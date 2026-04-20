@@ -81,15 +81,23 @@
 
 | Layer | Technology |
 |-------|-----------|
-| Web Frontend | React 18 + TypeScript + Vite + Tailwind CSS |
+| Web Frontend | React 18 + TypeScript + Vite + Tailwind CSS + shadcn/ui |
 | Mobile App | React Native (or Kotlin + Compose for Android) |
-| Backend API | Python FastAPI + SQLAlchemy async |
-| Database | PostgreSQL |
+| Backend API | Python FastAPI + SQLAlchemy 2.0 (async) |
+| Database | PostgreSQL + asyncpg |
+| Cache / Queue | Redis (caching, rate limiting, sessions) |
+| Background Tasks | Celery / Arq (emails, reports, invoices) |
 | Object Storage | S3-compatible (photos, receipts) |
 | AI/OCR | Tesseract / Google Vision / custom model |
-| Auth | JWT + bcrypt |
+| Auth | JWT (python-jose + passlib) + HTTPOnly cookies |
+| Validation | Pydantic v2 + OpenAPI |
+| State Management (Web) | Zustand (global) + TanStack Query (server) |
+| Forms (Web) | React Hook Form + Zod |
+| Tables (Web) | TanStack Table |
+| Maps | Leaflet / Mapbox (fleet tracking) |
 | Real-time | WebSocket for live tracking & alerts |
-| Deployment | Docker + cloud (TBD) |
+| Monitoring | Sentry (errors) + Prometheus (metrics) |
+| Deployment | Docker + docker-compose |
 
 ## Roles & Permissions Matrix
 
@@ -139,3 +147,10 @@ Hoàn thành chuyến ────────► Đánh dấu hoàn thành
 - Auto-sync when network restored
 - Timestamp + GPS stamp immutable (cannot backdate)
 - Queue retry with exponential backoff
+
+## Localization
+
+- **All customer-facing UI text in Vietnamese**
+- Internal code, comments, variable names in English
+- API error messages in Vietnamese where user-facing
+- Date/time format: DD/MM/YYYY (Vietnamese standard)

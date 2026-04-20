@@ -8,10 +8,18 @@ alembic==1.13.2
 asyncpg==0.29.0
 psycopg2-binary==2.9.9
 
+# Redis
+edis==5.0.8
+
+# Background tasks
+celery==5.4.0
+arq==0.25.0
+
 # Auth
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.9
+itsdangerous==2.2.0
 
 # Validation
 pydantic==2.9.2
@@ -27,3 +35,7 @@ starlette==0.40.0
 
 # Date/time
 python-dateutil==2.9.0
+
+# Monitoring
+sentry-sdk==2.13.0
+prometheus-fastapi-instrumentator==7.0.0
