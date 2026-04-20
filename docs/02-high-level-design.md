@@ -308,7 +308,11 @@ PERIOD_CLOSES
 └── created_at (TIMESTAMP)
 ```
 
-### 2.10 Workflow Engine
+### 2.10 Workflow Engine (python-statemachine + WORKFLOWS table)
+
+**Thư viện:** [python-statemachine](https://pypi.org/project/python-statemachine/) — StateChart / FSM library cho Python
+
+**Nguyên tắc:** python-statemachine xử lý logic trạng thái (validation, transitions, callbacks, guards). Bảng WORKFLOWS xử lý persistence, retry tracking, và production support.
 
 ```
 WORKFLOWS
@@ -321,59 +325,150 @@ WORKFLOWS
 └── updated_at (TIMESTAMP)
 ```
 
-**Nguyên tắc hoạt động:**
+**Kiến trúc tổng hợp:**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Workflow Engine                          │
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  python-statemachine (in-memory logic)                    │    │
+│  │                                                           │    │
+│  │  - Định nghĩa states, transitions (declarative)          │    │
+│  │  - Validate transitions (tự động throw nếu sai)          │    │
+│  │  - Callbacks: on_enter_, before_, after_                 │    │
+│  │  - Guards: cond= parameter (conditional transitions)     │    │
+│  │  - Auto-generate state diagram (PNG/SVG)                 │    │
+│  │                                                           │    │
+│  │  TripWorkflow(StateChart)                                 │    │
+│  │  ExpenseWorkflow(StateChart)                              │    │
+│  │  InvoiceWorkflow(StateChart)                              │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                           │                                      │
+│                    Persist state                                  │
+│                           ▼                                      │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │  WORKFLOWS table (persistence + retry)                    │    │
+│  │                                                           │    │
+│  │  - Lưu state hiện tại (integer)                           │    │
+│  │  - attempt tracking (0=pending, 1+=retry)                │    │
+│  │  - data JSONB (entity ref, payload, errors, results)     │    │
+│  │  - Production support: DML để fix workflow bị kẹt        │    │
+│  └─────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Luồng hoạt động:**
 
 ```
 API endpoint                          Workflow Worker
 ─────────────                         ──────────────────
-1. Xác thực request (JWT + RBAC)      Poll: WHERE attempt > 0
-2. Ghi Audit Log (hành động user)     │
-3. INSERT/UPDATE bảng WORKFLOWS  ────►│
-   - Cập nhật state                   │
-   - Đặt attempt = 1 (kích worker)    │
-4. Trả về response ngay lập tức       │
+1. Xác thực (JWT + RBAC)              Poll: WHERE attempt > 0
+2. Ghi Audit Log (user action)        │
+3. engine.load(entity) → resume()     │
+   └─ python-statemachine.validate()  │
+   └─ Nếu hợp lệ:                     │
+      - state mới → WORKFLOWS ────────►│
+      - attempt = 1                    │
+      - data updated                   │
+4. Trả về response ngay               │
                                       ▼
-                                 Lấy workflow config (code)
+                                 Load statemachine từ state
                                  Kiểm tra: attempt ≤ max_attempts?
                                       │
-                                 ├─ Có: Thực thi transition action
-                                 │      ├─ Thành công → cập nhật state, attempt = 0
-                                 │      └─ Thất bại → attempt += 1 (thử lại lần sau)
+                                 ├─ Có: Chạy callback actions
+                                 │      ├─ Thành công → state mới, attempt = 0
+                                 │      └─ Thất bại → attempt += 1
                                  │
-                                 └─ Không: Bỏ qua (cần can thiệp thủ công)
+                                 └─ Không: Bỏ qua (can thiệp thủ công)
 ```
 
-**Ví dụ: Trip Workflow (định nghĩa trong code)**
+**Ví dụ: Trip Workflow với python-statemachine**
 
 ```python
-# States (integer enum)
-TRIP_DRAFT = 0
-TRIP_ASSIGNED = 1
-TRIP_PICKUP_EMPTY = 2
-TRIP_AT_PORT = 3
-TRIP_LOADED = 4
-TRIP_IN_TRANSIT = 5
-TRIP_ARRIVING = 6
-TRIP_DELIVERED = 7
-TRIP_COMPLETED = 8
-TRIP_CANCELLED = 9
+from statemachine import StateChart, State
 
-# Transitions (code-defined)
-TRIP_TRANSITIONS = {
-    (0, "assign"):       {"to": 1, "max_attempts": 1, "actions": ["notify_driver"]},
-    (1, "confirm_pickup"): {"to": 2, "max_attempts": 1, "actions": []},
-    (3, "ocr_complete"):  {"to": 4, "max_attempts": 3, "actions": ["save_container_code"]},
-    (7, "confirm_delivery"): {"to": 8, "max_attempts": 3, "actions": [
-        "calculate_costs", "check_anomalies", "generate_alerts"
-    ]},
-}
+class TripWorkflow(StateChart):
+    "Chuyến xe Container"
+
+    draft = State(initial=True)
+    assigned = State()
+    pickup_empty = State()
+    at_port = State()
+    loaded = State()
+    in_transit = State()
+    arriving = State()
+    delivered = State()
+    completed = State(final=True)
+    cancelled = State(final=True)
+
+    assign = draft.to(assigned)
+    confirm_pickup = assigned.to(pickup_empty)
+    arrive_port = pickup_empty.to(at_port)
+    ocr_complete = at_port.to(loaded)
+    depart = loaded.to(in_transit)
+    arrive_dest = in_transit.to(arriving)
+    deliver = arriving.to(delivered)
+    confirm_delivery = delivered.to(completed)
+    cancel = (draft.to(cancelled) | assigned.to(cancelled) |
+              pickup_empty.to(cancelled) | at_port.to(cancelled) |
+              loaded.to(cancelled))
+
+    # Callbacks — worker executes these
+    def on_enter_assigned(self):
+        notify_driver(self)
+
+    def on_enter_completed(self):
+        calculate_costs(self)
+        check_anomalies(self)
+        generate_alerts(self)
+
+    # Guards — validation before transition
+    def before_ocr_complete(self, container_code=None):
+        if not container_code:
+            raise ValidationError("Missing container_code")
+```
+
+**Wrapper engine (lớp trung gian):**
+
+```python
+class WorkflowEngine:
+    def load(self, entity_type: str, entity_id: str) -> WorkflowRun:
+        row = db.query(WORKFLOWS).filter_by(data['entity_id'] == entity_id).first()
+        sm_class = get_statemachine_class(row.data['workflow_id'])  # TripWorkflow, etc.
+        sm = sm_class()
+        sm.current_state = map_int_to_state(sm, row.state)  # restore state
+        return WorkflowRun(row=row, statemachine=sm)
+
+    def create(self, workflow_id, entity_type, entity_id, initial_data) -> WorkflowRun:
+        row = insert_workflows(state=0, attempt=0, data={...})
+        sm = get_statemachine_class(workflow_id)()
+        return WorkflowRun(row=row, statemachine=sm)
+```
+
+**Hỗ trợ Production (DML):**
+
+```sql
+-- Xem workflow bị kẹt
+SELECT run_id, state, attempt, data->>'errors'
+FROM workflows WHERE attempt > 0 ORDER BY updated_at;
+
+-- Retry: reset attempt
+UPDATE workflows SET attempt = 1, data = data - 'errors' WHERE run_id = 'xxx';
+
+-- Force state (bypass transition)
+UPDATE workflows SET state = 8, attempt = 0 WHERE run_id = 'xxx';
+
+-- Hủy workflow bị kẹt
+UPDATE workflows SET state = 9, attempt = 0 WHERE run_id = 'xxx';
 ```
 
 **Phân tách rõ ràng:**
-- **Audit Log** ghi lại hành động của người dùng (ai bấm gì, lúc nào, giá trị cũ/mới)
-- **Workflow Table** chỉ là hàng đợi trạng thái hệ thống (không chứa user context)
-- API route mỏng — chỉ xác thực + ghi log + cập nhật workflow
-- Worker xử lý toàn bộ business logic
+- **python-statemachine:** Logic trạng thái (validation, callbacks, guards, diagrams)
+- **WORKFLOWS table:** Persistence, retry tracking, production observability
+- **Audit Log:** Ghi lại hành động người dùng (ai bấm gì, lúc nào, giá trị cũ/mới)
+- **API route:** Mỏng — xác thực + ghi audit log + gọi engine.resume()
+- **Worker:** Poll + execute callback actions
 
 ---
 
@@ -515,103 +610,183 @@ GET    /api/v1/audit-logs               — Danh sách (filter: user, entity_typ
 
 ---
 
-## 4. State Machines (Định nghĩa trong Code)
+## 4. State Machines (python-statemachine)
 
-Tất cả trạng thái, chuyển đổi và hành động được định nghĩa trong code. Bảng `WORKFLOWS` chỉ lưu trữ trạng thái thời gian chạy.
+State machines được định nghĩa bằng thư viện [python-statemachine](https://pypi.org/project/python-statemachine/) với declarative syntax. Bảng `WORKFLOWS` lưu trữ state hiện tại (integer), attempt tracking, và production observability.
 
-### 4.1 Trạng thái Chuyến xe (Trip Workflow)
+### 4.1 Trip Workflow
 
+```python
+from statemachine import StateChart, State
+
+class TripWorkflow(StateChart):
+    "Chuyến xe Container"
+
+    draft = State(initial=True)        # 0
+    assigned = State()                  # 1
+    pickup_empty = State()             # 2
+    at_port = State()                  # 3
+    loaded = State()                   # 4
+    in_transit = State()               # 5
+    arriving = State()                 # 6
+    delivered = State()                # 7
+    completed = State(final=True)      # 8
+    cancelled = State(final=True)      # 9
+
+    assign = draft.to(assigned)
+    confirm_pickup = assigned.to(pickup_empty)
+    arrive_port = pickup_empty.to(at_port)
+    ocr_complete = at_port.to(loaded)
+    depart = loaded.to(in_transit)
+    arrive_dest = in_transit.to(arriving)
+    deliver = arriving.to(delivered)
+    confirm_delivery = delivered.to(completed)
+    cancel = (draft.to(cancelled) | assigned.to(cancelled) |
+              pickup_empty.to(cancelled) | at_port.to(cancelled) |
+              loaded.to(cancelled))
+
+    # Callbacks (worker executes these on state entry)
+    def on_enter_assigned(self, **kwargs):
+        notify_driver(self.run)
+
+    def on_enter_loaded(self, **kwargs):
+        save_container_code(self.run)
+
+    def on_enter_in_transit(self, **kwargs):
+        notify_dispatcher(self.run)
+
+    def on_enter_completed(self, **kwargs):
+        calculate_costs(self.run)
+        check_anomalies(self.run)
+        generate_alerts(self.run)
+
+    def on_enter_cancelled(self, **kwargs):
+        notify_driver(self.run)
+
+    # Guards (validation before transition)
+    def before_ocr_complete(self, container_code=None, **kwargs):
+        if not container_code:
+            raise ValidationError("Missing container_code")
+
+    def before_confirm_delivery(self, delivery_photo_id=None, **kwargs):
+        if not delivery_photo_id:
+            raise ValidationError("Missing delivery photo")
 ```
-State 0: draft
-State 1: assigned
-State 2: pickup_empty
-State 3: at_port
-State 4: loaded
-State 5: in_transit
-State 6: arriving
-State 7: delivered
-State 8: completed   (terminal)
-State 9: cancelled   (terminal)
 
-Luồng chính:
-0 ──► 1 ──► 2 ──► 3 ──► 4 ──► 5 ──► 6 ──► 7 ──► 8
-0~4 ──► 9 (hủy bất kỳ lúc nào trước khi chạy)
-```
+**Worker transition config:**
 
-**Chuyển đổi và hành động:**
+| Event | Callback | max_attempts | Blocking |
+|-------|----------|-------------|----------|
+| assign | on_enter_assigned | 1 | Yes |
+| confirm_pickup | — | 1 | — |
+| arrive_port | — | 1 | — |
+| ocr_complete | on_enter_loaded | 3 | Yes |
+| depart | on_enter_in_transit | 1 | No |
+| confirm_delivery | on_enter_completed | 3 | Yes |
+| cancel | on_enter_cancelled | 1 | No |
 
-| Từ → Đến | Event | Ai trigger | max_attempts | Actions (Worker) |
-|-----------|-------|------------|-------------|-----------------|
-| 0 → 1 | assign | Điều hành | 1 | notify_driver |
-| 1 → 2 | confirm_pickup | Tài xế | 1 | (none) |
-| 2 → 3 | arrive_port | Tài xế | 1 | (none) |
-| 3 → 4 | ocr_complete | Tài xế | 3 | save_container_code |
-| 4 → 5 | depart | Tài xế | 1 | notify_dispatcher |
-| 5 → 6 | arrive_dest | Tài xế | 1 | (none) |
-| 6 → 7 | deliver | Tài xế | 1 | (none) |
-| 7 → 8 | confirm_delivery | Tài xế | 3 | calculate_costs, check_anomalies, generate_alerts |
-| 0~4 → 9 | cancel | Điều hành | 1 | notify_driver |
-
-**Ví dụ luồng API → Worker:**
+**Luồng API → Engine → Worker:**
 
 ```
 Tài xế bấm "Hoàn thành" trên app
     │
     ├─► API: Xác thực JWT + RBAC (role=driver)
-    ├─► API: Ghi Audit Log (user_id=xxx, action="confirm_delivery", entity=trip)
-    ├─► API: UPDATE workflows SET state=7, attempt=1 WHERE run_id=...
+    ├─► API: Ghi Audit Log (user action)
+    ├─► API: engine.load("trip", trip_id).resume("confirm_delivery", data)
+    │       └─ python-statemachine validates transition
+    │       └─ Callbacks queued for worker
+    │       └─ WORKFLOWS: state=7, attempt=1
     └─► API: Trả về {"status": "processing"}
 
-    Worker poll: attempt > 0 → tìm thấy
+    Worker poll: attempt > 0 → found
     │
-    ├─► Worker: calculate_costs(trip) → cập nhật TRIPS totals
-    ├─► Worker: check_anomalies(trip) → tạo ALERTS nếu bất thường
-    ├─► Worker: generate_alerts(trip) → ghi DRIVER_VIOLATIONS
-    └─► Worker: UPDATE workflows SET state=8, attempt=0 WHERE run_id=...
+    ├─► Worker: restore TripWorkflow at state=delivered
+    ├─► Worker: sm.send("confirm_delivery") → triggers on_enter_completed
+    │       ├─ calculate_costs(trip)
+    │       ├─ check_anomalies(trip)
+    │       └─ generate_alerts(trip)
+    └─► Worker: WORKFLOWS state=8, attempt=0
 ```
 
-### 4.2 Trạng thái Chi phí (Expense Workflow)
+### 4.2 Expense Workflow
 
-```
-State 0: pending
-State 1: approved  (terminal)
-State 2: rejected  (terminal)
-```
+```python
+class ExpenseWorkflow(StateChart):
+    "Chi phí dọc đường"
 
-| Từ → Đến | Event | Ai trigger | max_attempts | Actions (Worker) |
-|-----------|-------|------------|-------------|-----------------|
-| 0 → 1 | approve | Điều hành / Kế toán | 1 | add_to_trip_cost |
-| 0 → 2 | reject | Điều hành / Kế toán | 1 | notify_driver |
+    pending = State(initial=True)       # 0
+    approved = State(final=True)        # 1
+    rejected = State(final=True)        # 2
 
-### 4.3 Trạng thái Hóa đơn (Invoice Workflow)
+    approve = pending.to(approved)
+    reject = pending.to(rejected)
 
-```
-State 0: draft
-State 1: issued
-State 2: partial_paid
-State 3: fully_paid  (terminal)
-State 4: overdue
+    def on_enter_approved(self, **kwargs):
+        add_to_trip_cost(self.run)
+
+    def on_enter_rejected(self, **kwargs):
+        notify_driver(self.run)
 ```
 
-| Từ → Đến | Event | Ai trigger | max_attempts | Actions (Worker) |
-|-----------|-------|------------|-------------|-----------------|
-| 0 → 1 | issue | Kế toán | 1 | generate_pdf |
-| 1 → 2 | partial_payment | Kế toán | 1 | record_payment |
-| 1/2 → 3 | full_payment | Kế toán | 1 | record_payment, lock_invoice |
-| 1/2 → 4 | mark_overdue | Hệ thống | 1 | notify_director |
-| 4 → 2/3 | payment | Kế toán | 1 | record_payment |
+| Event | Callback | max_attempts |
+|-------|----------|-------------|
+| approve | on_enter_approved | 1 |
+| reject | on_enter_rejected | 1 |
 
-### 4.4 Trạng thái Xe (Vehicle — không dùng workflow, đơn giản)
+### 4.3 Invoice Workflow
 
+```python
+class InvoiceWorkflow(StateChart):
+    "Hóa đơn"
+
+    draft = State(initial=True)         # 0
+    issued = State()                    # 1
+    partial_paid = State()             # 2
+    fully_paid = State(final=True)     # 3
+    overdue = State()                  # 4
+
+    issue = draft.to(issued)
+    partial_payment = issued.to(partial_paid)
+    full_payment = (issued.to(fully_paid) |
+                    partial_paid.to(fully_paid))
+    mark_overdue = (issued.to(overdue) |
+                    partial_paid.to(overdue))
+    payment_after_overdue = (overdue.to(partial_paid) |
+                             overdue.to(fully_paid))
+
+    def on_enter_issued(self, **kwargs):
+        generate_pdf(self.run)
+
+    def on_enter_fully_paid(self, **kwargs):
+        lock_invoice(self.run)
+
+    def on_enter_overdue(self, **kwargs):
+        notify_director(self.run)
+
+    def on_enter_partial_paid(self, **kwargs):
+        record_payment(self.run)
 ```
-State 0: idle
-State 1: active
-State 2: on_trip
-State 3: maintenance
-State 4: retired  (terminal)
-```
 
-Giao tiếp trực tiếp qua API (không cần worker). Trạng thái xe thay đổi khi chuyến xe bắt đầu/kết thúc.
+| Event | Callback | max_attempts |
+|-------|----------|-------------|
+| issue | on_enter_issued | 3 |
+| partial_payment | on_enter_partial_paid | 1 |
+| full_payment | on_enter_fully_paid | 1 |
+| mark_overdue | on_enter_overdue | 1 |
+
+### 4.4 Vehicle (không dùng workflow engine)
+
+Trạng thái xe đơn giản, quản lý trực tiếp qua API. Trạng thái xe thay đổi khi chuyến xe bắt đầu/kết thúc.
+
+```python
+# Vehicle status — simple enum, no workflow needed
+class VehicleStatus(IntEnum):
+    idle = 0
+    active = 1
+    on_trip = 2
+    maintenance = 3
+    retired = 4
+```
 
 ---
 
