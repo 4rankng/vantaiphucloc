@@ -1,33 +1,45 @@
-import { useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Toaster } from 'sonner'
+import { AuthProvider, useAuth } from '@/contexts/AuthContext'
+import LoginPage from '@/pages/LoginPage'
+import DirectorDashboard from '@/pages/director/DirectorDashboard'
+import DispatcherDashboard from '@/pages/dispatcher/DispatcherDashboard'
+import AccountantDashboard from '@/pages/accountant/AccountantDashboard'
+import DriverHome from '@/pages/driver/DriverHome'
+import DriverTrips from '@/pages/driver/DriverTrips'
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000,
-      retry: 1,
-    },
-  },
-})
+function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles: string[] }) {
+  const { role } = useAuth()
+  if (!role) return <Navigate to="/" replace />
+  if (!allowedRoles.includes(role)) return <Navigate to="/" replace />
+  return <>{children}</>
+}
 
-function App() {
+function AppRoutes() {
+  const { role } = useAuth()
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<div>Login Page</div>} />
-          <Route path="/" element={<Navigate to="/login" replace />} />
-        </Routes>
-        <Toaster richColors position="top-right" />
-      </BrowserRouter>
-      <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
-        <h1>🚛 Vận tải hàng hóa</h1>
-        <p>Frontend scaffold ready. Start building!</p>
-      </div>
-    </QueryClientProvider>
+    <Routes>
+      <Route path="/" element={role ? <Navigate to={`/${role}`} replace /> : <LoginPage />} />
+      <Route path="/director" element={<ProtectedRoute allowedRoles={['director']}><DirectorDashboard /></ProtectedRoute>} />
+      <Route path="/director/*" element={<ProtectedRoute allowedRoles={['director']}><DirectorDashboard /></ProtectedRoute>} />
+      <Route path="/dispatcher" element={<ProtectedRoute allowedRoles={['dispatcher']}><DispatcherDashboard /></ProtectedRoute>} />
+      <Route path="/dispatcher/*" element={<ProtectedRoute allowedRoles={['dispatcher']}><DispatcherDashboard /></ProtectedRoute>} />
+      <Route path="/accountant" element={<ProtectedRoute allowedRoles={['accountant']}><AccountantDashboard /></ProtectedRoute>} />
+      <Route path="/accountant/*" element={<ProtectedRoute allowedRoles={['accountant']}><AccountantDashboard /></ProtectedRoute>} />
+      <Route path="/driver" element={<ProtectedRoute allowedRoles={['driver']}><DriverHome /></ProtectedRoute>} />
+      <Route path="/driver/trips" element={<ProtectedRoute allowedRoles={['driver']}><DriverTrips /></ProtectedRoute>} />
+      <Route path="/driver/*" element={<ProtectedRoute allowedRoles={['driver']}><DriverHome /></ProtectedRoute>} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
 }
 
-export default App
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </BrowserRouter>
+  )
+}
