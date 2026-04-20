@@ -1,114 +1,109 @@
-import { Home, MapPin, Camera, Wallet, User } from 'lucide-react'
-import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
 import { GlassCard } from '@/components/shared/GlassCard'
-import { mockJobs, formatCurrencyFull } from '@/data/mockData'
-import type { ReactNode } from 'react'
-
-const bottomNavItems = [
-  { label: 'Trang chủ', icon: <Home size={20} />, path: '/driver' },
-  { label: 'Chuyến xe', icon: <MapPin size={20} />, path: '/driver/trips' },
-  { label: 'Chụp ảnh', icon: <Camera size={20} />, path: '/driver/photos' },
-  { label: 'Thu nhập', icon: <Wallet size={20} />, path: '/driver/income' },
-  { label: 'Tài khoản', icon: <User size={20} />, path: '/driver/account' },
-]
-
-function QuickButton({ icon, label }: { icon: ReactNode; label: string }) {
-  return (
-    <button className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-[hsl(220,10%,94%)] hover:bg-[hsl(220,10%,88%)] transition-colors active:scale-95 flex-1">
-      {icon}
-      <span className="text-xs font-medium text-[#0a1f33]">{label}</span>
-    </button>
-  )
-}
+import { StatCard } from '@/components/shared/StatCard'
+import { StatusBadge } from '@/components/shared/StatusBadge'
+import { mockJobs, mockDrivers, formatCurrencyFull, formatCurrencyShort, getJobStatusBadge } from '@/data/mockData'
+import { Route, Wallet, Truck, Phone, MapPin, Clock } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 export default function DriverHome() {
+  const navigate = useNavigate()
+  // Driver DRV-001 — Nguyễn Văn Hùng
+  const driver = mockDrivers[0]
   const myJobs = mockJobs.filter(j => j.driverId === 'DRV-001')
-  const activeJob = myJobs.find(j => j.status === 'IN_PROGRESS')
-  const completedToday = myJobs.filter(j => j.status === 'COMPLETED').length
-  const todayIncome = myJobs.filter(j => j.status === 'COMPLETED').reduce((s, j) => s + j.driverFee, 0)
+  const activeTrip = myJobs.find(j => j.status === 'IN_PROGRESS')
+  const todayEarning = myJobs.filter(j => j.jobDate === '2025-04-20').reduce((s, j) => s + j.driverFee, 0)
+  const monthlyEarning = driver.monthlyTrips * driver.fixedFeePerTrip
+
+  const greeting = () => {
+    const h = new Date().getHours()
+    return h < 12 ? 'Chào buổi sáng' : h < 18 ? 'Chào buổi chiều' : 'Chào buổi tối'
+  }
 
   return (
-    <div className="min-h-screen bg-[hsl(220,20%,98%)]">
-      <header className="sticky top-0 z-40 bg-gradient-to-r from-[#0a2540] to-[#0d3158] text-white px-4 py-4 safe-area-top">
+    <div className="space-y-4">
+      {/* Welcome */}
+      <GlassCard className="p-5 bg-gradient-to-br from-navy-900 to-navy-800 !border-navy-700" style={{ background: 'linear-gradient(135deg, #0a1f33 0%, #0d2b45 100%)', border: 'none' }}>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-white/70">Xin chào,</p>
-            <p className="text-lg font-bold">Nguyễn Văn Hùng</p>
+            <p className="text-[11px] text-white/50 font-medium uppercase tracking-wider">{greeting()}</p>
+            <h2 className="text-lg font-bold text-white font-display mt-0.5">{driver.name}</h2>
+            <p className="text-[11px] text-white/40 mt-1 font-mono-num">{driver.tractorPlate}</p>
           </div>
-          <div className="w-10 h-10 rounded-full bg-[#d4a839] flex items-center justify-center text-white font-bold">H</div>
+          <div className="w-14 h-14 rounded-full bg-gold-400/20 flex items-center justify-center text-gold-400 text-xl font-bold">
+            {driver.name.split(' ').map(w => w[0]).join('').slice(0, 2)}
+          </div>
         </div>
-      </header>
+      </GlassCard>
 
-      <main className="px-4 py-4 space-y-4 pb-24">
-        {/* Today's income */}
-        <GlassCard className="p-4">
-          <p className="text-sm text-[hsl(220,10%,55%)]">Thu nhập hôm nay</p>
-          <p className="text-2xl font-bold text-[#0a2540] mt-1 font-['Manrope',sans-serif]">{formatCurrencyFull(todayIncome)}</p>
-          <p className="text-xs text-[hsl(220,10%,55%)] mt-1">{completedToday} chuyến hoàn thành • Cước: {formatCurrencyFull(800000)}/chuyến</p>
+      {/* Quick Stats */}
+      <div className="grid grid-cols-3 gap-2">
+        <StatCard icon={<Wallet size={16}/>} label="Hôm nay" value={formatCurrencyShort(todayEarning)} variant="gold" />
+        <StatCard icon={<Route size={16}/>} label="Tháng này" value={`${driver.monthlyTrips} chuyến`} />
+        <StatCard icon={<Clock size={16}/>} label="Đánh giá" value={`${driver.rating} ⭐`} variant="success" />
+      </div>
+
+      {/* Active Trip */}
+      {activeTrip ? (
+        <GlassCard className="p-4 border-l-4 border-l-emerald-400">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-bold text-navy-900 uppercase tracking-wider">Chuyến đang chạy</h3>
+            <StatusBadge variant="success" label="Đang chạy" />
+          </div>
+          <p className="text-sm font-semibold text-navy-900">{activeTrip.route}</p>
+          <div className="flex items-center gap-2 mt-2 text-[11px] text-gray-400">
+            <MapPin size={12} /> <span>{activeTrip.distanceKm} km</span>
+            <span>·</span>
+            <span>Cont: {activeTrip.containerNumber}</span>
+          </div>
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-navy-100">
+            <span className="text-[11px] text-gray-400">Cước tài xế</span>
+            <span className="text-sm font-bold text-gold-500 font-mono-num">{formatCurrencyFull(activeTrip.driverFee)}</span>
+          </div>
         </GlassCard>
-
-        {/* Active job */}
-        {activeJob && (
-          <GlassCard className="p-4 border-l-4 border-l-emerald-500">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-bold text-[#0a2540]">Chuyến hiện tại</span>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">Đang chạy</span>
-            </div>
-            <p className="text-base font-semibold text-[#0a1f33]">{activeJob.route}</p>
-            <p className="text-sm text-[hsl(220,10%,55%)] mt-1">{activeJob.description}</p>
-            <div className="mt-2 space-y-1 text-xs text-[hsl(220,10%,55%)]">
-              <p>🚛 {activeJob.tractorPlate} + {activeJob.trailerPlate} ({activeJob.trailerType})</p>
-              <p>📦 Cont: {activeJob.containerNumber}</p>
-              <p>👤 Khách: {activeJob.clientName}</p>
-            </div>
-            <div className="flex items-center justify-between mt-2 pt-2 border-t border-[hsl(220,10%,92%)]">
-              <span className="text-sm text-[hsl(220,10%,55%)]">Ngày: {activeJob.jobDate}</span>
-              <span className="text-sm font-bold text-[#d4a839]">Cước: {formatCurrencyFull(activeJob.revenue)}</span>
-            </div>
-          </GlassCard>
-        )}
-
-        {/* Quick actions */}
-        <div className="flex gap-3">
-          <QuickButton icon={<Camera size={24} className="text-[#0a2540]" />} label="Chụp ảnh" />
-          <QuickButton icon={<svg className="w-6 h-6 text-[#0a2540]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>} label="Khai báo chi phí" />
-          <QuickButton icon={<MapPin size={24} className="text-[#0a2540]" />} label="Cập nhật vị trí" />
-        </div>
-
-        {/* My jobs */}
-        <div>
-          <h3 className="text-sm font-bold text-[#0a1f33] mb-3">Chuyến của tôi</h3>
-          <div className="space-y-3">
-            {myJobs.map((job) => {
-              const statusConfig: Record<string, { bg: string; text: string; label: string }> = {
-                IN_PROGRESS: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Đang chạy' },
-                PLANNED: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Lên kế hoạch' },
-                COMPLETED: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Hoàn thành' },
-              }
-              const s = statusConfig[job.status] || statusConfig.COMPLETED
-              return (
-                <GlassCard key={job.id} className="p-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-[#0a2540]">{job.id}</span>
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-700">{job.trailerType}</span>
-                    </div>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${s.bg} ${s.text}`}>{s.label}</span>
-                  </div>
-                  <p className="text-sm text-[#0a1f33] font-medium">{job.route}</p>
-                  <p className="text-xs text-[hsl(220,10%,55%)] mt-0.5">{job.description} • Cont: {job.containerNumber}</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-xs text-[hsl(220,10%,55%)]">{job.jobDate} • {job.distanceKm}km</span>
-                    <span className="text-xs font-semibold text-[#0a2540]">Cước: {formatCurrencyFull(job.revenue)}</span>
-                  </div>
-                </GlassCard>
-              )
-            })}
-            {myJobs.length === 0 && <p className="text-sm text-[hsl(220,10%,55%)] text-center py-4">Chưa có chuyến nào</p>}
+      ) : (
+        <GlassCard className="p-6 text-center">
+          <div className="w-12 h-12 rounded-full bg-navy-50 flex items-center justify-center mx-auto mb-3 text-navy-300">
+            <Truck size={24} />
           </div>
+          <p className="text-sm font-semibold text-navy-900">Không có chuyến đang chạy</p>
+          <p className="text-xs text-gray-400 mt-1">Kiểm tra lại sau</p>
+        </GlassCard>
+      )}
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-2 gap-3">
+        <button onClick={() => navigate('/driver/trips')} className="glass-card rounded-xl p-4 text-left hover:shadow-md transition-shadow active:scale-[0.99]">
+          <Route size={20} className="text-navy-600 mb-2" />
+          <p className="text-sm font-semibold text-navy-900">Lịch sử chuyến</p>
+          <p className="text-[11px] text-gray-400">{myJobs.length} chuyến</p>
+        </button>
+        <button onClick={() => navigate('/driver/income')} className="glass-card rounded-xl p-4 text-left hover:shadow-md transition-shadow active:scale-[0.99]">
+          <Wallet size={20} className="text-gold-500 mb-2" />
+          <p className="text-sm font-semibold text-navy-900">Thu nhập</p>
+          <p className="text-[11px] text-gray-400">{formatCurrencyShort(monthlyEarning)}</p>
+        </button>
+      </div>
+
+      {/* Recent trips */}
+      <GlassCard className="p-4">
+        <h3 className="text-xs font-bold text-navy-900 uppercase tracking-wider mb-3">Chuyến gần đây</h3>
+        <div className="space-y-2">
+          {myJobs.slice(0, 3).map((j) => {
+            const s = getJobStatusBadge(j.status)
+            return (
+              <div key={j.id} className="flex items-center justify-between p-2 rounded-lg bg-navy-50/30">
+                <div>
+                  <p className="text-[12px] font-semibold text-navy-900">{j.route}</p>
+                  <p className="text-[10px] text-gray-400">{j.jobDate}</p>
+                </div>
+                <div className="text-right">
+                  <StatusBadge variant={j.status === 'IN_PROGRESS' ? 'success' : 'info'} label={s.label} />
+                </div>
+              </div>
+            )
+          })}
         </div>
-      </main>
-      <MobileBottomNav items={bottomNavItems} />
+      </GlassCard>
     </div>
   )
 }

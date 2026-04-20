@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
-import type { Role } from '@/types'
+
+export type Role = 'director' | 'dispatcher' | 'accountant' | 'driver'
 
 interface AuthContextType {
   role: Role | null
@@ -14,9 +15,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return localStorage.getItem('ttransport_role') as Role | null
   })
 
-  const setRole = (role: Role) => {
-    localStorage.setItem('ttransport_role', role)
-    setRoleState(role)
+  const setRole = (r: Role) => {
+    localStorage.setItem('ttransport_role', r)
+    setRoleState(r)
   }
 
   const logout = () => {

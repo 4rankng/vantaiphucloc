@@ -1,185 +1,167 @@
-import { LayoutDashboard, Truck, MapPin, Users, FileText, UserCog, TrendingUp, BookOpen } from 'lucide-react'
-import { Sidebar } from '@/components/layout/Sidebar'
-import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
-import { TopBar } from '@/components/layout/TopBar'
 import { StatCard } from '@/components/shared/StatCard'
 import { GlassCard } from '@/components/shared/GlassCard'
-import { mockJobs, mockDrivers, mockMonthlyRevenue, mockAlerts, mockTractors, mockPeriodCloses, formatCurrency, getJobStatusBadge, getContainerBadgeColor } from '@/data/mockData'
+import { StatusBadge } from '@/components/shared/StatusBadge'
+import { mockJobs, mockDrivers, mockMonthlyRevenue, mockTractors, mockAlerts, mockPeriodCloses, formatCurrency, formatCurrencyShort, getJobStatusBadge } from '@/data/mockData'
+import { Truck, TrendingUp, DollarSign, AlertTriangle, Route, Clock, CheckCircle, ArrowUpRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import type { ReactNode } from 'react'
-
-const sidebarItems = [
-  { label: 'Tổng quan', icon: <LayoutDashboard size={20} />, path: '/director' },
-  { label: 'Lịch vận chuyển', icon: <MapPin size={20} />, path: '/director/schedule' },
-  { label: 'Phương tiện', icon: <Truck size={20} />, path: '/director/vehicles' },
-  { label: 'Khách hàng', icon: <Users size={20} />, path: '/director/clients' },
-  { label: 'Tài chính', icon: <FileText size={20} />, path: '/director/finance' },
-  { label: 'Định mức', icon: <TrendingUp size={20} />, path: '/director/standards' },
-  { label: 'KPI Tài xế', icon: <UserCog size={20} />, path: '/director/kpi' },
-  { label: 'Chốt sổ', icon: <BookOpen size={20} />, path: '/director/period-close' },
-]
-
-const mobileItems = sidebarItems.slice(0, 5)
-
-function JobStatusBadge({ status }: { status: string }) {
-  const s = getJobStatusBadge(status as any)
-  return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${s.bg} ${s.text}`}>{s.label}</span>
-}
-
-function TrailerBadge({ type }: { type: string }) {
-  return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${getContainerBadgeColor(type as any)}`}>{type}</span>
-}
 
 export default function DirectorDashboard() {
   const navigate = useNavigate()
-  const activeJobs = mockJobs.filter(j => j.status === 'IN_PROGRESS')
-  const plannedJobs = mockJobs.filter(j => j.status === 'PLANNED')
-  const completedJobs = mockJobs.filter(j => j.status === 'COMPLETED')
-  const runningTractors = mockTractors.filter(t => t.status === 'running')
-  const idleTractors = mockTractors.filter(t => t.status === 'idle')
-  const maintenanceTractors = mockTractors.filter(t => t.status === 'maintenance')
+  const active = mockJobs.filter(j => j.status === 'IN_PROGRESS')
+  const planned = mockJobs.filter(j => j.status === 'PLANNED')
+  const completed = mockJobs.filter(j => j.status === 'COMPLETED')
+  const running = mockTractors.filter(t => t.status === 'running')
+  const idle = mockTractors.filter(t => t.status === 'idle')
   const highAlerts = mockAlerts.filter(a => a.severity === 'high')
   const topDrivers = [...mockDrivers].sort((a, b) => b.monthlyRevenue - a.monthlyRevenue)
-  const maxRevenue = Math.max(...mockMonthlyRevenue.map(m => m.revenue))
-  const currentMonth = mockMonthlyRevenue[mockMonthlyRevenue.length - 1]
-  const prevMonth = mockMonthlyRevenue[mockMonthlyRevenue.length - 2]
+  const maxRev = Math.max(...mockMonthlyRevenue.map(m => m.revenue))
+  const cur = mockMonthlyRevenue[mockMonthlyRevenue.length - 1]
 
   return (
-    <div className="flex min-h-screen bg-[hsl(220,20%,98%)]">
-      <Sidebar items={sidebarItems} title="Giám đốc" />
-      <div className="flex-1 flex flex-col min-h-screen">
-        <TopBar title="Tổng quan" />
-        <main className="flex-1 p-4 lg:p-6 space-y-6 pb-24 lg:pb-6 overflow-auto">
-          {/* KPIs */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard icon={<Truck size={24} />} label="Đầu kéo" value={mockTractors.length} subtitle={`Chạy: ${runningTractors.length} • Rảnh: ${idleTractors.length} • SC: ${maintenanceTractors.length}`} />
-            <StatCard icon={<TrendingUp size={24} />} label="Doanh thu tháng" value={formatCurrency(currentMonth.revenue)} variant="success" />
-            <StatCard icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} label="Chi phí" value={formatCurrency(currentMonth.expense)} />
-            <StatCard icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>} label="Lợi nhuận" value={formatCurrency(currentMonth.revenue - currentMonth.expense)} variant="success" />
-          </div>
-
-          {/* Job status */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard icon={<MapPin size={20} />} label="Đang chạy" value={activeJobs.length} variant="success" />
-            <StatCard icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} label="Lên kế hoạch" value={plannedJobs.length} variant="warning" />
-            <StatCard icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} label="Hoàn thành (T4)" value={completedJobs.length} />
-            <StatCard icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>} label="Cảnh báo" value={highAlerts.length} variant="danger" />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Revenue Chart */}
-            <GlassCard className="p-5">
-              <h3 className="text-base font-bold text-[#0a1f33] mb-4">Biểu đồ doanh thu 6 tháng</h3>
-              <div className="space-y-3">
-                {mockMonthlyRevenue.map((m) => (
-                  <div key={m.month} className="flex items-center gap-3">
-                    <span className="text-xs text-[hsl(220,10%,55%)] w-16 shrink-0">{m.month}</span>
-                    <div className="flex-1 flex gap-1 h-7 items-center">
-                      <div className="h-full rounded-md bg-gradient-to-r from-[#0a2540] to-[#0d3158]" style={{ width: `${(m.revenue / maxRevenue) * 100}%` }} title={`DT: ${formatCurrency(m.revenue)}`} />
-                      <div className="h-full rounded-md bg-[#d4a839]/30 border border-[#d4a839]/50" style={{ width: `${(m.expense / maxRevenue) * 100}%` }} title={`CP: ${formatCurrency(m.expense)}`} />
-                    </div>
-                    <span className="text-xs font-semibold text-[#0a1f33] w-24 text-right">{formatCurrency(m.revenue)}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex gap-4 mt-3 text-xs text-[hsl(220,10%,55%)]">
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-[#0a2540]" /> Doanh thu</span>
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-[#d4a839]/40 border border-[#d4a839]/50" /> Chi phí</span>
-              </div>
-            </GlassCard>
-
-            {/* Top Drivers */}
-            <GlassCard className="p-5">
-              <h3 className="text-base font-bold text-[#0a1f33] mb-4">KPI Tài xế tháng {currentMonth.month}</h3>
-              <div className="space-y-3">
-                {topDrivers.map((d, i) => (
-                  <div key={d.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-[hsl(220,10%,97%)] transition-colors">
-                    <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? 'bg-[#d4a839] text-white' : i === 1 ? 'bg-gray-300 text-gray-700' : i === 2 ? 'bg-amber-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                      {i + 1}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-[#0a1f33] truncate">{d.name}</p>
-                      <p className="text-xs text-[hsl(220,10%,55%)]">{d.tractorPlate} • {d.monthlyTrips} chuyến</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-[#0a2540]">{formatCurrency(d.monthlyRevenue)}</p>
-                      <p className="text-xs text-[hsl(220,10%,55%)]">⭐ {d.rating}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </GlassCard>
-          </div>
-
-          {/* Jobs Table */}
-          <GlassCard className="p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-[#0a1f33]">Chuyến xe gần đây</h3>
-              <button onClick={() => navigate('/director/schedule')} className="text-xs text-[#0a2540] font-semibold hover:underline">Xem tất cả →</button>
-            </div>
-            <div className="overflow-x-auto -mx-5 px-5">
-              <table className="w-full text-sm min-w-[700px]">
-                <thead>
-                  <tr className="text-left text-xs text-[hsl(220,10%,55%)] uppercase tracking-wider border-b border-[hsl(220,10%,92%)]">
-                    <th className="pb-2 pr-3">Mã</th>
-                    <th className="pb-2 pr-3">Ngày</th>
-                    <th className="pb-2 pr-3">Tuyến</th>
-                    <th className="pb-2 pr-3">Cont</th>
-                    <th className="pb-2 pr-3">Đầu kéo</th>
-                    <th className="pb-2 pr-3">Tài xế</th>
-                    <th className="pb-2 pr-3">Trạng thái</th>
-                    <th className="pb-2 text-right">Cước</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mockJobs.slice(0, 8).map((j) => (
-                    <tr key={j.id} className="border-b border-[hsl(220,10%,96%)] last:border-0 hover:bg-[hsl(220,10%,97%)]">
-                      <td className="py-2.5 pr-3 font-semibold text-[#0a2540]">{j.id}</td>
-                      <td className="py-2.5 pr-3 text-[hsl(220,10%,55%)] whitespace-nowrap">{j.jobDate}</td>
-                      <td className="py-2.5 pr-3 text-[#0a1f33] max-w-[200px] truncate" title={j.route}>
-                        {j.route}
-                        {j.isTwoWay && <span className="ml-1 text-[10px] text-purple-600 font-semibold bg-purple-50 px-1 rounded">2 chiều</span>}
-                      </td>
-                      <td className="py-2.5 pr-3"><TrailerBadge type={j.trailerType} /></td>
-                      <td className="py-2.5 pr-3 text-[hsl(220,10%,45%)] whitespace-nowrap">{j.tractorPlate}</td>
-                      <td className="py-2.5 pr-3 text-[hsl(220,10%,45%)] whitespace-nowrap">{j.driverName}</td>
-                      <td className="py-2.5 pr-3"><JobStatusBadge status={j.status} /></td>
-                      <td className="py-2.5 text-right font-semibold text-[#0a2540] whitespace-nowrap">{(j.revenue / 1000).toFixed(0)}k</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </GlassCard>
-
-          {/* Period Close */}
-          <GlassCard className="p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-[#0a1f33]">Chốt sổ</h3>
-              <span className="text-xs text-[hsl(220,10%,55%)]">Tháng hiện tại: {currentMonth.month}</span>
-            </div>
-            <div className="space-y-2">
-              {mockPeriodCloses.map((pc) => (
-                <div key={pc.id} className="flex items-center justify-between p-3 rounded-lg bg-[hsl(220,20%,98%)] border border-[hsl(220,10%,92%)]">
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm font-bold text-[#0a2540]">{pc.month}</span>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${pc.status === 'closed' ? 'bg-emerald-100 text-emerald-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                      {pc.status === 'closed' ? 'Đã chốt' : 'Đang mở'}
-                    </span>
-                    {pc.status === 'closed' && <span className="text-xs text-[hsl(220,10%,55%)]">bởi {pc.closedBy}</span>}
-                  </div>
-                  <div className="flex items-center gap-4 text-xs">
-                    <span className="text-[hsl(220,10%,55%)]">DT: <b className="text-[#0a2540]">{formatCurrency(pc.totalRevenue)}</b></span>
-                    <span className="text-[hsl(220,10%,55%)]">LN: <b className="text-emerald-600">{formatCurrency(pc.profit)}</b></span>
-                    <span className="text-[hsl(220,10%,55%)]">{pc.jobCount} chuyến</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </GlassCard>
-        </main>
-        <MobileBottomNav items={mobileItems} />
+    <div className="space-y-6">
+      {/* KPI Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+        <StatCard icon={<Truck size={20}/>} label="Đầu kéo" value={mockTractors.length} subtitle={`${running.length} chạy · ${idle.length} rảnh`} />
+        <StatCard icon={<TrendingUp size={20}/>} label="Doanh thu" value={formatCurrency(cur.revenue)} variant="gold" trend="up" />
+        <StatCard icon={<DollarSign size={20}/>} label="Chi phí" value={formatCurrency(cur.expense)} variant="warning" />
+        <StatCard icon={<ArrowUpRight size={20}/>} label="Lợi nhuận" value={formatCurrency(cur.revenue - cur.expense)} variant="success" />
       </div>
+
+      {/* Status Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard icon={<Route size={18}/>} label="Đang chạy" value={active.length} variant="success" />
+        <StatCard icon={<Clock size={18}/>} label="Lên kế hoạch" value={planned.length} variant="warning" />
+        <StatCard icon={<CheckCircle size={18}/>} label="Hoàn thành (T4)" value={completed.length} />
+        <StatCard icon={<AlertTriangle size={18}/>} label="Cảnh báo" value={highAlerts.length} variant="danger" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+        {/* Revenue Chart */}
+        <GlassCard className="p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold text-navy-900 font-display">Biểu đồ doanh thu 6 tháng</h3>
+            <div className="flex gap-3 text-[10px] text-gray-400">
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-navy-800"/> Doanh thu</span>
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-gold-300"/> Chi phí</span>
+            </div>
+          </div>
+          <div className="space-y-2.5">
+            {mockMonthlyRevenue.map((m) => (
+              <div key={m.month} className="flex items-center gap-3">
+                <span className="text-[11px] text-gray-400 w-14 shrink-0 font-mono-num">{m.month}</span>
+                <div className="flex-1 flex gap-1 h-6 items-center">
+                  <div className="h-full rounded-md bg-gradient-to-r from-navy-800 to-navy-700 transition-all duration-500"
+                    style={{ width: `${(m.revenue / maxRev) * 100}%` }} />
+                  <div className="h-full rounded-md bg-gold-300/50 border border-gold-300/70"
+                    style={{ width: `${(m.expense / maxRev) * 100}%` }} />
+                </div>
+                <span className="text-[11px] font-semibold text-navy-900 w-20 text-right font-mono-num">{formatCurrencyShort(m.revenue)}</span>
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+
+        {/* Top Drivers */}
+        <GlassCard className="p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold text-navy-900 font-display">KPI Tài xế tháng {cur.month}</h3>
+            <button onClick={() => navigate('/director/driver-kpi')} className="text-xs text-gold-500 font-semibold hover:underline">Xem tất cả →</button>
+          </div>
+          <div className="space-y-2">
+            {topDrivers.map((d, i) => (
+              <div key={d.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-navy-50/50 transition-colors">
+                <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${i === 0 ? 'badge-gold' : i === 1 ? 'bg-gray-200 text-gray-600' : i === 2 ? 'bg-amber-600 text-white' : 'bg-gray-100 text-gray-400'}`}>
+                  {i + 1}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-navy-900 truncate">{d.name}</p>
+                  <p className="text-[11px] text-gray-400">{d.tractorPlate} · {d.monthlyTrips} chuyến</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-bold text-navy-900 font-mono-num">{formatCurrencyShort(d.monthlyRevenue)}</p>
+                  <p className="text-[11px] text-gold-500">⭐ {d.rating}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+      </div>
+
+      {/* Recent Jobs */}
+      <GlassCard className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-bold text-navy-900 font-display">Chuyến xe gần đây</h3>
+          <button onClick={() => navigate('/director/trips')} className="text-xs text-gold-500 font-semibold hover:underline">Xem tất cả →</button>
+        </div>
+        {/* Mobile: cards */}
+        <div className="lg:hidden space-y-2">
+          {mockJobs.slice(0, 5).map((j) => {
+            const s = getJobStatusBadge(j.status)
+            return (
+              <div key={j.id} className="p-3 rounded-lg border border-navy-100/50 bg-white/50">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold text-navy-900">{j.id}</span>
+                  <StatusBadge variant={j.status === 'IN_PROGRESS' ? 'success' : j.status === 'COMPLETED' ? 'info' : j.status === 'PLANNED' ? 'warning' : 'neutral'} label={s.label} />
+                </div>
+                <p className="text-xs text-gray-500 truncate">{j.route}</p>
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-[11px] text-gray-400">{j.driverName}</span>
+                  <span className="text-xs font-bold text-navy-900 font-mono-num">{formatCurrencyShort(j.revenue)}</span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        {/* Desktop: table */}
+        <div className="hidden lg:block overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-[11px] text-gray-400 uppercase tracking-wider border-b border-navy-100">
+                <th className="pb-2 pr-3 font-semibold">Mã</th>
+                <th className="pb-2 pr-3 font-semibold">Ngày</th>
+                <th className="pb-2 pr-3 font-semibold">Tuyến</th>
+                <th className="pb-2 pr-3 font-semibold">Tài xế</th>
+                <th className="pb-2 pr-3 font-semibold">Trạng thái</th>
+                <th className="pb-2 text-right font-semibold">Cước</th>
+              </tr>
+            </thead>
+            <tbody>
+              {mockJobs.slice(0, 8).map((j) => {
+                const s = getJobStatusBadge(j.status)
+                return (
+                  <tr key={j.id} className="border-b border-navy-50 last:border-0 hover:bg-navy-50/30">
+                    <td className="py-2.5 pr-3 font-semibold text-navy-900 font-mono-num">{j.id}</td>
+                    <td className="py-2.5 pr-3 text-gray-500 font-mono-num">{j.jobDate}</td>
+                    <td className="py-2.5 pr-3 text-navy-900 max-w-[220px] truncate">{j.route}</td>
+                    <td className="py-2.5 pr-3 text-gray-500">{j.driverName}</td>
+                    <td className="py-2.5 pr-3"><StatusBadge variant={j.status === 'IN_PROGRESS' ? 'success' : j.status === 'COMPLETED' ? 'info' : j.status === 'PLANNED' ? 'warning' : 'neutral'} label={s.label} /></td>
+                    <td className="py-2.5 text-right font-semibold text-navy-900 font-mono-num">{formatCurrencyShort(j.revenue)}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </GlassCard>
+
+      {/* Period Close */}
+      <GlassCard className="p-5">
+        <h3 className="text-sm font-bold text-navy-900 font-display mb-3">Chốt sổ</h3>
+        <div className="space-y-2">
+          {mockPeriodCloses.map((pc) => (
+            <div key={pc.id} className="flex items-center justify-between p-3 rounded-lg bg-navy-50/30 border border-navy-100/50">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-bold text-navy-900 font-mono-num">{pc.month}</span>
+                <StatusBadge variant={pc.status === 'closed' ? 'success' : 'warning'} label={pc.status === 'closed' ? 'Đã chốt' : 'Đang mở'} />
+              </div>
+              <div className="flex items-center gap-3 text-[11px]">
+                <span className="text-gray-400">DT: <b className="text-navy-900">{formatCurrencyShort(pc.totalRevenue)}</b></span>
+                <span className="text-gray-400">LN: <b className="text-emerald-600">{formatCurrencyShort(pc.profit)}</b></span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </GlassCard>
     </div>
   )
 }
