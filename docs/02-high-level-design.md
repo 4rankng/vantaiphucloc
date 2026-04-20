@@ -20,32 +20,39 @@
 │   /*      ─────────► React Static Build                       │
 └──────────────────────┬───────────────────────────────────────┘
                        │
+                       ▼
+┌──────────────────────────────────────────────────────────────┐
+│                     FastAPI Backend                            │
+│                                                               │
+│   API Routes (Thin Layer):                                    │
+│   - Xác thực request (JWT + RBAC)                             │
+│   - Ghi Audit Log (user action)                               │
+│   - Cập nhật bảng WORKFLOWS (state + attempt)                 │
+│   - Trả về response ngay lập tức                              │
+│                                                               │
+│   → KHÔNG chứa business logic                                 │
+│   → Mọi logic xử lý do Worker thực hiện                       │
+└──────────────────────┬───────────────────────────────────────┘
+                       │
          ┌─────────────┼─────────────┐
          ▼             ▼             ▼
    ┌──────────┐  ┌──────────┐  ┌──────────────┐
-   │FastAPI   │  │ Redis    │  │ Object       │
-   │Backend   │  │ Cache +  │  │ Storage      │
-   │          │  │ Sessions │  │ (Ảnh, PDF)   │
-   │ - REST   │  │          │  │              │
-   │ - JWT    │  └──────────┘  └──────────────┘
-   │ - Celery │        │
-   │ - OCR    │        ▼
-   │          │  ┌──────────┐
-   └────┬─────┘  │Celery    │
-        │        │Worker    │
-        ▼        │(Background┘
-   ┌──────────┐  │ tasks)   │
-   │PostgreSQL│  └──────────┘
-   │          │        │
-   │ - Users  │        ▼
-   │ - Trips  │  ┌──────────────┐
-   │ - Fleet  │  │ Gemini API   │
-   │ - Costs  │  │ (OCR)        │
-   │ - Alerts │  └──────────────┘
-   │ - Audit  │
-   │ - Invoices│
-   └──────────┘
-```
+   │PostgreSQL│  │ Redis    │  │ Object       │
+│          │  │ Cache +  │  │ Storage      │
+│          │  │ Sessions │  │ (Ảnh, PDF)   │
+│          │  └──────────┘  └──────────────┘
+│ WORKFLOWS│        ▲
+│ (queue)  │        │
+│          │  ┌─────┴──────┐
+│ Users    │  │  Workflow  │
+│ Trips    │  │  Worker    │────────────── Gemini API (OCR)
+│ Fleet    │  │            │
+│ Expenses │  │  Polls     │────────────── Action handlers
+│ Alerts   │  │  WORKFLOWS │              (code-defined)
+│ Invoices │  │  attempt>0 │
+│ Audit    │  │            │
+│ Payments │  └────────────┘
+└──────────┘
 
 ### Triển khai
 - **Máy chủ đơn:** 1 DigitalOcean Droplet (4GB RAM, 2 vCPU)
@@ -301,6 +308,73 @@ PERIOD_CLOSES
 └── created_at (TIMESTAMP)
 ```
 
+### 2.10 Workflow Engine
+
+```
+WORKFLOWS
+├── id (SERIAL, AUTO INCREMENT, PK)
+├── run_id (UUID, UNIQUE)       — Nhận diện 1 thực thể chạy workflow
+├── state (INTEGER)              — Trạng thái hiện tại (định nghĩa trong code)
+├── attempt (INTEGER, default 0) — 0=chờ, 1+=đã thử, >max=dừng
+├── data (JSONB)                 — Dữ liệu mở rộng (entity_type, entity_id, event, payload, kết quả, lỗi)
+├── created_at (TIMESTAMP)
+└── updated_at (TIMESTAMP)
+```
+
+**Nguyên tắc hoạt động:**
+
+```
+API endpoint                          Workflow Worker
+─────────────                         ──────────────────
+1. Xác thực request (JWT + RBAC)      Poll: WHERE attempt > 0
+2. Ghi Audit Log (hành động user)     │
+3. INSERT/UPDATE bảng WORKFLOWS  ────►│
+   - Cập nhật state                   │
+   - Đặt attempt = 1 (kích worker)    │
+4. Trả về response ngay lập tức       │
+                                      ▼
+                                 Lấy workflow config (code)
+                                 Kiểm tra: attempt ≤ max_attempts?
+                                      │
+                                 ├─ Có: Thực thi transition action
+                                 │      ├─ Thành công → cập nhật state, attempt = 0
+                                 │      └─ Thất bại → attempt += 1 (thử lại lần sau)
+                                 │
+                                 └─ Không: Bỏ qua (cần can thiệp thủ công)
+```
+
+**Ví dụ: Trip Workflow (định nghĩa trong code)**
+
+```python
+# States (integer enum)
+TRIP_DRAFT = 0
+TRIP_ASSIGNED = 1
+TRIP_PICKUP_EMPTY = 2
+TRIP_AT_PORT = 3
+TRIP_LOADED = 4
+TRIP_IN_TRANSIT = 5
+TRIP_ARRIVING = 6
+TRIP_DELIVERED = 7
+TRIP_COMPLETED = 8
+TRIP_CANCELLED = 9
+
+# Transitions (code-defined)
+TRIP_TRANSITIONS = {
+    (0, "assign"):       {"to": 1, "max_attempts": 1, "actions": ["notify_driver"]},
+    (1, "confirm_pickup"): {"to": 2, "max_attempts": 1, "actions": []},
+    (3, "ocr_complete"):  {"to": 4, "max_attempts": 3, "actions": ["save_container_code"]},
+    (7, "confirm_delivery"): {"to": 8, "max_attempts": 3, "actions": [
+        "calculate_costs", "check_anomalies", "generate_alerts"
+    ]},
+}
+```
+
+**Phân tách rõ ràng:**
+- **Audit Log** ghi lại hành động của người dùng (ai bấm gì, lúc nào, giá trị cũ/mới)
+- **Workflow Table** chỉ là hàng đợi trạng thái hệ thống (không chứa user context)
+- API route mỏng — chỉ xác thực + ghi log + cập nhật workflow
+- Worker xử lý toàn bộ business logic
+
 ---
 
 ## 3. Thiết kế API (REST)
@@ -441,54 +515,103 @@ GET    /api/v1/audit-logs               — Danh sách (filter: user, entity_typ
 
 ---
 
-## 4. State Machines
+## 4. State Machines (Định nghĩa trong Code)
 
-### 4.1 Trạng thái Chuyến xe
+Tất cả trạng thái, chuyển đổi và hành động được định nghĩa trong code. Bảng `WORKFLOWS` chỉ lưu trữ trạng thái thời gian chạy.
 
-```
-[draft] ──► [assigned] ──► [pickup_empty] ──► [at_port] ──► [loaded]
-                                                      │
-                                                      ▼
-[completed] ◄── [delivered] ◄── [arriving] ◄── [in_transit]
-
-[cancelled] ◄── (từ bất kỳ trạng thái nào trước in_transit)
-```
-
-**Quy tắc chuyển trạng thái:**
-- `draft → assigned`: Điều hành tạo và gán xe + tài xế
-- `assigned → pickup_empty`: Tài xế xác nhận nhận ca
-- `at_port → loaded`: Sau khi quét OCR container
-- `loaded → in_transit`: Rời cảng
-- `delivered → completed`: Sau khi chụp ảnh hạ bãi + tính chi phí tự động
-- Chỉ `cancelled` được rút lại trước khi xe chạy
-
-### 4.2 Trạng thái Chi phí
+### 4.1 Trạng thái Chuyến xe (Trip Workflow)
 
 ```
-[pending] ──► [approved]  (tự động cộng vào tổng chi phí chuyến)
-       │
-       └──► [rejected]    (kèm lý do, thông báo tài xế)
+State 0: draft
+State 1: assigned
+State 2: pickup_empty
+State 3: at_port
+State 4: loaded
+State 5: in_transit
+State 6: arriving
+State 7: delivered
+State 8: completed   (terminal)
+State 9: cancelled   (terminal)
+
+Luồng chính:
+0 ──► 1 ──► 2 ──► 3 ──► 4 ──► 5 ──► 6 ──► 7 ──► 8
+0~4 ──► 9 (hủy bất kỳ lúc nào trước khi chạy)
 ```
 
-### 4.3 Trạng thái Hóa đơn
+**Chuyển đổi và hành động:**
+
+| Từ → Đến | Event | Ai trigger | max_attempts | Actions (Worker) |
+|-----------|-------|------------|-------------|-----------------|
+| 0 → 1 | assign | Điều hành | 1 | notify_driver |
+| 1 → 2 | confirm_pickup | Tài xế | 1 | (none) |
+| 2 → 3 | arrive_port | Tài xế | 1 | (none) |
+| 3 → 4 | ocr_complete | Tài xế | 3 | save_container_code |
+| 4 → 5 | depart | Tài xế | 1 | notify_dispatcher |
+| 5 → 6 | arrive_dest | Tài xế | 1 | (none) |
+| 6 → 7 | deliver | Tài xế | 1 | (none) |
+| 7 → 8 | confirm_delivery | Tài xế | 3 | calculate_costs, check_anomalies, generate_alerts |
+| 0~4 → 9 | cancel | Điều hành | 1 | notify_driver |
+
+**Ví dụ luồng API → Worker:**
 
 ```
-[draft] ──► [issued] ──► [partial_paid] ──► [fully_paid]
-                   │                        ▲
-                   └──► [overdue] ──────────┘
+Tài xế bấm "Hoàn thành" trên app
+    │
+    ├─► API: Xác thực JWT + RBAC (role=driver)
+    ├─► API: Ghi Audit Log (user_id=xxx, action="confirm_delivery", entity=trip)
+    ├─► API: UPDATE workflows SET state=7, attempt=1 WHERE run_id=...
+    └─► API: Trả về {"status": "processing"}
+
+    Worker poll: attempt > 0 → tìm thấy
+    │
+    ├─► Worker: calculate_costs(trip) → cập nhật TRIPS totals
+    ├─► Worker: check_anomalies(trip) → tạo ALERTS nếu bất thường
+    ├─► Worker: generate_alerts(trip) → ghi DRIVER_VIOLATIONS
+    └─► Worker: UPDATE workflows SET state=8, attempt=0 WHERE run_id=...
 ```
 
-### 4.4 Trạng thái Xe
+### 4.2 Trạng thái Chi phí (Expense Workflow)
 
 ```
-[idle] ◄──► [active] ──► [on_trip]
-  │                          │
-  ▼                          ▼
-[maintenance] ◄──────────────┘
-  │
-  ▼
-[retired]
+State 0: pending
+State 1: approved  (terminal)
+State 2: rejected  (terminal)
 ```
+
+| Từ → Đến | Event | Ai trigger | max_attempts | Actions (Worker) |
+|-----------|-------|------------|-------------|-----------------|
+| 0 → 1 | approve | Điều hành / Kế toán | 1 | add_to_trip_cost |
+| 0 → 2 | reject | Điều hành / Kế toán | 1 | notify_driver |
+
+### 4.3 Trạng thái Hóa đơn (Invoice Workflow)
+
+```
+State 0: draft
+State 1: issued
+State 2: partial_paid
+State 3: fully_paid  (terminal)
+State 4: overdue
+```
+
+| Từ → Đến | Event | Ai trigger | max_attempts | Actions (Worker) |
+|-----------|-------|------------|-------------|-----------------|
+| 0 → 1 | issue | Kế toán | 1 | generate_pdf |
+| 1 → 2 | partial_payment | Kế toán | 1 | record_payment |
+| 1/2 → 3 | full_payment | Kế toán | 1 | record_payment, lock_invoice |
+| 1/2 → 4 | mark_overdue | Hệ thống | 1 | notify_director |
+| 4 → 2/3 | payment | Kế toán | 1 | record_payment |
+
+### 4.4 Trạng thái Xe (Vehicle — không dùng workflow, đơn giản)
+
+```
+State 0: idle
+State 1: active
+State 2: on_trip
+State 3: maintenance
+State 4: retired  (terminal)
+```
+
+Giao tiếp trực tiếp qua API (không cần worker). Trạng thái xe thay đổi khi chuyến xe bắt đầu/kết thúc.
 
 ---
 
