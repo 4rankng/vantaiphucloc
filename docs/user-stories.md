@@ -67,7 +67,7 @@
 |----|-------|------|----------|
 | US-6.1 | Tạo booking / lệnh vận chuyển từ yêu cầu khách hàng | Điều hành | P0 |
 | US-6.2 | Phê duyệt booking / lệnh vận chuyển | Giám đốc | P0 |
-| US-6.3 | Tạo chuyến xe từ booking đã duyệt (gán xe, tài xế, tuyến, chủ hàng) | Điều hành | P0 |
+| US-6.3 | Tạo chuyến xe từ booking đã duyệt (gán xe, tài xế, tuyến, chủ hàng) — validate xe rảnh | Điều hành | P0 |
 | US-6.4 | Gán chủ hàng cho chuyến — hoặc đánh dấu 'Chưa rõ Chủ hàng' | Điều hành | P0 |
 | US-6.5 | Nhận ca / xác nhận chuyến trên Mobile | Tài xế | P0 |
 | US-6.6 | Cập nhật trạng thái chuyến: 4 manual checkpoints (Nhận ca, Chụp container, Chụp giao hàng, Hạ bãi) + 4 auto geofence (Lấy rỗng, Cảng, Rời cảng, Đến nơi) | Tài xế + Hệ thống | P0 |
@@ -116,6 +116,9 @@
 | US-9.8 | Cảnh báo lái xe >4h liên tục không thay thẻ — từ lần 3 phạt 500,000đ | Hệ thống → Điều hành | P1 |
 | US-9.9 | Cảnh báo không nộp phiếu hạ vỏ/hàng — phạt 100,000đ | Hệ thống → Điều hành | P1 |
 | US-9.10 | Cấu hình quy định phạt nội quy (PENALTY_RULES): loại vi phạm, mức phạt, ngưỡng lần (vd: từ lần 3) | Giám đốc | P1 |
+| US-9.11 | Tự động phạt khi vi phạm lần thứ N (occurrence_threshold) — auto-deduct từ lương | Hệ thống | P1 |
+| US-9.12 | Cảnh báo duplicate container code — informational, không block trip | Hệ thống → Điều hành | P2 |
+| US-9.13 | Warning khi tạo chuyến cho tuyến × loại xe chưa có định mức xăng dầu | Hệ thống → Điều hành | P1 |
 
 ## Epic 10: Orphan Trip & Period Close
 
@@ -217,6 +220,9 @@
 | US-19.4 | File validation: size limits (photo 10MB, doc 25MB), type whitelist (jpeg, png, pdf) | Hệ thống | P1 |
 | US-19.5 | Permission check: user phải có quyền truy cập entity trước khi lấy presigned URL | Hệ thống | P1 |
 | US-19.6 | GPS archives stored in Spaces (cold storage), not in primary DB | Hệ thống | P2 |
+| US-19.7 | Document auto-delete sau retention period (1/3/5 năm) — cron job cleanup Spaces + DB | Hệ thống | P2 |
+| US-19.8 | Geofence status transition yêu cầu 2 consecutive GPS readings — chống false trigger | Hệ thống | P0 |
+| US-19.9 | Status regression blocked — workflow engine không cho backward transition | Hệ thống | P0 |
 
 ## Epic 15: Notifications & Reminders
 

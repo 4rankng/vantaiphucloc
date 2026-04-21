@@ -1517,7 +1517,7 @@ Khi tạo trip:
 
 ---
 
-*Tổng: 36 kịch bản — bao phủ toàn bộ main flows, edge cases, fraud detection, offline, workflow engine, reminders, pricing, P&L, aging, GPS lifecycle, driver heartbeat, geofence, document storage, và error handling.*
+*Tổng: 42 kịch bản — bao phủ toàn bộ main flows, edge cases, fraud detection, offline, workflow engine, reminders, pricing, P&L, aging, GPS lifecycle, driver heartbeat, geofence, document storage, conflict prevention, penalty enforcement, retention, và error handling.*
 
 ## SC-34: GPS Data Lifecycle — From Raw to Cold Storage
 
@@ -1766,4 +1766,194 @@ When director wants to view:
    → Backend generates presigned URL (15 min)
    → Director clicks link → PDF opens in browser
    → After 15 min → link expires → need to request again
+```
+
+## SC-37: Geofence False Trigger (GPS Drift)
+
+**Vai trò:** Hệ thống
+
+### Bối cảnh
+```
+Trip 112, status: en_route on highway near port.
+GPS drifts: 10.7420 → 10.7360 (momentarily appears inside port geofence).
+
+Without protection:
+  → False "at_port" trigger → trip jumps backward from en_route to at_port ❌
+
+With 2-reading confirmation:
+  Reading 1 (T+0s):  10.7360, 106.7250 → distance to port center: 800m → INSIDE
+  Reading 2 (T+30s): 10.7420, 106.7310 → distance to port center: 1500m → OUTSIDE
+  → 1 inside, 1 outside → NOT confirmed → no transition ✓
+
+Legitimate arrival:
+  Reading 1 (T+0s):  10.7355, 106.7252 → 450m → INSIDE
+  Reading 2 (T+30s): 10.7350, 106.7248 → 380m → INSIDE
+  → 2 consecutive inside → CONFIRMED → auto at_port ✓
+
+Rule: 2 consecutive GPS readings (60 seconds) must agree before triggering geofence transition.
+```
+
+### Status regression protection
+```
+System NEVER allows backward status transitions:
+  en_route → at_port ❌ BLOCKED (regression)
+  at_port → leaving_port ✅ OK (forward)
+  leaving_port → at_port ❌ BLOCKED (regression)
+
+TRIP_STATUS_HISTORY is append-only — statuses only move forward.
+Even if geofence fires incorrectly, workflow engine rejects backward transition.
+```
+
+---
+
+## SC-38: Duplicate Container Code Detection
+
+**Vai trò:** Hệ thống → Điều hành Minh
+
+### Bối cảnh
+```
+Trip 112: OCR reads container code "TCLU7845230"
+System checks: this code already exists in Trip 101 (completed yesterday).
+
+ALERTS:
+  id: 5, trip_id: 112
+  alert_type: "duplicate_container"
+  severity: "low"
+  description: "Container TCLU7845230 đã được dùng ở chuyến TR-2026-0101 (hoàn thành 20/04)"
+
+NOTIFICATIONS → Điều hành Minh:
+  "Container TCLU7845230 trùng với TR-0101. Xác nhận đúng container?"
+
+Possible resolutions:
+  1. "Confirmed same container" — container being reused (normal in logistics)
+  2. "Wrong container" — OCR misread → driver re-photos or enters manually
+
+Business rule: Container reuse is normal (containers cycle through depots).
+Alert is informational only — does NOT block the trip.
+```
+
+---
+
+## SC-39: Vehicle Already On Trip (Conflict Prevention)
+
+**Vai trò:** Điều hành Minh → Hệ thống
+
+### Bối cảnh
+```
+Điều hành creates trip, selects vehicle 51F-1234:
+
+System check:
+  SELECT status FROM trips WHERE vehicle_id = 7 AND status NOT IN ('completed')
+  → Found: trip 110, status: "en_route"
+
+Response: 409 Conflict
+  "Xe 51F-1234 đang chạy chuyến TR-2026-0110 (en_route). Không thể gán chuyến mới."
+
+Only vehicles with status 'idle' or 'maintenance' (returning soon) are available in dropdown.
+Dashboard shows:
+  ✅ 51F-070.63 — Rảnh (idle)
+  ✅ 51F-139.82 — Rảnh (idle)
+  🚫 51F-1234 — Đang chạy TR-0110
+  🔧 51F-155.44 — Bảo dưỡng
+```
+
+---
+
+## SC-40: Penalty Auto-Enforcement (3rd GPS-Off Violation)
+
+**Vai trò:** Hệ thống → Kế toán Lan → Tài xế Bình
+
+### Bối cảnh
+```
+PENALTY_RULES:
+  rule_code: "gps_off_1h"
+  description: "Tắt GPS/định vị >1 giờ"
+  penalty_amount: 500000
+  penalty_type: "fine"
+  occurrence_threshold: 3
+  is_active: true
+
+Driver Bình's violation history (last 30 days):
+  1. 05/04/2026 — GPS off 1.5h → alert → dismissed (first time, warning only)
+  2. 12/04/2026 — GPS off 2h → alert → violation recorded
+  3. 21/04/2026 — GPS off 1.2h → THIS IS THE 3rd OCCURRENCE
+
+System auto-enforces:
+  DRIVER_PENALTIES:
+    driver_id: 13 (Bình)
+    trip_id: 115
+    penalty_rule_id: 1 (gps_off_1h)
+    amount: 500000
+    description: "Tắt GPS 1.2h — lần thứ 3 (ngưỡng phạt: từ lần 3)"
+
+  NOTIFICATIONS → Bình: "Phạt 500,000đ: Tắt GPS >1h (lần thứ 3). Chi tiết: chuyến TR-0115."
+  NOTIFICATIONS → Kế toán Lan: "Tài xế Bình phạt 500,000đ (tắt GPS lần 3). Tự động trừ vào lương."
+
+  → Auto-deducted from next payroll
+  → KPI: violation_count++ → impacts monthly KPI score
+```
+
+---
+
+## SC-41: Fuel Quota Matrix — Missing Entry
+
+**Vai trò:** Điều hành Minh → Hệ thống
+
+### Bối cảnh
+```
+Điều hành creates trip with:
+  route_id: 10 (HP → Sa Pa) × vehicle_type: "40ft_hc" (high cube)
+
+System lookup:
+  SELECT * FROM route_fuel_quotas WHERE route_id=10 AND vehicle_id=...
+  → EMPTY — no quota configured for this combination
+
+Warning shown to Minh:
+  "⚠️ Chưa có định mức xăng dầu cho tuyến HP→Sa Pa × 40ft HC.
+   Vui lòng nhập định mức thủ công hoặc cấu hình trong bảng định mức."
+
+Options:
+  1. Minh enters manual liters_per_100km for this trip → TRIP_FUEL_QUOTAS with override
+  2. Admin configures ROUTE_FUEL_QUOTAS entry for future trips
+
+Without a quota → fuel fraud detection DISABLED for this trip (no baseline to compare).
+Alert: "Chuyến TR-0116 không có định mức xăng dầu. Cảnh báo gian lận tắt."
+```
+
+---
+
+## SC-42: Document Retention & Auto-Delete
+
+**Vai trò:** Hệ thống
+
+### Bối cảnh
+```
+DOCUMENTS retention rules:
+  - booking, do, eir: retention_years = 1
+  - invoice, receipt: retention_years = 5
+  - customs: retention_years = 5
+  - delivery_receipt: retention_years = 3
+
+Cron job runs monthly:
+
+Step 1: Find expired documents
+  SELECT * FROM documents 
+  WHERE created_at < NOW() - INTERVAL '1 year' * retention_years
+  
+Step 2: Delete from DigitalOcean Spaces
+  s3_client.delete_object(Key=document.storage_key)
+
+Step 3: Delete from DB
+  DELETE FROM documents WHERE id IN (...)
+
+Step 4: Log
+  AUDIT_LOGS: "System auto-deleted 47 expired documents (retention period expired)"
+
+Example:
+  Invoice HD-2021-0150, created 2021-03-15, retention 5 years
+  → Eligible for deletion after 2026-03-15
+  → Cron in April 2026 picks it up → deleted from Spaces + DB
+
+Photos (TRIP_PHOTOS): retention_years = 3 (audit trail)
+GPS archives: retention_years = 1 (cold storage cleanup)
 ```
