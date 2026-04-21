@@ -1,14 +1,13 @@
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { useAuth } from '@/contexts/AuthContext'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/Sheet/Sheet'
-import { Settings, HelpCircle, FileText, LogOut, UserCircle, Phone } from 'lucide-react'
+import { Settings, HelpCircle, FileText, UserCircle, Phone } from 'lucide-react'
 
 export function MoreMenu() {
-  const { logout: authLogout, user } = useAuth()
+  const { user } = useAuth()
   const { navigate, driver } = useDriverStore()
   const initials = driver.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 
-  const handleLogout = () => authLogout()
   const handleSettings = () => alert('Tính năng đang phát triển')
   const handleHelp = () => alert('Gọi 1900-xxxx để được hỗ trợ')
   const handleRules = () => alert('Quy định vận tải sẽ được cập nhật sớm')
@@ -17,7 +16,6 @@ export function MoreMenu() {
     { icon: Settings, label: 'Cài đặt', action: handleSettings },
     { icon: HelpCircle, label: 'Trợ giúp', action: handleHelp },
     { icon: FileText, label: 'Quy định', action: handleRules },
-    { icon: LogOut, label: 'Đăng xuất', action: handleLogout, danger: true },
   ]
 
   return (
@@ -39,7 +37,7 @@ export function MoreMenu() {
           </div>
         </div>
       )}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         {menuItems.map(({ icon: Icon, label, action, danger }) => (
           <button
             key={label}
