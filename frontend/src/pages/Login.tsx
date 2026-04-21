@@ -7,8 +7,8 @@ import { Truck, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react'
 
 export function Login() {
   const { login } = useAuth()
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
+  const [username, setUsername] = useState('driver')
+  const [password, setPassword] = useState('driver')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
 
