@@ -201,10 +201,22 @@ Bảng `WORKFLOWS` điều khiển trạng thái phức tạp của Chuyến xe,
 4. Nếu transition thất bại → `attempt` tăng, engine thử lại (retry).
 5. Một số state có event không cần transition (ví dụ event = 999) — đây là event hợp lệ, khi `attempt = 1` thì transition function vẫn được thực thi.
 
-**Ví dụ — Chuyến xe:**
+**Ví dụ — Chuyến xe (workflow_id=1):**
 - State 1 (Nhận ca) + Event 10 (Bắt đầu) → State 2 (Lấy rỗng)
 - State 2 + Event 20 (Lấy xong) → State 3 (Đến cảng)
-- State 3 + Event 999 (Auto-timeout) → Alert + giữ state
+- State 5 (Đang chạy) + Event 999 (Auto-timeout) → Alert + giữ state (self-loop)
+
+**Ánh xạ workflow_id → Python class:**
+- `workflow_id=1` → `TripWorkflow` (8 states, 8+ transitions)
+- `workflow_id=2` → `ExpenseWorkflow` (3 states: pending/approved/rejected)
+- `workflow_id=3` → `InvoiceWorkflow`
+
+**Thư viện:** `python-statemachine` — hỗ trợ đầy đủ:
+- `State(N)` cho int state values
+- `.to.itself()` cho self-loop / no-op events
+- Mỗi (state, event) = đúng một transition function (bắt buộc bởi library)
+- Mỗi workflow_id = một Python class riêng
+- `send(event)` trigger transition
 
 **Retry Mechanism:** Tự động thử lại các action thất bại (OCR, Notify) với exponential backoff.
 **Blocking Actions:** Chỉ chuyển trạng thái khi các action quan trọng thành công.
