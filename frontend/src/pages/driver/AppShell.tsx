@@ -10,22 +10,21 @@ const moreItems = [
   { icon: FileText, label: 'Quy định', action: () => alert('Quy định vận tải sẽ được cập nhật sớm') },
 ]
 
+/* ─── Top bar ──────────────────────────────────────────────── */
 export function TopBar() {
-  const { driver, navigate } = useDriverStore()
+  const { driver } = useDriverStore()
   const { logout } = useAuth()
   const initials = driver.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 
   return (
-    <header
-      className="fixed top-0 left-0 right-0 z-50 border-b"
+    <div className="shell-topbar border-b"
       style={{
-        paddingTop: 'env(safe-area-inset-top)',
         background: 'var(--theme-header)',
         backdropFilter: 'var(--theme-glass-blur)',
         borderColor: 'var(--theme-header-border)',
       }}
     >
-      <div className="flex items-center justify-between h-12 px-4">
+      <div className="shell-topbar-inner flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <Truck className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
           <span className="text-lg font-bold" style={{ color: 'var(--theme-brand-primary)' }}>
@@ -33,7 +32,6 @@ export function TopBar() {
           </span>
         </div>
 
-        {/* Account dropdown — opens DOWN from avatar */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
@@ -63,7 +61,7 @@ export function TopBar() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate('/driver/profile')}>
+            <DropdownMenuItem onClick={() => useDriverStore.getState().navigate('/driver/profile')}>
               <UserCircle className="w-4 h-4 mr-2" style={{ color: 'var(--theme-text-muted)' }} />
               Hồ sơ
             </DropdownMenuItem>
@@ -74,10 +72,11 @@ export function TopBar() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </header>
+    </div>
   )
 }
 
+/* ─── Bottom nav ───────────────────────────────────────────── */
 const tabConfig = [
   { path: '/driver/trips', Icon: Truck, label: 'Chuyến' },
   { path: '/driver/expenses', Icon: Receipt, label: 'Chi phí' },
@@ -91,16 +90,14 @@ export function BottomNav() {
   const active = tabConfig.find(t => t.path !== '__more__' && currentPath.startsWith(t.path))?.path ?? '/driver/trips'
 
   return (
-    <nav
-      className="fixed bottom-0 left-0 right-0 z-50 border-t"
+    <div
+      className="shell-bottomnav border-t"
       style={{
-        paddingBottom: 'env(safe-area-inset-bottom)',
         background: 'var(--theme-bottom-nav)',
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',
         borderColor: 'var(--theme-bottom-nav-border)',
       }}
-      aria-label="Điều hướng chính"
     >
       <div className="flex items-stretch h-14 relative px-2">
         {tabConfig.map(({ path, Icon, label }) => {
@@ -108,22 +105,18 @@ export function BottomNav() {
           const isActive = !isMore && active === path
           const showBadge = path === '/driver/notifications' && unreadCount > 0
 
-          // More tab — reverse dropdown (opens UP from bottom nav)
           if (isMore) {
             return (
               <DropdownMenu key={path}>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className="flex-1 flex flex-col items-center justify-center gap-0.5 touch-manipulation relative group transition-all duration-300"
+                    className="flex-1 flex flex-col items-center justify-center gap-0.5 touch-manipulation"
                     aria-label={label}
                   >
-                    <div className="p-1.5 rounded-full" style={{ background: 'transparent' }}>
+                    <div className="p-1.5 rounded-full">
                       <Icon className="h-5 w-5" style={{ color: 'var(--theme-bottom-nav-inactive)' }} />
                     </div>
-                    <span
-                      className="text-[10px] font-medium leading-none opacity-80"
-                      style={{ color: 'var(--theme-bottom-nav-inactive)' }}
-                    >
+                    <span className="text-[10px] font-medium leading-none opacity-80" style={{ color: 'var(--theme-bottom-nav-inactive)' }}>
                       {label}
                     </span>
                   </button>
@@ -155,22 +148,12 @@ export function BottomNav() {
               )}
               <div className="relative">
                 <div
-                  className={cn(
-                    'p-1.5 rounded-full transition-all duration-300',
-                    isActive && '-translate-y-1',
-                  )}
-                  style={{
-                    background: isActive ? 'var(--theme-brand-primary-light)' : 'transparent',
-                  }}
+                  className={cn('p-1.5 rounded-full transition-all duration-300', isActive && '-translate-y-1')}
+                  style={{ background: isActive ? 'var(--theme-brand-primary-light)' : 'transparent' }}
                 >
                   <Icon
-                    className={cn(
-                      'h-5 w-5 transition-all duration-300',
-                      isActive && 'stroke-[2.5px]',
-                    )}
-                    style={{
-                      color: isActive ? 'var(--theme-bottom-nav-active)' : 'var(--theme-bottom-nav-inactive)',
-                    }}
+                    className={cn('h-5 w-5 transition-all duration-300', isActive && 'stroke-[2.5px]')}
+                    style={{ color: isActive ? 'var(--theme-bottom-nav-active)' : 'var(--theme-bottom-nav-inactive)' }}
                   />
                 </div>
                 {showBadge && (
@@ -183,13 +166,8 @@ export function BottomNav() {
                 )}
               </div>
               <span
-                className={cn(
-                  'text-[10px] font-medium leading-none transition-all duration-300',
-                  !isActive && 'opacity-80',
-                )}
-                style={{
-                  color: isActive ? 'var(--theme-bottom-nav-active)' : 'var(--theme-bottom-nav-inactive)',
-                }}
+                className={cn('text-[10px] font-medium leading-none transition-all duration-300', !isActive && 'opacity-80')}
+                style={{ color: isActive ? 'var(--theme-bottom-nav-active)' : 'var(--theme-bottom-nav-inactive)' }}
               >
                 {label}
               </span>
@@ -197,22 +175,16 @@ export function BottomNav() {
           )
         })}
       </div>
-    </nav>
+    </div>
   )
 }
 
+/* ─── Shell layout ─────────────────────────────────────────── */
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen" style={{ background: 'var(--theme-bg-primary)' }}>
+    <div className="shell" style={{ background: 'var(--theme-bg-primary)' }}>
       <TopBar />
-      <main
-        className="overflow-y-auto"
-        style={{
-          paddingTop: 'calc(3.5rem + env(safe-area-inset-top, 0px) + 16px)',
-          paddingBottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))',
-          minHeight: '100vh',
-        }}
-      >
+      <main className="shell-main overflow-y-auto">
         {children}
       </main>
       <BottomNav />
