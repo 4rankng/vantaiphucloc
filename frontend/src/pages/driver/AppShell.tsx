@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Truck, Receipt, Wallet, Bell, Menu, UserCircle, LogOut } from 'lucide-react'
+import { Truck, Receipt, Wallet, Bell, Menu, UserCircle, LogOut, Settings, HelpCircle, FileText, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { useAuth } from '@/contexts/AuthContext'
@@ -43,6 +43,7 @@ export function TopBar() {
         </div>
       </header>
 
+      {/* Account — TOP sheet */}
       <Sheet open={profileOpen} onOpenChange={setProfileOpen}>
         <SheetContent side="top" className="rounded-b-2xl">
           <div className="flex items-center gap-3 mb-4">
@@ -86,87 +87,127 @@ const tabConfig = [
   { path: '/driver/expenses', Icon: Receipt, label: 'Chi phí' },
   { path: '/driver/earnings', Icon: Wallet, label: 'Thu nhập' },
   { path: '/driver/notifications', Icon: Bell, label: 'Thông báo' },
-  { path: '/driver/more', Icon: Menu, label: 'Thêm' },
+  { path: '__more__', Icon: Menu, label: 'Thêm' },
+]
+
+const moreItems = [
+  { icon: Settings, label: 'Cài đặt', action: () => alert('Tính năng đang phát triển') },
+  { icon: HelpCircle, label: 'Trợ giúp', action: () => alert('Gọi 1900-xxxx để được hỗ trợ') },
+  { icon: FileText, label: 'Quy định', action: () => alert('Quy định vận tải sẽ được cập nhật sớm') },
 ]
 
 export function BottomNav() {
   const { currentPath, navigate, unreadCount } = useDriverStore()
-  const active = tabConfig.find(t => currentPath.startsWith(t.path))?.path ?? '/driver/trips'
+  const [moreOpen, setMoreOpen] = useState(false)
+  const active = tabConfig.find(t => t.path !== '__more__' && currentPath.startsWith(t.path))?.path ?? '/driver/trips'
+
+  const handleTabClick = (path: string) => {
+    if (path === '__more__') {
+      setMoreOpen(true)
+    } else {
+      navigate(path)
+    }
+  }
 
   return (
-    <nav
-      className="fixed bottom-0 left-0 right-0 z-50 border-t"
-      style={{
-        paddingBottom: 'env(safe-area-inset-bottom)',
-        background: 'var(--theme-bottom-nav)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
-        borderColor: 'var(--theme-bottom-nav-border)',
-      }}
-      aria-label="Điều hướng chính"
-    >
-      <div className="flex items-stretch h-14 relative px-2">
-        {tabConfig.map(({ path, Icon, label }) => {
-          const isActive = active === path
-          const showBadge = path === '/driver/notifications' && unreadCount > 0
-          return (
-            <button
-              key={path}
-              onClick={() => navigate(path)}
-              className="flex-1 flex flex-col items-center justify-center gap-0.5 touch-manipulation relative group transition-all duration-300"
-              aria-label={label}
-            >
-              {isActive && (
-                <span
-                  className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-1.5 rounded-b-full"
-                  style={{ background: 'var(--theme-bottom-nav-active)', opacity: 0.9 }}
-                />
-              )}
-              <div className="relative">
-                <div
-                  className={cn(
-                    'p-1.5 rounded-full transition-all duration-300',
-                    isActive && '-translate-y-1',
-                  )}
-                  style={{
-                    background: isActive ? 'var(--theme-brand-primary-light)' : 'transparent',
-                  }}
-                >
-                  <Icon
+    <>
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-50 border-t"
+        style={{
+          paddingBottom: 'env(safe-area-inset-bottom)',
+          background: 'var(--theme-bottom-nav)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          borderColor: 'var(--theme-bottom-nav-border)',
+        }}
+        aria-label="Điều hướng chính"
+      >
+        <div className="flex items-stretch h-14 relative px-2">
+          {tabConfig.map(({ path, Icon, label }) => {
+            const isMore = path === '__more__'
+            const isActive = isMore ? moreOpen : active === path
+            const showBadge = path === '/driver/notifications' && unreadCount > 0
+            return (
+              <button
+                key={path}
+                onClick={() => handleTabClick(path)}
+                className="flex-1 flex flex-col items-center justify-center gap-0.5 touch-manipulation relative group transition-all duration-300"
+                aria-label={label}
+              >
+                {isActive && (
+                  <span
+                    className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-1.5 rounded-b-full"
+                    style={{ background: 'var(--theme-bottom-nav-active)', opacity: 0.9 }}
+                  />
+                )}
+                <div className="relative">
+                  <div
                     className={cn(
-                      'h-5 w-5 transition-all duration-300',
-                      isActive && 'stroke-[2.5px]',
+                      'p-1.5 rounded-full transition-all duration-300',
+                      isActive && '-translate-y-1',
                     )}
                     style={{
-                      color: isActive ? 'var(--theme-bottom-nav-active)' : 'var(--theme-bottom-nav-inactive)',
+                      background: isActive ? 'var(--theme-brand-primary-light)' : 'transparent',
                     }}
-                  />
-                </div>
-                {showBadge && (
-                  <span
-                    className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
-                    style={{ background: 'var(--theme-status-error)' }}
                   >
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
-              </div>
-              <span
-                className={cn(
-                  'text-[10px] font-medium leading-none transition-all duration-300',
-                  !isActive && 'opacity-80',
-                )}
-                style={{
-                  color: isActive ? 'var(--theme-bottom-nav-active)' : 'var(--theme-bottom-nav-inactive)',
-                }}
+                    <Icon
+                      className={cn(
+                        'h-5 w-5 transition-all duration-300',
+                        isActive && 'stroke-[2.5px]',
+                      )}
+                      style={{
+                        color: isActive ? 'var(--theme-bottom-nav-active)' : 'var(--theme-bottom-nav-inactive)',
+                      }}
+                    />
+                  </div>
+                  {showBadge && (
+                    <span
+                      className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
+                      style={{ background: 'var(--theme-status-error)' }}
+                    >
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </div>
+                <span
+                  className={cn(
+                    'text-[10px] font-medium leading-none transition-all duration-300',
+                    !isActive && 'opacity-80',
+                  )}
+                  style={{
+                    color: isActive ? 'var(--theme-bottom-nav-active)' : 'var(--theme-bottom-nav-inactive)',
+                  }}
+                >
+                  {label}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </nav>
+
+      {/* More — BOTTOM sheet with 3 buttons in one row */}
+      <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+        <SheetContent side="bottom" className="rounded-t-2xl">
+          <SheetHeader className="pb-3">
+            <SheetTitle className="text-base font-semibold text-left">Thêm</SheetTitle>
+          </SheetHeader>
+          <div className="flex gap-2 pb-2">
+            {moreItems.map(({ icon: Icon, label, action }) => (
+              <button
+                key={label}
+                className="flex-1 flex flex-col items-center justify-center gap-1.5 py-4 rounded-xl transition-colors touch-manipulation border"
+                style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
+                onClick={() => { setMoreOpen(false); action() }}
               >
-                {label}
-              </span>
-            </button>
-          )
-        })}
-      </div>
-    </nav>
+                <Icon className="w-5 h-5" style={{ color: 'var(--theme-text-secondary)' }} />
+                <span className="text-xs font-medium leading-none" style={{ color: 'var(--theme-text-secondary)' }}>{label}</span>
+              </button>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
   )
 }
 
