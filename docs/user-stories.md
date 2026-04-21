@@ -54,6 +54,7 @@
 | US-5.2 | Cấu hình định mức xăng dầu theo ma trận xe × tải trọng (5 mức: empty/loaded_light/loaded_heavy/cargo_heavy/cargo_light) — L/100km | Giám đốc | P1 |
 | US-5.2b | Ghi đè định mức xăng dầu cho từng chuyến (kèm lý do, vd: xe cũ, đường sửa) | Điều hành | P1 |
 | US-5.3 | So sánh chi phí thực tế (nhiên liệu, thời gian) với định mức tuyến đường (dựa trên load_type) | Hệ thống | P1 |
+| US-5.3b | Tính actual_distance_km = haversine sum of GPS_LOG points mỗi 30s; so với ROUTES.distance_km → flag lệch tuyến >15% | Hệ thống | P0 |
 | US-5.4 | Cấu hình bảng giá cước: tuyến × loại xe → tiền đi đường (mooc 40', 40', 20', mooc 20') | Giám đốc | P0 |
 | US-5.5 | Chọn load_type khi tạo chuyến (empty/loaded_light/loaded_heavy) → tự áp đúng định mức | Điều hành | P1 |
 | US-5.6 | Cấu hình phụ bổ sung định mức theo tuyến (vd: Mộc Châu +3L/100km) | Giám đốc | P2 |
@@ -178,7 +179,7 @@
 | US-14.6 | Khai báo đổ dầu (lít + tiền + ảnh biên lai) | Tài xế | P0 |
 | US-14.7 | Khai báo chi phí phát sinh + ảnh biên lai | Tài xế | P0 |
 | US-14.8 | Hoạt động offline — IndexedDB queue, tự đồng bộ khi có mạng | Tài xế | P0 |
-| US-14.9 | Background GPS tracking qua native plugin — gửi vị trí mỗi 5 phút kể cả khi screen off | Tài xế | P0 |
+| US-14.9 | Background GPS tracking qua native plugin — gửi vị trí mỗi 30 giây khi en_route, kể cả khi screen off | Tài xế | P0 |
 | US-14.10 | Android: Foreground Service notification ("Hoàng đang chạy TR-0101") khi GPS active | Tài xế | P0 |
 | US-14.11 | iOS: Request "Always Allow" location permission cho background tracking | Tài xế | P0 |
 | US-14.12 | Xem thu nhập hôm nay | Tài xế | P1 |
@@ -189,10 +190,14 @@
 
 | ID | Story | Role | Priority |
 |----|-------|------|----------|
-| US-18.1 | Polling 30s cập nhật vị trí xe trên bản đồ cho tất cả chuyến đang chạy | Điều hành, Giám đốc | P0 |
+| US-18.1 | Polling 30s cập nhật vị trí xe trên bản đồ + GPS trail cho tất cả chuyến đang chạy | Điều hành, Giám đốc | P0 |
 | US-18.2 | Connection state indicator: 🟢 Online / 🔴 Offline (dựa trên navigator.onLine) | Hệ thống | P1 |
 | US-18.3 | Auto-pause polling khi offline, auto-resume khi online trở lại | Hệ thống | P1 |
 | US-18.4 | Cache GPS response 30s trên server (Redis) — tránh DB hit khi nhiều user mở dashboard | Hệ thống | P2 |
+| US-18.5 | Driver heartbeat POST mỗi 2 phút khi KHÔNG en_route (idle/pending) → track last_heartbeat_at | Tài xế | P1 |
+| US-18.6 | Driver status on dashboard: 🟢 Tracking / 🟡 Idle Online / 🔴 Offline / ⚫ Off Duty | Điều hành, Giám đốc | P1 |
+| US-18.7 | Route deviation alert: actual_distance_km >15% so với ROUTES.distance_km → cảnh báo lệch tuyến | Hệ thống → Điều hành | P0 |
+| US-18.8 | GPS_LOG cleanup: archive to cold storage sau khi trip completed, keep 90 days hot | Hệ thống | P2 |
 
 ## Epic 15: Notifications & Reminders
 
