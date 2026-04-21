@@ -174,7 +174,7 @@
 - `PAYMENTS`: id, invoice_id, amount, payment_method, reference_number, paid_by, notes, created_at.
 
 #### Workflows, Alerts & Notifications
-- `WORKFLOWS`: id (auto-increment), run_id (UUID), state (int), event (int), attempt (int), data (JSON). — State machine engine.
+- `WORKFLOWS`: id (auto-increment), run_id (UUID) — định danh instance, workflow_id (int) — loại workflow, state (int), event (int), attempt (int), data (JSON). — State machine engine.
 - `ALERTS`: id, trip_id, alert_type (fuel_anomaly/time_anomaly/route_deviation/idle), severity, description, is_resolved, resolved_by, resolution (violation/dismissed), resolution_note, created_at, resolved_at.
 - `NOTIFICATIONS`: id, user_id, type, title, message, entity_type, entity_id, is_read, created_at.
 - `DOCUMENTS`: id, entity_type, entity_id, doc_type (booking/do/eir/invoice/receipt/customs), file_path, uploaded_by, retention_years, created_at.
@@ -185,13 +185,14 @@ Bảng `WORKFLOWS` điều khiển trạng thái phức tạp của Chuyến xe,
 
 **Cấu trúc bảng:**
 - `id`: Auto-increment primary key
-- `run_id`: UUID — định danh duy nhất cho một thực thể nghiệp vụ (một chuyến xe, một chi phí, v.v.)
+- `run_id`: UUID — định danh instance của workflow (một chuyến xe, một chi phí, v.v.)
+- `workflow_id`: int — loại workflow (trip, expense, invoice…). Mỗi loại định nghĩa tập state/event/transition riêng trong code.
 - `state`: int — trạng thái hiện tại
 - `event`: int — sự kiện cần xử lý (0 = không có event chờ)
 - `attempt`: int — số lần thử transition
 - `data`: JSON — payload nghiệp vụ
 
-**Một thực thể = một dòng.** Mọi thay đổi trạng thái đều UPDATE trực tiếp trên cùng một dòng, không INSERT dòng mới. `run_id` là UUID để liên kết với thực thể nghiệp vụ (trip, expense, invoice), không phải để nhóm nhiều dòng.
+**Một thực thể = một dòng.** Mọi thay đổi trạng thái đều UPDATE trực tiếp trên cùng một dòng, không INSERT dòng mới.
 
 **Nguyên tắc hoạt động:**
 1. Mỗi cặp (state, event) có **đúng một** transition function duy nhất — bản chất của state machine.
