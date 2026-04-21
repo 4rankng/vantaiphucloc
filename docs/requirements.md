@@ -186,7 +186,7 @@ Bảng `WORKFLOWS` điều khiển trạng thái phức tạp của Chuyến xe,
 **Cấu trúc bảng:**
 - `id`: Auto-increment primary key
 - `run_id`: UUID — định danh instance của workflow
-- `workflow_type`: varchar — tên Python class (`'TripWorkflow'`, `'ExpenseWorkflow'`…) → engine instantiate đúng class
+- `workflow_type`: varchar — loại workflow (`'Trip'`, `'Expense'`, `'Invoice'`) → engine map sang Python class (`TripWorkflow`, `ExpenseWorkflow`)
 - `state`: varchar — state id trực tiếp từ `wf.current_state_value` (ví dụ `'received'`, `'en_route'`, `'completed'`)
 - `event`: varchar — event id trực tiếp từ library, đúng tên method (ví dụ `'start'`, `'pick_empty'`, `'timeout'`). NULL hoặc `''` = không có event chờ.
 - `attempt`: int — số lần thử transition
@@ -207,13 +207,14 @@ Bảng `WORKFLOWS` điều khiển trạng thái phức tạp của Chuyến xe,
 5. Self-loop events (`.to.itself()`) — event hợp lệ, state không đổi, `attempt = 1` vẫn thực thi.
 
 **Ví dụ — Chuyến xe (workflow_type='TripWorkflow'):**
-- state='received' + event='start' → state='empty_pickup'
-- state='en_route' + event='timeout' → state='en_route' (self-loop, tạo alert)
+- state='received' + event='start' → state='empty_pickup' (Trip)
+- state='en_route' + event='timeout' → state='en_route' (Trip, self-loop, tạo alert)
+- state='pending' + event='approve' → state='approved' (Expense)
 
 **Ánh xạ workflow_type → Python class:**
-- `'TripWorkflow'` → 8 states, 8+ transitions
-- `'ExpenseWorkflow'` → 3 states (pending/approved/rejected)
-- `'InvoiceWorkflow'` → states cho hóa đơn
+- `'Trip'` → class TripWorkflow (8 states, 8+ transitions)
+- `'Expense'` → class ExpenseWorkflow (3 states: pending/approved/rejected)
+- `'Invoice'` → class InvoiceWorkflow
 
 **python-statemachine API chính:**
 - `wf = TripWorkflow()` → khởi tạo
