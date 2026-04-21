@@ -21,7 +21,7 @@ export default function AccountantReceivablesPage() {
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         <StatCard icon={<DollarSign size={18}/>} label="Tổng công nợ" value={formatCurrencyShort(totalDebt)} variant="danger" />
         <StatCard icon={<AlertTriangle size={18}/>} label="Quá hạn" value={formatCurrencyShort(96000000)} variant="danger" />
-        <div className="col-span-2 lg:col-span-1"><StatCard icon={<ArrowUpRight size={18}/>} label="Số khách nợ" value={debtors.length} variant="warning" /></div>
+        <div className="col-span-2 lg:col-span-1"><StatCard icon={<ArrowUpRight size={18}/>} label="Số khách nợ" value={`${debtors.length}`} variant="warning" /></div>
       </div>
 
       <FilterBar searchPlaceholder="Tìm khách hàng..." />

@@ -13,7 +13,7 @@ export default function DirectorReportsPage() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard icon={<TrendingUp size={18}/>} label="Doanh thu tháng" value={formatCurrencyShort(cur.revenue)} variant="gold" trend="up" />
+        <StatCard icon={<TrendingUp size={18}/>} label="Doanh thu tháng" value={formatCurrencyShort(cur.revenue)} variant="gold" trend={{direction:'up'}} />
         <StatCard icon={<TrendingDown size={18}/>} label="Chi phí tháng" value={formatCurrencyShort(cur.expense)} variant="warning" />
         <StatCard icon={<DollarSign size={18}/>} label="Tổng HĐ" value={formatCurrencyShort(totalInvoiced)} />
         <StatCard icon={<BarChart3 size={18}/>} label="Biên lợi nhuận" value={`${((cur.revenue - cur.expense) / cur.revenue * 100).toFixed(1)}%`} variant="success" />

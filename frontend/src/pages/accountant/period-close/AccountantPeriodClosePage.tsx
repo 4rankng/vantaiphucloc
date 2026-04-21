@@ -16,7 +16,7 @@ export default function AccountantPeriodClosePage() {
     <div className="space-y-4">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard icon={<BookOpen size={18}/>} label="Tháng hiện tại" value={openPeriod?.month || '—'} />
-        <StatCard icon={<CheckCircle size={18}/>} label="Chuyến trong tháng" value={openPeriod?.jobCount || 0} />
+        <StatCard icon={<CheckCircle size={18}/>} label="Chuyến trong tháng" value={`${openPeriod?.jobCount || 0}`} />
         <StatCard icon={<Unlock size={18}/>} label="Doanh thu" value={formatCurrencyShort(openPeriod?.totalRevenue || 0)} variant="gold" />
         <StatCard icon={<Lock size={18}/>} label="Lợi nhuận" value={formatCurrencyShort(openPeriod?.profit || 0)} variant="success" />
       </div>

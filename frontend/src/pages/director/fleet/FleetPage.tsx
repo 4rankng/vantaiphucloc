@@ -25,10 +25,10 @@ export default function FleetPage() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard icon={<Truck size={18}/>} label="Đầu kéo" value={mockTractors.length} />
-        <StatCard icon={<CircleDot size={18}/>} label="Đang chạy" value={running} variant="success" />
-        <StatCard icon={<Wrench size={18}/>} label="Rơ mooc" value={mockTrailers.length} />
-        <StatCard icon={<CircleDot size={18}/>} label="Rảnh" value={idle} variant="warning" />
+        <StatCard icon={<Truck size={18}/>} label="Đầu kéo" value={`${mockTractors.length}`} />
+        <StatCard icon={<CircleDot size={18}/>} label="Đang chạy" value={`${running}`} variant="success" />
+        <StatCard icon={<Wrench size={18}/>} label="Rơ mooc" value={`${mockTrailers.length}`} />
+        <StatCard icon={<CircleDot size={18}/>} label="Rảnh" value={`${idle}`} variant="warning" />
       </div>
 
       <FilterBar searchPlaceholder="Tìm biển số, tài xế..." onCreateClick={() => setShowCreate(true)} createLabel="Thêm xe" />

@@ -22,7 +22,7 @@ export default function DirectorReceivablesPage() {
     <div className="space-y-4">
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         <StatCard icon={<DollarSign size={18}/>} label="Tổng công nợ" value={formatCurrencyShort(totalDebt)} variant="danger" />
-        <StatCard icon={<Clock size={18}/>} label="Số khách nợ" value={debtors.length} variant="warning" />
+        <StatCard icon={<Clock size={18}/>} label="Số khách nợ" value={`${debtors.length}`} variant="warning" />
         <div className="col-span-2 lg:col-span-1"><StatCard icon={<AlertTriangle size={18}/>} label="Quá hạn" value={formatCurrencyShort(96000000)} variant="danger" /></div>
       </div>
 

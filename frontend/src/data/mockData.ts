@@ -425,12 +425,12 @@ export function getContainerBadgeColor(type: TrailerType): string {
   }
 }
 
-export function getJobStatusBadge(status: JobStatus): { bg: string; text: string; label: string } {
+export function getJobStatusBadge(status: JobStatus): { variant: 'default'|'success'|'warning'|'danger'|'info'|'neutral'; label: string } {
   switch (status) {
-    case 'DRAFT': return { bg: 'bg-gray-100', text: 'text-gray-600', label: 'Nháp' }
-    case 'PLANNED': return { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Lên kế hoạch' }
-    case 'IN_PROGRESS': return { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Đang chạy' }
-    case 'COMPLETED': return { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Hoàn thành' }
-    case 'CANCELLED': return { bg: 'bg-red-100', text: 'text-red-700', label: 'Huỷ' }
+    case 'DRAFT': return { variant: 'neutral', label: 'Nháp' }
+    case 'PLANNED': return { variant: 'warning', label: 'Lên kế hoạch' }
+    case 'IN_PROGRESS': return { variant: 'success', label: 'Đang chạy' }
+    case 'COMPLETED': return { variant: 'info', label: 'Hoàn thành' }
+    case 'CANCELLED': return { variant: 'danger', label: 'Huỷ' }
   }
 }

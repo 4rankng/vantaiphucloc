@@ -17,10 +17,10 @@ export default function DispatcherDashboard() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={<Route size={24}/>} label="Đang chạy" value={active.length} variant="success" />
-        <StatCard icon={<Clock size={24}/>} label="Lên kế hoạch" value={planned.length} variant="warning" />
-        <StatCard icon={<Truck size={24}/>} label="Xe hoạt động" value={running.length} />
-        <StatCard icon={<AlertTriangle size={24}/>} label="Cảnh báo" value={highAlerts.length} variant="danger" />
+        <StatCard icon={<Route size={18}/>} label="Đang chạy" value={`${active.length}`} unit="chuyến" variant="success" />
+        <StatCard icon={<Clock size={18}/>} label="Lên kế hoạch" value={`${planned.length}`} unit="chuyến" variant="warning" />
+        <StatCard icon={<Truck size={18}/>} label="Xe hoạt động" value={`${running.length}`} unit="xe" />
+        <StatCard icon={<AlertTriangle size={18}/>} label="Cảnh báo" value={`${highAlerts.length}`} unit="mới" variant="danger" />
       </div>
 
       {/* Active trips */}

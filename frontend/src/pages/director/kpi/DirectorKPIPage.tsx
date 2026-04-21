@@ -12,8 +12,8 @@ export default function DirectorKPIPage() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard icon={<Trophy size={18}/>} label="Tài xế" value={sorted.length} />
-        <StatCard icon={<Route size={18}/>} label="Tổng chuyến" value={totalTrips} variant="info" />
+        <StatCard icon={<Trophy size={18}/>} label="Tài xế" value={`${sorted.length}`} />
+        <StatCard icon={<Route size={18}/>} label="Tổng chuyến" value={`${totalTrips}`} variant="info" />
         <StatCard icon={<TrendingUp size={18}/>} label="Tổng doanh thu" value={formatCurrencyShort(totalRevenue)} variant="gold" />
         <StatCard icon={<Star size={18}/>} label="Đánh giá TB" value={`${avgRating} ⭐`} variant="success" />
       </div>

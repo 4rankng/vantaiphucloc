@@ -28,7 +28,7 @@ export default function DriverIncome() {
       </GlassCard>
 
       <div className="grid grid-cols-2 gap-3">
-        <StatCard icon={<Route size={20}/>} label="Chuyến tháng" value={driver.monthlyTrips} />
+        <StatCard icon={<Route size={20}/>} label="Chuyến tháng" value={`${driver.monthlyTrips}`} />
         <StatCard icon={<DollarSign size={20}/>} label="Cước/chuyến" value={formatCurrencyShort(driver.fixedFeePerTrip)} variant="gold" />
       </div>
 
