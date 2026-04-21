@@ -1,10 +1,11 @@
-import { Truck, Receipt, Wallet, Bell, Menu, UserCircle, LogOut, Settings, HelpCircle, FileText } from 'lucide-react'
+import { Truck, Receipt, Wallet, Bell, Menu, UserCircle, LogOut, Settings, HelpCircle, FileText, Home, MapPinned } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { useAuth } from '@/contexts/AuthContext'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/DropdownMenu/DropdownMenu'
 
 const moreItems = [
+  { icon: Bell, label: 'Thông báo', action: () => { const { navigate } = useDriverStore.getState(); navigate('/driver/notifications') } },
   { icon: Settings, label: 'Cài đặt', action: () => alert('Tính năng đang phát triển') },
   { icon: HelpCircle, label: 'Trợ giúp', action: () => alert('Gọi 1900-xxxx để được hỗ trợ') },
   { icon: FileText, label: 'Quy định', action: () => alert('Quy định vận tải sẽ được cập nhật sớm') },
@@ -78,16 +79,16 @@ export function TopBar() {
 
 /* ─── Bottom nav ───────────────────────────────────────────── */
 const tabConfig = [
-  { path: '/driver/trips', Icon: Truck, label: 'Chuyến' },
+  { path: '/driver', Icon: Home, label: 'Trang chủ' },
+  { path: '/driver/trips', Icon: MapPinned, label: 'Chuyến' },
   { path: '/driver/expenses', Icon: Receipt, label: 'Chi phí' },
   { path: '/driver/earnings', Icon: Wallet, label: 'Thu nhập' },
-  { path: '/driver/notifications', Icon: Bell, label: 'Thông báo' },
   { path: '__more__', Icon: Menu, label: 'Thêm' },
 ]
 
 export function BottomNav() {
   const { currentPath, navigate, unreadCount } = useDriverStore()
-  const active = tabConfig.find(t => t.path !== '__more__' && currentPath.startsWith(t.path))?.path ?? '/driver/trips'
+  const active = tabConfig.find(t => t.path !== '__more__' && t.path !== '/driver' && currentPath.startsWith(t.path))?.path ?? (currentPath === '/driver' || currentPath === '' ? '/driver' : '/driver')
 
   return (
     <div
