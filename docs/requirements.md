@@ -95,7 +95,19 @@
 
 ### 3.5 Quản lý Chuyến xe (Trip Lifecycle)
 - **Khởi tạo:** Điều hành tạo chuyến từ booking đã duyệt, gán xe, tài xế, tuyến đường, chủ hàng (nếu có).
-- **Trạng thái (8 bước theo REQ-3.4):** Nhận ca → Lấy rỗng → Đến cảng lấy hàng → Rời cảng → Đang chạy → Đến nơi → Hạ bãi → Hoàn thành.
+- **Trạng thái (8 bước theo REQ-3.4):** Hệ thống theo dõi 8 trạng thái nội bộ, nhưng tài xế chỉ cần thao tác **4 bước thủ công** — 4 bước còn lại tự động qua GPS geofencing:
+  - **Thủ công (4 bước tài xế click):**
+    1. **Nhận ca** — Tài xế xác nhận nhận chuyến
+    2. **Chụp container tại cảng** — Chụp ảnh → OCR tự nhận diện mã container
+    3. **Chụp giao hàng** — Chụp ảnh tại điểm giao
+    4. **Hạ bãi xong** — Xác nhận đã hạ container
+  - **Tự động (4 bước GPS geofence):**
+    - Lấy rỗng: GPS thoát depot geofence
+    - Đến cảng: GPS vào port geofence
+    - Rời cảng: GPS thoát port geofence + OCR xong
+    - Đang chạy: GPS trên highway (away from port)
+    - Đến nơi: GPS vào destination geofence
+    - Hoàn thành: auto sau khi hạ bãi xác nhận
 - **Loại container:** Ghi nhận loại container (20ft/40ft/45ft/high cube) trong chuyến.
 - **Thời gian & quãng đường:** Tự động ghi nhận start_time, end_time, actual_distance_km khi hoàn thành.
 - **Chuyến mồ côi:** Phát hiện và cảnh báo các chuyến chưa gán chủ hàng để kế toán xử lý.
@@ -188,6 +200,7 @@
 
 #### Routes & Quotas
 - `ROUTES`: id, name, origin, destination, distance_km, expected_duration_min, toll_discount, toll_surcharge, is_active.
+- `ROUTE_GEOFENCES`: id, route_id, geofence_type (depot/port/destination), latitude, longitude, radius_meters, label. — Vùng geofence cho auto status transitions.
 - `ROUTE_PRICING`: id, route_id, vehicle_type (mooc_40/40ft/20ft/mooc_20), trip_pay, is_active. — Bảng giá cước: tuyến × loại xe → tiền đi đường.
 - `ROUTE_FUEL_QUOTAS`: id, route_id, vehicle_id, load_type (empty/loaded_light/loaded_heavy/cargo_heavy/cargo_light), liters_per_100km, supplement_note, is_default, created_by, updated_by, updated_at. — Định mức dầu: xe × tải trọng. Phụ bổ sung ghi trong supplement_note (vd: 'Mộc Châu +3').
 - `TRIP_FUEL_QUOTAS`: id, trip_id, route_fuel_quota_id, load_type, default_liters_per_100km, actual_liters_per_100km, override_reason, overridden_by. — Định mức thực tế cho chuyến.
@@ -200,13 +213,13 @@
 - `GPS_LOG_CURRENT`: View → union last 3 months of partitions for active queries.
 - `TRIP_PATHS`: id, trip_id, compressed_path (BYTEA — Douglas-Peucker simplified + gzip), point_count, raw_point_count, created_at. — One row per trip after completion. Raw GPS_LOG rows deleted after compression.
 - `GPS_ARCHIVES`: id, trip_id, month, storage_path (S3/flat-file), archived_at. — Cold storage reference.
-- `TRIP_PHOTOS`: id, trip_id, photo_type (container_pickup/container_delivery/fuel_receipt/expense_receipt/other), file_path, latitude, longitude, accuracy, server_timestamp.
+- `TRIP_PHOTOS`: id, trip_id, photo_type (container_pickup/container_delivery/fuel_receipt/expense_receipt/other), storage_key (S3 key), presigned_url (tạm thời, 15 phút), latitude, longitude, accuracy, server_timestamp. — Ảnh lưu trên DigitalOcean Spaces, truy cập qua presigned URL.
 - `EXPENSES`: id, trip_id, category (fuel/toll/repair/tires/engine_oil/salary/other), amount, liters (nullable, chỉ cho fuel/engine_oil), description, receipt_photo_id, status (pending/approved/rejected), reject_reason, approved_by, approved_at, workflow_id (FK → workflows.id), created_at.
 - `PENALTY_RULES`: id, rule_code, description, penalty_amount, penalty_type (fine/warning/termination), occurrence_threshold (vd: '3' = từ lần thứ 3), is_active. — Quy định phạt nội quy.
 - `DRIVER_PENALTIES`: id, driver_id, trip_id, penalty_rule_id, amount, description, created_by, created_at. — Ghi nhận vi phạm phạt.
 
 #### Financials
-- `INVOICES`: id, invoice_number, client_id, trip_ids (array), subtotal, tax, total, pdf_path, status (draft/issued/paid/partially_paid), issued_at, paid_at, workflow_id (FK → workflows.id), notes.
+- `INVOICES`: id, invoice_number, client_id, trip_ids (array), subtotal, tax, total, pdf_storage_key (S3 key), status (draft/issued/paid/partially_paid), issued_at, paid_at, workflow_id (FK → workflows.id), notes.
 - `PAYMENTS`: id, invoice_id, amount, payment_method, reference_number, paid_by, notes, created_at.
 - `RECEIVABLES_AGING`: id, client_id, period_month, period_year, beginning_balance, new_charges, payments_received, ending_balance, aging_bucket (current/T1/T2/T3/T4+), gbn_number, notes. — Bảng aging công nợ (tổng hợp tháng).
 - `RECEIVABLES_DETAIL`: id, client_id, transaction_date, transaction_type (charge/payment), gbn_number, amount_debit, amount_credit, running_balance, notes. — Chi tiết sổ cái theo khách hàng.
@@ -215,7 +228,7 @@
 - `WORKFLOWS`: id (auto-increment), run_id (UUID), workflow_type (varchar), state (varchar), event (varchar), attempt (int), data (JSON). — State machine engine.
 - `ALERTS`: id, trip_id, alert_type (fuel_anomaly/time_anomaly/route_deviation/idle), severity, description, is_resolved, resolved_by, resolution (violation/dismissed), resolution_note, created_at, resolved_at.
 - `NOTIFICATIONS`: id, user_id, type, title, message, entity_type, entity_id, is_read, created_at.
-- `DOCUMENTS`: id, entity_type, entity_id, doc_type (booking/do/eir/invoice/receipt/customs), file_path, uploaded_by, retention_years, created_at.
+- `DOCUMENTS`: id, entity_type, entity_id, doc_type (booking/do/eir/invoice/receipt/customs), storage_key (S3 key), original_filename, content_type, file_size_bytes, uploaded_by, retention_years, created_at. — Chứng từ lưu trên DigitalOcean Spaces, truy cập qua presigned URL.
 
 ### 4.3 Workflow Engine (State Machine)
 
@@ -615,16 +628,93 @@ Raw GPS (30s)     Smart Filter       Douglas-Peucker     Compressed Path     Col
 
 ---
 
-## 7. Lộ trình Triển khai (Roadmap)
+### 6.7 Document & File Storage (DigitalOcean Spaces)
+
+All uploaded files (photos, invoices, receipts, documents) stored on **DigitalOcean Spaces** (S3-compatible object storage). Files are **never public** — accessed exclusively via **presigned URLs**.
+
+#### Architecture
+- **Storage:** DigitalOcean Spaces bucket (vd: `ttransport-docs`)
+- **Access control:** AWS SDK `get_presigned_url(key, expires=900)` — URL valid for 15 minutes only
+- **No direct links:** Database stores only `storage_key` (vd: `photos/2026/04/101_pickup.jpg`), never public URL
+- **Upload flow:** Client → Backend API → validate → upload to Spaces → store `storage_key` in DB
+- **Download flow:** Client request → Backend generate presigned URL (15 min) → Client fetches file
+
+#### Storage Structure
+```
+ttransport-docs/
+  photos/
+    {year}/{month}/{trip_id}_{type}.jpg     ← TRIP_PHOTOS
+  invoices/
+    {year}/{month}/{invoice_number}.pdf      ← INVOICES
+  documents/
+    {entity_type}/{entity_id}/{doc_type}.pdf ← DOCUMENTS
+  gps-archives/
+    {year}/{month}/trip_{id}_path.bin.gz     ← GPS_ARCHIVES
+```
+
+#### Presigned URL Rules
+- **Photo/Document view:** 15-minute presigned URL, generated on demand
+- **Invoice PDF:** 15-minute presigned URL, generated on demand
+- **GPS archive:** Internal only, not exposed to frontend
+- **Never store presigned URL in DB** — always generate fresh on request
+- **Never make bucket public** — all access through backend API
+
+#### Security
+- Spaces API key stored in backend environment variables only
+- CORS configured to allow only TTransport domains
+- Upload requires authenticated API request (JWT)
+- Download requires authenticated API request + entity-level permission check
+- File size limits: photos 10MB, documents 25MB, invoices 5MB
+- Allowed types: image/jpeg, image/png, application/pdf
+
+### 6.8 Geofence Auto-Status
+
+Hệ thống sử dụng GPS + geofence để tự động chuyển 4/8 trạng thái chuyến, giảm thao tác thủ công cho tài xế.
+
+#### Geofence Zones (ROUTE_GEOFENCES)
+- **Depot:** Khu vực bãi xe (bán kính ~500m). Khi GPS thoát → auto `empty_pickup`.
+- **Port:** Khu vực cảng (bán kính ~1km). Khi GPS vào → auto `at_port`. Khi GPS thoát + OCR xong → auto `leaving_port`.
+- **Destination:** Khu vực giao hàng (bán kính ~500m). Khi GPS vào → auto `arrived`.
+- **Configurable:** Admin cấu hình toạ độ + bán kính cho từng tuyến.
+
+#### Auto-Transition Logic
+```
+GPS point arrives every 30s:
+  1. Calculate distance to each geofence center
+  2. If distance < radius:
+     - Inside depot + status=received → auto empty_pickup
+     - Inside port + status=empty_pickup → auto at_port
+     - Left port + OCR done + status=at_port → auto leaving_port
+     - On highway (not in any geofence) + status=leaving_port → auto en_route
+     - Inside destination + status=en_route → auto arrived
+  3. After driver confirms "Hạ bãi" → auto completed
+```
+
+#### Driver Mobile UI (4 checkpoints only)
+```
+┌─────────────────────────────────────┐
+│  CHUYẾN TR-2026-0101               │
+│                                     │
+│  ✅ 1. Nhận ca        [Đã nhận]    │
+│  ✅ 2. Chụp container [Đã chụp]    │
+│     (OCR auto: TCLU7845230)         │
+│  ☐ 3. Chụp giao hàng [Chụp ảnh]    │
+│  ☐ 4. Hạ bãi xong    [Xác nhận]    │
+│                                     │
+│  Auto: Lấy rỗng ✓ Cảng ✓ Rời cảng ✓│
+│        Đang chạy... 📍 10.81, 106.71│
+└─────────────────────────────────────┘
+```
 
 ### Giai đoạn 1: MVP (Sản phẩm khả dụng tối thiểu)
 - Xác thực & phân quyền 4 vai trò.
-- CRUD: Users, Vehicles, Clients, Routes.
-- Luồng Booking → Phê duyệt → Tạo chuyến → 8 trạng thái → Hoàn thành.
-- OCR container + GPS timestamp + ảnh chỉ đọc.
+- CRUD: Users, Vehicles, Clients, Routes, Route Geofences.
+- Luồng Booking → Phê duyệt → Tạo chuyến → 4 manual checkpoints + 4 auto geofence → Hoàn thành.
+- OCR container + GPS timestamp + ảnh chỉ đọc (DigitalOcean Spaces + presigned URL).
+- Geofence auto-status: depot, port, destination zones.
 - Chi phí dọc đường (7 loại: fuel/toll/repair/tires/engine_oil/salary/other) + duyệt/từ chối (kèm lý do).
 - Bảng giá cước theo tuyến × loại xe.
-- Cảnh báo gian lận (nhiên liệu >10%, thời gian >150%, dừng đỗ >45 phút).
+- Cảnh báo gian lận (nhiên liệu >10%, thời gian >150%, dừng đỗ >45 phút, lệch tuyến >15%).
 - Chuyến mồ côi + chặn chốt sổ.
 - Công nợ + aging (T1-T4+) + bảng kê chi tiết theo khách hàng + xuất hóa đơn PDF.
 - Báo cáo P&L theo đầu xe.

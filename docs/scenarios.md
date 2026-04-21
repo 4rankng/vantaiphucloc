@@ -1517,7 +1517,7 @@ Khi tạo trip:
 
 ---
 
-*Tổng: 34 kịch bản — bao phủ toàn bộ main flows, edge cases, fraud detection, offline, workflow engine, reminders, pricing, P&L, aging, GPS lifecycle, driver heartbeat, và error handling.*
+*Tổng: 36 kịch bản — bao phủ toàn bộ main flows, edge cases, fraud detection, offline, workflow engine, reminders, pricing, P&L, aging, GPS lifecycle, driver heartbeat, geofence, document storage, và error handling.*
 
 ## SC-34: GPS Data Lifecycle — From Raw to Cold Storage
 
@@ -1617,4 +1617,153 @@ If audit needed:
   → Download from S3
   → Decompress gzip → reconstruct 35-point path
   → Render on map for investigation
+```
+
+## SC-35: Geofence Auto-Status (4 Manual + 4 Auto)
+
+**Vai trò:** Tài xế Hoàng → Hệ thống (geofence) → Điều hành Minh
+
+### Geofence zones configured
+```
+ROUTE_GEOFENCES for route_id=3 (Cát Lái → Bình Dương):
+
+  Depot (bãi xe):
+    lat: 10.7320, lng: 106.7200, radius: 500m
+    → GPS exits → auto empty_pickup
+
+  Port (Cảng Cát Lái):
+    lat: 10.7350, lng: 106.7250, radius: 1000m
+    → GPS enters → auto at_port
+    → GPS exits + OCR done → auto leaving_port
+
+  Destination (Kho Samsung):
+    lat: 10.8500, lng: 106.7100, radius: 500m
+    → GPS enters → auto arrived
+```
+
+### Driver flow — 4 manual actions only
+```
+Hoàng mở app, thấy chuyến TR-0101:
+
+Step 1: NHẬN CA (manual)
+  → Hoàng click [Nhận ca]
+  → WORKFLOW: received → empty_pickup
+  → GPS plugin starts
+  → Auto: GPS exits depot geofence → status confirmed empty_pickup
+
+Step 2: CHỤP CONTAINER (manual)
+  → Hoàng arrives at port (auto at_port via geofence)
+  → Hoảng chụp ảnh container → OCR auto-reads "TCLU7845230"
+  → Auto: GPS exits port → auto leaving_port
+  → Auto: GPS on highway → auto en_route
+
+  (No manual clicks between port and highway — GPS handles all)
+
+Step 3: CHỤP GIAO HÀNG (manual)
+  → GPS enters destination geofence → auto arrived
+  → Hoàng chụp ảnh giao hàng
+  → (Photos uploaded to DigitalOcean Spaces, presigned URL for office to view)
+
+Step 4: HẠ BÃI (manual)
+  → Hoàng click [Hạ bãi xong]
+  → WORKFLOW: arrived → dropped_off → completed (auto)
+  → GPS plugin stops
+  → Notification: "Chuyến TR-0101 hoàn thành" → Điều hành Minh
+
+Total manual clicks by driver: 4
+Total auto transitions: 4 (empty_pickup, at_port, leaving_port, en_route, arrived)
+```
+
+### Geofence accuracy handling
+```
+GPS at 10.7345, 106.7248 — distance to port center: 550m
+Port radius: 1000m → 550m < 1000m → INSIDE → auto at_port ✓
+
+GPS at 10.7420, 106.7310 — distance to port center: 1500m
+Port radius: 1000m → 1500m > 1000m → OUTSIDE → auto leaving_port ✓
+
+Edge case: GPS drift near boundary:
+  → Require 2 consecutive readings (60s) inside/outside to confirm
+  → Prevents false triggers from GPS inaccuracy
+```
+
+---
+
+## SC-36: Document Storage — Presigned URL Flow
+
+**Vai trò:** Tài xế Hoàng (upload) → Kế toán Lan (view)
+
+### Upload flow (driver photo)
+```
+Hoàng chụp ảnh container:
+
+1. Mobile app:
+   - Capacitor Camera captures photo
+   - Resize to max 1920px (reduce upload size)
+   - POST /api/v1/photos/upload
+     Content-Type: multipart/form-data
+     { trip_id: 101, photo_type: "container_pickup", file: image.jpg, lat: ..., lng: ... }
+
+2. Backend:
+   - Validate: JWT auth ✓, file size <10MB ✓, content-type image/jpeg ✓
+   - Generate storage_key: "photos/2026/04/101_container_pickup_20260421T083000.jpg"
+   - Upload to DigitalOcean Spaces:
+     s3_client.put_object(
+       Bucket="ttransport-docs",
+       Key="photos/2026/04/101_container_pickup_20260421T083000.jpg",
+       Body=image_bytes,
+       ContentType="image/jpeg",
+       ACL="private"  ← NEVER public
+     )
+   - Store in TRIP_PHOTOS:
+     storage_key: "photos/2026/04/101_container_pickup_20260421T083000.jpg"
+     (no URL stored, just the key)
+
+3. Response:
+   { id: 1, storage_key: "photos/2026/04/...", message: "uploaded" }
+```
+
+### View flow (accountant views photo)
+```
+Kế toán Lan wants to see container photo for trip 101:
+
+1. Frontend:
+   GET /api/v1/trip-photos/1
+
+2. Backend:
+   - Auth check: Lan has permission to view trip 101? ✓
+   - Generate presigned URL:
+     url = s3_client.generate_presigned_url(
+       ClientMethod="get_object",
+       Params={ "Bucket": "ttransport-docs", "Key": "photos/2026/04/101_container_pickup_20260421T083000.jpg" },
+       ExpiresIn=900  ← 15 minutes only
+     )
+   - Response: { presigned_url: "https://ttransport-docs.sgp1.digitaloceanspaces.com/photos/...?X-Amz-Signature=..." }
+
+3. Frontend:
+   - <img src={presigned_url} />
+   - URL expires in 15 minutes → then need to request new one
+   - URL is NOT guessable → can't access other documents
+
+4. Security:
+   - Bucket is PRIVATE (ACL: private)
+   - No direct public access possible
+   - Each presigned URL is unique, time-limited
+   - If someone shares the URL → expires in max 15 minutes
+```
+
+### Invoice PDF storage
+```
+Kế toán xuất hóa đơn HD-2026-0201:
+
+1. Backend generates PDF
+2. Upload to Spaces:
+   Key: "invoices/2026/04/HD-2026-0201.pdf"
+   ACL: private
+3. Store in INVOICES: pdf_storage_key = "invoices/2026/04/HD-2026-0201.pdf"
+
+When director wants to view:
+   → Backend generates presigned URL (15 min)
+   → Director clicks link → PDF opens in browser
+   → After 15 min → link expires → need to request again
 ```

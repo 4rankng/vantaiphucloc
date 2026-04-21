@@ -51,6 +51,7 @@
 | ID | Story | Role | Priority |
 |----|-------|------|----------|
 | US-5.1 | CRUD tuyến đường (điểm đi, điểm đến, quãng đường, thời gian dự kiến, giảm vé, phụ phí vé) | Điều hành | P0 |
+| US-5.1b | Cấu hình geofence zones cho tuyến: depot (lat, lng, radius), port, destination | Điều hành, Giám đốc | P0 |
 | US-5.2 | Cấu hình định mức xăng dầu theo ma trận xe × tải trọng (5 mức: empty/loaded_light/loaded_heavy/cargo_heavy/cargo_light) — L/100km | Giám đốc | P1 |
 | US-5.2b | Ghi đè định mức xăng dầu cho từng chuyến (kèm lý do, vd: xe cũ, đường sửa) | Điều hành | P1 |
 | US-5.3 | So sánh chi phí thực tế (nhiên liệu, thời gian) với định mức tuyến đường (dựa trên load_type) | Hệ thống | P1 |
@@ -69,7 +70,7 @@
 | US-6.3 | Tạo chuyến xe từ booking đã duyệt (gán xe, tài xế, tuyến, chủ hàng) | Điều hành | P0 |
 | US-6.4 | Gán chủ hàng cho chuyến — hoặc đánh dấu 'Chưa rõ Chủ hàng' | Điều hành | P0 |
 | US-6.5 | Nhận ca / xác nhận chuyến trên Mobile | Tài xế | P0 |
-| US-6.6 | Cập nhật trạng thái chuyến 8 bước: Nhận ca → Lấy rỗng → Đến cảng lấy hàng → Rời cảng → Đang chạy → Đến nơi → Hạ bãi → Hoàn thành | Tài xế | P0 |
+| US-6.6 | Cập nhật trạng thái chuyến: 4 manual checkpoints (Nhận ca, Chụp container, Chụp giao hàng, Hạ bãi) + 4 auto geofence (Lấy rỗng, Cảng, Rời cảng, Đến nơi) | Tài xế + Hệ thống | P0 |
 | US-6.7 | Ghi nhận loại container (20ft/40ft/45ft/high cube) trong chuyến | Điều hành, Tài xế | P0 |
 | US-6.8 | Xem chi tiết chuyến (timeline 8 bước, ảnh, chi phí, GPS) | Giám đốc, Điều hành, Kế toán | P0 |
 | US-6.9 | Tài xế xem chi tiết chuyến của mình (timeline, chi phí đã khai) | Tài xế | P0 |
@@ -183,6 +184,8 @@
 | US-14.9 | Background GPS tracking qua native plugin — gửi vị trí mỗi 30 giây từ empty_pickup đến completed, kể cả khi screen off | Tài xế | P0 |
 | US-14.10 | START tracking: "Nhận ca" → empty_pickup → native plugin start(); STOP: completed → stop() | Tài xế | P0 |
 | US-14.11 | iOS: Request "Always Allow" location permission cho background tracking | Tài xế | P0 |
+| US-14.12 | Geofence auto-status: GPS enters/exits depot/port/destination → auto transition trip status | Hệ thống | P0 |
+| US-14.13 | Driver UI: chỉ 4 checkpoint buttons (Nhận ca, Chụp container, Chụp giao hàng, Hạ bãi), các bước khác auto | Tài xế | P0 |
 | US-14.12 | Xem thu nhập hôm nay | Tài xế | P1 |
 | US-14.13 | Nhận push notification (cảnh báo, từ chối chi phí, nhắc nhở) qua Capacitor Push | Tài xế | P1 |
 | US-14.14 | Xem lịch sử vị trí chuyến trên bản đồ (đối soát sau chuyến) | Điều hành, Giám đốc | P1 |
@@ -203,6 +206,17 @@
 | US-18.10 | Cold storage: move compressed paths to S3 after 3 months, keep primary DB lean | Hệ thống | P2 |
 | US-18.11 | Coordinate precision: DECIMAL(9,5) — 5 decimal places sufficient for mapping and audit | Hệ thống | P2 |
 | US-18.12 | DB index on (trip_id, server_timestamp) for each GPS_LOG partition | Hệ thống | P1 |
+
+## Epic 19: Document & File Storage (DigitalOcean Spaces)
+
+| ID | Story | Role | Priority |
+|----|-------|------|----------|
+| US-19.1 | Upload photos/documents to DigitalOcean Spaces via backend API (không public) | Hệ thống | P0 |
+| US-19.2 | Generate presigned URL (15 min) khi user cần xem ảnh/document | Hệ thống | P0 |
+| US-19.3 | DB stores storage_key only, never public URL | Hệ thống | P0 |
+| US-19.4 | File validation: size limits (photo 10MB, doc 25MB), type whitelist (jpeg, png, pdf) | Hệ thống | P1 |
+| US-19.5 | Permission check: user phải có quyền truy cập entity trước khi lấy presigned URL | Hệ thống | P1 |
+| US-19.6 | GPS archives stored in Spaces (cold storage), not in primary DB | Hệ thống | P2 |
 
 ## Epic 15: Notifications & Reminders
 
