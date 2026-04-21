@@ -1394,14 +1394,14 @@ CLIENTS (id=9, Công ty XYZ):
 
 Điều hành Minh tạo chuyến mới:
   Select client → XYZ vẫn hiện trong dropdown nhưng có badge:
-    "Công ty XYZ 🔒 Ngừng hoạt động"
+    "Công ty XYZ ⚠️ Nợ quá hạn"
     → Minh chọn XYZ → app cảnh báo:
-    "⚠️ Công ty XYZ đang ngừng hoạt động. Xác nhận tiếp tục?"
+    "⚠️ Công ty XYZ đang nợ quá hạn. Xác nhận tiếp tục?"
     → [Hủy] [Xác nhận tiếp tục]
   → Nếu xác nhận → cho phép tạo chuyến bình thường (không block)
 
 XYZ vẫn xem được lịch sử giao dịch cũ (read-only).
-Dashboard hiển thị XYZ với badge "🔒 Ngừng" trong danh sách khách hàng.
+Dashboard hiển thị XYZ với badge "⚠️ Nợ quá hạn" trong danh sách khách hàng.
 ```
 
 ---
