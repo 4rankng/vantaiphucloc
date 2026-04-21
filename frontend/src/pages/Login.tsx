@@ -33,7 +33,7 @@ export function Login() {
             <label className="text-sm font-medium text-[var(--theme-text-secondary)] mb-1 block">Mật khẩu</label>
             <Input type="password" placeholder="••••••" value={password} onChange={e => { setPassword(e.target.value); setError('') }} />
           </div>
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          {error && <p className="text-sm" style={{ color: 'var(--theme-status-error)' }}>{error}</p>}
           <Button type="submit" className="w-full h-12 text-base font-semibold rounded-xl">Đăng nhập</Button>
         </form>
       </div>

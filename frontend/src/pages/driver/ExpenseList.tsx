@@ -45,7 +45,8 @@ export function ExpenseList() {
       </div>
       <button
         onClick={() => navigate('/driver/expenses/new')}
-        className="fixed bottom-20 right-4 w-14 h-14 bg-[var(--theme-brand-primary)] text-white rounded-full shadow-lg flex items-center justify-center text-2xl z-20 active:scale-95 transition-transform"
+        className="fixed bottom-20 right-4 w-14 h-14 rounded-full flex items-center justify-center text-2xl z-20 active:scale-95 transition-transform"
+        style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)', boxShadow: 'var(--theme-shadow-elevated)' }}
       >+</button>
     </div>
   )

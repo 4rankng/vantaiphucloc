@@ -34,7 +34,7 @@ export function ActiveTrip({ jobId }: { jobId: string }) {
             <div key={cp.id} className="flex items-center gap-3 bg-[var(--theme-bg-secondary)] rounded-xl p-3 border border-[var(--theme-border-default)]">
               <button
                 onClick={() => toggleCheckpoint(jobId, cp.id)}
-                className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-white text-sm ${cp.done ? 'bg-emerald-500 border-emerald-500' : 'border-[var(--theme-border-default)]'}`}
+                className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm ${cp.done ? 'text-white' : ''}`} style={{ background: cp.done ? 'var(--theme-status-success)' : 'transparent', borderColor: cp.done ? 'var(--theme-status-success)' : 'var(--theme-border-default)' }}
               >
                 {cp.done && '✓'}
               </button>

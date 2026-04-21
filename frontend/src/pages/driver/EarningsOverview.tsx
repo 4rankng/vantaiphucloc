@@ -13,7 +13,8 @@ export function EarningsOverview() {
     <div className="p-4 space-y-4">
       <h2 className="text-lg font-bold">Thu nhập</h2>
 
-      <div className="bg-gradient-to-br from-[var(--theme-brand-primary)] to-[var(--theme-brand-secondary)] rounded-2xl p-5 text-white">
+      <div className="rounded-2xl p-5"
+      style={{ background: 'var(--theme-brand-gradient)', color: 'var(--theme-text-on-brand)' }}>
         <p className="text-sm opacity-80">Tổng thu nhập tháng này</p>
         <p className="text-3xl font-bold mt-1">{formatCurrencyShort(totalEarnings)}</p>
         <p className="text-sm opacity-70 mt-2">{completedJobs.length} chuyến hoàn thành</p>

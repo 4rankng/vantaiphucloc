@@ -44,7 +44,12 @@ export function CreateExpense() {
           <div className="flex flex-wrap gap-2">
             {EXPENSE_CATEGORIES.map(c => (
               <button key={c} type="button" onClick={() => setCategory(c)}
-                className={`px-3 py-2 rounded-full text-sm border transition-colors ${category === c ? 'bg-[var(--theme-brand-primary)] text-white border-[var(--theme-brand-primary)]' : 'border-[var(--theme-border-default)] text-[var(--theme-text-secondary)] bg-[var(--theme-bg-secondary)]'}`}
+                className="px-3 py-2 rounded-full text-sm border transition-colors"
+                  style={{
+                    background: category === c ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
+                    color: category === c ? 'var(--theme-text-on-brand)' : 'var(--theme-text-secondary)',
+                    borderColor: category === c ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)',
+                  }}
               >{c}</button>
             ))}
           </div>
