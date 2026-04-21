@@ -96,7 +96,7 @@
 
 ### 3.6 Công nghệ AI OCR & GPS
 - **OCR Container:** Tài xế chụp ảnh, AI tự động nhận diện 11 mã số container. Hỗ trợ nhập tay nếu OCR thất bại.
-- **Tuyến đường & Checkpoints:** Mỗi tuyến có các điểm kiểm tra (cảng, trạm, kho). GPS tại mỗi bước trạng thái được so khớp với checkpoints để ước tính km và phát hiện lệch tuyến.
+- **Tuyến đường:** Mỗi tuyến định nghĩa điểm đi, điểm đến, quãng đường và thời gian dự kiến. GPS tại mỗi bước trạng thái dùng để ước tính km thực tế.
 - **Theo dõi trực tuyến:** Ứng dụng mobile theo dõi vị trí trực tuyến trong suốt hành trình (REQ-5.3).
 - **Lịch sử vị trí:** Lưu trữ lịch sử vị trí để phục vụ đối soát và kiểm tra sau chuyến (REQ-5.5).
 
@@ -159,7 +159,6 @@
 
 #### Routes & Quotas
 - `ROUTES`: id, name, origin, destination, distance_km, expected_duration_min, is_active.
-- `ROUTE_CHECKPOINTS`: id, route_id, sequence, name, latitude, longitude, radius_meters. — Điểm kiểm tra trên tuyến (cảng, trạm thu phí, kho).
 - `ROUTE_FUEL_QUOTAS`: id, route_id, vehicle_type, liters_per_km, is_default, created_by, updated_by, updated_at. — Ma trận định mức: tuyến × loại xe. Có thể ghi đè thủ công.
 
 #### Trips & Bookings
