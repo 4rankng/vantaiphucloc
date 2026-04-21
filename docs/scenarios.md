@@ -563,7 +563,7 @@ Lần 4: Gemini timeout
 ```
 Hoàng đang ở "en_route" trên quốc lộ, mất 3G/4G.
 
-Mobile app (PWA):
+Mobile app (Capacitor native):
   → IndexedDB lưu local:
     - Queue item 1: { action: "status_update", trip_id: 101, status: "arrived", lat: ..., lng: ... }
     - Queue item 2: { action: "expense_create", trip_id: 101, category: "fuel", amount: 500000, liters: 10 }
@@ -573,6 +573,11 @@ App hiển thị:
   - Offline indicator 🔴
   - "3 thao tác đang chờ đồng bộ"
   - Hoạt động bình thường, không block user
+
+Background GPS vẫn hoạt động (native layer, không phụ thuộc mạng):
+  → Native plugin tiếp tục gửi GPS location mỗi 5 phút
+  → Nếu không có mạng → native layer cache location → gửi khi có mạng lại
+  → GPS interval KHÔNG bị ảnh hưởng bởi mất mạng
 
 Khi có mạng trở lại:
   → Background Sync tự động:
@@ -590,9 +595,9 @@ Nếu sync thất bại cho 1 item:
 
 ---
 
-## SC-08: Dừng đỗ quá 45 phút (Idle Detection)
+## SC-08: Background GPS Tracking (Native Plugin)
 
-**Vai trò:** Tài xế Tuấn → Hệ thống → Điều hành Minh
+**Vai trò:** Tài xế Hoàng → Hệ thống → Điều hành Minh
 
 ### Bối cảnh
 ```
@@ -600,23 +605,50 @@ TRIPS (id=107):
   driver_id: 14 (Tuấn)
   status: "en_route"
 
-GPS tracking: xe không di chuyển (accuracy < 50m, speed < 5km/h) trong 45 phút tại vị trí:
-  lat: 10.8100, lng: 106.7150
+Tài xế Tuấn click "Đang chạy" trên mobile:
+  → JS gọi: BackgroundGeolocation.start({ interval: 300000 }) // 5 phút
+  → Native plugin khởi tạo:
 
-ALERTS:
-  id: 3
-  trip_id: 107
-  alert_type: "idle"
-  severity: "medium"
-  description: "Xe dừng đỗ >45 phút tại vị trí (10.8100, 106.7150). Nghi ngờ câu giờ."
-  is_resolved: false
+    ANDROID:
+    - Foreground Service bắt đầu
+    - Persistent notification: "🚛 Tuấn đang chạy chuyến TR-2026-0107"
+    - OS sẽ không kill app kể cả khi screen off / app minimized
+    - GPS sample mỗi 5 phút → gửi POST /api/v1/gps-location
 
-NOTIFICATIONS → Điều hành Minh
+    iOS:
+    - Request "Always Allow" location permission (nếu chưa có)
+    - Background task bắt đầu
+    - iOS cho phép background location updates nhưng hạn chế hơn Android
+    - Plugin tự động manage background execution limits
 
-Minh gọi Tuấn → Tuấn báo xe hỏng trên đường:
-  ALERTS (id=3):
-    resolution: "dismissed"
-    resolution_note: "Xe hỏng, đã gọi cứu hộ. Không phải vi phạm."
+Mỗi 5 phút, native layer gửi:
+  POST /api/v1/gps-location
+  { trip_id: 107, lat: 10.8100, lng: 106.7150, accuracy: 12.0, speed: 65.3 }
+  → Server lưu vào TRIP_STATUS_HISTORY hoặc bảng GPS_LOG riêng
+```
+
+### Detect idle qua GPS
+```
+Native plugin report location mỗi 5 phút:
+  10:00 → lat: 10.8100, lng: 106.7150, speed: 0
+  10:05 → lat: 10.8101, lng: 106.7151, speed: 0 (<5km/h)
+  10:10 → lat: 10.8100, lng: 106.7150, speed: 0
+  ... 9 consecutive readings ...
+  10:45 → lat: 10.8100, lng: 106.7150, speed: 0
+
+Hệ thống detect: xe không di chuyển >45 phút → tạo ALERT (idle)
+
+Lưu ý: GPS tracking tiếp tục kể cả khi screen off.
+setInterval() KHÔNG được dùng — chỉ native layer đảm bảo.
+```
+
+### Khi hoàn thành chuyến
+```
+Tuấn click "Hoàn thành":
+  → JS gọi: BackgroundGeolocation.stop()
+  → Native foreground service dừng
+  → Notification biến mất
+  → GPS tracking ngừng gửi
 ```
 
 ---
