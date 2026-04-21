@@ -1316,26 +1316,69 @@ Không tạo trip. Không gửi notification cho tài xế.
 
 ---
 
-## SC-21: Photo chỉ đọc sau khi upload
+## SC-21: Photo Lock — Confirm then Lock (Not on Upload)
 
-**Vai trò:** Hệ thống
+**Vai trò:** Tài xế Hoàng → Hệ thống
 
-### Bối cảnh
+### Step 1: Upload — editable
 ```
-Tài xế Hoàng upload ảnh biên lai:
+Hoàng chụp ảnh container → upload:
 
-POST /api/v1/photos/upload → 201 Created
-  TRIP_PHOTOS (id=5):
-    is_readonly = true (immediately after upload)
+POST /api/v1/photos/upload
+  → TRIP_PHOTOS (id=5):
+    is_confirmed: false
+    status: "pending_review"
 
-Hoàng cố gắng xóa:
-DELETE /api/v1/trip-photos/5 → 403 "Ảnh đã tải lên không thể xóa"
+App hiển thị:
+  ┌──────────────────────────────────┐
+  │  📷 Container photo              │
+  │  [image preview]                 │
+  │                                  │
+  │  OCR result: TCLU7845230         │
+  │                                  │
+  │  ❌ Không đúng → [Chụp lại]      │
+  │  ✅ Xác nhận đúng → [Xác nhận]   │
+  └──────────────────────────────────┘
+```
 
-Hoàng cố gắng sửa:
-PUT /api/v1/trip-photos/5 → 403 "Ảnh đã tải lên không thể chỉnh sửa"
+### Step 2: Driver confirms — LOCKED
+```
+Hoàng xem OCR result: "TCLU7845230" → đúng!
+Hoàng click [Xác nhận]:
 
-Ảnh chỉ có thể xem:
-GET /api/v1/trip-photos/5 → 200 (file content)
+PUT /api/v1/trip-photos/5/confirm
+  → TRIP_PHOTOS (id=5):
+    is_confirmed: true
+    confirmed_at: 2026-04-21T08:35:00Z
+
+  → TRIPS: container_code = "TCLU7845230" (auto-fill from OCR)
+
+NOW the photo is locked:
+  DELETE /api/v1/trip-photos/5 → 403 "Ảnh đã xác nhận, không thể xóa"
+  PUT /api/v1/trip-photos/5 → 403 "Ảnh đã xác nhận, không thể chỉnh sửa"
+```
+
+### Step 3: Driver wants to retake (before confirming)
+```
+Hoàng upload ảnh → OCR đọc "TCLU7____30" (thiếu ký tự):
+  → OCR failed, app shows: "Nhận diện không đầy đủ"
+  → Hoàng click [Chụp lại]
+  → DELETE /api/v1/trip-photos/5 → 200 OK (not yet confirmed)
+  → Storage: delete from DigitalOcean Spaces
+  → Hoàng chụp lại → new upload
+
+Hoàng cũng có thể sửa OCR manually:
+  → Nhập tay: "TCLU7845230"
+  → Click [Xác nhận] → locked
+```
+
+### Rule
+```
+is_confirmed = false → photo editable (delete, retake, edit OCR result)
+is_confirmed = true  → photo locked (no delete, no edit)
+
+After trip completed → ALL photos locked regardless of is_confirmed
+After chốt sổ → ALL data locked (photos + expenses + everything)
 ```
 
 ---

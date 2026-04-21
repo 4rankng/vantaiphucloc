@@ -112,7 +112,7 @@
 - **Thời gian & quãng đường:** Tự động ghi nhận start_time, end_time, actual_distance_km khi hoàn thành.
 - **Chuyến mồ côi:** Phát hiện và cảnh báo các chuyến chưa gán chủ hàng để kế toán xử lý.
 - **Chốt sổ:** Sau khi chốt sổ cuối kỳ, dữ liệu chuyến bị khóa (chỉ đọc), không cho phép sửa đổi (REQ-10.6).
-- **Ảnh chỉ đọc:** Không cho phép chỉnh sửa hoặc xóa ảnh sau khi đã tải lên (REQ-6.5).
+- **Ảnh khóa sau khi xác nhận:** Tài xế upload ảnh → xem kết quả OCR/dữ liệu → xác nhận đúng → **khóa**. Trước khi xác nhận, tài xế có thể xóa/chụp lại. Sau khi xác nhận: không chỉnh sửa, không xóa (REQ-6.5).
 - **Lịch sử trạng thái:** Lưu trữ lịch sử trạng thái chuyến kèm mốc thời gian từng bước.
 
 ### 3.6 Công nghệ AI OCR & GPS
@@ -213,7 +213,7 @@
 - `GPS_LOG_CURRENT`: View → union last 3 months of partitions for active queries.
 - `TRIP_PATHS`: id, trip_id, compressed_path (BYTEA — Douglas-Peucker simplified + gzip), point_count, raw_point_count, created_at. — One row per trip after completion. Raw GPS_LOG rows deleted after compression.
 - `GPS_ARCHIVES`: id, trip_id, month, storage_path (S3/flat-file), archived_at. — Cold storage reference.
-- `TRIP_PHOTOS`: id, trip_id, photo_type (container_pickup/container_delivery/fuel_receipt/expense_receipt/other), storage_key (S3 key), presigned_url (tạm thời, 15 phút), latitude, longitude, accuracy, server_timestamp. — Ảnh lưu trên DigitalOcean Spaces, truy cập qua presigned URL.
+- `TRIP_PHOTOS`: id, trip_id, photo_type (container_pickup/container_delivery/fuel_receipt/expense_receipt/other), storage_key (S3 key), latitude, longitude, accuracy, server_timestamp, is_confirmed (boolean, default false), confirmed_at. — Ảnh upload → editable cho đến khi tài xế xác nhận. Sau confirmed: không sửa/xóa. Presigned URL generated on demand (not stored).
 - `EXPENSES`: id, trip_id, category (fuel/toll/repair/tires/engine_oil/salary/other), amount, liters (nullable, chỉ cho fuel/engine_oil), description, receipt_photo_id, status (pending/approved/rejected), reject_reason, approved_by, approved_at, workflow_id (FK → workflows.id), created_at.
 - `PENALTY_RULES`: id, rule_code, description, penalty_amount, penalty_type (fine/warning/termination), occurrence_threshold (vd: '3' = từ lần thứ 3), is_active. — Quy định phạt nội quy.
 - `DRIVER_PENALTIES`: id, driver_id, trip_id, penalty_rule_id, amount, description, created_by, created_at. — Ghi nhận vi phạm phạt.
