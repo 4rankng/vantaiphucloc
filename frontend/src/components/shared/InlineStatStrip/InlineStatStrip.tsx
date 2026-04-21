@@ -13,9 +13,7 @@ interface InlineStatStripProps {
 }
 
 /**
- * Inline stat strip — matching payroll frontend pattern.
- * Rounded border container, cells with 1px gap, value + label per cell.
- * All colors via theme tokens.
+ * Inline stat strip — Grab-style rounded card with cells.
  */
 export function InlineStatStrip({ items, className }: InlineStatStripProps) {
   if (!items.length) return null
@@ -24,13 +22,10 @@ export function InlineStatStrip({ items, className }: InlineStatStripProps) {
 
   return (
     <div
-      className={cn(
-        'rounded-xl overflow-hidden gap-px',
-        className,
-      )}
+      className={cn('rounded-2xl overflow-hidden gap-px', className)}
       style={{
-        background: 'var(--theme-border-default)',
-        border: '1px solid var(--theme-border-default)',
+        background: 'var(--theme-border-light)',
+        boxShadow: 'var(--theme-shadow-card)',
       }}
     >
       <div className={cn(cols, 'gap-px')}>
@@ -43,7 +38,7 @@ export function InlineStatStrip({ items, className }: InlineStatStripProps) {
             <div
               key={i}
               className={cn(
-                'flex flex-col items-center justify-center gap-1 px-3 py-3 flex-1 min-w-0 transition-colors',
+                'flex flex-col items-center justify-center gap-1 px-4 py-4 flex-1 min-w-0 transition-colors',
                 item.onClick && 'cursor-pointer',
               )}
               style={{ background: item.highlight ? 'var(--theme-brand-primary-light)' : 'var(--theme-bg-secondary)' }}
@@ -51,14 +46,14 @@ export function InlineStatStrip({ items, className }: InlineStatStripProps) {
               role={item.onClick ? 'button' : undefined}
             >
               <span
-                className="text-[13px] font-semibold tabular-nums tracking-tight leading-tight w-full text-center"
+                className="text-[15px] font-bold tabular-nums tracking-tight leading-tight w-full text-center"
                 style={{ color: item.highlight ? 'var(--theme-brand-primary)' : 'var(--theme-text-primary)' }}
               >
                 {formatted}
               </span>
               <span
                 className="text-[11px] leading-none text-center truncate w-full px-1 mt-0.5"
-                style={{ color: 'var(--theme-text-muted)' }}
+                style={{ color: 'var(--theme-text-secondary)' }}
               >
                 {item.label}
               </span>
@@ -71,8 +66,7 @@ export function InlineStatStrip({ items, className }: InlineStatStripProps) {
 }
 
 /**
- * Section stat card with icon — matching payroll frontend pattern.
- * Icon in colored circle, value + label below.
+ * Section stat card with icon — Grab style.
  */
 interface StatCardProps {
   icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>
@@ -89,25 +83,24 @@ export function StatCard({ icon: Icon, label, value, color, onClick }: StatCardP
   return (
     <div
       className={cn(
-        'rounded-xl p-4 border',
-        onClick && 'cursor-pointer active:scale-[0.98] transition-transform',
+        'rounded-2xl p-4 card-lift',
+        onClick && 'cursor-pointer',
       )}
       style={{
         background: 'var(--theme-bg-secondary)',
-        borderColor: 'var(--theme-border-default)',
-        boxShadow: 'var(--theme-shadow-sm)',
+        boxShadow: 'var(--theme-shadow-card)',
       }}
       onClick={onClick}
     >
       <div className="flex items-center gap-3">
         <div
-          className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
           style={{ background: 'var(--theme-brand-primary-light)' }}
         >
           <Icon className="w-5 h-5" style={{ color: accentColor }} />
         </div>
         <div className="min-w-0">
-          <p className="text-[11px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>{label}</p>
+          <p className="text-[11px] font-medium" style={{ color: 'var(--theme-text-secondary)' }}>{label}</p>
           <p className="text-lg font-bold tabular-nums leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{formatted}</p>
         </div>
       </div>

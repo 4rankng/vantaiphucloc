@@ -23,50 +23,50 @@ export function Login() {
     <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden"
       style={{ background: 'var(--theme-brand-gradient)' }}
     >
-      {/* Decorative overlay */}
-      <div className="absolute inset-0 opacity-10"
-        style={{ background: 'radial-gradient(circle at 30% 20%, var(--theme-brand-secondary), transparent 50%), radial-gradient(circle at 70% 80%, var(--theme-brand-primary-light), transparent 50%)' }}
-      />
+      {/* Decorative circles */}
+      <div className="absolute -top-20 -left-20 w-64 h-64 rounded-full" style={{ background: 'var(--theme-brand-primary)', opacity: 0.12 }} />
+      <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full" style={{ background: 'var(--theme-brand-primary)', opacity: 0.08 }} />
 
-      <div className="relative z-10 w-full max-w-[440px] flex flex-col items-center px-4 py-8">
+      <div className="relative z-10 w-full max-w-[440px] flex flex-col items-center px-5 py-8">
 
         {/* Brand */}
-        <div className="mb-8 flex items-center gap-3">
+        <div className="mb-10 flex flex-col items-center">
           <div
-            className="h-12 w-12 rounded-xl flex items-center justify-center"
-            style={{ background: 'var(--theme-glass-bg)', backdropFilter: 'var(--theme-glass-blur)' }}
+            className="h-16 w-16 rounded-2xl flex items-center justify-center mb-4"
+            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-elevated)' }}
           >
-            <Truck className="h-7 w-7" style={{ color: 'var(--theme-brand-secondary)' }} />
+            <Truck className="h-8 w-8" style={{ color: 'var(--theme-brand-primary)' }} />
           </div>
-          <div>
-            <h1 className="font-extrabold text-3xl tracking-tight" style={{ color: 'var(--theme-text-inverse)' }}>
-              TTransport
-            </h1>
-          </div>
+          <h1 className="font-extrabold text-3xl tracking-tight" style={{ color: 'var(--theme-text-inverse)' }}>
+            TTransport
+          </h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--theme-text-inverse)', opacity: 0.7 }}>
+            Quản lý vận tải hàng hóa
+          </p>
         </div>
 
         {/* Login Card */}
         <div
-          className="rounded-2xl p-8 w-full"
+          className="rounded-3xl p-7 w-full"
           style={{
             background: 'var(--theme-bg-secondary)',
             boxShadow: 'var(--theme-shadow-elevated)',
           }}
         >
           {/* Card Header */}
-          <div className="mb-8">
-            <h2 className="font-bold text-2xl mb-2" style={{ color: 'var(--theme-text-primary)' }}>
-              Chào mừng trở lại
+          <div className="mb-7">
+            <h2 className="font-bold text-xl" style={{ color: 'var(--theme-text-primary)' }}>
+              Đăng nhập
             </h2>
-            <p className="text-base" style={{ color: 'var(--theme-text-muted)' }}>
-              Đăng nhập để quản lý vận tải
+            <p className="text-sm mt-1" style={{ color: 'var(--theme-text-secondary)' }}>
+              Nhập thông tin để tiếp tục
             </p>
           </div>
 
           {/* Error */}
           {error && (
             <div
-              className="flex items-center gap-2 rounded-xl px-4 py-3 mb-5 text-sm font-medium"
+              className="flex items-center gap-2.5 rounded-2xl px-4 py-3.5 mb-5 text-sm font-medium"
               style={{ background: 'var(--theme-status-error-light)', color: 'var(--theme-status-error-text)' }}
             >
               <AlertCircle className="h-4 w-4 shrink-0" />
@@ -80,9 +80,9 @@ export function Login() {
               <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
                 Tên đăng nhập
               </Label>
-              <div className="relative group">
+              <div className="relative">
                 <User
-                  className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none z-10 transition-colors"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 pointer-events-none z-10"
                   style={{ color: 'var(--theme-text-muted)' }}
                 />
                 <Input
@@ -90,8 +90,8 @@ export function Login() {
                   placeholder="Nhập tên đăng nhập"
                   value={username}
                   onChange={e => { setUsername(e.target.value); setError('') }}
-                  className="text-sm"
-                  style={{ paddingLeft: '2.25rem' }}
+                  className="text-sm search-pill"
+                  style={{ paddingLeft: '2.75rem' }}
                   autoComplete="username"
                   autoCapitalize="none"
                 />
@@ -103,9 +103,9 @@ export function Login() {
               <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
                 Mật khẩu
               </Label>
-              <div className="relative group">
+              <div className="relative">
                 <Lock
-                  className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none z-10 transition-colors"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 pointer-events-none z-10"
                   style={{ color: 'var(--theme-text-muted)' }}
                 />
                 <Input
@@ -113,18 +113,18 @@ export function Login() {
                   placeholder="Nhập mật khẩu"
                   value={password}
                   onChange={e => { setPassword(e.target.value); setError('') }}
-                  className="text-sm"
-                  style={{ paddingLeft: '2.25rem', paddingRight: '2.75rem' }}
+                  className="text-sm search-pill"
+                  style={{ paddingLeft: '2.75rem', paddingRight: '3rem' }}
                   autoComplete="current-password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(v => !v)}
                   aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 flex items-center justify-center rounded-lg transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 flex items-center justify-center"
                   style={{ color: 'var(--theme-text-muted)' }}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? <EyeOff className="h-4.5 w-4.5" /> : <Eye className="h-4.5 w-4.5" />}
                 </button>
               </div>
             </div>
@@ -132,30 +132,16 @@ export function Login() {
             {/* Submit */}
             <Button
               type="submit"
-              className="w-full h-12 font-bold text-base rounded-xl mt-6"
-              style={{
-                background: 'var(--theme-brand-secondary)',
-                color: 'var(--theme-brand-primary)',
-              }}
+              className="w-full h-12 font-bold text-base rounded-2xl mt-2"
             >
               Đăng nhập
             </Button>
           </form>
-
-          {/* Footer */}
-          <div className="mt-8 pt-6" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
-            <p className="text-xs text-center" style={{ color: 'var(--theme-text-muted)' }}>
-              Quản lý vận tải hàng hóa với{' '}
-              <span className="font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>TTransport</span>
-            </p>
-          </div>
         </div>
-      </div>
 
-      {/* Bottom footer */}
-      <div className="absolute bottom-6 left-0 right-0 z-10">
-        <p className="text-center text-xs font-medium" style={{ color: 'var(--theme-text-inverse)', opacity: 0.6 }}>
-          © {new Date().getFullYear()} TTransport. Logistics Solutions.
+        {/* Bottom */}
+        <p className="mt-8 text-xs" style={{ color: 'var(--theme-text-inverse)', opacity: 0.5 }}>
+          © {new Date().getFullYear()} TTransport
         </p>
       </div>
     </div>
