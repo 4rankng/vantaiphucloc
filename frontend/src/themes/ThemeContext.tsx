@@ -1,11 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
 import type { ThemeDefinition } from './types';
-import { navyGoldTheme } from './navy-gold';
-import { midnightTheme } from './midnight';
-import { oceanTheme } from './ocean';
 import { grabTheme } from './grab';
 
-export const themes: ThemeDefinition[] = [navyGoldTheme, midnightTheme, oceanTheme, grabTheme];
+export const themes: ThemeDefinition[] = [grabTheme];
 const themeMap = new Map(themes.map(t => [t.name, t]));
 
 const STORAGE_KEY = 'ttransport-theme';
@@ -101,11 +98,11 @@ function applyThemeToDOM(theme: ThemeDefinition) {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [themeName, setThemeName] = useState<string>(() => {
-    try { return localStorage.getItem(STORAGE_KEY) || navyGoldTheme.name; }
-    catch { return navyGoldTheme.name; }
+    try { return localStorage.getItem(STORAGE_KEY) || grabTheme.name; }
+    catch { return grabTheme.name; }
   });
 
-  const theme = useMemo(() => themeMap.get(themeName) || navyGoldTheme, [themeName]);
+  const theme = useMemo(() => themeMap.get(themeName) || grabTheme, [themeName]);
 
   useEffect(() => {
     applyThemeToDOM(theme);
