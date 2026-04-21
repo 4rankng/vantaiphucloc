@@ -134,8 +134,8 @@ export function Login() {
               type="submit"
               className="w-full h-12 font-bold text-base rounded-xl mt-6"
               style={{
-                background: 'var(--theme-brand-primary)',
-                color: 'var(--theme-text-on-brand)',
+                background: 'var(--theme-brand-secondary)',
+                color: 'var(--theme-brand-primary)',
               }}
             >
               Đăng nhập
