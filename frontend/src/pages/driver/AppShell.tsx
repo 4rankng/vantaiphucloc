@@ -46,30 +46,25 @@ export function TopBar() {
               {initials}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>
-              <div className="flex items-center gap-2.5">
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
-                  style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-                >
-                  {initials}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{driver.name}</p>
-                  <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{driver.phone}</p>
-                </div>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => useDriverStore.getState().navigate('/driver/profile')}>
-              <UserCircle className="w-4 h-4 mr-2" style={{ color: 'var(--theme-text-muted)' }} />
-              Hồ sơ
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => logout()}>
-              <LogOut className="w-4 h-4 mr-2" style={{ color: 'var(--theme-status-error)' }} />
-              <span style={{ color: 'var(--theme-status-error)' }}>Đăng xuất</span>
-            </DropdownMenuItem>
+          <DropdownMenuContent align="end" className="w-48 p-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl transition-colors touch-manipulation"
+                      style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
+                      onClick={() => useDriverStore.getState().navigate('/driver/profile')}
+                    >
+                      <UserCircle className="w-5 h-5" style={{ color: 'var(--theme-text-secondary)' }} />
+                      <span className="text-[11px] font-medium leading-none">Hồ sơ</span>
+                    </button>
+                    <button
+                      className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl transition-colors touch-manipulation"
+                      style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
+                      onClick={() => logout()}
+                    >
+                      <LogOut className="w-5 h-5" style={{ color: 'var(--theme-status-error)' }} />
+                      <span className="text-[11px] font-medium leading-none">Đăng xuất</span>
+                    </button>
+                  </div>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
