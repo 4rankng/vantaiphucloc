@@ -103,6 +103,50 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* ─── Layout shell ─────────────────────────────────────── */
+:root {
+  --shell-topbar-h: 3rem;
+  --shell-bottomnav-h: 3.5rem;
+  --shell-safe-top: env(safe-area-inset-top, 0px);
+  --shell-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  min-height: 100vh;
+}
+
+.shell-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  height: var(--shell-topbar-h);
+  padding-top: var(--shell-safe-top);
+}
+
+.shell-topbar-inner {
+  height: var(--shell-topbar-h);
+}
+
+.shell-main {
+  flex: 1;
+  padding-top: calc(var(--shell-topbar-h) + var(--shell-safe-top));
+  padding-bottom: calc(var(--shell-bottomnav-h) + var(--shell-safe-bottom));
+}
+
+.shell-bottomnav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  padding-bottom: var(--shell-safe-bottom);
+}
+
 /* ─── Sidebar scrollbar ─────────────────────────────────── */
 .sidebar-scroll::-webkit-scrollbar { width: 4px; }
 .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
