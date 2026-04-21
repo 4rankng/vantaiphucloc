@@ -1,15 +1,61 @@
 import { ThemeProvider } from '@/themes'
-import { AuthProvider } from '@/contexts/AuthContext'
+import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { ErrorBoundaryProvider } from '@/contexts/ErrorContext'
 import { OfflineProvider } from '@/contexts/OfflineContext'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { OfflineIndicator } from '@/components/shared/OfflineIndicator'
-import { RoleSelect } from '@/pages/RoleSelect'
+import { Login } from '@/pages/Login'
+import { DriverStoreProvider, useDriverStore } from '@/hooks/use-driver-store'
+import { TopBar, BottomNav } from '@/pages/driver/AppShell'
+import { TripList } from '@/pages/driver/TripList'
+import { ActiveTrip } from '@/pages/driver/ActiveTrip'
+import { TripDetail } from '@/pages/driver/TripDetail'
+import { ExpenseList } from '@/pages/driver/ExpenseList'
+import { CreateExpense } from '@/pages/driver/CreateExpense'
+import { EarningsOverview } from '@/pages/driver/EarningsOverview'
+import { MoreMenu } from '@/pages/driver/MoreMenu'
+
+function Router() {
+  const { currentPath } = useDriverStore()
+
+  // /driver/trips/:id/detail
+  const detailMatch = currentPath.match(/^\/driver\/trips\/([^/]+)\/detail$/)
+  if (detailMatch) return <TripDetail jobId={detailMatch[1]} />
+
+  // /driver/trips/:id
+  const tripMatch = currentPath.match(/^\/driver\/trips\/([^/]+)$/)
+  if (tripMatch) return <ActiveTrip jobId={tripMatch[1]} />
+
+  switch (currentPath) {
+    case '/driver/trips': return <TripList />
+    case '/driver/expenses': return <ExpenseList />
+    case '/driver/expenses/new': return <CreateExpense />
+    case '/driver/earnings': return <EarningsOverview />
+    case '/driver/more': return <MoreMenu />
+    default: return <TripList />
+  }
+}
+
+function DriverApp() {
+  return (
+    <DriverStoreProvider>
+      <div className="max-w-md mx-auto min-h-screen flex flex-col bg-[var(--theme-bg-primary)]">
+        <TopBar />
+        <main className="flex-1 overflow-y-auto">
+          <Router />
+        </main>
+        <BottomNav />
+      </div>
+    </DriverStoreProvider>
+  )
+}
 
 function AppContent() {
+  const { user } = useAuth()
+
   return (
     <ErrorBoundary component="App" level="app">
-      <RoleSelect />
+      {!user ? <Login /> : <DriverApp />}
       <OfflineIndicator />
     </ErrorBoundary>
   )

@@ -1,32 +1,47 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useState, type ReactNode } from 'react'
+import type { Role } from '@/data/mockData'
+import { mockDrivers } from '@/data/mockData'
 
-export type Role = 'director' | 'dispatcher' | 'accountant' | 'driver'
+export interface UserInfo {
+  id: string
+  name: string
+  role: Role
+}
 
 interface AuthContextType {
-  role: Role | null
-  setRole: (role: Role) => void
+  user: UserInfo | null
+  login: (username: string, password: string) => boolean
   logout: () => void
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [role, setRoleState] = useState<Role | null>(() => {
-    return localStorage.getItem('ttransport_role') as Role | null
+  const [user, setUser] = useState<UserInfo | null>(() => {
+    const saved = localStorage.getItem('ttransport_user')
+    return saved ? JSON.parse(saved) : null
   })
 
-  const setRole = (r: Role) => {
-    localStorage.setItem('ttransport_role', r)
-    setRoleState(r)
+  const login = (username: string, password: string): boolean => {
+    if (username === 'driver' && password === 'driver') {
+      const d = mockDrivers[0]
+      const u: UserInfo = { id: d.id, name: d.name, role: 'driver' as Role }
+      localStorage.setItem('ttransport_user', JSON.stringify(u))
+      localStorage.setItem('ttransport_role', 'driver')
+      setUser(u)
+      return true
+    }
+    return false
   }
 
   const logout = () => {
+    localStorage.removeItem('ttransport_user')
     localStorage.removeItem('ttransport_role')
-    setRoleState(null)
+    setUser(null)
   }
 
   return (
-    <AuthContext.Provider value={{ role, setRole, logout }}>
+    <AuthContext.Provider value={{ user, login, logout }}>
       {children}
     </AuthContext.Provider>
   )
