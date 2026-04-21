@@ -76,7 +76,7 @@ export function TripList() {
             placeholder="Tìm chuyến, container, khách hàng..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="pl-10"
+            className="pl-10 search-pill"
           />
         </div>
       </div>

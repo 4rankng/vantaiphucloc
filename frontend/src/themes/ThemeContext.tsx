@@ -3,8 +3,9 @@ import type { ThemeDefinition } from './types';
 import { navyGoldTheme } from './navy-gold';
 import { midnightTheme } from './midnight';
 import { oceanTheme } from './ocean';
+import { grabTheme } from './grab';
 
-export const themes: ThemeDefinition[] = [navyGoldTheme, midnightTheme, oceanTheme];
+export const themes: ThemeDefinition[] = [navyGoldTheme, midnightTheme, oceanTheme, grabTheme];
 const themeMap = new Map(themes.map(t => [t.name, t]));
 
 const STORAGE_KEY = 'ttransport-theme';
