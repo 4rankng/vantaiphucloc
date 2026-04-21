@@ -174,7 +174,7 @@
 - `PAYMENTS`: id, invoice_id, amount, payment_method, reference_number, paid_by, notes, created_at.
 
 #### Workflows, Alerts & Notifications
-- `WORKFLOWS`: id (auto-increment), run_id (UUID) — định danh instance, workflow_id (int) — loại workflow, state (int), event (int), attempt (int), data (JSON). — State machine engine.
+- `WORKFLOWS`: id (auto-increment), run_id (UUID), workflow_type (varchar), state (varchar), event (varchar), attempt (int), data (JSON). — State machine engine.
 - `ALERTS`: id, trip_id, alert_type (fuel_anomaly/time_anomaly/route_deviation/idle), severity, description, is_resolved, resolved_by, resolution (violation/dismissed), resolution_note, created_at, resolved_at.
 - `NOTIFICATIONS`: id, user_id, type, title, message, entity_type, entity_id, is_read, created_at.
 - `DOCUMENTS`: id, entity_type, entity_id, doc_type (booking/do/eir/invoice/receipt/customs), file_path, uploaded_by, retention_years, created_at.
@@ -185,38 +185,44 @@ Bảng `WORKFLOWS` điều khiển trạng thái phức tạp của Chuyến xe,
 
 **Cấu trúc bảng:**
 - `id`: Auto-increment primary key
-- `run_id`: UUID — định danh instance của workflow (một chuyến xe, một chi phí, v.v.)
-- `workflow_id`: int — loại workflow (trip, expense, invoice…). Mỗi loại định nghĩa tập state/event/transition riêng trong code.
-- `state`: int — trạng thái hiện tại
-- `event`: int — sự kiện cần xử lý (0 = không có event chờ)
+- `run_id`: UUID — định danh instance của workflow
+- `workflow_type`: varchar — tên Python class (`'TripWorkflow'`, `'ExpenseWorkflow'`…) → engine instantiate đúng class
+- `state`: varchar — state id trực tiếp từ `wf.current_state_value` (ví dụ `'received'`, `'en_route'`, `'completed'`)
+- `event`: varchar — event id trực tiếp từ library, đúng tên method (ví dụ `'start'`, `'pick_empty'`, `'timeout'`). NULL hoặc `''` = không có event chờ.
 - `attempt`: int — số lần thử transition
 - `data`: JSON — payload nghiệp vụ
 
 **Một thực thể = một dòng.** Mọi thay đổi trạng thái đều UPDATE trực tiếp trên cùng một dòng, không INSERT dòng mới.
 
+**Tại sao varchar thay vì int:**
+- `python-statemachine` dùng string id cho state và event. `send('start')` nhận string, `current_state_value` trả string.
+- Lưu trực tiếp string loại bỏ lớp mapping int↔string, giảm code và rủi ro sai.
+- Library cung cấp `allowed_events` để kiểm tra event hợp lệ từ state hiện tại.
+
 **Nguyên tắc hoạt động:**
 1. Mỗi cặp (state, event) có **đúng một** transition function duy nhất — bản chất của state machine.
-2. Khi `attempt > 0` và `event != 0` → workflow engine thực thi transition function.
-3. Nếu transition thành công → `event = 0`, `attempt = 0` (không còn event chờ, chuyển sang state mới).
-4. Nếu transition thất bại → `attempt` tăng, engine thử lại (retry).
-5. Một số state có event không cần transition (ví dụ event = 999) — đây là event hợp lệ, khi `attempt = 1` thì transition function vẫn được thực thi.
+2. Khi `attempt > 0` và `event IS NOT NULL` → workflow engine thực thi `wf.send(event)`.
+3. Nếu transition thành công → `event = NULL`, `attempt = 0` (không còn event chờ, state đã chuyển).
+4. Nếu transition thất bại → `attempt++`, engine thử lại (retry with exponential backoff).
+5. Self-loop events (`.to.itself()`) — event hợp lệ, state không đổi, `attempt = 1` vẫn thực thi.
 
-**Ví dụ — Chuyến xe (workflow_id=1):**
-- State 1 (Nhận ca) + Event 10 (Bắt đầu) → State 2 (Lấy rỗng)
-- State 2 + Event 20 (Lấy xong) → State 3 (Đến cảng)
-- State 5 (Đang chạy) + Event 999 (Auto-timeout) → Alert + giữ state (self-loop)
+**Ví dụ — Chuyến xe (workflow_type='TripWorkflow'):**
+- state='received' + event='start' → state='empty_pickup'
+- state='en_route' + event='timeout' → state='en_route' (self-loop, tạo alert)
 
-**Ánh xạ workflow_id → Python class:**
-- `workflow_id=1` → `TripWorkflow` (8 states, 8+ transitions)
-- `workflow_id=2` → `ExpenseWorkflow` (3 states: pending/approved/rejected)
-- `workflow_id=3` → `InvoiceWorkflow`
+**Ánh xạ workflow_type → Python class:**
+- `'TripWorkflow'` → 8 states, 8+ transitions
+- `'ExpenseWorkflow'` → 3 states (pending/approved/rejected)
+- `'InvoiceWorkflow'` → states cho hóa đơn
 
-**Thư viện:** `python-statemachine` — hỗ trợ đầy đủ:
-- `State(N)` cho int state values
-- `.to.itself()` cho self-loop / no-op events
-- Mỗi (state, event) = đúng một transition function (bắt buộc bởi library)
-- Mỗi workflow_id = một Python class riêng
-- `send(event)` trigger transition
+**python-statemachine API chính:**
+- `wf = TripWorkflow()` → khởi tạo
+- `wf.send('start')` → trigger transition
+- `wf.current_state_value` → state id string
+- `wf.allowed_events` → danh sách event hợp lệ từ state hiện tại
+- `wf.is_terminated` → true nếu ở final state
+- `.to.itself()` cho self-loop
+- Mỗi (state, event) = đúng một transition (bắt buộc bởi library)
 
 **Retry Mechanism:** Tự động thử lại các action thất bại (OCR, Notify) với exponential backoff.
 **Blocking Actions:** Chỉ chuyển trạng thái khi các action quan trọng thành công.
