@@ -76,7 +76,7 @@
 ### 3.3 Quản lý Khách hàng (Client Management)
 - **CRUD Clients:** Quản lý thông tin khách hàng / chủ hàng: tên công ty, mã số thuế, địa chỉ, người liên hệ, số điện thoại, email.
 - **Điều khoản thanh toán:** Cấu hình điều khoản thanh toán cho từng khách hàng (net 15, net 30, v.v.).
-- **Trạng thái:** Khách hàng có thể bị đánh dấu `is_active: false`. Vẫn hiện trong danh sách/dropdown nhưng có badge "🔒 Ngừng". Cho phép tạo chuyến nhưng cảnh báo "Khách hàng đang ngừng hoạt động — xác nhận tiếp tục?". Lịch sử giao dịch luôn xem được.
+- **Trạng thái:** Khách hàng có thể bị đánh dấu `is_active: false`. Vẫn hiện trong danh sách/dropdown nhưng có badge "⚠️ Nợ quá hạn". Cho phép tạo chuyến nhưng cảnh báo "Khách hàng đang nợ quá hạn — xác nhận tiếp tục?". Lịch sử giao dịch luôn xem được.
 
 ### 3.4 Quản lý Tuyến đường & Định mức (Routes & Quotas)
 - **Quản lý Tuyến đường:** Danh mục các tuyến đường (Điểm đi - Điểm đến - Quãng đường - Thời gian dự kiến).
