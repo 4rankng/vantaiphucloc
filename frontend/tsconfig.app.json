@@ -19,7 +19,14 @@
     "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@ui/*": ["./src/components/ui/*"],
+      "@shared/*": ["./src/components/shared/*"],
+      "@layout/*": ["./src/components/layout/*"],
+      "@hooks/*": ["./src/hooks/*"],
+      "@lib/*": ["./src/lib/*"],
+      "@data/*": ["./src/data/*"],
+      "@themes/*": ["./src/themes/*"]
     }
   },
   "include": ["src"]

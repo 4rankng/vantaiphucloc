@@ -132,3 +132,9 @@
   background: linear-gradient(135deg, var(--theme-badge-from, #d4a839) 0%, var(--theme-badge-to, #b8922e) 100%);
   color: white;
 }
+
+@keyframes slide-up {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-slide-up { animation: slide-up 0.3s ease-out; }
