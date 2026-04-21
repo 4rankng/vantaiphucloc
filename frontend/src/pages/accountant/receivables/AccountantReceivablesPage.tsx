@@ -28,13 +28,13 @@ export default function AccountantReceivablesPage() {
 
       {/* AR by customer */}
       <GlassCard className="p-5">
-        <h3 className="text-sm font-bold text-navy-900 font-display mb-3">Công nợ theo khách hàng</h3>
+        <h3 className="text-sm font-bold text-[var(--theme-text-primary)] font-display mb-3">Công nợ theo khách hàng</h3>
         {isMobile ? (
           <div className="space-y-2">
             {debtors.map((c) => (
               <MobileListCard key={c.id}>
                 <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm font-semibold text-navy-900 truncate max-w-[70%]">{c.name}</p>
+                  <p className="text-sm font-semibold text-[var(--theme-text-primary)] truncate max-w-[70%]">{c.name}</p>
                   <span className="text-sm font-bold text-red-600 font-mono-num">{formatCurrencyShort(c.outstandingDebt)}</span>
                 </div>
                 <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mt-2">
@@ -45,14 +45,14 @@ export default function AccountantReceivablesPage() {
           </div>
         ) : (
           <table className="w-full text-sm">
-            <thead><tr className="text-left text-[11px] text-gray-400 uppercase tracking-wider border-b border-navy-100">
+            <thead><tr className="text-left text-[11px] text-[var(--theme-text-muted)] uppercase tracking-wider border-b border-[var(--theme-border-default)]">
               <th className="px-4 py-2.5 font-semibold">Khách hàng</th><th className="px-4 py-2.5 font-semibold text-right">Công nợ</th><th className="px-4 py-2.5 font-semibold text-right">Tỷ lệ</th>
             </tr></thead>
             <tbody>{debtors.map((c) => (
-              <tr key={c.id} className="border-b border-navy-50 last:border-0">
-                <td className="px-4 py-2.5 font-semibold text-navy-900">{c.name}</td>
+              <tr key={c.id} className="border-b border-[var(--theme-border-light)] last:border-0">
+                <td className="px-4 py-2.5 font-semibold text-[var(--theme-text-primary)]">{c.name}</td>
                 <td className="px-4 py-2.5 text-right font-semibold text-red-600 font-mono-num">{formatCurrencyFull(c.outstandingDebt)}</td>
-                <td className="px-4 py-2.5 text-right text-gray-400 font-mono-num">{((c.outstandingDebt / totalDebt) * 100).toFixed(1)}%</td>
+                <td className="px-4 py-2.5 text-right text-[var(--theme-text-muted)] font-mono-num">{((c.outstandingDebt / totalDebt) * 100).toFixed(1)}%</td>
               </tr>
             ))}</tbody>
           </table>
@@ -61,16 +61,16 @@ export default function AccountantReceivablesPage() {
 
       {/* Ledger */}
       <GlassCard className="p-5">
-        <h3 className="text-sm font-bold text-navy-900 font-display mb-3">Sổ cái gần đây</h3>
+        <h3 className="text-sm font-bold text-[var(--theme-text-primary)] font-display mb-3">Sổ cái gần đây</h3>
         <div className="space-y-2">
           {mockLedger.map((l) => (
-            <div key={l.id} className="flex items-center justify-between p-3 rounded-lg border border-navy-100/50">
+            <div key={l.id} className="flex items-center justify-between p-3 rounded-lg border border-[var(--theme-border-default)]/50">
               <div>
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-navy-100 text-navy-700">{typeLabel(l.type)}</span>
-                  <span className="text-xs text-gray-400 font-mono-num">{l.date}</span>
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded text-[var(--theme-bg-tertiary)] text-[var(--theme-text-secondary)]">{typeLabel(l.type)}</span>
+                  <span className="text-xs text-[var(--theme-text-muted)] font-mono-num">{l.date}</span>
                 </div>
-                <p className="text-[12px] text-navy-900">{l.clientName} — {l.notes}</p>
+                <p className="text-[12px] text-[var(--theme-text-primary)]">{l.clientName} — {l.notes}</p>
               </div>
               <div className="text-right">
                 {l.debit > 0 && <p className="text-sm font-semibold text-red-600 font-mono-num">+{formatCurrencyShort(l.debit)}</p>}

@@ -9,7 +9,7 @@ export default function DispatcherLayout() {
   const title = getPageTitle(location.pathname)
 
   return (
-    <div className="flex min-h-screen bg-[#f5f7fa]">
+    <div className="flex min-h-screen bg-[var(--theme-bg-primary)]">
       <Sidebar items={dispatcherNav} title="Điều hành" basePath="/dispatcher" />
       <div className="flex-1 flex flex-col min-h-screen min-w-0">
         <DesktopHeader title={title} />

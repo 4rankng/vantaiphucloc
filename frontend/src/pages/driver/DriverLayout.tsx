@@ -8,7 +8,7 @@ export default function DriverLayout() {
   const title = getPageTitle(location.pathname)
 
   return (
-    <div className="min-h-screen bg-[#f5f7fa]">
+    <div className="min-h-screen bg-[var(--theme-bg-primary)]">
       <MobileHeader title={title} />
       <main className="max-w-2xl mx-auto p-4 pb-24">
         <Outlet />

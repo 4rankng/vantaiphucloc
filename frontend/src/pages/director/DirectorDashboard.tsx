@@ -20,66 +20,64 @@ export default function DirectorDashboard() {
   return (
     <div className="space-y-6">
       {/* KPI Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-        <StatCard icon={<Truck size={20}/>} label="Đầu kéo" value={mockTractors.length} subtitle={`${running.length} chạy · ${idle.length} rảnh`} />
-        <StatCard icon={<TrendingUp size={20}/>} label="Doanh thu" value={formatCurrency(cur.revenue)} variant="gold" trend="up" />
-        <StatCard icon={<DollarSign size={20}/>} label="Chi phí" value={formatCurrency(cur.expense)} variant="warning" />
-        <StatCard icon={<ArrowUpRight size={20}/>} label="Lợi nhuận" value={formatCurrency(cur.revenue - cur.expense)} variant="success" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard icon={<Truck size={24}/>} label="Đầu kéo" value={mockTractors.length} subtitle={`${running.length} chạy · ${idle.length} rảnh`} />
+        <StatCard icon={<TrendingUp size={24}/>} label="Doanh thu" value={formatCurrency(cur.revenue)} variant="success" trend="up" />
+        <StatCard icon={<DollarSign size={24}/>} label="Chi phí" value={formatCurrency(cur.expense)} variant="warning" />
+        <StatCard icon={<ArrowUpRight size={24}/>} label="Lợi nhuận" value={formatCurrency(cur.revenue - cur.expense)} variant="teal" />
       </div>
 
       {/* Status Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard icon={<Route size={18}/>} label="Đang chạy" value={active.length} variant="success" />
-        <StatCard icon={<Clock size={18}/>} label="Lên kế hoạch" value={planned.length} variant="warning" />
-        <StatCard icon={<CheckCircle size={18}/>} label="Hoàn thành (T4)" value={completed.length} />
-        <StatCard icon={<AlertTriangle size={18}/>} label="Cảnh báo" value={highAlerts.length} variant="danger" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard icon={<Route size={24}/>} label="Đang chạy" value={active.length} variant="success" />
+        <StatCard icon={<Clock size={24}/>} label="Lên kế hoạch" value={planned.length} variant="warning" />
+        <StatCard icon={<CheckCircle size={24}/>} label="Hoàn thành (T4)" value={completed.length} />
+        <StatCard icon={<AlertTriangle size={24}/>} label="Cảnh báo" value={highAlerts.length} variant="danger" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         {/* Revenue Chart */}
-        <GlassCard className="p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-bold text-navy-900 font-display">Biểu đồ doanh thu 6 tháng</h3>
-            <div className="flex gap-3 text-[10px] text-gray-400">
-              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-navy-800"/> Doanh thu</span>
-              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-gold-300"/> Chi phí</span>
+        <GlassCard className="p-6">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-sm font-bold text-[var(--theme-text-primary)] font-display">Biểu đồ doanh thu 6 tháng</h3>
+            <div className="flex gap-3 text-[10px] text-[var(--theme-text-muted)]">
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm" style={{background:'var(--theme-brand-primary)'}}/> Doanh thu</span>
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm" style={{background:'var(--theme-brand-secondary)', opacity:0.5}}/> Chi phí</span>
             </div>
           </div>
           <div className="space-y-2.5">
             {mockMonthlyRevenue.map((m) => (
               <div key={m.month} className="flex items-center gap-3">
-                <span className="text-[11px] text-gray-400 w-14 shrink-0 font-mono-num">{m.month}</span>
+                <span className="text-[11px] text-[var(--theme-text-muted)] w-14 shrink-0 font-mono-num">{m.month}</span>
                 <div className="flex-1 flex gap-1 h-6 items-center">
-                  <div className="h-full rounded-md bg-gradient-to-r from-navy-800 to-navy-700 transition-all duration-500"
-                    style={{ width: `${(m.revenue / maxRev) * 100}%` }} />
-                  <div className="h-full rounded-md bg-gold-300/50 border border-gold-300/70"
-                    style={{ width: `${(m.expense / maxRev) * 100}%` }} />
+                  <div className="h-full rounded-md transition-all duration-500" style={{ width: `${(m.revenue / maxRev) * 100}%`, background: 'var(--theme-brand-primary)' }} />
+                  <div className="h-full rounded-md" style={{ width: `${(m.expense / maxRev) * 100}%`, background: 'var(--theme-brand-secondary)', opacity: 0.3 }} />
                 </div>
-                <span className="text-[11px] font-semibold text-navy-900 w-20 text-right font-mono-num">{formatCurrencyShort(m.revenue)}</span>
+                <span className="text-[11px] font-semibold text-[var(--theme-text-primary)] w-20 text-right font-mono-num">{formatCurrencyShort(m.revenue)}</span>
               </div>
             ))}
           </div>
         </GlassCard>
 
         {/* Top Drivers */}
-        <GlassCard className="p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-bold text-navy-900 font-display">KPI Tài xế tháng {cur.month}</h3>
-            <button onClick={() => navigate('/director/driver-kpi')} className="text-xs text-gold-500 font-semibold hover:underline">Xem tất cả →</button>
+        <GlassCard className="p-6">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="text-sm font-bold text-[var(--theme-text-primary)] font-display">KPI Tài xế tháng {cur.month}</h3>
+            <button onClick={() => navigate('/director/driver-kpi')} className="text-xs font-semibold hover:underline" style={{color:'var(--theme-brand-secondary)'}}>Xem tất cả →</button>
           </div>
           <div className="space-y-2">
             {topDrivers.map((d, i) => (
-              <div key={d.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-navy-50/50 transition-colors">
+              <div key={d.id} className="flex items-center gap-3 p-2 rounded-lg transition-colors hover:bg-[var(--theme-bg-tertiary)]">
                 <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${i === 0 ? 'badge-gold' : i === 1 ? 'bg-gray-200 text-gray-600' : i === 2 ? 'bg-amber-600 text-white' : 'bg-gray-100 text-gray-400'}`}>
                   {i + 1}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-navy-900 truncate">{d.name}</p>
-                  <p className="text-[11px] text-gray-400">{d.tractorPlate} · {d.monthlyTrips} chuyến</p>
+                  <p className="text-sm font-semibold text-[var(--theme-text-primary)] truncate">{d.name}</p>
+                  <p className="text-[11px] text-[var(--theme-text-muted)]">{d.tractorPlate} · {d.monthlyTrips} chuyến</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-sm font-bold text-navy-900 font-mono-num">{formatCurrencyShort(d.monthlyRevenue)}</p>
-                  <p className="text-[11px] text-gold-500">⭐ {d.rating}</p>
+                  <p className="text-sm font-bold text-[var(--theme-text-primary)] font-mono-num">{formatCurrencyShort(d.monthlyRevenue)}</p>
+                  <p className="text-[11px]" style={{color:'var(--theme-brand-secondary)'}}>⭐ {d.rating}</p>
                 </div>
               </div>
             ))}
@@ -88,25 +86,25 @@ export default function DirectorDashboard() {
       </div>
 
       {/* Recent Jobs */}
-      <GlassCard className="p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold text-navy-900 font-display">Chuyến xe gần đây</h3>
-          <button onClick={() => navigate('/director/trips')} className="text-xs text-gold-500 font-semibold hover:underline">Xem tất cả →</button>
+      <GlassCard className="p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-sm font-bold text-[var(--theme-text-primary)] font-display">Chuyến xe gần đây</h3>
+          <button onClick={() => navigate('/director/trips')} className="text-xs font-semibold hover:underline" style={{color:'var(--theme-brand-secondary)'}}>Xem tất cả →</button>
         </div>
         {/* Mobile: cards */}
         <div className="lg:hidden space-y-2">
           {mockJobs.slice(0, 5).map((j) => {
             const s = getJobStatusBadge(j.status)
             return (
-              <div key={j.id} className="p-3 rounded-lg border border-navy-100/50 bg-white/50">
+              <div key={j.id} className="p-4 rounded-xl" style={{background:'var(--theme-bg-tertiary)', border:'1px solid var(--theme-border-light)'}}>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold text-navy-900">{j.id}</span>
+                  <span className="text-xs font-bold text-[var(--theme-text-primary)]">{j.id}</span>
                   <StatusBadge variant={j.status === 'IN_PROGRESS' ? 'success' : j.status === 'COMPLETED' ? 'info' : j.status === 'PLANNED' ? 'warning' : 'neutral'} label={s.label} />
                 </div>
-                <p className="text-xs text-gray-500 truncate">{j.route}</p>
+                <p className="text-xs text-[var(--theme-text-secondary)] truncate">{j.route}</p>
                 <div className="flex items-center justify-between mt-2">
-                  <span className="text-[11px] text-gray-400">{j.driverName}</span>
-                  <span className="text-xs font-bold text-navy-900 font-mono-num">{formatCurrencyShort(j.revenue)}</span>
+                  <span className="text-[11px] text-[var(--theme-text-muted)]">{j.driverName}</span>
+                  <span className="text-xs font-bold text-[var(--theme-text-primary)] font-mono-num">{formatCurrencyShort(j.revenue)}</span>
                 </div>
               </div>
             )
@@ -116,7 +114,7 @@ export default function DirectorDashboard() {
         <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[11px] text-gray-400 uppercase tracking-wider border-b border-navy-100">
+              <tr className="text-left text-[11px] text-[var(--theme-text-muted)] uppercase tracking-wider" style={{borderBottom:'1px solid var(--theme-border-default)'}}>
                 <th className="pb-2 pr-3 font-semibold">Mã</th>
                 <th className="pb-2 pr-3 font-semibold">Ngày</th>
                 <th className="pb-2 pr-3 font-semibold">Tuyến</th>
@@ -129,13 +127,13 @@ export default function DirectorDashboard() {
               {mockJobs.slice(0, 8).map((j) => {
                 const s = getJobStatusBadge(j.status)
                 return (
-                  <tr key={j.id} className="border-b border-navy-50 last:border-0 hover:bg-navy-50/30">
-                    <td className="py-2.5 pr-3 font-semibold text-navy-900 font-mono-num">{j.id}</td>
-                    <td className="py-2.5 pr-3 text-gray-500 font-mono-num">{j.jobDate}</td>
-                    <td className="py-2.5 pr-3 text-navy-900 max-w-[220px] truncate">{j.route}</td>
-                    <td className="py-2.5 pr-3 text-gray-500">{j.driverName}</td>
+                  <tr key={j.id} style={{borderBottom:'1px solid var(--theme-border-light)'}} className="last:border-0">
+                    <td className="py-2.5 pr-3 font-semibold text-[var(--theme-text-primary)] font-mono-num">{j.id}</td>
+                    <td className="py-2.5 pr-3 text-[var(--theme-text-muted)] font-mono-num">{j.jobDate}</td>
+                    <td className="py-2.5 pr-3 text-[var(--theme-text-primary)] max-w-[220px] truncate">{j.route}</td>
+                    <td className="py-2.5 pr-3 text-[var(--theme-text-muted)]">{j.driverName}</td>
                     <td className="py-2.5 pr-3"><StatusBadge variant={j.status === 'IN_PROGRESS' ? 'success' : j.status === 'COMPLETED' ? 'info' : j.status === 'PLANNED' ? 'warning' : 'neutral'} label={s.label} /></td>
-                    <td className="py-2.5 text-right font-semibold text-navy-900 font-mono-num">{formatCurrencyShort(j.revenue)}</td>
+                    <td className="py-2.5 text-right font-semibold text-[var(--theme-text-primary)] font-mono-num">{formatCurrencyShort(j.revenue)}</td>
                   </tr>
                 )
               })}
@@ -145,18 +143,18 @@ export default function DirectorDashboard() {
       </GlassCard>
 
       {/* Period Close */}
-      <GlassCard className="p-5">
-        <h3 className="text-sm font-bold text-navy-900 font-display mb-3">Chốt sổ</h3>
+      <GlassCard className="p-6">
+        <h3 className="text-sm font-bold text-[var(--theme-text-primary)] font-display mb-4">Chốt sổ</h3>
         <div className="space-y-2">
           {mockPeriodCloses.map((pc) => (
-            <div key={pc.id} className="flex items-center justify-between p-3 rounded-lg bg-navy-50/30 border border-navy-100/50">
+            <div key={pc.id} className="flex items-center justify-between p-4 rounded-xl" style={{background:'var(--theme-bg-tertiary)', border:'1px solid var(--theme-border-light)'}}>
               <div className="flex items-center gap-3">
-                <span className="text-sm font-bold text-navy-900 font-mono-num">{pc.month}</span>
+                <span className="text-sm font-bold text-[var(--theme-text-primary)] font-mono-num">{pc.month}</span>
                 <StatusBadge variant={pc.status === 'closed' ? 'success' : 'warning'} label={pc.status === 'closed' ? 'Đã chốt' : 'Đang mở'} />
               </div>
               <div className="flex items-center gap-3 text-[11px]">
-                <span className="text-gray-400">DT: <b className="text-navy-900">{formatCurrencyShort(pc.totalRevenue)}</b></span>
-                <span className="text-gray-400">LN: <b className="text-emerald-600">{formatCurrencyShort(pc.profit)}</b></span>
+                <span className="text-[var(--theme-text-muted)]">DT: <b className="text-[var(--theme-text-primary)]">{formatCurrencyShort(pc.totalRevenue)}</b></span>
+                <span className="text-[var(--theme-text-muted)]">LN: <b className="text-emerald-600">{formatCurrencyShort(pc.profit)}</b></span>
               </div>
             </div>
           ))}

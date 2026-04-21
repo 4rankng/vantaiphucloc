@@ -5,12 +5,12 @@ import { StatusBadge } from '@/components/shared/StatusBadge'
 import { GlassCard } from '@/components/shared/GlassCard'
 import { mockInvoices, formatCurrencyFull, formatCurrencyShort } from '@/data/mockData'
 import { FileText } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import { DialogClose } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/Dialog'
+import { DialogClose } from '@/components/ui/Dialog'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { Label } from '@/components/ui/Label'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
 
 const invStatusVariant = (s: string): 'success'|'warning'|'danger'|'info'|'neutral' =>
   s === 'PAID' ? 'success' : s === 'ISSUED' ? 'info' : s === 'OVERDUE' ? 'danger' : s === 'CANCELLED' ? 'danger' : 'neutral'
@@ -41,15 +41,15 @@ export default function DirectorInvoicesPage() {
             <MobileListCard key={inv.id} onClick={() => setDetailId(inv.id)}>
               <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded bg-navy-100 flex items-center justify-center text-navy-600"><FileText size={14}/></div>
-                  <span className="text-xs font-bold text-navy-900 font-mono-num">{inv.id}</span>
+                  <div className="w-7 h-7 rounded text-[var(--theme-bg-tertiary)] flex items-center justify-center text-[var(--theme-text-secondary)]"><FileText size={14}/></div>
+                  <span className="text-xs font-bold text-[var(--theme-text-primary)] font-mono-num">{inv.id}</span>
                 </div>
                 <StatusBadge variant={invStatusVariant(inv.status)} label={invStatusLabel(inv.status)} />
               </div>
-              <p className="text-[12px] text-navy-900 font-medium truncate">{inv.clientName}</p>
+              <p className="text-[12px] text-[var(--theme-text-primary)] font-medium truncate">{inv.clientName}</p>
               <div className="flex items-center justify-between mt-2 text-[11px]">
-                <span className="text-gray-400">{inv.issueDate}</span>
-                <span className="font-bold text-navy-900 font-mono-num">{formatCurrencyShort(inv.amount)}</span>
+                <span className="text-[var(--theme-text-muted)]">{inv.issueDate}</span>
+                <span className="font-bold text-[var(--theme-text-primary)] font-mono-num">{formatCurrencyShort(inv.amount)}</span>
               </div>
             </MobileListCard>
           ))}
@@ -57,21 +57,21 @@ export default function DirectorInvoicesPage() {
       ) : (
         <GlassCard className="overflow-hidden">
           <table className="w-full text-sm">
-            <thead><tr className="text-left text-[11px] text-gray-400 uppercase tracking-wider border-b border-navy-100">
+            <thead><tr className="text-left text-[11px] text-[var(--theme-text-muted)] uppercase tracking-wider border-b border-[var(--theme-border-default)]">
               <th className="px-4 py-2.5 font-semibold">Mã HĐ</th><th className="px-4 py-2.5 font-semibold">Khách hàng</th>
               <th className="px-4 py-2.5 font-semibold">Loại</th><th className="px-4 py-2.5 font-semibold">Ngày phát hành</th>
               <th className="px-4 py-2.5 font-semibold">Hạn thanh toán</th><th className="px-4 py-2.5 font-semibold">Trạng thái</th>
               <th className="px-4 py-2.5 font-semibold text-right">Số tiền</th>
             </tr></thead>
             <tbody>{mockInvoices.map((inv) => (
-              <tr key={inv.id} className="border-b border-navy-50 last:border-0 hover:bg-navy-50/30 cursor-pointer" onClick={() => setDetailId(inv.id)}>
-                <td className="px-4 py-2.5 font-semibold text-navy-900 font-mono-num">{inv.id}</td>
-                <td className="px-4 py-2.5 text-navy-900">{inv.clientName}</td>
-                <td className="px-4 py-2.5 text-gray-500">{inv.category}</td>
-                <td className="px-4 py-2.5 text-gray-500 font-mono-num">{inv.issueDate}</td>
-                <td className="px-4 py-2.5 text-gray-500 font-mono-num">{inv.dueDate}</td>
+              <tr key={inv.id} className="border-b border-[var(--theme-border-light)] last:border-0 hover:var(--theme-bg-tertiary) cursor-pointer" onClick={() => setDetailId(inv.id)}>
+                <td className="px-4 py-2.5 font-semibold text-[var(--theme-text-primary)] font-mono-num">{inv.id}</td>
+                <td className="px-4 py-2.5 text-[var(--theme-text-primary)]">{inv.clientName}</td>
+                <td className="px-4 py-2.5 text-[var(--theme-text-muted)]">{inv.category}</td>
+                <td className="px-4 py-2.5 text-[var(--theme-text-muted)] font-mono-num">{inv.issueDate}</td>
+                <td className="px-4 py-2.5 text-[var(--theme-text-muted)] font-mono-num">{inv.dueDate}</td>
                 <td className="px-4 py-2.5"><StatusBadge variant={invStatusVariant(inv.status)} label={invStatusLabel(inv.status)} /></td>
-                <td className="px-4 py-2.5 text-right font-semibold text-navy-900 font-mono-num">{formatCurrencyShort(inv.amount)}</td>
+                <td className="px-4 py-2.5 text-right font-semibold text-[var(--theme-text-primary)] font-mono-num">{formatCurrencyShort(inv.amount)}</td>
               </tr>
             ))}</tbody>
           </table>
@@ -81,15 +81,15 @@ export default function DirectorInvoicesPage() {
       <DetailModal open={!!detail} onOpenChange={() => setDetailId(null)} title="Chi tiết hóa đơn">
         {detail && (
           <div className="space-y-3 text-sm">
-            <div className="flex justify-between py-2 border-b border-navy-100"><span className="text-gray-500">Mã HĐ</span><span className="font-semibold text-navy-900 font-mono-num">{detail.id}</span></div>
-            <div className="flex justify-between py-2 border-b border-navy-100"><span className="text-gray-500">Khách hàng</span><span className="text-navy-900">{detail.clientName}</span></div>
-            <div className="flex justify-between py-2 border-b border-navy-100"><span className="text-gray-500">Loại</span><span className="text-navy-900">{detail.category}</span></div>
-            <div className="flex justify-between py-2 border-b border-navy-100"><span className="text-gray-500">Container</span><span className="text-navy-900">{detail.containerSize} × {detail.containerCount}</span></div>
-            {detail.route && <div className="flex justify-between py-2 border-b border-navy-100"><span className="text-gray-500">Tuyến</span><span className="text-navy-900 text-right max-w-[60%]">{detail.route}</span></div>}
-            <div className="flex justify-between py-2 border-b border-navy-100"><span className="text-gray-500">Ngày phát hành</span><span className="text-navy-900 font-mono-num">{detail.issueDate}</span></div>
-            <div className="flex justify-between py-2 border-b border-navy-100"><span className="text-gray-500">Hạn thanh toán</span><span className="text-navy-900 font-mono-num">{detail.dueDate}</span></div>
-            <div className="flex justify-between py-2 border-b border-navy-100"><span className="text-gray-500">Số tiền</span><span className="font-bold text-navy-900 font-mono-num">{formatCurrencyFull(detail.amount)}</span></div>
-            <div className="flex justify-between py-2"><span className="text-gray-500">Trạng thái</span><StatusBadge variant={invStatusVariant(detail.status)} label={invStatusLabel(detail.status)} /></div>
+            <div className="flex justify-between py-2 border-b border-[var(--theme-border-default)]"><span className="text-[var(--theme-text-muted)]">Mã HĐ</span><span className="font-semibold text-[var(--theme-text-primary)] font-mono-num">{detail.id}</span></div>
+            <div className="flex justify-between py-2 border-b border-[var(--theme-border-default)]"><span className="text-[var(--theme-text-muted)]">Khách hàng</span><span className="text-[var(--theme-text-primary)]">{detail.clientName}</span></div>
+            <div className="flex justify-between py-2 border-b border-[var(--theme-border-default)]"><span className="text-[var(--theme-text-muted)]">Loại</span><span className="text-[var(--theme-text-primary)]">{detail.category}</span></div>
+            <div className="flex justify-between py-2 border-b border-[var(--theme-border-default)]"><span className="text-[var(--theme-text-muted)]">Container</span><span className="text-[var(--theme-text-primary)]">{detail.containerSize} × {detail.containerCount}</span></div>
+            {detail.route && <div className="flex justify-between py-2 border-b border-[var(--theme-border-default)]"><span className="text-[var(--theme-text-muted)]">Tuyến</span><span className="text-[var(--theme-text-primary)] text-right max-w-[60%]">{detail.route}</span></div>}
+            <div className="flex justify-between py-2 border-b border-[var(--theme-border-default)]"><span className="text-[var(--theme-text-muted)]">Ngày phát hành</span><span className="text-[var(--theme-text-primary)] font-mono-num">{detail.issueDate}</span></div>
+            <div className="flex justify-between py-2 border-b border-[var(--theme-border-default)]"><span className="text-[var(--theme-text-muted)]">Hạn thanh toán</span><span className="text-[var(--theme-text-primary)] font-mono-num">{detail.dueDate}</span></div>
+            <div className="flex justify-between py-2 border-b border-[var(--theme-border-default)]"><span className="text-[var(--theme-text-muted)]">Số tiền</span><span className="font-bold text-[var(--theme-text-primary)] font-mono-num">{formatCurrencyFull(detail.amount)}</span></div>
+            <div className="flex justify-between py-2"><span className="text-[var(--theme-text-muted)]">Trạng thái</span><StatusBadge variant={invStatusVariant(detail.status)} label={invStatusLabel(detail.status)} /></div>
           </div>
         )}
       </DetailModal>
@@ -109,7 +109,7 @@ export default function DirectorInvoicesPage() {
             <div className="space-y-2"><Label>Số tiền (VNĐ)</Label><Input type="number" placeholder="0" /></div>
             <div className="space-y-2"><Label>Hạn thanh toán</Label><Input type="date" /></div>
           </div>
-          <DialogFooter><DialogClose asChild><Button variant="outline">Huỷ</Button></DialogClose><Button className="bg-gold-400 text-navy-950 hover:bg-gold-300">Tạo</Button></DialogFooter>
+          <DialogFooter><DialogClose asChild><Button variant="outline">Huỷ</Button></DialogClose><Button className="bg-[var(--theme-brand-secondary)] text-[var(--theme-brand-primary-dark)] hover:bg-gold-300">Tạo</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

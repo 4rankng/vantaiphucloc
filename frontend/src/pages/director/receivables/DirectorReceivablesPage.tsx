@@ -33,10 +33,10 @@ export default function DirectorReceivablesPage() {
           {debtors.map((c) => (
             <MobileListCard key={c.id}>
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-semibold text-navy-900 truncate max-w-[70%]">{c.name}</p>
+                <p className="text-sm font-semibold text-[var(--theme-text-primary)] truncate max-w-[70%]">{c.name}</p>
                 <span className="text-sm font-bold text-red-600 font-mono-num">{formatCurrencyShort(c.outstandingDebt)}</span>
               </div>
-              <div className="flex items-center gap-2 text-[11px] text-gray-400">
+              <div className="flex items-center gap-2 text-[11px] text-[var(--theme-text-muted)]">
                 <span>{c.contactPerson || ''}</span>
                 <span>· {c.phone}</span>
               </div>
@@ -50,24 +50,24 @@ export default function DirectorReceivablesPage() {
       ) : (
         <GlassCard className="overflow-hidden">
           <table className="w-full text-sm">
-            <thead><tr className="text-left text-[11px] text-gray-400 uppercase tracking-wider border-b border-navy-100">
+            <thead><tr className="text-left text-[11px] text-[var(--theme-text-muted)] uppercase tracking-wider border-b border-[var(--theme-border-default)]">
               <th className="px-4 py-2.5 font-semibold">Khách hàng</th><th className="px-4 py-2.5 font-semibold">Người liên hệ</th>
               <th className="px-4 py-2.5 font-semibold">Điện thoại</th><th className="px-4 py-2.5 font-semibold text-right">Công nợ</th>
               <th className="px-4 py-2.5 font-semibold text-right">Tỷ lệ</th>
             </tr></thead>
             <tbody>{debtors.map((c) => (
-              <tr key={c.id} className="border-b border-navy-50 last:border-0 hover:bg-navy-50/30">
-                <td className="px-4 py-2.5 font-semibold text-navy-900">{c.name}</td>
-                <td className="px-4 py-2.5 text-gray-500">{c.contactPerson || '—'}</td>
-                <td className="px-4 py-2.5 text-gray-500 font-mono-num">{c.phone}</td>
+              <tr key={c.id} className="border-b border-[var(--theme-border-light)] last:border-0 hover:var(--theme-bg-tertiary)">
+                <td className="px-4 py-2.5 font-semibold text-[var(--theme-text-primary)]">{c.name}</td>
+                <td className="px-4 py-2.5 text-[var(--theme-text-muted)]">{c.contactPerson || '—'}</td>
+                <td className="px-4 py-2.5 text-[var(--theme-text-muted)] font-mono-num">{c.phone}</td>
                 <td className="px-4 py-2.5 text-right font-semibold text-red-600 font-mono-num">{formatCurrencyFull(c.outstandingDebt)}</td>
-                <td className="px-4 py-2.5 text-right text-gray-400 font-mono-num">{((c.outstandingDebt / totalDebt) * 100).toFixed(1)}%</td>
+                <td className="px-4 py-2.5 text-right text-[var(--theme-text-muted)] font-mono-num">{((c.outstandingDebt / totalDebt) * 100).toFixed(1)}%</td>
               </tr>
             ))}</tbody>
-            <tfoot><tr className="border-t-2 border-navy-200 bg-navy-50/30">
-              <td colSpan={3} className="px-4 py-3 font-bold text-navy-900">Tổng cộng</td>
+            <tfoot><tr className="border-t-2 border-[var(--theme-border-default)] var(--theme-bg-tertiary)">
+              <td colSpan={3} className="px-4 py-3 font-bold text-[var(--theme-text-primary)]">Tổng cộng</td>
               <td className="px-4 py-3 text-right font-bold text-red-600 font-mono-num">{formatCurrencyFull(totalDebt)}</td>
-              <td className="px-4 py-3 text-right font-bold text-navy-900 font-mono-num">100%</td>
+              <td className="px-4 py-3 text-right font-bold text-[var(--theme-text-primary)] font-mono-num">100%</td>
             </tr></tfoot>
           </table>
         </GlassCard>
@@ -75,12 +75,12 @@ export default function DirectorReceivablesPage() {
 
       {/* Aging Summary */}
       <GlassCard className="p-5">
-        <h3 className="text-sm font-bold text-navy-900 font-display mb-3">Phân loại theo thời gian</h3>
+        <h3 className="text-sm font-bold text-[var(--theme-text-primary)] font-display mb-3">Phân loại theo thời gian</h3>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {agingBuckets.map((b) => (
-            <div key={b.label} className="p-3 rounded-lg bg-navy-50/50 border border-navy-100">
-              <p className="text-[11px] text-gray-400 font-medium">{b.label}</p>
-              <p className="text-lg font-bold text-navy-900 font-mono-num mt-1">{formatCurrencyShort(Math.random() * 80000000 + 10000000)}</p>
+            <div key={b.label} className="p-3 rounded-lg text-[var(--theme-bg-tertiary)]/50 border border-[var(--theme-border-default)]">
+              <p className="text-[11px] text-[var(--theme-text-muted)] font-medium">{b.label}</p>
+              <p className="text-lg font-bold text-[var(--theme-text-primary)] font-mono-num mt-1">{formatCurrencyShort(Math.random() * 80000000 + 10000000)}</p>
             </div>
           ))}
         </div>

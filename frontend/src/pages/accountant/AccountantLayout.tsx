@@ -9,7 +9,7 @@ export default function AccountantLayout() {
   const title = getPageTitle(location.pathname)
 
   return (
-    <div className="flex min-h-screen bg-[#f5f7fa]">
+    <div className="flex min-h-screen bg-[var(--theme-bg-primary)]">
       <Sidebar items={accountantNav} title="Kế toán" basePath="/accountant" />
       <div className="flex-1 flex flex-col min-h-screen min-w-0">
         <DesktopHeader title={title} />

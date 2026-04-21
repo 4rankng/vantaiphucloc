@@ -27,12 +27,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-navy-950 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-[var(--theme-brand-primary-dark)] relative overflow-hidden">
       {/* Background pattern */}
       <div className="absolute inset-0 opacity-[0.03]" style={{
         backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
       }} />
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-gold-400/5 rounded-full blur-3xl" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-[var(--theme-brand-secondary)]/5 rounded-full blur-3xl" />
       <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-navy-600/10 rounded-full blur-3xl" />
 
       <div className="w-full max-w-md px-4 relative z-10">
@@ -42,7 +42,7 @@ export default function LoginPage() {
             <span className="text-4xl">🚛</span>
           </div>
           <h1 className="text-3xl font-extrabold text-white font-display tracking-tight">
-            <span className="text-gold-400">T</span>Transport
+            <span className="text-[var(--theme-brand-secondary)]">T</span>Transport
           </h1>
           <p className="text-white/40 mt-2 text-sm">Hệ thống quản lý vận tải hàng hóa</p>
         </div>

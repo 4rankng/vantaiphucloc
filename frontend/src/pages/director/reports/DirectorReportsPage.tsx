@@ -21,14 +21,14 @@ export default function DirectorReportsPage() {
 
       {/* Revenue/Expense Chart */}
       <GlassCard className="p-5">
-        <h3 className="text-sm font-bold text-navy-900 font-display mb-4">Doanh thu & Chi phí 6 tháng</h3>
+        <h3 className="text-sm font-bold text-[var(--theme-text-primary)] font-display mb-4">Doanh thu & Chi phí 6 tháng</h3>
         <div className="space-y-3">
           {mockMonthlyRevenue.map((m) => {
             const profit = m.revenue - m.expense
             return (
               <div key={m.month} className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-gray-400 font-mono-num">{m.month}</span>
+                  <span className="text-[11px] text-[var(--theme-text-muted)] font-mono-num">{m.month}</span>
                   <span className="text-[11px] font-semibold text-emerald-600 font-mono-num">LN: {formatCurrencyShort(profit)}</span>
                 </div>
                 <div className="flex gap-1 h-8 items-center">
@@ -43,7 +43,7 @@ export default function DirectorReportsPage() {
             )
           })}
         </div>
-        <div className="flex gap-4 mt-4 text-[11px] text-gray-400">
+        <div className="flex gap-4 mt-4 text-[11px] text-[var(--theme-text-muted)]">
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-navy-800" /> Doanh thu</span>
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-gold-300/60 border border-gold-300" /> Chi phí</span>
         </div>
@@ -51,7 +51,7 @@ export default function DirectorReportsPage() {
 
       {/* Expense Breakdown */}
       <GlassCard className="p-5">
-        <h3 className="text-sm font-bold text-navy-900 font-display mb-4">Chi phí theo danh mục</h3>
+        <h3 className="text-sm font-bold text-[var(--theme-text-primary)] font-display mb-4">Chi phí theo danh mục</h3>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[
             { label: 'Dầu', amount: 2050000, color: 'bg-blue-500' },
@@ -63,12 +63,12 @@ export default function DirectorReportsPage() {
             { label: 'Bảo hiểm', amount: 3200000, color: 'bg-indigo-500' },
             { label: 'Khác', amount: 1500000, color: 'bg-gray-500' },
           ].map((e) => (
-            <div key={e.label} className="p-3 rounded-lg border border-navy-100/50">
+            <div key={e.label} className="p-3 rounded-lg border border-[var(--theme-border-default)]/50">
               <div className="flex items-center gap-2 mb-1">
                 <span className={`w-2 h-2 rounded-full ${e.color}`} />
-                <span className="text-[11px] text-gray-500">{e.label}</span>
+                <span className="text-[11px] text-[var(--theme-text-muted)]">{e.label}</span>
               </div>
-              <p className="text-sm font-bold text-navy-900 font-mono-num">{formatCurrencyShort(e.amount)}</p>
+              <p className="text-sm font-bold text-[var(--theme-text-primary)] font-mono-num">{formatCurrencyShort(e.amount)}</p>
             </div>
           ))}
         </div>

@@ -3,7 +3,7 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
 import { MobileHeader, DesktopHeader } from '@/components/layout/Header'
 import { directorNav, directorMobileNav, getPageTitle } from '@/lib/navigation'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/Sheet'
 import { useAuth } from '@/contexts/AuthContext'
 import { useState, useEffect } from 'react'
 import { Users, Receipt, UserCog, BarChart3, LogOut } from 'lucide-react'
@@ -49,7 +49,7 @@ function DirectorMoreSheet() {
               return (
                 <button key={item.path} onClick={() => { handleClose(false); navigate(item.path) }}
                   className={cn('flex flex-col items-center justify-center gap-2 py-5 rounded-xl transition-colors touch-target',
-                    active ? 'bg-navy-50 text-navy-900 border border-navy-200' : 'hover:bg-navy-50/50 text-gray-600')}>
+                    active ? 'text-[var(--theme-bg-tertiary)] text-[var(--theme-text-primary)] border border-[var(--theme-border-default)]' : 'hover:text-[var(--theme-bg-tertiary)]/50 text-[var(--theme-text-secondary)]')}>
                   <Icon size={22} />
                   <span className="text-xs font-medium">{item.label}</span>
                 </button>
@@ -74,7 +74,7 @@ export default function DirectorLayout() {
   const isMorePage = location.pathname === '/director/more'
 
   return (
-    <div className="flex min-h-screen bg-[#f5f7fa]">
+    <div className="flex min-h-screen bg-[var(--theme-bg-primary)]">
       <Sidebar items={directorNav} title="Giám đốc" basePath="/director" />
       <div className="flex-1 flex flex-col min-h-screen min-w-0">
         <DesktopHeader title={title} />

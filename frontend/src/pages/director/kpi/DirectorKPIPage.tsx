@@ -20,21 +20,21 @@ export default function DirectorKPIPage() {
 
       {/* Ranking */}
       <GlassCard className="p-5">
-        <h3 className="text-sm font-bold text-navy-900 font-display mb-4">Xếp hạng tài xế</h3>
+        <h3 className="text-sm font-bold text-[var(--theme-text-primary)] font-display mb-4">Xếp hạng tài xế</h3>
         <div className="space-y-3">
           {sorted.map((d, i) => (
-            <div key={d.id} className="flex items-center gap-4 p-3 rounded-xl border border-navy-100/50 hover:bg-navy-50/30 transition-colors">
+            <div key={d.id} className="flex items-center gap-4 p-3 rounded-xl border border-[var(--theme-border-default)]/50 hover:var(--theme-bg-tertiary) transition-colors">
               <span className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-                i === 0 ? 'badge-gold' : i === 1 ? 'bg-gray-200 text-gray-600' : i === 2 ? 'bg-amber-600 text-white' : 'bg-gray-100 text-gray-400'
+                i === 0 ? 'badge-gold' : i === 1 ? 'bg-gray-200 text-[var(--theme-text-secondary)]' : i === 2 ? 'bg-amber-600 text-white' : 'bg-gray-100 text-[var(--theme-text-muted)]'
               }`}>
                 {i + 1}
               </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-bold text-navy-900">{d.name}</p>
-                  <span className="text-[10px] font-semibold bg-navy-100 text-navy-600 px-1.5 py-0.5 rounded font-mono-num">{d.tractorPlate}</span>
+                  <p className="text-sm font-bold text-[var(--theme-text-primary)]">{d.name}</p>
+                  <span className="text-[10px] font-semibold text-[var(--theme-bg-tertiary)] text-[var(--theme-text-secondary)] px-1.5 py-0.5 rounded font-mono-num">{d.tractorPlate}</span>
                 </div>
-                <div className="flex items-center gap-3 mt-1 text-[11px] text-gray-400">
+                <div className="flex items-center gap-3 mt-1 text-[11px] text-[var(--theme-text-muted)]">
                   <span>{d.monthlyTrips} chuyến</span>
                   <span>⭐ {d.rating}</span>
                   <span>Cước/chuyến: {formatCurrencyShort(d.fixedFeePerTrip)}</span>
@@ -45,8 +45,8 @@ export default function DirectorKPIPage() {
                 </div>
               </div>
               <div className="text-right shrink-0">
-                <p className="text-sm font-bold text-navy-900 font-mono-num">{formatCurrencyShort(d.monthlyRevenue)}</p>
-                <p className="text-[11px] text-gray-400">doanh thu</p>
+                <p className="text-sm font-bold text-[var(--theme-text-primary)] font-mono-num">{formatCurrencyShort(d.monthlyRevenue)}</p>
+                <p className="text-[11px] text-[var(--theme-text-muted)]">doanh thu</p>
               </div>
             </div>
           ))}
