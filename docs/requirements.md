@@ -162,15 +162,15 @@
 - `ROUTE_FUEL_QUOTAS`: id, route_id, vehicle_type, liters_per_km, is_default, created_by, updated_by, updated_at. — Ma trận định mức: tuyến × loại xe. Có thể ghi đè thủ công.
 
 #### Trips & Bookings
-- `BOOKINGS`: id, booking_code, client_id, route_id, vehicle_type_required, container_type, notes, status (pending/approved/rejected/completed), created_by, approved_by, approved_at, created_at.
-- `TRIPS`: id, trip_code, booking_id, vehicle_id, driver_id, client_id, route_id, container_code, container_type (20ft/40ft/45ft/hc), status (received/empty_pickup/at_port/leaving_port/en_route/arrived/dropped_off/completed), is_orphan, is_locked, start_time, end_time, actual_distance_km, created_at.
+- `BOOKINGS`: id, booking_code, client_id, route_id, vehicle_type_required, container_type, notes, status (pending/approved/rejected/completed), created_by, approved_by, approved_at, workflow_id (FK → workflows.id), created_at.
+- `TRIPS`: id, trip_code, booking_id, vehicle_id, driver_id, client_id, route_id, container_code, container_type (20ft/40ft/45ft/hc), status (received/empty_pickup/at_port/leaving_port/en_route/arrived/dropped_off/completed), is_orphan, is_locked, start_time, end_time, actual_distance_km, workflow_id (FK → workflows.id), created_at.
 - `TRIP_STATUS_HISTORY`: id, trip_id, status, timestamp, latitude, longitude, accuracy, notes.
 - `TRIP_PHOTOS`: id, trip_id, photo_type (container_pickup/container_delivery/fuel_receipt/expense_receipt/other), file_path, latitude, longitude, accuracy, server_timestamp.
-- `EXPENSES`: id, trip_id, category (fuel/toll/repair/other), amount, liters, fuel_quota_override, description, receipt_photo_id, status (pending/approved/rejected), reject_reason, approved_by, approved_at, created_at.
+- `EXPENSES`: id, trip_id, category (fuel/toll/repair/other), amount, liters, fuel_quota_override, description, receipt_photo_id, status (pending/approved/rejected), reject_reason, approved_by, approved_at, workflow_id (FK → workflows.id), created_at.
 - `TRIP_FUEL_QUOTAS`: id, trip_id, route_fuel_quota_id, default_liters_per_km, actual_liters_per_km, override_reason, overridden_by. — Định mức thực tế cho chuyến (mặc định từ ROUTE_FUEL_QUOTAS, có thể ghi đè).
 
 #### Financials
-- `INVOICES`: id, invoice_number, client_id, trip_ids (array), subtotal, tax, total, pdf_path, status (draft/issued/paid/partially_paid), issued_at, paid_at, notes.
+- `INVOICES`: id, invoice_number, client_id, trip_ids (array), subtotal, tax, total, pdf_path, status (draft/issued/paid/partially_paid), issued_at, paid_at, workflow_id (FK → workflows.id), notes.
 - `PAYMENTS`: id, invoice_id, amount, payment_method, reference_number, paid_by, notes, created_at.
 
 #### Workflows, Alerts & Notifications
