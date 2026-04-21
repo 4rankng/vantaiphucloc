@@ -121,13 +121,20 @@ export function BottomNav() {
                     </span>
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent side="top" align="end" className="w-48 mb-2">
-                  {moreItems.map(({ icon: MoreIcon, label: itemLabel, action }) => (
-                    <DropdownMenuItem key={itemLabel} onClick={action}>
-                      <MoreIcon className="w-4 h-4 mr-2" style={{ color: 'var(--theme-text-muted)' }} />
-                      {itemLabel}
-                    </DropdownMenuItem>
-                  ))}
+                <DropdownMenuContent side="top" align="end" className="w-48 mb-2 p-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    {moreItems.map(({ icon: MoreIcon, label: itemLabel, action }) => (
+                      <button
+                        key={itemLabel}
+                        className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-lg transition-colors touch-manipulation"
+                        style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
+                        onClick={() => { action() }}
+                      >
+                        <MoreIcon className="w-5 h-5" style={{ color: 'var(--theme-text-secondary)' }} />
+                        <span className="text-[11px] font-medium leading-none">{itemLabel}</span>
+                      </button>
+                    ))}
+                  </div>
                 </DropdownMenuContent>
               </DropdownMenu>
             )
