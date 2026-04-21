@@ -96,6 +96,8 @@ export interface ThemeSpacing {
   pagePadding: string;
   cardPadding: string;
   sectionGap: string;
+  topBarHeight: string;
+  bottomNavHeight: string;
 }
 
 export interface ThemeDefinition {

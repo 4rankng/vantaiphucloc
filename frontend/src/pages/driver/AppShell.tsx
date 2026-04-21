@@ -214,8 +214,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main
         className="overflow-y-auto"
         style={{
-          paddingTop: 'calc(3.5rem + env(safe-area-inset-top))',
-          paddingBottom: 'calc(3.5rem + env(safe-area-inset-bottom))',
+          paddingTop: 'calc(var(--theme-spacing-topBarHeight) + env(safe-area-inset-top))',
+          paddingBottom: 'calc(var(--theme-spacing-bottomNavHeight) + env(safe-area-inset-bottom))',
           minHeight: '100vh',
         }}
       >

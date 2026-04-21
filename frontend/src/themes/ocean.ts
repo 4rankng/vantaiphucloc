@@ -86,5 +86,7 @@ export const oceanTheme: ThemeDefinition = {
     pagePadding: '16px',
     cardPadding: '20px',
     sectionGap: '20px',
+    topBarHeight: '3.5rem',
+    bottomNavHeight: '3.5rem',
   },
 };
