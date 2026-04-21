@@ -6,7 +6,7 @@ import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { OfflineIndicator } from '@/components/shared/OfflineIndicator'
 import { Login } from '@/pages/Login'
 import { DriverStoreProvider, useDriverStore } from '@/hooks/use-driver-store'
-import { TopBar, BottomNav } from '@/pages/driver/AppShell'
+import { TopBar, BottomNav, AppShell } from '@/pages/driver/AppShell'
 import { TripList } from '@/pages/driver/TripList'
 import { ActiveTrip } from '@/pages/driver/ActiveTrip'
 import { TripDetail } from '@/pages/driver/TripDetail'
@@ -43,13 +43,9 @@ function Router() {
 function DriverApp() {
   return (
     <DriverStoreProvider>
-      <div className="max-w-md mx-auto min-h-screen flex flex-col bg-[var(--theme-bg-primary)]">
-        <TopBar />
-        <main className="flex-1 overflow-y-auto">
-          <Router />
-        </main>
-        <BottomNav />
-      </div>
+      <AppShell>
+        <Router />
+      </AppShell>
     </DriverStoreProvider>
   )
 }
