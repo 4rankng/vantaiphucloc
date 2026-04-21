@@ -53,6 +53,7 @@ export function MoreMenu() {
           </button>
         ))}
       </div>
+      <p className="text-center text-xs mt-6 pb-4" style={{ color: 'var(--theme-text-muted)' }}>v2026.04.21.4</p>
     </div>
   )
 }
