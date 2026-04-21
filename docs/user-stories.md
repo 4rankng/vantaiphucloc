@@ -27,7 +27,7 @@
 | US-2.8 | Nhận thông báo nhắc nhở thay thế linh kiện (theo thời gian hoặc số km) | Giám đốc, Điều hành | P1 |
 | US-2.9 | Quản lý thông tin bảo hiểm xe (nhà cung cấp, số hợp đồng, phí, hạn) | Giám đốc, Kế toán | P1 |
 | US-2.10 | Nhận thông báo gia hạn bảo hiểm trước khi hết hạn | Giám đốc, Kế toán | P1 |
-| US-2.11 | Ước tính km thực tế sau mỗi chuyến dựa trên tuyến đường + GPS checkpoints | Hệ thống | P1 |
+| US-2.11 | Tính actual_distance_km = haversine sum of GPS_LOG (30s intervals) sau mỗi chuyến; so với ROUTES.distance_km | Hệ thống | P1 |
 
 ## Epic 3: Client Management (Khách hàng / Chủ hàng)
 

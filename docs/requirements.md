@@ -67,7 +67,7 @@
 
 ### 3.2 Quản lý Đội xe & Tài sản (Fleet Management)
 - **CRUD Vehicles:** Quản lý biển số, loại xe, hãng xe, năm sản xuất, trạng thái (đang chạy, bãi, bảo dưỡng, ngưng hoạt động).
-- **Ước tính km:** Sau mỗi chuyến, hệ thống ước tính km thực tế dựa trên tuyến đường + GPS checkpoints tại mỗi bước trạng thái. Không cần công-tơ-mét thủ công.
+- **Ước tính km:** Sau mỗi chuyến, hệ thống tính actual_distance_km bằng cách **cộng dồn khoảng cách haversine** giữa tất cả GPS points (mỗi 30 giây) trong GPS_LOG. So sánh với distance_km từ Google Maps (lưu trong ROUTES) để phát hiện lệch tuyến. Không cần công-tơ-mét thủ công.
 - **Gán tài xế:** Quản lý việc bàn giao xe cho tài xế, lưu lịch sử gán/bàn giao.
 - **Linh kiện bảo hành:** Theo dõi danh sách linh kiện còn trong hạn bảo hành của từng xe, ngày lắp đặt, hạn bảo hành.
 - **Nhắc nhở thay thế:** Tự động nhắc nhở khi đến hạn thay thế linh kiện dựa trên thời gian hoặc số km (so với công-tơ-mét).
@@ -105,7 +105,7 @@
 
 ### 3.6 Công nghệ AI OCR & GPS
 - **OCR Container:** Tài xế chụp ảnh, AI tự động nhận diện 11 mã số container. Hỗ trợ nhập tay nếu OCR thất bại.
-- **Tuyến đường:** Mỗi tuyến định nghĩa điểm đi, điểm đến, quãng đường và thời gian dự kiến. GPS tại mỗi bước trạng thái dùng để ước tính km thực tế.
+- **Tuyến đường:** Mỗi tuyến định nghĩa điểm đi, điểm đến, quãng đường (Google Maps) và thời gian dự kiến. Hệ thống tính actual_distance_km từ GPS_LOG (haversine sum) và so sánh với route distance_km.
 - **Theo dõi trực tuyến:** Native background geolocation plugin gửi vị trí **mỗi 30 giây** khi chuyến ở trạng thái en_route, kể cả khi tắt màn hình hoặc thu nhỏ app (REQ-5.3).
   - **Android:** Sử dụng Foreground Service với persistent notification (vd: "Hoàng đang chạy TR-0101") để OS không kill app.
   - **iOS:** Yêu cầu "Always Allow" location permission. Plugin xử lý background execution limits.
@@ -535,7 +535,7 @@ WARRANTY_PARTS (id=5, vehicle_id=7):
 
 ### 6.5 Real-Time Location Updates (Polling)
 
-GPS positions arrive every 1-5 minutes from driver mobile app (native plugin). This is discrete checkpoint data, not streaming. Simple HTTP polling is sufficient — no WebSocket overhead needed.
+GPS positions arrive every 30 seconds from driver mobile app (native plugin) when en_route. Dashboard polls at same frequency. Simple HTTP polling is sufficient — no WebSocket overhead needed.
 
 #### Strategy: Interval Polling
 - **Interval:** Web dashboard polls every 30 seconds (same frequency as GPS updates from driver)

@@ -903,11 +903,11 @@ Frontend bắt đầu polling:
     updateMapMarkers(locations)
   }, 30000) // 30 giây
 
-Driver native GPS gửi location mỗi 1-5 phút → server lưu DB.
+Driver native GPS gửi location mỗi 30 giây → server lưu GPS_LOG.
 Dashboard poll mỗi 30s → lấy latest GPS cho tất cả active trips.
 
 Kết quả: Minh thấy 3 markers trên bản đồ, cập nhật mỗi 30s.
-GPS chỉ thay đổi mỗi 1-5 phút nên nhiều poll trả về cùng data → OK, vẫn simple và reliable.
+Marker positions update nearly real-time.
 ```
 
 ### Offline handling
