@@ -31,29 +31,29 @@ export function Notifications() {
       <button
         key={n.id}
         onClick={() => markNotificationRead(n.id)}
-        className="w-full text-left rounded-xl p-4 border active:scale-[0.98] transition-transform"
+        className="w-full text-left rounded-2xl p-4 card-lift"
         style={{
-          background: n.read ? 'var(--theme-bg-secondary)' : 'var(--theme-bg-secondary)',
-          borderColor: n.read ? 'var(--theme-border-default)' : 'var(--theme-brand-primary)',
-          opacity: n.read ? 0.7 : 1,
+          background: 'var(--theme-bg-secondary)',
+          boxShadow: 'var(--theme-shadow-card)',
+          opacity: n.read ? 0.65 : 1,
         }}
       >
         <div className="flex gap-3">
           <div
-            className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{ background: 'var(--theme-bg-tertiary)' }}
+            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: n.read ? 'var(--theme-bg-tertiary)' : 'var(--theme-brand-primary-light)' }}
           >
-            <Icon className="w-4 h-4" style={{ color: 'var(--theme-text-secondary)' }} />
+            <Icon className="w-5 h-5" style={{ color: n.read ? 'var(--theme-text-muted)' : 'var(--theme-brand-primary)' }} />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex justify-between items-start">
               <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{n.title}</p>
               {!n.read && (
-                <span className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5 ml-2" style={{ background: 'var(--theme-brand-primary)' }} />
+                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1.5 ml-2" style={{ background: 'var(--theme-brand-primary)' }} />
               )}
             </div>
-            <p className="text-xs mt-0.5 line-clamp-2" style={{ color: 'var(--theme-text-muted)' }}>{n.message}</p>
-            <p className="text-[10px] mt-1" style={{ color: 'var(--theme-text-muted)' }}>{formatTime(n.timestamp)}</p>
+            <p className="text-xs mt-1 line-clamp-2" style={{ color: 'var(--theme-text-secondary)' }}>{n.message}</p>
+            <p className="text-[11px] mt-1.5" style={{ color: 'var(--theme-text-muted)' }}>{formatTime(n.timestamp)}</p>
           </div>
         </div>
       </button>
@@ -61,11 +61,11 @@ export function Notifications() {
   }
 
   return (
-    <div className="p-4 space-y-4 pb-24">
+    <div className="p-4 space-y-5 pb-24">
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-bold" style={{ color: 'var(--theme-text-primary)' }}>Thông báo</h2>
         {unread.length > 0 && (
-          <Button variant="ghost" size="sm" onClick={markAllNotificationsRead} className="text-xs">
+          <Button variant="ghost" size="sm" onClick={markAllNotificationsRead} className="text-xs font-semibold">
             <CheckCheck className="w-3.5 h-3.5 mr-1" />
             Đọc tất cả
           </Button>
@@ -74,26 +74,28 @@ export function Notifications() {
 
       {unread.length > 0 && (
         <>
-          <span className="text-xs font-semibold uppercase tracking-wider block" style={{ color: 'var(--theme-text-muted)' }}>
+          <span className="text-xs font-bold block" style={{ color: 'var(--theme-text-secondary)' }}>
             Chưa đọc ({unread.length})
           </span>
-          <div className="space-y-2">{unread.map(renderNotif)}</div>
+          <div className="space-y-2.5">{unread.map(renderNotif)}</div>
         </>
       )}
 
       {read.length > 0 && (
         <>
-          <span className="text-xs font-semibold uppercase tracking-wider block" style={{ color: 'var(--theme-text-muted)' }}>
+          <span className="text-xs font-bold block" style={{ color: 'var(--theme-text-secondary)' }}>
             Đã đọc
           </span>
-          <div className="space-y-2">{read.map(renderNotif)}</div>
+          <div className="space-y-2.5">{read.map(renderNotif)}</div>
         </>
       )}
 
       {notifications.length === 0 && (
-        <div className="text-center py-12">
-          <BellOff className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--theme-text-muted)', opacity: 0.4 }} />
-          <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không có thông báo nào</p>
+        <div className="text-center py-16">
+          <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ background: 'var(--theme-bg-tertiary)' }}>
+            <BellOff className="w-7 h-7" style={{ color: 'var(--theme-text-muted)', opacity: 0.4 }} />
+          </div>
+          <p className="text-sm font-medium" style={{ color: 'var(--theme-text-secondary)' }}>Không có thông báo</p>
         </div>
       )}
     </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search, Package, MapPin, ChevronRight } from 'lucide-react'
+import { Search, Package, MapPin } from 'lucide-react'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
@@ -10,23 +10,27 @@ type Tab = 'active' | 'planned' | 'completed'
 function TripCard({ job, onClick }: { job: any; onClick: () => void }) {
   const s = getJobStatusBadge(job.status as JobStatus)
   return (
-    <button onClick={onClick} className="w-full text-left rounded-xl p-4 shadow-sm border active:scale-[0.98] transition-transform" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}>
-      <div className="flex justify-between items-start mb-2">
-        <div className="flex items-center gap-1.5 min-w-0 flex-1">
-          <MapPin className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
-          <span className="font-semibold text-sm truncate" style={{ color: 'var(--theme-text-primary)' }}>{job.route}</span>
+    <button
+      onClick={onClick}
+      className="w-full text-left rounded-2xl p-4 card-lift"
+      style={{
+        background: 'var(--theme-bg-secondary)',
+        boxShadow: 'var(--theme-shadow-card)',
+      }}
+    >
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-[15px] truncate" style={{ color: 'var(--theme-text-primary)' }}>{job.route}</p>
+          <div className="flex items-center gap-1.5 mt-1">
+            <Package className="w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
+            <span className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>{job.containerNumber}</span>
+          </div>
         </div>
         <Badge variant={s.variant as any} className="text-[11px] flex-shrink-0 ml-2">{s.label}</Badge>
       </div>
-      <div className="space-y-1.5">
-        <div className="flex items-center gap-1.5">
-          <Package className="w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-          <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{job.containerNumber}</span>
-        </div>
-        <div className="flex justify-between items-center">
-          <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{job.distanceKm} km</span>
-          <span className="text-sm font-bold" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyShort(job.driverFee)}</span>
-        </div>
+      <div className="flex justify-between items-center pt-2" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
+        <span className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>{job.distanceKm} km</span>
+        <span className="text-[15px] font-bold" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyShort(job.driverFee)}</span>
       </div>
     </button>
   )
@@ -69,37 +73,58 @@ export function TripList() {
 
   return (
     <div>
+      {/* Search — pill style */}
       <div className="px-4 pt-3 pb-2">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
           <Input
             placeholder="Tìm chuyến, container, khách hàng..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="pl-10 search-pill"
+            className="pl-11 search-pill"
           />
         </div>
       </div>
-      <div className="flex gap-0 border-b" style={{ borderColor: 'var(--theme-border-default)', background: 'var(--theme-bg-secondary)' }}>
-        {tabConfigs.map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className="flex-1 py-3 text-center text-sm font-medium border-b-2 transition-colors"
-            style={{
-              borderColor: activeTab === tab.key ? 'var(--theme-brand-primary)' : 'transparent',
-              color: activeTab === tab.key ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)',
-            }}
-          >
-            {tab.label} {tab.count > 0 && <span className="ml-1 text-xs opacity-60">({tab.count})</span>}
-          </button>
-        ))}
+
+      {/* Tabs — pill segment */}
+      <div className="px-4 pb-1">
+        <div className="flex gap-1 p-1 rounded-2xl" style={{ background: 'var(--theme-bg-tertiary)' }}>
+          {tabConfigs.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className="flex-1 py-2.5 text-center text-xs font-semibold rounded-xl transition-all"
+              style={{
+                background: activeTab === tab.key ? 'var(--theme-bg-secondary)' : 'transparent',
+                color: activeTab === tab.key ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)',
+                boxShadow: activeTab === tab.key ? 'var(--theme-shadow-sm)' : 'none',
+              }}
+            >
+              {tab.label}
+              {tab.count > 0 && (
+                <span className="ml-1 inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold"
+                  style={{
+                    background: activeTab === tab.key ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
+                    color: activeTab === tab.key ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)',
+                  }}
+                >
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* Cards */}
       <div className="space-y-3 px-4 py-3 pb-24">
         {current.items.length === 0 ? (
-          <div className="text-center py-12">
-            <MapPin className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--theme-text-muted)', opacity: 0.5 }} />
-            <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không có chuyến nào</p>
+          <div className="text-center py-16">
+            <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ background: 'var(--theme-bg-tertiary)' }}>
+              <MapPin className="w-7 h-7" style={{ color: 'var(--theme-text-muted)', opacity: 0.5 }} />
+            </div>
+            <p className="text-sm font-medium" style={{ color: 'var(--theme-text-secondary)' }}>Không có chuyến nào</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Chuyến mới sẽ xuất hiện ở đây</p>
           </div>
         ) : (
           current.items.map(j => (

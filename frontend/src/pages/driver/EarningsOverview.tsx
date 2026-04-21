@@ -1,9 +1,8 @@
 import { useDriverStore } from '@/hooks/use-driver-store'
+import { InlineStatStrip } from '@/components/shared/InlineStatStrip'
 import { formatCurrencyShort } from '@/data/mockData'
-import { InlineStatStrip, StatCard } from '@/components/shared/InlineStatStrip'
 import {
-  Wallet, TruckIcon, TrendingDown, Fuel, Wrench,
-  Star, AlertTriangle, DollarSign, ChevronRight,
+  Wallet, Fuel, Wrench, Star, AlertTriangle, DollarSign, ChevronRight,
 } from 'lucide-react'
 
 export function EarningsOverview() {
@@ -23,8 +22,8 @@ export function EarningsOverview() {
   ]
 
   return (
-    <div className="p-4 space-y-4 pb-24">
-      {/* Inline stat strip */}
+    <div className="p-4 space-y-5 pb-24">
+      {/* Stat strip */}
       <InlineStatStrip items={[
         { label: 'Tổng chuyến', value: jobs.length },
         { label: 'Thu nhập', value: formatCurrencyShort(totalEarnings), highlight: true },
@@ -32,20 +31,22 @@ export function EarningsOverview() {
         { label: 'Ròng', value: formatCurrencyShort(netIncome), highlight: netIncome >= 0 },
       ]} />
 
-      {/* Breakdown */}
+      {/* Breakdown card */}
       <div>
-        <span className="text-[11px] font-semibold uppercase tracking-wider block mb-2 px-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+        <span className="text-xs font-bold block mb-2.5 px-0.5" style={{ color: 'var(--theme-text-secondary)' }}>
           Chi tiết thu nhập
         </span>
-        <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}>
+        <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
           {breakdownItems.map(({ icon: Icon, label, value, color }, i, arr) => (
             <div key={label}>
-              <div className="flex justify-between items-center px-4 py-3">
-                <div className="flex items-center gap-2.5">
-                  <Icon className="w-4 h-4" style={{ color: color ?? 'var(--theme-text-muted)' }} />
+              <div className="flex justify-between items-center px-4 py-3.5">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'var(--theme-bg-tertiary)' }}>
+                    <Icon className="w-4 h-4" style={{ color: color ?? 'var(--theme-text-secondary)' }} />
+                  </div>
                   <span className="text-sm" style={{ color: 'var(--theme-text-secondary)' }}>{label}</span>
                 </div>
-                <span className="text-sm font-semibold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{value}</span>
+                <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{value}</span>
               </div>
               {i < arr.length - 1 && <div className="mx-4 border-t" style={{ borderColor: 'var(--theme-border-light)' }} />}
             </div>
