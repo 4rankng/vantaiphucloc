@@ -1,84 +1,75 @@
 import { useState } from 'react'
-import { Truck, Receipt, Wallet, Bell, Menu, UserCircle, LogOut, Settings, HelpCircle, FileText, Info } from 'lucide-react'
+import { Truck, Receipt, Wallet, Bell, Menu, UserCircle, LogOut, Settings, HelpCircle, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { useAuth } from '@/contexts/AuthContext'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/Sheet/Sheet'
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/DropdownMenu/DropdownMenu'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/Sheet/Sheet'
 
 export function TopBar() {
   const { driver, navigate } = useDriverStore()
   const { logout } = useAuth()
-  const [profileOpen, setProfileOpen] = useState(false)
   const initials = driver.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 
   return (
-    <>
-      <header
-        className="fixed top-0 left-0 right-0 z-50 border-b"
-        style={{
-          paddingTop: 'env(safe-area-inset-top)',
-          background: 'var(--theme-header)',
-          backdropFilter: 'var(--theme-glass-blur)',
-          borderColor: 'var(--theme-header-border)',
-        }}
-      >
-        <div className="flex items-center justify-between h-14 px-4">
-          <div className="flex items-center gap-2">
-            <Truck className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
-            <span className="text-lg font-bold" style={{ color: 'var(--theme-brand-primary)' }}>
-              TTransport
-            </span>
-          </div>
-          <button
-            onClick={() => setProfileOpen(true)}
-            className="w-9 h-9 flex items-center justify-center rounded-full font-bold text-xs touch-manipulation"
-            style={{
-              background: 'var(--theme-brand-primary)',
-              color: 'var(--theme-text-on-brand)',
-            }}
-            aria-label="Tài khoản"
-          >
-            {initials}
-          </button>
+    <header
+      className="fixed top-0 left-0 right-0 z-50 border-b"
+      style={{
+        paddingTop: 'env(safe-area-inset-top)',
+        background: 'var(--theme-header)',
+        backdropFilter: 'var(--theme-glass-blur)',
+        borderColor: 'var(--theme-header-border)',
+      }}
+    >
+      <div className="flex items-center justify-between h-14 px-4">
+        <div className="flex items-center gap-2">
+          <Truck className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
+          <span className="text-lg font-bold" style={{ color: 'var(--theme-brand-primary)' }}>
+            TTransport
+          </span>
         </div>
-      </header>
 
-      {/* Account — TOP sheet */}
-      <Sheet open={profileOpen} onOpenChange={setProfileOpen}>
-        <SheetContent side="top" className="rounded-b-2xl">
-          <div className="flex items-center gap-3 mb-4">
-            <div
-              className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold"
-              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="w-9 h-9 flex items-center justify-center rounded-full font-bold text-xs touch-manipulation"
+              style={{
+                background: 'var(--theme-brand-primary)',
+                color: 'var(--theme-text-on-brand)',
+              }}
+              aria-label="Tài khoản"
             >
               {initials}
-            </div>
-            <div className="min-w-0">
-              <p className="font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{driver.name}</p>
-              <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>{driver.phone}</p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-colors touch-manipulation border"
-              style={{ background: 'var(--theme-bg-tertiary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
-              onClick={() => { setProfileOpen(false); navigate('/driver/profile') }}
-            >
-              <UserCircle className="w-4 h-4" style={{ color: 'var(--theme-text-secondary)' }} />
-              <span className="text-sm font-medium">Hồ sơ</span>
             </button>
-            <button
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-colors touch-manipulation border"
-              style={{ background: 'var(--theme-status-error-light)', borderColor: 'var(--theme-status-error)', color: 'var(--theme-status-error)' }}
-              onClick={() => { setProfileOpen(false); logout() }}
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="text-sm font-medium">Đăng xuất</span>
-            </button>
-          </div>
-        </SheetContent>
-      </Sheet>
-    </>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>
+              <div className="flex items-center gap-2.5">
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                  style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+                >
+                  {initials}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{driver.name}</p>
+                  <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{driver.phone}</p>
+                </div>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => navigate('/driver/profile')}>
+              <UserCircle className="w-4 h-4 mr-2" style={{ color: 'var(--theme-text-muted)' }} />
+              Hồ sơ
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => logout()}>
+              <LogOut className="w-4 h-4 mr-2" style={{ color: 'var(--theme-status-error)' }} />
+              <span style={{ color: 'var(--theme-status-error)' }}>Đăng xuất</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </header>
   )
 }
 
