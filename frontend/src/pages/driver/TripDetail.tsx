@@ -1,14 +1,8 @@
 import { useDriverStore } from '@/hooks/use-driver-store'
+import { InlineStatStrip } from '@/components/shared/InlineStatStrip'
 import { formatCurrencyShort } from '@/data/mockData'
 import {
-  Package,
-  TruckIcon,
-  MapPin,
-  CalendarDays,
-  DollarSign,
-  Fuel,
-  Camera,
-  ChevronRight,
+  Package, TruckIcon, MapPin, Fuel, Camera,
 } from 'lucide-react'
 
 export function TripDetail({ jobId }: { jobId: string }) {
@@ -39,28 +33,16 @@ export function TripDetail({ jobId }: { jobId: string }) {
         </div>
       </div>
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { icon: ChevronRight, label: 'Quãng đường', value: job.distanceKm + ' km', color: 'var(--theme-brand-primary)' },
-          { icon: CalendarDays, label: 'Thời gian', value: job.jobDate, color: 'var(--theme-brand-primary)' },
-          { icon: DollarSign, label: 'Thu nhập', value: formatCurrencyShort(job.driverFee), color: 'var(--theme-brand-primary)' },
-        ].map(({ icon: Icon, label, value, color }) => (
-          <div key={label} className="rounded-xl p-3 border text-center" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}>
-            <div className="flex items-center justify-center mb-1.5">
-              <div className="p-1.5 rounded-lg" style={{ background: 'var(--theme-bg-tertiary)' }}>
-                <Icon className="w-3.5 h-3.5" style={{ color }} />
-              </div>
-            </div>
-            <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>{label}</p>
-            <p className="text-sm font-bold mt-0.5" style={{ color: 'var(--theme-text-primary)' }}>{value}</p>
-          </div>
-        ))}
-      </div>
+      {/* Inline stat strip */}
+      <InlineStatStrip items={[
+        { label: 'Quãng đường', value: job.distanceKm + ' km' },
+        { label: 'Ngày', value: job.jobDate.slice(5) },
+        { label: 'Thu nhập', value: formatCurrencyShort(job.driverFee), highlight: true },
+      ]} />
 
-      {/* Expenses section */}
+      {/* Expenses */}
       <div>
-        <span className="text-xs font-semibold uppercase tracking-wider block mb-2" style={{ color: 'var(--theme-text-muted)' }}>
+        <span className="text-[11px] font-semibold uppercase tracking-wider block mb-2 px-0.5" style={{ color: 'var(--theme-text-muted)' }}>
           Chi phí chuyến
         </span>
         <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}>
@@ -78,24 +60,24 @@ export function TripDetail({ jobId }: { jobId: string }) {
                       <Fuel className="w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
                       <span className="text-sm" style={{ color: 'var(--theme-text-primary)' }}>{e.category}</span>
                     </div>
-                    <span className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyShort(e.amount)}</span>
+                    <span className="text-sm font-semibold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyShort(e.amount)}</span>
                   </div>
-                  {i < tripExpenses.length - 1 && <div className="mx-4 border-t" style={{ borderColor: 'var(--theme-border-default)' }} />}
+                  {i < tripExpenses.length - 1 && <div className="mx-4 border-t" style={{ borderColor: 'var(--theme-border-light)' }} />}
                 </div>
               ))}
               <div className="mx-4 border-t" style={{ borderColor: 'var(--theme-border-default)' }} />
               <div className="flex justify-between items-center px-4 py-3">
                 <span className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tổng</span>
-                <span className="text-sm font-bold" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyShort(totalExp)}</span>
+                <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyShort(totalExp)}</span>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Photos section */}
+      {/* Photos */}
       <div>
-        <span className="text-xs font-semibold uppercase tracking-wider block mb-2" style={{ color: 'var(--theme-text-muted)' }}>
+        <span className="text-[11px] font-semibold uppercase tracking-wider block mb-2 px-0.5" style={{ color: 'var(--theme-text-muted)' }}>
           Ảnh chuyến
         </span>
         <div className="rounded-xl border p-4 text-center" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}>

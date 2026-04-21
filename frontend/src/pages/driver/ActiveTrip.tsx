@@ -1,6 +1,7 @@
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { InlineStatStrip } from '@/components/shared/InlineStatStrip'
 import { formatCurrencyShort, getJobStatusBadge, type JobStatus } from '@/data/mockData'
 import {
   CheckCircle2,
@@ -13,7 +14,6 @@ import {
   Warehouse,
   PlusCircle,
   Fuel,
-  ChevronRight,
 } from 'lucide-react'
 
 const CHECKPOINT_ICONS: Record<string, any> = {
@@ -49,23 +49,11 @@ export function ActiveTrip({ jobId }: { jobId: string }) {
             </Badge>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-3 mt-3">
-          {[
-            { icon: Package, label: 'Container', value: job.containerNumber },
-            { icon: TruckIcon, label: 'Xe kéo', value: job.tractorPlate },
-            { icon: ChevronRight, label: 'Quãng đường', value: job.distanceKm + ' km' },
-          ].map(({ icon: Icon, label, value }) => (
-            <div key={label} className="text-center">
-              <div className="flex items-center justify-center mb-1">
-                <div className="p-1.5 rounded-lg" style={{ background: 'var(--theme-bg-tertiary)' }}>
-                  <Icon className="w-3.5 h-3.5" style={{ color: 'var(--theme-text-secondary)' }} />
-                </div>
-              </div>
-              <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>{label}</p>
-              <p className="text-xs font-semibold mt-0.5 truncate" style={{ color: 'var(--theme-text-primary)' }}>{value}</p>
-            </div>
-          ))}
-        </div>
+        <InlineStatStrip items={[
+          { label: 'Container', value: job.containerNumber.slice(-7) },
+          { label: 'Xe kéo', value: job.tractorPlate },
+          { label: 'Quãng đường', value: job.distanceKm + ' km' },
+        ]} />
       </div>
 
       {/* Progress section */}
