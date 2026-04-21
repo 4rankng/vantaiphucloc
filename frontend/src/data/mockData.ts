@@ -413,9 +413,8 @@ export function formatCurrencyFull(amount: number): string {
 }
 
 export function formatCurrencyShort(amount: number): string {
-  if (amount >= 1000000000) return `${(amount / 1000000000).toFixed(1)} tỷ`
-  if (amount >= 1000000) return `${(amount / 1000000).toFixed(0)} tr`
-  return (amount / 1000).toFixed(0) + 'k'
+  if (amount >= 1000000000) return `${(amount / 1000000000).toFixed(2).replace(/\.?0+$/, '')} tỷ`
+  return amount.toLocaleString('vi-VN') + ' ₫'
 }
 
 export function getContainerBadgeColor(type: TrailerType): string {
