@@ -44,41 +44,36 @@ export function TopBar() {
       </header>
 
       <Sheet open={profileOpen} onOpenChange={setProfileOpen}>
-        <SheetContent side="bottom" className="h-auto pb-safe">
-          <SheetHeader className="pb-3">
-            <SheetTitle className="text-base font-semibold text-left">Tài khoản</SheetTitle>
-            <SheetDescription className="text-left">Thông tin tài xế</SheetDescription>
-          </SheetHeader>
-          <div className="pb-2">
-            <div className="flex items-center gap-3 px-3 pb-3">
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold"
-                style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-              >
-                {initials}
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{driver.name}</p>
-                <p className="text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>{driver.phone}</p>
-              </div>
+        <SheetContent side="top" className="rounded-b-2xl">
+          <div className="flex items-center gap-3 mb-4">
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold"
+              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+            >
+              {initials}
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                className="flex flex-col items-center justify-center gap-1.5 py-4 rounded-xl transition-colors touch-manipulation"
-                style={{ color: 'var(--theme-text-primary)' }}
-                onClick={() => { setProfileOpen(false); navigate('/driver/profile') }}
-              >
-                <UserCircle className="w-5 h-5" style={{ color: 'var(--theme-text-secondary)' }} />
-                <span className="text-xs font-medium leading-none" style={{ color: 'var(--theme-text-secondary)' }}>Hồ sơ</span>
-              </button>
-              <button
-                className="flex flex-col items-center justify-center gap-1.5 py-4 rounded-xl transition-colors touch-manipulation"
-                onClick={() => { setProfileOpen(false); logout() }}
-              >
-                <LogOut className="w-5 h-5" style={{ color: 'var(--theme-status-error)' }} />
-                <span className="text-xs font-medium leading-none" style={{ color: 'var(--theme-status-error)' }}>Đăng xuất</span>
-              </button>
+            <div className="min-w-0">
+              <p className="font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{driver.name}</p>
+              <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>{driver.phone}</p>
             </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-colors touch-manipulation border"
+              style={{ background: 'var(--theme-bg-tertiary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
+              onClick={() => { setProfileOpen(false); navigate('/driver/profile') }}
+            >
+              <UserCircle className="w-4 h-4" style={{ color: 'var(--theme-text-secondary)' }} />
+              <span className="text-sm font-medium">Hồ sơ</span>
+            </button>
+            <button
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-colors touch-manipulation border"
+              style={{ background: 'var(--theme-status-error-light)', borderColor: 'var(--theme-status-error)', color: 'var(--theme-status-error)' }}
+              onClick={() => { setProfileOpen(false); logout() }}
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="text-sm font-medium">Đăng xuất</span>
+            </button>
           </div>
         </SheetContent>
       </Sheet>
