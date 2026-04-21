@@ -111,7 +111,7 @@
   - **iOS:** Yêu cầu "Always Allow" location permission. Plugin xử lý background execution limits.
   - **Workflow:** User click "Đang chạy" → JS gọi native plugin `start({ interval: 30000 })` → Native OS xử lý interval 30s → gửi tọa độ về server.
   - **Không dùng setInterval()** — JavaScript timer sẽ bị kill khi screen off. Native layer quản lý GPS interval.
-- **Tính km thực tế:** Hệ thống tính actual_distance_km bằng cách **cộng dồn khoảng cách haversine** giữa tất cả GPS points liên tiếp trong chuyến. So sánh với distance_km từ Google Maps (lưu trong ROUTES) → phát hiện lệch tuyến nếu >15%.
+- **Tính km thực tế (Running Total):** Không đợi đến khi xem bản đồ. **Khi server nhận được mỗi GPS point mới**, tính khoảng cách haversine từ điểm trước đó → cộng dồn vào `TRIPS.actual_distance_km` (running total). So sánh ngay với `ROUTES.distance_km` → nếu lệch >15% → trigger ALERT cho Giám đốc.
 - **Hiệu suất nhiên liệu:** actual_liters_per_100km = liters × 100 / actual_distance_km. So sánh với định mức từ ROUTE_FUEL_QUOTAS.
 - **Lịch sử vị trí:** Lưu trữ lịch sử vị trí để phục vụ đối soát và kiểm tra sau chuyến (REQ-5.5).
 
@@ -194,7 +194,10 @@
 - `BOOKINGS`: id, booking_code, client_id, route_id, vehicle_type_required, container_type, notes, status (pending/approved/rejected/completed), created_by, approved_by, approved_at, workflow_id (FK → workflows.id), created_at.
 - `TRIPS`: id, trip_code, booking_id, vehicle_id, driver_id, client_id, route_id, container_code, container_type (20ft/40ft/45ft/hc), status (received/empty_pickup/at_port/leaving_port/en_route/arrived/dropped_off/completed), is_orphan, is_locked, start_time, end_time, actual_distance_km (haversine sum of GPS_LOG), route_deviation_pct (actual vs ROUTES.distance_km), workflow_id (FK → workflows.id), created_at.
 - `TRIP_STATUS_HISTORY`: id, trip_id, status, timestamp, latitude, longitude, accuracy, notes.
-- `GPS_LOG`: id, trip_id, latitude, longitude, accuracy, speed, altitude, server_timestamp. — Mỗi 30 giây khi en_route. Dùng để tính actual_distance_km (haversine sum) và vẽ GPS trail trên bản đồ.
+- `GPS_LOG_YYYYMM`: Partitioned by month (vd: `gps_log_202604`). id, trip_id, latitude (DECIMAL(9,5)), longitude (DECIMAL(9,5)), accuracy, speed, heading, server_timestamp. — Ingestion table: mỗi 30 giây khi en_route, nhưng chỉ log nếu delta >50m hoặc heading change >15°. Index: (trip_id, server_timestamp).
+- `GPS_LOG_CURRENT`: View → union last 3 months of partitions for active queries.
+- `TRIP_PATHS`: id, trip_id, compressed_path (BYTEA — Douglas-Peucker simplified + gzip), point_count, raw_point_count, created_at. — One row per trip after completion. Raw GPS_LOG rows deleted after compression.
+- `GPS_ARCHIVES`: id, trip_id, month, storage_path (S3/flat-file), archived_at. — Cold storage reference.
 - `TRIP_PHOTOS`: id, trip_id, photo_type (container_pickup/container_delivery/fuel_receipt/expense_receipt/other), file_path, latitude, longitude, accuracy, server_timestamp.
 - `EXPENSES`: id, trip_id, category (fuel/toll/repair/tires/engine_oil/salary/other), amount, liters (nullable, chỉ cho fuel/engine_oil), description, receipt_photo_id, status (pending/approved/rejected), reject_reason, approved_by, approved_at, workflow_id (FK → workflows.id), created_at.
 - `PENALTY_RULES`: id, rule_code, description, penalty_amount, penalty_type (fine/warning/termination), occurrence_threshold (vd: '3' = từ lần thứ 3), is_active. — Quy định phạt nội quy.
@@ -560,7 +563,53 @@ GPS positions arrive every 30 seconds from driver mobile app (native plugin) whe
 #### Tech
 - **Frontend:** `setInterval` + `fetch` + AbortController for cleanup. Native browser APIs only.
 - **Backend:** Standard REST endpoint. Cache response in Redis for 30s to avoid DB hits from multiple dashboard users.
-- **GPS_LOG cleanup:** Archive to cold storage after trip completed. Keep 90 days hot for audit trail.
+
+### 6.6 GPS Data Lifecycle
+
+GPS data is high-volume (30s intervals × N active trips). Without lifecycle management, the database grows rapidly and becomes slow. Strategy: **quality over volume**.
+
+#### Stage 1: Smart Ingestion (Real-time)
+- **Distance-based threshold:** Only log a new GPS point if driver has moved **>50 meters** from the last logged point. Filters out GPS noise when idling in traffic or stopped.
+- **Angle-based threshold:** Log if heading changed **>15°** from last point. Captures turns and route changes.
+- **Mandatory log every 2 minutes:** Even if thresholds not met, log at least once per 2 min to prove tracking is active.
+- **Coordinate precision:** Store as `DECIMAL(9,5)` — 5 decimal places (~1m accuracy) is sufficient for map rendering and auditing. Don't store full GPS chip precision.
+- **Result:** A 90-minute trip produces ~150-300 points (not 180 raw pings). Straight highway: ~45 points. City traffic with turns: ~300 points.
+
+#### Stage 2: Running Distance Calculation
+- **On arrival** of each GPS point, server calculates haversine distance from previous point → adds to `TRIPS.actual_distance_km`.
+- **Immediate comparison** with `ROUTES.distance_km`. If deviation >15% → trigger `route_deviation` ALERT.
+- **No batch processing** — distance is always up-to-date. Director sees real distance, not stale estimate.
+
+#### Stage 3: Post-Trip Compression (After Completion)
+- When trip status → `completed`:
+  1. Apply **Douglas-Peucker algorithm** to simplify path — removes redundant points on straight segments while preserving turns.
+  2. Compress simplified path with **gzip** → store as single `BYTEA` in `TRIP_PATHS.compressed_path`.
+  3. Store metadata: `point_count` (simplified), `raw_point_count` (original).
+  4. **Delete all raw GPS_LOG rows** for this trip from partitioned table.
+  5. Result: Thousands of rows → **1 row**. Full path still reconstructable for audit.
+
+#### Stage 4: Table Partitioning
+- `GPS_LOG_YYYYMM` — one table per month (vd: `gps_log_202604`, `gps_log_202605`).
+- Keeps each table small. Drop old partitions instantly instead of row-by-row DELETE.
+- `GPS_LOG_CURRENT` — view unioning last 3 months for active dashboard queries.
+- **Index:** `(trip_id, server_timestamp)` on each partition for fast lookup.
+
+#### Stage 5: Cold Storage Archive
+- After 3 months, compressed `TRIP_PATHS` rows move to cold storage:
+  - Store compressed path as flat file on S3/object storage.
+  - Record reference in `GPS_ARCHIVES` table.
+  - Delete `TRIP_PATHS` row from primary DB.
+- Trip history is rarely accessed after a few months. Cold storage is cheap, primary DB stays fast.
+
+#### Visual Summary
+```
+Raw GPS (30s)     Smart Filter       Douglas-Peucker     Compressed Path     Cold Storage
+────────────── ───────────────── ──────────────────── ──────────────────── ────────────
+~180 pts/trip → ~150-300 filtered → ~50-80 simplified → 1 row (BYTEA gzip) → S3 file
+  90 min        +heading change      preserve turns       + metadata           after 3mo
+                 +50m minimum         remove straight      delete raw rows      cheap storage
+                 +2min mandatory      segments             keep shape
+```
 
 ---
 
