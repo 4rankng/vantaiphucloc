@@ -86,7 +86,7 @@ export const navyGoldTheme: ThemeDefinition = {
     pagePadding: '16px',
     cardPadding: '20px',
     sectionGap: '20px',
-    topBarHeight: '3.5rem',
+    topBarHeight: '3rem',
     bottomNavHeight: '3.5rem',
     pagePadding: '16px',
   },

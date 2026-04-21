@@ -25,7 +25,7 @@ export function TopBar() {
         borderColor: 'var(--theme-header-border)',
       }}
     >
-      <div className="flex items-center justify-between h-14 px-4">
+      <div className="flex items-center justify-between h-12 px-4">
         <div className="flex items-center gap-2">
           <Truck className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
           <span className="text-lg font-bold" style={{ color: 'var(--theme-brand-primary)' }}>
