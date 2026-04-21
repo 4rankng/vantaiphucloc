@@ -87,7 +87,7 @@
 | US-7.3 | Nhập mã container thủ công khi OCR thất bại | Tài xế | P0 |
 | US-7.4 | Chụp ảnh biên lai cho mọi khoản chi phí phát sinh dọc đường | Tài xế | P0 |
 | US-7.5 | Mỗi ảnh đính kèm tọa độ GPS + thời gian máy chủ (không dùng giờ điện thoại) | Hệ thống | P0 |
-| US-7.6 | Ảnh đã tải lên không cho chỉnh sửa/xóa (chỉ đọc) | Hệ thống | P0 |
+| US-7.6 | Ảnh khóa sau khi tài xế xác nhận dữ liệu đúng (không phải ngay sau upload). Trước xác nhận: có thể xóa/chụp lại. | Hệ thống | P0 |
 | US-7.7 | Ảnh gốc được lưu trữ làm tài liệu chứng minh | Hệ thống | P0 |
 
 ## Epic 8: Expense Management
