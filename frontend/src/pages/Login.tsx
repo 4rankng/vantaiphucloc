@@ -34,7 +34,7 @@ export function Login() {
         <div className="mb-8 flex items-center gap-3">
           <div
             className="h-12 w-12 rounded-xl flex items-center justify-center"
-            style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(12px)' }}
+            style={{ background: 'var(--theme-glass-bg)', backdropFilter: 'var(--theme-glass-blur)' }}
           >
             <Truck className="h-7 w-7" style={{ color: 'var(--theme-brand-secondary)' }} />
           </div>
@@ -154,7 +154,7 @@ export function Login() {
 
       {/* Bottom footer */}
       <div className="absolute bottom-6 left-0 right-0 z-10">
-        <p className="text-center text-xs font-medium" style={{ color: 'rgba(255,255,255,0.6)' }}>
+        <p className="text-center text-xs font-medium" style={{ color: 'var(--theme-text-inverse)', opacity: 0.6 }}>
           © {new Date().getFullYear()} TTransport. Logistics Solutions.
         </p>
       </div>

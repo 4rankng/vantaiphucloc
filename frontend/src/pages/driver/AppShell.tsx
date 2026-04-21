@@ -153,7 +153,8 @@ export function BottomNav() {
                   </div>
                   {showBadge && (
                     <span
-                      className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
+                      className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[9px] font-bold"
+                      style={{ background: 'var(--theme-status-error)', color: 'var(--theme-text-inverse)' }}
                       style={{ background: 'var(--theme-status-error)' }}
                     >
                       {unreadCount > 9 ? '9+' : unreadCount}
