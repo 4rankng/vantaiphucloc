@@ -147,7 +147,7 @@
 - **Duyệt chi phí:** Điều hành/Kế toán duyệt các yêu cầu chi phí từ tài xế. Chi phí đã duyệt tự động cộng vào tổng chi phí chuyến.
 - **Xuất hóa đơn:** Gom chuyến theo chủ hàng, xuất hóa đơn (PDF). Lưu trữ số hóa đơn, ngày, file PDF, trạng thái.
 - **Công nợ:** Theo dõi tình trạng thanh toán của từng chủ hàng (tổng, đã thu, chưa thu).
-- **Báo cáo aging công nợ:** Phân loại nợ theo số tháng quá hạn (T1, T2, T3, T4+). Khách hàng nợ quá hạn có thể bị khóa tự động hoặc cảnh báo khi tạo booking mới.
+- **Báo cáo aging công nợ:** Phân loại nợ theo số tháng quá hạn (T1, T2, T3, T4+). Cảnh báo khi tạo booking mới cho khách hàng nợ quá hạn, nhưng KHÔNG tự động khóa. Giám đốc quyết định manually.
 - **Đánh dấu thanh toán:** Kế toán ghi nhận thanh toán (một phần hoặc toàn bộ). Hỗ trợ thanh toán nhiều đợt cho cùng hóa đơn.
 - **Chốt sổ:** Khóa dữ liệu cuối tháng, chặn chốt sổ nếu còn chuyến mồ côi chưa gán chủ hàng.
 - **Bảng kê chi tiết công nợ:** Mỗi khách hàng có bảng kê riêng (phát sinh Nợ/Có, lũy kế, ghi chú) — tương tự sổ cái kế toán.
