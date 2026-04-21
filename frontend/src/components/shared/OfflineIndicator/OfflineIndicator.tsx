@@ -1,9 +1,8 @@
-import { WifiOff } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { WifiOff, CloudOff } from 'lucide-react'
 import { useOffline } from '@/contexts/OfflineContext'
 
 export function OfflineIndicator() {
-  const { isOnline, pendingActions } = useOffline()
+  const { isOnline, pendingCount } = useOffline()
 
   if (isOnline) return null
 
@@ -17,9 +16,14 @@ export function OfflineIndicator() {
           </span>
         </div>
         <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
-          {pendingActions.length > 0
-            ? `${pendingActions.length} hành động chờ đồng bộ`
-            : 'Dữ liệu sẽ được đồng bộ khi có kết nối'}
+          {pendingCount > 0 ? (
+            <span className="inline-flex items-center gap-1">
+              <CloudOff className="h-3 w-3" />
+              {pendingCount} hành động chờ đồng bộ
+            </span>
+          ) : (
+            'Dữ liệu sẽ được đồng bộ khi có kết nối'
+          )}
         </p>
       </div>
     </div>
