@@ -1390,16 +1390,18 @@ After chốt sổ → ALL data locked (photos + expenses + everything)
 ### Bối cảnh
 ```
 CLIENTS (id=9, Công ty XYZ):
-  is_active: false (bị khóa do nợ quá hạn)
+  is_active: false (đánh dấu ngừng do nợ quá hạn)
 
 Điều hành Minh tạo chuyến mới:
-  Select client → XYZ không hiện trong dropdown (is_active=false)
-
-Hoặc nếu cố gắng API:
-POST /api/v1/trips { client_id: 9 }
-→ 400 "Khách hàng XYZ đã bị khóa. Không thể tạo chuyến mới."
+  Select client → XYZ vẫn hiện trong dropdown nhưng có badge:
+    "Công ty XYZ 🔒 Ngừng hoạt động"
+    → Minh chọn XYZ → app cảnh báo:
+    "⚠️ Công ty XYZ đang ngừng hoạt động. Xác nhận tiếp tục?"
+    → [Hủy] [Xác nhận tiếp tục]
+  → Nếu xác nhận → cho phép tạo chuyến bình thường (không block)
 
 XYZ vẫn xem được lịch sử giao dịch cũ (read-only).
+Dashboard hiển thị XYZ với badge "🔒 Ngừng" trong danh sách khách hàng.
 ```
 
 ---

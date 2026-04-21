@@ -35,7 +35,7 @@
 |----|-------|------|----------|
 | US-3.1 | Thêm/sửa/xóa khách hàng (tên công ty, mã số thuế, địa chỉ, liên hệ) | Giám đốc, Điều hành | P0 |
 | US-3.2 | Cấu hình điều khoản thanh toán cho từng khách hàng (net 15/30/45) | Giám đốc, Kế toán | P1 |
-| US-3.3 | Khóa/mở khóa khách hàng (ngừng tạo chuyến mới nhưng giữ lịch sử) | Giám đốc | P1 |
+| US-3.3 | Đánh dấu khách hàng ngừng hoạt động (is_active: false) — vẫn hiện trong dropdown với badge "🔒 Ngừng", cảnh báo khi tạo chuyến | Giám đốc | P1 |
 | US-3.4 | Xem lịch sử giao dịch với khách hàng (chuyến, hóa đơn, công nợ) | Giám đốc, Kế toán, Điều hành | P1 |
 
 ## Epic 4: Driver Profile & Assignment
