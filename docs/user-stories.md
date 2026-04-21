@@ -50,10 +50,13 @@
 
 | ID | Story | Role | Priority |
 |----|-------|------|----------|
-| US-5.1 | CRUD tuyến đường (điểm đi, điểm đến, quãng đường, thời gian dự kiến) | Điều hành | P0 |
-| US-5.2 | Cấu hình định mức xăng dầu mặc định theo ma trận tuyến × loại xe (lít/km) | Giám đốc | P1 |
+| US-5.1 | CRUD tuyến đường (điểm đi, điểm đến, quãng đường, thời gian dự kiến, giảm vé, phụ phí vé) | Điều hành | P0 |
+| US-5.2 | Cấu hình định mức xăng dầu theo ma trận xe × tải trọng (5 mức: empty/loaded_light/loaded_heavy/cargo_heavy/cargo_light) — L/100km | Giám đốc | P1 |
 | US-5.2b | Ghi đè định mức xăng dầu cho từng chuyến (kèm lý do, vd: xe cũ, đường sửa) | Điều hành | P1 |
-| US-5.3 | So sánh chi phí thực tế (nhiên liệu, thời gian) với định mức tuyến đường | Hệ thống | P1 |
+| US-5.3 | So sánh chi phí thực tế (nhiên liệu, thời gian) với định mức tuyến đường (dựa trên load_type) | Hệ thống | P1 |
+| US-5.4 | Cấu hình bảng giá cước: tuyến × loại xe → tiền đi đường (mooc 40', 40', 20', mooc 20') | Giám đốc | P0 |
+| US-5.5 | Chọn load_type khi tạo chuyến (empty/loaded_light/loaded_heavy) → tự áp đúng định mức | Điều hành | P1 |
+| US-5.6 | Cấu hình phụ bổ sung định mức theo tuyến (vd: Mộc Châu +3L/100km) | Giám đốc | P2 |
 
 ## Epic 6: Booking & Trip Lifecycle
 
@@ -88,22 +91,28 @@
 
 | ID | Story | Role | Priority |
 |----|-------|------|----------|
-| US-8.1 | Khai báo chi phí dọc đường (loại, số tiền, mô tả, ảnh biên lai) | Tài xế | P0 |
+| US-8.1 | Khai báo chi phí dọc đường (7 loại: fuel/toll/repair/tires/engine_oil/salary/other, số tiền, mô tả, ảnh biên lai) | Tài xế | P0 |
 | US-8.2 | Khai báo đổ dầu riêng (số lít, số tiền, ảnh biên lai) | Tài xế | P0 |
 | US-8.3 | Duyệt hoặc từ chối chi phí (kèm lý do từ chối) | Kế toán, Điều hành | P0 |
 | US-8.4 | Chi phí bị từ chối → tài xế nhận thông báo kèm lý do | Hệ thống → Tài xế | P1 |
 | US-8.5 | Chi phí đã duyệt tự động cộng vào tổng chi phí chuyến | Hệ thống | P0 |
+| US-8.6 | Khai báo chi phí sửa chữa, thay lốp, dầu máy (không chỉ nhiên liệu & cầu đường) | Tài xế, Kế toán | P1 |
+| US-8.7 | Xem chi phí chi tiết theo 7 loại: Dầu + Cầu đường + Sửa chữa + Lốp + Dầu máy + Lương lx + Khác | Kế toán, Giám đốc | P1 |
 
 ## Epic 9: Fraud Detection & Alerts
 
 | ID | Story | Role | Priority |
 |----|-------|------|----------|
 | US-9.1 | Cảnh báo thời gian thực > 150% thời gian dự kiến theo tuyến (nghi ngờ câu giờ) | Hệ thống → Điều hành | P0 |
-| US-9.2 | Cảnh báo chênh lệch nhiên liệu > 10% so với định mức (nghi ngờ gian lận dầu) | Hệ thống → Điều hành, Kế toán | P0 |
+| US-9.2 | Cảnh báo chênh lệch nhiên liệu > 10% so với định mức (dựa trên load_type, không phải định mức cố định) | Hệ thống → Điều hành, Kế toán | P0 |
 | US-9.3 | Cảnh báo dừng đỗ > 45 phút (tự động) | Hệ thống → Điều hành | P0 |
 | US-9.4 | Cảnh báo lệch tuyến đường | Hệ thống → Điều hành | P2 |
 | US-9.5 | Xem danh sách cảnh báo & trạng thái xử lý | Giám đốc, Điều hành | P0 |
 | US-9.6 | Xử lý cảnh báo: ghi nhận vi phạm (ảnh hưởng KPI) hoặc bỏ qua, kèm ghi chú | Điều hành | P0 |
+| US-9.7 | Cảnh báo tắt GPS/định vị >1h — từ lần 3 phạt 500,000đ | Hệ thống → Điều hành | P1 |
+| US-9.8 | Cảnh báo lái xe >4h liên tục không thay thẻ — từ lần 3 phạt 500,000đ | Hệ thống → Điều hành | P1 |
+| US-9.9 | Cảnh báo không nộp phiếu hạ vỏ/hàng — phạt 100,000đ | Hệ thống → Điều hành | P1 |
+| US-9.10 | Cấu hình quy định phạt nội quy (PENALTY_RULES): loại vi phạm, mức phạt, ngưỡng lần (vd: từ lần 3) | Giám đốc | P1 |
 
 ## Epic 10: Orphan Trip & Period Close
 
@@ -120,12 +129,16 @@
 | ID | Story | Role | Priority |
 |----|-------|------|----------|
 | US-11.1 | Xem danh sách chuyến hoàn thành, nhóm theo chủ hàng | Kế toán | P0 |
-| US-11.2 | Chi tiết chi phí mỗi chuyến: Nhiên liệu + Cầu đường + Sửa chữa + Lương tài xế + Khác | Kế toán | P0 |
+| US-11.2 | Chi tiết chi phí mỗi chuyến: Dầu + Cầu đường + Sửa chữa + Lốp + Dầu máy + Lương lx + Khác | Kế toán | P0 |
 | US-11.3 | Bảng công nợ theo chủ hàng: Tổng, Đã thanh toán, Chưa thanh toán | Kế toán, Giám đốc | P0 |
-| US-11.4 | Ghi nhận thanh toán (một phần hoặc toàn bộ) cho từng nhóm chuyến | Kế toán | P0 |
+| US-11.4 | Ghi nhận thanh toán (một phần hoặc toàn bộ, nhiều đợt) cho từng nhóm chuyến | Kế toán | P0 |
 | US-11.5 | Gom chuyến cùng chủ hàng → xuất hóa đơn PDF (số hóa đơn, ngày, file) | Kế toán | P0 |
 | US-11.6 | Xem doanh thu / chi phí tổng hợp | Giám đốc | P1 |
-| US-11.7 | Xem lãi ròng từng đầu xe (doanh thu - tất cả chi phí) | Giám đốc | P1 |
+| US-11.7 | Báo cáo P&L theo đầu xe: Cước vận chuyển - Tổng chi phí (7 loại) = Lợi nhuận gộp | Giám đốc | P1 |
+| US-11.8 | Báo cáo aging công nợ: phân loại theo số tháng quá hạn (Current/T1/T2/T3/T4+) | Kế toán, Giám đốc | P1 |
+| US-11.9 | Bảng kê chi tiết công nợ theo khách hàng (phát sinh Nợ/Có, lũy kế, GBN) | Kế toán | P1 |
+| US-11.10 | Khóa tự động hoặc cảnh báo khách hàng nợ quá hạn khi tạo booking mới | Hệ thống | P2 |
+| US-11.11 | Bảng giá cước tự động áp cho chuyến từ ROUTE_PRICING (tuyến × loại xe) | Hệ thống | P0 |
 
 ## Epic 12: Driver KPI & Payroll
 
@@ -135,7 +148,7 @@
 | US-12.2 | Điểm KPI = (Tổng chuyến - Số chuyến vi phạm) / Tổng chuyến × 100% | Hệ thống | P1 |
 | US-12.3 | Giám đốc xem bảng xếp hạng tài xế theo điểm KPI | Giám đốc | P1 |
 | US-12.4 | Chi tiết từng vi phạm hiển thị kèm bằng chứng (ảnh, thời gian, GPS) | Giám đốc, Điều hành | P1 |
-| US-12.5 | Tính lương tài xế (lương cơ bản + chuyến + thưởng/phạt) | Hệ thống → Kế toán | P1 |
+| US-12.5 | Tính lương tài xế (lương cơ bản + tiền đi đường + thưởng/phạt theo PENALTY_RULES) | Hệ thống → Kế toán | P1 |
 | US-12.6 | Tài xế xem thu nhập hôm nay trên Mobile | Tài xế | P1 |
 | US-12.7 | Tài xế xem lịch sử lương | Tài xế | P2 |
 | US-12.8 | Giám đốc xếp hạng tài xế (top 5 / bottom 5) | Giám đốc | P2 |
@@ -144,13 +157,14 @@
 
 | ID | Story | Role | Priority |
 |----|-------|------|----------|
-| US-13.1 | Dashboard Giám đốc: Tổng quan đội xe (đang chạy/rảnh/sửa chữa), doanh thu/chi phí/lợi nhuận, chuyến mồ côi, cảnh báo chưa duyệt, xếp hạng KPI | Giám đốc | P0 |
+| US-13.1 | Dashboard Giám đốc: Tổng quan đội xe, doanh thu/chi phí/lợi nhuận, chuyến mồ côi, cảnh báo chưa duyệt, xếp hạng KPI, aging công nợ tổng hợp | Giám đốc | P0 |
 | US-13.2 | Dashboard Điều hành: Chuyến đang thực hiện, cảnh báo chờ duyệt, timeline chi tiết | Điều hành | P0 |
-| US-13.3 | Dashboard Kế toán: Chi phí chờ duyệt, tóm tắt công nợ, chuyến mồ côi cần gán | Kế toán | P0 |
+| US-13.3 | Dashboard Kế toán: Chi phí chờ duyệt, tóm tắt công nợ + aging (T1-T4+), chuyến mồ côi cần gán | Kế toán | P0 |
 | US-13.4 | Dashboard Tài xế (mobile): Chuyến được giao, cập nhật tiến trình, gửi chi phí, thu nhập hôm nay | Tài xế | P0 |
 | US-13.5 | TAT (Turn-Around Time) trung bình | Giám đốc | P1 |
 | US-13.6 | Bảng xếp hạng 5 tài xế xuất sắc nhất / 5 xe hiệu quả nhất | Giám đốc | P2 |
 | US-13.7 | Xuất báo cáo Excel/PDF | Giám đốc, Kế toán | P2 |
+| US-13.8 | Báo cáo P&L theo đầu xe (tháng/chọn khoảng thời gian): Cước - Dầu - Đi đường - Lương - SC - Lốp - Dầu máy = Lợi nhuận gộp | Giám đốc | P1 |
 
 ## Epic 14: Mobile App (Driver)
 
