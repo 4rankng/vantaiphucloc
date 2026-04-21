@@ -1,5 +1,5 @@
 import { cva } from 'class-variance-authority'
-import type { BadgeVariant } from './StatusBadge'
+import type { BadgeVariant } from '@/components/shared/StatusBadge'
 
 interface TrendProps {
   direction: 'up' | 'down' | 'flat'

@@ -4,14 +4,16 @@ import { cn } from '@/lib/utils'
 interface GlassCardProps {
   children: ReactNode
   className?: string
+  style?: React.CSSProperties
   onClick?: () => void
   hover?: boolean
 }
 
-export function GlassCard({ children, className, onClick, hover = false }: GlassCardProps) {
+export function GlassCard({ children, className, style, onClick, hover = false }: GlassCardProps) {
   return (
     <div
       onClick={onClick}
+      style={style}
       className={cn(
         'rounded-xl border border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-shadow duration-150',
         (hover || onClick) && 'cursor-pointer hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)] active:scale-[0.98]',
