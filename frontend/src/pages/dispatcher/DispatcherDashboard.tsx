@@ -17,8 +17,7 @@ export default function DispatcherDashboard() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold" style={{color:'var(--theme-text-primary)'}}>Điều hành</h2>
+      <div className="flex items-center justify-end">
         <span className="text-[10px] font-mono-num" style={{color:'var(--theme-text-muted)'}}>{running.length}/{mockTractors.length} xe chạy · {active.length + planned.length} chuyến</span>
       </div>
 

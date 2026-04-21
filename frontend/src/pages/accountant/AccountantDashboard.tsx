@@ -20,8 +20,7 @@ export default function AccountantDashboard() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold" style={{color:'var(--theme-text-primary)'}}>Kế toán — {cur.month}</h2>
+      <div className="flex items-center justify-end">
         <span className="text-[10px] font-mono-num" style={{color:'var(--theme-text-muted)'}}>Lợi nhuận: {formatCurrencyShort(cur.revenue - cur.expense)}</span>
       </div>
 

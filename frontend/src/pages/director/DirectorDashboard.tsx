@@ -18,8 +18,7 @@ export default function DirectorDashboard() {
   return (
     <div className="space-y-5">
       {/* Time range */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold" style={{color:'var(--theme-text-primary)'}}>Tổng quan tháng {cur.month}</h2>
+      <div className="flex items-center justify-end">
         <div className="flex gap-1">
           {['Hôm nay', 'Tuần', 'Tháng'].map((r, i) => (
             <button key={r} className={`px-2.5 py-1 text-[10px] font-medium rounded-full transition-colors ${i === 2 ? 'text-white' : ''}`}
