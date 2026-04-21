@@ -13,7 +13,7 @@ import { TripDetail } from '@/pages/driver/TripDetail'
 import { ExpenseList } from '@/pages/driver/ExpenseList'
 import { CreateExpense } from '@/pages/driver/CreateExpense'
 import { EarningsOverview } from '@/pages/driver/EarningsOverview'
-import { MoreMenu } from '@/pages/driver/MoreMenu'
+import { DriverHome } from '@/pages/driver/DriverHome'
 import { Notifications } from '@/pages/driver/Notifications'
 import { Profile } from '@/pages/driver/Profile'
 
@@ -33,10 +33,9 @@ function Router() {
     case '/driver/expenses': return <ExpenseList />
     case '/driver/expenses/new': return <CreateExpense />
     case '/driver/earnings': return <EarningsOverview />
-    case '/driver/more': return <MoreMenu />
     case '/driver/notifications': return <Notifications />
     case '/driver/profile': return <Profile />
-    default: return <TripList />
+    default: return <DriverHome />
   }
 }
 
