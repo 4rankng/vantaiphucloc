@@ -166,22 +166,24 @@
 | US-13.7 | Xuất báo cáo Excel/PDF | Giám đốc, Kế toán | P2 |
 | US-13.8 | Báo cáo P&L theo đầu xe (tháng/chọn khoảng thời gian): Cước - Dầu - Đi đường - Lương - SC - Lốp - Dầu máy = Lợi nhuận gộp | Giám đốc | P1 |
 
-## Epic 14: Mobile App (Driver)
+## Epic 14: Mobile App (Driver — Capacitor Native)
 
 | ID | Story | Role | Priority |
 |----|-------|------|----------|
 | US-14.1 | Đăng nhập bằng tài khoản tài xế | Tài xế | P0 |
 | US-14.2 | Xem chuyến được giao | Tài xế | P0 |
 | US-14.3 | Cập nhật tiến trình chuyến (8 trạng thái) | Tài xế | P0 |
-| US-14.4 | Chụp ảnh container (pickup/delivery) | Tài xế | P0 |
+| US-14.4 | Chụp ảnh container (pickup/delivery) qua Capacitor Camera | Tài xế | P0 |
 | US-14.5 | Quét OCR mã container | Tài xế | P0 |
 | US-14.6 | Khai báo đổ dầu (lít + tiền + ảnh biên lai) | Tài xế | P0 |
 | US-14.7 | Khai báo chi phí phát sinh + ảnh biên lai | Tài xế | P0 |
-| US-14.8 | Hoạt động offline — tự đồng bộ khi có mạng, không mất dữ liệu | Tài xế | P0 |
-| US-14.9 | Xem thu nhập hôm nay | Tài xế | P1 |
-| US-14.10 | Nhận thông báo cảnh báo, từ chối chi phí (kèm lý do) | Tài xế | P1 |
-| US-14.11 | Theo dõi vị trí trực tuyến trong suốt hành trình | Tài xế | P1 |
-| US-14.12 | Xem lịch sử vị trí chuyến trên bản đồ (đối soát sau chuyến) | Điều hành, Giám đốc | P1 |
+| US-14.8 | Hoạt động offline — IndexedDB queue, tự đồng bộ khi có mạng | Tài xế | P0 |
+| US-14.9 | Background GPS tracking qua native plugin — gửi vị trí mỗi 5 phút kể cả khi screen off | Tài xế | P0 |
+| US-14.10 | Android: Foreground Service notification ("Hoàng đang chạy TR-0101") khi GPS active | Tài xế | P0 |
+| US-14.11 | iOS: Request "Always Allow" location permission cho background tracking | Tài xế | P0 |
+| US-14.12 | Xem thu nhập hôm nay | Tài xế | P1 |
+| US-14.13 | Nhận push notification (cảnh báo, từ chối chi phí, nhắc nhở) qua Capacitor Push | Tài xế | P1 |
+| US-14.14 | Xem lịch sử vị trí chuyến trên bản đồ (đối soát sau chuyến) | Điều hành, Giám đốc | P1 |
 
 ## Epic 15: Notifications & Reminders
 

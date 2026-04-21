@@ -106,7 +106,11 @@
 ### 3.6 Công nghệ AI OCR & GPS
 - **OCR Container:** Tài xế chụp ảnh, AI tự động nhận diện 11 mã số container. Hỗ trợ nhập tay nếu OCR thất bại.
 - **Tuyến đường:** Mỗi tuyến định nghĩa điểm đi, điểm đến, quãng đường và thời gian dự kiến. GPS tại mỗi bước trạng thái dùng để ước tính km thực tế.
-- **Theo dõi trực tuyến:** Ứng dụng mobile theo dõi vị trí trực tuyến trong suốt hành trình (REQ-5.3).
+- **Theo dõi trực tuyến:** Native background geolocation plugin theo dõi vị trí mỗi 5 phút trong suốt hành trình, kể cả khi tắt màn hình hoặc thu nhỏ app (REQ-5.3).
+  - **Android:** Sử dụng Foreground Service với persistent notification (vd: "Hoàng đang chạy TR-0101") để OS không kill app.
+  - **iOS:** Yêu cầu "Always Allow" location permission. Plugin xử lý background execution limits.
+  - **Workflow:** User click "Đang chạy" → JS gọi native plugin `start()` → Native OS xử lý interval 5 phút → gửi tọa độ về server.
+  - **Không dùng setInterval()** — JavaScript timer sẽ bị kill khi screen off. Native layer quản lý GPS interval.
 - **Lịch sử vị trí:** Lưu trữ lịch sử vị trí để phục vụ đối soát và kiểm tra sau chuyến (REQ-5.5).
 
 ### 3.7 Quản lý Chi phí & Cảnh báo
@@ -156,7 +160,8 @@
 ### 4.1 Tech Stack
 - **Backend:** FastAPI (Python), PostgreSQL, SQLAlchemy (Async), Redis (Cache/Session).
 - **Frontend:** React, Tailwind CSS, Lucide Icons.
-- **Mobile:** PWA (Progressive Web App) hỗ trợ Offline & Đồng bộ.
+- **Mobile:** Capacitor (Ionic) native app — PWA core + native plugins cho background geolocation, camera, notifications.
+- **Background Geolocation:** `@capacitor-community/background-geolocation` — native foreground service (Android) / background task (iOS).
 - **AI:** Gemini Vision API cho OCR container.
 - **Infrastructure:** Docker Compose, Nginx, DigitalOcean.
 
@@ -495,11 +500,35 @@ WARRANTY_PARTS (id=5, vehicle_id=7):
 
 ---
 
-## 6. Offline & Đồng bộ (PWA)
-- Sử dụng Service Worker để cache app shell.
+## 6. Mobile Architecture (Capacitor + Native Plugins)
+
+### 6.1 Nền tảng
+- **Capacitor (Ionic):** Wrapping web app (React + Vite) thành native app cho iOS và Android.
+- Web core dùng chung với desktop — chỉ thêm native layer cho hardware access.
+- Build: `pnpm build` → Capacitor copy web assets vào native project.
+
+### 6.2 Background Geolocation (REQ-5.3)
+- **Plugin:** `@capacitor-community/background-geolocation`
+- Xử lý logic native phức tạp để giữ GPS hoạt động khi app ở background.
+- **Workflow tích hợp:**
+  1. User click "Đang chạy" → JS gọi native plugin `start()`
+  2. Native Layer: Plugin khởi tạo foreground service (Android) hoặc background task (iOS)
+  3. GPS Interval: Native OS xử lý trigger mỗi 5 phút, kể cả khi tắt màn hình hoặc thu nhỏ app
+  4. API Sync: Plugin gửi tọa độ về server tự động
+- **Android:** Phải dùng Foreground Service với persistent notification (vd: "Hoàng đang chạy chuyến TR-0101") — báo cho OS biết đang thực hiện task, không kill.
+- **iOS:** Apple rất hạn chế. Phải request "Always Allow" location permission. Plugin xử lý background execution limits, hạn chế hơn Android.
+- **KHÔNG dùng setInterval()** — JavaScript timer chết khi screen off. Native layer quản lý GPS interval.
+
+### 6.3 Offline & Đồng bộ
 - **IndexedDB:** Lưu hàng đợi thao tác khi tài xế mất mạng.
 - Tự động đồng bộ (Background Sync) khi có kết nối trở lại.
 - **Không bao giờ mất dữ liệu đã nhập do lỗi mạng.**
+- Service Worker cache app shell cho fast load.
+
+### 6.4 Camera & Notifications
+- `@capacitor/camera` — chụp ảnh chất lượng cao cho OCR + biên lai.
+- `@capacitor/push-notifications` — nhận thông báo đẩy từ server (cảnh báo, từ chối chi phí, nhắc nhở).
+- Ảnh đính kèm GPS metadata từ native layer (không dùng browser Geolocation API — dùng plugin).
 
 ---
 
