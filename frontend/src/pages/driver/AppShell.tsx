@@ -30,7 +30,7 @@ export function BottomNav() {
   const active = tabs.find(t => currentPath.startsWith(t.path))?.path ?? '/driver/trips'
 
   return (
-    <nav className="h-16 flex items-center justify-around border-t border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] sticky bottom-0 z-30">
+    <nav className="h-16 flex items-center justify-around border-t border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] sticky bottom-0 z-30 pb-[env(safe-area-inset-bottom,12px)]">
       {tabs.map(t => (
         <button
           key={t.path}
