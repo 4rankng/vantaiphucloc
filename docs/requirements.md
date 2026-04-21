@@ -185,11 +185,13 @@ Bảng `WORKFLOWS` điều khiển trạng thái phức tạp của Chuyến xe,
 
 **Cấu trúc bảng:**
 - `id`: Auto-increment primary key
-- `run_id`: UUID — nhóm nhiều dòng thành một luồng nghiệp vụ
+- `run_id`: UUID — định danh duy nhất cho một thực thể nghiệp vụ (một chuyến xe, một chi phí, v.v.)
 - `state`: int — trạng thái hiện tại
 - `event`: int — sự kiện cần xử lý (0 = không có event chờ)
 - `attempt`: int — số lần thử transition
 - `data`: JSON — payload nghiệp vụ
+
+**Một thực thể = một dòng.** Mọi thay đổi trạng thái đều UPDATE trực tiếp trên cùng một dòng, không INSERT dòng mới. `run_id` là UUID để liên kết với thực thể nghiệp vụ (trip, expense, invoice), không phải để nhóm nhiều dòng.
 
 **Nguyên tắc hoạt động:**
 1. Mỗi cặp (state, event) có **đúng một** transition function duy nhất — bản chất của state machine.
