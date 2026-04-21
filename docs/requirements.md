@@ -228,6 +228,211 @@ Bảng `WORKFLOWS` điều khiển trạng thái phức tạp của Chuyến xe,
 **Retry Mechanism:** Tự động thử lại các action thất bại (OCR, Notify) với exponential backoff.
 **Blocking Actions:** Chỉ chuyển trạng thái khi các action quan trọng thành công.
 
+### 4.4 Kịch bản nghiệp vụ (Sample Scenarios)
+
+#### Kịch bản 1: Chuyến xe hoàn chỉnh (Happy Path)
+
+**Bối cảnh:** Điều hành tạo chuyến từ Cát Lái → Bình Dương cho chủ hàng Samsung.
+
+```
+--- Bước 1: Tạo Booking ---
+BOOKINGS:
+  id: 1, booking_code: "BK-2026-0001"
+  client_id: 5 (Samsung), route_id: 3 (Cát Lái → Bình Dương)
+  status: "pending", created_by: user_id=3 (Điều hành Minh)
+
+--- Bước 2: Giám đốc phê duyệt ---
+BOOKINGS:
+  status: "approved", approved_by: user_id=1 (Giám đốc An)
+
+WORKFLOWS:
+  id: 1, workflow_type: "Booking", state: "approved", event: NULL, attempt: 0
+
+--- Bước 3: Tạo chuyến ---
+TRIPS:
+  id: 101, trip_code: "TR-2026-0101"
+  booking_id: 1, vehicle_id: 7 (51F-1234), driver_id: 12 (Tài xế Hoàng)
+  route_id: 3, client_id: 5
+  container_code: null, container_type: "40ft"
+  status: "received", is_orphan: false
+  workflow_id: 2
+
+WORKFLOWS (id=2):
+  workflow_type: "Trip", state: "received", event: NULL, attempt: 0
+
+TRIP_FUEL_QUOTAS:
+  trip_id: 101, default_liters_per_km: 0.35, actual_liters_per_km: 0.35
+  (route_id=3 × vehicle_type=“container_40ft” → 0.35 l/km từ ROUTE_FUEL_QUOTAS)
+
+--- Bước 4: Tài xế nhận ca (Mobile) ---
+WORKFLOWS (id=2):
+  event: "confirm", attempt: 1
+→ engine: wf.send('confirm') → received → empty_pickup
+→ UPDATE: state="empty_pickup", event=NULL, attempt=0
+
+TRIP_STATUS_HISTORY:
+  trip_id: 101, status: "empty_pickup", lat: 10.732, lng: 106.720, timestamp: server
+
+--- Bước 5: Lấy rỗng tại bãi ---
+WORKFLOWS (id=2): event="pick_empty", attempt: 1
+→ empty_pickup → at_port
+
+--- Bước 6: Chụp container tại cảng (OCR) ---
+TRIP_PHOTOS:
+  id: 1, trip_id: 101, photo_type: "container_pickup"
+  file_path: "/photos/2026/04/101_pickup.jpg"
+  lat: 10.735, lng: 106.725, server_timestamp: 2026-04-21T08:30:00Z
+
+OCR Gemini → container_code: "TCLU7845230"
+TRIPS (id=101): container_code = "TCLU7845230"
+
+--- Bước 7: Rời cảng → Đang chạy → Đến nơi → Hạ bãi ---
+WORKFLOWS (id=2) state transitions:
+  at_port → leaving_port → en_route → arrived → dropped_off
+
+--- Bước 8: Tài xế khai báo chi phí dọc đường ---
+EXPENSES:
+  id: 501, trip_id: 101, category: "fuel", amount: 850000, liters: 15
+  description: "Đổ dầu tại trạm PV", status: "pending"
+  workflow_id: 3
+
+EXPENSES:
+  id: 502, trip_id: 101, category: "toll", amount: 120000
+  description: "Phí cầu đường", status: "pending"
+  workflow_id: 4
+
+WORKFLOWS (id=3): workflow_type: "Expense", state: "pending", event: NULL, attempt: 0
+WORKFLOWS (id=4): workflow_type: "Expense", state: "pending", event: NULL, attempt: 0
+
+--- Bước 9: Kế toán duyệt chi phí ---
+WORKFLOWS (id=3): event: "approve", attempt: 1
+→ pending → approved
+EXPENSES (id=501): status: "approved", approved_by: user_id=4 (Kế toán Lan)
+
+WORKFLOWS (id=4): event: "reject", attempt: 1
+→ pending → rejected
+EXPENSES (id=502): status: "rejected", reject_reason: "Biên lai không rõ, gửi lại ảnh"
+
+--- Bước 10: Hoàn thành chuyến ---
+WORKFLOWS (id=2): event: "complete", attempt: 1
+→ dropped_off → completed (final)
+
+TRIPS (id=101):
+  status: "completed", end_time: 2026-04-21T14:30:00Z
+  actual_distance_km: 47.3
+
+--- Bước 11: Xuất hóa đơn ---
+INVOICES:
+  id: 201, invoice_number: "HD-2026-0201"
+  client_id: 5 (Samsung)
+  trip_ids: [101]
+  total: 4500000, pdf_path: "/invoices/HD-2026-0201.pdf"
+  status: "issued", workflow_id: 5
+
+--- Bước 12: Khách hàng thanh toán ---
+PAYMENTS:
+  id: 1, invoice_id: 201, amount: 4500000
+  payment_method: "transfer", reference_number: "VCB-20260421-001"
+INVOICES (id=201): status: "paid", paid_at: 2026-04-21T16:00:00Z
+```
+
+#### Kịch bản 2: Phát hiện gian lận nhiên liệu
+
+```
+Bối cảnh: Chuyến 102, tuyến Cát Lái → Đồng Nai (120km), định mức 0.35 l/km
+  = 120 × 0.35 = 42 lít dự kiến
+
+EXPENSES (id=510):
+  trip_id: 102, category: "fuel", liters: 55, amount: 3025000
+  status: "pending"
+
+Hệ thống tự động kiểm tra:
+  55 lít vs 42 lít định mức = +31% → VƯỢT 10% NGƯỠNG
+
+ALERTS:
+  id: 1, trip_id: 102, alert_type: "fuel_anomaly", severity: "high"
+  description: "Khai 55 lít, định mức 42 lít. Chênh lệch +31%."
+  is_resolved: false
+
+NOTIFICATIONS:
+  user_id: 3 (Điều hành Minh)
+  title: "Cảnh báo gian lận dầu"
+  message: "Chuyến TR-2026-0102: Tài xế Hoàng khai 55 lít (định mức 42 lít, +31%)"
+
+Kế toán từ chối chi phí:
+  WORKFLOWS (expense): event: "reject", attempt: 1 → rejected
+  EXPENSES: reject_reason: "Gian lận nhiên liệu +31%"
+  NOTIFICATIONS → Tài xế Hoàng nhận thông báo từ chối kèm lý do
+
+Điều hành xử lý alert:
+  ALERTS: is_resolved: true, resolution: "violation", resolution_note: "Xác nhận gian lận"
+  → Tự động ghi vào hồ sơ vi phạm tài xế Hoàng
+  → KPI bị ảnh hưởng
+```
+
+#### Kịch bản 3: Chuyến mồ côi + Chặn chốt sổ
+
+```
+Bối cảnh: Chuyến 105 — cuốc vãng lai, chưa rõ chủ hàng
+
+TRIPS (id=105):
+  client_id: NULL, is_orphan: true
+
+Dashboard Kế toán hiển thị:
+  ⚠️ 2 chuyến mồ côi chưa gán chủ hàng
+  → TR-2026-0105, TR-2026-0108
+
+Kế toán gán chủ hàng:
+  TRIPS (id=105): client_id: 8 (Công ty ABC), is_orphan: false
+
+Kế toán chốt sổ tháng 4:
+  System check: SELECT COUNT(*) FROM trips WHERE is_orphan=true AND month=4
+  → Nếu > 0: "KHÔNG THỂ CHỐT SỔ — Còn 1 chuyến mồ côi chưa gán chủ hàng"
+  → Nếu = 0: Cho phép chốt sổ, khóa toàn bộ dữ liệu (is_locked=true)
+```
+
+#### Kịch bản 4: Ghi đè định mức xăng dầu
+
+```
+Bối cảnh: Xe 51F-1234 (container 40ft) được giao chuyến tuyến #3
+  nhưng xe đang bảo dưỡng máy, tốn nhiều dầu hơn bình thường.
+
+ROUTE_FUEL_QUOTAS (default):
+  route_id: 3, vehicle_type: "container_40ft", liters_per_km: 0.35
+
+Điều hành tạo chuyến → TRIP_FUEL_QUOTAS tự động tạo:
+  trip_id: 106, default_liters_per_km: 0.35, actual_liters_per_km: 0.35
+
+Điều hành ghi đè:
+  TRIP_FUEL_QUOTAS: actual_liters_per_km: 0.45, override_reason: "Xe vừa bảo dưỡng máy, tốn dầu hơn"
+  overridden_by: user_id=3
+
+→ Khi kiểm tra gian lận, hệ thống dùng actual_liters_per_km = 0.45 (không phải 0.35)
+```
+
+#### Kịch bản 5: Nhắc nhở bảo hiểm + linh kiện
+
+```
+Bối cảnh: Hệ thống chạy cron job mỗi ngày kiểm tra hạn.
+
+INSURANCE (id=3, vehicle_id=7):
+  provider: "Bảo Việt", policy_number: "BV-2026-00345"
+  expiry_date: 2026-05-15, renewal_reminder_days: 30
+
+Cron check (2026-04-21):
+  days_until_expiry = 24 → < 30 ngày
+  → Tạo NOTIFICATION:
+    user_id: 1 (Giám đốc An)
+    title: "Bảo hiểm sắp hết hạn"
+    message: "Xe 51F-1234 — Bảo Việt BV-2026-00345 hết hạn 15/05/2026 (còn 24 ngày)"
+    entity_type: "insurance", entity_id: 3
+
+WARRANTY_PARTS (id=5, vehicle_id=7):
+  part_name: "Lốp trước trái", install_date: 2025-01-15
+  replacement_cycle_km: 80000
+  → Reminder: theo thời gian hoặc km (tùy nào đến trước)
+```
+
 ---
 
 ## 5. Thiết kế API (RESTful)
