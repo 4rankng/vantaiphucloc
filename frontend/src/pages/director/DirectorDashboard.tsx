@@ -1,20 +1,12 @@
 import { StatCard } from '@/components/shared/StatCard'
 import { GlassCard } from '@/components/shared/GlassCard'
 import { StatusBadge } from '@/components/shared/StatusBadge'
-import { mockJobs, mockDrivers, mockMonthlyRevenue, mockTractors, mockAlerts, formatCurrency, formatCurrencyShort, getJobStatusBadge } from '@/data/mockData'
-import { Truck, TrendingUp, DollarSign, AlertTriangle, Route, Clock, CheckCircle, ArrowUpRight } from 'lucide-react'
+import { mockJobs, mockDrivers, mockMonthlyRevenue, mockTractors, mockAlerts, formatCurrencyShort, getJobStatusBadge } from '@/data/mockData'
+import { TrendingUp, DollarSign, ArrowUpRight, AlertTriangle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-
-const sparkRevenue = [65, 72, 80, 68, 85, 92]
-const sparkExpense = [55, 60, 52, 58, 62, 65]
-const sparkProfit = [10, 12, 28, 10, 23, 27]
-const sparkTrips = [8, 12, 10, 14, 11, 9]
 
 export default function DirectorDashboard() {
   const navigate = useNavigate()
-  const active = mockJobs.filter(j => j.status === 'IN_PROGRESS')
-  const planned = mockJobs.filter(j => j.status === 'PLANNED')
-  const completed = mockJobs.filter(j => j.status === 'COMPLETED')
   const running = mockTractors.filter(t => t.status === 'running')
   const idle = mockTractors.filter(t => t.status === 'idle')
   const maintenance = mockTractors.filter(t => t.status === 'maintenance')
@@ -27,10 +19,10 @@ export default function DirectorDashboard() {
     <div className="space-y-5">
       {/* Time range */}
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-bold" style={{color:'var(--theme-text-primary)'}}>Tổng quan</h2>
+        <h2 className="text-sm font-bold" style={{color:'var(--theme-text-primary)'}}>Tổng quan tháng {cur.month}</h2>
         <div className="flex gap-1">
           {['Hôm nay', 'Tuần', 'Tháng'].map((r, i) => (
-            <button key={r} className={`px-3 py-1 text-[11px] font-medium rounded-full transition-colors ${i === 2 ? 'text-white' : ''}`}
+            <button key={r} className={`px-2.5 py-1 text-[10px] font-medium rounded-full transition-colors ${i === 2 ? 'text-white' : ''}`}
               style={i === 2 ? {background:'var(--theme-brand-primary)'} : {background:'var(--theme-bg-tertiary)', color:'var(--theme-text-secondary)'}}>
               {r}
             </button>
@@ -38,107 +30,107 @@ export default function DirectorDashboard() {
         </div>
       </div>
 
-      {/* Primary KPI Row — compact */}
+      {/* Single KPI row — no duplicates */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard icon={<Truck size={18}/>} label="Đầu kéo" value={`${mockTractors.length}`} unit="xe"
-          subtitle={`${running.length} chạy · ${idle.length} rảnh`} sparkline={sparkTrips} />
-        <StatCard icon={<TrendingUp size={18}/>} label="Doanh thu" value={formatCurrencyShort(cur.revenue)} unit="VNĐ"
-          variant="success" trend={{direction:'up', value:'12%'}} sparkline={sparkRevenue} />
-        <StatCard icon={<DollarSign size={18}/>} label="Chi phí" value={formatCurrencyShort(cur.expense)} unit="VNĐ"
-          variant="warning" sparkline={sparkExpense} />
-        <StatCard icon={<ArrowUpRight size={18}/>} label="Lợi nhuận" value={formatCurrencyShort(cur.revenue - cur.expense)} unit="VNĐ"
-          variant="teal" trend={{direction:'up', value:'18%'}} sparkline={sparkProfit} />
+        <StatCard icon={<TrendingUp size={16}/>} label="Doanh thu" value={formatCurrencyShort(cur.revenue)} unit="VNĐ"
+          variant="success" trend={{direction:'up', value:'12%'}} sparkline={[65, 72, 80, 68, 85, 92]} />
+        <StatCard icon={<DollarSign size={16}/>} label="Chi phí" value={formatCurrencyShort(cur.expense)} unit="VNĐ"
+          variant="warning" sparkline={[55, 60, 52, 58, 62, 65]} />
+        <StatCard icon={<ArrowUpRight size={16}/>} label="Lợi nhuận" value={formatCurrencyShort(cur.revenue - cur.expense)} unit="VNĐ"
+          variant="teal" trend={{direction:'up', value:'18%'}} sparkline={[10, 12, 28, 10, 23, 27]} />
+        <StatCard icon={<AlertTriangle size={16}/>} label="Cảnh báo" value={`${highAlerts.length}`} unit="chưa xử lý"
+          variant="danger" />
       </div>
 
-      {/* Fleet capacity bar */}
-      <GlassCard className="p-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-semibold uppercase tracking-wide" style={{color:'var(--theme-text-muted)'}}>Công suất đội xe</span>
-          <span className="text-[11px] font-mono-num" style={{color:'var(--theme-text-secondary)'}}>{running.length}/{mockTractors.length} đang chạy</span>
-        </div>
-        <div className="flex h-2 rounded-full overflow-hidden" style={{background:'#f1f5f9'}}>
-          <div className="rounded-full" style={{width:`${(running.length/mockTractors.length)*100}%`, background:'#059669'}} />
-          <div className="rounded-full" style={{width:`${(idle.length/mockTractors.length)*100}%`, background:'#f59e0b'}} />
-          <div className="rounded-full" style={{width:`${(maintenance.length/mockTractors.length)*100}%`, background:'#ef4444'}} />
-        </div>
-        <div className="flex gap-4 mt-2">
-          <span className="flex items-center gap-1 text-[10px]" style={{color:'var(--theme-text-muted)'}}><span className="w-2 h-2 rounded-full" style={{background:'#059669'}}/> Đang chạy</span>
-          <span className="flex items-center gap-1 text-[10px]" style={{color:'var(--theme-text-muted)'}}><span className="w-2 h-2 rounded-full" style={{background:'#f59e0b'}}/> Rảnh</span>
-          <span className="flex items-center gap-1 text-[10px]" style={{color:'var(--theme-text-muted)'}}><span className="w-2 h-2 rounded-full" style={{background:'#ef4444'}}/> Sửa chữa</span>
-        </div>
-      </GlassCard>
+      {/* Fleet + Revenue side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Fleet status — compact */}
+        <GlassCard className="p-4">
+          <h3 className="text-[11px] font-semibold uppercase tracking-wide mb-3" style={{color:'var(--theme-text-muted)'}}>Đội xe ({mockTractors.length})</h3>
+          <div className="flex h-2 rounded-full overflow-hidden mb-2" style={{background:'#f1f5f9'}}>
+            <div className="rounded-full" style={{width:`${(running.length/mockTractors.length)*100}%`, background:'#059669'}} />
+            <div className="rounded-full" style={{width:`${(idle.length/mockTractors.length)*100}%`, background:'#f59e0b'}} />
+            <div className="rounded-full" style={{width:`${(maintenance.length/mockTractors.length)*100}%`, background:'#ef4444'}} />
+          </div>
+          <div className="grid grid-cols-3 gap-2 mt-3">
+            <div className="text-center">
+              <p className="text-lg font-bold font-mono-num" style={{color:'#059669'}}>{running.length}</p>
+              <p className="text-[10px]" style={{color:'var(--theme-text-muted)'}}>Đang chạy</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-bold font-mono-num" style={{color:'#d97706'}}>{idle.length}</p>
+              <p className="text-[10px]" style={{color:'var(--theme-text-muted)'}}>Rảnh</p>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-bold font-mono-num" style={{color:'#ef4444'}}>{maintenance.length}</p>
+              <p className="text-[10px]" style={{color:'var(--theme-text-muted)'}}>Sửa chữa</p>
+            </div>
+          </div>
+        </GlassCard>
 
-      {/* Secondary stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <StatCard icon={<Route size={16}/>} label="Đang chạy" value={`${active.length}`} unit="chuyến" variant="success" />
-        <StatCard icon={<Clock size={16}/>} label="Chờ xử lý" value={`${planned.length}`} unit="chuyến" variant="warning" />
-        <StatCard icon={<AlertTriangle size={16}/>} label="Cảnh báo" value={`${highAlerts.length}`} unit="mới" variant="danger" />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Revenue Chart */}
-        <GlassCard className="p-5">
-          <h3 className="text-[13px] font-bold mb-4" style={{color:'var(--theme-text-primary)'}}>Doanh thu 6 tháng</h3>
-          <div className="space-y-2">
+        {/* Revenue chart — spans 2 cols */}
+        <GlassCard className="p-4 lg:col-span-2">
+          <h3 className="text-[11px] font-semibold uppercase tracking-wide mb-3" style={{color:'var(--theme-text-muted)'}}>Doanh thu 6 tháng</h3>
+          <div className="space-y-1.5">
             {mockMonthlyRevenue.map((m) => (
               <div key={m.month} className="flex items-center gap-2">
-                <span className="text-[11px] w-12 shrink-0 font-mono-num" style={{color:'var(--theme-text-muted)'}}>{m.month}</span>
-                <div className="flex-1 flex gap-0.5 h-5 items-center">
-                  <div className="h-full rounded transition-all duration-500" style={{ width: `${(m.revenue / maxRev) * 100}%`, background: 'var(--theme-brand-primary)' }} />
-                  <div className="h-full rounded" style={{ width: `${(m.expense / maxRev) * 100}%`, background: 'var(--theme-brand-secondary)', opacity: 0.25 }} />
+                <span className="text-[10px] w-10 shrink-0 font-mono-num" style={{color:'var(--theme-text-muted)'}}>{m.month}</span>
+                <div className="flex-1 flex gap-0.5 h-4 items-center">
+                  <div className="h-full rounded-sm" style={{ width: `${(m.revenue / maxRev) * 100}%`, background: 'var(--theme-brand-primary)', opacity: 0.8 }} />
+                  <div className="h-full rounded-sm" style={{ width: `${(m.expense / maxRev) * 100}%`, background: 'var(--theme-brand-secondary)', opacity: 0.2 }} />
                 </div>
-                <span className="text-[11px] font-semibold w-16 text-right font-mono-num" style={{color:'var(--theme-text-primary)'}}>{formatCurrencyShort(m.revenue)}</span>
+                <span className="text-[10px] font-semibold w-14 text-right font-mono-num" style={{color:'var(--theme-text-primary)'}}>{formatCurrencyShort(m.revenue)}</span>
               </div>
             ))}
           </div>
         </GlassCard>
+      </div>
 
-        {/* Top Drivers */}
-        <GlassCard className="p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[13px] font-bold" style={{color:'var(--theme-text-primary)'}}>KPI Tài xế</h3>
-            <button onClick={() => navigate('/director/driver-kpi')} className="text-[11px] font-semibold hover:underline" style={{color:'var(--theme-brand-secondary)'}}>Xem tất cả →</button>
+      {/* Drivers + Trips side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Top Drivers — compact list */}
+        <GlassCard className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-[11px] font-semibold uppercase tracking-wide" style={{color:'var(--theme-text-muted)'}}>Top tài xế</h3>
+            <button onClick={() => navigate('/director/driver-kpi')} className="text-[10px] font-semibold" style={{color:'var(--theme-brand-secondary)'}}>Xem tất cả →</button>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             {topDrivers.slice(0, 5).map((d, i) => (
-              <div key={d.id} className="flex items-center gap-2.5 p-2 rounded-lg transition-colors hover:bg-[var(--theme-bg-tertiary)]">
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${i === 0 ? 'badge-gold' : i === 1 ? 'bg-gray-200 text-gray-600' : 'bg-gray-100 text-gray-400'}`}>
+              <div key={d.id} className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-[var(--theme-bg-tertiary)] transition-colors">
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${i === 0 ? 'badge-gold' : 'bg-gray-100 text-gray-400'}`}>
                   {i + 1}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-semibold truncate" style={{color:'var(--theme-text-primary)'}}>{d.name}</p>
-                  <p className="text-[10px]" style={{color:'var(--theme-text-muted)'}}>{d.tractorPlate} · {d.monthlyTrips} chuyến</p>
+                  <span className="text-[12px] font-semibold truncate block" style={{color:'var(--theme-text-primary)'}}>{d.name}</span>
                 </div>
-                <div className="text-right shrink-0">
-                  <p className="text-[13px] font-bold font-mono-num" style={{color:'var(--theme-text-primary)'}}>{formatCurrencyShort(d.monthlyRevenue)}</p>
+                <span className="text-[10px]" style={{color:'var(--theme-text-muted)'}}>{d.monthlyTrips} chuyến</span>
+                <span className="text-[12px] font-bold font-mono-num shrink-0" style={{color:'var(--theme-text-primary)'}}>{formatCurrencyShort(d.monthlyRevenue)}</span>
+              </div>
+            ))}
+          </div>
+        </GlassCard>
+
+        {/* Recent trips — compact list */}
+        <GlassCard className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-[11px] font-semibold uppercase tracking-wide" style={{color:'var(--theme-text-muted)'}}>Chuyến gần đây</h3>
+            <button onClick={() => navigate('/director/trips')} className="text-[10px] font-semibold" style={{color:'var(--theme-brand-secondary)'}}>Xem tất cả →</button>
+          </div>
+          <div className="space-y-1">
+            {mockJobs.slice(0, 5).map(job => (
+              <div key={job.id} className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-[var(--theme-bg-tertiary)] transition-colors">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[12px] font-semibold" style={{color:'var(--theme-text-primary)'}}>{job.containerNumber}</span>
+                    <StatusBadge variant={getJobStatusBadge(job.status).variant} label={getJobStatusBadge(job.status).label} />
+                  </div>
                 </div>
+                <span className="text-[12px] font-semibold font-mono-num shrink-0" style={{color:'var(--theme-text-primary)'}}>{formatCurrencyShort(job.revenue)}</span>
               </div>
             ))}
           </div>
         </GlassCard>
       </div>
-
-      {/* Recent trips */}
-      <GlassCard className="p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-[13px] font-bold" style={{color:'var(--theme-text-primary)'}}>Chuyến gần đây</h3>
-          <button onClick={() => navigate('/director/trips')} className="text-[11px] font-semibold hover:underline" style={{color:'var(--theme-brand-secondary)'}}>Xem tất cả →</button>
-        </div>
-        <div className="space-y-2">
-          {mockJobs.slice(0, 5).map(job => (
-            <div key={job.id} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-[var(--theme-bg-tertiary)] transition-colors">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-[13px] font-semibold" style={{color:'var(--theme-text-primary)'}}>{job.containerNumber}</span>
-                  <StatusBadge variant={getJobStatusBadge(job.status).variant} label={getJobStatusBadge(job.status).label} />
-                </div>
-                <p className="text-[11px] mt-0.5" style={{color:'var(--theme-text-muted)'}}>{job.description}</p>
-              </div>
-              <span className="text-[13px] font-semibold font-mono-num shrink-0" style={{color:'var(--theme-text-primary)'}}>{formatCurrencyShort(job.revenue)}</span>
-            </div>
-          ))}
-        </div>
-      </GlassCard>
     </div>
   )
 }
