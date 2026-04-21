@@ -1,32 +1,57 @@
+import { useDriverStore } from '@/hooks/use-driver-store'
 import { useAuth } from '@/contexts/AuthContext'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/Sheet/Sheet'
+import { Settings, HelpCircle, FileText, LogOut, UserCircle, Phone } from 'lucide-react'
 
 export function MoreMenu() {
-  const { logout, user } = useAuth()
-  const items = [
-    { icon: '⚙️', label: 'Cài đặt' },
-    { icon: '❓', label: 'Trợ giúp' },
-    { icon: '📋', label: 'Quy định' },
-    { icon: '🚪', label: 'Đăng xuất', action: logout },
+  const { logout: authLogout, user } = useAuth()
+  const { navigate, driver } = useDriverStore()
+  const initials = driver.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+
+  const handleLogout = () => authLogout()
+  const handleSettings = () => alert('Tính năng đang phát triển')
+  const handleHelp = () => alert('Gọi 1900-xxxx để được hỗ trợ')
+  const handleRules = () => alert('Quy định vận tải sẽ được cập nhật sớm')
+
+  const menuItems = [
+    { icon: Settings, label: 'Cài đặt', action: handleSettings },
+    { icon: HelpCircle, label: 'Trợ giúp', action: handleHelp },
+    { icon: FileText, label: 'Quy định', action: handleRules },
+    { icon: LogOut, label: 'Đăng xuất', action: handleLogout, danger: true },
   ]
 
   return (
-    <div className="p-4 space-y-4">
-      <h2 className="text-lg font-bold">Thêm</h2>
+    <div className="p-4 space-y-4 pb-24">
+      <h2 className="text-lg font-bold" style={{ color: 'var(--theme-text-primary)' }}>Thêm</h2>
       {user && (
-        <div className="bg-[var(--theme-bg-secondary)] rounded-xl p-4 border border-[var(--theme-border-default)]">
-          <p className="font-semibold">{user.name}</p>
-          <p className="text-sm text-[var(--theme-text-muted)]">{user.id}</p>
+        <div className="rounded-xl p-4 border" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}>
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold"
+              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+            >
+              {initials}
+            </div>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{user.name}</p>
+              <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{user.id}</p>
+            </div>
+          </div>
         </div>
       )}
       <div className="grid grid-cols-2 gap-3">
-        {items.map(item => (
+        {menuItems.map(({ icon: Icon, label, action, danger }) => (
           <button
-            key={item.label}
-            onClick={item.action}
-            className="bg-[var(--theme-bg-secondary)] rounded-xl p-5 border border-[var(--theme-border-default)] flex flex-col items-center gap-2 active:scale-95 transition-transform min-h-[80px] justify-center"
+            key={label}
+            onClick={action}
+            className="rounded-xl p-5 border flex flex-col items-center gap-2 active:scale-95 transition-transform min-h-[80px] justify-center"
+            style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}
           >
-            <span className="text-2xl">{item.icon}</span>
-            <span className="text-sm font-medium text-[var(--theme-text-primary)]">{item.label}</span>
+            <Icon
+              className="w-6 h-6"
+              style={{ color: danger ? 'var(--theme-status-error)' : 'var(--theme-text-secondary)' }}
+            />
+            <span className="text-sm font-medium" style={{ color: danger ? 'var(--theme-status-error)' : 'var(--theme-text-primary)' }}>{label}</span>
           </button>
         ))}
       </div>

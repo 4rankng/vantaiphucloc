@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Truck } from 'lucide-react'
 
 export function Login() {
   const { login } = useAuth()
@@ -17,24 +18,26 @@ export function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--theme-bg-primary)] flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ background: 'var(--theme-bg-primary)' }}>
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="text-4xl mb-2">🚛</div>
-          <h1 className="text-2xl font-bold text-[var(--theme-text-primary)]">TTransport</h1>
-          <p className="text-sm text-[var(--theme-text-muted)] mt-1">Đăng nhập tài xế</p>
+          <div className="mx-auto mb-2 w-14 h-14 rounded-full flex items-center justify-center" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+            <Truck className="w-7 h-7" />
+          </div>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--theme-text-primary)' }}>TTransport</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--theme-text-muted)' }}>Đăng nhập tài xế</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-sm font-medium text-[var(--theme-text-secondary)] mb-1 block">Tên đăng nhập</label>
-            <Input placeholder="Tài khoản" value={username} onChange={e => { setUsername(e.target.value); setError('') }} />
+            <label className="text-xs font-medium uppercase tracking-wider mb-1.5 block" style={{ color: 'var(--theme-text-muted)' }}>Tên đăng nhập</label>
+            <Input placeholder="Tài khoản" value={username} onChange={e => { setUsername(e.target.value); setError('') }} className="h-11" />
           </div>
           <div>
-            <label className="text-sm font-medium text-[var(--theme-text-secondary)] mb-1 block">Mật khẩu</label>
-            <Input type="password" placeholder="••••••" value={password} onChange={e => { setPassword(e.target.value); setError('') }} />
+            <label className="text-xs font-medium uppercase tracking-wider mb-1.5 block" style={{ color: 'var(--theme-text-muted)' }}>Mật khẩu</label>
+            <Input type="password" placeholder="••••••" value={password} onChange={e => { setPassword(e.target.value); setError('') }} className="h-11" />
           </div>
           {error && <p className="text-sm" style={{ color: 'var(--theme-status-error)' }}>{error}</p>}
-          <Button type="submit" className="w-full h-12 text-base font-semibold rounded-xl">Đăng nhập</Button>
+          <Button type="submit" className="w-full h-11 text-base font-semibold rounded-xl">Đăng nhập</Button>
         </form>
       </div>
     </div>

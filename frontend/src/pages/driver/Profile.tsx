@@ -1,0 +1,62 @@
+import { useDriverStore } from '@/hooks/use-driver-store'
+import { Badge } from '@/components/ui/Badge'
+import { ArrowLeft, User, Phone, TruckIcon, DollarSign, Route, Star, CalendarDays } from 'lucide-react'
+
+export function Profile() {
+  const { driver, navigate } = useDriverStore()
+  const initials = driver.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+
+  return (
+    <div className="p-4 space-y-4">
+      <button
+        onClick={() => navigate('/driver/more')}
+        className="flex items-center gap-1.5 text-sm font-medium"
+        style={{ color: 'var(--theme-brand-primary)' }}
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Quay lại
+      </button>
+
+      {/* Avatar section */}
+      <div className="flex flex-col items-center py-4">
+        <div
+          className="w-16 h-16 rounded-full flex items-center justify-center text-lg font-bold"
+          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+        >
+          {initials}
+        </div>
+        <h2 className="text-lg font-bold mt-3" style={{ color: 'var(--theme-text-primary)' }}>{driver.name}</h2>
+        <div className="flex items-center gap-1.5 mt-1">
+          <Phone className="w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
+          <span className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>{driver.phone}</span>
+        </div>
+        <Badge variant="success" className="mt-2">Tài xế</Badge>
+      </div>
+
+      {/* Info rows */}
+      <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}>
+        {[
+          { icon: User, label: 'Mã tài xế', value: driver.id },
+          { icon: Phone, label: 'Số điện thoại', value: driver.phone },
+          { icon: TruckIcon, label: 'Đầu kéo', value: driver.tractorPlate },
+          { icon: DollarSign, label: 'Phí/chuyến', value: driver.fixedFeePerTrip.toLocaleString('vi-VN') + ' ₫' },
+          { icon: Route, label: 'Tổng chuyến', value: driver.totalTrips + ' chuyến' },
+          { icon: CalendarDays, label: 'Chuyến tháng này', value: driver.monthlyTrips + ' chuyến' },
+          { icon: DollarSign, label: 'Doanh thu tháng', value: driver.monthlyRevenue.toLocaleString('vi-VN') + ' ₫' },
+          { icon: Star, label: 'Đánh giá', value: driver.rating + '/5.0' },
+        ].map(({ icon: Icon, label, value }, i, arr) => (
+          <div key={label}>
+            <div className="flex justify-between items-center px-4 py-3">
+              <div className="flex items-center gap-2">
+                <Icon className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
+                <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{label}</span>
+              </div>
+              <span className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>{value}</span>
+            </div>
+            {i < arr.length - 1 && <div className="mx-4 border-t" style={{ borderColor: 'var(--theme-border-default)' }} />}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}

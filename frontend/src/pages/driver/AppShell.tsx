@@ -1,62 +1,102 @@
+import { useState } from 'react'
+import { Truck, Receipt, Wallet, Bell, Menu, UserCircle, LogOut } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useDriverStore } from '@/hooks/use-driver-store'
+import { useAuth } from '@/contexts/AuthContext'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/Sheet/Sheet'
 
 export function TopBar() {
-  const { driver } = useDriverStore()
-  const initial = driver.name.charAt(driver.name.lastIndexOf(' ') + 1)
+  const { driver, navigate } = useDriverStore()
+  const { logout } = useAuth()
+  const [profileOpen, setProfileOpen] = useState(false)
+  const initials = driver.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 
   return (
-    <header
-      className="fixed top-0 left-0 right-0 z-50 border-b"
-      style={{
-        paddingTop: 'env(safe-area-inset-top)',
-        background: 'var(--theme-header)',
-        backdropFilter: 'var(--theme-glass-blur)',
-        borderColor: 'var(--theme-header-border)',
-      }}
-    >
-      <div className="flex items-center justify-between h-14 px-[var(--theme-spacing-page-padding)]">
-        <span className="text-lg font-bold" style={{ color: 'var(--theme-brand-primary)' }}>
-          🚛 TTransport
-        </span>
-        <div className="flex items-center gap-2">
+    <>
+      <header
+        className="fixed top-0 left-0 right-0 z-50 border-b"
+        style={{
+          paddingTop: 'env(safe-area-inset-top)',
+          background: 'var(--theme-header)',
+          backdropFilter: 'var(--theme-glass-blur)',
+          borderColor: 'var(--theme-header-border)',
+        }}
+      >
+        <div className="flex items-center justify-between h-14 px-4">
+          <div className="flex items-center gap-2">
+            <Truck className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
+            <span className="text-lg font-bold" style={{ color: 'var(--theme-brand-primary)' }}>
+              TTransport
+            </span>
+          </div>
           <button
-            className="relative w-10 h-10 flex items-center justify-center rounded-full transition-colors touch-manipulation"
-            style={{ color: 'var(--theme-text-secondary)' }}
-            aria-label="Thông báo"
-          >
-            <span className="text-lg">🔔</span>
-            <span
-              className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
-              style={{ background: 'var(--theme-status-error)' }}
-            />
-          </button>
-          <button
+            onClick={() => setProfileOpen(true)}
             className="w-9 h-9 flex items-center justify-center rounded-full font-bold text-xs touch-manipulation"
             style={{
               background: 'var(--theme-brand-primary)',
               color: 'var(--theme-text-on-brand)',
             }}
-            aria-label="Hồ sơ"
+            aria-label="Tài khoản"
           >
-            {initial}
+            {initials}
           </button>
         </div>
-      </div>
-    </header>
+      </header>
+
+      <Sheet open={profileOpen} onOpenChange={setProfileOpen}>
+        <SheetContent side="bottom" className="h-auto pb-safe">
+          <SheetHeader className="pb-3">
+            <SheetTitle className="text-base font-semibold text-left">Tài khoản</SheetTitle>
+            <SheetDescription className="text-left">Thông tin tài xế</SheetDescription>
+          </SheetHeader>
+          <div className="pb-2">
+            <div className="flex items-center gap-3 px-3 pb-3">
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold"
+                style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+              >
+                {initials}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{driver.name}</p>
+                <p className="text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>{driver.phone}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                className="flex flex-col items-center justify-center gap-1.5 py-4 rounded-xl transition-colors touch-manipulation"
+                style={{ color: 'var(--theme-text-primary)' }}
+                onClick={() => { setProfileOpen(false); navigate('/driver/profile') }}
+              >
+                <UserCircle className="w-5 h-5" style={{ color: 'var(--theme-text-secondary)' }} />
+                <span className="text-xs font-medium leading-none" style={{ color: 'var(--theme-text-secondary)' }}>Hồ sơ</span>
+              </button>
+              <button
+                className="flex flex-col items-center justify-center gap-1.5 py-4 rounded-xl transition-colors touch-manipulation"
+                onClick={() => { setProfileOpen(false); logout() }}
+              >
+                <LogOut className="w-5 h-5" style={{ color: 'var(--theme-status-error)' }} />
+                <span className="text-xs font-medium leading-none" style={{ color: 'var(--theme-status-error)' }}>Đăng xuất</span>
+              </button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
   )
 }
 
-const tabs = [
-  { path: '/driver/trips', icon: '🚛', label: 'Chuyến' },
-  { path: '/driver/expenses', icon: '🧾', label: 'Chi phí' },
-  { path: '/driver/earnings', icon: '💰', label: 'Thu nhập' },
-  { path: '/driver/more', icon: '☰', label: 'Thêm' },
+const tabConfig = [
+  { path: '/driver/trips', Icon: Truck, label: 'Chuyến' },
+  { path: '/driver/expenses', Icon: Receipt, label: 'Chi phí' },
+  { path: '/driver/earnings', Icon: Wallet, label: 'Thu nhập' },
+  { path: '/driver/notifications', Icon: Bell, label: 'Thông báo' },
+  { path: '/driver/more', Icon: Menu, label: 'Thêm' },
 ]
 
 export function BottomNav() {
-  const { currentPath, navigate } = useDriverStore()
-  const active = tabs.find(t => currentPath.startsWith(t.path))?.path ?? '/driver/trips'
+  const { currentPath, navigate, unreadCount } = useDriverStore()
+  const active = tabConfig.find(t => currentPath.startsWith(t.path))?.path ?? '/driver/trips'
 
   return (
     <nav
@@ -64,40 +104,57 @@ export function BottomNav() {
       style={{
         paddingBottom: 'env(safe-area-inset-bottom)',
         background: 'var(--theme-bottom-nav)',
-        backdropFilter: 'var(--theme-glass-blur)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
         borderColor: 'var(--theme-bottom-nav-border)',
       }}
       aria-label="Điều hướng chính"
     >
       <div className="flex items-stretch h-14 relative px-2">
-        {tabs.map(t => {
-          const isActive = active === t.path
+        {tabConfig.map(({ path, Icon, label }) => {
+          const isActive = active === path
+          const showBadge = path === '/driver/notifications' && unreadCount > 0
           return (
             <button
-              key={t.path}
-              onClick={() => navigate(t.path)}
-              className={cn(
-                'flex-1 flex flex-col items-center justify-center gap-0.5 touch-manipulation relative group transition-all duration-300',
-              )}
-              aria-label={t.label}
+              key={path}
+              onClick={() => navigate(path)}
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 touch-manipulation relative group transition-all duration-300"
+              aria-label={label}
             >
               {isActive && (
                 <span
-                  className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-1 rounded-b-full transition-all duration-300"
-                  style={{ background: 'var(--theme-bottom-nav-active)' }}
+                  className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-1.5 rounded-b-full"
+                  style={{ background: 'var(--theme-bottom-nav-active)', opacity: 0.9 }}
                 />
               )}
-              <div
-                className={cn(
-                  'p-1.5 rounded-full transition-all duration-300',
-                  isActive && '-translate-y-1',
+              <div className="relative">
+                <div
+                  className={cn(
+                    'p-1.5 rounded-full transition-all duration-300',
+                    isActive && '-translate-y-1',
+                  )}
+                  style={{
+                    background: isActive ? 'var(--theme-brand-primary-light)' : 'transparent',
+                  }}
+                >
+                  <Icon
+                    className={cn(
+                      'h-5 w-5 transition-all duration-300',
+                      isActive && 'stroke-[2.5px]',
+                    )}
+                    style={{
+                      color: isActive ? 'var(--theme-bottom-nav-active)' : 'var(--theme-bottom-nav-inactive)',
+                    }}
+                  />
+                </div>
+                {showBadge && (
+                  <span
+                    className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
+                    style={{ background: 'var(--theme-status-error)' }}
+                  >
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
                 )}
-                style={{
-                  background: isActive ? 'var(--theme-brand-primary-light)' : 'transparent',
-                  color: isActive ? 'var(--theme-bottom-nav-active)' : 'var(--theme-bottom-nav-inactive)',
-                }}
-              >
-                <span className={cn('text-lg inline-block', isActive && 'scale-110')}>{t.icon}</span>
               </div>
               <span
                 className={cn(
@@ -108,7 +165,7 @@ export function BottomNav() {
                   color: isActive ? 'var(--theme-bottom-nav-active)' : 'var(--theme-bottom-nav-inactive)',
                 }}
               >
-                {t.label}
+                {label}
               </span>
             </button>
           )
