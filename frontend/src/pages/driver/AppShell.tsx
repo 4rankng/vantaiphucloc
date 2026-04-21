@@ -180,25 +180,25 @@ export function BottomNav() {
 
       {/* More — BOTTOM drawer with 3 buttons in one row */}
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-        <SheetContent side="bottom" className="rounded-t-2xl pb-safe">
+        <SheetContent side="right" className="w-64 rounded-l-2xl">
           <SheetHeader className="pb-3">
             <SheetTitle className="text-base font-semibold text-left">Thêm</SheetTitle>
           </SheetHeader>
-          <div className="flex gap-3 pb-2">
+          <div className="flex flex-col gap-3 pb-2">
             {moreItems.map(({ icon: Icon, label, action }) => (
               <button
                 key={label}
-                className="flex-1 flex flex-col items-center justify-center gap-2 py-5 rounded-xl transition-colors touch-manipulation border"
+                className="flex items-center gap-3 py-4 px-4 rounded-xl transition-colors touch-manipulation border"
                 style={{ background: 'var(--theme-bg-tertiary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
                 onClick={() => { setMoreOpen(false); action() }}
               >
                 <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center"
+                  className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
                   style={{ background: 'var(--theme-bg-secondary)' }}
                 >
                   <Icon className="w-5 h-5" style={{ color: 'var(--theme-text-secondary)' }} />
                 </div>
-                <span className="text-xs font-medium leading-none" style={{ color: 'var(--theme-text-secondary)' }}>{label}</span>
+                <span className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>{label}</span>
               </button>
             ))}
           </div>
