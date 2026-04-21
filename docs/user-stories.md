@@ -185,17 +185,14 @@
 | US-14.13 | Nhận push notification (cảnh báo, từ chối chi phí, nhắc nhở) qua Capacitor Push | Tài xế | P1 |
 | US-14.14 | Xem lịch sử vị trí chuyến trên bản đồ (đối soát sau chuyến) | Điều hành, Giám đốc | P1 |
 
-## Epic 18: Real-Time Dashboard Connection
+## Epic 18: Real-Time Dashboard Updates
 
 | ID | Story | Role | Priority |
 |----|-------|------|----------|
-| US-18.1 | WebSocket connection cho real-time dashboard updates (vị trí xe, trạng thái chuyến, cảnh báo) | Điều hành, Giám đốc | P0 |
-| US-18.2 | Ping/Pong heartbeat tự động — phát hiện ngắt kết nối ngay, hiển thị "Reconnecting..." | Hệ thống | P0 |
-| US-18.3 | SSE fallback khi không cần bidirectional — notification feed, metric refresh | Hệ thống | P1 |
-| US-18.4 | Long Polling fallback khi WebSocket+SSE đều thất bại (firewall/proxy) | Hệ thống | P1 |
-| US-18.5 | Connection state indicator: 🟢 WebSocket / 🟡 SSE / 🟠 Polling / 🔴 Disconnected | Điều hành, Giám đốc | P1 |
-| US-18.6 | Tự động upgrade: Long Polling → SSE → WebSocket khi connection available | Hệ thống | P1 |
-| US-18.7 | Vị trí xe cập nhật trên bản đồ mỗi 5 phút (nhận từ driver native GPS qua WebSocket) | Điều hành, Giám đốc | P0 |
+| US-18.1 | Polling 30s cập nhật vị trí xe trên bản đồ cho tất cả chuyến đang chạy | Điều hành, Giám đốc | P0 |
+| US-18.2 | Connection state indicator: 🟢 Online / 🔴 Offline (dựa trên navigator.onLine) | Hệ thống | P1 |
+| US-18.3 | Auto-pause polling khi offline, auto-resume khi online trở lại | Hệ thống | P1 |
+| US-18.4 | Cache GPS response 30s trên server (Redis) — tránh DB hit khi nhiều user mở dashboard | Hệ thống | P2 |
 
 ## Epic 15: Notifications & Reminders
 
