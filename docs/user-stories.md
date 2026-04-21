@@ -108,3 +108,35 @@
 | US-9.1 | Quản lý danh mục tuyến đường và định mức đi đường | Điều hành | P1 |
 | US-9.2 | Cấu hình định mức xăng dầu theo tuyến và loại xe | Giám đốc | P1 |
 | US-9.3 | So sánh quãng đường thực tế với định mức tuyến đường | Hệ thống | P1 |
+
+## Epic 10: External Vehicle & Provider Management
+
+| ID | Story | Role | Priority |
+|----|-------|------|----------|
+| US-10.1 | Đăng ký đối tác vận tải (nhà cung cấp xe thuê ngoài) | Giám đốc | P1 |
+| US-10.2 | Quản lý hồ sơ năng lực xe thuê (đăng ký, kiểm định, bảo hiểm, GPLX, HĐLĐ) | Giám đốc, Điều hành | P1 |
+| US-10.3 | Tạo lệnh giao hàng cho xe thuê ngoài (BM.08.01b) | Điều hành | P1 |
+| US-10.4 | Theo dõi sản lượng xe thuê ngoài, ký nhận cuối tháng | Kế toán | P1 |
+| US-10.5 | Phổ biến nội quy an toàn cho đơn vị thuê ngoài | Điều hành | P2 |
+
+## Epic 11: Document & Workflow Management (QT.08)
+
+| ID | Story | Role | Priority |
+|----|-------|------|----------|
+| US-11.1 | Tạo booking / lệnh vận chuyển từ yêu cầu khách hàng (BM.08.01a) | Điều hành | P0 |
+| US-11.2 | Phê duyệt booking / lệnh vận chuyển | Giám đốc | P0 |
+| US-11.3 | Quản lý phiếu xe chạy điện tử (thay BM.08.02 giấy) | Tài xế | P0 |
+| US-11.4 | Quản lý phiếu giao nhận / EIR (BM.08.04, BM.08.05) | Tài xế, Điều hành | P1 |
+| US-11.5 | Lập biên bản quyết toán sản lượng (BM.08.06) | Kế toán, Điều hành | P1 |
+| US-11.6 | Lập đề nghị thanh toán (BM.08.07) | Kế toán | P1 |
+| US-11.7 | Quản lý chứng từ Hải quan (tờ khai xuất/nhập khẩu) | Điều hành | P2 |
+| US-11.8 | Bàn giao tài liệu cho khách hàng, xác nhận nhận đủ | Điều hành | P2 |
+
+## Epic 12: Data Integrity & Period Close
+
+| ID | Story | Role | Priority |
+|----|-------|------|----------|
+| US-12.1 | Ảnh đã tải lên không cho chỉnh sửa/xóa (chỉ đọc) | Hệ thống | P0 |
+| US-12.2 | Khóa dữ liệu chuyến sau chốt sổ cuối kỳ (chỉ đọc) | Hệ thống → Kế toán | P0 |
+| US-12.3 | Lưu trữ chứng từ theo thời gian quy định (5 năm/1 năm) | Hệ thống | P2 |
+| US-12.4 | Lịch sử trạng thái chuyến kèm mốc thời gian từng bước | Hệ thống | P0 |
