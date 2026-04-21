@@ -701,6 +701,145 @@ Ví dụ: Lốp thay ở km=120,000, replacement_cycle=80,000km → nhắc ở k
 
 ---
 
+## SC-29: Bảng giá cước theo tuyến (ROUTE_PRICING)
+
+**Vai trò:** Giám đốc An → Điều hành Minh → Hệ thống
+
+### Cấu hình giá cước
+```
+Giám đốc An cấu hình bảng giá cước cho tuyến Cát Lái → Bình Dương:
+
+ROUTE_PRICING:
+  route_id: 3 (Cát Lái → Bình Dương)
+  ┌────────────┬───────────────┐
+  │ Loại xe     │ Tiền đi đường │
+  ├────────────┼───────────────┤
+  │ mooc_40    │ 1,150,000     │
+  │ 40ft        │ 1,150,000     │
+  │ 20ft        │   930,000     │
+  │ mooc_20    │   930,000     │
+  └────────────┴───────────────┘
+
+ROUTE (id=3):
+  toll_discount: 80,000 (giảm vé QL5)
+  toll_surcharge: 0
+
+Tuyến Cát Lái → Mộc Châu, Sơn La:
+ROUTE_PRICING:
+  route_id: 1, 40ft: 2,740,000, 20ft: 2,470,000
+  toll_discount: 0, toll_surcharge: 0
+```
+
+### Tự động áp giá khi tạo chuyến
+```
+Điều hành Minh tạo chuyến:
+  route_id: 3, vehicle_id: 7 (51F-1234, 40ft)
+
+Hệ thống tự động lookup:
+  ROUTE_PRICING: route_id=3 × 40ft → trip_pay = 1,150,000
+  ROUTES: toll_discount = 80,000
+
+TRIPS (id=112):
+  trip_pay: 1,150,000 (auto-fill)
+  toll_adjustment: -80,000
+
+→ Cước hiển thị cho kế toán khi xuất hóa đơn
+```
+
+---
+
+## SC-30: Báo cáo P&L theo đầu xe
+
+**Vai trò:** Giám đốc An
+
+### Bối cảnh tháng 4/2026, xe 15C-136.31
+```
+Báo cáo P&L — Xe 15C-136.31 — Tháng 4/2026
+═══════════════════════════════════════
+
+Số chuyến: 28
+Tổng km: 4,200 km
+
+DOANH THU:
+  Cước vận chuyển:    85,400,000
+  ────────────────────────────────
+  Tổng doanh thu:     85,400,000
+
+CHI PHÍ:
+  Nhiên liệu (dầu):   32,500,000  (38%)
+  Tiền đi đường:       12,200,000  (14%)
+  Lương tài xế:        15,000,000  (18%)
+  Sửa chữa:            3,500,000   (4%)
+  Lốp:                 2,100,000   (2%)
+  Dầu máy:             1,200,000   (1%)
+  Khác:                  800,000   (1%)
+  ────────────────────────────────
+  Tổng chi phí:       67,300,000  (79%)
+
+LỢI NHUẬN GỘP:       18,100,000  (21%)
+Biên lợi nhuận:      21.2%
+
+So với tháng trước:
+  Doanh thu: ▲ +12%
+  Chi phí:   ▲ +5%
+  Lợi nhuận: ▲ +28%
+```
+
+Giám đốc click vào từng tháng → xem chi tiết từng chuyến:
+  TR-0101: Cát Lái → BD, 40ft, cước 1,150,000, chi phí 930,000, LN 220,000
+  TR-0105: Cát Lái → Sơn La, 40ft, cước 2,740,000, chi phí 3,060,000, LN -320,000 ❌
+
+---
+
+## SC-31: Báo cáo Aging Công nợ
+
+**Vai trò:** Kế toán Lan → Giám đốc An
+
+### Bảng aging tổng hợp
+```
+CÔNG NỢ PHẢI THU — T4/2026
+═══════════════════════════════════════
+
+Khách hàng        │ Current    │ T1         │ T2         │ T3+        │ Tổng nợ
+──────────────────┼────────────┼────────────┼────────────┼────────────┼────────────
+Samsung           │ 15,000,000 │            │            │            │ 15,000,000
+Công ty ABC       │            │ 12,500,000 │            │            │ 12,500,000
+Tân Việt Hưng     │            │            │ 18,000,000 │ 38,000,000 │ 56,000,000
+Trà Thu Đan       │            │ 25,000,000 │ 40,000,000 │ 75,000,000 │ 140,000,000 ⚠️
+──────────────────┼────────────┼────────────┼────────────┼────────────┼────────────
+TỔNG              │ 15,000,000 │ 37,500,000 │ 58,000,000 │ 113,000,000│ 223,500,000
+```
+
+### Bảng kê chi tiết — Trà Thu Đan
+```
+BẢNG KÊ CHI TIẾT CÔNG NỢ — Trà Thu Đan
+Số dư đầu kỳ: 140,000,000
+
+STT │ Ngày       │ Diễn giải              │ Phát sinh Nợ │ Phát sinh Có │ Lũy kế
+────┼────────────┼─────────────────────────┼──────────────┼──────────────┼──────────
+1   │ 01/04/2026 │ GBN TTD2604001          │  25,000,000  │              │ 165,000,000
+2   │ 15/04/2026 │ Trà Thu Đan TT T3       │              │  40,000,000  │ 125,000,000
+3   │ 28/04/2026 │ GBN TTD2604002          │  18,000,000  │              │ 143,000,000
+
+Số dư cuối kỳ: 143,000,000
+Aging: T1=18M, T2=25M, T3+=100M
+```
+
+### Cảnh báo khi tạo booking cho khách nợ quá hạn
+```
+Điều hành tạo booking cho Trà Thu Đan:
+  POST /api/v1/bookings { client_id: 12 (Trà Thu Đan) }
+
+  → 200 OK nhưng kèm warning:
+    "⚠️ Khách hàng Trà Thu Đan đang nợ 143,000,000 (T3+: 100M). Xem xét trước khi duyệt."
+
+Giám đốc duyệt booking → thấy warning → quyết định:
+  - Duyệt bình thường (khách hàng VIP, chắc chắn trả)
+  - Yêu cầu thanh toán trước khi tiếp tục
+```
+
+---
+
 ## SC-11: GPLX tài xế sắp hết hạn
 
 **Vai trò:** Hệ thống → Giám đốc An → Điều hành Minh
@@ -1221,4 +1360,4 @@ Khi tạo trip:
 
 ---
 
-*Tổng: 28 kịch bản — bao phủ toàn bộ main flows, edge cases, fraud detection, offline, workflow engine, reminders, và error handling.*
+*Tổng: 31 kịch bản — bao phủ toàn bộ main flows, edge cases, fraud detection, offline, workflow engine, reminders, pricing, P&L, aging, và error handling.*

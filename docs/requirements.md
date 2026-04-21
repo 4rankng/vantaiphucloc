@@ -81,8 +81,17 @@
 ### 3.4 Quản lý Tuyến đường & Định mức (Routes & Quotas)
 - **Quản lý Tuyến đường:** Danh mục các tuyến đường (Điểm đi - Điểm đến - Quãng đường - Thời gian dự kiến).
 - **Định mức đi đường:** Quy định thời gian và quãng đường dự kiến cho từng tuyến.
-- **Định mức xăng dầu:** Cấu hình lít/km cho từng tuyến × loại xe (ma trận: tuyến × loại xe → định mức). Định mức mặc định được áp dụng tự động nhưng người dùng có thể ghi đè thủ công cho từng chuyến (kèm lý do, ví dụ: xe cũ tốn nhiều dầu hơn, đường đang sửa).
-- **So sánh tự động:** Hệ thống tự động so sánh chi phí thực tế với định mức tuyến đường.
+- **Bảng giá cước theo tuyến (ROUTE_PRICING):** Ma trận giá cước: tuyến × loại xe → tiền đi đường. Bao gồm giảm vé theo tuyến (vd: QL5 giảm 80K) và phụ phí vé cầu/Y lệnh. Xe mooc 40', 40', 20', mooc 20' có giá khác nhau.
+- **Định mức xăng dầu phụ thuộc tải trọng:** Cấu hình L/100km cho từng xe × loại tải (5 mức):
+  - Hàng+vỏ >20t (chạy nặng)
+  - Hàng+vỏ <20t (chạy nhẹ)
+  - Vỏ rỗng (empty)
+  - Hàng >20t only
+  - Hàng <20t only
+  Phụ bổ sung theo tuyến (vd: Mộc Châu + Sơn La +2 đến +3 L/100km theo loại động cơ).
+  Mặc định từ `ROUTE_FUEL_QUOTAS` áp dụng tự động, có thể ghi đè thủ công cho từng chuyến.
+- **Loại tải chuyến:** Khi tạo chuyến, điều hành chọn load_type (empty/loaded_light/loaded_heavy) → hệ thống tự động chọn đúng định mức từ ma trận.
+- **So sánh tự động:** Hệ thống tự động so sánh chi phí thực tế với định mức tuyến đường (dựa trên load_type).
 
 ### 3.5 Quản lý Chuyến xe (Trip Lifecycle)
 - **Khởi tạo:** Điều hành tạo chuyến từ booking đã duyệt, gán xe, tài xế, tuyến đường, chủ hàng (nếu có).
@@ -102,22 +111,33 @@
 
 ### 3.7 Quản lý Chi phí & Cảnh báo
 - **Chi phí dọc đường:** Tài xế khai báo chi phí gồm: loại chi phí, số tiền, số lít (đối với nhiên liệu), mô tả, ảnh biên lai.
+- **Loại chi phí mở rộng:** fuel (nhiên liệu), toll (phí cầu đường), repair (sửa chữa), tires (lốp), engine_oil (dầu máy), salary (lương tài xế), other (khác).
 - **Duyệt/Từ chối:** Điều hành/Kế toán duyệt hoặc từ chối từng khoản chi phí. Chi phí bị từ chối kèm lý do, tài xế được thông báo.
-- **Cảnh báo vi phạm:** Tự động phát hiện hụt dầu (>10%), thời gian vượt 150% dự kiến, sai tuyến đường.
+- **Cảnh báo vi phạm:** Tự động phát hiện hụt dầu (>10%), thời gian vượt 150% dự kiến, dừng đỗ >45 phút, sai tuyến đường.
 - **Xử lý cảnh báo:** Điều hành xác nhận cảnh báo, ghi lý do, quyết định ghi nhận vi phạm hoặc bỏ qua. Vi phạm đã xác nhận tự động ảnh hưởng điểm KPI.
+- **Quy định phạt vi phạm nội quy (từ NEPO operations):**
+  - Tắt GPS/định vị >1h: từ lần 3 trở đi phạt 500,000đ/lần
+  - Lái xe >4h liên tục không thay thẻ: từ lần 3 trở đi phạt 500,000đ/lần
+  - Không nộp phiếu hạ vỏ/hàng: phạt 100,000đ/lần + chịu chi phí phát sinh
+  - Vi phạm an toàn (rượu/bia/chất kích thích): phạt 500,000đ/lần hoặc buộc thôi việc
+  - Báo nghỉ muộn (<12h ngày trước): phạt 200,000đ/lần
+  - Nghỉ trước 30 ngày notice: phạt 200,000đ/ngày từ ngày nghỉ đến đủ 30 ngày
 
 ### 3.8 Kế toán & Tài chính
 - **Duyệt chi phí:** Điều hành/Kế toán duyệt các yêu cầu chi phí từ tài xế. Chi phí đã duyệt tự động cộng vào tổng chi phí chuyến.
 - **Xuất hóa đơn:** Gom chuyến theo chủ hàng, xuất hóa đơn (PDF). Lưu trữ số hóa đơn, ngày, file PDF, trạng thái.
 - **Công nợ:** Theo dõi tình trạng thanh toán của từng chủ hàng (tổng, đã thu, chưa thu).
-- **Đánh dấu thanh toán:** Kế toán ghi nhận thanh toán (một phần hoặc toàn bộ).
+- **Báo cáo aging công nợ:** Phân loại nợ theo số tháng quá hạn (T1, T2, T3, T4+). Khách hàng nợ quá hạn có thể bị khóa tự động hoặc cảnh báo khi tạo booking mới.
+- **Đánh dấu thanh toán:** Kế toán ghi nhận thanh toán (một phần hoặc toàn bộ). Hỗ trợ thanh toán nhiều đợt cho cùng hóa đơn.
 - **Chốt sổ:** Khóa dữ liệu cuối tháng, chặn chốt sổ nếu còn chuyến mồ côi chưa gán chủ hàng.
+- **Bảng kê chi tiết công nợ:** Mỗi khách hàng có bảng kê riêng (phát sinh Nợ/Có, lũy kế, ghi chú) — tương tự sổ cái kế toán.
 
 ### 3.9 Báo cáo & Dashboard
-- **Giám đốc:** Dashboard lợi nhuận Real-time, lãi ròng từng xe, xếp hạng tài xế (KPI), số cảnh báo chưa duyệt.
+- **Giám đốc:** Dashboard lợi nhuận Real-time, lãi ròng từng xe, xếp hạng tài xế (KPI), số cảnh báo chưa duyệt, báo cáo aging công nợ.
 - **Điều hành:** Theo dõi vị trí xe trên bản đồ, trạng thái chuyến, timeline chi tiết, xử lý cảnh báo.
-- **Kế toán:** Chi phí chờ duyệt, tóm tắt công nợ, chuyến mồ côi cần gán chủ hàng.
+- **Kế toán:** Chi phí chờ duyệt, tóm tắt công nợ, aging công nợ (T1-T4+), chuyến mồ côi cần gán chủ hàng.
 - **Tài xế (mobile):** Chuyến được giao, cập nhật tiến trình, gửi chi phí, xem thu nhập hôm nay.
+- **Báo cáo P&L theo đầu xe:** Doanh thu - tổng chi phí (dầu + đi đường + lương lx + sửa chữa + lốp + dầu máy) = lợi nhuận gộp. Xem theo tháng, theo xe.
 
 ### 3.10 Hệ thống Thông báo & Nhắc nhở
 - **Thông báo trong ứng dụng:** Cảnh báo vi phạm, từ chối chi phí (kèm lý do), nhắc nhở thay thế linh kiện, gia hạn bảo hiểm.
@@ -158,20 +178,25 @@
 - `EXTERNAL_VEHICLES`: id, provider_name, provider_phone, license_plate, vehicle_type, driver_name, driver_license, license_expiry, insurance_doc_path, tech_inspection_doc_path, labor_contract_path, is_active.
 
 #### Routes & Quotas
-- `ROUTES`: id, name, origin, destination, distance_km, expected_duration_min, is_active.
-- `ROUTE_FUEL_QUOTAS`: id, route_id, vehicle_type, liters_per_km, is_default, created_by, updated_by, updated_at. — Ma trận định mức: tuyến × loại xe. Có thể ghi đè thủ công.
+- `ROUTES`: id, name, origin, destination, distance_km, expected_duration_min, toll_discount, toll_surcharge, is_active.
+- `ROUTE_PRICING`: id, route_id, vehicle_type (mooc_40/40ft/20ft/mooc_20), trip_pay, is_active. — Bảng giá cước: tuyến × loại xe → tiền đi đường.
+- `ROUTE_FUEL_QUOTAS`: id, route_id, vehicle_id, load_type (empty/loaded_light/loaded_heavy/cargo_heavy/cargo_light), liters_per_100km, supplement_note, is_default, created_by, updated_by, updated_at. — Định mức dầu: xe × tải trọng. Phụ bổ sung ghi trong supplement_note (vd: 'Mộc Châu +3').
+- `TRIP_FUEL_QUOTAS`: id, trip_id, route_fuel_quota_id, load_type, default_liters_per_100km, actual_liters_per_100km, override_reason, overridden_by. — Định mức thực tế cho chuyến.
 
 #### Trips & Bookings
 - `BOOKINGS`: id, booking_code, client_id, route_id, vehicle_type_required, container_type, notes, status (pending/approved/rejected/completed), created_by, approved_by, approved_at, workflow_id (FK → workflows.id), created_at.
 - `TRIPS`: id, trip_code, booking_id, vehicle_id, driver_id, client_id, route_id, container_code, container_type (20ft/40ft/45ft/hc), status (received/empty_pickup/at_port/leaving_port/en_route/arrived/dropped_off/completed), is_orphan, is_locked, start_time, end_time, actual_distance_km, workflow_id (FK → workflows.id), created_at.
 - `TRIP_STATUS_HISTORY`: id, trip_id, status, timestamp, latitude, longitude, accuracy, notes.
 - `TRIP_PHOTOS`: id, trip_id, photo_type (container_pickup/container_delivery/fuel_receipt/expense_receipt/other), file_path, latitude, longitude, accuracy, server_timestamp.
-- `EXPENSES`: id, trip_id, category (fuel/toll/repair/other), amount, liters, fuel_quota_override, description, receipt_photo_id, status (pending/approved/rejected), reject_reason, approved_by, approved_at, workflow_id (FK → workflows.id), created_at.
-- `TRIP_FUEL_QUOTAS`: id, trip_id, route_fuel_quota_id, default_liters_per_km, actual_liters_per_km, override_reason, overridden_by. — Định mức thực tế cho chuyến (mặc định từ ROUTE_FUEL_QUOTAS, có thể ghi đè).
+- `EXPENSES`: id, trip_id, category (fuel/toll/repair/tires/engine_oil/salary/other), amount, liters (nullable, chỉ cho fuel/engine_oil), description, receipt_photo_id, status (pending/approved/rejected), reject_reason, approved_by, approved_at, workflow_id (FK → workflows.id), created_at.
+- `PENALTY_RULES`: id, rule_code, description, penalty_amount, penalty_type (fine/warning/termination), occurrence_threshold (vd: '3' = từ lần thứ 3), is_active. — Quy định phạt nội quy.
+- `DRIVER_PENALTIES`: id, driver_id, trip_id, penalty_rule_id, amount, description, created_by, created_at. — Ghi nhận vi phạm phạt.
 
 #### Financials
 - `INVOICES`: id, invoice_number, client_id, trip_ids (array), subtotal, tax, total, pdf_path, status (draft/issued/paid/partially_paid), issued_at, paid_at, workflow_id (FK → workflows.id), notes.
 - `PAYMENTS`: id, invoice_id, amount, payment_method, reference_number, paid_by, notes, created_at.
+- `RECEIVABLES_AGING`: id, client_id, period_month, period_year, beginning_balance, new_charges, payments_received, ending_balance, aging_bucket (current/T1/T2/T3/T4+), gbn_number, notes. — Bảng aging công nợ (tổng hợp tháng).
+- `RECEIVABLES_DETAIL`: id, client_id, transaction_date, transaction_type (charge/payment), gbn_number, amount_debit, amount_credit, running_balance, notes. — Chi tiết sổ cái theo khách hàng.
 
 #### Workflows, Alerts & Notifications
 - `WORKFLOWS`: id (auto-increment), run_id (UUID), workflow_type (varchar), state (varchar), event (varchar), attempt (int), data (JSON). — State machine engine.
@@ -453,9 +478,15 @@ WARRANTY_PARTS (id=5, vehicle_id=7):
 - `GET/POST /api/v1/trips`: Quản lý chuyến xe & trạng thái.
 - `PUT /api/v1/trips/{id}/status`: Cập nhật trạng thái chuyến (8 bước).
 - `POST /api/v1/photos/upload`: Tải ảnh & đính kèm GPS.
-- `GET/POST /api/v1/expenses`: Duyệt chi phí dọc đường.
+- `GET/POST /api/v1/expenses`: Duyệt chi phí dọc đường (7 loại: fuel/toll/repair/tires/engine_oil/salary/other).
 - `GET/POST /api/v1/invoices`: Quản lý hóa đơn & công nợ.
-- `POST /api/v1/invoices/{id}/payments`: Ghi nhận thanh toán.
+- `POST /api/v1/invoices/{id}/payments`: Ghi nhận thanh toán (hỗ trợ nhiều đợt).
+- `GET /api/v1/receivables/aging`: Báo cáo aging công nợ (phân loại T1-T4+).
+- `GET /api/v1/receivables/{client_id}/detail`: Bảng kê chi tiết công nợ theo khách hàng.
+- `GET/POST /api/v1/routes/{id}/pricing`: Bảng giá cước theo tuyến × loại xe.
+- `GET/POST /api/v1/penalty-rules`: Quản lý quy định phạt nội quy.
+- `POST /api/v1/drivers/{id}/penalties`: Ghi nhận vi phạm phạt.
+- `GET /api/v1/reports/vehicle-pnl`: Báo cáo P&L theo đầu xe (doanh thu - chi phí = lợi nhuận).
 - `GET /api/v1/alerts`: Cảnh báo vi phạm.
 - `PUT /api/v1/alerts/{id}/resolve`: Xử lý cảnh báo.
 - `GET /api/v1/notifications`: Thông báo người dùng.
@@ -479,17 +510,20 @@ WARRANTY_PARTS (id=5, vehicle_id=7):
 - CRUD: Users, Vehicles, Clients, Routes.
 - Luồng Booking → Phê duyệt → Tạo chuyến → 8 trạng thái → Hoàn thành.
 - OCR container + GPS timestamp + ảnh chỉ đọc.
-- Chi phí dọc đường + duyệt/từ chối (kèm lý do).
-- Cảnh báo gian lận (nhiên liệu >10%, thời gian >150%).
+- Chi phí dọc đường (7 loại: fuel/toll/repair/tires/engine_oil/salary/other) + duyệt/từ chối (kèm lý do).
+- Bảng giá cước theo tuyến × loại xe.
+- Cảnh báo gian lận (nhiên liệu >10%, thời gian >150%, dừng đỗ >45 phút).
 - Chuyến mồ côi + chặn chốt sổ.
-- Công nợ + xuất hóa đơn PDF.
+- Công nợ + aging (T1-T4+) + bảng kê chi tiết theo khách hàng + xuất hóa đơn PDF.
+- Báo cáo P&L theo đầu xe.
 - Dashboard cơ bản cho 4 vai trò.
 - Audit log (Giám đốc).
 - Offline + auto-sync (tài xế).
 
 ### Giai đoạn 2: Nâng cao
 - Tích hợp bảo hiểm, nhắc nhở thay thế linh kiện.
-- Định mức xăng dầu theo ma trận tuyến × loại xe.
+- Định mức xăng dầu theo ma trận xe × tải trọng (5 mức: empty/loaded_light/loaded_heavy/cargo_heavy/cargo_light) + phụ bổ sung theo tuyến.
+- Quy định phạt vi phạm nội quy (tắt GPS, lái quá 4h, không nộp phiếu, rượu bia).
 - Dashboard tài chính chuyên sâu (P&L từng đầu xe, TAT).
 - Theo dõi xe Real-time trên bản đồ.
 - Quản lý xe thuê ngoài (đối tác vận tải, hồ sơ năng lực).
@@ -501,4 +535,4 @@ WARRANTY_PARTS (id=5, vehicle_id=7):
 
 ---
 
-*Tài liệu được hợp nhất và cập nhật vào tháng 04/2026.*
+*Tài liệu được hợp nhất và cập nhật vào tháng 04/2026. Phiên bản này tích hợp dữ liệu thực tế từ hoạt động của Công ty NEPO (Hải Phòng) — định mức đi đường, định mức dầu theo tải trọng, công nợ aging, và quy định phạt nội quy.*
