@@ -1490,4 +1490,104 @@ Khi tạo trip:
 
 ---
 
-*Tổng: 33 kịch bản — bao phủ toàn bộ main flows, edge cases, fraud detection, offline, workflow engine, reminders, pricing, P&L, aging, GPS tracking, driver heartbeat, và error handling.*
+*Tổng: 34 kịch bản — bao phủ toàn bộ main flows, edge cases, fraud detection, offline, workflow engine, reminders, pricing, P&L, aging, GPS lifecycle, driver heartbeat, và error handling.*
+
+## SC-34: GPS Data Lifecycle — From Raw to Cold Storage
+
+**Vai trò:** Hệ thống
+
+### Stage 1: Smart Ingestion (Trip in progress)
+```
+Trip 101, en_route, 90 phút, route: Cát Lái → Bình Dương (45km)
+
+Raw GPS pings (every 30s): 180 points
+After smart filtering:
+  - Highway straight section (20 min): moved >50m each ping but same heading
+    → Only 1 point per 2 min mandatory = 10 points (not 40 raw)
+  - City section with turns (15 min): heading changes >15° at intersections
+    → ~45 points logged (turns captured)
+  - Traffic jam (10 min): speed <5km/h, <50m movement
+    → Only mandatory 2-min points = 5 points (not 20 raw)
+
+Total filtered: ~80 points (vs 180 raw) — 56% reduction
+Stored in: GPS_LOG_202604 (partitioned table)
+Coordinate precision: DECIMAL(9,5) — lat: 10.73201, lng: 106.72003
+```
+
+### Stage 2: Running Distance Calculation
+```
+Each filtered point arrives at server:
+
+Point at 08:30:30: lat=10.74100, lng=106.73500
+Previous:           lat=10.73800, lng=106.73000
+haversine = 0.62 km
+
+TRIPS (id=101):
+  actual_distance_km += 0.62 → running total: 23.4 km
+  Compare: ROUTES.distance_km = 45.0 km
+  Progress: 23.4 / 45.0 = 52% of route
+  → On track, no alert
+
+Point at 09:15:00: running total = 56.2 km
+  Compare: 56.2 / 45.0 = 124.9%
+  deviation = +24.9% → EXCEEDS 15% threshold!
+  → ALERT: route_deviation created immediately
+  → "Chuyến TR-0101: Actual 56.2 km vs route 45.0 km (+24.9%). Nghi ngờ lệch tuyến."
+  → NOTIFICATION → Điều hành Minh
+```
+
+### Stage 3: Post-Trip Compression
+```
+Trip 101 completed. GPS_LOG_202604 has 80 rows for this trip.
+
+1. Douglas-Peucker simplification (epsilon=15m):
+   - Remove intermediate points on straight segments
+   - Preserve all turns and route changes
+   - 80 points → 35 simplified points
+
+2. Compress to gzip BYTEA:
+   - Binary format: [lat(4byte), lng(4byte), timestamp(4byte)] × 35
+   - Raw size: 35 × 12 = 420 bytes → gzip → ~280 bytes
+   - Store in TRIP_PATHS:
+     trip_id: 101, compressed_path: <BYTEA>
+     point_count: 35, raw_point_count: 80
+
+3. Delete raw rows:
+   DELETE FROM GPS_LOG_202604 WHERE trip_id = 101
+   → 80 rows gone. One TRIP_PATHS row replaces them.
+
+Result: 80 rows → 1 row. Full path reconstructable for audit.
+```
+
+### Stage 4: Monthly Partition Management
+```
+Current partitions:
+  GPS_LOG_202602 — 0 active trips (all completed + compressed)
+  GPS_LOG_202603 — 0 active trips
+  GPS_LOG_202604 — 12 active trips, ~960 raw rows
+
+Dashboard queries use GPS_LOG_CURRENT view:
+  → UNION of GPS_LOG_202602, GPS_LOG_202603, GPS_LOG_202604
+  → Only queries active/recent trips
+
+Old partitions with 0 rows:
+  DROP TABLE GPS_LOG_202602; — instant, no row-by-row delete
+```
+
+### Stage 5: Cold Storage Archive
+```
+After 3 months (July 2026):
+
+Trip 101 path data in TRIP_PATHS (created April 2026):
+  → Compress further if needed
+  → Write to S3: s3://ttransport-gps-archive/2026/04/trip_101_path.bin.gz
+  → Record in GPS_ARCHIVES:
+    trip_id: 101, month: 202604, storage_path: "s3://...", archived_at: 2026-07-21
+  → DELETE FROM TRIP_PATHS WHERE trip_id = 101
+  → Primary DB stays lean
+
+If audit needed:
+  → Download from S3
+  → Decompress gzip → reconstruct 35-point path
+  → Render on map for investigation
+```

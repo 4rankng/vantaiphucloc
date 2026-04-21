@@ -54,7 +54,8 @@
 | US-5.2 | Cấu hình định mức xăng dầu theo ma trận xe × tải trọng (5 mức: empty/loaded_light/loaded_heavy/cargo_heavy/cargo_light) — L/100km | Giám đốc | P1 |
 | US-5.2b | Ghi đè định mức xăng dầu cho từng chuyến (kèm lý do, vd: xe cũ, đường sửa) | Điều hành | P1 |
 | US-5.3 | So sánh chi phí thực tế (nhiên liệu, thời gian) với định mức tuyến đường (dựa trên load_type) | Hệ thống | P1 |
-| US-5.3b | Tính actual_distance_km = haversine sum of GPS_LOG points mỗi 30s; so với ROUTES.distance_km → flag lệch tuyến >15% | Hệ thống | P0 |
+| US-5.3b | Tính actual_distance_km = running haversine total (on each GPS point arrival); so với ROUTES.distance_km → flag lệch tuyến >15% ngay lập tức | Hệ thống | P0 |
+| US-5.3c | GPS logging: chỉ log point nếu moved >50m hoặc heading change >15°, mandatory mỗi 2 phút | Hệ thống | P0 |
 | US-5.4 | Cấu hình bảng giá cước: tuyến × loại xe → tiền đi đường (mooc 40', 40', 20', mooc 20') | Giám đốc | P0 |
 | US-5.5 | Chọn load_type khi tạo chuyến (empty/loaded_light/loaded_heavy) → tự áp đúng định mức | Điều hành | P1 |
 | US-5.6 | Cấu hình phụ bổ sung định mức theo tuyến (vd: Mộc Châu +3L/100km) | Giám đốc | P2 |
@@ -197,7 +198,11 @@
 | US-18.5 | Driver heartbeat POST mỗi 2 phút khi KHÔNG en_route (idle/pending) → track last_heartbeat_at | Tài xế | P1 |
 | US-18.6 | Driver status on dashboard: 🟢 Tracking / 🟡 Idle Online / 🔴 Offline / ⚫ Off Duty | Điều hành, Giám đốc | P1 |
 | US-18.7 | Route deviation alert: actual_distance_km >15% so với ROUTES.distance_km → cảnh báo lệch tuyến | Hệ thống → Điều hành | P0 |
-| US-18.8 | GPS_LOG cleanup: archive to cold storage sau khi trip completed, keep 90 days hot | Hệ thống | P2 |
+| US-18.8 | GPS_LOG partitioned tables by month (GPS_LOG_YYYYMM) — drop old partitions instantly | Hệ thống | P2 |
+| US-18.9 | Post-trip compression: Douglas-Peucker simplify + gzip → single TRIP_PATHS row, delete raw GPS_LOG | Hệ thống | P1 |
+| US-18.10 | Cold storage: move compressed paths to S3 after 3 months, keep primary DB lean | Hệ thống | P2 |
+| US-18.11 | Coordinate precision: DECIMAL(9,5) — 5 decimal places sufficient for mapping and audit | Hệ thống | P2 |
+| US-18.12 | DB index on (trip_id, server_timestamp) for each GPS_LOG partition | Hệ thống | P1 |
 
 ## Epic 15: Notifications & Reminders
 
