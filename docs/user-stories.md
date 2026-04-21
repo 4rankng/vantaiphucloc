@@ -21,6 +21,9 @@
 | US-2.3 | Gán tài xế vào đầu xe | Giám đốc, Điều hành | P0 |
 | US-2.4 | Lịch sử bảo dưỡng xe | Giám đốc | P1 |
 | US-2.5 | Xem vị trí xe real-time trên bản đồ | Giám đốc, Điều hành | P1 |
+| US-2.6 | Theo dõi linh kiện bảo hành theo từng xe | Giám đốc | P1 |
+| US-2.7 | Nhận thông báo nhắc nhở thay thế linh kiện | Giám đốc, Điều hành | P1 |
+| US-2.8 | Quản lý thông tin bảo hiểm xe và hạn gia hạn | Giám đốc, Kế toán | P1 |
 
 ## Epic 3: Trip Management
 
@@ -97,3 +100,11 @@
 | US-8.8 | Hoạt động offline — tự đồng bộ khi có mạng | Tài xế | P0 |
 | US-8.9 | Xem thu nhập hôm nay | Tài xế | P1 |
 | US-8.10 | Nhận thông báo cảnh báo | Tài xế | P1 |
+
+## Epic 9: Route & Quota Management
+
+| ID | Story | Role | Priority |
+|----|-------|------|----------|
+| US-9.1 | Quản lý danh mục tuyến đường và định mức đi đường | Điều hành | P1 |
+| US-9.2 | Cấu hình định mức xăng dầu theo tuyến và loại xe | Giám đốc | P1 |
+| US-9.3 | So sánh quãng đường thực tế với định mức tuyến đường | Hệ thống | P1 |
