@@ -1,1 +1,1 @@
-export * from './GlassCard'
+export { GlassCard, GlassCardSkeleton } from './GlassCard'

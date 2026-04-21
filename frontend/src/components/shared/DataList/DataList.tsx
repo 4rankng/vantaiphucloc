@@ -3,8 +3,9 @@ import { Input } from '@/components/ui/Input'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { Search, SlidersHorizontal, Plus } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/Dialog'
-import { DialogClose } from '@/components/ui/Dialog'
+import { cn } from '@/lib/utils'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog'
+import { Pagination as UIPagination } from '@/components/ui/Pagination'
 
 // ─── Filter Bar ───────────────────────────────────────────
 interface FilterBarProps {
@@ -41,7 +42,7 @@ export function FilterBar({
         )}
       </div>
       {showFilters && filters.length > 0 && (
-        <div className="flex flex-wrap gap-2 p-3 glass-card rounded-lg animate-fade-slide-up">
+        <div className="flex flex-wrap gap-2 p-3 rounded-lg border border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] animate-fade-slide-up">
           {filters.map((f) => (
             <Select key={f.key}>
               <SelectTrigger className="w-[140px] h-9 text-xs">
@@ -62,52 +63,7 @@ export function FilterBar({
 }
 
 // ─── Pagination ───────────────────────────────────────────
-interface PaginationProps {
-  total: number
-  pageSize: number
-  currentPage: number
-  onPageChange: (page: number) => void
-}
-
-export function Pagination({ total, pageSize, currentPage, onPageChange }: PaginationProps) {
-  const totalPages = Math.ceil(total / pageSize)
-  if (totalPages <= 1) return null
-
-  const pages: number[] = []
-  for (let i = 1; i <= Math.min(totalPages, 5); i++) pages.push(i)
-
-  return (
-    <div className="flex items-center justify-between py-3 text-sm text-[var(--theme-text-muted)]">
-      <span>Hiển thị {Math.min((currentPage - 1) * pageSize + 1, total)}–{Math.min(currentPage * pageSize, total)} / {total}</span>
-      <div className="flex gap-1">
-        <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => onPageChange(currentPage - 1)}>Trước</Button>
-        {pages.map((p) => (
-          <Button key={p} variant={p === currentPage ? 'default' : 'outline'} size="sm" onClick={() => onPageChange(p)}>{p}</Button>
-        ))}
-        <Button variant="outline" size="sm" disabled={currentPage >= totalPages} onClick={() => onPageChange(currentPage + 1)}>Sau</Button>
-      </div>
-    </div>
-  )
-}
-
-// ─── Empty State ──────────────────────────────────────────
-interface EmptyStateProps {
-  icon: React.ReactNode
-  title: string
-  description: string
-}
-
-export function EmptyState({ icon, title, description }: EmptyStateProps) {
-  return (
-    <div className="py-16 text-center">
-      <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{background:'var(--theme-bg-tertiary)'}}>
-        <span style={{color:'var(--theme-text-muted)'}}>{icon}</span>
-      </div>
-      <p className="text-sm font-semibold text-[var(--theme-text-primary)]">{title}</p>
-      <p className="text-xs text-[var(--theme-text-muted)] mt-1">{description}</p>
-    </div>
-  )
-}
+export { UIPagination as Pagination }
 
 // ─── Generic Detail Modal ─────────────────────────────────
 interface DetailModalProps {
@@ -139,7 +95,11 @@ interface MobileListCardProps {
 
 export function MobileListCard({ children, onClick, className }: MobileListCardProps) {
   return (
-    <div className={`card rounded-xl p-4 animate-fade-slide-up ${onClick ? 'cursor-pointer hover:shadow-lg transition-shadow active:scale-[0.99]' : ''} ${className || ''}`}>
+    <div className={cn(
+      'card rounded-xl p-4 animate-fade-slide-up',
+      onClick && 'cursor-pointer hover:shadow-lg transition-shadow active:scale-[0.99]',
+      className
+    )}>
       {children}
     </div>
   )

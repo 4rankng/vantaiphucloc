@@ -1,7 +1,19 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+import { TrendIndicator } from '@/components/shared/TrendIndicator'
+import { SparklineChart } from '@/components/shared/SparklineChart'
 
 type Variant = 'default' | 'success' | 'warning' | 'danger' | 'info' | 'teal' | 'gold'
+
+const variantStyles: Record<Variant, { iconBg: string; iconColor: string; sparkColor: string }> = {
+  default:  { iconBg: 'bg-slate-100', iconColor: 'text-slate-500', sparkColor: '#64748b' },
+  success:  { iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', sparkColor: '#059669' },
+  warning:  { iconBg: 'bg-amber-50', iconColor: 'text-amber-600', sparkColor: '#d97706' },
+  danger:   { iconBg: 'bg-red-50', iconColor: 'text-red-600', sparkColor: '#dc2626' },
+  info:     { iconBg: 'bg-blue-50', iconColor: 'text-blue-600', sparkColor: '#2563eb' },
+  teal:     { iconBg: 'bg-teal-50', iconColor: 'text-teal-600', sparkColor: '#0d9488' },
+  gold:     { iconBg: 'bg-amber-50', iconColor: 'text-amber-600', sparkColor: '#d97706' },
+}
 
 interface StatCardProps {
   icon: ReactNode
@@ -15,146 +27,40 @@ interface StatCardProps {
   sparkline?: number[]
 }
 
-// ONE color system — muted, sophisticated, consistent
-const variantMap: Record<Variant, { iconBg: string; iconColor: string; trendColor: string }> = {
-  default:  { iconBg: '#f1f5f9', iconColor: '#64748b', trendColor: '#64748b' },
-  success:  { iconBg: '#ecfdf5', iconColor: '#059669', trendColor: '#059669' },
-  warning:  { iconBg: '#fffbeb', iconColor: '#d97706', trendColor: '#d97706' },
-  danger:   { iconBg: '#fef2f2', iconColor: '#dc2626', trendColor: '#dc2626' },
-  info:     { iconBg: '#eff6ff', iconColor: '#2563eb', trendColor: '#2563eb' },
-  teal:     { iconBg: '#f0fdfa', iconColor: '#0d9488', trendColor: '#0d9488' },
-  gold:     { iconBg: '#fffbeb', iconColor: '#d97706', trendColor: '#d97706' },
-}
-
 export function StatCard({
   icon, label, value, unit, subtitle, variant = 'default',
   className, trend, sparkline,
 }: StatCardProps) {
-  const v = variantMap[variant]
+  const v = variantStyles[variant]
 
   return (
     <div
       className={cn(
-        'group relative overflow-hidden transition-all duration-200',
-        'hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)] active:scale-[0.98]',
+        'rounded-xl border border-slate-100 bg-white p-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)]',
+        'transition-all duration-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)] active:scale-[0.98]',
         className,
       )}
-      style={{
-        background: '#ffffff',
-        borderRadius: '12px',
-        padding: '16px',
-        // Single consistent shadow system — no neumorphism, no material
-        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.03)',
-        border: '1px solid #f1f5f9',
-      }}
     >
-      {/* Row 1: Label (small, muted, uppercase) — establishes hierarchy */}
       <div className="flex items-center justify-between mb-3">
-        <p
-          style={{
-            fontSize: '11px',
-            fontWeight: 600,
-            color: '#94a3b8',
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-            lineHeight: 1,
-            margin: 0,
-          }}
-        >
-          {label}
-        </p>
-        {/* Icon — small, subtle, background-tinted only */}
-        <div
-          style={{
-            width: '28px',
-            height: '28px',
-            borderRadius: '6px',
-            background: v.iconBg,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <span style={{ color: v.iconColor, display: 'flex', lineHeight: 0 }}>
-            {icon}
-          </span>
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</p>
+        <div className={cn('flex h-7 w-7 items-center justify-center rounded-md', v.iconBg)}>
+          <span className={cn('flex', v.iconColor)}>{icon}</span>
         </div>
       </div>
 
-      {/* Row 2: Value — THE hero element, everything else supports it */}
       <div className="flex items-baseline gap-1">
-        <span
-          className="font-mono-num"
-          style={{
-            fontSize: '22px',
-            fontWeight: 700,
-            color: '#0f172a',
-            lineHeight: 1.1,
-            letterSpacing: '-0.025em',
-            fontVariantNumeric: 'tabular-nums',
-          }}
-        >
-          {value}
-        </span>
-        {unit && (
-          <span
-            style={{
-              fontSize: '11px',
-              fontWeight: 500,
-              color: '#94a3b8',
-              lineHeight: 1,
-            }}
-          >
-            {unit}
-          </span>
-        )}
+        <span className="font-mono-num text-[22px] font-bold leading-tight tracking-tight text-slate-900">{value}</span>
+        {unit && <span className="text-[11px] font-medium text-slate-400">{unit}</span>}
       </div>
 
-      {/* Row 3: Trend + Subtitle — supporting info only */}
       {(trend || subtitle || sparkline) && (
         <div className="mt-2.5 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            {trend && (
-              <span
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  color: v.trendColor,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '2px',
-                }}
-              >
-                {trend.direction === 'up' ? '↑' : trend.direction === 'down' ? '↓' : '→'}
-                {trend.value}
-              </span>
-            )}
-            {subtitle && (
-              <span style={{ fontSize: '11px', color: '#94a3b8', lineHeight: 1 }}>
-                {subtitle}
-              </span>
-            )}
+            {trend && <TrendIndicator direction={trend.direction} value={trend.value} />}
+            {subtitle && <span className="text-[11px] text-slate-400">{subtitle}</span>}
           </div>
-
-          {/* Sparkline — tiny, subtle, background context */}
           {sparkline && sparkline.length > 0 && (
-            <div className="flex items-end gap-[1.5px]" style={{ height: '14px' }}>
-              {sparkline.map((val, i) => {
-                const max = Math.max(...sparkline)
-                const h = max > 0 ? Math.max(2, (val / max) * 14) : 2
-                return (
-                  <div
-                    key={i}
-                    style={{
-                      width: '3px',
-                      height: `${h}px`,
-                      borderRadius: '1px',
-                      background: i === sparkline.length - 1 ? v.iconColor : '#e2e8f0',
-                    }}
-                  />
-                )
-              })}
-            </div>
+            <SparklineChart data={sparkline} color={v.sparkColor} height={14} />
           )}
         </div>
       )}
