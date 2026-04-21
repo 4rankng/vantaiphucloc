@@ -106,11 +106,13 @@
 ### 3.6 Công nghệ AI OCR & GPS
 - **OCR Container:** Tài xế chụp ảnh, AI tự động nhận diện 11 mã số container. Hỗ trợ nhập tay nếu OCR thất bại.
 - **Tuyến đường:** Mỗi tuyến định nghĩa điểm đi, điểm đến, quãng đường (Google Maps) và thời gian dự kiến. Hệ thống tính actual_distance_km từ GPS_LOG (haversine sum) và so sánh với route distance_km.
-- **Theo dõi trực tuyến:** Native background geolocation plugin gửi vị trí **mỗi 30 giây** khi chuyến ở trạng thái en_route, kể cả khi tắt màn hình hoặc thu nhỏ app (REQ-5.3).
+- **Theo dõi trực tuyến:** Native background geolocation plugin gửi vị trí **mỗi 30 giây** trong suốt hành trình, kể cả khi tắt màn hình hoặc thu nhỏ app (REQ-5.3).
+  - **BẮT ĐẦU tracking:** Tài xế click "Nhận ca" → status `received` → `empty_pickup` → native plugin `start({ interval: 30000 })`. Tracking bắt đầu từ lúc driver rời đi lấy container rỗng.
+  - **KẾT THÚC tracking:** Trip status → `completed` → native plugin `stop()`. Tracking dừng khi chuyến hoàn thành.
+  - **7/8 trạng thái được track:** empty_pickup, at_port, leaving_port, en_route, arrived, dropped_off, (completed = stop). Chỉ `received` không track (driver chưa nhận ca).
+  - **Tại sao track từ empty_pickup:** Driver đốt nhiên liệu từ lúc lấy rỗng → cảng → highway → giao → hạ bãi. actual_distance_km phải bao gồm toàn bộ hành trình, không chỉ phần highway.
   - **Android:** Sử dụng Foreground Service với persistent notification (vd: "Hoàng đang chạy TR-0101") để OS không kill app.
   - **iOS:** Yêu cầu "Always Allow" location permission. Plugin xử lý background execution limits.
-  - **Workflow:** User click "Đang chạy" → JS gọi native plugin `start({ interval: 30000 })` → Native OS xử lý interval 30s → gửi tọa độ về server.
-  - **Không dùng setInterval()** — JavaScript timer sẽ bị kill khi screen off. Native layer quản lý GPS interval.
 - **Tính km thực tế (Running Total):** Không đợi đến khi xem bản đồ. **Khi server nhận được mỗi GPS point mới**, tính khoảng cách haversine từ điểm trước đó → cộng dồn vào `TRIPS.actual_distance_km` (running total). So sánh ngay với `ROUTES.distance_km` → nếu lệch >15% → trigger ALERT cho Giám đốc.
 - **Hiệu suất nhiên liệu:** actual_liters_per_100km = liters × 100 / actual_distance_km. So sánh với định mức từ ROUTE_FUEL_QUOTAS.
 - **Lịch sử vị trí:** Lưu trữ lịch sử vị trí để phục vụ đối soát và kiểm tra sau chuyến (REQ-5.5).
@@ -163,7 +165,7 @@
 - **Backend:** FastAPI (Python), PostgreSQL, SQLAlchemy (Async), Redis (Cache/Session).
 - **Frontend:** React, Tailwind CSS, Lucide Icons.
 - **Mobile:** Capacitor (Ionic) native app — PWA core + native plugins cho background geolocation, camera, notifications.
-- **Background Geolocation:** `@capacitor-community/background-geolocation` — native foreground service (Android) / background task (iOS). Interval: every 30 seconds when en_route.
+- **Background Geolocation:** `@capacitor-community/background-geolocation` — native foreground service (Android) / background task (iOS). Interval: every 30 seconds. Start: empty_pickup. Stop: completed.
 - **AI:** Gemini Vision API cho OCR container.
 - **Infrastructure:** Docker Compose, Nginx, DigitalOcean.
 
@@ -194,7 +196,7 @@
 - `BOOKINGS`: id, booking_code, client_id, route_id, vehicle_type_required, container_type, notes, status (pending/approved/rejected/completed), created_by, approved_by, approved_at, workflow_id (FK → workflows.id), created_at.
 - `TRIPS`: id, trip_code, booking_id, vehicle_id, driver_id, client_id, route_id, container_code, container_type (20ft/40ft/45ft/hc), status (received/empty_pickup/at_port/leaving_port/en_route/arrived/dropped_off/completed), is_orphan, is_locked, start_time, end_time, actual_distance_km (haversine sum of GPS_LOG), route_deviation_pct (actual vs ROUTES.distance_km), workflow_id (FK → workflows.id), created_at.
 - `TRIP_STATUS_HISTORY`: id, trip_id, status, timestamp, latitude, longitude, accuracy, notes.
-- `GPS_LOG_YYYYMM`: Partitioned by month (vd: `gps_log_202604`). id, trip_id, latitude (DECIMAL(9,5)), longitude (DECIMAL(9,5)), accuracy, speed, heading, server_timestamp. — Ingestion table: mỗi 30 giây khi en_route, nhưng chỉ log nếu delta >50m hoặc heading change >15°. Index: (trip_id, server_timestamp).
+- `GPS_LOG_YYYYMM`: Partitioned by month (vd: `gps_log_202604`). id, trip_id, latitude (DECIMAL(9,5)), longitude (DECIMAL(9,5)), accuracy, speed, heading, server_timestamp. — Ingestion table: mỗi 30 giây từ empty_pickup đến completed, nhưng chỉ log nếu delta >50m hoặc heading change >15°. Index: (trip_id, server_timestamp).
 - `GPS_LOG_CURRENT`: View → union last 3 months of partitions for active queries.
 - `TRIP_PATHS`: id, trip_id, compressed_path (BYTEA — Douglas-Peucker simplified + gzip), point_count, raw_point_count, created_at. — One row per trip after completion. Raw GPS_LOG rows deleted after compression.
 - `GPS_ARCHIVES`: id, trip_id, month, storage_path (S3/flat-file), archived_at. — Cold storage reference.
@@ -538,22 +540,22 @@ WARRANTY_PARTS (id=5, vehicle_id=7):
 
 ### 6.5 Real-Time Location Updates (Polling)
 
-GPS positions arrive every 30 seconds from driver mobile app (native plugin) when en_route. Dashboard polls at same frequency. Simple HTTP polling is sufficient — no WebSocket overhead needed.
+GPS positions arrive every 30 seconds from driver mobile app (native plugin) from empty_pickup to completed. Dashboard polls at same frequency. Simple HTTP polling is sufficient — no WebSocket overhead needed.
 
 #### Strategy: Interval Polling
 - **Interval:** Web dashboard polls every 30 seconds (same frequency as GPS updates from driver)
 - **Endpoint:** `GET /api/v1/trips/active/locations` → returns latest GPS for all active trips + last_seen timestamp
 - **Update:** Replace map markers, draw GPS trail, update online/offline status
 - **Driver status on dashboard:**
-  - 🟢 **Tracking** — en_route, last GPS <2 min ago
-  - 🟡 **Idle Online** — not en_route, heartbeat <5 min ago
+  - 🟢 **Tracking** — trip active (empty_pickup→dropped_off), last GPS <2 min ago
+  - 🟡 **Idle Online** — no active trip, heartbeat <5 min ago
   - 🔴 **Offline** — no GPS/heartbeat >10 min
   - ⚫ **Off Duty** — not assigned
 
-#### Driver Heartbeat (when NOT en_route)
-- Driver app sends lightweight POST every 2 min when idle: `POST /api/v1/drivers/heartbeat { user_id, lat, lng, app_state }`
+#### Driver Heartbeat (when NO active trip)
+- Driver app sends lightweight POST every 2 min when idle (no trip assigned): `POST /api/v1/drivers/heartbeat { user_id, lat, lng, app_state }`
 - Server tracks `last_heartbeat_at` on DRIVER_PROFILES
-- When en_route → GPS plugin handles presence (no separate heartbeat needed, GPS IS the heartbeat)
+- When driver has active trip → GPS plugin handles presence (no separate heartbeat needed, GPS IS the heartbeat)
 
 #### Connection State
 - 🟢 **Online** — polling active, dashboard updates every 30s

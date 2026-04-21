@@ -180,8 +180,8 @@
 | US-14.6 | Khai báo đổ dầu (lít + tiền + ảnh biên lai) | Tài xế | P0 |
 | US-14.7 | Khai báo chi phí phát sinh + ảnh biên lai | Tài xế | P0 |
 | US-14.8 | Hoạt động offline — IndexedDB queue, tự đồng bộ khi có mạng | Tài xế | P0 |
-| US-14.9 | Background GPS tracking qua native plugin — gửi vị trí mỗi 30 giây khi en_route, kể cả khi screen off | Tài xế | P0 |
-| US-14.10 | Android: Foreground Service notification ("Hoàng đang chạy TR-0101") khi GPS active | Tài xế | P0 |
+| US-14.9 | Background GPS tracking qua native plugin — gửi vị trí mỗi 30 giây từ empty_pickup đến completed, kể cả khi screen off | Tài xế | P0 |
+| US-14.10 | START tracking: "Nhận ca" → empty_pickup → native plugin start(); STOP: completed → stop() | Tài xế | P0 |
 | US-14.11 | iOS: Request "Always Allow" location permission cho background tracking | Tài xế | P0 |
 | US-14.12 | Xem thu nhập hôm nay | Tài xế | P1 |
 | US-14.13 | Nhận push notification (cảnh báo, từ chối chi phí, nhắc nhở) qua Capacitor Push | Tài xế | P1 |
@@ -195,7 +195,7 @@
 | US-18.2 | Connection state indicator: 🟢 Online / 🔴 Offline (dựa trên navigator.onLine) | Hệ thống | P1 |
 | US-18.3 | Auto-pause polling khi offline, auto-resume khi online trở lại | Hệ thống | P1 |
 | US-18.4 | Cache GPS response 30s trên server (Redis) — tránh DB hit khi nhiều user mở dashboard | Hệ thống | P2 |
-| US-18.5 | Driver heartbeat POST mỗi 2 phút khi KHÔNG en_route (idle/pending) → track last_heartbeat_at | Tài xế | P1 |
+| US-18.5 | Driver heartbeat POST mỗi 2 phút khi KHÔNG có active trip (idle/no assignment) → track last_heartbeat_at | Tài xế | P1 |
 | US-18.6 | Driver status on dashboard: 🟢 Tracking / 🟡 Idle Online / 🔴 Offline / ⚫ Off Duty | Điều hành, Giám đốc | P1 |
 | US-18.7 | Route deviation alert: actual_distance_km >15% so với ROUTES.distance_km → cảnh báo lệch tuyến | Hệ thống → Điều hành | P0 |
 | US-18.8 | GPS_LOG partitioned tables by month (GPS_LOG_YYYYMM) — drop old partitions instantly | Hệ thống | P2 |
