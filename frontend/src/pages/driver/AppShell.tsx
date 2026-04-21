@@ -177,21 +177,26 @@ export function BottomNav() {
         </div>
       </nav>
 
-      {/* More — BOTTOM sheet with 3 buttons in one row */}
+      {/* More — BOTTOM drawer with 3 buttons in one row */}
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-        <SheetContent side="bottom" className="rounded-t-2xl">
+        <SheetContent side="bottom" className="rounded-t-2xl pb-safe">
           <SheetHeader className="pb-3">
             <SheetTitle className="text-base font-semibold text-left">Thêm</SheetTitle>
           </SheetHeader>
-          <div className="flex gap-2 pb-2">
+          <div className="flex gap-3 pb-2">
             {moreItems.map(({ icon: Icon, label, action }) => (
               <button
                 key={label}
-                className="flex-1 flex flex-col items-center justify-center gap-1.5 py-4 rounded-xl transition-colors touch-manipulation border"
-                style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
+                className="flex-1 flex flex-col items-center justify-center gap-2 py-5 rounded-xl transition-colors touch-manipulation border"
+                style={{ background: 'var(--theme-bg-tertiary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
                 onClick={() => { setMoreOpen(false); action() }}
               >
-                <Icon className="w-5 h-5" style={{ color: 'var(--theme-text-secondary)' }} />
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center"
+                  style={{ background: 'var(--theme-bg-secondary)' }}
+                >
+                  <Icon className="w-5 h-5" style={{ color: 'var(--theme-text-secondary)' }} />
+                </div>
                 <span className="text-xs font-medium leading-none" style={{ color: 'var(--theme-text-secondary)' }}>{label}</span>
               </button>
             ))}
