@@ -67,7 +67,7 @@
 
 ### 3.2 Quản lý Đội xe & Tài sản (Fleet Management)
 - **CRUD Vehicles:** Quản lý biển số, loại xe, hãng xe, năm sản xuất, trạng thái (đang chạy, bãi, bảo dưỡng, ngưng hoạt động).
-- **Công-tơ-mét:** Theo dõi số km hiện tại của từng xe, cập nhật qua GPS hoặc nhập thủ công.
+- **Ước tính km:** Sau mỗi chuyến, hệ thống ước tính km thực tế dựa trên tuyến đường + GPS checkpoints tại mỗi bước trạng thái. Không cần công-tơ-mét thủ công.
 - **Gán tài xế:** Quản lý việc bàn giao xe cho tài xế, lưu lịch sử gán/bàn giao.
 - **Linh kiện bảo hành:** Theo dõi danh sách linh kiện còn trong hạn bảo hành của từng xe, ngày lắp đặt, hạn bảo hành.
 - **Nhắc nhở thay thế:** Tự động nhắc nhở khi đến hạn thay thế linh kiện dựa trên thời gian hoặc số km (so với công-tơ-mét).
@@ -96,7 +96,7 @@
 
 ### 3.6 Công nghệ AI OCR & GPS
 - **OCR Container:** Tài xế chụp ảnh, AI tự động nhận diện 11 mã số container. Hỗ trợ nhập tay nếu OCR thất bại.
-- **GPS Timestamp:** Mọi hành động của tài xế (chụp ảnh, báo chi phí, cập nhật trạng thái) đều đính kèm tọa độ và thời gian máy chủ.
+- **Tuyến đường & Checkpoints:** Mỗi tuyến có các điểm kiểm tra (cảng, trạm, kho). GPS tại mỗi bước trạng thái được so khớp với checkpoints để ước tính km và phát hiện lệch tuyến.
 - **Theo dõi trực tuyến:** Ứng dụng mobile theo dõi vị trí trực tuyến trong suốt hành trình (REQ-5.3).
 - **Lịch sử vị trí:** Lưu trữ lịch sử vị trí để phục vụ đối soát và kiểm tra sau chuyến (REQ-5.5).
 
@@ -151,7 +151,7 @@
 - `CLIENTS`: id, name, tax_code, address, contact_name, contact_phone, email, payment_terms, is_active, created_at.
 
 #### Fleet & Vehicles
-- `VEHICLES`: id, license_plate, vehicle_type, brand, model, year, fuel_quota_per_km, current_odometer_km, status (active/on_trip/idle/maintenance/retired), created_at.
+- `VEHICLES`: id, license_plate, vehicle_type, brand, model, year, fuel_quota_per_km, status (active/on_trip/idle/maintenance/retired), created_at.
 - `INSURANCE`: id, vehicle_id, provider, provider_phone, policy_number, premium_amount, start_date, expiry_date, renewal_reminder_days, status (active/expired/cancelled), notes.
 - `WARRANTY_PARTS`: id, vehicle_id, part_name, part_number, install_date, expiry_date, replacement_cycle_km, install_odometer_km, notes.
 - `DRIVER_ASSIGNMENTS`: id, vehicle_id, driver_id, assigned_at, unassigned_at, reason.
@@ -159,12 +159,13 @@
 
 #### Routes & Quotas
 - `ROUTES`: id, name, origin, destination, distance_km, expected_duration_min, is_active.
+- `ROUTE_CHECKPOINTS`: id, route_id, sequence, name, latitude, longitude, radius_meters. — Điểm kiểm tra trên tuyến (cảng, trạm thu phí, kho).
 - `ROUTE_FUEL_QUOTAS`: id, route_id, vehicle_type, liters_per_km. — Ma trận định mức: tuyến × loại xe.
 
 #### Trips & Bookings
 - `BOOKINGS`: id, booking_code, client_id, route_id, vehicle_type_required, container_type, notes, status (pending/approved/rejected/completed), created_by, approved_by, approved_at, created_at.
 - `TRIPS`: id, trip_code, booking_id, vehicle_id, driver_id, client_id, route_id, container_code, container_type (20ft/40ft/45ft/hc), status (received/empty_pickup/at_port/leaving_port/en_route/arrived/dropped_off/completed), is_orphan, is_locked, start_time, end_time, actual_distance_km, created_at.
-- `TRIP_STATUS_HISTORY`: id, trip_id, status, timestamp, latitude, longitude, notes.
+- `TRIP_STATUS_HISTORY`: id, trip_id, status, timestamp, latitude, longitude, accuracy, notes.
 - `TRIP_PHOTOS`: id, trip_id, photo_type (container_pickup/container_delivery/fuel_receipt/expense_receipt/other), file_path, latitude, longitude, accuracy, server_timestamp.
 - `EXPENSES`: id, trip_id, category (fuel/toll/repair/other), amount, liters, description, receipt_photo_id, status (pending/approved/rejected), reject_reason, approved_by, approved_at, created_at.
 

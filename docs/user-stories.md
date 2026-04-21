@@ -27,7 +27,7 @@
 | US-2.8 | Nhận thông báo nhắc nhở thay thế linh kiện (theo thời gian hoặc số km) | Giám đốc, Điều hành | P1 |
 | US-2.9 | Quản lý thông tin bảo hiểm xe (nhà cung cấp, số hợp đồng, phí, hạn) | Giám đốc, Kế toán | P1 |
 | US-2.10 | Nhận thông báo gia hạn bảo hiểm trước khi hết hạn | Giám đốc, Kế toán | P1 |
-| US-2.11 | Cập nhật công-tơ-mét xe (số km hiện tại) qua GPS hoặc nhập thủ công | Điều hành, Tài xế | P1 |
+| US-2.11 | Ước tính km thực tế sau mỗi chuyến dựa trên tuyến đường + GPS checkpoints | Hệ thống | P1 |
 
 ## Epic 3: Client Management (Khách hàng / Chủ hàng)
 
@@ -50,7 +50,8 @@
 
 | ID | Story | Role | Priority |
 |----|-------|------|----------|
-| US-5.1 | CRUD tuyến đường (điểm đi, điểm đến, quãng đường, thời gian dự kiến) | Điều hành | P0 |
+| US-5.1 | CRUD tuyến đường (điểm đi, điểm đến, quãng đường, thời gian dự kiến, checkpoints) | Điều hành | P0 |
+| US-5.1b | Định nghĩa checkpoints trên tuyến (cảng, trạm thu phí, kho) với tọa độ GPS | Điều hành | P1 |
 | US-5.2 | Cấu hình định mức xăng dầu theo ma trận tuyến × loại xe (lít/km) | Giám đốc | P1 |
 | US-5.3 | So sánh chi phí thực tế (nhiên liệu, thời gian) với định mức tuyến đường | Hệ thống | P1 |
 
