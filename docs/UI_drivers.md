@@ -9,8 +9,14 @@
 
 **Max 4 items.** Fixed at bottom, always visible. Active item highlighted with brand color.
 
+### Top Bar (Global Header)
+
+Fixed at top on every page. Contains global actions accessible from anywhere.
+
 ```
 ┌─────────────────────────────────────────────────┐
+│ 🪐 TTransport             🔔 (3)  👤 Hoàng     │  Top Bar
+├─────────────────────────────────────────────────┤
 │                                                 │
 │              [Page Content Area]                 │
 │                                                 │
@@ -20,17 +26,31 @@
 └──────────┴──────────┴──────────┴────────────────┘
 ```
 
+| Position | Icon | Purpose | Behavior |
+|----------|------|---------|----------|
+| Left | 🪐 Logo | Brand identity | Tap → home/root page |
+| Right-1 | 🔔 Notifications | Unread count badge | Tap → P12 Notifications page |
+| Right-2 | 👤 Avatar/Initials | Account & profile | Tap → P13 Profile page |
+
+**Top bar rules:**
+- 🔔 shows red badge with unread count (max 99+)
+- 👤 shows driver avatar or initials circle (2 letters from name)
+- Top bar hidden during full-screen camera (P05)
+- On sub-pages with back button: `← TR-0101` replaces logo, 🔔 + 👤 remain on right
+
+### Bottom Navigation
+
 | # | Icon | Label | Route | Purpose |
 |---|------|-------|-------|---------|
 | 1 | 🚛 | Chuyến | `/driver/trips` | Active trip, trip list, trip history |
 | 2 | 🧾 | Chi phí | `/driver/expenses` | Declare expenses, receipt photos, pending/approved status |
 | 3 | 💰 | Thu nhập | `/driver/earnings` | Today's earnings, monthly summary, breakdown |
-| 4 | ☰ | Thêm | `/driver/more` | Grid menu: Notifications, Profile, Settings, Help, Logout |
+| 4 | ☰ | Thêm | `/driver/more` | Grid menu: Settings, Help, Quy định, Logout |
 
 **Rules:**
 - Badge on 🚛 if new trip assigned
 - Badge on 🧾 if expense rejected
-- Badge on ☰ if unread notifications
+- **Notifications (🔔) and Profile (👤) moved to top bar** — always 1-tap away from any page
 - Bottom nav hidden during full-screen camera (checkpoint flow)
 
 ---
@@ -553,25 +573,28 @@ Checkpoint 4: HẠ BÃI XONG
 
 ### P11: More Menu (`/driver/more`)
 
-**Grid layout.** Group overflow items here.
+**Grid layout.** Overflow items not in bottom nav.
+
+Notifications (🔔) and Profile (👤) are **in the top bar** — accessible from every page.
 
 ```
-┌─────────────────────────────────┐
-│ Thêm                            │
-├─────────────────────────────────┤
+┌─────────────────────────────────────────────────┐
+│ 🪐 TTransport              🔔 (3)  👤 Hoàng     │  Top Bar (global)
+├─────────────────────────────────────────────────┤
 │                                 │
-│  ┌──────┐  ┌──────┐  ┌──────┐ │
-│  │ 🔔   │  │ 👤   │  │ ⚙️   │ │  MenuItem (3-col grid)
-│  │Thông │  │Hồ sơ │  │Cài   │ │
-│  │báo   │  │      │  │đặt   │ │
-│  │  (3) │  │      │  │      │ │  Badge count
-│  └──────┘  └──────┘  └──────┘ │
+│  Thêm                           │
 │                                 │
-│  ┌──────┐  ┌──────┐  ┌──────┐ │
-│  │ ❓   │  │ 📋   │  │ 🚪   │ │
-│  │Trợ   │  │Quy   │  │Đăng  │ │
-│  │giúp  │  │định  │  │xuất  │ │
-│  └──────┘  └──────┘  └──────┘ │
+│  ┌──────┐  ┌──────┐            │
+│  │ ⚙️   │  │ ❓   │            │  MenuItem (2-col grid)
+│  │Cài   │  │Trợ   │            │
+│  │đặt   │  │giúp  │            │
+│  └──────┘  └──────┘            │
+│                                 │
+│  ┌──────┐  ┌──────┐            │
+│  │ 📋   │  │ 🚪   │            │
+│  │Quy   │  │Đăng  │            │
+│  │định  │  │xuất  │            │
+│  └──────┘  └──────┘            │
 │                                 │
 │  v1.0.0                         │  AppVersion
 │                                 │
@@ -587,16 +610,16 @@ Checkpoint 4: HẠ BÃI XONG
 | **MenuItem** | Grid item with icon + label | icon, label, badge_count?, route |
 | **AppVersion** | Version display | version string |
 
-**Menu items:**
+**Menu items (4 — notifications & profile moved to top bar):**
 
 | # | Icon | Label | Route | Purpose |
 |---|------|-------|-------|---------|
-| 1 | 🔔 | Thông báo | P12 | Notifications list |
-| 2 | 👤 | Hồ sơ | P13 | Profile, GPLX info |
-| 3 | ⚙️ | Cài đặt | P14 | App preferences |
-| 4 | ❓ | Trợ giúp | P15 | FAQ, support |
-| 5 | 📋 | Quy định | (webview) | Company rules/policies |
-| 6 | 🚪 | Đăng xuất | — | Logout + blacklist token |
+| 1 | ⚙️ | Cài đặt | P14 | App preferences |
+| 2 | ❓ | Trợ giúp | P15 | FAQ, support |
+| 3 | 📋 | Quy định | (webview) | Company rules/policies |
+| 4 | 🚪 | Đăng xuất | — | Logout + blacklist token |
+
+> **Note:** Notifications (🔔) and Profile (👤) live in the **top bar** — always 1-tap away.
 
 ---
 
@@ -703,11 +726,11 @@ Checkpoint 4: HẠ BÃI XONG
 These components are reused across multiple pages.
 
 ### Navigation Components
-
 | Component | Used In | Purpose |
-|-----------|---------|---------|
+|-----------|---------|--------||
+| **TopBar** | All pages | Fixed top: logo left, 🔔 notifications + 👤 avatar right. Badge on 🔔 for unread count |
 | **BottomNav** | All pages | 4-item fixed bottom navigation with badges |
-| **Header** | All pages | Page title, back button, optional actions |
+| **Header** | Sub-pages | Page title with back arrow (←), replaces logo. 🔔 + 👤 always on right |
 | **TabSelector** | P01, P06 | Horizontal tab filter |
 | **FAB** | P06 | Floating action button for create |
 
@@ -963,6 +986,18 @@ P11 More Menu
 | `--text-caption` | 13px | Regular | Timestamps, muted text |
 | `--text-badge` | 11px | SemiBold | Status badges |
 
+### Top Bar Dimensions
+
+| Property | Value |
+|----------|-------|
+| Height | 56px (safe area inset added on iPhone) |
+| Logo | 24px icon, left-aligned |
+| 🔔 icon | 24px, badge: 16px red circle, white text |
+| 👤 avatar | 32px circle, initials 14px bold or photo |
+| Background | `--color-surface` |
+| Border bottom | `1px solid --color-border` |
+| Safe area | `padding-top: env(safe-area-inset-top)` |
+
 ### Bottom Nav Dimensions
 
 | Property | Value |
@@ -981,9 +1016,9 @@ P11 More Menu
 
 ### iPhone Safe Area
 ```
+Top bar: padding-top: env(safe-area-inset-top)
 Bottom nav: padding-bottom: env(safe-area-inset-bottom)
-Header: padding-top: env(safe-area-inset-top)
-Content: scroll between header and bottom nav
+Content: scroll between top bar and bottom nav
 ```
 
 ### Android Foreground Service Notification
