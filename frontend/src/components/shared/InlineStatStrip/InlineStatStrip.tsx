@@ -20,7 +20,7 @@ interface InlineStatStripProps {
 export function InlineStatStrip({ items, className }: InlineStatStripProps) {
   if (!items.length) return null
 
-  const cols = items.length <= 4 ? 'flex' : 'grid grid-cols-2'
+  const cols = items.length <= 2 ? 'flex' : 'grid grid-cols-2'
 
   return (
     <div
