@@ -143,7 +143,7 @@
 | US-11.7 | Báo cáo P&L theo đầu xe: Cước vận chuyển - Tổng chi phí (7 loại) = Lợi nhuận gộp | Giám đốc | P1 |
 | US-11.8 | Báo cáo aging công nợ: phân loại theo số tháng quá hạn (Current/T1/T2/T3/T4+) | Kế toán, Giám đốc | P1 |
 | US-11.9 | Bảng kê chi tiết công nợ theo khách hàng (phát sinh Nợ/Có, lũy kế, GBN) | Kế toán | P1 |
-| US-11.10 | Khóa tự động hoặc cảnh báo khách hàng nợ quá hạn khi tạo booking mới | Hệ thống | P2 |
+| US-11.10 | Cảnh báo khi tạo booking cho khách hàng nợ quá hạn — chỉ warning, KHÔNG tự động khóa (Giám đốc quyết định manually) | Hệ thống | P2 |
 | US-11.11 | Bảng giá cước tự động áp cho chuyến từ ROUTE_PRICING (tuyến × loại xe) | Hệ thống | P0 |
 
 ## Epic 12: Driver KPI & Payroll
