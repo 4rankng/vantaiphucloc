@@ -151,7 +151,7 @@
 - `CLIENTS`: id, name, tax_code, address, contact_name, contact_phone, email, payment_terms, is_active, created_at.
 
 #### Fleet & Vehicles
-- `VEHICLES`: id, license_plate, vehicle_type, brand, model, year, fuel_quota_per_km, status (active/on_trip/idle/maintenance/retired), created_at.
+- `VEHICLES`: id, license_plate, vehicle_type, brand, model, year, status (active/on_trip/idle/maintenance/retired), created_at.
 - `INSURANCE`: id, vehicle_id, provider, provider_phone, policy_number, premium_amount, start_date, expiry_date, renewal_reminder_days, status (active/expired/cancelled), notes.
 - `WARRANTY_PARTS`: id, vehicle_id, part_name, part_number, install_date, expiry_date, replacement_cycle_km, install_odometer_km, notes.
 - `DRIVER_ASSIGNMENTS`: id, vehicle_id, driver_id, assigned_at, unassigned_at, reason.
