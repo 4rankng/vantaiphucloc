@@ -102,7 +102,7 @@ export function StatCard({ icon: Icon, label, value, color, onClick }: StatCardP
       <div className="flex items-center gap-3">
         <div
           className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-          style={{ background: `${accentColor}15` }}
+          style={{ background: 'var(--theme-brand-primary-light)' }}
         >
           <Icon className="w-5 h-5" style={{ color: accentColor }} />
         </div>
