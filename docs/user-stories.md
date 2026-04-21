@@ -52,7 +52,8 @@
 |----|-------|------|----------|
 | US-5.1 | CRUD tuyến đường (điểm đi, điểm đến, quãng đường, thời gian dự kiến, checkpoints) | Điều hành | P0 |
 | US-5.1b | Định nghĩa checkpoints trên tuyến (cảng, trạm thu phí, kho) với tọa độ GPS | Điều hành | P1 |
-| US-5.2 | Cấu hình định mức xăng dầu theo ma trận tuyến × loại xe (lít/km) | Giám đốc | P1 |
+| US-5.2 | Cấu hình định mức xăng dầu mặc định theo ma trận tuyến × loại xe (lít/km) | Giám đốc | P1 |
+| US-5.2b | Ghi đè định mức xăng dầu cho từng chuyến (kèm lý do, vd: xe cũ, đường sửa) | Điều hành | P1 |
 | US-5.3 | So sánh chi phí thực tế (nhiên liệu, thời gian) với định mức tuyến đường | Hệ thống | P1 |
 
 ## Epic 6: Booking & Trip Lifecycle
