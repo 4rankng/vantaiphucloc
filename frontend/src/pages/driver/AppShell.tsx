@@ -7,23 +7,36 @@ export function TopBar() {
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-50 bg-[var(--theme-bg-secondary)]/95 backdrop-blur-xl border-b border-[var(--theme-border-default)]/40 supports-[backdrop-filter]:bg-[var(--theme-bg-secondary)]/85"
-      style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      className="fixed top-0 left-0 right-0 z-50 border-b"
+      style={{
+        paddingTop: 'env(safe-area-inset-top)',
+        background: 'var(--theme-header)',
+        backdropFilter: 'var(--theme-glass-blur)',
+        borderColor: 'var(--theme-header-border)',
+      }}
     >
-      <div className="flex items-center justify-between h-14 px-4">
-        <span className="text-lg font-bold text-[var(--theme-brand-primary)]">
+      <div className="flex items-center justify-between h-14 px-[var(--theme-spacing-page-padding)]">
+        <span className="text-lg font-bold" style={{ color: 'var(--theme-brand-primary)' }}>
           🚛 TTransport
         </span>
         <div className="flex items-center gap-2">
           <button
-            className="relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors touch-manipulation"
+            className="relative w-10 h-10 flex items-center justify-center rounded-full transition-colors touch-manipulation"
+            style={{ color: 'var(--theme-text-secondary)' }}
             aria-label="Thông báo"
           >
             <span className="text-lg">🔔</span>
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
+            <span
+              className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
+              style={{ background: 'var(--theme-status-error)' }}
+            />
           </button>
           <button
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-[var(--theme-brand-primary)] text-white font-bold text-xs touch-manipulation"
+            className="w-9 h-9 flex items-center justify-center rounded-full font-bold text-xs touch-manipulation"
+            style={{
+              background: 'var(--theme-brand-primary)',
+              color: 'var(--theme-text-on-brand)',
+            }}
             aria-label="Hồ sơ"
           >
             {initial}
@@ -47,8 +60,13 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 bg-[var(--theme-bg-secondary)]/95 backdrop-blur-xl border-t border-[var(--theme-border-default)]/40 supports-[backdrop-filter]:bg-[var(--theme-bg-secondary)]/85"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      className="fixed bottom-0 left-0 right-0 z-50 border-t"
+      style={{
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        background: 'var(--theme-bottom-nav)',
+        backdropFilter: 'var(--theme-glass-blur)',
+        borderColor: 'var(--theme-bottom-nav-border)',
+      }}
       aria-label="Điều hướng chính"
     >
       <div className="flex items-stretch h-14 relative px-2">
@@ -64,25 +82,31 @@ export function BottomNav() {
               aria-label={t.label}
             >
               {isActive && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-1 bg-[var(--theme-brand-primary)] rounded-b-full transition-all duration-300" />
+                <span
+                  className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-1 rounded-b-full transition-all duration-300"
+                  style={{ background: 'var(--theme-bottom-nav-active)' }}
+                />
               )}
               <div
                 className={cn(
                   'p-1.5 rounded-full transition-all duration-300',
-                  isActive
-                    ? 'bg-[var(--theme-brand-primary)]/10 text-[var(--theme-brand-primary)] -translate-y-1'
-                    : 'text-[var(--theme-text-muted)] opacity-60 group-hover:opacity-100',
+                  isActive && '-translate-y-1',
                 )}
+                style={{
+                  background: isActive ? 'var(--theme-brand-primary-light)' : 'transparent',
+                  color: isActive ? 'var(--theme-bottom-nav-active)' : 'var(--theme-bottom-nav-inactive)',
+                }}
               >
-                <span className={cn('text-lg', isActive && 'scale-110 inline-block')}>{t.icon}</span>
+                <span className={cn('text-lg inline-block', isActive && 'scale-110')}>{t.icon}</span>
               </div>
               <span
                 className={cn(
                   'text-[10px] font-medium leading-none transition-all duration-300',
-                  isActive
-                    ? 'text-[var(--theme-brand-primary)]'
-                    : 'text-[var(--theme-text-muted)] opacity-80',
+                  !isActive && 'opacity-80',
                 )}
+                style={{
+                  color: isActive ? 'var(--theme-bottom-nav-active)' : 'var(--theme-bottom-nav-inactive)',
+                }}
               >
                 {t.label}
               </span>
@@ -96,9 +120,16 @@ export function BottomNav() {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-[var(--theme-bg-primary)]">
+    <div className="min-h-screen" style={{ background: 'var(--theme-bg-primary)' }}>
       <TopBar />
-      <main className="pt-14 pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
+      <main
+        className="overflow-y-auto"
+        style={{
+          paddingTop: 'calc(3.5rem + env(safe-area-inset-top))',
+          paddingBottom: 'calc(3.5rem + env(safe-area-inset-bottom))',
+          minHeight: '100vh',
+        }}
+      >
         {children}
       </main>
       <BottomNav />
