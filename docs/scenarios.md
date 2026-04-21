@@ -872,6 +872,74 @@ Giám đốc duyệt booking → thấy warning → quyết định:
 
 ---
 
+## SC-32: Real-Time Dashboard — WebSocket Heartbeat
+
+**Vai trò:** Điều hành Minh → Hệ thống
+
+### Bối cảnh
+```
+Điều hành Minh mở dashboard → xem vị trí 3 xe đang chạy.
+
+Frontend mở WebSocket connection:
+  wss://api.tingting.vip/ws/dispatcher/user_3
+
+Server accepts → client joins channels:
+  - channel:vehicle_locations (GPS updates từ driver native app)
+  - channel:alerts (new fraud/idle alerts)
+  - channel:trip_status (status changes)
+```
+
+### Ping/Pong heartbeat
+```
+Mỗi 30 giây, browser gửi WebSocket PING frame:
+  → Server tự động trả PONG frame (protocol level)
+
+Nếu PONG không trả về trong 10 giây:
+  → Client biết connection died
+  → UI: "🔴 Disconnected — Reconnecting..."
+  → Auto-reconnect attempt (exponential backoff: 1s, 2s, 4s, 8s, max 30s)
+```
+
+### Real-time updates flow
+```
+Tài xế Hoàng (mobile native GPS) gửi location mỗi 5 phút:
+  → Server receives via POST /api/v1/gps-location
+  → Server publishes to Redis: PUBLISH vehicle_locations {trip_id: 101, lat: ..., lng: ...}
+  → WebSocket server picks up → pushes to all subscribers
+  → Điều hành dashboard cập nhật marker trên bản đồ — NO RELOAD needed
+
+Tài xế Tuấn dừng 45 phút:
+  → Server tạo ALERT (idle)
+  → Server publishes to Redis: PUBLISH alerts {alert: ...}
+  → WebSocket server pushes to Minh's dashboard
+  → Alert popup xuất hiện ngay — Minh không cần F5
+```
+
+### Connection fallback cascade
+```
+Trường hợp: Công ty dùng corporate proxy chặn WebSocket.
+
+1. WebSocket connect fails (3 attempts) → ❌
+2. Frontend fallback sang SSE:
+   EventSource('/api/v1/sse/dispatcher/user_3')
+   → Server push one-way: alerts, notifications, trip_status
+   → Không nhận được vehicle_locations realtime (SSE không bidirectional)
+   → UI: "🟡 Connected (SSE) — limited real-time"
+
+3. Nếu SSE cũng bị chặn:
+   → Fallback sang Long Polling:
+   GET /api/v1/poll/dispatcher/user_3?after=1713700800
+   → Server giữ request mở cho đến khi có data mới hoặc 30s timeout
+   → Client gửi request mới ngay
+   → UI: "🟠 Connected (Polling) — slight delay"
+
+4. Khi WebSocket available lại:
+   → Auto-upgrade: Long Polling → SSE → WebSocket
+   → UI: "🟢 Connected (WebSocket)"
+```
+
+---
+
 ## SC-11: GPLX tài xế sắp hết hạn
 
 **Vai trò:** Hệ thống → Giám đốc An → Điều hành Minh
@@ -1392,4 +1460,4 @@ Khi tạo trip:
 
 ---
 
-*Tổng: 31 kịch bản — bao phủ toàn bộ main flows, edge cases, fraud detection, offline, workflow engine, reminders, pricing, P&L, aging, và error handling.*
+*Tổng: 32 kịch bản — bao phủ toàn bộ main flows, edge cases, fraud detection, offline, workflow engine, reminders, pricing, P&L, aging, real-time, và error handling.*
