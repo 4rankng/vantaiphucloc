@@ -530,6 +530,58 @@ WARRANTY_PARTS (id=5, vehicle_id=7):
 - `@capacitor/push-notifications` — nhận thông báo đẩy từ server (cảnh báo, từ chối chi phí, nhắc nhở).
 - Ảnh đính kèm GPS metadata từ native layer (không dùng browser Geolocation API — dùng plugin).
 
+### 6.5 Real-Time Connection & Heartbeat (Web Frontend)
+
+Web dashboard (Giám đốc, Điều hành, Kế toán) cần cập nhật real-time: vị trí xe, trạng thái chuyến, cảnh báo mới, công nợ. Sử dụng 3-layer connection strategy:
+
+#### Layer 1: WebSockets (Primary — Industry Standard)
+- **Giao thức:** WebSocket (ws:// or wss://) — bidirectional, low-latency.
+- **Ping/Pong frames:** Built-in heartbeat ở protocol level. Browser gửi PING → server tự động trả PONG. Không cần custom code cho signal.
+- **Phát hiện ngắt:** Nếu PONG không trả về → client biết ngay connection đã chết → trigger "Reconnecting..." UI state.
+- **Use cases:**
+  - Điều hành xem vị trí xe real-time trên bản đồ (GPS updates mỗi 5 phút từ native driver app)
+  - Giám đốc dashboard cập nhật metric cards real-time
+  - Cảnh báo mới push ngay không cần reload
+- **Endpoint:** `wss://api.tingting.vip/ws/{role}/{user_id}`
+- **Message format:** `{ type: 'location'|'alert'|'trip_status'|'notification', payload: {...} }`
+
+#### Layer 2: Server-Sent Events (SSE) — Lightweight Alternative
+- **Khi nào dùng:** Khi chỉ cần server push data xuống client (không cần client gửi liên tục).
+- **How:** Client mở 1 HTTP connection dài → server stream data updates. Dùng "comment" line làm heartbeat để giữ connection sống.
+- **Use cases:**
+  - Kế toán nhận update khi chi phí mới được duyệt
+  - Notification feed — server push "Location received" hoặc "Order assigned"
+  - Dashboard metrics refresh (server tells client "new data available")
+- **Ưu điểm:** Đơn giản hơn WebSocket, lighter, không cần full bidirectional channel.
+
+#### Layer 3: Long Polling (Fallback)
+- **Khi nào dùng:** Khi WebSocket và SSE đều thất bại (firewall restrictions, corporate proxy, legacy browser).
+- **How:** Client gửi HTTP request → server giữ request mở (không respond) cho đến khi có data mới hoặc timeout → client gửi request mới ngay.
+- **Why:** Hoạt động trên mọi device, browser, và qua mọi corporate proxy. Là "fail-safe" method.
+- **Trigger tự động:** Nếu WebSocket connection thất bại 3 lần → fallback sang Long Polling. Khi WebSocket available lại → tự upgrade.
+
+#### Connection State Management
+```
+Frontend connection state machine:
+
+  CONNECTED (WebSocket) ──→ DISCONNECTED ──→ RECONNECTING
+       ↑                       │                  │
+       │                       │                  ↓
+       └─── SSE fallback ←─────┘          Long Polling
+                                            fallback
+
+UI indicators:
+  🟢 Connected (WebSocket) — real-time updates active
+  🟡 Connected (SSE) — server-push only, no bidirectional
+  🟠 Connected (Long Polling) — polling mode, slight delay
+  🔴 Disconnected — reconnecting...
+```
+
+#### Tech Stack for Real-Time
+- **Backend:** FastAPI + WebSocket support (native) + Redis Pub/Sub for message distribution
+- **Frontend:** Native WebSocket API + EventSource (SSE) + fetch-based Long Polling
+- **No external dependencies** — all built into browser APIs and FastAPI
+
 ---
 
 ## 7. Lộ trình Triển khai (Roadmap)
