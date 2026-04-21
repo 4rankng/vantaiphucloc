@@ -106,11 +106,13 @@
 ### 3.6 Công nghệ AI OCR & GPS
 - **OCR Container:** Tài xế chụp ảnh, AI tự động nhận diện 11 mã số container. Hỗ trợ nhập tay nếu OCR thất bại.
 - **Tuyến đường:** Mỗi tuyến định nghĩa điểm đi, điểm đến, quãng đường và thời gian dự kiến. GPS tại mỗi bước trạng thái dùng để ước tính km thực tế.
-- **Theo dõi trực tuyến:** Native background geolocation plugin theo dõi vị trí mỗi 5 phút trong suốt hành trình, kể cả khi tắt màn hình hoặc thu nhỏ app (REQ-5.3).
+- **Theo dõi trực tuyến:** Native background geolocation plugin gửi vị trí **mỗi 30 giây** khi chuyến ở trạng thái en_route, kể cả khi tắt màn hình hoặc thu nhỏ app (REQ-5.3).
   - **Android:** Sử dụng Foreground Service với persistent notification (vd: "Hoàng đang chạy TR-0101") để OS không kill app.
   - **iOS:** Yêu cầu "Always Allow" location permission. Plugin xử lý background execution limits.
-  - **Workflow:** User click "Đang chạy" → JS gọi native plugin `start()` → Native OS xử lý interval 5 phút → gửi tọa độ về server.
+  - **Workflow:** User click "Đang chạy" → JS gọi native plugin `start({ interval: 30000 })` → Native OS xử lý interval 30s → gửi tọa độ về server.
   - **Không dùng setInterval()** — JavaScript timer sẽ bị kill khi screen off. Native layer quản lý GPS interval.
+- **Tính km thực tế:** Hệ thống tính actual_distance_km bằng cách **cộng dồn khoảng cách haversine** giữa tất cả GPS points liên tiếp trong chuyến. So sánh với distance_km từ Google Maps (lưu trong ROUTES) → phát hiện lệch tuyến nếu >15%.
+- **Hiệu suất nhiên liệu:** actual_liters_per_100km = liters × 100 / actual_distance_km. So sánh với định mức từ ROUTE_FUEL_QUOTAS.
 - **Lịch sử vị trí:** Lưu trữ lịch sử vị trí để phục vụ đối soát và kiểm tra sau chuyến (REQ-5.5).
 
 ### 3.7 Quản lý Chi phí & Cảnh báo
@@ -161,7 +163,7 @@
 - **Backend:** FastAPI (Python), PostgreSQL, SQLAlchemy (Async), Redis (Cache/Session).
 - **Frontend:** React, Tailwind CSS, Lucide Icons.
 - **Mobile:** Capacitor (Ionic) native app — PWA core + native plugins cho background geolocation, camera, notifications.
-- **Background Geolocation:** `@capacitor-community/background-geolocation` — native foreground service (Android) / background task (iOS).
+- **Background Geolocation:** `@capacitor-community/background-geolocation` — native foreground service (Android) / background task (iOS). Interval: every 30 seconds when en_route.
 - **AI:** Gemini Vision API cho OCR container.
 - **Infrastructure:** Docker Compose, Nginx, DigitalOcean.
 
@@ -190,8 +192,9 @@
 
 #### Trips & Bookings
 - `BOOKINGS`: id, booking_code, client_id, route_id, vehicle_type_required, container_type, notes, status (pending/approved/rejected/completed), created_by, approved_by, approved_at, workflow_id (FK → workflows.id), created_at.
-- `TRIPS`: id, trip_code, booking_id, vehicle_id, driver_id, client_id, route_id, container_code, container_type (20ft/40ft/45ft/hc), status (received/empty_pickup/at_port/leaving_port/en_route/arrived/dropped_off/completed), is_orphan, is_locked, start_time, end_time, actual_distance_km, workflow_id (FK → workflows.id), created_at.
+- `TRIPS`: id, trip_code, booking_id, vehicle_id, driver_id, client_id, route_id, container_code, container_type (20ft/40ft/45ft/hc), status (received/empty_pickup/at_port/leaving_port/en_route/arrived/dropped_off/completed), is_orphan, is_locked, start_time, end_time, actual_distance_km (haversine sum of GPS_LOG), route_deviation_pct (actual vs ROUTES.distance_km), workflow_id (FK → workflows.id), created_at.
 - `TRIP_STATUS_HISTORY`: id, trip_id, status, timestamp, latitude, longitude, accuracy, notes.
+- `GPS_LOG`: id, trip_id, latitude, longitude, accuracy, speed, altitude, server_timestamp. — Mỗi 30 giây khi en_route. Dùng để tính actual_distance_km (haversine sum) và vẽ GPS trail trên bản đồ.
 - `TRIP_PHOTOS`: id, trip_id, photo_type (container_pickup/container_delivery/fuel_receipt/expense_receipt/other), file_path, latitude, longitude, accuracy, server_timestamp.
 - `EXPENSES`: id, trip_id, category (fuel/toll/repair/tires/engine_oil/salary/other), amount, liters (nullable, chỉ cho fuel/engine_oil), description, receipt_photo_id, status (pending/approved/rejected), reject_reason, approved_by, approved_at, workflow_id (FK → workflows.id), created_at.
 - `PENALTY_RULES`: id, rule_code, description, penalty_amount, penalty_type (fine/warning/termination), occurrence_threshold (vd: '3' = từ lần thứ 3), is_active. — Quy định phạt nội quy.
@@ -513,7 +516,7 @@ WARRANTY_PARTS (id=5, vehicle_id=7):
 - **Workflow tích hợp:**
   1. User click "Đang chạy" → JS gọi native plugin `start()`
   2. Native Layer: Plugin khởi tạo foreground service (Android) hoặc background task (iOS)
-  3. GPS Interval: Native OS xử lý trigger mỗi 5 phút, kể cả khi tắt màn hình hoặc thu nhỏ app
+  3. GPS Interval: Native OS xử lý trigger mỗi 30 giây, kể cả khi tắt màn hình hoặc thu nhỏ app
   4. API Sync: Plugin gửi tọa độ về server tự động
 - **Android:** Phải dùng Foreground Service với persistent notification (vd: "Hoàng đang chạy chuyến TR-0101") — báo cho OS biết đang thực hiện task, không kill.
 - **iOS:** Apple rất hạn chế. Phải request "Always Allow" location permission. Plugin xử lý background execution limits, hạn chế hơn Android.
@@ -535,10 +538,19 @@ WARRANTY_PARTS (id=5, vehicle_id=7):
 GPS positions arrive every 1-5 minutes from driver mobile app (native plugin). This is discrete checkpoint data, not streaming. Simple HTTP polling is sufficient — no WebSocket overhead needed.
 
 #### Strategy: Interval Polling
-- **Interval:** Web dashboard polls every 30 seconds
-- **Endpoint:** `GET /api/v1/trips/active/locations` → returns latest GPS for all active trips
-- **Update:** Replace map markers and status badges with fresh data
-- **Why polling, not WebSocket:** Data changes every 1-5 minutes. 30s polling gives identical UX to WebSocket with fraction of the complexity. No connection state management, no fallback cascade, no Redis Pub/Sub.
+- **Interval:** Web dashboard polls every 30 seconds (same frequency as GPS updates from driver)
+- **Endpoint:** `GET /api/v1/trips/active/locations` → returns latest GPS for all active trips + last_seen timestamp
+- **Update:** Replace map markers, draw GPS trail, update online/offline status
+- **Driver status on dashboard:**
+  - 🟢 **Tracking** — en_route, last GPS <2 min ago
+  - 🟡 **Idle Online** — not en_route, heartbeat <5 min ago
+  - 🔴 **Offline** — no GPS/heartbeat >10 min
+  - ⚫ **Off Duty** — not assigned
+
+#### Driver Heartbeat (when NOT en_route)
+- Driver app sends lightweight POST every 2 min when idle: `POST /api/v1/drivers/heartbeat { user_id, lat, lng, app_state }`
+- Server tracks `last_heartbeat_at` on DRIVER_PROFILES
+- When en_route → GPS plugin handles presence (no separate heartbeat needed, GPS IS the heartbeat)
 
 #### Connection State
 - 🟢 **Online** — polling active, dashboard updates every 30s
@@ -548,6 +560,7 @@ GPS positions arrive every 1-5 minutes from driver mobile app (native plugin). T
 #### Tech
 - **Frontend:** `setInterval` + `fetch` + AbortController for cleanup. Native browser APIs only.
 - **Backend:** Standard REST endpoint. Cache response in Redis for 30s to avoid DB hits from multiple dashboard users.
+- **GPS_LOG cleanup:** Archive to cold storage after trip completed. Keep 90 days hot for audit trail.
 
 ---
 

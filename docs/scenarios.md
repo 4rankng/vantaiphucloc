@@ -158,7 +158,7 @@ WORKFLOWS (id=2):
   event: "en_route", attempt: 1
 → leaving_port → en_route
 
-GPS tracking: mỗi 5 phút ghi vị trí (REQ-5.3)
+GPS tracking: mỗi 30 giây ghi vị trí (REQ-5.3)
 App mobile hiển thị lộ trình đang đi
 Văn phòng xem vị trí Hoàng trên bản đồ (REQ-5.4)
 ```
@@ -575,7 +575,7 @@ App hiển thị:
   - Hoạt động bình thường, không block user
 
 Background GPS vẫn hoạt động (native layer, không phụ thuộc mạng):
-  → Native plugin tiếp tục gửi GPS location mỗi 5 phút
+  → Native plugin tiếp tục gửi GPS location mỗi 30 giây
   → Nếu không có mạng → native layer cache location → gửi khi có mạng lại
   → GPS interval KHÔNG bị ảnh hưởng bởi mất mạng
 
@@ -606,14 +606,14 @@ TRIPS (id=107):
   status: "en_route"
 
 Tài xế Tuấn click "Đang chạy" trên mobile:
-  → JS gọi: BackgroundGeolocation.start({ interval: 300000 }) // 5 phút
+  → JS gọi: BackgroundGeolocation.start({ interval: 30000 }) // 30 giây
   → Native plugin khởi tạo:
 
     ANDROID:
     - Foreground Service bắt đầu
     - Persistent notification: "🚛 Tuấn đang chạy chuyến TR-2026-0107"
     - OS sẽ không kill app kể cả khi screen off / app minimized
-    - GPS sample mỗi 5 phút → gửi POST /api/v1/gps-location
+    - GPS sample mỗi 30 giây → gửi POST /api/v1/gps-location
 
     iOS:
     - Request "Always Allow" location permission (nếu chưa có)
@@ -621,22 +621,39 @@ Tài xế Tuấn click "Đang chạy" trên mobile:
     - iOS cho phép background location updates nhưng hạn chế hơn Android
     - Plugin tự động manage background execution limits
 
-Mỗi 5 phút, native layer gửi:
+Mỗi 30 giây, native layer gửi:
   POST /api/v1/gps-location
   { trip_id: 107, lat: 10.8100, lng: 106.7150, accuracy: 12.0, speed: 65.3 }
-  → Server lưu vào TRIP_STATUS_HISTORY hoặc bảng GPS_LOG riêng
+  → Server lưu vào GPS_LOG
+```
+
+### Calculate actual_distance_km (Haversine)
+```
+Trip 107 completed. GPS_LOG has 340 points (90 min × 2/min):
+
+Server calculates:
+  actual_distance_km = sum(haversine(p[i], p[i+1]) for i in 0..339)
+  = 47.3 km
+
+ROUTES.distance_km for this route = 45.0 km (Google Maps)
+route_deviation_pct = (47.3 - 45.0) / 45.0 × 100% = 5.1%
+→ Within 15% tolerance → OK, no alert
+
+If deviation > 15%:
+  → ALERT: route_deviation
+  → "Actual 62.1 km vs route 45.0 km (+38%). Nghi ngờ lệch tuyến."
 ```
 
 ### Detect idle qua GPS
 ```
-Native plugin report location mỗi 5 phút:
+Native plugin report location mỗi 30 giây:
   10:00 → lat: 10.8100, lng: 106.7150, speed: 0
-  10:05 → lat: 10.8101, lng: 106.7151, speed: 0 (<5km/h)
-  10:10 → lat: 10.8100, lng: 106.7150, speed: 0
-  ... 9 consecutive readings ...
-  10:45 → lat: 10.8100, lng: 106.7150, speed: 0
+  10:00:30 → lat: 10.8101, lng: 106.7151, speed: 0 (<5km/h)
+  10:01:00 → lat: 10.8100, lng: 106.7150, speed: 0
+  ... 90 consecutive readings (45 min × 2/min) ...
+  10:45:00 → lat: 10.8100, lng: 106.7150, speed: 0
 
-Hệ thống detect: xe không di chuyển >45 phút → tạo ALERT (idle)
+Hệ thống detect: xe không di chuyển >45 phút (90+ readings với speed <5km/h) → tạo ALERT (idle)
 
 Lưu ý: GPS tracking tiếp tục kể cả khi screen off.
 setInterval() KHÔNG được dùng — chỉ native layer đảm bảo.
@@ -905,6 +922,50 @@ Mạng trở lại:
   → Frontend resume polling
   → Map markers refresh ngay
   → UI: "🟢 Đang cập nhật"
+```
+
+---
+
+## SC-33: Driver Heartbeat & Online Status
+
+**Vai trò:** Tài xế Bình (idle) → Hệ thống → Điều hành Minh
+
+### Bối cảnh: Driver NOT en_route
+```
+Bình vừa hoàn thành chuyến, đang chờ chuyến mới.
+GPS plugin đã stop — không còn gửi location.
+
+Mobile app gửi heartbeat mỗi 2 phút:
+  POST /api/v1/drivers/heartbeat
+  { user_id: 13, lat: 10.730, lng: 106.720, app_state: "idle" }
+
+DRIVER_PROFILES (user_id=13):
+  last_heartbeat_at: 2026-04-21T14:19:00Z
+  last_lat: 10.730, last_lng: 106.720
+```
+
+### Dashboard hiển thị
+```
+Điều hành Minh mở fleet overview:
+
+  Hoàng  🟢 Tracking  TR-0101 en_route (last GPS 30s ago)
+  Tuấn   🟢 Tracking  TR-0107 en_route (last GPS 15s ago)
+  Bình   🟡 Idle Online (last heartbeat 1 min ago, at depot)
+  Hùng   🔴 Offline (last seen 25 min ago)
+  Chín    ⚫ Off Duty (external vehicle, not tracked)
+
+Giám đốc An click Hùng:
+  "Tài xế Hùng offline từ 13:54. Không phản hồi."
+  → Gọi điện 확인
+```
+
+### Offline detection
+```
+Hùng tắt app hoặc mất mạng:
+  → Heartbeat stops
+  → Sau 10 phút không heartbeat: status → 🔴 Offline
+  → Sau 30 phút: NOTIFICATIONS → Điều hành Minh
+    "Tài xế Hùng offline 30 phút. Kiểm tra tình trạng."
 ```
 
 ---
@@ -1429,4 +1490,4 @@ Khi tạo trip:
 
 ---
 
-*Tổng: 32 kịch bản — bao phủ toàn bộ main flows, edge cases, fraud detection, offline, workflow engine, reminders, pricing, P&L, aging, real-time, và error handling.*
+*Tổng: 33 kịch bản — bao phủ toàn bộ main flows, edge cases, fraud detection, offline, workflow engine, reminders, pricing, P&L, aging, GPS tracking, driver heartbeat, và error handling.*
