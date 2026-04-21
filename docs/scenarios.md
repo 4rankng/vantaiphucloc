@@ -595,18 +595,19 @@ Nếu sync thất bại cho 1 item:
 
 ---
 
-## SC-08: Background GPS Tracking (Native Plugin)
+## SC-08: GPS Tracking — Start to Stop (Full Trip)
 
-**Vai trò:** Tài xế Hoàng → Hệ thống → Điều hành Minh
+**Vai trò:** Tài xế Tuấn → Hệ thống → Điều hành Minh
 
-### Bối cảnh
+### START: Nhận ca → empty_pickup
 ```
 TRIPS (id=107):
   driver_id: 14 (Tuấn)
-  status: "en_route"
+  status: "received"
 
-Tài xế Tuấn click "Đang chạy" trên mobile:
-  → JS gọi: BackgroundGeolocation.start({ interval: 30000 }) // 30 giây
+Tuấn click "Nhận ca" trên mobile:
+  → WORKFLOW: received → empty_pickup
+  → JS gọi: BackgroundGeolocation.start({ interval: 30000 })
   → Native plugin khởi tạo:
 
     ANDROID:
@@ -618,13 +619,32 @@ Tài xế Tuấn click "Đang chạy" trên mobile:
     iOS:
     - Request "Always Allow" location permission (nếu chưa có)
     - Background task bắt đầu
-    - iOS cho phép background location updates nhưng hạn chế hơn Android
     - Plugin tự động manage background execution limits
+
+  → TRIPS.start_time = now()
+  → TRIP_STATUS_HISTORY: { status: "empty_pickup", lat: ..., lng: ... }
+```
+
+### TRACKING: 7 statuses (empty_pickup → dropped_off)
+```
+GPS tracking covers the FULL journey:
+
+  empty_pickup → at_port → leaving_port → en_route → arrived → dropped_off
+  ───────────    ────────   ────────────   ────────   ────────   ───────────
+  Lấy rỗng       Cảng       Rời cảng      Highway    Đến nơi    Hạ bãi
+  ~15 min        ~10 min    ~5 min        ~60 min    ~10 min    ~10 min
+
+Why track ALL stages, not just en_route:
+  - Driver burns fuel from the moment they leave depot
+  - actual_distance_km must include pickup + dropoff legs
+  - Fuel efficiency calculation uses TOTAL km, not just highway km
+  - GPS proves driver was at port for OCR photo
 
 Mỗi 30 giây, native layer gửi:
   POST /api/v1/gps-location
   { trip_id: 107, lat: 10.8100, lng: 106.7150, accuracy: 12.0, speed: 65.3 }
-  → Server lưu vào GPS_LOG
+  → Server: smart filter → GPS_LOG_YYYYMM (if >50m or >15° heading change)
+  → Server: haversine → add to TRIPS.actual_distance_km running total
 ```
 
 ### Calculate actual_distance_km (Haversine)
@@ -659,13 +679,20 @@ Lưu ý: GPS tracking tiếp tục kể cả khi screen off.
 setInterval() KHÔNG được dùng — chỉ native layer đảm bảo.
 ```
 
-### Khi hoàn thành chuyến
+### STOP: completed
 ```
 Tuấn click "Hoàn thành":
+  → WORKFLOW: dropped_off → completed
   → JS gọi: BackgroundGeolocation.stop()
   → Native foreground service dừng
   → Notification biến mất
   → GPS tracking ngừng gửi
+  → TRIPS.end_time = now()
+  → TRIPS.actual_distance_km = final running total (vd: 47.3 km)
+
+Post-trip compression:
+  → Douglas-Peucker → gzip → TRIP_PATHS (1 row)
+  → DELETE raw GPS_LOG rows
 ```
 
 ---
