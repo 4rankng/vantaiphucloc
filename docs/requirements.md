@@ -174,15 +174,37 @@
 - `PAYMENTS`: id, invoice_id, amount, payment_method, reference_number, paid_by, notes, created_at.
 
 #### Workflows, Alerts & Notifications
-- `WORKFLOWS`: id, run_id, state, attempt, data (JSONB), created_at, updated_at.
+- `WORKFLOWS`: id (auto-increment), run_id (UUID), state (int), event (int), attempt (int), data (JSON). — State machine engine.
 - `ALERTS`: id, trip_id, alert_type (fuel_anomaly/time_anomaly/route_deviation/idle), severity, description, is_resolved, resolved_by, resolution (violation/dismissed), resolution_note, created_at, resolved_at.
 - `NOTIFICATIONS`: id, user_id, type, title, message, entity_type, entity_id, is_read, created_at.
 - `DOCUMENTS`: id, entity_type, entity_id, doc_type (booking/do/eir/invoice/receipt/customs), file_path, uploaded_by, retention_years, created_at.
 
-### 4.3 Workflow Engine
-Sử dụng `python-statemachine` kết hợp bảng `WORKFLOWS` để quản lý trạng thái phức tạp của Chuyến xe, Chi phí và Hóa đơn.
-- **Retry Mechanism:** Tự động thử lại các action thất bại (OCR, Notify).
-- **Blocking Actions:** Chỉ chuyển trạng thái khi các action quan trọng thành công.
+### 4.3 Workflow Engine (State Machine)
+
+Bảng `WORKFLOWS` điều khiển trạng thái phức tạp của Chuyến xe, Chi phí, Hóa đơn v.v.
+
+**Cấu trúc bảng:**
+- `id`: Auto-increment primary key
+- `run_id`: UUID — nhóm nhiều dòng thành một luồng nghiệp vụ
+- `state`: int — trạng thái hiện tại
+- `event`: int — sự kiện cần xử lý (0 = không có event chờ)
+- `attempt`: int — số lần thử transition
+- `data`: JSON — payload nghiệp vụ
+
+**Nguyên tắc hoạt động:**
+1. Mỗi cặp (state, event) có **đúng một** transition function duy nhất — bản chất của state machine.
+2. Khi `attempt > 0` và `event != 0` → workflow engine thực thi transition function.
+3. Nếu transition thành công → `event = 0`, `attempt = 0` (không còn event chờ, chuyển sang state mới).
+4. Nếu transition thất bại → `attempt` tăng, engine thử lại (retry).
+5. Một số state có event không cần transition (ví dụ event = 999) — đây là event hợp lệ, khi `attempt = 1` thì transition function vẫn được thực thi.
+
+**Ví dụ — Chuyến xe:**
+- State 1 (Nhận ca) + Event 10 (Bắt đầu) → State 2 (Lấy rỗng)
+- State 2 + Event 20 (Lấy xong) → State 3 (Đến cảng)
+- State 3 + Event 999 (Auto-timeout) → Alert + giữ state
+
+**Retry Mechanism:** Tự động thử lại các action thất bại (OCR, Notify) với exponential backoff.
+**Blocking Actions:** Chỉ chuyển trạng thái khi các action quan trọng thành công.
 
 ---
 
