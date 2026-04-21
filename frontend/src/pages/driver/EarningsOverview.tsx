@@ -24,22 +24,6 @@ export function EarningsOverview() {
 
   return (
     <div className="p-4 space-y-4 pb-24">
-      {/* Hero gradient card */}
-      <div className="rounded-xl p-5" style={{ background: 'var(--theme-brand-gradient)' }}>
-        <div className="flex items-center gap-2 mb-1">
-          <Wallet className="w-4 h-4" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.8 }} />
-          <span className="text-[11px] font-medium uppercase tracking-wider" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.7 }}>
-            Thu nhập tháng này
-          </span>
-        </div>
-        <p className="text-3xl font-bold tabular-nums mt-1" style={{ color: 'var(--theme-text-on-brand)' }}>
-          {formatCurrencyShort(totalEarnings)}
-        </p>
-        <p className="text-sm mt-2" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.7 }}>
-          {completedJobs.length} chuyến hoàn thành
-        </p>
-      </div>
-
       {/* Inline stat strip */}
       <InlineStatStrip items={[
         { label: 'Tổng chuyến', value: jobs.length },
