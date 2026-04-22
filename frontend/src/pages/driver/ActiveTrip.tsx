@@ -120,7 +120,8 @@ export function ActiveTrip({ jobId }: { jobId: string }) {
         )}
       </div>
 
-      <Button onClick={() => navigate('/driver/expenses/new')} className="w-full h-11 rounded-2xl font-semibold text-sm">
+      <Button onClick={() => navigate('/driver/expenses/new')} variant="default" className="w-full h-11 rounded-2xl font-semibold text-sm"
+        style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
         <PlusCircle className="w-4 h-4 mr-2" />
         Khai chi phí
       </Button>
