@@ -47,6 +47,7 @@ export interface DriverStore {
   toggleCheckpoint: (jobId: string, cpId: string) => void
   addExpense: (e: Omit<ExpenseItem, 'id' | 'status' | 'date' | 'driverName' | 'tractorPlate'>) => void
   navigate: (path: string) => void
+  goBack: () => void
   currentPath: string
   markNotificationRead: (id: string) => void
   markAllNotificationsRead: () => void
@@ -57,6 +58,7 @@ const StoreContext = React.createContext<DriverStore | null>(null)
 
 export function DriverStoreProvider({ children }: { children: ReactNode }) {
   const [currentPath, setCurrentPath] = useState('/driver')
+  const [history, setHistory] = useState<string[]>(['/driver'])
   const driver = mockDrivers.find(d => d.id === DRIVER_ID)!
   const [jobs, setJobs] = useState<Job[]>(mockJobs.filter(j => j.driverId === DRIVER_ID))
   const [expenses, setExpenses] = useState<ExpenseItem[]>(
@@ -114,10 +116,22 @@ export function DriverStoreProvider({ children }: { children: ReactNode }) {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })))
   }, [])
 
-  const navigate = useCallback((path: string) => setCurrentPath(path), [])
+  const navigate = useCallback((path: string) => {
+    setCurrentPath(path)
+    setHistory(prev => [...prev, path])
+  }, [])
+
+  const goBack = useCallback(() => {
+    setHistory(prev => {
+      if (prev.length <= 1) return prev
+      const next = prev.slice(0, -1)
+      setCurrentPath(next[next.length - 1])
+      return next
+    })
+  }, [])
 
   return (
-    <StoreContext.Provider value={{ driver, jobs, expenses, checkpoints, notifications, unreadCount, toggleCheckpoint, addExpense, navigate, currentPath, markNotificationRead, markAllNotificationsRead, updateJobStatus }}>
+    <StoreContext.Provider value={{ driver, jobs, expenses, checkpoints, notifications, unreadCount, toggleCheckpoint, addExpense, navigate, goBack, currentPath, markNotificationRead, markAllNotificationsRead, updateJobStatus }}>
       {children}
     </StoreContext.Provider>
   )

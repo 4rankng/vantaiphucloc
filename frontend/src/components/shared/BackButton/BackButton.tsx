@@ -1,13 +1,8 @@
 import { ArrowLeft } from 'lucide-react'
+import { useDriverStore } from '@/hooks/use-driver-store'
 
-export function BackButton({ fallback = '/driver', label = 'Quay lại' }: { fallback?: string; label?: string }) {
-  const goBack = () => {
-    if (window.history.length > 1) {
-      window.history.back()
-    } else {
-      window.location.hash = '#' + fallback
-    }
-  }
+export function BackButton({ label = 'Quay lại' }: { label?: string }) {
+  const { goBack } = useDriverStore()
   return (
     <button
       onClick={goBack}
