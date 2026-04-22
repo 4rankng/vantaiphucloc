@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Search, Package, MapPin, Navigation, Clock, ChevronRight } from 'lucide-react'
 import { useDriverStore } from '@/hooks/use-driver-store'
+import { BackButton } from '@/components/shared/BackButton'
+import { Search, Package, MapPin, Navigation, Clock, ChevronRight } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { formatCurrencyShort, getJobStatusBadge, type JobStatus } from '@/data/mockData'
@@ -49,8 +50,11 @@ export function TripList() {
 
   return (
     <div>
+      <div className="px-4 pt-3">
+        <BackButton />
+      </div>
       {/* Search pill */}
-      <div className="px-4 pt-3 pb-2">
+      <div className="px-4 pt-0 pb-2">
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
           <Input

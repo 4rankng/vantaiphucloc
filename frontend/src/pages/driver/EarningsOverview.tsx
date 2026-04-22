@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useDriverStore } from '@/hooks/use-driver-store'
+import { BackButton } from '@/components/shared/BackButton'
 import { formatCurrencyShort } from '@/data/mockData'
 import {
   TrendingUp, TrendingDown, Fuel, Wrench, ChevronRight,
@@ -46,6 +47,7 @@ export function EarningsOverview() {
 
   return (
     <div className="p-4 space-y-5 pb-24">
+      <BackButton />
       {/* ── Period filter ── */}
       <div className="flex gap-1 p-1 rounded-2xl" style={{ background: 'var(--theme-bg-tertiary)' }}>
         {periods.map(p => (
