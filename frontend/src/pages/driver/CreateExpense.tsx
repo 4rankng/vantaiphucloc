@@ -3,7 +3,7 @@ import { useDriverStore } from '@/hooks/use-driver-store'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { EXPENSE_CATEGORIES } from '@/data/mockData'
-import { ArrowLeft, Camera, Fuel, Car, Wrench, CircleDot, Droplets, Banknote, Shield, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, Camera, Fuel, Car, Wrench, CircleDot, Droplets, Banknote, Shield, ShieldCheck, ChevronDown } from 'lucide-react'
 
 const CATEGORY_ICONS: Record<string, any> = {
   'Dầu': Fuel,
@@ -56,15 +56,22 @@ export function CreateExpense() {
           <label className="text-xs font-bold mb-2.5 block" style={{ color: 'var(--theme-text-secondary)' }}>
             Chuyến
           </label>
-          <select
-            value={tripId}
-            onChange={e => setTripId(e.target.value)}
-            className="w-full h-12 rounded-2xl border text-sm px-4 transition-colors search-pill"
-            style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
+          <button
+            type="button"
+            onClick={() => {
+              const labels = activeTrips.map(j => `${j.id} - ${j.route.slice(0, 30)}`)
+              const choice = prompt('Chọn chuyến:\n' + labels.map((l, i) => `${i + 1}. ${l}`).join('\n'))
+              if (choice) {
+                const idx = parseInt(choice) - 1
+                if (idx >= 0 && idx < activeTrips.length) setTripId(activeTrips[idx].id)
+              }
+            }}
+            className="w-full h-12 rounded-2xl text-sm px-4 text-left flex items-center justify-between card-lift"
+            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', color: tripId ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}
           >
-            <option value="">-- Chọn chuyến --</option>
-            {activeTrips.map(j => <option key={j.id} value={j.id}>{j.id} - {j.route.slice(0, 30)}</option>)}
-          </select>
+            <span className="truncate">{tripId ? activeTrips.find(j => j.id === tripId)?.route.slice(0, 30) ?? tripId : 'Chọn chuyến...'}</span>
+            <ChevronDown className="w-4 h-4 shrink-0 ml-2" style={{ color: 'var(--theme-text-muted)' }} />
+          </button>
         </div>
 
         {/* Category chips */}
