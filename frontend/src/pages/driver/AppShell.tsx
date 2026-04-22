@@ -97,11 +97,17 @@ export function BottomNav() {
               <DropdownMenu key={path}>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className="flex-1 flex flex-col items-center justify-center gap-0.5 touch-manipulation"
+                    className="flex-1 flex flex-col items-center justify-center gap-0.5 touch-manipulation relative"
                     aria-label={label}
                   >
-                    <div className="p-1.5 rounded-full">
+                    <div className="p-1.5 rounded-full relative">
                       <Icon className="h-5 w-5" style={{ color: 'var(--theme-bottom-nav-inactive)' }} />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[9px] font-bold"
+                          style={{ background: 'var(--theme-status-error)', color: 'var(--theme-text-inverse)' }}>
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
                     </div>
                     <span className="text-[10px] font-medium leading-none opacity-80" style={{ color: 'var(--theme-bottom-nav-inactive)' }}>
                       {label}
