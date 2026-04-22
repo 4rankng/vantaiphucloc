@@ -1,6 +1,6 @@
 [build]
   base = "frontend"
-  command = "corepack enable && corepack prepare pnpm@latest --activate && pnpm install && pnpm run build"
+  command = "corepack enable && pnpm install && pnpm run build"
   publish = "dist"
 
 [build.environment]
