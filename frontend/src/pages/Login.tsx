@@ -133,6 +133,10 @@ export function Login() {
             <Button
               type="submit"
               className="w-full h-12 font-bold text-base rounded-2xl mt-2"
+              style={{
+                background: 'var(--theme-brand-primary)',
+                color: 'var(--theme-text-on-brand)',
+              }}
             >
               Đăng nhập
             </Button>
