@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/Sheet/Sheet'
 import { Input } from '@/components/ui/Input'
 import { formatCurrencyShort } from '@/data/mockData'
-import { Search, Plus, Receipt, ChevronRight, Inbox } from 'lucide-react'
+import { Search, Receipt, ChevronRight, Inbox } from 'lucide-react'
 
 type ExpTab = 'pending' | 'approved' | 'rejected'
 
@@ -105,16 +105,6 @@ export function ExpenseList() {
           currentItems.map(renderCard)
         )}
       </div>
-
-      {/* FAB */}
-      <button
-        onClick={() => navigate('/driver/expenses/new')}
-        className="fixed bottom-20 right-4 w-14 h-14 rounded-2xl flex items-center justify-center z-20 card-lift"
-        style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)', boxShadow: 'var(--theme-shadow-elevated)' }}
-        aria-label="Thêm chi phí"
-      >
-        <Plus className="w-6 h-6" />
-      </button>
 
       {/* Detail sheet */}
       <Sheet open={!!detailExp} onOpenChange={open => !open && setDetailExp(null)}>

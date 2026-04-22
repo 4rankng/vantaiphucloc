@@ -54,10 +54,11 @@ export function TopBar() {
 }
 
 /* ─── Page layout — common wrapper ─────────────────────────── */
-export function PageLayout({ children, showBack = false, className }: {
+export function PageLayout({ children, showBack = false, className, fab }: {
   children: React.ReactNode
   showBack?: boolean
   className?: string
+  fab?: React.ReactNode
 }) {
   return (
     <div className="min-h-[100dvh]" style={{ background: 'var(--theme-bg-primary)' }}>
@@ -67,6 +68,7 @@ export function PageLayout({ children, showBack = false, className }: {
         {showBack && <BackButton />}
         {children}
       </main>
+      {fab}
     </div>
   )
 }
