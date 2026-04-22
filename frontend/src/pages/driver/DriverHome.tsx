@@ -128,40 +128,6 @@ export function DriverHome() {
         </div>
       )}
 
-      {/* ── QUICK ACTIONS — Grab style compact icons ── */}
-      <div className="px-4 mb-5">
-        <div className="flex items-start gap-5 overflow-x-auto scrollbar-hide py-1">
-          <button onClick={() => navigate('/driver/trips')} className="flex flex-col items-center gap-1.5 shrink-0">
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
-              style={{ background: 'var(--theme-brand-primary-light)' }}>
-              <Truck className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
-            </div>
-            <span className="text-[11px] font-medium" style={{ color: 'var(--theme-text-secondary)' }}>Chuyến đi</span>
-          </button>
-          <button onClick={() => navigate('/driver/expenses/new')} className="flex flex-col items-center gap-1.5 shrink-0">
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
-              style={{ background: 'var(--theme-brand-primary-light)' }}>
-              <Plus className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
-            </div>
-            <span className="text-[11px] font-medium" style={{ color: 'var(--theme-text-secondary)' }}>Khai chi phí</span>
-          </button>
-          <button onClick={() => navigate('/driver/earnings')} className="flex flex-col items-center gap-1.5 shrink-0">
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
-              style={{ background: 'var(--theme-brand-primary-light)' }}>
-              <Receipt className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
-            </div>
-            <span className="text-[11px] font-medium" style={{ color: 'var(--theme-text-secondary)' }}>Chi phí</span>
-          </button>
-          <button onClick={() => navigate('/driver/notifications')} className="flex flex-col items-center gap-1.5 shrink-0 relative">
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
-              style={{ background: 'var(--theme-brand-primary-light)' }}>
-              <Bell className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
-            </div>
-            <span className="text-[11px] font-medium" style={{ color: 'var(--theme-text-secondary)' }}>Thông báo</span>
-          </button>
-        </div>
-      </div>
-
       {/* ── CHUYẾN ĐI ── */}
       <div className="px-4 mb-5">
         <SectionHeader title="Chuyến đi" onClick={() => navigate('/driver/trips')} />
@@ -205,7 +171,19 @@ export function DriverHome() {
 
       {/* ── CHI PHÍ ── */}
       <div className="px-4 mb-5">
-        <SectionHeader title="Chi phí" onClick={() => navigate('/driver/expenses')} />
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xs font-bold" style={{ color: 'var(--theme-text-secondary)' }}>Chi phí</span>
+          <div className="flex items-center gap-3">
+            <button onClick={() => navigate('/driver/expenses/new')} className="flex items-center gap-1 text-xs font-semibold"
+              style={{ color: 'var(--theme-brand-primary)' }}>
+              <Plus className="w-3.5 h-3.5" /> Khai chi phí
+            </button>
+            <button onClick={() => navigate('/driver/expenses')} className="flex items-center gap-0.5 text-xs font-semibold"
+              style={{ color: 'var(--theme-brand-primary)' }}>
+              Chi tiết <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
 
         {topExpenses.length > 0 ? (
           <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
