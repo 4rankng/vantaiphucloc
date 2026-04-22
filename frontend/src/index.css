@@ -206,3 +206,22 @@ select {
   background-position: right 12px center;
   padding-right: 40px;
 }
+
+/* ─── Live card pulse ─────────────────────────────────── */
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.live-dot {
+  animation: live-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes live-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.live-shimmer {
+  background: linear-gradient(90deg, transparent 0%, var(--theme-brand-primary-light) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: live-shimmer 3s ease-in-out infinite;
+}
