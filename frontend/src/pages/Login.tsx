@@ -20,17 +20,17 @@ export function Login() {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center relative overflow-hidden"
+    <div className="min-h-[100dvh] w-full flex items-center justify-center relative overflow-hidden"
       style={{ background: 'var(--theme-brand-gradient)' }}
     >
       {/* Decorative circles */}
       <div className="absolute -top-20 -left-20 w-64 h-64 rounded-full" style={{ background: 'var(--theme-brand-primary)', opacity: 0.12 }} />
       <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full" style={{ background: 'var(--theme-brand-primary)', opacity: 0.08 }} />
 
-      <div className="relative z-10 w-full max-w-[440px] flex flex-col items-center px-5 py-8">
+      <div className="relative z-10 w-full max-w-[400px] flex flex-col items-center px-5">
 
         {/* Brand */}
-        <div className="mb-10 flex flex-col items-center">
+        <div className="mb-8 flex flex-col items-center">
           <div
             className="h-16 w-16 rounded-2xl flex items-center justify-center mb-4"
             style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-elevated)' }}
@@ -143,10 +143,6 @@ export function Login() {
           </form>
         </div>
 
-        {/* Bottom */}
-        <p className="mt-8 text-xs" style={{ color: 'var(--theme-text-inverse)', opacity: 0.5 }}>
-          © {new Date().getFullYear()} TTransport
-        </p>
       </div>
     </div>
   )
