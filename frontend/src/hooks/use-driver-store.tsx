@@ -119,7 +119,7 @@ export function DriverStoreProvider({ children }: { children: ReactNode }) {
   const navigate = useCallback((path: string) => {
     setCurrentPath(path)
     setHistory(prev => [...prev, path])
-    window.scrollTo(0, 0)
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }))
   }, [])
 
   const goBack = useCallback(() => {
@@ -127,7 +127,7 @@ export function DriverStoreProvider({ children }: { children: ReactNode }) {
       if (prev.length <= 1) return prev
       const next = prev.slice(0, -1)
       setCurrentPath(next[next.length - 1])
-      window.scrollTo(0, 0)
+      requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }))
       return next
     })
   }, [])
