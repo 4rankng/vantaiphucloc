@@ -18,17 +18,11 @@ export function TopBar() {
   const initials = driver.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 
   return (
-    <div className="shell-topbar border-b"
-      style={{
-        background: 'var(--theme-header)',
-        backdropFilter: 'var(--theme-glass-blur)',
-        borderColor: 'var(--theme-header-border)',
-      }}
-    >
+    <div className="shell-topbar">
       <div className="shell-topbar-inner flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
-          <Truck className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
-          <span className="text-lg font-bold" style={{ color: 'var(--theme-brand-primary)' }}>
+          <Truck className="w-5 h-5" style={{ color: 'var(--theme-text-on-brand)' }} />
+          <span className="text-lg font-bold" style={{ color: 'var(--theme-text-on-brand)' }}>
             TTransport
           </span>
         </div>
@@ -38,7 +32,7 @@ export function TopBar() {
             <button
               className="w-9 h-9 flex items-center justify-center rounded-full font-bold text-xs touch-manipulation"
               style={{
-                background: 'var(--theme-brand-primary)',
+                background: 'rgba(255,255,255,0.2)',
                 color: 'var(--theme-text-on-brand)',
               }}
               aria-label="Tài khoản"
