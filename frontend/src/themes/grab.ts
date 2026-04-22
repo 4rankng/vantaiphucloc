@@ -9,13 +9,13 @@ export const grabTheme: ThemeDefinition = {
     bgTertiary: '#EEEEEE',
     bgGlass: 'rgba(255, 255, 255, 0.92)',
 
-    brandPrimary: '#00B14F',
+    brandPrimary: '#00963E',
     brandPrimaryLight: '#E6F9EF',
     brandPrimaryDark: '#008A3D',
-    brandSecondary: '#00B14F',
-    brandGradient: 'linear-gradient(135deg, #00B14F 0%, #009643 100%)',
-    brandGradientFrom: '#00B14F',
-    brandGradientTo: '#009643',
+    brandSecondary: '#00963E',
+    brandGradient: 'linear-gradient(135deg, #00963E 0%, #008A3D 100%)',
+    brandGradientFrom: '#00963E',
+    brandGradientTo: '#008A3D',
 
     textPrimary: '#1C1C1C',
     textSecondary: '#6B6B6B',
@@ -27,7 +27,7 @@ export const grabTheme: ThemeDefinition = {
     borderLight: '#F3F3F3',
     borderGlass: 'rgba(255, 255, 255, 0.95)',
 
-    statusSuccess: '#00B14F',
+    statusSuccess: '#00963E',
     statusSuccessLight: '#E6F9EF',
     statusSuccessText: '#00662D',
     statusWarning: '#FF9500',
@@ -45,12 +45,12 @@ export const grabTheme: ThemeDefinition = {
     sidebarText: 'rgba(255, 255, 255, 0.55)',
     sidebarTextMuted: 'rgba(255, 255, 255, 0.25)',
     sidebarActive: 'rgba(0, 177, 79, 0.15)',
-    sidebarActiveText: '#00B14F',
+    sidebarActiveText: '#00963E',
     sidebarHover: 'rgba(255, 255, 255, 0.04)',
 
     bottomNav: 'rgba(255, 255, 255, 0.96)',
     bottomNavBorder: 'rgba(0, 0, 0, 0.06)',
-    bottomNavActive: '#00B14F',
+    bottomNavActive: '#00963E',
     bottomNavInactive: '#9E9E9E',
 
     header: 'rgba(255, 255, 255, 0.96)',
@@ -67,8 +67,8 @@ export const grabTheme: ThemeDefinition = {
     skeletonBase: 'rgba(0, 0, 0, 0.04)',
     skeletonShine: 'rgba(0, 0, 0, 0.08)',
 
-    badgeFrom: '#00B14F',
-    badgeTo: '#009643',
+    badgeFrom: '#00963E',
+    badgeTo: '#008A3D',
   },
   typography: {
     fontFamilyDisplay: '"Be Vietnam Pro", "Inter", ui-sans-serif, system-ui, sans-serif',

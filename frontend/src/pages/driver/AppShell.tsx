@@ -15,16 +15,13 @@ const moreItems = [
 export function TopBar() {
   const { driver } = useDriverStore()
   const { logout } = useAuth()
-  const initials = driver.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 
   return (
     <div className="shell-topbar">
       <div className="shell-topbar-inner flex items-center justify-between px-4">
-        <div className="flex items-center gap-2">
-          <Truck className="w-5 h-5" style={{ color: 'var(--theme-text-on-brand)' }} />
-          <span className="text-lg font-bold" style={{ color: 'var(--theme-text-on-brand)' }}>
-            TTransport
-          </span>
+        <div>
+          <p className="text-[11px]" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.75 }}>Xin chào,</p>
+          <p className="text-[15px] font-bold" style={{ color: 'var(--theme-text-on-brand)' }}>{driver.name}</p>
         </div>
 
         <DropdownMenu>
@@ -32,7 +29,7 @@ export function TopBar() {
             <button
               className="w-9 h-9 flex items-center justify-center rounded-full font-bold text-xs touch-manipulation"
               style={{
-                background: 'rgba(255,255,255,0.2)',
+                background: 'rgba(255,255,255,0.35)',
                 color: 'var(--theme-text-on-brand)',
               }}
               aria-label="Tài khoản"
