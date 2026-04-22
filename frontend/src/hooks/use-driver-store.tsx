@@ -56,7 +56,7 @@ export interface DriverStore {
 const StoreContext = React.createContext<DriverStore | null>(null)
 
 export function DriverStoreProvider({ children }: { children: ReactNode }) {
-  const [currentPath, setCurrentPath] = useState('/driver/trips')
+  const [currentPath, setCurrentPath] = useState('/driver')
   const driver = mockDrivers.find(d => d.id === DRIVER_ID)!
   const [jobs, setJobs] = useState<Job[]>(mockJobs.filter(j => j.driverId === DRIVER_ID))
   const [expenses, setExpenses] = useState<ExpenseItem[]>(

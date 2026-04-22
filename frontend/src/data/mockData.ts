@@ -328,6 +328,24 @@ export const mockJobs: Job[] = [
     route: 'Hải Phòng → Thái Nguyên', distanceKm: 155,
     revenue: 1190000, status: 'PLANNED', driverFee: 850000, isTwoWay: false,
   },
+  {
+    id: 'JOB-011', jobDate: '2025-04-17',
+    tractorPlate: '15C-136.31', trailerPlate: '15R067.95', trailerType: '40FT',
+    driverId: 'DRV-001', driverName: 'Nguyễn Văn Hùng',
+    clientId: 'CLT-004', clientName: 'Công ty CP Thương mại Thái Bình',
+    containerNumber: 'MSKU-1234567', description: 'Chở hàng tiêu dùng',
+    route: 'Hải Phòng → Thái Bình', distanceKm: 80,
+    revenue: 850000, status: 'COMPLETED', driverFee: 800000, isTwoWay: false,
+  },
+  {
+    id: 'JOB-012', jobDate: '2025-04-16',
+    tractorPlate: '15C-139.82', trailerPlate: '15R070.51', trailerType: '40FT',
+    driverId: 'DRV-002', driverName: 'Trần Minh Tuấn',
+    clientId: 'CLT-006', clientName: 'Anh Hoàng (Khách lẻ)',
+    containerNumber: 'TCNU-5544332', description: 'Hàng nông sản',
+    route: 'Hải Phòng → Nam Định', distanceKm: 95,
+    revenue: 920000, status: 'COMPLETED', driverFee: 800000, isTwoWay: false,
+  },
 ]
 
 export const mockAlerts: Alert[] = [
