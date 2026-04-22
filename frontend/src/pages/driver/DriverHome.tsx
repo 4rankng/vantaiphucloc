@@ -71,7 +71,7 @@ export function DriverHome() {
   return (
     <div className="pb-20">
       {/* ── Green header with wallet (Level 2: Summary) ── */}
-      <div className="px-4 pt-3 pb-8" style={{ background: 'var(--theme-brand-primary)' }}>
+      <div className="px-4 pt-3 pb-12" style={{ background: 'var(--theme-brand-primary)' }}>
         <div className="rounded-2xl p-4" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-elevated)' }}>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold" style={{ color: 'var(--theme-text-secondary)' }}>Thu nhập tháng này</span>
