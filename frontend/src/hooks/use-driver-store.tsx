@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, type ReactNode } from 'react'
+import React, { useState, useCallback, type ReactNode } from 'react'
 import {
   mockJobs, mockExpenses, mockDrivers,
   type Job, type ExpenseItem, type Driver
@@ -130,10 +130,6 @@ export function DriverStoreProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
-  // Scroll to top when route changes (after render)
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [currentPath])
 
   return (
     <StoreContext.Provider value={{ driver, jobs, expenses, checkpoints, notifications, unreadCount, toggleCheckpoint, addExpense, navigate, goBack, currentPath, markNotificationRead, markAllNotificationsRead, updateJobStatus }}>
