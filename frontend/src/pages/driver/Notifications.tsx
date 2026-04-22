@@ -1,4 +1,5 @@
 import { useDriverStore } from '@/hooks/use-driver-store'
+import { BackButton } from '@/components/shared/BackButton'
 import { Button } from '@/components/ui/Button'
 import { Bell, BellOff, CheckCheck, XCircle, Package, AlertTriangle, Shield, Star } from 'lucide-react'
 
@@ -62,6 +63,7 @@ export function Notifications() {
 
   return (
     <div className="p-4 space-y-5 pb-24">
+      <BackButton />
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-bold" style={{ color: 'var(--theme-text-primary)' }}>Thông báo</h2>
         {unread.length > 0 && (

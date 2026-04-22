@@ -1,4 +1,5 @@
 import { useDriverStore } from '@/hooks/use-driver-store'
+import { BackButton } from '@/components/shared/BackButton'
 import { InlineStatStrip } from '@/components/shared/InlineStatStrip'
 import { formatCurrencyShort } from '@/data/mockData'
 import { Package, TruckIcon, MapPin, Fuel, Camera } from 'lucide-react'
@@ -13,6 +14,7 @@ export function TripDetail({ jobId }: { jobId: string }) {
 
   return (
     <div className="p-4 space-y-5 pb-4">
+      <BackButton to="/driver/trips" />
       {/* Route card */}
       <div className="rounded-2xl p-4" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
         <div className="flex items-center gap-2 mb-3">

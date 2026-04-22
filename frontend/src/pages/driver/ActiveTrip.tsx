@@ -1,4 +1,5 @@
 import { useDriverStore } from '@/hooks/use-driver-store'
+import { BackButton } from '@/components/shared/BackButton'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { InlineStatStrip } from '@/components/shared/InlineStatStrip'
@@ -28,6 +29,7 @@ export function ActiveTrip({ jobId }: { jobId: string }) {
 
   return (
     <div className="p-4 space-y-5 pb-24">
+      <BackButton to="/driver/trips" />
       {/* Route card */}
       <div className="rounded-2xl p-4" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
         <div className="flex justify-between items-start mb-3">

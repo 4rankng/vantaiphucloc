@@ -1,7 +1,8 @@
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { useAuth } from '@/contexts/AuthContext'
+import { BackButton } from '@/components/shared/BackButton'
 import { Badge } from '@/components/ui/Badge'
-import { ArrowLeft, User, Phone, TruckIcon, DollarSign, Route, Star, CalendarDays, LogOut } from 'lucide-react'
+import { User, Phone, TruckIcon, DollarSign, Route, Star, CalendarDays, LogOut } from 'lucide-react'
 
 export function Profile() {
   const { driver, navigate } = useDriverStore()
@@ -10,14 +11,7 @@ export function Profile() {
 
   return (
     <div className="p-4 space-y-5">
-      <button
-        onClick={() => navigate('/driver')}
-        className="flex items-center gap-1.5 text-sm font-semibold"
-        style={{ color: 'var(--theme-brand-primary)' }}
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Quay lại
-      </button>
+      <BackButton />
 
       {/* Avatar section */}
       <div className="flex flex-col items-center py-6">
