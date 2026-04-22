@@ -8,7 +8,7 @@ import { ToastProvider } from '@/components/atoms/Toast'
 import { Login } from '@/pages/Login'
 import { DriverStoreProvider, useDriverStore } from '@/hooks/use-driver-store'
 import { TopBar, BottomNav, PageLayout, HomeLayout } from '@/pages/driver/AppShell'
-import { Fab } from '@/components/shared/Fab'
+import { ExpenseFab } from '@/pages/driver/ExpenseFab'
 import { TripList } from '@/pages/driver/TripList'
 import { ActiveTrip } from '@/pages/driver/ActiveTrip'
 import { TripDetail } from '@/pages/driver/TripDetail'
@@ -30,7 +30,7 @@ function Router() {
 
   switch (currentPath) {
     case '/driver/trips': return <PageLayout showBack><TripList /></PageLayout>
-    case '/driver/expenses': return <PageLayout showBack fab={<Fab to="/driver/expenses/new" label="Thêm chi phí" />}><ExpenseList /></PageLayout>
+    case '/driver/expenses': return <PageLayout showBack fab={<ExpenseFab />}><ExpenseList /></PageLayout>
     case '/driver/expenses/new': return <PageLayout showBack><CreateExpense /></PageLayout>
     case '/driver/earnings': return <PageLayout showBack><EarningsOverview /></PageLayout>
     case '/driver/notifications': return <PageLayout showBack><Notifications /></PageLayout>
