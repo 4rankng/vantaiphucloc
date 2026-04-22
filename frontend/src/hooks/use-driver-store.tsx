@@ -119,7 +119,6 @@ export function DriverStoreProvider({ children }: { children: ReactNode }) {
   const navigate = useCallback((path: string) => {
     setCurrentPath(path)
     setHistory(prev => [...prev, path])
-    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }))
   }, [])
 
   const goBack = useCallback(() => {
@@ -127,10 +126,14 @@ export function DriverStoreProvider({ children }: { children: ReactNode }) {
       if (prev.length <= 1) return prev
       const next = prev.slice(0, -1)
       setCurrentPath(next[next.length - 1])
-      requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }))
       return next
     })
   }, [])
+
+  // Scroll to top when route changes (after render)
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [currentPath])
 
   return (
     <StoreContext.Provider value={{ driver, jobs, expenses, checkpoints, notifications, unreadCount, toggleCheckpoint, addExpense, navigate, goBack, currentPath, markNotificationRead, markAllNotificationsRead, updateJobStatus }}>
