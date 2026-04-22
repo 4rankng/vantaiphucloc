@@ -189,6 +189,14 @@
   box-shadow: 0 0 0 2px var(--theme-brand-primary-light);
 }
 
+/* Password dots — force proper bullet rendering */
+input[type="password"] {
+  -webkit-text-security: disc;
+  -moz-text-security: disc;
+  text-security: disc;
+  letter-spacing: 2px;
+}
+
 /* ─── Grab-style card lift ─────────────────────────────── */
 .card-lift {
   transition: transform 0.15s ease, box-shadow 0.15s ease;
