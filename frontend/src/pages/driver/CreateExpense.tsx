@@ -146,7 +146,9 @@ export function CreateExpense() {
           </button>
         </div>
 
-        <Button type="submit" className="w-full h-12 rounded-2xl font-bold text-[15px]" disabled={!category || !amount}>
+        <Button type="submit" className="w-full h-12 rounded-2xl font-bold text-[15px]" disabled={!category || !amount}
+          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+        >
           Gửi khai báo
         </Button>
       </form>
