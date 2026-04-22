@@ -3,35 +3,41 @@ import { useDriverStore } from '@/hooks/use-driver-store'
 
 /* ─── Top bar — bell + user icon only ──────────────────────── */
 export function TopBar() {
-  const { navigate, unreadCount } = useDriverStore()
+  const { driver, navigate, unreadCount } = useDriverStore()
 
   return (
-    <div className="shell-topbar">
-      <div className="shell-topbar-inner flex items-center justify-end gap-3 px-4">
-        <button
-          className="w-9 h-9 flex items-center justify-center rounded-full touch-manipulation relative"
-          style={{ background: 'rgba(255,255,255,0.35)', color: 'var(--theme-text-on-brand)' }}
-          onClick={() => navigate('/driver/notifications')}
-          aria-label="Thông báo"
-        >
-          <Bell className="w-5 h-5" />
-          {unreadCount > 0 && (
-            <span
-              className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[9px] font-bold"
-              style={{ background: 'var(--theme-status-error)', color: 'var(--theme-text-inverse)' }}
-            >
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </span>
-          )}
-        </button>
-        <button
-          className="w-9 h-9 flex items-center justify-center rounded-full touch-manipulation"
-          style={{ background: 'rgba(255,255,255,0.35)', color: 'var(--theme-text-on-brand)' }}
-          onClick={() => navigate('/driver/profile')}
-          aria-label="Tài khoản"
-        >
-          <UserCircle className="w-5 h-5" />
-        </button>
+    <div className="px-4 pt-3 pb-2" style={{ background: 'var(--theme-brand-primary)' }}>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[11px]" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.75 }}>Xin chào,</p>
+          <p className="text-[15px] font-bold" style={{ color: 'var(--theme-text-on-brand)' }}>{driver.name}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            className="w-9 h-9 flex items-center justify-center rounded-full touch-manipulation relative"
+            style={{ background: 'rgba(255,255,255,0.35)', color: 'var(--theme-text-on-brand)' }}
+            onClick={() => navigate('/driver/notifications')}
+            aria-label="Thông báo"
+          >
+            <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span
+                className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[9px] font-bold"
+                style={{ background: 'var(--theme-status-error)', color: 'var(--theme-text-inverse)' }}
+              >
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+          <button
+            className="w-9 h-9 flex items-center justify-center rounded-full touch-manipulation"
+            style={{ background: 'rgba(255,255,255,0.35)', color: 'var(--theme-text-on-brand)' }}
+            onClick={() => navigate('/driver/profile')}
+            aria-label="Tài khoản"
+          >
+            <UserCircle className="w-5 h-5" />
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -40,9 +46,9 @@ export function TopBar() {
 /* ─── Shell layout — no bottom nav for driver ──────────────── */
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="shell" style={{ background: 'var(--theme-bg-primary)' }}>
+    <div className="min-h-[100dvh]" style={{ background: 'var(--theme-bg-primary)' }}>
       <TopBar />
-      <main className="shell-main overflow-y-auto">
+      <main>
         {children}
       </main>
     </div>
