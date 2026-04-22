@@ -4,7 +4,7 @@ import { LiveCard } from '@/components/organisms/LiveCard'
 import { SectionHeader } from '@/components/shared/SectionHeader'
 import { TripCard } from '@/components/shared/TripCard'
 import { ExpenseRow } from '@/components/shared/ExpenseRow'
-import { LinkButton, DetailLink, ActionPill } from '@/components/shared/LinkButton'
+import { LinkButton, DetailLink } from '@/components/shared/LinkButton'
 import { Receipt, Clock, MapPin, Plus, Navigation } from 'lucide-react'
 
 export function DriverHome() {
@@ -112,7 +112,7 @@ export function DriverHome() {
         <div className="flex items-center justify-between mb-3">
           <span className="text-xs font-bold" style={{ color: 'var(--theme-text-secondary)' }}>Chi phí</span>
           <div className="flex items-center gap-3">
-            <ActionPill onClick={() => navigate('/driver/expenses/new')} icon={Plus}>Khai chi phí</ActionPill>
+            <LinkButton onClick={() => navigate('/driver/expenses/new')} icon={Plus}>Khai chi phí</LinkButton>
             <DetailLink onClick={() => navigate('/driver/expenses')} />
           </div>
         </div>
