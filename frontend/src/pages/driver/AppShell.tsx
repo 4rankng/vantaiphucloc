@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/DropdownMenu/DropdownMenu'
 
 const moreItems = [
-  { icon: Bell, label: 'Thông báo', action: () => { const { navigate } = useDriverStore.getState(); navigate('/driver/notifications') } },
+  { icon: Bell, label: 'Thông báo', action: () => { const { navigate } = useDriverStore.getState(); navigate('/driver/notifications') }, hasUnread: true },
   { icon: Settings, label: 'Cài đặt', action: () => alert('Tính năng đang phát triển') },
   { icon: HelpCircle, label: 'Trợ giúp', action: () => alert('Gọi 1900-xxxx để được hỗ trợ') },
   { icon: FileText, label: 'Quy định', action: () => alert('Quy định vận tải sẽ được cập nhật sớm') },
@@ -110,13 +110,19 @@ export function BottomNav() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent side="top" align="end" className="w-48 mb-2 p-2">
                   <div className="grid grid-cols-2 gap-2">
-                    {moreItems.map(({ icon: MoreIcon, label: itemLabel, action }) => (
+                    {moreItems.map(({ icon: MoreIcon, label: itemLabel, action, hasUnread }) => (
                       <button
                         key={itemLabel}
-                        className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-lg transition-colors touch-manipulation"
+                        className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-lg transition-colors touch-manipulation relative"
                         style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
                         onClick={() => { action() }}
                       >
+                        {hasUnread && unreadCount > 0 && (
+                          <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[9px] font-bold"
+                            style={{ background: 'var(--theme-status-error)', color: 'var(--theme-text-inverse)' }}>
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                          </span>
+                        )}
                         <MoreIcon className="w-5 h-5" style={{ color: 'var(--theme-text-secondary)' }} />
                         <span className="text-[11px] font-medium leading-none">{itemLabel}</span>
                       </button>
