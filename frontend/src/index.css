@@ -119,12 +119,8 @@
 }
 
 .shell-topbar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 50;
-  height: var(--shell-topbar-h);
+  background: var(--theme-brand-primary);
+  color: var(--theme-text-on-brand);
   padding-top: var(--shell-safe-top);
 }
 
@@ -134,7 +130,6 @@
 
 .shell-main {
   flex: 1;
-  padding-top: calc(var(--shell-topbar-h) + var(--shell-safe-top));
   padding-bottom: calc(var(--shell-bottomnav-h) + var(--shell-safe-bottom));
 }
 

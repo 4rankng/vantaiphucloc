@@ -79,16 +79,16 @@ export function DriverHome() {
 
   return (
     <div className="pb-20">
-      {/* Greeting + wallet strip */}
-      <div className="px-4 pt-3 pb-4">
+      {/* Greeting — extends green topbar */}
+      <div className="px-4 pt-3 pb-4" style={{ background: 'var(--theme-brand-primary)' }}>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Xin chào,</p>
-            <p className="text-lg font-bold" style={{ color: 'var(--theme-text-primary)' }}>Tài xế</p>
+            <p className="text-xs" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.7 }}>Xin chào,</p>
+            <p className="text-lg font-bold" style={{ color: 'var(--theme-text-on-brand)' }}>Tài xế</p>
           </div>
           <button onClick={() => navigate('/driver/notifications')} className="relative w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
-            <Bell className="w-5 h-5" style={{ color: 'var(--theme-text-secondary)' }} />
+            style={{ background: 'rgba(255,255,255,0.2)' }}>
+            <Bell className="w-5 h-5" style={{ color: 'var(--theme-text-on-brand)' }} />
             {unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[9px] font-bold"
                 style={{ background: 'var(--theme-status-error)', color: 'var(--theme-text-inverse)' }}>
