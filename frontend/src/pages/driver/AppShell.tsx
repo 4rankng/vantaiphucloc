@@ -1,7 +1,15 @@
 import { Bell, UserCircle } from 'lucide-react'
+import { useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { BackButton } from '@/components/shared/BackButton'
+
+/* ─── Scroll to top on route change ───────────────────────── */
+function ScrollToTop() {
+  const { currentPath } = useDriverStore()
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }) }, [currentPath])
+  return null
+}
 
 /* ─── Top bar — context-aware ──────────────────────────────── */
 export function TopBar() {
@@ -53,6 +61,7 @@ export function PageLayout({ children, showBack = false, className }: {
 }) {
   return (
     <div className="min-h-[100dvh]" style={{ background: 'var(--theme-bg-primary)' }}>
+      <ScrollToTop />
       <TopBar />
       <main className={cn('p-4 space-y-4', className)}>
         {showBack && <BackButton />}
@@ -66,6 +75,7 @@ export function PageLayout({ children, showBack = false, className }: {
 export function HomeLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-[100dvh]" style={{ background: 'var(--theme-bg-primary)' }}>
+      <ScrollToTop />
       <TopBar />
       <main>
         {children}
