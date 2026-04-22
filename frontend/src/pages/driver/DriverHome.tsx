@@ -2,7 +2,7 @@ import { useDriverStore } from '@/hooks/use-driver-store'
 import { formatCurrencyShort } from '@/data/mockData'
 import {
   Truck, Receipt, Wallet, MapPin, ChevronRight,
-  Navigation, Package, Plus, Bell,
+  Navigation, Package, Plus, Phone, MapPinCheck,
 } from 'lucide-react'
 
 function QuickAction({ icon: Icon, label, onClick, badge }: {
@@ -14,7 +14,7 @@ function QuickAction({ icon: Icon, label, onClick, badge }: {
   return (
     <button onClick={onClick} className="flex flex-col items-center gap-1.5 relative">
       <div className="w-14 h-14 rounded-2xl flex items-center justify-center card-lift"
-        style={{ background: 'var(--theme-brand-primary-light)' }}>
+        style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
         <Icon className="w-6 h-6" style={{ color: 'var(--theme-brand-primary)' }} />
       </div>
       {badge != null && badge > 0 && (
@@ -30,17 +30,15 @@ function QuickAction({ icon: Icon, label, onClick, badge }: {
   )
 }
 
-function RecentTrip({ job, onClick }: { job: any; onClick: () => void }) {
+/** Level 3: flat list item — low contrast */
+function TripListItem({ job, onClick }: { job: any; onClick: () => void }) {
   return (
     <button onClick={onClick} className="w-full text-left rounded-2xl p-3.5 card-lift"
       style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-          style={{ background: job.status === 'IN_PROGRESS' ? 'var(--theme-brand-primary-light)' : 'var(--theme-bg-tertiary)' }}>
-          {job.status === 'IN_PROGRESS'
-            ? <Navigation className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
-            : <Package className="w-5 h-5" style={{ color: 'var(--theme-text-muted)' }} />
-          }
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: 'var(--theme-bg-tertiary)' }}>
+          <Package className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{job.route}</p>
@@ -48,21 +46,14 @@ function RecentTrip({ job, onClick }: { job: any; onClick: () => void }) {
             {job.containerNumber} · {job.distanceKm}km
           </p>
         </div>
-        <div className="text-right shrink-0">
-          <p className="text-sm font-bold" style={{ color: 'var(--theme-brand-primary)' }}>
-            {formatCurrencyShort(job.driverFee)}
-          </p>
-          <p className="text-[10px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-            {job.status === 'IN_PROGRESS' ? 'Đang chạy' : job.status === 'PLANNED' ? 'Chờ nhận' : 'Hoàn thành'}
-          </p>
-        </div>
+        <ChevronRight className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
       </div>
     </button>
   )
 }
 
 export function DriverHome() {
-  const { jobs, expenses, notifications, navigate } = useDriverStore()
+  const { jobs, expenses, navigate } = useDriverStore()
   const activeJobs = jobs.filter(j => j.status === 'IN_PROGRESS')
   const plannedJobs = jobs.filter(j => j.status === 'PLANNED')
   const completedJobs = jobs.filter(j => j.status === 'COMPLETED')
@@ -71,13 +62,15 @@ export function DriverHome() {
   const netIncome = totalEarnings - totalExpenses
 
   const activeTrip = activeJobs[0]
-  const recentJobs = [...activeJobs, ...plannedJobs, ...completedJobs.slice(0, 3)].slice(0, 4)
+  const recentJobs = [...plannedJobs, ...completedJobs.slice(0, 2)].slice(0, 3)
+
+  // Simulated elapsed time
+  const elapsed = '1h 23m'
 
   return (
     <div className="pb-20">
-      {/* Green header with wallet — Grab style */}
+      {/* ── Green header with wallet (Level 2: Summary) ── */}
       <div className="px-4 pt-3 pb-6" style={{ background: 'var(--theme-brand-primary)' }}>
-        {/* Wallet card */}
         <div className="rounded-2xl p-4" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-elevated)' }}>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold" style={{ color: 'var(--theme-text-secondary)' }}>Thu nhập tháng này</span>
@@ -92,49 +85,71 @@ export function DriverHome() {
           <div className="flex gap-4 mt-3 pt-3" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
             <div>
               <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>Thu</p>
-              <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-status-success)' }}>{formatCurrencyShort(totalEarnings)}</p>
+              <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyShort(totalEarnings)}</p>
             </div>
             <div>
               <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>Chi</p>
-              <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-status-error)' }}>{formatCurrencyShort(totalExpenses)}</p>
+              <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyShort(totalExpenses)}</p>
             </div>
             <div>
-              <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>Chuyến</p>
+              <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>Chuyến HT</p>
               <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{completedJobs.length}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Active trip — OUTSIDE green section, white bg with border */}
+      {/* ── LIVE CARD (Level 1: Active) ── */}
       {activeTrip && (
         <div className="px-4 -mt-3 mb-4">
           <button
             onClick={() => navigate(`/driver/trips/${activeTrip.id}`)}
-            className="w-full text-left rounded-2xl p-4 card-lift"
-            style={{
-              background: 'var(--theme-bg-secondary)',
-              boxShadow: 'var(--theme-shadow-elevated)',
-              borderLeft: '4px solid var(--theme-brand-primary)',
-            }}
+            className="w-full text-left rounded-2xl overflow-hidden card-lift"
+            style={{ boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--theme-brand-primary-light)' }}>
-                  <Navigation className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
-                </div>
-                <div>
-                  <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>Đang chạy</p>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-secondary)' }}>{activeTrip.route}</p>
-                </div>
+            {/* Green header bar with pulse */}
+            <div className="px-4 pt-3.5 pb-0 flex items-center justify-between"
+              style={{ background: 'var(--theme-brand-primary)' }}>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full live-dot" style={{ background: '#fff' }} />
+                <span className="text-xs font-bold" style={{ color: 'var(--theme-text-on-brand)' }}>ĐANG CHẠY</span>
+                <span className="text-[11px] font-medium" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.7 }}>• {elapsed}</span>
               </div>
-              <ChevronRight className="w-5 h-5" style={{ color: 'var(--theme-text-muted)' }} />
+              <ChevronRight className="w-4 h-4" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.7 }} />
+            </div>
+
+            {/* Content on white */}
+            <div className="px-4 py-3.5" style={{ background: 'var(--theme-bg-secondary)' }}>
+              <p className="text-[15px] font-bold truncate" style={{ color: 'var(--theme-text-primary)' }}>{activeTrip.route}</p>
+              <div className="flex items-center gap-3 mt-2">
+                <span className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>{activeTrip.containerNumber}</span>
+                <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>•</span>
+                <span className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>{activeTrip.distanceKm} km</span>
+                <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>•</span>
+                <span className="text-xs font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyShort(activeTrip.driverFee)}</span>
+              </div>
+              {/* Quick actions */}
+              <div className="flex gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
+                <button className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold"
+                  style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+                  <Navigation className="w-3.5 h-3.5" />
+                  Xem chi tiết
+                </button>
+                <button className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ background: 'var(--theme-bg-tertiary)' }}>
+                  <Phone className="w-4 h-4" style={{ color: 'var(--theme-text-secondary)' }} />
+                </button>
+                <button className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ background: 'var(--theme-bg-tertiary)' }}>
+                  <MapPinCheck className="w-4 h-4" style={{ color: 'var(--theme-text-secondary)' }} />
+                </button>
+              </div>
             </div>
           </button>
         </div>
       )}
 
-      {/* Quick actions grid */}
+      {/* ── Quick actions ── */}
       <div className="px-4 pb-5">
         <div className="grid grid-cols-4 gap-3">
           <QuickAction icon={Truck} label="Chuyến đi" onClick={() => navigate('/driver/trips')} badge={plannedJobs.length} />
@@ -144,30 +159,27 @@ export function DriverHome() {
         </div>
       </div>
 
-      {/* Recent activity */}
-      <div className="px-4">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-bold" style={{ color: 'var(--theme-text-secondary)' }}>Hoạt động gần đây</span>
-          <button onClick={() => navigate('/driver/trips')} className="flex items-center gap-0.5 text-xs font-semibold"
-            style={{ color: 'var(--theme-brand-primary)' }}>
-            Xem tất cả <ChevronRight className="w-3 h-3" />
-          </button>
+      {/* ── Recent trips (Level 3: flat list) ── */}
+      {recentJobs.length > 0 && (
+        <div className="px-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold" style={{ color: 'var(--theme-text-secondary)' }}>Gần đây</span>
+            <button onClick={() => navigate('/driver/trips')} className="flex items-center gap-0.5 text-xs font-semibold"
+              style={{ color: 'var(--theme-brand-primary)' }}>
+              Xem tất cả <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+          <div className="space-y-2.5">
+            {recentJobs.map(j => (
+              <TripListItem
+                key={j.id}
+                job={j}
+                onClick={() => navigate(j.status === 'IN_PROGRESS' ? `/driver/trips/${j.id}` : `/driver/trips/${j.id}/detail`)}
+              />
+            ))}
+          </div>
         </div>
-        <div className="space-y-2.5">
-          {recentJobs.map(j => (
-            <RecentTrip
-              key={j.id}
-              job={j}
-              onClick={() => navigate(j.status === 'IN_PROGRESS' ? `/driver/trips/${j.id}` : `/driver/trips/${j.id}/detail`)}
-            />
-          ))}
-          {recentJobs.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có hoạt động</p>
-            </div>
-          )}
-        </div>
-      </div>
+      )}
     </div>
   )
 }
