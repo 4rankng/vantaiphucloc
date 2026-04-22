@@ -1,80 +1,61 @@
-import { Truck, Receipt, Wallet, Bell, Menu, UserCircle, LogOut, Settings, HelpCircle, FileText, Home, MapPinned } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Bell, UserCircle } from 'lucide-react'
 import { useDriverStore } from '@/hooks/use-driver-store'
-import { useAuth } from '@/contexts/AuthContext'
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/DropdownMenu/DropdownMenu'
 
-const moreItems = [
-  { icon: Bell, label: 'Thông báo', action: () => { const { navigate } = useDriverStore.getState(); navigate('/driver/notifications') }, hasUnread: true },
-  { icon: Settings, label: 'Cài đặt', action: () => alert('Tính năng đang phát triển') },
-  { icon: HelpCircle, label: 'Trợ giúp', action: () => alert('Gọi 1900-xxxx để được hỗ trợ') },
-  { icon: FileText, label: 'Quy định', action: () => alert('Quy định vận tải sẽ được cập nhật sớm') },
-]
-
-/* ─── Top bar ──────────────────────────────────────────────── */
+/* ─── Top bar — bell + user icon only ──────────────────────── */
 export function TopBar() {
-  const { driver } = useDriverStore()
-  const { logout } = useAuth()
+  const { navigate, unreadCount } = useDriverStore()
 
   return (
     <div className="shell-topbar">
-      <div className="shell-topbar-inner flex items-center justify-between px-4">
-        <div>
-          <p className="text-[11px]" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.75 }}>Xin chào,</p>
-          <p className="text-[15px] font-bold" style={{ color: 'var(--theme-text-on-brand)' }}>{driver.name}</p>
-        </div>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              className="w-9 h-9 flex items-center justify-center rounded-full touch-manipulation"
-              style={{
-                background: 'rgba(255,255,255,0.35)',
-                color: 'var(--theme-text-on-brand)',
-              }}
-              aria-label="Tài khoản"
+      <div className="shell-topbar-inner flex items-center justify-end gap-3 px-4">
+        <button
+          className="w-9 h-9 flex items-center justify-center rounded-full touch-manipulation relative"
+          style={{ background: 'rgba(255,255,255,0.35)', color: 'var(--theme-text-on-brand)' }}
+          onClick={() => navigate('/driver/notifications')}
+          aria-label="Thông báo"
+        >
+          <Bell className="w-5 h-5" />
+          {unreadCount > 0 && (
+            <span
+              className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[9px] font-bold"
+              style={{ background: 'var(--theme-status-error)', color: 'var(--theme-text-inverse)' }}
             >
-              <UserCircle className="w-5 h-5" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 p-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl transition-colors touch-manipulation"
-                      style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
-                      onClick={() => useDriverStore.getState().navigate('/driver/profile')}
-                    >
-                      <UserCircle className="w-5 h-5" style={{ color: 'var(--theme-text-secondary)' }} />
-                      <span className="text-[11px] font-medium leading-none">Hồ sơ</span>
-                    </button>
-                    <button
-                      className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl transition-colors touch-manipulation"
-                      style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
-                      onClick={() => logout()}
-                    >
-                      <LogOut className="w-5 h-5" style={{ color: 'var(--theme-status-error)' }} />
-                      <span className="text-[11px] font-medium leading-none">Đăng xuất</span>
-                    </button>
-                  </div>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </button>
+        <button
+          className="w-9 h-9 flex items-center justify-center rounded-full touch-manipulation"
+          style={{ background: 'rgba(255,255,255,0.35)', color: 'var(--theme-text-on-brand)' }}
+          onClick={() => navigate('/driver/profile')}
+          aria-label="Tài khoản"
+        >
+          <UserCircle className="w-5 h-5" />
+        </button>
       </div>
     </div>
   )
 }
 
-/* ─── Bottom nav ───────────────────────────────────────────── */
-const tabConfig = [
-  { path: '/driver', Icon: Home, label: 'Trang chủ' },
-  { path: '/driver/trips', Icon: MapPinned, label: 'Chuyến' },
-  { path: '/driver/expenses', Icon: Receipt, label: 'Chi phí' },
-  { path: '/driver/earnings', Icon: Wallet, label: 'Thu nhập' },
-  { path: '__more__', Icon: Menu, label: 'Thêm' },
-]
+/* ─── Shell layout — no bottom nav for driver ──────────────── */
+export function AppShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="shell" style={{ background: 'var(--theme-bg-primary)' }}>
+      <TopBar />
+      <main className="shell-main overflow-y-auto">
+        {children}
+      </main>
+    </div>
+  )
+}
 
-export function BottomNav() {
-  const { currentPath, navigate, unreadCount } = useDriverStore()
-  const active = tabConfig.find(t => t.path !== '__more__' && t.path !== '/driver' && currentPath.startsWith(t.path))?.path ?? (currentPath === '/driver' || currentPath === '' ? '/driver' : '/driver')
+/* ─── Reusable BottomNav component (kept for other roles) ──── */
+import { cn } from '@/lib/utils'
+import { Home } from 'lucide-react'
+
+export function BottomNav({ tabs }: { tabs: { path: string; label: string; icon: React.ElementType }[] }) {
+  const { currentPath, navigate } = useDriverStore()
+  const active = tabs.find(t => t.path !== '/' && currentPath.startsWith(t.path))?.path ?? '/'
 
   return (
     <div
@@ -87,58 +68,8 @@ export function BottomNav() {
       }}
     >
       <div className="flex items-stretch h-14 relative px-2">
-        {tabConfig.map(({ path, Icon, label }) => {
-          const isMore = path === '__more__'
-          const isActive = !isMore && active === path
-          const showBadge = path === '/driver/notifications' && unreadCount > 0
-
-          if (isMore) {
-            return (
-              <DropdownMenu key={path}>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    className="flex-1 flex flex-col items-center justify-center gap-0.5 touch-manipulation relative"
-                    aria-label={label}
-                  >
-                    <div className="p-1.5 rounded-full relative">
-                      <Icon className="h-5 w-5" style={{ color: 'var(--theme-bottom-nav-inactive)' }} />
-                      {unreadCount > 0 && (
-                        <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[9px] font-bold"
-                          style={{ background: 'var(--theme-status-error)', color: 'var(--theme-text-inverse)' }}>
-                          {unreadCount > 9 ? '9+' : unreadCount}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[10px] font-medium leading-none opacity-80" style={{ color: 'var(--theme-bottom-nav-inactive)' }}>
-                      {label}
-                    </span>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent side="top" align="end" className="w-48 mb-2 p-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    {moreItems.map(({ icon: MoreIcon, label: itemLabel, action, hasUnread }) => (
-                      <button
-                        key={itemLabel}
-                        className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-lg transition-colors touch-manipulation relative"
-                        style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
-                        onClick={() => { action() }}
-                      >
-                        {hasUnread && unreadCount > 0 && (
-                          <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[9px] font-bold"
-                            style={{ background: 'var(--theme-status-error)', color: 'var(--theme-text-inverse)' }}>
-                            {unreadCount > 9 ? '9+' : unreadCount}
-                          </span>
-                        )}
-                        <MoreIcon className="w-5 h-5" style={{ color: 'var(--theme-text-secondary)' }} />
-                        <span className="text-[11px] font-medium leading-none">{itemLabel}</span>
-                      </button>
-                    ))}
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )
-          }
-
+        {tabs.map(({ path, icon: Icon, label }) => {
+          const isActive = active === path
           return (
             <button
               key={path}
@@ -152,24 +83,14 @@ export function BottomNav() {
                   style={{ background: 'var(--theme-bottom-nav-active)', opacity: 0.9 }}
                 />
               )}
-              <div className="relative">
-                <div
-                  className={cn('p-1.5 rounded-full transition-all duration-300', isActive && '-translate-y-1')}
-                  style={{ background: isActive ? 'var(--theme-brand-primary-light)' : 'transparent' }}
-                >
-                  <Icon
-                    className={cn('h-5 w-5 transition-all duration-300', isActive && 'stroke-[2.5px]')}
-                    style={{ color: isActive ? 'var(--theme-bottom-nav-active)' : 'var(--theme-bottom-nav-inactive)' }}
-                  />
-                </div>
-                {showBadge && (
-                  <span
-                    className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[9px] font-bold"
-                    style={{ background: 'var(--theme-status-error)', color: 'var(--theme-text-inverse)' }}
-                  >
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
+              <div
+                className={cn('p-1.5 rounded-full transition-all duration-300', isActive && '-translate-y-1')}
+                style={{ background: isActive ? 'var(--theme-brand-primary-light)' : 'transparent' }}
+              >
+                <Icon
+                  className={cn('h-5 w-5 transition-all duration-300', isActive && 'stroke-[2.5px]')}
+                  style={{ color: isActive ? 'var(--theme-bottom-nav-active)' : 'var(--theme-bottom-nav-inactive)' }}
+                />
               </div>
               <span
                 className={cn('text-[10px] font-medium leading-none transition-all duration-300', !isActive && 'opacity-80')}
@@ -181,19 +102,6 @@ export function BottomNav() {
           )
         })}
       </div>
-    </div>
-  )
-}
-
-/* ─── Shell layout ─────────────────────────────────────────── */
-export function AppShell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="shell" style={{ background: 'var(--theme-bg-primary)' }}>
-      <TopBar />
-      <main className="shell-main overflow-y-auto">
-        {children}
-      </main>
-      <BottomNav />
     </div>
   )
 }
