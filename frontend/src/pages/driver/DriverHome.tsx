@@ -1,9 +1,8 @@
 import { useDriverStore } from '@/hooks/use-driver-store'
-import { InlineStatStrip } from '@/components/shared/InlineStatStrip'
 import { formatCurrencyShort } from '@/data/mockData'
 import {
-  Truck, Receipt, Wallet, MapPin, Clock, ChevronRight,
-  Navigation, Package, Fuel, Plus, TrendingUp, Bell,
+  Truck, Receipt, Wallet, MapPin, ChevronRight,
+  Navigation, Package, Plus, Bell,
 } from 'lucide-react'
 
 function QuickAction({ icon: Icon, label, onClick, badge }: {
@@ -70,19 +69,16 @@ export function DriverHome() {
   const totalEarnings = completedJobs.reduce((s, j) => s + j.driverFee, 0)
   const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0)
   const netIncome = totalEarnings - totalExpenses
-  const unreadCount = notifications.filter(n => !n.read).length
 
-  // Active trip (if any) — contextual shortcut
   const activeTrip = activeJobs[0]
-  // Recent 3 jobs (active + planned first, then completed)
   const recentJobs = [...activeJobs, ...plannedJobs, ...completedJobs.slice(0, 3)].slice(0, 4)
 
   return (
     <div className="pb-20">
-      {/* Wallet — extends green topbar */}
-      <div className="px-4 pt-3 pb-5" style={{ background: 'var(--theme-brand-primary)' }}>
-        {/* Wallet card — always visible, trust-first */}
-        <div className="rounded-2xl p-4" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
+      {/* Green header with wallet — Grab style */}
+      <div className="px-4 pt-3 pb-6" style={{ background: 'var(--theme-brand-primary)' }}>
+        {/* Wallet card */}
+        <div className="rounded-2xl p-4" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-elevated)' }}>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold" style={{ color: 'var(--theme-text-secondary)' }}>Thu nhập tháng này</span>
             <button onClick={() => navigate('/driver/earnings')} className="flex items-center gap-0.5 text-xs font-semibold"
@@ -110,31 +106,35 @@ export function DriverHome() {
         </div>
       </div>
 
-      {/* Contextual shortcut — active trip */}
+      {/* Active trip — OUTSIDE green section, white bg with border */}
       {activeTrip && (
-        <div className="px-4 pb-4">
+        <div className="px-4 -mt-3 mb-4">
           <button
             onClick={() => navigate(`/driver/trips/${activeTrip.id}`)}
             className="w-full text-left rounded-2xl p-4 card-lift"
-            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)', boxShadow: 'var(--theme-shadow-elevated)' }}
+            style={{
+              background: 'var(--theme-bg-secondary)',
+              boxShadow: 'var(--theme-shadow-elevated)',
+              borderLeft: '4px solid var(--theme-brand-primary)',
+            }}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.2)' }}>
-                  <Navigation className="w-5 h-5" />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--theme-brand-primary-light)' }}>
+                  <Navigation className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
                 </div>
                 <div>
-                  <p className="text-sm font-bold">Đang chạy</p>
-                  <p className="text-xs mt-0.5" style={{ opacity: 0.8 }}>{activeTrip.route}</p>
+                  <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>Đang chạy</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-secondary)' }}>{activeTrip.route}</p>
                 </div>
               </div>
-              <ChevronRight className="w-5 h-5" style={{ opacity: 0.7 }} />
+              <ChevronRight className="w-5 h-5" style={{ color: 'var(--theme-text-muted)' }} />
             </div>
           </button>
         </div>
       )}
 
-      {/* Quick actions grid — 4 max */}
+      {/* Quick actions grid */}
       <div className="px-4 pb-5">
         <div className="grid grid-cols-4 gap-3">
           <QuickAction icon={Truck} label="Chuyến đi" onClick={() => navigate('/driver/trips')} badge={plannedJobs.length} />
