@@ -4,7 +4,7 @@ import { LiveCard } from '@/components/organisms/LiveCard'
 import { Badge } from '@/components/ui/Badge'
 import {
   Truck, ChevronRight, Package, Receipt, Clock, MapPin,
-  Plus, Navigation,
+  Plus, Navigation, Bell,
 } from 'lucide-react'
 
 /* ─── Section header with Chi tiết link ────────────────────── */
@@ -128,40 +128,36 @@ export function DriverHome() {
         </div>
       )}
 
-      {/* ── QUICK ACTIONS ── */}
+      {/* ── QUICK ACTIONS — Grab style compact icons ── */}
       <div className="px-4 mb-5">
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={() => navigate('/driver/trips')}
-            className="rounded-2xl p-3.5 flex items-center gap-3 card-lift text-left"
-            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}
-          >
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+        <div className="flex items-start gap-5 overflow-x-auto scrollbar-hide py-1">
+          <button onClick={() => navigate('/driver/trips')} className="flex flex-col items-center gap-1.5 shrink-0">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
               style={{ background: 'var(--theme-brand-primary-light)' }}>
               <Truck className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Chuyến đi</p>
-              <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
-                {plannedJobs.length > 0 ? `${plannedJobs.length} chờ nhận` : 'Không có'}
-              </p>
-            </div>
-            <ChevronRight className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
+            <span className="text-[11px] font-medium" style={{ color: 'var(--theme-text-secondary)' }}>Chuyến đi</span>
           </button>
-          <button
-            onClick={() => navigate('/driver/expenses/new')}
-            className="rounded-2xl p-3.5 flex items-center gap-3 card-lift text-left"
-            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}
-          >
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+          <button onClick={() => navigate('/driver/expenses/new')} className="flex flex-col items-center gap-1.5 shrink-0">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
               style={{ background: 'var(--theme-brand-primary-light)' }}>
               <Plus className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Khai chi phí</p>
-              <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>Thêm khoản chi</p>
+            <span className="text-[11px] font-medium" style={{ color: 'var(--theme-text-secondary)' }}>Khai chi phí</span>
+          </button>
+          <button onClick={() => navigate('/driver/earnings')} className="flex flex-col items-center gap-1.5 shrink-0">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
+              style={{ background: 'var(--theme-brand-primary-light)' }}>
+              <Receipt className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
             </div>
-            <ChevronRight className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
+            <span className="text-[11px] font-medium" style={{ color: 'var(--theme-text-secondary)' }}>Chi phí</span>
+          </button>
+          <button onClick={() => navigate('/driver/notifications')} className="flex flex-col items-center gap-1.5 shrink-0 relative">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
+              style={{ background: 'var(--theme-brand-primary-light)' }}>
+              <Bell className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
+            </div>
+            <span className="text-[11px] font-medium" style={{ color: 'var(--theme-text-secondary)' }}>Thông báo</span>
           </button>
         </div>
       </div>
