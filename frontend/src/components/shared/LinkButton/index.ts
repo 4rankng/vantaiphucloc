@@ -1,1 +1,1 @@
-export { LinkButton, DetailLink } from './LinkButton'
+export { LinkButton, DetailLink, ActionPill } from './LinkButton'

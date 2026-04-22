@@ -30,3 +30,24 @@ export function DetailLink({ onClick }: { onClick: () => void }) {
     </button>
   )
 }
+
+/** Green pill action button */
+export function ActionPill({ onClick, icon: Icon, children }: {
+  onClick: () => void
+  icon?: React.ElementType
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full card-lift"
+      style={{
+        background: 'var(--theme-brand-primary)',
+        color: 'var(--theme-text-on-brand)',
+      }}
+    >
+      {Icon && <Icon className="w-3.5 h-3.5" />}
+      {children}
+    </button>
+  )
+}
