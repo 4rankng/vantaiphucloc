@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/Sheet/Sheet'
 import { EXPENSE_CATEGORIES } from '@/data/mockData'
-import { ArrowLeft, Camera, Fuel, Car, Wrench, CircleDot, Droplets, Banknote, Shield, ShieldCheck, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Camera, Fuel, Car, Wrench, CircleDot, Droplets, Banknote, Shield, ShieldCheck, ChevronDown, Navigation, Package } from 'lucide-react'
 
 const CATEGORY_ICONS: Record<string, any> = {
   'Dầu': Fuel,
@@ -23,8 +24,10 @@ export function CreateExpense() {
   const [amount, setAmount] = useState('')
   const [liters, setLiters] = useState('')
   const [description, setDescription] = useState('')
+  const [tripSheetOpen, setTripSheetOpen] = useState(false)
 
   const activeTrips = jobs.filter(j => j.status === 'IN_PROGRESS' || j.status === 'COMPLETED')
+  const selectedTrip = activeTrips.find(j => j.id === tripId)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -51,25 +54,23 @@ export function CreateExpense() {
       <h2 className="text-xl font-bold" style={{ color: 'var(--theme-text-primary)' }}>Khai chi phí</h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Trip selector */}
+        {/* Trip selector — Grab-style bottom sheet */}
         <div>
           <label className="text-xs font-bold mb-2.5 block" style={{ color: 'var(--theme-text-secondary)' }}>
             Chuyến
           </label>
           <button
             type="button"
-            onClick={() => {
-              const labels = activeTrips.map(j => `${j.id} - ${j.route.slice(0, 30)}`)
-              const choice = prompt('Chọn chuyến:\n' + labels.map((l, i) => `${i + 1}. ${l}`).join('\n'))
-              if (choice) {
-                const idx = parseInt(choice) - 1
-                if (idx >= 0 && idx < activeTrips.length) setTripId(activeTrips[idx].id)
-              }
-            }}
+            onClick={() => setTripSheetOpen(true)}
             className="w-full h-12 rounded-2xl text-sm px-4 text-left flex items-center justify-between card-lift"
-            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', color: tripId ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}
+            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', color: selectedTrip ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}
           >
-            <span className="truncate">{tripId ? activeTrips.find(j => j.id === tripId)?.route.slice(0, 30) ?? tripId : 'Chọn chuyến...'}</span>
+            <span className="truncate">
+              {selectedTrip
+                ? `${selectedTrip.route.slice(0, 30)} · ${selectedTrip.containerNumber}`
+                : 'Chọn chuyến...'
+              }
+            </span>
             <ChevronDown className="w-4 h-4 shrink-0 ml-2" style={{ color: 'var(--theme-text-muted)' }} />
           </button>
         </div>
@@ -152,6 +153,49 @@ export function CreateExpense() {
           Gửi khai báo
         </Button>
       </form>
+
+      {/* Trip selector bottom sheet — Grab style */}
+      <Sheet open={tripSheetOpen} onOpenChange={setTripSheetOpen}>
+        <SheetContent side="bottom" className="rounded-t-3xl max-h-[60vh] pb-safe">
+          <SheetHeader className="pb-3">
+            <SheetTitle className="text-base font-bold text-left">Chọn chuyến</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-2 overflow-y-auto max-h-[45vh]">
+            {activeTrips.map(j => (
+              <button
+                key={j.id}
+                type="button"
+                className="w-full text-left rounded-2xl p-3.5 card-lift"
+                style={{
+                  background: tripId === j.id ? 'var(--theme-brand-primary-light)' : 'var(--theme-bg-secondary)',
+                  boxShadow: 'var(--theme-shadow-card)',
+                  borderWidth: 2,
+                  borderColor: tripId === j.id ? 'var(--theme-brand-primary)' : 'transparent',
+                  borderStyle: 'solid',
+                }}
+                onClick={() => { setTripId(j.id); setTripSheetOpen(false) }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ background: tripId === j.id ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)' }}>
+                    {j.status === 'IN_PROGRESS'
+                      ? <Navigation className="w-4 h-4" style={{ color: tripId === j.id ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)' }} />
+                      : <Package className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
+                    }
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{j.route}</p>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{j.containerNumber} · {j.distanceKm}km</p>
+                  </div>
+                </div>
+              </button>
+            ))}
+            {activeTrips.length === 0 && (
+              <p className="text-center py-6 text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không có chuyến nào</p>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
