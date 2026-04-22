@@ -181,7 +181,7 @@
 /* ─── Grab-style pill search ─────────────────────────────── */
 .search-pill {
   border-radius: 999px;
-  padding: 10px 16px;
+  padding: 10px 16px 10px 44px;
   font-size: 14px;
   transition: box-shadow 0.2s ease;
 }
