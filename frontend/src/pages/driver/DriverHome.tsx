@@ -69,7 +69,7 @@ export function DriverHome() {
   const elapsed = '1h 23m'
 
   return (
-    <div className="pb-20">
+    <div>
       {/* ── Green header with wallet (Level 2: Summary) ── */}
       <div className="px-4 pt-3 pb-12" style={{ background: 'var(--theme-brand-primary)' }}>
         <div className="rounded-2xl p-4" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-elevated)' }}>
@@ -102,16 +102,18 @@ export function DriverHome() {
 
       {/* ── LIVE CARD (Level 1: Active) ── */}
       {activeTrip && (
-        <LiveCard
-          title={activeTrip.route}
-          subtitle={`${activeTrip.containerNumber} · ${activeTrip.distanceKm} km`}
-          elapsed={elapsed}
-          onClick={() => navigate(`/driver/trips/${activeTrip.id}`)}
-        />
+        <div className="mt-4">
+          <LiveCard
+            title={activeTrip.route}
+            subtitle={`${activeTrip.containerNumber} · ${activeTrip.distanceKm} km`}
+            elapsed={elapsed}
+            onClick={() => navigate(`/driver/trips/${activeTrip.id}`)}
+          />
+        </div>
       )}
 
       {/* ── Quick actions ── */}
-      <div className="px-4 pb-5">
+      <div className="px-4 pb-5 mt-4">
         <div className="grid grid-cols-4 gap-3">
           <QuickAction icon={Truck} label="Chuyến đi" onClick={() => navigate('/driver/trips')} badge={plannedJobs.length} />
           <QuickAction icon={Plus} label="Khai chi phí" onClick={() => navigate('/driver/expenses/new')} />
