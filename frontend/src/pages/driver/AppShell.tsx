@@ -27,14 +27,14 @@ export function TopBar() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              className="w-9 h-9 flex items-center justify-center rounded-full font-bold text-xs touch-manipulation"
+              className="w-9 h-9 flex items-center justify-center rounded-full touch-manipulation"
               style={{
                 background: 'rgba(255,255,255,0.35)',
                 color: 'var(--theme-text-on-brand)',
               }}
               aria-label="Tài khoản"
             >
-              {initials}
+              <UserCircle className="w-5 h-5" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48 p-2">
