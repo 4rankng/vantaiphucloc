@@ -4,7 +4,8 @@ import { LiveCard } from '@/components/organisms/LiveCard'
 import { SectionHeader } from '@/components/shared/SectionHeader'
 import { TripCard } from '@/components/shared/TripCard'
 import { ExpenseRow } from '@/components/shared/ExpenseRow'
-import { ChevronRight, Receipt, Clock, MapPin, Plus, Navigation } from 'lucide-react'
+import { LinkButton, DetailLink } from '@/components/shared/LinkButton'
+import { Receipt, Clock, MapPin, Plus, Navigation } from 'lucide-react'
 
 export function DriverHome() {
   const { jobs, expenses, navigate } = useDriverStore()
@@ -36,10 +37,7 @@ export function DriverHome() {
         <div className="rounded-2xl p-4" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-elevated)' }}>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold" style={{ color: 'var(--theme-text-secondary)' }}>Thu nhập tháng này</span>
-            <button onClick={() => navigate('/driver/earnings')} className="flex items-center gap-0.5 text-xs font-semibold"
-              style={{ color: 'var(--theme-brand-primary)' }}>
-              Chi tiết <ChevronRight className="w-3 h-3" />
-            </button>
+            <DetailLink onClick={() => navigate('/driver/earnings')} />
           </div>
           <p className="text-2xl font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
             {formatCurrencyShort(netIncome)}
@@ -76,10 +74,7 @@ export function DriverHome() {
       {/* ── CHUYẾN ĐI ── */}
       <div className="px-4 mb-5">
         <SectionHeader title="Chuyến đi">
-          <button onClick={() => navigate('/driver/trips')} className="flex items-center gap-0.5 text-xs font-semibold"
-            style={{ color: 'var(--theme-brand-primary)' }}>
-            Chi tiết <ChevronRight className="w-3 h-3" />
-          </button>
+          <DetailLink onClick={() => navigate('/driver/trips')} />
         </SectionHeader>
         <div className="grid grid-cols-2 gap-3 mb-3">
           <div className="rounded-2xl p-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
@@ -117,14 +112,8 @@ export function DriverHome() {
         <div className="flex items-center justify-between mb-3">
           <span className="text-xs font-bold" style={{ color: 'var(--theme-text-secondary)' }}>Chi phí</span>
           <div className="flex items-center gap-3">
-            <button onClick={() => navigate('/driver/expenses/new')} className="flex items-center gap-1 text-xs font-semibold"
-              style={{ color: 'var(--theme-brand-primary)' }}>
-              <Plus className="w-3.5 h-3.5" /> Khai chi phí
-            </button>
-            <button onClick={() => navigate('/driver/expenses')} className="flex items-center gap-0.5 text-xs font-semibold"
-              style={{ color: 'var(--theme-brand-primary)' }}>
-              Chi tiết <ChevronRight className="w-3 h-3" />
-            </button>
+            <LinkButton onClick={() => navigate('/driver/expenses/new')} icon={Plus}>Khai chi phí</LinkButton>
+            <DetailLink onClick={() => navigate('/driver/expenses')} />
           </div>
         </div>
         {topExpenses.length > 0 ? (
