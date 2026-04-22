@@ -4,6 +4,7 @@ import { ErrorBoundaryProvider } from '@/contexts/ErrorContext'
 import { OfflineProvider } from '@/contexts/OfflineContext'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { OfflineIndicator } from '@/components/shared/OfflineIndicator'
+import { ToastProvider } from '@/components/atoms/Toast'
 import { Login } from '@/pages/Login'
 import { DriverStoreProvider, useDriverStore } from '@/hooks/use-driver-store'
 import { TopBar, BottomNav, AppShell } from '@/pages/driver/AppShell'
@@ -66,7 +67,9 @@ export default function App() {
       <AuthProvider>
         <ErrorBoundaryProvider>
           <OfflineProvider>
-            <AppContent />
+            <ToastProvider>
+              <AppContent />
+            </ToastProvider>
           </OfflineProvider>
         </ErrorBoundaryProvider>
       </AuthProvider>
