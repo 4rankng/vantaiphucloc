@@ -38,7 +38,7 @@ export function CreateExpense() {
     label: j.route,
     subtitle: `${j.containerNumber} · ${j.distanceKm}km`,
     icon: j.status === 'IN_PROGRESS'
-      ? <Navigation className="w-4 h-4" style={{ color: '#fff' }} />
+      ? <Navigation className="w-4 h-4" style={{ color: 'var(--theme-text-on-brand)' }} />
       : <Package className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />,
   }))
 

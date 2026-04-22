@@ -33,12 +33,12 @@ export function Login() {
           className="h-14 w-14 rounded-2xl flex items-center justify-center mb-3"
           style={{ background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)' }}
         >
-          <Truck className="h-7 w-7" style={{ color: '#fff' }} />
+          <Truck className="h-7 w-7" style={{ color: 'var(--theme-text-on-brand)' }} />
         </div>
-        <h1 className="font-extrabold text-2xl tracking-tight" style={{ color: '#fff' }}>
+        <h1 className="font-extrabold text-2xl tracking-tight" style={{ color: 'var(--theme-text-on-brand)' }}>
           TTransport
         </h1>
-        <p className="text-xs mt-0.5" style={{ color: '#fff', opacity: 0.7 }}>
+        <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.7 }}>
           Quản lý vận tải hàng hóa
         </p>
       </div>
