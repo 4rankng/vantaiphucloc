@@ -1,15 +1,17 @@
 import { useDriverStore } from '@/hooks/use-driver-store'
+import { useAuth } from '@/contexts/AuthContext'
 import { Badge } from '@/components/ui/Badge'
-import { ArrowLeft, User, Phone, TruckIcon, DollarSign, Route, Star, CalendarDays } from 'lucide-react'
+import { ArrowLeft, User, Phone, TruckIcon, DollarSign, Route, Star, CalendarDays, LogOut } from 'lucide-react'
 
 export function Profile() {
   const { driver, navigate } = useDriverStore()
+  const { logout } = useAuth()
   const initials = driver.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 
   return (
     <div className="p-4 space-y-5">
       <button
-        onClick={() => navigate('/driver/more')}
+        onClick={() => navigate('/driver')}
         className="flex items-center gap-1.5 text-sm font-semibold"
         style={{ color: 'var(--theme-brand-primary)' }}
       >
@@ -59,6 +61,16 @@ export function Profile() {
           </div>
         ))}
       </div>
+
+      {/* Logout */}
+      <button
+        onClick={() => logout()}
+        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold text-sm mt-2"
+        style={{ background: 'var(--theme-status-error-light)', color: 'var(--theme-status-error-text)' }}
+      >
+        <LogOut className="w-4 h-4" />
+        Đăng xuất
+      </button>
     </div>
   )
 }
