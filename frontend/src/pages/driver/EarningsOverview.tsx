@@ -19,7 +19,7 @@ function StatSection({ title, icon: Icon, items }: {
         </span>
       </div>
       <div className="rounded-lg overflow-hidden gap-px" style={{ background: 'var(--theme-border-default)', border: '1px solid var(--theme-border-default)' }}>
-        <div className={items.length <= 4 ? 'flex' : 'grid grid-cols-2'}>
+        <div className="grid grid-cols-2">
           {items.map((item, i) => (
             <div
               key={i}
