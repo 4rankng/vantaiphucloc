@@ -2,7 +2,7 @@ import { useDriverStore } from '@/hooks/use-driver-store'
 import { formatCurrencyShort } from '@/data/mockData'
 import {
   Truck, Receipt, Wallet, MapPin, ChevronRight,
-  Navigation, Package, Plus, Phone, MapPinCheck,
+  Navigation, Package, Plus,
 } from 'lucide-react'
 
 function QuickAction({ icon: Icon, label, onClick, badge }: {
@@ -107,43 +107,37 @@ export function DriverHome() {
             className="w-full text-left rounded-2xl overflow-hidden card-lift"
             style={{ boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
           >
-            {/* Green header bar with pulse */}
+            {/* Amber header bar — distinct from green */}
             <div className="px-4 pt-3.5 pb-0 flex items-center justify-between"
-              style={{ background: 'var(--theme-brand-primary)' }}>
+              style={{ background: 'var(--theme-status-warning)' }}>
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full live-dot" style={{ background: '#fff' }} />
-                <span className="text-xs font-bold" style={{ color: 'var(--theme-text-on-brand)' }}>ĐANG CHẠY</span>
-                <span className="text-[11px] font-medium" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.7 }}>• {elapsed}</span>
+                <span className="text-xs font-bold" style={{ color: '#fff' }}>ĐANG CHẠY</span>
+                <span className="text-[11px] font-medium" style={{ color: '#fff', opacity: 0.8 }}>• {elapsed}</span>
               </div>
-              <ChevronRight className="w-4 h-4" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.7 }} />
+              <ChevronRight className="w-4 h-4" style={{ color: '#fff', opacity: 0.7 }} />
             </div>
 
-            {/* Content on white */}
+            {/* Content */}
             <div className="px-4 py-3.5" style={{ background: 'var(--theme-bg-secondary)' }}>
               <p className="text-[15px] font-bold truncate" style={{ color: 'var(--theme-text-primary)' }}>{activeTrip.route}</p>
               <div className="flex items-center gap-3 mt-2">
                 <span className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>{activeTrip.containerNumber}</span>
-                <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>•</span>
+                <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>·</span>
                 <span className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>{activeTrip.distanceKm} km</span>
-                <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>•</span>
-                <span className="text-xs font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyShort(activeTrip.driverFee)}</span>
+                <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>·</span>
+                <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyShort(activeTrip.driverFee)}</span>
               </div>
-              {/* Quick actions */}
-              <div className="flex gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
-                <button className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold"
-                  style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-                  <Navigation className="w-3.5 h-3.5" />
-                  Xem chi tiết
-                </button>
-                <button className="w-10 h-10 rounded-xl flex items-center justify-center"
-                  style={{ background: 'var(--theme-bg-tertiary)' }}>
-                  <Phone className="w-4 h-4" style={{ color: 'var(--theme-text-secondary)' }} />
-                </button>
-                <button className="w-10 h-10 rounded-xl flex items-center justify-center"
-                  style={{ background: 'var(--theme-bg-tertiary)' }}>
-                  <MapPinCheck className="w-4 h-4" style={{ color: 'var(--theme-text-secondary)' }} />
-                </button>
-              </div>
+              {/* Single CTA */}
+              <button className="w-full flex items-center justify-center gap-1.5 mt-3 pt-3 py-2.5 rounded-xl text-xs font-bold"
+                style={{
+                  background: 'var(--theme-status-warning)',
+                  color: '#fff',
+                  borderTop: '1px solid var(--theme-border-light)',
+                }}>
+                <Navigation className="w-4 h-4" />
+                Xem chuyến đang chạy
+              </button>
             </div>
           </button>
         </div>
