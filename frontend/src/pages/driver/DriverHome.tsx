@@ -1,10 +1,10 @@
 import { useDriverStore } from '@/hooks/use-driver-store'
-import { formatCurrencyShort } from '@/data/mockData'
+import { formatCurrencyShort, getJobStatusBadge, type JobStatus } from '@/data/mockData'
 import { LiveCard } from '@/components/organisms/LiveCard'
 import { Badge } from '@/components/ui/Badge'
-import { getJobStatusBadge, type JobStatus } from '@/data/mockData'
 import {
   Truck, ChevronRight, Package, Receipt, Clock, MapPin,
+  Plus, Navigation,
 } from 'lucide-react'
 
 /* ─── Section header with Chi tiết link ────────────────────── */
@@ -20,26 +20,28 @@ function SectionHeader({ title, onClick }: { title: string; onClick: () => void 
   )
 }
 
-/* ─── Trip list item ───────────────────────────────────────── */
-function TripItem({ job, onClick }: { job: any; onClick: () => void }) {
+/* ─── Trip card — SAME design as TripList ──────────────────── */
+function TripCard({ job, onClick }: { job: any; onClick: () => void }) {
   const s = getJobStatusBadge(job.status as JobStatus)
   return (
-    <button onClick={onClick} className="w-full text-left rounded-2xl p-3.5 card-lift"
+    <button onClick={onClick} className="w-full text-left rounded-2xl p-4 card-lift"
       style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-          style={{ background: 'var(--theme-brand-primary-light)' }}>
-          <Package className="w-4 h-4" style={{ color: 'var(--theme-brand-primary)' }} />
-        </div>
+      <div className="flex justify-between items-start mb-3">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{job.route}</p>
-            <Badge variant={s.variant as any} className="ml-2 shrink-0 text-[10px]">{s.label}</Badge>
+          <p className="font-bold text-[15px] truncate" style={{ color: 'var(--theme-text-primary)' }}>{job.route}</p>
+          <div className="flex items-center gap-1.5 mt-1">
+            <Package className="w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
+            <span className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>{job.containerNumber}</span>
           </div>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-            {job.containerNumber} · {job.distanceKm}km · {formatCurrencyShort(job.driverFee)}
-          </p>
         </div>
+        <Badge variant={s.variant as any} className="text-[11px] flex-shrink-0 ml-2">{s.label}</Badge>
+      </div>
+      <div className="flex justify-between items-center pt-2" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
+        <div className="flex items-center gap-3">
+          <span className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>{job.distanceKm} km</span>
+          <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{job.jobDate}</span>
+        </div>
+        <span className="text-[15px] font-bold" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyShort(job.driverFee)}</span>
       </div>
     </button>
   )
@@ -72,9 +74,7 @@ export function DriverHome() {
   const netIncome = totalEarnings - totalExpenses
 
   const activeTrip = activeJobs[0]
-  const upcomingTrips = plannedJobs.slice(0, 3)
-  const recentCompleted = completedJobs.slice(0, 2)
-  const displayTrips = [...upcomingTrips, ...recentCompleted].slice(0, 3)
+  const displayTrips = [...plannedJobs.slice(0, 2), ...completedJobs.slice(0, 1)].slice(0, 3)
 
   const expenseByCategory = expenses.reduce<Record<string, number>>((acc, e) => {
     acc[e.category] = (acc[e.category] || 0) + e.amount
@@ -128,6 +128,44 @@ export function DriverHome() {
         </div>
       )}
 
+      {/* ── QUICK ACTIONS ── */}
+      <div className="px-4 mb-5">
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => navigate('/driver/trips')}
+            className="rounded-2xl p-3.5 flex items-center gap-3 card-lift text-left"
+            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}
+          >
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: 'var(--theme-brand-primary-light)' }}>
+              <Truck className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Chuyến đi</p>
+              <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
+                {plannedJobs.length > 0 ? `${plannedJobs.length} chờ nhận` : 'Không có'}
+              </p>
+            </div>
+            <ChevronRight className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
+          </button>
+          <button
+            onClick={() => navigate('/driver/expenses/new')}
+            className="rounded-2xl p-3.5 flex items-center gap-3 card-lift text-left"
+            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}
+          >
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: 'var(--theme-brand-primary-light)' }}>
+              <Plus className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Khai chi phí</p>
+              <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>Thêm khoản chi</p>
+            </div>
+            <ChevronRight className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
+          </button>
+        </div>
+      </div>
+
       {/* ── CHUYẾN ĐI ── */}
       <div className="px-4 mb-5">
         <SectionHeader title="Chuyến đi" onClick={() => navigate('/driver/trips')} />
@@ -143,18 +181,18 @@ export function DriverHome() {
           </div>
           <div className="rounded-2xl p-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
             <div className="flex items-center gap-2 mb-1">
-              <Truck className="w-3.5 h-3.5" style={{ color: 'var(--theme-status-success)' }} />
+              <Navigation className="w-3.5 h-3.5" style={{ color: 'var(--theme-status-success)' }} />
               <span className="text-[11px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>Đang chạy</span>
             </div>
             <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{activeJobs.length}</p>
           </div>
         </div>
 
-        {/* Trip list */}
+        {/* Trip list — same card design as TripList page */}
         {displayTrips.length > 0 ? (
           <div className="space-y-2.5">
             {displayTrips.map(j => (
-              <TripItem
+              <TripCard
                 key={j.id}
                 job={j}
                 onClick={() => navigate(j.status === 'IN_PROGRESS' ? `/driver/trips/${j.id}` : `/driver/trips/${j.id}/detail`)}
