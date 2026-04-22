@@ -19,11 +19,11 @@ export function LiveCard({ title, subtitle, elapsed, onClick }: LiveCardProps) {
         <div className="px-4 py-2.5 flex items-center justify-between"
           style={{ background: 'var(--theme-status-warning)' }}>
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full live-dot" style={{ background: '#fff' }} />
-            <span className="text-[11px] font-bold" style={{ color: '#fff' }}>ĐANG CHẠY</span>
-            {elapsed && <span className="text-[10px]" style={{ color: '#fff', opacity: 0.8 }}>• {elapsed}</span>}
+            <span className="w-2 h-2 rounded-full live-dot" style={{ background: 'var(--theme-text-on-brand)' }} />
+            <span className="text-[11px] font-bold" style={{ color: 'var(--theme-text-on-brand)' }}>ĐANG CHẠY</span>
+            {elapsed && <span className="text-[10px]" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.8 }}>• {elapsed}</span>}
           </div>
-          <span className="text-[11px] font-medium" style={{ color: '#fff' }}>Chi tiết →</span>
+          <span className="text-[11px] font-medium" style={{ color: 'var(--theme-text-on-brand)' }}>Chi tiết →</span>
         </div>
 
         {/* Content */}
