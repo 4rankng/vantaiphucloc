@@ -1,8 +1,9 @@
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { formatCurrencyShort } from '@/data/mockData'
+import { LiveCard } from '@/components/organisms/LiveCard'
 import {
-  Truck, Receipt, Wallet, MapPin, ChevronRight,
-  Navigation, Package, Plus,
+  Truck, Receipt, Wallet, ChevronRight,
+  Plus, Package,
 } from 'lucide-react'
 
 function QuickAction({ icon: Icon, label, onClick, badge }: {
@@ -101,34 +102,12 @@ export function DriverHome() {
 
       {/* ── LIVE CARD (Level 1: Active) ── */}
       {activeTrip && (
-        <div className="px-4 mb-4">
-          <button
-            onClick={() => navigate(`/driver/trips/${activeTrip.id}`)}
-            className="w-full text-left rounded-2xl overflow-hidden card-lift"
-            style={{ boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
-          >
-            {/* Amber header bar — distinct from green */}
-            <div className="px-4 py-2.5 flex items-center justify-between"
-              style={{ background: 'var(--theme-status-warning)' }}>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full live-dot" style={{ background: '#fff' }} />
-                <span className="text-[11px] font-bold" style={{ color: '#fff' }}>ĐANG CHẠY</span>
-                <span className="text-[10px]" style={{ color: '#fff', opacity: 0.8 }}>• {elapsed}</span>
-              </div>
-              <span className="text-[11px] font-medium" style={{ color: '#fff' }}>Chi tiết →</span>
-            </div>
-
-            {/* Content — compact */}
-            <div className="px-4 py-3" style={{ background: 'var(--theme-bg-secondary)' }}>
-              <p className="text-sm font-bold truncate" style={{ color: 'var(--theme-text-primary)' }}>{activeTrip.route}</p>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>{activeTrip.containerNumber}</span>
-                <span className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>·</span>
-                <span className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>{activeTrip.distanceKm} km</span>
-              </div>
-            </div>
-          </button>
-        </div>
+        <LiveCard
+          title={activeTrip.route}
+          subtitle={`${activeTrip.containerNumber} · ${activeTrip.distanceKm} km`}
+          elapsed={elapsed}
+          onClick={() => navigate(`/driver/trips/${activeTrip.id}`)}
+        />
       )}
 
       {/* ── Quick actions ── */}

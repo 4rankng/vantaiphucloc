@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/Sheet/Sheet'
+import { FormField } from '@/components/molecules/FormField'
+import { SheetSelect, type SheetSelectOption } from '@/components/molecules/SheetSelect'
+import { useToast } from '@/components/atoms/Toast'
 import { EXPENSE_CATEGORIES } from '@/data/mockData'
 import { ArrowLeft, Camera, Fuel, Car, Wrench, CircleDot, Droplets, Banknote, Shield, ShieldCheck, ChevronDown, Navigation, Package } from 'lucide-react'
 
@@ -19,6 +21,7 @@ const CATEGORY_ICONS: Record<string, any> = {
 
 export function CreateExpense() {
   const { jobs, addExpense, navigate } = useDriverStore()
+  const toast = useToast()
   const [tripId, setTripId] = useState('')
   const [category, setCategory] = useState('')
   const [amount, setAmount] = useState('')
@@ -29,6 +32,15 @@ export function CreateExpense() {
   const activeTrips = jobs.filter(j => j.status === 'IN_PROGRESS' || j.status === 'COMPLETED')
   const selectedTrip = activeTrips.find(j => j.id === tripId)
 
+  const tripOptions: SheetSelectOption[] = activeTrips.map(j => ({
+    value: j.id,
+    label: j.route,
+    subtitle: `${j.containerNumber} · ${j.distanceKm}km`,
+    icon: j.status === 'IN_PROGRESS'
+      ? <Navigation className="w-4 h-4" style={{ color: '#fff' }} />
+      : <Package className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />,
+  }))
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!category || !amount) return
@@ -38,6 +50,7 @@ export function CreateExpense() {
       amount: Number(amount),
       description,
     })
+    toast.success('Khai chi phí thành công')
     navigate('/driver/expenses')
   }
 
@@ -54,11 +67,8 @@ export function CreateExpense() {
       <h2 className="text-xl font-bold" style={{ color: 'var(--theme-text-primary)' }}>Khai chi phí</h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Trip selector — Grab-style bottom sheet */}
-        <div>
-          <label className="text-xs font-bold mb-2.5 block" style={{ color: 'var(--theme-text-secondary)' }}>
-            Chuyến
-          </label>
+        {/* Trip selector */}
+        <FormField label="Chuyến">
           <button
             type="button"
             onClick={() => setTripSheetOpen(true)}
@@ -66,20 +76,14 @@ export function CreateExpense() {
             style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', color: selectedTrip ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}
           >
             <span className="truncate">
-              {selectedTrip
-                ? `${selectedTrip.route.slice(0, 30)} · ${selectedTrip.containerNumber}`
-                : 'Chọn chuyến...'
-              }
+              {selectedTrip ? `${selectedTrip.route.slice(0, 30)} · ${selectedTrip.containerNumber}` : 'Chọn chuyến...'}
             </span>
             <ChevronDown className="w-4 h-4 shrink-0 ml-2" style={{ color: 'var(--theme-text-muted)' }} />
           </button>
-        </div>
+        </FormField>
 
         {/* Category chips */}
-        <div>
-          <label className="text-xs font-bold mb-2.5 block" style={{ color: 'var(--theme-text-secondary)' }}>
-            Hạng mục
-          </label>
+        <FormField label="Hạng mục" required>
           <div className="flex flex-wrap gap-2">
             {EXPENSE_CATEGORIES.map(c => {
               const Icon = CATEGORY_ICONS[c] ?? Fuel
@@ -102,39 +106,27 @@ export function CreateExpense() {
               )
             })}
           </div>
-        </div>
+        </FormField>
 
         {/* Amount */}
-        <div>
-          <label className="text-xs font-bold mb-2.5 block" style={{ color: 'var(--theme-text-secondary)' }}>
-            Số tiền (VNĐ)
-          </label>
+        <FormField label="Số tiền (VNĐ)" required>
           <Input type="number" placeholder="0" value={amount} onChange={e => setAmount(e.target.value)} className="h-12 search-pill" />
-        </div>
+        </FormField>
 
         {/* Liters (fuel only) */}
         {category === 'Dầu' && (
-          <div>
-            <label className="text-xs font-bold mb-2.5 block" style={{ color: 'var(--theme-text-secondary)' }}>
-              Số lít
-            </label>
+          <FormField label="Số lít" hint="Nhập số lít nhiên liệu">
             <Input type="number" placeholder="0" value={liters} onChange={e => setLiters(e.target.value)} className="h-12 search-pill" />
-          </div>
+          </FormField>
         )}
 
         {/* Description */}
-        <div>
-          <label className="text-xs font-bold mb-2.5 block" style={{ color: 'var(--theme-text-secondary)' }}>
-            Ghi chú
-          </label>
+        <FormField label="Ghi chú">
           <Input placeholder="Mô tả chi phí..." value={description} onChange={e => setDescription(e.target.value)} className="h-12 search-pill" />
-        </div>
+        </FormField>
 
         {/* Receipt photo */}
-        <div>
-          <label className="text-xs font-bold mb-2.5 block" style={{ color: 'var(--theme-text-secondary)' }}>
-            Ảnh biên lai
-          </label>
+        <FormField label="Ảnh biên lai">
           <button
             type="button"
             className="w-full rounded-2xl border-2 border-dashed p-8 text-center"
@@ -145,7 +137,7 @@ export function CreateExpense() {
             </div>
             <span className="text-sm font-medium" style={{ color: 'var(--theme-text-secondary)' }}>Chụp ảnh biên lai</span>
           </button>
-        </div>
+        </FormField>
 
         <Button type="submit" className="w-full h-12 rounded-2xl font-bold text-[15px]" disabled={!category || !amount}
           style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
@@ -154,48 +146,15 @@ export function CreateExpense() {
         </Button>
       </form>
 
-      {/* Trip selector bottom sheet — Grab style */}
-      <Sheet open={tripSheetOpen} onOpenChange={setTripSheetOpen}>
-        <SheetContent side="bottom" className="rounded-t-3xl max-h-[60vh] pb-safe">
-          <SheetHeader className="pb-3">
-            <SheetTitle className="text-base font-bold text-left">Chọn chuyến</SheetTitle>
-          </SheetHeader>
-          <div className="space-y-2 overflow-y-auto max-h-[45vh]">
-            {activeTrips.map(j => (
-              <button
-                key={j.id}
-                type="button"
-                className="w-full text-left rounded-2xl p-3.5 card-lift"
-                style={{
-                  background: tripId === j.id ? 'var(--theme-brand-primary-light)' : 'var(--theme-bg-secondary)',
-                  boxShadow: 'var(--theme-shadow-card)',
-                  borderWidth: 2,
-                  borderColor: tripId === j.id ? 'var(--theme-brand-primary)' : 'transparent',
-                  borderStyle: 'solid',
-                }}
-                onClick={() => { setTripId(j.id); setTripSheetOpen(false) }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: tripId === j.id ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)' }}>
-                    {j.status === 'IN_PROGRESS'
-                      ? <Navigation className="w-4 h-4" style={{ color: tripId === j.id ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)' }} />
-                      : <Package className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
-                    }
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{j.route}</p>
-                    <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{j.containerNumber} · {j.distanceKm}km</p>
-                  </div>
-                </div>
-              </button>
-            ))}
-            {activeTrips.length === 0 && (
-              <p className="text-center py-6 text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không có chuyến nào</p>
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
+      {/* Trip selector — Grab-style bottom sheet */}
+      <SheetSelect
+        open={tripSheetOpen}
+        onOpenChange={setTripSheetOpen}
+        title="Chọn chuyến"
+        options={tripOptions}
+        value={tripId}
+        onChange={setTripId}
+      />
     </div>
   )
 }

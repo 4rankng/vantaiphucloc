@@ -27,31 +27,29 @@ export function Login() {
       <div className="absolute -top-20 -left-20 w-64 h-64 rounded-full" style={{ background: 'var(--theme-brand-primary)', opacity: 0.12 }} />
       <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full" style={{ background: 'var(--theme-brand-primary)', opacity: 0.08 }} />
 
-      <div className="relative z-10 w-full max-w-[400px] flex flex-col items-center px-5">
-
-        {/* Brand */}
-        <div className="mb-8 flex flex-col items-center">
-          <div
-            className="h-16 w-16 rounded-2xl flex items-center justify-center mb-4"
-            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-elevated)' }}
-          >
-            <Truck className="h-8 w-8" style={{ color: 'var(--theme-brand-primary)' }} />
-          </div>
-          <h1 className="font-extrabold text-3xl tracking-tight" style={{ color: 'var(--theme-text-inverse)' }}>
-            TTransport
-          </h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--theme-text-inverse)', opacity: 0.7 }}>
-            Quản lý vận tải hàng hóa
-          </p>
-        </div>
-
-        {/* Login Card */}
+      {/* Brand — fixed at top, doesn't affect centering */}
+      <div className="absolute top-6 left-0 right-0 flex flex-col items-center z-10">
         <div
-          className="rounded-3xl p-7 w-full"
-          style={{
-            background: 'var(--theme-bg-secondary)',
-            boxShadow: 'var(--theme-shadow-elevated)',
-          }}
+          className="h-14 w-14 rounded-2xl flex items-center justify-center mb-3"
+          style={{ background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)' }}
+        >
+          <Truck className="h-7 w-7" style={{ color: '#fff' }} />
+        </div>
+        <h1 className="font-extrabold text-2xl tracking-tight" style={{ color: '#fff' }}>
+          TTransport
+        </h1>
+        <p className="text-xs mt-0.5" style={{ color: '#fff', opacity: 0.7 }}>
+          Quản lý vận tải hàng hóa
+        </p>
+      </div>
+
+      {/* Login Card — perfectly centered */}
+      <div
+        className="relative z-10 w-full max-w-[400px] rounded-3xl p-7 mx-5"
+        style={{
+          background: 'var(--theme-bg-secondary)',
+          boxShadow: 'var(--theme-shadow-elevated)',
+        }}
         >
           {/* Card Header */}
           <div className="mb-7">
@@ -142,8 +140,6 @@ export function Login() {
             </Button>
           </form>
         </div>
-
-      </div>
     </div>
   )
 }

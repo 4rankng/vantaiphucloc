@@ -1,0 +1,9 @@
+// Atoms — re-exports from ui/ + thin wrappers
+export { Button, buttonVariants } from '@/components/ui/Button'
+export { Input, inputVariants } from '@/components/ui/Input'
+export { Badge, badgeVariants } from '@/components/ui/Badge'
+export { Avatar, AvatarImage, AvatarFallback, avatarVariants } from '@/components/ui/Avatar'
+export { Separator as Divider } from '@/components/ui/Separator'
+export { Pill } from './Pill'
+export { ThemedIcon as Icon } from './Icon'
+export { useToast, Toaster } from './Toast'
