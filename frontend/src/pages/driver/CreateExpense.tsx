@@ -6,7 +6,6 @@ import { FormField } from '@/components/molecules/FormField'
 import { SheetSelect, type SheetSelectOption } from '@/components/molecules/SheetSelect'
 import { useToast } from '@/components/atoms/Toast'
 import { EXPENSE_CATEGORIES } from '@/data/mockData'
-import { BackButton } from '@/components/shared/BackButton'
 import { Camera, Fuel, Car, Wrench, CircleDot, Droplets, Banknote, Shield, ShieldCheck, ChevronDown, Navigation, Package } from 'lucide-react'
 
 const CATEGORY_ICONS: Record<string, any> = {
@@ -57,7 +56,7 @@ export function CreateExpense() {
 
   return (
     <div className="p-4 space-y-6">
-      <BackButton to="/driver/expenses" />
+      
       <h2 className="text-xl font-bold" style={{ color: 'var(--theme-text-primary)' }}>Khai chi phí</h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">

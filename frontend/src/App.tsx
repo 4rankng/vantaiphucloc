@@ -7,7 +7,7 @@ import { OfflineIndicator } from '@/components/shared/OfflineIndicator'
 import { ToastProvider } from '@/components/atoms/Toast'
 import { Login } from '@/pages/Login'
 import { DriverStoreProvider, useDriverStore } from '@/hooks/use-driver-store'
-import { TopBar, BottomNav, AppShell } from '@/pages/driver/AppShell'
+import { TopBar, BottomNav, PageLayout, HomeLayout } from '@/pages/driver/AppShell'
 import { TripList } from '@/pages/driver/TripList'
 import { ActiveTrip } from '@/pages/driver/ActiveTrip'
 import { TripDetail } from '@/pages/driver/TripDetail'
@@ -21,31 +21,27 @@ import { Profile } from '@/pages/driver/Profile'
 function Router() {
   const { currentPath } = useDriverStore()
 
-  // /driver/trips/:id/detail
   const detailMatch = currentPath.match(/^\/driver\/trips\/([^/]+)\/detail$/)
-  if (detailMatch) return <TripDetail jobId={detailMatch[1]} />
+  if (detailMatch) return <PageLayout showBack><TripDetail jobId={detailMatch[1]} /></PageLayout>
 
-  // /driver/trips/:id
   const tripMatch = currentPath.match(/^\/driver\/trips\/([^/]+)$/)
-  if (tripMatch) return <ActiveTrip jobId={tripMatch[1]} />
+  if (tripMatch) return <PageLayout showBack><ActiveTrip jobId={tripMatch[1]} /></PageLayout>
 
   switch (currentPath) {
-    case '/driver/trips': return <TripList />
-    case '/driver/expenses': return <ExpenseList />
-    case '/driver/expenses/new': return <CreateExpense />
-    case '/driver/earnings': return <EarningsOverview />
-    case '/driver/notifications': return <Notifications />
-    case '/driver/profile': return <Profile />
-    default: return <DriverHome />
+    case '/driver/trips': return <PageLayout showBack><TripList /></PageLayout>
+    case '/driver/expenses': return <PageLayout showBack><ExpenseList /></PageLayout>
+    case '/driver/expenses/new': return <PageLayout showBack><CreateExpense /></PageLayout>
+    case '/driver/earnings': return <PageLayout showBack><EarningsOverview /></PageLayout>
+    case '/driver/notifications': return <PageLayout showBack><Notifications /></PageLayout>
+    case '/driver/profile': return <PageLayout showBack><Profile /></PageLayout>
+    default: return <HomeLayout><DriverHome /></HomeLayout>
   }
 }
 
 function DriverApp() {
   return (
     <DriverStoreProvider>
-      <AppShell>
-        <Router />
-      </AppShell>
+      <Router />
     </DriverStoreProvider>
   )
 }

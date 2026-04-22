@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useDriverStore } from '@/hooks/use-driver-store'
-import { BackButton } from '@/components/shared/BackButton'
 import { Badge } from '@/components/ui/Badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/Sheet/Sheet'
 import { Input } from '@/components/ui/Input'
@@ -63,9 +62,6 @@ export function ExpenseList() {
 
   return (
     <div>
-      <div className="px-4 pt-3">
-        <BackButton />
-      </div>
       {/* Tabs — pill segment */}
       <div className="px-4 pt-0 pb-1">
         <div className="flex gap-1 p-1 rounded-2xl" style={{ background: 'var(--theme-bg-tertiary)' }}>

@@ -1,6 +1,5 @@
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { useAuth } from '@/contexts/AuthContext'
-import { BackButton } from '@/components/shared/BackButton'
 import { Badge } from '@/components/ui/Badge'
 import { Phone, TruckIcon, DollarSign, Route, Star, CalendarDays, LogOut } from 'lucide-react'
 
@@ -11,7 +10,7 @@ export function Profile() {
 
   return (
     <div className="p-4 space-y-4">
-      <BackButton />
+      
 
       {/* Compact header: avatar + name + badge inline */}
       <div className="flex items-center gap-3 rounded-2xl p-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
