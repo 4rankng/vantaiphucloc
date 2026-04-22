@@ -2,54 +2,66 @@ import { useDriverStore } from '@/hooks/use-driver-store'
 import { useAuth } from '@/contexts/AuthContext'
 import { BackButton } from '@/components/shared/BackButton'
 import { Badge } from '@/components/ui/Badge'
-import { User, Phone, TruckIcon, DollarSign, Route, Star, CalendarDays, LogOut } from 'lucide-react'
+import { Phone, TruckIcon, DollarSign, Route, Star, CalendarDays, LogOut } from 'lucide-react'
 
 export function Profile() {
-  const { driver, navigate } = useDriverStore()
+  const { driver } = useDriverStore()
   const { logout } = useAuth()
   const initials = driver.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 
   return (
-    <div className="p-4 space-y-5">
+    <div className="p-4 space-y-4">
       <BackButton />
 
-      {/* Avatar section */}
-      <div className="flex flex-col items-center py-6">
+      {/* Compact header: avatar + name + badge inline */}
+      <div className="flex items-center gap-3 rounded-2xl p-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
         <div
-          className="w-20 h-20 rounded-full flex items-center justify-center text-xl font-bold"
+          className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
           style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
         >
           {initials}
         </div>
-        <h2 className="text-lg font-bold mt-4" style={{ color: 'var(--theme-text-primary)' }}>{driver.name}</h2>
-        <div className="flex items-center gap-1.5 mt-1.5">
-          <Phone className="w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-          <span className="text-sm" style={{ color: 'var(--theme-text-secondary)' }}>{driver.phone}</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-[15px] font-bold truncate" style={{ color: 'var(--theme-text-primary)' }}>{driver.name}</p>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <Phone className="w-3 h-3" style={{ color: 'var(--theme-text-muted)' }} />
+            <span className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>{driver.phone}</span>
+          </div>
         </div>
-        <Badge variant="success" className="mt-3">Tài xế</Badge>
+        <Badge variant="success" className="text-[10px] shrink-0">Tài xế</Badge>
       </div>
 
-      {/* Info card */}
+      {/* Stats row — compact 3-col */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="rounded-2xl p-2.5 text-center" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
+          <Route className="w-4 h-4 mx-auto mb-1" style={{ color: 'var(--theme-brand-primary)' }} />
+          <p className="text-xs font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{driver.totalTrips}</p>
+          <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>Tổng chuyến</p>
+        </div>
+        <div className="rounded-2xl p-2.5 text-center" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
+          <CalendarDays className="w-4 h-4 mx-auto mb-1" style={{ color: 'var(--theme-status-warning)' }} />
+          <p className="text-xs font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{driver.monthlyTrips}</p>
+          <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>Tháng này</p>
+        </div>
+        <div className="rounded-2xl p-2.5 text-center" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
+          <Star className="w-4 h-4 mx-auto mb-1" style={{ color: 'var(--theme-status-warning)' }} />
+          <p className="text-xs font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{driver.rating}</p>
+          <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>Đánh giá</p>
+        </div>
+      </div>
+
+      {/* Info rows — no icons, compact label-value pairs */}
       <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
         {[
-          { icon: User, label: 'Mã tài xế', value: driver.id },
-          { icon: Phone, label: 'Số điện thoại', value: driver.phone },
-          { icon: TruckIcon, label: 'Đầu kéo', value: driver.tractorPlate },
-          { icon: DollarSign, label: 'Phí/chuyến', value: driver.fixedFeePerTrip.toLocaleString('vi-VN') + ' ₫' },
-          { icon: Route, label: 'Tổng chuyến', value: driver.totalTrips + ' chuyến' },
-          { icon: CalendarDays, label: 'Chuyến tháng này', value: driver.monthlyTrips + ' chuyến' },
-          { icon: DollarSign, label: 'Doanh thu tháng', value: driver.monthlyRevenue.toLocaleString('vi-VN') + ' ₫' },
-          { icon: Star, label: 'Đánh giá', value: driver.rating + '/5.0' },
-        ].map(({ icon: Icon, label, value }, i, arr) => (
+          { label: 'Mã tài xế', value: driver.id },
+          { label: 'Đầu kéo', value: driver.tractorPlate },
+          { label: 'Phí/chuyến', value: driver.fixedFeePerTrip.toLocaleString('vi-VN') + ' ₫' },
+          { label: 'Doanh thu tháng', value: driver.monthlyRevenue.toLocaleString('vi-VN') + ' ₫' },
+        ].map(({ label, value }, i, arr) => (
           <div key={label}>
-            <div className="flex justify-between items-center px-4 py-3.5">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'var(--theme-bg-tertiary)' }}>
-                  <Icon className="w-4 h-4" style={{ color: 'var(--theme-text-secondary)' }} />
-                </div>
-                <span className="text-xs font-medium" style={{ color: 'var(--theme-text-secondary)' }}>{label}</span>
-              </div>
-              <span className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{value}</span>
+            <div className="flex justify-between items-center px-4 py-2.5">
+              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{label}</span>
+              <span className="text-sm font-semibold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{value}</span>
             </div>
             {i < arr.length - 1 && <div className="mx-4 border-t" style={{ borderColor: 'var(--theme-border-light)' }} />}
           </div>
@@ -59,7 +71,7 @@ export function Profile() {
       {/* Logout */}
       <button
         onClick={() => logout()}
-        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold text-sm mt-2"
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-semibold text-sm"
         style={{ background: 'var(--theme-status-error-light)', color: 'var(--theme-status-error-text)' }}
       >
         <LogOut className="w-4 h-4" />

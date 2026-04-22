@@ -28,20 +28,19 @@ export function ActiveTrip({ jobId }: { jobId: string }) {
   const progress = cps.length > 0 ? (doneCount / cps.length) * 100 : 0
 
   return (
-    <div className="p-4 space-y-5 pb-24">
-      <BackButton to="/driver/trips" />
-      {/* Route card */}
-      <div className="rounded-2xl p-4" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
-        <div className="flex justify-between items-start mb-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <Navigation className="w-4 h-4" style={{ color: 'var(--theme-brand-primary)' }} />
-              <span className="text-[15px] font-bold truncate" style={{ color: 'var(--theme-text-primary)' }}>{job.route}</span>
-            </div>
-            <Badge variant={getJobStatusBadge(job.status as JobStatus).variant as any}>
-              {getJobStatusBadge(job.status as JobStatus).label}
-            </Badge>
+    <div className="p-4 space-y-4 pb-6">
+      <BackButton />
+
+      {/* Route card — compact */}
+      <div className="rounded-2xl p-3.5" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
+        <div className="flex justify-between items-start mb-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Navigation className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-brand-primary)' }} />
+            <span className="text-[15px] font-bold truncate" style={{ color: 'var(--theme-text-primary)' }}>{job.route}</span>
           </div>
+          <Badge variant={getJobStatusBadge(job.status as JobStatus).variant as any} className="ml-2 shrink-0 text-[10px]">
+            {getJobStatusBadge(job.status as JobStatus).label}
+          </Badge>
         </div>
         <InlineStatStrip items={[
           { label: 'Container', value: job.containerNumber.slice(-7) },
@@ -50,86 +49,80 @@ export function ActiveTrip({ jobId }: { jobId: string }) {
         ]} />
       </div>
 
-      {/* Progress */}
+      {/* Progress — compact */}
       <div>
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-bold" style={{ color: 'var(--theme-text-secondary)' }}>Trạm kiểm tra</span>
-          <span className="text-xs font-bold" style={{ color: 'var(--theme-brand-primary)' }}>{doneCount}/{cps.length}</span>
+          <span className="text-xs font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>{doneCount}/{cps.length}</span>
         </div>
-        {/* Progress bar */}
-        <div className="h-2.5 rounded-full overflow-hidden mb-4" style={{ background: 'var(--theme-bg-tertiary)' }}>
+        <div className="h-2 rounded-full overflow-hidden mb-3" style={{ background: 'var(--theme-bg-tertiary)' }}>
           <div
             className="h-full rounded-full transition-all duration-500"
             style={{ width: `${progress}%`, background: progress === 100 ? 'var(--theme-status-success)' : 'var(--theme-brand-primary)' }}
           />
         </div>
-        <div className="space-y-2.5">
+        <div className="space-y-1.5">
           {cps.map(cp => {
             const CpIcon = CHECKPOINT_ICONS[cp.id] ?? Circle
             return (
               <button
                 key={cp.id}
                 onClick={() => toggleCheckpoint(jobId, cp.id)}
-                className="w-full flex items-center gap-3.5 rounded-2xl p-3.5 card-lift"
+                className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors"
                 style={{
                   background: 'var(--theme-bg-secondary)',
-                  boxShadow: 'var(--theme-shadow-card)',
                   borderLeft: cp.done ? '3px solid var(--theme-status-success)' : '3px solid transparent',
                 }}
               >
                 {cp.done ? (
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'var(--theme-status-success-light)' }}>
-                    <CheckCircle2 className="w-5 h-5" style={{ color: 'var(--theme-status-success)' }} />
-                  </div>
+                  <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: 'var(--theme-status-success)' }} />
                 ) : (
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'var(--theme-bg-tertiary)' }}>
-                    <CpIcon className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
-                  </div>
+                  <CpIcon className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
                 )}
-                <div className="flex-1 min-w-0 text-left">
-                  <p className="text-sm font-semibold" style={{ color: cp.done ? 'var(--theme-status-success)' : 'var(--theme-text-primary)' }}>{cp.label}</p>
-                  {cp.timestamp && (
-                    <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-                      {new Date(cp.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  )}
-                </div>
+                <span className={`text-sm ${cp.done ? 'font-semibold' : ''}`} style={{ color: cp.done ? 'var(--theme-status-success)' : 'var(--theme-text-primary)' }}>
+                  {cp.label}
+                </span>
+                {cp.timestamp && (
+                  <span className="text-[11px] ml-auto tabular-nums" style={{ color: 'var(--theme-text-muted)' }}>
+                    {new Date(cp.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
               </button>
             )
           })}
         </div>
       </div>
 
-      {/* Expenses */}
+      {/* Expenses — compact list */}
       <div>
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-bold" style={{ color: 'var(--theme-text-secondary)' }}>Chi phí chuyến</span>
-          <span className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyShort(totalExp)}</span>
+          <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyShort(totalExp)}</span>
         </div>
-        <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
-          {tripExpenses.length === 0 ? (
-            <div className="p-5 text-center">
-              <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Chưa khai chi phí</p>
-            </div>
-          ) : (
-            tripExpenses.map((e, i) => (
+        {tripExpenses.length > 0 ? (
+          <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
+            {tripExpenses.map((e, i) => (
               <div key={e.id}>
-                <div className="flex justify-between items-center px-4 py-3">
-                  <div className="flex items-center gap-2.5">
-                    <Fuel className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
+                <div className="flex justify-between items-center px-4 py-2.5">
+                  <div className="flex items-center gap-2">
+                    <Fuel className="w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
                     <span className="text-sm" style={{ color: 'var(--theme-text-primary)' }}>{e.category}</span>
                   </div>
-                  <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyShort(e.amount)}</span>
+                  <span className="text-sm font-semibold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyShort(e.amount)}</span>
                 </div>
                 {i < tripExpenses.length - 1 && <div className="mx-4 border-t" style={{ borderColor: 'var(--theme-border-light)' }} />}
               </div>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-center py-3 rounded-2xl" style={{ color: 'var(--theme-text-muted)', background: 'var(--theme-bg-secondary)' }}>
+            Chưa khai chi phí
+          </p>
+        )}
       </div>
 
-      <Button onClick={() => navigate('/driver/expenses/new')} className="w-full h-12 rounded-2xl font-bold text-[15px]">
-        <PlusCircle className="w-5 h-5 mr-2" />
+      <Button onClick={() => navigate('/driver/expenses/new')} className="w-full h-11 rounded-2xl font-semibold text-sm">
+        <PlusCircle className="w-4 h-4 mr-2" />
         Khai chi phí
       </Button>
     </div>
