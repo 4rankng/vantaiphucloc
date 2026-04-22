@@ -1,66 +1,11 @@
 import { useDriverStore } from '@/hooks/use-driver-store'
-import { formatCurrencyShort, getJobStatusBadge, type JobStatus } from '@/data/mockData'
+import { formatCurrencyShort } from '@/data/mockData'
 import { LiveCard } from '@/components/organisms/LiveCard'
-import { Badge } from '@/components/ui/Badge'
-import {
-  Truck, ChevronRight, Package, Receipt, Clock, MapPin,
-  Plus, Navigation, Bell,
-} from 'lucide-react'
+import { SectionHeader } from '@/components/shared/SectionHeader'
+import { TripCard } from '@/components/shared/TripCard'
+import { ExpenseRow } from '@/components/shared/ExpenseRow'
+import { ChevronRight, Receipt, Clock, MapPin, Plus, Navigation } from 'lucide-react'
 
-/* ─── Section header with Chi tiết link ────────────────────── */
-function SectionHeader({ title, onClick }: { title: string; onClick: () => void }) {
-  return (
-    <div className="flex items-center justify-between mb-3">
-      <span className="text-xs font-bold" style={{ color: 'var(--theme-text-secondary)' }}>{title}</span>
-      <button onClick={onClick} className="flex items-center gap-0.5 text-xs font-semibold"
-        style={{ color: 'var(--theme-brand-primary)' }}>
-        Chi tiết <ChevronRight className="w-3 h-3" />
-      </button>
-    </div>
-  )
-}
-
-/* ─── Trip card — SAME design as TripList ──────────────────── */
-function TripCard({ job, onClick }: { job: any; onClick: () => void }) {
-  const s = getJobStatusBadge(job.status as JobStatus)
-  return (
-    <button onClick={onClick} className="w-full text-left rounded-2xl p-4 card-lift"
-      style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
-      <div className="flex justify-between items-start mb-3">
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-[15px] truncate" style={{ color: 'var(--theme-text-primary)' }}>{job.route}</p>
-          <div className="flex items-center gap-1.5 mt-1">
-            <Package className="w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-            <span className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>{job.containerNumber}</span>
-          </div>
-        </div>
-        <Badge variant={s.variant as any} className="text-[11px] flex-shrink-0 ml-2">{s.label}</Badge>
-      </div>
-      <div className="flex justify-between items-center pt-2" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
-        <div className="flex items-center gap-3">
-          <span className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>{job.distanceKm} km</span>
-          <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{job.jobDate}</span>
-        </div>
-        <span className="text-[15px] font-bold" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyShort(job.driverFee)}</span>
-      </div>
-    </button>
-  )
-}
-
-/* ─── Expense summary row ──────────────────────────────────── */
-function ExpenseRow({ category, amount, isLast }: { category: string; amount: number; isLast: boolean }) {
-  return (
-    <div>
-      <div className="flex items-center justify-between px-4 py-3">
-        <span className="text-sm" style={{ color: 'var(--theme-text-secondary)' }}>{category}</span>
-        <span className="text-sm font-semibold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyShort(amount)}</span>
-      </div>
-      {!isLast && <div className="mx-4 border-t" style={{ borderColor: 'var(--theme-border-light)' }} />}
-    </div>
-  )
-}
-
-/* ─── Home page ────────────────────────────────────────────── */
 export function DriverHome() {
   const { jobs, expenses, navigate } = useDriverStore()
 
@@ -130,9 +75,12 @@ export function DriverHome() {
 
       {/* ── CHUYẾN ĐI ── */}
       <div className="px-4 mb-5">
-        <SectionHeader title="Chuyến đi" onClick={() => navigate('/driver/trips')} />
-
-        {/* Stats row */}
+        <SectionHeader title="Chuyến đi">
+          <button onClick={() => navigate('/driver/trips')} className="flex items-center gap-0.5 text-xs font-semibold"
+            style={{ color: 'var(--theme-brand-primary)' }}>
+            Chi tiết <ChevronRight className="w-3 h-3" />
+          </button>
+        </SectionHeader>
         <div className="grid grid-cols-2 gap-3 mb-3">
           <div className="rounded-2xl p-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
             <div className="flex items-center gap-2 mb-1">
@@ -149,16 +97,11 @@ export function DriverHome() {
             <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{activeJobs.length}</p>
           </div>
         </div>
-
-        {/* Trip list — same card design as TripList page */}
         {displayTrips.length > 0 ? (
           <div className="space-y-2.5">
             {displayTrips.map(j => (
-              <TripCard
-                key={j.id}
-                job={j}
-                onClick={() => navigate(j.status === 'IN_PROGRESS' ? `/driver/trips/${j.id}` : `/driver/trips/${j.id}/detail`)}
-              />
+              <TripCard key={j.id} job={j}
+                onClick={() => navigate(j.status === 'IN_PROGRESS' ? `/driver/trips/${j.id}` : `/driver/trips/${j.id}/detail`)} />
             ))}
           </div>
         ) : (
@@ -184,7 +127,6 @@ export function DriverHome() {
             </button>
           </div>
         </div>
-
         {topExpenses.length > 0 ? (
           <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
             {topExpenses.map(([cat, amount], i) => (
