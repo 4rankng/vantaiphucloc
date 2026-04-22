@@ -1,21 +1,39 @@
 import { Bell, UserCircle } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useDriverStore } from '@/hooks/use-driver-store'
 
-/* ─── Top bar — bell + user icon only ──────────────────────── */
+/* ─── Top bar — context-aware ──────────────────────────────── */
 export function TopBar() {
-  const { driver, navigate, unreadCount } = useDriverStore()
+  const { driver, navigate, unreadCount, currentPath } = useDriverStore()
+  const isHome = currentPath === '/driver' || currentPath === '' || currentPath === '/'
 
   return (
-    <div className="px-4 pt-3 pb-2" style={{ background: 'var(--theme-brand-primary)' }}>
+    <div
+      className={cn('px-4 pt-3 pb-2')}
+      style={{ background: isHome ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)' }}
+    >
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-[11px]" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.75 }}>Xin chào,</p>
-          <p className="text-[15px] font-bold" style={{ color: 'var(--theme-text-on-brand)' }}>{driver.name}</p>
+          <p
+            className="text-[11px]"
+            style={{ color: isHome ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)', opacity: 0.75 }}
+          >
+            Xin chào,
+          </p>
+          <p
+            className="text-[15px] font-bold"
+            style={{ color: isHome ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)' }}
+          >
+            {driver.name}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <button
             className="w-9 h-9 flex items-center justify-center rounded-full touch-manipulation relative"
-            style={{ background: 'rgba(255,255,255,0.35)', color: 'var(--theme-text-on-brand)' }}
+            style={{
+              background: isHome ? 'rgba(255,255,255,0.35)' : 'var(--theme-bg-tertiary)',
+              color: isHome ? 'var(--theme-text-on-brand)' : 'var(--theme-text-secondary)',
+            }}
             onClick={() => navigate('/driver/notifications')}
             aria-label="Thông báo"
           >
@@ -31,7 +49,10 @@ export function TopBar() {
           </button>
           <button
             className="w-9 h-9 flex items-center justify-center rounded-full touch-manipulation"
-            style={{ background: 'rgba(255,255,255,0.35)', color: 'var(--theme-text-on-brand)' }}
+            style={{
+              background: isHome ? 'rgba(255,255,255,0.35)' : 'var(--theme-bg-tertiary)',
+              color: isHome ? 'var(--theme-text-on-brand)' : 'var(--theme-text-secondary)',
+            }}
             onClick={() => navigate('/driver/profile')}
             aria-label="Tài khoản"
           >
@@ -56,7 +77,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 /* ─── Reusable BottomNav component (kept for other roles) ──── */
-import { cn } from '@/lib/utils'
 import { Home } from 'lucide-react'
 
 export function BottomNav({ tabs }: { tabs: { path: string; label: string; icon: React.ElementType }[] }) {
