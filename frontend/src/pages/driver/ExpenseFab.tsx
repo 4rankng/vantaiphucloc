@@ -7,7 +7,7 @@ export function ExpenseFab() {
   return createPortal(
     <button
       onClick={() => navigate('/driver/expenses/new')}
-      className="fixed bottom-6 right-4 w-14 h-14 rounded-2xl flex items-center justify-center z-[100] safe-area-bottom"
+      className="fixed bottom-6 right-4 w-14 h-14 rounded-2xl flex items-center justify-center z-[100] safe-area-bottom card-lift"
       style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)', boxShadow: 'var(--theme-shadow-elevated)' }}
       aria-label="Thêm chi phí"
     >
