@@ -118,7 +118,7 @@ export function DriverHome() {
 
       {/* ── LIVE CARD ── */}
       {activeTrip && (
-        <div className="-mt-6 px-4 mb-4">
+        <div className="-mt-6 px-4 mb-6">
           <LiveCard
             title={activeTrip.route}
             subtitle={`${activeTrip.containerNumber} · ${activeTrip.distanceKm} km`}
