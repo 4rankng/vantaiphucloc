@@ -11,10 +11,16 @@ const NOTIF_ICONS: Record<string, any> = {
   star: Star,
 }
 
+const NOTIF_COLORS: Record<string, string> = {
+  reject: 'var(--theme-status-error)',
+  trip: 'var(--theme-brand-primary)',
+  license: 'var(--theme-status-warning)',
+  approve: 'var(--theme-status-success)',
+  star: 'var(--theme-status-warning)',
+}
+
 export function Notifications() {
   const { notifications, markNotificationRead, markAllNotificationsRead } = useDriverStore()
-  const unread = notifications.filter(n => !n.read)
-  const read = notifications.filter(n => n.read)
 
   const formatTime = (ts: string) => {
     const d = new Date(ts)
@@ -22,82 +28,61 @@ export function Notifications() {
     const diffMs = now.getTime() - d.getTime()
     const diffHours = Math.floor(diffMs / 3600000)
     if (diffHours < 1) return 'Vừa xong'
-    if (diffHours < 24) return `${diffHours} giờ trước`
+    if (diffHours < 24) return `${diffHours}h`
     return d.toLocaleDateString('vi-VN')
   }
 
-  const renderNotif = (n: any) => {
-    const Icon = NOTIF_ICONS[n.icon] ?? Bell
-    return (
-      <button
-        key={n.id}
-        onClick={() => markNotificationRead(n.id)}
-        className="w-full text-left rounded-2xl p-4 card-lift"
-        style={{
-          background: 'var(--theme-bg-secondary)',
-          boxShadow: 'var(--theme-shadow-card)',
-          opacity: n.read ? 0.65 : 1,
-        }}
-      >
-        <div className="flex gap-3">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-            style={{ background: n.read ? 'var(--theme-bg-tertiary)' : 'var(--theme-brand-primary-light)' }}
-          >
-            <Icon className="w-5 h-5" style={{ color: n.read ? 'var(--theme-text-muted)' : 'var(--theme-brand-primary)' }} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex justify-between items-start">
-              <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{n.title}</p>
-              {!n.read && (
-                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1.5 ml-2" style={{ background: 'var(--theme-brand-primary)' }} />
-              )}
-            </div>
-            <p className="text-xs mt-1 line-clamp-2" style={{ color: 'var(--theme-text-secondary)' }}>{n.message}</p>
-            <p className="text-[11px] mt-1.5" style={{ color: 'var(--theme-text-muted)' }}>{formatTime(n.timestamp)}</p>
-          </div>
-        </div>
-      </button>
-    )
-  }
-
   return (
-    <div className="p-4 space-y-5 pb-24">
-      <BackButton />
-      <div className="flex justify-between items-center">
-        <h2 className="text-lg font-bold" style={{ color: 'var(--theme-text-primary)' }}>Thông báo</h2>
-        {unread.length > 0 && (
-          <Button variant="ghost" size="sm" onClick={markAllNotificationsRead} className="text-xs font-semibold">
-            <CheckCheck className="w-3.5 h-3.5 mr-1" />
-            Đọc tất cả
-          </Button>
+    <div className="p-4 space-y-3 pb-6">
+      <div className="flex items-center justify-between">
+        <BackButton />
+        {notifications.some(n => !n.read) && (
+          <button onClick={markAllNotificationsRead}
+            className="flex items-center gap-1 text-xs font-semibold"
+            style={{ color: 'var(--theme-brand-primary)' }}>
+            <CheckCheck className="w-3.5 h-3.5" /> Đọc tất cả
+          </button>
         )}
       </div>
 
-      {unread.length > 0 && (
-        <>
-          <span className="text-xs font-bold block" style={{ color: 'var(--theme-text-secondary)' }}>
-            Chưa đọc ({unread.length})
-          </span>
-          <div className="space-y-2.5">{unread.map(renderNotif)}</div>
-        </>
-      )}
-
-      {read.length > 0 && (
-        <>
-          <span className="text-xs font-bold block" style={{ color: 'var(--theme-text-secondary)' }}>
-            Đã đọc
-          </span>
-          <div className="space-y-2.5">{read.map(renderNotif)}</div>
-        </>
-      )}
-
-      {notifications.length === 0 && (
-        <div className="text-center py-16">
-          <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ background: 'var(--theme-bg-tertiary)' }}>
-            <BellOff className="w-7 h-7" style={{ color: 'var(--theme-text-muted)', opacity: 0.4 }} />
-          </div>
-          <p className="text-sm font-medium" style={{ color: 'var(--theme-text-secondary)' }}>Không có thông báo</p>
+      {notifications.length === 0 ? (
+        <div className="text-center py-12">
+          <BellOff className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--theme-text-muted)', opacity: 0.4 }} />
+          <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Không có thông báo</p>
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          {notifications.map(n => {
+            const Icon = NOTIF_ICONS[n.icon] ?? Bell
+            const color = NOTIF_COLORS[n.icon] ?? 'var(--theme-brand-primary)'
+            return (
+              <button
+                key={n.id}
+                onClick={() => markNotificationRead(n.id)}
+                className="w-full text-left rounded-xl px-3 py-2.5 flex items-start gap-2.5 transition-colors"
+                style={{
+                  background: n.read ? 'transparent' : 'var(--theme-bg-secondary)',
+                }}
+              >
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ background: n.read ? 'var(--theme-bg-tertiary)' : `${color}15` }}
+                >
+                  <Icon className="w-4 h-4" style={{ color: n.read ? 'var(--theme-text-muted)' : color }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className={`text-xs ${n.read ? '' : 'font-semibold'} truncate`} style={{ color: 'var(--theme-text-primary)' }}>{n.title}</p>
+                    {!n.read && (
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: 'var(--theme-brand-primary)' }} />
+                    )}
+                  </div>
+                  <p className="text-[11px] mt-0.5 line-clamp-2" style={{ color: 'var(--theme-text-muted)' }}>{n.message}</p>
+                  <p className="text-[10px] mt-0.5" style={{ color: 'var(--theme-text-muted)', opacity: 0.7 }}>{formatTime(n.timestamp)}</p>
+                </div>
+              </button>
+            )
+          })}
         </div>
       )}
     </div>
