@@ -1,22 +1,13 @@
 import { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronLeft, ChevronRight, Plus, MapPin, Calendar } from 'lucide-react'
+import { Plus, MapPin, Calendar } from 'lucide-react'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { apiClient } from '@/services/api'
 import { formatCurrencyFull, type WorkOrder, type ContainerItem } from '@/data/mockData'
+import { MonthNavigator } from '@/components/shared/MonthNavigator'
+import { ContBadge } from '@/components/shared/ContBadge'
 
 // ─── Cont type badge ──────────────────────────────────────────────────────────
-function ContBadge({ type }: { type: string }) {
-  return (
-    <span
-      className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0"
-      style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
-    >
-      {type}
-    </span>
-  )
-}
-
 // ─── Job card ─────────────────────────────────────────────────────────────────
 function JobCard({ job, onClick }: { job: WorkOrder; onClick: () => void }) {
   const date = new Date(job.createdAt)
@@ -91,34 +82,6 @@ function Fab({ onClick }: { onClick: () => void }) {
       <Plus className="w-6 h-6" />
     </button>,
     document.body,
-  )
-}
-
-// ─── Month navigator ──────────────────────────────────────────────────────────
-function MonthNavigator({ year, month, onPrev, onNext }: {
-  year: number; month: number; onPrev: () => void; onNext: () => void
-}) {
-  const monthName = new Date(year, month).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })
-  return (
-    <div className="flex items-center justify-center gap-4 py-2">
-      <button
-        onClick={onPrev}
-        className="w-9 h-9 flex items-center justify-center rounded-full touch-manipulation"
-        style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}
-      >
-        <ChevronLeft className="w-4 h-4" style={{ color: 'var(--theme-text-primary)' }} />
-      </button>
-      <span className="text-sm font-bold capitalize min-w-[140px] text-center" style={{ color: 'var(--theme-text-primary)' }}>
-        {monthName}
-      </span>
-      <button
-        onClick={onNext}
-        className="w-9 h-9 flex items-center justify-center rounded-full touch-manipulation"
-        style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}
-      >
-        <ChevronRight className="w-4 h-4" style={{ color: 'var(--theme-text-primary)' }} />
-      </button>
-    </div>
   )
 }
 

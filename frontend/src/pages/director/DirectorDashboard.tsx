@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { Users, Truck, TrendingUp, ChevronLeft, ChevronRight, UserCircle, Building2 } from 'lucide-react'
+import { Users, Truck, TrendingUp, UserCircle, Building2 } from 'lucide-react'
 import { apiClient } from '@/services/api'
 import { formatCurrencyFull as formatCurrency } from '@/data/mockData'
+import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import type { WorkOrder, Client, Driver } from '@/data/mockData'
 
 interface DirectorDashboardProps {
@@ -83,7 +84,6 @@ export function DirectorDashboard({ onManageUsers, onViewDriverJobs, onViewClien
       .sort((a, b) => b.revenue - a.revenue)
   }, [monthlyJobs])
 
-  const monthLabel = `Tháng ${month.month}/${month.year}`
   const prevMonth = useCallback(() => {
     setMonth(prev => {
       const m = prev.month === 1 ? 12 : prev.month - 1
@@ -124,14 +124,8 @@ export function DirectorDashboard({ onManageUsers, onViewDriverJobs, onViewClien
       </div>
 
       {/* Month navigator */}
-      <div className="px-4 pb-2 flex items-center justify-center gap-2">
-        <button onClick={prevMonth} className="w-8 h-8 flex items-center justify-center rounded-full touch-manipulation" style={{ background: 'var(--theme-bg-secondary)' }}>
-          <ChevronLeft className="w-4 h-4" style={{ color: 'var(--theme-text-primary)' }} />
-        </button>
-        <span className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>{monthLabel}</span>
-        <button onClick={nextMonth} className="w-8 h-8 flex items-center justify-center rounded-full touch-manipulation" style={{ background: 'var(--theme-bg-secondary)' }}>
-          <ChevronRight className="w-4 h-4" style={{ color: 'var(--theme-text-primary)' }} />
-        </button>
+      <div className="px-4 pb-2">
+        <MonthNavigator year={month.year} month={month.month} onPrev={prevMonth} onNext={nextMonth} />
       </div>
 
       {/* Quick actions */}
