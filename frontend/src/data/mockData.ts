@@ -569,9 +569,7 @@ export const mockSalaryPeriods: SalaryPeriod[] = [
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 export function formatCurrency(amount: number): string {
-  if (amount >= 1000000000) return `${(amount / 1000000000).toFixed(1)} tỷ VNĐ`
-  if (amount >= 1000000) return `${(amount / 1000000).toFixed(1)} triệu VNĐ`
-  return amount.toLocaleString('vi-VN') + ' VNĐ'
+  return amount.toLocaleString('vi-VN') + ' ₫'
 }
 
 export function formatCurrencyFull(amount: number): string {
@@ -579,7 +577,6 @@ export function formatCurrencyFull(amount: number): string {
 }
 
 export function formatCurrencyShort(amount: number): string {
-  if (amount >= 1000000000) return `${(amount / 1000000000).toFixed(2).replace(/\.?0+$/, '')} tỷ`
   return amount.toLocaleString('vi-VN') + ' ₫'
 }
 
