@@ -1,14 +1,14 @@
 import { useEffect, useState, useMemo } from 'react'
-import { Search, Filter, CheckCircle, Clock, AlertCircle } from 'lucide-react'
+import { Search, Filter, CheckCircle, Clock, CircleDollarSign } from 'lucide-react'
 import { Masonry } from 'masonic'
 import { Input } from '@/components/ui/Input/Input'
 import { apiClient } from '@/services/api'
-import type { WorkOrder } from '@/data/mockData'
+import { formatCurrencyFull, type WorkOrder } from '@/data/mockData'
 
 const STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle; color: string; bg: string }> = {
-  PENDING:  { label: 'Chờ đối soát', icon: Clock,       color: 'var(--theme-status-warning)', bg: 'var(--theme-status-warning-light)' },
-  MATCHED:  { label: 'Đã đối soát',  icon: CheckCircle, color: 'var(--theme-status-success)', bg: 'var(--theme-status-success-light)' },
-  DISPUTED: { label: 'Sai số công',  icon: AlertCircle, color: 'var(--theme-status-error)',   bg: 'var(--theme-status-error-light)' },
+  PENDING:  { label: 'Chờ đơn giá', icon: Clock,       color: 'var(--theme-status-warning)', bg: 'var(--theme-status-warning-light)' },
+  PRICED:   { label: 'Đã tính giá', icon: CheckCircle,  color: 'var(--theme-status-success)', bg: 'var(--theme-status-success-light)' },
+  APPROVED: { label: 'Đã duyệt',    icon: CheckCircle,  color: 'var(--theme-brand-primary)',  bg: 'var(--theme-brand-primary-light)' },
 }
 
 function WorkOrderCard({ data: wo }: { data: WorkOrder }) {
@@ -38,20 +38,30 @@ function WorkOrderCard({ data: wo }: { data: WorkOrder }) {
       <p className="text-[11px] font-medium truncate mb-0.5" style={{ color: 'var(--theme-text-secondary)' }}>
         {wo.driverName}
       </p>
-      <p className="text-[10px] font-mono mb-2" style={{ color: 'var(--theme-text-muted)' }}>
+      <p className="text-[10px] font-mono mb-1" style={{ color: 'var(--theme-text-muted)' }}>
         {wo.tractorPlate}
       </p>
       <p className="text-[11px] truncate mb-2" style={{ color: 'var(--theme-text-muted)' }}>
         {wo.clientName}
       </p>
 
-      <div
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
-        style={{ background: s.bg }}
-      >
-        <StatusIcon className="w-3 h-3" style={{ color: s.color }} />
-        <span className="text-[10px] font-semibold" style={{ color: s.color }}>{s.label}</span>
-      </div>
+      {/* Earning */}
+      {wo.earning > 0 ? (
+        <div className="flex items-center gap-1.5 mb-1">
+          <CircleDollarSign className="w-3.5 h-3.5" style={{ color: 'var(--theme-brand-primary)' }} />
+          <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>
+            {formatCurrencyFull(wo.earning)}
+          </span>
+        </div>
+      ) : (
+        <div
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+          style={{ background: s.bg }}
+        >
+          <StatusIcon className="w-3 h-3" style={{ color: s.color }} />
+          <span className="text-[10px] font-semibold" style={{ color: s.color }}>{s.label}</span>
+        </div>
+      )}
 
       <p className="text-[10px] mt-2" style={{ color: 'var(--theme-text-muted)' }}>
         {new Date(wo.createdAt).toLocaleDateString('vi-VN')}
@@ -67,6 +77,7 @@ export function WorkOrderList() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [showFilters, setShowFilters] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'PRICED'>('ALL')
 
   useEffect(() => {
     let cancelled = false
@@ -87,9 +98,21 @@ export function WorkOrderList() {
         if (endDate && d > new Date(endDate + 'T23:59:59')) return false
         return true
       })()
-      return plateOk && dateOk
+      const statusOk = statusFilter === 'ALL' || w.status === statusFilter
+      return plateOk && dateOk && statusOk
     }),
-    [workOrders, searchPlate, startDate, endDate],
+    [workOrders, searchPlate, startDate, endDate, statusFilter],
+  )
+
+  const counts = useMemo(() => ({
+    ALL: workOrders.length,
+    PENDING: workOrders.filter(w => w.status === 'PENDING').length,
+    PRICED: workOrders.filter(w => w.status === 'PRICED').length,
+  }), [workOrders])
+
+  const totalEarnings = useMemo(() =>
+    filtered.reduce((sum, w) => sum + w.earning, 0),
+    [filtered],
   )
 
   const hasFilters = searchPlate.trim() || startDate || endDate
@@ -103,6 +126,29 @@ export function WorkOrderList() {
           <p className="text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>Số công</p>
           <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{filtered.length} kết quả</p>
         </div>
+        {totalEarnings > 0 && (
+          <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>
+            {formatCurrencyFull(totalEarnings)}
+          </p>
+        )}
+      </div>
+
+      {/* Status filter pills */}
+      <div className="flex gap-2">
+        {(['ALL', 'PENDING', 'PRICED'] as const).map(s => (
+          <button
+            key={s}
+            onClick={() => setStatusFilter(s)}
+            className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all touch-manipulation"
+            style={{
+              background: statusFilter === s ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
+              color: statusFilter === s ? 'var(--theme-text-on-brand)' : 'var(--theme-text-secondary)',
+              border: `1px solid ${statusFilter === s ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)'}`,
+            }}
+          >
+            {s === 'ALL' ? 'Tất cả' : STATUS_CONFIG[s].label} ({counts[s]})
+          </button>
+        ))}
       </div>
 
       {/* Search + filter */}

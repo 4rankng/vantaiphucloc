@@ -1,9 +1,9 @@
 import { useEffect, useState, useMemo } from 'react'
-import { Camera, CheckCircle, Clock, AlertCircle } from 'lucide-react'
+import { Camera, CheckCircle, Clock, Wallet } from 'lucide-react'
 import { Masonry } from 'masonic'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { apiClient } from '@/services/api'
-import type { WorkOrder } from '@/data/mockData'
+import { formatCurrencyFull, type WorkOrder } from '@/data/mockData'
 
 // ─── Status config ────────────────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, {
@@ -12,9 +12,9 @@ const STATUS_CONFIG: Record<string, {
   color: string
   bg: string
 }> = {
-  PENDING:  { label: 'Chờ đối soát', icon: Clock,        color: 'var(--theme-status-warning)',  bg: 'var(--theme-status-warning-light)' },
-  MATCHED:  { label: 'Đã đối soát',  icon: CheckCircle,  color: 'var(--theme-status-success)',  bg: 'var(--theme-status-success-light)' },
-  DISPUTED: { label: 'Sai số công',  icon: AlertCircle,  color: 'var(--theme-status-error)',    bg: 'var(--theme-status-error-light)' },
+  PENDING:  { label: 'Chờ đơn giá', icon: Clock,       color: 'var(--theme-status-warning)',  bg: 'var(--theme-status-warning-light)' },
+  PRICED:   { label: 'Đã tính',     icon: CheckCircle,  color: 'var(--theme-status-success)',  bg: 'var(--theme-status-success-light)' },
+  APPROVED: { label: 'Đã duyệt',    icon: CheckCircle,  color: 'var(--theme-brand-primary)',   bg: 'var(--theme-brand-primary-light)' },
 }
 
 // ─── Masonic work-order card ──────────────────────────────────────────────────
@@ -43,19 +43,28 @@ function WorkOrderCard({ data: wo }: { data: WorkOrder }) {
         </span>
       </div>
 
-      {/* Client */}
-      <p className="text-[11px] truncate mb-2" style={{ color: 'var(--theme-text-muted)' }}>
+      {/* Client + Route */}
+      <p className="text-[11px] truncate mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>
         {wo.clientName}
       </p>
+      <p className="text-[10px] truncate mb-2" style={{ color: 'var(--theme-text-muted)', opacity: 0.7 }}>
+        {wo.route}
+      </p>
 
-      {/* Status pill */}
-      <div
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
-        style={{ background: s.bg }}
-      >
-        <StatusIcon className="w-3 h-3" style={{ color: s.color }} />
-        <span className="text-[10px] font-semibold" style={{ color: s.color }}>{s.label}</span>
-      </div>
+      {/* Earning or pending */}
+      {wo.earning > 0 ? (
+        <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>
+          +{formatCurrencyFull(wo.earning)}
+        </p>
+      ) : (
+        <div
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+          style={{ background: s.bg }}
+        >
+          <StatusIcon className="w-3 h-3" style={{ color: s.color }} />
+          <span className="text-[10px] font-semibold" style={{ color: s.color }}>{s.label}</span>
+        </div>
+      )}
 
       {/* Date */}
       <p className="text-[10px] mt-2" style={{ color: 'var(--theme-text-muted)' }}>
@@ -82,28 +91,66 @@ export function DriverHome() {
 
   const recentOrders = useMemo(() => workOrders.slice(0, 6), [workOrders])
 
-  // Summary counts
+  // Summary
   const counts = useMemo(() => ({
     total: workOrders.length,
     pending: workOrders.filter(w => w.status === 'PENDING').length,
-    matched: workOrders.filter(w => w.status === 'MATCHED').length,
+    priced: workOrders.filter(w => w.status === 'PRICED').length,
   }), [workOrders])
+
+  const totalEarnings = useMemo(() =>
+    workOrders.reduce((sum, w) => sum + w.earning, 0),
+    [workOrders],
+  )
+
+  const thisMonthEarnings = useMemo(() => {
+    const now = new Date()
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+    return workOrders
+      .filter(w => w.createdAt >= monthStart)
+      .reduce((sum, w) => sum + w.earning, 0)
+  }, [workOrders])
 
   return (
     <div className="pb-8">
+      {/* Earnings hero card */}
+      <div className="px-4 pt-4 pb-3">
+        <div
+          className="rounded-2xl p-4"
+          style={{
+            background: 'var(--theme-brand-primary)',
+            boxShadow: 'var(--theme-shadow-elevated)',
+          }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <Wallet className="w-4 h-4" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.8 }} />
+            <p className="text-xs font-semibold" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.8 }}>
+              Thu nhập tháng này
+            </p>
+          </div>
+          <p className="text-2xl font-bold tabular-nums" style={{ color: 'var(--theme-text-on-brand)' }}>
+            {formatCurrencyFull(thisMonthEarnings)}
+          </p>
+          <p className="text-[10px] mt-1" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.7 }}>
+            Tổng: {formatCurrencyFull(totalEarnings)} · {counts.priced}/{counts.total} công đã tính
+          </p>
+        </div>
+      </div>
+
       {/* CTA */}
-      <div className="px-4 pt-4 pb-4">
+      <div className="px-4 pb-4">
         <button
           onClick={() => navigate('/driver/work-orders/new')}
           className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl text-sm font-bold transition-all active:scale-[0.98] touch-manipulation"
           style={{
-            background: 'var(--theme-brand-primary)',
-            color: 'var(--theme-text-on-brand)',
-            boxShadow: 'var(--theme-shadow-elevated)',
+            background: 'var(--theme-bg-secondary)',
+            color: 'var(--theme-brand-primary)',
+            boxShadow: 'var(--theme-shadow-card)',
+            border: '2px solid var(--theme-brand-primary)',
           }}
         >
           <Camera className="h-5 w-5" />
-          Chụp công
+          Chụp số công
         </button>
       </div>
 
@@ -115,8 +162,8 @@ export function DriverHome() {
         >
           {[
             { label: 'Tổng công', value: counts.total, color: 'var(--theme-text-primary)' },
-            { label: 'Chờ duyệt', value: counts.pending, color: 'var(--theme-status-warning)' },
-            { label: 'Đã duyệt', value: counts.matched, color: 'var(--theme-status-success)' },
+            { label: 'Chờ giá', value: counts.pending, color: 'var(--theme-status-warning)' },
+            { label: 'Đã tính', value: counts.priced, color: 'var(--theme-status-success)' },
           ].map((item, i) => (
             <div
               key={item.label}
