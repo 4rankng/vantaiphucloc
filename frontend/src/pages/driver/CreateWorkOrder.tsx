@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Camera, Check, RotateCcw, Plus, Trash2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button/Button'
+import { SheetPicker } from '@/components/shared/SheetPicker'
 import { apiClient } from '@/services/api'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { WORK_TYPES, type Client, type RoutePrice, type WorkType, type ContainerItem } from '@/data/mockData'
@@ -254,29 +255,25 @@ export function CreateWorkOrder() {
       {/* ── Customer ── */}
       <div className="space-y-1.5">
         <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Khách hàng</label>
-        <select
+        <SheetPicker
+          label="Chọn khách hàng"
+          placeholder="Chọn khách hàng"
           value={clientId}
-          onChange={e => setClientId(e.target.value)}
-          className="w-full h-11 rounded-xl px-4 text-sm"
-          style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
-        >
-          <option value="">Chọn khách hàng</option>
-          {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
+          options={clients.map(c => ({ value: c.id, label: c.name, sublabel: c.phone }))}
+          onChange={setClientId}
+        />
       </div>
 
       {/* ── Route ── */}
       <div className="space-y-1.5">
         <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Cung đường</label>
-        <select
+        <SheetPicker
+          label="Chọn cung đường"
+          placeholder="Chọn cung đường"
           value={route}
-          onChange={e => setRoute(e.target.value)}
-          className="w-full h-11 rounded-xl px-4 text-sm"
-          style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
-        >
-          <option value="">Chọn cung đường</option>
-          {routes.map((r, i) => <option key={i} value={r.route}>{r.route}</option>)}
-        </select>
+          options={routes.map((r, i) => ({ value: r.route, label: r.route }))}
+          onChange={setRoute}
+        />
       </div>
 
       {/* ── Submit ── */}
