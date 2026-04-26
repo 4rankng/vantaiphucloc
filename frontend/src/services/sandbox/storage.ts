@@ -1,10 +1,9 @@
 const PREFIX = 'ttransport_'
-const VERSION = 4
+const VERSION = 5
 
 export function getStore<T>(key: string, fallback: T[]): T[] {
   const version = localStorage.getItem(PREFIX + '_version')
   if (version !== String(VERSION)) {
-    // Version mismatch — nuke ALL ttransport data and re-seed
     resetAllStores()
   }
 
