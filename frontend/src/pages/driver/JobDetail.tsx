@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { MapPin, Calendar, Truck, Building2, Route as RouteIcon } from 'lucide-react'
+import { MapPin, Calendar, Truck, Building2, Route as RouteIcon, Camera } from 'lucide-react'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { apiClient } from '@/services/api'
 import { formatCurrencyFull, type WorkOrder } from '@/data/mockData'
@@ -54,21 +54,39 @@ export function JobDetail() {
         {job.containers.map((c, i) => (
           <div
             key={i}
-            className="aspect-[4/3] rounded-2xl flex flex-col items-center justify-center"
-            style={{ background: 'var(--theme-bg-tertiary)' }}
+            className="rounded-2xl overflow-hidden"
+            style={{ border: '1px solid var(--theme-border-default)' }}
           >
-            <div className="w-12 h-12 rounded-full flex items-center justify-center mb-2"
-              style={{ background: 'var(--theme-bg-secondary)' }}>
-              <span className="text-lg">📷</span>
+            {c.photoUrl ? (
+              <img
+                src={c.photoUrl}
+                alt={c.containerNumber}
+                className="w-full aspect-[4/3] object-cover"
+              />
+            ) : (
+              <div
+                className="w-full aspect-[4/3] flex flex-col items-center justify-center"
+                style={{ background: 'var(--theme-bg-tertiary)' }}
+              >
+                <div className="w-12 h-12 rounded-full flex items-center justify-center mb-2"
+                  style={{ background: 'var(--theme-bg-secondary)' }}>
+                  <Camera className="w-5 h-5" style={{ color: 'var(--theme-text-muted)' }} />
+                </div>
+              </div>
+            )}
+            <div className="p-2 flex items-center justify-between" style={{ background: 'var(--theme-bg-secondary)' }}>
+              <p className="text-xs font-mono font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
+                {c.containerNumber}
+              </p>
+              <span
+                className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0"
+                style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
+              >
+                {c.workType}
+              </span>
             </div>
-            <p className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-              {c.containerNumber}
-            </p>
-            <p className="text-[10px] font-bold mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-              {c.workType}
-            </p>
           </div>
-        ))}
+        ))}}
       </div>
 
       {/* Container details */}
