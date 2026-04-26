@@ -1,175 +1,223 @@
-import { useEffect, useState, useMemo } from 'react'
-import { TrendingUp, Truck, Package, DollarSign } from 'lucide-react'
-import { Masonry } from 'masonic'
-import { ChartCard } from '@/components/shared/ChartCard'
-import { BarChartWidget, DoughnutChartWidget } from '@/components/shared/Charts'
+import { useEffect, useState, useMemo, useCallback } from 'react'
+import { Users, Truck, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react'
 import { apiClient } from '@/services/api'
-import { formatCurrencyShort, formatCurrency } from '@/data/mockData'
-import type { ChartOptions } from 'chart.js'
+import { formatCurrency } from '@/data/mockData'
+import type { WorkOrder, Client, Driver } from '@/data/mockData'
 
-interface DashboardData {
-  totalRevenue: number
-  totalExpense: number
-  tripCount: number
-  activeTrips: number
-  outstandingDebt: number
-  monthlyRevenue: { month: string; revenue: number; expense: number }[]
-  alerts: { id: string; message: string; severity: string; timestamp: string }[]
+interface DirectorDashboardProps {
+  onManageUsers?: () => void
+  onViewDriverJobs?: (driverId: string) => void
+  onViewClientJobs?: (clientId: string) => void
+  onViewClientPricing?: (clientId: string) => void
 }
 
-interface KpiItem {
-  id: string
-  label: string
-  value: string
-  sub: string
-  icon: typeof TrendingUp
-  accent: string
-  accentLight: string
-}
-
-function KpiCard({ data }: { data: KpiItem }) {
-  const Icon = data.icon
-  return (
-    <div
-      className="rounded-2xl p-4"
-      style={{
-        background: 'var(--theme-bg-secondary)',
-        boxShadow: 'var(--theme-shadow-card)',
-        border: '1px solid var(--theme-border-default)',
-      }}
-    >
-      <div className="flex items-start justify-between mb-2">
-        <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
-          {data.label}
-        </p>
-        <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: data.accentLight }}>
-          <Icon className="w-3.5 h-3.5" style={{ color: data.accent }} />
-        </div>
-      </div>
-      <p className="text-[22px] font-bold leading-tight tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
-        {data.value}
-      </p>
-      <p className="text-[11px] mt-1" style={{ color: 'var(--theme-text-muted)' }}>{data.sub}</p>
-    </div>
-  )
-}
-
-const PERIODS = [
-  { key: 'month' as const, label: 'Tháng' },
-  { key: 'quarter' as const, label: 'Quý' },
-  { key: 'year' as const, label: 'Năm' },
-]
-
-export function DirectorDashboard({ onManageUsers }: { onManageUsers?: () => void }) {
-  const [data, setData] = useState<DashboardData | null>(null)
-  const [period, setPeriod] = useState<'month' | 'quarter' | 'year'>('month')
+export function DirectorDashboard({ onManageUsers, onViewDriverJobs, onViewClientJobs, onViewClientPricing }: DirectorDashboardProps) {
+  const [jobs, setJobs] = useState<WorkOrder[]>([])
+  const [clients, setClients] = useState<Client[]>([])
+  const [drivers, setDrivers] = useState<Driver[]>([])
+  const [month, setMonth] = useState(() => {
+    const d = new Date()
+    return { year: d.getFullYear(), month: d.getMonth() + 1 }
+  })
 
   useEffect(() => {
     let cancelled = false
-    apiClient.getDashboardSummary().then(res => {
-      if (!cancelled && res.success) setData(res.data as DashboardData)
+    Promise.all([
+      apiClient.getWorkOrders(),
+      apiClient.getClients(),
+    ]).then(([jRes, cRes]) => {
+      if (!cancelled) {
+        if (jRes.success) setJobs(jRes.data)
+        if (cRes.success) setClients(cRes.data)
+      }
     })
     return () => { cancelled = true }
   }, [])
 
-  const profit = useMemo(() => (data ? data.totalRevenue - data.totalExpense : 0), [data])
+  // Load drivers from users store
+  useEffect(() => {
+    const raw = localStorage.getItem('ttransport_users')
+    if (raw) {
+      try {
+        const users = JSON.parse(raw)
+        setDrivers(users.filter((u: { role: string }) => u.role === 'driver'))
+      } catch { /* */ }
+    }
+  }, [])
 
-  const kpiItems = useMemo<KpiItem[]>(() => {
-    if (!data) return []
-    return [
-      { id: 'revenue', label: 'Doanh thu', value: formatCurrencyShort(data.totalRevenue), sub: 'tháng này', icon: TrendingUp, accent: '#00963E', accentLight: '#E6F9EF' },
-      { id: 'profit', label: 'Lợi nhuận', value: formatCurrencyShort(profit), sub: 'tháng này', icon: DollarSign, accent: '#2196F3', accentLight: '#E3F2FD' },
-      { id: 'active', label: 'Xe hoạt động', value: String(data.activeTrips), sub: `${data.tripCount} tổng chuyến`, icon: Truck, accent: '#FF9500', accentLight: '#FFF4E6' },
-      { id: 'trips', label: 'Chuyến tháng', value: String(data.tripCount), sub: 'tháng này', icon: Package, accent: '#9C27B0', accentLight: '#F3E5F5' },
-    ]
-  }, [data, profit])
+  // Filter jobs by selected month
+  const monthlyJobs = useMemo(() => {
+    return jobs.filter(j => {
+      const d = new Date(j.createdAt)
+      return d.getFullYear() === month.year && d.getMonth() + 1 === month.month
+    })
+  }, [jobs, month])
 
-  const barData = useMemo(() => ({
-    labels: data?.monthlyRevenue.map(m => m.month) ?? [],
-    datasets: [
-      { label: 'Doanh thu', data: data?.monthlyRevenue.map(m => m.revenue) ?? [], backgroundColor: '#00963E', borderRadius: 6, borderSkipped: false as const },
-      { label: 'Chi phí', data: data?.monthlyRevenue.map(m => m.expense) ?? [], backgroundColor: '#FF5252', borderRadius: 6, borderSkipped: false as const },
-    ],
-  }), [data])
+  // Stats
+  const totalSalary = useMemo(() => monthlyJobs.reduce((s, j) => s + j.earning, 0), [monthlyJobs])
+  const totalTrips = monthlyJobs.length
+  const pendingCount = useMemo(() => monthlyJobs.filter(j => j.status === 'PENDING').length, [monthlyJobs])
 
-  const barOptions = useMemo((): ChartOptions<'bar'> => ({
-    plugins: {
-      tooltip: {
-        callbacks: {
-          label: ctx => `${ctx.dataset.label}: ${formatCurrency(ctx.parsed.y)}`,
-        },
-      },
-    },
-    scales: {
-      y: { ticks: { callback: v => typeof v === 'number' ? `${(v / 1_000_000).toFixed(0)}tr` : v } },
-    },
-  }), [])
+  // Per-driver breakdown
+  const driverBreakdown = useMemo(() => {
+    const map = new Map<string, { name: string; trips: number; earning: number }>()
+    for (const j of monthlyJobs) {
+      const existing = map.get(j.driverId) ?? { name: j.driverName, trips: 0, earning: 0 }
+      existing.trips++
+      existing.earning += j.earning
+      map.set(j.driverId, existing)
+    }
+    return Array.from(map.entries()).map(([id, data]) => ({ id, ...data }))
+      .sort((a, b) => b.earning - a.earning)
+  }, [monthlyJobs])
 
-  const doughnutData = useMemo(() => ({
-    labels: ['Doanh thu', 'Chi phí'],
-    datasets: [{
-      data: data ? [data.totalRevenue, data.totalExpense] : [0, 0],
-      backgroundColor: ['#00963E', '#FF5252'],
-      borderWidth: 0,
-      hoverOffset: 6,
-    }],
-  }), [data])
+  // Per-client breakdown
+  const clientBreakdown = useMemo(() => {
+    const map = new Map<string, { name: string; trips: number; revenue: number }>()
+    for (const j of monthlyJobs) {
+      const existing = map.get(j.clientId) ?? { name: j.clientName, trips: 0, revenue: 0 }
+      existing.trips++
+      existing.revenue += j.unitPrice
+      map.set(j.clientId, existing)
+    }
+    return Array.from(map.entries()).map(([id, data]) => ({ id, ...data }))
+      .sort((a, b) => b.revenue - a.revenue)
+  }, [monthlyJobs])
 
-  if (!data) {
-    return (
-      <div className="p-4 space-y-3">
-        <div className="grid grid-cols-2 gap-2">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="h-24 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
-          ))}
-        </div>
-        <div className="h-52 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
-      </div>
-    )
-  }
+  const monthLabel = `Tháng ${month.month}/${month.year}`
+  const prevMonth = useCallback(() => {
+    setMonth(prev => {
+      const m = prev.month === 1 ? 12 : prev.month - 1
+      const y = prev.month === 1 ? prev.year - 1 : prev.year
+      return { year: y, month: m }
+    })
+  }, [])
+  const nextMonth = useCallback(() => {
+    setMonth(prev => {
+      const m = prev.month === 12 ? 1 : prev.month + 1
+      const y = prev.month === 12 ? prev.year + 1 : prev.year
+      return { year: y, month: m }
+    })
+  }, [])
 
   return (
     <div className="pb-8">
-      {/* Period filter */}
-      <div className="px-4 pt-4 pb-3 flex gap-2">
-        {PERIODS.map(p => (
-          <button
-            key={p.key}
-            onClick={() => setPeriod(p.key)}
-            className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all touch-manipulation"
-            style={{
-              background: period === p.key ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
-              color: period === p.key ? 'var(--theme-text-on-brand)' : 'var(--theme-text-secondary)',
-              border: `1px solid ${period === p.key ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)'}`,
-            }}
-          >
-            {p.label}
-          </button>
-        ))}
+      {/* Month navigator */}
+      <div className="px-4 pt-3 pb-2 flex items-center justify-between">
+        <button onClick={prevMonth} className="w-8 h-8 flex items-center justify-center rounded-full touch-manipulation" style={{ background: 'var(--theme-bg-secondary)' }}>
+          <ChevronLeft className="w-4 h-4" style={{ color: 'var(--theme-text-primary)' }} />
+        </button>
+        <span className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>{monthLabel}</span>
+        <button onClick={nextMonth} className="w-8 h-8 flex items-center justify-center rounded-full touch-manipulation" style={{ background: 'var(--theme-bg-secondary)' }}>
+          <ChevronRight className="w-4 h-4" style={{ color: 'var(--theme-text-primary)' }} />
+        </button>
       </div>
 
-      {/* Masonic KPI grid — 2 columns, variable height cards */}
-      <div className="px-4">
-        <Masonry
-          items={kpiItems}
-          columnGutter={8}
-          columnWidth={160}
-          maxColumnCount={2}
-          render={({ data: item }) => <KpiCard data={item} />}
-          overscanBy={2}
-        />
+      {/* Quick actions */}
+      <div className="px-4 pb-3 flex gap-2">
+        <button
+          onClick={onManageUsers}
+          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold touch-manipulation"
+          style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)', border: '1px solid var(--theme-border-default)' }}
+        >
+          <Users className="w-3.5 h-3.5" style={{ color: 'var(--theme-brand-primary)' }} /> Nhân sự
+        </button>
       </div>
 
-      {/* Charts */}
-      <div className="px-4 mt-4 space-y-4">
-        <ChartCard title="Doanh thu & Chi phí" subtitle="6 tháng gần nhất">
-          <BarChartWidget data={barData} height={210} options={barOptions} />
-        </ChartCard>
-
-        <ChartCard title="Tỷ lệ doanh thu / chi phí" subtitle="tháng này">
-          <DoughnutChartWidget data={doughnutData} height={220} />
-        </ChartCard>
+      {/* Stats cards */}
+      <div className="px-4 grid grid-cols-2 gap-2">
+        <div className="rounded-2xl p-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>Tổng chi</span>
+            <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: 'var(--theme-brand-primary-light)' }}>
+              <TrendingUp className="w-3 h-3" style={{ color: 'var(--theme-brand-primary)' }} />
+            </div>
+          </div>
+          <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(totalSalary)}</p>
+        </div>
+        <div className="rounded-2xl p-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>Số chuyến</span>
+            <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: 'var(--theme-brand-primary-light)' }}>
+              <Truck className="w-3 h-3" style={{ color: 'var(--theme-brand-primary)' }} />
+            </div>
+          </div>
+          <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{totalTrips}</p>
+          {pendingCount > 0 && (
+            <p className="text-[10px] font-semibold mt-0.5" style={{ color: 'var(--theme-status-warning)' }}>{pendingCount} chờ đơn giá</p>
+          )}
+        </div>
       </div>
+
+      {/* Driver KPI breakdown */}
+      {driverBreakdown.length > 0 && (
+        <div className="px-4 mt-4">
+          <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--theme-text-muted)' }}>Theo tài xế</p>
+          <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
+            {driverBreakdown.map((d, i) => (
+              <button
+                key={d.id}
+                onClick={() => onViewDriverJobs?.(d.id)}
+                className="w-full flex items-center justify-between px-4 py-3 touch-manipulation card-lift"
+                style={{
+                  borderBottom: i < driverBreakdown.length - 1 ? '1px solid var(--theme-border-default)' : 'none',
+                }}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
+                    {d.name.split(' ').map(w => w[0]).join('').slice(-2).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 text-left">
+                    <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{d.name}</p>
+                    <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>{d.trips} chuyến</p>
+                  </div>
+                </div>
+                <span className="text-sm font-bold tabular-nums shrink-0" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(d.earning)}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Client KPI breakdown */}
+      {clientBreakdown.length > 0 && (
+        <div className="px-4 mt-4">
+          <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--theme-text-muted)' }}>Theo khách hàng</p>
+          <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
+            {clientBreakdown.map((c, i) => (
+              <button
+                key={c.id}
+                onClick={() => onViewClientJobs?.(c.id)}
+                className="w-full flex items-center justify-between px-4 py-3 touch-manipulation card-lift"
+                style={{
+                  borderBottom: i < clientBreakdown.length - 1 ? '1px solid var(--theme-border-default)' : 'none',
+                }}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
+                    {c.name.replace(/Công ty|TNHH|CP|Doanh nghiệp/g, '').trim().split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'KH'}
+                  </div>
+                  <div className="min-w-0 text-left">
+                    <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{c.name}</p>
+                    <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>{c.trips} chuyến</p>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(c.revenue)}</p>
+                  <p className="text-[10px] font-medium" style={{ color: 'var(--theme-brand-primary)' }}>Xem đơn giá →</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {monthlyJobs.length === 0 && (
+        <div className="px-4 mt-8 flex flex-col items-center">
+          <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không có dữ liệu tháng {month.month}/{month.year}</p>
+        </div>
+      )}
     </div>
   )
 }

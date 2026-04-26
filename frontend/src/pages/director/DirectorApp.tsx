@@ -5,12 +5,14 @@ import { AppTopBar } from '@/components/shared/AppTopBar'
 import { DirectorDashboard } from './DirectorDashboard'
 import { UserManagement } from './UserManagement'
 import { DirectorNotifications } from './DirectorNotifications'
+import { DriverJobs } from './DriverJobs'
+import { ClientJobs } from './ClientJobs'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog/Dialog'
 import { Button } from '@/components/ui/Button/Button'
 import { Input } from '@/components/ui/Input/Input'
 import { Label } from '@/components/ui/Label/Label'
 
-type DirectorPage = 'dashboard' | 'users' | 'notifications' | 'account'
+type DirectorPage = 'dashboard' | 'users' | 'notifications' | 'account' | 'driver-jobs' | 'client-jobs'
 
 function AccountPage({ onBack }: { onBack: () => void }) {
   const { user, logout } = useAuth()
@@ -81,23 +83,39 @@ function AccountPage({ onBack }: { onBack: () => void }) {
 export function DirectorApp() {
   const { user } = useAuth()
   const [page, setPage] = useState<DirectorPage>('dashboard')
+  const [selectedDriverId, setSelectedDriverId] = useState('')
+  const [selectedClientId, setSelectedClientId] = useState('')
+
+  const goBack = () => setPage('dashboard')
 
   const renderContent = () => {
     switch (page) {
-      case 'users':         return <><AppTopBar variant="page" title="Quản lý tài khoản" onBack={() => setPage('dashboard')} /><UserManagement /></>
-      case 'notifications': return <><AppTopBar variant="page" title="Thông báo" onBack={() => setPage('dashboard')} /><DirectorNotifications /></>
-      case 'account':       return <AccountPage onBack={() => setPage('dashboard')} />
-      default:              return (
-        <>
-          <AppTopBar
-            variant="home"
-            name={user?.name ?? ''}
-            onNotifications={() => setPage('notifications')}
-            onProfile={() => setPage('account')}
-          />
-          <DirectorDashboard onManageUsers={() => setPage('users')} />
-        </>
-      )
+      case 'users':
+        return <><AppTopBar variant="page" title="Quản lý tài khoản" onBack={goBack} /><UserManagement /></>
+      case 'notifications':
+        return <><AppTopBar variant="page" title="Thông báo" onBack={goBack} /><DirectorNotifications /></>
+      case 'account':
+        return <AccountPage onBack={goBack} />
+      case 'driver-jobs':
+        return <DriverJobs driverId={selectedDriverId} onBack={goBack} />
+      case 'client-jobs':
+        return <ClientJobs clientId={selectedClientId} onBack={goBack} />
+      default:
+        return (
+          <>
+            <AppTopBar
+              variant="home"
+              name={user?.name ?? ''}
+              onNotifications={() => setPage('notifications')}
+              onProfile={() => setPage('account')}
+            />
+            <DirectorDashboard
+              onManageUsers={() => setPage('users')}
+              onViewDriverJobs={(id) => { setSelectedDriverId(id); setPage('driver-jobs') }}
+              onViewClientJobs={(id) => { setSelectedClientId(id); setPage('client-jobs') }}
+            />
+          </>
+        )
     }
   }
 
