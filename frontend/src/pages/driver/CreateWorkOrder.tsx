@@ -132,8 +132,6 @@ export function CreateWorkOrder() {
       />
 
       <div>
-        <h2 className="text-lg font-bold" style={{ color: 'var(--theme-text-primary)' }}>Tạo chuyến mới</h2>
-        <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>Chụp số cont và chọn thông tin</p>
       </div>
 
       {/* ── Container cards ── */}
