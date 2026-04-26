@@ -25,7 +25,7 @@ function AccountantRouter() {
   const { currentPath, navigate, goBack } = useAppStore()
   const [dropdownOpen, setDropdownOpen] = useState(false)
 
-  useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }) }, [currentPath])
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'auto' as ScrollBehavior }) }, [currentPath])
 
   const isHome = currentPath === '/accountant'
   const title = TITLES[currentPath] ?? (currentPath.startsWith('/accountant/trip/') ? 'Chi tiết chuyến' : '')
