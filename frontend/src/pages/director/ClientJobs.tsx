@@ -128,7 +128,7 @@ export function ClientJobs({ clientId, onBack }: { clientId: string; onBack: () 
                 background: job.status === 'PRICED' ? 'var(--theme-brand-primary-light)' : 'var(--theme-status-warning-light)',
                 color: job.status === 'PRICED' ? 'var(--theme-brand-primary)' : 'var(--theme-status-warning)',
               }}>
-                {job.status === 'PRICED' ? 'Đã tính giá' : 'Chờ đơn giá'}
+                {job.status === 'PRICED' ? 'Đã tính giá' : 'Chờ đối soát'}
               </span>
             </div>
             <div className="flex items-center gap-2">
