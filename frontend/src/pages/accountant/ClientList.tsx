@@ -11,7 +11,7 @@ import { formatCurrencyFull } from '@/data/mockData'
 import type { Client, ClientType } from '@/data/mockData'
 
 const EMPTY_CLIENT = {
-  name: '', type: 'company' as ClientType, taxCode: '', address: '', phone: '', contactPerson: '', outstandingDebt: 0,
+  name: '', type: 'company' as ClientType, taxCode: '', address: '', phone: '', contactPerson: '',
 }
 
 export function ClientList() {
@@ -48,7 +48,7 @@ export function ClientList() {
     setForm({
       name: client.name, type: client.type, taxCode: client.taxCode ?? '',
       address: client.address ?? '', phone: client.phone,
-      contactPerson: client.contactPerson ?? '', outstandingDebt: client.outstandingDebt,
+      contactPerson: client.contactPerson ?? '',
     })
     setSelectedClient(null)
     setDialogOpen(true)
@@ -126,9 +126,6 @@ export function ClientList() {
               {selectedClient.taxCode && <InfoRow label="Mã số thuế" value={selectedClient.taxCode} />}
               {selectedClient.address && <InfoRow label="Địa chỉ" value={selectedClient.address} />}
               {selectedClient.contactPerson && <InfoRow label="Người liên hệ" value={selectedClient.contactPerson} />}
-              {selectedClient.outstandingDebt > 0 && (
-                <InfoRow label="Nợ" value={formatCurrencyFull(selectedClient.outstandingDebt)} valueStyle={{ color: 'var(--theme-status-error)', fontWeight: 600 }} />
-              )}
             </div>
           )}
           <DialogFooter>
