@@ -34,10 +34,10 @@ function JobCard({ job, onClick }: { job: WorkOrder; onClick: () => void }) {
       }}
     >
       {/* Container numbers + types */}
-      <div className="space-y-1 mb-2">
+      <div className={`grid ${job.containers.length > 1 ? 'grid-cols-2' : 'grid-cols-1'} gap-1 mb-2`}>
         {job.containers.map((c, i) => (
           <div key={i} className="flex items-center gap-2">
-            <p className="text-sm font-bold font-mono" style={{ color: 'var(--theme-text-primary)' }}>
+            <p className="text-sm font-bold font-mono truncate" style={{ color: 'var(--theme-text-primary)' }}>
               {c.containerNumber}
             </p>
             <ContBadge type={c.workType} />
