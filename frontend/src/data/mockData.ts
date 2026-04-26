@@ -1,4 +1,4 @@
-export type Role = 'director' | 'accountant' | 'driver'
+export type Role = 'superadmin' | 'director' | 'accountant' | 'driver'
 export type TrailerType = '20FT' | '40FT'
 export type JobStatus = 'DRAFT' | 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 export type ClientType = 'company' | 'individual'
@@ -23,6 +23,7 @@ export const WORK_TYPE_LABELS: Record<WorkType, string> = {
 }
 
 export const ROLE_LABELS: Record<Role, string> = {
+  superadmin: 'SuperAdmin',
   director: 'Giám đốc',
   accountant: 'Kế toán',
   driver: 'Tài xế',
