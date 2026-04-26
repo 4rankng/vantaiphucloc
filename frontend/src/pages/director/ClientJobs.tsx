@@ -2,11 +2,11 @@ import { useEffect, useState, useMemo } from 'react'
 import { AppTopBar } from '@/components/shared/AppTopBar'
 import { apiClient } from '@/services/api'
 import { formatCurrency } from '@/data/mockData'
-import type { WorkOrder, RoutePrice, Client } from '@/data/mockData'
+import type { WorkOrder, Pricing, Client } from '@/data/mockData'
 
 export function ClientJobs({ clientId, onBack }: { clientId: string; onBack: () => void }) {
   const [jobs, setJobs] = useState<WorkOrder[]>([])
-  const [pricings, setPricings] = useState<RoutePrice[]>([])
+  const [pricings, setPricings] = useState<Pricing[]>([])
   const [clientName, setClientName] = useState('')
   const [showPricing, setShowPricing] = useState(false)
 
@@ -15,22 +15,22 @@ export function ClientJobs({ clientId, onBack }: { clientId: string; onBack: () 
     Promise.all([
       apiClient.getWorkOrders(),
       apiClient.getClients(),
-      apiClient.getRoutes(),
-    ]).then(([jRes, cRes, rRes]) => {
+      apiClient.getPricings({ clientId }),
+    ]).then(([jRes, cRes, pRes]) => {
       if (!cancelled) {
         if (jRes.success) setJobs(jRes.data.filter(j => j.clientId === clientId))
         if (cRes.success) {
           const c = (cRes.data as Client[]).find(c => c.id === clientId)
           setClientName(c?.name ?? clientId)
         }
-        if (rRes.success) setPricings((rRes.data as RoutePrice[]).filter(p => p.clientId === clientId))
+        if (pRes.success) setPricings(pRes.data)
       }
     })
     return () => { cancelled = true }
   }, [clientId])
 
   const totalRevenue = useMemo(() => jobs.reduce((s, j) => s + j.unitPrice, 0), [jobs])
-  const clientPricings = useMemo(() => pricings.filter(p => p.clientId === clientId), [pricings, clientId])
+  const clientPricings = pricings
 
   return (
     <>
