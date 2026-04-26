@@ -5,6 +5,7 @@ import { SheetPicker } from '@/components/shared/SheetPicker'
 import { ContainerScanner } from '@/components/shared/ContainerScanner'
 import { apiClient } from '@/services/api'
 import { useDriverStore } from '@/hooks/use-driver-store'
+import { useToast } from '@/components/atoms/Toast'
 import { WORK_TYPES, type Client, type RoutePrice, type WorkType, type ContainerItem } from '@/data/mockData'
 
 // ─── Generate fake ISO 6346 cont number ───────────────────────────────────────
@@ -26,6 +27,7 @@ const EMPTY_CONT: ContainerForm = { containerNumber: '', workType: 'E20', photoT
 
 export function CreateWorkOrder() {
   const { driver, navigate } = useDriverStore()
+  const toast = useToast()
   const [clients, setClients] = useState<Client[]>([])
   const [routes, setRoutes] = useState<RoutePrice[]>([])
 
@@ -112,8 +114,10 @@ export function CreateWorkOrder() {
       })
 
       navigate('/driver')
+      toast.success('Gửi chuyến thành công')
     } catch (err) {
       console.error('Submit failed:', err)
+      toast.error('Gửi thất bại', 'Vui lòng thử lại')
       setSubmitting(false)
     }
   }, [containers, clientId, route, clients, driver, navigate])

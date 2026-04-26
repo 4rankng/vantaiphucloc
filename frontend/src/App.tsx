@@ -21,12 +21,12 @@ function DriverRouter() {
   const { currentPath } = useDriverStore()
 
   switch (currentPath) {
-    case '/driver/work-orders/new': return <PageLayout showBack title="Tạo chuyến"><CreateWorkOrder /></PageLayout>
-    case '/driver/history':         return <PageLayout showBack title="Lịch sử"><DriverHistory /></PageLayout>
-    case '/driver/notifications':   return <PageLayout showBack title="Thông báo"><DriverNotifications /></PageLayout>
-    case '/driver/profile':         return <PageLayout showBack title="Tài khoản"><Profile /></PageLayout>
+    case '/driver/work-orders/new': return <ErrorBoundary component="CreateWorkOrder" level="page"><PageLayout showBack title="Tạo chuyến"><CreateWorkOrder /></PageLayout></ErrorBoundary>
+    case '/driver/history':         return <ErrorBoundary component="DriverHistory" level="page"><PageLayout showBack title="Lịch sử"><DriverHistory /></PageLayout></ErrorBoundary>
+    case '/driver/notifications':   return <ErrorBoundary component="Notifications" level="page"><PageLayout showBack title="Thông báo"><DriverNotifications /></PageLayout></ErrorBoundary>
+    case '/driver/profile':         return <ErrorBoundary component="Profile" level="page"><PageLayout showBack title="Tài khoản"><Profile /></PageLayout></ErrorBoundary>
     default:
-      if (currentPath.startsWith('/driver/job/')) return <PageLayout showBack title="Chi tiết chuyến"><JobDetail /></PageLayout>
+      if (currentPath.startsWith('/driver/job/')) return <ErrorBoundary component="JobDetail" level="page"><PageLayout showBack title="Chi tiết chuyến"><JobDetail /></PageLayout></ErrorBoundary>
       return <HomeLayout><DriverHome /></HomeLayout>
   }
 }
