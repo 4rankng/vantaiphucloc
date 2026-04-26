@@ -92,7 +92,7 @@ export function CreateWorkOrder() {
     const containerItems: ContainerItem[] = containers.map(c => ({
       containerNumber: c.containerNumber.trim(),
       workType: c.workType,
-      photoUrl: cont.photoDataUrl ?? '',
+      photoUrl: c.photoDataUrl ?? '',
     }))
 
     const gpsLat = 20.8449
