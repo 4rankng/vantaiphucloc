@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { AppTopBar } from '@/components/shared/AppTopBar'
 import { apiClient } from '@/services/api'
-import { formatCurrency } from '@/data/mockData'
+import { formatCurrencyFull as formatCurrency } from '@/data/mockData'
 import type { WorkOrder, Driver } from '@/data/mockData'
 
 export function DriverJobs({ driverId, onBack }: { driverId: string; onBack: () => void }) {
