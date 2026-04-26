@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/Input/Input'
 import { Label } from '@/components/ui/Label/Label'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { apiClient } from '@/services/api'
-import { formatCurrencyFull } from '@/data/mockData'
 import type { Client, ClientType } from '@/data/mockData'
 
 const EMPTY_CLIENT = {
