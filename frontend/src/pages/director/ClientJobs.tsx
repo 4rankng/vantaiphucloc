@@ -59,14 +59,14 @@ export function ClientJobs({ clientId, onBack }: { clientId: string; onBack: () 
           </div>
         </div>
 
-        {/* Pricing table toggle */}
+        {/* ── Đơn giá section ── */}
         <button
           onClick={() => setShowPricing(!showPricing)}
-          className="w-full rounded-2xl p-3 flex items-center justify-between touch-manipulation"
-          style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
+          className="w-full rounded-2xl p-3.5 flex items-center justify-between touch-manipulation"
+          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
         >
-          <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Bảng đơn giá ({clientPricings.length})</span>
-          <span className="text-xs font-medium" style={{ color: 'var(--theme-brand-primary)' }}>{showPricing ? 'Ẩn' : 'Xem'}</span>
+          <span className="text-sm font-bold">💰 Bảng đơn giá</span>
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.2)' }}>{clientPricings.length} mức giá</span>
         </button>
 
         {showPricing && clientPricings.length > 0 && (
@@ -101,7 +101,7 @@ export function ClientJobs({ clientId, onBack }: { clientId: string; onBack: () 
                     </div>
                     <div>
                       <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>Số lượng</span>
-                      <p className="text-xs font-bold tabular-nums" style={{ color: jobCount > 0 ? 'var(--theme-brand-primary)' : 'var(--theme-text-muted)' }}>{jobCount} chuyến</p>
+                      <p className="text-xs font-bold tabular-nums" style={{ color: jobCount > 0 ? 'var(--theme-brand-primary)' : 'var(--theme-text-muted)' }}>{jobCount} công</p>
                     </div>
                   </div>
                 </div>
@@ -110,7 +110,12 @@ export function ClientJobs({ clientId, onBack }: { clientId: string; onBack: () 
           </div>
         )}
 
-        {/* Job list */}
+        {/* ── Job history section ── */}
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>🚛 Lịch sử chuyến</p>
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}>{jobs.length} chuyến</span>
+        </div>
+
         {jobs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(job => (
           <div
             key={job.id}
