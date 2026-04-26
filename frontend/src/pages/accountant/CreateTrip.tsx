@@ -13,8 +13,6 @@ import { Plus, Trash2 } from 'lucide-react'
 interface CongItem {
   id: string
   workType: WorkType
-  driverSalary: number
-  allowance: number
 }
 
 export function CreateTrip() {
@@ -27,8 +25,10 @@ export function CreateTrip() {
   const [driverId, setDriverId] = useState('')
   const [route, setRoute] = useState('')
   const [congItems, setCongItems] = useState<CongItem[]>([
-    { id: '1', workType: 'E20', driverSalary: 0, allowance: 0 },
+    { id: '1', workType: 'E20' },
   ])
+  const [driverSalary, setDriverSalary] = useState(0)
+  const [allowance, setAllowance] = useState(0)
 
   useEffect(() => {
     Promise.all([apiClient.getClients(), apiClient.getDrivers(), apiClient.getRoutes()])
@@ -40,7 +40,7 @@ export function CreateTrip() {
   }, [])
 
   const addCong = () => {
-    setCongItems(prev => [...prev, { id: String(prev.length + 1), workType: 'E20', driverSalary: 0, allowance: 0 }])
+    setCongItems(prev => [...prev, { id: String(prev.length + 1), workType: 'E20' }])
   }
 
   const removeCong = (id: string) => {
@@ -77,6 +77,20 @@ export function CreateTrip() {
         <SheetPicker options={drivers} value={driverId} onChange={setDriverId} placeholder="Chọn tài xế" />
       </div>
 
+      {/* Trip-level salary & allowance */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Lương tài xế</Label>
+          <Input type="number" value={driverSalary || ''} onChange={e => setDriverSalary(Number(e.target.value))}
+            placeholder="0" className="text-sm" />
+        </div>
+        <div className="space-y-2">
+          <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Phụ cấp</Label>
+          <Input type="number" value={allowance || ''} onChange={e => setAllowance(Number(e.target.value))}
+            placeholder="0" className="text-sm" />
+        </div>
+      </div>
+
       {/* Cong items */}
       <div>
         <div className="flex items-center justify-between mb-2">
@@ -105,18 +119,6 @@ export function CreateTrip() {
                   onChange={v => updateCong(item.id, 'workType', v)}
                   placeholder="Chọn loại công"
                 />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Lương tài xế</Label>
-                  <Input type="number" value={item.driverSalary || ''} onChange={e => updateCong(item.id, 'driverSalary', Number(e.target.value))}
-                    placeholder="0" className="text-sm" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Phụ cấp</Label>
-                  <Input type="number" value={item.allowance || ''} onChange={e => updateCong(item.id, 'allowance', Number(e.target.value))}
-                    placeholder="0" className="text-sm" />
-                </div>
               </div>
             </div>
           ))}
