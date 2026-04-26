@@ -86,7 +86,7 @@ export function JobDetail() {
               </span>
             </div>
           </div>
-        ))}}
+        ))}
       </div>
 
       {/* Container details */}
