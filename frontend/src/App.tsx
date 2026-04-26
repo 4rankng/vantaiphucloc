@@ -7,9 +7,11 @@ import { OfflineIndicator } from '@/components/shared/OfflineIndicator'
 import { ToastProvider } from '@/components/atoms/Toast'
 import { RoleSelect } from '@/pages/RoleSelect'
 import { DriverStoreProvider, useDriverStore } from '@/hooks/use-driver-store'
-import { TopBar, PageLayout, HomeLayout } from '@/pages/driver/AppShell'
+import { PageLayout, HomeLayout } from '@/pages/driver/AppShell'
 import { CreateWorkOrder } from '@/pages/driver/CreateWorkOrder'
 import { DriverHome } from '@/pages/driver/DriverHome'
+import { DriverHistory } from '@/pages/driver/DriverHistory'
+import { DriverNotifications } from '@/pages/driver/DriverNotifications'
 import { Profile } from '@/pages/driver/Profile'
 import { DirectorApp } from '@/pages/director/DirectorApp'
 import { AccountantApp } from '@/pages/accountant/AccountantApp'
@@ -19,7 +21,9 @@ function DriverRouter() {
 
   switch (currentPath) {
     case '/driver/work-orders/new': return <PageLayout showBack><CreateWorkOrder /></PageLayout>
-    case '/driver/profile': return <PageLayout showBack><Profile /></PageLayout>
+    case '/driver/history': return <HomeLayout><DriverHistory /></HomeLayout>
+    case '/driver/notifications': return <HomeLayout><DriverNotifications /></HomeLayout>
+    case '/driver/profile': return <HomeLayout><Profile /></HomeLayout>
     default: return <HomeLayout><DriverHome /></HomeLayout>
   }
 }

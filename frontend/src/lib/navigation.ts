@@ -30,7 +30,12 @@ export const pageTitles: Record<string, string> = {
   '/accountant/work-orders': 'Số công',
   '/accountant/trip-orders': 'Chuyến/Lệnh',
   '/accountant/salary': 'Tính lương',
+  '/accountant/notifications': 'Thông báo',
+  '/accountant/profile': 'Tài khoản',
   '/driver': 'Trang chủ',
+  '/driver/history': 'Lịch sử',
+  '/driver/notifications': 'Thông báo',
+  '/driver/profile': 'Tài khoản',
 }
 
 export function getPageTitle(pathname: string): string {

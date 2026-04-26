@@ -1,11 +1,9 @@
 import { useEffect, useState, useMemo } from 'react'
-import { DollarSign, Truck, TrendingUp, AlertTriangle } from 'lucide-react'
+import { Truck, TrendingUp, Package } from 'lucide-react'
 import { StatCard } from '@/components/shared/StatCard/StatCard'
 import { ChartCard } from '@/components/shared/ChartCard'
-import { PageHeader } from '@/components/shared/PageHeader/PageHeader'
 import { apiClient } from '@/services/api'
 import { formatCurrencyShort, formatCurrency } from '@/data/mockData'
-import type { Alert } from '@/data/mockData'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
@@ -17,11 +15,12 @@ interface DashboardData {
   activeTrips: number
   outstandingDebt: number
   monthlyRevenue: { month: string; revenue: number; expense: number }[]
-  alerts: Alert[]
+  alerts: { id: string; message: string; severity: string; timestamp: string }[]
 }
 
 export function DirectorDashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
+  const [period, setPeriod] = useState<'month' | 'quarter' | 'year'>('month')
 
   useEffect(() => {
     let cancelled = false
@@ -40,7 +39,6 @@ export function DirectorDashboard() {
     return (
       <main className="p-4 space-y-4">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 w-48 rounded bg-[var(--theme-bg-tertiary)]" />
           <div className="grid grid-cols-2 gap-3">
             {[1, 2, 3, 4].map(i => <div key={i} className="h-28 rounded-xl bg-[var(--theme-bg-tertiary)]" />)}
           </div>
@@ -51,11 +49,28 @@ export function DirectorDashboard() {
 
   return (
     <main className="p-4 space-y-4">
-      <PageHeader title="Tổng quan" />
+      {/* Period filter */}
+      <div className="flex gap-2">
+        {(['month', 'quarter', 'year'] as const).map(p => (
+          <button
+            key={p}
+            onClick={() => setPeriod(p)}
+            className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all touch-manipulation"
+            style={{
+              background: period === p ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
+              color: period === p ? 'var(--theme-text-on-brand)' : 'var(--theme-text-secondary)',
+              border: `1px solid ${period === p ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)'}`,
+            }}
+          >
+            {p === 'month' ? 'Tháng' : p === 'quarter' ? 'Quý' : 'Năm'}
+          </button>
+        ))}
+      </div>
 
+      {/* KPI Cards */}
       <div className="grid grid-cols-2 gap-3">
         <StatCard
-          icon={<DollarSign className="h-4 w-4" />}
+          icon={<TrendingUp className="h-4 w-4" />}
           label="Doanh thu"
           value={formatCurrencyShort(data.totalRevenue)}
           variant="success"
@@ -70,20 +85,22 @@ export function DirectorDashboard() {
         />
         <StatCard
           icon={<Truck className="h-4 w-4" />}
-          label="Chuyến đang chạy"
+          label="Xe đang hoạt động"
           value={String(data.activeTrips)}
           variant="default"
-          subtitle={`${data.tripCount} tổng cộng`}
+          subtitle={`${data.tripCount} tổng chuyến`}
         />
         <StatCard
-          icon={<AlertTriangle className="h-4 w-4" />}
-          label="Công nợ"
-          value={formatCurrencyShort(data.outstandingDebt)}
-          variant="warning"
+          icon={<Package className="h-4 w-4" />}
+          label="Tổng chuyến tháng"
+          value={String(data.tripCount)}
+          variant="default"
+          subtitle="tháng này"
         />
       </div>
 
-      <ChartCard title="Doanh thu & Chi phí" subtitle="6 tháng gần nhất">
+      {/* Revenue chart */}
+      <ChartCard title="Doanh thu tăng trưởng" subtitle="6 tháng gần nhất">
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={data.monthlyRevenue}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--theme-border-default)" />
@@ -96,21 +113,6 @@ export function DirectorDashboard() {
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>
-
-      {data.alerts.length > 0 && (
-        <div className="rounded-xl border border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] p-4 space-y-3">
-          <h3 className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Cảnh báo gần đây</h3>
-          {data.alerts.slice(0, 4).map(alert => (
-            <div key={alert.id} className="flex items-start gap-3">
-              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" style={{ color: alert.severity === 'high' ? 'var(--theme-status-error)' : 'var(--theme-status-warning)' }} />
-              <div className="min-w-0">
-                <p className="text-xs" style={{ color: 'var(--theme-text-primary)' }}>{alert.message}</p>
-                <p className="text-[10px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{alert.timestamp}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </main>
   )
 }

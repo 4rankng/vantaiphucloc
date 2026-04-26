@@ -1,9 +1,3 @@
-export * from './TripCard'
-export * from './TripTable'
-export * from './TripDetail'
-export * from './VehicleCard'
-export * from './VehicleTable'
-export * from './VehicleDetail'
+// Only keep modules that serve the requirements
 export * from './ClientCard'
 export * from './ClientDetail'
-export * from './InvoiceCard'
