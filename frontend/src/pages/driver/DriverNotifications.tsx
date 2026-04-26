@@ -1,5 +1,4 @@
 import { Bell, CheckCircle, Wallet, UserPlus } from 'lucide-react'
-import { TopBar } from './AppShell'
 
 interface Notification {
   id: string
@@ -55,9 +54,7 @@ export function DriverNotifications() {
   const unreadCount = mockNotifications.filter(n => !n.read).length
 
   return (
-    <div className="pb-6" style={{ background: 'var(--theme-bg-primary)' }}>
-      <TopBar />
-
+    <div className="pb-6">
       <div className="px-4 pt-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>
