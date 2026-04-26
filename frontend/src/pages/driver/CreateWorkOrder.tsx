@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Camera, Check, RotateCcw, Plus, Trash2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button/Button'
 import { SheetPicker } from '@/components/shared/SheetPicker'
+import { ContainerScanner } from '@/components/shared/ContainerScanner'
 import { apiClient } from '@/services/api'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { WORK_TYPES, type Client, type RoutePrice, type WorkType, type ContainerItem } from '@/data/mockData'
@@ -35,8 +36,8 @@ export function CreateWorkOrder() {
   const [route, setRoute] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  // Ref for hidden file input (camera)
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  // Scanner state
+  const [scannerOpen, setScannerOpen] = useState(false)
   const [activeContIdx, setActiveContIdx] = useState(0)
 
   useEffect(() => {
@@ -50,26 +51,20 @@ export function CreateWorkOrder() {
     return () => { cancelled = true }
   }, [])
 
-  // Handle camera capture
-  const handleCameraCapture = useCallback((idx: number) => () => {
+  // Handle scanner
+  const openScanner = useCallback((idx: number) => () => {
     setActiveContIdx(idx)
-    if (fileInputRef.current) {
-      fileInputRef.current.click()
-    }
+    setScannerOpen(true)
   }, [])
 
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      // Discard the actual image, just fill in a fake cont number
-      setContainers(prev => prev.map((c, i) =>
-        i === activeContIdx
-          ? { ...c, photoTaken: true, containerNumber: c.containerNumber || generateContainerNumber() }
-          : c,
-      ))
-    }
-    // Reset input so same file can be re-selected
-    e.target.value = ''
+  const handleScanComplete = useCallback((imageSrc: string) => {
+    // Discard actual image, fill fake cont number for mockup
+    setContainers(prev => prev.map((c, i) =>
+      i === activeContIdx
+        ? { ...c, photoTaken: true, containerNumber: c.containerNumber || generateContainerNumber() }
+        : c,
+    ))
+    setScannerOpen(false)
   }, [activeContIdx])
 
   // Container management
@@ -99,7 +94,6 @@ export function CreateWorkOrder() {
       photoUrl: '',
     }))
 
-    // Get GPS (simulate for mockup)
     const gpsLat = 20.8449
     const gpsLng = 106.6881
 
@@ -122,18 +116,13 @@ export function CreateWorkOrder() {
 
   return (
     <div className="space-y-4 pb-6">
-      {/* Hidden file input for camera */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={handleFileChange}
-      />
-
-      <div>
-      </div>
+      {/* Scanner overlay */}
+      {scannerOpen && (
+        <ContainerScanner
+          onCapture={handleScanComplete}
+          onClose={() => setScannerOpen(false)}
+        />
+      )}
 
       {/* ── Container cards ── */}
       <div className="space-y-3">
@@ -159,9 +148,9 @@ export function CreateWorkOrder() {
               )}
             </div>
 
-            {/* Camera / Photo area — rectangle viewfinder */}
+            {/* Camera trigger */}
             <button
-              onClick={handleCameraCapture(idx)}
+              onClick={openScanner(idx)}
               className="w-full rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-6 px-4 transition-colors touch-manipulation"
               style={{
                 background: cont.photoTaken ? 'var(--theme-bg-tertiary)' : 'transparent',
@@ -193,7 +182,7 @@ export function CreateWorkOrder() {
                   </div>
                   <div className="flex items-center gap-2 mt-1">
                     <Camera className="w-5 h-5" style={{ color: 'var(--theme-text-muted)' }} />
-                    <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Chạm để chụp</span>
+                    <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Chạm để quét</span>
                   </div>
                 </div>
               )}
@@ -205,7 +194,7 @@ export function CreateWorkOrder() {
                 <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Số cont</label>
                 {cont.photoTaken && (
                   <button
-                    onClick={handleCameraCapture(idx)}
+                    onClick={openScanner(idx)}
                     className="flex items-center gap-1 text-[10px] font-medium touch-manipulation"
                     style={{ color: 'var(--theme-text-muted)' }}
                   >
@@ -287,7 +276,7 @@ export function CreateWorkOrder() {
           label="Chọn cung đường"
           placeholder="Chọn cung đường"
           value={route}
-          options={routes.map((r, i) => ({ value: r.route, label: r.route }))}
+          options={routes.map((r) => ({ value: r.route, label: r.route }))}
           onChange={setRoute}
         />
       </div>
