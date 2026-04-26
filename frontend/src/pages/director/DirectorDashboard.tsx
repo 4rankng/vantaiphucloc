@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { Users, Truck, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Users, Truck, TrendingUp, ChevronLeft, ChevronRight, UserCircle, Building2 } from 'lucide-react'
 import { apiClient } from '@/services/api'
 import { formatCurrency } from '@/data/mockData'
 import type { WorkOrder, Client, Driver } from '@/data/mockData'
@@ -160,8 +160,8 @@ export function DirectorDashboard({ onManageUsers, onViewDriverJobs, onViewClien
                 }}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
-                    {d.name.split(' ').map(w => w[0]).join('').slice(-2).toUpperCase()}
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
+                    <UserCircle className="w-4 h-4" />
                   </div>
                   <div className="min-w-0 text-left">
                     <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{d.name}</p>
@@ -194,8 +194,8 @@ export function DirectorDashboard({ onManageUsers, onViewDriverJobs, onViewClien
                 }}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
-                    {c.name.replace(/Công ty|TNHH|CP|Doanh nghiệp/g, '').trim().split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'KH'}
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
+                    <Building2 className="w-4 h-4" />
                   </div>
                   <div className="min-w-0 text-left">
                     <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{c.name}</p>
