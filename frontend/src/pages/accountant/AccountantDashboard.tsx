@@ -2,13 +2,16 @@ import { useEffect, useState, useMemo } from 'react'
 import { DollarSign, FileText, Camera, AlertTriangle, Users, Route } from 'lucide-react'
 import { StatCard } from '@/components/shared/StatCard/StatCard'
 import { PageHeader } from '@/components/shared/PageHeader/PageHeader'
+import { SectionHeader } from '@/components/shared/SectionHeader'
 import { apiClient } from '@/services/api'
 import { formatCurrencyShort } from '@/data/mockData'
 import { useAppStore } from '@/hooks/use-app-store'
+import { accountantNav } from '@/lib/navigation'
 import type { WorkOrder, TripOrder, Client } from '@/data/mockData'
 
 export function AccountantDashboard() {
   const { navigate } = useAppStore()
+  const quickAccessItems = useMemo(() => accountantNav.filter(n => n.path !== '/accountant'), [])
   const [clients, setClients] = useState<Client[]>([])
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
   const [tripOrders, setTripOrders] = useState<TripOrder[]>([])
@@ -105,6 +108,24 @@ export function AccountantDashboard() {
             subtitle="theo kỳ"
           />
         </button>
+      </div>
+
+      {/* ── QUICK ACCESS ── */}
+      <div>
+        <SectionHeader title="Truy cập nhanh" />
+        <div className="grid grid-cols-4 gap-3">
+          {quickAccessItems.map(({ label, icon: Icon, path }) => (
+            <button key={path} onClick={() => navigate(path)}
+              className="flex flex-col items-center gap-1.5 py-3 rounded-2xl transition-all active:scale-[0.96] touch-manipulation"
+              style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
+              <div className="h-9 w-9 rounded-full flex items-center justify-center"
+                style={{ background: 'var(--theme-brand-primary-light)' }}>
+                <Icon className="h-4.5 w-4.5" style={{ color: 'var(--theme-brand-primary)' }} />
+              </div>
+              <span className="text-[11px] font-medium text-center leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{label}</span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   )
