@@ -65,7 +65,7 @@ export function ClientJobs({ clientId, onBack }: { clientId: string; onBack: () 
           className="w-full rounded-2xl p-3.5 flex items-center justify-between touch-manipulation"
           style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
         >
-          <span className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>Bảng đơn giá</span>
+          <span className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>Bảng giá</span>
           <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}>{clientPricings.length} mức giá</span>
         </button>
 
