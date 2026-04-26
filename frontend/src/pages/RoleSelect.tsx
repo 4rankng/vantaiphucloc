@@ -1,4 +1,4 @@
-import { LayoutDashboard, Truck, CircleDollarSign, UserCircle } from 'lucide-react'
+import { LayoutDashboard, Truck, CircleDollarSign } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Role } from '@/data/mockData'
@@ -14,8 +14,7 @@ interface RoleCard {
 const roles: RoleCard[] = [
   { role: 'director', label: ROLE_LABELS.director, icon: LayoutDashboard, description: 'Xem tổng quan, báo cáo doanh thu' },
   { role: 'accountant', label: ROLE_LABELS.accountant, icon: CircleDollarSign, description: 'Quản lý khách hàng, đơn giá, lương' },
-  { role: 'driver', label: ROLE_LABELS.driver, icon: Truck, description: 'Chụp công, xem chuyến, thu nhập' },
-  { role: 'dispatcher', label: ROLE_LABELS.dispatcher, icon: UserCircle, description: 'Điều hành chuyến xe, cảnh báo' },
+  { role: 'driver', label: ROLE_LABELS.driver, icon: Truck, description: 'Chụp ảnh công, gửi số công' },
 ]
 
 export function RoleSelect() {

@@ -1,14 +1,11 @@
-import { useEffect, useState, useMemo, useCallback } from 'react'
-import { DollarSign, Truck, TrendingUp, AlertTriangle, Route, Users } from 'lucide-react'
+import { useEffect, useState, useMemo } from 'react'
+import { DollarSign, Truck, TrendingUp, AlertTriangle } from 'lucide-react'
 import { StatCard } from '@/components/shared/StatCard/StatCard'
 import { ChartCard } from '@/components/shared/ChartCard'
 import { PageHeader } from '@/components/shared/PageHeader/PageHeader'
-import { SectionHeader } from '@/components/shared/SectionHeader'
 import { apiClient } from '@/services/api'
 import { formatCurrencyShort, formatCurrency } from '@/data/mockData'
-import { useAppStore } from '@/hooks/use-app-store'
-import { directorNav } from '@/lib/navigation'
-import type { Job, Alert } from '@/data/mockData'
+import type { Alert } from '@/data/mockData'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
@@ -21,11 +18,9 @@ interface DashboardData {
   outstandingDebt: number
   monthlyRevenue: { month: string; revenue: number; expense: number }[]
   alerts: Alert[]
-  recentJobs: Job[]
 }
 
 export function DirectorDashboard() {
-  const { navigate } = useAppStore()
   const [data, setData] = useState<DashboardData | null>(null)
 
   useEffect(() => {
@@ -116,24 +111,6 @@ export function DirectorDashboard() {
           ))}
         </div>
       )}
-
-      {/* ── QUICK ACCESS ── */}
-      <div>
-        <SectionHeader title="Quản lý" />
-        <div className="grid grid-cols-4 gap-3">
-          {directorNav.filter(n => n.path !== '/director').map(({ label, icon: Icon, path }) => (
-            <button key={path} onClick={() => navigate(path)}
-              className="flex flex-col items-center gap-1.5 py-3 rounded-2xl transition-all active:scale-[0.96] touch-manipulation"
-              style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
-              <div className="h-9 w-9 rounded-full flex items-center justify-center"
-                style={{ background: 'var(--theme-brand-primary-light)' }}>
-                <Icon className="h-4.5 w-4.5" style={{ color: 'var(--theme-brand-primary)' }} />
-              </div>
-              <span className="text-[11px] font-medium text-center leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
     </main>
   )
 }
