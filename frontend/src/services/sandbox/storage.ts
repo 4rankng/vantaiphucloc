@@ -1,5 +1,5 @@
 const PREFIX = 'ttransport_'
-const VERSION = 6
+const VERSION = 7
 
 export function getStore<T>(key: string, fallback: T[]): T[] {
   const version = localStorage.getItem(PREFIX + '_version')
