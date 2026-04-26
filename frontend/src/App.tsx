@@ -15,6 +15,7 @@ import { DriverHistory } from '@/pages/driver/DriverHistory'
 import { DriverNotifications } from '@/pages/driver/DriverNotifications'
 import { DirectorApp } from '@/pages/director/DirectorApp'
 import { AccountantApp } from '@/pages/accountant/AccountantApp'
+import { SuperAdminApp } from '@/pages/superadmin/SuperAdminApp'
 
 function DriverRouter() {
   const { currentPath } = useDriverStore()
@@ -43,6 +44,7 @@ function AppContent() {
   if (!user) return <RoleSelect />
 
   switch (user.role) {
+    case 'superadmin': return <SuperAdminApp />
     case 'director': return <DirectorApp />
     case 'accountant': return <AccountantApp />
     default: return <DriverApp />
