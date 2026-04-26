@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { AppStoreProvider, useAppStore } from '@/hooks/use-app-store'
 import { AppTopBar } from '@/components/shared/AppTopBar'
+import { ProfileDialog } from '@/components/shared/ProfileDialog'
 import { getPageTitle } from '@/lib/navigation'
 import { AccountantDashboard } from './AccountantDashboard'
 import { ClientList } from './ClientList'
@@ -11,7 +12,6 @@ import { WorkOrderList } from './WorkOrderList'
 import { TripOrderList } from './TripOrderList'
 import { SalaryView } from './SalaryView'
 import { AccountantNotifications } from './AccountantNotifications'
-import { AccountantProfile } from './AccountantProfile'
 
 // Home-level paths get the greeting top bar; everything else gets a back-arrow top bar
 const HOME_PATH = '/accountant'
@@ -19,6 +19,7 @@ const HOME_PATH = '/accountant'
 function AccountantRouter() {
   const { user } = useAuth()
   const { currentPath, navigate, goBack } = useAppStore()
+  const [profileOpen, setProfileOpen] = useState(false)
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }) }, [currentPath])
 
@@ -35,7 +36,6 @@ function AccountantRouter() {
       case '/accountant/trip-orders':  return <TripOrderList />
       case '/accountant/salary':       return <SalaryView />
       case '/accountant/notifications':return <AccountantNotifications />
-      case '/accountant/profile':      return <AccountantProfile />
       default: return (
         <div className="p-4 text-center py-12" style={{ color: 'var(--theme-text-muted)' }}>
           <p className="text-sm">Trang đang phát triển</p>
@@ -51,7 +51,7 @@ function AccountantRouter() {
           variant="home"
           name={user?.name ?? ''}
           onNotifications={() => navigate('/accountant/notifications')}
-          onProfile={() => navigate('/accountant/profile')}
+          onProfile={() => setProfileOpen(true)}
         />
       ) : (
         <AppTopBar variant="page" title={pageTitle} onBack={goBack} />
@@ -60,6 +60,7 @@ function AccountantRouter() {
       <main className={isHome ? undefined : 'p-4 space-y-4'}>
         {renderPage()}
       </main>
+      <ProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} />
     </div>
   )
 }
