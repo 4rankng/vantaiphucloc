@@ -115,6 +115,30 @@ Freight container trip payroll system for Phuc Loc company.
 - driver: tractor_plate
 - director: company
 
+## Ke Toan Layout
+- **Mobile**: bottom nav with 4 tabs
+- **Desktop/laptop**: sidebar with 4 sections
+
+### 5 Navigation Items
+1. **Trang chu** (Home) — dashboard: overview stats, viec can lam ngay (trips pending, jobs pending match, upcoming salary periods)
+2. **Chuyen** (Trips) — create trip, view trips, doi soat (match jobs)
+3. **So cong** (Work Orders) — view/filter driver-submitted jobs by plate, time
+4. **Luong** (Salary) — setup period, calculate driver salary
+5. **Thiet lap** (Settings) — khach hang, cung duong, don gia (CRUD)
+
+### Trang Chu (Dashboard)
+When ke toan logs in, show actionable info for the day:
+- Trips cho doi soat (need attention)
+- So cong chua match
+- Quick stats (total trips, pending jobs, etc.)
+- Salary period status (current period)
+
+### Doi Soat Flow
+- Software auto-matches first (loai cong + khach hang + cung duong)
+- Ke toan confirms auto-match or manually picks jobs for unmatched items
+- Status: Cho doi soat → Khop (after match confirmed)
+
 ## Open Questions
-- [ ] Layout for ke toan: tab/bottom nav vs single scroll vs sidebar?
-- [ ] (More questions during discussion)
+- [x] Layout for ke toan: bottom nav (mobile) + sidebar (desktop)
+- [x] 5 navigation items confirmed (Trang chu, Chuyen, So cong, Luong, Thiet lap)
+- [x] Doi soat: auto-match + manual confirm, then manual pick for unmatched
