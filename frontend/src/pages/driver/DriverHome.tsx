@@ -1,13 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { MapPin, Calendar } from 'lucide-react'
+import { Plus, MapPin, Calendar } from 'lucide-react'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { apiClient } from '@/services/api'
 import { formatCurrencyFull, type WorkOrder, type ContainerItem } from '@/data/mockData'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
-import { ContBadge } from '@/components/shared/ContBadge'
-import { JobCard } from '@/components/shared/JobCard'
-import { Fab } from '@/components/shared/Fab'
+import { WorkOrderCard } from '@/components/shared/WorkOrderCard'
+import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 
 // ─── Cont type badge ──────────────────────────────────────────────────────────
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -105,9 +104,10 @@ export function DriverHome() {
           </div>
         ) : (
           filteredJobs.map(job => (
-            <JobCard
+            <WorkOrderCard
               key={job.id}
-              job={job}
+              variant="driver"
+              data={job}
               onClick={() => navigate(`/driver/job/${job.id}`)}
             />
           ))
@@ -115,7 +115,7 @@ export function DriverHome() {
       </div>
 
       {/* FAB */}
-      <Fab onClick={() => navigate('/driver/work-orders/new')} />
+      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => navigate('/driver/work-orders/new')} label="Tạo chuyến mới" />
     </div>
   )
 }
