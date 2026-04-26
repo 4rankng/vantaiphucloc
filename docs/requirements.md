@@ -116,29 +116,28 @@ Freight container trip payroll system for Phuc Loc company.
 - director: company
 
 ## Ke Toan Layout
-- **Mobile**: bottom nav with 4 tabs
-- **Desktop/laptop**: sidebar with 4 sections
+- **NO bottom nav, NO sidebar** — single scroll page (Trang chu)
+- Everything accessible from Trang chu
 
-### 5 Navigation Items
-1. **Trang chu** (Home) — dashboard: overview stats, viec can lam ngay (trips pending, jobs pending match, upcoming salary periods)
-2. **Chuyen** (Trips) — create trip, view trips, doi soat (match jobs)
-3. **So cong** (Work Orders) — view/filter driver-submitted jobs by plate, time
-4. **Luong** (Salary) — setup period, calculate driver salary
-5. **Thiet lap** (Settings) — khach hang, cung duong, don gia (CRUD)
+### Quick Actions (row of buttons at top)
+1. **Tạo chuyến** — create new trip
+2. **Khách hàng** → opens client management page (includes don gia management per client)
+3. **Thiết lập** → setup salary period (from date → to date, e.g. 26th to 25th)
 
-### Trang Chu (Dashboard)
-When ke toan logs in, show actionable info for the day:
-- Trips cho doi soat (need attention)
-- So cong chua match
-- Quick stats (total trips, pending jobs, etc.)
-- Salary period status (current period)
+### Trang Chu Sections (scroll)
+1. **Stats strip** — trips today, jobs pending match, current salary period
+2. **Chuyến chờ đối soát** — trips needing attention, tap to doi soat
+3. **Số công chưa match** — jobs that failed auto-match, ke toan must manual match
 
-### Doi Soat Flow
-- Software auto-matches first (loai cong + khach hang + cung duong)
-- Ke toan confirms auto-match or manually picks jobs for unmatched items
-- Status: Cho doi soat → Khop (after match confirmed)
+### Drill-down Pages
+- Trip detail → doi soat (view matched/unmatched jobs, manual match)
+- Client management → CRUD clients + don gia per client
+- Salary period → view drivers, calculated salary, mark paid
+- Job detail → edit job info for manual matching
 
 ## Open Questions
-- [x] Layout for ke toan: bottom nav (mobile) + sidebar (desktop)
-- [x] 5 navigation items confirmed (Trang chu, Chuyen, So cong, Luong, Thiet lap)
-- [x] Doi soat: auto-match + manual confirm, then manual pick for unmatched
+- [x] Layout: single page, no nav
+- [x] Quick actions: Tao chuyen, Khach hang, Thiet lap
+- [x] Don gia is part of Khach hang page (per-client pricing)
+- [x] Salary: sum of (driver_salary + allowance) from matched jobs in period
+- [x] Doi soat: auto-match first, manual for unmatched (can edit job + trip before matching)
