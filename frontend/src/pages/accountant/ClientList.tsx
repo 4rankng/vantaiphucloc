@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Plus, Pencil, Trash2, Building2, User } from 'lucide-react'
-import { PageHeader } from '@/components/shared/PageHeader/PageHeader'
+import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog/Dialog'
 import { Button } from '@/components/ui/Button/Button'
 import { Input } from '@/components/ui/Input/Input'
@@ -66,18 +66,9 @@ export function ClientList() {
   }
 
   return (
-    <div className="p-4 space-y-4">
-      <PageHeader title="Khách hàng" subtitle={`${clients.length} khách hàng`} onAdd={handleOpenCreate} addLabel="Thêm khách hàng" />
-
-      {/* Mobile add button */}
-      <button onClick={handleOpenCreate}
-        className="lg:hidden w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
-        style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-        <Plus className="h-4 w-4" /> Thêm khách hàng
-      </button>
-
+    <div>
       <div className="space-y-2">
-        {clients.map(client => (
+      {clients.map(client => (
           <div key={client.id}
             className="flex items-start gap-3 p-4 rounded-xl border"
             style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}>
@@ -171,6 +162,7 @@ export function ClientList() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={handleOpenCreate} label="Thêm khách hàng" />
     </div>
   )
 }
