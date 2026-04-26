@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { useAuth } from '@/contexts/AuthContext'
 import { Phone, TruckIcon, LogOut, KeyRound, ChevronRight } from 'lucide-react'
-import { TopBar } from './AppShell'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog/Dialog'
 import { Button } from '@/components/ui/Button/Button'
 import { Input } from '@/components/ui/Input/Input'
@@ -27,9 +26,7 @@ export function Profile() {
   }
 
   return (
-    <div className="pb-6" style={{ background: 'var(--theme-bg-primary)' }}>
-      <TopBar />
-
+    <div className="pb-6">
       <div className="px-4 pt-4 space-y-4">
         {/* Avatar + name */}
         <div

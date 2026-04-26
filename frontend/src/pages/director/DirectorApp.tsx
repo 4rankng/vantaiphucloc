@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { LayoutDashboard, Users, Bell, UserCircle, LogOut, KeyRound, ChevronRight } from 'lucide-react'
+import { LogOut, KeyRound, ChevronRight } from 'lucide-react'
+import { AppTopBar } from '@/components/shared/AppTopBar'
 import { DirectorDashboard } from './DirectorDashboard'
 import { UserManagement } from './UserManagement'
 import { DirectorNotifications } from './DirectorNotifications'
@@ -9,16 +10,9 @@ import { Button } from '@/components/ui/Button/Button'
 import { Input } from '@/components/ui/Input/Input'
 import { Label } from '@/components/ui/Label/Label'
 
-type DirectorTab = 'dashboard' | 'users' | 'notifications' | 'account'
+type DirectorPage = 'dashboard' | 'users' | 'notifications' | 'account'
 
-const navItems: { tab: DirectorTab; icon: typeof LayoutDashboard; label: string }[] = [
-  { tab: 'dashboard', icon: LayoutDashboard, label: 'Tổng quan' },
-  { tab: 'users', icon: Users, label: 'Tài khoản' },
-  { tab: 'notifications', icon: Bell, label: 'Thông báo' },
-  { tab: 'account', icon: UserCircle, label: 'Cá nhân' },
-]
-
-function AccountTab() {
+function AccountPage({ onBack }: { onBack: () => void }) {
   const { user, logout } = useAuth()
   const initials = (user?.name ?? 'GD').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
   const [pwDialog, setPwDialog] = useState(false)
@@ -27,40 +21,35 @@ function AccountTab() {
   const [confirmPw, setConfirmPw] = useState('')
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="flex items-center gap-3 rounded-2xl p-4" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
-        <div className="w-14 h-14 rounded-full flex items-center justify-center text-base font-bold shrink-0" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-          {initials}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[16px] font-bold" style={{ color: 'var(--theme-text-primary)' }}>{user?.name}</p>
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
-            Giám đốc
-          </span>
-        </div>
-      </div>
-
-      <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
-        <button
-          onClick={() => setPwDialog(true)}
-          className="w-full flex items-center justify-between px-4 py-3.5 touch-manipulation"
-        >
-          <div className="flex items-center gap-3">
-            <KeyRound className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
-            <span className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Đổi mật khẩu</span>
+    <>
+      <AppTopBar variant="page" title="Tài khoản" onBack={onBack} />
+      <div className="p-4 space-y-4">
+        <div className="flex items-center gap-3 rounded-2xl p-4" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
+          <div className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+            {initials}
           </div>
-          <ChevronRight className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
+          <div className="flex-1 min-w-0">
+            <p className="text-[15px] font-bold" style={{ color: 'var(--theme-text-primary)' }}>{user?.name}</p>
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
+              Giám đốc
+            </span>
+          </div>
+        </div>
+
+        <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
+          <button onClick={() => setPwDialog(true)} className="w-full flex items-center justify-between px-4 py-3.5 touch-manipulation">
+            <div className="flex items-center gap-3">
+              <KeyRound className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
+              <span className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Đổi mật khẩu</span>
+            </div>
+            <ChevronRight className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
+          </button>
+        </div>
+
+        <button onClick={logout} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold text-sm touch-manipulation" style={{ background: 'var(--theme-status-error-light)', color: 'var(--theme-status-error-text)' }}>
+          <LogOut className="w-4 h-4" /> Đăng xuất
         </button>
       </div>
-
-      <button
-        onClick={logout}
-        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold text-sm touch-manipulation"
-        style={{ background: 'var(--theme-status-error-light)', color: 'var(--theme-status-error-text)' }}
-      >
-        <LogOut className="w-4 h-4" />
-        Đăng xuất
-      </button>
 
       <Dialog open={pwDialog} onOpenChange={setPwDialog}>
         <DialogContent>
@@ -85,77 +74,36 @@ function AccountTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  )
-}
-
-function TopBar({ tab }: { tab: DirectorTab }) {
-  const { user } = useAuth()
-  const titles: Record<DirectorTab, string> = {
-    dashboard: 'Tổng quan',
-    users: 'Quản lý tài khoản',
-    notifications: 'Thông báo',
-    account: 'Tài khoản',
-  }
-
-  return (
-    <div className="px-4 pt-3 pb-2" style={{ background: 'var(--theme-brand-primary)' }}>
-      <div className="flex items-center justify-between">
-        <div className="min-w-0">
-          <p className="text-[11px] truncate" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.75 }}>{titles[tab]}</p>
-          <p className="text-[15px] font-bold truncate" style={{ color: 'var(--theme-text-on-brand)' }}>{user?.name}</p>
-        </div>
-      </div>
-    </div>
+    </>
   )
 }
 
 export function DirectorApp() {
-  const [activeTab, setActiveTab] = useState<DirectorTab>('dashboard')
+  const { user } = useAuth()
+  const [page, setPage] = useState<DirectorPage>('dashboard')
 
   const renderContent = () => {
-    switch (activeTab) {
-      case 'dashboard': return <DirectorDashboard />
-      case 'users': return <UserManagement />
-      case 'notifications': return <DirectorNotifications />
-      case 'account': return <AccountTab />
+    switch (page) {
+      case 'users':         return <><AppTopBar variant="page" title="Quản lý tài khoản" onBack={() => setPage('dashboard')} /><UserManagement /></>
+      case 'notifications': return <><AppTopBar variant="page" title="Thông báo" onBack={() => setPage('dashboard')} /><DirectorNotifications /></>
+      case 'account':       return <AccountPage onBack={() => setPage('dashboard')} />
+      default:              return (
+        <>
+          <AppTopBar
+            variant="home"
+            name={user?.name ?? ''}
+            onNotifications={() => setPage('notifications')}
+            onProfile={() => setPage('account')}
+          />
+          <DirectorDashboard onManageUsers={() => setPage('users')} />
+        </>
+      )
     }
   }
 
   return (
-    <div className="min-h-[100dvh] pb-14" style={{ background: 'var(--theme-bg-primary)' }}>
-      <TopBar tab={activeTab} />
-      <main>{renderContent()}</main>
-
-      {/* Bottom Navigation */}
-      <nav
-        className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2"
-        style={{
-          background: 'var(--theme-bottom-nav)',
-          borderTop: '1px solid var(--theme-bottom-nav-border)',
-          height: '3.5rem',
-        }}
-      >
-        {navItems.map(({ tab, icon: Icon, label }) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full touch-manipulation"
-            aria-label={label}
-          >
-            <Icon
-              className="w-5 h-5"
-              style={{ color: activeTab === tab ? 'var(--theme-bottom-nav-active)' : 'var(--theme-bottom-nav-inactive)' }}
-            />
-            <span
-              className="text-[10px] font-medium"
-              style={{ color: activeTab === tab ? 'var(--theme-bottom-nav-active)' : 'var(--theme-bottom-nav-inactive)' }}
-            >
-              {label}
-            </span>
-          </button>
-        ))}
-      </nav>
+    <div className="min-h-[100dvh]" style={{ background: 'var(--theme-bg-primary)' }}>
+      {renderContent()}
     </div>
   )
 }

@@ -20,10 +20,10 @@ function DriverRouter() {
   const { currentPath } = useDriverStore()
 
   switch (currentPath) {
-    case '/driver/work-orders/new': return <PageLayout showBack><CreateWorkOrder /></PageLayout>
-    case '/driver/history': return <HomeLayout><DriverHistory /></HomeLayout>
-    case '/driver/notifications': return <HomeLayout><DriverNotifications /></HomeLayout>
-    case '/driver/profile': return <HomeLayout><Profile /></HomeLayout>
+    case '/driver/work-orders/new': return <PageLayout showBack title="Tạo số công"><CreateWorkOrder /></PageLayout>
+    case '/driver/history':         return <PageLayout showBack title="Lịch sử"><DriverHistory /></PageLayout>
+    case '/driver/notifications':   return <PageLayout showBack title="Thông báo"><DriverNotifications /></PageLayout>
+    case '/driver/profile':         return <PageLayout showBack title="Tài khoản"><Profile /></PageLayout>
     default: return <HomeLayout><DriverHome /></HomeLayout>
   }
 }

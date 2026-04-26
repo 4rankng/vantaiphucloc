@@ -2,7 +2,6 @@ import { useEffect, useState, useMemo } from 'react'
 import { CheckCircle, Clock, AlertCircle, Camera } from 'lucide-react'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { apiClient } from '@/services/api'
-import { TopBar } from './AppShell'
 import type { WorkOrder } from '@/data/mockData'
 
 const STATUS_MAP: Record<string, { label: string; icon: typeof CheckCircle; color: string; bg: string }> = {
@@ -40,8 +39,6 @@ export function DriverHistory() {
 
   return (
     <div className="pb-6" style={{ background: 'var(--theme-bg-primary)' }}>
-      <TopBar />
-
       {/* Filter tabs */}
       <div className="px-4 pt-3 pb-2 flex gap-2 overflow-x-auto scrollbar-none">
         {(['ALL', 'PENDING', 'MATCHED', 'DISPUTED'] as const).map(s => (
