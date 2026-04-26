@@ -124,7 +124,7 @@ export function DirectorDashboard({ onManageUsers, onViewDriverJobs, onViewClien
       </div>
 
       {/* Month navigator */}
-      <div className="px-4 pb-2 flex items-center justify-between">
+      <div className="px-4 pb-2 flex items-center justify-center gap-2">
         <button onClick={prevMonth} className="w-8 h-8 flex items-center justify-center rounded-full touch-manipulation" style={{ background: 'var(--theme-bg-secondary)' }}>
           <ChevronLeft className="w-4 h-4" style={{ color: 'var(--theme-text-primary)' }} />
         </button>
