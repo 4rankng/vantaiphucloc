@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { Plus, Truck, CircleDollarSign, LayoutDashboard, Phone } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog/Dialog'
 import { Button } from '@/components/ui/Button/Button'
@@ -108,14 +109,17 @@ export function UserManagement() {
         ))}
       </div>
 
-      {/* Add button */}
-      <button
-        onClick={() => { setForm(EMPTY_FORM); setDialogOpen(true) }}
-        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all active:scale-[0.98] touch-manipulation"
-        style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-      >
-        <Plus className="h-4 w-4" /> Thêm tài khoản
-      </button>
+      {/* FAB */}
+      {createPortal(
+        <button
+          onClick={() => { setForm(EMPTY_FORM); setDialogOpen(true) }}
+          className="fixed bottom-6 right-5 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90 touch-manipulation"
+          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+        >
+          <Plus className="w-6 h-6" />
+        </button>,
+        document.body,
+      )}
 
       {/* User list */}
       <div className="space-y-2">
