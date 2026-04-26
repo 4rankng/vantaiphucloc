@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Plus, Pencil, Trash2, Building2, User } from 'lucide-react'
+import { Plus, Pencil, Trash2, Building2, UserCircle } from 'lucide-react'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog/Dialog'
 import { Button } from '@/components/ui/Button/Button'
 import { Input } from '@/components/ui/Input/Input'
 import { Label } from '@/components/ui/Label/Label'
+import { InfoRow } from '@/components/shared/InfoRow'
 import { apiClient } from '@/services/api'
 import { formatCurrencyFull } from '@/data/mockData'
 import type { Client, ClientType } from '@/data/mockData'
@@ -16,9 +17,16 @@ const EMPTY_CLIENT = {
 export function ClientList() {
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Detail dialog
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
+
+  // Create/Edit dialog
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Client | null>(null)
   const [form, setForm] = useState(EMPTY_CLIENT)
+
+  // Delete confirm
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
   const loadClients = useCallback(async () => {
@@ -37,7 +45,12 @@ export function ClientList() {
 
   const handleOpenEdit = useCallback((client: Client) => {
     setEditing(client)
-    setForm({ name: client.name, type: client.type, taxCode: client.taxCode ?? '', address: client.address ?? '', phone: client.phone, contactPerson: client.contactPerson ?? '', outstandingDebt: client.outstandingDebt })
+    setForm({
+      name: client.name, type: client.type, taxCode: client.taxCode ?? '',
+      address: client.address ?? '', phone: client.phone,
+      contactPerson: client.contactPerson ?? '', outstandingDebt: client.outstandingDebt,
+    })
+    setSelectedClient(null)
     setDialogOpen(true)
   }, [])
 
@@ -54,6 +67,7 @@ export function ClientList() {
   const handleDelete = useCallback(async (id: string) => {
     await apiClient.deleteClient(id)
     setDeleteConfirm(null)
+    setSelectedClient(null)
     loadClients()
   }, [loadClients])
 
@@ -62,42 +76,71 @@ export function ClientList() {
   }, [])
 
   if (loading) {
-    return <div className="p-4"><div className="animate-pulse space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-20 rounded-xl bg-[var(--theme-bg-tertiary)]" />)}</div></div>
+    return (
+      <div className="space-y-2">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-16 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+        ))}
+      </div>
+    )
   }
 
   return (
     <div>
+      {/* Client list — clean cards, tap to see detail */}
       <div className="space-y-2">
-      {clients.map(client => (
-          <div key={client.id}
-            className="flex items-start gap-3 p-4 rounded-xl border"
-            style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}>
-            <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0"
-              style={{ background: 'var(--theme-bg-tertiary)' }}>
-              {client.type === 'company'
-                ? <Building2 className="h-5 w-5" style={{ color: 'var(--theme-text-muted)' }} />
-                : <User className="h-5 w-5" style={{ color: 'var(--theme-text-muted)' }} />}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{client.name}</p>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{client.phone}{client.taxCode ? ` · MST: ${client.taxCode}` : ''}</p>
-              {client.outstandingDebt > 0 && (
-                <p className="text-xs mt-1 font-medium" style={{ color: 'var(--theme-status-error)' }}>
-                  Nợ: {formatCurrencyFull(client.outstandingDebt)}
+        {clients.map(client => (
+          <button
+            key={client.id}
+            onClick={() => setSelectedClient(client)}
+            className="w-full text-left rounded-2xl p-3 transition-all active:scale-[0.98] touch-manipulation"
+            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: 'var(--theme-bg-tertiary)' }}>
+                {client.type === 'company'
+                  ? <Building2 className="h-4 w-4" style={{ color: 'var(--theme-text-muted)' }} />
+                  : <UserCircle className="h-4 w-4" style={{ color: 'var(--theme-text-muted)' }} />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{client.name}</p>
+                <p className="text-[11px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+                  {client.phone}{client.taxCode ? ` · MST: ${client.taxCode}` : ''}
                 </p>
-              )}
+              </div>
             </div>
-            <div className="flex items-center gap-1 shrink-0">
-              <button onClick={() => handleOpenEdit(client)} className="h-8 w-8 flex items-center justify-center rounded-lg touch-manipulation" style={{ color: 'var(--theme-text-muted)' }} aria-label="Sửa">
-                <Pencil className="h-4 w-4" />
-              </button>
-              <button onClick={() => setDeleteConfirm(client.id)} className="h-8 w-8 flex items-center justify-center rounded-lg touch-manipulation" style={{ color: 'var(--theme-status-error)' }} aria-label="Xoá">
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
+          </button>
         ))}
       </div>
+
+      {/* Client Detail Dialog */}
+      <Dialog open={!!selectedClient} onOpenChange={() => setSelectedClient(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{selectedClient?.name}</DialogTitle>
+          </DialogHeader>
+          {selectedClient && (
+            <div className="space-y-1">
+              <InfoRow icon={selectedClient.type === 'company' ? Building2 : UserCircle} label="Loại" value={selectedClient.type === 'company' ? 'Công ty' : 'Cá nhân'} />
+              <InfoRow label="Điện thoại" value={selectedClient.phone} />
+              {selectedClient.taxCode && <InfoRow label="Mã số thuế" value={selectedClient.taxCode} />}
+              {selectedClient.address && <InfoRow label="Địa chỉ" value={selectedClient.address} />}
+              {selectedClient.contactPerson && <InfoRow label="Người liên hệ" value={selectedClient.contactPerson} />}
+              {selectedClient.outstandingDebt > 0 && (
+                <InfoRow label="Nợ" value={formatCurrencyFull(selectedClient.outstandingDebt)} valueStyle={{ color: 'var(--theme-status-error)', fontWeight: 600 }} />
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm(selectedClient!.id)} className="flex-1" style={{ color: 'var(--theme-status-error)' }}>
+              <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Xoá
+            </Button>
+            <Button onClick={() => handleOpenEdit(selectedClient!)} className="flex-1" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+              <Pencil className="w-3.5 h-3.5 mr-1.5" /> Sửa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -144,7 +187,9 @@ export function ClientList() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleSubmit} disabled={!form.name.trim()} className="flex-1" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>{editing ? 'Cập nhật' : 'Xác nhận'}</Button>
+            <Button onClick={handleSubmit} disabled={!form.name.trim()} className="flex-1" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+              {editing ? 'Cập nhật' : 'Xác nhận'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -158,10 +203,11 @@ export function ClientList() {
           <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Hành động này không thể hoàn tác.</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="flex-1">Huỷ</Button>
-            <Button variant="destructive" className="flex-1" onClick={() => deleteConfirm && handleDelete(deleteConfirm)}>Xoá</Button>
+            <Button variant="destructive" className="flex-1" onClick={() => deleteConfirm && handleDelete(deleteConfirm)}>Xác nhận</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={handleOpenCreate} label="Thêm khách hàng" />
     </div>
   )
