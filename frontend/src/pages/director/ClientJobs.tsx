@@ -33,6 +33,16 @@ export function ClientJobs({ clientId, onBack }: { clientId: string; onBack: () 
   const totalDriverEarning = useMemo(() => jobs.reduce((s, j) => s + j.earning, 0), [jobs])
   const clientPricings = pricings
 
+  // Count jobs per pricing combo (workType + route)
+  const pricingJobCounts = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const j of jobs) {
+      const key = `${j.containers[0]?.workType ?? ''}|${j.route}`
+      map.set(key, (map.get(key) ?? 0) + 1)
+    }
+    return map
+  }, [jobs])
+
   return (
     <>
       <AppTopBar variant="page" title={clientName} onBack={onBack} />
@@ -60,26 +70,45 @@ export function ClientJobs({ clientId, onBack }: { clientId: string; onBack: () 
         </button>
 
         {showPricing && clientPricings.length > 0 && (
-          <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
-            {/* Header */}
-            <div className="grid grid-cols-4 px-3 py-2" style={{ background: 'var(--theme-bg-tertiary)' }}>
-              <span className="text-[10px] font-bold" style={{ color: 'var(--theme-text-muted)' }}>Loại</span>
-              <span className="text-[10px] font-bold col-span-2" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</span>
-              <span className="text-[10px] font-bold text-right" style={{ color: 'var(--theme-text-muted)' }}>Đơn giá</span>
-            </div>
-            {clientPricings.map((p, i) => (
-              <div
-                key={i}
-                className="grid grid-cols-4 px-3 py-2.5 items-center"
-                style={{ borderBottom: i < clientPricings.length - 1 ? '1px solid var(--theme-border-default)' : 'none' }}
-              >
-                <span className="text-xs font-bold" style={{ color: 'var(--theme-brand-primary)' }}>{p.workType}</span>
-                <span className="text-xs col-span-2 truncate" style={{ color: 'var(--theme-text-primary)' }}>{p.route}</span>
-                <span className="text-xs font-bold tabular-nums text-right" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(p.unitPrice)}</span>
-              </div>
-            ))}
+          <div className="space-y-2">
+            {clientPricings.map(p => {
+              const jobCount = pricingJobCounts.get(`${p.workType}|${p.route}`) ?? 0
+              return (
+                <div
+                  key={p.id}
+                  className="rounded-2xl p-3 space-y-2"
+                  style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
+                >
+                  {/* Top: type + unit price */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-lg" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>{p.workType}</span>
+                    <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(p.unitPrice)}</span>
+                  </div>
+                  {/* Route */}
+                  <div className="flex items-start gap-1.5">
+                    <span className="text-[10px] font-bold uppercase shrink-0" style={{ color: 'var(--theme-text-muted)' }}>Tuyến</span>
+                    <span className="text-xs leading-relaxed" style={{ color: 'var(--theme-text-primary)' }}>{p.route}</span>
+                  </div>
+                  {/* Driver salary + allowance */}
+                  <div className="flex gap-4">
+                    <div>
+                      <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>Lương tài xế</span>
+                      <p className="text-xs font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(p.driverSalary)}</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>Phụ cấp</span>
+                      <p className="text-xs font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(p.allowance)}</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>Số lượng</span>
+                      <p className="text-xs font-bold tabular-nums" style={{ color: jobCount > 0 ? 'var(--theme-brand-primary)' : 'var(--theme-text-muted)' }}>{jobCount} chuyến</p>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
           </div>
-        )}
+        )}}
 
         {/* Job list */}
         {jobs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(job => (
