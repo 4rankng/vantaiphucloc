@@ -198,7 +198,7 @@ export function DirectorDashboard({ onManageUsers, onViewDriverJobs, onViewClien
                 </div>
                 <div className="text-right shrink-0">
                   <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(c.revenue)}</p>
-                  <p className="text-[10px] font-medium" style={{ color: 'var(--theme-brand-primary)' }}>Xem đơn giá →</p>
+                  <p className="text-[10px] font-medium" style={{ color: 'var(--theme-brand-primary)' }}>Chi tiết →</p>
                 </div>
               </button>
             ))}
