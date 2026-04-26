@@ -18,7 +18,6 @@ const AuthContext = createContext<AuthContextType | null>(null)
 
 const ROLE_USERS: Record<Role, Omit<UserInfo, 'role'>> = {
   director: { id: 'DIR-001', name: 'Giám đốc' },
-  dispatcher: { id: 'DSP-001', name: 'Điều hành' },
   accountant: { id: 'ACC-001', name: 'Kế toán' },
   driver: { id: 'DRV-001', name: 'Nguyễn Văn Hùng' },
 }
