@@ -54,9 +54,8 @@ export function DirectorDashboard({ onManageUsers, onViewDriverJobs, onViewClien
   }, [jobs, month])
 
   // Stats
-  const totalSalary = useMemo(() => monthlyJobs.reduce((s, j) => s + j.earning, 0), [monthlyJobs])
-  const totalTrips = monthlyJobs.length
-  const pendingCount = useMemo(() => monthlyJobs.filter(j => j.status === 'PENDING').length, [monthlyJobs])
+  const totalRevenue = useMemo(() => monthlyJobs.reduce((s, j) => s + j.unitPrice, 0), [monthlyJobs])
+  const totalDriverEarning = useMemo(() => monthlyJobs.reduce((s, j) => s + j.earning, 0), [monthlyJobs])
 
   // Per-driver breakdown
   const driverBreakdown = useMemo(() => {
@@ -102,8 +101,30 @@ export function DirectorDashboard({ onManageUsers, onViewDriverJobs, onViewClien
 
   return (
     <div className="pb-8">
+      {/* Stats */}
+      <div className="px-4 pt-4 pb-2 grid grid-cols-2 gap-2">
+        <div className="rounded-2xl p-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>Doanh thu</span>
+            <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: 'var(--theme-brand-primary-light)' }}>
+              <TrendingUp className="w-3 h-3" style={{ color: 'var(--theme-brand-primary)' }} />
+            </div>
+          </div>
+          <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(totalRevenue)}</p>
+        </div>
+        <div className="rounded-2xl p-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>Chi tài xế</span>
+            <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: 'var(--theme-brand-primary-light)' }}>
+              <Truck className="w-3 h-3" style={{ color: 'var(--theme-brand-primary)' }} />
+            </div>
+          </div>
+          <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(totalDriverEarning)}</p>
+        </div>
+      </div>
+
       {/* Month navigator */}
-      <div className="px-4 pt-3 pb-2 flex items-center justify-between">
+      <div className="px-4 pb-2 flex items-center justify-between">
         <button onClick={prevMonth} className="w-8 h-8 flex items-center justify-center rounded-full touch-manipulation" style={{ background: 'var(--theme-bg-secondary)' }}>
           <ChevronLeft className="w-4 h-4" style={{ color: 'var(--theme-text-primary)' }} />
         </button>
