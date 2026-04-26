@@ -10,11 +10,18 @@ export interface UserInfo {
 
 interface AuthContextType {
   user: UserInfo | null
-  login: (username: string, password: string) => boolean
+  loginAs: (role: Role) => void
   logout: () => void
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
+
+const ROLE_USERS: Record<Role, Omit<UserInfo, 'role'>> = {
+  director: { id: 'DIR-001', name: 'Giám đốc' },
+  dispatcher: { id: 'DSP-001', name: 'Điều hành' },
+  accountant: { id: 'ACC-001', name: 'Kế toán' },
+  driver: { id: 'DRV-001', name: 'Nguyễn Văn Hùng' },
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserInfo | null>(() => {
@@ -22,16 +29,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return saved ? JSON.parse(saved) : null
   })
 
-  const login = (username: string, password: string): boolean => {
-    if (username === 'driver' && password === 'driver') {
-      const d = mockDrivers[0]
-      const u: UserInfo = { id: d.id, name: d.name, role: 'driver' as Role }
-      localStorage.setItem('ttransport_user', JSON.stringify(u))
-      localStorage.setItem('ttransport_role', 'driver')
-      setUser(u)
-      return true
-    }
-    return false
+  const loginAs = (role: Role) => {
+    const base = role === 'driver'
+      ? { id: mockDrivers[0].id, name: mockDrivers[0].name }
+      : ROLE_USERS[role]
+    const u: UserInfo = { ...base, role }
+    localStorage.setItem('ttransport_user', JSON.stringify(u))
+    localStorage.setItem('ttransport_role', role)
+    setUser(u)
   }
 
   const logout = () => {
@@ -41,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, loginAs, logout }}>
       {children}
     </AuthContext.Provider>
   )

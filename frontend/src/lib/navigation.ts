@@ -51,7 +51,12 @@ export const dispatcherMobileNav: NavItem[] = [
 // ─── Accountant ────────────────────────────────────────────
 export const accountantNav: NavItem[] = [
   { label: 'Tổng quan', icon: LayoutDashboard, path: '/accountant' },
-  { label: 'Chi phí', icon: CircleDollarSign, path: '/accountant/expenses' },
+  { label: 'Khách hàng', icon: Users, path: '/accountant/clients' },
+  { label: 'Cung đường', icon: Route, path: '/accountant/routes' },
+  { label: 'Đơn giá', icon: CircleDollarSign, path: '/accountant/pricings' },
+  { label: 'Số công', icon: Camera, path: '/accountant/work-orders' },
+  { label: 'Chuyến/Lệnh', icon: Truck, path: '/accountant/trip-orders' },
+  { label: 'Tính lương', icon: Wallet, path: '/accountant/salary' },
   { label: 'Hóa đơn', icon: FileText, path: '/accountant/invoices' },
   { label: 'Công nợ', icon: Receipt, path: '/accountant/receivables' },
   { label: 'Chốt sổ', icon: BookOpen, path: '/accountant/period-close' },
@@ -59,10 +64,10 @@ export const accountantNav: NavItem[] = [
 
 export const accountantMobileNav: NavItem[] = [
   { label: 'Tổng quan', icon: LayoutDashboard, path: '/accountant' },
-  { label: 'Chi phí', icon: CircleDollarSign, path: '/accountant/expenses' },
-  { label: 'Hóa đơn', icon: FileText, path: '/accountant/invoices' },
-  { label: 'Công nợ', icon: Receipt, path: '/accountant/receivables' },
-  { label: 'Chốt sổ', icon: BookOpen, path: '/accountant/period-close' },
+  { label: 'Số công', icon: Camera, path: '/accountant/work-orders' },
+  { label: 'Chuyến', icon: Truck, path: '/accountant/trip-orders' },
+  { label: 'Lương', icon: Wallet, path: '/accountant/salary' },
+  { label: 'Khác', icon: MoreHorizontal, path: '/accountant/more' },
 ]
 
 // ─── Driver ────────────────────────────────────────────────
@@ -91,10 +96,16 @@ export const pageTitles: Record<string, string> = {
   '/dispatcher/fleet': 'Đội xe',
   '/dispatcher/clients': 'Chủ hàng',
   '/accountant': 'Tổng quan',
-  '/accountant/expenses': 'Chi phí',
+  '/accountant/clients': 'Khách hàng',
+  '/accountant/routes': 'Cung đường',
+  '/accountant/pricings': 'Đơn giá',
+  '/accountant/work-orders': 'Số công',
+  '/accountant/trip-orders': 'Chuyến/Lệnh',
+  '/accountant/salary': 'Tính lương',
   '/accountant/invoices': 'Hóa đơn',
   '/accountant/receivables': 'Công nợ',
   '/accountant/period-close': 'Chốt sổ',
+  '/accountant/more': 'Thêm',
   '/driver': 'Trang chủ',
   '/driver/trips': 'Chuyến xe',
   '/driver/photos': 'Chụp ảnh',

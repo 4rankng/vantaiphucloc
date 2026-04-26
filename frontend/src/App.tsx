@@ -5,7 +5,7 @@ import { OfflineProvider } from '@/contexts/OfflineContext'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { OfflineIndicator } from '@/components/shared/OfflineIndicator'
 import { ToastProvider } from '@/components/atoms/Toast'
-import { Login } from '@/pages/Login'
+import { RoleSelect } from '@/pages/RoleSelect'
 import { DriverStoreProvider, useDriverStore } from '@/hooks/use-driver-store'
 import { TopBar, BottomNav, PageLayout, HomeLayout } from '@/pages/driver/AppShell'
 import { ExpenseFab } from '@/pages/driver/ExpenseFab'
@@ -18,8 +18,11 @@ import { EarningsOverview } from '@/pages/driver/EarningsOverview'
 import { DriverHome } from '@/pages/driver/DriverHome'
 import { Notifications } from '@/pages/driver/Notifications'
 import { Profile } from '@/pages/driver/Profile'
+import { CreateWorkOrder } from '@/pages/driver/CreateWorkOrder'
+import { DirectorApp } from '@/pages/director/DirectorApp'
+import { AccountantApp } from '@/pages/accountant/AccountantApp'
 
-function Router() {
+function DriverRouter() {
   const { currentPath } = useDriverStore()
 
   const detailMatch = currentPath.match(/^\/driver\/trips\/([^/]+)\/detail$/)
@@ -35,6 +38,7 @@ function Router() {
     case '/driver/earnings': return <PageLayout showBack><EarningsOverview /></PageLayout>
     case '/driver/notifications': return <PageLayout showBack><Notifications /></PageLayout>
     case '/driver/profile': return <PageLayout showBack><Profile /></PageLayout>
+    case '/driver/work-orders/new': return <PageLayout showBack><CreateWorkOrder /></PageLayout>
     default: return <HomeLayout><DriverHome /></HomeLayout>
   }
 }
@@ -42,7 +46,7 @@ function Router() {
 function DriverApp() {
   return (
     <DriverStoreProvider>
-      <Router />
+      <DriverRouter />
     </DriverStoreProvider>
   )
 }
@@ -50,12 +54,14 @@ function DriverApp() {
 function AppContent() {
   const { user } = useAuth()
 
-  return (
-    <ErrorBoundary component="App" level="app">
-      {!user ? <Login /> : <DriverApp />}
-      <OfflineIndicator />
-    </ErrorBoundary>
-  )
+  if (!user) return <RoleSelect />
+
+  switch (user.role) {
+    case 'director': return <DirectorApp />
+    case 'accountant': return <AccountantApp />
+    case 'dispatcher': return <DriverApp />
+    default: return <DriverApp />
+  }
 }
 
 export default function App() {
@@ -65,7 +71,10 @@ export default function App() {
         <ErrorBoundaryProvider>
           <OfflineProvider>
             <ToastProvider>
-              <AppContent />
+              <ErrorBoundary component="App" level="app">
+                <AppContent />
+                <OfflineIndicator />
+              </ErrorBoundary>
             </ToastProvider>
           </OfflineProvider>
         </ErrorBoundaryProvider>

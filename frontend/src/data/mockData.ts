@@ -2,6 +2,19 @@ export type Role = 'director' | 'dispatcher' | 'accountant' | 'driver'
 export type TrailerType = '20FT' | '40FT'
 export type JobStatus = 'DRAFT' | 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 export type ClientType = 'company' | 'individual'
+export type WorkType = 'E20' | 'E40' | 'F20' | 'F40'
+export type WorkOrderStatus = 'PENDING' | 'MATCHED' | 'DISPUTED'
+export type TripOrderStatus = 'DRAFT' | 'CONFIRMED' | 'INVOICED' | 'CANCELLED'
+export type SalaryPeriodStatus = 'OPEN' | 'CALCULATED' | 'PAID'
+
+export const WORK_TYPES: WorkType[] = ['E20', 'E40', 'F20', 'F40']
+
+export const WORK_TYPE_LABELS: Record<WorkType, string> = {
+  E20: 'E20 (Container rỗng 20ft)',
+  E40: 'E40 (Container rỗng 40ft)',
+  F20: 'F20 (Container hàng 20ft)',
+  F40: 'F40 (Container hàng 40ft)',
+}
 
 export const ROLE_LABELS: Record<Role, string> = {
   director: 'Giám đốc',
@@ -151,6 +164,76 @@ export interface PeriodClose {
   profit: number
   jobCount: number
   status: 'open' | 'closed'
+}
+
+export interface WorkOrder {
+  id: string
+  workOrderNumber: string
+  photoUrl: string
+  workType: WorkType
+  clientId: string
+  clientName: string
+  route: string
+  driverId: string
+  driverName: string
+  tractorPlate: string
+  createdAt: string
+  status: WorkOrderStatus
+}
+
+export interface Pricing {
+  id: string
+  clientId: string
+  clientName: string
+  workType: WorkType
+  route: string
+  unitPrice: number
+  driverSalary: number
+  allowance: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TripOrder {
+  id: string
+  tripDate: string
+  clientId: string
+  clientName: string
+  workType: WorkType
+  route: string
+  tractorPlate: string
+  driverId: string
+  driverName: string
+  containerNumber: string
+  pricingId: string
+  unitPrice: number
+  driverSalary: number
+  allowance: number
+  revenue: number
+  matchedWorkOrderIds: string[]
+  status: TripOrderStatus
+  createdAt: string
+}
+
+export interface SalaryPeriod {
+  id: string
+  driverId: string
+  driverName: string
+  startDate: string
+  endDate: string
+  workOrderCount: number
+  pricePerOrder: number
+  totalSalary: number
+  totalAllowance: number
+  totalDeduction: number
+  netPay: number
+  status: SalaryPeriodStatus
+}
+
+export interface ApiResponse<T> {
+  data: T
+  success: boolean
+  message?: string
 }
 
 // ─── REAL EXPENSE CATEGORIES ─────────────────────────────────────────────────
@@ -418,6 +501,42 @@ export const mockPeriodCloses: PeriodClose[] = [
   { id: 'PC-004', month: '04/2025', closedBy: '', closedAt: '', totalRevenue: 24800000, totalExpense: 18200000, profit: 6600000, jobCount: 10, status: 'open' },
 ]
 
+// ─── Mock Work Orders ────────────────────────────────────────────────────────
+
+export const mockWorkOrders: WorkOrder[] = [
+  { id: 'WO-001', workOrderNumber: 'CONG-284731', photoUrl: '', workType: 'E40', clientId: 'CLT-002', clientName: 'Công ty TNHH Sản xuất Mộc Châu', route: 'Hải Phòng → Mộc Châu, Sơn La', driverId: 'DRV-001', driverName: 'Nguyễn Văn Hùng', tractorPlate: '15C-136.31', createdAt: '2025-04-20T08:30:00Z', status: 'MATCHED' },
+  { id: 'WO-002', workOrderNumber: 'CONG-910456', photoUrl: '', workType: 'F40', clientId: 'CLT-003', clientName: 'Tập đoàn Xuất nhập khẩu Lào Cai', route: 'Hải Phòng → Sa Pa', driverId: 'DRV-002', driverName: 'Trần Minh Tuấn', tractorPlate: '15C-139.82', createdAt: '2025-04-20T07:15:00Z', status: 'MATCHED' },
+  { id: 'WO-003', workOrderNumber: 'CONG-552190', photoUrl: '', workType: 'E40', clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', route: 'Hải Phòng → Bắc Ninh → Ninh Bình (Kết hợp 2 chiều)', driverId: 'DRV-003', driverName: 'Lê Hoàng Nam', tractorPlate: '15C-070.63', createdAt: '2025-04-20T06:45:00Z', status: 'MATCHED' },
+  { id: 'WO-004', workOrderNumber: 'CONG-331782', photoUrl: '', workType: 'E20', clientId: 'CLT-004', clientName: 'Công ty CP Thương mại Thái Bình', route: 'Hải Phòng → Hải Dương', driverId: 'DRV-004', driverName: 'Phạm Đức Anh', tractorPlate: '15C-180.99', createdAt: '2025-04-20T09:00:00Z', status: 'PENDING' },
+  { id: 'WO-005', workOrderNumber: 'CONG-778423', photoUrl: '', workType: 'F20', clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', route: 'Hải Phòng → Hà Nội (QL5)', driverId: 'DRV-001', driverName: 'Nguyễn Văn Hùng', tractorPlate: '15C-136.31', createdAt: '2025-04-19T07:30:00Z', status: 'MATCHED' },
+  { id: 'WO-006', workOrderNumber: 'CONG-664501', photoUrl: '', workType: 'F40', clientId: 'CLT-005', clientName: 'Doanh nghiệp Vận tải Quảng Ninh', route: 'Hải Phòng → Hạ Long, Quảng Ninh', driverId: 'DRV-002', driverName: 'Trần Minh Tuấn', tractorPlate: '15C-139.82', createdAt: '2025-04-19T08:00:00Z', status: 'PENDING' },
+]
+
+// ─── Mock Pricings ───────────────────────────────────────────────────────────
+
+export const mockPricings: Pricing[] = [
+  { id: 'PRC-001', clientId: 'CLT-002', clientName: 'Công ty TNHH Sản xuất Mộc Châu', workType: 'E40', route: 'Hải Phòng → Mộc Châu, Sơn La', unitPrice: 2740000, driverSalary: 800000, allowance: 200000, createdAt: '2025-04-01', updatedAt: '2025-04-01' },
+  { id: 'PRC-002', clientId: 'CLT-003', clientName: 'Tập đoàn Xuất nhập khẩu Lào Cai', workType: 'F40', route: 'Hải Phòng → Sa Pa', unitPrice: 4800000, driverSalary: 900000, allowance: 250000, createdAt: '2025-04-01', updatedAt: '2025-04-01' },
+  { id: 'PRC-003', clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', workType: 'E40', route: 'Hải Phòng → Bắc Ninh → Ninh Bình (Kết hợp 2 chiều)', unitPrice: 1780000, driverSalary: 850000, allowance: 150000, createdAt: '2025-04-01', updatedAt: '2025-04-01' },
+  { id: 'PRC-004', clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', workType: 'F20', route: 'Hải Phòng → Hà Nội (QL5)', unitPrice: 930000, driverSalary: 800000, allowance: 100000, createdAt: '2025-04-01', updatedAt: '2025-04-01' },
+  { id: 'PRC-005', clientId: 'CLT-004', clientName: 'Công ty CP Thương mại Thái Bình', workType: 'E20', route: 'Hải Phòng → Hải Dương', unitPrice: 600000, driverSalary: 750000, allowance: 100000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
+  { id: 'PRC-006', clientId: 'CLT-005', clientName: 'Doanh nghiệp Vận tải Quảng Ninh', workType: 'F40', route: 'Hải Phòng → Hạ Long, Quảng Ninh', unitPrice: 790000, driverSalary: 800000, allowance: 120000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
+]
+
+// ─── Mock Trip Orders ────────────────────────────────────────────────────────
+
+export const mockTripOrders: TripOrder[] = [
+  { id: 'TRP-001', tripDate: '2025-04-20', clientId: 'CLT-002', clientName: 'Công ty TNHH Sản xuất Mộc Châu', workType: 'E40', route: 'Hải Phòng → Mộc Châu, Sơn La', tractorPlate: '15C-136.31', driverId: 'DRV-001', driverName: 'Nguyễn Văn Hùng', containerNumber: 'MSKU-7283456', pricingId: 'PRC-001', unitPrice: 2740000, driverSalary: 800000, allowance: 200000, revenue: 2740000, matchedWorkOrderIds: ['WO-001'], status: 'CONFIRMED', createdAt: '2025-04-20T10:00:00Z' },
+  { id: 'TRP-002', tripDate: '2025-04-20', clientId: 'CLT-003', clientName: 'Tập đoàn Xuất nhập khẩu Lào Cai', workType: 'F40', route: 'Hải Phòng → Sa Pa', tractorPlate: '15C-139.82', driverId: 'DRV-002', driverName: 'Trần Minh Tuấn', containerNumber: 'TCNU-9120345', pricingId: 'PRC-002', unitPrice: 4800000, driverSalary: 900000, allowance: 250000, revenue: 4800000, matchedWorkOrderIds: ['WO-002'], status: 'CONFIRMED', createdAt: '2025-04-20T10:30:00Z' },
+]
+
+// ─── Mock Salary Periods ─────────────────────────────────────────────────────
+
+export const mockSalaryPeriods: SalaryPeriod[] = [
+  { id: 'SAL-001', driverId: 'DRV-001', driverName: 'Nguyễn Văn Hùng', startDate: '2025-04-01', endDate: '2025-04-30', workOrderCount: 5, pricePerOrder: 800000, totalSalary: 4000000, totalAllowance: 600000, totalDeduction: 0, netPay: 4600000, status: 'OPEN' },
+  { id: 'SAL-002', driverId: 'DRV-003', driverName: 'Lê Hoàng Nam', startDate: '2025-03-01', endDate: '2025-03-31', workOrderCount: 15, pricePerOrder: 850000, totalSalary: 12750000, totalAllowance: 2250000, totalDeduction: 0, netPay: 15000000, status: 'PAID' },
+]
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 export function formatCurrency(amount: number): string {
@@ -449,5 +568,30 @@ export function getJobStatusBadge(status: JobStatus): { variant: 'default'|'succ
     case 'IN_PROGRESS': return { variant: 'success', label: 'Đang chạy' }
     case 'COMPLETED': return { variant: 'info', label: 'Hoàn thành' }
     case 'CANCELLED': return { variant: 'danger', label: 'Huỷ' }
+  }
+}
+
+export function getWorkOrderStatusBadge(status: WorkOrderStatus): { variant: 'default'|'success'|'warning'|'danger'|'info'|'neutral'; label: string } {
+  switch (status) {
+    case 'PENDING': return { variant: 'warning', label: 'Chờ đối soát' }
+    case 'MATCHED': return { variant: 'success', label: 'Đã đối soát' }
+    case 'DISPUTED': return { variant: 'danger', label: 'Tranh chấp' }
+  }
+}
+
+export function getTripOrderStatusBadge(status: TripOrderStatus): { variant: 'default'|'success'|'warning'|'danger'|'info'|'neutral'; label: string } {
+  switch (status) {
+    case 'DRAFT': return { variant: 'neutral', label: 'Nháp' }
+    case 'CONFIRMED': return { variant: 'success', label: 'Đã xác nhận' }
+    case 'INVOICED': return { variant: 'info', label: 'Đã xuất hoá đơn' }
+    case 'CANCELLED': return { variant: 'danger', label: 'Đã huỷ' }
+  }
+}
+
+export function getSalaryStatusBadge(status: SalaryPeriodStatus): { variant: 'default'|'success'|'warning'|'danger'|'info'|'neutral'; label: string } {
+  switch (status) {
+    case 'OPEN': return { variant: 'warning', label: 'Chờ tính' }
+    case 'CALCULATED': return { variant: 'info', label: 'Đã tính' }
+    case 'PAID': return { variant: 'success', label: 'Đã trả' }
   }
 }
