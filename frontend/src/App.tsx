@@ -13,7 +13,6 @@ import { DriverHome } from '@/pages/driver/DriverHome'
 import { JobDetail } from '@/pages/driver/JobDetail'
 import { DriverHistory } from '@/pages/driver/DriverHistory'
 import { DriverNotifications } from '@/pages/driver/DriverNotifications'
-import { Profile } from '@/pages/driver/Profile'
 import { DirectorApp } from '@/pages/director/DirectorApp'
 import { AccountantApp } from '@/pages/accountant/AccountantApp'
 
@@ -24,7 +23,6 @@ function DriverRouter() {
     case '/driver/work-orders/new': return <ErrorBoundary component="CreateWorkOrder" level="page"><PageLayout showBack title="Tạo chuyến"><CreateWorkOrder /></PageLayout></ErrorBoundary>
     case '/driver/history':         return <ErrorBoundary component="DriverHistory" level="page"><PageLayout showBack title="Lịch sử"><DriverHistory /></PageLayout></ErrorBoundary>
     case '/driver/notifications':   return <ErrorBoundary component="Notifications" level="page"><PageLayout showBack title="Thông báo"><DriverNotifications /></PageLayout></ErrorBoundary>
-    case '/driver/profile':         return <ErrorBoundary component="Profile" level="page"><PageLayout showBack title="Tài khoản"><Profile /></PageLayout></ErrorBoundary>
     default:
       if (currentPath.startsWith('/driver/job/')) return <ErrorBoundary component="JobDetail" level="page"><PageLayout showBack title="Chi tiết chuyến"><JobDetail /></PageLayout></ErrorBoundary>
       return <HomeLayout><DriverHome /></HomeLayout>
