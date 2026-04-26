@@ -1,174 +1,216 @@
 import { useEffect, useState, useMemo } from 'react'
-import { Search, Filter, CheckCircle, Clock } from 'lucide-react'
-import { Masonry } from 'masonic'
+import { Search, Filter, Link2 } from 'lucide-react'
 import { Input } from '@/components/ui/Input/Input'
-import { WorkOrderCard } from '@/components/shared/WorkOrderCard'
+import { Label } from '@/components/ui/Label/Label'
+import { ContBadge } from '@/components/shared/ContBadge'
+import { SheetPicker } from '@/components/shared/SheetPicker'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog/Dialog'
+import { Button } from '@/components/ui/Button/Button'
 import { apiClient } from '@/services/api'
-import { formatCurrencyFull, type WorkOrder } from '@/data/mockData'
-
-const STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle; color: string; bg: string }> = {
-  PENDING:  { label: 'Chờ đối soát', icon: Clock,       color: 'var(--theme-status-warning)', bg: 'var(--theme-status-warning-light)' },
-}
+import { type WorkOrder, type TripOrder, WORK_TYPES, type WorkType } from '@/data/mockData'
 
 export function WorkOrderList() {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
+  const [trips, setTrips] = useState<TripOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [searchPlate, setSearchPlate] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
-  const [showFilters, setShowFilters] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING'>('ALL')
+
+  // Edit job dialog
+  const [editJob, setEditJob] = useState<WorkOrder | null>(null)
+  const [editWorkType, setEditWorkType] = useState<WorkType>('E20')
+  const [editClientName, setEditClientName] = useState('')
+  const [editRoute, setEditRoute] = useState('')
+
+  // Match dialog
+  const [matchJobId, setMatchJobId] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    apiClient.getWorkOrders().then(res => {
-      if (!cancelled && res.success) setWorkOrders(res.data)
-      if (!cancelled) setLoading(false)
-    })
+    Promise.all([apiClient.getWorkOrders(), apiClient.getTripOrders()])
+      .then(([w, t]) => {
+        if (!cancelled) {
+          if (w.success) setWorkOrders(w.data)
+          if (t.success) setTrips(t.data)
+          setLoading(false)
+        }
+      })
     return () => { cancelled = true }
   }, [])
 
-  const filtered = useMemo(() =>
-    workOrders.filter(w => {
-      const plateOk = !searchPlate.trim() || w.tractorPlate.toLowerCase().includes(searchPlate.toLowerCase())
-      const dateOk = (() => {
-        if (!startDate && !endDate) return true
-        const d = new Date(w.createdAt)
-        if (startDate && d < new Date(startDate)) return false
-        if (endDate && d > new Date(endDate + 'T23:59:59')) return false
-        return true
-      })()
-      const statusOk = statusFilter === 'ALL' || w.status === statusFilter
-      return plateOk && dateOk && statusOk
-    }),
-    [workOrders, searchPlate, startDate, endDate, statusFilter],
-  )
+  // Only show unmatched jobs
+  const unmatched = useMemo(() => {
+    const matchedIds = new Set(trips.flatMap(t => t.matchedWorkOrderIds))
+    return workOrders.filter(w => !matchedIds.has(w.id))
+  }, [workOrders, trips])
 
-  const counts = useMemo(() => ({
-    ALL: workOrders.length,
-    PENDING: workOrders.filter(w => w.status === 'PENDING').length,
-    PENDING: workOrders.filter(w => w.status === 'PENDING').length,
-  }), [workOrders])
+  const filtered = useMemo(() => {
+    if (!searchPlate.trim()) return unmatched
+    return unmatched.filter(w => w.tractorPlate.toLowerCase().includes(searchPlate.toLowerCase()))
+  }, [unmatched, searchPlate])
 
-  const totalEarnings = useMemo(() =>
-    filtered.reduce((sum, w) => sum + w.earning, 0),
-    [filtered],
-  )
+  // Editable job
+  const handleOpenEdit = (job: WorkOrder) => {
+    setEditJob(job)
+    setEditWorkType(job.containers[0]?.workType ?? 'E20')
+    setEditClientName(job.clientName)
+    setEditRoute(job.route)
+  }
 
-  const hasFilters = searchPlate.trim() || startDate || endDate
-  const activeFilters = showFilters || !!(startDate || endDate)
+  // Available trips to match with (unmatched or partially matched)
+  const availableTrips = useMemo(() => {
+    return trips.filter(t => t.status === 'DRAFT')
+  }, [trips])
 
-  return (
-    <div className="p-4 space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>Số công</p>
-          <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{filtered.length} kết quả</p>
-        </div>
-        {totalEarnings > 0 && (
-          <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>
-            {formatCurrencyFull(totalEarnings)}
-          </p>
-        )}
-      </div>
+  const handleMatch = (jobId: string, tripId: string) => {
+    // In real app: call API to match
+    setMatchJobId(null)
+    setEditJob(null)
+  }
 
-      {/* Status filter pills */}
-      <div className="flex gap-2">
-        {(['ALL', 'PENDING'] as const).map(s => (
-          <button
-            key={s}
-            onClick={() => setStatusFilter(s)}
-            className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all touch-manipulation"
-            style={{
-              background: statusFilter === s ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
-              color: statusFilter === s ? 'var(--theme-text-on-brand)' : 'var(--theme-text-secondary)',
-              border: `1px solid ${statusFilter === s ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)'}`,
-            }}
-          >
-            {s === 'ALL' ? 'Tất cả' : STATUS_CONFIG[s]?.label ?? s} ({counts[s]})
-          </button>
+  if (loading) {
+    return (
+      <div className="space-y-2">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-20 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
         ))}
       </div>
+    )
+  }
 
-      {/* Search + filter */}
-      <div className="space-y-2">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--theme-text-muted)' }} />
-            <Input
-              value={searchPlate}
-              onChange={e => setSearchPlate(e.target.value)}
-              placeholder="Tìm theo biển số..."
-              className="text-sm pl-9"
-              style={{ background: 'var(--theme-bg-secondary)' }}
-            />
-          </div>
-          <button
-            onClick={() => setShowFilters(v => !v)}
-            className="w-11 h-11 flex items-center justify-center rounded-xl shrink-0 touch-manipulation"
-            style={{
-              background: activeFilters ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
-              border: `1px solid ${activeFilters ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)'}`,
-              color: activeFilters ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)',
-            }}
-            aria-label="Bộ lọc"
-          >
-            <Filter className="h-4 w-4" />
-          </button>
-        </div>
-
-        {showFilters && (
-          <div
-            className="grid grid-cols-2 gap-2 p-3 rounded-xl"
-            style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
-          >
-            <div className="space-y-1">
-              <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Từ ngày</label>
-              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                className="w-full h-9 rounded-lg px-2 text-xs border"
-                style={{ background: 'var(--theme-bg-tertiary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }} />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Đến ngày</label>
-              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-                className="w-full h-9 rounded-lg px-2 text-xs border"
-                style={{ background: 'var(--theme-bg-tertiary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }} />
-            </div>
-            {hasFilters && (
-              <button
-                onClick={() => { setSearchPlate(''); setStartDate(''); setEndDate('') }}
-                className="col-span-2 text-xs font-medium py-1.5 rounded-lg touch-manipulation"
-                style={{ color: 'var(--theme-status-error)', background: 'var(--theme-status-error-light)' }}
-              >
-                Xoá bộ lọc
-              </button>
-            )}
-          </div>
-        )}
+  return (
+    <div className="space-y-3">
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--theme-text-muted)' }} />
+        <Input
+          value={searchPlate}
+          onChange={e => setSearchPlate(e.target.value)}
+          placeholder="Tìm theo biển số..."
+          className="text-sm pl-9"
+          style={{ background: 'var(--theme-bg-secondary)' }}
+        />
       </div>
 
-      {/* Masonic card grid */}
-      {loading ? (
-        <div className="grid grid-cols-2 gap-2">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="h-32 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
-          ))}
-        </div>
-      ) : filtered.length === 0 ? (
+      {filtered.length === 0 ? (
         <div className="rounded-2xl p-8 text-center" style={{ background: 'var(--theme-bg-secondary)' }}>
-          <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không tìm thấy số công</p>
+          <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không có số công chưa match</p>
         </div>
       ) : (
-        <Masonry
-          items={filtered}
-          columnGutter={8}
-          columnWidth={160}
-          maxColumnCount={2}
-          render={WorkOrderCard}
-          overscanBy={3}
-        />
+        <div className="space-y-2">
+          {filtered.map(job => (
+            <div key={job.id}
+              className="rounded-2xl p-3"
+              style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ContBadge type={job.containers[0]?.workType ?? 'E20'} />
+                  <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+                    {job.containers[0]?.containerNumber || job.id}
+                  </span>
+                </div>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                  style={{ background: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' }}>
+                  Chờ match
+                </span>
+              </div>
+              <p className="text-[11px] mt-1" style={{ color: 'var(--theme-text-muted)' }}>
+                {job.driverName} · {job.tractorPlate}
+              </p>
+              <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
+                {job.clientName} · {job.route}
+              </p>
+              <div className="flex gap-2 mt-2">
+                <button onClick={() => handleOpenEdit(job)}
+                  className="flex-1 py-1.5 rounded-lg text-xs font-medium touch-manipulation"
+                  style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}>
+                  Sửa
+                </button>
+                <button onClick={() => setMatchJobId(job.id)}
+                  className="flex-1 py-1.5 rounded-lg text-xs font-bold touch-manipulation"
+                  style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+                  <Link2 className="w-3 h-3 inline mr-1" /> Match
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
+
+      {/* Edit Job Dialog */}
+      <Dialog open={!!editJob} onOpenChange={() => setEditJob(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sửa số công</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Loại công</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {WORK_TYPES.map(w => (
+                  <button key={w} onClick={() => setEditWorkType(w)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors touch-manipulation"
+                    style={{
+                      background: editWorkType === w ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
+                      color: editWorkType === w ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
+                    }}>
+                    {w}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</Label>
+              <Input value={editClientName} onChange={e => setEditClientName(e.target.value)} className="text-sm" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</Label>
+              <Input value={editRoute} onChange={e => setEditRoute(e.target.value)} className="text-sm" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditJob(null)} className="flex-1">Huỷ</Button>
+            <Button onClick={() => { /* save edits */ setEditJob(null) }} className="flex-1" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+              Lưu
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Match Job to Trip Dialog */}
+      <Dialog open={!!matchJobId} onOpenChange={() => setMatchJobId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Chọn chuyến để match</DialogTitle>
+          </DialogHeader>
+          {availableTrips.length === 0 ? (
+            <div className="py-6 text-center">
+              <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không có chuyến nào để match</p>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+              {availableTrips.map(trip => (
+                <button key={trip.id}
+                  onClick={() => handleMatch(matchJobId!, trip.id)}
+                  className="w-full text-left rounded-xl p-3 transition-all active:scale-[0.98] touch-manipulation"
+                  style={{ background: 'var(--theme-bg-tertiary)', border: '1px solid var(--theme-border-default)' }}>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+                    {trip.clientName}
+                  </p>
+                  <p className="text-[11px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+                    {trip.route} · {trip.driverName}
+                  </p>
+                  <p className="text-[11px] font-mono" style={{ color: 'var(--theme-text-muted)' }}>
+                    {trip.workType} · {trip.containerNumber}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMatchJobId(null)} className="flex-1">Huỷ</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
