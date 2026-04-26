@@ -304,23 +304,21 @@ export function UserManagement() {
               </div>
             </div>
           )}
-          <DialogFooter className="flex-col gap-2 sm:flex-row">
+          <DialogFooter>
             <Button
               variant="outline"
               onClick={() => setDeleteId(detailUser?.id ?? null)}
-              className="w-full sm:w-auto gap-1.5"
+              className="flex-1 gap-1.5"
               style={{ color: 'var(--theme-status-error)', borderColor: 'var(--theme-status-error)' }}
             >
               <Trash2 className="w-3.5 h-3.5" /> Xoá
             </Button>
-            <div className="flex gap-2 w-full sm:w-auto">
-              <Button variant="outline" onClick={() => setDetailUser(null)} className="flex-1 sm:flex-none">Huỷ</Button>
-              <Button onClick={handleEdit} disabled={!editForm.name.trim() || !editForm.phone.trim()} className="flex-1 sm:flex-none gap-1.5"
-                style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-              >
-                <Pencil className="w-3.5 h-3.5" /> Lưu
-              </Button>
-            </div>
+            <Button variant="outline" onClick={() => setDetailUser(null)} className="flex-1">Huỷ</Button>
+            <Button onClick={handleEdit} disabled={!editForm.name.trim() || !editForm.phone.trim()} className="flex-1 gap-1.5"
+              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+            >
+              <Pencil className="w-3.5 h-3.5" /> Lưu
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
