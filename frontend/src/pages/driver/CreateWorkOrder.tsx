@@ -193,7 +193,7 @@ export function CreateWorkOrder() {
                   }}
                 >
                   <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-brand-primary)', opacity: 0.7 }}>
-                    Aim cont number here
+                    Căn số cont vào khung
                   </span>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
