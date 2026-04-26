@@ -72,7 +72,7 @@ export function ClientJobs({ clientId, onBack }: { clientId: string; onBack: () 
         {showPricing && clientPricings.length > 0 && (
           <div className="space-y-2">
             {clientPricings.map(p => {
-              const jobCount = Math.max(1, pricingJobCounts.get(`${p.workType}|${p.route}`) ?? 0)
+              const jobCount = pricingJobCounts.get(`${p.workType}|${p.route}`) ?? 0
               return (
                 <div
                   key={p.id}
