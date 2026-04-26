@@ -247,12 +247,12 @@ export function UserManagement() {
               <Input type="password" value={createForm.password} onChange={e => updateCreateField('password', e.target.value)} placeholder="••••••••" className="text-sm" />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Huỷ</Button>
-            <Button onClick={handleCreate} disabled={!createForm.name.trim() || !createForm.phone.trim() || !createForm.password.trim()}
+          <DialogFooter className="flex-row gap-2">
+            <Button variant="outline" onClick={() => setCreateOpen(false)} className="flex-1">Huỷ</Button>
+            <Button onClick={handleCreate} disabled={!createForm.name.trim() || !createForm.phone.trim() || !createForm.password.trim()} className="flex-1"
               style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
             >
-              Tạo tài khoản
+              Xác nhận
             </Button>
           </DialogFooter>
         </DialogContent>
