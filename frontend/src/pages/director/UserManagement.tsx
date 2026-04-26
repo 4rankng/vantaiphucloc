@@ -333,8 +333,8 @@ export function UserManagement() {
             Hành động này không thể hoàn tác. Tài khoản sẽ bị xoá vĩnh viễn.
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteId(null)}>Huỷ</Button>
-            <Button onClick={handleDelete} style={{ background: 'var(--theme-status-error)', color: '#fff' }}>
+            <Button variant="outline" onClick={() => setDeleteId(null)} className="flex-1">Huỷ</Button>
+            <Button onClick={handleDelete} className="flex-1" style={{ background: 'var(--theme-status-error)', color: '#fff' }}>
               Xoá
             </Button>
           </DialogFooter>

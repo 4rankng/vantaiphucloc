@@ -136,8 +136,8 @@ export function RouteList() {
             </label>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Huỷ</Button>
-            <Button onClick={handleSubmit} disabled={!form.route.trim()}>{editIdx !== null ? 'Cập nhật' : 'Tạo'}</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} className="flex-1">Huỷ</Button>
+            <Button onClick={handleSubmit} disabled={!form.route.trim()} className="flex-1" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>{editIdx !== null ? 'Cập nhật' : 'Xác nhận'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -149,7 +149,7 @@ export function RouteList() {
           </DialogHeader>
           <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Hành động này không thể hoàn tác.</p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Huỷ</Button>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="flex-1">Huỷ</Button>
             <Button variant="destructive" onClick={() => deleteConfirm !== null && handleDelete(deleteConfirm)}>Xoá</Button>
           </DialogFooter>
         </DialogContent>

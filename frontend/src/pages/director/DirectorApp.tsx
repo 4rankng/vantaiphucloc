@@ -70,8 +70,12 @@ function AccountPage({ onBack }: { onBack: () => void }) {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPwDialog(false)}>Huỷ</Button>
-            <Button onClick={() => setPwDialog(false)} disabled={!currentPw || !newPw || newPw !== confirmPw}>Đổi mật khẩu</Button>
+            <Button variant="outline" onClick={() => setPwDialog(false)} className="flex-1">Huỷ</Button>
+            <Button onClick={() => setPwDialog(false)} disabled={!currentPw || !newPw || newPw !== confirmPw} className="flex-1"
+              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+            >
+              Xác nhận
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
