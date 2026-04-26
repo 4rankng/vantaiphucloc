@@ -5,7 +5,7 @@ import { apiClient } from '@/services/api'
 import { formatCurrencyFull, type WorkOrder } from '@/data/mockData'
 
 const STATUS_MAP: Record<string, { label: string; icon: typeof CheckCircle; color: string; bg: string }> = {
-  PENDING:  { label: 'Chờ đơn giá', icon: Clock,       color: 'var(--theme-status-warning)', bg: 'var(--theme-status-warning-light)' },
+  PENDING:  { label: 'Chờ đối soát', icon: Clock,       color: 'var(--theme-status-warning)', bg: 'var(--theme-status-warning-light)' },
   PRICED:   { label: 'Đã tính',     icon: CheckCircle,  color: 'var(--theme-status-success)', bg: 'var(--theme-status-success-light)' },
   APPROVED: { label: 'Đã duyệt',    icon: CheckCircle,  color: 'var(--theme-brand-primary)',  bg: 'var(--theme-brand-primary-light)' },
 }

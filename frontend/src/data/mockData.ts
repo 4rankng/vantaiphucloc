@@ -588,7 +588,7 @@ export function getJobStatusBadge(status: JobStatus): { variant: 'default'|'succ
 
 export function getWorkOrderStatusBadge(status: WorkOrderStatus): { variant: 'default'|'success'|'warning'|'danger'|'info'|'neutral'; label: string } {
   switch (status) {
-    case 'PENDING': return { variant: 'warning', label: 'Chờ đơn giá' }
+    case 'PENDING': return { variant: 'warning', label: 'Chờ đối soát' }
     case 'PRICED': return { variant: 'success', label: 'Đã tính giá' }
     case 'APPROVED': return { variant: 'info', label: 'Đã duyệt' }
   }
