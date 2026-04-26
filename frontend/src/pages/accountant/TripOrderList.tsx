@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/Button/Button'
 import { Input } from '@/components/ui/Input/Input'
 import { Label } from '@/components/ui/Label/Label'
+import { SheetPicker } from '@/components/shared/SheetPicker/SheetPicker'
 import { apiClient } from '@/services/api'
 import { formatCurrencyFull, getTripOrderStatusBadge, WORK_TYPES, type TripOrder, type Client, type Driver, type RoutePrice, type Pricing, type WorkOrder, type WorkType } from '@/data/mockData'
 
@@ -170,11 +171,13 @@ export function TripOrderList() {
             </div>
             <div className="space-y-2">
               <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Khách hàng</Label>
-              <select value={form.clientId} onChange={e => updateField('clientId', e.target.value)}
-                className="w-full h-10 rounded-lg px-3 text-sm border" style={{ background: 'var(--theme-bg-tertiary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}>
-                <option value="">Chọn khách hàng</option>
-                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <SheetPicker
+                label="Chọn khách hàng"
+                placeholder="Chọn khách hàng"
+                value={form.clientId}
+                onChange={v => updateField('clientId', v)}
+                options={clients.map(c => ({ value: c.id, label: c.name }))}
+              />
             </div>
             <div className="space-y-2">
               <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Loại công</Label>
@@ -193,19 +196,23 @@ export function TripOrderList() {
             </div>
             <div className="space-y-2">
               <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Cung đường</Label>
-              <select value={form.route} onChange={e => updateField('route', e.target.value)}
-                className="w-full h-10 rounded-lg px-3 text-sm border" style={{ background: 'var(--theme-bg-tertiary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}>
-                <option value="">Chọn cung đường</option>
-                {routes.map((r, i) => <option key={i} value={r.route}>{r.route}</option>)}
-              </select>
+              <SheetPicker
+                label="Chọn cung đường"
+                placeholder="Chọn cung đường"
+                value={form.route}
+                onChange={v => updateField('route', v)}
+                options={routes.map(r => ({ value: r.route, label: r.route }))}
+              />
             </div>
             <div className="space-y-2">
               <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tài xế</Label>
-              <select value={form.driverId} onChange={e => updateField('driverId', e.target.value)}
-                className="w-full h-10 rounded-lg px-3 text-sm border" style={{ background: 'var(--theme-bg-tertiary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}>
-                <option value="">Chọn tài xế</option>
-                {drivers.map(d => <option key={d.id} value={d.id}>{d.name} ({d.tractorPlate})</option>)}
-              </select>
+              <SheetPicker
+                label="Chọn tài xế"
+                placeholder="Chọn tài xế"
+                value={form.driverId}
+                onChange={v => updateField('driverId', v)}
+                options={drivers.map(d => ({ value: d.id, label: `${d.name} (${d.tractorPlate})` }))}
+              />
             </div>
             <div className="space-y-2">
               <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số container</Label>
