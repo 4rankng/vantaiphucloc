@@ -140,7 +140,7 @@ export function AccountantDashboard() {
         <div className="px-4 mt-4">
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-status-warning)' }}>
-              Số công chưa match ({unmatchedJobs.length})
+              Số công chưa khớp ({unmatchedJobs.length})
             </p>
             <button onClick={() => navigate('/accountant/work-orders')} className="text-[11px] font-medium" style={{ color: 'var(--theme-brand-primary)' }}>
               Xem tất cả →

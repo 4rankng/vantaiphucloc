@@ -49,7 +49,7 @@ Freight container trip payroll system for Phuc Loc company.
 - Software auto-matches job → trip using: **loai cong + khach hang + cung duong**
 - Match results:
   - **Khop** (matched) — job matches a trip
-  - **Cho doi soat** — no auto-match found, ke toan must manual match
+  - **Cho doi soat** — no auto-match found, ke toan must khớp thủ công
 - Ke toan can manually match a job to a trip
 
 ### 5. Calculate Salary (Ke toan)
@@ -129,14 +129,14 @@ Freight container trip payroll system for Phuc Loc company.
 1. **Quick actions**: Tạo chuyến | Khách hàng | Cung đường | Thiết lập
 2. **Lương tài xế** — auto-calculated from matched jobs in current period, shows per-driver breakdown
 3. **Chuyến chờ đối soát** — trips needing attention, tap to doi soat
-4. **Số công chưa match** — jobs that failed auto-match, ke toan must manual match
+4. **Số công chưa match** — jobs that failed auto-match, ke toan must khớp thủ công
 
 ### Drill-down Pages
-- Trip detail → doi soat (view matched/unmatched jobs, manual match)
+- Trip detail → doi soat (view matched/chưa khớp jobs, khớp thủ công)
 - Client management → CRUD clients + don gia per client
 - Route management → CRUD routes
 - Salary period → setup/configure period dates
-- Job detail → edit job info for manual matching
+- Job detail → edit job info for khớp thủ cônging
 
 ### Salary
 - Auto-calculated from matched jobs in current period
@@ -148,4 +148,4 @@ Freight container trip payroll system for Phuc Loc company.
 - [x] Quick actions: Tao chuyen, Khach hang, Thiet lap
 - [x] Don gia is part of Khach hang page (per-client pricing)
 - [x] Salary: sum of (driver_salary + allowance) from matched jobs in period
-- [x] Doi soat: auto-match first, manual for unmatched (can edit job + trip before matching)
+- [x] Doi soat: auto-match first, manual for chưa khớp (can edit job + trip before matching)
