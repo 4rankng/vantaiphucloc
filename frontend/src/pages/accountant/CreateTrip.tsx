@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/Label/Label'
 import { SheetPicker } from '@/components/shared/SheetPicker'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { apiClient } from '@/services/api'
-import { WORK_TYPES, WORK_TYPE_LABELS, type Client, type Driver, type Pricing, type WorkType } from '@/data/mockData'
+import { WORK_TYPES, type Client, type Driver, type WorkType } from '@/data/mockData'
 import { Plus, Trash2 } from 'lucide-react'
 
 interface CongItem {
@@ -111,14 +111,17 @@ export function CreateTrip() {
                   </button>
                 )}
               </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Loại công</Label>
-                <SheetPicker
-                  options={WORK_TYPES.map(w => ({ value: w, label: WORK_TYPE_LABELS[w] }))}
-                  value={item.workType}
-                  onChange={v => updateCong(item.id, 'workType', v)}
-                  placeholder="Chọn loại công"
-                />
+              <div className="flex flex-wrap gap-1.5">
+                {WORK_TYPES.map(w => (
+                  <button key={w} onClick={() => updateCong(item.id, 'workType', w)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors touch-manipulation"
+                    style={{
+                      background: item.workType === w ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
+                      color: item.workType === w ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
+                    }}>
+                    {w}
+                  </button>
+                ))}
               </div>
             </div>
           ))}
