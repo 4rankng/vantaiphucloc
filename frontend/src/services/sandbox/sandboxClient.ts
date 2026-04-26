@@ -142,14 +142,15 @@ export async function getWorkOrders(filters?: WorkOrderFilters): Promise<ApiResp
   return ok(items)
 }
 
-export async function createWorkOrder(data: Omit<WorkOrder, 'id' | 'createdAt' | 'status' | 'unitPrice' | 'driverSalary' | 'allowance' | 'earning' | 'pricingId'>): Promise<ApiResponse<WorkOrder>> {
+export async function createWorkOrder(data: Omit<WorkOrder, 'id' | 'createdAt' | 'status' | 'unitPrice' | 'driverSalary' | 'allowance' | 'earning' | 'pricingId' | 'gpsAddress'>): Promise<ApiResponse<WorkOrder>> {
   await delay()
   const items = getStore('work_orders', mockWorkOrders)
 
-  // Auto-lookup pricing
+  // For mockup: simple pricing lookup using first container's workType
   const pricings = getStore('pricings', mockPricings)
+  const firstType = data.containers[0]?.workType ?? 'E20'
   const pricing = pricings.find(p =>
-    p.clientId === data.clientId && p.workType === data.workType && p.route === data.route,
+    p.clientId === data.clientId && p.workType === firstType && p.route === data.route,
   )
 
   const unitPrice = pricing?.unitPrice ?? 0
@@ -161,6 +162,7 @@ export async function createWorkOrder(data: Omit<WorkOrder, 'id' | 'createdAt' |
   const item: WorkOrder = {
     ...data,
     id: generateId('WO'),
+    gpsAddress: 'Cảng Chùa Vẽ, Ngô Quyền, Hải Phòng',
     unitPrice,
     driverSalary,
     allowance,

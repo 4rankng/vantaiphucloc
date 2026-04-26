@@ -10,6 +10,7 @@ import { DriverStoreProvider, useDriverStore } from '@/hooks/use-driver-store'
 import { PageLayout, HomeLayout } from '@/pages/driver/AppShell'
 import { CreateWorkOrder } from '@/pages/driver/CreateWorkOrder'
 import { DriverHome } from '@/pages/driver/DriverHome'
+import { JobDetail } from '@/pages/driver/JobDetail'
 import { DriverHistory } from '@/pages/driver/DriverHistory'
 import { DriverNotifications } from '@/pages/driver/DriverNotifications'
 import { Profile } from '@/pages/driver/Profile'
@@ -20,11 +21,13 @@ function DriverRouter() {
   const { currentPath } = useDriverStore()
 
   switch (currentPath) {
-    case '/driver/work-orders/new': return <PageLayout showBack title="Tạo số công"><CreateWorkOrder /></PageLayout>
+    case '/driver/work-orders/new': return <PageLayout showBack title="Tạo chuyến"><CreateWorkOrder /></PageLayout>
     case '/driver/history':         return <PageLayout showBack title="Lịch sử"><DriverHistory /></PageLayout>
     case '/driver/notifications':   return <PageLayout showBack title="Thông báo"><DriverNotifications /></PageLayout>
     case '/driver/profile':         return <PageLayout showBack title="Tài khoản"><Profile /></PageLayout>
-    default: return <HomeLayout><DriverHome /></HomeLayout>
+    default:
+      if (currentPath.startsWith('/driver/job/')) return <PageLayout showBack title="Chi tiết chuyến"><JobDetail /></PageLayout>
+      return <HomeLayout><DriverHome /></HomeLayout>
   }
 }
 

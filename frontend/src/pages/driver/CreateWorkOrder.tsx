@@ -1,25 +1,42 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Camera, Check, RotateCcw, CheckCircle, AlertCircle } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Camera, Check, RotateCcw, Plus, Trash2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button/Button'
 import { apiClient } from '@/services/api'
 import { useDriverStore } from '@/hooks/use-driver-store'
-import { formatCurrencyFull, WORK_TYPES, type Client, type RoutePrice, type WorkType } from '@/data/mockData'
+import { WORK_TYPES, type Client, type RoutePrice, type WorkType, type ContainerItem } from '@/data/mockData'
+
+// ─── Generate fake ISO 6346 cont number ───────────────────────────────────────
+function generateContainerNumber(): string {
+  const prefixes = ['MSKU', 'TCNU', 'HLCU', 'CSLU', 'TEMU', 'BMOU', 'TRHU', 'FCIU']
+  const prefix = prefixes[Math.floor(Math.random() * prefixes.length)]
+  const num = String(Math.floor(Math.random() * 9000000) + 1000000)
+  return `${prefix}-${num}`
+}
+
+interface ContainerForm {
+  containerNumber: string
+  workType: WorkType
+  photoTaken: boolean
+}
+
+const EMPTY_CONT: ContainerForm = { containerNumber: '', workType: 'E20', photoTaken: false }
 
 export function CreateWorkOrder() {
   const { driver, navigate } = useDriverStore()
   const [clients, setClients] = useState<Client[]>([])
   const [routes, setRoutes] = useState<RoutePrice[]>([])
 
-  // Step 1: Container photo + OCR
-  const [containerPhotoTaken, setContainerPhotoTaken] = useState(false)
-  const [ocrNumber, setOcrNumber] = useState('')
+  // Containers
+  const [containers, setContainers] = useState<ContainerForm[]>([{ ...EMPTY_CONT }])
 
-  // Form fields
-  const [workType, setWorkType] = useState<WorkType>('E20')
+  // Common fields
   const [clientId, setClientId] = useState('')
   const [route, setRoute] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [result, setResult] = useState<{ earning: number; status: string } | null>(null)
+
+  // Ref for hidden file input (camera)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [activeContIdx, setActiveContIdx] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -32,248 +49,247 @@ export function CreateWorkOrder() {
     return () => { cancelled = true }
   }, [])
 
-  const handleTakeContainerPhoto = useCallback(() => {
-    setContainerPhotoTaken(true)
-    // Simulate OCR
-    const prefixes = ['MSKU', 'TCNU', 'HLCU', 'CSLU', 'TEMU']
-    const prefix = prefixes[Math.floor(Math.random() * prefixes.length)]
-    const num = String(Math.floor(Math.random() * 9000000) + 1000000)
-    setOcrNumber(`${prefix}-${num}`)
+  // Handle camera capture
+  const handleCameraCapture = useCallback((idx: number) => () => {
+    setActiveContIdx(idx)
+    if (fileInputRef.current) {
+      fileInputRef.current.click()
+    }
   }, [])
 
-  const handleRetakeContainer = useCallback(() => {
-    setContainerPhotoTaken(false)
-    setOcrNumber('')
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Discard the actual image, just fill in a fake cont number
+      setContainers(prev => prev.map((c, i) =>
+        i === activeContIdx
+          ? { ...c, photoTaken: true, containerNumber: c.containerNumber || generateContainerNumber() }
+          : c,
+      ))
+    }
+    // Reset input so same file can be re-selected
+    e.target.value = ''
+  }, [activeContIdx])
+
+  // Container management
+  const updateContainer = useCallback((idx: number, field: keyof ContainerForm, value: string) => {
+    setContainers(prev => prev.map((c, i) =>
+      i === idx ? { ...c, [field]: value } : c,
+    ))
   }, [])
 
+  const addContainer = useCallback(() => {
+    setContainers(prev => [...prev, { ...EMPTY_CONT }])
+  }, [])
+
+  const removeContainer = useCallback((idx: number) => {
+    setContainers(prev => prev.filter((_, i) => i !== idx))
+  }, [])
+
+  // Submit
   const handleSubmit = useCallback(async () => {
-    if (!ocrNumber.trim() || !clientId || !route) return
+    if (containers.some(c => !c.containerNumber.trim()) || !clientId || !route) return
     setSubmitting(true)
 
     const client = clients.find(c => c.id === clientId)
-    const res = await apiClient.createWorkOrder({
-      workOrderNumber: ocrNumber.trim(),
+    const containerItems: ContainerItem[] = containers.map(c => ({
+      containerNumber: c.containerNumber.trim(),
+      workType: c.workType,
       photoUrl: '',
-      workType,
+    }))
+
+    // Get GPS (simulate for mockup)
+    const gpsLat = 20.8449
+    const gpsLng = 106.6881
+
+    await apiClient.createWorkOrder({
+      containers: containerItems,
       clientId,
       clientName: client?.name ?? '',
       route,
       driverId: driver.id,
       driverName: driver.name,
       tractorPlate: driver.tractorPlate,
+      gpsLat,
+      gpsLng,
     })
 
-    if (res.success) {
-      setResult({ earning: res.data.earning, status: res.data.status })
-    }
-    setSubmitting(false)
-  }, [ocrNumber, clientId, route, workType, clients, driver, navigate])
+    navigate('/driver')
+  }, [containers, clientId, route, clients, driver, navigate])
 
-  // Success state
-  if (result) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div
-          className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
-          style={{ background: 'var(--theme-status-success-light)' }}
-        >
-          <CheckCircle className="w-8 h-8" style={{ color: 'var(--theme-status-success)' }} />
-        </div>
-        <h3 className="text-lg font-bold mb-1" style={{ color: 'var(--theme-text-primary)' }}>
-          Gửi thành công!
-        </h3>
-        <p className="text-sm mb-4" style={{ color: 'var(--theme-text-muted)' }}>
-          {ocrNumber} · {workType}
-        </p>
-        {result.earning > 0 ? (
-          <div className="rounded-2xl p-4 mb-6 w-full max-w-xs" style={{ background: 'var(--theme-brand-primary-light)' }}>
-            <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Thu nhập chuyến này</p>
-            <p className="text-xl font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>
-              +{formatCurrencyFull(result.earning)}
-            </p>
-          </div>
-        ) : (
-          <div className="rounded-2xl p-4 mb-6 w-full max-w-xs" style={{ background: 'var(--theme-status-warning-light)' }}>
-            <p className="text-xs" style={{ color: 'var(--theme-status-warning)' }}>
-              Chưa có đơn giá cho tuyến này. Kế toán sẽ cập nhật sau.
-            </p>
-          </div>
-        )}
-        <div className="flex gap-3 w-full max-w-xs">
-          <Button
-            onClick={() => {
-              setResult(null)
-              setContainerPhotoTaken(false)
-              setOcrNumber('')
-              setClientId('')
-              setRoute('')
-              setWorkType('E20')
-            }}
-            variant="outline"
-            className="flex-1 h-11 font-bold rounded-xl"
-          >
-            Chụp tiếp
-          </Button>
-          <Button
-            onClick={() => navigate('/driver')}
-            className="flex-1 h-11 font-bold rounded-xl"
-            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-          >
-            Trang chủ
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
-  const canSubmit = ocrNumber.trim() && clientId && route
+  const canSubmit = containers.every(c => c.containerNumber.trim()) && clientId && route
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4 pb-6">
+      {/* Hidden file input for camera */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
       <div>
-        <h2 className="text-lg font-bold" style={{ color: 'var(--theme-text-primary)' }}>Tạo số công</h2>
+        <h2 className="text-lg font-bold" style={{ color: 'var(--theme-text-primary)' }}>Tạo chuyến mới</h2>
         <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>Chụp số cont và chọn thông tin</p>
       </div>
 
-      {/* ── STEP 1: Container photo + OCR ── */}
+      {/* ── Container cards ── */}
       <div className="space-y-3">
-        <div className="flex items-center gap-2">
+        {containers.map((cont, idx) => (
           <div
-            className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-            style={{ background: containerPhotoTaken ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)', color: containerPhotoTaken ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)' }}
+            key={idx}
+            className="rounded-2xl p-4 space-y-3"
+            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
           >
-            1
-          </div>
-          <span className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Chụp số công-ten-nơ</span>
-        </div>
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold" style={{ color: 'var(--theme-text-secondary)' }}>
+                Cont {idx + 1}
+              </span>
+              {containers.length > 1 && (
+                <button
+                  onClick={() => removeContainer(idx)}
+                  className="w-7 h-7 flex items-center justify-center rounded-full touch-manipulation"
+                  style={{ background: 'var(--theme-status-error-light)' }}
+                >
+                  <Trash2 className="w-3.5 h-3.5" style={{ color: 'var(--theme-status-error)' }} />
+                </button>
+              )}
+            </div>
 
+            {/* Camera / Photo area */}
+            <button
+              onClick={handleCameraCapture(idx)}
+              className="w-full rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-4 transition-colors touch-manipulation"
+              style={{
+                background: cont.photoTaken ? 'var(--theme-bg-tertiary)' : 'transparent',
+                borderColor: cont.photoTaken ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)',
+              }}
+            >
+              {cont.photoTaken ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'var(--theme-brand-primary)' }}>
+                    <Check className="w-4 h-4" style={{ color: 'var(--theme-text-on-brand)' }} />
+                  </div>
+                  <span className="text-xs font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>Đã chụp</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-1">
+                  <Camera className="w-6 h-6" style={{ color: 'var(--theme-text-muted)' }} />
+                  <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Chạm để chụp</span>
+                </div>
+              )}
+            </button>
+
+            {/* Container number input */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Số cont</label>
+                {cont.photoTaken && (
+                  <button
+                    onClick={handleCameraCapture(idx)}
+                    className="flex items-center gap-1 text-[10px] font-medium touch-manipulation"
+                    style={{ color: 'var(--theme-text-muted)' }}
+                  >
+                    <RotateCcw className="w-3 h-3" /> Chụp lại
+                  </button>
+                )}
+              </div>
+              <input
+                value={cont.containerNumber}
+                onChange={e => updateContainer(idx, 'containerNumber', e.target.value)}
+                className="w-full h-10 rounded-xl px-3 text-sm font-mono font-semibold"
+                style={{
+                  background: 'var(--theme-bg-tertiary)',
+                  border: '1px solid var(--theme-border-default)',
+                  color: 'var(--theme-text-primary)',
+                }}
+                placeholder="VD: MSKU-1234567"
+              />
+              <p className="text-[10px] flex items-center gap-1" style={{ color: 'var(--theme-text-muted)' }}>
+                <AlertCircle className="w-3 h-3" />
+                Sửa nếu PM nhận diện sai
+              </p>
+            </div>
+
+            {/* Type selector */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Loại cont</label>
+              <div className="grid grid-cols-4 gap-1.5">
+                {WORK_TYPES.map(wt => (
+                  <button
+                    key={wt}
+                    onClick={() => updateContainer(idx, 'workType', wt)}
+                    className="py-2.5 rounded-lg text-xs font-bold transition-colors touch-manipulation"
+                    style={{
+                      background: cont.workType === wt ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
+                      color: cont.workType === wt ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
+                      border: `1px solid ${cont.workType === wt ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)'}`,
+                    }}
+                  >
+                    {wt}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Add container button */}
         <button
-          onClick={handleTakeContainerPhoto}
-          className="w-full aspect-[4/3] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-colors touch-manipulation"
+          onClick={addContainer}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-colors touch-manipulation"
           style={{
-            background: containerPhotoTaken ? 'var(--theme-bg-tertiary)' : 'var(--theme-bg-secondary)',
-            borderColor: containerPhotoTaken ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)',
+            background: 'var(--theme-bg-secondary)',
+            color: 'var(--theme-brand-primary)',
+            border: '1px dashed var(--theme-brand-primary)',
           }}
-          aria-label={containerPhotoTaken ? 'Chụp lại' : 'Chụp ảnh số công'}
         >
-          {containerPhotoTaken ? (
-            <>
-              <div className="h-14 w-14 rounded-full flex items-center justify-center" style={{ background: 'var(--theme-brand-primary)' }}>
-                <Check className="h-7 w-7" style={{ color: 'var(--theme-text-on-brand)' }} />
-              </div>
-              <div className="text-center">
-                <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Đã chụp</p>
-                <p className="text-lg font-bold font-mono mt-1" style={{ color: 'var(--theme-brand-primary)' }}>{ocrNumber}</p>
-              </div>
-              <button
-                onClick={(e) => { e.stopPropagation(); handleRetakeContainer() }}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium mt-1"
-                style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-muted)' }}
-              >
-                <RotateCcw className="w-3 h-3" /> Chụp lại
-              </button>
-            </>
-          ) : (
-            <>
-              <Camera className="h-10 w-10" style={{ color: 'var(--theme-text-muted)' }} />
-              <p className="text-sm font-medium" style={{ color: 'var(--theme-text-secondary)' }}>Chạm để chụp ảnh</p>
-              <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>PM sẽ tự động nhận diện số cont</p>
-            </>
-          )}
+          <Plus className="w-4 h-4" />
+          Thêm cont
         </button>
       </div>
 
-      {/* ── STEP 2: Select info ── */}
-      {containerPhotoTaken && (
-        <div className="space-y-4">
-          {/* OCR edit */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>2</div>
-              <span className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Kiểm tra số cont</span>
-            </div>
-            <input
-              value={ocrNumber}
-              onChange={e => setOcrNumber(e.target.value)}
-              className="w-full h-11 rounded-xl px-4 text-sm font-mono font-semibold"
-              style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
-              placeholder="Số công-ten-nơ"
-            />
-            <p className="text-[11px] flex items-center gap-1" style={{ color: 'var(--theme-text-muted)' }}>
-              <AlertCircle className="w-3 h-3" />
-              Sửa nếu PM nhận diện không đúng
-            </p>
-          </div>
+      {/* ── Customer ── */}
+      <div className="space-y-1.5">
+        <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Khách hàng</label>
+        <select
+          value={clientId}
+          onChange={e => setClientId(e.target.value)}
+          className="w-full h-11 rounded-xl px-4 text-sm"
+          style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
+        >
+          <option value="">Chọn khách hàng</option>
+          {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </div>
 
-          {/* Cont size */}
-          <div className="space-y-2">
-            <span className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Kích thước cont</span>
-            <div className="grid grid-cols-4 gap-2">
-              {WORK_TYPES.map(wt => (
-                <button key={wt} onClick={() => setWorkType(wt)}
-                  className="py-3 rounded-xl text-sm font-bold transition-colors touch-manipulation"
-                  style={{
-                    background: workType === wt ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
-                    color: workType === wt ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
-                    border: `1px solid ${workType === wt ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)'}`,
-                  }}>
-                  {wt}
-                </button>
-              ))}
-            </div>
-          </div>
+      {/* ── Route ── */}
+      <div className="space-y-1.5">
+        <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Cung đường</label>
+        <select
+          value={route}
+          onChange={e => setRoute(e.target.value)}
+          className="w-full h-11 rounded-xl px-4 text-sm"
+          style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
+        >
+          <option value="">Chọn cung đường</option>
+          {routes.map((r, i) => <option key={i} value={r.route}>{r.route}</option>)}
+        </select>
+      </div>
 
-          {/* Client */}
-          <div className="space-y-2">
-            <span className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Khách hàng</span>
-            <select
-              value={clientId}
-              onChange={e => setClientId(e.target.value)}
-              className="w-full h-11 rounded-xl px-4 text-sm"
-              style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
-            >
-              <option value="">Chọn khách hàng</option>
-              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-
-          {/* Route */}
-          <div className="space-y-2">
-            <span className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Cung đường</span>
-            <select
-              value={route}
-              onChange={e => setRoute(e.target.value)}
-              className="w-full h-11 rounded-xl px-4 text-sm"
-              style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
-            >
-              <option value="">Chọn cung đường</option>
-              {routes.map((r, i) => <option key={i} value={r.route}>{r.route}</option>)}
-            </select>
-          </div>
-
-          {/* Driver info (auto) */}
-          <div className="p-3 rounded-xl space-y-1" style={{ background: 'var(--theme-bg-tertiary)' }}>
-            <p className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Thông tin xe (tự động)</p>
-            <div className="flex justify-between text-xs">
-              <span style={{ color: 'var(--theme-text-secondary)' }}>Tài xế</span>
-              <span className="font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{driver.name}</span>
-            </div>
-            <div className="flex justify-between text-xs">
-              <span style={{ color: 'var(--theme-text-secondary)' }}>Biển số</span>
-              <span className="font-semibold font-mono" style={{ color: 'var(--theme-text-primary)' }}>{driver.tractorPlate}</span>
-            </div>
-          </div>
-
-          <Button
-            onClick={handleSubmit}
-            disabled={!canSubmit || submitting}
-            className="w-full h-12 font-bold text-base rounded-2xl"
-            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-          >
-            {submitting ? 'Đang gửi...' : 'Gửi số công'}
-          </Button>
-        </div>
-      )}
+      {/* ── Submit ── */}
+      <Button
+        onClick={handleSubmit}
+        disabled={!canSubmit || submitting}
+        className="w-full h-12 font-bold text-base rounded-2xl"
+        style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+      >
+        {submitting ? 'Đang gửi...' : 'Gửi chuyến'}
+      </Button>
     </div>
   )
 }
