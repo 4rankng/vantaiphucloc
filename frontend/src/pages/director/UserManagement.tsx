@@ -41,8 +41,8 @@ const ROLE_COLORS: Record<Role, { bg: string; color: string }> = {
   driver: { bg: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' },
 }
 
-// Director can only create driver and accountant accounts
-const CREATABLE_ROLES: Role[] = ['driver', 'accountant']
+// Director can create driver, accountant, and director accounts
+const CREATABLE_ROLES: Role[] = ['driver', 'accountant', 'director']
 
 interface CreateForm {
   name: string
@@ -167,7 +167,7 @@ export function UserManagement() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Vai trò</Label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {CREATABLE_ROLES.map(r => (
                   <button
                     key={r}
