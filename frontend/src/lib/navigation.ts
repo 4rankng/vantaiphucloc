@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Truck, Route, Users, FileText, Receipt,
   UserCog, BarChart3, AlertTriangle, CircleDollarSign, BookOpen,
-  Camera, Wallet, UserCircle, MoreHorizontal,
+  Camera, Wallet, UserCircle,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -23,14 +23,6 @@ export const directorNav: NavItem[] = [
   { label: 'Báo cáo', icon: BarChart3, path: '/director/reports' },
 ]
 
-export const directorMobileNav: NavItem[] = [
-  { label: 'Tổng quan', icon: LayoutDashboard, path: '/director' },
-  { label: 'Chuyến', icon: Route, path: '/director/trips' },
-  { label: 'Đội xe', icon: Truck, path: '/director/fleet' },
-  { label: 'Hóa đơn', icon: FileText, path: '/director/invoices' },
-  { label: 'Khác', icon: MoreHorizontal, path: '/director/more' },
-]
-
 // ─── Dispatcher ────────────────────────────────────────────
 export const dispatcherNav: NavItem[] = [
   { label: 'Tổng quan', icon: LayoutDashboard, path: '/dispatcher' },
@@ -38,14 +30,6 @@ export const dispatcherNav: NavItem[] = [
   { label: 'Cảnh báo', icon: AlertTriangle, path: '/dispatcher/alerts' },
   { label: 'Đội xe', icon: Truck, path: '/dispatcher/fleet' },
   { label: 'Chủ hàng', icon: Users, path: '/dispatcher/clients' },
-]
-
-export const dispatcherMobileNav: NavItem[] = [
-  { label: 'Tổng quan', icon: LayoutDashboard, path: '/dispatcher' },
-  { label: 'Chuyến', icon: Route, path: '/dispatcher/trips' },
-  { label: 'Cảnh báo', icon: AlertTriangle, path: '/dispatcher/alerts' },
-  { label: 'Đội xe', icon: Truck, path: '/dispatcher/fleet' },
-  { label: 'Khách hàng', icon: Users, path: '/dispatcher/clients' },
 ]
 
 // ─── Accountant ────────────────────────────────────────────
@@ -60,14 +44,6 @@ export const accountantNav: NavItem[] = [
   { label: 'Hóa đơn', icon: FileText, path: '/accountant/invoices' },
   { label: 'Công nợ', icon: Receipt, path: '/accountant/receivables' },
   { label: 'Chốt sổ', icon: BookOpen, path: '/accountant/period-close' },
-]
-
-export const accountantMobileNav: NavItem[] = [
-  { label: 'Tổng quan', icon: LayoutDashboard, path: '/accountant' },
-  { label: 'Số công', icon: Camera, path: '/accountant/work-orders' },
-  { label: 'Chuyến', icon: Truck, path: '/accountant/trip-orders' },
-  { label: 'Lương', icon: Wallet, path: '/accountant/salary' },
-  { label: 'Khác', icon: MoreHorizontal, path: '/accountant/more' },
 ]
 
 // ─── Driver ────────────────────────────────────────────────
@@ -89,7 +65,6 @@ export const pageTitles: Record<string, string> = {
   '/director/receivables': 'Công nợ',
   '/director/driver-kpi': 'KPI Tài xế',
   '/director/reports': 'Báo cáo',
-  '/director/more': 'Thêm',
   '/dispatcher': 'Tổng quan',
   '/dispatcher/trips': 'Chuyến xe',
   '/dispatcher/alerts': 'Cảnh báo',
@@ -105,7 +80,6 @@ export const pageTitles: Record<string, string> = {
   '/accountant/invoices': 'Hóa đơn',
   '/accountant/receivables': 'Công nợ',
   '/accountant/period-close': 'Chốt sổ',
-  '/accountant/more': 'Thêm',
   '/driver': 'Trang chủ',
   '/driver/trips': 'Chuyến xe',
   '/driver/photos': 'Chụp ảnh',
