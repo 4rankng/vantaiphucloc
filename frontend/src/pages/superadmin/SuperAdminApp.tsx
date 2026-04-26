@@ -260,14 +260,16 @@ function SuperAdminDashboard({
           { label: ROLE_LABELS.driver, value: counts.driver, icon: Truck },
           { label: ROLE_LABELS.accountant, value: counts.accountant, icon: CircleDollarSign },
         ] as const).map(({ label, value, icon: Icon }) => (
-          <div key={label} className="rounded-2xl p-3 text-center"
+          <div key={label} className="flex items-center gap-2 rounded-2xl p-3"
             style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
-            <div className="w-7 h-7 rounded-lg mx-auto flex items-center justify-center mb-1"
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
               style={{ background: 'var(--theme-brand-primary-light)' }}>
-              <Icon className="w-3.5 h-3.5" style={{ color: 'var(--theme-brand-primary)' }} />
+              <Icon className="w-4 h-4" style={{ color: 'var(--theme-brand-primary)' }} />
             </div>
-            <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{value}</p>
-            <p className="text-[10px] font-medium mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{label}</p>
+            <div className="min-w-0">
+              <p className="text-lg font-bold tabular-nums leading-none" style={{ color: 'var(--theme-text-primary)' }}>{value}</p>
+              <p className="text-[10px] font-medium mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{label}</p>
+            </div>
           </div>
         ))}
       </div>

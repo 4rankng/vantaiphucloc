@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button/Button'
 import { Badge } from '@/components/ui/Badge/Badge'
 import { ChartCard } from '@/components/shared/ChartCard'
 import { BarChartWidget } from '@/components/shared/Charts'
+import { SheetPicker } from '@/components/shared/SheetPicker/SheetPicker'
 import { apiClient } from '@/services/api'
 import { formatCurrencyFull, getSalaryStatusBadge, type Driver, type SalaryPeriod } from '@/data/mockData'
 import type { ChartOptions } from 'chart.js'
@@ -106,15 +107,13 @@ export function SalaryView() {
       >
         <div className="space-y-1.5">
           <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Tài xế</label>
-          <select
+          <SheetPicker
+            label="Chọn tài xế"
+            placeholder="Chọn tài xế"
             value={selectedDriver}
-            onChange={e => setSelectedDriver(e.target.value)}
-            className="w-full h-10 rounded-xl px-3 text-sm border"
-            style={{ background: 'var(--theme-bg-tertiary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
-          >
-            <option value="">Chọn tài xế</option>
-            {drivers.map(d => <option key={d.id} value={d.id}>{d.name} ({d.tractorPlate})</option>)}
-          </select>
+            onChange={setSelectedDriver}
+            options={drivers.map(d => ({ value: d.id, label: `${d.name} (${d.tractorPlate})` }))}
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
