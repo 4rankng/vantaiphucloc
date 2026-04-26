@@ -16,6 +16,11 @@ type DirectorPage = 'dashboard' | 'users' | 'notifications' | 'account' | 'drive
 
 function AccountPage({ onBack }: { onBack: () => void }) {
   const { user, logout } = useAuth()
+  const [pwDialog, setPwDialog] = useState(false)
+  const [currentPw, setCurrentPw] = useState('')
+  const [newPw, setNewPw] = useState('')
+  const [confirmPw, setConfirmPw] = useState('')
+
   return (
     <>
       <AppTopBar variant="page" title="Tài khoản" onBack={onBack} />
