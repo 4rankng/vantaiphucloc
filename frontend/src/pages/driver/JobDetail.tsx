@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { MapPin, Calendar, Truck, Building2, Route as RouteIcon, Camera } from 'lucide-react'
 import { useDriverStore } from '@/hooks/use-driver-store'
+import { InfoRow } from '@/components/shared/InfoRow'
+import { ContBadge } from '@/components/shared/ContBadge'
 import { apiClient } from '@/services/api'
 import { formatCurrencyFull, type WorkOrder } from '@/data/mockData'
 
@@ -122,28 +124,6 @@ export function JobDetail() {
             Chờ đối soát
           </span>
         )}
-      </div>
-    </div>
-  )
-}
-
-function InfoRow({ icon: Icon, label, value, noBorder }: {
-  icon: typeof MapPin
-  label: string
-  value: string
-  noBorder?: boolean
-}) {
-  return (
-    <div
-      className="flex items-start gap-3 px-4 py-3"
-      style={!noBorder ? { borderBottom: '1px solid var(--theme-border-light)' } : undefined}
-    >
-      <Icon className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
-      <div className="min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
-          {label}
-        </p>
-        <p className="text-sm mt-0.5" style={{ color: 'var(--theme-text-primary)' }}>{value}</p>
       </div>
     </div>
   )

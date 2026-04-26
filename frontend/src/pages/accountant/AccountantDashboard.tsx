@@ -3,52 +3,11 @@ import { Camera, FileText, Users, Route, CircleDollarSign, Wallet } from 'lucide
 import { Masonry } from 'masonic'
 import { ChartCard } from '@/components/shared/ChartCard'
 import { LineChartWidget } from '@/components/shared/Charts'
+import { StatTileCard, type StatTile } from '@/components/shared/StatTileCard'
 import { apiClient } from '@/services/api'
 import { useAppStore } from '@/hooks/use-app-store'
 import type { WorkOrder, TripOrder, Client } from '@/data/mockData'
 import type { LucideIcon } from 'lucide-react'
-
-// ─── Stat tile for masonic grid ───────────────────────────────────────────────
-interface StatTile {
-  id: string
-  label: string
-  value: string
-  sub?: string
-  icon: LucideIcon
-  path: string
-  accent: string
-  accentLight: string
-}
-
-function StatTileCard({ data, navigate }: { data: StatTile; navigate: (p: string) => void }) {
-  const Icon = data.icon
-  return (
-    <button
-      onClick={() => navigate(data.path)}
-      className="w-full text-left rounded-2xl p-4 transition-all active:scale-[0.97] touch-manipulation"
-      style={{
-        background: 'var(--theme-bg-secondary)',
-        boxShadow: 'var(--theme-shadow-card)',
-        border: '1px solid var(--theme-border-default)',
-      }}
-    >
-      <div className="flex items-start justify-between mb-2">
-        <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
-          {data.label}
-        </p>
-        <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: data.accentLight }}>
-          <Icon className="w-3.5 h-3.5" style={{ color: data.accent }} />
-        </div>
-      </div>
-      <p className="text-[22px] font-bold leading-tight tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
-        {data.value}
-      </p>
-      {data.sub && (
-        <p className="text-[11px] mt-1" style={{ color: 'var(--theme-text-muted)' }}>{data.sub}</p>
-      )}
-    </button>
-  )
-}
 
 // ─── Quick-link icon tile ─────────────────────────────────────────────────────
 interface QuickLink { label: string; icon: LucideIcon; path: string }
@@ -84,7 +43,7 @@ export function AccountantDashboard() {
   const confirmedTrips = useMemo(() => tripOrders.filter(t => t.status === 'CONFIRMED').length, [tripOrders])
 
   const statTiles = useMemo<StatTile[]>(() => [
-    { id: 'clients', label: 'Khách hàng', value: String(clients.length), icon: Users, path: '/accountant/clients', accent: '#2196F3', accentLight: '#E3F2FD' },
+    { id: 'clients', label: 'Khách hàng', value: String(clients.length), sub: '', icon: Users, path: '/accountant/clients', accent: '#2196F3', accentLight: '#E3F2FD' },
     { id: 'workorders', label: 'Số công', value: String(workOrders.length), sub: `${pendingWO} chờ đối soát`, icon: Camera, path: '/accountant/work-orders', accent: '#FF9500', accentLight: '#FFF4E6' },
     { id: 'trips', label: 'Chuyến/Lệnh', value: String(tripOrders.length), sub: `${confirmedTrips} đã xác nhận`, icon: FileText, path: '/accountant/trip-orders', accent: '#00963E', accentLight: '#E6F9EF' },
     { id: 'salary', label: 'Tính lương', value: 'Tính', sub: 'theo kỳ', icon: Wallet, path: '/accountant/salary', accent: '#9C27B0', accentLight: '#F3E5F5' },
@@ -125,7 +84,7 @@ export function AccountantDashboard() {
           columnGutter={8}
           columnWidth={160}
           maxColumnCount={2}
-          render={({ data: item }) => <StatTileCard data={item} navigate={navigate} />}
+          render={({ data: item }) => <StatTileCard data={item} onClick={navigate} />}
           overscanBy={2}
         />
       </div>
