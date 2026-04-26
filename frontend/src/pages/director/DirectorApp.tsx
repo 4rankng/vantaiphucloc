@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { AppTopBar } from '@/components/shared/AppTopBar'
-import { ProfileDialog } from '@/components/shared/ProfileDialog'
+import { UserDropdown } from '@/components/shared/ProfileDialog'
 import { DirectorDashboard } from './DirectorDashboard'
 import { UserManagement } from './UserManagement'
 import { DirectorNotifications } from './DirectorNotifications'
@@ -15,7 +15,7 @@ export function DirectorApp() {
   const [page, setPage] = useState<DirectorPage>('dashboard')
   const [selectedDriverId, setSelectedDriverId] = useState('')
   const [selectedClientId, setSelectedClientId] = useState('')
-  const [profileOpen, setProfileOpen] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
 
   const goBack = () => setPage('dashboard')
 
@@ -36,7 +36,7 @@ export function DirectorApp() {
               variant="home"
               name={user?.name ?? ''}
               onNotifications={() => setPage('notifications')}
-              onProfile={() => setProfileOpen(true)}
+              onProfile={() => setDropdownOpen(true)}
             />
             <DirectorDashboard
               onManageUsers={() => setPage('users')}
@@ -51,7 +51,7 @@ export function DirectorApp() {
   return (
     <div className="min-h-[100dvh]" style={{ background: 'var(--theme-bg-primary)' }}>
       {renderContent()}
-      <ProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} />
+      <UserDropdown open={dropdownOpen} onClose={() => setDropdownOpen(false)} />
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { AppStoreProvider, useAppStore } from '@/hooks/use-app-store'
 import { AppTopBar } from '@/components/shared/AppTopBar'
-import { ProfileDialog } from '@/components/shared/ProfileDialog'
+import { UserDropdown } from '@/components/shared/ProfileDialog'
 import { getPageTitle } from '@/lib/navigation'
 import { AccountantDashboard } from './AccountantDashboard'
 import { ClientList } from './ClientList'
@@ -19,7 +19,7 @@ const HOME_PATH = '/accountant'
 function AccountantRouter() {
   const { user } = useAuth()
   const { currentPath, navigate, goBack } = useAppStore()
-  const [profileOpen, setProfileOpen] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }) }, [currentPath])
 
@@ -51,7 +51,7 @@ function AccountantRouter() {
           variant="home"
           name={user?.name ?? ''}
           onNotifications={() => navigate('/accountant/notifications')}
-          onProfile={() => setProfileOpen(true)}
+          onProfile={() => setDropdownOpen(true)}
         />
       ) : (
         <AppTopBar variant="page" title={pageTitle} onBack={goBack} />
@@ -60,7 +60,7 @@ function AccountantRouter() {
       <main className={isHome ? undefined : 'p-4 space-y-4'}>
         {renderPage()}
       </main>
-      <ProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} />
+      <UserDropdown open={dropdownOpen} onClose={() => setDropdownOpen(false)} />
     </div>
   )
 }
