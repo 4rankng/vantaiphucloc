@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useDriverStore } from '@/hooks/use-driver-store'
 import { useAuth } from '@/contexts/AuthContext'
 import { Phone, Truck, LogOut, KeyRound, UserCircle } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog/Dialog'
@@ -11,17 +10,22 @@ const ROLE_LABELS: Record<string, string> = {
   driver: 'Tài xế',
   director: 'Giám đốc',
   accountant: 'Kế toán',
+  superadmin: 'SuperAdmin',
 }
 
-export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { driver } = useDriverStore()
+interface ProfileDialogProps {
+  open: boolean
+  onClose: () => void
+  /** Extra driver-specific info (phone, plate) — only for driver role */
+  driverMeta?: { phone: string; plate: string }
+}
+
+export function ProfileDialog({ open, onClose, driverMeta }: ProfileDialogProps) {
   const { user, logout } = useAuth()
 
-  // For driver role use driver store, otherwise use auth user
-  const isDriver = user?.role === 'driver'
-  const name = isDriver ? driver.name : (user?.name ?? '')
-  const phone = isDriver ? driver.phone : ''
-  const plate = isDriver ? driver.tractorPlate : ''
+  const name = user?.name ?? ''
+  const phone = driverMeta?.phone ?? ''
+  const plate = driverMeta?.plate ?? ''
   const role = user?.role ?? 'driver'
   const roleLabel = ROLE_LABELS[role] ?? role
 
