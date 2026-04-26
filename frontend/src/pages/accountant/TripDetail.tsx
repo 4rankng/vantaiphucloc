@@ -142,7 +142,7 @@ export function TripDetail({ tripId }: { tripId: string }) {
           <button onClick={() => setShowMatchDialog(true)}
             className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold transition-all active:scale-[0.98] touch-manipulation"
             style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-            <Link2 className="w-4 h-4" /> Match số công
+            <Link2 className="w-4 h-4" /> Khớp số công
           </button>
         </div>
       )}
@@ -191,11 +191,11 @@ export function TripDetail({ tripId }: { tripId: string }) {
       <Dialog open={showMatchDialog} onOpenChange={setShowMatchDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Chọn số công để match</DialogTitle>
+            <DialogTitle>Chọn số công để khớp</DialogTitle>
           </DialogHeader>
           {unmatchedJobs.length === 0 ? (
             <div className="py-6 text-center">
-              <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không có số công nào chưa match</p>
+              <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không có số công nào chưa khớp</p>
             </div>
           ) : (
             <div className="space-y-2 max-h-[50vh] overflow-y-auto">

@@ -92,7 +92,7 @@ export function WorkOrderList() {
 
       {filtered.length === 0 ? (
         <div className="rounded-2xl p-8 text-center" style={{ background: 'var(--theme-bg-secondary)' }}>
-          <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không có số công chưa match</p>
+          <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không có số công chưa khớp</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -109,7 +109,7 @@ export function WorkOrderList() {
                 </div>
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
                   style={{ background: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' }}>
-                  Chờ match
+                  Chờ khớp
                 </span>
               </div>
               <p className="text-[11px] mt-1" style={{ color: 'var(--theme-text-muted)' }}>
@@ -179,11 +179,11 @@ export function WorkOrderList() {
       <Dialog open={!!matchJobId} onOpenChange={() => setMatchJobId(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Chọn chuyến để match</DialogTitle>
+            <DialogTitle>Chọn chuyến để khớp</DialogTitle>
           </DialogHeader>
           {availableTrips.length === 0 ? (
             <div className="py-6 text-center">
-              <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không có chuyến nào để match</p>
+              <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không có chuyến nào để khớp</p>
             </div>
           ) : (
             <div className="space-y-2 max-h-[50vh] overflow-y-auto">
