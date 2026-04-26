@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { LogOut, KeyRound, ChevronRight } from 'lucide-react'
+import { LogOut, KeyRound, ChevronRight, UserCircle } from 'lucide-react'
 import { AppTopBar } from '@/components/shared/AppTopBar'
 import { DirectorDashboard } from './DirectorDashboard'
 import { UserManagement } from './UserManagement'
@@ -16,19 +16,13 @@ type DirectorPage = 'dashboard' | 'users' | 'notifications' | 'account' | 'drive
 
 function AccountPage({ onBack }: { onBack: () => void }) {
   const { user, logout } = useAuth()
-  const initials = (user?.name ?? 'GD').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
-  const [pwDialog, setPwDialog] = useState(false)
-  const [currentPw, setCurrentPw] = useState('')
-  const [newPw, setNewPw] = useState('')
-  const [confirmPw, setConfirmPw] = useState('')
-
   return (
     <>
       <AppTopBar variant="page" title="Tài khoản" onBack={onBack} />
       <div className="p-4 space-y-4">
         <div className="flex items-center gap-3 rounded-2xl p-4" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
-          <div className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-            {initials}
+          <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+            <UserCircle className="w-6 h-6" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[15px] font-bold" style={{ color: 'var(--theme-text-primary)' }}>{user?.name}</p>

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { useAuth } from '@/contexts/AuthContext'
-import { Phone, TruckIcon, LogOut, KeyRound, ChevronRight } from 'lucide-react'
+import { Phone, TruckIcon, LogOut, KeyRound, ChevronRight, UserCircle } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog/Dialog'
 import { Button } from '@/components/ui/Button/Button'
 import { Input } from '@/components/ui/Input/Input'
@@ -10,7 +10,6 @@ import { Label } from '@/components/ui/Label/Label'
 export function Profile() {
   const { driver } = useDriverStore()
   const { logout } = useAuth()
-  const initials = driver.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 
   const [pwDialog, setPwDialog] = useState(false)
   const [currentPw, setCurrentPw] = useState('')
@@ -34,10 +33,10 @@ export function Profile() {
           style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}
         >
           <div
-            className="w-14 h-14 rounded-full flex items-center justify-center text-base font-bold shrink-0"
+            className="w-14 h-14 rounded-full flex items-center justify-center shrink-0"
             style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
           >
-            {initials}
+            <UserCircle className="w-7 h-7" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[16px] font-bold" style={{ color: 'var(--theme-text-primary)' }}>{driver.name}</p>
