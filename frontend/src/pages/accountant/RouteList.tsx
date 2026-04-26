@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Plus, Pencil, Trash2, Route } from 'lucide-react'
-import { PageHeader } from '@/components/shared/PageHeader/PageHeader'
+import { Plus, Pencil, Trash2, Route as RouteIcon } from 'lucide-react'
+import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog/Dialog'
 import { Button } from '@/components/ui/Button/Button'
 import { Input } from '@/components/ui/Input/Input'
 import { Label } from '@/components/ui/Label/Label'
+import { InfoRow } from '@/components/shared/InfoRow'
 import { apiClient } from '@/services/api'
 import { formatCurrencyFull } from '@/data/mockData'
 import type { RoutePrice } from '@/data/mockData'
@@ -21,9 +22,16 @@ const EMPTY_FORM: RouteForm = { route: '', type20ft: 0, type40ft: 0, isTwoWay: f
 export function RouteList() {
   const [routes, setRoutes] = useState<RoutePrice[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Detail dialog
+  const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
+
+  // Create/Edit dialog
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editIdx, setEditIdx] = useState<number | null>(null)
   const [form, setForm] = useState<RouteForm>(EMPTY_FORM)
+
+  // Delete confirm
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
 
   const loadRoutes = useCallback(async () => {
@@ -44,6 +52,7 @@ export function RouteList() {
     const r = routes[idx]
     setEditIdx(idx)
     setForm({ route: r.route, type20ft: r.type20ft, type40ft: r.type40ft, isTwoWay: r.isTwoWay ?? false })
+    setSelectedIdx(null)
     setDialogOpen(true)
   }, [routes])
 
@@ -60,6 +69,7 @@ export function RouteList() {
   const handleDelete = useCallback(async (idx: number) => {
     await apiClient.deleteRoute(idx)
     setDeleteConfirm(null)
+    setSelectedIdx(null)
     loadRoutes()
   }, [loadRoutes])
 
@@ -68,48 +78,66 @@ export function RouteList() {
   }, [])
 
   if (loading) {
-    return <div className="p-4"><div className="animate-pulse space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-20 rounded-xl bg-[var(--theme-bg-tertiary)]" />)}</div></div>
+    return (
+      <div className="space-y-2">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-16 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+        ))}
+      </div>
+    )
   }
 
   return (
-    <div className="p-4 space-y-4">
-      <PageHeader title="Cung đường" subtitle={`${routes.length} tuyến đường`} onAdd={handleOpenCreate} addLabel="Thêm cung đường" />
-
-      <button onClick={handleOpenCreate}
-        className="lg:hidden w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
-        style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-        <Plus className="h-4 w-4" /> Thêm cung đường
-      </button>
-
+    <div>
+      {/* Route list — clean cards, tap to see detail */}
       <div className="space-y-2">
         {routes.map((r, idx) => (
-          <div key={idx}
-            className="flex items-start gap-3 p-4 rounded-xl border"
-            style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}>
-            <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0"
-              style={{ background: 'var(--theme-bg-tertiary)' }}>
-              <Route className="h-5 w-5" style={{ color: 'var(--theme-text-muted)' }} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{r.route}</p>
-              {r.isTwoWay && <span className="text-[10px] font-medium px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>2 chiều</span>}
-              <div className="flex gap-4 mt-1">
-                <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>20ft: {formatCurrencyFull(r.type20ft)}</p>
-                <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>40ft: {formatCurrencyFull(r.type40ft)}</p>
+          <button
+            key={idx}
+            onClick={() => setSelectedIdx(idx)}
+            className="w-full text-left rounded-2xl p-3 transition-all active:scale-[0.98] touch-manipulation"
+            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: 'var(--theme-bg-tertiary)' }}>
+                <RouteIcon className="h-4 w-4" style={{ color: 'var(--theme-text-muted)' }} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{r.route}</p>
+                <p className="text-[11px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+                  20ft: {formatCurrencyFull(r.type20ft)} · 40ft: {formatCurrencyFull(r.type40ft)}
+                </p>
               </div>
             </div>
-            <div className="flex items-center gap-1 shrink-0">
-              <button onClick={() => handleOpenEdit(idx)} className="h-8 w-8 flex items-center justify-center rounded-lg touch-manipulation" style={{ color: 'var(--theme-text-muted)' }} aria-label="Sửa">
-                <Pencil className="h-4 w-4" />
-              </button>
-              <button onClick={() => setDeleteConfirm(idx)} className="h-8 w-8 flex items-center justify-center rounded-lg touch-manipulation" style={{ color: 'var(--theme-status-error)' }} aria-label="Xoá">
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
+          </button>
         ))}
       </div>
 
+      {/* Route Detail Dialog */}
+      <Dialog open={selectedIdx !== null} onOpenChange={() => setSelectedIdx(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{selectedIdx !== null ? routes[selectedIdx]?.route : ''}</DialogTitle>
+          </DialogHeader>
+          {selectedIdx !== null && (
+            <div className="space-y-1">
+              <InfoRow icon={RouteIcon} label="Giá 20ft" value={formatCurrencyFull(routes[selectedIdx].type20ft)} />
+              <InfoRow label="Giá 40ft" value={formatCurrencyFull(routes[selectedIdx].type40ft)} />
+              <InfoRow label="Hai chiều" value={routes[selectedIdx].isTwoWay ? 'Có' : 'Không'} />
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm(selectedIdx!)} className="flex-1" style={{ color: 'var(--theme-status-error)' }}>
+              <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Xoá
+            </Button>
+            <Button onClick={() => handleOpenEdit(selectedIdx!)} className="flex-1" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+              <Pencil className="w-3.5 h-3.5 mr-1.5" /> Sửa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -137,11 +165,14 @@ export function RouteList() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleSubmit} disabled={!form.route.trim()} className="flex-1" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>{editIdx !== null ? 'Cập nhật' : 'Xác nhận'}</Button>
+            <Button onClick={handleSubmit} disabled={!form.route.trim()} className="flex-1" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+              {editIdx !== null ? 'Cập nhật' : 'Xác nhận'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Delete Confirmation */}
       <Dialog open={deleteConfirm !== null} onOpenChange={() => setDeleteConfirm(null)}>
         <DialogContent>
           <DialogHeader>
@@ -150,10 +181,12 @@ export function RouteList() {
           <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Hành động này không thể hoàn tác.</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="flex-1">Huỷ</Button>
-            <Button variant="destructive" className="flex-1" onClick={() => deleteConfirm !== null && handleDelete(deleteConfirm)}>Xoá</Button>
+            <Button variant="destructive" className="flex-1" onClick={() => deleteConfirm !== null && handleDelete(deleteConfirm)}>Xác nhận</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={handleOpenCreate} label="Thêm cung đường" />
     </div>
   )
 }
