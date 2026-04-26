@@ -159,10 +159,10 @@ export function CreateWorkOrder() {
               )}
             </div>
 
-            {/* Camera / Photo area */}
+            {/* Camera / Photo area — rectangle viewfinder */}
             <button
               onClick={handleCameraCapture(idx)}
-              className="w-full rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-4 transition-colors touch-manipulation"
+              className="w-full rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-6 px-4 transition-colors touch-manipulation"
               style={{
                 background: cont.photoTaken ? 'var(--theme-bg-tertiary)' : 'transparent',
                 borderColor: cont.photoTaken ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)',
@@ -176,9 +176,25 @@ export function CreateWorkOrder() {
                   <span className="text-xs font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>Đã chụp</span>
                 </div>
               ) : (
-                <div className="flex flex-col items-center gap-1">
-                  <Camera className="w-6 h-6" style={{ color: 'var(--theme-text-muted)' }} />
-                  <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Chạm để chụp</span>
+                <div className="flex flex-col items-center gap-2 w-full">
+                  {/* Viewfinder rectangle */}
+                  <div
+                    className="w-full rounded-lg border-2 flex items-center justify-center"
+                    style={{
+                      borderColor: 'var(--theme-brand-primary)',
+                      opacity: 0.6,
+                      height: '48px',
+                      background: 'var(--theme-brand-primary-light)',
+                    }}
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-brand-primary)', opacity: 0.7 }}>
+                      Aim cont number here
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Camera className="w-5 h-5" style={{ color: 'var(--theme-text-muted)' }} />
+                    <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Chạm để chụp</span>
+                  </div>
                 </div>
               )}
             </button>
