@@ -126,7 +126,7 @@ Freight container trip payroll system for Phuc Loc company.
 4. **Thiết lập** → setup salary period (from date → to date, e.g. 26th to 25th)
 
 ### Trang Chu Sections (scroll)
-1. **Stats strip** — trips today, jobs pending match, current salary period
+1. **Quick actions**: Tạo chuyến | Khách hàng | Cung đường | Thiết lập
 2. **Lương tài xế** — auto-calculated from matched jobs in current period, shows per-driver breakdown
 3. **Chuyến chờ đối soát** — trips needing attention, tap to doi soat
 4. **Số công chưa match** — jobs that failed auto-match, ke toan must manual match
