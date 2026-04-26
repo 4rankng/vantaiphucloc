@@ -7,9 +7,23 @@ import { Button } from '@/components/ui/Button/Button'
 import { Input } from '@/components/ui/Input/Input'
 import { Label } from '@/components/ui/Label/Label'
 
+const ROLE_LABELS: Record<string, string> = {
+  driver: 'Tài xế',
+  director: 'Giám đốc',
+  accountant: 'Kế toán',
+}
+
 export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { driver } = useDriverStore()
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
+
+  // For driver role use driver store, otherwise use auth user
+  const isDriver = user?.role === 'driver'
+  const name = isDriver ? driver.name : (user?.name ?? '')
+  const phone = isDriver ? driver.phone : ''
+  const plate = isDriver ? driver.tractorPlate : ''
+  const role = user?.role ?? 'driver'
+  const roleLabel = ROLE_LABELS[role] ?? role
 
   const [pwStep, setPwStep] = useState(false)
   const [currentPw, setCurrentPw] = useState('')
@@ -68,34 +82,38 @@ export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () =>
                 <UserCircle className="w-6 h-6" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>{driver.name}</p>
+                <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>{name}</p>
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block mt-0.5"
                   style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
-                  Tài xế
+                  {roleLabel}
                 </span>
               </div>
             </div>
 
             {/* Details */}
             <div className="space-y-1">
-              <div className="flex items-center gap-3 py-2">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--theme-bg-tertiary)' }}>
-                  <Phone className="w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
+              {phone && (
+                <div className="flex items-center gap-3 py-2">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--theme-bg-tertiary)' }}>
+                    <Phone className="w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>Số điện thoại</p>
+                    <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>{phone}</p>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>Số điện thoại</p>
-                  <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>{driver.phone}</p>
+              )}
+              {plate && (
+                <div className="flex items-center gap-3 py-2">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--theme-bg-tertiary)' }}>
+                    <Truck className="w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>Biển số đầu kéo</p>
+                    <p className="text-sm font-medium font-mono" style={{ color: 'var(--theme-text-primary)' }}>{plate}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3 py-2">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'var(--theme-bg-tertiary)' }}>
-                  <Truck className="w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>Biển số đầu kéo</p>
-                  <p className="text-sm font-medium font-mono" style={{ color: 'var(--theme-text-primary)' }}>{driver.tractorPlate}</p>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Actions */}
