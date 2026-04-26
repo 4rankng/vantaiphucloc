@@ -124,31 +124,6 @@ export function DirectorDashboard({ onManageUsers, onViewDriverJobs, onViewClien
         </button>
       </div>
 
-      {/* Stats cards */}
-      <div className="px-4 grid grid-cols-2 gap-2">
-        <div className="rounded-2xl p-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>Tổng chi</span>
-            <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: 'var(--theme-brand-primary-light)' }}>
-              <TrendingUp className="w-3 h-3" style={{ color: 'var(--theme-brand-primary)' }} />
-            </div>
-          </div>
-          <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(totalSalary)}</p>
-        </div>
-        <div className="rounded-2xl p-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>Số chuyến</span>
-            <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: 'var(--theme-brand-primary-light)' }}>
-              <Truck className="w-3 h-3" style={{ color: 'var(--theme-brand-primary)' }} />
-            </div>
-          </div>
-          <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{totalTrips}</p>
-          {pendingCount > 0 && (
-            <p className="text-[10px] font-semibold mt-0.5" style={{ color: 'var(--theme-status-warning)' }}>{pendingCount} chờ đơn giá</p>
-          )}
-        </div>
-      </div>
-
       {/* Driver KPI breakdown */}
       {driverBreakdown.length > 0 && (
         <div className="px-4 mt-4">
