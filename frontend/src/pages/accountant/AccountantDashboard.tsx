@@ -1,11 +1,9 @@
 import { useEffect, useState, useMemo } from 'react'
-import { Camera, FileText, Users, Route, CircleDollarSign, Truck, Wallet } from 'lucide-react'
+import { Camera, FileText, Users, Route, CircleDollarSign, Wallet } from 'lucide-react'
 import { StatCard } from '@/components/shared/StatCard/StatCard'
-import { PageHeader } from '@/components/shared/PageHeader/PageHeader'
 import { SectionHeader } from '@/components/shared/SectionHeader'
 import { apiClient } from '@/services/api'
 import { useAppStore } from '@/hooks/use-app-store'
-import { accountantNav } from '@/lib/navigation'
 import type { WorkOrder, TripOrder, Client } from '@/data/mockData'
 
 export function AccountantDashboard() {
@@ -33,10 +31,17 @@ export function AccountantDashboard() {
   const pendingWorkOrders = useMemo(() => workOrders.filter(w => w.status === 'PENDING').length, [workOrders])
   const confirmedTrips = useMemo(() => tripOrders.filter(t => t.status === 'CONFIRMED').length, [tripOrders])
 
+  const quickLinks = [
+    { label: 'Khách hàng', icon: Users, path: '/accountant/clients' },
+    { label: 'Cung đường', icon: Route, path: '/accountant/routes' },
+    { label: 'Đơn giá', icon: CircleDollarSign, path: '/accountant/pricings' },
+    { label: 'Chuyến/Lệnh', icon: FileText, path: '/accountant/trip-orders' },
+    { label: 'Tính lương', icon: Wallet, path: '/accountant/salary' },
+  ]
+
   return (
     <div className="p-4 space-y-4">
-      <PageHeader title="Tổng quan" subtitle="Kế toán" />
-
+      {/* KPI cards */}
       <div className="grid grid-cols-2 gap-3">
         <button onClick={() => navigate('/accountant/clients')} className="text-left">
           <StatCard
@@ -75,19 +80,24 @@ export function AccountantDashboard() {
         </button>
       </div>
 
-      {/* ── QUICK ACCESS ── */}
+      {/* Quick access hub */}
       <div>
-        <SectionHeader title="Truy cập nhanh" />
+        <SectionHeader title="Danh mục" />
         <div className="grid grid-cols-4 gap-3">
-          {accountantNav.map(({ label, icon: Icon, path }) => (
-            <button key={path} onClick={() => navigate(path)}
+          {quickLinks.map(({ label, icon: Icon, path }) => (
+            <button
+              key={path}
+              onClick={() => navigate(path)}
               className="flex flex-col items-center gap-1.5 py-3 rounded-2xl transition-all active:scale-[0.96] touch-manipulation"
-              style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
-              <div className="h-9 w-9 rounded-full flex items-center justify-center"
-                style={{ background: 'var(--theme-brand-primary-light)' }}>
-                <Icon className="h-4.5 w-4.5" style={{ color: 'var(--theme-brand-primary)' }} />
+              style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}
+            >
+              <div
+                className="h-9 w-9 rounded-full flex items-center justify-center"
+                style={{ background: 'var(--theme-brand-primary-light)' }}
+              >
+                <Icon className="h-4 w-4" style={{ color: 'var(--theme-brand-primary)' }} />
               </div>
-              <span className="text-[11px] font-medium text-center leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{label}</span>
+              <span className="text-[10px] font-medium text-center leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{label}</span>
             </button>
           ))}
         </div>

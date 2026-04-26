@@ -1,36 +1,161 @@
+import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { LogOut } from 'lucide-react'
+import { LayoutDashboard, Users, Bell, UserCircle, LogOut, KeyRound, ChevronRight } from 'lucide-react'
 import { DirectorDashboard } from './DirectorDashboard'
+import { UserManagement } from './UserManagement'
+import { DirectorNotifications } from './DirectorNotifications'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog/Dialog'
+import { Button } from '@/components/ui/Button/Button'
+import { Input } from '@/components/ui/Input/Input'
+import { Label } from '@/components/ui/Label/Label'
 
-function TopBar() {
+type DirectorTab = 'dashboard' | 'users' | 'notifications' | 'account'
+
+const navItems: { tab: DirectorTab; icon: typeof LayoutDashboard; label: string }[] = [
+  { tab: 'dashboard', icon: LayoutDashboard, label: 'Tổng quan' },
+  { tab: 'users', icon: Users, label: 'Tài khoản' },
+  { tab: 'notifications', icon: Bell, label: 'Thông báo' },
+  { tab: 'account', icon: UserCircle, label: 'Cá nhân' },
+]
+
+function AccountTab() {
   const { user, logout } = useAuth()
+  const initials = (user?.name ?? 'GD').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+  const [pwDialog, setPwDialog] = useState(false)
+  const [currentPw, setCurrentPw] = useState('')
+  const [newPw, setNewPw] = useState('')
+  const [confirmPw, setConfirmPw] = useState('')
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center gap-3 rounded-2xl p-4" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
+        <div className="w-14 h-14 rounded-full flex items-center justify-center text-base font-bold shrink-0" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+          {initials}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[16px] font-bold" style={{ color: 'var(--theme-text-primary)' }}>{user?.name}</p>
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
+            Giám đốc
+          </span>
+        </div>
+      </div>
+
+      <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
+        <button
+          onClick={() => setPwDialog(true)}
+          className="w-full flex items-center justify-between px-4 py-3.5 touch-manipulation"
+        >
+          <div className="flex items-center gap-3">
+            <KeyRound className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
+            <span className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Đổi mật khẩu</span>
+          </div>
+          <ChevronRight className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
+        </button>
+      </div>
+
+      <button
+        onClick={logout}
+        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold text-sm touch-manipulation"
+        style={{ background: 'var(--theme-status-error-light)', color: 'var(--theme-status-error-text)' }}
+      >
+        <LogOut className="w-4 h-4" />
+        Đăng xuất
+      </button>
+
+      <Dialog open={pwDialog} onOpenChange={setPwDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Đổi mật khẩu</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mật khẩu hiện tại</Label>
+              <Input type="password" value={currentPw} onChange={e => setCurrentPw(e.target.value)} placeholder="••••••••" className="text-sm" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mật khẩu mới</Label>
+              <Input type="password" value={newPw} onChange={e => setNewPw(e.target.value)} placeholder="••••••••" className="text-sm" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Xác nhận mật khẩu mới</Label>
+              <Input type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} placeholder="••••••••" className="text-sm" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPwDialog(false)}>Huỷ</Button>
+            <Button onClick={() => setPwDialog(false)} disabled={!currentPw || !newPw || newPw !== confirmPw}>Đổi mật khẩu</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
+function TopBar({ tab }: { tab: DirectorTab }) {
+  const { user } = useAuth()
+  const titles: Record<DirectorTab, string> = {
+    dashboard: 'Tổng quan',
+    users: 'Quản lý tài khoản',
+    notifications: 'Thông báo',
+    account: 'Tài khoản',
+  }
 
   return (
     <div className="px-4 pt-3 pb-2" style={{ background: 'var(--theme-brand-primary)' }}>
       <div className="flex items-center justify-between">
         <div className="min-w-0">
-          <p className="text-[11px] truncate" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.75 }}>Tổng quan</p>
+          <p className="text-[11px] truncate" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.75 }}>{titles[tab]}</p>
           <p className="text-[15px] font-bold truncate" style={{ color: 'var(--theme-text-on-brand)' }}>{user?.name}</p>
         </div>
-        <button
-          className="w-9 h-9 flex items-center justify-center rounded-full touch-manipulation"
-          style={{ background: 'rgba(255,255,255,0.35)', color: 'var(--theme-text-on-brand)' }}
-          onClick={logout} aria-label="Đăng xuất"
-        >
-          <LogOut className="w-5 h-5" />
-        </button>
       </div>
     </div>
   )
 }
 
 export function DirectorApp() {
+  const [activeTab, setActiveTab] = useState<DirectorTab>('dashboard')
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'dashboard': return <DirectorDashboard />
+      case 'users': return <UserManagement />
+      case 'notifications': return <DirectorNotifications />
+      case 'account': return <AccountTab />
+    }
+  }
+
   return (
-    <div className="min-h-[100dvh] pb-6" style={{ background: 'var(--theme-bg-primary)' }}>
-      <TopBar />
-      <main>
-        <DirectorDashboard />
-      </main>
+    <div className="min-h-[100dvh] pb-14" style={{ background: 'var(--theme-bg-primary)' }}>
+      <TopBar tab={activeTab} />
+      <main>{renderContent()}</main>
+
+      {/* Bottom Navigation */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2"
+        style={{
+          background: 'var(--theme-bottom-nav)',
+          borderTop: '1px solid var(--theme-bottom-nav-border)',
+          height: '3.5rem',
+        }}
+      >
+        {navItems.map(({ tab, icon: Icon, label }) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full touch-manipulation"
+            aria-label={label}
+          >
+            <Icon
+              className="w-5 h-5"
+              style={{ color: activeTab === tab ? 'var(--theme-bottom-nav-active)' : 'var(--theme-bottom-nav-inactive)' }}
+            />
+            <span
+              className="text-[10px] font-medium"
+              style={{ color: activeTab === tab ? 'var(--theme-bottom-nav-active)' : 'var(--theme-bottom-nav-inactive)' }}
+            >
+              {label}
+            </span>
+          </button>
+        ))}
+      </nav>
     </div>
   )
 }

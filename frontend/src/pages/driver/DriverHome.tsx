@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { Camera, Clock, CheckCircle } from 'lucide-react'
+import { Camera, CheckCircle } from 'lucide-react'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { apiClient } from '@/services/api'
 import { SectionHeader } from '@/components/shared/SectionHeader'
