@@ -59,9 +59,9 @@ export function DirectorDashboard({ onManageUsers, onViewDriverJobs, onViewClien
 
   // Per-driver breakdown
   const driverBreakdown = useMemo(() => {
-    const map = new Map<string, { name: string; trips: number; earning: number }>()
+    const map = new Map<string, { name: string; plate: string; trips: number; earning: number }>()
     for (const j of monthlyJobs) {
-      const existing = map.get(j.driverId) ?? { name: j.driverName, trips: 0, earning: 0 }
+      const existing = map.get(j.driverId) ?? { name: j.driverName, plate: j.tractorPlate, trips: 0, earning: 0 }
       existing.trips++
       existing.earning += j.earning
       map.set(j.driverId, existing)
@@ -165,7 +165,11 @@ export function DirectorDashboard({ onManageUsers, onViewDriverJobs, onViewClien
                   </div>
                   <div className="min-w-0 text-left">
                     <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{d.name}</p>
-                    <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>{d.trips} chuyến</p>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-mono" style={{ color: 'var(--theme-text-muted)' }}>{d.plate}</span>
+                      <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>·</span>
+                      <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>{d.trips} chuyến</span>
+                    </div>
                   </div>
                 </div>
                 <span className="text-sm font-bold tabular-nums shrink-0" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(d.earning)}</span>
