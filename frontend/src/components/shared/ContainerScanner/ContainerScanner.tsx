@@ -1,4 +1,4 @@
-import { useRef, useCallback, useState, useEffect } from 'react'
+import { useRef, useCallback, useState } from 'react'
 import Webcam from 'react-webcam'
 import { X, RotateCcw } from 'lucide-react'
 
@@ -7,72 +7,49 @@ interface ContainerScannerProps {
   onClose: () => void
 }
 
-// Target rectangle dimensions (must match the CSS)
-const TARGET_WIDTH_RATIO = 0.85
-const TARGET_HEIGHT = 100
+// Target rectangle dimensions — must match CSS values
+const RECT_WIDTH_PERCENT = 0.85
+const RECT_HEIGHT_PX = 100
 
 export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) {
   const webcamRef = useRef<Webcam>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
   const [captured, setCaptured] = useState<string | null>(null)
-  const [viewSize, setViewSize] = useState({ width: 0, height: 0 })
 
-  // Track container size for crop calculations
-  useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-    const obs = new ResizeObserver(([entry]) => {
-      setViewSize({
-        width: entry.contentRect.width,
-        height: entry.contentRect.height,
-      })
-    })
-    obs.observe(el)
-    return () => obs.disconnect()
+  const handleCapture = useCallback(() => {
+    const webcam = webcamRef.current
+    if (!webcam) return
+
+    const video = webcam.video
+    if (!video) return
+
+    const canvas = document.createElement('canvas')
+
+    // Video source resolution (actual pixels)
+    const sourceWidth = video.videoWidth
+    const sourceHeight = video.videoHeight
+
+    // Scale factor between displayed size and actual resolution
+    const scale = sourceWidth / video.clientWidth
+
+    // Calculate crop coordinates in actual pixels
+    const cropWidth = (video.clientWidth * RECT_WIDTH_PERCENT) * scale
+    const cropHeight = RECT_HEIGHT_PX * scale
+    const cropX = (sourceWidth - cropWidth) / 2
+    const cropY = (sourceHeight - cropHeight) / 2
+
+    canvas.width = cropWidth
+    canvas.height = cropHeight
+
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(
+      video,
+      cropX, cropY, cropWidth, cropHeight,
+      0, 0, cropWidth, cropHeight,
+    )
+
+    const croppedImage = canvas.toDataURL('image/jpeg', 0.8)
+    setCaptured(croppedImage)
   }, [])
-
-  const cropToTarget = useCallback((fullImage: string): Promise<string> => {
-    return new Promise((resolve) => {
-      const img = new Image()
-      img.onload = () => {
-        const canvas = document.createElement('canvas')
-        const ctx = canvas.getContext('2d')!
-
-        // Calculate target rectangle position in the video element
-        const videoW = viewSize.width
-        const videoH = viewSize.height
-        const targetW = videoW * TARGET_WIDTH_RATIO
-        const targetH = TARGET_HEIGHT
-        const targetX = (videoW - targetW) / 2
-        const targetY = (videoH - targetH) / 2
-
-        // Map to actual image coordinates
-        // Webcam screenshot may have different resolution than displayed size
-        const scaleX = img.width / videoW
-        const scaleY = img.height / videoH
-
-        const cropX = targetX * scaleX
-        const cropY = targetY * scaleY
-        const cropW = targetW * scaleX
-        const cropH = targetH * scaleY
-
-        canvas.width = cropW
-        canvas.height = cropH
-        ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH)
-
-        resolve(canvas.toDataURL('image/jpeg', 0.8))
-      }
-      img.src = fullImage
-    })
-  }, [viewSize])
-
-  const handleCapture = useCallback(async () => {
-    const fullImage = webcamRef.current?.getScreenshot()
-    if (fullImage && viewSize.width > 0) {
-      const cropped = await cropToTarget(fullImage)
-      setCaptured(cropped)
-    }
-  }, [cropToTarget, viewSize])
 
   const handleRetake = useCallback(() => {
     setCaptured(null)
@@ -86,7 +63,6 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
 
   return (
     <div
-      ref={containerRef}
       className="fixed inset-0 z-[100] flex flex-col"
       style={{ background: '#000' }}
     >
@@ -150,12 +126,11 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
             className="absolute inset-0 flex flex-col items-center justify-center"
             style={{ pointerEvents: 'none' }}
           >
-            {/* Dim mask with rectangle cutout */}
             <div
               className="relative rounded-xl"
               style={{
-                width: `${TARGET_WIDTH_RATIO * 100}%`,
-                height: `${TARGET_HEIGHT}px`,
+                width: `${RECT_WIDTH_PERCENT * 100}%`,
+                height: `${RECT_HEIGHT_PX}px`,
                 boxShadow: '0 0 0 1000px rgba(0, 0, 0, 0.6)',
                 border: '2px solid rgba(255,255,255,0.4)',
               }}
@@ -167,7 +142,6 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
               <div className="absolute -bottom-[2px] -right-[2px] w-6 h-6 border-b-2 border-r-2 rounded-br-lg" style={{ borderColor: 'var(--theme-brand-primary)' }} />
             </div>
 
-            {/* Instruction */}
             <p
               className="mt-4 text-xs font-bold uppercase tracking-wider"
               style={{ color: 'rgba(255,255,255,0.8)', textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}
