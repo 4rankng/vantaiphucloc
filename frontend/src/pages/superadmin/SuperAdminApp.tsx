@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { AppTopBar } from '@/components/shared/AppTopBar'
-import { ProfileDialog } from '@/components/shared/ProfileDialog'
+import { UserDropdown } from '@/components/shared/ProfileDialog'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { UserCircle, Plus, Trash2, Pencil, Users, Truck, CircleDollarSign, LayoutDashboard, Search } from 'lucide-react'
@@ -329,7 +329,7 @@ function SuperAdminDashboard({
 
 export function SuperAdminApp() {
   const { user } = useAuth()
-  const [profileOpen, setProfileOpen] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<UserAccount | null>(null)
   const [filterRole, setFilterRole] = useState<Role | 'ALL'>('ALL')
@@ -345,7 +345,7 @@ export function SuperAdminApp() {
       <AppTopBar
         variant="home"
         name={user?.name ?? ''}
-        onProfile={() => setProfileOpen(true)}
+        onProfile={() => setDropdownOpen(true)}
         onNotifications={() => {}}
       />
       <SuperAdminDashboard
@@ -357,7 +357,7 @@ export function SuperAdminApp() {
         onViewUser={setSelectedUser}
       />
       <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => setCreateOpen(true)} label="Tạo tài khoản" />
-      <ProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} />
+      <UserDropdown open={dropdownOpen} onClose={() => setDropdownOpen(false)} />
       <CreateUserDialog open={createOpen} onClose={() => setCreateOpen(false)} />
       <UserDetailDialog user={selectedUser} open={!!selectedUser} onClose={() => setSelectedUser(null)} />
     </div>
