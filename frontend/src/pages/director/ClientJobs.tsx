@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { AppTopBar } from '@/components/shared/AppTopBar'
 import { apiClient } from '@/services/api'
-import { formatCurrency } from '@/data/mockData'
+import { formatCurrencyFull as formatCurrency } from '@/data/mockData'
 import type { WorkOrder, Pricing, Client } from '@/data/mockData'
 
 export function ClientJobs({ clientId, onBack }: { clientId: string; onBack: () => void }) {
