@@ -88,29 +88,34 @@ export function CreateWorkOrder() {
     if (containers.some(c => !c.containerNumber.trim()) || !clientId || !route) return
     setSubmitting(true)
 
-    const client = clients.find(c => c.id === clientId)
-    const containerItems: ContainerItem[] = containers.map(c => ({
-      containerNumber: c.containerNumber.trim(),
-      workType: c.workType,
-      photoUrl: c.photoDataUrl ?? '',
-    }))
+    try {
+      const client = clients.find(c => c.id === clientId)
+      const containerItems: ContainerItem[] = containers.map(c => ({
+        containerNumber: c.containerNumber.trim(),
+        workType: c.workType,
+        photoUrl: '', // discard photo in mockup
+      }))
 
-    const gpsLat = 20.8449
-    const gpsLng = 106.6881
+      const gpsLat = 20.8449
+      const gpsLng = 106.6881
 
-    await apiClient.createWorkOrder({
-      containers: containerItems,
-      clientId,
-      clientName: client?.name ?? '',
-      route,
-      driverId: driver.id,
-      driverName: driver.name,
-      tractorPlate: driver.tractorPlate,
-      gpsLat,
-      gpsLng,
-    })
+      await apiClient.createWorkOrder({
+        containers: containerItems,
+        clientId,
+        clientName: client?.name ?? '',
+        route,
+        driverId: driver.id,
+        driverName: driver.name,
+        tractorPlate: driver.tractorPlate,
+        gpsLat,
+        gpsLng,
+      })
 
-    navigate('/driver')
+      navigate('/driver')
+    } catch (err) {
+      console.error('Submit failed:', err)
+      setSubmitting(false)
+    }
   }, [containers, clientId, route, clients, driver, navigate])
 
   const canSubmit = containers.every(c => c.containerNumber.trim()) && clientId && route
