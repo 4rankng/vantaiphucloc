@@ -30,21 +30,23 @@ export function ClientJobs({ clientId, onBack }: { clientId: string; onBack: () 
   }, [clientId])
 
   const totalRevenue = useMemo(() => jobs.reduce((s, j) => s + j.unitPrice, 0), [jobs])
+  const totalDriverEarning = useMemo(() => jobs.reduce((s, j) => s + j.earning, 0), [jobs])
   const clientPricings = pricings
 
   return (
     <>
       <AppTopBar variant="page" title={clientName} onBack={onBack} />
       <div className="p-4 space-y-3">
-        {/* Summary */}
-        <div className="rounded-2xl p-3 flex items-center justify-between" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
-          <div>
+        {/* Stats */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-2xl p-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
             <p className="text-[10px] font-semibold uppercase" style={{ color: 'var(--theme-text-muted)' }}>Doanh thu</p>
             <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(totalRevenue)}</p>
           </div>
-          <span className="text-xs font-semibold px-2 py-1 rounded-lg" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
-            {jobs.length} chuyến
-          </span>
+          <div className="rounded-2xl p-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
+            <p className="text-[10px] font-semibold uppercase" style={{ color: 'var(--theme-text-muted)' }}>Chi tài xế</p>
+            <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(totalDriverEarning)}</p>
+          </div>
         </div>
 
         {/* Pricing table toggle */}
