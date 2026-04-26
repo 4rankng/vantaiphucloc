@@ -24,7 +24,7 @@ export function DriverJobs({ driverId, onBack }: { driverId: string; onBack: () 
 
   return (
     <>
-      <AppTopBar variant="page" title={driver?.name ?? 'Tài xế'} onBack={onBack} />
+      <AppTopBar variant="page" title={driver ? `${driver.name} · ${driver.tractorPlate}` : 'Tài xế'} onBack={onBack} />
       <div className="p-4 space-y-3">
         {/* Summary */}
         <div className="rounded-2xl p-3 flex items-center justify-between" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
