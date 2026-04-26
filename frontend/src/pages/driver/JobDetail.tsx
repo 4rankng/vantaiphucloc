@@ -54,27 +54,25 @@ export function JobDetail() {
         {job.containers.map((c, i) => (
           <div
             key={i}
-            className="rounded-2xl overflow-hidden"
+            className="rounded-xl overflow-hidden"
             style={{ border: '1px solid var(--theme-border-default)' }}
           >
             {c.photoUrl ? (
               <img
                 src={c.photoUrl}
                 alt={c.containerNumber}
-                className="w-full aspect-[4/3] object-cover"
+                className="w-full object-contain"
+                style={{ maxHeight: '80px' }}
               />
             ) : (
               <div
-                className="w-full aspect-[4/3] flex flex-col items-center justify-center"
-                style={{ background: 'var(--theme-bg-tertiary)' }}
+                className="w-full flex flex-col items-center justify-center"
+                style={{ background: 'var(--theme-bg-tertiary)', height: '60px' }}
               >
-                <div className="w-12 h-12 rounded-full flex items-center justify-center mb-2"
-                  style={{ background: 'var(--theme-bg-secondary)' }}>
-                  <Camera className="w-5 h-5" style={{ color: 'var(--theme-text-muted)' }} />
-                </div>
+                <Camera className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
               </div>
             )}
-            <div className="p-2 flex items-center justify-between" style={{ background: 'var(--theme-bg-secondary)' }}>
+            <div className="px-2 py-1.5 flex items-center justify-between" style={{ background: 'var(--theme-bg-secondary)' }}>
               <p className="text-xs font-mono font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
                 {c.containerNumber}
               </p>
@@ -85,26 +83,6 @@ export function JobDetail() {
                 {c.workType}
               </span>
             </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Container details */}
-      <div className="rounded-2xl p-4 space-y-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
-        <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
-          Container
-        </p>
-        {job.containers.map((c, i) => (
-          <div key={i} className="flex items-center justify-between py-1.5">
-            <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-              {c.containerNumber}
-            </span>
-            <span
-              className="text-[10px] font-bold px-2 py-0.5 rounded"
-              style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
-            >
-              {c.workType}
-            </span>
           </div>
         ))}
       </div>
