@@ -249,7 +249,9 @@ export function UserManagement() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Huỷ</Button>
-            <Button onClick={handleCreate} disabled={!createForm.name.trim() || !createForm.phone.trim() || !createForm.password.trim()}>
+            <Button onClick={handleCreate} disabled={!createForm.name.trim() || !createForm.phone.trim() || !createForm.password.trim()}
+              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+            >
               Tạo tài khoản
             </Button>
           </DialogFooter>
@@ -313,7 +315,9 @@ export function UserManagement() {
             </Button>
             <div className="flex gap-2 w-full sm:w-auto">
               <Button variant="outline" onClick={() => setDetailUser(null)} className="flex-1 sm:flex-none">Huỷ</Button>
-              <Button onClick={handleEdit} disabled={!editForm.name.trim() || !editForm.phone.trim()} className="flex-1 sm:flex-none gap-1.5">
+              <Button onClick={handleEdit} disabled={!editForm.name.trim() || !editForm.phone.trim()} className="flex-1 sm:flex-none gap-1.5"
+                style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+              >
                 <Pencil className="w-3.5 h-3.5" /> Lưu
               </Button>
             </div>
