@@ -165,22 +165,17 @@ export function DriverHome() {
 
   return (
     <div className="pb-20">
-      {/* Month navigator */}
-      <div className="px-4 pt-4">
-        <MonthNavigator year={year} month={month} onPrev={handlePrevMonth} onNext={handleNextMonth} />
-      </div>
-
       {/* Stats row */}
-      <div className="px-4 mt-3">
+      <div className="px-4 pt-4">
         <div className="grid grid-cols-2 gap-2">
           <div
             className="rounded-2xl p-4"
-            style={{ background: 'var(--theme-brand-primary)', boxShadow: 'var(--theme-shadow-elevated)' }}
+            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
           >
-            <p className="text-[11px] font-semibold" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.8 }}>
+            <p className="text-[11px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
               Thu nhập
             </p>
-            <p className="text-xl font-bold tabular-nums mt-1" style={{ color: 'var(--theme-text-on-brand)' }}>
+            <p className="text-xl font-bold tabular-nums mt-1" style={{ color: 'var(--theme-text-primary)' }}>
               {formatCurrencyFull(totalEarnings)}
             </p>
           </div>
@@ -196,6 +191,11 @@ export function DriverHome() {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Month navigator */}
+      <div className="px-4 mt-4">
+        <MonthNavigator year={year} month={month} onPrev={handlePrevMonth} onNext={handleNextMonth} />
       </div>
 
       {/* Job list */}
