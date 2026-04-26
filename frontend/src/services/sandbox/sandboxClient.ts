@@ -144,11 +144,16 @@ export async function getWorkOrders(filters?: WorkOrderFilters): Promise<ApiResp
 
 export async function createWorkOrder(data: Omit<WorkOrder, 'id' | 'createdAt' | 'status' | 'unitPrice' | 'driverSalary' | 'allowance' | 'earning' | 'pricingId' | 'gpsAddress'>): Promise<ApiResponse<WorkOrder>> {
   await delay()
-  const items = getStore('work_orders', mockWorkOrders)
 
-  // For mockup: simple pricing lookup using first container's workType
+  let items: WorkOrder[]
+  try {
+    items = getStore('work_orders', mockWorkOrders)
+  } catch {
+    items = [...mockWorkOrders]
+  }
+
   const pricings = getStore('pricings', mockPricings)
-  const firstType = data.containers[0]?.workType ?? 'E20'
+  const firstType = data.containers?.[0]?.workType ?? 'E20'
   const pricing = pricings.find(p =>
     p.clientId === data.clientId && p.workType === firstType && p.route === data.route,
   )
