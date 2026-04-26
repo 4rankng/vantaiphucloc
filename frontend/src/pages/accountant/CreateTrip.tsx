@@ -6,11 +6,13 @@ import { Input } from '@/components/ui/Input/Input'
 import { Label } from '@/components/ui/Label/Label'
 import { apiClient } from '@/services/api'
 import { WORK_TYPES, type Client, type Driver, type WorkType } from '@/data/mockData'
+import { SheetPicker } from '@/components/shared/SheetPicker'
 import { Plus, Trash2 } from 'lucide-react'
 
 interface CongItem {
   id: string
   workType: WorkType
+  containerNumber: string
 }
 
 export function CreateTrip() {
@@ -23,7 +25,7 @@ export function CreateTrip() {
   const [driverId, setDriverId] = useState('')
   const [route, setRoute] = useState('')
   const [congItems, setCongItems] = useState<CongItem[]>([
-    { id: '1', workType: 'E20' },
+    { id: '1', workType: 'E20', containerNumber: '' },
   ])
   const [driverSalary, setDriverSalary] = useState(0)
   const [allowance, setAllowance] = useState(0)
@@ -38,7 +40,7 @@ export function CreateTrip() {
   }, [])
 
   const addCong = () => {
-    setCongItems(prev => [...prev, { id: String(prev.length + 1), workType: 'E20' }])
+    setCongItems(prev => [...prev, { id: String(prev.length + 1), workType: 'E20', containerNumber: '' }])
   }
 
   const removeCong = (id: string) => {
@@ -121,6 +123,12 @@ export function CreateTrip() {
                   </button>
                 ))}
               </div>
+              <Input
+                value={item.containerNumber}
+                onChange={e => updateCong(item.id, 'containerNumber', e.target.value)}
+                placeholder="Số cont"
+                className="text-sm font-mono"
+              />
             </div>
           ))}
         </div>
