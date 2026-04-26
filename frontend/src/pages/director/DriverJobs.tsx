@@ -46,12 +46,14 @@ export function DriverJobs({ driverId, onBack }: { driverId: string; onBack: () 
           >
             <div className="flex items-center justify-between">
               <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-muted)' }}>{job.id}</span>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{
-                background: job.status === 'PRICED' ? 'var(--theme-brand-primary-light)' : 'var(--theme-status-warning-light)',
-                color: job.status === 'PRICED' ? 'var(--theme-brand-primary)' : 'var(--theme-status-warning)',
-              }}>
-                {job.status === 'PRICED' ? 'Đã tính giá' : 'Chờ đối soát'}
-              </span>
+              {job.status === 'PENDING' && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{
+                  background: 'var(--theme-status-warning-light)',
+                  color: 'var(--theme-status-warning)',
+                }}>
+                  Chờ đối soát
+                </span>
+              )}
             </div>
             <div className="flex flex-wrap gap-1">
               {job.containers.map((c, i) => (

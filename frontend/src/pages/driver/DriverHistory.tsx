@@ -6,15 +6,13 @@ import { formatCurrencyFull, type WorkOrder } from '@/data/mockData'
 
 const STATUS_MAP: Record<string, { label: string; icon: typeof CheckCircle; color: string; bg: string }> = {
   PENDING:  { label: 'Chờ đối soát', icon: Clock,       color: 'var(--theme-status-warning)', bg: 'var(--theme-status-warning-light)' },
-  PRICED:   { label: 'Đã tính',     icon: CheckCircle,  color: 'var(--theme-status-success)', bg: 'var(--theme-status-success-light)' },
-  APPROVED: { label: 'Đã duyệt',    icon: CheckCircle,  color: 'var(--theme-brand-primary)',  bg: 'var(--theme-brand-primary-light)' },
 }
 
 export function DriverHistory() {
   const { driver } = useDriverStore()
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'PRICED'>('ALL')
+  const [filter, setFilter] = useState<'ALL' | 'PENDING'>('ALL')
 
   useEffect(() => {
     let cancelled = false
@@ -33,7 +31,6 @@ export function DriverHistory() {
   const counts = useMemo(() => ({
     ALL: workOrders.length,
     PENDING: workOrders.filter(w => w.status === 'PENDING').length,
-    PRICED: workOrders.filter(w => w.status === 'PRICED').length,
   }), [workOrders])
 
   const totalEarnings = useMemo(() =>
@@ -45,7 +42,7 @@ export function DriverHistory() {
     <div className="pb-6" style={{ background: 'var(--theme-bg-primary)' }}>
       {/* Filter tabs */}
       <div className="px-4 pt-3 pb-2 flex gap-2 overflow-x-auto scrollbar-none">
-        {(['ALL', 'PENDING', 'PRICED'] as const).map(s => (
+        {(['ALL', 'PENDING'] as const).map(s => (
           <button
             key={s}
             onClick={() => setFilter(s)}
@@ -56,7 +53,7 @@ export function DriverHistory() {
               border: `1px solid ${filter === s ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)'}`,
             }}
           >
-            {s === 'ALL' ? 'Tất cả' : STATUS_MAP[s].label} ({counts[s]})
+            {s === 'ALL' ? 'Tất cả' : STATUS_MAP[s]?.label ?? s} ({counts[s]})
           </button>
         ))}
       </div>
