@@ -63,10 +63,10 @@ export function ClientJobs({ clientId, onBack }: { clientId: string; onBack: () 
         <button
           onClick={() => setShowPricing(!showPricing)}
           className="w-full rounded-2xl p-3.5 flex items-center justify-between touch-manipulation"
-          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+          style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
         >
-          <span className="text-sm font-bold">💰 Bảng đơn giá</span>
-          <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: 'rgba(255,255,255,0.2)' }}>{clientPricings.length} mức giá</span>
+          <span className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>Bảng đơn giá</span>
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}>{clientPricings.length} mức giá</span>
         </button>
 
         {showPricing && clientPricings.length > 0 && (
@@ -112,7 +112,7 @@ export function ClientJobs({ clientId, onBack }: { clientId: string; onBack: () 
 
         {/* ── Job history section ── */}
         <div className="flex items-center justify-between">
-          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>🚛 Lịch sử chuyến</p>
+          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>Lịch sử chuyến</p>
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}>{jobs.length} chuyến</span>
         </div>
 
