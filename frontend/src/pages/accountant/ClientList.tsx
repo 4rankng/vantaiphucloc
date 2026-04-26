@@ -1,0 +1,176 @@
+import { useEffect, useState, useCallback } from 'react'
+import { Plus, Pencil, Trash2, Building2, User } from 'lucide-react'
+import { PageHeader } from '@/components/shared/PageHeader/PageHeader'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog/Dialog'
+import { Button } from '@/components/ui/Button/Button'
+import { Input } from '@/components/ui/Input/Input'
+import { Label } from '@/components/ui/Label/Label'
+import { apiClient } from '@/services/api'
+import { formatCurrencyFull } from '@/data/mockData'
+import type { Client, ClientType } from '@/data/mockData'
+
+const EMPTY_CLIENT = {
+  name: '', type: 'company' as ClientType, taxCode: '', address: '', phone: '', contactPerson: '', outstandingDebt: 0,
+}
+
+export function ClientList() {
+  const [clients, setClients] = useState<Client[]>([])
+  const [loading, setLoading] = useState(true)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editing, setEditing] = useState<Client | null>(null)
+  const [form, setForm] = useState(EMPTY_CLIENT)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+
+  const loadClients = useCallback(async () => {
+    const res = await apiClient.getClients()
+    if (res.success) setClients(res.data)
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { loadClients() }, [loadClients])
+
+  const handleOpenCreate = useCallback(() => {
+    setEditing(null)
+    setForm(EMPTY_CLIENT)
+    setDialogOpen(true)
+  }, [])
+
+  const handleOpenEdit = useCallback((client: Client) => {
+    setEditing(client)
+    setForm({ name: client.name, type: client.type, taxCode: client.taxCode ?? '', address: client.address ?? '', phone: client.phone, contactPerson: client.contactPerson ?? '', outstandingDebt: client.outstandingDebt })
+    setDialogOpen(true)
+  }, [])
+
+  const handleSubmit = useCallback(async () => {
+    if (editing) {
+      await apiClient.updateClient(editing.id, form)
+    } else {
+      await apiClient.createClient(form)
+    }
+    setDialogOpen(false)
+    loadClients()
+  }, [editing, form, loadClients])
+
+  const handleDelete = useCallback(async (id: string) => {
+    await apiClient.deleteClient(id)
+    setDeleteConfirm(null)
+    loadClients()
+  }, [loadClients])
+
+  const updateField = useCallback((field: string, value: string | number) => {
+    setForm(prev => ({ ...prev, [field]: value }))
+  }, [])
+
+  if (loading) {
+    return <div className="p-4"><div className="animate-pulse space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-20 rounded-xl bg-[var(--theme-bg-tertiary)]" />)}</div></div>
+  }
+
+  return (
+    <div className="p-4 space-y-4">
+      <PageHeader title="Khách hàng" subtitle={`${clients.length} khách hàng`} onAdd={handleOpenCreate} addLabel="Thêm khách hàng" />
+
+      {/* Mobile add button */}
+      <button onClick={handleOpenCreate}
+        className="lg:hidden w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
+        style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+        <Plus className="h-4 w-4" /> Thêm khách hàng
+      </button>
+
+      <div className="space-y-2">
+        {clients.map(client => (
+          <div key={client.id}
+            className="flex items-start gap-3 p-4 rounded-xl border"
+            style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}>
+            <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0"
+              style={{ background: 'var(--theme-bg-tertiary)' }}>
+              {client.type === 'company'
+                ? <Building2 className="h-5 w-5" style={{ color: 'var(--theme-text-muted)' }} />
+                : <User className="h-5 w-5" style={{ color: 'var(--theme-text-muted)' }} />}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{client.name}</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{client.phone}{client.taxCode ? ` · MST: ${client.taxCode}` : ''}</p>
+              {client.outstandingDebt > 0 && (
+                <p className="text-xs mt-1 font-medium" style={{ color: 'var(--theme-status-error)' }}>
+                  Nợ: {formatCurrencyFull(client.outstandingDebt)}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <button onClick={() => handleOpenEdit(client)} className="h-8 w-8 flex items-center justify-center rounded-lg touch-manipulation" style={{ color: 'var(--theme-text-muted)' }} aria-label="Sửa">
+                <Pencil className="h-4 w-4" />
+              </button>
+              <button onClick={() => setDeleteConfirm(client.id)} className="h-8 w-8 flex items-center justify-center rounded-lg touch-manipulation" style={{ color: 'var(--theme-status-error)' }} aria-label="Xoá">
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Create/Edit Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editing ? 'Sửa khách hàng' : 'Thêm khách hàng'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tên</Label>
+              <Input value={form.name} onChange={e => updateField('name', e.target.value)} placeholder="Tên khách hàng" className="text-sm" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Loại</Label>
+              <div className="flex gap-2">
+                {(['company', 'individual'] as ClientType[]).map(t => (
+                  <button key={t} onClick={() => updateField('type', t)}
+                    className="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors"
+                    style={{
+                      background: form.type === t ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
+                      color: form.type === t ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
+                    }}>
+                    {t === 'company' ? 'Công ty' : 'Cá nhân'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mã số thuế</Label>
+              <Input value={form.taxCode} onChange={e => updateField('taxCode', e.target.value)} placeholder="0123456789" className="text-sm" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Địa chỉ</Label>
+              <Input value={form.address} onChange={e => updateField('address', e.target.value)} placeholder="Địa chỉ" className="text-sm" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điện thoại</Label>
+              <Input value={form.phone} onChange={e => updateField('phone', e.target.value)} placeholder="0225-123-456" className="text-sm" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Người liên hệ</Label>
+              <Input value={form.contactPerson} onChange={e => updateField('contactPerson', e.target.value)} placeholder="Họ tên" className="text-sm" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Huỷ</Button>
+            <Button onClick={handleSubmit} disabled={!form.name.trim()}>{editing ? 'Cập nhật' : 'Tạo'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xoá khách hàng?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Hành động này không thể hoàn tác.</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Huỷ</Button>
+            <Button variant="destructive" onClick={() => deleteConfirm && handleDelete(deleteConfirm)}>Xoá</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}

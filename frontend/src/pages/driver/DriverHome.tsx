@@ -5,7 +5,7 @@ import { SectionHeader } from '@/components/shared/SectionHeader'
 import { TripCard } from '@/components/shared/TripCard'
 import { ExpenseRow } from '@/components/shared/ExpenseRow'
 import { LinkButton, DetailLink } from '@/components/shared/LinkButton'
-import { Receipt, Clock, MapPin, Plus, Navigation } from 'lucide-react'
+import { Receipt, Clock, MapPin, Plus, Navigation, Camera } from 'lucide-react'
 
 export function DriverHome() {
   const { jobs, expenses, navigate } = useDriverStore()
@@ -70,6 +70,16 @@ export function DriverHome() {
           />
         </div>
       )}
+
+      {/* ── CHỤP CÔNG ── */}
+      <div className="px-4 mb-5">
+        <button
+          onClick={() => navigate('/driver/work-orders/new')}
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold transition-all active:scale-[0.98] touch-manipulation"
+          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+          <Camera className="h-5 w-5" /> Chụp công
+        </button>
+      </div>
 
       {/* ── CHUYẾN ĐI ── */}
       <div className="px-4 mb-5">
