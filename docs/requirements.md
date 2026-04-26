@@ -122,18 +122,26 @@ Freight container trip payroll system for Phuc Loc company.
 ### Quick Actions (row of buttons at top)
 1. **Tạo chuyến** — create new trip
 2. **Khách hàng** → opens client management page (includes don gia management per client)
-3. **Thiết lập** → setup salary period (from date → to date, e.g. 26th to 25th)
+3. **Cung đường** → opens route management page
+4. **Thiết lập** → setup salary period (from date → to date, e.g. 26th to 25th)
 
 ### Trang Chu Sections (scroll)
 1. **Stats strip** — trips today, jobs pending match, current salary period
-2. **Chuyến chờ đối soát** — trips needing attention, tap to doi soat
-3. **Số công chưa match** — jobs that failed auto-match, ke toan must manual match
+2. **Lương tài xế** — auto-calculated from matched jobs in current period, shows per-driver breakdown
+3. **Chuyến chờ đối soát** — trips needing attention, tap to doi soat
+4. **Số công chưa match** — jobs that failed auto-match, ke toan must manual match
 
 ### Drill-down Pages
 - Trip detail → doi soat (view matched/unmatched jobs, manual match)
 - Client management → CRUD clients + don gia per client
-- Salary period → view drivers, calculated salary, mark paid
+- Route management → CRUD routes
+- Salary period → setup/configure period dates
 - Job detail → edit job info for manual matching
+
+### Salary
+- Auto-calculated from matched jobs in current period
+- Shows per-driver breakdown on Trang chu
+- No manual trigger needed
 
 ## Open Questions
 - [x] Layout: single page, no nav
