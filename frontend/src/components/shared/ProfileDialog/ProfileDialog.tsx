@@ -121,10 +121,10 @@ export function ProfileDialog({ open, onClose, driverMeta }: ProfileDialogProps)
             </div>
 
             {/* Actions */}
-            <div className="space-y-2 pt-2">
+            <div className="flex gap-2 pt-2">
               <button
                 onClick={() => setPwStep(true)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl touch-manipulation"
+                className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl touch-manipulation"
                 style={{ background: 'var(--theme-bg-tertiary)' }}
               >
                 <KeyRound className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
@@ -132,7 +132,7 @@ export function ProfileDialog({ open, onClose, driverMeta }: ProfileDialogProps)
               </button>
               <button
                 onClick={() => { logout(); handleClose() }}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold touch-manipulation"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold touch-manipulation"
                 style={{ background: 'var(--theme-status-error-light)', color: 'var(--theme-status-error-text)' }}
               >
                 <LogOut className="w-4 h-4" /> Đăng xuất
