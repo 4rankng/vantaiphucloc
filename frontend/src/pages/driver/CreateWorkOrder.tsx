@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Camera, Check, RotateCcw, Plus, Trash2, AlertCircle } from 'lucide-react'
+import { Camera, RotateCcw, Plus, Trash2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button/Button'
 import { SheetPicker } from '@/components/shared/SheetPicker'
 import { ContainerScanner } from '@/components/shared/ContainerScanner'
@@ -19,6 +19,7 @@ interface ContainerForm {
   containerNumber: string
   workType: WorkType
   photoTaken: boolean
+  photoDataUrl?: string
 }
 
 const EMPTY_CONT: ContainerForm = { containerNumber: '', workType: 'E20', photoTaken: false }
@@ -61,7 +62,7 @@ export function CreateWorkOrder() {
     // Discard actual image, fill fake cont number for mockup
     setContainers(prev => prev.map((c, i) =>
       i === activeContIdx
-        ? { ...c, photoTaken: true, containerNumber: c.containerNumber || generateContainerNumber() }
+        ? { ...c, photoTaken: true, photoDataUrl: imageSrc, containerNumber: c.containerNumber || generateContainerNumber() }
         : c,
     ))
     setScannerOpen(false)
@@ -91,7 +92,7 @@ export function CreateWorkOrder() {
     const containerItems: ContainerItem[] = containers.map(c => ({
       containerNumber: c.containerNumber.trim(),
       workType: c.workType,
-      photoUrl: '',
+      photoUrl: cont.photoDataUrl ?? '',
     }))
 
     const gpsLat = 20.8449
@@ -149,44 +150,50 @@ export function CreateWorkOrder() {
             </div>
 
             {/* Camera trigger */}
+            {/* Photo preview or camera trigger */}
+            {cont.photoTaken && cont.photoDataUrl ? (
+              <button
+                onClick={openScanner(idx)}
+                className="w-full rounded-xl overflow-hidden touch-manipulation"
+                style={{ border: '2px solid var(--theme-brand-primary)' }}
+              >
+                <img
+                  src={cont.photoDataUrl}
+                  alt="Container"
+                  className="w-full h-auto object-contain"
+                  style={{ maxHeight: '120px' }}
+                />
+              </button>
+            ) : (
             <button
               onClick={openScanner(idx)}
               className="w-full rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-6 px-4 transition-colors touch-manipulation"
               style={{
-                background: cont.photoTaken ? 'var(--theme-bg-tertiary)' : 'transparent',
-                borderColor: cont.photoTaken ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)',
+                background: 'transparent',
+                borderColor: 'var(--theme-border-default)',
               }}
             >
-              {cont.photoTaken ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'var(--theme-brand-primary)' }}>
-                    <Check className="w-4 h-4" style={{ color: 'var(--theme-text-on-brand)' }} />
-                  </div>
-                  <span className="text-xs font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>Đã chụp</span>
+              <div className="flex flex-col items-center gap-2 w-full">
+                <div
+                  className="w-full rounded-lg border-2 flex items-center justify-center"
+                  style={{
+                    borderColor: 'var(--theme-brand-primary)',
+                    opacity: 0.6,
+                    height: '48px',
+                    background: 'var(--theme-brand-primary-light)',
+                  }}
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-brand-primary)', opacity: 0.7 }}>
+                    Aim cont number here
+                  </span>
                 </div>
-              ) : (
-                <div className="flex flex-col items-center gap-2 w-full">
-                  {/* Viewfinder rectangle */}
-                  <div
-                    className="w-full rounded-lg border-2 flex items-center justify-center"
-                    style={{
-                      borderColor: 'var(--theme-brand-primary)',
-                      opacity: 0.6,
-                      height: '48px',
-                      background: 'var(--theme-brand-primary-light)',
-                    }}
-                  >
-                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-brand-primary)', opacity: 0.7 }}>
-                      Aim cont number here
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Camera className="w-5 h-5" style={{ color: 'var(--theme-text-muted)' }} />
-                    <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Chạm để quét</span>
-                  </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <Camera className="w-5 h-5" style={{ color: 'var(--theme-text-muted)' }} />
+                  <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Chạm để quét</span>
                 </div>
-              )}
+              </div>
             </button>
+            )}
 
             {/* Container number input */}
             <div className="space-y-1.5">
