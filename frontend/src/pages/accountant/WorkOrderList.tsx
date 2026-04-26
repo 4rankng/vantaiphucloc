@@ -8,8 +8,6 @@ import { formatCurrencyFull, type WorkOrder } from '@/data/mockData'
 
 const STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle; color: string; bg: string }> = {
   PENDING:  { label: 'Chờ đối soát', icon: Clock,       color: 'var(--theme-status-warning)', bg: 'var(--theme-status-warning-light)' },
-  PRICED:   { label: 'Đã tính giá', icon: CheckCircle,  color: 'var(--theme-status-success)', bg: 'var(--theme-status-success-light)' },
-  APPROVED: { label: 'Đã duyệt',    icon: CheckCircle,  color: 'var(--theme-brand-primary)',  bg: 'var(--theme-brand-primary-light)' },
 }
 
 export function WorkOrderList() {
@@ -19,7 +17,7 @@ export function WorkOrderList() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [showFilters, setShowFilters] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'PRICED'>('ALL')
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING'>('ALL')
 
   useEffect(() => {
     let cancelled = false
@@ -49,7 +47,7 @@ export function WorkOrderList() {
   const counts = useMemo(() => ({
     ALL: workOrders.length,
     PENDING: workOrders.filter(w => w.status === 'PENDING').length,
-    PRICED: workOrders.filter(w => w.status === 'PRICED').length,
+    PENDING: workOrders.filter(w => w.status === 'PENDING').length,
   }), [workOrders])
 
   const totalEarnings = useMemo(() =>
@@ -77,7 +75,7 @@ export function WorkOrderList() {
 
       {/* Status filter pills */}
       <div className="flex gap-2">
-        {(['ALL', 'PENDING', 'PRICED'] as const).map(s => (
+        {(['ALL', 'PENDING'] as const).map(s => (
           <button
             key={s}
             onClick={() => setStatusFilter(s)}
@@ -88,7 +86,7 @@ export function WorkOrderList() {
               border: `1px solid ${statusFilter === s ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)'}`,
             }}
           >
-            {s === 'ALL' ? 'Tất cả' : STATUS_CONFIG[s].label} ({counts[s]})
+            {s === 'ALL' ? 'Tất cả' : STATUS_CONFIG[s]?.label ?? s} ({counts[s]})
           </button>
         ))}
       </div>
