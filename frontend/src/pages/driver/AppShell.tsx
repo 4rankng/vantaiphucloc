@@ -20,7 +20,7 @@ export function TopBar() {
         onNotifications={() => navigate('/driver/notifications')}
         onProfile={() => setProfileOpen(true)}
       />
-      <ProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} />
+      <ProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} driverMeta={{ phone: driver.phone, plate: driver.tractorPlate }} />
     </>
   )
 }
