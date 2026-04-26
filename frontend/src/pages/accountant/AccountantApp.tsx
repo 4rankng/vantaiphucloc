@@ -6,22 +6,18 @@ import { UserDropdown } from '@/components/shared/ProfileDialog'
 import { AccountantDashboard } from './AccountantDashboard'
 import { ClientList } from './ClientList'
 import { RouteList } from './RouteList'
-import { PricingList } from './PricingList'
 import { WorkOrderList } from './WorkOrderList'
-import { SalaryView } from './SalaryView'
-
-const HOME_PATH = '/accountant'
+import { TripList } from './TripList'
+import { TripDetail } from './TripDetail'
+import { CreateTrip } from './CreateTrip'
+import { SalarySetup } from './SalarySetup'
 
 const TITLES: Record<string, string> = {
   '/accountant/clients': 'Khách hàng',
   '/accountant/routes': 'Cung đường',
-  '/accountant/pricings': 'Bảng giá',
-  '/accountant/work-orders': 'Số công',
-  '/accountant/salary': 'Tính lương',
-}
-
-function getPageTitle(path: string): string {
-  return TITLES[path] ?? ''
+  '/accountant/work-orders': 'Số công chưa match',
+  '/accountant/trips': 'Chuyến',
+  '/accountant/salary-setup': 'Thiết lập kỳ lương',
 }
 
 function AccountantRouter() {
@@ -31,16 +27,22 @@ function AccountantRouter() {
 
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }) }, [currentPath])
 
-  const isHome = currentPath === HOME_PATH
+  const isHome = currentPath === '/accountant'
+  const title = TITLES[currentPath] ?? (currentPath.startsWith('/accountant/trip/') ? 'Chi tiết chuyến' : '')
 
   const renderPage = () => {
+    if (currentPath.startsWith('/accountant/trip/')) {
+      const tripId = currentPath.replace('/accountant/trip/', '')
+      return <TripDetail tripId={tripId} />
+    }
     switch (currentPath) {
       case '/accountant':              return <AccountantDashboard />
       case '/accountant/clients':      return <ClientList />
       case '/accountant/routes':       return <RouteList />
-      case '/accountant/pricings':     return <PricingList />
       case '/accountant/work-orders':  return <WorkOrderList />
-      case '/accountant/salary':       return <SalaryView />
+      case '/accountant/trips':        return <TripList />
+      case '/accountant/create-trip':  return <CreateTrip />
+      case '/accountant/salary-setup': return <SalarySetup />
       default: return (
         <div className="p-4 text-center py-12" style={{ color: 'var(--theme-text-muted)' }}>
           <p className="text-sm">Trang đang phát triển</p>
@@ -59,7 +61,7 @@ function AccountantRouter() {
           onProfile={() => setDropdownOpen(true)}
         />
       ) : (
-        <AppTopBar variant="page" title={getPageTitle(currentPath)} onBack={goBack} />
+        <AppTopBar variant="page" title={title} onBack={goBack} />
       )}
 
       <main className={isHome ? undefined : 'p-4 space-y-4'}>

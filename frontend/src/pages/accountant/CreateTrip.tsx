@@ -1,0 +1,134 @@
+import { useState, useEffect } from 'react'
+import { useAppStore } from '@/hooks/use-app-store'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog/Dialog'
+import { Button } from '@/components/ui/Button/Button'
+import { Input } from '@/components/ui/Input/Input'
+import { Label } from '@/components/ui/Label/Label'
+import { SheetPicker } from '@/components/shared/SheetPicker'
+import { ContBadge } from '@/components/shared/ContBadge'
+import { apiClient } from '@/services/api'
+import { WORK_TYPES, WORK_TYPE_LABELS, type Client, type Driver, type Pricing, type WorkType } from '@/data/mockData'
+import { Plus, Trash2 } from 'lucide-react'
+
+interface CongItem {
+  id: string
+  workType: WorkType
+  driverSalary: number
+  allowance: number
+}
+
+export function CreateTrip() {
+  const { goBack } = useAppStore()
+  const [clients, setClients] = useState<{ value: string; label: string }[]>([])
+  const [drivers, setDrivers] = useState<{ value: string; label: string }[]>([])
+  const [routes, setRoutes] = useState<{ value: string; label: string }[]>([])
+
+  const [clientId, setClientId] = useState('')
+  const [driverId, setDriverId] = useState('')
+  const [route, setRoute] = useState('')
+  const [congItems, setCongItems] = useState<CongItem[]>([
+    { id: '1', workType: 'E20', driverSalary: 0, allowance: 0 },
+  ])
+
+  useEffect(() => {
+    Promise.all([apiClient.getClients(), apiClient.getDrivers(), apiClient.getRoutes()])
+      .then(([c, d, r]) => {
+        if (c.success) setClients(c.data.map((x: Client) => ({ value: x.id, label: x.name })))
+        if (d.success) setDrivers(d.data.map((x: Driver) => ({ value: x.id, label: `${x.name} (${x.tractorPlate})` })))
+        if (r.success) setRoutes(r.data.map((x: { route: string }) => ({ value: x.route, label: x.route })))
+      })
+  }, [])
+
+  const addCong = () => {
+    setCongItems(prev => [...prev, { id: String(prev.length + 1), workType: 'E20', driverSalary: 0, allowance: 0 }])
+  }
+
+  const removeCong = (id: string) => {
+    setCongItems(prev => prev.length > 1 ? prev.filter(c => c.id !== id) : prev)
+  }
+
+  const updateCong = (id: string, field: keyof CongItem, value: string | number) => {
+    setCongItems(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c))
+  }
+
+  const handleSubmit = () => {
+    if (!clientId || !driverId || !route) return
+    // In real app: call API
+    goBack()
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Client */}
+      <div className="space-y-2">
+        <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Khách hàng</Label>
+        <SheetPicker options={clients} value={clientId} onChange={setClientId} placeholder="Chọn khách hàng" />
+      </div>
+
+      {/* Route */}
+      <div className="space-y-2">
+        <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Cung đường</Label>
+        <SheetPicker options={routes} value={route} onChange={setRoute} placeholder="Chọn cung đường" />
+      </div>
+
+      {/* Driver */}
+      <div className="space-y-2">
+        <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tài xế</Label>
+        <SheetPicker options={drivers} value={driverId} onChange={setDriverId} placeholder="Chọn tài xế" />
+      </div>
+
+      {/* Cong items */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Công</Label>
+          <button onClick={addCong} className="flex items-center gap-1 text-xs font-medium touch-manipulation" style={{ color: 'var(--theme-brand-primary)' }}>
+            <Plus className="w-3.5 h-3.5" /> Thêm công
+          </button>
+        </div>
+        <div className="space-y-3">
+          {congItems.map((item, i) => (
+            <div key={item.id} className="rounded-2xl p-3 space-y-3"
+              style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Công {i + 1}</span>
+                {congItems.length > 1 && (
+                  <button onClick={() => removeCong(item.id)} className="touch-manipulation" style={{ color: 'var(--theme-status-error)' }}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Loại công</Label>
+                <SheetPicker
+                  options={WORK_TYPES.map(w => ({ value: w, label: WORK_TYPE_LABELS[w] }))}
+                  value={item.workType}
+                  onChange={v => updateCong(item.id, 'workType', v)}
+                  placeholder="Chọn loại công"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Lương tài xế</Label>
+                  <Input type="number" value={item.driverSalary || ''} onChange={e => updateCong(item.id, 'driverSalary', Number(e.target.value))}
+                    placeholder="0" className="text-sm" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Phụ cấp</Label>
+                  <Input type="number" value={item.allowance || ''} onChange={e => updateCong(item.id, 'allowance', Number(e.target.value))}
+                    placeholder="0" className="text-sm" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Submit */}
+      <Button onClick={handleSubmit} disabled={!clientId || !driverId || !route}
+        className="w-full h-11 font-bold rounded-xl"
+        style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+        Tạo chuyến
+      </Button>
+    </div>
+  )
+}

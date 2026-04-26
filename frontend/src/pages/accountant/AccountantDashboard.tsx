@@ -1,101 +1,170 @@
 import { useEffect, useState, useMemo } from 'react'
-import { Camera, CircleDollarSign } from 'lucide-react'
-import { apiClient } from '@/services/api'
+import { Plus, Building2, Route, Settings, Wallet } from 'lucide-react'
 import { useAppStore } from '@/hooks/use-app-store'
-import { WorkOrderCard } from '@/components/shared/WorkOrderCard'
-import { formatCurrencyFull, type WorkOrder, type Pricing } from '@/data/mockData'
+import { apiClient } from '@/services/api'
+import { formatCurrencyFull, type WorkOrder, type Driver, type TripOrder } from '@/data/mockData'
+
+const QUICK_ACTIONS = [
+  { label: 'Tạo chuyến', icon: Plus, path: '/accountant/create-trip' },
+  { label: 'Khách hàng', icon: Building2, path: '/accountant/clients' },
+  { label: 'Cung đường', icon: Route, path: '/accountant/routes' },
+  { label: 'Thiết lập', icon: Settings, path: '/accountant/salary-setup' },
+] as const
 
 export function AccountantDashboard() {
   const { navigate } = useAppStore()
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
-  const [pricings, setPricings] = useState<Pricing[]>([])
+  const [trips, setTrips] = useState<TripOrder[]>([])
+  const [drivers, setDrivers] = useState<Driver[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([apiClient.getWorkOrders(), apiClient.getPricings()])
-      .then(([w, p]) => {
+    Promise.all([apiClient.getWorkOrders(), apiClient.getTripOrders(), apiClient.getDrivers()])
+      .then(([w, t, d]) => {
         if (!cancelled) {
           if (w.success) setWorkOrders(w.data)
-          if (p.success) setPricings(p.data)
+          if (t.success) setTrips(t.data)
+          if (d.success) setDrivers(d.data)
           setLoading(false)
         }
       })
     return () => { cancelled = true }
   }, [])
 
-  const pending = useMemo(() => workOrders.filter(w => w.status === 'PENDING'), [workOrders])
-  const priced = useMemo(() => workOrders.filter(w => w.earning > 0), [workOrders])
-  const totalRevenue = useMemo(() => priced.reduce((s, w) => s + w.earning, 0), [priced])
+  const unmatchedJobs = useMemo(() => workOrders.filter(w => w.status === 'PENDING'), [workOrders])
+  const pendingTrips = useMemo(() => trips.filter(t => t.status === 'DRAFT'), [trips])
+  const matchedJobs = useMemo(() => workOrders.filter(w => w.earning > 0), [workOrders])
+
+  // Auto-calculate salary per driver from matched jobs in current period
+  const salaryByDriver = useMemo(() => {
+    const map = new Map<string, { name: string; plate: string; totalJobs: number; totalSalary: number }>()
+    matchedJobs.forEach(job => {
+      const existing = map.get(job.driverId) ?? { name: job.driverName, plate: job.tractorPlate, totalJobs: 0, totalSalary: 0 }
+      existing.totalJobs += 1
+      existing.totalSalary += job.earning
+      map.set(job.driverId, existing)
+    })
+    return Array.from(map.entries()).map(([id, data]) => ({ id, ...data }))
+  }, [matchedJobs])
 
   if (loading) {
     return (
       <div className="p-4 space-y-2">
-        {[1, 2, 3, 4].map(i => <div key={i} className="h-20 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}
+        {[1, 2, 3, 4].map(i => <div key={i} className="h-16 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}
       </div>
     )
   }
 
   return (
     <div className="pb-6">
-      {/* Summary strip */}
-      <div className="px-4 pt-3 pb-2 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-            {pending.length} chờ đối soát
-          </span>
-          <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-            {priced.length} đã tính
-          </span>
-        </div>
-        {totalRevenue > 0 && (
-          <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>
-            {formatCurrencyFull(totalRevenue)}
-          </span>
-        )}
+      {/* Quick actions */}
+      <div className="px-4 pt-3 grid grid-cols-4 gap-2">
+        {QUICK_ACTIONS.map(({ label, icon: Icon, path }) => (
+          <button
+            key={path}
+            onClick={() => navigate(path)}
+            className="flex flex-col items-center gap-1.5 py-3 rounded-2xl transition-all active:scale-[0.95] touch-manipulation"
+            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}
+          >
+            <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ background: 'var(--theme-brand-primary-light)' }}>
+              <Icon className="h-3.5 w-3.5" style={{ color: 'var(--theme-brand-primary)' }} />
+            </div>
+            <span className="text-[9px] font-medium text-center leading-tight px-0.5" style={{ color: 'var(--theme-text-primary)' }}>
+              {label}
+            </span>
+          </button>
+        ))}
       </div>
 
-      {/* Pending section — what needs attention */}
-      {pending.length > 0 && (
-        <div className="px-4 mt-2">
+      {/* Driver salary section */}
+      {salaryByDriver.length > 0 && (
+        <div className="px-4 mt-4">
+          <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--theme-text-muted)' }}>
+            <Wallet className="w-3 h-3 inline mr-1" />
+            Lương tài xế (kỳ hiện tại)
+          </p>
+          <div className="space-y-2">
+            {salaryByDriver.map(d => (
+              <div key={d.id}
+                className="flex items-center justify-between rounded-2xl p-3"
+                style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{d.name}</p>
+                  <p className="text-[11px] font-mono" style={{ color: 'var(--theme-text-muted)' }}>{d.plate} · {d.totalJobs} công</p>
+                </div>
+                <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>
+                  {formatCurrencyFull(d.totalSalary)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Trips pending doi soat */}
+      {pendingTrips.length > 0 && (
+        <div className="px-4 mt-4">
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-status-warning)' }}>
-              Chờ đối soát ({pending.length})
+              Chờ đối soát ({pendingTrips.length})
+            </p>
+            <button onClick={() => navigate('/accountant/trips')} className="text-[11px] font-medium" style={{ color: 'var(--theme-brand-primary)' }}>
+              Xem tất cả →
+            </button>
+          </div>
+          <div className="space-y-2">
+            {pendingTrips.slice(0, 3).map(trip => (
+              <button key={trip.id}
+                onClick={() => navigate(`/accountant/trip/${trip.id}`)}
+                className="w-full text-left rounded-2xl p-3 transition-all active:scale-[0.98] touch-manipulation"
+                style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{trip.clientName}</p>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                    style={{ background: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' }}>
+                    Chờ đối soát
+                  </span>
+                </div>
+                <p className="text-[11px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+                  {trip.driverName} · {trip.route}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Unmatched jobs */}
+      {unmatchedJobs.length > 0 && (
+        <div className="px-4 mt-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-status-warning)' }}>
+              Số công chưa match ({unmatchedJobs.length})
             </p>
             <button onClick={() => navigate('/accountant/work-orders')} className="text-[11px] font-medium" style={{ color: 'var(--theme-brand-primary)' }}>
               Xem tất cả →
             </button>
           </div>
           <div className="space-y-2">
-            {pending.slice(0, 5).map(wo => (
-              <WorkOrderCard key={wo.id} data={wo} variant="accountant" />
+            {unmatchedJobs.slice(0, 3).map(job => (
+              <div key={job.id}
+                className="rounded-2xl p-3"
+                style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold font-mono" style={{ color: 'var(--theme-text-primary)' }}>{job.workOrderNumber}</p>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
+                    {job.workType}
+                  </span>
+                </div>
+                <p className="text-[11px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+                  {job.driverName} · {job.tractorPlate}
+                </p>
+                <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
+                  {job.clientName} · {job.route}
+                </p>
+              </div>
             ))}
-          </div>
-        </div>
-      )}
-
-      {/* Recent priced */}
-      {priced.length > 0 && (
-        <div className="px-4 mt-4">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
-              Gần đây ({priced.length})
-            </p>
-          </div>
-          <div className="space-y-2">
-            {priced.slice(0, 5).map(wo => (
-              <WorkOrderCard key={wo.id} data={wo} variant="accountant" />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Empty state */}
-      {workOrders.length === 0 && (
-        <div className="px-4 mt-4">
-          <div className="rounded-2xl p-8 text-center" style={{ background: 'var(--theme-bg-secondary)' }}>
-            <Camera className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--theme-text-muted)' }} />
-            <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có số công nào</p>
           </div>
         </div>
       )}
