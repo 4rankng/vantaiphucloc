@@ -64,7 +64,7 @@ function JobCard({ job, onClick }: { job: WorkOrder; onClick: () => void }) {
             className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
             style={{ background: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' }}
           >
-            Chờ đơn giá
+            Chờ đối soát
           </span>
         )}
         <span className="text-[11px] tabular-nums" style={{ color: 'var(--theme-text-muted)' }}>
