@@ -238,8 +238,8 @@ export function TripOrderList() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Huỷ</Button>
-            <Button onClick={handleSubmit} disabled={!form.clientId || !form.route || !form.driverId}>Tạo chuyến</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} className="flex-1">Huỷ</Button>
+            <Button onClick={handleSubmit} disabled={!form.clientId || !form.route || !form.driverId} className="flex-1" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>Xác nhận</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
