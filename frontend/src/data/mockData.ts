@@ -193,12 +193,18 @@ export interface WorkOrder {
   status: WorkOrderStatus
 }
 
+export interface PricingLine {
+  workType: WorkType
+  quantity: number
+}
+
 export interface Pricing {
   id: string
   clientId: string
   clientName: string
   workType: WorkType
   route: string
+  lines: PricingLine[]
   unitPrice: number
   driverSalary: number
   allowance: number
@@ -542,20 +548,20 @@ export const mockWorkOrders: WorkOrder[] = [
 // ─── Mock Pricings ───────────────────────────────────────────────────────────
 
 export const mockPricings: Pricing[] = [
-  { id: 'PRC-001', clientId: 'CLT-002', clientName: 'Công ty TNHH Sản xuất Mộc Châu', workType: 'E40', route: 'Hải Phòng → Mộc Châu, Sơn La', unitPrice: 2740000, driverSalary: 800000, allowance: 200000, createdAt: '2025-04-01', updatedAt: '2025-04-01' },
-  { id: 'PRC-002', clientId: 'CLT-003', clientName: 'Tập đoàn Xuất nhập khẩu Lào Cai', workType: 'F40', route: 'Hải Phòng → Sa Pa', unitPrice: 4800000, driverSalary: 900000, allowance: 250000, createdAt: '2025-04-01', updatedAt: '2025-04-01' },
-  { id: 'PRC-003', clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', workType: 'E40', route: 'Hải Phòng → Bắc Ninh → Ninh Bình (Kết hợp 2 chiều)', unitPrice: 1780000, driverSalary: 850000, allowance: 150000, createdAt: '2025-04-01', updatedAt: '2025-04-01' },
-  { id: 'PRC-004', clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', workType: 'F20', route: 'Hải Phòng → Hà Nội (QL5)', unitPrice: 930000, driverSalary: 800000, allowance: 100000, createdAt: '2025-04-01', updatedAt: '2025-04-01' },
-  { id: 'PRC-005', clientId: 'CLT-004', clientName: 'Công ty CP Thương mại Thái Bình', workType: 'E20', route: 'Hải Phòng → Hải Dương', unitPrice: 600000, driverSalary: 750000, allowance: 100000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
-  { id: 'PRC-006', clientId: 'CLT-005', clientName: 'Doanh nghiệp Vận tải Quảng Ninh', workType: 'F40', route: 'Hải Phòng → Hạ Long, Quảng Ninh', unitPrice: 790000, driverSalary: 800000, allowance: 120000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
-  { id: 'PRC-007', clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', workType: 'E20', route: 'Hải Phòng → Hà Nội (QL5)', unitPrice: 930000, driverSalary: 750000, allowance: 100000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
-  { id: 'PRC-008', clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', workType: 'E20', route: 'Hải Phòng → Hải Dương', unitPrice: 600000, driverSalary: 700000, allowance: 80000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
-  { id: 'PRC-009', clientId: 'CLT-002', clientName: 'Công ty TNHH Sản xuất Mộc Châu', workType: 'E20', route: 'Hải Phòng → Mộc Châu, Sơn La', unitPrice: 2470000, driverSalary: 780000, allowance: 180000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
-  { id: 'PRC-010', clientId: 'CLT-003', clientName: 'Tập đoàn Xuất nhập khẩu Lào Cai', workType: 'E40', route: 'Hải Phòng → Sa Pa', unitPrice: 4280000, driverSalary: 850000, allowance: 200000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
-  { id: 'PRC-011', clientId: 'CLT-004', clientName: 'Công ty CP Thương mại Thái Bình', workType: 'E40', route: 'Hải Phòng → Thái Nguyên', unitPrice: 1190000, driverSalary: 780000, allowance: 120000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
-  { id: 'PRC-012', clientId: 'CLT-005', clientName: 'Doanh nghiệp Vận tải Quảng Ninh', workType: 'E20', route: 'Hải Phòng → Hạ Long, Quảng Ninh', unitPrice: 680000, driverSalary: 750000, allowance: 100000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
-  { id: 'PRC-013', clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', workType: 'E40', route: 'Hải Phòng → Thanh Hóa', unitPrice: 1000000, driverSalary: 800000, allowance: 120000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
-  { id: 'PRC-014', clientId: 'CLT-002', clientName: 'Công ty TNHH Sản xuất Mộc Châu', workType: 'E40', route: 'Hải Phòng → Hà Nội (QL5)', unitPrice: 1150000, driverSalary: 800000, allowance: 100000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
+  { id: 'PRC-001', clientId: 'CLT-002', clientName: 'Công ty TNHH Sản xuất Mộc Châu', workType: 'E40', route: 'Hải Phòng → Mộc Châu, Sơn La', lines: [{ workType: 'E40', quantity: 1 }], unitPrice: 2740000, driverSalary: 800000, allowance: 200000, createdAt: '2025-04-01', updatedAt: '2025-04-01' },
+  { id: 'PRC-002', clientId: 'CLT-003', clientName: 'Tập đoàn Xuất nhập khẩu Lào Cai', workType: 'F40', route: 'Hải Phòng → Sa Pa', lines: [{ workType: 'F40', quantity: 1 }], unitPrice: 4800000, driverSalary: 900000, allowance: 250000, createdAt: '2025-04-01', updatedAt: '2025-04-01' },
+  { id: 'PRC-003', clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', workType: 'E40', route: 'Hải Phòng → Bắc Ninh → Ninh Bình (Kết hợp 2 chiều)', lines: [{ workType: 'E20', quantity: 1 }, { workType: 'F20', quantity: 1 }], unitPrice: 1780000, driverSalary: 850000, allowance: 150000, createdAt: '2025-04-01', updatedAt: '2025-04-01' },
+  { id: 'PRC-004', clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', workType: 'F20', route: 'Hải Phòng → Hà Nội (QL5)', lines: [{ workType: 'F20', quantity: 2 }], unitPrice: 930000, driverSalary: 800000, allowance: 100000, createdAt: '2025-04-01', updatedAt: '2025-04-01' },
+  { id: 'PRC-005', clientId: 'CLT-004', clientName: 'Công ty CP Thương mại Thái Bình', workType: 'E20', route: 'Hải Phòng → Hải Dương', lines: [{ workType: 'E20', quantity: 1 }], unitPrice: 600000, driverSalary: 750000, allowance: 100000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
+  { id: 'PRC-006', clientId: 'CLT-005', clientName: 'Doanh nghiệp Vận tải Quảng Ninh', workType: 'F40', route: 'Hải Phòng → Hạ Long, Quảng Ninh', lines: [{ workType: 'F40', quantity: 1 }], unitPrice: 790000, driverSalary: 800000, allowance: 120000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
+  { id: 'PRC-007', clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', workType: 'E20', route: 'Hải Phòng → Hà Nội (QL5)', lines: [{ workType: 'E20', quantity: 2 }], unitPrice: 930000, driverSalary: 750000, allowance: 100000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
+  { id: 'PRC-008', clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', workType: 'E20', route: 'Hải Phòng → Hải Dương', lines: [{ workType: 'E20', quantity: 1 }], unitPrice: 600000, driverSalary: 700000, allowance: 80000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
+  { id: 'PRC-009', clientId: 'CLT-002', clientName: 'Công ty TNHH Sản xuất Mộc Châu', workType: 'E20', route: 'Hải Phòng → Mộc Châu, Sơn La', lines: [{ workType: 'E20', quantity: 1 }], unitPrice: 2470000, driverSalary: 780000, allowance: 180000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
+  { id: 'PRC-010', clientId: 'CLT-003', clientName: 'Tập đoàn Xuất nhập khẩu Lào Cai', workType: 'E40', route: 'Hải Phòng → Sa Pa', lines: [{ workType: 'E40', quantity: 2 }], unitPrice: 4280000, driverSalary: 850000, allowance: 200000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
+  { id: 'PRC-011', clientId: 'CLT-004', clientName: 'Công ty CP Thương mại Thái Bình', workType: 'E40', route: 'Hải Phòng → Thái Nguyên', lines: [{ workType: 'E40', quantity: 1 }], unitPrice: 1190000, driverSalary: 780000, allowance: 120000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
+  { id: 'PRC-012', clientId: 'CLT-005', clientName: 'Doanh nghiệp Vận tải Quảng Ninh', workType: 'E20', route: 'Hải Phòng → Hạ Long, Quảng Ninh', lines: [{ workType: 'E20', quantity: 1 }, { workType: 'E40', quantity: 1 }], unitPrice: 680000, driverSalary: 750000, allowance: 100000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
+  { id: 'PRC-013', clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', workType: 'E40', route: 'Hải Phòng → Thanh Hóa', lines: [{ workType: 'E40', quantity: 1 }], unitPrice: 1000000, driverSalary: 800000, allowance: 120000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
+  { id: 'PRC-014', clientId: 'CLT-002', clientName: 'Công ty TNHH Sản xuất Mộc Châu', workType: 'E40', route: 'Hải Phòng → Hà Nội (QL5)', lines: [{ workType: 'E40', quantity: 1 }], unitPrice: 1150000, driverSalary: 800000, allowance: 100000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
 ]
 
 // ─── Mock Trip Orders ────────────────────────────────────────────────────────
