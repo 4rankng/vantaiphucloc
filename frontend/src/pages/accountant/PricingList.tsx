@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input/Input'
 import { Label } from '@/components/ui/Label/Label'
 import { SheetPicker } from '@/components/shared/SheetPicker'
 import { Plus, Pencil, Trash2, X, Check, Search } from 'lucide-react'
+import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 
 // ─── Pricing Card ─────────────────────────────────────────────────────────────
 function PricingCard({ pricing, onEdit, onDelete }: {
@@ -254,44 +255,43 @@ export function PricingList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-          <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Tìm khách hàng, cung đường..." className="text-xs h-9 pl-8" />
-        </div>
-        <button onClick={() => { setEditingPricing(undefined); setShowForm(true) }}
-          className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0 touch-manipulation"
-          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-          <Plus className="w-4 h-4" />
-        </button>
-      </div>
-
-      {showForm && (
-        <PricingForm initial={editingPricing} clients={clients} routes={routes}
-          onSave={handleSave} onCancel={() => { setShowForm(false); setEditingPricing(undefined) }} />
-      )}
-
-      {grouped.map(([clientName, items]) => (
-        <div key={clientName}>
-          <p className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: 'var(--theme-text-muted)' }}>{clientName}</p>
-          <div className="space-y-2">
-            {items.map(p => (
-              <PricingCard key={p.id} pricing={p}
-                onEdit={() => { setEditingPricing(p); setShowForm(true) }}
-                onDelete={() => handleDelete(p.id)} />
-            ))}
+      <div className="relative">
+        <div className="flex items-center gap-2">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
+            <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Tìm khách hàng, cung đường..." className="text-xs h-9 pl-8" />
           </div>
         </div>
-      ))}
 
-      {grouped.length === 0 && (
-        <div className="text-center py-8">
-          <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>
-            {searchQuery ? 'Không tìm thấy bảng giá' : 'Chưa có bảng giá'}
-          </p>
-        </div>
-      )}
+        {showForm && (
+          <PricingForm initial={editingPricing} clients={clients} routes={routes}
+            onSave={handleSave} onCancel={() => { setShowForm(false); setEditingPricing(undefined) }} />
+        )}
+
+        {grouped.map(([clientName, items]) => (
+          <div key={clientName} className="mt-4">
+            <p className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: 'var(--theme-text-muted)' }}>{clientName}</p>
+            <div className="space-y-2">
+              {items.map(p => (
+                <PricingCard key={p.id} pricing={p}
+                  onEdit={() => { setEditingPricing(p); setShowForm(true) }}
+                  onDelete={() => handleDelete(p.id)} />
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {grouped.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>
+              {searchQuery ? 'Không tìm thấy bảng giá' : 'Chưa có bảng giá'}
+            </p>
+          </div>
+        )}
+      </div>
+
+      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => { setEditingPricing(undefined); setShowForm(true) }} label="Thêm bảng giá" />
     </div>
   )
 }
