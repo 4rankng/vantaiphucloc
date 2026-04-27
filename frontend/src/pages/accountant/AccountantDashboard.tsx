@@ -12,21 +12,33 @@ const QUICK_ACTIONS = [
   { label: 'Thiết lập', icon: Settings, path: '/accountant/salary-setup' },
 ] as const
 
+// Unique work types across all containers
+function uniqueWorkTypes(job: WorkOrder) {
+  const types = new Set(job.containers.map(c => c.workType))
+  return Array.from(types)
+}
+
+// All container numbers joined
+function allContNumbers(job: WorkOrder) {
+  return job.containers.map(c => c.containerNumber).filter(Boolean).join(' · ') || job.id
+}
+
 // Shared card component for unmatched jobs
 function DoiSoatCard({ job, onClick }: { job: WorkOrder; onClick: () => void }) {
+  const types = uniqueWorkTypes(job)
   return (
     <button
       onClick={onClick}
       className="w-full text-left rounded-2xl p-3 transition-all active:scale-[0.98] touch-manipulation"
       style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {job.containers[0] && <ContBadge type={job.containers[0].workType} />}
+        <div className="flex items-center gap-2 flex-wrap">
+          {types.map(t => <ContBadge key={t} type={t} />)}
           <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-            {job.containers[0]?.containerNumber || job.id}
+            {allContNumbers(job)}
           </span>
         </div>
-        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ml-2"
           style={{ background: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' }}>
           Cần đối soát
         </span>
@@ -38,6 +50,35 @@ function DoiSoatCard({ job, onClick }: { job: WorkOrder; onClick: () => void }) 
         {job.clientName} · {job.route}
       </p>
     </button>
+  )
+}
+
+// Card for already-matched jobs
+function MatchedCard({ job }: { job: WorkOrder }) {
+  const types = uniqueWorkTypes(job)
+  return (
+    <div
+      className="w-full text-left rounded-2xl p-3 transition-all"
+      style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 flex-wrap">
+          {types.map(t => <ContBadge key={t} type={t} />)}
+          <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+            {allContNumbers(job)}
+          </span>
+        </div>
+        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ml-2"
+          style={{ background: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' }}>
+          Đã khớp
+        </span>
+      </div>
+      <p className="text-[11px] mt-1" style={{ color: 'var(--theme-text-muted)' }}>
+        {job.driverName} · {job.tractorPlate}
+      </p>
+      <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
+        {job.clientName} · {job.route}
+      </p>
+    </div>
   )
 }
 
@@ -155,6 +196,20 @@ export function AccountantDashboard() {
               <ChevronDown className="w-3.5 h-3.5" /> Xem thêm
             </button>
           )}
+        </div>
+      )}
+
+      {/* Chuyến đã khớp */}
+      {matchedJobs.length > 0 && (
+        <div className="px-4 mt-4">
+          <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--theme-status-success)' }}>
+            Chuyến đã khớp ({matchedJobs.length})
+          </p>
+          <div className="space-y-2">
+            {matchedJobs.map(job => (
+              <MatchedCard key={job.id} job={job} />
+            ))}
+          </div>
         </div>
       )}
 
