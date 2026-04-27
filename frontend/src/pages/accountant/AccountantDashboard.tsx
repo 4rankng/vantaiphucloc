@@ -223,7 +223,7 @@ export function AccountantDashboard() {
           <div className="space-y-2">
             {pendingTrips.map(trip => (
               <button key={trip.id}
-                onClick={() => navigate(`/accountant/trip/${trip.id}`)}
+                onClick={() => navigate(`/accountant/match-trip/${trip.id}`)}
                 className="w-full text-left rounded-2xl p-3 transition-all active:scale-[0.98] touch-manipulation"
                 style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
                 <div className="flex items-center justify-between">

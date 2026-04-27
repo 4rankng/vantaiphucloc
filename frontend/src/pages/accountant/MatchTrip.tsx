@@ -82,14 +82,14 @@ function CompareRow({ label, left, right, matched, onTapLeft, onTapRight }: {
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
         <button onClick={onTapLeft} className="min-w-0 text-left rounded-lg px-2 py-1.5 -mx-2 transition-colors touch-manipulation active:opacity-70" style={{ background: 'transparent' }}>
-          <p className="text-[9px] font-medium" style={{ color: 'var(--theme-brand-primary)' }}>Đã chạy</p>
+          <p className="text-[9px] font-medium" style={{ color: 'var(--theme-status-warning)' }}>Yêu cầu</p>
           <div className="flex items-center gap-1">
             <p className="text-xs font-medium" style={{ color: 'var(--theme-text-primary)' }}>{left || '-'}</p>
           </div>
         </button>
         <ArrowLeftRight className="w-3.5 h-3.5 shrink-0" style={{ color: matched ? 'var(--theme-status-success)' : 'var(--theme-text-muted)' }} />
         <button onClick={onTapRight} className="min-w-0 text-left rounded-lg px-2 py-1.5 -mx-2 transition-colors touch-manipulation active:opacity-70" style={{ background: 'transparent' }}>
-          <p className="text-[9px] font-medium" style={{ color: 'var(--theme-status-warning)' }}>Yêu cầu</p>
+          <p className="text-[9px] font-medium" style={{ color: 'var(--theme-brand-primary)' }}>Đã chạy</p>
           <div className="flex items-center gap-1">
             <p className="text-xs font-medium" style={{ color: 'var(--theme-text-primary)' }}>{right || '-'}</p>
           </div>
@@ -101,8 +101,8 @@ function CompareRow({ label, left, right, matched, onTapLeft, onTapRight }: {
 
 // ─── Container comparison row (tappable) ──────────────────────────────────────
 function ContCompareRow({ left, right, matched, onTapLeft, onTapRight }: {
-  left: { type: string; number: string }[]
-  right: { type: string; number: string }
+  left: { type: string; number: string }
+  right: { type: string; number: string }[]
   matched?: boolean
   onTapLeft?: () => void; onTapRight?: () => void
 }) {
@@ -119,23 +119,23 @@ function ContCompareRow({ left, right, matched, onTapLeft, onTapRight }: {
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-start">
         <button onClick={onTapLeft} className="min-w-0 text-left rounded-lg px-2 py-1.5 -mx-2 touch-manipulation active:opacity-70">
-          <p className="text-[9px] font-medium mb-1" style={{ color: 'var(--theme-brand-primary)' }}>Đã chạy</p>
-          {left.map((c, i) => (
-            <div key={i} className="flex items-center gap-1 mb-0.5">
-              <ContBadge type={c.type as TripOrder['workType']} />
-              <span className="text-[11px] font-mono font-medium" style={{ color: 'var(--theme-text-primary)' }}>{c.number}</span>
-            </div>
-          ))}
+          <p className="text-[9px] font-medium mb-1" style={{ color: 'var(--theme-status-warning)' }}>Yêu cầu</p>
+          <div className="flex items-center gap-1">
+            <ContBadge type={left.type as TripOrder['workType']} />
+            <span className="text-[11px] font-mono font-medium" style={{ color: 'var(--theme-text-primary)' }}>{left.number}</span>
+          </div>
         </button>
         <div className="flex items-center pt-3">
           <ArrowLeftRight className="w-3.5 h-3.5" style={{ color: matched ? 'var(--theme-status-success)' : 'var(--theme-text-muted)' }} />
         </div>
         <button onClick={onTapRight} className="min-w-0 text-left rounded-lg px-2 py-1.5 -mx-2 touch-manipulation active:opacity-70">
-          <p className="text-[9px] font-medium mb-1" style={{ color: 'var(--theme-status-warning)' }}>Yêu cầu</p>
-          <div className="flex items-center gap-1">
-            <ContBadge type={right.type as TripOrder['workType']} />
-            <span className="text-[11px] font-mono font-medium" style={{ color: 'var(--theme-text-primary)' }}>{right.number}</span>
-          </div>
+          <p className="text-[9px] font-medium mb-1" style={{ color: 'var(--theme-brand-primary)' }}>Đã chạy</p>
+          {right.map((c, i) => (
+            <div key={i} className="flex items-center gap-1 mb-0.5">
+              <ContBadge type={c.type as TripOrder['workType']} />
+              <span className="text-[11px] font-mono font-medium" style={{ color: 'var(--theme-text-primary)' }}>{c.number}</span>
+            </div>
+          ))}
         </button>
       </div>
     </div>
@@ -143,7 +143,7 @@ function ContCompareRow({ left, right, matched, onTapLeft, onTapRight }: {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
+export function MatchTrip({ tripId: initialTripId }: { tripId: string }) {
   const { goBack } = useAppStore()
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
   const [trips, setTrips] = useState<TripOrder[]>([])
@@ -152,20 +152,20 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
-  const [selectedJobId, setSelectedJobId] = useState(initialJobId)
-  const [selectedTripId, setSelectedTripId] = useState('')
-  const [pickMode, setPickMode] = useState<'job' | 'trip' | null>(null)
+  const [selectedTripId, setSelectedTripId] = useState(initialTripId)
+  const [selectedJobId, setSelectedJobId] = useState('')
+  const [pickMode, setPickMode] = useState<'trip' | 'job' | null>(null)
 
   // Edit dialog
   const [editDialog, setEditDialog] = useState<'cont-left' | 'cont-right' | 'client-left' | 'client-right' | 'route-left' | 'route-right' | null>(null)
 
   // Local editable copies
-  const [editedJob, setEditedJob] = useState<{ clientName: string; route: string; containers: { type: string; number: string }[] } | null>(null)
   const [editedTrip, setEditedTrip] = useState<{ clientName: string; route: string; contType: string; contNumber: string } | null>(null)
+  const [editedJob, setEditedJob] = useState<{ clientName: string; route: string; containers: { type: string; number: string }[] } | null>(null)
 
   // Dialog-local state for container editing
+  const [dialogContLeft, setDialogContLeft] = useState<{ type: string; number: string }>({ type: 'E20', number: '' })
   const [dialogContainers, setDialogContainers] = useState<{ type: string; number: string }[]>([])
-  const [dialogContRight, setDialogContRight] = useState<{ type: string; number: string }>({ type: 'E20', number: '' })
 
   useEffect(() => {
     let cancelled = false
@@ -186,10 +186,16 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
   const unmatchedJobs = useMemo(() => workOrders.filter(w => !matchedIds.has(w.id)), [workOrders, matchedIds])
   const draftTrips = useMemo(() => trips.filter(t => t.status === 'DRAFT'), [trips])
 
-  const selectedJob = useMemo(() => workOrders.find(w => w.id === selectedJobId), [workOrders, selectedJobId])
   const selectedTrip = useMemo(() => trips.find(t => t.id === selectedTripId), [trips, selectedTripId])
+  const selectedJob = useMemo(() => workOrders.find(w => w.id === selectedJobId), [workOrders, selectedJobId])
 
   // Init edited copies
+  useEffect(() => {
+    if (selectedTrip) {
+      setEditedTrip({ clientName: selectedTrip.clientName, route: selectedTrip.route, contType: selectedTrip.workType, contNumber: selectedTrip.containerNumber })
+    } else setEditedTrip(null)
+  }, [selectedTrip])
+
   useEffect(() => {
     if (selectedJob) {
       setEditedJob({
@@ -200,34 +206,32 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
     } else setEditedJob(null)
   }, [selectedJob])
 
-  useEffect(() => {
-    if (selectedTrip) {
-      setEditedTrip({ clientName: selectedTrip.clientName, route: selectedTrip.route, contType: selectedTrip.workType, contNumber: selectedTrip.containerNumber })
-    } else setEditedTrip(null)
-  }, [selectedTrip])
+  // Client/route options for SheetPicker
+  const clientOptions = useMemo(() => clients.map(c => ({ value: c.name, label: c.name })), [clients])
+  const routeOptions = useMemo(() => routes.map(r => ({ value: r.route, label: r.route })), [routes])
 
   // Open edit dialog with current values
   const openEdit = (mode: typeof editDialog) => {
     if (!mode) return
-    if (mode === 'cont-left' && editedJob) setDialogContainers([...editedJob.containers])
-    if (mode === 'cont-right' && editedTrip) setDialogContRight({ type: editedTrip.contType, number: editedTrip.contNumber })
+    if (mode === 'cont-left' && editedTrip) setDialogContLeft({ type: editedTrip.contType, number: editedTrip.contNumber })
+    if (mode === 'cont-right' && editedJob) setDialogContainers([...editedJob.containers])
     setEditDialog(mode)
   }
 
   const saveDialog = () => {
     if (!editDialog) return
-    if (editDialog === 'cont-left' && editedJob) setEditedJob({ ...editedJob, containers: [...dialogContainers] })
-    if (editDialog === 'cont-right' && editedTrip) setEditedTrip({ ...editedTrip, contType: dialogContRight.type, contNumber: dialogContRight.number })
+    if (editDialog === 'cont-left' && editedTrip) setEditedTrip({ ...editedTrip, contType: dialogContLeft.type, contNumber: dialogContLeft.number })
+    if (editDialog === 'cont-right' && editedJob) setEditedJob({ ...editedJob, containers: [...dialogContainers] })
     setEditDialog(null)
   }
 
   // Validation
-  const jobClient = editedJob?.clientName ?? ''
   const tripClient = editedTrip?.clientName ?? ''
-  const jobRoute = editedJob?.route ?? ''
+  const jobClient = editedJob?.clientName ?? ''
   const tripRoute = editedTrip?.route ?? ''
-  const jobConts = editedJob?.containers ?? []
+  const jobRoute = editedJob?.route ?? ''
   const tripCont = editedTrip ? { type: editedTrip.contType, number: editedTrip.contNumber } : null
+  const jobConts = editedJob?.containers ?? []
 
   const contMatched = tripCont ? jobConts.some(c => c.type === tripCont.type && c.number === tripCont.number) : false
   const clientMatched = jobClient === tripClient && jobClient !== ''
@@ -236,19 +240,19 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
   const matchCount = [contMatched, clientMatched, routeMatched].filter(Boolean).length
 
   const handleMatch = async () => {
-    if (!selectedJob || !selectedTrip || !editedJob || !editedTrip || submitting) return
+    if (!selectedTrip || !selectedJob || !editedTrip || !editedJob || submitting) return
     setSubmitting(true)
     try {
-      await updateWorkOrder(selectedJobId, {
-        clientName: editedJob.clientName,
-        route: editedJob.route,
-        containers: editedJob.containers.map(c => ({ containerNumber: c.number, workType: c.type as WorkType, photoUrl: '' })),
-      })
       await updateTripOrder(selectedTripId, {
         clientName: editedTrip.clientName,
         route: editedTrip.route,
         workType: editedTrip.contType as WorkType,
         containerNumber: editedTrip.contNumber,
+      })
+      await updateWorkOrder(selectedJobId, {
+        clientName: editedJob.clientName,
+        route: editedJob.route,
+        containers: editedJob.containers.map(c => ({ containerNumber: c.number, workType: c.type as WorkType, photoUrl: '' })),
       })
       await createTripOrder({
         tripDate: selectedTrip.tripDate,
@@ -280,6 +284,23 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
       <div className="flex flex-col h-[calc(100dvh-56px)]">
         {/* ── TOP: Selector buttons ── */}
         <div className="px-4 pt-3 pb-2 space-y-2 shrink-0">
+          <button onClick={() => setPickMode('trip')}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-2xl touch-manipulation"
+            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: 'var(--theme-status-warning)' }}>Chuyến yêu cầu</p>
+              {selectedTrip ? (
+                <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                  <ContBadge type={selectedTrip.workType} />
+                  <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{selectedTrip.containerNumber}</span>
+                </div>
+              ) : (
+                <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>Chọn chuyến yêu cầu</p>
+              )}
+            </div>
+            <ChevronDown className="w-4 h-4 shrink-0 ml-2" style={{ color: 'var(--theme-text-muted)' }} />
+          </button>
+
           <button onClick={() => setPickMode('job')}
             className="w-full flex items-center justify-between px-4 py-3 rounded-2xl touch-manipulation"
             style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
@@ -300,43 +321,24 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
             </div>
             <ChevronDown className="w-4 h-4 shrink-0 ml-2" style={{ color: 'var(--theme-text-muted)' }} />
           </button>
-
-          <button onClick={() => setPickMode('trip')}
-            className="w-full flex items-center justify-between px-4 py-3 rounded-2xl touch-manipulation"
-            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
-            <div className="flex-1 min-w-0 text-left">
-              <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: 'var(--theme-status-warning)' }}>Chuyến yêu cầu</p>
-              {selectedTrip ? (
-                <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                  <ContBadge type={selectedTrip.workType} />
-                  <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{selectedTrip.containerNumber}</span>
-                </div>
-              ) : (
-                <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>Chọn chuyến yêu cầu</p>
-              )}
-            </div>
-            <ChevronDown className="w-4 h-4 shrink-0 ml-2" style={{ color: 'var(--theme-text-muted)' }} />
-          </button>
         </div>
 
         {/* ── MIDDLE: Comparison rows (tappable) ── */}
-        {selectedJob && selectedTrip && editedJob && editedTrip ? (
+        {selectedTrip && selectedJob && editedTrip && editedJob ? (
           <div className="flex-1 overflow-y-auto px-4 pb-2 space-y-2">
             <ContCompareRow
-              left={jobConts} right={tripCont!} matched={contMatched}
+              left={tripCont!} right={jobConts} matched={contMatched}
               onTapLeft={() => openEdit('cont-left')}
               onTapRight={() => openEdit('cont-right')}
             />
-            <CompareRow label="Khách hàng" left={jobClient} right={tripClient} matched={clientMatched}
+            <CompareRow label="Khách hàng" left={tripClient} right={jobClient} matched={clientMatched}
               onTapLeft={() => openEdit('client-left')}
               onTapRight={() => openEdit('client-right')}
             />
-            <CompareRow label="Cung đường" left={jobRoute} right={tripRoute} matched={routeMatched}
+            <CompareRow label="Cung đường" left={tripRoute} right={jobRoute} matched={routeMatched}
               onTapLeft={() => openEdit('route-left')}
               onTapRight={() => openEdit('route-right')}
             />
-
-
           </div>
         ) : (
           <div className="flex-1 flex items-center justify-center px-4">
@@ -345,7 +347,7 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
         )}
 
         {/* ── BOTTOM ── */}
-        {selectedJob && selectedTrip && (
+        {selectedTrip && selectedJob && (
           <div className="px-4 pb-4 pt-2 shrink-0" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
             <Button onClick={handleMatch} disabled={submitting}
               className="w-full h-12 font-bold rounded-xl text-sm"
@@ -357,6 +359,19 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
       </div>
 
       {/* ── Picker modals ── */}
+      <PickModal open={pickMode === 'trip'} title="Chọn chuyến yêu cầu"
+        items={draftTrips} selectedId={selectedTripId} onSelect={setSelectedTripId} onClose={() => setPickMode(null)}
+        renderLabel={trip => (
+          <div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <ContBadge type={trip.workType} />
+              <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{trip.containerNumber}</span>
+            </div>
+            <p className="text-[11px] mt-1" style={{ color: 'var(--theme-text-muted)' }}>{trip.clientName}</p>
+            <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>{trip.route}</p>
+          </div>
+        )}
+      />
       <PickModal open={pickMode === 'job'} title="Chọn chuyến đã chạy"
         items={unmatchedJobs} selectedId={selectedJobId} onSelect={setSelectedJobId} onClose={() => setPickMode(null)}
         renderLabel={job => (
@@ -374,23 +389,34 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
           </div>
         )}
       />
-      <PickModal open={pickMode === 'trip'} title="Chọn chuyến yêu cầu"
-        items={draftTrips} selectedId={selectedTripId} onSelect={setSelectedTripId} onClose={() => setPickMode(null)}
-        renderLabel={trip => (
-          <div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <ContBadge type={trip.workType} />
-              <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{trip.containerNumber}</span>
-            </div>
-            <p className="text-[11px] mt-1" style={{ color: 'var(--theme-text-muted)' }}>{trip.clientName}</p>
-            <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>{trip.route}</p>
-          </div>
-        )}
-      />
 
       {/* ── Edit dialogs ── */}
-      {/* Container - left (đã chạy) */}
-      <EditDialog open={editDialog === 'cont-left'} title="Sửa container · Đã chạy" color="var(--theme-brand-primary)" onClose={saveDialog}>
+      {/* Container - left (yêu cầu / trip) */}
+      <EditDialog open={editDialog === 'cont-left'} title="Sửa container · Yêu cầu" color="var(--theme-status-warning)" onClose={saveDialog}>
+        <div className="rounded-xl p-3 space-y-3"
+          style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Loại công</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {WORK_TYPES.map(w => (
+                <button key={w} onClick={() => setDialogContLeft(prev => ({ ...prev, type: w }))}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold touch-manipulation"
+                  style={{ background: dialogContLeft.type === w ? 'var(--theme-status-warning)' : 'var(--theme-bg-tertiary)', color: dialogContLeft.type === w ? '#fff' : 'var(--theme-text-primary)' }}>
+                  {w}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Số cont</Label>
+            <Input value={dialogContLeft.number} onChange={e => setDialogContLeft(prev => ({ ...prev, number: e.target.value }))}
+              className="text-sm font-mono h-10" autoFocus />
+          </div>
+        </div>
+      </EditDialog>
+
+      {/* Container - right (đã chạy / work order) */}
+      <EditDialog open={editDialog === 'cont-right'} title="Sửa container · Đã chạy" color="var(--theme-brand-primary)" onClose={saveDialog}>
         {dialogContainers.map((c, i) => (
           <div key={i} className="rounded-xl p-3 space-y-3"
             style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
@@ -429,82 +455,58 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
         </button>
       </EditDialog>
 
-      {/* Container - right (yêu cầu) */}
-      <EditDialog open={editDialog === 'cont-right'} title="Sửa container · Yêu cầu" color="var(--theme-status-warning)" onClose={saveDialog}>
-        <div className="rounded-xl p-3 space-y-3"
-          style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Loại công</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {WORK_TYPES.map(w => (
-                <button key={w} onClick={() => setDialogContRight(prev => ({ ...prev, type: w }))}
-                  className="px-3 py-1.5 rounded-lg text-xs font-bold touch-manipulation"
-                  style={{ background: dialogContRight.type === w ? 'var(--theme-status-warning)' : 'var(--theme-bg-tertiary)', color: dialogContRight.type === w ? '#fff' : 'var(--theme-text-primary)' }}>
-                  {w}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Số cont</Label>
-            <Input value={dialogContRight.number} onChange={e => setDialogContRight(prev => ({ ...prev, number: e.target.value }))}
-              className="text-sm font-mono h-10" autoFocus />
-          </div>
-        </div>
-      </EditDialog>
-
-      {/* Khách hàng - left */}
-      <EditDialog open={editDialog === 'client-left'} title="Sửa khách hàng · Đã chạy" color="var(--theme-brand-primary)" onClose={saveDialog}>
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</Label>
-          <SheetPicker
-            label="Chọn khách hàng"
-            placeholder="Chọn khách hàng..."
-            value={editedJob?.clientName ?? ''}
-            options={clients.map(c => ({ value: c.name, label: c.name }))}
-            onChange={v => setEditedJob(prev => prev ? { ...prev, clientName: v } : null)}
-          />
-        </div>
-      </EditDialog>
-
-      {/* Khách hàng - right */}
-      <EditDialog open={editDialog === 'client-right'} title="Sửa khách hàng · Yêu cầu" color="var(--theme-status-warning)" onClose={saveDialog}>
+      {/* Khách hàng - left (yêu cầu / trip) */}
+      <EditDialog open={editDialog === 'client-left'} title="Sửa khách hàng · Yêu cầu" color="var(--theme-status-warning)" onClose={saveDialog}>
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</Label>
           <SheetPicker
             label="Chọn khách hàng"
             placeholder="Chọn khách hàng..."
             value={editedTrip?.clientName ?? ''}
-            options={clients.map(c => ({ value: c.name, label: c.name }))}
+            options={clientOptions}
             onChange={v => setEditedTrip(prev => prev ? { ...prev, clientName: v } : null)}
           />
         </div>
       </EditDialog>
 
-      {/* Cung đường - left */}
-      <EditDialog open={editDialog === 'route-left'} title="Sửa cung đường · Đã chạy" color="var(--theme-brand-primary)" onClose={saveDialog}>
+      {/* Khách hàng - right (đã chạy / job) */}
+      <EditDialog open={editDialog === 'client-right'} title="Sửa khách hàng · Đã chạy" color="var(--theme-brand-primary)" onClose={saveDialog}>
         <div className="space-y-1.5">
-          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</Label>
+          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</Label>
           <SheetPicker
-            label="Chọn cung đường"
-            placeholder="Chọn cung đường..."
-            value={editedJob?.route ?? ''}
-            options={routes.map(r => ({ value: r.route, label: r.route }))}
-            onChange={v => setEditedJob(prev => prev ? { ...prev, route: v } : null)}
+            label="Chọn khách hàng"
+            placeholder="Chọn khách hàng..."
+            value={editedJob?.clientName ?? ''}
+            options={clientOptions}
+            onChange={v => setEditedJob(prev => prev ? { ...prev, clientName: v } : null)}
           />
         </div>
       </EditDialog>
 
-      {/* Cung đường - right */}
-      <EditDialog open={editDialog === 'route-right'} title="Sửa cung đường · Yêu cầu" color="var(--theme-status-warning)" onClose={saveDialog}>
+      {/* Cung đường - left (yêu cầu / trip) */}
+      <EditDialog open={editDialog === 'route-left'} title="Sửa cung đường · Yêu cầu" color="var(--theme-status-warning)" onClose={saveDialog}>
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</Label>
           <SheetPicker
             label="Chọn cung đường"
             placeholder="Chọn cung đường..."
             value={editedTrip?.route ?? ''}
-            options={routes.map(r => ({ value: r.route, label: r.route }))}
+            options={routeOptions}
             onChange={v => setEditedTrip(prev => prev ? { ...prev, route: v } : null)}
+          />
+        </div>
+      </EditDialog>
+
+      {/* Cung đường - right (đã chạy / job) */}
+      <EditDialog open={editDialog === 'route-right'} title="Sửa cung đường · Đã chạy" color="var(--theme-brand-primary)" onClose={saveDialog}>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</Label>
+          <SheetPicker
+            label="Chọn cung đường"
+            placeholder="Chọn cung đường..."
+            value={editedJob?.route ?? ''}
+            options={routeOptions}
+            onChange={v => setEditedJob(prev => prev ? { ...prev, route: v } : null)}
           />
         </div>
       </EditDialog>
