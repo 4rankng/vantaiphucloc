@@ -3,28 +3,57 @@ import { useAppStore } from '@/hooks/use-app-store'
 import { apiClient } from '@/services/api'
 import { createTripOrder } from '@/services/sandbox/sandboxClient'
 import { ContBadge } from '@/components/shared/ContBadge'
-import { formatCurrencyFull, type WorkOrder, type TripOrder, type WorkType } from '@/data/mockData'
-import { Building2, Route, Truck, Check, ChevronDown, Wallet } from 'lucide-react'
+import { formatCurrencyFull, type WorkOrder, type TripOrder } from '@/data/mockData'
+import { Building2, Route, Check, ChevronDown, Wallet, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button/Button'
 
-// ─── Compact field row ────────────────────────────────────────────────────────
-function Field({ label, value, icon: Icon }: { label: string; value?: string; icon?: React.ElementType }) {
+// ─── Compact field row with optional match tick ───────────────────────────────
+function Field({ label, value, icon: Icon, matched }: {
+  label: string; value?: string; icon?: React.ElementType; matched?: boolean
+}) {
   return (
     <div className="flex items-start gap-2 py-1.5">
-      {Icon && (
+      {matched ? (
+        <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" style={{ color: 'var(--theme-status-success)' }} />
+      ) : Icon ? (
         <div className="w-5 h-5 rounded flex items-center justify-center shrink-0 mt-0.5" style={{ background: 'var(--theme-bg-tertiary)' }}>
           <Icon className="w-3 h-3" style={{ color: 'var(--theme-text-muted)' }} />
         </div>
-      )}
+      ) : null}
       <div className="min-w-0 flex-1">
         <p className="text-[9px] leading-tight" style={{ color: 'var(--theme-text-muted)' }}>{label}</p>
-        <p className="text-xs font-medium leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{value || '-'}</p>
+        <p className="text-xs leading-tight" style={{
+          color: matched ? 'var(--theme-status-success)' : 'var(--theme-text-primary)',
+          fontWeight: matched ? 600 : 500,
+        }}>{value || '-'}</p>
       </div>
     </div>
   )
 }
 
-// ─── Picker dropdown ──────────────────────────────────────────────────────────
+// ─── Container row (type + number as one unit, with match tick) ───────────────
+function ContRow({ type, number, matched }: { type: string; number: string; matched?: boolean }) {
+  return (
+    <div className="flex items-start gap-2 py-1.5">
+      {matched ? (
+        <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" style={{ color: 'var(--theme-status-success)' }} />
+      ) : (
+        <div className="w-5 h-5 rounded flex items-center justify-center shrink-0 mt-0.5" style={{ background: 'var(--theme-bg-tertiary)' }}>
+          <span className="text-[8px] font-bold" style={{ color: 'var(--theme-text-muted)' }}>□</span>
+        </div>
+      )}
+      <div className="min-w-0 flex-1 flex items-center gap-1.5">
+        <ContBadge type={type as TripOrder['workType']} />
+        <span className="text-xs font-mono font-medium" style={{
+          color: matched ? 'var(--theme-status-success)' : 'var(--theme-text-primary)',
+          fontWeight: matched ? 600 : 500,
+        }}>{number || '-'}</span>
+      </div>
+    </div>
+  )
+}
+
+// ─── Picker dropdown (full width overlay, no truncation) ──────────────────────
 function Picker<T extends { id: string }>({
   items,
   selectedId,
@@ -39,34 +68,47 @@ function Picker<T extends { id: string }>({
   renderLabel: (item: T) => React.ReactNode
 }) {
   const [open, setOpen] = useState(false)
-
   const selected = items.find(i => i.id === selectedId)
 
   return (
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all touch-manipulation"
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl transition-all touch-manipulation"
         style={{
           background: selected ? 'var(--theme-bg-secondary)' : 'var(--theme-bg-tertiary)',
           border: open ? '2px solid var(--theme-brand-primary)' : '1px solid var(--theme-border-default)',
         }}
       >
-        {selected ? renderLabel(selected) : (
-          <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{placeholder}</span>
-        )}
+        <span className="min-w-0 flex-1 text-left" style={{ overflow: 'visible' }}>
+          {selected ? renderLabel(selected) : (
+            <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{placeholder}</span>
+          )}
+        </span>
         <ChevronDown className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
       </button>
 
       {open && (
-        <div className="absolute z-50 left-0 right-0 mt-1 rounded-xl overflow-hidden max-h-60 overflow-y-auto"
-          style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
+        <div
+          className="fixed z-[100] rounded-xl overflow-hidden max-h-[50dvh] overflow-y-auto"
+          style={{
+            background: 'var(--theme-bg-secondary)',
+            boxShadow: 'var(--theme-shadow-card)',
+            border: '1px solid var(--theme-border-default)',
+            // Position below the trigger but extend beyond parent grid
+            left: 'max(8px, 50vw - 45vw)',
+            right: 'max(8px, 50vw - 45vw)',
+            top: 'auto',
+            width: '90vw',
+            maxWidth: '500px',
+          }}
+        >
           {items.length === 0 ? (
             <p className="text-xs text-center py-4" style={{ color: 'var(--theme-text-muted)' }}>Không có dữ liệu</p>
           ) : items.map(item => (
             <button key={item.id}
               onClick={() => { onSelect(item.id); setOpen(false) }}
-              className="w-full text-left px-3 py-2.5 transition-colors touch-manipulation"
+              className="w-full text-left px-4 py-3 transition-colors touch-manipulation"
               style={{
                 background: item.id === selectedId ? 'var(--theme-brand-primary-light)' : 'transparent',
                 borderBottom: '1px solid var(--theme-border-light)',
@@ -88,7 +130,6 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
-  // Selections
   const [selectedJobId, setSelectedJobId] = useState(initialJobId)
   const [selectedTripId, setSelectedTripId] = useState('')
 
@@ -111,6 +152,34 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
 
   const selectedJob = useMemo(() => workOrders.find(w => w.id === selectedJobId), [workOrders, selectedJobId])
   const selectedTrip = useMemo(() => trips.find(t => t.id === selectedTripId), [trips, selectedTripId])
+
+  // Match score: cont sets + khách hàng + cung đường
+  const getMatchScore = () => {
+    if (!selectedJob || !selectedTrip) return { matches: 0, total: 0 }
+    let m = 0
+    let total = 0
+    // Container sets: each (type + number) pair from job compared to trip's single container
+    // Job can have multiple containers, trip has one — count how many job containers match trip
+    const jobConts = selectedJob.containers
+    const tripCont = { type: selectedTrip.workType, number: selectedTrip.containerNumber }
+    // Check if trip's container matches any job container
+    total += Math.max(jobConts.length, 1) // count container sets
+    const contMatch = jobConts.some(c => c.workType === tripCont.type && c.containerNumber === tripCont.number)
+    if (contMatch) m += 1
+    // Khách hàng
+    total += 1
+    if (selectedJob.clientName === selectedTrip.clientName) m += 1
+    // Cung đường
+    total += 1
+    if (selectedJob.route === selectedTrip.route) m += 1
+    return { matches: m, total }
+  }
+
+  // Check if a specific container from job matches trip
+  const contMatched = (type: string, number: string) => {
+    if (!selectedTrip) return false
+    return type === selectedTrip.workType && number === selectedTrip.containerNumber
+  }
 
   const handleMatch = async () => {
     if (!selectedJob || !selectedTrip || submitting) return
@@ -143,16 +212,6 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
     return <div className="space-y-2">{[1, 2].map(i => <div key={i} className="h-20 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}</div>
   }
 
-  // Count matching fields for comparison
-  const getMatchScore = () => {
-    if (!selectedJob || !selectedTrip) return { matches: 0, total: 4 }
-    let m = 0
-    if (selectedJob.clientName === selectedTrip.clientName) m++
-    if (selectedJob.route === selectedTrip.route) m++
-    if (selectedJob.containers[0]?.workType === selectedTrip.workType) m++
-    if (selectedJob.containers[0]?.containerNumber === selectedTrip.containerNumber) m++
-    return { matches: m, total: 4 }
-  }
   const score = getMatchScore()
 
   return (
@@ -170,10 +229,12 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
             onSelect={setSelectedJobId}
             placeholder="Chọn chuyến"
             renderLabel={job => (
-              <div className="flex items-center gap-1.5 min-w-0">
-                <ContBadge type={job.containers[0]?.workType ?? 'E20'} />
-                <span className="text-[11px] font-mono font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
-                  {job.containers.map(c => c.containerNumber).join(' · ') || job.id}
+              <div className="flex flex-wrap items-center gap-1.5">
+                {job.containers.map(c => (
+                  <ContBadge key={c.containerNumber} type={c.workType} />
+                ))}
+                <span className="text-[11px] font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+                  {job.containers.map(c => c.containerNumber).join(' · ')}
                 </span>
               </div>
             )}
@@ -191,10 +252,13 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
             onSelect={setSelectedTripId}
             placeholder="Chọn chuyến"
             renderLabel={trip => (
-              <div className="flex items-center gap-1.5 min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <ContBadge type={trip.workType} />
-                <span className="text-[11px] font-mono font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
+                <span className="text-[11px] font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
                   {trip.containerNumber}
+                </span>
+                <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>
+                  — {trip.clientName}
                 </span>
               </div>
             )}
@@ -205,25 +269,24 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
       {/* ── MIDDLE: Side-by-side comparison cards ── */}
       <div className="flex-1 overflow-y-auto px-4 pb-2">
         <div className="grid grid-cols-2 gap-2">
-          {/* Left card: Chuyến đã chạy detail */}
+          {/* Left card: Chuyến đã chạy */}
           <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
             <div className="px-3 py-1.5" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
               <p className="text-[10px] font-bold">Đã chạy</p>
             </div>
             {selectedJob ? (
               <div className="px-3 py-2">
-                <div className="flex items-center gap-1.5 mb-1.5">
+                <div className="space-y-0" style={{ borderBottom: '1px solid var(--theme-border-light)', paddingBottom: 4, marginBottom: 4 }}>
                   {selectedJob.containers.map(c => (
-                    <ContBadge key={c.containerNumber} type={c.workType} />
+                    <ContRow key={c.containerNumber} type={c.workType} number={c.containerNumber}
+                      matched={selectedTrip && contMatched(c.workType, c.containerNumber)} />
                   ))}
                 </div>
-                <div className="text-[11px] font-mono font-semibold mb-2" style={{ color: 'var(--theme-text-primary)' }}>
-                  {selectedJob.containers.map(c => c.containerNumber).join(' · ')}
-                </div>
-                <div className="space-y-0" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
-                  <Field icon={Truck} label="Biển số" value={selectedJob.tractorPlate} />
-                  <Field icon={Building2} label="Khách hàng" value={selectedJob.clientName} />
-                  <Field icon={Route} label="Cung đường" value={selectedJob.route} />
+                <div className="space-y-0">
+                  <Field icon={Building2} label="Khách hàng" value={selectedJob.clientName}
+                    matched={selectedTrip && selectedJob.clientName === selectedTrip.clientName} />
+                  <Field icon={Route} label="Cung đường" value={selectedJob.route}
+                    matched={selectedTrip && selectedJob.route === selectedTrip.route} />
                   <Field icon={Wallet} label="Lương + Phụ cấp" value={`${formatCurrencyFull(selectedJob.driverSalary)} + ${formatCurrencyFull(selectedJob.allowance)}`} />
                 </div>
               </div>
@@ -234,23 +297,22 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
             )}
           </div>
 
-          {/* Right card: Chuyến yêu cầu detail */}
+          {/* Right card: Chuyến yêu cầu */}
           <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
             <div className="px-3 py-1.5" style={{ background: 'var(--theme-status-warning-light)' }}>
               <p className="text-[10px] font-bold" style={{ color: 'var(--theme-status-warning)' }}>Yêu cầu</p>
             </div>
             {selectedTrip ? (
               <div className="px-3 py-2">
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <ContBadge type={selectedTrip.workType} />
+                <div className="space-y-0" style={{ borderBottom: '1px solid var(--theme-border-light)', paddingBottom: 4, marginBottom: 4 }}>
+                  <ContRow type={selectedTrip.workType} number={selectedTrip.containerNumber}
+                    matched={selectedJob && selectedJob.containers.some(c => c.workType === selectedTrip.workType && c.containerNumber === selectedTrip.containerNumber)} />
                 </div>
-                <div className="text-[11px] font-mono font-semibold mb-2" style={{ color: 'var(--theme-text-primary)' }}>
-                  {selectedTrip.containerNumber}
-                </div>
-                <div className="space-y-0" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
-                  {/* No tài xế — this is from khách hàng */}
-                  <Field icon={Building2} label="Khách hàng" value={selectedTrip.clientName} />
-                  <Field icon={Route} label="Cung đường" value={selectedTrip.route} />
+                <div className="space-y-0">
+                  <Field icon={Building2} label="Khách hàng" value={selectedTrip.clientName}
+                    matched={selectedJob && selectedTrip.clientName === selectedJob.clientName} />
+                  <Field icon={Route} label="Cung đường" value={selectedTrip.route}
+                    matched={selectedJob && selectedTrip.route === selectedJob.route} />
                   <Field icon={Wallet} label="Lương + Phụ cấp" value={`${formatCurrencyFull(selectedTrip.driverSalary)} + ${formatCurrencyFull(selectedTrip.allowance)}`} />
                 </div>
               </div>
@@ -266,11 +328,11 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
         {selectedJob && selectedTrip && (
           <div className="mt-3 rounded-xl p-2.5 text-center"
             style={{
-              background: score.matches >= 3 ? 'var(--theme-status-success-light)' : score.matches >= 2 ? 'var(--theme-status-warning-light)' : 'var(--theme-bg-tertiary)',
+              background: score.matches === score.total ? 'var(--theme-status-success-light)' : score.matches > 0 ? 'var(--theme-status-warning-light)' : 'var(--theme-bg-tertiary)',
             }}>
             <p className="text-[11px] font-semibold"
-              style={{ color: score.matches >= 3 ? 'var(--theme-status-success)' : score.matches >= 2 ? 'var(--theme-status-warning)' : 'var(--theme-text-muted)' }}>
-              {score.matches >= 3 ? '✓ Khớp tốt' : score.matches >= 2 ? 'Khớp một phần' : 'Kiểm tra lại'}
+              style={{ color: score.matches === score.total ? 'var(--theme-status-success)' : score.matches > 0 ? 'var(--theme-status-warning)' : 'var(--theme-text-muted)' }}>
+              {score.matches === score.total ? '✓ Khớp hoàn toàn' : score.matches > 0 ? 'Khớp một phần' : 'Kiểm tra lại'}
               {' '}({score.matches}/{score.total})
             </p>
           </div>
