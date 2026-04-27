@@ -40,7 +40,7 @@ function DoiSoatCard({ job, onClick }: { job: WorkOrder; onClick: () => void }) 
         </div>
         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ml-2"
           style={{ background: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' }}>
-          Cần đối soát
+          Đối soát tài xế
         </span>
       </div>
       <p className="text-[11px] mt-1" style={{ color: 'var(--theme-text-muted)' }}>
@@ -181,7 +181,7 @@ export function AccountantDashboard() {
       {unmatchedJobs.length > 0 && (
         <div className="px-4 mt-4">
           <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--theme-status-warning)' }}>
-            Cần đối soát ({unmatchedJobs.length})
+            Đối soát tài xế ({unmatchedJobs.length})
           </p>
           <div className="space-y-2">
             {visibleJobs.map(job => (
@@ -217,7 +217,7 @@ export function AccountantDashboard() {
       {pendingTrips.length > 0 && (
         <div className="px-4 mt-4">
           <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--theme-status-warning)' }}>
-            Chuyến chờ đối soát ({pendingTrips.length})
+            Đối soát khách hàng ({pendingTrips.length})
           </p>
           <div className="space-y-2">
             {pendingTrips.map(trip => (
@@ -232,7 +232,7 @@ export function AccountantDashboard() {
                   </div>
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
                     style={{ background: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' }}>
-                    Chờ đối soát
+                    Đối soát khách hàng
                   </span>
                 </div>
                 <p className="text-[11px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
