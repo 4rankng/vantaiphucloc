@@ -1,8 +1,9 @@
 import { useEffect, useState, useMemo } from 'react'
-import { Plus, Building2, Route, Settings, Wallet } from 'lucide-react'
+import { Plus, Building2, Route, Settings, Wallet, ChevronDown } from 'lucide-react'
 import { useAppStore } from '@/hooks/use-app-store'
 import { apiClient } from '@/services/api'
 import { formatCurrencyFull, type WorkOrder, type Driver, type TripOrder } from '@/data/mockData'
+import { ContBadge } from '@/components/shared/ContBadge'
 
 const QUICK_ACTIONS = [
   { label: 'Tạo chuyến', icon: Plus, path: '/accountant/create-trip' },
@@ -11,12 +12,42 @@ const QUICK_ACTIONS = [
   { label: 'Thiết lập', icon: Settings, path: '/accountant/salary-setup' },
 ] as const
 
+// Shared card component for unmatched jobs
+function DoiSoatCard({ job, onClick }: { job: WorkOrder; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full text-left rounded-2xl p-3 transition-all active:scale-[0.98] touch-manipulation"
+      style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {job.containers[0] && <ContBadge type={job.containers[0].workType} />}
+          <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+            {job.containers[0]?.containerNumber || job.id}
+          </span>
+        </div>
+        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+          style={{ background: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' }}>
+          Cần đối soát
+        </span>
+      </div>
+      <p className="text-[11px] mt-1" style={{ color: 'var(--theme-text-muted)' }}>
+        {job.driverName} · {job.tractorPlate}
+      </p>
+      <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
+        {job.clientName} · {job.route}
+      </p>
+    </button>
+  )
+}
+
 export function AccountantDashboard() {
   const { navigate } = useAppStore()
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
   const [trips, setTrips] = useState<TripOrder[]>([])
   const [drivers, setDrivers] = useState<Driver[]>([])
   const [loading, setLoading] = useState(true)
+  const [showAllJobs, setShowAllJobs] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -32,7 +63,6 @@ export function AccountantDashboard() {
     return () => { cancelled = true }
   }, [])
 
-  // Same matching logic as WorkOrderList — consistent counts
   const matchedIds = useMemo(() => new Set(trips.flatMap(t => t.matchedWorkOrderIds)), [trips])
   const unmatchedJobs = useMemo(() => workOrders.filter(w => !matchedIds.has(w.id)), [workOrders, matchedIds])
   const pendingTrips = useMemo(() => trips.filter(t => t.status === 'DRAFT'), [trips])
@@ -48,6 +78,9 @@ export function AccountantDashboard() {
     })
     return Array.from(map.entries()).map(([id, data]) => ({ id, ...data }))
   }, [matchedJobs])
+
+  const INITIAL_SHOW = 3
+  const visibleJobs = showAllJobs ? unmatchedJobs : unmatchedJobs.slice(0, INITIAL_SHOW)
 
   if (loading) {
     return (
@@ -106,65 +139,49 @@ export function AccountantDashboard() {
       {/* Can doi soat — unmatched jobs */}
       {unmatchedJobs.length > 0 && (
         <div className="px-4 mt-4">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-status-warning)' }}>
-              Cần đối soát ({unmatchedJobs.length})
-            </p>
-            <button onClick={() => navigate('/accountant/work-orders')} className="text-[11px] font-medium" style={{ color: 'var(--theme-brand-primary)' }}>
-              Xem tất cả →
-            </button>
-          </div>
+          <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--theme-status-warning)' }}>
+            Cần đối soát ({unmatchedJobs.length})
+          </p>
           <div className="space-y-2">
-            {unmatchedJobs.slice(0, 5).map(job => (
-              <button key={job.id}
-                onClick={() => navigate(`/accountant/match/${job.id}`)}
-                className="w-full text-left rounded-2xl p-3 transition-all active:scale-[0.98] touch-manipulation"
-                style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                    {job.driverName}
-                  </p>
-                  {job.containers[0] && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
-                      {job.containers[0].workType}
-                    </span>
-                  )}
-                </div>
-                <p className="text-[11px] mt-0.5 font-mono" style={{ color: 'var(--theme-text-muted)' }}>
-                  {job.tractorPlate}
-                </p>
-                <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
-                  {job.clientName} · {job.route}
-                </p>
-              </button>
+            {visibleJobs.map(job => (
+              <DoiSoatCard key={job.id} job={job} onClick={() => navigate(`/accountant/match/${job.id}`)} />
             ))}
           </div>
+          {unmatchedJobs.length > INITIAL_SHOW && !showAllJobs && (
+            <button
+              onClick={() => setShowAllJobs(true)}
+              className="w-full flex items-center justify-center gap-1.5 py-2.5 mt-2 rounded-2xl text-xs font-medium transition-all active:scale-[0.98] touch-manipulation"
+              style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-muted)' }}>
+              <ChevronDown className="w-3.5 h-3.5" /> Xem thêm
+            </button>
+          )}
         </div>
       )}
 
       {/* Trips pending doi soat */}
       {pendingTrips.length > 0 && (
         <div className="px-4 mt-4">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-status-warning)' }}>
-              Chuyến chờ đối soát ({pendingTrips.length})
-            </p>
-          </div>
+          <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--theme-status-warning)' }}>
+            Chuyến chờ đối soát ({pendingTrips.length})
+          </p>
           <div className="space-y-2">
-            {pendingTrips.slice(0, 3).map(trip => (
+            {pendingTrips.map(trip => (
               <button key={trip.id}
                 onClick={() => navigate(`/accountant/trip/${trip.id}`)}
                 className="w-full text-left rounded-2xl p-3 transition-all active:scale-[0.98] touch-manipulation"
                 style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{trip.clientName}</p>
+                  <div className="flex items-center gap-2">
+                    <ContBadge type={trip.workType} />
+                    <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{trip.containerNumber}</span>
+                  </div>
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
                     style={{ background: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' }}>
                     Chờ đối soát
                   </span>
                 </div>
                 <p className="text-[11px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-                  {trip.driverName} · {trip.route}
+                  {trip.clientName} · {trip.route}
                 </p>
               </button>
             ))}
