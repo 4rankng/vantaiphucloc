@@ -4,7 +4,7 @@ import { apiClient } from '@/services/api'
 import { updateWorkOrder, createTripOrder, updateTripOrder } from '@/services/sandbox/sandboxClient'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { WORK_TYPES, type WorkOrder, type TripOrder, type WorkType } from '@/data/mockData'
-import { Check, ChevronDown, CheckCircle2, ArrowLeftRight, X, Pencil } from 'lucide-react'
+import { Check, ChevronDown, CheckCircle2, ArrowLeftRight, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button/Button'
 import { Input } from '@/components/ui/Input/Input'
 import { Label } from '@/components/ui/Label/Label'
@@ -51,10 +51,7 @@ function EditDialog({ open, title, color, onClose, children }: {
   return (
     <div className="fixed inset-0 z-[200] flex flex-col" style={{ background: 'var(--theme-bg-primary)' }}>
       <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
-        <div className="flex items-center gap-2">
-          <Pencil className="w-4 h-4" style={{ color }} />
-          <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>{title}</p>
-        </div>
+        <p className="text-sm font-bold" style={{ color }}>{title}</p>
         <button onClick={onClose} className="text-xs font-medium px-3 py-1.5 rounded-lg touch-manipulation" style={{ color: 'var(--theme-brand-primary)' }}>
           Xong
         </button>
@@ -87,7 +84,6 @@ function CompareRow({ label, left, right, matched, onTapLeft, onTapRight }: {
           <p className="text-[9px] font-medium" style={{ color: 'var(--theme-brand-primary)' }}>Đã chạy</p>
           <div className="flex items-center gap-1">
             <p className="text-xs font-medium" style={{ color: 'var(--theme-text-primary)' }}>{left || '-'}</p>
-            <Pencil className="w-2.5 h-2.5 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
           </div>
         </button>
         <ArrowLeftRight className="w-3.5 h-3.5 shrink-0" style={{ color: matched ? 'var(--theme-status-success)' : 'var(--theme-text-muted)' }} />
@@ -95,7 +91,6 @@ function CompareRow({ label, left, right, matched, onTapLeft, onTapRight }: {
           <p className="text-[9px] font-medium" style={{ color: 'var(--theme-status-warning)' }}>Yêu cầu</p>
           <div className="flex items-center gap-1">
             <p className="text-xs font-medium" style={{ color: 'var(--theme-text-primary)' }}>{right || '-'}</p>
-            <Pencil className="w-2.5 h-2.5 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
           </div>
         </button>
       </div>
@@ -130,7 +125,6 @@ function ContCompareRow({ left, right, matched, onTapLeft, onTapRight }: {
               <span className="text-[11px] font-mono font-medium" style={{ color: 'var(--theme-text-primary)' }}>{c.number}</span>
             </div>
           ))}
-          <Pencil className="w-2.5 h-2.5 mt-0.5" style={{ color: 'var(--theme-text-muted)' }} />
         </button>
         <div className="flex items-center pt-3">
           <ArrowLeftRight className="w-3.5 h-3.5" style={{ color: matched ? 'var(--theme-status-success)' : 'var(--theme-text-muted)' }} />
@@ -141,7 +135,6 @@ function ContCompareRow({ left, right, matched, onTapLeft, onTapRight }: {
             <ContBadge type={right.type as TripOrder['workType']} />
             <span className="text-[11px] font-mono font-medium" style={{ color: 'var(--theme-text-primary)' }}>{right.number}</span>
           </div>
-          <Pencil className="w-2.5 h-2.5 mt-0.5" style={{ color: 'var(--theme-text-muted)' }} />
         </button>
       </div>
     </div>
@@ -288,11 +281,13 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
             <div className="flex-1 min-w-0 text-left">
               <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: 'var(--theme-brand-primary)' }}>Chuyến đã chạy</p>
               {selectedJob ? (
-                <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                  {selectedJob.containers.map(c => <ContBadge key={c.containerNumber} type={c.workType} />)}
-                  <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                    {selectedJob.containers.map(c => c.containerNumber).join(' · ')}
-                  </span>
+                <div className="flex flex-wrap items-center gap-2 mt-1">
+                  {selectedJob.containers.map(c => (
+                    <span key={c.containerNumber} className="flex items-center gap-1">
+                      <ContBadge type={c.workType} />
+                      <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
+                    </span>
+                  ))}
                 </div>
               ) : (
                 <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>Chọn chuyến đã chạy</p>
@@ -361,11 +356,13 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
         items={unmatchedJobs} selectedId={selectedJobId} onSelect={setSelectedJobId} onClose={() => setPickMode(null)}
         renderLabel={job => (
           <div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {job.containers.map(c => <ContBadge key={c.containerNumber} type={c.workType} />)}
-              <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                {job.containers.map(c => c.containerNumber).join(' · ')}
-              </span>
+            <div className="flex flex-wrap items-center gap-2">
+              {job.containers.map(c => (
+                <span key={c.containerNumber} className="flex items-center gap-1">
+                  <ContBadge type={c.workType} />
+                  <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
+                </span>
+              ))}
             </div>
             <p className="text-[11px] mt-1" style={{ color: 'var(--theme-text-muted)' }}>{job.driverName} · {job.clientName}</p>
             <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>{job.route}</p>
