@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { Plus, Building2, Route, Settings, Wallet, ChevronDown } from 'lucide-react'
+import { Plus, Building2, Route, Settings, Wallet, ChevronDown, Receipt } from 'lucide-react'
 import { useAppStore } from '@/hooks/use-app-store'
 import { apiClient } from '@/services/api'
 import { formatCurrencyFull, type WorkOrder, type Driver, type TripOrder } from '@/data/mockData'
@@ -7,6 +7,7 @@ import { ContBadge } from '@/components/shared/ContBadge'
 
 const QUICK_ACTIONS = [
   { label: 'Tạo chuyến', icon: Plus, path: '/accountant/create-trip' },
+  { label: 'Bảng giá', icon: Receipt, path: '/accountant/pricing' },
   { label: 'Khách hàng', icon: Building2, path: '/accountant/clients' },
   { label: 'Cung đường', icon: Route, path: '/accountant/routes' },
   { label: 'Thiết lập', icon: Settings, path: '/accountant/salary-setup' },
@@ -134,7 +135,7 @@ export function AccountantDashboard() {
   return (
     <div className="pb-6">
       {/* Quick actions */}
-      <div className="px-4 pt-3 grid grid-cols-4 gap-2">
+      <div className="px-4 pt-3 grid grid-cols-5 gap-2">
         {QUICK_ACTIONS.map(({ label, icon: Icon, path }) => (
           <button
             key={path}
