@@ -1,8 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
-import { useAppStore } from '@/hooks/use-app-store'
 import { apiClient } from '@/services/api'
 import { getPricings, createPricing, updatePricing, deletePricing } from '@/services/sandbox/sandboxClient'
-import { formatCurrencyFull, WORK_TYPES, WORK_TYPE_LABELS, type Pricing, type WorkType, type Client, type RoutePrice } from '@/data/mockData'
+import { formatCurrencyFull, WORK_TYPES, WORK_TYPE_LABELS, type Pricing, type PricingLine, type WorkType, type Client, type RoutePrice } from '@/data/mockData'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { Button } from '@/components/ui/Button/Button'
 import { Input } from '@/components/ui/Input/Input'
@@ -11,24 +10,21 @@ import { SheetPicker } from '@/components/shared/SheetPicker'
 import { Plus, Pencil, Trash2, X, Check, Search } from 'lucide-react'
 
 // ─── Pricing Card ─────────────────────────────────────────────────────────────
-function PricingCard({
-  pricing,
-  onEdit,
-  onDelete,
-}: {
-  pricing: Pricing
-  onEdit: () => void
-  onDelete: () => void
+function PricingCard({ pricing, onEdit, onDelete }: {
+  pricing: Pricing; onEdit: () => void; onDelete: () => void
 }) {
   return (
     <div className="rounded-2xl p-3 space-y-2"
       style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <ContBadge type={pricing.workType} />
-          <span className="text-[10px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>
-            {WORK_TYPE_LABELS[pricing.workType]}
-          </span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {pricing.lines.map((line, i) => (
+            <span key={i} className="flex items-center gap-1">
+              {i > 0 && <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>+</span>}
+              <ContBadge type={line.workType} />
+              <span className="text-[11px] font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>×{line.quantity}</span>
+            </span>
+          ))}
         </div>
         <div className="flex items-center gap-1">
           <button onClick={onEdit} className="p-1.5 rounded-lg touch-manipulation" style={{ color: 'var(--theme-text-muted)' }}>
@@ -59,23 +55,70 @@ function PricingCard({
   )
 }
 
-// ─── Pricing Form (add / edit) ────────────────────────────────────────────────
-function PricingForm({
-  initial,
-  clients,
-  routes,
-  onSave,
-  onCancel,
-}: {
+// ─── Line editor ──────────────────────────────────────────────────────────────
+function LineEditor({ lines, onChange }: {
+  lines: PricingLine[]; onChange: (lines: PricingLine[]) => void
+}) {
+  const addLine = () => onChange([...lines, { workType: 'E20', quantity: 1 }])
+  const removeLine = (idx: number) => onChange(lines.filter((_, i) => i !== idx))
+  const updateLine = (idx: number, field: keyof PricingLine, value: WorkType | number) => {
+    onChange(lines.map((l, i) => i === idx ? { ...l, [field]: value } : l))
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Công</Label>
+        <button onClick={addLine} className="flex items-center gap-1 text-xs font-medium touch-manipulation" style={{ color: 'var(--theme-brand-primary)' }}>
+          <Plus className="w-3.5 h-3.5" /> Thêm loại
+        </button>
+      </div>
+      {lines.map((line, i) => (
+        <div key={i} className="flex items-center gap-2 rounded-xl p-2"
+          style={{ background: 'var(--theme-bg-tertiary)', border: '1px solid var(--theme-border-default)' }}>
+          {/* Type selector */}
+          <div className="flex gap-0.5 shrink-0">
+            {WORK_TYPES.map(w => (
+              <button key={w} onClick={() => updateLine(i, 'workType', w)}
+                className="px-1.5 py-1 rounded text-[9px] font-bold touch-manipulation"
+                style={{
+                  background: line.workType === w ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
+                  color: line.workType === w ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
+                }}>
+                {w}
+              </button>
+            ))}
+          </div>
+          {/* Quantity */}
+          <div className="flex items-center gap-1">
+            <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>×‌</span>
+            <Input type="number" min={1} value={line.quantity} onChange={e => updateLine(i, 'quantity', Math.max(1, Number(e.target.value)))}
+              className="text-xs font-bold h-8 w-14 text-center" />
+          </div>
+          {/* Remove */}
+          {lines.length > 1 && (
+            <button onClick={() => removeLine(i)} className="touch-manipulation shrink-0" style={{ color: 'var(--theme-status-error)' }}>
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── Pricing Form ─────────────────────────────────────────────────────────────
+function PricingForm({ initial, clients, routes, onSave, onCancel }: {
   initial?: Pricing
-  clients: Client[]
-  routes: RoutePrice[]
+  clients: Client[]; routes: RoutePrice[]
   onSave: (data: Omit<Pricing, 'id' | 'createdAt' | 'updatedAt'>) => void
   onCancel: () => void
 }) {
   const [clientId, setClientId] = useState(initial?.clientId ?? '')
-  const [workType, setWorkType] = useState<WorkType>(initial?.workType ?? 'E20')
   const [route, setRoute] = useState(initial?.route ?? '')
+  const [lines, setLines] = useState<PricingLine[]>(
+    initial?.lines ?? [{ workType: 'E20' as WorkType, quantity: 1 }]
+  )
   const [unitPrice, setUnitPrice] = useState(initial?.unitPrice ?? 0)
   const [driverSalary, setDriverSalary] = useState(initial?.driverSalary ?? 0)
   const [allowance, setAllowance] = useState(initial?.allowance ?? 0)
@@ -83,10 +126,12 @@ function PricingForm({
   const clientOptions = useMemo(() => clients.map(c => ({ value: c.id, label: c.name })), [clients])
   const routeOptions = useMemo(() => routes.map(r => ({ value: r.route, label: r.route })), [routes])
   const clientName = clients.find(c => c.id === clientId)?.name ?? ''
+  // Derive primary workType from first line for compatibility
+  const workType = lines[0]?.workType ?? 'E20'
 
   const handleSubmit = () => {
-    if (!clientId || !route) return
-    onSave({ clientId, clientName, workType, route, unitPrice, driverSalary, allowance })
+    if (!clientId || !route || lines.length === 0) return
+    onSave({ clientId, clientName, workType, route, lines, unitPrice, driverSalary, allowance })
   }
 
   return (
@@ -101,36 +146,18 @@ function PricingForm({
         </button>
       </div>
 
-      {/* Client */}
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</Label>
         <SheetPicker options={clientOptions} value={clientId} onChange={setClientId} placeholder="Chọn khách hàng" />
       </div>
 
-      {/* Route */}
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</Label>
         <SheetPicker options={routeOptions} value={route} onChange={setRoute} placeholder="Chọn cung đường" />
       </div>
 
-      {/* Work type */}
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Loại công</Label>
-        <div className="flex flex-wrap gap-1.5">
-          {WORK_TYPES.map(w => (
-            <button key={w} onClick={() => setWorkType(w)}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors touch-manipulation"
-              style={{
-                background: workType === w ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
-                color: workType === w ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
-              }}>
-              {w}
-            </button>
-          ))}
-        </div>
-      </div>
+      <LineEditor lines={lines} onChange={setLines} />
 
-      {/* Prices */}
       <div className="grid grid-cols-3 gap-2">
         <div className="space-y-1.5">
           <Label className="text-[10px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Đơn giá</Label>
@@ -149,7 +176,7 @@ function PricingForm({
         </div>
       </div>
 
-      <Button onClick={handleSubmit} disabled={!clientId || !route}
+      <Button onClick={handleSubmit} disabled={!clientId || !route || lines.length === 0}
         className="w-full h-10 font-bold rounded-xl text-sm"
         style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
         <Check className="w-4 h-4 mr-1.5" /> {initial ? 'Lưu' : 'Thêm'}
@@ -188,11 +215,10 @@ export function PricingList() {
     return pricings.filter(p =>
       p.clientName.toLowerCase().includes(q) ||
       p.route.toLowerCase().includes(q) ||
-      p.workType.toLowerCase().includes(q)
+      p.lines.some(l => l.workType.toLowerCase().includes(q))
     )
   }, [pricings, searchQuery])
 
-  // Group by client for display
   const grouped = useMemo(() => {
     const map = new Map<string, Pricing[]>()
     filtered.forEach(p => {
@@ -211,9 +237,7 @@ export function PricingList() {
       }
     } else {
       const res = await createPricing(data)
-      if (res.success) {
-        setPricings(prev => [...prev, res.data])
-      }
+      if (res.success) setPricings(prev => [...prev, res.data])
     }
     setShowForm(false)
     setEditingPricing(undefined)
@@ -221,9 +245,7 @@ export function PricingList() {
 
   const handleDelete = async (id: string) => {
     const res = await deletePricing(id)
-    if (res.success) {
-      setPricings(prev => prev.filter(p => p.id !== id))
-    }
+    if (res.success) setPricings(prev => prev.filter(p => p.id !== id))
   }
 
   if (loading) {
@@ -232,16 +254,11 @@ export function PricingList() {
 
   return (
     <div className="space-y-4">
-      {/* Search + Add */}
       <div className="flex items-center gap-2">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-          <Input
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Tìm khách hàng, cung đường..."
-            className="text-xs h-9 pl-8"
-          />
+          <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Tìm khách hàng, cung đường..." className="text-xs h-9 pl-8" />
         </div>
         <button onClick={() => { setEditingPricing(undefined); setShowForm(true) }}
           className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0 touch-manipulation"
@@ -250,23 +267,14 @@ export function PricingList() {
         </button>
       </div>
 
-      {/* Form */}
       {showForm && (
-        <PricingForm
-          initial={editingPricing}
-          clients={clients}
-          routes={routes}
-          onSave={handleSave}
-          onCancel={() => { setShowForm(false); setEditingPricing(undefined) }}
-        />
+        <PricingForm initial={editingPricing} clients={clients} routes={routes}
+          onSave={handleSave} onCancel={() => { setShowForm(false); setEditingPricing(undefined) }} />
       )}
 
-      {/* List grouped by client */}
       {grouped.map(([clientName, items]) => (
         <div key={clientName}>
-          <p className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: 'var(--theme-text-muted)' }}>
-            {clientName}
-          </p>
+          <p className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: 'var(--theme-text-muted)' }}>{clientName}</p>
           <div className="space-y-2">
             {items.map(p => (
               <PricingCard key={p.id} pricing={p}
