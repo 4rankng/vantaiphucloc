@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useAppStore } from '@/hooks/use-app-store'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog/Dialog'
 import { Button } from '@/components/ui/Button/Button'
 import { Input } from '@/components/ui/Input/Input'
 import { Label } from '@/components/ui/Label/Label'
 import { apiClient } from '@/services/api'
+import { createTripOrder } from '@/services/sandbox/sandboxClient'
 import { WORK_TYPES, type Client, type Driver, type WorkType } from '@/data/mockData'
 import { SheetPicker } from '@/components/shared/SheetPicker'
 import { Plus, Trash2 } from 'lucide-react'
@@ -20,6 +20,8 @@ export function CreateTrip() {
   const [clients, setClients] = useState<{ value: string; label: string }[]>([])
   const [drivers, setDrivers] = useState<{ value: string; label: string }[]>([])
   const [routes, setRoutes] = useState<{ value: string; label: string }[]>([])
+  const [clientMap, setClientMap] = useState<Map<string, string>>(new Map())
+  const [driverMap, setDriverMap] = useState<Map<string, { name: string; plate: string }>>(new Map())
 
   const [clientId, setClientId] = useState('')
   const [driverId, setDriverId] = useState('')
@@ -29,12 +31,19 @@ export function CreateTrip() {
   ])
   const [driverSalary, setDriverSalary] = useState(0)
   const [allowance, setAllowance] = useState(0)
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
     Promise.all([apiClient.getClients(), apiClient.getDrivers(), apiClient.getRoutes()])
       .then(([c, d, r]) => {
-        if (c.success) setClients(c.data.map((x: Client) => ({ value: x.id, label: x.name })))
-        if (d.success) setDrivers(d.data.map((x: Driver) => ({ value: x.id, label: `${x.name} (${x.tractorPlate})` })))
+        if (c.success) {
+          setClients(c.data.map((x: Client) => ({ value: x.id, label: x.name })))
+          setClientMap(new Map(c.data.map((x: Client) => [x.id, x.name])))
+        }
+        if (d.success) {
+          setDrivers(d.data.map((x: Driver) => ({ value: x.id, label: `${x.name} (${x.tractorPlate})` })))
+          setDriverMap(new Map(d.data.map((x: Driver) => [x.id, { name: x.name, plate: x.tractorPlate }])))
+        }
         if (r.success) setRoutes(r.data.map((x: { route: string }) => ({ value: x.route, label: x.route })))
       })
   }, [])
@@ -51,10 +60,34 @@ export function CreateTrip() {
     setCongItems(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c))
   }
 
-  const handleSubmit = () => {
-    if (!clientId || !driverId || !route) return
-    // In real app: call API
-    goBack()
+  const handleSubmit = async () => {
+    if (!clientId || !driverId || !route || submitting) return
+    setSubmitting(true)
+    try {
+      const firstCong = congItems[0]
+      const clientName = clientMap.get(clientId) ?? ''
+      const driverInfo = driverMap.get(driverId) ?? { name: '', plate: '' }
+      await createTripOrder({
+        tripDate: new Date().toISOString().slice(0, 10),
+        clientId,
+        clientName,
+        workType: firstCong.workType,
+        route,
+        tractorPlate: driverInfo.plate,
+        driverId,
+        driverName: driverInfo.name,
+        containerNumber: firstCong.containerNumber,
+        pricingId: '',
+        unitPrice: 0,
+        driverSalary,
+        allowance,
+        revenue: 0,
+        matchedWorkOrderIds: [],
+      })
+      goBack()
+    } catch {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -135,10 +168,10 @@ export function CreateTrip() {
       </div>
 
       {/* Submit */}
-      <Button onClick={handleSubmit} disabled={!clientId || !driverId || !route}
+      <Button onClick={handleSubmit} disabled={!clientId || !driverId || !route || submitting}
         className="w-full h-11 font-bold rounded-xl"
         style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-        Tạo chuyến
+        {submitting ? 'Đang tạo...' : 'Tạo chuyến'}
       </Button>
     </div>
   )
