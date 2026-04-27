@@ -26,7 +26,6 @@ export function WorkOrderList() {
     return () => { cancelled = true }
   }, [])
 
-  // Same matching logic as dashboard
   const matchedIds = useMemo(() => new Set(trips.flatMap(t => t.matchedWorkOrderIds)), [trips])
   const unmatched = useMemo(() => workOrders.filter(w => !matchedIds.has(w.id)), [workOrders, matchedIds])
 
@@ -72,7 +71,7 @@ export function WorkOrderList() {
               style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <ContBadge type={job.containers[0]?.workType ?? 'E20'} />
+                  {job.containers[0] && <ContBadge type={job.containers[0].workType} />}
                   <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
                     {job.containers[0]?.containerNumber || job.id}
                   </span>
