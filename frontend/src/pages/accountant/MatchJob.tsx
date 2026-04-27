@@ -336,15 +336,7 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
               onTapRight={() => openEdit('route-right')}
             />
 
-            <div className="rounded-xl p-3 text-center" style={{
-              background: allMatched ? 'var(--theme-status-success-light)' : 'var(--theme-bg-tertiary)',
-            }}>
-              <p className="text-xs font-bold" style={{
-                color: allMatched ? 'var(--theme-status-success)' : 'var(--theme-text-muted)',
-              }}>
-                {allMatched ? '✓ Khớp hoàn toàn' : `${matchCount}/3 trường hợp khớp`}
-              </p>
-            </div>
+
           </div>
         ) : (
           <div className="flex-1 flex items-center justify-center px-4">
