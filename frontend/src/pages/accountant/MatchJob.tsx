@@ -1,11 +1,11 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useAppStore } from '@/hooks/use-app-store'
 import { apiClient } from '@/services/api'
+import { createTripOrder } from '@/services/sandbox/sandboxClient'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { ContBadge } from '@/components/shared/ContBadge'
-import { SheetPicker } from '@/components/shared/SheetPicker'
 import { formatCurrencyFull, type WorkOrder, type TripOrder, WORK_TYPES, type WorkType } from '@/data/mockData'
-import { Building2, Route, UserCircle, Truck, Pencil, Check } from 'lucide-react'
+import { Building2, Route, Truck, ArrowLeftRight, Check } from 'lucide-react'
 import { Button } from '@/components/ui/Button/Button'
 import { Input } from '@/components/ui/Input/Input'
 import { Label } from '@/components/ui/Label/Label'
@@ -19,18 +19,19 @@ export function MatchJob({ jobId }: { jobId: string }) {
   // Selected trip for comparison
   const [selectedTripId, setSelectedTripId] = useState('')
 
-  // Edit states for job (left side)
+  // Edit states for job (left side — chuyen da chay)
   const [editJob, setEditJob] = useState(false)
   const [jobWorkType, setJobWorkType] = useState<WorkType>('E20')
   const [jobClient, setJobClient] = useState('')
   const [jobRoute, setJobRoute] = useState('')
   const [jobContNumber, setJobContNumber] = useState('')
 
-  // Edit states for trip (right side)
+  // Edit states for trip (right side — chuyen yeu cau)
   const [editTrip, setEditTrip] = useState(false)
   const [tripWorkType, setTripWorkType] = useState<WorkType>('E20')
   const [tripClient, setTripClient] = useState('')
   const [tripRoute, setTripRoute] = useState('')
+  const [tripContNumber, setTripContNumber] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -47,7 +48,6 @@ export function MatchJob({ jobId }: { jobId: string }) {
 
   const job = useMemo(() => workOrders.find(w => w.id === jobId), [workOrders, jobId])
 
-  // Populate job edit fields when loaded
   useEffect(() => {
     if (job) {
       setJobWorkType(job.containers[0]?.workType ?? 'E20')
@@ -64,17 +64,40 @@ export function MatchJob({ jobId }: { jobId: string }) {
       setTripWorkType(selectedTrip.workType)
       setTripClient(selectedTrip.clientName)
       setTripRoute(selectedTrip.route)
+      setTripContNumber(selectedTrip.containerNumber)
     }
   }, [selectedTrip])
 
-  // Trips that are DRAFT (chua khop) for matching
-  const draftTrips = useMemo(() => {
-    return trips.filter(t => t.status === 'DRAFT')
-  }, [trips])
+  // Trips that are DRAFT — available for matching
+  const draftTrips = useMemo(() => trips.filter(t => t.status === 'DRAFT'), [trips])
 
-  const handleMatch = () => {
-    // In real app: call API to match job to trip
-    goBack()
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleMatch = async () => {
+    if (!job || !selectedTrip || submitting) return
+    setSubmitting(true)
+    try {
+      await createTripOrder({
+        tripDate: selectedTrip.tripDate,
+        clientId: tripClient || selectedTrip.clientId,
+        clientName: tripClient || selectedTrip.clientName,
+        workType: tripWorkType,
+        route: tripRoute || selectedTrip.route,
+        tractorPlate: job.tractorPlate,
+        driverId: job.driverId,
+        driverName: job.driverName,
+        containerNumber: tripContNumber || selectedTrip.containerNumber,
+        pricingId: selectedTrip.pricingId,
+        unitPrice: selectedTrip.unitPrice,
+        driverSalary: selectedTrip.driverSalary,
+        allowance: selectedTrip.allowance,
+        revenue: selectedTrip.unitPrice,
+        matchedWorkOrderIds: [jobId],
+      })
+      goBack()
+    } catch {
+      setSubmitting(false)
+    }
   }
 
   if (loading) {
@@ -82,17 +105,17 @@ export function MatchJob({ jobId }: { jobId: string }) {
   }
 
   if (!job) {
-    return <div className="p-4 text-center" style={{ color: 'var(--theme-text-muted)' }}>Không tìm thấy số công</div>
+    return <div className="p-4 text-center" style={{ color: 'var(--theme-text-muted)' }}>Không tìm thấy chuyến đã chạy</div>
   }
 
   return (
     <div className="space-y-3">
-      {/* LEFT: Job info */}
+      {/* LEFT: Chuyến đã chạy (from tài xế) */}
       <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
         <div className="flex items-center justify-between px-3 py-2" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-          <p className="text-xs font-bold">Số công</p>
+          <p className="text-xs font-bold">Chuyến đã chạy</p>
           <button onClick={() => setEditJob(!editJob)} className="touch-manipulation">
-            <Pencil className="w-3 h-3" />
+            <ArrowLeftRight className="w-3 h-3" />
           </button>
         </div>
 
@@ -132,50 +155,51 @@ export function MatchJob({ jobId }: { jobId: string }) {
               <ContBadge type={jobWorkType} />
               <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{jobContNumber || '-'}</span>
             </div>
-            <InfoRow icon={UserCircle} label="Tài xế" value={`${job.driverName} · ${job.tractorPlate}`} />
+            <InfoRow icon={Truck} label="Biển số" value={job.tractorPlate} />
             <InfoRow icon={Building2} label="Khách hàng" value={jobClient} />
             <InfoRow icon={Route} label="Cung đường" value={jobRoute} />
           </div>
         )}
       </div>
 
-      {/* RIGHT: Select trip */}
+      {/* RIGHT: Chuyến yêu cầu (from khách hàng — no tài xế) */}
       <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
-        <div className="px-3 py-2" style={{ background: 'var(--theme-status-warning-light)' }}>
-          <p className="text-xs font-bold" style={{ color: 'var(--theme-status-warning)' }}>Chuyến chưa khớp</p>
+        <div className="flex items-center justify-between px-3 py-2" style={{ background: 'var(--theme-status-warning-light)' }}>
+          <p className="text-xs font-bold" style={{ color: 'var(--theme-status-warning)' }}>Chuyến yêu cầu</p>
+          {selectedTrip && (
+            <button onClick={() => { setSelectedTripId(''); setEditTrip(false) }}
+              className="flex items-center gap-1 text-[10px] font-medium touch-manipulation" style={{ color: 'var(--theme-status-warning)' }}>
+              <ArrowLeftRight className="w-3 h-3" /> Đổi chuyến
+            </button>
+          )}
         </div>
 
         {!selectedTrip ? (
           <div className="p-3 space-y-2">
             {draftTrips.length === 0 ? (
-              <p className="text-xs text-center py-4" style={{ color: 'var(--theme-text-muted)' }}>Không có chuyến nào chưa khớp</p>
+              <p className="text-xs text-center py-4" style={{ color: 'var(--theme-text-muted)' }}>Không có chuyến yêu cầu nào</p>
             ) : (
               draftTrips.map(trip => (
                 <button key={trip.id}
                   onClick={() => setSelectedTripId(trip.id)}
                   className="w-full text-left rounded-xl p-2.5 transition-all active:scale-[0.98] touch-manipulation"
                   style={{ background: 'var(--theme-bg-tertiary)', border: '1px solid var(--theme-border-default)' }}>
-                  <p className="text-xs font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{trip.clientName}</p>
-                  <p className="text-[10px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-                    {trip.route} · {trip.driverName}
-                  </p>
-                  <div className="flex items-center gap-1.5 mt-1">
+                  <div className="flex items-center gap-1.5">
                     <ContBadge type={trip.workType} />
-                    <span className="text-[10px] font-mono" style={{ color: 'var(--theme-text-muted)' }}>{trip.containerNumber}</span>
+                    <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{trip.containerNumber}</span>
                   </div>
+                  <p className="text-[10px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+                    {trip.clientName}
+                  </p>
+                  <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>
+                    {trip.route}
+                  </p>
                 </button>
               ))
             )}
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between px-3 pt-2">
-              <p className="text-[10px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Đã chọn</p>
-              <button onClick={() => { setSelectedTripId(''); setEditTrip(false) }} className="text-[10px] font-medium touch-manipulation" style={{ color: 'var(--theme-brand-primary)' }}>
-                Đổi chuyến
-              </button>
-            </div>
-
             {editTrip ? (
               <div className="p-3 space-y-3">
                 <div className="space-y-1">
@@ -189,6 +213,10 @@ export function MatchJob({ jobId }: { jobId: string }) {
                       </button>
                     ))}
                   </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Số cont</Label>
+                  <Input value={tripContNumber} onChange={e => setTripContNumber(e.target.value)} className="text-xs font-mono h-8" />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[10px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</Label>
@@ -207,13 +235,13 @@ export function MatchJob({ jobId }: { jobId: string }) {
                 <div className="flex items-center justify-between px-3">
                   <div className="flex items-center gap-2">
                     <ContBadge type={tripWorkType} />
-                    <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{selectedTrip.containerNumber}</span>
+                    <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{tripContNumber}</span>
                   </div>
                   <button onClick={() => setEditTrip(true)} className="touch-manipulation" style={{ color: 'var(--theme-text-muted)' }}>
-                    <Pencil className="w-3 h-3" />
+                    <ArrowLeftRight className="w-3 h-3" />
                   </button>
                 </div>
-                <InfoRow icon={UserCircle} label="Tài xế" value={`${selectedTrip.driverName} · ${selectedTrip.tractorPlate}`} />
+                {/* No tài xế name — this is from khách hàng */}
                 <InfoRow icon={Building2} label="Khách hàng" value={tripClient} />
                 <InfoRow icon={Route} label="Cung đường" value={tripRoute} />
                 <InfoRow label="Lương + Phụ cấp" value={`${formatCurrencyFull(selectedTrip.driverSalary)} + ${formatCurrencyFull(selectedTrip.allowance)}`} />
@@ -225,10 +253,10 @@ export function MatchJob({ jobId }: { jobId: string }) {
 
       {/* Khớp button */}
       {selectedTrip && (
-        <Button onClick={handleMatch}
+        <Button onClick={handleMatch} disabled={submitting}
           className="w-full h-11 font-bold rounded-xl"
           style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-          <Check className="w-4 h-4 mr-1.5" /> Khớp
+          <Check className="w-4 h-4 mr-1.5" /> {submitting ? 'Đang khớp...' : 'Khớp'}
         </Button>
       )}
     </div>

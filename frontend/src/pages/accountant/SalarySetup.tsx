@@ -1,7 +1,26 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/Button/Button'
 import { Label } from '@/components/ui/Label/Label'
 import { Input } from '@/components/ui/Input/Input'
+
+const STORAGE_KEY = 'ttransport_salary_period_config'
+
+interface PeriodConfig {
+  fromDay: string
+  toDay: string
+}
+
+function loadConfig(): PeriodConfig | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch { /* ignore */ }
+  return null
+}
+
+function saveConfig(config: PeriodConfig) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(config))
+}
 
 const DAY_OPTIONS = [
   '1', '2', '3', '4', '5', '6', '7', '8', '9', '10',
@@ -12,6 +31,15 @@ const DAY_OPTIONS = [
 export function SalarySetup() {
   const [fromDay, setFromDay] = useState('26')
   const [toDay, setToDay] = useState('25')
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    const config = loadConfig()
+    if (config) {
+      setFromDay(config.fromDay)
+      setToDay(config.toDay)
+    }
+  }, [])
 
   const formatDay = (d: string) => {
     if (d === 'cuoi thang') return 'cuối tháng'
@@ -30,7 +58,9 @@ export function SalarySetup() {
   }
 
   const handleSave = () => {
-    // In real app: call API to save period config
+    saveConfig({ fromDay, toDay })
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
   }
 
   return (
@@ -73,7 +103,7 @@ export function SalarySetup() {
         <Button onClick={handleSave}
           className="w-full h-10 font-bold rounded-xl"
           style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-          Lưu
+          {saved ? 'Đã lưu ✓' : 'Lưu'}
         </Button>
       </div>
     </div>
