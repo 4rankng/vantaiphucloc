@@ -12,6 +12,7 @@ import { TripDetail } from './TripDetail'
 import { CreateTrip } from './CreateTrip'
 import { SalarySetup } from './SalarySetup'
 import { MatchJob } from './MatchJob'
+import { MatchTrip } from './MatchTrip'
 import { PricingList } from './PricingList'
 
 const TITLES: Record<string, string> = {
@@ -33,7 +34,8 @@ function AccountantRouter() {
   const isHome = currentPath === '/accountant'
   const title = TITLES[currentPath] ?? (
     currentPath.startsWith('/accountant/trip/') ? 'Chi tiết chuyến' :
-    currentPath.startsWith('/accountant/match/') ? 'Đối soát' : ''
+    currentPath.startsWith('/accountant/match/') ? 'Đối soát' :
+    currentPath.startsWith('/accountant/match-trip/') ? 'Đối soát' : ''
   )
 
   const renderPage = () => {
@@ -44,6 +46,10 @@ function AccountantRouter() {
     if (currentPath.startsWith('/accountant/match/')) {
       const jobId = currentPath.replace('/accountant/match/', '')
       return <MatchJob jobId={jobId} />
+    }
+    if (currentPath.startsWith('/accountant/match-trip/')) {
+      const tripId = currentPath.replace('/accountant/match-trip/', '')
+      return <MatchTrip tripId={tripId} />
     }
     switch (currentPath) {
       case '/accountant':              return <AccountantDashboard />
@@ -75,7 +81,7 @@ function AccountantRouter() {
         <AppTopBar variant="page" title={title} onBack={goBack} />
       )}
 
-      <main className={isHome || currentPath.startsWith('/accountant/match/') ? undefined : 'p-4 space-y-4'}>
+      <main className={isHome || currentPath.startsWith('/accountant/match/') || currentPath.startsWith('/accountant/match-trip/') ? undefined : 'p-4 space-y-4'}>
         {renderPage()}
       </main>
       <UserDropdown open={dropdownOpen} onClose={() => setDropdownOpen(false)} />
