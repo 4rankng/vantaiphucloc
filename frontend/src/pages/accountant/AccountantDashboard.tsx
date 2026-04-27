@@ -32,11 +32,12 @@ export function AccountantDashboard() {
     return () => { cancelled = true }
   }, [])
 
-  const unmatchedJobs = useMemo(() => workOrders.filter(w => w.status === 'PENDING'), [workOrders])
+  // Same matching logic as WorkOrderList — consistent counts
+  const matchedIds = useMemo(() => new Set(trips.flatMap(t => t.matchedWorkOrderIds)), [trips])
+  const unmatchedJobs = useMemo(() => workOrders.filter(w => !matchedIds.has(w.id)), [workOrders, matchedIds])
   const pendingTrips = useMemo(() => trips.filter(t => t.status === 'DRAFT'), [trips])
-  const matchedJobs = useMemo(() => workOrders.filter(w => w.earning > 0), [workOrders])
+  const matchedJobs = useMemo(() => workOrders.filter(w => matchedIds.has(w.id)), [workOrders, matchedIds])
 
-  // Auto-calculate salary per driver from matched jobs in current period
   const salaryByDriver = useMemo(() => {
     const map = new Map<string, { name: string; plate: string; totalJobs: number; totalSalary: number }>()
     matchedJobs.forEach(job => {
@@ -102,16 +103,52 @@ export function AccountantDashboard() {
         </div>
       )}
 
+      {/* Can doi soat — unmatched jobs */}
+      {unmatchedJobs.length > 0 && (
+        <div className="px-4 mt-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-status-warning)' }}>
+              Cần đối soát ({unmatchedJobs.length})
+            </p>
+            <button onClick={() => navigate('/accountant/work-orders')} className="text-[11px] font-medium" style={{ color: 'var(--theme-brand-primary)' }}>
+              Xem tất cả →
+            </button>
+          </div>
+          <div className="space-y-2">
+            {unmatchedJobs.slice(0, 5).map(job => (
+              <button key={job.id}
+                onClick={() => navigate(`/accountant/match/${job.id}`)}
+                className="w-full text-left rounded-2xl p-3 transition-all active:scale-[0.98] touch-manipulation"
+                style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+                    {job.driverName}
+                  </p>
+                  {job.containers[0] && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
+                      {job.containers[0].workType}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] mt-0.5 font-mono" style={{ color: 'var(--theme-text-muted)' }}>
+                  {job.tractorPlate}
+                </p>
+                <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
+                  {job.clientName} · {job.route}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Trips pending doi soat */}
       {pendingTrips.length > 0 && (
         <div className="px-4 mt-4">
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-status-warning)' }}>
-              Chờ đối soát ({pendingTrips.length})
+              Chuyến chờ đối soát ({pendingTrips.length})
             </p>
-            <button onClick={() => navigate('/accountant/trips')} className="text-[11px] font-medium" style={{ color: 'var(--theme-brand-primary)' }}>
-              Xem tất cả →
-            </button>
           </div>
           <div className="space-y-2">
             {pendingTrips.slice(0, 3).map(trip => (
@@ -130,40 +167,6 @@ export function AccountantDashboard() {
                   {trip.driverName} · {trip.route}
                 </p>
               </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Unmatched jobs */}
-      {unmatchedJobs.length > 0 && (
-        <div className="px-4 mt-4">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-status-warning)' }}>
-              Số công chưa khớp ({unmatchedJobs.length})
-            </p>
-            <button onClick={() => navigate('/accountant/work-orders')} className="text-[11px] font-medium" style={{ color: 'var(--theme-brand-primary)' }}>
-              Xem tất cả →
-            </button>
-          </div>
-          <div className="space-y-2">
-            {unmatchedJobs.slice(0, 3).map(job => (
-              <div key={job.id}
-                className="rounded-2xl p-3"
-                style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold font-mono" style={{ color: 'var(--theme-text-primary)' }}>{job.workOrderNumber}</p>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
-                    {job.workType}
-                  </span>
-                </div>
-                <p className="text-[11px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-                  {job.driverName} · {job.tractorPlate}
-                </p>
-                <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
-                  {job.clientName} · {job.route}
-                </p>
-              </div>
             ))}
           </div>
         </div>

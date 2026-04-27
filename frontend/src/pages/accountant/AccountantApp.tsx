@@ -11,11 +11,12 @@ import { TripList } from './TripList'
 import { TripDetail } from './TripDetail'
 import { CreateTrip } from './CreateTrip'
 import { SalarySetup } from './SalarySetup'
+import { MatchJob } from './MatchJob'
 
 const TITLES: Record<string, string> = {
   '/accountant/clients': 'Khách hàng',
   '/accountant/routes': 'Cung đường',
-  '/accountant/work-orders': 'Số công chưa khớp',
+  '/accountant/work-orders': 'Cần đối soát',
   '/accountant/trips': 'Chuyến',
   '/accountant/salary-setup': 'Thiết lập kỳ lương',
 }
@@ -28,12 +29,19 @@ function AccountantRouter() {
   useEffect(() => { window.scrollTo({ top: 0, behavior: 'auto' as ScrollBehavior }) }, [currentPath])
 
   const isHome = currentPath === '/accountant'
-  const title = TITLES[currentPath] ?? (currentPath.startsWith('/accountant/trip/') ? 'Chi tiết chuyến' : '')
+  const title = TITLES[currentPath] ?? (
+    currentPath.startsWith('/accountant/trip/') ? 'Chi tiết chuyến' :
+    currentPath.startsWith('/accountant/match/') ? 'Đối soát' : ''
+  )
 
   const renderPage = () => {
     if (currentPath.startsWith('/accountant/trip/')) {
       const tripId = currentPath.replace('/accountant/trip/', '')
       return <TripDetail tripId={tripId} />
+    }
+    if (currentPath.startsWith('/accountant/match/')) {
+      const jobId = currentPath.replace('/accountant/match/', '')
+      return <MatchJob jobId={jobId} />
     }
     switch (currentPath) {
       case '/accountant':              return <AccountantDashboard />
