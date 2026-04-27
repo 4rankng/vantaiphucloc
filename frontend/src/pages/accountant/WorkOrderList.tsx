@@ -78,7 +78,7 @@ export function WorkOrderList() {
                 </div>
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
                   style={{ background: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' }}>
-                  Cần đối soát
+                  Đối soát tài xế
                 </span>
               </div>
               <p className="text-[11px] mt-1" style={{ color: 'var(--theme-text-muted)' }}>
