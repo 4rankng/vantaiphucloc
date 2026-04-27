@@ -12,6 +12,7 @@ import { TripDetail } from './TripDetail'
 import { CreateTrip } from './CreateTrip'
 import { SalarySetup } from './SalarySetup'
 import { MatchJob } from './MatchJob'
+import { PricingList } from './PricingList'
 
 const TITLES: Record<string, string> = {
   '/accountant/clients': 'Khách hàng',
@@ -19,6 +20,7 @@ const TITLES: Record<string, string> = {
   '/accountant/work-orders': 'Đối soát tài xế',
   '/accountant/trips': 'Chuyến',
   '/accountant/salary-setup': 'Thiết lập kỳ lương',
+  '/accountant/pricing': 'Bảng giá',
 }
 
 function AccountantRouter() {
@@ -51,6 +53,7 @@ function AccountantRouter() {
       case '/accountant/trips':        return <TripList />
       case '/accountant/create-trip':  return <CreateTrip />
       case '/accountant/salary-setup': return <SalarySetup />
+      case '/accountant/pricing':      return <PricingList />
       default: return (
         <div className="p-4 text-center py-12" style={{ color: 'var(--theme-text-muted)' }}>
           <p className="text-sm">Trang đang phát triển</p>
