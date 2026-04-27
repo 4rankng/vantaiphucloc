@@ -16,7 +16,7 @@ import { MatchJob } from './MatchJob'
 const TITLES: Record<string, string> = {
   '/accountant/clients': 'Khách hàng',
   '/accountant/routes': 'Cung đường',
-  '/accountant/work-orders': 'Cần đối soát',
+  '/accountant/work-orders': 'Đối soát tài xế',
   '/accountant/trips': 'Chuyến',
   '/accountant/salary-setup': 'Thiết lập kỳ lương',
 }

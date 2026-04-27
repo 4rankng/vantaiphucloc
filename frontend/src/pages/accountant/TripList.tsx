@@ -37,7 +37,7 @@ export function TripList() {
                 background: trip.status === 'DRAFT' ? 'var(--theme-status-warning-light)' : 'var(--theme-status-success-light)',
                 color: trip.status === 'DRAFT' ? 'var(--theme-status-warning)' : 'var(--theme-status-success)',
               }}>
-              {trip.status === 'DRAFT' ? 'Chờ đối soát' : 'Đã khớp'}
+              {trip.status === 'DRAFT' ? 'Đối soát khách hàng' : 'Đã khớp'}
             </span>
           </div>
           <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
