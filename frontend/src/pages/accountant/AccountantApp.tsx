@@ -72,7 +72,7 @@ function AccountantRouter() {
         <AppTopBar variant="page" title={title} onBack={goBack} />
       )}
 
-      <main className={isHome ? undefined : 'p-4 space-y-4'}>
+      <main className={isHome || currentPath.startsWith('/accountant/match/') ? undefined : 'p-4 space-y-4'}>
         {renderPage()}
       </main>
       <UserDropdown open={dropdownOpen} onClose={() => setDropdownOpen(false)} />
