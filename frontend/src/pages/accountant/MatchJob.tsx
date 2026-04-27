@@ -1,14 +1,13 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useAppStore } from '@/hooks/use-app-store'
 import { apiClient } from '@/services/api'
-import { updateWorkOrder } from '@/services/sandbox/sandboxClient'
-import { createTripOrder } from '@/services/sandbox/sandboxClient'
-import { updateTripOrder } from '@/services/sandbox/sandboxClient'
+import { updateWorkOrder, createTripOrder, updateTripOrder } from '@/services/sandbox/sandboxClient'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { WORK_TYPES, type WorkOrder, type TripOrder, type WorkType } from '@/data/mockData'
-import { Check, ChevronDown, CheckCircle2, ArrowLeftRight, X } from 'lucide-react'
+import { Check, ChevronDown, CheckCircle2, ArrowLeftRight, X, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/Button/Button'
 import { Input } from '@/components/ui/Input/Input'
+import { Label } from '@/components/ui/Label/Label'
 
 // ─── Full-screen picker modal ─────────────────────────────────────────────────
 function PickModal<T extends { id: string }>({
@@ -44,15 +43,33 @@ function PickModal<T extends { id: string }>({
   )
 }
 
-// ─── Editable comparison row ──────────────────────────────────────────────────
-function EditableRow({ label, left, right, matched, side, onEditLeft, onEditRight }: {
-  label: string
-  left: string; right: string
-  matched?: boolean
-  /** Which side is currently being edited */
-  side: 'left' | 'right' | null
-  onEditLeft: (val: string) => void
-  onEditRight: (val: string) => void
+// ─── Full-screen edit dialog ──────────────────────────────────────────────────
+function EditDialog({ open, title, color, onClose, children }: {
+  open: boolean; title: string; color: string; onClose: () => void; children: React.ReactNode
+}) {
+  if (!open) return null
+  return (
+    <div className="fixed inset-0 z-[200] flex flex-col" style={{ background: 'var(--theme-bg-primary)' }}>
+      <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
+        <div className="flex items-center gap-2">
+          <Pencil className="w-4 h-4" style={{ color }} />
+          <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>{title}</p>
+        </div>
+        <button onClick={onClose} className="text-xs font-medium px-3 py-1.5 rounded-lg touch-manipulation" style={{ color: 'var(--theme-brand-primary)' }}>
+          Xong
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+// ─── Read-only comparison row (tappable left/right) ───────────────────────────
+function CompareRow({ label, left, right, matched, onTapLeft, onTapRight }: {
+  label: string; left: string; right: string; matched?: boolean
+  onTapLeft?: () => void; onTapRight?: () => void
 }) {
   return (
     <div className="rounded-xl p-3" style={{
@@ -66,38 +83,32 @@ function EditableRow({ label, left, right, matched, side, onEditLeft, onEditRigh
         }}>{label}</p>
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
-        {/* Left */}
-        <div className="min-w-0">
-          <p className="text-[9px] font-medium mb-0.5" style={{ color: 'var(--theme-brand-primary)' }}>Đã chạy</p>
-          {side === 'left' ? (
-            <Input value={left} onChange={e => onEditLeft(e.target.value)} className="text-xs h-8" autoFocus />
-          ) : (
-            <p className="text-xs font-medium cursor-pointer rounded px-1 -mx-1 hover:opacity-80" style={{ color: 'var(--theme-text-primary)' }}>{left || '-'}</p>
-          )}
-        </div>
+        <button onClick={onTapLeft} className="min-w-0 text-left rounded-lg px-2 py-1.5 -mx-2 transition-colors touch-manipulation active:opacity-70" style={{ background: 'transparent' }}>
+          <p className="text-[9px] font-medium" style={{ color: 'var(--theme-brand-primary)' }}>Đã chạy</p>
+          <div className="flex items-center gap-1">
+            <p className="text-xs font-medium" style={{ color: 'var(--theme-text-primary)' }}>{left || '-'}</p>
+            <Pencil className="w-2.5 h-2.5 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
+          </div>
+        </button>
         <ArrowLeftRight className="w-3.5 h-3.5 shrink-0" style={{ color: matched ? 'var(--theme-status-success)' : 'var(--theme-text-muted)' }} />
-        {/* Right */}
-        <div className="min-w-0">
-          <p className="text-[9px] font-medium mb-0.5" style={{ color: 'var(--theme-status-warning)' }}>Yêu cầu</p>
-          {side === 'right' ? (
-            <Input value={right} onChange={e => onEditRight(e.target.value)} className="text-xs h-8" autoFocus />
-          ) : (
-            <p className="text-xs font-medium cursor-pointer rounded px-1 -mx-1 hover:opacity-80" style={{ color: 'var(--theme-text-primary)' }}>{right || '-'}</p>
-          )}
-        </div>
+        <button onClick={onTapRight} className="min-w-0 text-left rounded-lg px-2 py-1.5 -mx-2 transition-colors touch-manipulation active:opacity-70" style={{ background: 'transparent' }}>
+          <p className="text-[9px] font-medium" style={{ color: 'var(--theme-status-warning)' }}>Yêu cầu</p>
+          <div className="flex items-center gap-1">
+            <p className="text-xs font-medium" style={{ color: 'var(--theme-text-primary)' }}>{right || '-'}</p>
+            <Pencil className="w-2.5 h-2.5 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
+          </div>
+        </button>
       </div>
     </div>
   )
 }
 
-// ─── Editable container row ───────────────────────────────────────────────────
-function EditableContRow({ left, right, matched, editSide, onEditLeft, onEditRight }: {
+// ─── Container comparison row (tappable) ──────────────────────────────────────
+function ContCompareRow({ left, right, matched, onTapLeft, onTapRight }: {
   left: { type: string; number: string }[]
   right: { type: string; number: string }
   matched?: boolean
-  editSide: 'left' | 'right' | null
-  onEditLeft: (containers: { type: string; number: string }[]) => void
-  onEditRight: (cont: { type: string; number: string }) => void
+  onTapLeft?: () => void; onTapRight?: () => void
 }) {
   return (
     <div className="rounded-xl p-3" style={{
@@ -111,62 +122,27 @@ function EditableContRow({ left, right, matched, editSide, onEditLeft, onEditRig
         }}>Container</p>
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-start">
-        {/* Left: job containers */}
-        <div className="min-w-0">
+        <button onClick={onTapLeft} className="min-w-0 text-left rounded-lg px-2 py-1.5 -mx-2 touch-manipulation active:opacity-70">
           <p className="text-[9px] font-medium mb-1" style={{ color: 'var(--theme-brand-primary)' }}>Đã chạy</p>
           {left.map((c, i) => (
-            <div key={i} className="flex items-center gap-1 mb-1">
-              {editSide === 'left' ? (
-                <>
-                  <div className="flex gap-0.5">
-                    {WORK_TYPES.map(w => (
-                      <button key={w} onClick={() => {
-                        const updated = [...left]; updated[i] = { ...updated[i], type: w }; onEditLeft(updated)
-                      }} className="px-1 py-0.5 rounded text-[8px] font-bold touch-manipulation"
-                        style={{ background: c.type === w ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)', color: c.type === w ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)' }}>
-                        {w}
-                      </button>
-                    ))}
-                  </div>
-                  <Input value={c.number} onChange={e => {
-                    const updated = [...left]; updated[i] = { ...updated[i], number: e.target.value }; onEditLeft(updated)
-                  }} className="text-[10px] font-mono h-6 flex-1" />
-                </>
-              ) : (
-                <>
-                  <ContBadge type={c.type as TripOrder['workType']} />
-                  <span className="text-[11px] font-mono font-medium" style={{ color: 'var(--theme-text-primary)' }}>{c.number}</span>
-                </>
-              )}
+            <div key={i} className="flex items-center gap-1 mb-0.5">
+              <ContBadge type={c.type as TripOrder['workType']} />
+              <span className="text-[11px] font-mono font-medium" style={{ color: 'var(--theme-text-primary)' }}>{c.number}</span>
             </div>
           ))}
-        </div>
+          <Pencil className="w-2.5 h-2.5 mt-0.5" style={{ color: 'var(--theme-text-muted)' }} />
+        </button>
         <div className="flex items-center pt-3">
           <ArrowLeftRight className="w-3.5 h-3.5" style={{ color: matched ? 'var(--theme-status-success)' : 'var(--theme-text-muted)' }} />
         </div>
-        {/* Right: trip container */}
-        <div className="min-w-0">
+        <button onClick={onTapRight} className="min-w-0 text-left rounded-lg px-2 py-1.5 -mx-2 touch-manipulation active:opacity-70">
           <p className="text-[9px] font-medium mb-1" style={{ color: 'var(--theme-status-warning)' }}>Yêu cầu</p>
-          {editSide === 'right' ? (
-            <div>
-              <div className="flex gap-0.5 mb-1">
-                {WORK_TYPES.map(w => (
-                  <button key={w} onClick={() => onEditRight({ ...right, type: w })}
-                    className="px-1 py-0.5 rounded text-[8px] font-bold touch-manipulation"
-                    style={{ background: right.type === w ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)', color: right.type === w ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)' }}>
-                    {w}
-                  </button>
-                ))}
-              </div>
-              <Input value={right.number} onChange={e => onEditRight({ ...right, number: e.target.value })} className="text-[10px] font-mono h-6" />
-            </div>
-          ) : (
-            <div className="flex items-center gap-1">
-              <ContBadge type={right.type as TripOrder['workType']} />
-              <span className="text-[11px] font-mono font-medium" style={{ color: 'var(--theme-text-primary)' }}>{right.number}</span>
-            </div>
-          )}
-        </div>
+          <div className="flex items-center gap-1">
+            <ContBadge type={right.type as TripOrder['workType']} />
+            <span className="text-[11px] font-mono font-medium" style={{ color: 'var(--theme-text-primary)' }}>{right.number}</span>
+          </div>
+          <Pencil className="w-2.5 h-2.5 mt-0.5" style={{ color: 'var(--theme-text-muted)' }} />
+        </button>
       </div>
     </div>
   )
@@ -184,13 +160,16 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
   const [selectedTripId, setSelectedTripId] = useState('')
   const [pickMode, setPickMode] = useState<'job' | 'trip' | null>(null)
 
-  // Edit state: local overrides for comparison
-  const [editField, setEditField] = useState<string | null>(null) // 'cont' | 'client' | 'route'
-  const [editSide, setEditSide] = useState<'left' | 'right' | null>(null)
+  // Edit dialog
+  const [editDialog, setEditDialog] = useState<'cont-left' | 'cont-right' | 'client-left' | 'client-right' | 'route-left' | 'route-right' | null>(null)
 
   // Local editable copies
   const [editedJob, setEditedJob] = useState<{ clientName: string; route: string; containers: { type: string; number: string }[] } | null>(null)
   const [editedTrip, setEditedTrip] = useState<{ clientName: string; route: string; contType: string; contNumber: string } | null>(null)
+
+  // Dialog-local state for container editing
+  const [dialogContainers, setDialogContainers] = useState<{ type: string; number: string }[]>([])
+  const [dialogContRight, setDialogContRight] = useState<{ type: string; number: string }>({ type: 'E20', number: '' })
 
   useEffect(() => {
     let cancelled = false
@@ -212,7 +191,7 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
   const selectedJob = useMemo(() => workOrders.find(w => w.id === selectedJobId), [workOrders, selectedJobId])
   const selectedTrip = useMemo(() => trips.find(t => t.id === selectedTripId), [trips, selectedTripId])
 
-  // Initialize edited copies when selection changes
+  // Init edited copies
   useEffect(() => {
     if (selectedJob) {
       setEditedJob({
@@ -220,28 +199,31 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
         route: selectedJob.route,
         containers: selectedJob.containers.map(c => ({ type: c.workType, number: c.containerNumber })),
       })
-    } else {
-      setEditedJob(null)
-    }
+    } else setEditedJob(null)
   }, [selectedJob])
 
   useEffect(() => {
     if (selectedTrip) {
-      setEditedTrip({
-        clientName: selectedTrip.clientName,
-        route: selectedTrip.route,
-        contType: selectedTrip.workType,
-        contNumber: selectedTrip.containerNumber,
-      })
-    } else {
-      setEditedTrip(null)
-    }
+      setEditedTrip({ clientName: selectedTrip.clientName, route: selectedTrip.route, contType: selectedTrip.workType, contNumber: selectedTrip.containerNumber })
+    } else setEditedTrip(null)
   }, [selectedTrip])
 
-  // Reset edit mode when selection changes
-  useEffect(() => { setEditField(null); setEditSide(null) }, [selectedJobId, selectedTripId])
+  // Open edit dialog with current values
+  const openEdit = (mode: typeof editDialog) => {
+    if (!mode) return
+    if (mode === 'cont-left' && editedJob) setDialogContainers([...editedJob.containers])
+    if (mode === 'cont-right' && editedTrip) setDialogContRight({ type: editedTrip.contType, number: editedTrip.contNumber })
+    setEditDialog(mode)
+  }
 
-  // Validation on edited values
+  const saveDialog = () => {
+    if (!editDialog) return
+    if (editDialog === 'cont-left' && editedJob) setEditedJob({ ...editedJob, containers: [...dialogContainers] })
+    if (editDialog === 'cont-right' && editedTrip) setEditedTrip({ ...editedTrip, contType: dialogContRight.type, contNumber: dialogContRight.number })
+    setEditDialog(null)
+  }
+
+  // Validation
   const jobClient = editedJob?.clientName ?? ''
   const tripClient = editedTrip?.clientName ?? ''
   const jobRoute = editedJob?.route ?? ''
@@ -255,29 +237,21 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
   const allMatched = contMatched && clientMatched && routeMatched
   const matchCount = [contMatched, clientMatched, routeMatched].filter(Boolean).length
 
-  const startEdit = (field: string, side: 'left' | 'right') => {
-    setEditField(field)
-    setEditSide(side)
-  }
-
   const handleMatch = async () => {
     if (!selectedJob || !selectedTrip || !editedJob || !editedTrip || submitting) return
     setSubmitting(true)
     try {
-      // Save edits to work order
       await updateWorkOrder(selectedJobId, {
         clientName: editedJob.clientName,
         route: editedJob.route,
         containers: editedJob.containers.map(c => ({ containerNumber: c.number, workType: c.type as WorkType, photoUrl: '' })),
       })
-      // Save edits to trip
       await updateTripOrder(selectedTripId, {
         clientName: editedTrip.clientName,
         route: editedTrip.route,
         workType: editedTrip.contType as WorkType,
         containerNumber: editedTrip.contNumber,
       })
-      // Create matched trip
       await createTripOrder({
         tripDate: selectedTrip.tripDate,
         clientId: selectedTrip.clientId,
@@ -296,9 +270,7 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
         matchedWorkOrderIds: [selectedJobId],
       })
       goBack()
-    } catch {
-      setSubmitting(false)
-    }
+    } catch { setSubmitting(false) }
   }
 
   if (loading) {
@@ -308,7 +280,7 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
   return (
     <>
       <div className="flex flex-col h-[calc(100dvh-56px)]">
-        {/* ── TOP: Two selector buttons ── */}
+        {/* ── TOP: Selector buttons ── */}
         <div className="px-4 pt-3 pb-2 space-y-2 shrink-0">
           <button onClick={() => setPickMode('job')}
             className="w-full flex items-center justify-between px-4 py-3 rounded-2xl touch-manipulation"
@@ -347,53 +319,23 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
           </button>
         </div>
 
-        {/* ── MIDDLE: Row-by-row comparison with inline edit ── */}
+        {/* ── MIDDLE: Comparison rows (tappable) ── */}
         {selectedJob && selectedTrip && editedJob && editedTrip ? (
           <div className="flex-1 overflow-y-auto px-4 pb-2 space-y-2">
-            {/* Container row */}
-            <div onClick={() => startEdit('cont', editField === 'cont' && editSide === 'left' ? 'right' : editField === 'cont' && editSide === 'right' ? null : 'left')}>
-              <EditableContRow
-                left={jobConts}
-                right={tripCont!}
-                matched={contMatched}
-                editSide={editField === 'cont' ? editSide : null}
-                onEditLeft={containers => setEditedJob(prev => prev ? { ...prev, containers } : null)}
-                onEditRight={cont => setEditedTrip(prev => prev ? { ...prev, contType: cont.type, contNumber: cont.number } : null)}
-              />
-            </div>
+            <ContCompareRow
+              left={jobConts} right={tripCont!} matched={contMatched}
+              onTapLeft={() => openEdit('cont-left')}
+              onTapRight={() => openEdit('cont-right')}
+            />
+            <CompareRow label="Khách hàng" left={jobClient} right={tripClient} matched={clientMatched}
+              onTapLeft={() => openEdit('client-left')}
+              onTapRight={() => openEdit('client-right')}
+            />
+            <CompareRow label="Cung đường" left={jobRoute} right={tripRoute} matched={routeMatched}
+              onTapLeft={() => openEdit('route-left')}
+              onTapRight={() => openEdit('route-right')}
+            />
 
-            {/* Khách hàng row */}
-            <div onClick={() => startEdit('client', editField === 'client' && editSide === 'left' ? 'right' : editField === 'client' && editSide === 'right' ? null : 'left')}>
-              <EditableRow
-                label="Khách hàng"
-                left={jobClient} right={tripClient}
-                matched={clientMatched}
-                side={editField === 'client' ? editSide : null}
-                onEditLeft={val => setEditedJob(prev => prev ? { ...prev, clientName: val } : null)}
-                onEditRight={val => setEditedTrip(prev => prev ? { ...prev, clientName: val } : null)}
-              />
-            </div>
-
-            {/* Cung đường row */}
-            <div onClick={() => startEdit('route', editField === 'route' && editSide === 'left' ? 'right' : editField === 'route' && editSide === 'right' ? null : 'left')}>
-              <EditableRow
-                label="Cung đường"
-                left={jobRoute} right={tripRoute}
-                matched={routeMatched}
-                side={editField === 'route' ? editSide : null}
-                onEditLeft={val => setEditedJob(prev => prev ? { ...prev, route: val } : null)}
-                onEditRight={val => setEditedTrip(prev => prev ? { ...prev, route: val } : null)}
-              />
-            </div>
-
-            {/* Edit hint */}
-            {editField && (
-              <p className="text-[10px] text-center" style={{ color: 'var(--theme-text-muted)' }}>
-                Chạm vào hàng để chỉnh sửa · Chạm bên kia để đổi sang
-              </p>
-            )}
-
-            {/* Match summary */}
             <div className="rounded-xl p-3 text-center" style={{
               background: allMatched ? 'var(--theme-status-success-light)' : 'var(--theme-bg-tertiary)',
             }}>
@@ -410,7 +352,7 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
           </div>
         )}
 
-        {/* ── BOTTOM: Khớp button ── */}
+        {/* ── BOTTOM ── */}
         {selectedJob && selectedTrip && (
           <div className="px-4 pb-4 pt-2 shrink-0" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
             <Button onClick={handleMatch} disabled={submitting}
@@ -451,6 +393,107 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
           </div>
         )}
       />
+
+      {/* ── Edit dialogs ── */}
+      {/* Container - left (đã chạy) */}
+      <EditDialog open={editDialog === 'cont-left'} title="Sửa container · Đã chạy" color="var(--theme-brand-primary)" onClose={saveDialog}>
+        {dialogContainers.map((c, i) => (
+          <div key={i} className="rounded-xl p-3 space-y-3"
+            style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Container {i + 1}</span>
+              {dialogContainers.length > 1 && (
+                <button onClick={() => setDialogContainers(prev => prev.filter((_, j) => j !== i))}
+                  className="touch-manipulation" style={{ color: 'var(--theme-status-error)' }}>
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Loại công</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {WORK_TYPES.map(w => (
+                  <button key={w} onClick={() => setDialogContainers(prev => prev.map((c2, j) => j === i ? { ...c2, type: w } : c2))}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold touch-manipulation"
+                    style={{ background: c.type === w ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)', color: c.type === w ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)' }}>
+                    {w}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Số cont</Label>
+              <Input value={c.number} onChange={e => setDialogContainers(prev => prev.map((c2, j) => j === i ? { ...c2, number: e.target.value } : c2))}
+                className="text-sm font-mono h-10" autoFocus />
+            </div>
+          </div>
+        ))}
+        <button onClick={() => setDialogContainers(prev => [...prev, { type: 'E20', number: '' }])}
+          className="w-full py-2.5 rounded-xl text-xs font-medium touch-manipulation"
+          style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)', border: '1px dashed var(--theme-border-default)' }}>
+          + Thêm container
+        </button>
+      </EditDialog>
+
+      {/* Container - right (yêu cầu) */}
+      <EditDialog open={editDialog === 'cont-right'} title="Sửa container · Yêu cầu" color="var(--theme-status-warning)" onClose={saveDialog}>
+        <div className="rounded-xl p-3 space-y-3"
+          style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Loại công</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {WORK_TYPES.map(w => (
+                <button key={w} onClick={() => setDialogContRight(prev => ({ ...prev, type: w }))}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold touch-manipulation"
+                  style={{ background: dialogContRight.type === w ? 'var(--theme-status-warning)' : 'var(--theme-bg-tertiary)', color: dialogContRight.type === w ? '#fff' : 'var(--theme-text-primary)' }}>
+                  {w}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Số cont</Label>
+            <Input value={dialogContRight.number} onChange={e => setDialogContRight(prev => ({ ...prev, number: e.target.value }))}
+              className="text-sm font-mono h-10" autoFocus />
+          </div>
+        </div>
+      </EditDialog>
+
+      {/* Khách hàng - left */}
+      <EditDialog open={editDialog === 'client-left'} title="Sửa khách hàng · Đã chạy" color="var(--theme-brand-primary)" onClose={saveDialog}>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</Label>
+          <Input value={editedJob?.clientName ?? ''} onChange={e => setEditedJob(prev => prev ? { ...prev, clientName: e.target.value } : null)}
+            className="text-sm h-10" autoFocus />
+        </div>
+      </EditDialog>
+
+      {/* Khách hàng - right */}
+      <EditDialog open={editDialog === 'client-right'} title="Sửa khách hàng · Yêu cầu" color="var(--theme-status-warning)" onClose={saveDialog}>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</Label>
+          <Input value={editedTrip?.clientName ?? ''} onChange={e => setEditedTrip(prev => prev ? { ...prev, clientName: e.target.value } : null)}
+            className="text-sm h-10" autoFocus />
+        </div>
+      </EditDialog>
+
+      {/* Cung đường - left */}
+      <EditDialog open={editDialog === 'route-left'} title="Sửa cung đường · Đã chạy" color="var(--theme-brand-primary)" onClose={saveDialog}>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</Label>
+          <Input value={editedJob?.route ?? ''} onChange={e => setEditedJob(prev => prev ? { ...prev, route: e.target.value } : null)}
+            className="text-sm h-10" autoFocus />
+        </div>
+      </EditDialog>
+
+      {/* Cung đường - right */}
+      <EditDialog open={editDialog === 'route-right'} title="Sửa cung đường · Yêu cầu" color="var(--theme-status-warning)" onClose={saveDialog}>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</Label>
+          <Input value={editedTrip?.route ?? ''} onChange={e => setEditedTrip(prev => prev ? { ...prev, route: e.target.value } : null)}
+            className="text-sm h-10" autoFocus />
+        </div>
+      </EditDialog>
     </>
   )
 }
