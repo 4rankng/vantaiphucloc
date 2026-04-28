@@ -100,6 +100,48 @@ export interface ThemeSpacing {
   bottomNavHeight: string;
 }
 
+export interface ThemeSemanticTokens {
+  space: {
+    xs: string;
+    sm: string;
+    md: string;
+    lg: string;
+    xl: string;
+    '2xl': string;
+    '3xl': string;
+  };
+  sizing: {
+    iconSm: string;
+    iconMd: string;
+    iconLg: string;
+    avatarSm: string;
+    avatarMd: string;
+    avatarLg: string;
+  };
+  opacity: {
+    disabled: string;
+    hover: string;
+    focus: string;
+    background: string;
+  };
+  zIndex: {
+    base: string;
+    dropdown: string;
+    sticky: string;
+    overlay: string;
+    modal: string;
+    popover: string;
+    toast: string;
+    tooltip: string;
+  };
+  transition: {
+    fast: string;
+    normal: string;
+    slow: string;
+    spring: string;
+  };
+}
+
 export interface ThemeDefinition {
   name: string;
   label: string;
@@ -107,4 +149,5 @@ export interface ThemeDefinition {
   typography: ThemeTypography;
   borderRadius: ThemeBorderRadius;
   spacing: ThemeSpacing;
+  tokens: ThemeSemanticTokens;
 }
