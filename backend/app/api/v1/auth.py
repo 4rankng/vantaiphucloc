@@ -1,5 +1,3 @@
-import time
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -15,48 +13,27 @@ from app.core.security import (
 )
 from app.core.deps import get_current_user
 from app.core.identifier import detect_identifier_type
+from app.core.redis import get_redis
+from app.core.rate_limit import RateLimiter
 from app.config import settings
+from redis.asyncio import Redis
 
 router = APIRouter(prefix="/auth")
 
-# ── In-memory rate limiting (adequate for single-process deployment) ─
-_login_attempts: dict[str, tuple[int, float]] = {}
-MAX_LOGIN_ATTEMPTS = 5
-LOCKOUT_SECONDS = 300
-
-
-def _check_rate_limit(identifier: str) -> None:
-    now = time.monotonic()
-    entry = _login_attempts.get(identifier)
-    if entry:
-        count, last_time = entry
-        if count >= MAX_LOGIN_ATTEMPTS and (now - last_time) < LOCKOUT_SECONDS:
-            raise HTTPException(
-                status_code=429,
-                detail="Too many login attempts. Please try again later.",
-            )
-        if (now - last_time) >= LOCKOUT_SECONDS:
-            _login_attempts.pop(identifier, None)
-
-
-def _record_failed_attempt(identifier: str) -> None:
-    now = time.monotonic()
-    entry = _login_attempts.get(identifier)
-    if entry:
-        count, _ = entry
-        _login_attempts[identifier] = (count + 1, now)
-    else:
-        _login_attempts[identifier] = (1, now)
-
-
-def _clear_failed_attempts(identifier: str) -> None:
-    _login_attempts.pop(identifier, None)
-
 
 @router.post("/login", response_model=LoginResponse)
-async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(
+    body: LoginRequest,
+    db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis),
+):
     identifier = body.username
-    _check_rate_limit(identifier)
+    limiter = RateLimiter(redis)
+    await limiter.check(
+        f"login:{identifier}",
+        settings.RATE_LIMIT_LOGIN_MAX,
+        settings.RATE_LIMIT_LOGIN_WINDOW,
+    )
 
     id_type = detect_identifier_type(identifier)
     if id_type == "phone":
@@ -70,13 +47,10 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
     user = result.scalars().first()
 
     if not user or not verify_password(body.password, user.hashed_password):
-        _record_failed_attempt(identifier)
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     if not user.is_active:
         raise HTTPException(status_code=401, detail="Account is deactivated")
-
-    _clear_failed_attempts(identifier)
 
     token_data = {
         "id": user.id,
