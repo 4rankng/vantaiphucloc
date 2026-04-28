@@ -22,8 +22,20 @@ import type {
   ApiResponse,
   WorkType,
 } from '@/data/mockData'
+import { setCache, getCache } from '@/lib/offline-db'
+import { offlineQueue } from '@/lib/offline-queue'
 
 // ─── Case-conversion utilities ────────────────────────────────────────────────
+
+function isNetworkError(err: unknown): boolean {
+  if (err && typeof err === 'object' && 'type' in err) {
+    return (err as { type: string }).type === 'network'
+  }
+  if (err instanceof Error) {
+    return err.message.includes('Network Error') || err.message.includes('timeout')
+  }
+  return !navigator.onLine
+}
 
 /** Convert a single snake_case string to camelCase */
 function snakeToCamel(s: string): string {
@@ -103,8 +115,12 @@ function fail<T>(err: unknown): ApiResponse<T> {
 export async function getClients(): Promise<ApiResponse<Client[]>> {
   try {
     const res = await api.get('/clients')
-    return ok(normalizeMany<Client>(res.data))
+    const data = normalizeMany<Client>(res.data)
+    await setCache('clients', data)
+    return ok(data)
   } catch (err) {
+    const cached = await getCache<Client[]>('clients')
+    if (isNetworkError(err) && cached) return ok(cached)
     return fail(err)
   }
 }
@@ -141,8 +157,12 @@ export async function deleteClient(id: string): Promise<ApiResponse<{ success: b
 export async function getRoutes(): Promise<ApiResponse<RoutePrice[]>> {
   try {
     const res = await api.get('/routes')
-    return ok(normalizeMany<RoutePrice>(res.data))
+    const data = normalizeMany<RoutePrice>(res.data)
+    await setCache('routes', data)
+    return ok(data)
   } catch (err) {
+    const cached = await getCache<RoutePrice[]>('routes')
+    if (isNetworkError(err) && cached) return ok(cached)
     return fail(err)
   }
 }
@@ -234,6 +254,7 @@ interface WorkOrderFilters {
 }
 
 export async function getWorkOrders(filters?: WorkOrderFilters): Promise<ApiResponse<WorkOrder[]>> {
+  const cacheKey = `work-orders:${filters?.driverId || ''}:${filters?.status || ''}`
   try {
     const params: Record<string, string> = {}
     if (filters?.driverId) params.driver_id = filters.driverId
@@ -242,8 +263,12 @@ export async function getWorkOrders(filters?: WorkOrderFilters): Promise<ApiResp
     if (filters?.dateTo) params.date_to = filters.dateTo
     if (filters?.status) params.status = filters.status
     const res = await api.get('/work-orders', { params })
-    return ok(normalizeMany<WorkOrder>(res.data))
+    const data = normalizeMany<WorkOrder>(res.data)
+    await setCache(cacheKey, data)
+    return ok(data)
   } catch (err) {
+    const cached = await getCache<WorkOrder[]>(cacheKey)
+    if (isNetworkError(err) && cached) return ok(cached)
     return fail(err)
   }
 }
@@ -251,10 +276,40 @@ export async function getWorkOrders(filters?: WorkOrderFilters): Promise<ApiResp
 export async function createWorkOrder(
   data: Omit<WorkOrder, 'id' | 'createdAt' | 'status' | 'unitPrice' | 'driverSalary' | 'allowance' | 'earning' | 'pricingId' | 'gpsAddress'>,
 ): Promise<ApiResponse<WorkOrder>> {
+  const snakeBody = toSnake(data)
   try {
-    const res = await api.post('/work-orders', toSnake(data))
-    return ok(normalizeOne<WorkOrder>(res.data))
+    const res = await api.post('/work-orders', snakeBody)
+    const wo = normalizeOne<WorkOrder>(res.data)
+    // Update cache with new work order
+    const cacheKey = `work-orders:${data.driverId || ''}:`
+    const cached = await getCache<WorkOrder[]>(cacheKey)
+    if (cached) {
+      await setCache(cacheKey, [wo, ...cached])
+    }
+    return ok(wo)
   } catch (err) {
+    if (isNetworkError(err)) {
+      await offlineQueue.enqueue({
+        endpoint: '/api/v1/work-orders',
+        method: 'POST',
+        body: snakeBody,
+      })
+      // Return optimistic payload so UI treats as success
+      const optimistic: WorkOrder = {
+        ...data,
+        id: `pending-${crypto.randomUUID()}`,
+        createdAt: new Date().toISOString(),
+        status: 'PENDING' as WorkOrder['status'],
+        unitPrice: 0,
+        driverSalary: 0,
+        allowance: 0,
+        earning: 0,
+        pricingId: null,
+        gpsAddress: undefined,
+        pendingSync: true,
+      } as unknown as WorkOrder
+      return ok(optimistic)
+    }
     return fail(err)
   }
 }
