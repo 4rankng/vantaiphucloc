@@ -9,6 +9,7 @@ from starlette.responses import Response as StarletteResponse
 from app.config import settings
 from app.api.v1.router import router as api_v1_router
 from app.core.redis import init_redis, close_redis
+from app.core.worker import init_arq_pool, close_arq_pool
 
 MAX_REQUEST_BODY_BYTES = 1_048_576  # 1 MB
 
@@ -29,7 +30,9 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
 async def lifespan(_app: FastAPI):
     settings.validate_production()
     await init_redis()
+    await init_arq_pool()
     yield
+    await close_arq_pool()
     await close_redis()
 
 
