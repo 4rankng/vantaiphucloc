@@ -1,4 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from arq import ArqRedis
+
 from app.api.v1.auth import router as auth_router
 from app.api.v1.clients import router as clients_router
 from app.api.v1.routes import router as routes_router
@@ -9,6 +11,7 @@ from app.api.v1.reconcile import router as reconcile_router
 from app.api.v1.salary import router as salary_router
 from app.api.v1.salary_config import router as salary_config_router
 from app.api.v1.drivers import router as drivers_router
+from app.core.deps import get_worker_pool
 
 router = APIRouter()
 
@@ -27,3 +30,15 @@ router.include_router(drivers_router)
 @router.get("/health")
 async def health_check():
     return {"status": "ok", "service": "vantaihanghoa"}
+
+
+@router.get("/health/worker")
+async def worker_health(pool: ArqRedis = Depends(get_worker_pool)):
+    """Check arq worker connectivity and return queue info."""
+    await pool.ping()
+    info = await pool.info()
+    return {
+        "status": "ok",
+        "workers": info.get("workers", []),
+        "queued": info.get("queued", 0),
+    }
