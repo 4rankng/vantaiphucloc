@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 
@@ -7,6 +8,9 @@ from app.models.base import User
 from app.models.domain import Pricing, PricingLine
 from app.schemas.domain import PricingCreate, PricingUpdate, PricingOut, PricingLineOut
 from app.core.deps import require_roles
+from app.core.redis import get_redis
+from app.core.cache import CacheManager
+from app.config import settings
 
 router = APIRouter()
 
@@ -39,7 +43,14 @@ async def list_pricings(
     route: str | None = None,
     current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis),
 ):
+    cache = CacheManager(redis)
+    cache_id = f"list:{client_id}:{work_type}:{route}"
+    cached = await cache.get_json("pricings", current_user.company_id, cache_id)
+    if cached is not None:
+        return cached
+
     query = select(Pricing).where(Pricing.company_id == current_user.company_id)
 
     if client_id is not None:
@@ -51,8 +62,10 @@ async def list_pricings(
 
     result = await db.execute(query.order_by(Pricing.id.asc()))
     pricings = result.scalars().all()
-
-    return [await _load_pricing_out(db, p) for p in pricings]
+    data = [await _load_pricing_out(db, p) for p in pricings]
+    serialized = [p.model_dump(mode="json") for p in data]
+    await cache.set_json("pricings", current_user.company_id, cache_id, serialized, ttl=settings.CACHE_PRICING_TTL)
+    return data
 
 
 @router.post("/pricings", response_model=PricingOut, status_code=201)
@@ -60,6 +73,7 @@ async def create_pricing(
     body: PricingCreate,
     current_user: User = Depends(require_roles("accountant", "superadmin")),
     db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis),
 ):
     lines_data = body.lines
     pricing_data = body.model_dump(exclude={"lines"})
@@ -80,6 +94,7 @@ async def create_pricing(
 
     await db.commit()
     await db.refresh(pricing)
+    await CacheManager(redis).invalidate_namespace("pricings", current_user.company_id)
 
     return await _load_pricing_out(db, pricing)
 
@@ -90,6 +105,7 @@ async def update_pricing(
     body: PricingUpdate,
     current_user: User = Depends(require_roles("accountant", "superadmin")),
     db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis),
 ):
     result = await db.execute(
         select(Pricing).where(
@@ -120,6 +136,7 @@ async def update_pricing(
 
     await db.commit()
     await db.refresh(pricing)
+    await CacheManager(redis).invalidate_namespace("pricings", current_user.company_id)
 
     return await _load_pricing_out(db, pricing)
 
@@ -129,6 +146,7 @@ async def delete_pricing(
     pricing_id: int,
     current_user: User = Depends(require_roles("accountant", "superadmin")),
     db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis),
 ):
     result = await db.execute(
         select(Pricing).where(
@@ -142,4 +160,5 @@ async def delete_pricing(
 
     await db.delete(pricing)
     await db.commit()
+    await CacheManager(redis).invalidate_namespace("pricings", current_user.company_id)
     return Response()
