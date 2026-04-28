@@ -42,22 +42,22 @@ export function StatCard({
       )}
     >
       <div className="flex items-center justify-between mb-3">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">{label}</p>
         <div className={cn('flex h-7 w-7 items-center justify-center rounded-md', v.iconBg)}>
           <span className={cn('flex', v.iconColor)}>{icon}</span>
         </div>
       </div>
 
       <div className="flex items-baseline gap-1">
-        <span className="font-mono-num text-[22px] font-bold leading-tight tracking-tight text-slate-900">{value}</span>
-        {unit && <span className="text-[11px] font-medium text-slate-400">{unit}</span>}
+        <span className="font-mono-num text-2xl font-bold leading-tight tracking-tight text-slate-900">{value}</span>
+        {unit && <span className="text-xs font-medium text-slate-400">{unit}</span>}
       </div>
 
       {(trend || subtitle || sparkline) && (
         <div className="mt-2.5 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             {trend && <TrendIndicator direction={trend.direction} value={trend.value} />}
-            {subtitle && <span className="text-[11px] text-slate-400">{subtitle}</span>}
+            {subtitle && <span className="text-xs text-slate-400">{subtitle}</span>}
           </div>
           {sparkline && sparkline.length > 0 && (
             <SparklineChart data={sparkline} color={v.sparkColor} height={14} />

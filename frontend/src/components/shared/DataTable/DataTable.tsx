@@ -44,7 +44,7 @@ export function DataTable<T extends Record<string, unknown>>({
                   key={col.key}
                   className={cn(
                     cellPad,
-                    'text-[11px] font-semibold uppercase tracking-wider text-[var(--theme-text-muted)]',
+                    'text-xs font-semibold uppercase tracking-wider text-[var(--theme-text-muted)]',
                     col.align === 'center' && 'text-center',
                     col.align === 'right' && 'text-right',
                   )}

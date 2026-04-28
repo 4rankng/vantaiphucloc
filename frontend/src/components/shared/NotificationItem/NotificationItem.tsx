@@ -45,8 +45,8 @@ export function NotificationItem({ notification, onRead }: { notification: any; 
           <p className={`text-xs ${n.read ? '' : 'font-semibold'} truncate`} style={{ color: 'var(--theme-text-primary)' }}>{n.title}</p>
           {!n.read && <span className="w-2 h-2 rounded-full shrink-0" style={{ background: 'var(--theme-brand-primary)' }} />}
         </div>
-        <p className="text-[11px] mt-0.5 line-clamp-2" style={{ color: 'var(--theme-text-muted)' }}>{n.message}</p>
-        <p className="text-[10px] mt-0.5" style={{ color: 'var(--theme-text-muted)', opacity: 0.7 }}>{formatTime(n.timestamp)}</p>
+        <p className="text-xs mt-0.5 line-clamp-2" style={{ color: 'var(--theme-text-muted)' }}>{n.message}</p>
+        <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)', opacity: 0.7 }}>{formatTime(n.timestamp)}</p>
       </div>
     </button>
   )

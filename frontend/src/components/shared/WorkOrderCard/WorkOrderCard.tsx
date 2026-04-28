@@ -61,7 +61,7 @@ function DriverCard({ wo, onClick }: { wo: WorkOrder; onClick: () => void }) {
       </div>
 
       <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>{wo.clientName}</p>
-      <p className="text-[11px] truncate" style={{ color: 'var(--theme-text-muted)' }}>{wo.route}</p>
+      <p className="text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>{wo.route}</p>
 
       <div className="flex items-center justify-between mt-2 pt-2" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
         {wo.earning > 0 ? (
@@ -69,12 +69,12 @@ function DriverCard({ wo, onClick }: { wo: WorkOrder; onClick: () => void }) {
             +{formatCurrencyFull(wo.earning)}
           </span>
         ) : (
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
             style={{ background: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' }}>
             Chờ đối soát
           </span>
         )}
-        <span className="text-[11px] tabular-nums" style={{ color: 'var(--theme-text-muted)' }}>{dateStr}</span>
+        <span className="text-xs tabular-nums" style={{ color: 'var(--theme-text-muted)' }}>{dateStr}</span>
       </div>
     </button>
   )
@@ -98,19 +98,19 @@ function AccountantCard({ wo }: { wo: WorkOrder }) {
         <p className="text-sm font-bold font-mono truncate flex-1" style={{ color: 'var(--theme-text-primary)' }}>
           {wo.workOrderNumber}
         </p>
-        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0"
+        <span className="text-xs font-bold px-1.5 py-0.5 rounded shrink-0"
           style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
           {wo.workType}
         </span>
       </div>
 
-      <p className="text-[11px] font-medium truncate mb-0.5" style={{ color: 'var(--theme-text-secondary)' }}>
+      <p className="text-xs font-medium truncate mb-0.5" style={{ color: 'var(--theme-text-secondary)' }}>
         {wo.driverName}
       </p>
-      <p className="text-[10px] font-mono mb-1" style={{ color: 'var(--theme-text-muted)' }}>
+      <p className="text-xs font-mono mb-1" style={{ color: 'var(--theme-text-muted)' }}>
         {wo.tractorPlate}
       </p>
-      <p className="text-[11px] truncate mb-2" style={{ color: 'var(--theme-text-muted)' }}>
+      <p className="text-xs truncate mb-2" style={{ color: 'var(--theme-text-muted)' }}>
         {wo.clientName}
       </p>
 
@@ -124,11 +124,11 @@ function AccountantCard({ wo }: { wo: WorkOrder }) {
       ) : (
         <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full" style={{ background: s.bg }}>
           <StatusIcon className="w-3 h-3" style={{ color: s.color }} />
-          <span className="text-[10px] font-semibold" style={{ color: s.color }}>{s.label}</span>
+          <span className="text-xs font-semibold" style={{ color: s.color }}>{s.label}</span>
         </div>
       )}
 
-      <p className="text-[10px] mt-2" style={{ color: 'var(--theme-text-muted)' }}>
+      <p className="text-xs mt-2" style={{ color: 'var(--theme-text-muted)' }}>
         {new Date(wo.createdAt).toLocaleDateString('vi-VN')}
       </p>
     </div>

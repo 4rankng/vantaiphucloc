@@ -46,13 +46,13 @@ export function InlineStatStrip({ items, className }: InlineStatStripProps) {
               role={item.onClick ? 'button' : undefined}
             >
               <span
-                className="text-[15px] font-bold tabular-nums tracking-tight leading-tight w-full text-center"
+                className="text-base font-bold tabular-nums tracking-tight leading-tight w-full text-center"
                 style={{ color: item.highlight ? 'var(--theme-brand-primary)' : 'var(--theme-text-primary)' }}
               >
                 {formatted}
               </span>
               <span
-                className="text-[11px] leading-none text-center truncate w-full px-1 mt-0.5"
+                className="text-xs leading-none text-center truncate w-full px-1 mt-0.5"
                 style={{ color: 'var(--theme-text-secondary)' }}
               >
                 {item.label}
@@ -100,7 +100,7 @@ export function StatCard({ icon: Icon, label, value, color, onClick }: StatCardP
           <Icon className="w-5 h-5" style={{ color: accentColor }} />
         </div>
         <div className="min-w-0">
-          <p className="text-[11px] font-medium" style={{ color: 'var(--theme-text-secondary)' }}>{label}</p>
+          <p className="text-xs font-medium" style={{ color: 'var(--theme-text-secondary)' }}>{label}</p>
           <p className="text-lg font-bold tabular-nums leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{formatted}</p>
         </div>
       </div>

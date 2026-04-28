@@ -36,7 +36,7 @@ export function Login() {
         <img
           src="/logo.png"
           alt="TTransport"
-          className="h-16 w-auto mb-3 drop-shadow-md"
+          className="h-16 w-auto mb-3 drop-shadow-md rounded-[22%]"
         />
         <p className="text-sm mt-1" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.75 }}>
           Quản lý vận tải hàng hóa
