@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/Input/Input'
 import { Label } from '@/components/ui/Label/Label'
 import { apiClient } from '@/services/api'
 import { WORK_TYPES, type Client, type Driver, type WorkType } from '@/data/domain'
-import { SheetPicker } from '@/components/shared/SheetPicker'
+import { InlineSelect } from '@/components/shared/InlineSelect'
 import { Plus, Trash2 } from 'lucide-react'
 
 interface CongItem {
@@ -94,19 +94,19 @@ export function CreateTrip() {
       {/* Client */}
       <div className="space-y-2">
         <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Khách hàng</Label>
-        <SheetPicker options={clients} value={clientId} onChange={setClientId} placeholder="Chọn khách hàng" />
+        <InlineSelect options={clients} value={clientId} onChange={setClientId} placeholder="Chọn khách hàng" />
       </div>
 
       {/* Route */}
       <div className="space-y-2">
         <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Cung đường</Label>
-        <SheetPicker options={routes} value={route} onChange={setRoute} placeholder="Chọn cung đường" />
+        <InlineSelect options={routes} value={route} onChange={setRoute} placeholder="Chọn cung đường" />
       </div>
 
       {/* Driver */}
       <div className="space-y-2">
         <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tài xế</Label>
-        <SheetPicker options={drivers} value={driverId} onChange={setDriverId} placeholder="Chọn tài xế" />
+        <InlineSelect options={drivers} value={driverId} onChange={setDriverId} placeholder="Chọn tài xế" />
       </div>
 
       {/* Trip-level salary & allowance */}

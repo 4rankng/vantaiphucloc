@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Camera, RotateCcw, Plus, Trash2, AlertCircle, WifiOff } from 'lucide-react'
 import { Button } from '@/components/ui/Button/Button'
-import { SheetPicker } from '@/components/shared/SheetPicker'
+import { InlineSelect } from '@/components/shared/InlineSelect'
 import { ContainerScanner } from '@/components/shared/ContainerScanner'
 import type { PhotoMeta } from '@/components/shared/ContainerScanner'
 import { apiClient } from '@/services/api'
@@ -297,7 +297,7 @@ export function CreateWorkOrder() {
       {/* ── Customer ── */}
       <div className="space-y-1.5">
         <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Khách hàng</label>
-        <SheetPicker
+        <InlineSelect
           label="Chọn khách hàng"
           placeholder="Chọn khách hàng"
           value={clientId}
@@ -309,7 +309,7 @@ export function CreateWorkOrder() {
       {/* ── Route ── */}
       <div className="space-y-1.5">
         <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Cung đường</label>
-        <SheetPicker
+        <InlineSelect
           label="Chọn cung đường"
           placeholder="Chọn cung đường"
           value={route}
