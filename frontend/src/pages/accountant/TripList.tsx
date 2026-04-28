@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { apiClient } from '@/services/api'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { Plus } from 'lucide-react'
-import { formatCurrencyFull, type TripOrder } from '@/data/mockData'
+import { formatCurrencyFull, type TripOrder } from '@/data/domain'
 import { useAppStore } from '@/hooks/use-app-store'
 
 export function TripList() {

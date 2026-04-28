@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/Badge'
 import { Package } from 'lucide-react'
-import { formatCurrencyShort, getJobStatusBadge, type JobStatus } from '@/data/mockData'
+import { formatCurrencyShort, getJobStatusBadge, type JobStatus } from '@/data/domain'
 
 export function TripCard({ job, onClick }: { job: any; onClick: () => void }) {
   const s = getJobStatusBadge(job.status as JobStatus)

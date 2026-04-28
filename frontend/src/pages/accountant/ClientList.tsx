@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/Input/Input'
 import { Label } from '@/components/ui/Label/Label'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { apiClient } from '@/services/api'
-import type { Client, ClientType } from '@/data/mockData'
+import type { Client, ClientType } from '@/data/domain'
 
 const EMPTY_CLIENT = {
   name: '', type: 'company' as ClientType, taxCode: '', address: '', phone: '', contactPerson: '',

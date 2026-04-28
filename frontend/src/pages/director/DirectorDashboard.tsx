@@ -1,9 +1,9 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { Users, Truck, TrendingUp, UserCircle, Building2 } from 'lucide-react'
 import { apiClient } from '@/services/api'
-import { formatCurrencyFull as formatCurrency } from '@/data/mockData'
+import { formatCurrencyFull as formatCurrency } from '@/data/domain'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
-import type { WorkOrder, Client, Driver } from '@/data/mockData'
+import type { WorkOrder, Client, Driver } from '@/data/domain'
 
 interface DirectorDashboardProps {
   onManageUsers?: () => void

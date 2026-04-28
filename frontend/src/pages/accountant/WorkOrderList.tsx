@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/Input/Input'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { apiClient } from '@/services/api'
 import { useAppStore } from '@/hooks/use-app-store'
-import { type WorkOrder, type TripOrder } from '@/data/mockData'
+import { type WorkOrder, type TripOrder } from '@/data/domain'
 
 export function WorkOrderList() {
   const { navigate } = useAppStore()
