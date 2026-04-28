@@ -1,5 +1,6 @@
 import json
 import logging
+import asyncio
 
 from pywebpush import webpush, WebPushException
 
@@ -28,7 +29,8 @@ async def send_push_to_user(user_id: int, title: str, body: str) -> int:
     sent = 0
     for sub in subscriptions:
         try:
-            webpush(
+            await asyncio.to_thread(
+                webpush,
                 subscription_info={
                     "endpoint": sub.endpoint,
                     "keys": {"p256dh": sub.p256dh, "auth": sub.auth},

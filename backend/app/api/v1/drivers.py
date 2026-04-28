@@ -24,7 +24,7 @@ async def list_drivers(
     cache = CacheManager(redis)
     cached = await cache.get_json("drivers", current_user.company_id, "list")
     if cached is not None:
-        return cached
+        return [DriverOut(**d) for d in cached]
 
     result = await db.execute(
         select(User).where(
