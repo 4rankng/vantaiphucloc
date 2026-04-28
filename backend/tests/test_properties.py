@@ -103,7 +103,7 @@ async def _make_user(session, company_id, role, phone=None, username=None):
 
 
 async def _login(client, phone, password=_TEST_PASSWORD):
-    resp = await client.post("/api/v1/auth/login", json={"phone": phone, "password": password})
+    resp = await client.post("/api/v1/auth/login", json={"username": phone, "password": password})
     assert resp.status_code == 200, f"Login failed: {resp.text}"
     return {"Authorization": f"Bearer {resp.json()['access_token']}"}
 
@@ -144,7 +144,7 @@ def test_property_1_jwt_payload_completeness(phone, username):
             ) as client:
                 resp = await client.post(
                     "/api/v1/auth/login",
-                    json={"phone": phone, "password": _TEST_PASSWORD},
+                    json={"username": phone, "password": _TEST_PASSWORD},
                 )
             assert resp.status_code == 200, f"Login failed: {resp.text}"
             token = resp.json()["access_token"]

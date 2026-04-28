@@ -5,7 +5,7 @@ import { OfflineProvider } from '@/contexts/OfflineContext'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { OfflineIndicator } from '@/components/shared/OfflineIndicator'
 import { ToastProvider } from '@/components/atoms/Toast'
-import { RoleSelect } from '@/pages/RoleSelect'
+import { Login } from '@/pages/Login'
 import { DriverStoreProvider, useDriverStore } from '@/hooks/use-driver-store'
 import { PageLayout, HomeLayout } from '@/pages/driver/AppShell'
 import { CreateWorkOrder } from '@/pages/driver/CreateWorkOrder'
@@ -41,7 +41,7 @@ function DriverApp() {
 function AppContent() {
   const { user } = useAuth()
 
-  if (!user) return <RoleSelect />
+  if (!user) return <Login />
 
   switch (user.role) {
     case 'superadmin': return <SuperAdminApp />
