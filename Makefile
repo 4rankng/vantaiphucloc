@@ -22,8 +22,15 @@ install:
 migrate:
 	cd backend && PYTHONPATH=. alembic upgrade head
 
-## dev: Start backend, frontend, worker, and adminer concurrently
+## dev: Start PostgreSQL, Redis, backend, frontend, worker, and adminer concurrently
 dev:
+	@docker start vantai-postgres 2>/dev/null || docker run -d --name vantai-postgres \
+		-e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=vantaihanghoa \
+		-p 5432:5432 postgres:16-alpine
+	@docker start vantai-redis 2>/dev/null || docker run -d --name vantai-redis \
+		-p 6379:6379 redis:7-alpine redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+	@sleep 1
+	cd backend && PYTHONPATH=. alembic upgrade head
 	@trap 'kill 0' INT; \
 	cd backend && PYTHONPATH=. uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 & \
 	cd backend && PYTHONPATH=. arq app.workers.worker.WorkerSettings & \

@@ -16,7 +16,7 @@ const trendColors: Record<string, string> = {
 export function TrendIndicator({ direction, value, className }: TrendProps) {
   const arrow = direction === 'up' ? '↑' : direction === 'down' ? '↓' : '→'
   return (
-    <span className={`inline-flex items-center gap-0.5 text-[11px] font-semibold ${trendColors[direction]} ${className ?? ''}`}>
+    <span className={`inline-flex items-center gap-0.5 text-xs font-semibold ${trendColors[direction]} ${className ?? ''}`}>
       {arrow}{value}
     </span>
   )

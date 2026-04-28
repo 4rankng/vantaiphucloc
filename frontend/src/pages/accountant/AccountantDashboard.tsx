@@ -39,15 +39,15 @@ function DoiSoatCard({ job, onClick }: { job: WorkOrder; onClick: () => void }) 
             {allContNumbers(job)}
           </span>
         </div>
-        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ml-2"
+        <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ml-2"
           style={{ background: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' }}>
           Đối soát tài xế
         </span>
       </div>
-      <p className="text-[11px] mt-1" style={{ color: 'var(--theme-text-muted)' }}>
+      <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>
         {job.driverName} · {job.tractorPlate}
       </p>
-      <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
+      <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
         {job.clientName} · {job.route}
       </p>
     </button>
@@ -68,15 +68,15 @@ function MatchedCard({ job }: { job: WorkOrder }) {
             {allContNumbers(job)}
           </span>
         </div>
-        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ml-2"
+        <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ml-2"
           style={{ background: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' }}>
           Đã khớp
         </span>
       </div>
-      <p className="text-[11px] mt-1" style={{ color: 'var(--theme-text-muted)' }}>
+      <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>
         {job.driverName} · {job.tractorPlate}
       </p>
-      <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
+      <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
         {job.clientName} · {job.route}
       </p>
     </div>
@@ -146,7 +146,7 @@ export function AccountantDashboard() {
             <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ background: 'var(--theme-brand-primary-light)' }}>
               <Icon className="h-3.5 w-3.5" style={{ color: 'var(--theme-brand-primary)' }} />
             </div>
-            <span className="text-[9px] font-medium text-center leading-tight px-0.5" style={{ color: 'var(--theme-text-primary)' }}>
+            <span className="text-xs font-medium text-center leading-tight px-0.5" style={{ color: 'var(--theme-text-primary)' }}>
               {label}
             </span>
           </button>
@@ -167,7 +167,7 @@ export function AccountantDashboard() {
                 style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
                 <div>
                   <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{d.name}</p>
-                  <p className="text-[11px] font-mono" style={{ color: 'var(--theme-text-muted)' }}>{d.plate} · {d.totalJobs} công</p>
+                  <p className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>{d.plate} · {d.totalJobs} công</p>
                 </div>
                 <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>
                   {formatCurrencyFull(d.totalSalary)}
@@ -231,12 +231,12 @@ export function AccountantDashboard() {
                     <ContBadge type={trip.workType} />
                     <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{trip.containerNumber}</span>
                   </div>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
                     style={{ background: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' }}>
                     Đối soát khách hàng
                   </span>
                 </div>
-                <p className="text-[11px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
                   {trip.clientName} · {trip.route}
                 </p>
               </button>

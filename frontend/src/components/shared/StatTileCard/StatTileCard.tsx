@@ -24,18 +24,18 @@ export function StatTileCard({ data, onClick }: { data: StatTile; onClick: (path
       }}
     >
       <div className="flex items-start justify-between mb-2">
-        <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
+        <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
           {data.label}
         </p>
         <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: data.accentLight }}>
           <Icon className="w-3.5 h-3.5" style={{ color: data.accent }} />
         </div>
       </div>
-      <p className="text-[22px] font-bold leading-tight tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
+      <p className="text-2xl font-bold leading-tight tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
         {data.value}
       </p>
       {data.sub && (
-        <p className="text-[11px] mt-1" style={{ color: 'var(--theme-text-muted)' }}>{data.sub}</p>
+        <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>{data.sub}</p>
       )}
     </button>
   )

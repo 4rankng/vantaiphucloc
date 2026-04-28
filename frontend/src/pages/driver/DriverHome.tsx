@@ -59,7 +59,7 @@ export function DriverHome() {
             className="rounded-2xl p-4"
             style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
           >
-            <p className="text-[11px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
+            <p className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
               Thu nhập
             </p>
             <p className="text-xl font-bold tabular-nums mt-1" style={{ color: 'var(--theme-text-primary)' }}>
@@ -70,7 +70,7 @@ export function DriverHome() {
             className="rounded-2xl p-4"
             style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
           >
-            <p className="text-[11px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
+            <p className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
               Số chuyến
             </p>
             <p className="text-xl font-bold tabular-nums mt-1" style={{ color: 'var(--theme-text-primary)' }}>

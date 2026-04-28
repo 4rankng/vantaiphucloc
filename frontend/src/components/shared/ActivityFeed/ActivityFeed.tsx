@@ -36,7 +36,7 @@ export function ActivityFeed({ items, className }: ActivityFeedProps) {
               <p className="text-xs text-[var(--theme-text-muted)] mt-0.5">{item.description}</p>
             )}
             {item.timestamp && (
-              <p className="text-[11px] text-[var(--theme-text-muted)] mt-1">{item.timestamp}</p>
+              <p className="text-xs text-[var(--theme-text-muted)] mt-1">{item.timestamp}</p>
             )}
           </div>
         </div>

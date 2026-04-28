@@ -74,7 +74,7 @@ export function MetricCard({
     >
       {/* Header: label + icon */}
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--theme-text-muted)]">
+        <p className="text-xs font-semibold uppercase tracking-wider text-[var(--theme-text-muted)]">
           {label}
         </p>
         {icon && (
@@ -85,7 +85,7 @@ export function MetricCard({
       </div>
 
       {/* Hero value */}
-      <p className="mt-2 text-[26px] font-bold leading-tight tracking-tight text-[var(--theme-text-primary)]">
+      <p className="mt-2 text-2xl font-bold leading-tight tracking-tight text-[var(--theme-text-primary)]">
         {value}
       </p>
 
@@ -98,7 +98,7 @@ export function MetricCard({
           </span>
         )}
         {subtitle && (
-          <span className="text-[11px] text-[var(--theme-text-muted)]">
+          <span className="text-xs text-[var(--theme-text-muted)]">
             {subtitle}
           </span>
         )}

@@ -17,7 +17,7 @@ export function InfoRow({ icon: Icon, label, value, noBorder }: {
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>{label}</p>
+        <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{label}</p>
         <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>{value ?? '-'}</p>
       </div>
     </div>

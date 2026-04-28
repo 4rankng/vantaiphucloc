@@ -82,7 +82,7 @@ export function TripDetail({ tripId }: { tripId: string }) {
               style={{ color: 'var(--theme-text-muted)' }}>
               <Pencil className="h-3.5 w-3.5" />
             </button>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
               style={{
                 background: trip.status === 'DRAFT' ? 'var(--theme-status-warning-light)' : 'var(--theme-status-success-light)',
                 color: trip.status === 'DRAFT' ? 'var(--theme-status-warning)' : 'var(--theme-status-success)',
@@ -127,7 +127,7 @@ export function TripDetail({ tripId }: { tripId: string }) {
                     {formatCurrencyFull(job.earning)}
                   </span>
                 </div>
-                <p className="text-[11px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
                   {job.driverName} · {job.tractorPlate}
                 </p>
               </div>
@@ -210,10 +210,10 @@ export function TripDetail({ tripId }: { tripId: string }) {
                       {job.containers[0]?.containerNumber || job.id}
                     </span>
                   </div>
-                  <p className="text-[11px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
                     {job.driverName} · {job.tractorPlate}
                   </p>
-                  <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
+                  <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
                     {job.clientName} · {job.route}
                   </p>
                 </button>
