@@ -23,6 +23,10 @@ email-validator==2.2.0
 python-dotenv==1.0.1
 httpx==0.27.2
 
+# Redis & background jobs
+redis[hiredis]>=5.0.0
+arq>=0.26.0
+
 # CORS & middleware
 starlette==0.40.0
 
