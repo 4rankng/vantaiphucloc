@@ -22,18 +22,16 @@ async def list_routes(
     redis: Redis = Depends(get_redis),
 ):
     cache = CacheManager(redis)
-    cached = await cache.get_json("routes", current_user.company_id, "list")
+    cached = await cache.get_json("routes", "list")
     if cached is not None:
         return [RouteOut(**r) for r in cached]
 
     result = await db.execute(
-        select(Route)
-        .where(Route.company_id == current_user.company_id)
-        .order_by(Route.route.asc())
+        select(Route).order_by(Route.route.asc())
     )
     data = result.scalars().all()
     serialized = [RouteOut.model_validate(r).model_dump(mode="json") for r in data]
-    await cache.set_json("routes", current_user.company_id, "list", serialized, ttl=settings.CACHE_ROUTES_TTL)
+    await cache.set_json("routes", "list", serialized, ttl=settings.CACHE_ROUTES_TTL)
     return data
 
 
@@ -44,14 +42,11 @@ async def create_route(
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
-    route = Route(
-        company_id=current_user.company_id,
-        **body.model_dump(),
-    )
+    route = Route(**body.model_dump())
     db.add(route)
     await db.commit()
     await db.refresh(route)
-    await CacheManager(redis).invalidate_namespace("routes", current_user.company_id)
+    await CacheManager(redis).invalidate_namespace("routes")
     return route
 
 
@@ -64,10 +59,7 @@ async def update_route(
     redis: Redis = Depends(get_redis),
 ):
     result = await db.execute(
-        select(Route).where(
-            Route.id == route_id,
-            Route.company_id == current_user.company_id,
-        )
+        select(Route).where(Route.id == route_id)
     )
     route = result.scalar_one_or_none()
     if route is None:
@@ -78,7 +70,7 @@ async def update_route(
 
     await db.commit()
     await db.refresh(route)
-    await CacheManager(redis).invalidate_namespace("routes", current_user.company_id)
+    await CacheManager(redis).invalidate_namespace("routes")
     return route
 
 
@@ -90,10 +82,7 @@ async def delete_route(
     redis: Redis = Depends(get_redis),
 ):
     result = await db.execute(
-        select(Route).where(
-            Route.id == route_id,
-            Route.company_id == current_user.company_id,
-        )
+        select(Route).where(Route.id == route_id)
     )
     route = result.scalar_one_or_none()
     if route is None:
@@ -101,5 +90,5 @@ async def delete_route(
 
     await db.delete(route)
     await db.commit()
-    await CacheManager(redis).invalidate_namespace("routes", current_user.company_id)
+    await CacheManager(redis).invalidate_namespace("routes")
     return Response()

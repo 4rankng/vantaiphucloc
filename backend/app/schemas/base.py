@@ -37,7 +37,6 @@ class UserOut(BaseModel):
     email: str | None = None
     username: str
     role: str
-    company_id: int | None
     vendor: str | None = None
     tractor_plate: str | None = None
     is_active: bool
@@ -70,7 +69,6 @@ class UserCreate(BaseModel):
     username: str
     password: str
     role: str = "driver"
-    company_id: int | None = None
 
 
 class UserUpdate(BaseModel):
@@ -78,7 +76,6 @@ class UserUpdate(BaseModel):
     email: str | None = None
     username: str | None = None
     role: str | None = None
-    company_id: int | None = None
     is_active: bool | None = None
 
 

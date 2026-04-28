@@ -22,18 +22,16 @@ async def list_clients(
     redis: Redis = Depends(get_redis),
 ):
     cache = CacheManager(redis)
-    cached = await cache.get_json("clients", current_user.company_id, "list")
+    cached = await cache.get_json("clients", "list")
     if cached is not None:
         return [ClientOut(**c) for c in cached]
 
     result = await db.execute(
-        select(Client)
-        .where(Client.company_id == current_user.company_id)
-        .order_by(Client.name.asc())
+        select(Client).order_by(Client.name.asc())
     )
     data = result.scalars().all()
     serialized = [ClientOut.model_validate(c).model_dump(mode="json") for c in data]
-    await cache.set_json("clients", current_user.company_id, "list", serialized, ttl=settings.CACHE_CLIENTS_TTL)
+    await cache.set_json("clients", "list", serialized, ttl=settings.CACHE_CLIENTS_TTL)
     return data
 
 
@@ -44,14 +42,11 @@ async def create_client(
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
-    client = Client(
-        company_id=current_user.company_id,
-        **body.model_dump(),
-    )
+    client = Client(**body.model_dump())
     db.add(client)
     await db.commit()
     await db.refresh(client)
-    await CacheManager(redis).invalidate_namespace("clients", current_user.company_id)
+    await CacheManager(redis).invalidate_namespace("clients")
     return client
 
 
@@ -64,10 +59,7 @@ async def update_client(
     redis: Redis = Depends(get_redis),
 ):
     result = await db.execute(
-        select(Client).where(
-            Client.id == client_id,
-            Client.company_id == current_user.company_id,
-        )
+        select(Client).where(Client.id == client_id)
     )
     client = result.scalar_one_or_none()
     if client is None:
@@ -78,7 +70,7 @@ async def update_client(
 
     await db.commit()
     await db.refresh(client)
-    await CacheManager(redis).invalidate_namespace("clients", current_user.company_id)
+    await CacheManager(redis).invalidate_namespace("clients")
     return client
 
 
@@ -90,10 +82,7 @@ async def delete_client(
     redis: Redis = Depends(get_redis),
 ):
     result = await db.execute(
-        select(Client).where(
-            Client.id == client_id,
-            Client.company_id == current_user.company_id,
-        )
+        select(Client).where(Client.id == client_id)
     )
     client = result.scalar_one_or_none()
     if client is None:
@@ -101,5 +90,5 @@ async def delete_client(
 
     await db.delete(client)
     await db.commit()
-    await CacheManager(redis).invalidate_namespace("clients", current_user.company_id)
+    await CacheManager(redis).invalidate_namespace("clients")
     return Response()

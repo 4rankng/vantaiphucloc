@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Index
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Index
 from app.database import Base
 
 
@@ -12,10 +12,10 @@ class User(Base):
     Application user / system account.
 
     Valid roles:
-        superadmin  – full system access (Phúc Lộc)
-        director    – read-only dashboards and reports (Phúc Lộc)
-        accountant  – manages trips, pricing, reconciliation, salary (Phúc Lộc)
-        driver      – submits work orders (Phúc Lộc or vendor)
+        superadmin  – full system access
+        director    – read-only dashboards and reports
+        accountant  – manages trips, pricing, reconciliation, salary
+        driver      – submits work orders (internal or vendor)
 
     This app belongs to Phúc Lộc. Internal staff (superadmin, director, accountant)
     are always Phúc Lộc. Drivers may belong to Phúc Lộc or an external vendor;
@@ -38,9 +38,6 @@ class User(Base):
     # superadmin | director | accountant | driver
     role = Column(String(20), default="driver", nullable=False)
 
-    # Company this user belongs to for data isolation (always Phúc Lộc for staff)
-    company_id = Column(Integer, ForeignKey("companies.id"), nullable=True, index=True)
-
     # For drivers: which vendor/company they come from. "Phúc Lộc" = internal driver.
     vendor = Column(String(255), nullable=True, index=True)
 
@@ -59,8 +56,4 @@ class User(Base):
         default=_utcnow,
         onupdate=_utcnow,
         nullable=False,
-    )
-
-    __table_args__ = (
-        Index("ix_users_company_id_role", "company_id", "role"),
     )

@@ -56,7 +56,6 @@ async def login(
         "id": user.id,
         "name": user.username,
         "role": user.role,
-        "company_id": user.company_id,
     }
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token({"id": user.id})
@@ -90,7 +89,6 @@ async def refresh_token(body: RefreshTokenRequest, db: AsyncSession = Depends(ge
         "id": user.id,
         "name": user.username,
         "role": user.role,
-        "company_id": user.company_id,
     }
     new_access = create_access_token(token_data)
     new_refresh = create_refresh_token({"id": user.id})
