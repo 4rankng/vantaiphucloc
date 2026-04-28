@@ -1,205 +1,297 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
-import { Plus, Pencil, Trash2, CircleDollarSign } from 'lucide-react'
-import { PageHeader } from '@/components/shared/PageHeader/PageHeader'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog/Dialog'
+import { useEffect, useState, useMemo } from 'react'
+import { apiClient } from '@/services/api'
+import { getPricings, createPricing, updatePricing, deletePricing } from '@/services/sandbox/sandboxClient'
+import { formatCurrencyFull, WORK_TYPES, WORK_TYPE_LABELS, type Pricing, type PricingLine, type WorkType, type Client, type RoutePrice } from '@/data/mockData'
+import { ContBadge } from '@/components/shared/ContBadge'
 import { Button } from '@/components/ui/Button/Button'
 import { Input } from '@/components/ui/Input/Input'
 import { Label } from '@/components/ui/Label/Label'
-import { apiClient } from '@/services/api'
-import { formatCurrencyFull, WORK_TYPES, type Pricing, type Client, type RoutePrice, type WorkType } from '@/data/mockData'
+import { SheetPicker } from '@/components/shared/SheetPicker'
+import { Plus, Pencil, Trash2, X, Check, Search } from 'lucide-react'
+import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 
-interface PricingForm {
-  clientId: string
-  clientName: string
-  workType: WorkType
-  route: string
-  unitPrice: number
-  driverSalary: number
-  allowance: number
+// ─── Pricing Card ─────────────────────────────────────────────────────────────
+function PricingCard({ pricing, onEdit, onDelete }: {
+  pricing: Pricing; onEdit: () => void; onDelete: () => void
+}) {
+  return (
+    <div className="rounded-2xl p-3 space-y-2"
+      style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
+      <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {pricing.lines.map((line, i) => (
+            <span key={i} className="flex items-center gap-1">
+              {i > 0 && <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>+</span>}
+              <ContBadge type={line.workType} />
+              <span className="text-[11px] font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>×{line.quantity}</span>
+            </span>
+          ))}
+        </div>
+        <div className="flex items-center gap-1">
+          <button onClick={onEdit} className="p-1.5 rounded-lg touch-manipulation" style={{ color: 'var(--theme-text-muted)' }}>
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={onDelete} className="p-1.5 rounded-lg touch-manipulation" style={{ color: 'var(--theme-status-error)' }}>
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+      <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{pricing.clientName}</p>
+      <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>{pricing.route}</p>
+      <div className="grid grid-cols-3 gap-2 pt-1" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
+        <div>
+          <p className="text-[9px]" style={{ color: 'var(--theme-text-muted)' }}>Đơn giá</p>
+          <p className="text-xs font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyFull(pricing.unitPrice)}</p>
+        </div>
+        <div>
+          <p className="text-[9px]" style={{ color: 'var(--theme-text-muted)' }}>Lương TX</p>
+          <p className="text-xs font-semibold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(pricing.driverSalary)}</p>
+        </div>
+        <div>
+          <p className="text-[9px]" style={{ color: 'var(--theme-text-muted)' }}>Phụ cấp</p>
+          <p className="text-xs font-semibold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(pricing.allowance)}</p>
+        </div>
+      </div>
+    </div>
+  )
 }
 
-const EMPTY_FORM: PricingForm = {
-  clientId: '', clientName: '', workType: 'E20', route: '', unitPrice: 0, driverSalary: 0, allowance: 0,
+// ─── Line editor ──────────────────────────────────────────────────────────────
+function LineEditor({ lines, onChange }: {
+  lines: PricingLine[]; onChange: (lines: PricingLine[]) => void
+}) {
+  const addLine = () => onChange([...lines, { workType: 'E20', quantity: 1 }])
+  const removeLine = (idx: number) => onChange(lines.filter((_, i) => i !== idx))
+  const updateLine = (idx: number, field: keyof PricingLine, value: WorkType | number) => {
+    onChange(lines.map((l, i) => i === idx ? { ...l, [field]: value } : l))
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Công</Label>
+        <button onClick={addLine} className="flex items-center gap-1 text-xs font-medium touch-manipulation" style={{ color: 'var(--theme-brand-primary)' }}>
+          <Plus className="w-3.5 h-3.5" /> Thêm loại
+        </button>
+      </div>
+      {lines.map((line, i) => (
+        <div key={i} className="flex items-center gap-2 rounded-xl p-2"
+          style={{ background: 'var(--theme-bg-tertiary)', border: '1px solid var(--theme-border-default)' }}>
+          {/* Type selector */}
+          <div className="flex gap-0.5 shrink-0">
+            {WORK_TYPES.map(w => (
+              <button key={w} onClick={() => updateLine(i, 'workType', w)}
+                className="px-1.5 py-1 rounded text-[9px] font-bold touch-manipulation"
+                style={{
+                  background: line.workType === w ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
+                  color: line.workType === w ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
+                }}>
+                {w}
+              </button>
+            ))}
+          </div>
+          {/* Quantity */}
+          <div className="flex items-center gap-1">
+            <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>×‌</span>
+            <Input type="number" min={1} value={line.quantity} onChange={e => updateLine(i, 'quantity', Math.max(1, Number(e.target.value)))}
+              className="text-xs font-bold h-8 w-14 text-center" />
+          </div>
+          {/* Remove */}
+          {lines.length > 1 && (
+            <button onClick={() => removeLine(i)} className="touch-manipulation shrink-0" style={{ color: 'var(--theme-status-error)' }}>
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  )
 }
 
+// ─── Pricing Form ─────────────────────────────────────────────────────────────
+function PricingForm({ initial, clients, routes, onSave, onCancel }: {
+  initial?: Pricing
+  clients: Client[]; routes: RoutePrice[]
+  onSave: (data: Omit<Pricing, 'id' | 'createdAt' | 'updatedAt'>) => void
+  onCancel: () => void
+}) {
+  const [clientId, setClientId] = useState(initial?.clientId ?? '')
+  const [route, setRoute] = useState(initial?.route ?? '')
+  const [lines, setLines] = useState<PricingLine[]>(
+    initial?.lines ?? [{ workType: 'E20' as WorkType, quantity: 1 }]
+  )
+  const [unitPrice, setUnitPrice] = useState(initial?.unitPrice ?? 0)
+  const [driverSalary, setDriverSalary] = useState(initial?.driverSalary ?? 0)
+  const [allowance, setAllowance] = useState(initial?.allowance ?? 0)
+
+  const clientOptions = useMemo(() => clients.map(c => ({ value: c.id, label: c.name })), [clients])
+  const routeOptions = useMemo(() => routes.map(r => ({ value: r.route, label: r.route })), [routes])
+  const clientName = clients.find(c => c.id === clientId)?.name ?? ''
+  // Derive primary workType from first line for compatibility
+  const workType = lines[0]?.workType ?? 'E20'
+
+  const handleSubmit = () => {
+    if (!clientId || !route || lines.length === 0) return
+    onSave({ clientId, clientName, workType, route, lines, unitPrice, driverSalary, allowance })
+  }
+
+  return (
+    <div className="rounded-2xl p-4 space-y-4"
+      style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '2px solid var(--theme-brand-primary)' }}>
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+          {initial ? 'Sửa bảng giá' : 'Thêm bảng giá'}
+        </p>
+        <button onClick={onCancel} className="touch-manipulation" style={{ color: 'var(--theme-text-muted)' }}>
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</Label>
+        <SheetPicker options={clientOptions} value={clientId} onChange={setClientId} placeholder="Chọn khách hàng" />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</Label>
+        <SheetPicker options={routeOptions} value={route} onChange={setRoute} placeholder="Chọn cung đường" />
+      </div>
+
+      <LineEditor lines={lines} onChange={setLines} />
+
+      <div className="grid grid-cols-3 gap-2">
+        <div className="space-y-1.5">
+          <Label className="text-[10px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Đơn giá</Label>
+          <Input type="number" value={unitPrice || ''} onChange={e => setUnitPrice(Number(e.target.value))}
+            placeholder="0" className="text-xs font-mono h-9" />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-[10px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Lương TX</Label>
+          <Input type="number" value={driverSalary || ''} onChange={e => setDriverSalary(Number(e.target.value))}
+            placeholder="0" className="text-xs font-mono h-9" />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-[10px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Phụ cấp</Label>
+          <Input type="number" value={allowance || ''} onChange={e => setAllowance(Number(e.target.value))}
+            placeholder="0" className="text-xs font-mono h-9" />
+        </div>
+      </div>
+
+      <Button onClick={handleSubmit} disabled={!clientId || !route || lines.length === 0}
+        className="w-full h-10 font-bold rounded-xl text-sm"
+        style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+        <Check className="w-4 h-4 mr-1.5" /> {initial ? 'Lưu' : 'Thêm'}
+      </Button>
+    </div>
+  )
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
 export function PricingList() {
   const [pricings, setPricings] = useState<Pricing[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [routes, setRoutes] = useState<RoutePrice[]>([])
   const [loading, setLoading] = useState(true)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editing, setEditing] = useState<Pricing | null>(null)
-  const [form, setForm] = useState<PricingForm>(EMPTY_FORM)
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [showForm, setShowForm] = useState(false)
+  const [editingPricing, setEditingPricing] = useState<Pricing | undefined>()
+  const [searchQuery, setSearchQuery] = useState('')
 
-  const loadData = useCallback(async () => {
-    const [pRes, cRes, rRes] = await Promise.all([
-      apiClient.getPricings(), apiClient.getClients(), apiClient.getRoutes(),
-    ])
-    if (pRes.success) setPricings(pRes.data)
-    if (cRes.success) setClients(cRes.data)
-    if (rRes.success) setRoutes(rRes.data)
-    setLoading(false)
+  useEffect(() => {
+    let cancelled = false
+    Promise.all([getPricings(), apiClient.getClients(), apiClient.getRoutes()])
+      .then(([p, c, r]) => {
+        if (!cancelled) {
+          if (p.success) setPricings(p.data)
+          if (c.success) setClients(c.data)
+          if (r.success) setRoutes(r.data)
+          setLoading(false)
+        }
+      })
+    return () => { cancelled = true }
   }, [])
 
-  useEffect(() => { loadData() }, [loadData])
+  const filtered = useMemo(() => {
+    if (!searchQuery.trim()) return pricings
+    const q = searchQuery.toLowerCase()
+    return pricings.filter(p =>
+      p.clientName.toLowerCase().includes(q) ||
+      p.route.toLowerCase().includes(q) ||
+      p.lines.some(l => l.workType.toLowerCase().includes(q))
+    )
+  }, [pricings, searchQuery])
 
-  const handleOpenCreate = useCallback(() => {
-    setEditing(null)
-    setForm(EMPTY_FORM)
-    setDialogOpen(true)
-  }, [])
-
-  const handleOpenEdit = useCallback((p: Pricing) => {
-    setEditing(p)
-    setForm({ clientId: p.clientId, clientName: p.clientName, workType: p.workType, route: p.route, unitPrice: p.unitPrice, driverSalary: p.driverSalary, allowance: p.allowance })
-    setDialogOpen(true)
-  }, [])
-
-  const handleSubmit = useCallback(async () => {
-    if (editing) {
-      await apiClient.updatePricing(editing.id, form)
-    } else {
-      await apiClient.createPricing(form)
-    }
-    setDialogOpen(false)
-    loadData()
-  }, [editing, form, loadData])
-
-  const handleDelete = useCallback(async (id: string) => {
-    await apiClient.deletePricing(id)
-    setDeleteConfirm(null)
-    loadData()
-  }, [loadData])
-
-  const updateField = useCallback((field: keyof PricingForm, value: string | number) => {
-    setForm(prev => {
-      const next = { ...prev, [field]: value }
-      if (field === 'clientId') {
-        const client = clients.find(c => c.id === value)
-        if (client) next.clientName = client.name
-      }
-      return next
+  const grouped = useMemo(() => {
+    const map = new Map<string, Pricing[]>()
+    filtered.forEach(p => {
+      const list = map.get(p.clientName) ?? []
+      list.push(p)
+      map.set(p.clientName, list)
     })
-  }, [clients])
+    return Array.from(map.entries())
+  }, [filtered])
+
+  const handleSave = async (data: Omit<Pricing, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (editingPricing) {
+      const res = await updatePricing(editingPricing.id, data)
+      if (res.success) {
+        setPricings(prev => prev.map(p => p.id === editingPricing.id ? { ...p, ...data, updatedAt: new Date().toISOString() } : p))
+      }
+    } else {
+      const res = await createPricing(data)
+      if (res.success) setPricings(prev => [...prev, res.data])
+    }
+    setShowForm(false)
+    setEditingPricing(undefined)
+  }
+
+  const handleDelete = async (id: string) => {
+    const res = await deletePricing(id)
+    if (res.success) setPricings(prev => prev.filter(p => p.id !== id))
+  }
 
   if (loading) {
-    return <div className="p-4"><div className="animate-pulse space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-20 rounded-xl bg-[var(--theme-bg-tertiary)]" />)}</div></div>
+    return <div className="space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-24 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}</div>
   }
 
   return (
-    <div className="p-4 space-y-4">
-      <PageHeader title="Đơn giá" subtitle={`${pricings.length} mục`} onAdd={handleOpenCreate} addLabel="Thêm đơn giá" />
+    <div className="space-y-4">
+      <div className="relative">
+        <div className="flex items-center gap-2">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
+            <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Tìm khách hàng, cung đường..." className="text-xs h-9 pl-8" />
+          </div>
+        </div>
 
-      <button onClick={handleOpenCreate}
-        className="lg:hidden w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]"
-        style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-        <Plus className="h-4 w-4" /> Thêm đơn giá
-      </button>
+        {showForm && (
+          <PricingForm initial={editingPricing} clients={clients} routes={routes}
+            onSave={handleSave} onCancel={() => { setShowForm(false); setEditingPricing(undefined) }} />
+        )}
 
-      <div className="space-y-2">
-        {pricings.map(p => (
-          <div key={p.id}
-            className="flex items-start gap-3 p-4 rounded-xl border"
-            style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}>
-            <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0"
-              style={{ background: 'var(--theme-bg-tertiary)' }}>
-              <CircleDollarSign className="h-5 w-5" style={{ color: 'var(--theme-text-muted)' }} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{p.clientName}</p>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>{p.workType}</span>
-              </div>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{p.route}</p>
-              <div className="flex gap-3 mt-1">
-                <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Đơn giá: {formatCurrencyFull(p.unitPrice)}</p>
-                <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Lương LX: {formatCurrencyFull(p.driverSalary)}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-1 shrink-0">
-              <button onClick={() => handleOpenEdit(p)} className="h-8 w-8 flex items-center justify-center rounded-lg touch-manipulation" style={{ color: 'var(--theme-text-muted)' }} aria-label="Sửa">
-                <Pencil className="h-4 w-4" />
-              </button>
-              <button onClick={() => setDeleteConfirm(p.id)} className="h-8 w-8 flex items-center justify-center rounded-lg touch-manipulation" style={{ color: 'var(--theme-status-error)' }} aria-label="Xoá">
-                <Trash2 className="h-4 w-4" />
-              </button>
+        {grouped.map(([clientName, items]) => (
+          <div key={clientName} className="mt-4">
+            <p className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: 'var(--theme-text-muted)' }}>{clientName}</p>
+            <div className="space-y-2">
+              {items.map(p => (
+                <PricingCard key={p.id} pricing={p}
+                  onEdit={() => { setEditingPricing(p); setShowForm(true) }}
+                  onDelete={() => handleDelete(p.id)} />
+              ))}
             </div>
           </div>
         ))}
+
+        {grouped.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>
+              {searchQuery ? 'Không tìm thấy bảng giá' : 'Chưa có bảng giá'}
+            </p>
+          </div>
+        )}
       </div>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editing ? 'Sửa đơn giá' : 'Thêm đơn giá'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Khách hàng</Label>
-              <select value={form.clientId} onChange={e => updateField('clientId', e.target.value)}
-                className="w-full h-10 rounded-lg px-3 text-sm border" style={{ background: 'var(--theme-bg-tertiary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}>
-                <option value="">Chọn khách hàng</option>
-                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Loại công</Label>
-              <div className="grid grid-cols-4 gap-2">
-                {WORK_TYPES.map(wt => (
-                  <button key={wt} onClick={() => updateField('workType', wt)}
-                    className="py-2 px-1 rounded-lg text-xs font-bold transition-colors"
-                    style={{
-                      background: form.workType === wt ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
-                      color: form.workType === wt ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
-                    }}>
-                    {wt}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Cung đường</Label>
-              <select value={form.route} onChange={e => updateField('route', e.target.value)}
-                className="w-full h-10 rounded-lg px-3 text-sm border" style={{ background: 'var(--theme-bg-tertiary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}>
-                <option value="">Chọn cung đường</option>
-                {routes.map((r, i) => <option key={i} value={r.route}>{r.route}</option>)}
-              </select>
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Đơn giá</Label>
-                <Input type="number" value={form.unitPrice || ''} onChange={e => updateField('unitPrice', Number(e.target.value))} placeholder="0" className="text-sm" />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Lương LX</Label>
-                <Input type="number" value={form.driverSalary || ''} onChange={e => updateField('driverSalary', Number(e.target.value))} placeholder="0" className="text-sm" />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Phụ cấp</Label>
-                <Input type="number" value={form.allowance || ''} onChange={e => updateField('allowance', Number(e.target.value))} placeholder="0" className="text-sm" />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Huỷ</Button>
-            <Button onClick={handleSubmit} disabled={!form.clientId || !form.route}>{editing ? 'Cập nhật' : 'Tạo'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Xoá đơn giá?</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Hành động này không thể hoàn tác.</p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Huỷ</Button>
-            <Button variant="destructive" onClick={() => deleteConfirm && handleDelete(deleteConfirm)}>Xoá</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => { setEditingPricing(undefined); setShowForm(true) }} label="Thêm bảng giá" />
     </div>
   )
 }
