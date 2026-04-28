@@ -1,5 +1,5 @@
 # Web framework
-fastapi==0.115.0
+fastapi==0.115.5
 uvicorn[standard]==0.30.6
 
 # Database
@@ -9,7 +9,7 @@ asyncpg==0.29.0
 psycopg2-binary==2.9.9
 
 # Redis
-edis==5.0.8
+redis==5.0.8
 
 # Background tasks
 celery==5.4.0
