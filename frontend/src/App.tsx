@@ -20,7 +20,7 @@ import { AccountantApp } from '@/pages/accountant/AccountantApp'
 import { SuperAdminApp } from '@/pages/superadmin/SuperAdminApp'
 import { checkVersion, forceUpdate, requestSoftUpdate } from '@/lib/version'
 
-const VERSION_CHECK_INTERVAL = 5 * 60 * 1000 // 5 minutes
+
 
 function DriverRouter() {
   const { currentPath } = useDriverStore()
@@ -57,8 +57,8 @@ function AppContent() {
 }
 
 /**
- * Runs the version check loop. Lives outside auth so it works
- * even when the user isn't logged in.
+ * Checks version once on mount (session start). No polling.
+ * Next check happens when user opens a new tab/session.
  */
 function VersionChecker({ children }: { children: React.ReactNode }) {
   const [forceUpdating, setForceUpdating] = useState(false)
@@ -80,12 +80,8 @@ function VersionChecker({ children }: { children: React.ReactNode }) {
     }
 
     doCheck()
-    const interval = setInterval(doCheck, VERSION_CHECK_INTERVAL)
 
-    return () => {
-      mounted = false
-      clearInterval(interval)
-    }
+    return () => { mounted = false }
   }, [])
 
   // Listen for FORCE_RELOAD from the service worker
