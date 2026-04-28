@@ -3,6 +3,7 @@ import { Camera, RotateCcw, Plus, Trash2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button/Button'
 import { SheetPicker } from '@/components/shared/SheetPicker'
 import { ContainerScanner } from '@/components/shared/ContainerScanner'
+import type { PhotoMeta } from '@/components/shared/ContainerScanner'
 import { apiClient } from '@/services/api'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { useToast } from '@/components/atoms/Toast'
@@ -21,6 +22,9 @@ interface ContainerForm {
   workType: WorkType
   photoTaken: boolean
   photoDataUrl?: string
+  photoLat?: number | null
+  photoLng?: number | null
+  photoTimestamp?: string | null
 }
 
 const EMPTY_CONT: ContainerForm = { containerNumber: '', workType: 'E20', photoTaken: false }
@@ -60,11 +64,10 @@ export function CreateWorkOrder() {
     setScannerOpen(true)
   }, [])
 
-  const handleScanComplete = useCallback((imageSrc: string) => {
-    // Discard actual image, fill fake cont number for mockup
+  const handleScanComplete = useCallback((imageSrc: string, meta: PhotoMeta) => {
     setContainers(prev => prev.map((c, i) =>
       i === activeContIdx
-        ? { ...c, photoTaken: true, photoDataUrl: imageSrc, containerNumber: c.containerNumber || generateContainerNumber() }
+        ? { ...c, photoTaken: true, photoDataUrl: imageSrc, containerNumber: c.containerNumber || generateContainerNumber(), photoLat: meta.lat, photoLng: meta.lng, photoTimestamp: meta.timestamp }
         : c,
     ))
     setScannerOpen(false)
@@ -85,7 +88,6 @@ export function CreateWorkOrder() {
     setContainers(prev => prev.filter((_, i) => i !== idx))
   }, [])
 
-  // Submit
   const handleSubmit = useCallback(async () => {
     if (containers.some(c => !c.containerNumber.trim()) || !clientId || !route) return
     setSubmitting(true)
@@ -95,11 +97,20 @@ export function CreateWorkOrder() {
       const containerItems: ContainerItem[] = containers.map(c => ({
         containerNumber: c.containerNumber.trim(),
         workType: c.workType,
-        photoUrl: '', // discard photo in mockup
+        photoUrl: c.photoDataUrl ?? '',
+        photoLat: c.photoLat ?? null,
+        photoLng: c.photoLng ?? null,
+        photoTimestamp: c.photoTimestamp ?? null,
       }))
 
-      const gpsLat = 20.8449
-      const gpsLng = 106.6881
+      const gps = await new Promise<{ lat: number; lng: number }>((resolve) => {
+        if (!navigator.geolocation) return resolve({ lat: 0, lng: 0 })
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          () => resolve({ lat: 0, lng: 0 }),
+          { enableHighAccuracy: true, timeout: 5000 },
+        )
+      })
 
       await apiClient.createWorkOrder({
         containers: containerItems,
@@ -109,8 +120,8 @@ export function CreateWorkOrder() {
         driverId: driver.id,
         driverName: driver.name,
         tractorPlate: driver.tractorPlate,
-        gpsLat,
-        gpsLng,
+        gpsLat: gps.lat,
+        gpsLng: gps.lng,
       })
 
       navigate('/driver')

@@ -148,6 +148,9 @@ class ContainerCreate(BaseModel):
     container_number: str
     work_type: str
     photo_url: str | None = None
+    photo_lat: float | None = None
+    photo_lng: float | None = None
+    photo_timestamp: datetime | None = None
 
 
 class ContainerOut(BaseModel):
@@ -155,6 +158,10 @@ class ContainerOut(BaseModel):
     container_number: str
     work_type: str
     photo_url: str | None
+    photo_lat: float | None = None
+    photo_lng: float | None = None
+    photo_timestamp: datetime | None = None
+    photo_address: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
