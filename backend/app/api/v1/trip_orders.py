@@ -3,7 +3,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, delete
 
 from app.database import get_db
 from app.models.base import User
@@ -167,8 +167,18 @@ async def update_trip_order(
         setattr(trip_order, field, value)
 
     if new_matched_ids is not None:
-        # Add new join table entries for any new IDs
+        # Remove old join table entries that are no longer in the list
         existing_ids = await _get_matched_work_order_ids(db, trip_order.id)
+        removed_ids = set(existing_ids) - set(new_matched_ids)
+        for wo_id in removed_ids:
+            await db.execute(
+                delete(TripOrderWorkOrder).where(
+                    TripOrderWorkOrder.trip_order_id == trip_order.id,
+                    TripOrderWorkOrder.work_order_id == wo_id,
+                )
+            )
+
+        # Add new join table entries
         for wo_id in new_matched_ids:
             if wo_id not in existing_ids:
                 db.add(TripOrderWorkOrder(

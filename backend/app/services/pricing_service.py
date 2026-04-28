@@ -17,7 +17,7 @@ from app.core.cache import CacheManager
 
 def _pricing_cache_key(client_id: int, work_type: str, route: str) -> str:
     raw = f"{client_id}:{work_type}:{route}"
-    return hashlib.md5(raw.encode()).hexdigest()
+    return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
 async def find_pricing(

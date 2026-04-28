@@ -49,7 +49,7 @@ async def list_pricings(
     cache_id = f"list:{client_id}:{work_type}:{route}"
     cached = await cache.get_json("pricings", current_user.company_id, cache_id)
     if cached is not None:
-        return cached
+        return [PricingOut(**p) for p in cached]
 
     query = select(Pricing).where(Pricing.company_id == current_user.company_id)
 
