@@ -22,12 +22,14 @@ If you change code and this file becomes stale, the next agent will be misled. K
 
 ## Project Overview
 
-**TTransport** — a freight/logistics management frontend for Vietnamese transport companies.
+**Vận Tải Phúc Lộc** — a freight/logistics management frontend for Phúc Lộc transport company.
 
 - **Mobile-first** PWA with offline support
+- **Single-tenant** — no company selection, no multi-tenancy
 - **4 roles**: `driver` (mobile hub), `accountant` (manage trips/pricing/salary), `director` (dashboards/reports), `superadmin`
 - **No React Router** — custom state-based navigation with history stacks
 - **Theme system**: Grab-inspired green theme with CSS variables
+- **Backend-driven force update**: checks `GET /version` every 5 min, can force reload users
 
 ---
 
@@ -413,6 +415,29 @@ function MyComponent() {
 For accountant: edit `lib/navigation.ts` — add to `accountantNav[]` and `pageTitles`.
 For driver: add case in `DriverRouter` (App.tsx).
 For director: add to `DirectorPage` type in DirectorApp.tsx.
+
+---
+
+## Force Update (Backend-Driven Version Check)
+
+The frontend checks `GET /api/v1/version` (public, no auth) on load + every 5 minutes.
+
+**How it works:**
+1. Backend exposes `{ version: "2026.04.28.1", minimum_version: "2026.04.22.0" }`
+2. Frontend has its own version baked at build time via `__APP_VERSION__` (from `package.json`)
+3. `src/lib/version.ts` compares versions:
+   - `current < minimum` → **hard update**: show `ForceUpdateOverlay`, delete all caches, reload
+   - `current < latest` → **soft update**: tell service worker to `skipWaiting()`, seamless
+   - `current == latest` → up-to-date
+
+**Key files:**
+- `src/lib/version.ts` — `checkVersion()`, `forceUpdate()`, `requestSoftUpdate()`
+- `src/App.tsx` — `VersionChecker` component wraps entire app
+- `src/sw.ts` — handles `SKIP_WAITING` and `FORCE_UPDATE` messages from main thread
+- `src/components/shared/ForceUpdateOverlay/` — full-screen Vietnamese "Đang cập nhật..." overlay
+- `vite.config.ts` — `define: { __APP_VERSION__ }` injects version at build time
+
+**To force all users to update:** Raise `MINIMUM_VERSION` in backend `.env` and restart.
 
 ---
 

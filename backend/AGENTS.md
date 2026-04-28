@@ -10,7 +10,7 @@
 - Adding or removing a database model (table)
 - Adding or removing an API endpoint file
 - Adding or removing a service
-- Changing an architectural pattern (auth, multi-tenancy, schema conventions)
+- Changing an architectural pattern (auth, schema conventions)
 - Changing status enums or business logic constants
 - Adding new dependencies or changing the tech stack
 
@@ -20,12 +20,14 @@ If you change code and this file becomes stale, the next agent will be misled. K
 
 ## Project Overview
 
-**Vận Tải Hàng Hóa** — a freight/logistics management backend for Vietnamese transport companies.
+**Vận Tải Phúc Lộc** — a freight/logistics management backend for Phúc Lộc transport company.
 
-- **Multi-tenant**: all data scoped to `company_id`
+- **Single-tenant**: one company (Phúc Lộc), no `company_id` multi-tenancy
 - **4 roles**: `superadmin` (full access), `director` (read dashboards), `accountant` (manage trips/pricing/salary), `driver` (submit work orders)
-- **Phone-based auth**: users log in with phone + password, get JWT
+- **Phone-based auth**: users log in with phone/email/username + password, get JWT
 - **Currency**: Vietnamese Dong (VND), stored as integers — no decimals
+- **Drivers & vendors**: drivers have a `vendor` string field (default "Phúc Lộc"). External vendor drivers have their company name there.
+- **Force update**: backend exposes `GET /version` with `APP_VERSION` and `MINIMUM_VERSION`. Frontend checks this to force/soft update.
 
 ---
 
@@ -40,10 +42,9 @@ If you change code and this file becomes stale, the next agent will be misled. K
 | Migrations | Alembic |
 | Validation | Pydantic v2 |
 | Auth | python-jose (JWT) + passlib (bcrypt) |
-| Background | Celery 5.4, arq |
+| Background | arq (Redis-based) |
 | Caching | Redis |
 | Testing | pytest + pytest-asyncio + hypothesis |
-| Monitoring | Sentry, Prometheus |
 
 ---
 
@@ -55,12 +56,14 @@ backend/
 │   ├── main.py                  # FastAPI app instance, CORS middleware, mounts api_v1_router
 │   │                            #   - docs at /api/docs, redoc at /api/redoc
 │   ├── config.py                # Settings class (pydantic-settings), reads .env
-│   │                            #   - DATABASE_URL, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, CORS_ORIGINS
+│   │                            #   - DATABASE_URL, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
+│   │                            #   - APP_VERSION, MINIMUM_VERSION (for force update)
+│   │                            #   - CORS_ORIGINS
 │   ├── database.py              # Async engine (asyncpg), async_sessionmaker, Base (DeclarativeBase), get_db()
 │   │
 │   ├── api/v1/                  # All API endpoints — one file per domain entity
-│   │   ├── router.py            # Mounts all sub-routers. Health check at /api/v1/health
-│   │   ├── auth.py              # POST /auth/login, POST /auth/change-password
+│   │   ├── router.py            # Mounts all sub-routers. Health check, version check, job status
+│   │   ├── auth.py              # POST /auth/login, POST /auth/refresh, POST /auth/logout
 │   │   ├── clients.py           # CRUD /clients (list, create, update, delete)
 │   │   ├── drivers.py           # CRUD /drivers
 │   │   ├── routes.py            # CRUD /routes
@@ -69,17 +72,23 @@ backend/
 │   │   ├── trip_orders.py       # CRUD /trip-orders (work order matching)
 │   │   ├── reconcile.py         # POST /reconcile (match work order → trip order)
 │   │   ├── salary.py            # POST /salary/calculate, GET /salary/periods
-│   │   └── salary_config.py     # GET/PUT /salary-config
+│   │   ├── salary_config.py     # GET/PUT /salary-config
+│   │   └── push.py              # Push notification subscription
 │   │
 │   ├── core/
 │   │   ├── deps.py              # Dependency injectors:
 │   │   │                        #   get_current_user — decodes JWT, loads User from DB
 │   │   │                        #   require_roles(*roles) — factory, returns dependency that checks role
-│   │   └── security.py          # hash_password, verify_password, create_access_token, decode_access_token
+│   │   ├── security.py          # hash_password, verify_password, create_access_token, decode_access_token
+│   │   ├── cache.py             # CacheManager (Redis) — get/set/invalidate by namespace + id (NO company_id)
+│   │   ├── redis.py             # Redis connection pool
+│   │   ├── rate_limit.py        # RateLimiter for login protection
+│   │   ├── identifier.py        # detect_identifier_type (phone/email/username)
+│   │   └── worker.py            # arq pool lifecycle
 │   │
 │   ├── models/
 │   │   ├── __init__.py          # Re-exports ALL models — required for Alembic autogenerate discovery
-│   │   ├── base.py              # User model (phone, username, role, company_id, tractor_plate)
+│   │   ├── base.py              # User model (phone, email, username, role, vendor, tractor_plate)
 │   │   └── domain.py            # All domain models (see Database Models below)
 │   │
 │   ├── schemas/
@@ -89,12 +98,30 @@ backend/
 │   │   └── domain.py            # Create/Update/Out schemas for each domain entity
 │   │
 │   └── services/
-│       └── pricing_service.py   # find_pricing(db, company_id, client_id, work_type, route) → Pricing | None
+│       ├── pricing_service.py   # find_pricing(db, client_id, work_type, route) → Pricing | None
+│       ├── salary_service.py    # get_salary_period_dates(db, reference_date) → (start, end)
+│       ├── push_service.py      # Web push notifications
+│       └── geocoding.py         # Reverse geocoding
 │
 ├── alembic/
 │   ├── env.py                   # Migration env — imports all models for autogenerate
-│   └── versions/                # Migration files
-│       └── 001_initial_schema.py
+│   └── versions/
+│       ├── 001_initial_schema.py
+│       ├── 002_add_user_email.py
+│       ├── 003_container_photo_metadata.py
+│       ├── 004_push_subscriptions.py
+│       ├── 005_add_user_vendor.py
+│       └── 006_drop_multi_tenant.py
+│
+├── workers/
+│   ├── __init__.py              # enqueue(), salary_recalc_job_id()
+│   ├── worker.py                # WorkerSettings (arq)
+│   └── tasks/
+│       ├── cleanup.py           # Rate-limit key cleanup
+│       ├── geocoding.py         # Geocode work orders / containers
+│       ├── notifications.py     # Push notification delivery
+│       ├── reports.py           # Monthly reports, salary reminders
+│       └── salary.py            # Salary calculation task
 │
 ├── tests/
 │   ├── conftest.py              # Fixtures: async DB session, test client
@@ -115,29 +142,28 @@ All models are in `app/models/domain.py`. User is in `app/models/base.py`.
 
 | Table | Model | Key Columns | Status Enum | Children |
 |---|---|---|---|---|
-| `companies` | `Company` | name | — | — |
-| `users` | `User` | phone (unique), username, role, company_id, is_active, tractor_plate | role: superadmin/director/accountant/driver | — |
-| `clients` | `Client` | company_id, name, type, phone, tax_code, outstanding_debt (int) | type: company/individual | — |
-| `routes` | `Route` | company_id, route, type_20ft, type_40ft (int VND), is_two_way | — | — |
-| `pricings` | `Pricing` | company_id, client_id, client_name, work_type, route, unit_price, driver_salary, allowance | work_type: E20/E40/F20/F40 | `PricingLine` (CASCADE) |
+| `users` | `User` | phone (unique), email (unique), username, role, vendor, is_active, tractor_plate | role: superadmin/director/accountant/driver | — |
+| `clients` | `Client` | name, type, phone, tax_code, outstanding_debt (int) | type: company/individual | — |
+| `routes` | `Route` | route, type_20ft, type_40ft (int VND), is_two_way | — | — |
+| `pricings` | `Pricing` | client_id, client_name, work_type, route, unit_price, driver_salary, allowance | work_type: E20/E40/F20/F40 | `PricingLine` (CASCADE) |
 | `pricing_lines` | `PricingLine` | pricing_id (CASCADE), work_type, quantity | — | — |
-| `work_orders` | `WorkOrder` | company_id, client_id, client_name, route, driver_id, driver_name, tractor_plate, unit_price, driver_salary, allowance, earning, pricing_id | status: PENDING/PRICED/MATCHED | `WorkOrderContainer` (CASCADE) |
+| `work_orders` | `WorkOrder` | client_id, client_name, route, driver_id, driver_name, tractor_plate, unit_price, driver_salary, allowance, earning, pricing_id | status: PENDING/PRICED/MATCHED | `WorkOrderContainer` (CASCADE) |
 | `work_order_containers` | `WorkOrderContainer` | work_order_id (CASCADE), container_number, work_type, photo_url | work_type: E20/E40/F20/F40 | — |
-| `trip_orders` | `TripOrder` | company_id, trip_date, client_id, client_name, work_type, route, driver_id, driver_name, container_number, pricing_id, unit_price, driver_salary, allowance, revenue | status: DRAFT/CONFIRMED/INVOICED/CANCELLED | `TripOrderWorkOrder` |
+| `trip_orders` | `TripOrder` | trip_date, client_id, client_name, work_type, route, driver_id, driver_name, container_number, pricing_id, unit_price, driver_salary, allowance, revenue | status: DRAFT/CONFIRMED/INVOICED/CANCELLED | `TripOrderWorkOrder` |
 | `trip_order_work_orders` | `TripOrderWorkOrder` | trip_order_id (CASCADE, PK), work_order_id (PK) | — | — |
-| `salary_periods` | `SalaryPeriod` | company_id, driver_id, driver_name, start_date, end_date, work_order_count, price_per_order, total_salary, total_allowance, total_deduction, net_pay | status: OPEN/CALCULATED/PAID | — |
-| `salary_period_configs` | `SalaryPeriodConfig` | company_id (unique), from_day (1–28), to_day (1–28) | — | — |
+| `salary_periods` | `SalaryPeriod` | driver_id, driver_name, start_date, end_date, work_order_count, price_per_order, total_salary, total_allowance, total_deduction, net_pay | status: OPEN/CALCULATED/PAID | — |
+| `salary_period_configs` | `SalaryPeriodConfig` | from_day (1–28), to_day (1–28) — singleton row | — | — |
+
+**No `company_id` column on any table. No `companies` table. Single-tenant.**
 
 ---
 
 ## Key Patterns
 
-### Multi-tenancy
-Every model has `company_id`. All endpoint queries filter by `current_user.company_id`:
+### Single-Tenant (No Multi-Tenancy)
+All data belongs to Phúc Lộc. Queries are simple:
 ```python
-result = await db.execute(
-    select(Client).where(Client.company_id == current_user.company_id)
-)
+result = await db.execute(select(Client).order_by(Client.name.asc()))
 ```
 
 ### Money Handling
@@ -173,7 +199,6 @@ pricing_id = Column(Integer, ForeignKey("pricings.id", ondelete="CASCADE"))
 
 ### Auth & Role-Based Access
 ```python
-# Protect an endpoint:
 @router.get("/clients", response_model=list[ClientOut])
 async def list_clients(
     current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
@@ -181,16 +206,42 @@ async def list_clients(
 ):
 ```
 
+### Cache (Redis)
+Cache keys use `namespace:identifier` (no company_id):
+```python
+cache = CacheManager(redis)
+await cache.set_json("clients", "list", serialized, ttl=300)
+await cache.invalidate_namespace("clients")
+```
+
 ### CRUD Endpoint Pattern
 See `clients.py` for the canonical example:
 ```python
 router = APIRouter()
 
-@router.get("/clients", response_model=list[ClientOut])       # List (company-scoped)
+@router.get("/clients", response_model=list[ClientOut])       # List
 @router.post("/clients", response_model=ClientOut, status_code=201)  # Create
 @router.put("/clients/{client_id}", response_model=ClientOut)  # Update (partial)
 @router.delete("/clients/{client_id}", status_code=204)        # Delete
 ```
+
+### Background Jobs
+Use `enqueue()` from `app.workers`:
+```python
+from app.workers import enqueue, salary_recalc_job_id
+job_id = salary_recalc_job_id(driver_id, start_date, end_date)
+await enqueue("calculate_salary_task", _job_id=job_id, driver_id=driver_id, ...)
+```
+
+### Force Update
+Backend exposes `GET /api/v1/version` (public, no auth):
+```json
+{ "version": "2026.04.28.1", "minimum_version": "2026.04.22.0" }
+```
+- `APP_VERSION` / `MINIMUM_VERSION` set in `.env` or `config.py`
+- Frontend checks this on load + every 5 minutes
+- Hard update: current < minimum → nuke caches, reload
+- Soft update: current < latest → SW skipWaiting
 
 ---
 
@@ -202,21 +253,14 @@ router = APIRouter()
 2. Create schemas: `XxxCreate`, `XxxUpdate`, `XxxOut` in `app/schemas/domain.py`
 3. Create model in `app/models/domain.py` (if new table needed)
 4. Re-export model in `app/models/__init__.py`
-5. Register router in `app/api/v1/router.py`:
-   ```python
-   from app.api.v1.<entity> import router as <entity>_router
-   router.include_router(<entity>_router)
-   ```
+5. Register router in `app/api/v1/router.py`
 6. Create migration: `alembic revision --autogenerate -m "add <entity>"`
 7. Apply migration: `alembic upgrade head`
 
 ### Add a New Database Model
 
-1. Add model class to `app/models/domain.py` — include `company_id` for multi-tenancy
-2. Re-export in `app/models/__init__.py`:
-   ```python
-   from .domain import NewModel  # noqa: F401
-   ```
+1. Add model class to `app/models/domain.py` — no company_id needed
+2. Re-export in `app/models/__init__.py`
 3. Add schemas in `app/schemas/domain.py`
 4. Create Alembic migration
 
@@ -256,11 +300,7 @@ async def admin_only(
 ### Add Business Logic (Service)
 
 1. Create `app/services/<name>_service.py`
-2. Import and use in endpoint files:
-   ```python
-   from app.services.pricing_service import find_pricing
-   pricing = await find_pricing(db, company_id, client_id, work_type, route)
-   ```
+2. Import and use in endpoint files
 
 ---
 
@@ -284,6 +324,9 @@ cd backend && alembic downgrade -1
 
 # View current migration state
 cd backend && alembic current
+
+# Seed admin user
+cd backend && python -m app.seed
 ```
 
 ---
@@ -297,5 +340,8 @@ Set in `.env` (see `.env.example`):
 | `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5432/vantaihanghoa` | PostgreSQL connection string |
 | `SECRET_KEY` | `change-me-to-a-random-secret-key` | JWT signing key |
 | `ALGORITHM` | `HS256` | JWT algorithm |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | Token lifetime |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `1440` | Token lifetime (24h) |
 | `CORS_ORIGINS` | `http://localhost:5173,http://localhost:3000` | Comma-separated allowed origins |
+| `APP_VERSION` | `2026.04.28.1` | Current backend version |
+| `MINIMUM_VERSION` | `2026.04.22.0` | Oldest frontend version allowed |
+| `REDIS_URL` | `redis://localhost:6379/0` | Redis connection |
