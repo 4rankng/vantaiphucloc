@@ -1,5 +1,5 @@
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import select
 
@@ -23,20 +23,21 @@ async def generate_monthly_report_task(
     else:
         end = date(year, month + 1, 1) - timedelta(days=1)
 
+    start_dt = datetime(start.year, start.month, start.day, tzinfo=timezone.utc)
+    end_dt = datetime(end.year, end.month, end.day, 23, 59, 59, tzinfo=timezone.utc)
+
     async with async_session() as db:
         try:
             result = await db.execute(
                 select(WorkOrder).where(
                     WorkOrder.company_id == company_id,
-                    WorkOrder.date >= start,
-                    WorkOrder.date <= end,
+                    WorkOrder.created_at >= start_dt,
+                    WorkOrder.created_at <= end_dt,
                 )
             )
             orders = result.scalars().all()
 
-            total_revenue = sum(
-                (wo.unit_price or 0) * (wo.quantity or 1) for wo in orders
-            )
+            total_revenue = sum(wo.unit_price or 0 for wo in orders)
             total_driver_cost = sum(wo.driver_salary or 0 for wo in orders)
             total_allowance = sum(wo.allowance or 0 for wo in orders)
 

@@ -24,7 +24,7 @@ async def list_routes(
     cache = CacheManager(redis)
     cached = await cache.get_json("routes", current_user.company_id, "list")
     if cached is not None:
-        return cached
+        return [RouteOut(**r) for r in cached]
 
     result = await db.execute(
         select(Route)

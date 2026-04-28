@@ -24,7 +24,7 @@ async def list_clients(
     cache = CacheManager(redis)
     cached = await cache.get_json("clients", current_user.company_id, "list")
     if cached is not None:
-        return cached
+        return [ClientOut(**c) for c in cached]
 
     result = await db.execute(
         select(Client)

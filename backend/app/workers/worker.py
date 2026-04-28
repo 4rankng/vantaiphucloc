@@ -9,6 +9,7 @@ from app.workers.tasks.cleanup import cleanup_expired_sessions, cleanup_old_audi
 from app.workers.tasks.reports import remind_salary_period_end, recalculate_open_periods
 from app.workers.tasks.salary import calculate_salary_task
 from app.workers.tasks.notifications import send_notification_task
+from app.workers.tasks.geocoding import geocode_container_task, geocode_work_order_task
 from app.workers.tasks.reports import generate_monthly_report_task
 
 logger = logging.getLogger(__name__)
@@ -19,6 +20,8 @@ class WorkerSettings:
         calculate_salary_task,
         send_notification_task,
         generate_monthly_report_task,
+        geocode_container_task,
+        geocode_work_order_task,
     ]
     cron_jobs = [
         cron(cleanup_expired_sessions, hour=3, minute=0),

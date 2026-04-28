@@ -61,7 +61,9 @@ async def create_work_order(
     current_user: User = Depends(require_roles("driver")),
     db: AsyncSession = Depends(get_db),
 ):
-    work_order = await _create_single_work_order(body, current_user, db)
+    work_order = await _create_work_order_db(body, current_user, db)
+    await db.commit()
+    await db.refresh(work_order)
 
     # Fire-and-forget notification
     try:
@@ -75,6 +77,14 @@ async def create_work_order(
         )
     except RuntimeError:
         _logger.warning("Failed to enqueue notification for WO#%s", work_order.id)
+
+    # Enqueue geocoding tasks (best-effort)
+    try:
+        from app.workers import enqueue
+        if body.gps_lat and body.gps_lng:
+            await enqueue("geocode_work_order_task", work_order_id=work_order.id, lat=body.gps_lat, lng=body.gps_lng)
+    except RuntimeError:
+        pass
 
     return await _load_work_order_out(db, work_order)
 
@@ -177,30 +187,46 @@ async def batch_create_work_orders(
     db: AsyncSession = Depends(get_db),
 ):
     results: list[BatchWorkOrderResult] = []
-    for i, item in enumerate(body.items):
-        # Use a nested transaction (savepoint) per item so partial failures
-        # are isolated — a failure on item N doesn't affect items 0..N-1.
-        async with db.begin_nested():
-            try:
-                wo = await _create_single_work_order(item, current_user, db)
-                results.append(BatchWorkOrderResult(index=i, id=wo.id, success=True))
-            except Exception as exc:
-                await db.rollback()
-                _logger.warning("Batch item %d failed: %s", i, exc)
-                results.append(BatchWorkOrderResult(index=i, success=False, error=str(exc)))
-    # Commit the outer transaction (successful items only, failed were rolled back)
-    await db.commit()
+    async with db.begin():
+        for i, item in enumerate(body.items):
+            async with db.begin_nested():
+                try:
+                    wo = await _create_work_order_db(item, current_user, db)
+                    results.append(BatchWorkOrderResult(index=i, id=wo.id, success=True))
+                except Exception as exc:
+                    _logger.warning("Batch item %d failed: %s", i, exc)
+                    results.append(BatchWorkOrderResult(index=i, success=False, error=str(exc)))
+
+    # Enqueue geocoding for successful items (best-effort, outside transaction)
+    try:
+        from app.workers import enqueue
+        for r in results:
+            if r.success and r.id and body.items[r.index].gps_lat and body.items[r.index].gps_lng:
+                await enqueue(
+                    "geocode_work_order_task",
+                    work_order_id=r.id,
+                    lat=body.items[r.index].gps_lat,
+                    lng=body.items[r.index].gps_lng,
+                )
+    except RuntimeError:
+        pass
+
     return results
 
 
-async def _create_single_work_order(
+async def _create_work_order_db(
     body: WorkOrderCreate, current_user: User, db: AsyncSession
 ) -> WorkOrder:
-    """Shared creation logic for single and batch endpoints."""
+    """Create WorkOrder + containers in the DB. Flushes but does NOT commit
+    — the caller is responsible for committing (or letting the context manager do it)."""
     containers_data = body.containers
 
     first_container = containers_data[0] if containers_data else None
     work_type = first_container.work_type if first_container else ""
+
+    # Drivers always create work orders under their own identity
+    driver_id = current_user.id if current_user.role == "driver" else body.driver_id
+    driver_name = current_user.username if current_user.role == "driver" else body.driver_name
 
     pricing = await find_pricing(
         db,
@@ -230,8 +256,8 @@ async def _create_single_work_order(
         client_id=body.client_id,
         client_name=body.client_name,
         route=body.route,
-        driver_id=body.driver_id,
-        driver_name=body.driver_name,
+        driver_id=driver_id,
+        driver_name=driver_name,
         tractor_plate=body.tractor_plate,
         gps_lat=body.gps_lat,
         gps_lng=body.gps_lng,
@@ -257,15 +283,5 @@ async def _create_single_work_order(
             photo_timestamp=container.photo_timestamp,
         ))
 
-    await db.commit()
-    await db.refresh(work_order)
-
-    # Enqueue geocoding tasks (best-effort)
-    try:
-        from app.workers import enqueue
-        if body.gps_lat and body.gps_lng:
-            await enqueue("geocode_work_order_task", work_order_id=work_order.id, lat=body.gps_lat, lng=body.gps_lng)
-    except RuntimeError:
-        pass
-
+    await db.flush()
     return work_order

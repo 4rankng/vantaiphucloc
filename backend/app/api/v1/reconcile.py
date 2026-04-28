@@ -23,17 +23,23 @@ async def reconcile(
     current_user: User = Depends(require_roles("accountant", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
-    # Load work order
+    # Load work order (scoped to user's company)
     wo_result = await db.execute(
-        select(WorkOrder).where(WorkOrder.id == body.work_order_id)
+        select(WorkOrder).where(
+            WorkOrder.id == body.work_order_id,
+            WorkOrder.company_id == current_user.company_id,
+        )
     )
     work_order = wo_result.scalar_one_or_none()
     if work_order is None:
         raise HTTPException(status_code=404, detail="Work order not found")
 
-    # Load trip order
+    # Load trip order (scoped to user's company)
     to_result = await db.execute(
-        select(TripOrder).where(TripOrder.id == body.trip_order_id)
+        select(TripOrder).where(
+            TripOrder.id == body.trip_order_id,
+            TripOrder.company_id == current_user.company_id,
+        )
     )
     trip_order = to_result.scalar_one_or_none()
     if trip_order is None:
