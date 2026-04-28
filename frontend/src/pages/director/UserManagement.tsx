@@ -1,11 +1,12 @@
 import { useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus, Truck, CircleDollarSign, LayoutDashboard, Phone, Pencil, Trash2, ChevronRight } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog/Dialog'
-import { Button } from '@/components/ui/Button/Button'
-import { Input } from '@/components/ui/Input/Input'
-import { Label } from '@/components/ui/Label/Label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
+import { Button } from '@/components/ui'
+import { Input } from '@/components/ui'
+import { Label } from '@/components/ui'
 import { useToast } from '@/components/atoms/Toast'
+import { FilterPills } from '@/components/shared/FilterPills'
 import type { Role } from '@/data/domain'
 import { ROLE_LABELS } from '@/data/domain'
 
@@ -128,22 +129,16 @@ export function UserManagement() {
   return (
     <div className="p-4 space-y-4">
       {/* Filter pills */}
-      <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
-        {(['ALL', 'director', 'accountant', 'driver'] as const).map(r => (
-          <button
-            key={r}
-            onClick={() => setFilterRole(r)}
-            className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all touch-manipulation"
-            style={{
-              background: filterRole === r ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
-              color: filterRole === r ? 'var(--theme-text-on-brand)' : 'var(--theme-text-secondary)',
-              border: `1px solid ${filterRole === r ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)'}`,
-            }}
-          >
-            {r === 'ALL' ? 'Tất cả' : ROLE_LABELS[r]} ({roleCounts[r]})
-          </button>
-        ))}
-      </div>
+      <FilterPills
+        options={[
+          { value: 'ALL', label: 'Tất cả', count: roleCounts.ALL },
+          { value: 'director', label: ROLE_LABELS.director, count: roleCounts.director },
+          { value: 'accountant', label: ROLE_LABELS.accountant, count: roleCounts.accountant },
+          { value: 'driver', label: ROLE_LABELS.driver, count: roleCounts.driver },
+        ]}
+        value={filterRole}
+        onChange={setFilterRole}
+      />
 
       {/* FAB */}
       {createPortal(

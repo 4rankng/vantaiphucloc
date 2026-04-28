@@ -3,7 +3,8 @@ import { Plus, Building2, Route, Settings, Wallet, ChevronDown, Receipt } from '
 import { useAppStore } from '@/hooks/use-app-store'
 import { apiClient } from '@/services/api'
 import { formatCurrencyFull, type WorkOrder, type Driver, type TripOrder } from '@/data/domain'
-import { ContBadge } from '@/components/shared/ContBadge'
+import { WorkOrderJobCard } from '@/components/shared/WorkOrderJobCard'
+import { TripOrderCard } from '@/components/shared/TripOrderCard'
 
 const QUICK_ACTIONS = [
   { label: 'Tạo chuyến', icon: Plus, path: '/accountant/create-trip' },
@@ -12,76 +13,6 @@ const QUICK_ACTIONS = [
   { label: 'Cung đường', icon: Route, path: '/accountant/routes' },
   { label: 'Thiết lập', icon: Settings, path: '/accountant/salary-setup' },
 ] as const
-
-// Unique work types across all containers
-function uniqueWorkTypes(job: WorkOrder) {
-  const types = new Set(job.containers.map(c => c.workType))
-  return Array.from(types)
-}
-
-// All container numbers joined
-function allContNumbers(job: WorkOrder) {
-  return job.containers.map(c => c.containerNumber).filter(Boolean).join(' · ') || job.id
-}
-
-// Shared card component for unmatched jobs
-function DoiSoatCard({ job, onClick }: { job: WorkOrder; onClick: () => void }) {
-  const types = uniqueWorkTypes(job)
-  return (
-    <button
-      onClick={onClick}
-      className="w-full text-left rounded-2xl p-3 transition-all active:scale-[0.98] touch-manipulation"
-      style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 flex-wrap">
-          {types.map(t => <ContBadge key={t} type={t} />)}
-          <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-            {allContNumbers(job)}
-          </span>
-        </div>
-        <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ml-2"
-          style={{ background: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' }}>
-          Đối soát tài xế
-        </span>
-      </div>
-      <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>
-        {job.driverName} · {job.tractorPlate}
-      </p>
-      <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-        {job.clientName} · {job.route}
-      </p>
-    </button>
-  )
-}
-
-// Card for already-matched jobs
-function MatchedCard({ job }: { job: WorkOrder }) {
-  const types = uniqueWorkTypes(job)
-  return (
-    <div
-      className="w-full text-left rounded-2xl p-3 transition-all"
-      style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 flex-wrap">
-          {types.map(t => <ContBadge key={t} type={t} />)}
-          <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-            {allContNumbers(job)}
-          </span>
-        </div>
-        <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ml-2"
-          style={{ background: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' }}>
-          Đã khớp
-        </span>
-      </div>
-      <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>
-        {job.driverName} · {job.tractorPlate}
-      </p>
-      <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-        {job.clientName} · {job.route}
-      </p>
-    </div>
-  )
-}
 
 export function AccountantDashboard() {
   const { navigate } = useAppStore()
@@ -186,7 +117,12 @@ export function AccountantDashboard() {
           </p>
           <div className="space-y-2">
             {visibleJobs.map(job => (
-              <DoiSoatCard key={job.id} job={job} onClick={() => navigate(`/accountant/match/${job.id}`)} />
+              <WorkOrderJobCard
+                key={job.id}
+                job={job}
+                status="unmatched"
+                onClick={() => navigate(`/accountant/match/${job.id}`)}
+              />
             ))}
           </div>
           {unmatchedJobs.length > INITIAL_SHOW && !showAllJobs && (
@@ -208,7 +144,7 @@ export function AccountantDashboard() {
           </p>
           <div className="space-y-2">
             {matchedJobs.map(job => (
-              <MatchedCard key={job.id} job={job} />
+              <WorkOrderJobCard key={job.id} job={job} status="matched" />
             ))}
           </div>
         </div>
@@ -222,24 +158,11 @@ export function AccountantDashboard() {
           </p>
           <div className="space-y-2">
             {pendingTrips.map(trip => (
-              <button key={trip.id}
+              <TripOrderCard
+                key={trip.id}
+                trip={trip}
                 onClick={() => navigate(`/accountant/match-trip/${trip.id}`)}
-                className="w-full text-left rounded-2xl p-3 transition-all active:scale-[0.98] touch-manipulation"
-                style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ContBadge type={trip.workType} />
-                    <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{trip.containerNumber}</span>
-                  </div>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                    style={{ background: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' }}>
-                    Đối soát khách hàng
-                  </span>
-                </div>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-                  {trip.clientName} · {trip.route}
-                </p>
-              </button>
+              />
             ))}
           </div>
         </div>
