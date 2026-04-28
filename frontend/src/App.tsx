@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { ThemeProvider } from '@/themes'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { ErrorBoundaryProvider } from '@/contexts/ErrorContext'
@@ -19,7 +19,6 @@ import { DirectorApp } from '@/pages/director/DirectorApp'
 import { AccountantApp } from '@/pages/accountant/AccountantApp'
 import { SuperAdminApp } from '@/pages/superadmin/SuperAdminApp'
 import { checkVersion, forceUpdate, requestSoftUpdate } from '@/lib/version'
-
 
 
 function DriverRouter() {
@@ -57,31 +56,32 @@ function AppContent() {
 }
 
 /**
- * Checks version once on mount (session start). No polling.
- * Next check happens when user opens a new tab/session.
+ * Checks version once on mount (session start). Renders children
+ * IMMEDIATELY — never blocks the app from showing.
+ *
+ * If a hard-update is needed, the overlay appears after the check
+ * completes (or doesn't, if backend is unreachable).
+ *
+ * This ensures drivers can use the app fully offline — the version
+ * check silently fails and the app renders normally.
  */
 function VersionChecker({ children }: { children: React.ReactNode }) {
   const [forceUpdating, setForceUpdating] = useState(false)
+  const checkedRef = useRef(false)
 
   useEffect(() => {
-    let mounted = true
+    if (checkedRef.current) return
+    checkedRef.current = true
 
-    const doCheck = async () => {
-      const status = await checkVersion()
-
-      if (!mounted) return
-
+    checkVersion().then(status => {
       if (status === 'hard-update') {
         setForceUpdating(true)
-        await forceUpdate()
+        forceUpdate()
       } else if (status === 'soft-update') {
         requestSoftUpdate()
       }
-    }
-
-    doCheck()
-
-    return () => { mounted = false }
+    })
+    // No await — children render immediately
   }, [])
 
   // Listen for FORCE_RELOAD from the service worker
