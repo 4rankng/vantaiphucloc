@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -7,6 +8,9 @@ from app.models.base import User
 from app.models.domain import Client
 from app.schemas.domain import ClientCreate, ClientUpdate, ClientOut
 from app.core.deps import require_roles
+from app.core.redis import get_redis
+from app.core.cache import CacheManager
+from app.config import settings
 
 router = APIRouter()
 
@@ -15,13 +19,22 @@ router = APIRouter()
 async def list_clients(
     current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis),
 ):
+    cache = CacheManager(redis)
+    cached = await cache.get_json("clients", current_user.company_id, "list")
+    if cached is not None:
+        return cached
+
     result = await db.execute(
         select(Client)
         .where(Client.company_id == current_user.company_id)
         .order_by(Client.name.asc())
     )
-    return result.scalars().all()
+    data = result.scalars().all()
+    serialized = [ClientOut.model_validate(c).model_dump(mode="json") for c in data]
+    await cache.set_json("clients", current_user.company_id, "list", serialized, ttl=settings.CACHE_CLIENTS_TTL)
+    return data
 
 
 @router.post("/clients", response_model=ClientOut, status_code=201)
@@ -29,6 +42,7 @@ async def create_client(
     body: ClientCreate,
     current_user: User = Depends(require_roles("accountant", "superadmin")),
     db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis),
 ):
     client = Client(
         company_id=current_user.company_id,
@@ -37,6 +51,7 @@ async def create_client(
     db.add(client)
     await db.commit()
     await db.refresh(client)
+    await CacheManager(redis).invalidate_namespace("clients", current_user.company_id)
     return client
 
 
@@ -46,6 +61,7 @@ async def update_client(
     body: ClientUpdate,
     current_user: User = Depends(require_roles("accountant", "superadmin")),
     db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis),
 ):
     result = await db.execute(
         select(Client).where(
@@ -62,6 +78,7 @@ async def update_client(
 
     await db.commit()
     await db.refresh(client)
+    await CacheManager(redis).invalidate_namespace("clients", current_user.company_id)
     return client
 
 
@@ -70,6 +87,7 @@ async def delete_client(
     client_id: int,
     current_user: User = Depends(require_roles("accountant", "superadmin")),
     db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis),
 ):
     result = await db.execute(
         select(Client).where(
@@ -83,4 +101,5 @@ async def delete_client(
 
     await db.delete(client)
     await db.commit()
+    await CacheManager(redis).invalidate_namespace("clients", current_user.company_id)
     return Response()
