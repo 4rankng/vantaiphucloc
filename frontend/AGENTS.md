@@ -29,7 +29,7 @@ On a new day, reset `N` to `1`:
 { "version": "2026.04.29.1" }
 ```
 
-This version is baked into the build via `__APP_VERSION__` (vite.config.ts) and compared against the backend's `/api/v1/version` endpoint for force updates. **If you don't bump it, users won't get your changes.**
+The version is used for PWA cache busting. **If you don't bump it, users may get stale cached assets.**
 
 If you change code and this file becomes stale, the next agent will be misled. Keep it current.
 
@@ -44,7 +44,7 @@ If you change code and this file becomes stale, the next agent will be misled. K
 - **4 roles**: `driver` (mobile hub), `accountant` (manage trips/pricing/salary), `director` (dashboards/reports), `superadmin`
 - **No React Router** — custom state-based navigation with history stacks
 - **Theme system**: Grab-inspired green theme with CSS variables
-- **Backend-driven force update**: checks `GET /version` once per session, can force reload users
+- **PWA**: service worker with precaching for offline support
 
 ---
 
@@ -430,32 +430,6 @@ function MyComponent() {
 For accountant: edit `lib/navigation.ts` — add to `accountantNav[]` and `pageTitles`.
 For driver: add case in `DriverRouter` (App.tsx).
 For director: add to `DirectorPage` type in DirectorApp.tsx.
-
----
-
-## Force Update (Backend-Driven Version Check)
-
-The frontend checks `GET /api/v1/version` (public, no auth) **once per session** (on app load).
-If backend is unreachable, the check silently fails — the app works fully offline (critical for drivers).
-
-**How it works:**
-1. Backend exposes `{ version: "2026.04.28.1", minimum_version: "2026.04.22.0" }`
-2. Frontend has its own version baked at build time via `__APP_VERSION__` (from `package.json`)
-3. `src/lib/version.ts` compares versions (5s timeout, fails gracefully):
-   - `current < minimum` → **hard update**: show `ForceUpdateOverlay`, delete all caches, reload
-   - `current < latest` → **soft update**: tell service worker to `skipWaiting()`, seamless
-   - `current == latest` → up-to-date
-
-**Key files:**
-- `src/lib/version.ts` — `checkVersion()`, `forceUpdate()`, `requestSoftUpdate()`
-- `src/App.tsx` — `VersionChecker` component wraps entire app (renders children immediately)
-- `src/sw.ts` — handles `SKIP_WAITING` and `FORCE_UPDATE` messages from main thread
-- `src/components/shared/ForceUpdateOverlay/` — full-screen Vietnamese "Đang cập nhật..." overlay
-- `vite.config.ts` — `define: { __APP_VERSION__ }` injects version at build time
-
-**To force all users to update:** Raise `MINIMUM_VERSION` in backend `.env` and restart.
-
-**⚠️ Version Bump Rule:** Every frontend code change MUST bump `version` in `package.json` (see Self-Maintenance Rule above). Without this, users won't receive your changes.
 
 ---
 
