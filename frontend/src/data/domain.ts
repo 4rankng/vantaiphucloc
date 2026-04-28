@@ -194,6 +194,8 @@ export interface WorkOrder {
   pricingId?: string
   createdAt: string
   status: WorkOrderStatus
+  /** True when created offline, not yet synced to server */
+  pendingSync?: boolean
 }
 
 export interface PricingLine {

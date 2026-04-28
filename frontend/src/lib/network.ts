@@ -3,7 +3,7 @@
  *
  * Tracks two dimensions of connectivity:
  *   browserOnline  – navigator.onLine (device has internet)
- *   backendOnline  – GET /api/v1/health responds (backend reachable)
+ *   backendOnline  – GET /api/v1/health responds with valid body
  *
  * The app is considered "offline" if either is false.
  */
@@ -28,7 +28,10 @@ export async function checkBackendHealth(): Promise<boolean> {
       cache: 'no-store',
     })
     clearTimeout(id)
-    return r.ok
+    if (!r.ok) return false
+    // Validate response body to reject captive portals returning 200 HTML
+    const body = await r.json()
+    return body?.status === 'ok'
   } catch {
     return false
   }
@@ -53,7 +56,6 @@ export function isFullyOnline(): boolean {
 
 export function onNetworkChange(callback: (online: boolean) => void): () => void {
   const goOnline = () => {
-    // Browser came back online — check if backend is also reachable
     checkBackendHealth().then(ok => {
       setBackendOnline(ok)
       callback(ok)
@@ -94,7 +96,6 @@ function setBackendOnline(value: boolean) {
 }
 
 function updatePolling() {
-  // Poll when browser is online but backend is not
   if (isOnline() && !_backendOnline) {
     startPolling()
   } else {
@@ -106,6 +107,8 @@ function startPolling() {
   if (_pollTimer) return
   _pollTimer = setInterval(async () => {
     if (!isOnline()) return
+    // Skip health check when tab is hidden to save battery
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
     const ok = await checkBackendHealth()
     setBackendOnline(ok)
   }, POLL_INTERVAL)
@@ -121,16 +124,21 @@ function stopPolling() {
 // ── Auto-init on import ───────────────────────────────────────────────
 
 if (typeof window !== 'undefined') {
-  // Initial check
   checkBackendHealth().then(ok => {
     setBackendOnline(ok)
   })
 
-  // Re-check when browser goes online
   window.addEventListener('online', () => {
     checkBackendHealth().then(ok => setBackendOnline(ok))
   })
   window.addEventListener('offline', () => {
     setBackendOnline(false)
+  })
+
+  // Resume health check when tab becomes visible
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && isOnline() && !_backendOnline) {
+      checkBackendHealth().then(ok => setBackendOnline(ok))
+    }
   })
 }

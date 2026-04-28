@@ -22,7 +22,7 @@ import type {
   ApiResponse,
   WorkType,
 } from '@/data/domain'
-import { setCache, getCache } from '@/lib/offline-db'
+import { setCache, getCache, uuid } from '@/lib/offline-db'
 import { offlineQueue } from '@/lib/offline-queue'
 
 // ─── Case-conversion utilities ────────────────────────────────────────────────
@@ -294,20 +294,34 @@ export async function createWorkOrder(
         method: 'POST',
         body: snakeBody,
       })
-      // Return optimistic payload so UI treats as success
+      // Optimistic payload matching the WorkOrder interface exactly
       const optimistic: WorkOrder = {
-        ...data,
-        id: `pending-${crypto.randomUUID()}`,
-        createdAt: new Date().toISOString(),
-        status: 'PENDING' as WorkOrder['status'],
+        id: `pending-${uuid()}`,
+        containers: data.containers,
+        clientId: data.clientId,
+        clientName: data.clientName,
+        route: data.route,
+        driverId: data.driverId,
+        driverName: data.driverName,
+        tractorPlate: data.tractorPlate,
+        gpsLat: data.gpsLat,
+        gpsLng: data.gpsLng,
+        gpsAddress: undefined,
         unitPrice: 0,
         driverSalary: 0,
         allowance: 0,
         earning: 0,
-        pricingId: null,
-        gpsAddress: undefined,
+        pricingId: undefined,
+        createdAt: new Date().toISOString(),
+        status: 'PENDING',
         pendingSync: true,
-      } as unknown as WorkOrder
+      }
+      // Write to cache so it appears in lists immediately
+      const cacheKey = `work-orders:${data.driverId || ''}:`
+      const cached = await getCache<WorkOrder[]>(cacheKey)
+      if (cached) {
+        await setCache(cacheKey, [optimistic, ...cached])
+      }
       return ok(optimistic)
     }
     return fail(err)

@@ -119,7 +119,7 @@ export function CreateWorkOrder() {
       })
 
       navigate('/driver')
-      if (!isOnline || (res.data as Record<string, unknown>)?.pendingSync) {
+      if (!isOnline || res.data?.pendingSync) {
         toast.success('Đã lưu offline', 'Sẽ đồng bộ khi có mạng')
       } else {
         toast.success('Gửi chuyến thành công')
