@@ -141,7 +141,7 @@ def make_auth_headers(db_session, async_client, company):
 
         response = await async_client.post(
             "/api/v1/auth/login",
-            json={"phone": phone, "password": password},
+            json={"username": phone, "password": password},
         )
         assert response.status_code == 200, (
             f"Login failed for role={role!r}: {response.status_code} {response.text}"
