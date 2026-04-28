@@ -75,22 +75,22 @@ function CompareRow({ label, left, right, matched, onTapLeft, onTapRight }: {
     }}>
       <div className="flex items-center gap-1.5 mb-2">
         {matched && <CheckCircle2 className="w-3.5 h-3.5" style={{ color: 'var(--theme-status-success)' }} />}
-        <p className="text-[10px] font-bold uppercase tracking-wide" style={{
+        <p className="text-xs font-bold uppercase tracking-wide" style={{
           color: matched ? 'var(--theme-status-success)' : 'var(--theme-text-muted)',
         }}>{label}</p>
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
         <button onClick={onTapLeft} className="min-w-0 text-left rounded-lg px-2 py-1.5 -mx-2 transition-colors touch-manipulation active:opacity-70" style={{ background: 'transparent' }}>
-          <p className="text-[9px] font-medium" style={{ color: 'var(--theme-brand-primary)' }}>Đã chạy</p>
+          <p className="text-xs font-medium" style={{ color: 'var(--theme-brand-primary)' }}>Đã chạy</p>
           <div className="flex items-center gap-1">
-            <p className="text-xs font-medium" style={{ color: 'var(--theme-text-primary)' }}>{left || '-'}</p>
+            <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>{left || '-'}</p>
           </div>
         </button>
         <ArrowLeftRight className="w-3.5 h-3.5 shrink-0" style={{ color: matched ? 'var(--theme-status-success)' : 'var(--theme-text-muted)' }} />
         <button onClick={onTapRight} className="min-w-0 text-left rounded-lg px-2 py-1.5 -mx-2 transition-colors touch-manipulation active:opacity-70" style={{ background: 'transparent' }}>
-          <p className="text-[9px] font-medium" style={{ color: 'var(--theme-status-warning)' }}>Yêu cầu</p>
+          <p className="text-xs font-medium" style={{ color: 'var(--theme-status-warning)' }}>Yêu cầu</p>
           <div className="flex items-center gap-1">
-            <p className="text-xs font-medium" style={{ color: 'var(--theme-text-primary)' }}>{right || '-'}</p>
+            <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>{right || '-'}</p>
           </div>
         </button>
       </div>
@@ -112,17 +112,17 @@ function ContCompareRow({ left, right, matched, onTapLeft, onTapRight }: {
     }}>
       <div className="flex items-center gap-1.5 mb-2">
         {matched && <CheckCircle2 className="w-3.5 h-3.5" style={{ color: 'var(--theme-status-success)' }} />}
-        <p className="text-[10px] font-bold uppercase tracking-wide" style={{
+        <p className="text-xs font-bold uppercase tracking-wide" style={{
           color: matched ? 'var(--theme-status-success)' : 'var(--theme-text-muted)',
         }}>Container</p>
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-start">
         <button onClick={onTapLeft} className="min-w-0 text-left rounded-lg px-2 py-1.5 -mx-2 touch-manipulation active:opacity-70">
-          <p className="text-[9px] font-medium mb-1" style={{ color: 'var(--theme-brand-primary)' }}>Đã chạy</p>
+          <p className="text-xs font-medium mb-1" style={{ color: 'var(--theme-brand-primary)' }}>Đã chạy</p>
           {left.map((c, i) => (
             <div key={i} className="flex items-center gap-1 mb-0.5">
               <ContBadge type={c.type as TripOrder['workType']} />
-              <span className="text-[11px] font-mono font-medium" style={{ color: 'var(--theme-text-primary)' }}>{c.number}</span>
+              <span className="text-sm font-mono font-medium" style={{ color: 'var(--theme-text-primary)' }}>{c.number}</span>
             </div>
           ))}
         </button>
@@ -130,10 +130,10 @@ function ContCompareRow({ left, right, matched, onTapLeft, onTapRight }: {
           <ArrowLeftRight className="w-3.5 h-3.5" style={{ color: matched ? 'var(--theme-status-success)' : 'var(--theme-text-muted)' }} />
         </div>
         <button onClick={onTapRight} className="min-w-0 text-left rounded-lg px-2 py-1.5 -mx-2 touch-manipulation active:opacity-70">
-          <p className="text-[9px] font-medium mb-1" style={{ color: 'var(--theme-status-warning)' }}>Yêu cầu</p>
+          <p className="text-xs font-medium mb-1" style={{ color: 'var(--theme-status-warning)' }}>Yêu cầu</p>
           <div className="flex items-center gap-1">
             <ContBadge type={right.type as TripOrder['workType']} />
-            <span className="text-[11px] font-mono font-medium" style={{ color: 'var(--theme-text-primary)' }}>{right.number}</span>
+            <span className="text-sm font-mono font-medium" style={{ color: 'var(--theme-text-primary)' }}>{right.number}</span>
           </div>
         </button>
       </div>
@@ -283,7 +283,7 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
             className="w-full flex items-center justify-between px-4 py-3 rounded-2xl touch-manipulation"
             style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
             <div className="flex-1 min-w-0 text-left">
-              <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: 'var(--theme-brand-primary)' }}>Chuyến đã chạy</p>
+              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--theme-brand-primary)' }}>Chuyến đã chạy</p>
               {selectedJob ? (
                 <div className="flex flex-wrap items-center gap-2 mt-1">
                   {selectedJob.containers.map(c => (
@@ -304,7 +304,7 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
             className="w-full flex items-center justify-between px-4 py-3 rounded-2xl touch-manipulation"
             style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
             <div className="flex-1 min-w-0 text-left">
-              <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: 'var(--theme-status-warning)' }}>Chuyến yêu cầu</p>
+              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--theme-status-warning)' }}>Chuyến yêu cầu</p>
               {selectedTrip ? (
                 <div className="flex flex-wrap items-center gap-1.5 mt-1">
                   <ContBadge type={selectedTrip.workType} />
@@ -368,8 +368,8 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
                 </span>
               ))}
             </div>
-            <p className="text-[11px] mt-1" style={{ color: 'var(--theme-text-muted)' }}>{job.driverName} · {job.clientName}</p>
-            <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>{job.route}</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>{job.driverName} · {job.clientName}</p>
+            <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{job.route}</p>
           </div>
         )}
       />
@@ -381,8 +381,8 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
               <ContBadge type={trip.workType} />
               <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{trip.containerNumber}</span>
             </div>
-            <p className="text-[11px] mt-1" style={{ color: 'var(--theme-text-muted)' }}>{trip.clientName}</p>
-            <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>{trip.route}</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>{trip.clientName}</p>
+            <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{trip.route}</p>
           </div>
         )}
       />
@@ -403,7 +403,7 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
               )}
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[10px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Loại công</Label>
+              <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Loại công</Label>
               <div className="flex flex-wrap gap-1.5">
                 {WORK_TYPES.map(w => (
                   <button key={w} onClick={() => setDialogContainers(prev => prev.map((c2, j) => j === i ? { ...c2, type: w } : c2))}
@@ -415,7 +415,7 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[10px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Số cont</Label>
+              <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Số cont</Label>
               <Input value={c.number} onChange={e => setDialogContainers(prev => prev.map((c2, j) => j === i ? { ...c2, number: e.target.value } : c2))}
                 className="text-sm font-mono h-10" autoFocus />
             </div>

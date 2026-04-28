@@ -40,41 +40,44 @@ export function AppTopBar(props: AppTopBarProps) {
       style={{ background: 'var(--theme-brand-primary)' }}
     >
       {/* ── Left ── */}
-      {props.variant === 'home' ? (
-        <div className="min-w-0">
-          <p
-            className="text-[11px] leading-tight"
-            style={{ color: 'var(--theme-text-on-brand)', opacity: 0.75 }}
-          >
-            Xin chào,
-          </p>
-          <p
-            className="text-[13px] font-semibold leading-tight truncate"
-            style={{ color: 'var(--theme-text-on-brand)' }}
-          >
-            {props.name}
-          </p>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 min-w-0">
-          {props.onBack && (
-            <button
-              onClick={props.onBack}
-              className="w-8 h-8 flex items-center justify-center rounded-full shrink-0 touch-manipulation"
-              style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--theme-text-on-brand)' }}
-              aria-label="Quay lại"
+      <div className="flex items-center gap-2 min-w-0">
+        <img src="/logo.avif" alt="" className="w-8 h-8 shrink-0 object-contain rounded-md" />
+        {props.variant === 'home' ? (
+          <div className="min-w-0">
+            <p
+              className="text-xs leading-tight"
+              style={{ color: 'var(--theme-text-on-brand)', opacity: 0.75 }}
             >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-          )}
-          <p
-            className="text-[14px] font-semibold truncate"
-            style={{ color: 'var(--theme-text-on-brand)' }}
-          >
-            {props.title}
-          </p>
-        </div>
-      )}
+              Xin chào,
+            </p>
+            <p
+              className="text-sm font-semibold leading-tight truncate"
+              style={{ color: 'var(--theme-text-on-brand)' }}
+            >
+              {props.name}
+            </p>
+          </div>
+        ) : (
+          <>
+            {props.onBack && (
+              <button
+                onClick={props.onBack}
+                className="w-8 h-8 flex items-center justify-center rounded-full shrink-0 touch-manipulation"
+                style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--theme-text-on-brand)' }}
+                aria-label="Quay lại"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+            )}
+            <p
+              className="text-sm font-semibold truncate"
+              style={{ color: 'var(--theme-text-on-brand)' }}
+            >
+              {props.title}
+            </p>
+          </>
+        )}
+      </div>
 
       {/* ── Right ── */}
       <div className="flex items-center gap-1 shrink-0">

@@ -34,7 +34,7 @@ export function Login() {
       {/* Brand */}
       <div className="absolute top-8 left-0 right-0 flex flex-col items-center z-10">
         <img
-          src="/logo.png"
+          src="/logo.avif"
           alt="TTransport"
           className="h-16 w-auto mb-3 drop-shadow-md rounded-[22%]"
         />

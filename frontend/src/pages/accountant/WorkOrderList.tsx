@@ -76,15 +76,15 @@ export function WorkOrderList() {
                     {job.containers[0]?.containerNumber || job.id}
                   </span>
                 </div>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
                   style={{ background: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' }}>
                   Đối soát tài xế
                 </span>
               </div>
-              <p className="text-[11px] mt-1" style={{ color: 'var(--theme-text-muted)' }}>
+              <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>
                 {job.driverName} · {job.tractorPlate}
               </p>
-              <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
+              <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
                 {job.clientName} · {job.route}
               </p>
             </button>

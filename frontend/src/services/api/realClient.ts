@@ -466,6 +466,17 @@ export async function createDriver(
   }
 }
 
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+export async function getNotifications(): Promise<ApiResponse<unknown[]>> {
+  try {
+    const res = await api.get('/notifications')
+    return ok(normalizeMany<unknown>(res.data))
+  } catch (err) {
+    return ok([])
+  }
+}
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 /**
