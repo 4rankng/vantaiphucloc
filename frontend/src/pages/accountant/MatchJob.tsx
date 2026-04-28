@@ -5,9 +5,9 @@ import { ContBadge } from '@/components/shared/ContBadge'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { WORK_TYPES, type WorkOrder, type TripOrder, type WorkType, type Client, type RoutePrice } from '@/data/domain'
 import { Check, ChevronDown, CheckCircle2, ArrowLeftRight, X } from 'lucide-react'
-import { Button } from '@/components/ui/Button/Button'
-import { Input } from '@/components/ui/Input/Input'
-import { Label } from '@/components/ui/Label/Label'
+import { Button } from '@/components/ui'
+import { Input } from '@/components/ui'
+import { Label } from '@/components/ui'
 
 // ─── Full-screen picker modal ─────────────────────────────────────────────────
 function PickModal<T extends { id: string }>({
