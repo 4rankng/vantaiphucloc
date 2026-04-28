@@ -13,6 +13,8 @@ from app.schemas.domain import (
     WorkOrderUpdate,
     WorkOrderOut,
     ContainerOut,
+    BatchWorkOrderCreate,
+    BatchWorkOrderResult,
 )
 from app.core.deps import get_current_user, require_roles
 from app.services.pricing_service import find_pricing
@@ -59,88 +61,7 @@ async def create_work_order(
     current_user: User = Depends(require_roles("driver")),
     db: AsyncSession = Depends(get_db),
 ):
-    containers_data = body.containers
-
-    # Use the first container's work_type for pricing lookup
-    first_container = containers_data[0] if containers_data else None
-    work_type = first_container.work_type if first_container else ""
-
-    pricing = await find_pricing(
-        db,
-        company_id=current_user.company_id,
-        client_id=body.client_id,
-        work_type=work_type,
-        route=body.route,
-    )
-
-    if pricing is not None:
-        unit_price = pricing.unit_price
-        driver_salary = pricing.driver_salary
-        allowance = pricing.allowance
-        earning = driver_salary + allowance
-        status = "PRICED"
-        pricing_id = pricing.id
-    else:
-        unit_price = 0
-        driver_salary = 0
-        allowance = 0
-        earning = 0
-        status = "PENDING"
-        pricing_id = None
-
-    work_order = WorkOrder(
-        company_id=current_user.company_id,
-        client_id=body.client_id,
-        client_name=body.client_name,
-        route=body.route,
-        driver_id=body.driver_id,
-        driver_name=body.driver_name,
-        tractor_plate=body.tractor_plate,
-        gps_lat=body.gps_lat,
-        gps_lng=body.gps_lng,
-        gps_address=None,
-        unit_price=unit_price,
-        driver_salary=driver_salary,
-        allowance=allowance,
-        earning=earning,
-        pricing_id=pricing_id,
-        status=status,
-    )
-    db.add(work_order)
-    await db.flush()  # get work_order.id without committing
-
-    for container in containers_data:
-        db.add(WorkOrderContainer(
-            work_order_id=work_order.id,
-            container_number=container.container_number,
-            work_type=container.work_type,
-            photo_url=container.photo_url,
-            photo_lat=container.photo_lat,
-            photo_lng=container.photo_lng,
-            photo_timestamp=container.photo_timestamp,
-        ))
-
-    await db.commit()
-    await db.refresh(work_order)
-
-    # Enqueue geocoding tasks
-    try:
-        from app.workers import enqueue
-        if body.gps_lat and body.gps_lng:
-            await enqueue("geocode_work_order_task", work_order_id=work_order.id, lat=body.gps_lat, lng=body.gps_lng)
-        for container in containers_data:
-            if container.photo_lat and container.photo_lng:
-                result = await db.execute(
-                    select(WorkOrderContainer).where(
-                        WorkOrderContainer.work_order_id == work_order.id,
-                        WorkOrderContainer.container_number == container.container_number,
-                    )
-                )
-                c = result.scalar_one_or_none()
-                if c:
-                    await enqueue("geocode_container_task", container_id=c.id, lat=container.photo_lat, lng=container.photo_lng)
-    except RuntimeError:
-        _logger.warning("Failed to enqueue geocoding for WO#%s", work_order.id)
+    work_order = await _create_single_work_order(body, current_user, db)
 
     # Fire-and-forget notification
     try:
@@ -247,3 +168,98 @@ async def update_work_order(
     await db.refresh(work_order)
 
     return await _load_work_order_out(db, work_order)
+
+
+@router.post("/work-orders/batch", status_code=207)
+async def batch_create_work_orders(
+    body: BatchWorkOrderCreate,
+    current_user: User = Depends(require_roles("driver")),
+    db: AsyncSession = Depends(get_db),
+):
+    results: list[BatchWorkOrderResult] = []
+    for i, item in enumerate(body.items):
+        try:
+            wo = await _create_single_work_order(item, current_user, db)
+            results.append(BatchWorkOrderResult(index=i, id=wo.id, success=True))
+        except Exception as exc:
+            _logger.warning("Batch item %d failed: %s", i, exc)
+            results.append(BatchWorkOrderResult(index=i, success=False, error=str(exc)))
+    return results
+
+
+async def _create_single_work_order(
+    body: WorkOrderCreate, current_user: User, db: AsyncSession
+) -> WorkOrder:
+    """Shared creation logic for single and batch endpoints."""
+    containers_data = body.containers
+
+    first_container = containers_data[0] if containers_data else None
+    work_type = first_container.work_type if first_container else ""
+
+    pricing = await find_pricing(
+        db,
+        company_id=current_user.company_id,
+        client_id=body.client_id,
+        work_type=work_type,
+        route=body.route,
+    )
+
+    if pricing is not None:
+        unit_price = pricing.unit_price
+        driver_salary = pricing.driver_salary
+        allowance = pricing.allowance
+        earning = driver_salary + allowance
+        status = "PRICED"
+        pricing_id = pricing.id
+    else:
+        unit_price = 0
+        driver_salary = 0
+        allowance = 0
+        earning = 0
+        status = "PENDING"
+        pricing_id = None
+
+    work_order = WorkOrder(
+        company_id=current_user.company_id,
+        client_id=body.client_id,
+        client_name=body.client_name,
+        route=body.route,
+        driver_id=body.driver_id,
+        driver_name=body.driver_name,
+        tractor_plate=body.tractor_plate,
+        gps_lat=body.gps_lat,
+        gps_lng=body.gps_lng,
+        gps_address=None,
+        unit_price=unit_price,
+        driver_salary=driver_salary,
+        allowance=allowance,
+        earning=earning,
+        pricing_id=pricing_id,
+        status=status,
+    )
+    db.add(work_order)
+    await db.flush()
+
+    for container in containers_data:
+        db.add(WorkOrderContainer(
+            work_order_id=work_order.id,
+            container_number=container.container_number,
+            work_type=container.work_type,
+            photo_url=container.photo_url,
+            photo_lat=container.photo_lat,
+            photo_lng=container.photo_lng,
+            photo_timestamp=container.photo_timestamp,
+        ))
+
+    await db.commit()
+    await db.refresh(work_order)
+
+    # Enqueue geocoding tasks (best-effort)
+    try:
+        from app.workers import enqueue
+        if body.gps_lat and body.gps_lng:
+            await enqueue("geocode_work_order_task", work_order_id=work_order.id, lat=body.gps_lat, lng=body.gps_lng)
+    except RuntimeError:
+        pass
+
+    return work_order

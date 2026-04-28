@@ -378,3 +378,18 @@ class JobStatusResponse(BaseModel):
 class SalaryCalculateAsyncResponse(BaseModel):
     job_id: str
     message: str = "Salary calculation enqueued"
+
+
+# ---------------------------------------------------------------------------
+# Batch work orders (offline sync)
+# ---------------------------------------------------------------------------
+
+class BatchWorkOrderCreate(BaseModel):
+    items: list[WorkOrderCreate]
+
+
+class BatchWorkOrderResult(BaseModel):
+    index: int
+    id: int | None = None
+    success: bool
+    error: str | None = None
