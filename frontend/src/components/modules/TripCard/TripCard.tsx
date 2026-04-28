@@ -1,6 +1,6 @@
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { MobileListCard } from '@/components/shared/DataList'
-import { getJobStatusBadge, formatCurrencyShort, type JobStatus } from '@/data/mockData'
+import { getJobStatusBadge, formatCurrencyShort, type JobStatus } from '@/data/domain'
 import { tripStatusVariant } from '@/lib/statusMaps'
 import { Button } from '@/components/ui/Button'
 

@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/Badge'
 import { Receipt } from 'lucide-react'
-import { formatCurrencyShort } from '@/data/mockData'
+import { formatCurrencyShort } from '@/data/domain'
 
 const statusMap: Record<string, { variant: any; label: string }> = {
   DRAFT: { variant: 'warning', label: 'Chờ duyệt' },

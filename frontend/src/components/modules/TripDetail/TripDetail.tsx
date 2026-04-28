@@ -1,6 +1,6 @@
 import { DetailRow, DetailList } from '@/components/shared/DetailRow'
 import { StatusBadge } from '@/components/shared/StatusBadge'
-import { getJobStatusBadge, type JobStatus, formatCurrencyFull } from '@/data/mockData'
+import { getJobStatusBadge, type JobStatus, formatCurrencyFull } from '@/data/domain'
 import { tripStatusVariant } from '@/lib/statusMaps'
 import type { TripData } from '../TripCard'
 

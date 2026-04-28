@@ -1,8 +1,8 @@
 import { useEffect, useState, useMemo } from 'react'
 import { AppTopBar } from '@/components/shared/AppTopBar'
 import { apiClient } from '@/services/api'
-import { formatCurrencyFull as formatCurrency } from '@/data/mockData'
-import type { WorkOrder, Pricing, Client } from '@/data/mockData'
+import { formatCurrencyFull as formatCurrency } from '@/data/domain'
+import type { WorkOrder, Pricing, Client } from '@/data/domain'
 
 export function ClientJobs({ clientId, onBack }: { clientId: string; onBack: () => void }) {
   const [jobs, setJobs] = useState<WorkOrder[]>([])

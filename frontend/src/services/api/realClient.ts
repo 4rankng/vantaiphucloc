@@ -21,7 +21,7 @@ import type {
   Driver,
   ApiResponse,
   WorkType,
-} from '@/data/mockData'
+} from '@/data/domain'
 import { setCache, getCache } from '@/lib/offline-db'
 import { offlineQueue } from '@/lib/offline-queue'
 

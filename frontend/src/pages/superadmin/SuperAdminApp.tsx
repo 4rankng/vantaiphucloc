@@ -10,8 +10,8 @@ import { Button } from '@/components/ui/Button/Button'
 import { Input } from '@/components/ui/Input/Input'
 import { Label } from '@/components/ui/Label/Label'
 import { SheetPicker } from '@/components/shared/SheetPicker'
-import type { Role } from '@/data/mockData'
-import { ROLE_LABELS } from '@/data/mockData'
+import type { Role } from '@/data/domain'
+import { ROLE_LABELS } from '@/data/domain'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

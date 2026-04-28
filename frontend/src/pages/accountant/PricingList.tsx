@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { apiClient } from '@/services/api'
-import { formatCurrencyFull, WORK_TYPES, WORK_TYPE_LABELS, type Pricing, type PricingLine, type WorkType, type Client, type RoutePrice } from '@/data/mockData'
+import { formatCurrencyFull, WORK_TYPES, WORK_TYPE_LABELS, type Pricing, type PricingLine, type WorkType, type Client, type RoutePrice } from '@/data/domain'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { Button } from '@/components/ui/Button/Button'
 import { Input } from '@/components/ui/Input/Input'

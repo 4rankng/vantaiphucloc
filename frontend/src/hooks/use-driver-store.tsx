@@ -1,13 +1,12 @@
 import React, { useState, useCallback, type ReactNode } from 'react'
-import { mockDrivers, type Driver } from '@/data/mockData'
-
-const DRIVER_ID = 'DRV-001'
+import type { Driver } from '@/data/domain'
 
 export interface DriverStore {
-  driver: Driver
+  driver: Driver | null
   navigate: (path: string) => void
   goBack: () => void
   currentPath: string
+  setDriver: (driver: Driver) => void
 }
 
 const StoreContext = React.createContext<DriverStore | null>(null)
@@ -15,7 +14,7 @@ const StoreContext = React.createContext<DriverStore | null>(null)
 export function DriverStoreProvider({ children }: { children: ReactNode }) {
   const [currentPath, setCurrentPath] = useState('/driver')
   const [history, setHistory] = useState<string[]>(['/driver'])
-  const driver = mockDrivers.find(d => d.id === DRIVER_ID)!
+  const [driver, setDriver] = useState<Driver | null>(null)
 
   const navigate = useCallback((path: string) => {
     setCurrentPath(path)
@@ -32,7 +31,7 @@ export function DriverStoreProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <StoreContext.Provider value={{ driver, navigate, goBack, currentPath }}>
+    <StoreContext.Provider value={{ driver, navigate, goBack, currentPath, setDriver }}>
       {children}
     </StoreContext.Provider>
   )

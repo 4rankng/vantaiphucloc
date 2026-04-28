@@ -7,8 +7,8 @@ import { Input } from '@/components/ui/Input/Input'
 import { Label } from '@/components/ui/Label/Label'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { apiClient } from '@/services/api'
-import { formatCurrencyFull } from '@/data/mockData'
-import type { RoutePrice } from '@/data/mockData'
+import { formatCurrencyFull } from '@/data/domain'
+import type { RoutePrice } from '@/data/domain'
 
 interface RouteForm {
   route: string

@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { CheckCircle, Clock, Camera } from 'lucide-react'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { apiClient } from '@/services/api'
-import { formatCurrencyFull, type WorkOrder } from '@/data/mockData'
+import { formatCurrencyFull, type WorkOrder } from '@/data/domain'
 
 const STATUS_MAP: Record<string, { label: string; icon: typeof CheckCircle; color: string; bg: string }> = {
   PENDING:  { label: 'Chờ đối soát', icon: Clock,       color: 'var(--theme-status-warning)', bg: 'var(--theme-status-warning-light)' },

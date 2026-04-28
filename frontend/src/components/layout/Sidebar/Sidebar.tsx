@@ -6,7 +6,7 @@ import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/Dialog'
 import { DialogClose } from '@/components/ui/Dialog'
 import { Button } from '@/components/ui/Button'
-import { ROLE_LABELS } from '@/data/mockData'
+import { ROLE_LABELS } from '@/data/domain'
 
 export interface SidebarNavItem {
   label: string

@@ -1,6 +1,6 @@
 import { DetailRow, DetailList } from '@/components/shared/DetailRow'
 import { StatusBadge } from '@/components/shared/StatusBadge'
-import { formatCurrencyFull } from '@/data/mockData'
+import { formatCurrencyFull } from '@/data/domain'
 import type { ClientData } from '../ClientCard'
 
 export function ClientDetail({ data }: { data: ClientData }) {
