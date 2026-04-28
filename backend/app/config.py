@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     WORKER_TIMEOUT: int = 600
     WORKER_MAX_TRIES: int = 3
 
+    # Push notifications (VAPID)
+    VAPID_PUBLIC_KEY: str = ""
+    VAPID_PRIVATE_KEY: str = ""
+    VAPID_CLAIMS_EMAIL: str = ""
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]

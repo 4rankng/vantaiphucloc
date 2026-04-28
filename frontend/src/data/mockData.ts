@@ -11,6 +11,9 @@ export interface ContainerItem {
   containerNumber: string
   workType: WorkType
   photoUrl: string
+  photoLat?: number | null
+  photoLng?: number | null
+  photoTimestamp?: string | null
 }
 
 export const WORK_TYPES: WorkType[] = ['E20', 'E40', 'F20', 'F40']

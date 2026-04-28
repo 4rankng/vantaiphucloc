@@ -1,9 +1,16 @@
-import { useRef, useCallback, useState } from 'react'
+import { useRef, useCallback, useState, useEffect } from 'react'
 import Webcam from 'react-webcam'
 import { X, RotateCcw } from 'lucide-react'
+import { calculateObjectCoverCrop } from '@/lib/crop-utils'
+
+export interface PhotoMeta {
+  lat: number | null
+  lng: number | null
+  timestamp: string
+}
 
 interface ContainerScannerProps {
-  onCapture: (imageSrc: string) => void
+  onCapture: (imageSrc: string, meta: PhotoMeta) => void
   onClose: () => void
 }
 
@@ -14,6 +21,16 @@ const RECT_HEIGHT_PX = 100
 export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) {
   const webcamRef = useRef<Webcam>(null)
   const [captured, setCaptured] = useState<string | null>(null)
+  const [gpsCoords, setGpsCoords] = useState<{ lat: number | null; lng: number | null }>({ lat: null, lng: null })
+
+  useEffect(() => {
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setGpsCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => setGpsCoords({ lat: null, lng: null }),
+      { enableHighAccuracy: true, timeout: 5000 },
+    )
+  }, [])
 
   const handleCapture = useCallback(() => {
     const webcam = webcamRef.current
@@ -22,30 +39,21 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
     const video = webcam.video
     if (!video) return
 
+    const crop = calculateObjectCoverCrop({
+      sourceWidth: video.videoWidth,
+      sourceHeight: video.videoHeight,
+      containerWidth: video.clientWidth,
+      containerHeight: video.clientHeight,
+      rectWidth: video.clientWidth * RECT_WIDTH_PERCENT,
+      rectHeight: RECT_HEIGHT_PX,
+    })
+
     const canvas = document.createElement('canvas')
-
-    // Video source resolution (actual pixels)
-    const sourceWidth = video.videoWidth
-    const sourceHeight = video.videoHeight
-
-    // Scale factor between displayed size and actual resolution
-    const scale = sourceWidth / video.clientWidth
-
-    // Calculate crop coordinates in actual pixels
-    const cropWidth = (video.clientWidth * RECT_WIDTH_PERCENT) * scale
-    const cropHeight = RECT_HEIGHT_PX * scale
-    const cropX = (sourceWidth - cropWidth) / 2
-    const cropY = (sourceHeight - cropHeight) / 2
-
-    canvas.width = cropWidth
-    canvas.height = cropHeight
+    canvas.width = crop.width
+    canvas.height = crop.height
 
     const ctx = canvas.getContext('2d')!
-    ctx.drawImage(
-      video,
-      cropX, cropY, cropWidth, cropHeight,
-      0, 0, cropWidth, cropHeight,
-    )
+    ctx.drawImage(video, crop.x, crop.y, crop.width, crop.height, 0, 0, crop.width, crop.height)
 
     const croppedImage = canvas.toDataURL('image/jpeg', 0.8)
     setCaptured(croppedImage)
@@ -57,9 +65,13 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
 
   const handleConfirm = useCallback(() => {
     if (captured) {
-      onCapture(captured)
+      onCapture(captured, {
+        lat: gpsCoords.lat,
+        lng: gpsCoords.lng,
+        timestamp: new Date().toISOString(),
+      })
     }
-  }, [captured, onCapture])
+  }, [captured, gpsCoords, onCapture])
 
   return (
     <div

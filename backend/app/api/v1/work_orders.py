@@ -115,10 +115,32 @@ async def create_work_order(
             container_number=container.container_number,
             work_type=container.work_type,
             photo_url=container.photo_url,
+            photo_lat=container.photo_lat,
+            photo_lng=container.photo_lng,
+            photo_timestamp=container.photo_timestamp,
         ))
 
     await db.commit()
     await db.refresh(work_order)
+
+    # Enqueue geocoding tasks
+    try:
+        from app.workers import enqueue
+        if body.gps_lat and body.gps_lng:
+            await enqueue("geocode_work_order_task", work_order_id=work_order.id, lat=body.gps_lat, lng=body.gps_lng)
+        for container in containers_data:
+            if container.photo_lat and container.photo_lng:
+                result = await db.execute(
+                    select(WorkOrderContainer).where(
+                        WorkOrderContainer.work_order_id == work_order.id,
+                        WorkOrderContainer.container_number == container.container_number,
+                    )
+                )
+                c = result.scalar_one_or_none()
+                if c:
+                    await enqueue("geocode_container_task", container_id=c.id, lat=container.photo_lat, lng=container.photo_lng)
+    except RuntimeError:
+        _logger.warning("Failed to enqueue geocoding for WO#%s", work_order.id)
 
     # Fire-and-forget notification
     try:

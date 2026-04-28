@@ -176,6 +176,10 @@ class WorkOrderContainer(Base):
     container_number = Column(String(50), nullable=False)
     work_type = Column(String(10), nullable=False)     # E20 | E40 | F20 | F40
     photo_url = Column(String(1000), nullable=True)
+    photo_lat = Column(Float, nullable=True)
+    photo_lng = Column(Float, nullable=True)
+    photo_timestamp = Column(DateTime(timezone=True), nullable=True)
+    photo_address = Column(String(500), nullable=True)
 
 
 # ---------------------------------------------------------------------------

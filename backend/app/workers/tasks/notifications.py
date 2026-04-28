@@ -30,4 +30,12 @@ async def send_notification_task(
     await redis.zremrangebyrank(key, 0, -(101))
 
     logger.info("Notification stored: user=%s channel=%s title=%s", user_id, channel, title)
+
+    try:
+        from app.services.push_service import send_push_to_user
+        push_count = await send_push_to_user(user_id, title, message)
+        logger.info("Push sent to %d devices for user %s", push_count, user_id)
+    except Exception as e:
+        logger.error("Failed to send push for user %s: %s", user_id, e)
+
     return {"user_id": user_id, "channel": channel, "status": "stored"}
