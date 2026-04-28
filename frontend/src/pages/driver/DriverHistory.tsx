@@ -1,20 +1,18 @@
 import { useEffect, useState, useMemo } from 'react'
-import { CheckCircle, Clock, AlertCircle, Camera } from 'lucide-react'
+import { CheckCircle, Clock, Camera } from 'lucide-react'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { apiClient } from '@/services/api'
-import type { WorkOrder } from '@/data/mockData'
+import { formatCurrencyFull, type WorkOrder } from '@/data/mockData'
 
 const STATUS_MAP: Record<string, { label: string; icon: typeof CheckCircle; color: string; bg: string }> = {
-  PENDING: { label: 'Chờ đối soát', icon: Clock, color: 'var(--theme-status-warning)', bg: 'var(--theme-status-warning-light)' },
-  MATCHED: { label: 'Đã đối soát', icon: CheckCircle, color: 'var(--theme-status-success)', bg: 'var(--theme-status-success-light)' },
-  DISPUTED: { label: 'Sai số công', icon: AlertCircle, color: 'var(--theme-status-error)', bg: 'var(--theme-status-error-light)' },
+  PENDING:  { label: 'Chờ đối soát', icon: Clock,       color: 'var(--theme-status-warning)', bg: 'var(--theme-status-warning-light)' },
 }
 
 export function DriverHistory() {
   const { driver } = useDriverStore()
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'MATCHED' | 'DISPUTED'>('ALL')
+  const [filter, setFilter] = useState<'ALL' | 'PENDING'>('ALL')
 
   useEffect(() => {
     let cancelled = false
@@ -33,15 +31,18 @@ export function DriverHistory() {
   const counts = useMemo(() => ({
     ALL: workOrders.length,
     PENDING: workOrders.filter(w => w.status === 'PENDING').length,
-    MATCHED: workOrders.filter(w => w.status === 'MATCHED').length,
-    DISPUTED: workOrders.filter(w => w.status === 'DISPUTED').length,
   }), [workOrders])
+
+  const totalEarnings = useMemo(() =>
+    filtered.reduce((sum, w) => sum + w.earning, 0),
+    [filtered],
+  )
 
   return (
     <div className="pb-6" style={{ background: 'var(--theme-bg-primary)' }}>
       {/* Filter tabs */}
       <div className="px-4 pt-3 pb-2 flex gap-2 overflow-x-auto scrollbar-none">
-        {(['ALL', 'PENDING', 'MATCHED', 'DISPUTED'] as const).map(s => (
+        {(['ALL', 'PENDING'] as const).map(s => (
           <button
             key={s}
             onClick={() => setFilter(s)}
@@ -52,10 +53,25 @@ export function DriverHistory() {
               border: `1px solid ${filter === s ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)'}`,
             }}
           >
-            {s === 'ALL' ? 'Tất cả' : STATUS_MAP[s].label} ({counts[s]})
+            {s === 'ALL' ? 'Tất cả' : STATUS_MAP[s]?.label ?? s} ({counts[s]})
           </button>
         ))}
       </div>
+
+      {/* Total earnings bar */}
+      {totalEarnings > 0 && (
+        <div className="px-4 mb-3">
+          <div className="rounded-xl px-4 py-2.5 flex items-center justify-between"
+            style={{ background: 'var(--theme-brand-primary-light)' }}>
+            <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>
+              Tổng ({filtered.length} công)
+            </span>
+            <span className="text-base font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>
+              {formatCurrencyFull(totalEarnings)}
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="px-4 space-y-2">
         {loading ? (
@@ -95,17 +111,23 @@ export function DriverHistory() {
                     <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--theme-text-muted)' }}>
                       {wo.clientName}
                     </p>
-                    <p className="text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>
+                    <p className="text-xs truncate" style={{ color: 'var(--theme-text-muted)', opacity: 0.7 }}>
                       {wo.route}
                     </p>
                   </div>
-                  <div
-                    className="flex items-center gap-1 px-2 py-1 rounded-full shrink-0"
-                    style={{ background: s.bg }}
-                  >
-                    <StatusIcon className="w-3 h-3" style={{ color: s.color }} />
-                    <span className="text-[10px] font-semibold" style={{ color: s.color }}>{s.label}</span>
-                  </div>
+                  {wo.earning > 0 ? (
+                    <p className="text-sm font-bold tabular-nums shrink-0" style={{ color: 'var(--theme-brand-primary)' }}>
+                      +{formatCurrencyFull(wo.earning)}
+                    </p>
+                  ) : (
+                    <div
+                      className="flex items-center gap-1 px-2 py-1 rounded-full shrink-0"
+                      style={{ background: s.bg }}
+                    >
+                      <StatusIcon className="w-3 h-3" style={{ color: s.color }} />
+                      <span className="text-[10px] font-semibold" style={{ color: s.color }}>{s.label}</span>
+                    </div>
+                  )}
                 </div>
                 <p className="text-[10px] mt-2" style={{ color: 'var(--theme-text-muted)' }}>
                   {new Date(wo.createdAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}

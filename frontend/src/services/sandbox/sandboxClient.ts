@@ -142,10 +142,40 @@ export async function getWorkOrders(filters?: WorkOrderFilters): Promise<ApiResp
   return ok(items)
 }
 
-export async function createWorkOrder(data: Omit<WorkOrder, 'id' | 'createdAt' | 'status'>): Promise<ApiResponse<WorkOrder>> {
+export async function createWorkOrder(data: Omit<WorkOrder, 'id' | 'createdAt' | 'status' | 'unitPrice' | 'driverSalary' | 'allowance' | 'earning' | 'pricingId' | 'gpsAddress'>): Promise<ApiResponse<WorkOrder>> {
   await delay()
-  const items = getStore('work_orders', mockWorkOrders)
-  const item: WorkOrder = { ...data, id: generateId('WO'), createdAt: now(), status: 'PENDING' }
+
+  let items: WorkOrder[]
+  try {
+    items = getStore('work_orders', mockWorkOrders)
+  } catch {
+    items = [...mockWorkOrders]
+  }
+
+  const pricings = getStore('pricings', mockPricings)
+  const firstType = data.containers?.[0]?.workType ?? 'E20'
+  const pricing = pricings.find(p =>
+    p.clientId === data.clientId && p.workType === firstType && p.route === data.route,
+  )
+
+  const unitPrice = pricing?.unitPrice ?? 0
+  const driverSalary = pricing?.driverSalary ?? 0
+  const allowance = pricing?.allowance ?? 0
+  const earning = driverSalary + allowance
+  const status: WorkOrder['status'] = pricing ? 'PRICED' : 'PENDING'
+
+  const item: WorkOrder = {
+    ...data,
+    id: generateId('WO'),
+    gpsAddress: 'Cảng Chùa Vẽ, Ngô Quyền, Hải Phòng',
+    unitPrice,
+    driverSalary,
+    allowance,
+    earning,
+    pricingId: pricing?.id,
+    createdAt: now(),
+    status,
+  }
   items.push(item)
   setStore('work_orders', items)
   return ok(item)
@@ -222,23 +252,17 @@ export async function calculateSalary(
   await delay()
   const workOrders = getStore('work_orders', mockWorkOrders)
   const matched = workOrders.filter(
-    w => w.driverId === driverId && w.status === 'MATCHED'
+    w => w.driverId === driverId && w.status !== 'PENDING'
       && w.createdAt >= startDate + 'T00:00:00Z'
       && w.createdAt <= endDate + 'T23:59:59Z',
   )
 
-  const pricings = getStore('pricings', mockPricings)
   let totalSalary = 0
   let totalAllowance = 0
 
   matched.forEach(wo => {
-    const pricing = pricings.find(p =>
-      p.clientId === wo.clientId && p.workType === wo.workType && p.route === wo.route,
-    )
-    if (pricing) {
-      totalSalary += pricing.driverSalary
-      totalAllowance += pricing.allowance
-    }
+    totalSalary += wo.driverSalary
+    totalAllowance += wo.allowance
   })
 
   const driver = getStore('drivers', mockDrivers).find(d => d.id === driverId)

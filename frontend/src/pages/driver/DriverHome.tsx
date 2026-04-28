@@ -1,75 +1,24 @@
-import { useEffect, useState, useMemo } from 'react'
-import { Camera, CheckCircle, Clock, AlertCircle } from 'lucide-react'
-import { Masonry } from 'masonic'
+import { useState, useEffect, useMemo } from 'react'
+import { createPortal } from 'react-dom'
+import { Plus, MapPin, Calendar } from 'lucide-react'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { apiClient } from '@/services/api'
-import type { WorkOrder } from '@/data/mockData'
+import { formatCurrencyFull, type WorkOrder, type ContainerItem } from '@/data/mockData'
+import { MonthNavigator } from '@/components/shared/MonthNavigator'
+import { WorkOrderCard } from '@/components/shared/WorkOrderCard'
+import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 
-// ─── Status config ────────────────────────────────────────────────────────────
-const STATUS_CONFIG: Record<string, {
-  label: string
-  icon: typeof CheckCircle
-  color: string
-  bg: string
-}> = {
-  PENDING:  { label: 'Chờ đối soát', icon: Clock,        color: 'var(--theme-status-warning)',  bg: 'var(--theme-status-warning-light)' },
-  MATCHED:  { label: 'Đã đối soát',  icon: CheckCircle,  color: 'var(--theme-status-success)',  bg: 'var(--theme-status-success-light)' },
-  DISPUTED: { label: 'Sai số công',  icon: AlertCircle,  color: 'var(--theme-status-error)',    bg: 'var(--theme-status-error-light)' },
-}
-
-// ─── Masonic work-order card ──────────────────────────────────────────────────
-function WorkOrderCard({ data: wo }: { data: WorkOrder }) {
-  const s = STATUS_CONFIG[wo.status] ?? STATUS_CONFIG.PENDING
-  const StatusIcon = s.icon
-  return (
-    <div
-      className="rounded-2xl p-3.5"
-      style={{
-        background: 'var(--theme-bg-secondary)',
-        boxShadow: 'var(--theme-shadow-card)',
-        border: '1px solid var(--theme-border-default)',
-      }}
-    >
-      {/* Number + type */}
-      <div className="flex items-center gap-2 mb-1.5">
-        <p className="text-sm font-bold font-mono truncate" style={{ color: 'var(--theme-text-primary)' }}>
-          {wo.workOrderNumber}
-        </p>
-        <span
-          className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0"
-          style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
-        >
-          {wo.workType}
-        </span>
-      </div>
-
-      {/* Client */}
-      <p className="text-[11px] truncate mb-2" style={{ color: 'var(--theme-text-muted)' }}>
-        {wo.clientName}
-      </p>
-
-      {/* Status pill */}
-      <div
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
-        style={{ background: s.bg }}
-      >
-        <StatusIcon className="w-3 h-3" style={{ color: s.color }} />
-        <span className="text-[10px] font-semibold" style={{ color: s.color }}>{s.label}</span>
-      </div>
-
-      {/* Date */}
-      <p className="text-[10px] mt-2" style={{ color: 'var(--theme-text-muted)' }}>
-        {new Date(wo.createdAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-      </p>
-    </div>
-  )
-}
-
+// ─── Cont type badge ──────────────────────────────────────────────────────────
 // ─── Main component ───────────────────────────────────────────────────────────
 export function DriverHome() {
   const { driver, navigate } = useDriverStore()
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Month navigator state — default current month
+  const now = new Date()
+  const [year, setYear] = useState(now.getFullYear())
+  const [month, setMonth] = useState(now.getMonth())
 
   useEffect(() => {
     let cancelled = false
@@ -80,87 +29,93 @@ export function DriverHome() {
     return () => { cancelled = true }
   }, [driver.id])
 
-  const recentOrders = useMemo(() => workOrders.slice(0, 6), [workOrders])
+  const handlePrevMonth = () => {
+    if (month === 0) { setMonth(11); setYear(y => y - 1) }
+    else setMonth(m => m - 1)
+  }
+  const handleNextMonth = () => {
+    if (month === 11) { setMonth(0); setYear(y => y + 1) }
+    else setMonth(m => m + 1)
+  }
 
-  // Summary counts
-  const counts = useMemo(() => ({
-    total: workOrders.length,
-    pending: workOrders.filter(w => w.status === 'PENDING').length,
-    matched: workOrders.filter(w => w.status === 'MATCHED').length,
-  }), [workOrders])
+  // Filter jobs by selected month
+  const filteredJobs = useMemo(() => {
+    const start = new Date(year, month, 1).toISOString()
+    const end = new Date(year, month + 1, 0, 23, 59, 59).toISOString()
+    return workOrders.filter(w => w.createdAt >= start && w.createdAt <= end)
+  }, [workOrders, year, month])
+
+  const totalEarnings = useMemo(() =>
+    filteredJobs.reduce((sum, w) => sum + w.earning, 0),
+    [filteredJobs],
+  )
 
   return (
-    <div className="pb-8">
-      {/* CTA */}
-      <div className="px-4 pt-4 pb-4">
-        <button
-          onClick={() => navigate('/driver/work-orders/new')}
-          className="w-full flex items-center justify-center gap-2.5 py-4 rounded-2xl text-sm font-bold transition-all active:scale-[0.98] touch-manipulation"
-          style={{
-            background: 'var(--theme-brand-primary)',
-            color: 'var(--theme-text-on-brand)',
-            boxShadow: 'var(--theme-shadow-elevated)',
-          }}
-        >
-          <Camera className="h-5 w-5" />
-          Chụp công
-        </button>
-      </div>
-
-      {/* Summary strip */}
-      <div className="px-4 mb-4">
-        <div
-          className="grid grid-cols-3 rounded-2xl overflow-hidden"
-          style={{ border: '1px solid var(--theme-border-default)' }}
-        >
-          {[
-            { label: 'Tổng công', value: counts.total, color: 'var(--theme-text-primary)' },
-            { label: 'Chờ duyệt', value: counts.pending, color: 'var(--theme-status-warning)' },
-            { label: 'Đã duyệt', value: counts.matched, color: 'var(--theme-status-success)' },
-          ].map((item, i) => (
-            <div
-              key={item.label}
-              className="py-3 text-center"
-              style={{
-                background: 'var(--theme-bg-secondary)',
-                borderRight: i < 2 ? '1px solid var(--theme-border-default)' : 'none',
-              }}
-            >
-              <p className="text-[18px] font-bold tabular-nums" style={{ color: item.color }}>{item.value}</p>
-              <p className="text-[10px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{item.label}</p>
-            </div>
-          ))}
+    <div className="pb-20">
+      {/* Stats row */}
+      <div className="px-4 pt-4">
+        <div className="grid grid-cols-2 gap-2">
+          <div
+            className="rounded-2xl p-4"
+            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
+          >
+            <p className="text-[11px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
+              Thu nhập
+            </p>
+            <p className="text-xl font-bold tabular-nums mt-1" style={{ color: 'var(--theme-text-primary)' }}>
+              {formatCurrencyFull(totalEarnings)}
+            </p>
+          </div>
+          <div
+            className="rounded-2xl p-4"
+            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
+          >
+            <p className="text-[11px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
+              Số chuyến
+            </p>
+            <p className="text-xl font-bold tabular-nums mt-1" style={{ color: 'var(--theme-text-primary)' }}>
+              {filteredJobs.length}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Recent work orders — masonic grid */}
-      <div className="px-4">
-        <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--theme-text-muted)' }}>
-          Số công gần đây
+      {/* Month navigator */}
+      <div className="px-4 mt-4">
+        <MonthNavigator year={year} month={month} onPrev={handlePrevMonth} onNext={handleNextMonth} />
+      </div>
+
+      {/* Job list */}
+      <div className="px-4 mt-4 space-y-2.5">
+        <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
+          Lịch sử chuyến
         </p>
 
         {loading ? (
-          <div className="grid grid-cols-2 gap-2">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-28 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+          <div className="animate-pulse space-y-2.5">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-24 rounded-2xl" style={{ background: 'var(--theme-bg-tertiary)' }} />
             ))}
           </div>
-        ) : recentOrders.length === 0 ? (
+        ) : filteredJobs.length === 0 ? (
           <div className="rounded-2xl p-8 text-center" style={{ background: 'var(--theme-bg-secondary)' }}>
-            <CheckCircle className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--theme-text-muted)' }} />
-            <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có số công nào</p>
+            <Calendar className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--theme-text-muted)' }} />
+            <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có chuyến nào trong tháng này</p>
           </div>
         ) : (
-          <Masonry
-            items={recentOrders}
-            columnGutter={8}
-            columnWidth={160}
-            maxColumnCount={2}
-            render={WorkOrderCard}
-            overscanBy={2}
-          />
+          filteredJobs.map(job => (
+            <WorkOrderCard
+              key={job.id}
+              variant="driver"
+              data={job}
+              onClick={() => navigate(`/driver/job/${job.id}`)}
+            />
+          ))
         )}
       </div>
+
+      {/* FAB */}
+      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => navigate('/driver/work-orders/new')} label="Tạo chuyến mới" />
     </div>
   )
 }

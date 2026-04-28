@@ -1,6 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { AppTopBar } from '@/components/shared/AppTopBar'
+import { UserDropdown } from '@/components/shared/ProfileDialog'
 
 function ScrollToTop() {
   const { currentPath } = useDriverStore()
@@ -10,13 +11,17 @@ function ScrollToTop() {
 
 export function TopBar() {
   const { driver, navigate } = useDriverStore()
+  const [dropdownOpen, setDropdownOpen] = useState(false)
   return (
-    <AppTopBar
-      variant="home"
-      name={driver.name}
-      onNotifications={() => navigate('/driver/notifications')}
-      onProfile={() => navigate('/driver/profile')}
-    />
+    <>
+      <AppTopBar
+        variant="home"
+        name={driver.name}
+        onNotifications={() => navigate('/driver/notifications')}
+        onProfile={() => setDropdownOpen(true)}
+      />
+      <UserDropdown open={dropdownOpen} onClose={() => setDropdownOpen(false)} />
+    </>
   )
 }
 

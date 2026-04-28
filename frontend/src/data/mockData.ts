@@ -1,11 +1,17 @@
-export type Role = 'director' | 'accountant' | 'driver'
+export type Role = 'superadmin' | 'director' | 'accountant' | 'driver'
 export type TrailerType = '20FT' | '40FT'
 export type JobStatus = 'DRAFT' | 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 export type ClientType = 'company' | 'individual'
 export type WorkType = 'E20' | 'E40' | 'F20' | 'F40'
-export type WorkOrderStatus = 'PENDING' | 'MATCHED' | 'DISPUTED'
+export type WorkOrderStatus = 'PENDING' | 'PRICED' | 'APPROVED'
 export type TripOrderStatus = 'DRAFT' | 'CONFIRMED' | 'INVOICED' | 'CANCELLED'
 export type SalaryPeriodStatus = 'OPEN' | 'CALCULATED' | 'PAID'
+
+export interface ContainerItem {
+  containerNumber: string
+  workType: WorkType
+  photoUrl: string
+}
 
 export const WORK_TYPES: WorkType[] = ['E20', 'E40', 'F20', 'F40']
 
@@ -17,6 +23,7 @@ export const WORK_TYPE_LABELS: Record<WorkType, string> = {
 }
 
 export const ROLE_LABELS: Record<Role, string> = {
+  superadmin: 'SuperAdmin',
   director: 'Giám đốc',
   accountant: 'Kế toán',
   driver: 'Tài xế',
@@ -167,17 +174,28 @@ export interface PeriodClose {
 
 export interface WorkOrder {
   id: string
-  workOrderNumber: string
-  photoUrl: string
-  workType: WorkType
+  containers: ContainerItem[]
   clientId: string
   clientName: string
   route: string
   driverId: string
   driverName: string
   tractorPlate: string
+  gpsLat: number
+  gpsLng: number
+  gpsAddress?: string
+  unitPrice: number
+  driverSalary: number
+  allowance: number
+  earning: number
+  pricingId?: string
   createdAt: string
   status: WorkOrderStatus
+}
+
+export interface PricingLine {
+  workType: WorkType
+  quantity: number
 }
 
 export interface Pricing {
@@ -186,6 +204,7 @@ export interface Pricing {
   clientName: string
   workType: WorkType
   route: string
+  lines: PricingLine[]
   unitPrice: number
   driverSalary: number
   allowance: number
@@ -503,30 +522,60 @@ export const mockPeriodCloses: PeriodClose[] = [
 // ─── Mock Work Orders ────────────────────────────────────────────────────────
 
 export const mockWorkOrders: WorkOrder[] = [
-  { id: 'WO-001', workOrderNumber: 'CONG-284731', photoUrl: '', workType: 'E40', clientId: 'CLT-002', clientName: 'Công ty TNHH Sản xuất Mộc Châu', route: 'Hải Phòng → Mộc Châu, Sơn La', driverId: 'DRV-001', driverName: 'Nguyễn Văn Hùng', tractorPlate: '15C-136.31', createdAt: '2025-04-20T08:30:00Z', status: 'MATCHED' },
-  { id: 'WO-002', workOrderNumber: 'CONG-910456', photoUrl: '', workType: 'F40', clientId: 'CLT-003', clientName: 'Tập đoàn Xuất nhập khẩu Lào Cai', route: 'Hải Phòng → Sa Pa', driverId: 'DRV-002', driverName: 'Trần Minh Tuấn', tractorPlate: '15C-139.82', createdAt: '2025-04-20T07:15:00Z', status: 'MATCHED' },
-  { id: 'WO-003', workOrderNumber: 'CONG-552190', photoUrl: '', workType: 'E40', clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', route: 'Hải Phòng → Bắc Ninh → Ninh Bình (Kết hợp 2 chiều)', driverId: 'DRV-003', driverName: 'Lê Hoàng Nam', tractorPlate: '15C-070.63', createdAt: '2025-04-20T06:45:00Z', status: 'MATCHED' },
-  { id: 'WO-004', workOrderNumber: 'CONG-331782', photoUrl: '', workType: 'E20', clientId: 'CLT-004', clientName: 'Công ty CP Thương mại Thái Bình', route: 'Hải Phòng → Hải Dương', driverId: 'DRV-004', driverName: 'Phạm Đức Anh', tractorPlate: '15C-180.99', createdAt: '2025-04-20T09:00:00Z', status: 'PENDING' },
-  { id: 'WO-005', workOrderNumber: 'CONG-778423', photoUrl: '', workType: 'F20', clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', route: 'Hải Phòng → Hà Nội (QL5)', driverId: 'DRV-001', driverName: 'Nguyễn Văn Hùng', tractorPlate: '15C-136.31', createdAt: '2025-04-19T07:30:00Z', status: 'MATCHED' },
-  { id: 'WO-006', workOrderNumber: 'CONG-664501', photoUrl: '', workType: 'F40', clientId: 'CLT-005', clientName: 'Doanh nghiệp Vận tải Quảng Ninh', route: 'Hải Phòng → Hạ Long, Quảng Ninh', driverId: 'DRV-002', driverName: 'Trần Minh Tuấn', tractorPlate: '15C-139.82', createdAt: '2025-04-19T08:00:00Z', status: 'PENDING' },
+  // DRV-001 — Nguyễn Văn Hùng — April 2026 jobs
+  { id: 'WO-001', containers: [{ containerNumber: 'MSKU-284731', workType: 'E40', photoUrl: '' }], clientId: 'CLT-002', clientName: 'Công ty TNHH Sản xuất Mộc Châu', route: 'Hải Phòng → Mộc Châu, Sơn La', driverId: 'DRV-001', driverName: 'Nguyễn Văn Hùng', tractorPlate: '15C-136.31', gpsLat: 20.8449, gpsLng: 106.6881, gpsAddress: 'Cảng Chùa Vẽ, Ngô Quyền, Hải Phòng', unitPrice: 2740000, driverSalary: 800000, allowance: 200000, earning: 1000000, pricingId: 'PRC-001', createdAt: '2026-04-26T08:30:00Z', status: 'PRICED' },
+  { id: 'WO-002', containers: [{ containerNumber: 'MSKU-111222', workType: 'E20', photoUrl: '' }, { containerNumber: 'TCNU-333444', workType: 'E20', photoUrl: '' }], clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', route: 'Hải Phòng → Hà Nội (QL5)', driverId: 'DRV-001', driverName: 'Nguyễn Văn Hùng', tractorPlate: '15C-136.31', gpsLat: 20.8449, gpsLng: 106.6881, gpsAddress: 'Cảng Đình Vũ, Hải An, Hải Phòng', unitPrice: 1860000, driverSalary: 800000, allowance: 100000, earning: 900000, pricingId: 'PRC-004', createdAt: '2026-04-25T07:30:00Z', status: 'PRICED' },
+  { id: 'WO-003', containers: [{ containerNumber: 'HLCU-552190', workType: 'F20', photoUrl: '' }], clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', route: 'Hải Phòng → Hải Dương', driverId: 'DRV-001', driverName: 'Nguyễn Văn Hùng', tractorPlate: '15C-136.31', gpsLat: 20.8449, gpsLng: 106.6881, gpsAddress: 'Cảng Chùa Vẽ, Ngô Quyền, Hải Phòng', unitPrice: 600000, driverSalary: 750000, allowance: 100000, earning: 850000, pricingId: 'PRC-005', createdAt: '2026-04-24T14:20:00Z', status: 'PRICED' },
+  { id: 'WO-004', containers: [{ containerNumber: 'TEMU-991234', workType: 'E40', photoUrl: '' }], clientId: 'CLT-002', clientName: 'Công ty TNHH Sản xuất Mộc Châu', route: 'Hải Phòng → Mộc Châu, Sơn La', driverId: 'DRV-001', driverName: 'Nguyễn Văn Hùng', tractorPlate: '15C-136.31', gpsLat: 20.8449, gpsLng: 106.6881, gpsAddress: 'Cảng Đình Vũ, Hải An, Hải Phòng', unitPrice: 2740000, driverSalary: 800000, allowance: 200000, earning: 1000000, pricingId: 'PRC-001', createdAt: '2026-04-23T06:15:00Z', status: 'PRICED' },
+  { id: 'WO-005', containers: [{ containerNumber: 'CSLU-331782', workType: 'E20', photoUrl: '' }, { containerNumber: 'HLCU-449901', workType: 'E20', photoUrl: '' }], clientId: 'CLT-004', clientName: 'Công ty CP Thương mại Thái Bình', route: 'Hải Phòng → Thái Nguyên', driverId: 'DRV-001', driverName: 'Nguyễn Văn Hùng', tractorPlate: '15C-136.31', gpsLat: 20.8449, gpsLng: 106.6881, gpsAddress: 'Cảng Chùa Vẽ, Ngô Quyền, Hải Phòng', unitPrice: 0, driverSalary: 0, allowance: 0, earning: 0, createdAt: '2026-04-22T09:00:00Z', status: 'PENDING' },
+  { id: 'WO-006', containers: [{ containerNumber: 'BMOU-445566', workType: 'F40', photoUrl: '' }, { containerNumber: 'TRHU-778899', workType: 'F20', photoUrl: '' }], clientId: 'CLT-005', clientName: 'Doanh nghiệp Vận tải Quảng Ninh', route: 'Hải Phòng → Hạ Long, Quảng Ninh', driverId: 'DRV-001', driverName: 'Nguyễn Văn Hùng', tractorPlate: '15C-136.31', gpsLat: 20.8449, gpsLng: 106.6881, gpsAddress: 'Cảng Chùa Vẽ, Ngô Quyền, Hải Phòng', unitPrice: 790000, driverSalary: 800000, allowance: 120000, earning: 920000, pricingId: 'PRC-006', createdAt: '2026-04-20T11:45:00Z', status: 'PRICED' },
+  // DRV-002 — Trần Minh Tuấn
+  { id: 'WO-007', containers: [{ containerNumber: 'TCNU-910456', workType: 'F40', photoUrl: '' }], clientId: 'CLT-003', clientName: 'Tập đoàn Xuất nhập khẩu Lào Cai', route: 'Hải Phòng → Sa Pa', driverId: 'DRV-002', driverName: 'Trần Minh Tuấn', tractorPlate: '15C-139.82', gpsLat: 20.8449, gpsLng: 106.6881, gpsAddress: 'Cảng Đình Vũ, Hải An, Hải Phòng', unitPrice: 4800000, driverSalary: 900000, allowance: 250000, earning: 1150000, pricingId: 'PRC-002', createdAt: '2026-04-26T07:15:00Z', status: 'PRICED' },
+  { id: 'WO-008', containers: [{ containerNumber: 'TEMU-664501', workType: 'F40', photoUrl: '' }], clientId: 'CLT-005', clientName: 'Doanh nghiệp Vận tải Quảng Ninh', route: 'Hải Phòng → Hạ Long, Quảng Ninh', driverId: 'DRV-002', driverName: 'Trần Minh Tuấn', tractorPlate: '15C-139.82', gpsLat: 20.8449, gpsLng: 106.6881, gpsAddress: 'Cảng Chùa Vẽ, Ngô Quyền, Hải Phòng', unitPrice: 0, driverSalary: 0, allowance: 0, earning: 0, createdAt: '2026-04-25T08:00:00Z', status: 'PENDING' },
+  // More PENDING jobs for doi soat testing (mix of 1 cont and 2 cont)
+  { id: 'WO-015', containers: [{ containerNumber: 'MSKU-556677', workType: 'E20', photoUrl: '' }, { containerNumber: 'TCNU-889900', workType: 'E20', photoUrl: '' }], clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', route: 'Hải Phòng → Hà Nội (QL5)', driverId: 'DRV-001', driverName: 'Nguyễn Văn Hùng', tractorPlate: '15C-136.31', gpsLat: 20.8449, gpsLng: 106.6881, unitPrice: 0, driverSalary: 0, allowance: 0, earning: 0, createdAt: '2026-04-26T14:00:00Z', status: 'PENDING' },
+  { id: 'WO-016', containers: [{ containerNumber: 'FCIU-112244', workType: 'E40', photoUrl: '' }], clientId: 'CLT-003', clientName: 'Tập đoàn Xuất nhập khẩu Lào Cai', route: 'Hải Phòng → Sa Pa', driverId: 'DRV-002', driverName: 'Trần Minh Tuấn', tractorPlate: '15C-139.82', gpsLat: 20.8449, gpsLng: 106.6881, unitPrice: 0, driverSalary: 0, allowance: 0, earning: 0, createdAt: '2026-04-26T15:30:00Z', status: 'PENDING' },
+  { id: 'WO-017', containers: [{ containerNumber: 'TRHU-335577', workType: 'E20', photoUrl: '' }, { containerNumber: 'BMOU-991133', workType: 'E20', photoUrl: '' }], clientId: 'CLT-002', clientName: 'Công ty TNHH Sản xuất Mộc Châu', route: 'Hải Phòng → Mộc Châu, Sơn La', driverId: 'DRV-001', driverName: 'Nguyễn Văn Hùng', tractorPlate: '15C-136.31', gpsLat: 20.8449, gpsLng: 106.6881, unitPrice: 0, driverSalary: 0, allowance: 0, earning: 0, createdAt: '2026-04-27T06:30:00Z', status: 'PENDING' },
+  { id: 'WO-018', containers: [{ containerNumber: 'HLCU-667788', workType: 'F40', photoUrl: '' }], clientId: 'CLT-004', clientName: 'Công ty CP Thương mại Thái Bình', route: 'Hải Phòng → Thái Nguyên', driverId: 'DRV-002', driverName: 'Trần Minh Tuấn', tractorPlate: '15C-139.82', gpsLat: 20.8449, gpsLng: 106.6881, unitPrice: 0, driverSalary: 0, allowance: 0, earning: 0, createdAt: '2026-04-27T07:00:00Z', status: 'PENDING' },
+  { id: 'WO-009', containers: [{ containerNumber: 'CSLU-221100', workType: 'E20', photoUrl: '' }], clientId: 'CLT-002', clientName: 'Công ty TNHH Sản xuất Mộc Châu', route: 'Hải Phòng → Mộc Châu, Sơn La', driverId: 'DRV-001', driverName: 'Nguyễn Văn Hùng', tractorPlate: '15C-136.31', gpsLat: 20.8449, gpsLng: 106.6881, gpsAddress: 'Cảng Đình Vũ, Hải An, Hải Phòng', unitPrice: 2470000, driverSalary: 780000, allowance: 180000, earning: 960000, pricingId: 'PRC-009', createdAt: '2026-04-18T06:30:00Z', status: 'PRICED' },
+  { id: 'WO-010', containers: [{ containerNumber: 'HLCU-883421', workType: 'E40', photoUrl: '' }], clientId: 'CLT-003', clientName: 'Tập đoàn Xuất nhập khẩu Lào Cai', route: 'Hải Phòng → Sa Pa', driverId: 'DRV-002', driverName: 'Trần Minh Tuấn', tractorPlate: '15C-139.82', gpsLat: 20.8449, gpsLng: 106.6881, gpsAddress: 'Cảng Chùa Vẽ, Ngô Quyền, Hải Phòng', unitPrice: 4280000, driverSalary: 850000, allowance: 200000, earning: 1050000, pricingId: 'PRC-010', createdAt: '2026-04-17T09:15:00Z', status: 'PRICED' },
+  { id: 'WO-011', containers: [{ containerNumber: 'TRHU-556677', workType: 'E40', photoUrl: '' }], clientId: 'CLT-004', clientName: 'Công ty CP Thương mại Thái Bình', route: 'Hải Phòng → Thái Nguyên', driverId: 'DRV-001', driverName: 'Nguyễn Văn Hùng', tractorPlate: '15C-136.31', gpsLat: 20.8449, gpsLng: 106.6881, gpsAddress: 'Cảng Chùa Vẽ, Ngô Quyền, Hải Phòng', unitPrice: 1190000, driverSalary: 780000, allowance: 120000, earning: 900000, pricingId: 'PRC-011', createdAt: '2026-04-16T07:45:00Z', status: 'PRICED' },
+  { id: 'WO-012', containers: [{ containerNumber: 'BMOU-112233', workType: 'E20', photoUrl: '' }], clientId: 'CLT-005', clientName: 'Doanh nghiệp Vận tải Quảng Ninh', route: 'Hải Phòng → Hạ Long, Quảng Ninh', driverId: 'DRV-001', driverName: 'Nguyễn Văn Hùng', tractorPlate: '15C-136.31', gpsLat: 20.8449, gpsLng: 106.6881, gpsAddress: 'Cảng Đình Vũ, Hải An, Hải Phòng', unitPrice: 680000, driverSalary: 750000, allowance: 100000, earning: 850000, pricingId: 'PRC-012', createdAt: '2026-04-15T10:30:00Z', status: 'PRICED' },
+  { id: 'WO-013', containers: [{ containerNumber: 'FCIU-998877', workType: 'E40', photoUrl: '' }], clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', route: 'Hải Phòng → Thanh Hóa', driverId: 'DRV-002', driverName: 'Trần Minh Tuấn', tractorPlate: '15C-139.82', gpsLat: 20.8449, gpsLng: 106.6881, gpsAddress: 'Cảng Chùa Vẽ, Ngô Quyền, Hải Phòng', unitPrice: 1000000, driverSalary: 800000, allowance: 120000, earning: 920000, pricingId: 'PRC-013', createdAt: '2026-04-14T08:00:00Z', status: 'PRICED' },
+  { id: 'WO-014', containers: [{ containerNumber: 'TEMU-445533', workType: 'E40', photoUrl: '' }], clientId: 'CLT-002', clientName: 'Công ty TNHH Sản xuất Mộc Châu', route: 'Hải Phòng → Hà Nội (QL5)', driverId: 'DRV-001', driverName: 'Nguyễn Văn Hùng', tractorPlate: '15C-136.31', gpsLat: 20.8449, gpsLng: 106.6881, gpsAddress: 'Cảng Đình Vũ, Hải An, Hải Phòng', unitPrice: 1150000, driverSalary: 800000, allowance: 100000, earning: 900000, pricingId: 'PRC-014', createdAt: '2026-04-13T11:20:00Z', status: 'PRICED' },
 ]
 
 // ─── Mock Pricings ───────────────────────────────────────────────────────────
 
 export const mockPricings: Pricing[] = [
-  { id: 'PRC-001', clientId: 'CLT-002', clientName: 'Công ty TNHH Sản xuất Mộc Châu', workType: 'E40', route: 'Hải Phòng → Mộc Châu, Sơn La', unitPrice: 2740000, driverSalary: 800000, allowance: 200000, createdAt: '2025-04-01', updatedAt: '2025-04-01' },
-  { id: 'PRC-002', clientId: 'CLT-003', clientName: 'Tập đoàn Xuất nhập khẩu Lào Cai', workType: 'F40', route: 'Hải Phòng → Sa Pa', unitPrice: 4800000, driverSalary: 900000, allowance: 250000, createdAt: '2025-04-01', updatedAt: '2025-04-01' },
-  { id: 'PRC-003', clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', workType: 'E40', route: 'Hải Phòng → Bắc Ninh → Ninh Bình (Kết hợp 2 chiều)', unitPrice: 1780000, driverSalary: 850000, allowance: 150000, createdAt: '2025-04-01', updatedAt: '2025-04-01' },
-  { id: 'PRC-004', clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', workType: 'F20', route: 'Hải Phòng → Hà Nội (QL5)', unitPrice: 930000, driverSalary: 800000, allowance: 100000, createdAt: '2025-04-01', updatedAt: '2025-04-01' },
-  { id: 'PRC-005', clientId: 'CLT-004', clientName: 'Công ty CP Thương mại Thái Bình', workType: 'E20', route: 'Hải Phòng → Hải Dương', unitPrice: 600000, driverSalary: 750000, allowance: 100000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
-  { id: 'PRC-006', clientId: 'CLT-005', clientName: 'Doanh nghiệp Vận tải Quảng Ninh', workType: 'F40', route: 'Hải Phòng → Hạ Long, Quảng Ninh', unitPrice: 790000, driverSalary: 800000, allowance: 120000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
+  { id: 'PRC-001', clientId: 'CLT-002', clientName: 'Công ty TNHH Sản xuất Mộc Châu', workType: 'E40', route: 'Hải Phòng → Mộc Châu, Sơn La', lines: [{ workType: 'E40', quantity: 1 }], unitPrice: 2740000, driverSalary: 800000, allowance: 200000, createdAt: '2025-04-01', updatedAt: '2025-04-01' },
+  { id: 'PRC-002', clientId: 'CLT-003', clientName: 'Tập đoàn Xuất nhập khẩu Lào Cai', workType: 'F40', route: 'Hải Phòng → Sa Pa', lines: [{ workType: 'F40', quantity: 1 }], unitPrice: 4800000, driverSalary: 900000, allowance: 250000, createdAt: '2025-04-01', updatedAt: '2025-04-01' },
+  { id: 'PRC-003', clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', workType: 'E40', route: 'Hải Phòng → Bắc Ninh → Ninh Bình (Kết hợp 2 chiều)', lines: [{ workType: 'E20', quantity: 1 }, { workType: 'F20', quantity: 1 }], unitPrice: 1780000, driverSalary: 850000, allowance: 150000, createdAt: '2025-04-01', updatedAt: '2025-04-01' },
+  { id: 'PRC-004', clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', workType: 'F20', route: 'Hải Phòng → Hà Nội (QL5)', lines: [{ workType: 'F20', quantity: 2 }], unitPrice: 930000, driverSalary: 800000, allowance: 100000, createdAt: '2025-04-01', updatedAt: '2025-04-01' },
+  { id: 'PRC-005', clientId: 'CLT-004', clientName: 'Công ty CP Thương mại Thái Bình', workType: 'E20', route: 'Hải Phòng → Hải Dương', lines: [{ workType: 'E20', quantity: 1 }], unitPrice: 600000, driverSalary: 750000, allowance: 100000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
+  { id: 'PRC-006', clientId: 'CLT-005', clientName: 'Doanh nghiệp Vận tải Quảng Ninh', workType: 'F40', route: 'Hải Phòng → Hạ Long, Quảng Ninh', lines: [{ workType: 'F40', quantity: 1 }], unitPrice: 790000, driverSalary: 800000, allowance: 120000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
+  { id: 'PRC-007', clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', workType: 'E20', route: 'Hải Phòng → Hà Nội (QL5)', lines: [{ workType: 'E20', quantity: 2 }], unitPrice: 930000, driverSalary: 750000, allowance: 100000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
+  { id: 'PRC-008', clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', workType: 'E20', route: 'Hải Phòng → Hải Dương', lines: [{ workType: 'E20', quantity: 1 }], unitPrice: 600000, driverSalary: 700000, allowance: 80000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
+  { id: 'PRC-009', clientId: 'CLT-002', clientName: 'Công ty TNHH Sản xuất Mộc Châu', workType: 'E20', route: 'Hải Phòng → Mộc Châu, Sơn La', lines: [{ workType: 'E20', quantity: 1 }], unitPrice: 2470000, driverSalary: 780000, allowance: 180000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
+  { id: 'PRC-010', clientId: 'CLT-003', clientName: 'Tập đoàn Xuất nhập khẩu Lào Cai', workType: 'E40', route: 'Hải Phòng → Sa Pa', lines: [{ workType: 'E40', quantity: 2 }], unitPrice: 4280000, driverSalary: 850000, allowance: 200000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
+  { id: 'PRC-011', clientId: 'CLT-004', clientName: 'Công ty CP Thương mại Thái Bình', workType: 'E40', route: 'Hải Phòng → Thái Nguyên', lines: [{ workType: 'E40', quantity: 1 }], unitPrice: 1190000, driverSalary: 780000, allowance: 120000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
+  { id: 'PRC-012', clientId: 'CLT-005', clientName: 'Doanh nghiệp Vận tải Quảng Ninh', workType: 'E20', route: 'Hải Phòng → Hạ Long, Quảng Ninh', lines: [{ workType: 'E20', quantity: 1 }, { workType: 'E40', quantity: 1 }], unitPrice: 680000, driverSalary: 750000, allowance: 100000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
+  { id: 'PRC-013', clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', workType: 'E40', route: 'Hải Phòng → Thanh Hóa', lines: [{ workType: 'E40', quantity: 1 }], unitPrice: 1000000, driverSalary: 800000, allowance: 120000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
+  { id: 'PRC-014', clientId: 'CLT-002', clientName: 'Công ty TNHH Sản xuất Mộc Châu', workType: 'E40', route: 'Hải Phòng → Hà Nội (QL5)', lines: [{ workType: 'E40', quantity: 1 }], unitPrice: 1150000, driverSalary: 800000, allowance: 100000, createdAt: '2025-04-05', updatedAt: '2025-04-05' },
 ]
 
 // ─── Mock Trip Orders ────────────────────────────────────────────────────────
 
 export const mockTripOrders: TripOrder[] = [
-  { id: 'TRP-001', tripDate: '2025-04-20', clientId: 'CLT-002', clientName: 'Công ty TNHH Sản xuất Mộc Châu', workType: 'E40', route: 'Hải Phòng → Mộc Châu, Sơn La', tractorPlate: '15C-136.31', driverId: 'DRV-001', driverName: 'Nguyễn Văn Hùng', containerNumber: 'MSKU-7283456', pricingId: 'PRC-001', unitPrice: 2740000, driverSalary: 800000, allowance: 200000, revenue: 2740000, matchedWorkOrderIds: ['WO-001'], status: 'CONFIRMED', createdAt: '2025-04-20T10:00:00Z' },
-  { id: 'TRP-002', tripDate: '2025-04-20', clientId: 'CLT-003', clientName: 'Tập đoàn Xuất nhập khẩu Lào Cai', workType: 'F40', route: 'Hải Phòng → Sa Pa', tractorPlate: '15C-139.82', driverId: 'DRV-002', driverName: 'Trần Minh Tuấn', containerNumber: 'TCNU-9120345', pricingId: 'PRC-002', unitPrice: 4800000, driverSalary: 900000, allowance: 250000, revenue: 4800000, matchedWorkOrderIds: ['WO-002'], status: 'CONFIRMED', createdAt: '2025-04-20T10:30:00Z' },
+  // CONFIRMED (already matched)
+  { id: 'TRP-001', tripDate: '2026-04-20', clientId: 'CLT-002', clientName: 'Công ty TNHH Sản xuất Mộc Châu', workType: 'E40', route: 'Hải Phòng → Mộc Châu, Sơn La', tractorPlate: '15C-136.31', driverId: 'DRV-001', driverName: 'Nguyễn Văn Hùng', containerNumber: 'MSKU-7283456', pricingId: 'PRC-001', unitPrice: 2740000, driverSalary: 800000, allowance: 200000, revenue: 2740000, matchedWorkOrderIds: ['WO-001'], status: 'CONFIRMED', createdAt: '2026-04-20T10:00:00Z' },
+  { id: 'TRP-002', tripDate: '2026-04-20', clientId: 'CLT-003', clientName: 'Tập đoàn Xuất nhập khẩu Lào Cai', workType: 'F40', route: 'Hải Phòng → Sa Pa', tractorPlate: '15C-139.82', driverId: 'DRV-002', driverName: 'Trần Minh Tuấn', containerNumber: 'TCNU-9120345', pricingId: 'PRC-002', unitPrice: 4800000, driverSalary: 900000, allowance: 250000, revenue: 4800000, matchedWorkOrderIds: ['WO-007'], status: 'CONFIRMED', createdAt: '2026-04-20T10:30:00Z' },
+  // DRAFT (chua khop — available for matching)
+  { id: 'TRP-003', tripDate: '2026-04-26', clientId: 'CLT-004', clientName: 'Công ty CP Thương mại Thái Bình', workType: 'E20', route: 'Hải Phòng → Thái Nguyên', tractorPlate: '15C-136.31', driverId: 'DRV-001', driverName: 'Nguyễn Văn Hùng', containerNumber: 'CSLU-331782', pricingId: 'PRC-005', unitPrice: 600000, driverSalary: 750000, allowance: 100000, revenue: 0, matchedWorkOrderIds: [], status: 'DRAFT', createdAt: '2026-04-26T09:00:00Z' },
+  { id: 'TRP-004', tripDate: '2026-04-26', clientId: 'CLT-005', clientName: 'Doanh nghiệp Vận tải Quảng Ninh', workType: 'F40', route: 'Hải Phòng → Hạ Long, Quảng Ninh', tractorPlate: '15C-139.82', driverId: 'DRV-002', driverName: 'Trần Minh Tuấn', containerNumber: 'TEMU-664501', pricingId: 'PRC-006', unitPrice: 790000, driverSalary: 800000, allowance: 120000, revenue: 0, matchedWorkOrderIds: [], status: 'DRAFT', createdAt: '2026-04-26T11:00:00Z' },
+  { id: 'TRP-005', tripDate: '2026-04-27', clientId: 'CLT-001', clientName: 'Công ty CP Vận tải Hải Phòng', workType: 'E20', route: 'Hải Phòng → Hà Nội (QL5)', tractorPlate: '15C-136.31', driverId: 'DRV-001', driverName: 'Nguyễn Văn Hùng', containerNumber: 'MSKU-111222', pricingId: 'PRC-007', unitPrice: 930000, driverSalary: 750000, allowance: 100000, revenue: 0, matchedWorkOrderIds: [], status: 'DRAFT', createdAt: '2026-04-27T06:00:00Z' },
+  { id: 'TRP-006', tripDate: '2026-04-27', clientId: 'CLT-002', clientName: 'Công ty TNHH Sản xuất Mộc Châu', workType: 'E40', route: 'Hải Phòng → Mộc Châu, Sơn La', tractorPlate: '15C-136.31', driverId: 'DRV-001', driverName: 'Nguyễn Văn Hùng', containerNumber: 'HLCU-445566', pricingId: 'PRC-001', unitPrice: 2740000, driverSalary: 800000, allowance: 200000, revenue: 0, matchedWorkOrderIds: [], status: 'DRAFT', createdAt: '2026-04-27T07:00:00Z' },
+  { id: 'TRP-007', tripDate: '2026-04-27', clientId: 'CLT-003', clientName: 'Tập đoàn Xuất nhập khẩu Lào Cai', workType: 'E40', route: 'Hải Phòng → Sa Pa', tractorPlate: '15C-139.82', driverId: 'DRV-002', driverName: 'Trần Minh Tuấn', containerNumber: 'BMOU-778899', pricingId: 'PRC-010', unitPrice: 4280000, driverSalary: 850000, allowance: 200000, revenue: 0, matchedWorkOrderIds: [], status: 'DRAFT', createdAt: '2026-04-27T08:00:00Z' },
 ]
 
 // ─── Mock Salary Periods ─────────────────────────────────────────────────────
@@ -539,9 +588,7 @@ export const mockSalaryPeriods: SalaryPeriod[] = [
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 export function formatCurrency(amount: number): string {
-  if (amount >= 1000000000) return `${(amount / 1000000000).toFixed(1)} tỷ VNĐ`
-  if (amount >= 1000000) return `${(amount / 1000000).toFixed(1)} triệu VNĐ`
-  return amount.toLocaleString('vi-VN') + ' VNĐ'
+  return amount.toLocaleString('vi-VN') + ' ₫'
 }
 
 export function formatCurrencyFull(amount: number): string {
@@ -549,7 +596,6 @@ export function formatCurrencyFull(amount: number): string {
 }
 
 export function formatCurrencyShort(amount: number): string {
-  if (amount >= 1000000000) return `${(amount / 1000000000).toFixed(2).replace(/\.?0+$/, '')} tỷ`
   return amount.toLocaleString('vi-VN') + ' ₫'
 }
 
@@ -573,8 +619,8 @@ export function getJobStatusBadge(status: JobStatus): { variant: 'default'|'succ
 export function getWorkOrderStatusBadge(status: WorkOrderStatus): { variant: 'default'|'success'|'warning'|'danger'|'info'|'neutral'; label: string } {
   switch (status) {
     case 'PENDING': return { variant: 'warning', label: 'Chờ đối soát' }
-    case 'MATCHED': return { variant: 'success', label: 'Đã đối soát' }
-    case 'DISPUTED': return { variant: 'danger', label: 'Tranh chấp' }
+    case 'PRICED': return { variant: 'success', label: 'Đã tính giá' }
+    case 'APPROVED': return { variant: 'info', label: 'Đã duyệt' }
   }
 }
 

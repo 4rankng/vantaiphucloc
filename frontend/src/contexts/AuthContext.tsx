@@ -16,7 +16,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
-const ROLE_USERS: Record<Role, Omit<UserInfo, 'role'>> = {
+const ROLE_USERS: Record<string, Omit<UserInfo, 'role'>> = {
+  superadmin: { id: 'SA-001', name: 'SuperAdmin' },
   director: { id: 'DIR-001', name: 'Giám đốc' },
   accountant: { id: 'ACC-001', name: 'Kế toán' },
   driver: { id: 'DRV-001', name: 'Nguyễn Văn Hùng' },

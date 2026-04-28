@@ -1,0 +1,1 @@
+export { ContBadge } from './ContBadge'

@@ -1,47 +1,47 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Camera, Check, RotateCcw, MapPin, Lock, AlertCircle } from 'lucide-react'
+import { Camera, RotateCcw, Plus, Trash2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button/Button'
-import { Input } from '@/components/ui/Input/Input'
-import { Label } from '@/components/ui/Label/Label'
+import { SheetPicker } from '@/components/shared/SheetPicker'
+import { ContainerScanner } from '@/components/shared/ContainerScanner'
 import { apiClient } from '@/services/api'
 import { useDriverStore } from '@/hooks/use-driver-store'
-import { WORK_TYPES, type Client, type RoutePrice, type WorkType } from '@/data/mockData'
+import { useToast } from '@/components/atoms/Toast'
+import { WORK_TYPES, type Client, type RoutePrice, type WorkType, type ContainerItem } from '@/data/mockData'
 
-interface GpsCoords {
-  lat: number
-  lng: number
-  accuracy: number
-}
-
+// ─── Generate fake ISO 6346 cont number ───────────────────────────────────────
 function generateContainerNumber(): string {
-  const prefixes = ['MSKU', 'TCNU', 'HLCU', 'CSLU', 'TEMU']
+  const prefixes = ['MSKU', 'TCNU', 'HLCU', 'CSLU', 'TEMU', 'BMOU', 'TRHU', 'FCIU']
   const prefix = prefixes[Math.floor(Math.random() * prefixes.length)]
   const num = String(Math.floor(Math.random() * 9000000) + 1000000)
   return `${prefix}-${num}`
 }
 
+interface ContainerForm {
+  containerNumber: string
+  workType: WorkType
+  photoTaken: boolean
+  photoDataUrl?: string
+}
+
+const EMPTY_CONT: ContainerForm = { containerNumber: '', workType: 'E20', photoTaken: false }
+
 export function CreateWorkOrder() {
   const { driver, navigate } = useDriverStore()
+  const toast = useToast()
   const [clients, setClients] = useState<Client[]>([])
   const [routes, setRoutes] = useState<RoutePrice[]>([])
 
-  // Step 1: Container photo + OCR
-  const [containerPhotoTaken, setContainerPhotoTaken] = useState(false)
-  const [ocrNumber, setOcrNumber] = useState('')
+  // Containers
+  const [containers, setContainers] = useState<ContainerForm[]>([{ ...EMPTY_CONT }])
 
-  // Step 2: Seal photo
-  const [sealPhotoTaken, setSealPhotoTaken] = useState(false)
-
-  // Step 3: GPS
-  const [gps, setGps] = useState<GpsCoords | null>(null)
-  const [gpsLoading, setGpsLoading] = useState(false)
-  const [gpsError, setGpsError] = useState('')
-
-  // Form fields
-  const [workType, setWorkType] = useState<WorkType>('E20')
+  // Common fields
   const [clientId, setClientId] = useState('')
   const [route, setRoute] = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  // Scanner state
+  const [scannerOpen, setScannerOpen] = useState(false)
+  const [activeContIdx, setActiveContIdx] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -54,296 +54,258 @@ export function CreateWorkOrder() {
     return () => { cancelled = true }
   }, [])
 
-  const handleTakeContainerPhoto = useCallback(() => {
-    setContainerPhotoTaken(true)
-    setOcrNumber(generateContainerNumber())
+  // Handle scanner
+  const openScanner = useCallback((idx: number) => () => {
+    setActiveContIdx(idx)
+    setScannerOpen(true)
   }, [])
 
-  const handleRetakeContainer = useCallback(() => {
-    setContainerPhotoTaken(false)
-    setOcrNumber('')
+  const handleScanComplete = useCallback((imageSrc: string) => {
+    // Discard actual image, fill fake cont number for mockup
+    setContainers(prev => prev.map((c, i) =>
+      i === activeContIdx
+        ? { ...c, photoTaken: true, photoDataUrl: imageSrc, containerNumber: c.containerNumber || generateContainerNumber() }
+        : c,
+    ))
+    setScannerOpen(false)
+  }, [activeContIdx])
+
+  // Container management
+  const updateContainer = useCallback((idx: number, field: keyof ContainerForm, value: string) => {
+    setContainers(prev => prev.map((c, i) =>
+      i === idx ? { ...c, [field]: value } : c,
+    ))
   }, [])
 
-  const handleTakeSealPhoto = useCallback(() => {
-    setSealPhotoTaken(true)
+  const addContainer = useCallback(() => {
+    setContainers(prev => [...prev, { ...EMPTY_CONT }])
   }, [])
 
-  const handleGetGps = useCallback(() => {
-    if (!navigator.geolocation) {
-      setGpsError('Thiết bị không hỗ trợ GPS')
-      return
-    }
-    setGpsLoading(true)
-    setGpsError('')
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        setGps({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy })
-        setGpsLoading(false)
-      },
-      () => {
-        // Simulate GPS for demo
-        setGps({ lat: 20.8449, lng: 106.6881, accuracy: 15 })
-        setGpsLoading(false)
-      },
-      { timeout: 8000, enableHighAccuracy: true },
-    )
+  const removeContainer = useCallback((idx: number) => {
+    setContainers(prev => prev.filter((_, i) => i !== idx))
   }, [])
 
+  // Submit
   const handleSubmit = useCallback(async () => {
-    if (!ocrNumber.trim() || !clientId || !route) return
+    if (containers.some(c => !c.containerNumber.trim()) || !clientId || !route) return
     setSubmitting(true)
-    const client = clients.find(c => c.id === clientId)
-    await apiClient.createWorkOrder({
-      workOrderNumber: ocrNumber.trim(),
-      photoUrl: '',
-      workType,
-      clientId,
-      clientName: client?.name ?? '',
-      route,
-      driverId: driver.id,
-      driverName: driver.name,
-      tractorPlate: driver.tractorPlate,
-    })
-    navigate('/driver')
-  }, [ocrNumber, clientId, route, workType, clients, driver, navigate])
 
-  const canSubmit = ocrNumber.trim() && clientId && route && sealPhotoTaken && gps
+    try {
+      const client = clients.find(c => c.id === clientId)
+      const containerItems: ContainerItem[] = containers.map(c => ({
+        containerNumber: c.containerNumber.trim(),
+        workType: c.workType,
+        photoUrl: '', // discard photo in mockup
+      }))
+
+      const gpsLat = 20.8449
+      const gpsLng = 106.6881
+
+      await apiClient.createWorkOrder({
+        containers: containerItems,
+        clientId,
+        clientName: client?.name ?? '',
+        route,
+        driverId: driver.id,
+        driverName: driver.name,
+        tractorPlate: driver.tractorPlate,
+        gpsLat,
+        gpsLng,
+      })
+
+      navigate('/driver')
+      toast.success('Gửi chuyến thành công')
+    } catch (err) {
+      console.error('Submit failed:', err)
+      toast.error('Gửi thất bại', 'Vui lòng thử lại')
+      setSubmitting(false)
+    }
+  }, [containers, clientId, route, clients, driver, navigate])
+
+  const canSubmit = containers.every(c => c.containerNumber.trim()) && clientId && route
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h2 className="text-lg font-bold" style={{ color: 'var(--theme-text-primary)' }}>Tạo số công</h2>
-        <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>Chụp ảnh và điền thông tin chuyến</p>
-      </div>
-
-      {/* ── STEP 1: Container photo + OCR ── */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <div
-            className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-            style={{ background: containerPhotoTaken ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)', color: containerPhotoTaken ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)' }}
-          >
-            1
-          </div>
-          <span className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Chụp số công-ten-nơ</span>
-        </div>
-
-        <button
-          onClick={handleTakeContainerPhoto}
-          className="w-full aspect-[4/3] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-colors touch-manipulation"
-          style={{
-            background: containerPhotoTaken ? 'var(--theme-bg-tertiary)' : 'var(--theme-bg-secondary)',
-            borderColor: containerPhotoTaken ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)',
-          }}
-          aria-label={containerPhotoTaken ? 'Chụp lại' : 'Chụp ảnh số công'}
-        >
-          {containerPhotoTaken ? (
-            <>
-              <div className="h-14 w-14 rounded-full flex items-center justify-center" style={{ background: 'var(--theme-brand-primary)' }}>
-                <Check className="h-7 w-7" style={{ color: 'var(--theme-text-on-brand)' }} />
-              </div>
-              <div className="text-center">
-                <p className="text-sm font-bold font-mono" style={{ color: 'var(--theme-text-primary)' }}>{ocrNumber}</p>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>AI đã nhận diện · Nhấn để chụp lại</p>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="h-14 w-14 rounded-full flex items-center justify-center" style={{ background: 'var(--theme-bg-tertiary)' }}>
-                <Camera className="h-7 w-7" style={{ color: 'var(--theme-text-muted)' }} />
-              </div>
-              <div className="text-center">
-                <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Chụp ảnh số công-ten-nơ</p>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>AI sẽ tự nhận diện số công</p>
-              </div>
-            </>
-          )}
-        </button>
-
-        {containerPhotoTaken && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số công</Label>
-              <button onClick={handleRetakeContainer} className="text-xs font-medium flex items-center gap-1 touch-manipulation" style={{ color: 'var(--theme-brand-primary)' }}>
-                <RotateCcw className="h-3 w-3" /> Chụp lại
-              </button>
-            </div>
-            <Input
-              value={ocrNumber}
-              onChange={e => setOcrNumber(e.target.value)}
-              className="text-sm font-mono"
-              placeholder="Số công"
-            />
-            <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>
-              Kiểm tra và sửa nếu nhận diện không đúng
-            </p>
-          </div>
-        )}
-      </div>
-
-      {containerPhotoTaken && (
-        <>
-          {/* ── STEP 2: Seal photo ── */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <div
-                className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-                style={{ background: sealPhotoTaken ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)', color: sealPhotoTaken ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)' }}
-              >
-                2
-              </div>
-              <span className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Chụp ảnh seal công</span>
-            </div>
-
-            <button
-              onClick={handleTakeSealPhoto}
-              className="w-full py-4 rounded-2xl border-2 border-dashed flex items-center justify-center gap-3 transition-colors touch-manipulation"
-              style={{
-                background: sealPhotoTaken ? 'var(--theme-bg-tertiary)' : 'var(--theme-bg-secondary)',
-                borderColor: sealPhotoTaken ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)',
-              }}
-              aria-label="Chụp ảnh seal"
-            >
-              {sealPhotoTaken ? (
-                <>
-                  <Check className="h-5 w-5" style={{ color: 'var(--theme-brand-primary)' }} />
-                  <span className="text-sm font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>Đã chụp ảnh seal</span>
-                </>
-              ) : (
-                <>
-                  <Lock className="h-5 w-5" style={{ color: 'var(--theme-text-muted)' }} />
-                  <span className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Chụp ảnh seal công</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* ── STEP 3: GPS ── */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <div
-                className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-                style={{ background: gps ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)', color: gps ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)' }}
-              >
-                3
-              </div>
-              <span className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Xác nhận vị trí GPS</span>
-            </div>
-
-            {gps ? (
-              <div
-                className="flex items-center gap-3 p-3 rounded-2xl"
-                style={{ background: 'var(--theme-status-success-light)' }}
-              >
-                <MapPin className="h-5 w-5 shrink-0" style={{ color: 'var(--theme-status-success)' }} />
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold" style={{ color: 'var(--theme-status-success-text)' }}>
-                    Đã lấy vị trí GPS
-                  </p>
-                  <p className="text-[10px]" style={{ color: 'var(--theme-status-success-text)', opacity: 0.8 }}>
-                    {gps.lat.toFixed(5)}, {gps.lng.toFixed(5)} · Độ chính xác: {Math.round(gps.accuracy)}m
-                  </p>
-                </div>
-                <button onClick={handleGetGps} className="text-xs font-medium shrink-0 touch-manipulation" style={{ color: 'var(--theme-status-success-text)' }}>
-                  Lấy lại
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={handleGetGps}
-                disabled={gpsLoading}
-                className="w-full py-3.5 rounded-2xl flex items-center justify-center gap-2 text-sm font-semibold transition-all active:scale-[0.98] touch-manipulation"
-                style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
-              >
-                <MapPin className="h-4 w-4" style={{ color: 'var(--theme-brand-primary)' }} />
-                {gpsLoading ? 'Đang lấy vị trí...' : 'Lấy vị trí GPS'}
-              </button>
-            )}
-
-            {gpsError && (
-              <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--theme-status-error)' }}>
-                <AlertCircle className="h-3.5 w-3.5" />
-                {gpsError}
-              </div>
-            )}
-          </div>
-
-          {/* ── Form fields ── */}
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Loại công</Label>
-            <div className="grid grid-cols-4 gap-2">
-              {WORK_TYPES.map(wt => (
-                <button key={wt} onClick={() => setWorkType(wt)}
-                  className="py-3 rounded-xl text-sm font-bold transition-colors touch-manipulation"
-                  style={{
-                    background: workType === wt ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
-                    color: workType === wt ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
-                    border: `1px solid ${workType === wt ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)'}`,
-                  }}>
-                  {wt}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Khách hàng</Label>
-            <select
-              value={clientId}
-              onChange={e => setClientId(e.target.value)}
-              className="w-full h-11 rounded-xl px-4 text-sm"
-              style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
-            >
-              <option value="">Chọn khách hàng</option>
-              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Cung đường</Label>
-            <select
-              value={route}
-              onChange={e => setRoute(e.target.value)}
-              className="w-full h-11 rounded-xl px-4 text-sm"
-              style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
-            >
-              <option value="">Chọn cung đường</option>
-              {routes.map((r, i) => <option key={i} value={r.route}>{r.route}</option>)}
-            </select>
-          </div>
-
-          {/* Driver info (auto-filled) */}
-          <div
-            className="p-3 rounded-xl space-y-1"
-            style={{ background: 'var(--theme-bg-tertiary)' }}
-          >
-            <p className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Thông tin xe (tự động)</p>
-            <div className="flex justify-between text-xs">
-              <span style={{ color: 'var(--theme-text-secondary)' }}>Tài xế</span>
-              <span className="font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{driver.name}</span>
-            </div>
-            <div className="flex justify-between text-xs">
-              <span style={{ color: 'var(--theme-text-secondary)' }}>Biển số</span>
-              <span className="font-semibold font-mono" style={{ color: 'var(--theme-text-primary)' }}>{driver.tractorPlate}</span>
-            </div>
-          </div>
-
-          {!canSubmit && (
-            <p className="text-xs text-center" style={{ color: 'var(--theme-text-muted)' }}>
-              Cần chụp ảnh seal và lấy GPS trước khi gửi
-            </p>
-          )}
-
-          <Button
-            onClick={handleSubmit}
-            disabled={!canSubmit || submitting}
-            className="w-full h-12 font-bold text-base rounded-2xl"
-            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-          >
-            {submitting ? 'Đang gửi...' : 'Gửi lệnh'}
-          </Button>
-        </>
+    <div className="space-y-4 pb-6">
+      {/* Scanner overlay */}
+      {scannerOpen && (
+        <ContainerScanner
+          onCapture={handleScanComplete}
+          onClose={() => setScannerOpen(false)}
+        />
       )}
+
+      {/* ── Container cards ── */}
+      <div className="space-y-3">
+        {containers.map((cont, idx) => (
+          <div
+            key={idx}
+            className="rounded-2xl p-4 space-y-3"
+            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold" style={{ color: 'var(--theme-text-secondary)' }}>
+                Cont {idx + 1}
+              </span>
+              {containers.length > 1 && (
+                <button
+                  onClick={() => removeContainer(idx)}
+                  className="w-7 h-7 flex items-center justify-center rounded-full touch-manipulation"
+                  style={{ background: 'var(--theme-status-error-light)' }}
+                >
+                  <Trash2 className="w-3.5 h-3.5" style={{ color: 'var(--theme-status-error)' }} />
+                </button>
+              )}
+            </div>
+
+            {/* Camera trigger */}
+            {/* Photo preview or camera trigger */}
+            {cont.photoTaken && cont.photoDataUrl ? (
+              <button
+                onClick={openScanner(idx)}
+                className="w-full rounded-xl overflow-hidden touch-manipulation"
+                style={{ border: '2px solid var(--theme-brand-primary)' }}
+              >
+                <img
+                  src={cont.photoDataUrl}
+                  alt="Container"
+                  className="w-full h-auto object-contain"
+                  style={{ maxHeight: '120px' }}
+                />
+              </button>
+            ) : (
+            <button
+              onClick={openScanner(idx)}
+              className="w-full rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-6 px-4 transition-colors touch-manipulation"
+              style={{
+                background: 'transparent',
+                borderColor: 'var(--theme-border-default)',
+              }}
+            >
+              <div className="flex flex-col items-center gap-2 w-full">
+                <div
+                  className="w-full rounded-lg border-2 flex items-center justify-center"
+                  style={{
+                    borderColor: 'var(--theme-brand-primary)',
+                    opacity: 0.6,
+                    height: '48px',
+                    background: 'var(--theme-brand-primary-light)',
+                  }}
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-brand-primary)', opacity: 0.7 }}>
+                    Căn số cont vào khung
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <Camera className="w-5 h-5" style={{ color: 'var(--theme-text-muted)' }} />
+                  <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Chạm để quét</span>
+                </div>
+              </div>
+            </button>
+            )}
+
+            {/* Container number input */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Số cont</label>
+                {cont.photoTaken && (
+                  <button
+                    onClick={openScanner(idx)}
+                    className="flex items-center gap-1 text-[10px] font-medium touch-manipulation"
+                    style={{ color: 'var(--theme-text-muted)' }}
+                  >
+                    <RotateCcw className="w-3 h-3" /> Chụp lại
+                  </button>
+                )}
+              </div>
+              <input
+                value={cont.containerNumber}
+                onChange={e => updateContainer(idx, 'containerNumber', e.target.value)}
+                className="w-full h-10 rounded-xl px-3 text-sm font-mono font-semibold"
+                style={{
+                  background: 'var(--theme-bg-tertiary)',
+                  border: '1px solid var(--theme-border-default)',
+                  color: 'var(--theme-text-primary)',
+                }}
+                placeholder="VD: MSKU-1234567"
+              />
+              <p className="text-[10px] flex items-center gap-1" style={{ color: 'var(--theme-text-muted)' }}>
+                <AlertCircle className="w-3 h-3" />
+                Sửa nếu PM nhận diện sai
+              </p>
+            </div>
+
+            {/* Type selector */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Loại cont</label>
+              <div className="grid grid-cols-4 gap-1.5">
+                {WORK_TYPES.map(wt => (
+                  <button
+                    key={wt}
+                    onClick={() => updateContainer(idx, 'workType', wt)}
+                    className="py-2.5 rounded-lg text-xs font-bold transition-colors touch-manipulation"
+                    style={{
+                      background: cont.workType === wt ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
+                      color: cont.workType === wt ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
+                      border: `1px solid ${cont.workType === wt ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)'}`,
+                    }}
+                  >
+                    {wt}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Add container button */}
+        <button
+          onClick={addContainer}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-colors touch-manipulation"
+          style={{
+            background: 'var(--theme-bg-secondary)',
+            color: 'var(--theme-brand-primary)',
+            border: '1px dashed var(--theme-brand-primary)',
+          }}
+        >
+          <Plus className="w-4 h-4" />
+          Thêm cont
+        </button>
+      </div>
+
+      {/* ── Customer ── */}
+      <div className="space-y-1.5">
+        <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Khách hàng</label>
+        <SheetPicker
+          label="Chọn khách hàng"
+          placeholder="Chọn khách hàng"
+          value={clientId}
+          options={clients.map(c => ({ value: c.id, label: c.name, sublabel: c.phone }))}
+          onChange={setClientId}
+        />
+      </div>
+
+      {/* ── Route ── */}
+      <div className="space-y-1.5">
+        <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Cung đường</label>
+        <SheetPicker
+          label="Chọn cung đường"
+          placeholder="Chọn cung đường"
+          value={route}
+          options={routes.map((r) => ({ value: r.route, label: r.route }))}
+          onChange={setRoute}
+        />
+      </div>
+
+      {/* ── Submit ── */}
+      <Button
+        onClick={handleSubmit}
+        disabled={!canSubmit || submitting}
+        className="w-full h-12 font-bold text-base rounded-2xl"
+        style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+      >
+        {submitting ? 'Đang gửi...' : 'Gửi chuyến'}
+      </Button>
     </div>
   )
 }
