@@ -4,8 +4,7 @@ from datetime import date, timedelta
 from sqlalchemy import select
 
 from app.database import async_session
-from app.models.base import User
-from app.models.domain import WorkOrder
+from app.models.domain import WorkOrder, SalaryPeriod
 from app.workers import enqueue
 
 logger = logging.getLogger(__name__)
@@ -60,9 +59,52 @@ async def generate_monthly_report_task(
 
 async def remind_salary_period_end(ctx: dict) -> None:
     """Check for salary periods closing soon and queue notifications."""
-    logger.info("Salary period reminder check ran")
+    today = date.today()
+    soon = today + timedelta(days=3)
+
+    async with async_session() as db:
+        result = await db.execute(
+            select(SalaryPeriod).where(
+                SalaryPeriod.status == "CALCULATED",
+                SalaryPeriod.end_date <= soon,
+                SalaryPeriod.end_date >= today,
+            )
+        )
+        periods = result.scalars().all()
+
+        for period in periods:
+            try:
+                await enqueue(
+                    "send_notification_task",
+                    user_id=period.driver_id,
+                    title="Sắp hết kỳ lương",
+                    message=f"Kỳ lương {period.start_date} - {period.end_date} sắp kết thúc",
+                    channel="in_app",
+                )
+            except RuntimeError:
+                logger.warning("Failed to enqueue reminder for period %s", period.id)
+
+        logger.info("Salary period reminder: %d periods found", len(periods))
 
 
 async def recalculate_open_periods(ctx: dict) -> None:
-    """Recalculate any OPEN salary periods with new work orders."""
-    logger.info("Open salary period recalculation ran")
+    """Recalculate any OPEN salary periods."""
+    async with async_session() as db:
+        result = await db.execute(
+            select(SalaryPeriod).where(SalaryPeriod.status == "OPEN")
+        )
+        periods = result.scalars().all()
+
+        for period in periods:
+            try:
+                await enqueue(
+                    "calculate_salary_task",
+                    company_id=period.company_id,
+                    driver_id=period.driver_id,
+                    start_date=period.start_date.isoformat(),
+                    end_date=period.end_date.isoformat(),
+                )
+            except RuntimeError:
+                logger.warning("Failed to enqueue recalculation for period %s", period.id)
+
+        logger.info("Open period recalculation: %d periods queued", len(periods))

@@ -356,3 +356,18 @@ class DriverOut(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# Job status (arq async queue polling)
+# ---------------------------------------------------------------------------
+
+class JobStatusResponse(BaseModel):
+    job_id: str
+    status: str          # queued | in_progress | complete | not_found
+    result: dict | None = None
+
+
+class SalaryCalculateAsyncResponse(BaseModel):
+    job_id: str
+    message: str = "Salary calculation enqueued"

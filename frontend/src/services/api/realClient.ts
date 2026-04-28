@@ -1,7 +1,5 @@
 /**
  * Real HTTP API client — calls the FastAPI backend.
- * Implements the same method signatures as sandboxClient.ts so that
- * frontend page components require zero changes after the swap.
  *
  * Key conventions:
  *  - toCamel  : recursively converts snake_case keys → camelCase on all responses
@@ -159,10 +157,7 @@ export async function createRoute(data: Omit<RoutePrice, never>): Promise<ApiRes
 }
 
 /**
- * The sandbox uses an array index for update/delete; the real client uses the
- * route's `id` field. Callers that previously passed an index should now pass
- * the string id (the swap in index.ts handles this transparently since page
- * components pass the id from the fetched data).
+ * Update a route by its integer or string ID.
  */
 export async function updateRoute(id: number | string, data: Partial<RoutePrice>): Promise<ApiResponse<RoutePrice>> {
   try {
@@ -320,18 +315,38 @@ export async function updateTripOrder(id: string, data: Partial<TripOrder>): Pro
 
 // ─── Salary ───────────────────────────────────────────────────────────────────
 
+export interface AsyncJobResult {
+  jobId: string
+  message: string
+}
+
+export interface JobStatus {
+  jobId: string
+  status: 'queued' | 'in_progress' | 'complete' | 'not_found'
+  result: Record<string, unknown> | null
+}
+
 export async function calculateSalary(
   driverId: string,
   startDate: string,
   endDate: string,
-): Promise<ApiResponse<SalaryPeriod>> {
+): Promise<ApiResponse<AsyncJobResult>> {
   try {
     const res = await api.post('/salary/calculate', {
       driver_id: driverId,
       start_date: startDate,
       end_date: endDate,
     })
-    return ok(normalizeOne<SalaryPeriod>(res.data))
+    return ok(normalizeOne<AsyncJobResult>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export async function getJobStatus(jobId: string): Promise<ApiResponse<JobStatus>> {
+  try {
+    const res = await api.get(`/jobs/${jobId}`)
+    return ok(normalizeOne<JobStatus>(res.data))
   } catch (err) {
     return fail(err)
   }
@@ -385,8 +400,7 @@ export async function createDriver(
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 /**
- * Computes the dashboard summary client-side from work orders and trip orders,
- * matching the sandbox implementation's approach.
+ * Computes the dashboard summary client-side from work orders and trip orders.
  */
 export async function getDashboardSummary(): Promise<ApiResponse<{
   totalRevenue: number
