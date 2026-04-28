@@ -3,12 +3,13 @@
 import type { ErrorInfo, ReactNode } from 'react'
 import { Component } from 'react'
 import { InlineError } from '@/components/shared/InlineError'
+import ErrorFallback from '@/components/shared/ErrorFallback/ErrorFallback'
 
 interface Props {
   children: ReactNode
   fallback?: ReactNode
   component?: string
-  level?: 'app' | 'page' | 'component'
+  level?: 'root' | 'app' | 'page' | 'component'
 }
 
 interface State {
@@ -27,16 +28,29 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error(`[ErrorBoundary:${this.props.level || 'component'}]`, this.props.component, error, info)
+    const level = this.props.level || 'component'
+    console.error(`[ErrorBoundary:${level}]`, this.props.component, error, info)
   }
 
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback
+
+      const level = this.props.level || 'component'
+
+      if (level === 'component') {
+        return (
+          <InlineError
+            error={this.state.error!}
+            component={this.props.component || 'Component'}
+            onRetry={() => this.setState({ hasError: false, error: null })}
+          />
+        )
+      }
+
       return (
-        <InlineError
-          error={this.state.error!}
-          component={this.props.component || 'Component'}
+        <ErrorFallback
+          error={this.state.error}
           onRetry={() => this.setState({ hasError: false, error: null })}
         />
       )
