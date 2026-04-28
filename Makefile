@@ -1,10 +1,11 @@
-.PHONY: help install migrate dev-backend dev-frontend lint deploy
+.PHONY: help install migrate dev dev-backend dev-frontend lint deploy
 
 ## help: Print a description of all available targets
 help:
 	@echo "Available targets:"
 	@echo "  install       Install Python and Node dependencies"
 	@echo "  migrate       Run Alembic database migrations (alembic upgrade head)"
+	@echo "  dev           Start backend and frontend concurrently with hot-reload"
 	@echo "  dev-backend   Start the FastAPI backend with hot-reload"
 	@echo "  dev-frontend  Start the Vite frontend dev server"
 	@echo "  lint          Run ruff (backend) and eslint (frontend)"
@@ -18,6 +19,13 @@ install:
 ## migrate: Run Alembic migrations against the configured DATABASE_URL
 migrate:
 	cd backend && PYTHONPATH=. alembic upgrade head
+
+## dev: Start backend and frontend concurrently with hot-reload
+dev:
+	@trap 'kill 0' INT; \
+	cd backend && PYTHONPATH=. uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 & \
+	cd frontend && pnpm dev & \
+	wait
 
 ## dev-backend: Start the FastAPI backend with uvicorn --reload
 dev-backend:
