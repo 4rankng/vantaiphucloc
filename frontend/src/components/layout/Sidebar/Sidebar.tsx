@@ -46,14 +46,14 @@ export function Sidebar({ items, title, basePath }: SidebarProps) {
             alt="TTransport"
             className="h-8 w-auto"
           />
-          <p className="text-[10px] font-medium tracking-wider uppercase" style={{ color: 'var(--theme-sidebar-text-muted)' }}>{title}</p>
+          <p className="text-xs font-medium tracking-wider uppercase" style={{ color: 'var(--theme-sidebar-text-muted)' }}>{title}</p>
         </div>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 py-3 overflow-y-auto sidebar-scroll">
         <div className="px-3 mb-2">
-          <span className="text-[10px] font-semibold uppercase tracking-widest px-3" style={{ color: 'var(--theme-sidebar-text-muted)' }}>Menu</span>
+          <span className="text-xs font-semibold uppercase tracking-widest px-3" style={{ color: 'var(--theme-sidebar-text-muted)' }}>Menu</span>
         </div>
         {items.map((item) => {
           const Icon = item.icon
@@ -63,7 +63,7 @@ export function Sidebar({ items, title, basePath }: SidebarProps) {
               to={item.path}
               end={item.path === basePath}
               className={({ isActive }) => cn(
-                'flex items-center gap-3 px-4 py-2.5 mx-2 rounded-[var(--theme-radius-md)] text-[13px] font-medium transition-all duration-150 group',
+                'flex items-center gap-3 px-4 py-2.5 mx-2 rounded-[var(--theme-radius-md)] text-sm font-medium transition-all duration-150 group',
               )}
               style={({ isActive }) => ({
                 background: isActive ? 'var(--theme-sidebar-active)' : 'transparent',
@@ -97,10 +97,10 @@ export function Sidebar({ items, title, basePath }: SidebarProps) {
           >
             {roleLabel ? roleLabel[0] : 'U'}
           </div>
-          <div className="flex-1 min-w-0 text-left">
-            <p className="text-[13px] font-medium truncate" style={{ color: 'var(--theme-sidebar-active-text)', opacity: 0.8 }}>{roleLabel}</p>
-            <p className="text-[10px]" style={{ color: 'var(--theme-sidebar-text-muted)' }}>Phiên bản demo</p>
-          </div>
+      <div className="min-w-0">
+          <p className="text-sm font-medium truncate" style={{ color: 'var(--theme-sidebar-active-text)', opacity: 0.8 }}>{roleLabel}</p>
+          <p className="text-xs" style={{ color: 'var(--theme-sidebar-text-muted)' }}>Phiên bản demo</p>
+        </div>
         </button>
         <button
           onClick={() => setShowLogoutConfirm(true)}

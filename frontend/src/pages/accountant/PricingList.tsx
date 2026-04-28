@@ -20,9 +20,9 @@ function PricingCard({ pricing, onEdit, onDelete }: {
         <div className="flex flex-wrap items-center gap-1.5">
           {pricing.lines.map((line, i) => (
             <span key={i} className="flex items-center gap-1">
-              {i > 0 && <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>+</span>}
+              {i > 0 && <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>+</span>}
               <ContBadge type={line.workType} />
-              <span className="text-[11px] font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>×{line.quantity}</span>
+              <span className="text-xs font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>×{line.quantity}</span>
             </span>
           ))}
         </div>
@@ -36,19 +36,19 @@ function PricingCard({ pricing, onEdit, onDelete }: {
         </div>
       </div>
       <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{pricing.clientName}</p>
-      <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>{pricing.route}</p>
+      <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{pricing.route}</p>
       <div className="grid grid-cols-3 gap-2 pt-1" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
         <div>
-          <p className="text-[9px]" style={{ color: 'var(--theme-text-muted)' }}>Đơn giá</p>
-          <p className="text-xs font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyFull(pricing.unitPrice)}</p>
+          <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Đơn giá</p>
+          <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyFull(pricing.unitPrice)}</p>
         </div>
         <div>
-          <p className="text-[9px]" style={{ color: 'var(--theme-text-muted)' }}>Lương TX</p>
-          <p className="text-xs font-semibold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(pricing.driverSalary)}</p>
+          <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Lương TX</p>
+          <p className="text-sm font-semibold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(pricing.driverSalary)}</p>
         </div>
         <div>
-          <p className="text-[9px]" style={{ color: 'var(--theme-text-muted)' }}>Phụ cấp</p>
-          <p className="text-xs font-semibold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(pricing.allowance)}</p>
+          <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Phụ cấp</p>
+          <p className="text-sm font-semibold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(pricing.allowance)}</p>
         </div>
       </div>
     </div>
@@ -80,7 +80,7 @@ function LineEditor({ lines, onChange }: {
           <div className="flex gap-0.5 shrink-0">
             {WORK_TYPES.map(w => (
               <button key={w} onClick={() => updateLine(i, 'workType', w)}
-                className="px-1.5 py-1 rounded text-[9px] font-bold touch-manipulation"
+                className="px-1.5 py-1 rounded text-xs font-bold touch-manipulation"
                 style={{
                   background: line.workType === w ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
                   color: line.workType === w ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
@@ -91,7 +91,7 @@ function LineEditor({ lines, onChange }: {
           </div>
           {/* Quantity */}
           <div className="flex items-center gap-1">
-            <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>×‌</span>
+            <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>×‌</span>
             <Input type="number" min={1} value={line.quantity} onChange={e => updateLine(i, 'quantity', Math.max(1, Number(e.target.value)))}
               className="text-xs font-bold h-8 w-14 text-center" />
           </div>
@@ -160,17 +160,17 @@ function PricingForm({ initial, clients, routes, onSave, onCancel }: {
 
       <div className="grid grid-cols-3 gap-2">
         <div className="space-y-1.5">
-          <Label className="text-[10px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Đơn giá</Label>
+          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Đơn giá</Label>
           <Input type="number" value={unitPrice || ''} onChange={e => setUnitPrice(Number(e.target.value))}
             placeholder="0" className="text-xs font-mono h-9" />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-[10px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Lương TX</Label>
+          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Lương TX</Label>
           <Input type="number" value={driverSalary || ''} onChange={e => setDriverSalary(Number(e.target.value))}
             placeholder="0" className="text-xs font-mono h-9" />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-[10px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Phụ cấp</Label>
+          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Phụ cấp</Label>
           <Input type="number" value={allowance || ''} onChange={e => setAllowance(Number(e.target.value))}
             placeholder="0" className="text-xs font-mono h-9" />
         </div>
@@ -270,7 +270,7 @@ export function PricingList() {
 
         {grouped.map(([clientName, items]) => (
           <div key={clientName} className="mt-4">
-            <p className="text-[10px] font-bold uppercase tracking-wide mb-1.5" style={{ color: 'var(--theme-text-muted)' }}>{clientName}</p>
+            <p className="text-xs font-bold uppercase tracking-wide mb-1.5" style={{ color: 'var(--theme-text-muted)' }}>{clientName}</p>
             <div className="space-y-2">
               {items.map(p => (
                 <PricingCard key={p.id} pricing={p}

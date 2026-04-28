@@ -105,7 +105,7 @@ export function DirectorDashboard({ onManageUsers, onViewDriverJobs, onViewClien
       <div className="px-4 pt-4 pb-2 grid grid-cols-2 gap-2">
         <div className="rounded-2xl p-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>Doanh thu</span>
+            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>Doanh thu</span>
             <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: 'var(--theme-brand-primary-light)' }}>
               <TrendingUp className="w-3 h-3" style={{ color: 'var(--theme-brand-primary)' }} />
             </div>
@@ -114,7 +114,7 @@ export function DirectorDashboard({ onManageUsers, onViewDriverJobs, onViewClien
         </div>
         <div className="rounded-2xl p-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>Chi tài xế</span>
+            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>Chi tài xế</span>
             <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: 'var(--theme-brand-primary-light)' }}>
               <Truck className="w-3 h-3" style={{ color: 'var(--theme-brand-primary)' }} />
             </div>
@@ -160,9 +160,9 @@ export function DirectorDashboard({ onManageUsers, onViewDriverJobs, onViewClien
                   <div className="min-w-0 text-left">
                     <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{d.name}</p>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-mono" style={{ color: 'var(--theme-text-muted)' }}>{d.plate}</span>
-                      <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>·</span>
-                      <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>{d.trips} chuyến</span>
+                      <span className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>{d.plate}</span>
+                      <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>·</span>
+                      <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{d.trips} chuyến</span>
                     </div>
                   </div>
                 </div>
@@ -193,12 +193,12 @@ export function DirectorDashboard({ onManageUsers, onViewDriverJobs, onViewClien
                   </div>
                   <div className="min-w-0 text-left">
                     <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{c.name}</p>
-                    <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>{c.trips} chuyến</p>
+                    <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{c.trips} chuyến</p>
                   </div>
                 </div>
                 <div className="text-right shrink-0">
                   <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(c.revenue)}</p>
-                  <p className="text-[10px] font-medium" style={{ color: 'var(--theme-brand-primary)' }}>Chi tiết →</p>
+                  <p className="text-xs font-medium" style={{ color: 'var(--theme-brand-primary)' }}>Chi tiết →</p>
                 </div>
               </button>
             ))}

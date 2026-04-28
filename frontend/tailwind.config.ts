@@ -27,10 +27,9 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				// INDUSTRIAL LUXURY Typography - Breaking Anti-Patterns
-				display: ['Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-				sans: ['Source Sans Pro', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-				financial: ['DM Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
+				sans: ['"Be Vietnam Pro"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+				display: ['"Be Vietnam Pro"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+				mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',
@@ -133,15 +132,15 @@ export default {
 				'grain-shift': 'grain-shift 8s steps(10) infinite',
 			},
 			fontSize: {
-				'xs': ['0.6875rem', { lineHeight: '1.4' }],    // 11px
-				'sm': ['0.75rem', { lineHeight: '1.4' }],     // 12px
-				'base': ['0.8125rem', { lineHeight: '1.5' }],  // 13px
-				'lg': ['0.875rem', { lineHeight: '1.4' }],    // 14px
-				'xl': ['1rem', { lineHeight: '1.3' }],        // 16px
-				'2xl': ['1.125rem', { lineHeight: '1.3' }],   // 18px
-				'3xl': ['1.25rem', { lineHeight: '1.25' }],   // 20px
-				'4xl': ['1.5rem', { lineHeight: '1.2' }],     // 24px
-				'5xl': ['1.75rem', { lineHeight: '1.15' }],   // 28px
+				'2xs': ['0.625rem', { lineHeight: '1.4' }],   // 10px — for truly tiny labels only
+				'xs':  ['0.75rem',  { lineHeight: '1.4' }],   // 12px
+				'sm':  ['0.875rem', { lineHeight: '1.5' }],   // 14px
+				'base':['1rem',     { lineHeight: '1.5' }],   // 16px
+				'lg':  ['1.125rem', { lineHeight: '1.4' }],   // 18px
+				'xl':  ['1.25rem',  { lineHeight: '1.3' }],   // 20px
+				'2xl': ['1.5rem',   { lineHeight: '1.25' }],  // 24px
+				'3xl': ['1.875rem', { lineHeight: '1.2' }],   // 30px
+				'4xl': ['2.25rem',  { lineHeight: '1.15' }],  // 36px
 			},
 			fontWeight: {
 				thin: '100',

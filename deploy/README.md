@@ -4,6 +4,26 @@ One-time setup steps for deploying Vantaiphucloc on a DigitalOcean Ubuntu 24.04 
 
 **Domain:** `phucloc.tingting.vip`
 
+## Port & Network Security
+
+All Docker service ports are bound to `127.0.0.1` so they are **only accessible from the droplet itself**. Nginx acts as the sole public entrypoint, proxying to backend and frontend over localhost.
+
+| Service | Port | Exposed to | Purpose |
+|---------|------|------------|---------|
+| Nginx | 80, 443 | **Public** | Reverse proxy, SSL termination |
+| Backend | 8000 | 127.0.0.1 only | FastAPI (proxied by Nginx) |
+| Frontend | 3000 | 127.0.0.1 only | Static files (proxied by Nginx) |
+| Adminer | 8081 | 127.0.0.1 only | DB admin (access via SSH tunnel) |
+| Redis | 6379 | Internal only | Docker network, no host port |
+| PostgreSQL | 5432 | Local socket only | System service, no remote access |
+
+**Never** open Redis (6379), PostgreSQL (5432), or Adminer (8081) in the firewall. To access Adminer remotely, use an SSH tunnel:
+
+```bash
+ssh -L 8081:127.0.0.1:8081 user@your-droplet-ip
+# Then open http://localhost:8081 in your browser
+```
+
 ## 1. System packages
 
 ```bash
@@ -13,7 +33,20 @@ sudo apt install -y nginx postgresql postgresql-contrib \
     libbz2-dev libreadline-dev libsqlite3-dev libffi-dev liblzma-dev
 ```
 
-## 2. Install Docker & Docker Compose
+## 2. Configure Firewall (UFW)
+
+Only allow SSH, HTTP, and HTTPS. Database and internal services must not be exposed.
+
+```bash
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow OpenSSH
+sudo ufw allow 'Nginx Full'
+sudo ufw --force enable
+sudo ufw status
+```
+
+## 3. Install Docker & Docker Compose
 
 ```bash
 # Install Docker
@@ -26,21 +59,21 @@ docker --version
 docker compose version
 ```
 
-## 3. Set up PostgreSQL
+## 4. Set up PostgreSQL
 
 ```bash
 sudo -u postgres psql -c "CREATE USER vantaiphucloc WITH PASSWORD 'your-db-password';"
 sudo -u postgres psql -c "CREATE DATABASE vantaiphucloc OWNER vantaiphucloc;"
 ```
 
-## 4. Create environment file
+## 5. Create environment file
 
 ```bash
 cp backend/.env.example backend/.env
 # Edit backend/.env with your production values
 ```
 
-## 5. Deploy with Docker Compose
+## 6. Deploy with Docker Compose
 
 ```bash
 # Copy source to droplet
@@ -55,7 +88,7 @@ docker compose up -d --build
 docker compose exec backend alembic upgrade head
 ```
 
-## 6. Configure Nginx
+## 7. Configure Nginx
 
 ```bash
 sudo cp deploy/nginx.conf /etc/nginx/sites-available/vantaiphucloc
@@ -64,7 +97,7 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-## 7. SSL with Let's Encrypt (Certbot)
+## 8. SSL with Let's Encrypt (Certbot)
 
 ```bash
 sudo apt install -y certbot python3-certbot-nginx
@@ -73,7 +106,7 @@ sudo certbot --nginx -d phucloc.tingting.vip
 sudo systemctl reload nginx
 ```
 
-## 12. Deploy frontend (first time)
+## 9. Deploy frontend (first time)
 
 ```bash
 # Build locally

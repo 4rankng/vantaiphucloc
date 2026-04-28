@@ -32,7 +32,7 @@ export function TripList() {
           style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
           <div className="flex items-center justify-between mb-1">
             <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>{trip.clientName}</p>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
               style={{
                 background: trip.status === 'DRAFT' ? 'var(--theme-status-warning-light)' : 'var(--theme-status-success-light)',
                 color: trip.status === 'DRAFT' ? 'var(--theme-status-warning)' : 'var(--theme-status-success)',
@@ -40,19 +40,19 @@ export function TripList() {
               {trip.status === 'DRAFT' ? 'Đối soát khách hàng' : 'Đã khớp'}
             </span>
           </div>
-          <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
+          <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
             {trip.driverName} · {trip.route}
           </p>
           {trip.containers.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1.5">
               {trip.containers.map((c, i) => (
-                <span key={i} className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}>
+                <span key={i} className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}>
                   {c.workType}
                 </span>
               ))}
             </div>
           )}
-          <p className="text-[10px] mt-1.5" style={{ color: 'var(--theme-text-muted)' }}>
+          <p className="text-xs mt-1.5" style={{ color: 'var(--theme-text-muted)' }}>
             {new Date(trip.createdAt).toLocaleDateString('vi-VN')}
           </p>
         </button>
