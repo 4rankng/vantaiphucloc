@@ -3,7 +3,7 @@ export type TrailerType = '20FT' | '40FT'
 export type JobStatus = 'DRAFT' | 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 export type ClientType = 'company' | 'individual'
 export type WorkType = 'E20' | 'E40' | 'F20' | 'F40'
-export type WorkOrderStatus = 'PENDING' | 'PRICED' | 'APPROVED'
+export type WorkOrderStatus = 'PENDING' | 'PRICED' | 'MATCHED'
 export type TripOrderStatus = 'DRAFT' | 'CONFIRMED' | 'INVOICED' | 'CANCELLED'
 export type SalaryPeriodStatus = 'OPEN' | 'CALCULATED' | 'PAID'
 
@@ -33,35 +33,18 @@ export const ROLE_LABELS: Record<Role, string> = {
 }
 
 // ─── Vehicles (Real plates) ──────────────────────────────────────────────────
-
-export interface Tractor {
-  id: string
-  licensePlate: string
-  make: string
-  model: string
-  status: 'running' | 'idle' | 'maintenance'
-  driverId?: string
-  driverName?: string
-  inspectionDue?: string
-}
-
-export interface Trailer {
-  id: string
-  licensePlate: string
-  type: TrailerType
-  status: 'in_use' | 'idle' | 'maintenance'
-}
+// TODO: Add when vehicle management feature is implemented
+// export interface Tractor { ... }
+// export interface Trailer { ... }
 
 export interface Driver {
   id: string
-  name: string
+  username: string
   phone: string
-  tractorPlate: string
-  fixedFeePerTrip: number
-  totalTrips: number
-  monthlyTrips: number
-  monthlyRevenue: number
-  rating: number
+  tractorPlate: string | null
+  vendor: string | null
+  createdAt: string
+  updatedAt: string
 }
 
 export interface Client {
@@ -75,80 +58,23 @@ export interface Client {
   outstandingDebt: number
 }
 
-export interface Partner {
-  id: string
-  name: string
-  taxCode: string
-  address: string
-  phone: string
-}
+// TODO: Add when partner management feature is implemented
+// export interface Partner { ... }
 
-export interface Job {
-  id: string
-  jobDate: string
-  tractorPlate: string
-  trailerPlate: string
-  trailerType: TrailerType
-  driverId: string
-  driverName: string
-  clientId: string
-  clientName: string
-  containerNumber: string
-  description: string
-  route: string
-  distanceKm: number
-  revenue: number
-  status: JobStatus
-  driverFee: number
-  isTwoWay: boolean
-}
+// TODO: Add when job management feature is implemented
+// export interface Job { ... }
 
-export interface Alert {
-  id: string
-  type: 'expense' | 'orphan' | 'maintenance' | 'overdue' | 'route'
-  severity: 'high' | 'medium' | 'low'
-  message: string
-  timestamp: string
-  jobId?: string
-}
+// TODO: Add when alert system feature is implemented
+// export interface Alert { ... }
 
-export interface ExpenseItem {
-  id: string
-  jobId: string
-  tractorPlate: string
-  driverName: string
-  category: string
-  amount: number
-  description: string
-  status: 'DRAFT' | 'APPROVED' | 'CANCELLED'
-  date: string
-}
+// TODO: Add when expense tracking feature is implemented
+// export interface ExpenseItem { ... }
 
-export interface Invoice {
-  id: string
-  clientId: string
-  clientName: string
-  category: string
-  containerSize: TrailerType
-  containerCount: number
-  route: string
-  distanceKm: number
-  amount: number
-  status: 'DRAFT' | 'ISSUED' | 'PAID' | 'OVERDUE' | 'CANCELLED'
-  issueDate: string
-  dueDate: string
-}
+// TODO: Add when invoicing feature is implemented
+// export interface Invoice { ... }
 
-export interface LedgerEntry {
-  id: string
-  date: string
-  clientName: string
-  type: 'INVOICE' | 'PAYMENT_RECEIVED' | 'PARTNER_PAYMENT'
-  debit: number
-  credit: number
-  reference: string
-  notes: string
-}
+// TODO: Add when ledger feature is implemented
+// export interface LedgerEntry { ... }
 
 export interface RoutePrice {
   route: string
@@ -157,23 +83,11 @@ export interface RoutePrice {
   isTwoWay?: boolean
 }
 
-export interface MonthlyRevenue {
-  month: string
-  revenue: number
-  expense: number
-}
+// TODO: Add when reporting feature is implemented
+// export interface MonthlyRevenue { ... }
 
-export interface PeriodClose {
-  id: string
-  month: string
-  closedBy: string
-  closedAt: string
-  totalRevenue: number
-  totalExpense: number
-  profit: number
-  jobCount: number
-  status: 'open' | 'closed'
-}
+// TODO: Add when period close feature is implemented
+// export interface PeriodClose { ... }
 
 export interface WorkOrder {
   id: string
@@ -294,7 +208,7 @@ export function getWorkOrderStatusBadge(status: WorkOrderStatus): { variant: 'de
   switch (status) {
     case 'PENDING': return { variant: 'warning', label: 'Chờ đối soát' }
     case 'PRICED': return { variant: 'success', label: 'Đã tính giá' }
-    case 'APPROVED': return { variant: 'info', label: 'Đã duyệt' }
+    case 'MATCHED': return { variant: 'info', label: 'Đã đối soát' }
   }
 }
 
