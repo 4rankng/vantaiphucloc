@@ -1,15 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
-import { createPortal } from 'react-dom'
-import { Plus, MapPin, Calendar } from 'lucide-react'
+import { Plus, Calendar } from 'lucide-react'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { apiClient } from '@/services/api'
-import { formatCurrencyFull, type WorkOrder, type ContainerItem } from '@/data/domain'
+import { formatCurrencyFull, type WorkOrder } from '@/data/domain'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { WorkOrderCard } from '@/components/shared/WorkOrderCard'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
-
-// ─── Cont type badge ──────────────────────────────────────────────────────────
-// ─── Main component ───────────────────────────────────────────────────────────
+import { StatsRow } from '@/components/shared/StatsRow'
 export function DriverHome() {
   const { driver, navigate } = useDriverStore()
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
@@ -54,30 +51,12 @@ export function DriverHome() {
     <div className="pb-20">
       {/* Stats row */}
       <div className="px-4 pt-4">
-        <div className="grid grid-cols-2 gap-2">
-          <div
-            className="rounded-2xl p-4"
-            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
-          >
-            <p className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
-              Thu nhập
-            </p>
-            <p className="text-xl font-bold tabular-nums mt-1" style={{ color: 'var(--theme-text-primary)' }}>
-              {formatCurrencyFull(totalEarnings)}
-            </p>
-          </div>
-          <div
-            className="rounded-2xl p-4"
-            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
-          >
-            <p className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
-              Số chuyến
-            </p>
-            <p className="text-xl font-bold tabular-nums mt-1" style={{ color: 'var(--theme-text-primary)' }}>
-              {filteredJobs.length}
-            </p>
-          </div>
-        </div>
+        <StatsRow
+          items={[
+            { label: 'Thu nhập', value: formatCurrencyFull(totalEarnings) },
+            { label: 'Số chuyến', value: filteredJobs.length },
+          ]}
+        />
       </div>
 
       {/* Month navigator */}

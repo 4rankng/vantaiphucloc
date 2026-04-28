@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { Button } from '@/components/ui/Button/Button'
-import { Input } from '@/components/ui/Input/Input'
+import { Button } from '@/components/ui'
+import { Input } from '@/components/ui'
 import { Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react'
 
 export function Login() {

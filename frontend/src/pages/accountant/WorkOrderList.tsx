@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Search } from 'lucide-react'
-import { Input } from '@/components/ui/Input/Input'
-import { ContBadge } from '@/components/shared/ContBadge'
+import { Input } from '@/components/ui'
+import { WorkOrderJobCard } from '@/components/shared/WorkOrderJobCard'
 import { apiClient } from '@/services/api'
 import { useAppStore } from '@/hooks/use-app-store'
 import { type WorkOrder, type TripOrder } from '@/data/domain'
@@ -65,29 +65,12 @@ export function WorkOrderList() {
       ) : (
         <div className="space-y-2">
           {filtered.map(job => (
-            <button key={job.id}
+            <WorkOrderJobCard
+              key={job.id}
+              job={job}
+              status="unmatched"
               onClick={() => navigate(`/accountant/match/${job.id}`)}
-              className="w-full text-left rounded-2xl p-3 transition-all active:scale-[0.98] touch-manipulation"
-              style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {job.containers[0] && <ContBadge type={job.containers[0].workType} />}
-                  <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                    {job.containers[0]?.containerNumber || job.id}
-                  </span>
-                </div>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                  style={{ background: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' }}>
-                  Đối soát tài xế
-                </span>
-              </div>
-              <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>
-                {job.driverName} · {job.tractorPlate}
-              </p>
-              <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                {job.clientName} · {job.route}
-              </p>
-            </button>
+            />
           ))}
         </div>
       )}
