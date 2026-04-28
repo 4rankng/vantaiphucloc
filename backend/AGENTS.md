@@ -27,7 +27,7 @@ If you change code and this file becomes stale, the next agent will be misled. K
 - **Phone-based auth**: users log in with phone/email/username + password, get JWT
 - **Currency**: Vietnamese Dong (VND), stored as integers — no decimals
 - **Drivers & vendors**: drivers have a `vendor` string field (default "Phúc Lộc"). External vendor drivers have their company name there.
-- **Force update**: backend exposes `GET /version` with `APP_VERSION` and `MINIMUM_VERSION`. Frontend checks this to force/soft update.
+- **PWA**: service worker with precaching, background sync for offline support
 
 ---
 
@@ -57,12 +57,11 @@ backend/
 │   │                            #   - docs at /api/docs, redoc at /api/redoc
 │   ├── config.py                # Settings class (pydantic-settings), reads .env
 │   │                            #   - DATABASE_URL, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
-│   │                            #   - APP_VERSION, MINIMUM_VERSION (for force update)
 │   │                            #   - CORS_ORIGINS
 │   ├── database.py              # Async engine (asyncpg), async_sessionmaker, Base (DeclarativeBase), get_db()
 │   │
 │   ├── api/v1/                  # All API endpoints — one file per domain entity
-│   │   ├── router.py            # Mounts all sub-routers. Health check, version check, job status
+│   │   ├── router.py            # Mounts all sub-routers. Health check, job status
 │   │   ├── auth.py              # POST /auth/login, POST /auth/refresh, POST /auth/logout
 │   │   ├── clients.py           # CRUD /clients (list, create, update, delete)
 │   │   ├── drivers.py           # CRUD /drivers
@@ -233,16 +232,6 @@ job_id = salary_recalc_job_id(driver_id, start_date, end_date)
 await enqueue("calculate_salary_task", _job_id=job_id, driver_id=driver_id, ...)
 ```
 
-### Force Update
-Backend exposes `GET /api/v1/version` (public, no auth):
-```json
-{ "version": "2026.04.28.1", "minimum_version": "2026.04.22.0" }
-```
-- `APP_VERSION` / `MINIMUM_VERSION` set in `.env` or `config.py`
-- Frontend checks this on load + every 5 minutes
-- Hard update: current < minimum → nuke caches, reload
-- Soft update: current < latest → SW skipWaiting
-
 ---
 
 ## How-To Recipes
@@ -342,6 +331,4 @@ Set in `.env` (see `.env.example`):
 | `ALGORITHM` | `HS256` | JWT algorithm |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `1440` | Token lifetime (24h) |
 | `CORS_ORIGINS` | `http://localhost:5173,http://localhost:3000` | Comma-separated allowed origins |
-| `APP_VERSION` | `2026.04.28.1` | Current backend version |
-| `MINIMUM_VERSION` | `2026.04.22.0` | Oldest frontend version allowed |
 | `REDIS_URL` | `redis://localhost:6379/0` | Redis connection |
