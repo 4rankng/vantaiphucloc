@@ -21,7 +21,7 @@ async def enqueue(function_name: str, _job_id: str | None = None, **kwargs) -> s
     return job.job_id
 
 
-def salary_recalc_job_id(company_id: int, driver_id: int, start_date: str, end_date: str) -> str:
+def salary_recalc_job_id(driver_id: int, start_date: str, end_date: str) -> str:
     """Deterministic job ID to prevent duplicate salary recalculation enqueues."""
-    raw = f"salary_recalc:{company_id}:{driver_id}:{start_date}:{end_date}"
+    raw = f"salary_recalc:{driver_id}:{start_date}:{end_date}"
     return hashlib.sha256(raw.encode()).hexdigest()[:32]

@@ -24,13 +24,12 @@ async def list_drivers(
     redis: Redis = Depends(get_redis),
 ):
     cache = CacheManager(redis)
-    cached = await cache.get_json("drivers", current_user.company_id, "list")
+    cached = await cache.get_json("drivers", "list")
     if cached is not None:
         return [DriverOut(**d) for d in cached]
 
     result = await db.execute(
         select(User).where(
-            User.company_id == current_user.company_id,
             User.role == "driver",
         ).order_by(User.username.asc())
     )
@@ -48,7 +47,7 @@ async def list_drivers(
         for d in drivers
     ]
     serialized = [d.model_dump(mode="json") for d in data]
-    await cache.set_json("drivers", current_user.company_id, "list", serialized, ttl=settings.CACHE_DRIVERS_TTL)
+    await cache.set_json("drivers", "list", serialized, ttl=settings.CACHE_DRIVERS_TTL)
     return data
 
 
@@ -64,7 +63,6 @@ async def create_driver(
         username=body.username,
         hashed_password=hash_password(body.phone),
         role="driver",
-        company_id=current_user.company_id,
         vendor=body.vendor or PHUC_LOC,
         is_active=True,
         tractor_plate=body.tractor_plate,
@@ -72,7 +70,7 @@ async def create_driver(
     db.add(driver)
     await db.commit()
     await db.refresh(driver)
-    await CacheManager(redis).invalidate_namespace("drivers", current_user.company_id)
+    await CacheManager(redis).invalidate_namespace("drivers")
 
     return DriverOut(
         id=driver.id,

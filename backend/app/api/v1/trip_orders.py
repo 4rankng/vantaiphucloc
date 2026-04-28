@@ -47,6 +47,23 @@ async def _set_work_orders_matched(db: AsyncSession, work_order_ids: list[int]) 
             wo.status = "MATCHED"
 
 
+async def _enqueue_salary_recalc(db: AsyncSession, driver_id: int, ref_date: date) -> None:
+    """Enqueue salary recalculation for a driver in the period containing ref_date."""
+    try:
+        from app.workers import enqueue, salary_recalc_job_id
+        start, end = await get_salary_period_dates(db, ref_date)
+        job_id = salary_recalc_job_id(driver_id, start.isoformat(), end.isoformat())
+        await enqueue(
+            "calculate_salary_task",
+            _job_id=job_id,
+            driver_id=driver_id,
+            start_date=start.isoformat(),
+            end_date=end.isoformat(),
+        )
+    except RuntimeError:
+        _logger.warning("Failed to enqueue salary recalculation for driver %s", driver_id)
+
+
 @router.post("/trip-orders", response_model=TripOrderOut, status_code=201)
 async def create_trip_order(
     body: TripOrderCreate,
@@ -57,7 +74,6 @@ async def create_trip_order(
     trip_data = body.model_dump(exclude={"matched_work_order_ids"})
 
     trip_order = TripOrder(
-        company_id=current_user.company_id,
         status="DRAFT",
         **trip_data,
     )
@@ -76,21 +92,7 @@ async def create_trip_order(
     await db.commit()
     await db.refresh(trip_order)
 
-    # Enqueue salary recalculation for the driver
-    try:
-        from app.workers import enqueue, salary_recalc_job_id
-        start, end = await get_salary_period_dates(db, current_user.company_id, body.trip_date)
-        job_id = salary_recalc_job_id(current_user.company_id, trip_order.driver_id, start.isoformat(), end.isoformat())
-        await enqueue(
-            "calculate_salary_task",
-            _job_id=job_id,
-            company_id=current_user.company_id,
-            driver_id=trip_order.driver_id,
-            start_date=start.isoformat(),
-            end_date=end.isoformat(),
-        )
-    except RuntimeError:
-        _logger.warning("Failed to enqueue salary recalculation for driver %s", trip_order.driver_id)
+    await _enqueue_salary_recalc(db, trip_order.driver_id, body.trip_date)
 
     return await _load_trip_order_out(db, trip_order)
 
@@ -105,7 +107,7 @@ async def list_trip_orders(
     current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
-    query = select(TripOrder).where(TripOrder.company_id == current_user.company_id)
+    query = select(TripOrder)
 
     if client_id is not None:
         query = query.where(TripOrder.client_id == client_id)
@@ -131,10 +133,7 @@ async def get_trip_order(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(TripOrder).where(
-            TripOrder.id == trip_order_id,
-            TripOrder.company_id == current_user.company_id,
-        )
+        select(TripOrder).where(TripOrder.id == trip_order_id)
     )
     trip_order = result.scalar_one_or_none()
     if trip_order is None:
@@ -151,10 +150,7 @@ async def update_trip_order(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(TripOrder).where(
-            TripOrder.id == trip_order_id,
-            TripOrder.company_id == current_user.company_id,
-        )
+        select(TripOrder).where(TripOrder.id == trip_order_id)
     )
     trip_order = result.scalar_one_or_none()
     if trip_order is None:
@@ -192,20 +188,7 @@ async def update_trip_order(
 
     # Enqueue salary recalculation if matched work orders changed
     if new_matched_ids:
-        try:
-            from app.workers import enqueue, salary_recalc_job_id
-            ref_date = trip_order.trip_date if hasattr(trip_order, "trip_date") and trip_order.trip_date else date.today()
-            start, end = await get_salary_period_dates(db, current_user.company_id, ref_date)
-            job_id = salary_recalc_job_id(current_user.company_id, trip_order.driver_id, start.isoformat(), end.isoformat())
-            await enqueue(
-                "calculate_salary_task",
-                _job_id=job_id,
-                company_id=current_user.company_id,
-                driver_id=trip_order.driver_id,
-                start_date=start.isoformat(),
-                end_date=end.isoformat(),
-            )
-        except RuntimeError:
-            _logger.warning("Failed to enqueue salary recalculation for driver %s", trip_order.driver_id)
+        ref_date = trip_order.trip_date if hasattr(trip_order, "trip_date") and trip_order.trip_date else date.today()
+        await _enqueue_salary_recalc(db, trip_order.driver_id, ref_date)
 
     return await _load_trip_order_out(db, trip_order)

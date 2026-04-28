@@ -14,12 +14,10 @@ def _safe_date(year: int, month: int, day: int) -> date:
 
 
 async def get_salary_period_dates(
-    db: AsyncSession, company_id: int, reference_date: date
+    db: AsyncSession, reference_date: date
 ) -> tuple[date, date]:
     """Return the (start_date, end_date) of the salary period containing *reference_date*."""
-    result = await db.execute(
-        select(SalaryPeriodConfig).where(SalaryPeriodConfig.company_id == company_id)
-    )
+    result = await db.execute(select(SalaryPeriodConfig))
     config = result.scalar_one_or_none()
 
     from_day = config.from_day if config else 1
