@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useAppStore } from '@/hooks/use-app-store'
 import { apiClient } from '@/services/api'
-import { updateWorkOrder, createTripOrder, updateTripOrder } from '@/services/sandbox/sandboxClient'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { SheetPicker } from '@/components/shared/SheetPicker/SheetPicker'
 import { WORK_TYPES, type WorkOrder, type TripOrder, type WorkType, type Client, type RoutePrice } from '@/data/mockData'
@@ -239,18 +238,18 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
     if (!selectedJob || !selectedTrip || !editedJob || !editedTrip || submitting) return
     setSubmitting(true)
     try {
-      await updateWorkOrder(selectedJobId, {
+      await apiClient.updateWorkOrder(selectedJobId, {
         clientName: editedJob.clientName,
         route: editedJob.route,
         containers: editedJob.containers.map(c => ({ containerNumber: c.number, workType: c.type as WorkType, photoUrl: '' })),
       })
-      await updateTripOrder(selectedTripId, {
+      await apiClient.updateTripOrder(selectedTripId, {
         clientName: editedTrip.clientName,
         route: editedTrip.route,
         workType: editedTrip.contType as WorkType,
         containerNumber: editedTrip.contNumber,
       })
-      await createTripOrder({
+      await apiClient.createTripOrder({
         tripDate: selectedTrip.tripDate,
         clientId: selectedTrip.clientId,
         clientName: editedTrip.clientName,

@@ -1,4 +1,6 @@
+import json
 import logging
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -10,18 +12,22 @@ async def send_notification_task(
     message: str,
     channel: str = "in_app",
 ) -> dict:
-    """Send a notification to a user.
+    """Send a notification to a user. Stores in Redis sorted set for polling."""
+    redis = ctx["redis"]
+    now = datetime.now(timezone.utc)
 
-    Channels: in_app (default), email, sms.
-    Placeholder implementation — logs the notification.
-    """
-    logger.info(
-        "Notification sent: user=%s channel=%s title=%s",
-        user_id, channel, title,
-    )
-
-    return {
+    notification = {
         "user_id": user_id,
+        "title": title,
+        "message": message,
         "channel": channel,
-        "status": "sent",
+        "created_at": now.isoformat(),
+        "read": False,
     }
+
+    key = f"notifications:user:{user_id}"
+    await redis.zadd(key, {json.dumps(notification, ensure_ascii=False): now.timestamp()})
+    await redis.zremrangebyrank(key, 0, -(101))
+
+    logger.info("Notification stored: user=%s channel=%s title=%s", user_id, channel, title)
+    return {"user_id": user_id, "channel": channel, "status": "stored"}

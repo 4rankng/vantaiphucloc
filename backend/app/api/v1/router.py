@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 from arq import ArqRedis
+from arq.jobs import Job, JobStatus
 
 from app.api.v1.auth import router as auth_router
 from app.api.v1.clients import router as clients_router
@@ -11,7 +12,9 @@ from app.api.v1.reconcile import router as reconcile_router
 from app.api.v1.salary import router as salary_router
 from app.api.v1.salary_config import router as salary_config_router
 from app.api.v1.drivers import router as drivers_router
-from app.core.deps import get_worker_pool
+from app.core.deps import get_current_user, get_worker_pool
+from app.models.base import User
+from app.schemas.domain import JobStatusResponse
 
 router = APIRouter()
 
@@ -42,3 +45,27 @@ async def worker_health(pool: ArqRedis = Depends(get_worker_pool)):
         "workers": info.get("workers", []),
         "queued": info.get("queued", 0),
     }
+
+
+@router.get("/jobs/{job_id}", response_model=JobStatusResponse)
+async def get_job_status(
+    job_id: str,
+    _current_user: User = Depends(get_current_user),
+):
+    pool = get_worker_pool()
+    job = Job(job_id, redis=pool)
+    status = await job.status()
+
+    if status == JobStatus.not_found:
+        return JobStatusResponse(job_id=job_id, status="not_found")
+
+    info = await job.info()
+    result = None
+    if info and hasattr(info, "result") and info.result is not None:
+        result = info.result if isinstance(info.result, dict) else {"value": str(info.result)}
+
+    return JobStatusResponse(
+        job_id=job_id,
+        status=status.value,
+        result=result,
+    )
