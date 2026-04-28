@@ -47,11 +47,11 @@ async def list_pricings(
 ):
     cache = CacheManager(redis)
     cache_id = f"list:{client_id}:{work_type}:{route}"
-    cached = await cache.get_json("pricings", current_user.company_id, cache_id)
+    cached = await cache.get_json("pricings", cache_id)
     if cached is not None:
         return [PricingOut(**p) for p in cached]
 
-    query = select(Pricing).where(Pricing.company_id == current_user.company_id)
+    query = select(Pricing)
 
     if client_id is not None:
         query = query.where(Pricing.client_id == client_id)
@@ -64,7 +64,7 @@ async def list_pricings(
     pricings = result.scalars().all()
     data = [await _load_pricing_out(db, p) for p in pricings]
     serialized = [p.model_dump(mode="json") for p in data]
-    await cache.set_json("pricings", current_user.company_id, cache_id, serialized, ttl=settings.CACHE_PRICING_TTL)
+    await cache.set_json("pricings", cache_id, serialized, ttl=settings.CACHE_PRICING_TTL)
     return data
 
 
@@ -78,10 +78,7 @@ async def create_pricing(
     lines_data = body.lines
     pricing_data = body.model_dump(exclude={"lines"})
 
-    pricing = Pricing(
-        company_id=current_user.company_id,
-        **pricing_data,
-    )
+    pricing = Pricing(**pricing_data)
     db.add(pricing)
     await db.flush()  # get pricing.id without committing
 
@@ -94,7 +91,7 @@ async def create_pricing(
 
     await db.commit()
     await db.refresh(pricing)
-    await CacheManager(redis).invalidate_namespace("pricings", current_user.company_id)
+    await CacheManager(redis).invalidate_namespace("pricings")
 
     return await _load_pricing_out(db, pricing)
 
@@ -108,10 +105,7 @@ async def update_pricing(
     redis: Redis = Depends(get_redis),
 ):
     result = await db.execute(
-        select(Pricing).where(
-            Pricing.id == pricing_id,
-            Pricing.company_id == current_user.company_id,
-        )
+        select(Pricing).where(Pricing.id == pricing_id)
     )
     pricing = result.scalar_one_or_none()
     if pricing is None:
@@ -136,7 +130,7 @@ async def update_pricing(
 
     await db.commit()
     await db.refresh(pricing)
-    await CacheManager(redis).invalidate_namespace("pricings", current_user.company_id)
+    await CacheManager(redis).invalidate_namespace("pricings")
 
     return await _load_pricing_out(db, pricing)
 
@@ -149,10 +143,7 @@ async def delete_pricing(
     redis: Redis = Depends(get_redis),
 ):
     result = await db.execute(
-        select(Pricing).where(
-            Pricing.id == pricing_id,
-            Pricing.company_id == current_user.company_id,
-        )
+        select(Pricing).where(Pricing.id == pricing_id)
     )
     pricing = result.scalar_one_or_none()
     if pricing is None:
@@ -160,5 +151,5 @@ async def delete_pricing(
 
     await db.delete(pricing)
     await db.commit()
-    await CacheManager(redis).invalidate_namespace("pricings", current_user.company_id)
+    await CacheManager(redis).invalidate_namespace("pricings")
     return Response()

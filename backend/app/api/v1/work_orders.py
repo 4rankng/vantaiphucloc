@@ -99,7 +99,7 @@ async def list_work_orders(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    query = select(WorkOrder).where(WorkOrder.company_id == current_user.company_id)
+    query = select(WorkOrder)
 
     if driver_id is not None:
         query = query.where(WorkOrder.driver_id == driver_id)
@@ -125,10 +125,7 @@ async def get_work_order(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(WorkOrder).where(
-            WorkOrder.id == work_order_id,
-            WorkOrder.company_id == current_user.company_id,
-        )
+        select(WorkOrder).where(WorkOrder.id == work_order_id)
     )
     work_order = result.scalar_one_or_none()
     if work_order is None:
@@ -145,10 +142,7 @@ async def update_work_order(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(WorkOrder).where(
-            WorkOrder.id == work_order_id,
-            WorkOrder.company_id == current_user.company_id,
-        )
+        select(WorkOrder).where(WorkOrder.id == work_order_id)
     )
     work_order = result.scalar_one_or_none()
     if work_order is None:
@@ -230,7 +224,6 @@ async def _create_work_order_db(
 
     pricing = await find_pricing(
         db,
-        company_id=current_user.company_id,
         client_id=body.client_id,
         work_type=work_type,
         route=body.route,
@@ -252,7 +245,6 @@ async def _create_work_order_db(
         pricing_id = None
 
     work_order = WorkOrder(
-        company_id=current_user.company_id,
         client_id=body.client_id,
         client_name=body.client_name,
         route=body.route,

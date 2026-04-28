@@ -12,11 +12,10 @@ logger = logging.getLogger(__name__)
 
 async def generate_monthly_report_task(
     ctx: dict,
-    company_id: int,
     month: int,
     year: int,
 ) -> dict:
-    """Generate a monthly financial summary for a company."""
+    """Generate a monthly financial summary."""
     start = date(year, month, 1)
     if month == 12:
         end = date(year + 1, 1, 1) - timedelta(days=1)
@@ -30,7 +29,6 @@ async def generate_monthly_report_task(
         try:
             result = await db.execute(
                 select(WorkOrder).where(
-                    WorkOrder.company_id == company_id,
                     WorkOrder.created_at >= start_dt,
                     WorkOrder.created_at <= end_dt,
                 )
@@ -42,7 +40,6 @@ async def generate_monthly_report_task(
             total_allowance = sum(wo.allowance or 0 for wo in orders)
 
             report = {
-                "company_id": company_id,
                 "period": f"{year}-{month:02d}",
                 "total_orders": len(orders),
                 "total_revenue": total_revenue,
@@ -51,7 +48,7 @@ async def generate_monthly_report_task(
                 "gross_margin": total_revenue - total_driver_cost - total_allowance,
             }
 
-            logger.info("Monthly report generated: company=%s period=%s", company_id, report["period"])
+            logger.info("Monthly report generated: period=%s", report["period"])
             return report
         except Exception:
             await db.rollback()
@@ -100,7 +97,6 @@ async def recalculate_open_periods(ctx: dict) -> None:
             try:
                 await enqueue(
                     "calculate_salary_task",
-                    company_id=period.company_id,
                     driver_id=period.driver_id,
                     start_date=period.start_date.isoformat(),
                     end_date=period.end_date.isoformat(),
