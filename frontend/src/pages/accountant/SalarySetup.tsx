@@ -2,43 +2,29 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { Input } from '@/components/ui'
-
-const STORAGE_KEY = 'ttransport_salary_period_config'
+import { api } from '@/services/api/client'
+import { useToast } from '@/components/atoms/Toast'
 
 interface PeriodConfig {
+  id?: number
   fromDay: string
   toDay: string
 }
 
-function loadConfig(): PeriodConfig | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return JSON.parse(raw)
-  } catch { /* ignore */ }
-  return null
-}
-
-function saveConfig(config: PeriodConfig) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(config))
-}
-
-const DAY_OPTIONS = [
-  '1', '2', '3', '4', '5', '6', '7', '8', '9', '10',
-  '11', '12', '13', '14', '15', '16', '17', '18', '19', '20',
-  '21', '22', '23', '24', '25', '26', '27', '28',
-]
-
 export function SalarySetup() {
+  const toast = useToast()
   const [fromDay, setFromDay] = useState('26')
   const [toDay, setToDay] = useState('25')
-  const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const config = loadConfig()
-    if (config) {
-      setFromDay(config.fromDay)
-      setToDay(config.toDay)
-    }
+    api.get('/salary-config').then(res => {
+      if (res.data) {
+        setFromDay(String(res.data.from_day ?? 26))
+        setToDay(String(res.data.to_day ?? 25))
+      }
+    }).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
   const formatDay = (d: string) => {
@@ -57,10 +43,19 @@ export function SalarySetup() {
     return `${from} tháng này đến ${to} tháng sau`
   }
 
-  const handleSave = () => {
-    saveConfig({ fromDay, toDay })
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      await api.put('/salary-config', {
+        from_day: parseInt(fromDay) || 26,
+        to_day: parseInt(toDay) || 25,
+      })
+      toast.success('Đã lưu', 'Cấu hình kỳ lương đã được cập nhật')
+    } catch {
+      toast.error('Lỗi', 'Không thể lưu cấu hình')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -102,8 +97,9 @@ export function SalarySetup() {
 
         <Button onClick={handleSave}
           className="w-full h-10 font-bold rounded-xl"
+          disabled={saving || loading}
           style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-          {saved ? 'Đã lưu ✓' : 'Lưu'}
+          {saving ? 'Đang lưu...' : loading ? 'Đang tải...' : 'Lưu'}
         </Button>
       </div>
     </div>

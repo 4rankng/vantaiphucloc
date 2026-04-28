@@ -456,7 +456,7 @@ export async function getDrivers(): Promise<ApiResponse<Driver[]>> {
 }
 
 export async function createDriver(
-  data: { name: string; phone: string; tractorPlate: string },
+  data: { username: string; phone: string; tractorPlate?: string; vendor?: string },
 ): Promise<ApiResponse<Driver>> {
   try {
     const res = await api.post('/drivers', toSnake(data))
@@ -467,14 +467,10 @@ export async function createDriver(
 }
 
 // ─── Notifications ────────────────────────────────────────────────────────────
+// TODO: Add backend GET /notifications endpoint. For now, return empty.
 
 export async function getNotifications(): Promise<ApiResponse<unknown[]>> {
-  try {
-    const res = await api.get('/notifications')
-    return ok(normalizeMany<unknown>(res.data))
-  } catch (err) {
-    return ok([])
-  }
+  return ok([])
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────

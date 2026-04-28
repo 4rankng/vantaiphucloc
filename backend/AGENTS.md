@@ -22,6 +22,7 @@ app/
 ├── api/v1/
 │   ├── router.py            # Mounts sub-routers, health check, job status
 │   ├── auth.py              # /auth/login, /auth/refresh, /auth/logout
+│   ├── users.py             # CRUD /users (director/superadmin)
 │   ├── clients.py           # CRUD /clients
 │   ├── drivers.py           # CRUD /drivers
 │   ├── routes.py            # CRUD /routes

@@ -69,6 +69,7 @@ class UserCreate(BaseModel):
     username: str
     password: str
     role: str = "driver"
+    tractor_plate: str | None = None
 
 
 class UserUpdate(BaseModel):
@@ -76,6 +77,8 @@ class UserUpdate(BaseModel):
     email: str | None = None
     username: str | None = None
     role: str | None = None
+    password: str | None = None
+    tractor_plate: str | None = None
     is_active: bool | None = None
 
 
