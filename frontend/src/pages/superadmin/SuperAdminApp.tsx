@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { api } from '@/services/api/client'
 import { AppTopBar } from '@/components/shared/AppTopBar'
 import { UserDropdown } from '@/components/shared/ProfileDialog'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
@@ -15,6 +16,11 @@ import type { Role } from '@/data/domain'
 import { ROLE_LABELS } from '@/data/domain'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+interface Company {
+  id: number
+  name: string
+}
 
 interface UserAccount {
   id: string
@@ -143,14 +149,30 @@ function CreateUserDialog({
   open: boolean
   onClose: () => void
 }) {
-  const [form, setForm] = useState({ name: '', phone: '', role: 'driver' as Role, company: '', password: '', tractorPlate: '' })
+  const [form, setForm] = useState({ name: '', phone: '', role: 'driver' as Role, companyId: '', password: '', tractorPlate: '' })
+  const [companies, setCompanies] = useState<Company[]>([])
+
+  // Load companies on mount
+  useEffect(() => {
+    api.get('/companies').then(res => {
+      setCompanies(res.data)
+      // Default to first company (Phúc Lộc)
+      if (res.data.length > 0 && !form.companyId) {
+        setForm(f => ({ ...f, companyId: String(res.data[0].id) }))
+      }
+    }).catch(() => {})
+  }, [])
 
   const handleSubmit = () => {
-    if (!form.name.trim() || !form.phone.trim() || !form.company.trim() || !form.password.trim()) return
+    if (!form.name.trim() || !form.phone.trim() || !form.companyId || !form.password.trim()) return
     // In real app: call API
     onClose()
-    setForm({ name: '', phone: '', role: 'driver', company: '', password: '', tractorPlate: '' })
+    setForm({ name: '', phone: '', role: 'driver', companyId: companies.length > 0 ? String(companies[0].id) : '', password: '', tractorPlate: '' })
   }
+
+  // For director/accountant, lock company to Phúc Lộc (first company)
+  const isInternalRole = form.role === 'director' || form.role === 'accountant'
+  const selectedCompanyName = companies.find(c => String(c.id) === form.companyId)?.name ?? ''
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -172,13 +194,35 @@ function CreateUserDialog({
             <InlineSelect
               options={CREATEABLE_ROLES}
               value={form.role}
-              onChange={v => setForm(f => ({ ...f, role: v as Role }))}
+              onChange={v => {
+                const newRole = v as Role
+                // When switching to internal role, force Phúc Lộc company
+                const isInternal = newRole === 'director' || newRole === 'accountant'
+                setForm(f => ({
+                  ...f,
+                  role: newRole,
+                  companyId: isInternal && companies.length > 0 ? String(companies[0].id) : f.companyId,
+                }))
+              }}
               placeholder="Chọn vai trò"
             />
           </div>
           <div className="space-y-2">
             <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Công ty</Label>
-            <Input value={form.company} onChange={e => setForm(f => ({ ...f, company: e.target.value }))} placeholder="Tên công ty" className="text-sm" />
+            {isInternalRole ? (
+              <div className="h-10 rounded-xl px-3 flex items-center text-sm font-medium"
+                style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', color: 'var(--theme-text-primary)' }}>
+                {companies[0]?.name ?? 'Phúc Lộc'}
+                <span className="ml-2 text-xs" style={{ color: 'var(--theme-text-muted)' }}>(cố định)</span>
+              </div>
+            ) : (
+              <InlineSelect
+                options={companies.map(c => ({ value: String(c.id), label: c.name }))}
+                value={form.companyId}
+                onChange={v => setForm(f => ({ ...f, companyId: v as string }))}
+                placeholder="Chọn công ty"
+              />
+            )}
           </div>
           {form.role === 'driver' && (
             <div className="space-y-2">
@@ -194,7 +238,7 @@ function CreateUserDialog({
         <DialogFooter>
           <Button variant="outline" onClick={onClose} className="flex-1">Huỷ</Button>
           <Button onClick={handleSubmit}
-            disabled={!form.name.trim() || !form.phone.trim() || !form.company.trim() || !form.password.trim()}
+            disabled={!form.name.trim() || !form.phone.trim() || !form.companyId || !form.password.trim()}
             className="flex-1"
             style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
             Xác nhận
