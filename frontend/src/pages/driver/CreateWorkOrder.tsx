@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Camera, RotateCcw, Plus, Trash2, AlertCircle, WifiOff } from 'lucide-react'
-import { Button } from '@/components/ui/Button/Button'
+import { Button } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { ContainerScanner } from '@/components/shared/ContainerScanner'
 import type { PhotoMeta } from '@/components/shared/ContainerScanner'

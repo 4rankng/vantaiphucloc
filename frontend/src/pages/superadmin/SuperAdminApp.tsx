@@ -5,11 +5,12 @@ import { UserDropdown } from '@/components/shared/ProfileDialog'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { UserCircle, Plus, Trash2, Pencil, Users, Truck, CircleDollarSign, LayoutDashboard, Search } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog/Dialog'
-import { Button } from '@/components/ui/Button/Button'
-import { Input } from '@/components/ui/Input/Input'
-import { Label } from '@/components/ui/Label/Label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
+import { Button } from '@/components/ui'
+import { Input } from '@/components/ui'
+import { Label } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect'
+import { FilterPills } from '@/components/shared/FilterPills'
 import type { Role } from '@/data/domain'
 import { ROLE_LABELS } from '@/data/domain'
 
@@ -275,22 +276,16 @@ function SuperAdminDashboard({
         </div>
 
         {/* Role filter pills */}
-        <div className="flex gap-2 overflow-x-auto">
-          {(['ALL', 'director', 'driver', 'accountant'] as const).map(r => (
-            <button
-              key={r}
-              onClick={() => setFilterRole(r)}
-              className="shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all touch-manipulation"
-              style={{
-                background: filterRole === r ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
-                color: filterRole === r ? 'var(--theme-text-on-brand)' : 'var(--theme-text-secondary)',
-                border: `1px solid ${filterRole === r ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)'}`,
-              }}
-            >
-              {r === 'ALL' ? 'Tất cả' : ROLE_LABELS[r]} ({r === 'ALL' ? users.length : users.filter(u => u.role === r).length})
-            </button>
-          ))}
-        </div>
+        <FilterPills
+          options={[
+            { value: 'ALL', label: 'Tất cả', count: users.length },
+            { value: 'director', label: ROLE_LABELS.director, count: users.filter(u => u.role === 'director').length },
+            { value: 'driver', label: ROLE_LABELS.driver, count: users.filter(u => u.role === 'driver').length },
+            { value: 'accountant', label: ROLE_LABELS.accountant, count: users.filter(u => u.role === 'accountant').length },
+          ]}
+          value={filterRole}
+          onChange={setFilterRole}
+        />
       </div>
 
       {/* User list */}

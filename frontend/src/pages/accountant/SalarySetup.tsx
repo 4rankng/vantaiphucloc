@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/Button/Button'
-import { Label } from '@/components/ui/Label/Label'
-import { Input } from '@/components/ui/Input/Input'
+import { Button } from '@/components/ui'
+import { Label } from '@/components/ui'
+import { Input } from '@/components/ui'
 
 const STORAGE_KEY = 'ttransport_salary_period_config'
 

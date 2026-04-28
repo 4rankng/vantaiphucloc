@@ -4,10 +4,10 @@ import { InfoRow } from '@/components/shared/InfoRow'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { formatCurrencyFull, type TripOrder, type WorkOrder, WORK_TYPES, type WorkType } from '@/data/domain'
 import { Building2, Route, UserCircle, Wallet, Link2, Pencil, Trash2 } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog/Dialog'
-import { Button } from '@/components/ui/Button/Button'
-import { Input } from '@/components/ui/Input/Input'
-import { Label } from '@/components/ui/Label/Label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
+import { Button } from '@/components/ui'
+import { Input } from '@/components/ui'
+import { Label } from '@/components/ui'
 
 export function TripDetail({ tripId }: { tripId: string }) {
   const [trip, setTrip] = useState<TripOrder | null>(null)
