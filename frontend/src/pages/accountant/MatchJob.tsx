@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useAppStore } from '@/hooks/use-app-store'
 import { apiClient } from '@/services/api'
 import { ContBadge } from '@/components/shared/ContBadge'
-import { SheetPicker } from '@/components/shared/SheetPicker/SheetPicker'
+import { InlineSelect } from '@/components/shared/InlineSelect'
 import { WORK_TYPES, type WorkOrder, type TripOrder, type WorkType, type Client, type RoutePrice } from '@/data/domain'
 import { Check, ChevronDown, CheckCircle2, ArrowLeftRight, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button/Button'
@@ -456,8 +456,7 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
       <EditDialog open={editDialog === 'client-left'} title="Sửa khách hàng · Đã chạy" color="var(--theme-brand-primary)" onClose={saveDialog}>
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</Label>
-          <SheetPicker
-            label="Chọn khách hàng"
+          <InlineSelect
             placeholder="Chọn khách hàng..."
             value={editedJob?.clientName ?? ''}
             options={clients.map(c => ({ value: c.name, label: c.name }))}
@@ -470,8 +469,7 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
       <EditDialog open={editDialog === 'client-right'} title="Sửa khách hàng · Yêu cầu" color="var(--theme-status-warning)" onClose={saveDialog}>
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</Label>
-          <SheetPicker
-            label="Chọn khách hàng"
+          <InlineSelect
             placeholder="Chọn khách hàng..."
             value={editedTrip?.clientName ?? ''}
             options={clients.map(c => ({ value: c.name, label: c.name }))}
@@ -484,8 +482,7 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
       <EditDialog open={editDialog === 'route-left'} title="Sửa cung đường · Đã chạy" color="var(--theme-brand-primary)" onClose={saveDialog}>
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</Label>
-          <SheetPicker
-            label="Chọn cung đường"
+          <InlineSelect
             placeholder="Chọn cung đường..."
             value={editedJob?.route ?? ''}
             options={routes.map(r => ({ value: r.route, label: r.route }))}
@@ -498,8 +495,7 @@ export function MatchJob({ jobId: initialJobId }: { jobId: string }) {
       <EditDialog open={editDialog === 'route-right'} title="Sửa cung đường · Yêu cầu" color="var(--theme-status-warning)" onClose={saveDialog}>
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</Label>
-          <SheetPicker
-            label="Chọn cung đường"
+          <InlineSelect
             placeholder="Chọn cung đường..."
             value={editedTrip?.route ?? ''}
             options={routes.map(r => ({ value: r.route, label: r.route }))}

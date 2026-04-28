@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/Button/Button'
 import { Input } from '@/components/ui/Input/Input'
 import { Label } from '@/components/ui/Label/Label'
-import { SheetPicker } from '@/components/shared/SheetPicker'
+import { InlineSelect } from '@/components/shared/InlineSelect'
 import type { Role } from '@/data/domain'
 import { ROLE_LABELS } from '@/data/domain'
 
@@ -168,7 +168,7 @@ function CreateUserDialog({
           </div>
           <div className="space-y-2">
             <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Vai trò</Label>
-            <SheetPicker
+            <InlineSelect
               options={CREATEABLE_ROLES}
               value={form.role}
               onChange={v => setForm(f => ({ ...f, role: v as Role }))}

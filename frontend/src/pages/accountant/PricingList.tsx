@@ -5,7 +5,7 @@ import { ContBadge } from '@/components/shared/ContBadge'
 import { Button } from '@/components/ui/Button/Button'
 import { Input } from '@/components/ui/Input/Input'
 import { Label } from '@/components/ui/Label/Label'
-import { SheetPicker } from '@/components/shared/SheetPicker'
+import { InlineSelect } from '@/components/shared/InlineSelect'
 import { Plus, Pencil, Trash2, X, Check, Search } from 'lucide-react'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 
@@ -148,12 +148,12 @@ function PricingForm({ initial, clients, routes, onSave, onCancel }: {
 
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</Label>
-        <SheetPicker options={clientOptions} value={clientId} onChange={setClientId} placeholder="Chọn khách hàng" />
+        <InlineSelect options={clientOptions} value={clientId} onChange={setClientId} placeholder="Chọn khách hàng" />
       </div>
 
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</Label>
-        <SheetPicker options={routeOptions} value={route} onChange={setRoute} placeholder="Chọn cung đường" />
+        <InlineSelect options={routeOptions} value={route} onChange={setRoute} placeholder="Chọn cung đường" />
       </div>
 
       <LineEditor lines={lines} onChange={setLines} />
