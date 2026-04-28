@@ -26,80 +26,36 @@ docker --version
 docker compose version
 ```
 
-## 3. Node.js and pnpm
-
-```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
-npm install -g pnpm
-```
-
-## 4. Create system user
-
-```bash
-sudo useradd --system --shell /bin/bash --create-home vantaiphucloc
-```
-
-## 4. Set up PostgreSQL
+## 3. Set up PostgreSQL
 
 ```bash
 sudo -u postgres psql -c "CREATE USER vantaiphucloc WITH PASSWORD 'your-db-password';"
 sudo -u postgres psql -c "CREATE DATABASE vantaiphucloc OWNER vantaiphucloc;"
 ```
 
-## 5. Create application directories
+## 4. Create environment file
 
 ```bash
-sudo mkdir -p /opt/vantaiphucloc/backend
-sudo mkdir -p /var/www/vantaiphucloc/frontend/dist
-sudo chown -R vantaiphucloc:vantaiphucloc /opt/vantaiphucloc /var/www/vantaiphucloc
+cp backend/.env.example backend/.env
+# Edit backend/.env with your production values
 ```
 
-## 6. Create Python virtual environment
+## 5. Deploy with Docker Compose
 
 ```bash
-sudo -u vantaiphucloc python3.14 -m venv /opt/vantaiphucloc/venv
-```
+# Copy source to droplet
+rsync -avz --exclude 'node_modules' --exclude '.git' \
+    ./ vantaiphucloc@your-droplet-ip:/opt/vantaiphucloc/
 
-## 7. Create environment file
-
-```bash
-sudo mkdir -p /etc/vantaiphucloc
-sudo tee /etc/vantaiphucloc/.env > /dev/null <<EOF
-DATABASE_URL=postgresql://vantaiphucloc:your-db-password@localhost:5432/vantaiphucloc
-SECRET_KEY=your-random-secret-key-here
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=60
-CORS_ORIGINS=https://phucloc.tingting.vip
-EOF
-sudo chmod 600 /etc/vantaiphucloc/.env
-sudo chown vantaiphucloc:vantaiphucloc /etc/vantaiphucloc/.env
-```
-
-## 8. Deploy backend (first time)
-
-```bash
-# Copy backend source
-rsync -avz backend/ vantaiphucloc@your-droplet-ip:/opt/vantaiphucloc/backend/
-
-# Install Python dependencies
-sudo -u vantaiphucloc /opt/vantaiphucloc/venv/bin/pip install -r /opt/vantaiphucloc/backend/requirements.txt
+# On the droplet
+cd /opt/vantaiphucloc
+docker compose up -d --build
 
 # Run migrations
-sudo -u vantaiphucloc bash -c "cd /opt/vantaiphucloc/backend && PYTHONPATH=. /opt/vantaiphucloc/venv/bin/alembic upgrade head"
+docker compose exec backend alembic upgrade head
 ```
 
-## 9. Install and start the systemd service
-
-```bash
-sudo cp deploy/vantaiphucloc-backend.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable vantaiphucloc-backend
-sudo systemctl start vantaiphucloc-backend
-sudo systemctl status vantaiphucloc-backend
-```
-
-## 10. Configure Nginx
+## 6. Configure Nginx
 
 ```bash
 sudo cp deploy/nginx.conf /etc/nginx/sites-available/vantaiphucloc
@@ -108,7 +64,7 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-## 11. SSL with Let's Encrypt (Certbot)
+## 7. SSL with Let's Encrypt (Certbot)
 
 ```bash
 sudo apt install -y certbot python3-certbot-nginx
@@ -129,20 +85,28 @@ rsync -avz --delete frontend/dist/ vantaiphucloc@your-droplet-ip:/var/www/vantai
 
 ## Subsequent deployments
 
-Use `make deploy` from the project root (requires `DROPLET_HOST` and `DROPLET_USER` env vars):
-
 ```bash
-DROPLET_HOST=your-droplet-ip DROPLET_USER=vantaiphucloc make deploy
+# Copy source to droplet
+rsync -avz --exclude 'node_modules' --exclude '.git' \
+    ./ vantaiphucloc@your-droplet-ip:/opt/vantaiphucloc/
+
+# On the droplet: rebuild and restart
+cd /opt/vantaiphucloc
+docker compose up -d --build
+docker compose exec backend alembic upgrade head
 ```
 
 ## Useful commands
 
 ```bash
 # View backend logs
-sudo journalctl -u vantaiphucloc-backend -f
+docker compose logs -f backend
 
-# Restart backend
-sudo systemctl restart vantaiphucloc-backend
+# Restart services
+docker compose restart
+
+# Stop all services
+docker compose down
 
 # Check Nginx status
 sudo systemctl status nginx
