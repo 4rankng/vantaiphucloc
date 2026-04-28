@@ -7,14 +7,20 @@ import { ExpirationPlugin } from 'workbox-expiration'
 
 declare const self: ServiceWorkerGlobalScope
 
-// Precache manifest injected by workbox via vite-plugin-pwa injectManifest
-precacheAndRoute(self.__WB_MANIFEST)
+const manifest = self.__WB_MANIFEST ?? []
+precacheAndRoute(manifest)
 cleanupOutdatedCaches()
 
-// Navigation fallback (SPA)
-registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html')))
+if (manifest.length > 0) {
+  registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html')))
+} else {
+  self.addEventListener('fetch', (event) => {
+    if (event.request.mode === 'navigate') {
+      event.respondWith(fetch(event.request))
+    }
+  })
+}
 
-// API caching — NetworkFirst with expiration
 registerRoute(
   /^\/api\/.*/i,
   new NetworkFirst({

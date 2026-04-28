@@ -21,7 +21,7 @@ export function KPIBadge({ value, label, variant = 'neutral', size = 'md' }: KPI
   return (
     <span className={cn(
       'inline-flex items-center gap-1 rounded-full font-semibold',
-      size === 'sm' ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs',
+      size === 'sm' ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-1 text-xs',
       VARIANT_STYLES[variant],
     )}>
       {value}

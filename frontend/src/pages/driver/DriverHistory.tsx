@@ -102,7 +102,7 @@ export function DriverHistory() {
                         {wo.workOrderNumber}
                       </p>
                       <span
-                        className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                        className="text-xs font-bold px-1.5 py-0.5 rounded"
                         style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
                       >
                         {wo.workType}
@@ -125,11 +125,11 @@ export function DriverHistory() {
                       style={{ background: s.bg }}
                     >
                       <StatusIcon className="w-3 h-3" style={{ color: s.color }} />
-                      <span className="text-[10px] font-semibold" style={{ color: s.color }}>{s.label}</span>
+                      <span className="text-xs font-semibold" style={{ color: s.color }}>{s.label}</span>
                     </div>
                   )}
                 </div>
-                <p className="text-[10px] mt-2" style={{ color: 'var(--theme-text-muted)' }}>
+                <p className="text-xs mt-2" style={{ color: 'var(--theme-text-muted)' }}>
                   {new Date(wo.createdAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>

@@ -1,4 +1,6 @@
 import { Bell, CheckCircle, Wallet, UserPlus } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { apiClient } from '@/services/api'
 
 interface Notification {
   id: string
@@ -9,41 +11,6 @@ interface Notification {
   read: boolean
 }
 
-const mockNotifications: Notification[] = [
-  {
-    id: 'N-001',
-    type: 'work_order',
-    title: 'Số công đã đối soát',
-    message: 'Số công CONG-284731 đã được kế toán xác nhận thành công.',
-    time: '10 phút trước',
-    read: false,
-  },
-  {
-    id: 'N-002',
-    type: 'salary',
-    title: 'Lương tháng 4 đã tính',
-    message: 'Kế toán đã tính lương kỳ 01/04 - 30/04. Vui lòng kiểm tra.',
-    time: '2 giờ trước',
-    read: false,
-  },
-  {
-    id: 'N-003',
-    type: 'work_order',
-    title: 'Số công cần kiểm tra',
-    message: 'Số công CONG-664501 bị tranh chấp. Vui lòng liên hệ kế toán.',
-    time: '1 ngày trước',
-    read: true,
-  },
-  {
-    id: 'N-004',
-    type: 'account',
-    title: 'Tài khoản được tạo',
-    message: 'Tài khoản lái xe của bạn đã được tạo thành công bởi quản trị viên.',
-    time: '3 ngày trước',
-    read: true,
-  },
-]
-
 const TYPE_CONFIG = {
   work_order: { icon: CheckCircle, color: 'var(--theme-status-success)', bg: 'var(--theme-status-success-light)' },
   salary: { icon: Wallet, color: 'var(--theme-status-warning)', bg: 'var(--theme-status-warning-light)' },
@@ -51,7 +18,15 @@ const TYPE_CONFIG = {
 }
 
 export function DriverNotifications() {
-  const unreadCount = mockNotifications.filter(n => !n.read).length
+  const [notifications, setNotifications] = useState<Notification[]>([])
+
+  useEffect(() => {
+    apiClient.getNotifications().then(res => {
+      if (res.success) setNotifications(res.data)
+    }).catch(() => {})
+  }, [])
+
+  const unreadCount = notifications.filter(n => !n.read).length
 
   return (
     <div className="pb-6">
@@ -70,14 +45,14 @@ export function DriverNotifications() {
           )}
         </div>
 
-        {mockNotifications.length === 0 ? (
+        {notifications.length === 0 ? (
           <div className="rounded-2xl p-8 text-center" style={{ background: 'var(--theme-bg-secondary)' }}>
             <Bell className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--theme-text-muted)' }} />
             <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không có thông báo</p>
           </div>
         ) : (
           <div className="space-y-2">
-            {mockNotifications.map(n => {
+            {notifications.map(n => {
               const cfg = TYPE_CONFIG[n.type]
               const NIcon = cfg.icon
               return (

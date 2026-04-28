@@ -213,7 +213,7 @@ export function CreateWorkOrder() {
                     background: 'var(--theme-brand-primary-light)',
                   }}
                 >
-                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-brand-primary)', opacity: 0.7 }}>
+                  <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--theme-brand-primary)', opacity: 0.7 }}>
                     Căn số cont vào khung
                   </span>
                 </div>
@@ -232,7 +232,7 @@ export function CreateWorkOrder() {
                 {cont.photoTaken && (
                   <button
                     onClick={openScanner(idx)}
-                    className="flex items-center gap-1 text-[10px] font-medium touch-manipulation"
+                    className="flex items-center gap-1 text-xs font-medium touch-manipulation"
                     style={{ color: 'var(--theme-text-muted)' }}
                   >
                     <RotateCcw className="w-3 h-3" /> Chụp lại
@@ -250,7 +250,7 @@ export function CreateWorkOrder() {
                 }}
                 placeholder="VD: MSKU-1234567"
               />
-              <p className="text-[10px] flex items-center gap-1" style={{ color: 'var(--theme-text-muted)' }}>
+              <p className="text-xs flex items-center gap-1" style={{ color: 'var(--theme-text-muted)' }}>
                 <AlertCircle className="w-3 h-3" />
                 {isOnline ? 'Sửa nếu PM nhận diện sai' : 'Nhập số cont thủ công'}
               </p>

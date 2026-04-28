@@ -104,7 +104,7 @@ export function Sidebar({ items, title, basePath }: SidebarProps) {
         </button>
         <button
           onClick={() => setShowLogoutConfirm(true)}
-          className="w-full flex items-center gap-3 px-4 py-2 rounded-[var(--theme-radius-md)] text-[13px] transition-all duration-150 hover:text-red-400"
+          className="w-full flex items-center gap-3 px-4 py-2 rounded-[var(--theme-radius-md)] text-sm transition-all duration-150 hover:text-red-400"
           style={{ color: 'var(--theme-sidebar-text-muted)' }}
         >
           <LogOut size={16} />
