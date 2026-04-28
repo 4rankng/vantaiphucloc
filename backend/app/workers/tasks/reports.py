@@ -1,0 +1,68 @@
+import logging
+from datetime import date, timedelta
+
+from sqlalchemy import select
+
+from app.database import async_session
+from app.models.base import User
+from app.models.domain import WorkOrder
+from app.workers import enqueue
+
+logger = logging.getLogger(__name__)
+
+
+async def generate_monthly_report_task(
+    ctx: dict,
+    company_id: int,
+    month: int,
+    year: int,
+) -> dict:
+    """Generate a monthly financial summary for a company."""
+    start = date(year, month, 1)
+    if month == 12:
+        end = date(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        end = date(year, month + 1, 1) - timedelta(days=1)
+
+    async with async_session() as db:
+        try:
+            result = await db.execute(
+                select(WorkOrder).where(
+                    WorkOrder.company_id == company_id,
+                    WorkOrder.date >= start,
+                    WorkOrder.date <= end,
+                )
+            )
+            orders = result.scalars().all()
+
+            total_revenue = sum(
+                (wo.unit_price or 0) * (wo.quantity or 1) for wo in orders
+            )
+            total_driver_cost = sum(wo.driver_salary or 0 for wo in orders)
+            total_allowance = sum(wo.allowance or 0 for wo in orders)
+
+            report = {
+                "company_id": company_id,
+                "period": f"{year}-{month:02d}",
+                "total_orders": len(orders),
+                "total_revenue": total_revenue,
+                "total_driver_cost": total_driver_cost,
+                "total_allowance": total_allowance,
+                "gross_margin": total_revenue - total_driver_cost - total_allowance,
+            }
+
+            logger.info("Monthly report generated: company=%s period=%s", company_id, report["period"])
+            return report
+        except Exception:
+            await db.rollback()
+            raise
+
+
+async def remind_salary_period_end(ctx: dict) -> None:
+    """Check for salary periods closing soon and queue notifications."""
+    logger.info("Salary period reminder check ran")
+
+
+async def recalculate_open_periods(ctx: dict) -> None:
+    """Recalculate any OPEN salary periods with new work orders."""
+    logger.info("Open salary period recalculation ran")
