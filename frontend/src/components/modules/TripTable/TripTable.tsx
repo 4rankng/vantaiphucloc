@@ -1,6 +1,6 @@
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { GlassCard } from '@/components/shared/GlassCard'
-import { getJobStatusBadge, type JobStatus, formatCurrencyShort } from '@/data/mockData'
+import { getJobStatusBadge, type JobStatus, formatCurrencyShort } from '@/data/domain'
 import { tripStatusVariant } from '@/lib/statusMaps'
 import { Button } from '@/components/ui/Button'
 import type { TripData } from '../TripCard'

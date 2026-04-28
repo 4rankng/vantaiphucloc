@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button/Button'
 import { Input } from '@/components/ui/Input/Input'
 import { Label } from '@/components/ui/Label/Label'
 import { apiClient } from '@/services/api'
-import { WORK_TYPES, type Client, type Driver, type WorkType } from '@/data/mockData'
+import { WORK_TYPES, type Client, type Driver, type WorkType } from '@/data/domain'
 import { SheetPicker } from '@/components/shared/SheetPicker'
 import { Plus, Trash2 } from 'lucide-react'
 

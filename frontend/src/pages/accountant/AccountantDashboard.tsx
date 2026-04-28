@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { Plus, Building2, Route, Settings, Wallet, ChevronDown, Receipt } from 'lucide-react'
 import { useAppStore } from '@/hooks/use-app-store'
 import { apiClient } from '@/services/api'
-import { formatCurrencyFull, type WorkOrder, type Driver, type TripOrder } from '@/data/mockData'
+import { formatCurrencyFull, type WorkOrder, type Driver, type TripOrder } from '@/data/domain'
 import { ContBadge } from '@/components/shared/ContBadge'
 
 const QUICK_ACTIONS = [

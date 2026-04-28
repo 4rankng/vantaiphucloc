@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
-import type { Role } from '@/data/mockData'
+import type { Role } from '@/data/domain'
 import { api, setTokens, clearTokens } from '@/services/api/client'
 
 export interface UserInfo {

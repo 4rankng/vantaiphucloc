@@ -8,7 +8,7 @@ import { apiClient } from '@/services/api'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { useToast } from '@/components/atoms/Toast'
 import { useOffline } from '@/contexts/OfflineContext'
-import { WORK_TYPES, type Client, type RoutePrice, type WorkType, type ContainerItem } from '@/data/mockData'
+import { WORK_TYPES, type Client, type RoutePrice, type WorkType, type ContainerItem } from '@/data/domain'
 
 interface ContainerForm {
   containerNumber: string

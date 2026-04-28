@@ -1,6 +1,6 @@
 import { CheckCircle, Clock, CircleDollarSign } from 'lucide-react'
 import { ContBadge } from '@/components/shared/ContBadge'
-import { formatCurrencyFull, type WorkOrder } from '@/data/mockData'
+import { formatCurrencyFull, type WorkOrder } from '@/data/domain'
 
 const STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle; color: string; bg: string }> = {
   PENDING:  { label: 'Chờ đối soát', icon: Clock,       color: 'var(--theme-status-warning)', bg: 'var(--theme-status-warning-light)' },

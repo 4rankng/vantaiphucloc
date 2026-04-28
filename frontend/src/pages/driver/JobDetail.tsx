@@ -4,7 +4,7 @@ import { useDriverStore } from '@/hooks/use-driver-store'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { apiClient } from '@/services/api'
-import { formatCurrencyFull, type WorkOrder } from '@/data/mockData'
+import { formatCurrencyFull, type WorkOrder } from '@/data/domain'
 
 export function JobDetail() {
   const { currentPath, goBack } = useDriverStore()

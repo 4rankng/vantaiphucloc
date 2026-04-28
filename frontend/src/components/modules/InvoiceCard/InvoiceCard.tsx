@@ -1,6 +1,6 @@
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { MobileListCard } from '@/components/shared/DataList'
-import { formatCurrencyShort } from '@/data/mockData'
+import { formatCurrencyShort } from '@/data/domain'
 import { invoiceStatusVariant, invoiceStatusLabel } from '@/lib/statusMaps'
 
 export interface InvoiceData {

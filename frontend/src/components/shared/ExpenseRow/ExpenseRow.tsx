@@ -1,4 +1,4 @@
-import { formatCurrencyShort } from '@/data/mockData'
+import { formatCurrencyShort } from '@/data/domain'
 
 export function ExpenseRow({ category, amount, isLast }: { category: string; amount: number; isLast: boolean }) {
   return (
