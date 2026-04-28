@@ -26,20 +26,6 @@ interface UserAccount {
   createdAt: string
 }
 
-// ─── Mock Users ───────────────────────────────────────────────────────────────
-
-const MOCK_USERS: UserAccount[] = [
-  { id: 'DIR-001', name: 'Trần Văn Minh', phone: '0901 234 567', role: 'director', company: 'Phúc Lộc', active: true, createdAt: '2026-01-15' },
-  { id: 'DIR-002', name: 'Nguyễn Thanh Hải', phone: '0902 345 678', role: 'director', company: 'Thanh Bình', active: true, createdAt: '2026-02-20' },
-  { id: 'DRV-001', name: 'Nguyễn Văn Hùng', phone: '0903 111 222', role: 'driver', company: 'Phúc Lộc', tractorPlate: '15C-136.31', active: true, createdAt: '2026-01-15' },
-  { id: 'DRV-002', name: 'Trần Minh Tuấn', phone: '0903 222 333', role: 'driver', company: 'Phúc Lộc', tractorPlate: '15C-139.82', active: true, createdAt: '2026-01-15' },
-  { id: 'DRV-003', name: 'Lê Hoàng Nam', phone: '0903 333 444', role: 'driver', company: 'Phúc Lộc', tractorPlate: '15C-070.63', active: true, createdAt: '2026-02-01' },
-  { id: 'DRV-004', name: 'Phạm Đức Anh', phone: '0903 444 555', role: 'driver', company: 'Thanh Bình', tractorPlate: '15C-180.99', active: true, createdAt: '2026-02-20' },
-  { id: 'DRV-005', name: 'Hoàng Văn Long', phone: '0903 555 666', role: 'driver', company: 'Thanh Bình', tractorPlate: '15C-091.45', active: false, createdAt: '2026-03-05' },
-  { id: 'ACC-001', name: 'Phạm Thị Lan', phone: '0904 111 222', role: 'accountant', company: 'Phúc Lộc', active: true, createdAt: '2026-01-15' },
-  { id: 'ACC-002', name: 'Võ Minh Tuấn', phone: '0904 222 333', role: 'accountant', company: 'Thanh Bình', active: true, createdAt: '2026-02-20' },
-]
-
 const ROLE_ICONS: Record<string, typeof Users> = {
   director: LayoutDashboard,
   driver: Truck,
@@ -75,19 +61,19 @@ function UserCard({ user, onTap }: { user: UserAccount; onTap: () => void }) {
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold truncate" style={{ color: 'var(--theme-text-primary)' }}>{user.name}</p>
           <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+            <span className="text-xs font-semibold px-1.5 py-0.5 rounded"
               style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
               {ROLE_LABELS[user.role]}
             </span>
             {user.tractorPlate && (
-              <span className="text-[11px] font-mono font-medium" style={{ color: 'var(--theme-text-muted)' }}>
+              <span className="text-xs font-mono font-medium" style={{ color: 'var(--theme-text-muted)' }}>
                 {user.tractorPlate}
               </span>
             )}
           </div>
         </div>
         {!user.active && (
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0"
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0"
             style={{ background: 'var(--theme-status-error-light)', color: 'var(--theme-status-error-text)' }}>
             Ngưng
           </span>
@@ -123,7 +109,7 @@ function UserDetailDialog({
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>{user.name}</p>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block mt-0.5"
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full inline-block mt-0.5"
               style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
               {ROLE_LABELS[user.role]}
             </span>
@@ -268,7 +254,7 @@ function SuperAdminDashboard({
             </div>
             <div className="min-w-0">
               <p className="text-lg font-bold tabular-nums leading-none" style={{ color: 'var(--theme-text-primary)' }}>{value}</p>
-              <p className="text-[10px] font-medium mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{label}</p>
+              <p className="text-xs font-medium mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{label}</p>
             </div>
           </div>
         ))}
@@ -337,10 +323,7 @@ export function SuperAdminApp() {
   const [filterRole, setFilterRole] = useState<Role | 'ALL'>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
 
-  const [users] = useState<UserAccount[]>(() => {
-    const saved = localStorage.getItem('ttransport_superadmin_users')
-    return saved ? JSON.parse(saved) : MOCK_USERS
-  })
+  const [users, setUsers] = useState<UserAccount[]>([])
 
   return (
     <div className="min-h-[100dvh]" style={{ background: 'var(--theme-bg-primary)' }}>

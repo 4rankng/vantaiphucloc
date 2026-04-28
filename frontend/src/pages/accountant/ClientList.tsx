@@ -103,7 +103,7 @@ export function ClientList() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{client.name}</p>
-                <p className="text-[11px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
                   {client.phone}{client.taxCode ? ` · MST: ${client.taxCode}` : ''}
                 </p>
               </div>

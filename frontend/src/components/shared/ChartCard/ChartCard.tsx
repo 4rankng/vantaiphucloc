@@ -26,7 +26,7 @@ export function ChartCard({ title, subtitle, actions, children, loading, classNa
         <div className="min-w-0">
           <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{title}</p>
           {subtitle && (
-            <p className="text-[11px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{subtitle}</p>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{subtitle}</p>
           )}
         </div>
         {actions && <div className="shrink-0">{actions}</div>}

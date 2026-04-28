@@ -104,7 +104,7 @@ export function RouteList() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{r.route}</p>
-                <p className="text-[11px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
                   20ft: {formatCurrencyFull(r.type20ft)} · 40ft: {formatCurrencyFull(r.type40ft)}
                 </p>
               </div>

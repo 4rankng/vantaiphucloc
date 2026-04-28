@@ -39,7 +39,7 @@ export function Profile() {
             <UserCircle className="w-7 h-7" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[16px] font-bold" style={{ color: 'var(--theme-text-primary)' }}>{driver.name}</p>
+            <p className="text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>{driver.name}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <Phone className="w-3 h-3" style={{ color: 'var(--theme-text-muted)' }} />
               <span className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>{driver.phone}</span>
@@ -50,7 +50,7 @@ export function Profile() {
             </div>
           </div>
           <span
-            className="text-[10px] font-semibold px-2 py-1 rounded-full shrink-0"
+            className="text-xs font-semibold px-2 py-1 rounded-full shrink-0"
             style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
           >
             Tài xế
