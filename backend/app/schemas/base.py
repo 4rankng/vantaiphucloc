@@ -38,7 +38,7 @@ class UserOut(BaseModel):
     username: str
     role: str
     company_id: int | None
-    company_name: str | None = None
+    vendor: str | None = None
     tractor_plate: str | None = None
     is_active: bool
     created_at: datetime | None

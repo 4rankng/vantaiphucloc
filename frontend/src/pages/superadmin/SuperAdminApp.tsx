@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { api } from '@/services/api/client'
 import { AppTopBar } from '@/components/shared/AppTopBar'
 import { UserDropdown } from '@/components/shared/ProfileDialog'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { InfoRow } from '@/components/shared/InfoRow'
-import { UserCircle, Plus, Trash2, Pencil, Users, Truck, CircleDollarSign, LayoutDashboard, Search } from 'lucide-react'
+import { Users, Plus, Truck, CircleDollarSign, LayoutDashboard, Search } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
@@ -15,19 +14,18 @@ import { FilterPills } from '@/components/shared/FilterPills'
 import type { Role } from '@/data/domain'
 import { ROLE_LABELS } from '@/data/domain'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-interface Company {
-  id: number
-  name: string
-}
+const PHUC_LOC = 'Phúc Lộc'
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface UserAccount {
   id: string
   name: string
   phone: string
   role: Role
-  company: string
+  vendor: string
   tractorPlate?: string
   active: boolean
   createdAt: string
@@ -72,6 +70,11 @@ function UserCard({ user, onTap }: { user: UserAccount; onTap: () => void }) {
               style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
               {ROLE_LABELS[user.role]}
             </span>
+            {user.role === 'driver' && user.vendor !== PHUC_LOC && (
+              <span className="text-xs font-medium" style={{ color: 'var(--theme-text-muted)' }}>
+                {user.vendor}
+              </span>
+            )}
             {user.tractorPlate && (
               <span className="text-xs font-mono font-medium" style={{ color: 'var(--theme-text-muted)' }}>
                 {user.tractorPlate}
@@ -124,7 +127,7 @@ function UserDetailDialog({
         </div>
 
         <div className="space-y-0">
-          <InfoRow icon={Users} label="Công ty" value={user.company} noBorder />
+          <InfoRow icon={Users} label={user.role === 'driver' ? 'Nhà thầu' : 'Công ty'} value={user.vendor} noBorder />
           {user.tractorPlate && <InfoRow icon={Truck} label="Biển số đầu kéo" value={user.tractorPlate} noBorder />}
         </div>
 
@@ -149,30 +152,24 @@ function CreateUserDialog({
   open: boolean
   onClose: () => void
 }) {
-  const [form, setForm] = useState({ name: '', phone: '', role: 'driver' as Role, companyId: '', password: '', tractorPlate: '' })
-  const [companies, setCompanies] = useState<Company[]>([])
-
-  // Load companies on mount
-  useEffect(() => {
-    api.get('/companies').then(res => {
-      setCompanies(res.data)
-      // Default to first company (Phúc Lộc)
-      if (res.data.length > 0 && !form.companyId) {
-        setForm(f => ({ ...f, companyId: String(res.data[0].id) }))
-      }
-    }).catch(() => {})
-  }, [])
+  const [form, setForm] = useState({
+    name: '',
+    phone: '',
+    role: 'driver' as Role,
+    vendor: PHUC_LOC,
+    password: '',
+    tractorPlate: '',
+  })
 
   const handleSubmit = () => {
-    if (!form.name.trim() || !form.phone.trim() || !form.companyId || !form.password.trim()) return
+    if (!form.name.trim() || !form.phone.trim() || !form.password.trim()) return
     // In real app: call API
     onClose()
-    setForm({ name: '', phone: '', role: 'driver', companyId: companies.length > 0 ? String(companies[0].id) : '', password: '', tractorPlate: '' })
+    setForm({ name: '', phone: '', role: 'driver', vendor: PHUC_LOC, password: '', tractorPlate: '' })
   }
 
-  // For director/accountant, lock company to Phúc Lộc (first company)
+  // Internal staff (director, accountant) are always Phúc Lộc
   const isInternalRole = form.role === 'director' || form.role === 'accountant'
-  const selectedCompanyName = companies.find(c => String(c.id) === form.companyId)?.name ?? ''
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -196,34 +193,30 @@ function CreateUserDialog({
               value={form.role}
               onChange={v => {
                 const newRole = v as Role
-                // When switching to internal role, force Phúc Lộc company
-                const isInternal = newRole === 'director' || newRole === 'accountant'
                 setForm(f => ({
                   ...f,
                   role: newRole,
-                  companyId: isInternal && companies.length > 0 ? String(companies[0].id) : f.companyId,
+                  // Internal roles are always Phúc Lộc
+                  vendor: (newRole === 'director' || newRole === 'accountant') ? PHUC_LOC : f.vendor,
                 }))
               }}
               placeholder="Chọn vai trò"
             />
           </div>
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Công ty</Label>
-            {isInternalRole ? (
-              <div className="h-10 rounded-xl px-3 flex items-center text-sm font-medium"
-                style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', color: 'var(--theme-text-primary)' }}>
-                {companies[0]?.name ?? 'Phúc Lộc'}
-                <span className="ml-2 text-xs" style={{ color: 'var(--theme-text-muted)' }}>(cố định)</span>
-              </div>
-            ) : (
-              <InlineSelect
-                options={companies.map(c => ({ value: String(c.id), label: c.name }))}
-                value={form.companyId}
-                onChange={v => setForm(f => ({ ...f, companyId: v as string }))}
-                placeholder="Chọn công ty"
+          {form.role === 'driver' && (
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Nhà thầu</Label>
+              <Input
+                value={form.vendor}
+                onChange={e => setForm(f => ({ ...f, vendor: e.target.value }))}
+                placeholder={PHUC_LOC}
+                className="text-sm"
               />
-            )}
-          </div>
+              <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                Mặc định "Phúc Lộc". Đổi thành tên nhà thầu nếu tài xế thuê ngoài.
+              </p>
+            </div>
+          )}
           {form.role === 'driver' && (
             <div className="space-y-2">
               <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Biển số đầu kéo</Label>
@@ -238,7 +231,7 @@ function CreateUserDialog({
         <DialogFooter>
           <Button variant="outline" onClick={onClose} className="flex-1">Huỷ</Button>
           <Button onClick={handleSubmit}
-            disabled={!form.name.trim() || !form.phone.trim() || !form.companyId || !form.password.trim()}
+            disabled={!form.name.trim() || !form.phone.trim() || !form.password.trim()}
             className="flex-1"
             style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
             Xác nhận
@@ -277,7 +270,7 @@ function SuperAdminDashboard({
     const searchOk = !searchQuery.trim() ||
       u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.phone.includes(searchQuery) ||
-      u.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.vendor.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (u.tractorPlate ?? '').toLowerCase().includes(searchQuery.toLowerCase())
     return roleOk && searchOk
   })
@@ -313,7 +306,7 @@ function SuperAdminDashboard({
           <input
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Tìm tên, SĐT, công ty, biển số..."
+            placeholder="Tìm tên, SĐT, nhà thầu, biển số..."
             className="w-full h-10 rounded-xl pl-9 pr-3 text-sm"
             style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
           />

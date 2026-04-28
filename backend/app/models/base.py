@@ -12,10 +12,14 @@ class User(Base):
     Application user / system account.
 
     Valid roles:
-        superadmin  – full system access
-        director    – read-only dashboards and reports
-        accountant  – manages trips, pricing, reconciliation, salary
-        driver      – submits work orders
+        superadmin  – full system access (Phúc Lộc)
+        director    – read-only dashboards and reports (Phúc Lộc)
+        accountant  – manages trips, pricing, reconciliation, salary (Phúc Lộc)
+        driver      – submits work orders (Phúc Lộc or vendor)
+
+    This app belongs to Phúc Lộc. Internal staff (superadmin, director, accountant)
+    are always Phúc Lộc. Drivers may belong to Phúc Lộc or an external vendor;
+    the 'vendor' field stores that label.
     """
 
     __tablename__ = "users"
@@ -34,8 +38,11 @@ class User(Base):
     # superadmin | director | accountant | driver
     role = Column(String(20), default="driver", nullable=False)
 
-    # Multi-tenancy: every user belongs to a company
+    # Company this user belongs to for data isolation (always Phúc Lộc for staff)
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=True, index=True)
+
+    # For drivers: which vendor/company they come from. "Phúc Lộc" = internal driver.
+    vendor = Column(String(255), nullable=True, index=True)
 
     is_active = Column(Boolean, default=True, nullable=False)
 

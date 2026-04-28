@@ -5,13 +5,14 @@ from sqlalchemy import select
 
 from app.database import get_db
 from app.models.base import User
-from app.models.domain import Company
 from app.schemas.domain import DriverCreate, DriverOut
 from app.core.deps import get_current_user, require_roles
 from app.core.security import hash_password
 from app.core.redis import get_redis
 from app.core.cache import CacheManager
 from app.config import settings
+
+PHUC_LOC = "Phúc Lộc"
 
 router = APIRouter()
 
@@ -34,22 +35,13 @@ async def list_drivers(
         ).order_by(User.username.asc())
     )
     drivers = result.scalars().all()
-
-    # Resolve company names
-    company_ids = {d.company_id for d in drivers if d.company_id}
-    companies: dict[int, str] = {}
-    if company_ids:
-        co_result = await db.execute(select(Company).where(Company.id.in_(company_ids)))
-        companies = {c.id: c.name for c in co_result.scalars().all()}
-
     data = [
         DriverOut(
             id=d.id,
             username=d.username,
             phone=d.phone,
             tractor_plate=d.tractor_plate,
-            company_id=d.company_id,
-            company_name=companies.get(d.company_id) if d.company_id else None,
+            vendor=d.vendor or PHUC_LOC,
             created_at=d.created_at,
             updated_at=d.updated_at,
         )
@@ -67,36 +59,19 @@ async def create_driver(
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
-    # Default to Phúc Lộc company if not specified
-    company_id = body.company_id
-    if company_id is None:
-        # Find the first company (Phúc Lộc should be the first/only one)
-        co_result = await db.execute(select(Company).order_by(Company.id.asc()).limit(1))
-        default_company = co_result.scalar_one_or_none()
-        if default_company:
-            company_id = default_company.id
-
     driver = User(
         phone=body.phone,
         username=body.username,
         hashed_password=hash_password(body.phone),
         role="driver",
-        company_id=company_id,
+        company_id=current_user.company_id,
+        vendor=body.vendor or PHUC_LOC,
         is_active=True,
         tractor_plate=body.tractor_plate,
     )
     db.add(driver)
     await db.commit()
     await db.refresh(driver)
-
-    # Resolve company name for response
-    company_name: str | None = None
-    if driver.company_id:
-        co_result = await db.execute(select(Company).where(Company.id == driver.company_id))
-        co = co_result.scalar_one_or_none()
-        if co:
-            company_name = co.name
-
     await CacheManager(redis).invalidate_namespace("drivers", current_user.company_id)
 
     return DriverOut(
@@ -104,8 +79,7 @@ async def create_driver(
         username=driver.username,
         phone=driver.phone,
         tractor_plate=driver.tractor_plate,
-        company_id=driver.company_id,
-        company_name=company_name,
+        vendor=driver.vendor or PHUC_LOC,
         created_at=driver.created_at,
         updated_at=driver.updated_at,
     )

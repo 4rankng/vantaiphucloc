@@ -4,7 +4,6 @@ from sqlalchemy import select
 
 from app.database import get_db
 from app.models.base import User
-from app.models.domain import Company
 from app.schemas.base import (
     LoginRequest, LoginResponse, RefreshTokenRequest, MessageResponse, UserOut,
 )
@@ -62,19 +61,8 @@ async def login(
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token({"id": user.id})
 
-    # Resolve company name
-    company_name: str | None = None
-    if user.company_id:
-        co_result = await db.execute(select(Company).where(Company.id == user.company_id))
-        co = co_result.scalar_one_or_none()
-        if co:
-            company_name = co.name
-
-    user_out = UserOut.model_validate(user)
-    user_out.company_name = company_name
-
     return LoginResponse(
-        user=user_out,
+        user=UserOut.model_validate(user),
         access_token=access_token,
         refresh_token=refresh_token,
         token_type="Bearer",
@@ -107,19 +95,8 @@ async def refresh_token(body: RefreshTokenRequest, db: AsyncSession = Depends(ge
     new_access = create_access_token(token_data)
     new_refresh = create_refresh_token({"id": user.id})
 
-    # Resolve company name
-    company_name: str | None = None
-    if user.company_id:
-        co_result = await db.execute(select(Company).where(Company.id == user.company_id))
-        co = co_result.scalar_one_or_none()
-        if co:
-            company_name = co.name
-
-    user_out = UserOut.model_validate(user)
-    user_out.company_name = company_name
-
     return LoginResponse(
-        user=user_out,
+        user=UserOut.model_validate(user),
         access_token=new_access,
         refresh_token=new_refresh,
         token_type="Bearer",
