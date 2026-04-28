@@ -7,7 +7,7 @@ export function DirectorNotifications() {
 
   useEffect(() => {
     apiClient.getNotifications().then(res => {
-      if (res.success) setNotifications(res.data)
+      if (res.success) setNotifications(res.data as AppNotification[])
     }).catch(() => {})
   }, [])
 
