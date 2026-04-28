@@ -265,3 +265,27 @@ export async function syncUploads(): Promise<{ synced: number; failed: number }>
 
   return { synced, failed }
 }
+
+// ─── Cleanup ────────────────────────────────────────
+
+/** Remove uploads older than maxAgeMs whose queue entry no longer exists. */
+export async function cleanupOrphanUploads(maxAgeMs: number = 24 * 60 * 60 * 1000): Promise<number> {
+  const db = await getDB()
+  const cutoff = Date.now() - maxAgeMs
+  const queue = await getQueue()
+  const activeTripIds = new Set(queue.map(a => (a.body as Record<string, unknown>)?.tripId as string | undefined).filter(Boolean))
+
+  const tx = db.transaction('uploads', 'readwrite')
+  let cursor = await tx.store.openCursor()
+  let removed = 0
+  while (cursor) {
+    const u = cursor.value as PendingUpload
+    if (u.createdAt < cutoff && !activeTripIds.has(u.tripId)) {
+      await cursor.delete()
+      removed++
+    }
+    cursor = await cursor.continue()
+  }
+  await tx.done
+  return removed
+}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Camera, RotateCcw, Plus, Trash2, AlertCircle } from 'lucide-react'
+import { Camera, RotateCcw, Plus, Trash2, AlertCircle, WifiOff } from 'lucide-react'
 import { Button } from '@/components/ui/Button/Button'
 import { SheetPicker } from '@/components/shared/SheetPicker'
 import { ContainerScanner } from '@/components/shared/ContainerScanner'
@@ -7,15 +7,8 @@ import type { PhotoMeta } from '@/components/shared/ContainerScanner'
 import { apiClient } from '@/services/api'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { useToast } from '@/components/atoms/Toast'
+import { useOffline } from '@/contexts/OfflineContext'
 import { WORK_TYPES, type Client, type RoutePrice, type WorkType, type ContainerItem } from '@/data/mockData'
-
-// ─── Generate fake ISO 6346 cont number ───────────────────────────────────────
-function generateContainerNumber(): string {
-  const prefixes = ['MSKU', 'TCNU', 'HLCU', 'CSLU', 'TEMU', 'BMOU', 'TRHU', 'FCIU']
-  const prefix = prefixes[Math.floor(Math.random() * prefixes.length)]
-  const num = String(Math.floor(Math.random() * 9000000) + 1000000)
-  return `${prefix}-${num}`
-}
 
 interface ContainerForm {
   containerNumber: string
@@ -32,6 +25,7 @@ const EMPTY_CONT: ContainerForm = { containerNumber: '', workType: 'E20', photoT
 export function CreateWorkOrder() {
   const { driver, navigate } = useDriverStore()
   const toast = useToast()
+  const { isOnline } = useOffline()
   const [clients, setClients] = useState<Client[]>([])
   const [routes, setRoutes] = useState<RoutePrice[]>([])
 
@@ -67,7 +61,7 @@ export function CreateWorkOrder() {
   const handleScanComplete = useCallback((imageSrc: string, meta: PhotoMeta) => {
     setContainers(prev => prev.map((c, i) =>
       i === activeContIdx
-        ? { ...c, photoTaken: true, photoDataUrl: imageSrc, containerNumber: c.containerNumber || generateContainerNumber(), photoLat: meta.lat, photoLng: meta.lng, photoTimestamp: meta.timestamp }
+        ? { ...c, photoTaken: true, photoDataUrl: imageSrc, photoLat: meta.lat, photoLng: meta.lng, photoTimestamp: meta.timestamp }
         : c,
     ))
     setScannerOpen(false)
@@ -112,7 +106,7 @@ export function CreateWorkOrder() {
         )
       })
 
-      await apiClient.createWorkOrder({
+      const res = await apiClient.createWorkOrder({
         containers: containerItems,
         clientId,
         clientName: client?.name ?? '',
@@ -125,18 +119,35 @@ export function CreateWorkOrder() {
       })
 
       navigate('/driver')
-      toast.success('Gửi chuyến thành công')
+      if (!isOnline || (res.data as Record<string, unknown>)?.pendingSync) {
+        toast.success('Đã lưu offline', 'Sẽ đồng bộ khi có mạng')
+      } else {
+        toast.success('Gửi chuyến thành công')
+      }
     } catch (err) {
       console.error('Submit failed:', err)
       toast.error('Gửi thất bại', 'Vui lòng thử lại')
       setSubmitting(false)
     }
-  }, [containers, clientId, route, clients, driver, navigate])
+  }, [containers, clientId, route, clients, driver, navigate, isOnline, toast])
 
   const canSubmit = containers.every(c => c.containerNumber.trim()) && clientId && route
 
   return (
     <div className="space-y-4 pb-6">
+      {/* Offline hint */}
+      {!isOnline && (
+        <div
+          className="flex items-center gap-2 rounded-xl px-3 py-2"
+          style={{ background: 'var(--theme-status-warning-light)', border: '1px solid var(--theme-status-warning)' }}
+        >
+          <WifiOff className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-status-warning)' }} />
+          <span className="text-xs font-medium" style={{ color: 'var(--theme-status-warning)' }}>
+            Không có mạng — nhập số cont thủ công
+          </span>
+        </div>
+      )}
+
       {/* Scanner overlay */}
       {scannerOpen && (
         <ContainerScanner
@@ -169,7 +180,6 @@ export function CreateWorkOrder() {
               )}
             </div>
 
-            {/* Camera trigger */}
             {/* Photo preview or camera trigger */}
             {cont.photoTaken && cont.photoDataUrl ? (
               <button
@@ -242,7 +252,7 @@ export function CreateWorkOrder() {
               />
               <p className="text-[10px] flex items-center gap-1" style={{ color: 'var(--theme-text-muted)' }}>
                 <AlertCircle className="w-3 h-3" />
-                Sửa nếu PM nhận diện sai
+                {isOnline ? 'Sửa nếu PM nhận diện sai' : 'Nhập số cont thủ công'}
               </p>
             </div>
 
@@ -315,7 +325,7 @@ export function CreateWorkOrder() {
         className="w-full h-12 font-bold text-base rounded-2xl"
         style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
       >
-        {submitting ? 'Đang gửi...' : 'Gửi chuyến'}
+        {submitting ? 'Đang gửi...' : isOnline ? 'Gửi chuyến' : 'Lưu offline'}
       </Button>
     </div>
   )
