@@ -13,6 +13,7 @@ from app.api.v1.salary import router as salary_router
 from app.api.v1.salary_config import router as salary_config_router
 from app.api.v1.drivers import router as drivers_router
 from app.api.v1.push import router as push_router
+from app.config import settings
 from app.core.deps import get_current_user, get_worker_pool
 from app.models.base import User
 from app.schemas.domain import JobStatusResponse
@@ -35,6 +36,16 @@ router.include_router(push_router)
 @router.get("/health")
 async def health_check():
     return {"status": "ok", "service": "vantaihanghoa"}
+
+
+@router.get("/version")
+async def get_version():
+    """Public endpoint — no auth required.
+    Frontend checks this to detect when a force-update is needed."""
+    return {
+        "version": settings.APP_VERSION,
+        "minimum_version": settings.MINIMUM_VERSION,
+    }
 
 
 @router.get("/health/worker")
