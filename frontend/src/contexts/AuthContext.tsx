@@ -7,7 +7,6 @@ export interface UserInfo {
   name: string
   role: Role
   companyId?: number
-  companyName?: string
 }
 
 interface AuthContextType {
@@ -28,7 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await api.post('/auth/login', { username, password })
       const { access_token, refresh_token } = res.data
-      const { id, username: name, role, company_id, company_name } = res.data.user
+      const { id, username: name, role, company_id } = res.data.user
 
       setTokens(access_token, refresh_token)
 
@@ -37,7 +36,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name,
         role,
         companyId: company_id ?? undefined,
-        companyName: company_name ?? undefined,
       }
       localStorage.setItem('ttransport_user', JSON.stringify(u))
       setUser(u)
