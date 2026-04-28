@@ -1,10 +1,10 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from datetime import datetime
 
 
 # Auth
 class LoginRequest(BaseModel):
-    username: str
+    phone: str
     password: str
 
 
@@ -16,10 +16,10 @@ class TokenResponse(BaseModel):
 
 class UserOut(BaseModel):
     id: int
-    username: str
-    email: str | None
-    fullname: str | None
+    phone: str
+    username: str          # display name / full name
     role: str
+    company_id: int | None
     is_active: bool
     created_at: datetime | None
 
@@ -36,16 +36,19 @@ class LoginResponse(BaseModel):
 
 # User CRUD
 class UserCreate(BaseModel):
-    username: str
-    email: EmailStr | None = None
-    fullname: str | None = None
+    phone: str
+    username: str          # display name / full name
     password: str
-    role: str = "user"
+    role: str = "driver"   # superadmin | director | accountant | driver
+    company_id: int | None = None
 
 
 class UserUpdate(BaseModel):
-    email: EmailStr | None = None
-    fullname: str | None = None
+    phone: str | None = None
+    username: str | None = None
+    role: str | None = None
+    company_id: int | None = None
+    is_active: bool | None = None
 
 
 class ChangePassword(BaseModel):
