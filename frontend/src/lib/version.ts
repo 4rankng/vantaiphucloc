@@ -2,11 +2,14 @@
  * Version checking for backend-driven force updates.
  *
  * The frontend bakes its own version at build time (__APP_VERSION__).
- * On load + every 5 minutes, it calls GET /api/v1/version (public, no auth)
+ * On session start it calls GET /api/v1/version (public, no auth)
  * to compare against the backend's APP_VERSION and MINIMUM_VERSION.
  *
  * - hard-update: frontend version < MINIMUM_VERSION → nuke caches, reload
  * - soft-update: frontend version < APP_VERSION   → tell SW to skipWaiting
+ *
+ * IMPORTANT: If the backend is unreachable, checkVersion() returns 'up-to-date'
+ * so the app renders immediately. Drivers must be able to use the app offline.
  */
 
 declare const __APP_VERSION__: string
@@ -40,11 +43,19 @@ function compareVersions(a: string, b: string): number {
 
 /**
  * Call the backend version endpoint and determine update status.
- * Works without authentication.
+ * Works without authentication. Returns 'up-to-date' on any error
+ * (network offline, timeout, backend down) so the app never blocks.
  */
 export async function checkVersion(): Promise<VersionStatus> {
   try {
-    const res = await fetch('/api/v1/version')
+    // Short timeout — don't let a slow/dead backend block the app.
+    // Drivers need the app to work offline.
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 5000)
+
+    const res = await fetch('/api/v1/version', { signal: controller.signal })
+    clearTimeout(timeoutId)
+
     if (!res.ok) return 'up-to-date'
 
     const data: VersionResponse = await res.json()
@@ -57,7 +68,7 @@ export async function checkVersion(): Promise<VersionStatus> {
     }
     return 'up-to-date'
   } catch {
-    // Network error — can't check, assume up-to-date
+    // Network error, timeout, abort — assume up-to-date, never block
     return 'up-to-date'
   }
 }
