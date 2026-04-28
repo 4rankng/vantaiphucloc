@@ -1,9 +1,11 @@
+import { useEffect, useState } from 'react'
 import { ThemeProvider } from '@/themes'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { ErrorBoundaryProvider } from '@/contexts/ErrorContext'
 import { OfflineProvider } from '@/contexts/OfflineContext'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { OfflineIndicator } from '@/components/shared/OfflineIndicator'
+import { ForceUpdateOverlay } from '@/components/shared/ForceUpdateOverlay'
 import { ToastProvider } from '@/components/atoms/Toast'
 import { Login } from '@/pages/Login'
 import { DriverStoreProvider, useDriverStore } from '@/hooks/use-driver-store'
@@ -16,6 +18,9 @@ import { DriverNotifications } from '@/pages/driver/DriverNotifications'
 import { DirectorApp } from '@/pages/director/DirectorApp'
 import { AccountantApp } from '@/pages/accountant/AccountantApp'
 import { SuperAdminApp } from '@/pages/superadmin/SuperAdminApp'
+import { checkVersion, forceUpdate, requestSoftUpdate } from '@/lib/version'
+
+const VERSION_CHECK_INTERVAL = 5 * 60 * 1000 // 5 minutes
 
 function DriverRouter() {
   const { currentPath } = useDriverStore()
@@ -51,20 +56,75 @@ function AppContent() {
   }
 }
 
+/**
+ * Runs the version check loop. Lives outside auth so it works
+ * even when the user isn't logged in.
+ */
+function VersionChecker({ children }: { children: React.ReactNode }) {
+  const [forceUpdating, setForceUpdating] = useState(false)
+
+  useEffect(() => {
+    let mounted = true
+
+    const doCheck = async () => {
+      const status = await checkVersion()
+
+      if (!mounted) return
+
+      if (status === 'hard-update') {
+        setForceUpdating(true)
+        await forceUpdate()
+      } else if (status === 'soft-update') {
+        requestSoftUpdate()
+      }
+    }
+
+    doCheck()
+    const interval = setInterval(doCheck, VERSION_CHECK_INTERVAL)
+
+    return () => {
+      mounted = false
+      clearInterval(interval)
+    }
+  }, [])
+
+  // Listen for FORCE_RELOAD from the service worker
+  useEffect(() => {
+    if (!navigator.serviceWorker) return
+
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type === 'FORCE_RELOAD') {
+        location.reload()
+      }
+    }
+
+    navigator.serviceWorker.addEventListener('message', handler)
+    return () => navigator.serviceWorker.removeEventListener('message', handler)
+  }, [])
+
+  if (forceUpdating) {
+    return <ForceUpdateOverlay />
+  }
+
+  return <>{children}</>
+}
+
 export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <ErrorBoundaryProvider>
-          <OfflineProvider>
-            <ToastProvider>
-              <ErrorBoundary component="App" level="app">
-                <AppContent />
-                <OfflineIndicator />
-              </ErrorBoundary>
-            </ToastProvider>
-          </OfflineProvider>
-        </ErrorBoundaryProvider>
+        <VersionChecker>
+          <ErrorBoundaryProvider>
+            <OfflineProvider>
+              <ToastProvider>
+                <ErrorBoundary component="App" level="app">
+                  <AppContent />
+                  <OfflineIndicator />
+                </ErrorBoundary>
+              </ToastProvider>
+            </OfflineProvider>
+          </ErrorBoundaryProvider>
+        </VersionChecker>
       </AuthProvider>
     </ThemeProvider>
   )
