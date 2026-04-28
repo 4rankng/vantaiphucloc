@@ -3,6 +3,18 @@ import { openDB, type IDBPDatabase } from 'idb'
 const DB_NAME = 'ttransport_offline'
 const DB_VERSION = 1
 
+export function uuid(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  // Fallback for non-secure contexts (plain HTTP)
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
+
 export interface QueuedAction {
   id: string
   timestamp: number
@@ -53,11 +65,21 @@ export async function enqueue(action: Omit<QueuedAction, 'id' | 'timestamp' | 'r
   const db = await getDB()
   const entry: QueuedAction = {
     ...action,
-    id: crypto.randomUUID(),
+    id: uuid(),
     timestamp: Date.now(),
     retries: 0,
   }
-  await db.put('queue', entry)
+  try {
+    await db.put('queue', entry)
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+      await cleanupOrphanUploads(0)
+      await clearExpiredCache()
+      await db.put('queue', entry)
+    } else {
+      throw e
+    }
+  }
   return entry
 }
 
@@ -154,12 +176,21 @@ export async function addUpload(upload: Omit<PendingUpload, 'id' | 'status' | 'r
   const db = await getDB()
   const entry: PendingUpload = {
     ...upload,
-    id: crypto.randomUUID(),
+    id: uuid(),
     status: 'pending',
     retries: 0,
     createdAt: Date.now(),
   }
-  await db.put('uploads', entry)
+  try {
+    await db.put('uploads', entry)
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+      await cleanupOrphanUploads(0)
+      await db.put('uploads', entry)
+    } else {
+      throw e
+    }
+  }
   return entry
 }
 

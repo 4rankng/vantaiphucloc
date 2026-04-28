@@ -2,8 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button/Button'
 import { Input } from '@/components/ui/Input/Input'
-import { Label } from '@/components/ui/Label/Label'
-import { Truck, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react'
+import { Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react'
 
 export function Login() {
   const { login } = useAuth()
@@ -33,30 +32,26 @@ export function Login() {
       <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full" style={{ background: 'var(--theme-brand-primary)', opacity: 0.08 }} />
 
       {/* Brand */}
-      <div className="absolute top-6 left-0 right-0 flex flex-col items-center z-10">
-        <div
-          className="h-14 w-14 rounded-2xl flex items-center justify-center mb-3"
-          style={{ background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)' }}
-        >
-          <Truck className="h-7 w-7" style={{ color: 'var(--theme-text-on-brand)' }} />
-        </div>
-        <h1 className="font-extrabold text-2xl tracking-tight" style={{ color: 'var(--theme-text-on-brand)' }}>
-          TTransport
-        </h1>
-        <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.7 }}>
+      <div className="absolute top-8 left-0 right-0 flex flex-col items-center z-10">
+        <img
+          src="/logo.png"
+          alt="TTransport"
+          className="h-16 w-auto mb-3 drop-shadow-md"
+        />
+        <p className="text-sm mt-1" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.75 }}>
           Quản lý vận tải hàng hóa
         </p>
       </div>
 
       {/* Login Card */}
       <div
-        className="relative z-10 w-full max-w-[400px] rounded-3xl p-7 mx-5"
+        className="relative z-10 w-full max-w-[400px] rounded-3xl p-7 mx-5 mt-32"
         style={{
           background: 'var(--theme-bg-secondary)',
           boxShadow: 'var(--theme-shadow-elevated)',
         }}
       >
-        <div className="mb-7">
+        <div className="mb-6">
           <h2 className="font-bold text-xl" style={{ color: 'var(--theme-text-primary)' }}>
             Đăng nhập
           </h2>
@@ -67,7 +62,7 @@ export function Login() {
 
         {error && (
           <div
-            className="flex items-center gap-2.5 rounded-2xl px-4 py-3.5 mb-5 text-sm font-medium"
+            className="flex items-center gap-2.5 rounded-xl px-4 py-3 mb-5 text-sm font-medium"
             style={{ background: 'var(--theme-status-error-light)', color: 'var(--theme-status-error-text)' }}
           >
             <AlertCircle className="h-4 w-4 shrink-0" />
@@ -75,24 +70,23 @@ export function Login() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           {/* Username / Phone / Email */}
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
               Số điện thoại / Email / Tên đăng nhập
-            </Label>
+            </label>
             <div className="relative">
               <User
-                className="absolute left-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 pointer-events-none z-10"
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none z-10"
                 style={{ color: 'var(--theme-text-muted)' }}
               />
               <Input
                 type="text"
-                placeholder="Nhập số điện thoại, email hoặc tên đăng nhập"
+                placeholder="SĐT, email hoặc tên đăng nhập"
                 value={username}
                 onChange={e => { setUsername(e.target.value); setError('') }}
-                className="text-sm search-pill"
-                style={{ paddingLeft: '2.75rem' }}
+                className="login-input"
                 autoComplete="username"
                 autoCapitalize="none"
                 disabled={loading}
@@ -101,13 +95,13 @@ export function Login() {
           </div>
 
           {/* Password */}
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+          <div className="space-y-1.5">
+            <label className="block text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
               Mật khẩu
-            </Label>
+            </label>
             <div className="relative">
               <Lock
-                className="absolute left-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 pointer-events-none z-10"
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none z-10"
                 style={{ color: 'var(--theme-text-muted)' }}
               />
               <Input
@@ -115,8 +109,8 @@ export function Login() {
                 placeholder="Nhập mật khẩu"
                 value={password}
                 onChange={e => { setPassword(e.target.value); setError('') }}
-                className="text-sm search-pill"
-                style={{ paddingLeft: '2.75rem', paddingRight: '3rem' }}
+                className="login-input"
+                style={{ paddingRight: '3rem' }}
                 autoComplete="current-password"
                 disabled={loading}
               />
@@ -124,10 +118,10 @@ export function Login() {
                 type="button"
                 onClick={() => setShowPassword(v => !v)}
                 aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 flex items-center justify-center"
+                className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 flex items-center justify-center rounded-full"
                 style={{ color: 'var(--theme-text-muted)' }}
               >
-                {showPassword ? <EyeOff className="h-4.5 w-4.5" /> : <Eye className="h-4.5 w-4.5" />}
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
           </div>
@@ -135,7 +129,7 @@ export function Login() {
           {/* Submit */}
           <Button
             type="submit"
-            className="w-full h-12 font-bold text-base rounded-2xl mt-2"
+            className="w-full h-12 font-semibold text-base rounded-xl mt-2"
             style={{
               background: 'var(--theme-brand-primary)',
               color: 'var(--theme-text-on-brand)',

@@ -15,7 +15,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 # ---------------------------------------------------------------------------
@@ -385,7 +385,7 @@ class SalaryCalculateAsyncResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 class BatchWorkOrderCreate(BaseModel):
-    items: list[WorkOrderCreate]
+    items: list[WorkOrderCreate] = Field(..., max_length=50)
 
 
 class BatchWorkOrderResult(BaseModel):

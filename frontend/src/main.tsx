@@ -2,7 +2,7 @@ import { StrictMode, Component, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App'
-import ErrorFallback from '@/components/shared/ErrorFallback/ErrorFallback'
+import { ErrorFallback } from '@/components/shared/ErrorFallback/ErrorFallback'
 
 interface EBState { error: Error | null }
 
