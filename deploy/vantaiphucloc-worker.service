@@ -1,0 +1,19 @@
+[Unit]
+Description=Vantaiphucloc Background Worker
+After=network.target redis.service postgresql.service
+
+[Service]
+Type=simple
+User=vantaiphucloc
+Group=vantaiphucloc
+WorkingDirectory=/opt/vantaiphucloc/backend
+EnvironmentFile=/etc/vantaiphucloc/.env
+Environment="PYTHONPATH=/opt/vantaiphucloc/backend"
+ExecStart=/opt/vantaiphucloc/venv/bin/arq app.workers.worker.WorkerSettings
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
