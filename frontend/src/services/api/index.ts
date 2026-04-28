@@ -1,4 +1,3 @@
-import * as sandboxClient from '@/services/sandbox/sandboxClient'
+import * as realClient from './realClient'
 
-// When VITE_USE_SANDBOX is 'false', swap this with a real Axios-based client
-export const apiClient = sandboxClient
+export const apiClient = realClient
