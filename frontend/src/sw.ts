@@ -1,5 +1,10 @@
 /// <reference lib="webworker" />
 
+import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
+import { NavigationRoute, registerRoute, createHandlerBoundToURL } from 'workbox-routing'
+import { NetworkFirst } from 'workbox-strategies'
+import { ExpirationPlugin } from 'workbox-expiration'
+
 declare const self: ServiceWorkerGlobalScope
 
 // Precache manifest injected by workbox via vite-plugin-pwa injectManifest
@@ -64,10 +69,3 @@ self.addEventListener('notificationclick', (event) => {
     }),
   )
 })
-
-// ── Workbox imports (resolved at build time) ───────────────────────
-
-import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
-import { NavigationRoute, registerRoute, createHandlerBoundToURL } from 'workbox-routing'
-import { NetworkFirst } from 'workbox-strategies'
-import { ExpirationPlugin } from 'workbox-expiration'
