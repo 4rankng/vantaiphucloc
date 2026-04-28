@@ -49,7 +49,7 @@ export function DriverHistory() {
     <div className="pb-6" style={{ background: 'var(--theme-bg-primary)' }}>
       {/* Filter tabs */}
       <div className="px-4 pt-3 pb-2">
-        <FilterPills options={filterOptions} value={filter} onChange={setFilter} />
+        <FilterPills<FilterValue> options={filterOptions} value={filter} onChange={setFilter} />
       </div>
 
       {/* Total earnings bar */}
