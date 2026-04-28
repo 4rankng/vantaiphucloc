@@ -189,6 +189,23 @@
   box-shadow: 0 0 0 2px var(--theme-brand-primary-light);
 }
 
+/* ─── Login form inputs ──────────────────────────────────── */
+.login-input {
+  height: 48px;
+  border-radius: 12px;
+  padding-left: 2.75rem;
+  font-size: 14px;
+  transition: box-shadow 0.2s ease;
+}
+.login-input::placeholder {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.login-input:focus {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-brand-primary) 20%, transparent);
+}
+
 /* Password dots — force proper bullet rendering */
 input[type="password"] {
   -webkit-text-security: disc;

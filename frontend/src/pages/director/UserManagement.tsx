@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/Input/Input'
 import { Label } from '@/components/ui/Label/Label'
 import { useToast } from '@/components/atoms/Toast'
 import type { Role } from '@/data/domain'
-import { ROLE_LABELS, mockDrivers } from '@/data/domain'
+import { ROLE_LABELS } from '@/data/domain'
 
 interface UserAccount {
   id: string
@@ -18,18 +18,7 @@ interface UserAccount {
   createdAt: string
 }
 
-const INITIAL_USERS: UserAccount[] = [
-  { id: 'DIR-001', name: 'Giám đốc', phone: '0901-000-001', role: 'director', createdAt: '2025-01-01' },
-  { id: 'ACC-001', name: 'Kế toán', phone: '0901-000-002', role: 'accountant', createdAt: '2025-01-01' },
-  ...mockDrivers.map(d => ({
-    id: d.id,
-    name: d.name,
-    phone: d.phone,
-    role: 'driver' as Role,
-    tractorPlate: d.tractorPlate,
-    createdAt: '2025-01-15',
-  })),
-]
+const INITIAL_USERS: UserAccount[] = []
 
 const ROLE_ICONS: Record<Role, typeof Truck> = {
   director: LayoutDashboard,

@@ -178,12 +178,18 @@ async def batch_create_work_orders(
 ):
     results: list[BatchWorkOrderResult] = []
     for i, item in enumerate(body.items):
-        try:
-            wo = await _create_single_work_order(item, current_user, db)
-            results.append(BatchWorkOrderResult(index=i, id=wo.id, success=True))
-        except Exception as exc:
-            _logger.warning("Batch item %d failed: %s", i, exc)
-            results.append(BatchWorkOrderResult(index=i, success=False, error=str(exc)))
+        # Use a nested transaction (savepoint) per item so partial failures
+        # are isolated — a failure on item N doesn't affect items 0..N-1.
+        async with db.begin_nested():
+            try:
+                wo = await _create_single_work_order(item, current_user, db)
+                results.append(BatchWorkOrderResult(index=i, id=wo.id, success=True))
+            except Exception as exc:
+                await db.rollback()
+                _logger.warning("Batch item %d failed: %s", i, exc)
+                results.append(BatchWorkOrderResult(index=i, success=False, error=str(exc)))
+    # Commit the outer transaction (successful items only, failed were rolled back)
+    await db.commit()
     return results
 
 

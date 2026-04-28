@@ -41,21 +41,12 @@ export function Sidebar({ items, title, basePath }: SidebarProps) {
       {/* Logo */}
       <div className="px-6 py-5" style={{ borderBottom: '1px solid var(--theme-sidebar-border)' }}>
         <div className="flex items-center gap-3">
-          <div
-            className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-lg font-display shadow-lg"
-            style={{
-              background: 'var(--theme-brand-gradient)',
-              color: 'var(--theme-text-on-brand)',
-            }}
-          >
-            T
-          </div>
-          <div>
-            <h1 className="text-base font-bold font-display tracking-tight">
-              <span style={{ color: 'var(--theme-brand-secondary)' }}>T</span>ransport
-            </h1>
-            <p className="text-[10px] font-medium tracking-wider uppercase" style={{ color: 'var(--theme-sidebar-text-muted)' }}>{title}</p>
-          </div>
+          <img
+            src="/logo.png"
+            alt="TTransport"
+            className="h-8 w-auto"
+          />
+          <p className="text-[10px] font-medium tracking-wider uppercase" style={{ color: 'var(--theme-sidebar-text-muted)' }}>{title}</p>
         </div>
       </div>
 
