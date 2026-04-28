@@ -20,10 +20,11 @@ install:
 migrate:
 	cd backend && PYTHONPATH=. alembic upgrade head
 
-## dev: Start backend and frontend concurrently with hot-reload
+## dev: Start backend, frontend, and worker concurrently with hot-reload
 dev:
 	@trap 'kill 0' INT; \
 	cd backend && PYTHONPATH=. uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 & \
+	cd backend && PYTHONPATH=. arq app.workers.worker.WorkerSettings & \
 	cd frontend && pnpm dev & \
 	wait
 

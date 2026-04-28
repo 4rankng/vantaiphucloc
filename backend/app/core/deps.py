@@ -1,9 +1,11 @@
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from arq import ArqRedis
 
 from app.core.security import decode_access_token
+from app.core.worker import get_arq_pool
 from app.database import get_db
 from app.models.base import User
 
@@ -67,3 +69,8 @@ def require_roles(*roles: str):
         return current_user
 
     return _check
+
+
+async def get_worker_pool(request: Request) -> ArqRedis:
+    """Return the arq pool from app state."""
+    return get_arq_pool()
