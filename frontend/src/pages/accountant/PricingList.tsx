@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
 import { apiClient } from '@/services/api'
-import { getPricings, createPricing, updatePricing, deletePricing } from '@/services/sandbox/sandboxClient'
 import { formatCurrencyFull, WORK_TYPES, WORK_TYPE_LABELS, type Pricing, type PricingLine, type WorkType, type Client, type RoutePrice } from '@/data/mockData'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { Button } from '@/components/ui/Button/Button'
@@ -198,7 +197,7 @@ export function PricingList() {
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([getPricings(), apiClient.getClients(), apiClient.getRoutes()])
+    Promise.all([apiClient.getPricings(), apiClient.getClients(), apiClient.getRoutes()])
       .then(([p, c, r]) => {
         if (!cancelled) {
           if (p.success) setPricings(p.data)
@@ -232,12 +231,12 @@ export function PricingList() {
 
   const handleSave = async (data: Omit<Pricing, 'id' | 'createdAt' | 'updatedAt'>) => {
     if (editingPricing) {
-      const res = await updatePricing(editingPricing.id, data)
+      const res = await apiClient.updatePricing(editingPricing.id, data)
       if (res.success) {
         setPricings(prev => prev.map(p => p.id === editingPricing.id ? { ...p, ...data, updatedAt: new Date().toISOString() } : p))
       }
     } else {
-      const res = await createPricing(data)
+      const res = await apiClient.createPricing(data)
       if (res.success) setPricings(prev => [...prev, res.data])
     }
     setShowForm(false)
@@ -245,7 +244,7 @@ export function PricingList() {
   }
 
   const handleDelete = async (id: string) => {
-    const res = await deletePricing(id)
+    const res = await apiClient.deletePricing(id)
     if (res.success) setPricings(prev => prev.filter(p => p.id !== id))
   }
 

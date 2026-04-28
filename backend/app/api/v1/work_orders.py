@@ -1,4 +1,5 @@
 from datetime import date
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +16,8 @@ from app.schemas.domain import (
 )
 from app.core.deps import get_current_user, require_roles
 from app.services.pricing_service import find_pricing
+
+_logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -116,6 +119,19 @@ async def create_work_order(
 
     await db.commit()
     await db.refresh(work_order)
+
+    # Fire-and-forget notification
+    try:
+        from app.workers import enqueue
+        await enqueue(
+            "send_notification_task",
+            user_id=current_user.id,
+            title="Phiếu làm việc mới",
+            message=f"WO#{work_order.id} đã được tạo bởi tài xế {work_order.driver_name}",
+            channel="in_app",
+        )
+    except RuntimeError:
+        _logger.warning("Failed to enqueue notification for WO#%s", work_order.id)
 
     return await _load_work_order_out(db, work_order)
 

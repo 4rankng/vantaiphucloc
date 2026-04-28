@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/Button/Button'
 import { Input } from '@/components/ui/Input/Input'
 import { Label } from '@/components/ui/Label/Label'
 import { apiClient } from '@/services/api'
-import { createTripOrder } from '@/services/sandbox/sandboxClient'
 import { WORK_TYPES, type Client, type Driver, type WorkType } from '@/data/mockData'
 import { SheetPicker } from '@/components/shared/SheetPicker'
 import { Plus, Trash2 } from 'lucide-react'
@@ -67,7 +66,7 @@ export function CreateTrip() {
       const firstCong = congItems[0]
       const clientName = clientMap.get(clientId) ?? ''
       const driverInfo = driverMap.get(driverId) ?? { name: '', plate: '' }
-      await createTripOrder({
+      await apiClient.createTripOrder({
         tripDate: new Date().toISOString().slice(0, 10),
         clientId,
         clientName,
