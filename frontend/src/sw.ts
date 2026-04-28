@@ -33,6 +33,42 @@ registerRoute(
   'GET',
 )
 
+// ── Version check: skip /version endpoint caching ────────────────────────
+// The version endpoint must always hit the network — never cache it.
+registerRoute(
+  /\/api\/v1\/version$/i,
+  new NetworkFirst({ networkTimeoutSeconds: 5, cacheName: 'no-cache' }),
+  'GET',
+)
+
+// ── Message handlers from main thread ───────────────────────────────────
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+  }
+
+  if (event.data?.type === 'FORCE_UPDATE') {
+    // Delete all caches, then claim all clients so they reload
+    event.waitUntil(
+      caches.keys().then(names => Promise.all(names.map(n => caches.delete(n))))
+        .then(() => self.clients.claim())
+        .then(() => {
+          return self.clients.matchAll().then(clients => {
+            for (const client of clients) {
+              client.postMessage({ type: 'FORCE_RELOAD' })
+            }
+          })
+        })
+    )
+  }
+})
+
+// When new SW activates, claim all clients immediately
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim())
+})
+
 // ── Push notification handler ──────────────────────────────────────
 
 self.addEventListener('push', (event) => {
