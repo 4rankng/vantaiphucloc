@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus, Truck, CircleDollarSign, LayoutDashboard, Phone, Pencil, Trash2, ChevronRight } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
@@ -7,27 +7,30 @@ import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { useToast } from '@/components/atoms/Toast'
 import { FilterPills } from '@/components/shared/FilterPills'
+import { api } from '@/services/api/client'
 import type { Role } from '@/data/domain'
 import { ROLE_LABELS } from '@/data/domain'
 
 interface UserAccount {
   id: string
-  name: string
+  username: string
   phone: string
+  email?: string
   role: Role
   tractorPlate?: string
+  isActive: boolean
   createdAt: string
 }
 
-const INITIAL_USERS: UserAccount[] = []
-
 const ROLE_ICONS: Record<Role, typeof Truck> = {
+  superadmin: LayoutDashboard,
   director: LayoutDashboard,
   accountant: CircleDollarSign,
   driver: Truck,
 }
 
 const ROLE_COLORS: Record<Role, { bg: string; color: string }> = {
+  superadmin: { bg: 'var(--theme-status-info-light)', color: 'var(--theme-status-info)' },
   director: { bg: 'var(--theme-status-info-light)', color: 'var(--theme-status-info)' },
   accountant: { bg: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' },
   driver: { bg: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' },
@@ -36,30 +39,56 @@ const ROLE_COLORS: Record<Role, { bg: string; color: string }> = {
 const CREATABLE_ROLES: Role[] = ['driver', 'accountant', 'director']
 
 interface UserForm {
-  name: string
+  username: string
   phone: string
   role: Role
   tractorPlate: string
   password: string
 }
 
-const EMPTY_FORM: UserForm = { name: '', phone: '', role: 'driver', tractorPlate: '', password: '' }
+const EMPTY_FORM: UserForm = { username: '', phone: '', role: 'driver', tractorPlate: '', password: '' }
+
+function toCamelCase(obj: Record<string, unknown>): UserAccount {
+  return {
+    id: String(obj.id),
+    username: obj.username as string,
+    phone: obj.phone as string,
+    email: obj.email as string | undefined,
+    role: obj.role as Role,
+    tractorPlate: obj.tractor_plate as string | undefined,
+    isActive: obj.is_active as boolean,
+    createdAt: obj.created_at as string,
+  }
+}
 
 export function UserManagement() {
   const toast = useToast()
-  const [users, setUsers] = useState<UserAccount[]>(INITIAL_USERS)
+  const [users, setUsers] = useState<UserAccount[]>([])
+  const [loading, setLoading] = useState(true)
   const [filterRole, setFilterRole] = useState<Role | 'ALL'>('ALL')
 
-  // Create dialog
   const [createOpen, setCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState<UserForm>(EMPTY_FORM)
+  const [saving, setSaving] = useState(false)
 
-  // Detail/Edit dialog
   const [detailUser, setDetailUser] = useState<UserAccount | null>(null)
   const [editForm, setEditForm] = useState<UserForm>(EMPTY_FORM)
 
-  // Delete confirm
   const [deleteId, setDeleteId] = useState<string | null>(null)
+
+  const fetchUsers = useCallback(async () => {
+    try {
+      const res = await api.get('/users')
+      const list = (res.data as Record<string, unknown>[]).map(toCamelCase)
+      setUsers(list.filter(u => u.isActive))
+    } catch {
+      toast.error('Lỗi', 'Không thể tải danh sách tài khoản')
+    } finally {
+      setLoading(false)
+    }
+  }, [toast])
+
+  useEffect(() => { fetchUsers() }, [fetchUsers])
 
   const filtered = filterRole === 'ALL' ? users : users.filter(u => u.role === filterRole)
 
@@ -71,26 +100,33 @@ export function UserManagement() {
     setEditForm(prev => ({ ...prev, [field]: value }))
   }, [])
 
-  const handleCreate = useCallback(() => {
-    if (!createForm.name.trim() || !createForm.phone.trim()) return
-    const newUser: UserAccount = {
-      id: `USR-${Date.now()}`,
-      name: createForm.name.trim(),
-      phone: createForm.phone.trim(),
-      role: createForm.role,
-      tractorPlate: createForm.role === 'driver' ? createForm.tractorPlate.trim() : undefined,
-      createdAt: new Date().toISOString().split('T')[0],
+  const handleCreate = useCallback(async () => {
+    if (!createForm.username.trim() || !createForm.phone.trim() || !createForm.password.trim()) return
+    setSaving(true)
+    try {
+      await api.post('/users', {
+        username: createForm.username.trim(),
+        phone: createForm.phone.trim(),
+        role: createForm.role,
+        password: createForm.password,
+        tractor_plate: createForm.role === 'driver' ? createForm.tractorPlate.trim() : undefined,
+      })
+      toast.success('Đã tạo tài khoản')
+      setCreateOpen(false)
+      setCreateForm(EMPTY_FORM)
+      fetchUsers()
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Lỗi không xác định'
+      toast.error('Lỗi', detail)
+    } finally {
+      setSaving(false)
     }
-    setUsers(prev => [...prev, newUser])
-    setCreateOpen(false)
-    setCreateForm(EMPTY_FORM)
-    toast.success('Đã tạo tài khoản')
-  }, [createForm, toast])
+  }, [createForm, toast, fetchUsers])
 
   const openDetail = useCallback((user: UserAccount) => {
     setDetailUser(user)
     setEditForm({
-      name: user.name,
+      username: user.username,
       phone: user.phone,
       role: user.role,
       tractorPlate: user.tractorPlate ?? '',
@@ -98,26 +134,47 @@ export function UserManagement() {
     })
   }, [])
 
-  const handleEdit = useCallback(() => {
-    if (!detailUser || !editForm.name.trim() || !editForm.phone.trim()) return
-    setUsers(prev => prev.map(u => u.id === detailUser.id ? {
-      ...u,
-      name: editForm.name.trim(),
-      phone: editForm.phone.trim(),
-      role: editForm.role,
-      tractorPlate: editForm.role === 'driver' ? editForm.tractorPlate.trim() : undefined,
-    } : u))
-    setDetailUser(null)
-    toast.success('Đã cập nhật')
-  }, [detailUser, editForm, toast])
+  const handleEdit = useCallback(async () => {
+    if (!detailUser || !editForm.username.trim() || !editForm.phone.trim()) return
+    setSaving(true)
+    try {
+      const payload: Record<string, unknown> = {
+        username: editForm.username.trim(),
+        phone: editForm.phone.trim(),
+        role: editForm.role,
+      }
+      if (editForm.role === 'driver' && editForm.tractorPlate.trim()) {
+        payload.tractor_plate = editForm.tractorPlate.trim()
+      }
+      if (editForm.password.trim()) {
+        payload.password = editForm.password.trim()
+      }
+      await api.put(`/users/${detailUser.id}`, payload)
+      toast.success('Đã cập nhật')
+      setDetailUser(null)
+      fetchUsers()
+    } catch {
+      toast.error('Lỗi', 'Không thể cập nhật')
+    } finally {
+      setSaving(false)
+    }
+  }, [detailUser, editForm, toast, fetchUsers])
 
-  const handleDelete = useCallback(() => {
+  const handleDelete = useCallback(async () => {
     if (!deleteId) return
-    setUsers(prev => prev.filter(u => u.id !== deleteId))
-    setDeleteId(null)
-    setDetailUser(null)
-    toast.success('Đã xoá tài khoản')
-  }, [deleteId, toast])
+    setSaving(true)
+    try {
+      await api.delete(`/users/${deleteId}`)
+      toast.success('Đã xoá tài khoản')
+      setDeleteId(null)
+      setDetailUser(null)
+      fetchUsers()
+    } catch {
+      toast.error('Lỗi', 'Không thể xoá tài khoản')
+    } finally {
+      setSaving(false)
+    }
+  }, [deleteId, toast, fetchUsers])
 
   const roleCounts = {
     ALL: users.length,
@@ -126,9 +183,12 @@ export function UserManagement() {
     driver: users.filter(u => u.role === 'driver').length,
   }
 
+  if (loading) {
+    return <div className="p-4 text-center py-12" style={{ color: 'var(--theme-text-muted)' }}>Đang tải...</div>
+  }
+
   return (
     <div className="p-4 space-y-4">
-      {/* Filter pills */}
       <FilterPills
         options={[
           { value: 'ALL', label: 'Tất cả', count: roleCounts.ALL },
@@ -140,7 +200,6 @@ export function UserManagement() {
         onChange={setFilterRole}
       />
 
-      {/* FAB */}
       {createPortal(
         <button
           onClick={() => { setCreateForm(EMPTY_FORM); setCreateOpen(true) }}
@@ -152,7 +211,6 @@ export function UserManagement() {
         document.body,
       )}
 
-      {/* User list */}
       <div className="space-y-2">
         {filtered.map(u => {
           const RoleIcon = ROLE_ICONS[u.role]
@@ -171,7 +229,7 @@ export function UserManagement() {
                 <RoleIcon className="w-4.5 h-4.5" style={{ color: roleColor.color }} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{u.name}</p>
+                <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{u.username}</p>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <Phone className="w-3 h-3" style={{ color: 'var(--theme-text-muted)' }} />
                   <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{u.phone}</span>
@@ -213,8 +271,8 @@ export function UserManagement() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Họ tên</Label>
-              <Input value={createForm.name} onChange={e => updateCreateField('name', e.target.value)} placeholder="Nguyễn Văn A" className="text-sm" />
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tên đăng nhập</Label>
+              <Input value={createForm.username} onChange={e => updateCreateField('username', e.target.value)} placeholder="nguyenvana" className="text-sm" />
             </div>
             <div className="space-y-2">
               <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số điện thoại</Label>
@@ -233,7 +291,7 @@ export function UserManagement() {
           </div>
           <DialogFooter className="flex-row gap-2">
             <Button variant="outline" onClick={() => setCreateOpen(false)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleCreate} disabled={!createForm.name.trim() || !createForm.phone.trim() || !createForm.password.trim()} className="flex-1"
+            <Button onClick={handleCreate} disabled={!createForm.username.trim() || !createForm.phone.trim() || !createForm.password.trim() || saving} className="flex-1"
               style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
             >
               Xác nhận
@@ -269,8 +327,8 @@ export function UserManagement() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Họ tên</Label>
-                <Input value={editForm.name} onChange={e => updateEditField('name', e.target.value)} className="text-sm" />
+                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tên đăng nhập</Label>
+                <Input value={editForm.username} onChange={e => updateEditField('username', e.target.value)} className="text-sm" />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số điện thoại</Label>
@@ -298,7 +356,7 @@ export function UserManagement() {
               <Trash2 className="w-3.5 h-3.5" /> Xoá
             </Button>
             <Button variant="outline" onClick={() => setDetailUser(null)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleEdit} disabled={!editForm.name.trim() || !editForm.phone.trim()} className="flex-1 gap-1.5"
+            <Button onClick={handleEdit} disabled={!editForm.username.trim() || !editForm.phone.trim() || saving} className="flex-1 gap-1.5"
               style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
             >
               <Pencil className="w-3.5 h-3.5" /> Lưu
@@ -312,11 +370,11 @@ export function UserManagement() {
         <DialogContent>
           <DialogHeader><DialogTitle>Xoá tài khoản?</DialogTitle></DialogHeader>
           <p className="text-sm" style={{ color: 'var(--theme-text-secondary)' }}>
-            Hành động này không thể hoàn tác. Tài khoản sẽ bị xoá vĩnh viễn.
+            Tài khoản sẽ bị vô hiệu hoá. Hành động này không thể hoàn tác.
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteId(null)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleDelete} className="flex-1" style={{ background: 'var(--theme-status-error)', color: '#fff' }}>
+            <Button onClick={handleDelete} disabled={saving} className="flex-1" style={{ background: 'var(--theme-status-error)', color: '#fff' }}>
               Xoá
             </Button>
           </DialogFooter>
