@@ -24,61 +24,55 @@ export function Login() {
   }
 
   return (
-    <div className="min-h-[100dvh] w-full flex items-center justify-center relative overflow-hidden"
+    <div
+      className="min-h-[100dvh] w-full flex flex-col items-center justify-center relative overflow-hidden"
       style={{ background: 'var(--theme-brand-gradient)' }}
     >
-      {/* Decorative circles */}
-      <div className="absolute -top-20 -left-20 w-64 h-64 rounded-full" style={{ background: 'var(--theme-brand-primary)', opacity: 0.12 }} />
-      <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full" style={{ background: 'var(--theme-brand-primary)', opacity: 0.08 }} />
+      {/* Background decorative shapes */}
+      <div className="login-bg-circle login-bg-circle--tl" />
+      <div className="login-bg-circle login-bg-circle--br" />
+      <div className="login-bg-wave" />
 
-      {/* Brand */}
-      <div className="absolute top-8 left-0 right-0 flex flex-col items-center z-10">
-        <img
-          src="/logo.avif"
-          alt="TTransport"
-          className="h-16 w-auto mb-3 drop-shadow-md rounded-[22%]"
-        />
-        <p className="text-sm mt-1" style={{ color: 'var(--theme-text-on-brand)', opacity: 0.75 }}>
-          Quản lý vận tải hàng hóa
-        </p>
+      {/* Brand section */}
+      <div className="login-brand animate-fade-slide-up stagger-1">
+        <div className="login-logo-wrap">
+          <img
+            src="/logo.avif"
+            alt="TTransport"
+            className="login-logo"
+          />
+        </div>
+        <h1 className="login-brand-name">TTransport</h1>
+        <p className="login-brand-tagline">Quản lý vận tải hàng hóa</p>
       </div>
 
       {/* Login Card */}
-      <div
-        className="relative z-10 w-full max-w-[400px] rounded-3xl p-7 mx-5 mt-32"
-        style={{
-          background: 'var(--theme-bg-secondary)',
-          boxShadow: 'var(--theme-shadow-elevated)',
-        }}
-      >
-        <div className="mb-6">
-          <h2 className="font-bold text-xl" style={{ color: 'var(--theme-text-primary)' }}>
-            Đăng nhập
-          </h2>
-          <p className="text-sm mt-1" style={{ color: 'var(--theme-text-secondary)' }}>
-            Nhập thông tin để tiếp tục
-          </p>
+      <div className="login-card animate-fade-slide-up stagger-2">
+        {/* Card header */}
+        <div className="login-card-header">
+          <h2 className="login-card-title">Đăng nhập</h2>
+          <p className="login-card-subtitle">Nhập thông tin để tiếp tục</p>
         </div>
 
+        <div className="login-card-divider" />
+
+        {/* Error */}
         {error && (
-          <div
-            className="flex items-center gap-2.5 rounded-xl px-4 py-3 mb-5 text-sm font-medium"
-            style={{ background: 'var(--theme-status-error-light)', color: 'var(--theme-status-error-text)' }}
-          >
+          <div className="login-error animate-fade-slide-up">
             <AlertCircle className="h-4 w-4 shrink-0" />
-            {error}
+            <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        <form onSubmit={handleSubmit} className="login-form" noValidate>
           {/* Username / Phone / Email */}
-          <div className="space-y-1.5">
-            <label className="block text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+          <div className="login-field">
+            <label className="login-label">
               Số điện thoại / Email / Tên đăng nhập
             </label>
             <div className="relative">
               <User
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none z-10"
+                className="login-field-icon"
                 style={{ color: 'var(--theme-text-muted)' }}
               />
               <Input
@@ -95,13 +89,11 @@ export function Login() {
           </div>
 
           {/* Password */}
-          <div className="space-y-1.5">
-            <label className="block text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-              Mật khẩu
-            </label>
+          <div className="login-field">
+            <label className="login-label">Mật khẩu</label>
             <div className="relative">
               <Lock
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none z-10"
+                className="login-field-icon"
                 style={{ color: 'var(--theme-text-muted)' }}
               />
               <Input
@@ -118,7 +110,7 @@ export function Login() {
                 type="button"
                 onClick={() => setShowPassword(v => !v)}
                 aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 flex items-center justify-center rounded-full"
+                className="login-eye-btn"
                 style={{ color: 'var(--theme-text-muted)' }}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -129,17 +121,29 @@ export function Login() {
           {/* Submit */}
           <Button
             type="submit"
-            className="w-full h-12 font-semibold text-base rounded-xl mt-2"
+            className="login-submit-btn"
             style={{
               background: 'var(--theme-brand-primary)',
               color: 'var(--theme-text-on-brand)',
             }}
             disabled={loading}
           >
-            {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+            {loading ? (
+              <span className="login-loading">
+                <span className="login-spinner" />
+                Đang đăng nhập...
+              </span>
+            ) : (
+              'Đăng nhập'
+            )}
           </Button>
         </form>
       </div>
+
+      {/* Footer */}
+      <p className="login-footer animate-fade-slide-up stagger-3">
+        © {new Date().getFullYear()} TTransport
+      </p>
     </div>
   )
 }
