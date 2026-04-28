@@ -352,7 +352,7 @@ class DriverCreate(BaseModel):
     username: str
     phone: str
     tractor_plate: str | None = None
-    company_id: int | None = None  # defaults to Phúc Lộc company if omitted
+    vendor: str | None = None  # defaults to "Phúc Lộc" if omitted
 
 
 class DriverOut(BaseModel):
@@ -360,8 +360,7 @@ class DriverOut(BaseModel):
     username: str
     phone: str
     tractor_plate: str | None = None
-    company_id: int | None = None
-    company_name: str | None = None
+    vendor: str | None = None
     created_at: datetime
     updated_at: datetime
 
