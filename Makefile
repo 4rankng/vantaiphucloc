@@ -1,15 +1,17 @@
-.PHONY: help install migrate dev dev-backend dev-frontend dev-worker lint deploy
+.PHONY: help install migrate dev dev-backend dev-frontend dev-worker lint deploy seed adminer
 
 ## help: Print a description of all available targets
 help:
 	@echo "Available targets:"
 	@echo "  install       Install Python and Node dependencies"
 	@echo "  migrate       Run Alembic database migrations (alembic upgrade head)"
-	@echo "  dev           Start backend and frontend concurrently with hot-reload"
+	@echo "  seed          Create initial admin user (admin/admin123)"
+	@echo "  dev           Start backend, frontend, worker, and adminer concurrently"
 	@echo "  dev-backend   Start the FastAPI backend with hot-reload"
 	@echo "  dev-frontend  Start the Vite frontend dev server"
 	@echo "  lint          Run ruff (backend) and eslint (frontend)"
-	@echo "  deploy        Build frontend, rsync to droplet, restart backend service"
+	@echo "  deploy        Build frontend, rsync to droplet, run migrations, seed, restart"
+	@echo "  adminer       Start Adminer (DB management UI) on port 8081"
 
 ## install: Install Python dependencies (backend) and Node dependencies (frontend)
 install:
@@ -20,12 +22,13 @@ install:
 migrate:
 	cd backend && PYTHONPATH=. alembic upgrade head
 
-## dev: Start backend, frontend, and worker concurrently with hot-reload
+## dev: Start backend, frontend, worker, and adminer concurrently
 dev:
 	@trap 'kill 0' INT; \
 	cd backend && PYTHONPATH=. uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 & \
 	cd backend && PYTHONPATH=. arq app.workers.worker.WorkerSettings & \
 	cd frontend && pnpm dev & \
+	docker run --rm --name vantai-adminer -p 8081:8080 -e ADMINER_DESIGN=pepa-linha adminer & \
 	wait
 
 ## dev-backend: Start the FastAPI backend with uvicorn --reload
@@ -40,12 +43,20 @@ dev-frontend:
 dev-worker:
 	cd backend && PYTHONPATH=. arq app.workers.worker.WorkerSettings
 
+## seed: Create initial superadmin user (admin/admin123). Safe to re-run.
+seed:
+	cd backend && PYTHONPATH=. python -m app.seed
+
+## adminer: Start Adminer DB management UI on http://localhost:8081
+adminer:
+	docker run --rm --name vantai-adminer -p 8081:8080 -e ADMINER_DESIGN=pepa-linha adminer
+
 ## lint: Run ruff on backend and eslint on frontend
 lint:
 	cd backend && ruff check .
 	cd frontend && pnpm eslint src
 
-## deploy: Build frontend, rsync to droplet, run migrations, restart backend service
+## deploy: Build frontend, rsync to droplet, run migrations, seed admin, restart backend service
 ## Requires DROPLET_HOST and DROPLET_USER env vars (e.g. DROPLET_HOST=1.2.3.4 DROPLET_USER=deploy)
 deploy:
 	@if [ -z "$(DROPLET_HOST)" ]; then echo "Error: DROPLET_HOST is not set"; exit 1; fi
@@ -55,4 +66,4 @@ deploy:
 	rsync -avz --delete --exclude '__pycache__' --exclude '*.pyc' --exclude '.env' \
 		backend/ $(DROPLET_USER)@$(DROPLET_HOST):/opt/vantaiphucloc/backend/
 	ssh $(DROPLET_USER)@$(DROPLET_HOST) \
-		"cd /opt/vantaiphucloc/backend && PYTHONPATH=. alembic upgrade head && systemctl restart vantaiphucloc-backend"
+		"cd /opt/vantaiphucloc/backend && PYTHONPATH=. alembic upgrade head && PYTHONPATH=. python -m app.seed && systemctl restart vantaiphucloc-backend"
