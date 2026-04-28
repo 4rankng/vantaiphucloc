@@ -1,4 +1,4 @@
-.PHONY: help install migrate dev dev-backend dev-frontend lint deploy
+.PHONY: help install migrate dev dev-backend dev-frontend dev-worker lint deploy
 
 ## help: Print a description of all available targets
 help:
@@ -34,6 +34,10 @@ dev-backend:
 ## dev-frontend: Start the Vite frontend dev server
 dev-frontend:
 	cd frontend && pnpm dev
+
+## dev-worker: Start the arq background worker
+dev-worker:
+	cd backend && PYTHONPATH=. arq app.workers.worker.WorkerSettings
 
 ## lint: Run ruff on backend and eslint on frontend
 lint:

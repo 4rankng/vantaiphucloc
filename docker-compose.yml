@@ -1,4 +1,18 @@
 services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru --appendonly yes
+    expose:
+      - "6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: ./backend
@@ -8,10 +22,14 @@ services:
       - backend/.env
     environment:
       - PYTHONPATH=/app
+      - REDIS_URL=redis://redis:6379/0
     expose:
       - "8000"
     ports:
       - "8000:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
 
   frontend:
     build:
@@ -22,3 +40,6 @@ services:
       - "80"
     ports:
       - "3000:80"
+
+volumes:
+  redis_data:
