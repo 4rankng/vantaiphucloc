@@ -7,14 +7,19 @@ import { Truck, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react'
 
 export function Login() {
   const { login } = useAuth()
-  const [username, setUsername] = useState('driver')
-  const [password, setPassword] = useState('driver')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!login(username, password)) {
+    setLoading(true)
+    setError('')
+    const success = await login(username, password)
+    setLoading(false)
+    if (!success) {
       setError('Thông tin đăng nhập không hợp lệ. Vui lòng thử lại.')
     }
   }
@@ -27,7 +32,7 @@ export function Login() {
       <div className="absolute -top-20 -left-20 w-64 h-64 rounded-full" style={{ background: 'var(--theme-brand-primary)', opacity: 0.12 }} />
       <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full" style={{ background: 'var(--theme-brand-primary)', opacity: 0.08 }} />
 
-      {/* Brand — fixed at top, doesn't affect centering */}
+      {/* Brand */}
       <div className="absolute top-6 left-0 right-0 flex flex-col items-center z-10">
         <div
           className="h-14 w-14 rounded-2xl flex items-center justify-center mb-3"
@@ -43,103 +48,104 @@ export function Login() {
         </p>
       </div>
 
-      {/* Login Card — perfectly centered */}
+      {/* Login Card */}
       <div
         className="relative z-10 w-full max-w-[400px] rounded-3xl p-7 mx-5"
         style={{
           background: 'var(--theme-bg-secondary)',
           boxShadow: 'var(--theme-shadow-elevated)',
         }}
-        >
-          {/* Card Header */}
-          <div className="mb-7">
-            <h2 className="font-bold text-xl" style={{ color: 'var(--theme-text-primary)' }}>
-              Đăng nhập
-            </h2>
-            <p className="text-sm mt-1" style={{ color: 'var(--theme-text-secondary)' }}>
-              Nhập thông tin để tiếp tục
-            </p>
+      >
+        <div className="mb-7">
+          <h2 className="font-bold text-xl" style={{ color: 'var(--theme-text-primary)' }}>
+            Đăng nhập
+          </h2>
+          <p className="text-sm mt-1" style={{ color: 'var(--theme-text-secondary)' }}>
+            Nhập thông tin để tiếp tục
+          </p>
+        </div>
+
+        {error && (
+          <div
+            className="flex items-center gap-2.5 rounded-2xl px-4 py-3.5 mb-5 text-sm font-medium"
+            style={{ background: 'var(--theme-status-error-light)', color: 'var(--theme-status-error-text)' }}
+          >
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+          {/* Username / Phone / Email */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+              Số điện thoại / Email / Tên đăng nhập
+            </Label>
+            <div className="relative">
+              <User
+                className="absolute left-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 pointer-events-none z-10"
+                style={{ color: 'var(--theme-text-muted)' }}
+              />
+              <Input
+                type="text"
+                placeholder="Nhập số điện thoại, email hoặc tên đăng nhập"
+                value={username}
+                onChange={e => { setUsername(e.target.value); setError('') }}
+                className="text-sm search-pill"
+                style={{ paddingLeft: '2.75rem' }}
+                autoComplete="username"
+                autoCapitalize="none"
+                disabled={loading}
+              />
+            </div>
           </div>
 
-          {/* Error */}
-          {error && (
-            <div
-              className="flex items-center gap-2.5 rounded-2xl px-4 py-3.5 mb-5 text-sm font-medium"
-              style={{ background: 'var(--theme-status-error-light)', color: 'var(--theme-status-error-text)' }}
-            >
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              {error}
+          {/* Password */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+              Mật khẩu
+            </Label>
+            <div className="relative">
+              <Lock
+                className="absolute left-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 pointer-events-none z-10"
+                style={{ color: 'var(--theme-text-muted)' }}
+              />
+              <Input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Nhập mật khẩu"
+                value={password}
+                onChange={e => { setPassword(e.target.value); setError('') }}
+                className="text-sm search-pill"
+                style={{ paddingLeft: '2.75rem', paddingRight: '3rem' }}
+                autoComplete="current-password"
+                disabled={loading}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 flex items-center justify-center"
+                style={{ color: 'var(--theme-text-muted)' }}
+              >
+                {showPassword ? <EyeOff className="h-4.5 w-4.5" /> : <Eye className="h-4.5 w-4.5" />}
+              </button>
             </div>
-          )}
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-            {/* Username */}
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                Tên đăng nhập
-              </Label>
-              <div className="relative">
-                <User
-                  className="absolute left-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 pointer-events-none z-10"
-                  style={{ color: 'var(--theme-text-muted)' }}
-                />
-                <Input
-                  type="text"
-                  placeholder="Nhập tên đăng nhập"
-                  value={username}
-                  onChange={e => { setUsername(e.target.value); setError('') }}
-                  className="text-sm search-pill"
-                  style={{ paddingLeft: '2.75rem' }}
-                  autoComplete="username"
-                  autoCapitalize="none"
-                />
-              </div>
-            </div>
-
-            {/* Password */}
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                Mật khẩu
-              </Label>
-              <div className="relative">
-                <Lock
-                  className="absolute left-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 pointer-events-none z-10"
-                  style={{ color: 'var(--theme-text-muted)' }}
-                />
-                <Input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Nhập mật khẩu"
-                  value={password}
-                  onChange={e => { setPassword(e.target.value); setError('') }}
-                  className="text-sm search-pill"
-                  style={{ paddingLeft: '2.75rem', paddingRight: '3rem' }}
-                  autoComplete="current-password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(v => !v)}
-                  aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 flex items-center justify-center"
-                  style={{ color: 'var(--theme-text-muted)' }}
-                >
-                  {showPassword ? <EyeOff className="h-4.5 w-4.5" /> : <Eye className="h-4.5 w-4.5" />}
-                </button>
-              </div>
-            </div>
-
-            {/* Submit */}
-            <Button
-              type="submit"
-              className="w-full h-12 font-bold text-base rounded-2xl mt-2"
-              style={{
-                background: 'var(--theme-brand-primary)',
-                color: 'var(--theme-text-on-brand)',
-              }}
-            >
-              Đăng nhập
-            </Button>
-          </form>
-        </div>
+          {/* Submit */}
+          <Button
+            type="submit"
+            className="w-full h-12 font-bold text-base rounded-2xl mt-2"
+            style={{
+              background: 'var(--theme-brand-primary)',
+              color: 'var(--theme-text-on-brand)',
+            }}
+            disabled={loading}
+          >
+            {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+          </Button>
+        </form>
+      </div>
     </div>
   )
 }

@@ -22,11 +22,12 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
-    # Login credential — phone number (unique, indexed)
+    # Login credentials — any of phone, email, or username can be used to log in
     phone = Column(String(20), unique=True, index=True, nullable=False)
+    email = Column(String(255), unique=True, nullable=True, index=True)
 
-    # Display name / full name (replaces the old `fullname` column)
-    username = Column(String(100), nullable=False)
+    # Display name / full name (also usable as login identifier)
+    username = Column(String(100), nullable=False, index=True)
 
     hashed_password = Column(String(255), nullable=False)
 
