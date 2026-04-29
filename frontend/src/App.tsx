@@ -4,7 +4,6 @@ import { ErrorBoundaryProvider } from '@/contexts/ErrorContext'
 import { OfflineProvider } from '@/contexts/OfflineContext'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { OfflineIndicator } from '@/components/shared/OfflineIndicator'
-import { ForceUpdateOverlay } from '@/components/shared/ForceUpdateOverlay'
 import { ToastProvider } from '@/components/atoms/Toast'
 import { Login } from '@/pages/Login'
 import { DriverStoreProvider, useDriverStore } from '@/hooks/use-driver-store'
@@ -17,8 +16,6 @@ import { DriverNotifications } from '@/pages/driver/DriverNotifications'
 import { DirectorApp } from '@/pages/director/DirectorApp'
 import { AccountantApp } from '@/pages/accountant/AccountantApp'
 import { SuperAdminApp } from '@/pages/superadmin/SuperAdminApp'
-import { checkVersion, type VersionStatus } from '@/lib/version'
-import { useState, useEffect } from 'react'
 
 
 function DriverRouter() {
@@ -56,32 +53,6 @@ function AppContent() {
 }
 
 export default function App() {
-  const [forceUpdate, setForceUpdate] = useState(false)
-
-  useEffect(() => {
-    const doCheck = async () => {
-      const status: VersionStatus = await checkVersion()
-      if (status === 'hard-update') {
-        setForceUpdate(true)
-        if ('caches' in window) {
-          const names = await caches.keys()
-          await Promise.all(names.map(n => caches.delete(n)))
-        }
-        navigator.serviceWorker?.controller?.postMessage({ type: 'FORCE_UPDATE' })
-        setTimeout(() => location.reload(), 1500)
-      } else if (status === 'soft-update') {
-        navigator.serviceWorker?.controller?.postMessage({ type: 'SKIP_WAITING' })
-      }
-    }
-    doCheck()
-    const interval = setInterval(doCheck, 5 * 60 * 1000)
-    return () => clearInterval(interval)
-  }, [])
-
-  if (forceUpdate) {
-    return <ForceUpdateOverlay />
-  }
-
   return (
     <ThemeProvider>
       <AuthProvider>
