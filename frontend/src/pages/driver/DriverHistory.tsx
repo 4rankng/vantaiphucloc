@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Camera } from 'lucide-react'
-import { useDriverStore } from '@/hooks/use-driver-store'
+import { useAuth } from '@/contexts/AuthContext'
 import { apiClient } from '@/services/api'
 import { formatCurrencyFull, type WorkOrder } from '@/data/domain'
 import { FilterPills } from '@/components/shared/FilterPills'
@@ -14,19 +14,19 @@ const FILTER_OPTIONS: { value: FilterValue; label: string }[] = [
 ]
 
 export function DriverHistory() {
-  const { driver } = useDriverStore()
+  const { user } = useAuth()
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<FilterValue>('ALL')
 
   useEffect(() => {
     let cancelled = false
-    apiClient.getWorkOrders({ driverId: driver.id }).then(res => {
+    apiClient.getWorkOrders({ driverId: user!.id }).then(res => {
       if (!cancelled && res.success) setWorkOrders(res.data)
       if (!cancelled) setLoading(false)
     })
     return () => { cancelled = true }
-  }, [driver.id])
+  }, [user!.id])
 
   const filtered = useMemo(() =>
     filter === 'ALL' ? workOrders : workOrders.filter(w => w.status === filter),

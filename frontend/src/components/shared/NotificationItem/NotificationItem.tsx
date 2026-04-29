@@ -1,6 +1,6 @@
-import { Bell, XCircle, Package, Shield, CheckCheck, Star } from 'lucide-react'
+import { Bell, XCircle, Package, Shield, CheckCheck, Star, type LucideIcon } from 'lucide-react'
 
-const NOTIF_ICONS: Record<string, any> = {
+const NOTIF_ICONS: Record<string, LucideIcon> = {
   reject: XCircle,
   trip: Package,
   license: Shield,
@@ -16,7 +16,7 @@ const NOTIF_COLORS: Record<string, string> = {
   star: 'var(--theme-status-warning)',
 }
 
-export function NotificationItem({ notification, onRead }: { notification: any; onRead: (id: string) => void }) {
+export function NotificationItem({ notification, onRead }: { notification: { id: string; icon: string; read: boolean; title: string; message: string; timestamp: string }; onRead: (id: string) => void }) {
   const n = notification
   const Icon = NOTIF_ICONS[n.icon] ?? Bell
   const color = NOTIF_COLORS[n.icon] ?? 'var(--theme-brand-primary)'

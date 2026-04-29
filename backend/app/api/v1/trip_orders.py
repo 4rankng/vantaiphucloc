@@ -1,13 +1,16 @@
-from datetime import date
+import math
 import logging
+from collections import defaultdict
+from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, func
 
 from app.database import get_db
 from app.models.base import User
 from app.models.domain import TripOrder, TripOrderWorkOrder, WorkOrder
+from app.schemas.base import PaginatedResponse
 from app.schemas.domain import TripOrderCreate, TripOrderUpdate, TripOrderOut
 from app.core.deps import get_current_user, require_roles
 from app.services.salary_service import get_salary_period_dates
@@ -27,6 +30,26 @@ async def _get_matched_work_order_ids(db: AsyncSession, trip_order_id: int) -> l
     return [row[0] for row in result.all()]
 
 
+async def _batch_get_matched_work_order_ids(
+    db: AsyncSession, trip_order_ids: list[int]
+) -> dict[int, list[int]]:
+    """Batch-load matched work order IDs for multiple trip orders."""
+    if not trip_order_ids:
+        return {}
+    result = await db.execute(
+        select(
+            TripOrderWorkOrder.trip_order_id,
+            TripOrderWorkOrder.work_order_id,
+        ).where(
+            TripOrderWorkOrder.trip_order_id.in_(trip_order_ids)
+        )
+    )
+    mapping: dict[int, list[int]] = defaultdict(list)
+    for row in result.all():
+        mapping[row[0]].append(row[1])
+    return mapping
+
+
 async def _load_trip_order_out(db: AsyncSession, trip_order: TripOrder) -> TripOrderOut:
     """Load a TripOrder with matched work order IDs and return a TripOrderOut."""
     matched_ids = await _get_matched_work_order_ids(db, trip_order.id)
@@ -36,6 +59,25 @@ async def _load_trip_order_out(db: AsyncSession, trip_order: TripOrder) -> TripO
     }
     data["matched_work_order_ids"] = matched_ids
     return TripOrderOut.model_validate(data)
+
+
+async def _batch_load_trip_order_outs(
+    db: AsyncSession, trip_orders: list[TripOrder]
+) -> list[TripOrderOut]:
+    """Batch-load matched work order IDs for multiple trip orders."""
+    if not trip_orders:
+        return []
+
+    to_ids = [to.id for to in trip_orders]
+    mapping = await _batch_get_matched_work_order_ids(db, to_ids)
+
+    return [
+        TripOrderOut.model_validate({
+            **{col.name: getattr(to, col.name) for col in TripOrder.__table__.columns},
+            "matched_work_order_ids": mapping.get(to.id, []),
+        })
+        for to in trip_orders
+    ]
 
 
 async def _set_work_orders_matched(db: AsyncSession, work_order_ids: list[int]) -> None:
@@ -97,33 +139,57 @@ async def create_trip_order(
     return await _load_trip_order_out(db, trip_order)
 
 
-@router.get("/trip-orders", response_model=list[TripOrderOut])
+@router.get("/trip-orders", response_model=PaginatedResponse[TripOrderOut])
 async def list_trip_orders(
     client_id: int | None = None,
     driver_id: int | None = None,
     status: str | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
     current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
     query = select(TripOrder)
+    count_query = select(func.count(TripOrder.id))
 
     if client_id is not None:
         query = query.where(TripOrder.client_id == client_id)
+        count_query = count_query.where(TripOrder.client_id == client_id)
     if driver_id is not None:
         query = query.where(TripOrder.driver_id == driver_id)
+        count_query = count_query.where(TripOrder.driver_id == driver_id)
     if status is not None:
         query = query.where(TripOrder.status == status)
+        count_query = count_query.where(TripOrder.status == status)
     if date_from is not None:
         query = query.where(TripOrder.trip_date >= date_from)
+        count_query = count_query.where(TripOrder.trip_date >= date_from)
     if date_to is not None:
         query = query.where(TripOrder.trip_date <= date_to)
+        count_query = count_query.where(TripOrder.trip_date <= date_to)
 
-    result = await db.execute(query.order_by(TripOrder.id.desc()))
+    total_q = await db.execute(count_query)
+    total = total_q.scalar() or 0
+
+    result = await db.execute(
+        query.order_by(TripOrder.id.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
     trip_orders = result.scalars().all()
 
-    return [await _load_trip_order_out(db, to) for to in trip_orders]
+    # Batch-load matched IDs instead of per-row queries
+    items = await _batch_load_trip_order_outs(db, trip_orders)
+
+    return PaginatedResponse[TripOrderOut](
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=math.ceil(total / page_size) if total > 0 else 0,
+    )
 
 
 @router.get("/trip-orders/{trip_order_id}", response_model=TripOrderOut)

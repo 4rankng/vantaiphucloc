@@ -9,7 +9,7 @@
  */
 
 // Shared utilities — also available for direct import
-export { toCamel, toSnake, toStringId, normalizeOne, normalizeMany, ok, fail, isNetworkError } from './utils'
+export { toCamel, toSnake, ok, fail, isNetworkError } from './utils'
 
 // Domain modules
 import * as clientsApi from './clients.api'

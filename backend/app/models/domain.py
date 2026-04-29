@@ -106,6 +106,10 @@ class PricingLine(Base):
     work_type = Column(String(10), nullable=False)
     quantity = Column(Integer, nullable=False)
 
+    __table_args__ = (
+        UniqueConstraint("pricing_id", "work_type", name="uq_pricing_lines_pricing_work_type"),
+    )
+
 
 # ---------------------------------------------------------------------------
 # WorkOrder
@@ -211,7 +215,7 @@ class TripOrderWorkOrder(Base):
     )
     work_order_id = Column(
         Integer,
-        ForeignKey("work_orders.id"),
+        ForeignKey("work_orders.id", ondelete="CASCADE"),
         primary_key=True,
         nullable=False,
     )

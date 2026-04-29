@@ -1,9 +1,9 @@
+import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
-import { useDriverStore } from '@/hooks/use-driver-store'
 
 export function BackButton({ label = 'Quay lại', onClick }: { label?: string; onClick?: () => void }) {
-  const { goBack: driverGoBack } = useDriverStore()
-  const handleBack = onClick ?? driverGoBack
+  const navigate = useNavigate()
+  const handleBack = onClick ?? (() => navigate(-1))
   return (
     <button
       onClick={handleBack}

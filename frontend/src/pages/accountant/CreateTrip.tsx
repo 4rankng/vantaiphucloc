@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
-import { useAppStore } from '@/hooks/use-app-store'
+import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
-import { apiClient } from '@/services/api'
-import { WORK_TYPES, type Client, type Driver, type WorkType } from '@/data/domain'
+import { useClients, useDrivers, useRoutes, useCreateTripOrder } from '@/hooks/use-queries'
+import { WORK_TYPES, type WorkType } from '@/data/domain'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { Plus, Trash2 } from 'lucide-react'
 
@@ -15,12 +15,17 @@ interface CongItem {
 }
 
 export function CreateTrip() {
-  const { goBack } = useAppStore()
-  const [clients, setClients] = useState<{ value: string; label: string }[]>([])
-  const [drivers, setDrivers] = useState<{ value: string; label: string }[]>([])
-  const [routes, setRoutes] = useState<{ value: string; label: string }[]>([])
-  const [clientMap, setClientMap] = useState<Map<string, string>>(new Map())
-  const [driverMap, setDriverMap] = useState<Map<string, { name: string; plate: string }>>(new Map())
+  const navigate = useNavigate()
+  const { data: clients = [] } = useClients()
+  const { data: drivers = [] } = useDrivers()
+  const { data: routes = [] } = useRoutes()
+  const createTripOrder = useCreateTripOrder()
+
+  const clientOptions = useMemo(() => clients.map(x => ({ value: String(x.id), label: x.name })), [clients])
+  const driverOptions = useMemo(() => drivers.map(x => ({ value: String(x.id), label: `${x.name} (${x.tractorPlate})` })), [drivers])
+  const routeOptions = useMemo(() => routes.map(x => ({ value: x.route, label: x.route })), [routes])
+  const clientMap = useMemo(() => new Map(clients.map(x => [x.id, x.name])), [clients])
+  const driverMap = useMemo(() => new Map(drivers.map(x => [x.id, { name: x.name, plate: x.tractorPlate }])), [drivers])
 
   const [clientId, setClientId] = useState('')
   const [driverId, setDriverId] = useState('')
@@ -31,21 +36,6 @@ export function CreateTrip() {
   const [driverSalary, setDriverSalary] = useState(0)
   const [allowance, setAllowance] = useState(0)
   const [submitting, setSubmitting] = useState(false)
-
-  useEffect(() => {
-    Promise.all([apiClient.getClients(), apiClient.getDrivers(), apiClient.getRoutes()])
-      .then(([c, d, r]) => {
-        if (c.success) {
-          setClients(c.data.map((x: Client) => ({ value: x.id, label: x.name })))
-          setClientMap(new Map(c.data.map((x: Client) => [x.id, x.name])))
-        }
-        if (d.success) {
-          setDrivers(d.data.map((x: Driver) => ({ value: x.id, label: `${x.name} (${x.tractorPlate})` })))
-          setDriverMap(new Map(d.data.map((x: Driver) => [x.id, { name: x.name, plate: x.tractorPlate }])))
-        }
-        if (r.success) setRoutes(r.data.map((x: { route: string }) => ({ value: x.route, label: x.route })))
-      })
-  }, [])
 
   const addCong = () => {
     setCongItems(prev => [...prev, { id: String(prev.length + 1), workType: 'E20', containerNumber: '' }])
@@ -59,34 +49,32 @@ export function CreateTrip() {
     setCongItems(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c))
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!clientId || !driverId || !route || submitting) return
     setSubmitting(true)
-    try {
-      const firstCong = congItems[0]
-      const clientName = clientMap.get(clientId) ?? ''
-      const driverInfo = driverMap.get(driverId) ?? { name: '', plate: '' }
-      await apiClient.createTripOrder({
-        tripDate: new Date().toISOString().slice(0, 10),
-        clientId,
-        clientName,
-        workType: firstCong.workType,
-        route,
-        tractorPlate: driverInfo.plate,
-        driverId,
-        driverName: driverInfo.name,
-        containerNumber: firstCong.containerNumber,
-        pricingId: '',
-        unitPrice: 0,
-        driverSalary,
-        allowance,
-        revenue: 0,
-        matchedWorkOrderIds: [],
-      })
-      goBack()
-    } catch {
-      setSubmitting(false)
-    }
+    const firstCong = congItems[0]
+    const clientName = clientMap.get(Number(clientId)) ?? ''
+    const driverInfo = driverMap.get(Number(driverId)) ?? { name: '', plate: '' }
+    createTripOrder.mutate({
+      tripDate: new Date().toISOString().slice(0, 10),
+      clientId: Number(clientId),
+      clientName,
+      workType: firstCong.workType,
+      route,
+      tractorPlate: driverInfo.plate,
+      driverId: Number(driverId),
+      driverName: driverInfo.name,
+      containerNumber: firstCong.containerNumber,
+      pricingId: 0,
+      unitPrice: 0,
+      driverSalary,
+      allowance,
+      revenue: 0,
+      matchedWorkOrderIds: [],
+    }, {
+      onSuccess: () => navigate(-1),
+      onError: () => setSubmitting(false),
+    })
   }
 
   return (
@@ -94,19 +82,19 @@ export function CreateTrip() {
       {/* Client */}
       <div className="space-y-2">
         <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Khách hàng</Label>
-        <InlineSelect options={clients} value={clientId} onChange={setClientId} placeholder="Chọn khách hàng" />
+        <InlineSelect options={clientOptions} value={clientId} onChange={setClientId} placeholder="Chọn khách hàng" />
       </div>
 
       {/* Route */}
       <div className="space-y-2">
         <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Cung đường</Label>
-        <InlineSelect options={routes} value={route} onChange={setRoute} placeholder="Chọn cung đường" />
+        <InlineSelect options={routeOptions} value={route} onChange={setRoute} placeholder="Chọn cung đường" />
       </div>
 
       {/* Driver */}
       <div className="space-y-2">
         <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tài xế</Label>
-        <InlineSelect options={drivers} value={driverId} onChange={setDriverId} placeholder="Chọn tài xế" />
+        <InlineSelect options={driverOptions} value={driverId} onChange={setDriverId} placeholder="Chọn tài xế" />
       </div>
 
       {/* Trip-level salary & allowance */}

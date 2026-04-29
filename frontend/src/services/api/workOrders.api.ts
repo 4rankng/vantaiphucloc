@@ -1,11 +1,11 @@
 import { api } from './client'
-import { normalizeMany, normalizeOne, toSnake, ok, fail, isNetworkError } from './utils'
-import { setCache, getCache, uuid } from '@/lib/offline-db'
+import { toCamel, toSnake, ok, fail, isNetworkError } from './utils'
+import { setCache, getCache } from '@/lib/offline-db'
 import { offlineQueue } from '@/lib/offline-queue'
-import type { WorkOrder, ApiResponse, WorkType } from '@/data/domain'
+import type { WorkOrder, ApiResponse } from '@/data/domain'
 
 interface WorkOrderFilters {
-  driverId?: string
+  driverId?: number
   tractorPlate?: string
   dateFrom?: string
   dateTo?: string
@@ -16,13 +16,13 @@ export async function getWorkOrders(filters?: WorkOrderFilters): Promise<ApiResp
   const cacheKey = `work-orders:${filters?.driverId || ''}:${filters?.status || ''}`
   try {
     const params: Record<string, string> = {}
-    if (filters?.driverId) params.driver_id = filters.driverId
+    if (filters?.driverId) params.driver_id = String(filters.driverId)
     if (filters?.tractorPlate) params.tractor_plate = filters.tractorPlate
     if (filters?.dateFrom) params.date_from = filters.dateFrom
     if (filters?.dateTo) params.date_to = filters.dateTo
     if (filters?.status) params.status = filters.status
     const res = await api.get('/work-orders', { params })
-    const data = normalizeMany<WorkOrder>(res.data)
+    const data = toCamel<WorkOrder[]>(res.data)
     await setCache(cacheKey, data)
     return ok(data)
   } catch (err) {
@@ -38,7 +38,7 @@ export async function createWorkOrder(
   const snakeBody = toSnake(data)
   try {
     const res = await api.post('/work-orders', snakeBody)
-    const wo = normalizeOne<WorkOrder>(res.data)
+    const wo = toCamel<WorkOrder>(res.data)
     // Update cache with new work order
     const cacheKey = `work-orders:${data.driverId || ''}:`
     const cached = await getCache<WorkOrder[]>(cacheKey)
@@ -55,7 +55,7 @@ export async function createWorkOrder(
       })
       // Optimistic payload matching the WorkOrder interface exactly
       const optimistic: WorkOrder = {
-        id: `pending-${uuid()}`,
+        id: -Date.now(), // negative to distinguish from server IDs
         containers: data.containers,
         clientId: data.clientId,
         clientName: data.clientName,
@@ -87,10 +87,10 @@ export async function createWorkOrder(
   }
 }
 
-export async function updateWorkOrder(id: string, data: Partial<WorkOrder>): Promise<ApiResponse<WorkOrder>> {
+export async function updateWorkOrder(id: number, data: Partial<WorkOrder>): Promise<ApiResponse<WorkOrder>> {
   try {
     const res = await api.put(`/work-orders/${id}`, toSnake(data))
-    return ok(normalizeOne<WorkOrder>(res.data))
+    return ok(toCamel<WorkOrder>(res.data))
   } catch (err) {
     return fail(err)
   }

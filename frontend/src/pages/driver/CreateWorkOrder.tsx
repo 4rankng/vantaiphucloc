@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Camera, RotateCcw, Plus, Trash2, AlertCircle, WifiOff } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { ContainerScanner } from '@/components/shared/ContainerScanner'
 import type { PhotoMeta } from '@/components/shared/ContainerScanner'
 import { apiClient } from '@/services/api'
-import { useDriverStore } from '@/hooks/use-driver-store'
 import { useToast } from '@/components/atoms/Toast'
 import { useOffline } from '@/contexts/OfflineContext'
 import { WORK_TYPES, type Client, type RoutePrice, type WorkType, type ContainerItem } from '@/data/domain'
@@ -23,7 +24,8 @@ interface ContainerForm {
 const EMPTY_CONT: ContainerForm = { containerNumber: '', workType: 'E20', photoTaken: false }
 
 export function CreateWorkOrder() {
-  const { driver, navigate } = useDriverStore()
+  const navigate = useNavigate()
+  const { user } = useAuth()
   const toast = useToast()
   const { isOnline } = useOffline()
   const [clients, setClients] = useState<Client[]>([])
@@ -82,12 +84,23 @@ export function CreateWorkOrder() {
     setContainers(prev => prev.filter((_, i) => i !== idx))
   }, [])
 
+  // Get driver info from API for plate etc
+  const [driverPlate, setDriverPlate] = useState('')
+  useEffect(() => {
+    apiClient.getDrivers().then(res => {
+      if (res.success) {
+        const d = res.data.find((d: { id: number; tractorPlate?: string }) => d.id === Number(user!.id))
+        if (d) setDriverPlate(d.tractorPlate ?? '')
+      }
+    })
+  }, [user])
+
   const handleSubmit = useCallback(async () => {
     if (containers.some(c => !c.containerNumber.trim()) || !clientId || !route) return
     setSubmitting(true)
 
     try {
-      const client = clients.find(c => c.id === clientId)
+      const client = clients.find(c => String(c.id) === clientId)
       const containerItems: ContainerItem[] = containers.map(c => ({
         containerNumber: c.containerNumber.trim(),
         workType: c.workType,
@@ -108,12 +121,12 @@ export function CreateWorkOrder() {
 
       const res = await apiClient.createWorkOrder({
         containers: containerItems,
-        clientId,
+        clientId: Number(clientId),
         clientName: client?.name ?? '',
         route,
-        driverId: driver.id,
-        driverName: driver.name,
-        tractorPlate: driver.tractorPlate,
+        driverId: Number(user!.id),
+        driverName: user!.name,
+        tractorPlate: driverPlate,
         gpsLat: gps.lat,
         gpsLng: gps.lng,
       })
@@ -129,7 +142,7 @@ export function CreateWorkOrder() {
       toast.error('Gửi thất bại', 'Vui lòng thử lại')
       setSubmitting(false)
     }
-  }, [containers, clientId, route, clients, driver, navigate, isOnline, toast])
+  }, [containers, clientId, route, clients, user, driverPlate, navigate, isOnline, toast])
 
   const canSubmit = containers.every(c => c.containerNumber.trim()) && clientId && route
 
@@ -301,7 +314,7 @@ export function CreateWorkOrder() {
           label="Chọn khách hàng"
           placeholder="Chọn khách hàng"
           value={clientId}
-          options={clients.map(c => ({ value: c.id, label: c.name, sublabel: c.phone }))}
+          options={clients.map(c => ({ value: String(c.id), label: c.name, sublabel: c.phone }))}
           onChange={setClientId}
         />
       </div>

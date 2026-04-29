@@ -1,6 +1,5 @@
-import { Users, Truck, CircleDollarSign, LayoutDashboard, type LucideIcon } from 'lucide-react'
+import { Truck, CircleDollarSign, LayoutDashboard, type LucideIcon } from 'lucide-react'
 import type { Role } from '@/data/domain'
-import { ROLE_LABELS } from '@/data/domain'
 
 const PHUC_LOC = 'Phúc Lộc'
 

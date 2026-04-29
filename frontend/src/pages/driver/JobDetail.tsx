@@ -1,21 +1,18 @@
 import { useEffect, useState } from 'react'
 import { MapPin, Calendar, Truck, Building2, Route as RouteIcon, Camera } from 'lucide-react'
-import { useDriverStore } from '@/hooks/use-driver-store'
+import { useParams } from 'react-router-dom'
 import { InfoRow } from '@/components/shared/InfoRow'
-import { ContBadge } from '@/components/shared/ContBadge'
 import { apiClient } from '@/services/api'
 import { formatCurrencyFull, type WorkOrder } from '@/data/domain'
 
 export function JobDetail() {
-  const { currentPath, goBack } = useDriverStore()
+  const { jobId: jobIdStr } = useParams<{ jobId: string }>()
+  const jobId = Number(jobIdStr)
   const [job, setJob] = useState<WorkOrder | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Extract job ID from path like /driver/job/WO-001
-  const jobId = currentPath.split('/').pop()
-
   useEffect(() => {
-    if (!jobId) return
+    if (!jobIdStr) return
     let cancelled = false
     apiClient.getWorkOrders({}).then(res => {
       if (!cancelled && res.success) {
