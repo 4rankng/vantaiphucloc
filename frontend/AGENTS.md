@@ -11,10 +11,6 @@
 - **Theme**: Grab-inspired green, CSS variables
 - **All UI text in Vietnamese**
 
-## ⚠️ Version Bump Rule
-
-Every frontend change MUST bump `version` in `package.json`. Format: `YYYY.MM.DD.N`. Same day bump N, new day reset to 1. Used for PWA cache busting.
-
 ## Tech: React 19 + TypeScript + Vite + Tailwind v4 + shadcn/ui (26 components) + Axios + vite-plugin-pwa
 
 ## Path Aliases
