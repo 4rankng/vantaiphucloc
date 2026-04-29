@@ -108,9 +108,9 @@ class PricingCreate(BaseModel):
     work_type: str
     route: str
     lines: list[PricingLineCreate]
-    unit_price: int
-    driver_salary: int
-    allowance: int
+    unit_price: int = Field(ge=0)
+    driver_salary: int = Field(ge=0)
+    allowance: int = Field(ge=0)
 
 
 class PricingUpdate(BaseModel):
@@ -234,10 +234,10 @@ class TripOrderCreate(BaseModel):
     driver_name: str
     container_number: str
     pricing_id: int | None = None
-    unit_price: int
-    driver_salary: int
-    allowance: int
-    revenue: int
+    unit_price: int = Field(ge=0)
+    driver_salary: int = Field(ge=0)
+    allowance: int = Field(ge=0)
+    revenue: int = Field(ge=0)
     matched_work_order_ids: list[int] = []
 
 

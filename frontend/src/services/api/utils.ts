@@ -4,8 +4,6 @@
  * Key conventions:
  *  - toCamel  : recursively converts snake_case keys → camelCase on all responses
  *  - toSnake  : converts camelCase keys → snake_case for request bodies
- *  - toStringId: converts integer `id` fields to strings so existing string-ID
- *                comparisons in page components continue to work
  *  - All calls are wrapped in try/catch; failures return
  *    { data: null, success: false, message: error.message }
  */
@@ -36,18 +34,18 @@ function camelToSnake(s: string): string {
 }
 
 /** Recursively convert all object keys from snake_case to camelCase */
-export function toCamel(value: unknown): unknown {
+export function toCamel<T>(value: unknown): T {
   if (Array.isArray(value)) {
-    return value.map(toCamel)
+    return value.map(v => toCamel<unknown>(v)) as T
   }
   if (value !== null && typeof value === 'object') {
     const result: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
       result[snakeToCamel(k)] = toCamel(v)
     }
-    return result
+    return result as T
   }
-  return value
+  return value as T
 }
 
 /** Recursively convert all object keys from camelCase to snake_case */
@@ -63,28 +61,6 @@ export function toSnake(value: unknown): unknown {
     return result
   }
   return value
-}
-
-/**
- * Convert integer `id` fields to strings in a camelCase-converted object.
- * The backend returns integer PKs; the frontend uses string IDs everywhere.
- */
-export function toStringId<T extends Record<string, unknown>>(obj: T): T {
-  if (obj && typeof obj.id === 'number') {
-    return { ...obj, id: String(obj.id) }
-  }
-  return obj
-}
-
-/** Apply toCamel + toStringId to a single response object */
-export function normalizeOne<T>(raw: unknown): T {
-  const camel = toCamel(raw) as Record<string, unknown>
-  return toStringId(camel) as T
-}
-
-/** Apply toCamel + toStringId to an array of response objects */
-export function normalizeMany<T>(raw: unknown): T[] {
-  return (toCamel(raw) as Record<string, unknown>[]).map(item => toStringId(item) as T)
 }
 
 /** Wrap a successful result in the ApiResponse shape */

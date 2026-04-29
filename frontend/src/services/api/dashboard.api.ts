@@ -1,5 +1,5 @@
 import { api } from './client'
-import { normalizeOne, ok, fail } from './utils'
+import { toCamel, ok, fail } from './utils'
 import type { ApiResponse } from '@/data/domain'
 
 // TODO: Add backend GET /notifications endpoint. For now, return empty.
@@ -35,7 +35,7 @@ export interface DashboardSummary {
 export async function getDashboardSummary(): Promise<ApiResponse<DashboardSummary>> {
   try {
     const res = await api.get('/dashboard/summary')
-    const data = normalizeOne<DashboardSummary>(res.data)
+    const data = toCamel<DashboardSummary>(res.data)
     // Fill in fields not yet in backend response
     if (!data.monthlyRevenue) data.monthlyRevenue = []
     if (!data.alerts) data.alerts = []

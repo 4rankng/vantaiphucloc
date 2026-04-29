@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Plus, Calendar } from 'lucide-react'
-import { useDriverStore } from '@/hooks/use-driver-store'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
 import { apiClient } from '@/services/api'
 import { formatCurrencyFull, type WorkOrder } from '@/data/domain'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
@@ -8,7 +9,8 @@ import { WorkOrderCard } from '@/components/shared/WorkOrderCard'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { StatsRow } from '@/components/shared/StatsRow'
 export function DriverHome() {
-  const { driver, navigate } = useDriverStore()
+  const navigate = useNavigate()
+  const { user } = useAuth()
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -19,12 +21,12 @@ export function DriverHome() {
 
   useEffect(() => {
     let cancelled = false
-    apiClient.getWorkOrders({ driverId: driver.id }).then(res => {
+    apiClient.getWorkOrders({ driverId: user!.id }).then(res => {
       if (!cancelled && res.success) setWorkOrders(res.data)
       if (!cancelled) setLoading(false)
     })
     return () => { cancelled = true }
-  }, [driver.id])
+  }, [user!.id])
 
   const handlePrevMonth = () => {
     if (month === 0) { setMonth(11); setYear(y => y - 1) }

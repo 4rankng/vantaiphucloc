@@ -1,13 +1,16 @@
-from datetime import date
+import math
 import logging
+from collections import defaultdict
+from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, func
 
 from app.database import get_db
 from app.models.base import User
 from app.models.domain import WorkOrder, WorkOrderContainer
+from app.schemas.base import PaginatedResponse
 from app.schemas.domain import (
     WorkOrderCreate,
     WorkOrderUpdate,
@@ -25,7 +28,7 @@ router = APIRouter()
 
 
 async def _load_work_order_out(db: AsyncSession, work_order: WorkOrder) -> WorkOrderOut:
-    """Load a WorkOrder with its associated WorkOrderContainer rows and return a WorkOrderOut."""
+    """Load a single WorkOrder with its associated WorkOrderContainer rows."""
     containers_result = await db.execute(
         select(WorkOrderContainer).where(
             WorkOrderContainer.work_order_id == work_order.id
@@ -53,6 +56,55 @@ async def _load_work_order_out(db: AsyncSession, work_order: WorkOrder) -> WorkO
         updated_at=work_order.updated_at,
         containers=[ContainerOut.model_validate(c) for c in containers],
     )
+
+
+async def _batch_load_work_order_outs(
+    db: AsyncSession, work_orders: list[WorkOrder]
+) -> list[WorkOrderOut]:
+    """Batch-load containers for multiple work orders at once (N+1 fix)."""
+    if not work_orders:
+        return []
+
+    wo_ids = [wo.id for wo in work_orders]
+    containers_result = await db.execute(
+        select(WorkOrderContainer).where(
+            WorkOrderContainer.work_order_id.in_(wo_ids)
+        )
+    )
+    all_containers = containers_result.scalars().all()
+
+    # Group containers by work_order_id
+    containers_by_wo: dict[int, list[WorkOrderContainer]] = defaultdict(list)
+    for c in all_containers:
+        containers_by_wo[c.work_order_id].append(c)
+
+    return [
+        WorkOrderOut(
+            id=wo.id,
+            client_id=wo.client_id,
+            client_name=wo.client_name,
+            route=wo.route,
+            driver_id=wo.driver_id,
+            driver_name=wo.driver_name,
+            tractor_plate=wo.tractor_plate,
+            gps_lat=wo.gps_lat,
+            gps_lng=wo.gps_lng,
+            gps_address=wo.gps_address,
+            unit_price=wo.unit_price,
+            driver_salary=wo.driver_salary,
+            allowance=wo.allowance,
+            earning=wo.earning,
+            pricing_id=wo.pricing_id,
+            status=wo.status,
+            created_at=wo.created_at,
+            updated_at=wo.updated_at,
+            containers=[
+                ContainerOut.model_validate(c)
+                for c in containers_by_wo.get(wo.id, [])
+            ],
+        )
+        for wo in work_orders
+    ]
 
 
 @router.post("/work-orders", response_model=WorkOrderOut, status_code=201)
@@ -89,33 +141,57 @@ async def create_work_order(
     return await _load_work_order_out(db, work_order)
 
 
-@router.get("/work-orders", response_model=list[WorkOrderOut])
+@router.get("/work-orders", response_model=PaginatedResponse[WorkOrderOut])
 async def list_work_orders(
     driver_id: int | None = None,
     tractor_plate: str | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
     status: str | None = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     query = select(WorkOrder)
+    count_query = select(func.count(WorkOrder.id))
 
     if driver_id is not None:
         query = query.where(WorkOrder.driver_id == driver_id)
+        count_query = count_query.where(WorkOrder.driver_id == driver_id)
     if tractor_plate is not None:
         query = query.where(WorkOrder.tractor_plate == tractor_plate)
+        count_query = count_query.where(WorkOrder.tractor_plate == tractor_plate)
     if date_from is not None:
         query = query.where(WorkOrder.created_at >= date_from)
+        count_query = count_query.where(WorkOrder.created_at >= date_from)
     if date_to is not None:
         query = query.where(WorkOrder.created_at <= date_to)
+        count_query = count_query.where(WorkOrder.created_at <= date_to)
     if status is not None:
         query = query.where(WorkOrder.status == status)
+        count_query = count_query.where(WorkOrder.status == status)
 
-    result = await db.execute(query.order_by(WorkOrder.id.desc()))
+    total_q = await db.execute(count_query)
+    total = total_q.scalar() or 0
+
+    result = await db.execute(
+        query.order_by(WorkOrder.id.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
     work_orders = result.scalars().all()
 
-    return [await _load_work_order_out(db, wo) for wo in work_orders]
+    # Batch-load containers instead of per-row queries
+    items = await _batch_load_work_order_outs(db, work_orders)
+
+    return PaginatedResponse[WorkOrderOut](
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=math.ceil(total / page_size) if total > 0 else 0,
+    )
 
 
 @router.get("/work-orders/{work_order_id}", response_model=WorkOrderOut)

@@ -4,7 +4,7 @@ import { apiClient } from '@/services/api'
 import { formatCurrencyFull as formatCurrency } from '@/data/domain'
 import type { WorkOrder, Pricing, Client } from '@/data/domain'
 
-export function ClientJobs({ clientId, onBack }: { clientId: string; onBack: () => void }) {
+export function ClientJobs({ clientId, onBack }: { clientId: number; onBack: () => void }) {
   const [jobs, setJobs] = useState<WorkOrder[]>([])
   const [pricings, setPricings] = useState<Pricing[]>([])
   const [clientName, setClientName] = useState('')
@@ -21,7 +21,7 @@ export function ClientJobs({ clientId, onBack }: { clientId: string; onBack: () 
         if (jRes.success) setJobs(jRes.data.filter(j => j.clientId === clientId))
         if (cRes.success) {
           const c = (cRes.data as Client[]).find(c => c.id === clientId)
-          setClientName(c?.name ?? clientId)
+          setClientName(c?.name ?? String(clientId))
         }
         if (pRes.success) setPricings(pRes.data)
       }
