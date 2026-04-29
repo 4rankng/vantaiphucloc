@@ -179,13 +179,10 @@ export function formatCurrency(amount: number): string {
   return amount.toLocaleString('vi-VN') + ' ₫'
 }
 
-export function formatCurrencyFull(amount: number): string {
-  return amount.toLocaleString('vi-VN') + ' ₫'
-}
-
-export function formatCurrencyShort(amount: number): string {
-  return amount.toLocaleString('vi-VN') + ' ₫'
-}
+// formatCurrencyFull and formatCurrencyShort removed — identical to formatCurrency
+// Use formatCurrency everywhere instead.
+export { formatCurrency as formatCurrencyFull }
+export { formatCurrency as formatCurrencyShort }
 
 export function getContainerBadgeColor(type: TrailerType): string {
   switch (type) {
