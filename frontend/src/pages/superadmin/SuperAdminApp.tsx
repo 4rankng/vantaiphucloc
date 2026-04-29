@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { AppTopBar } from '@/components/shared/AppTopBar'
 import { UserDropdown } from '@/components/shared/ProfileDialog'
@@ -11,19 +11,18 @@ import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { FilterPills } from '@/components/shared/FilterPills'
+import { useToast } from '@/components/atoms/Toast'
+import { api } from '@/services/api/client'
 import type { Role } from '@/data/domain'
 import { ROLE_LABELS } from '@/data/domain'
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
 const PHUC_LOC = 'Phúc Lộc'
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface UserAccount {
   id: string
-  name: string
+  username: string
   phone: string
+  email?: string
   role: Role
   vendor: string
   tractorPlate?: string
@@ -43,10 +42,25 @@ const CREATEABLE_ROLES: { value: Role; label: string }[] = [
   { value: 'accountant', label: ROLE_LABELS.accountant },
 ]
 
+function toUserAccount(obj: Record<string, unknown>): UserAccount {
+  return {
+    id: String(obj.id),
+    username: obj.username as string,
+    phone: obj.phone as string,
+    email: obj.email as string | undefined,
+    role: obj.role as Role,
+    vendor: (obj.vendor as string) || PHUC_LOC,
+    tractorPlate: obj.tractor_plate as string | undefined,
+    active: obj.is_active as boolean,
+    createdAt: obj.created_at as string,
+  }
+}
+
 // ─── User Card ────────────────────────────────────────────────────────────────
 
 function UserCard({ user, onTap }: { user: UserAccount; onTap: () => void }) {
   const RoleIcon = ROLE_ICONS[user.role] ?? Users
+  const displayName = user.username
 
   return (
     <button
@@ -64,7 +78,7 @@ function UserCard({ user, onTap }: { user: UserAccount; onTap: () => void }) {
           <RoleIcon className="w-4 h-4" style={{ color: 'var(--theme-brand-primary)' }} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold truncate" style={{ color: 'var(--theme-text-primary)' }}>{user.name}</p>
+          <p className="text-sm font-bold truncate" style={{ color: 'var(--theme-text-primary)' }}>{displayName}</p>
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-xs font-semibold px-1.5 py-0.5 rounded"
               style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
@@ -111,26 +125,23 @@ function UserDetailDialog({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader><DialogTitle>Chi tiết tài khoản</DialogTitle></DialogHeader>
-
         <div className="flex items-center gap-3 py-2">
           <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
             style={{ background: 'var(--theme-brand-primary-light)' }}>
             <RoleIcon className="w-6 h-6" style={{ color: 'var(--theme-brand-primary)' }} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>{user.name}</p>
+            <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>{user.username}</p>
             <span className="text-xs font-semibold px-2 py-0.5 rounded-full inline-block mt-0.5"
               style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
               {ROLE_LABELS[user.role]}
             </span>
           </div>
         </div>
-
         <div className="space-y-0">
           <InfoRow icon={Users} label={user.role === 'driver' ? 'Nhà thầu' : 'Công ty'} value={user.vendor} noBorder />
           {user.tractorPlate && <InfoRow icon={Truck} label="Biển số đầu kéo" value={user.tractorPlate} noBorder />}
         </div>
-
         <DialogFooter>
           <Button variant="outline" onClick={onClose} className="flex-1">Huỷ</Button>
           <Button onClick={onClose} className="flex-1"
@@ -148,12 +159,16 @@ function UserDetailDialog({
 function CreateUserDialog({
   open,
   onClose,
+  onCreated,
 }: {
   open: boolean
   onClose: () => void
+  onCreated: () => void
 }) {
+  const toast = useToast()
+  const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
-    name: '',
+    username: '',
     phone: '',
     role: 'driver' as Role,
     vendor: PHUC_LOC,
@@ -161,15 +176,31 @@ function CreateUserDialog({
     tractorPlate: '',
   })
 
-  const handleSubmit = () => {
-    if (!form.name.trim() || !form.phone.trim() || !form.password.trim()) return
-    // In real app: call API
-    onClose()
-    setForm({ name: '', phone: '', role: 'driver', vendor: PHUC_LOC, password: '', tractorPlate: '' })
-  }
-
-  // Internal staff (director, accountant) are always Phúc Lộc
   const isInternalRole = form.role === 'director' || form.role === 'accountant'
+
+  const handleSubmit = async () => {
+    if (!form.username.trim() || !form.phone.trim() || !form.password.trim()) return
+    setSaving(true)
+    try {
+      await api.post('/users', {
+        username: form.username.trim(),
+        phone: form.phone.trim(),
+        role: form.role,
+        password: form.password,
+        vendor: form.role === 'driver' ? form.vendor : undefined,
+        tractor_plate: form.role === 'driver' && form.tractorPlate.trim() ? form.tractorPlate.trim() : undefined,
+      })
+      toast.success('Đã tạo tài khoản')
+      setForm({ username: '', phone: '', role: 'driver', vendor: PHUC_LOC, password: '', tractorPlate: '' })
+      onClose()
+      onCreated()
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Lỗi không xác định'
+      toast.error('Lỗi', detail)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -179,8 +210,8 @@ function CreateUserDialog({
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Họ tên</Label>
-            <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Nguyễn Văn A" className="text-sm" />
+            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tên đăng nhập</Label>
+            <Input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} placeholder="nguyenvana" className="text-sm" />
           </div>
           <div className="space-y-2">
             <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số điện thoại</Label>
@@ -196,7 +227,6 @@ function CreateUserDialog({
                 setForm(f => ({
                   ...f,
                   role: newRole,
-                  // Internal roles are always Phúc Lộc
                   vendor: (newRole === 'director' || newRole === 'accountant') ? PHUC_LOC : f.vendor,
                 }))
               }}
@@ -231,10 +261,10 @@ function CreateUserDialog({
         <DialogFooter>
           <Button variant="outline" onClick={onClose} className="flex-1">Huỷ</Button>
           <Button onClick={handleSubmit}
-            disabled={!form.name.trim() || !form.phone.trim() || !form.password.trim()}
+            disabled={!form.username.trim() || !form.phone.trim() || !form.password.trim() || saving}
             className="flex-1"
             style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-            Xác nhận
+            {saving ? 'Đang tạo...' : 'Xác nhận'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -268,7 +298,7 @@ function SuperAdminDashboard({
   const filtered = users.filter(u => {
     const roleOk = filterRole === 'ALL' || u.role === filterRole
     const searchOk = !searchQuery.trim() ||
-      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.phone.includes(searchQuery) ||
       u.vendor.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (u.tractorPlate ?? '').toLowerCase().includes(searchQuery.toLowerCase())
@@ -277,7 +307,6 @@ function SuperAdminDashboard({
 
   return (
     <div className="pb-24">
-      {/* Stats */}
       <div className="px-4 pt-4 grid grid-cols-3 gap-2">
         {([
           { label: ROLE_LABELS.director, value: counts.director, icon: LayoutDashboard },
@@ -298,9 +327,7 @@ function SuperAdminDashboard({
         ))}
       </div>
 
-      {/* Filters */}
       <div className="px-4 mt-4 space-y-2">
-        {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--theme-text-muted)' }} />
           <input
@@ -311,8 +338,6 @@ function SuperAdminDashboard({
             style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
           />
         </div>
-
-        {/* Role filter pills */}
         <FilterPills
           options={[
             { value: 'ALL', label: 'Tất cả', count: users.length },
@@ -325,7 +350,6 @@ function SuperAdminDashboard({
         />
       </div>
 
-      {/* User list */}
       <div className="px-4 mt-3">
         <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--theme-text-muted)' }}>
           {filtered.length} tài khoản
@@ -349,13 +373,37 @@ function SuperAdminDashboard({
 
 export function SuperAdminApp() {
   const { user } = useAuth()
+  const toast = useToast()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<UserAccount | null>(null)
   const [filterRole, setFilterRole] = useState<Role | 'ALL'>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
-
   const [users, setUsers] = useState<UserAccount[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchUsers = useCallback(async () => {
+    try {
+      const res = await api.get('/users')
+      const list = (res.data as Record<string, unknown>[]).map(toUserAccount)
+      setUsers(list)
+    } catch {
+      toast.error('Lỗi', 'Không thể tải danh sách tài khoản')
+    } finally {
+      setLoading(false)
+    }
+  }, [toast])
+
+  useEffect(() => { fetchUsers() }, [fetchUsers])
+
+  if (loading) {
+    return (
+      <div className="min-h-[100dvh]" style={{ background: 'var(--theme-bg-primary)' }}>
+        <AppTopBar variant="home" name={user?.name ?? ''} onProfile={() => {}} onNotifications={() => {}} />
+        <div className="p-4 text-center py-12" style={{ color: 'var(--theme-text-muted)' }}>Đang tải...</div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-[100dvh]" style={{ background: 'var(--theme-bg-primary)' }}>
@@ -375,7 +423,7 @@ export function SuperAdminApp() {
       />
       <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => setCreateOpen(true)} label="Tạo tài khoản" />
       <UserDropdown open={dropdownOpen} onClose={() => setDropdownOpen(false)} />
-      <CreateUserDialog open={createOpen} onClose={() => setCreateOpen(false)} />
+      <CreateUserDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreated={fetchUsers} />
       <UserDetailDialog user={selectedUser} open={!!selectedUser} onClose={() => setSelectedUser(null)} />
     </div>
   )

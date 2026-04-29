@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useDriverStore } from '@/hooks/use-driver-store'
 import { useAuth } from '@/contexts/AuthContext'
+import { api } from '@/services/api/client'
+import { useToast } from '@/components/atoms/Toast'
 import { Phone, TruckIcon, LogOut, KeyRound, ChevronRight, UserCircle } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
@@ -11,17 +13,36 @@ export function Profile() {
   const { driver } = useDriverStore()
   const { logout } = useAuth()
 
+  const toast = useToast()
+
   const [pwDialog, setPwDialog] = useState(false)
   const [currentPw, setCurrentPw] = useState('')
   const [newPw, setNewPw] = useState('')
   const [confirmPw, setConfirmPw] = useState('')
+  const [saving, setSaving] = useState(false)
 
-  const handleChangePw = () => {
-    // In real app: call API to change password
-    setPwDialog(false)
-    setCurrentPw('')
-    setNewPw('')
-    setConfirmPw('')
+  const handleChangePw = async () => {
+    if (newPw !== confirmPw) {
+      toast.error('Lỗi', 'Mật khẩu xác nhận không khớp')
+      return
+    }
+    setSaving(true)
+    try {
+      await api.post('/users/change-password', {
+        current_password: currentPw,
+        new_password: newPw,
+      })
+      toast.success('Đã đổi mật khẩu')
+      setPwDialog(false)
+      setCurrentPw('')
+      setNewPw('')
+      setConfirmPw('')
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Lỗi không xác định'
+      toast.error('Lỗi', detail)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -120,7 +141,7 @@ export function Profile() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPwDialog(false)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleChangePw} disabled={!currentPw || !newPw || newPw !== confirmPw} className="flex-1"
+            <Button onClick={handleChangePw} disabled={!currentPw || !newPw || newPw !== confirmPw || saving} className="flex-1"
               style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
             >
               Xác nhận

@@ -36,15 +36,13 @@ export function DirectorDashboard({ onManageUsers, onViewDriverJobs, onViewClien
     return () => { cancelled = true }
   }, [])
 
-  // Load drivers from users store
+  // Load drivers from API
   useEffect(() => {
-    const raw = localStorage.getItem('ttransport_users')
-    if (raw) {
-      try {
-        const users = JSON.parse(raw)
-        setDrivers(users.filter((u: { role: string }) => u.role === 'driver'))
-      } catch { /* */ }
-    }
+    let cancelled = false
+    apiClient.getDrivers().then(res => {
+      if (!cancelled && res.success) setDrivers(res.data)
+    })
+    return () => { cancelled = true }
   }, [])
 
   // Filter jobs by selected month
