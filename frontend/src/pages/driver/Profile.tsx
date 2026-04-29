@@ -1,6 +1,8 @@
-import { useState } from 'react'
-import { useDriverStore } from '@/hooks/use-driver-store'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { apiClient } from '@/services/api'
+import { api } from '@/services/api/client'
+import { useToast } from '@/components/atoms/Toast'
 import { Phone, TruckIcon, LogOut, KeyRound, ChevronRight, UserCircle } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
@@ -8,20 +10,54 @@ import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 
 export function Profile() {
-  const { driver } = useDriverStore()
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
+  const toast = useToast()
+
+  const [driverPlate, setDriverPlate] = useState('')
+  const [phone, setPhone] = useState('')
+
+  useEffect(() => {
+    if (user) {
+      apiClient.getDrivers().then(res => {
+        if (res.success) {
+          const d = res.data.find((d: { id: number; tractorPlate?: string; phone?: string }) => d.id === Number(user.id))
+          if (d) {
+            setDriverPlate(d.tractorPlate ?? '')
+            setPhone(d.phone ?? '')
+          }
+        }
+      })
+    }
+  }, [user])
 
   const [pwDialog, setPwDialog] = useState(false)
   const [currentPw, setCurrentPw] = useState('')
   const [newPw, setNewPw] = useState('')
   const [confirmPw, setConfirmPw] = useState('')
+  const [saving, setSaving] = useState(false)
 
-  const handleChangePw = () => {
-    // In real app: call API to change password
-    setPwDialog(false)
-    setCurrentPw('')
-    setNewPw('')
-    setConfirmPw('')
+  const handleChangePw = async () => {
+    if (newPw !== confirmPw) {
+      toast.error('Lỗi', 'Mật khẩu xác nhận không khớp')
+      return
+    }
+    setSaving(true)
+    try {
+      await api.post('/users/change-password', {
+        current_password: currentPw,
+        new_password: newPw,
+      })
+      toast.success('Đã đổi mật khẩu')
+      setPwDialog(false)
+      setCurrentPw('')
+      setNewPw('')
+      setConfirmPw('')
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Lỗi không xác định'
+      toast.error('Lỗi', detail)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -39,14 +75,14 @@ export function Profile() {
             <UserCircle className="w-7 h-7" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>{driver.name}</p>
+            <p className="text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>{user?.name}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <Phone className="w-3 h-3" style={{ color: 'var(--theme-text-muted)' }} />
-              <span className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>{driver.phone}</span>
+              <span className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>{phone}</span>
             </div>
             <div className="flex items-center gap-1.5 mt-0.5">
               <TruckIcon className="w-3 h-3" style={{ color: 'var(--theme-text-muted)' }} />
-              <span className="text-xs font-medium" style={{ color: 'var(--theme-brand-primary)' }}>{driver.tractorPlate}</span>
+              <span className="text-xs font-medium" style={{ color: 'var(--theme-brand-primary)' }}>{driverPlate}</span>
             </div>
           </div>
           <span
@@ -60,8 +96,8 @@ export function Profile() {
         {/* Info */}
         <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
           {[
-            { label: 'Mã tài xế', value: driver.id },
-            { label: 'Biển số đầu kéo', value: driver.tractorPlate },
+            { label: 'Mã tài xế', value: user?.id },
+            { label: 'Biển số đầu kéo', value: driverPlate },
           ].map(({ label, value }, i, arr) => (
             <div key={label}>
               <div className="flex justify-between items-center px-4 py-3">
@@ -120,7 +156,7 @@ export function Profile() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPwDialog(false)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleChangePw} disabled={!currentPw || !newPw || newPw !== confirmPw} className="flex-1"
+            <Button onClick={handleChangePw} disabled={!currentPw || !newPw || newPw !== confirmPw || saving} className="flex-1"
               style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
             >
               Xác nhận

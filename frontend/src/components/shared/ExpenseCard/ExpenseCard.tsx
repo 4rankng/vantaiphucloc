@@ -2,13 +2,13 @@ import { Badge } from '@/components/ui/Badge'
 import { Receipt } from 'lucide-react'
 import { formatCurrencyShort } from '@/data/domain'
 
-const statusMap: Record<string, { variant: any; label: string }> = {
+const statusMap: Record<string, { variant: 'default' | 'success' | 'warning' | 'danger' | 'info'; label: string }> = {
   DRAFT: { variant: 'warning', label: 'Chờ duyệt' },
   APPROVED: { variant: 'success', label: 'Đã duyệt' },
   CANCELLED: { variant: 'danger', label: 'Từ chối' },
 }
 
-export function ExpenseCard({ expense, onClick }: { expense: any; onClick: () => void }) {
+export function ExpenseCard({ expense, onClick }: { expense: { status: string; category: string; description?: string; amount: number }; onClick: () => void }) {
   const s = statusMap[expense.status] ?? statusMap.DRAFT
   return (
     <button

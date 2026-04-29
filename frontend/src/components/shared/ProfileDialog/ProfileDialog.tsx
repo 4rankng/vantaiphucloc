@@ -7,21 +7,14 @@ import { Input } from '@/components/ui/Input/Input'
 import { Label } from '@/components/ui/Label/Label'
 
 export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { logout } = useAuth()
-  const [pwStep, setPwStep] = useState(false)
   const [currentPw, setCurrentPw] = useState('')
   const [newPw, setNewPw] = useState('')
   const [confirmPw, setConfirmPw] = useState('')
 
-  const handleChangePw = () => {
-    setPwStep(false)
+  const handleClose = () => {
     setCurrentPw('')
     setNewPw('')
     setConfirmPw('')
-  }
-
-  const handleClose = () => {
-    setPwStep(false)
     onClose()
   }
 
@@ -45,7 +38,7 @@ export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () =>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={handleClose} className="flex-1">Huỷ</Button>
-          <Button onClick={handleChangePw} disabled={!currentPw || !newPw || newPw !== confirmPw} className="flex-1"
+          <Button onClick={handleClose} disabled={!currentPw || !newPw || newPw !== confirmPw} className="flex-1"
             style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
           >
             Xác nhận

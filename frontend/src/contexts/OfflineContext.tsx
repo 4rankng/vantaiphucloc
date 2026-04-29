@@ -36,6 +36,7 @@ interface OfflineContextValue {
 
 const OfflineContext = createContext<OfflineContextValue | null>(null)
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useOffline() {
   const ctx = useContext(OfflineContext)
   if (!ctx) throw new Error('useOffline must be used within OfflineProvider')
@@ -68,13 +69,6 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     getQueueCount().then(n => setPendingCount(n))
   }, [])
 
-  useEffect(() => {
-    if (isOnline && !prevOnlineRef.current && pendingCount > 0) {
-      syncNow()
-    }
-    prevOnlineRef.current = isOnline
-  }, [isOnline])
-
   // Abort in-flight sync on unmount
   useEffect(() => {
     return () => {
@@ -93,24 +87,6 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     const { clearQueue: dbClear } = await import('@/lib/offline-db')
     await dbClear()
     setPendingCount(0)
-  }, [])
-
-  const syncNow = useCallback(async (): Promise<{ synced: number; failed: number }> => {
-    if (!isFullyOnline()) return { synced: 0, failed: 0 }
-
-    // Critical #2: Use Web Locks API to prevent cross-tab duplicate sync
-    if (typeof navigator !== 'undefined' && navigator.locks) {
-      try {
-        return await navigator.locks.request(SYNC_LOCK, { mode: 'exclusive', ifAvailable: true }, async (lock) => {
-          if (!lock) return { synced: 0, failed: 0 }
-          return runSync()
-        })
-      } catch {
-        // Lock API not supported in some contexts, proceed without lock
-        return runSync()
-      }
-    }
-    return runSync()
   }, [])
 
   async function runSync(): Promise<{ synced: number; failed: number }> {
@@ -171,6 +147,34 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       abortRef.current = null
     }
   }
+
+  const syncNow = useCallback(async (): Promise<{ synced: number; failed: number }> => {
+    if (!isFullyOnline()) return { synced: 0, failed: 0 }
+
+    // Critical #2: Use Web Locks API to prevent cross-tab duplicate sync
+    if (typeof navigator !== 'undefined' && navigator.locks) {
+      try {
+        return await navigator.locks.request(SYNC_LOCK, { mode: 'exclusive', ifAvailable: true }, async (lock) => {
+          if (!lock) return { synced: 0, failed: 0 }
+          return runSync()
+        })
+      } catch {
+        // Lock API not supported in some contexts, proceed without lock
+        return runSync()
+      }
+    }
+    return runSync()
+  }, [])
+
+  useEffect(() => {
+    if (isOnline && !prevOnlineRef.current && pendingCount > 0 && !syncing) {
+      const timer = setTimeout(() => {
+        syncNow()
+      }, 300)
+      return () => clearTimeout(timer)
+    }
+    prevOnlineRef.current = isOnline
+  }, [isOnline, pendingCount, syncing, syncNow])
 
   return (
     <OfflineContext.Provider value={{ isOnline, pendingCount, syncing, syncProgress, queueAction, clearQueue, syncNow }}>

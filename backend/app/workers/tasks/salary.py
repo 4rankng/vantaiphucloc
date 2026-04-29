@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 async def calculate_salary_task(
     ctx: dict,
-    company_id: int,
     driver_id: int,
     start_date: str,
     end_date: str,
@@ -31,7 +30,6 @@ async def calculate_salary_task(
             # Query MATCHED work orders for the driver in the period
             result = await db.execute(
                 select(WorkOrder).where(
-                    WorkOrder.company_id == company_id,
                     WorkOrder.driver_id == driver_id,
                     WorkOrder.status == "MATCHED",
                     WorkOrder.created_at >= start,
@@ -49,7 +47,6 @@ async def calculate_salary_task(
             # Upsert SalaryPeriod
             existing = await db.execute(
                 select(SalaryPeriod).where(
-                    SalaryPeriod.company_id == company_id,
                     SalaryPeriod.driver_id == driver_id,
                     SalaryPeriod.start_date == start,
                     SalaryPeriod.end_date == end,
@@ -59,7 +56,6 @@ async def calculate_salary_task(
 
             if period is None:
                 period = SalaryPeriod(
-                    company_id=company_id,
                     driver_id=driver_id,
                     driver_name=driver_name,
                     start_date=start,
@@ -87,8 +83,8 @@ async def calculate_salary_task(
             await db.refresh(period)
 
             logger.info(
-                "Salary period %s calculated for driver=%s company=%s: %d orders, salary=%d",
-                period.id, driver_id, company_id, work_order_count, total_salary,
+                "Salary period %s calculated for driver=%s: %d orders, salary=%d",
+                period.id, driver_id, work_order_count, total_salary,
             )
 
             return {"salary_period_id": period.id, "status": "CALCULATED"}

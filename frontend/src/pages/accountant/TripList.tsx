@@ -1,24 +1,12 @@
-import { useEffect, useState } from 'react'
-import { apiClient } from '@/services/api'
+import { useTripOrders } from '@/hooks/use-queries'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { TripOrderCard } from '@/components/shared/TripOrderCard'
 import { Plus } from 'lucide-react'
-import { type TripOrder } from '@/data/domain'
-import { useAppStore } from '@/hooks/use-app-store'
+import { useNavigate } from 'react-router-dom'
 
 export function TripList() {
-  const [trips, setTrips] = useState<TripOrder[]>([])
-  const [loading, setLoading] = useState(true)
-  const { navigate } = useAppStore()
-
-  useEffect(() => {
-    let cancelled = false
-    apiClient.getTripOrders().then(res => {
-      if (!cancelled && res.success) setTrips(res.data)
-      if (!cancelled) setLoading(false)
-    })
-    return () => { cancelled = true }
-  }, [])
+  const { data: trips = [], isLoading: loading } = useTripOrders()
+  const navigate = useNavigate()
 
   if (loading) {
     return (

@@ -2,7 +2,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Package } from 'lucide-react'
 import { formatCurrencyShort, getJobStatusBadge, type JobStatus } from '@/data/domain'
 
-export function TripCard({ job, onClick }: { job: any; onClick: () => void }) {
+export function TripCard({ job, onClick }: { job: { status: string; route: string; containerNumber: string; distanceKm: number; jobDate: string; driverFee: number }; onClick: () => void }) {
   const s = getJobStatusBadge(job.status as JobStatus)
   return (
     <button onClick={onClick} className="w-full text-left rounded-2xl p-4 card-lift"
@@ -15,7 +15,7 @@ export function TripCard({ job, onClick }: { job: any; onClick: () => void }) {
             <span className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>{job.containerNumber}</span>
           </div>
         </div>
-        <Badge variant={s.variant as any} className="text-xs flex-shrink-0 ml-2">{s.label}</Badge>
+        <Badge variant={s.variant as 'default' | 'success' | 'warning' | 'danger' | 'info'} className="text-xs flex-shrink-0 ml-2">{s.label}</Badge>
       </div>
       <div className="flex justify-between items-center pt-2" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
         <div className="flex items-center gap-3">

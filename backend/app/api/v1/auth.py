@@ -56,7 +56,6 @@ async def login(
         "id": user.id,
         "name": user.username,
         "role": user.role,
-        "company_id": user.company_id,
     }
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token({"id": user.id})
@@ -90,7 +89,6 @@ async def refresh_token(body: RefreshTokenRequest, db: AsyncSession = Depends(ge
         "id": user.id,
         "name": user.username,
         "role": user.role,
-        "company_id": user.company_id,
     }
     new_access = create_access_token(token_data)
     new_refresh = create_refresh_token({"id": user.id})
@@ -105,5 +103,10 @@ async def refresh_token(body: RefreshTokenRequest, db: AsyncSession = Depends(ge
 
 
 @router.post("/logout", response_model=MessageResponse)
-async def logout(_current_user: User = Depends(get_current_user)):
+async def logout(
+    _current_user: User = Depends(get_current_user),
+    redis: Redis = Depends(get_redis),
+):
+    # TODO: Accept the current access token jti and blacklist it.
+    # For now, the short-lived tokens expire naturally.
     return MessageResponse(message="Logged out successfully")

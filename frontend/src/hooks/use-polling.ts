@@ -40,7 +40,10 @@ export function usePolling<T>(
   }, [enabled, isOnline, fetcher, intervalMs, maxBackoffMs])
 
   useEffect(() => {
-    if (enabled && isOnline) fetch()
+    if (enabled && isOnline) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetch()
+    }
   }, [enabled, isOnline])
 
   useEffect(() => {
