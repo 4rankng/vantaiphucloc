@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
+import { useToast } from '@/components/atoms/Toast'
 
 export function TripDetail({ tripId }: { tripId: string }) {
   const [trip, setTrip] = useState<TripOrder | null>(null)
@@ -22,6 +23,7 @@ export function TripDetail({ tripId }: { tripId: string }) {
 
   // Match dialog — pick from unmatched jobs
   const [showMatchDialog, setShowMatchDialog] = useState(false)
+  const toast = useToast()
 
   useEffect(() => {
     let cancelled = false
@@ -64,8 +66,40 @@ export function TripDetail({ tripId }: { tripId: string }) {
     setEditTrip(true)
   }
 
-  const handleMatch = (jobId: string) => {
-    // In real app: call API to match job to trip
+  const handleSaveEdit = async () => {
+    if (!trip) return
+    const res = await apiClient.updateTripOrder(trip.id, {
+      clientName: editClientName,
+      route: editRoute,
+      workType: editWorkType,
+    })
+    if (res.success) {
+      setTrip(res.data)
+      toast.success('Đã lưu')
+    } else {
+      toast.error('Lỗi', 'Không thể cập nhật')
+    }
+    setEditTrip(false)
+  }
+
+  const handleMatch = async (jobId: string) => {
+    if (!trip) return
+    try {
+      const res = await apiClient.reconcile(jobId, trip.id)
+      if (res.success) {
+        // Reload trip data with new matches
+        const tripRes = await apiClient.getTripOrders()
+        if (tripRes.success) {
+          const updated = tripRes.data.find(t => t.id === trip.id)
+          if (updated) setTrip(updated)
+        }
+        toast.success('Đã khớp')
+      } else {
+        toast.error('Lỗi', res.message ?? 'Không thể khớp')
+      }
+    } catch {
+      toast.error('Lỗi', 'Không thể khớp')
+    }
     setShowMatchDialog(false)
   }
 
@@ -180,7 +214,7 @@ export function TripDetail({ tripId }: { tripId: string }) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditTrip(false)} className="flex-1">Huỷ</Button>
-            <Button onClick={() => { setEditTrip(false) }} className="flex-1" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+            <Button onClick={handleSaveEdit} className="flex-1" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
               Lưu
             </Button>
           </DialogFooter>
