@@ -26,9 +26,13 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, EBState> {
   }
 }
 
-const container = document.getElementById('root')!
-const root = (container as any)._reactRootContainer ?? createRoot(container)
-;(container as any)._reactRootContainer = root
+interface RootContainer extends HTMLElement {
+  _reactRootContainer?: ReturnType<typeof createRoot>
+}
+
+const container = document.getElementById('root')! as RootContainer
+const root = container._reactRootContainer ?? createRoot(container)
+container._reactRootContainer = root
 
 root.render(
   <StrictMode>

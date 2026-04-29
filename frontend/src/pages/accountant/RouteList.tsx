@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { Plus, Pencil, Trash2, Route as RouteIcon } from 'lucide-react'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
@@ -6,9 +6,8 @@ import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { InfoRow } from '@/components/shared/InfoRow'
-import { apiClient } from '@/services/api'
+import { useRoutes, useCreateRoute, useUpdateRoute, useDeleteRoute } from '@/hooks/use-queries'
 import { formatCurrencyFull } from '@/data/domain'
-import type { RoutePrice } from '@/data/domain'
 
 interface RouteForm {
   route: string
@@ -20,8 +19,7 @@ interface RouteForm {
 const EMPTY_FORM: RouteForm = { route: '', type20ft: 0, type40ft: 0, isTwoWay: false }
 
 export function RouteList() {
-  const [routes, setRoutes] = useState<RoutePrice[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: routes = [], isLoading: loading } = useRoutes()
 
   // Detail dialog
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
@@ -34,13 +32,9 @@ export function RouteList() {
   // Delete confirm
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
 
-  const loadRoutes = useCallback(async () => {
-    const res = await apiClient.getRoutes()
-    if (res.success) setRoutes(res.data)
-    setLoading(false)
-  }, [])
-
-  useEffect(() => { loadRoutes() }, [loadRoutes])
+  const createRoute = useCreateRoute()
+  const updateRoute = useUpdateRoute()
+  const deleteRoute = useDeleteRoute()
 
   const handleOpenCreate = useCallback(() => {
     setEditIdx(null)
@@ -56,22 +50,22 @@ export function RouteList() {
     setDialogOpen(true)
   }, [routes])
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(() => {
     if (editIdx !== null) {
-      await apiClient.updateRoute(editIdx, form)
+      updateRoute.mutate({ id: editIdx, data: form }, { onSuccess: () => setDialogOpen(false) })
     } else {
-      await apiClient.createRoute(form)
+      createRoute.mutate(form, { onSuccess: () => setDialogOpen(false) })
     }
-    setDialogOpen(false)
-    loadRoutes()
-  }, [editIdx, form, loadRoutes])
+  }, [editIdx, form, createRoute, updateRoute])
 
-  const handleDelete = useCallback(async (idx: number) => {
-    await apiClient.deleteRoute(idx)
-    setDeleteConfirm(null)
-    setSelectedIdx(null)
-    loadRoutes()
-  }, [loadRoutes])
+  const handleDelete = useCallback((idx: number) => {
+    deleteRoute.mutate(idx, {
+      onSuccess: () => {
+        setDeleteConfirm(null)
+        setSelectedIdx(null)
+      },
+    })
+  }, [deleteRoute])
 
   const updateField = useCallback((field: keyof RouteForm, value: string | number | boolean) => {
     setForm(prev => ({ ...prev, [field]: value }))

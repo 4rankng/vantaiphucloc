@@ -1,5 +1,17 @@
+from typing import Generic, TypeVar
+
 from pydantic import BaseModel, field_validator
 from datetime import datetime
+
+T = TypeVar("T")
+
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    items: list[T]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
 
 
 # ── Input sanitization ──────────────────────────────────────────────
@@ -37,7 +49,8 @@ class UserOut(BaseModel):
     email: str | None = None
     username: str
     role: str
-    company_id: int | None
+    vendor: str | None = None
+    tractor_plate: str | None = None
     is_active: bool
     created_at: datetime | None
 
@@ -68,7 +81,7 @@ class UserCreate(BaseModel):
     username: str
     password: str
     role: str = "driver"
-    company_id: int | None = None
+    tractor_plate: str | None = None
 
 
 class UserUpdate(BaseModel):
@@ -76,7 +89,8 @@ class UserUpdate(BaseModel):
     email: str | None = None
     username: str | None = None
     role: str | None = None
-    company_id: int | None = None
+    password: str | None = None
+    tractor_plate: str | None = None
     is_active: bool | None = None
 
 

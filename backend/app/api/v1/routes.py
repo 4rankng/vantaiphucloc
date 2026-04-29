@@ -1,11 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, Response
+import math
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from app.database import get_db
 from app.models.base import User
 from app.models.domain import Route
+from app.schemas.base import PaginatedResponse
 from app.schemas.domain import RouteCreate, RouteUpdate, RouteOut
 from app.core.deps import require_roles
 from app.core.redis import get_redis
@@ -15,26 +18,41 @@ from app.config import settings
 router = APIRouter()
 
 
-@router.get("/routes", response_model=list[RouteOut])
+@router.get("/routes", response_model=PaginatedResponse[RouteOut])
 async def list_routes(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
     current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
     cache = CacheManager(redis)
-    cached = await cache.get_json("routes", current_user.company_id, "list")
+    cache_key = f"list:{page}:{page_size}"
+    cached = await cache.get_json("routes", cache_key)
     if cached is not None:
-        return cached
+        return PaginatedResponse(**cached)
+
+    total_q = await db.execute(select(func.count(Route.id)))
+    total = total_q.scalar() or 0
 
     result = await db.execute(
         select(Route)
-        .where(Route.company_id == current_user.company_id)
         .order_by(Route.route.asc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
     )
     data = result.scalars().all()
-    serialized = [RouteOut.model_validate(r).model_dump(mode="json") for r in data]
-    await cache.set_json("routes", current_user.company_id, "list", serialized, ttl=settings.CACHE_ROUTES_TTL)
-    return data
+
+    response = PaginatedResponse[RouteOut](
+        items=[RouteOut.model_validate(r) for r in data],
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=math.ceil(total / page_size) if total > 0 else 0,
+    )
+    serialized = response.model_dump(mode="json")
+    await cache.set_json("routes", cache_key, serialized, ttl=settings.CACHE_ROUTES_TTL)
+    return response
 
 
 @router.post("/routes", response_model=RouteOut, status_code=201)
@@ -44,14 +62,11 @@ async def create_route(
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
-    route = Route(
-        company_id=current_user.company_id,
-        **body.model_dump(),
-    )
+    route = Route(**body.model_dump())
     db.add(route)
     await db.commit()
     await db.refresh(route)
-    await CacheManager(redis).invalidate_namespace("routes", current_user.company_id)
+    await CacheManager(redis).invalidate_namespace("routes")
     return route
 
 
@@ -64,10 +79,7 @@ async def update_route(
     redis: Redis = Depends(get_redis),
 ):
     result = await db.execute(
-        select(Route).where(
-            Route.id == route_id,
-            Route.company_id == current_user.company_id,
-        )
+        select(Route).where(Route.id == route_id)
     )
     route = result.scalar_one_or_none()
     if route is None:
@@ -78,7 +90,7 @@ async def update_route(
 
     await db.commit()
     await db.refresh(route)
-    await CacheManager(redis).invalidate_namespace("routes", current_user.company_id)
+    await CacheManager(redis).invalidate_namespace("routes")
     return route
 
 
@@ -90,10 +102,7 @@ async def delete_route(
     redis: Redis = Depends(get_redis),
 ):
     result = await db.execute(
-        select(Route).where(
-            Route.id == route_id,
-            Route.company_id == current_user.company_id,
-        )
+        select(Route).where(Route.id == route_id)
     )
     route = result.scalar_one_or_none()
     if route is None:
@@ -101,5 +110,5 @@ async def delete_route(
 
     await db.delete(route)
     await db.commit()
-    await CacheManager(redis).invalidate_namespace("routes", current_user.company_id)
+    await CacheManager(redis).invalidate_namespace("routes")
     return Response()

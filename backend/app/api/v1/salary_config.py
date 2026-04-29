@@ -16,17 +16,12 @@ async def get_salary_config(
     current_user: User = Depends(require_roles("accountant", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(SalaryPeriodConfig).where(
-            SalaryPeriodConfig.company_id == current_user.company_id
-        )
-    )
+    result = await db.execute(select(SalaryPeriodConfig))
     config = result.scalar_one_or_none()
 
     if config is None:
-        # Create default config
+        # Create default config (singleton)
         config = SalaryPeriodConfig(
-            company_id=current_user.company_id,
             from_day=1,
             to_day=28,
         )
@@ -43,17 +38,12 @@ async def update_salary_config(
     current_user: User = Depends(require_roles("accountant", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(SalaryPeriodConfig).where(
-            SalaryPeriodConfig.company_id == current_user.company_id
-        )
-    )
+    result = await db.execute(select(SalaryPeriodConfig))
     config = result.scalar_one_or_none()
 
     if config is None:
         # Upsert: create with provided values
         config = SalaryPeriodConfig(
-            company_id=current_user.company_id,
             from_day=body.from_day or 1,
             to_day=body.to_day or 28,
         )

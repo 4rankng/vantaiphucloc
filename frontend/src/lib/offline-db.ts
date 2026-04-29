@@ -163,7 +163,7 @@ export async function clearAllCache(): Promise<void> {
 
 export interface PendingUpload {
   id: string
-  tripId: string
+  tripId: number
   type: 'container_photo' | 'document' | 'signature'
   blob: Blob
   filename: string
@@ -304,7 +304,7 @@ export async function cleanupOrphanUploads(maxAgeMs: number = 24 * 60 * 60 * 100
   const db = await getDB()
   const cutoff = Date.now() - maxAgeMs
   const queue = await getQueue()
-  const activeTripIds = new Set(queue.map(a => (a.body as Record<string, unknown>)?.tripId as string | undefined).filter(Boolean))
+  const activeTripIds = new Set(queue.map(a => (a.body as Record<string, unknown>)?.tripId as number | undefined).filter(v => v != null))
 
   const tx = db.transaction('uploads', 'readwrite')
   let cursor = await tx.store.openCursor()

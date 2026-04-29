@@ -25,7 +25,6 @@ function Command({ open, onOpenChange, children }: CommandProps) {
 
 function CommandInput({
   placeholder = "Tìm kiếm...",
-  className,
   ...props
 }: React.InputHTMLAttributes<HTMLInputElement>) {
   return (

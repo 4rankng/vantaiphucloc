@@ -1,4 +1,4 @@
-import { Bell, CheckCircle, Clock, Wallet, UserPlus, type LucideIcon } from 'lucide-react'
+import { Bell, CheckCircle, Wallet, UserPlus, type LucideIcon } from 'lucide-react'
 
 export interface AppNotification {
   id: string

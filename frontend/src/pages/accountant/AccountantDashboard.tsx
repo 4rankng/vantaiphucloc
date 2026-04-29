@@ -1,8 +1,8 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Plus, Building2, Route, Settings, Wallet, ChevronDown, Receipt } from 'lucide-react'
-import { useAppStore } from '@/hooks/use-app-store'
+import { useNavigate } from 'react-router-dom'
 import { apiClient } from '@/services/api'
-import { formatCurrencyFull, type WorkOrder, type Driver, type TripOrder } from '@/data/domain'
+import { formatCurrencyFull, type WorkOrder, type TripOrder } from '@/data/domain'
 import { WorkOrderJobCard } from '@/components/shared/WorkOrderJobCard'
 import { TripOrderCard } from '@/components/shared/TripOrderCard'
 
@@ -15,21 +15,19 @@ const QUICK_ACTIONS = [
 ] as const
 
 export function AccountantDashboard() {
-  const { navigate } = useAppStore()
+  const navigate = useNavigate()
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
   const [trips, setTrips] = useState<TripOrder[]>([])
-  const [drivers, setDrivers] = useState<Driver[]>([])
   const [loading, setLoading] = useState(true)
   const [showAllJobs, setShowAllJobs] = useState(false)
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([apiClient.getWorkOrders(), apiClient.getTripOrders(), apiClient.getDrivers()])
-      .then(([w, t, d]) => {
+    Promise.all([apiClient.getWorkOrders(), apiClient.getTripOrders()])
+      .then(([w, t]) => {
         if (!cancelled) {
           if (w.success) setWorkOrders(w.data)
           if (t.success) setTrips(t.data)
-          if (d.success) setDrivers(d.data)
           setLoading(false)
         }
       })

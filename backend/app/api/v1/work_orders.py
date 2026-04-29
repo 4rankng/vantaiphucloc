@@ -1,13 +1,16 @@
-from datetime import date
+import math
 import logging
+from collections import defaultdict
+from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, func
 
 from app.database import get_db
 from app.models.base import User
 from app.models.domain import WorkOrder, WorkOrderContainer
+from app.schemas.base import PaginatedResponse
 from app.schemas.domain import (
     WorkOrderCreate,
     WorkOrderUpdate,
@@ -25,7 +28,7 @@ router = APIRouter()
 
 
 async def _load_work_order_out(db: AsyncSession, work_order: WorkOrder) -> WorkOrderOut:
-    """Load a WorkOrder with its associated WorkOrderContainer rows and return a WorkOrderOut."""
+    """Load a single WorkOrder with its associated WorkOrderContainer rows."""
     containers_result = await db.execute(
         select(WorkOrderContainer).where(
             WorkOrderContainer.work_order_id == work_order.id
@@ -55,13 +58,64 @@ async def _load_work_order_out(db: AsyncSession, work_order: WorkOrder) -> WorkO
     )
 
 
+async def _batch_load_work_order_outs(
+    db: AsyncSession, work_orders: list[WorkOrder]
+) -> list[WorkOrderOut]:
+    """Batch-load containers for multiple work orders at once (N+1 fix)."""
+    if not work_orders:
+        return []
+
+    wo_ids = [wo.id for wo in work_orders]
+    containers_result = await db.execute(
+        select(WorkOrderContainer).where(
+            WorkOrderContainer.work_order_id.in_(wo_ids)
+        )
+    )
+    all_containers = containers_result.scalars().all()
+
+    # Group containers by work_order_id
+    containers_by_wo: dict[int, list[WorkOrderContainer]] = defaultdict(list)
+    for c in all_containers:
+        containers_by_wo[c.work_order_id].append(c)
+
+    return [
+        WorkOrderOut(
+            id=wo.id,
+            client_id=wo.client_id,
+            client_name=wo.client_name,
+            route=wo.route,
+            driver_id=wo.driver_id,
+            driver_name=wo.driver_name,
+            tractor_plate=wo.tractor_plate,
+            gps_lat=wo.gps_lat,
+            gps_lng=wo.gps_lng,
+            gps_address=wo.gps_address,
+            unit_price=wo.unit_price,
+            driver_salary=wo.driver_salary,
+            allowance=wo.allowance,
+            earning=wo.earning,
+            pricing_id=wo.pricing_id,
+            status=wo.status,
+            created_at=wo.created_at,
+            updated_at=wo.updated_at,
+            containers=[
+                ContainerOut.model_validate(c)
+                for c in containers_by_wo.get(wo.id, [])
+            ],
+        )
+        for wo in work_orders
+    ]
+
+
 @router.post("/work-orders", response_model=WorkOrderOut, status_code=201)
 async def create_work_order(
     body: WorkOrderCreate,
     current_user: User = Depends(require_roles("driver")),
     db: AsyncSession = Depends(get_db),
 ):
-    work_order = await _create_single_work_order(body, current_user, db)
+    work_order = await _create_work_order_db(body, current_user, db)
+    await db.commit()
+    await db.refresh(work_order)
 
     # Fire-and-forget notification
     try:
@@ -76,36 +130,68 @@ async def create_work_order(
     except RuntimeError:
         _logger.warning("Failed to enqueue notification for WO#%s", work_order.id)
 
+    # Enqueue geocoding tasks (best-effort)
+    try:
+        from app.workers import enqueue
+        if body.gps_lat and body.gps_lng:
+            await enqueue("geocode_work_order_task", work_order_id=work_order.id, lat=body.gps_lat, lng=body.gps_lng)
+    except RuntimeError:
+        pass
+
     return await _load_work_order_out(db, work_order)
 
 
-@router.get("/work-orders", response_model=list[WorkOrderOut])
+@router.get("/work-orders", response_model=PaginatedResponse[WorkOrderOut])
 async def list_work_orders(
     driver_id: int | None = None,
     tractor_plate: str | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
     status: str | None = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    query = select(WorkOrder).where(WorkOrder.company_id == current_user.company_id)
+    query = select(WorkOrder)
+    count_query = select(func.count(WorkOrder.id))
 
     if driver_id is not None:
         query = query.where(WorkOrder.driver_id == driver_id)
+        count_query = count_query.where(WorkOrder.driver_id == driver_id)
     if tractor_plate is not None:
         query = query.where(WorkOrder.tractor_plate == tractor_plate)
+        count_query = count_query.where(WorkOrder.tractor_plate == tractor_plate)
     if date_from is not None:
         query = query.where(WorkOrder.created_at >= date_from)
+        count_query = count_query.where(WorkOrder.created_at >= date_from)
     if date_to is not None:
         query = query.where(WorkOrder.created_at <= date_to)
+        count_query = count_query.where(WorkOrder.created_at <= date_to)
     if status is not None:
         query = query.where(WorkOrder.status == status)
+        count_query = count_query.where(WorkOrder.status == status)
 
-    result = await db.execute(query.order_by(WorkOrder.id.desc()))
+    total_q = await db.execute(count_query)
+    total = total_q.scalar() or 0
+
+    result = await db.execute(
+        query.order_by(WorkOrder.id.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
     work_orders = result.scalars().all()
 
-    return [await _load_work_order_out(db, wo) for wo in work_orders]
+    # Batch-load containers instead of per-row queries
+    items = await _batch_load_work_order_outs(db, work_orders)
+
+    return PaginatedResponse[WorkOrderOut](
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=math.ceil(total / page_size) if total > 0 else 0,
+    )
 
 
 @router.get("/work-orders/{work_order_id}", response_model=WorkOrderOut)
@@ -115,10 +201,7 @@ async def get_work_order(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(WorkOrder).where(
-            WorkOrder.id == work_order_id,
-            WorkOrder.company_id == current_user.company_id,
-        )
+        select(WorkOrder).where(WorkOrder.id == work_order_id)
     )
     work_order = result.scalar_one_or_none()
     if work_order is None:
@@ -135,10 +218,7 @@ async def update_work_order(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(WorkOrder).where(
-            WorkOrder.id == work_order_id,
-            WorkOrder.company_id == current_user.company_id,
-        )
+        select(WorkOrder).where(WorkOrder.id == work_order_id)
     )
     work_order = result.scalar_one_or_none()
     if work_order is None:
@@ -177,34 +257,49 @@ async def batch_create_work_orders(
     db: AsyncSession = Depends(get_db),
 ):
     results: list[BatchWorkOrderResult] = []
-    for i, item in enumerate(body.items):
-        # Use a nested transaction (savepoint) per item so partial failures
-        # are isolated — a failure on item N doesn't affect items 0..N-1.
-        async with db.begin_nested():
-            try:
-                wo = await _create_single_work_order(item, current_user, db)
-                results.append(BatchWorkOrderResult(index=i, id=wo.id, success=True))
-            except Exception as exc:
-                await db.rollback()
-                _logger.warning("Batch item %d failed: %s", i, exc)
-                results.append(BatchWorkOrderResult(index=i, success=False, error=str(exc)))
-    # Commit the outer transaction (successful items only, failed were rolled back)
-    await db.commit()
+    async with db.begin():
+        for i, item in enumerate(body.items):
+            async with db.begin_nested():
+                try:
+                    wo = await _create_work_order_db(item, current_user, db)
+                    results.append(BatchWorkOrderResult(index=i, id=wo.id, success=True))
+                except Exception as exc:
+                    _logger.warning("Batch item %d failed: %s", i, exc)
+                    results.append(BatchWorkOrderResult(index=i, success=False, error=str(exc)))
+
+    # Enqueue geocoding for successful items (best-effort, outside transaction)
+    try:
+        from app.workers import enqueue
+        for r in results:
+            if r.success and r.id and body.items[r.index].gps_lat and body.items[r.index].gps_lng:
+                await enqueue(
+                    "geocode_work_order_task",
+                    work_order_id=r.id,
+                    lat=body.items[r.index].gps_lat,
+                    lng=body.items[r.index].gps_lng,
+                )
+    except RuntimeError:
+        pass
+
     return results
 
 
-async def _create_single_work_order(
+async def _create_work_order_db(
     body: WorkOrderCreate, current_user: User, db: AsyncSession
 ) -> WorkOrder:
-    """Shared creation logic for single and batch endpoints."""
+    """Create WorkOrder + containers in the DB. Flushes but does NOT commit
+    — the caller is responsible for committing (or letting the context manager do it)."""
     containers_data = body.containers
 
     first_container = containers_data[0] if containers_data else None
     work_type = first_container.work_type if first_container else ""
 
+    # Drivers always create work orders under their own identity
+    driver_id = current_user.id if current_user.role == "driver" else body.driver_id
+    driver_name = current_user.username if current_user.role == "driver" else body.driver_name
+
     pricing = await find_pricing(
         db,
-        company_id=current_user.company_id,
         client_id=body.client_id,
         work_type=work_type,
         route=body.route,
@@ -226,12 +321,11 @@ async def _create_single_work_order(
         pricing_id = None
 
     work_order = WorkOrder(
-        company_id=current_user.company_id,
         client_id=body.client_id,
         client_name=body.client_name,
         route=body.route,
-        driver_id=body.driver_id,
-        driver_name=body.driver_name,
+        driver_id=driver_id,
+        driver_name=driver_name,
         tractor_plate=body.tractor_plate,
         gps_lat=body.gps_lat,
         gps_lng=body.gps_lng,
@@ -257,15 +351,5 @@ async def _create_single_work_order(
             photo_timestamp=container.photo_timestamp,
         ))
 
-    await db.commit()
-    await db.refresh(work_order)
-
-    # Enqueue geocoding tasks (best-effort)
-    try:
-        from app.workers import enqueue
-        if body.gps_lat and body.gps_lng:
-            await enqueue("geocode_work_order_task", work_order_id=work_order.id, lat=body.gps_lat, lng=body.gps_lng)
-    except RuntimeError:
-        pass
-
+    await db.flush()
     return work_order

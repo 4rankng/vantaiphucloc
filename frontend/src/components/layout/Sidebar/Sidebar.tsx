@@ -1,9 +1,9 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
-import { LogOut, ChevronRight, User, KeyRound } from 'lucide-react'
+import { LogOut, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/Dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/Dialog'
 import { DialogClose } from '@/components/ui/Dialog'
 import { Button } from '@/components/ui/Button'
 import { ROLE_LABELS } from '@/data/domain'
@@ -62,7 +62,7 @@ export function Sidebar({ items, title, basePath }: SidebarProps) {
               key={item.path}
               to={item.path}
               end={item.path === basePath}
-              className={({ isActive }) => cn(
+              className={() => cn(
                 'flex items-center gap-3 px-4 py-2.5 mx-2 rounded-[var(--theme-radius-md)] text-sm font-medium transition-all duration-150 group',
               )}
               style={({ isActive }) => ({

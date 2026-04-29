@@ -9,14 +9,20 @@ import {
   unsubscribeFromPush,
 } from '@/lib/push-subscription'
 
+function getInitialPermission(): NotificationPermission {
+  return notifications.getPermissionStatus()
+}
+
+function getInitialPushSupported(): boolean {
+  return isPushSupported()
+}
+
 export function useNotifications() {
-  const [permission, setPermission] = useState<NotificationPermission>('default')
-  const [pushSupported, setPushSupported] = useState(false)
+  const [permission, setPermission] = useState<NotificationPermission>(getInitialPermission)
+  const [pushSupported] = useState<boolean>(getInitialPushSupported)
   const [pushSubscribed, setPushSubscribed] = useState(false)
 
   useEffect(() => {
-    setPermission(notifications.getPermissionStatus())
-    setPushSupported(isPushSupported())
     getPushSubscriptionStatus().then((status) => {
       setPushSubscribed(status.subscribed)
     })

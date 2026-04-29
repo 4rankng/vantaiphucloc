@@ -17,12 +17,11 @@ from app.core.cache import CacheManager
 
 def _pricing_cache_key(client_id: int, work_type: str, route: str) -> str:
     raw = f"{client_id}:{work_type}:{route}"
-    return hashlib.md5(raw.encode()).hexdigest()
+    return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
 async def find_pricing(
     db: AsyncSession,
-    company_id: int,
     client_id: int,
     work_type: str,
     route: str,
@@ -31,7 +30,7 @@ async def find_pricing(
     cache_key = _pricing_cache_key(client_id, work_type, route)
 
     if cache:
-        cached = await cache.get_json("pricing_lookup", company_id, cache_key)
+        cached = await cache.get_json("pricing_lookup", cache_key)
         if cached is not None:
             result = await db.execute(
                 select(Pricing).where(Pricing.id == cached["id"]).limit(1)
@@ -40,7 +39,6 @@ async def find_pricing(
 
     result = await db.execute(
         select(Pricing).where(
-            Pricing.company_id == company_id,
             Pricing.client_id == client_id,
             Pricing.work_type == work_type,
             Pricing.route == route,
@@ -50,7 +48,7 @@ async def find_pricing(
 
     if pricing and cache:
         await cache.set_json(
-            "pricing_lookup", company_id, cache_key,
+            "pricing_lookup", cache_key,
             {"id": pricing.id},
             ttl=600,
         )

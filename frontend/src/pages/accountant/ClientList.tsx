@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { Plus, Pencil, Trash2, Building2, UserCircle } from 'lucide-react'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
@@ -6,7 +6,7 @@ import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { InfoRow } from '@/components/shared/InfoRow'
-import { apiClient } from '@/services/api'
+import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/use-queries'
 import type { Client, ClientType } from '@/data/domain'
 
 const EMPTY_CLIENT = {
@@ -14,8 +14,7 @@ const EMPTY_CLIENT = {
 }
 
 export function ClientList() {
-  const [clients, setClients] = useState<Client[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: clients = [], isLoading: loading } = useClients()
 
   // Detail dialog
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
@@ -28,13 +27,9 @@ export function ClientList() {
   // Delete confirm
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
-  const loadClients = useCallback(async () => {
-    const res = await apiClient.getClients()
-    if (res.success) setClients(res.data)
-    setLoading(false)
-  }, [])
-
-  useEffect(() => { loadClients() }, [loadClients])
+  const createClient = useCreateClient()
+  const updateClient = useUpdateClient()
+  const deleteClient = useDeleteClient()
 
   const handleOpenCreate = useCallback(() => {
     setEditing(null)
@@ -53,22 +48,22 @@ export function ClientList() {
     setDialogOpen(true)
   }, [])
 
-  const handleSubmit = useCallback(async () => {
+  const handleSubmit = useCallback(() => {
     if (editing) {
-      await apiClient.updateClient(editing.id, form)
+      updateClient.mutate({ id: editing.id, data: form }, { onSuccess: () => setDialogOpen(false) })
     } else {
-      await apiClient.createClient(form)
+      createClient.mutate(form, { onSuccess: () => setDialogOpen(false) })
     }
-    setDialogOpen(false)
-    loadClients()
-  }, [editing, form, loadClients])
+  }, [editing, form, createClient, updateClient])
 
-  const handleDelete = useCallback(async (id: string) => {
-    await apiClient.deleteClient(id)
-    setDeleteConfirm(null)
-    setSelectedClient(null)
-    loadClients()
-  }, [loadClients])
+  const handleDelete = useCallback((id: string) => {
+    deleteClient.mutate(id, {
+      onSuccess: () => {
+        setDeleteConfirm(null)
+        setSelectedClient(null)
+      },
+    })
+  }, [deleteClient])
 
   const updateField = useCallback((field: string, value: string | number) => {
     setForm(prev => ({ ...prev, [field]: value }))
