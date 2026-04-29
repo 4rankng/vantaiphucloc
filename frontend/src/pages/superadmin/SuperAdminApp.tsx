@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Plus } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { AppTopBar } from '@/components/shared/AppTopBar'
@@ -35,7 +35,10 @@ export function SuperAdminApp() {
     }
   }, [toast])
 
-  useEffect(() => { fetchUsers() }, [fetchUsers])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchUsers()
+  }, [fetchUsers])
 
   if (loading) {
     return (

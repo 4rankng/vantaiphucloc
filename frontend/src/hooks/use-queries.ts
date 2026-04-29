@@ -1,0 +1,343 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { apiClient } from '@/services/api'
+import { api } from '@/services/api/client'
+import type { Pricing, WorkOrder, TripOrder, WorkType, Client, RoutePrice, SalaryPeriod } from '@/data/domain'
+
+// ─── Query key factories ─────────────────────────────────────────────────────
+
+export const queryKeys = {
+  clients: ['clients'] as const,
+  client: (id: number) => ['clients', id] as const,
+  routes: ['routes'] as const,
+  pricings: ['pricings'] as const,
+  pricingsFiltered: (filters?: { clientId?: number; workType?: WorkType; route?: string }) =>
+    ['pricings', filters] as const,
+  workOrders: ['work-orders'] as const,
+  workOrdersFiltered: (filters?: Record<string, string>) =>
+    ['work-orders', filters] as const,
+  tripOrders: ['trip-orders'] as const,
+  tripOrdersFiltered: (filters?: Record<string, string>) =>
+    ['trip-orders', filters] as const,
+  salaryPeriods: ['salary-periods'] as const,
+  salaryPeriodsByDriver: (driverId?: number) =>
+    ['salary-periods', driverId] as const,
+  drivers: ['drivers'] as const,
+  dashboard: ['dashboard'] as const,
+  users: ['users'] as const,
+  notifications: ['notifications'] as const,
+  salaryConfig: ['salary-config'] as const,
+}
+
+// ─── Query hooks (GET) ───────────────────────────────────────────────────────
+
+export function useClients() {
+  return useQuery({
+    queryKey: queryKeys.clients,
+    queryFn: async () => {
+      const res = await apiClient.getClients()
+      return res.success ? res.data : []
+    },
+  })
+}
+
+export function useRoutes() {
+  return useQuery({
+    queryKey: queryKeys.routes,
+    queryFn: async () => {
+      const res = await apiClient.getRoutes()
+      return res.success ? res.data : []
+    },
+  })
+}
+
+export function usePricings(filters?: { clientId?: number; workType?: WorkType; route?: string }) {
+  return useQuery({
+    queryKey: queryKeys.pricingsFiltered(filters),
+    queryFn: async () => {
+      const res = await apiClient.getPricings(filters)
+      return res.success ? res.data : []
+    },
+  })
+}
+
+export function useWorkOrders(filters?: { driverId?: number; tractorPlate?: string; dateFrom?: string; dateTo?: string; status?: WorkOrder['status'] }) {
+  const flatFilters: Record<string, string> = {}
+  if (filters?.driverId) flatFilters.driverId = String(filters.driverId)
+  if (filters?.tractorPlate) flatFilters.tractorPlate = filters.tractorPlate
+  if (filters?.dateFrom) flatFilters.dateFrom = filters.dateFrom
+  if (filters?.dateTo) flatFilters.dateTo = filters.dateTo
+  if (filters?.status) flatFilters.status = filters.status
+
+  return useQuery({
+    queryKey: queryKeys.workOrdersFiltered(Object.keys(flatFilters).length > 0 ? flatFilters : undefined),
+    queryFn: async () => {
+      const res = await apiClient.getWorkOrders(filters)
+      return res.success ? res.data : []
+    },
+  })
+}
+
+export function useTripOrders(filters?: { clientId?: number; driverId?: number; status?: TripOrder['status']; dateFrom?: string; dateTo?: string }) {
+  const flatFilters: Record<string, string> = {}
+  if (filters?.clientId) flatFilters.clientId = String(filters.clientId)
+  if (filters?.driverId) flatFilters.driverId = String(filters.driverId)
+  if (filters?.status) flatFilters.status = filters.status
+  if (filters?.dateFrom) flatFilters.dateFrom = filters.dateFrom
+  if (filters?.dateTo) flatFilters.dateTo = filters.dateTo
+
+  return useQuery({
+    queryKey: queryKeys.tripOrdersFiltered(Object.keys(flatFilters).length > 0 ? flatFilters : undefined),
+    queryFn: async () => {
+      const res = await apiClient.getTripOrders(filters)
+      return res.success ? res.data : []
+    },
+  })
+}
+
+export function useSalaryPeriods(driverId?: number) {
+  return useQuery({
+    queryKey: queryKeys.salaryPeriodsByDriver(driverId),
+    queryFn: async () => {
+      const res = await apiClient.getSalaryPeriods(driverId)
+      return res.success ? res.data : []
+    },
+  })
+}
+
+export function useDrivers() {
+  return useQuery({
+    queryKey: queryKeys.drivers,
+    queryFn: async () => {
+      const res = await apiClient.getDrivers()
+      return res.success ? res.data : []
+    },
+  })
+}
+
+export function useDashboardSummary() {
+  return useQuery({
+    queryKey: queryKeys.dashboard,
+    queryFn: async () => {
+      const res = await apiClient.getDashboardSummary()
+      return res.success ? res.data : null
+    },
+  })
+}
+
+export function useUsers() {
+  return useQuery({
+    queryKey: queryKeys.users,
+    queryFn: async () => {
+      const res = await api.get('/users')
+      return (res.data as Record<string, unknown>[]).map((obj: Record<string, unknown>) => ({
+        id: obj.id as number,
+        username: obj.username as string,
+        phone: obj.phone as string,
+        email: obj.email as string | undefined,
+        role: obj.role as string,
+        tractorPlate: obj.tractor_plate as string | undefined,
+        isActive: obj.is_active as boolean,
+        createdAt: obj.created_at as string,
+      }))
+    },
+  })
+}
+
+export function useNotifications() {
+  return useQuery({
+    queryKey: queryKeys.notifications,
+    queryFn: async () => {
+      const res = await apiClient.getNotifications()
+      return res.success ? res.data : []
+    },
+  })
+}
+
+export function useSalaryConfig() {
+  return useQuery({
+    queryKey: queryKeys.salaryConfig,
+    queryFn: async () => {
+      const res = await api.get('/salary-config')
+      return res.data as { from_day: number; to_day: number } | null
+    },
+  })
+}
+
+// ─── Mutation hooks ──────────────────────────────────────────────────────────
+
+export function useCreateClient() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: Omit<Client, 'id'>) => apiClient.createClient(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.clients }) },
+  })
+}
+
+export function useUpdateClient() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<Client> }) => apiClient.updateClient(id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.clients }) },
+  })
+}
+
+export function useDeleteClient() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => apiClient.deleteClient(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.clients }) },
+  })
+}
+
+export function useCreateRoute() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: Omit<RoutePrice, never>) => apiClient.createRoute(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.routes }) },
+  })
+}
+
+export function useUpdateRoute() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number | string; data: Partial<RoutePrice> }) => apiClient.updateRoute(id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.routes }) },
+  })
+}
+
+export function useDeleteRoute() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number | string) => apiClient.deleteRoute(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.routes }) },
+  })
+}
+
+export function useCreatePricing() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: Omit<Pricing, 'id' | 'createdAt' | 'updatedAt'>) => apiClient.createPricing(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['pricings'] }) },
+  })
+}
+
+export function useUpdatePricing() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<Pricing> }) => apiClient.updatePricing(id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['pricings'] }) },
+  })
+}
+
+export function useDeletePricing() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => apiClient.deletePricing(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['pricings'] }) },
+  })
+}
+
+export function useCreateWorkOrder() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: Parameters<typeof apiClient.createWorkOrder>[0]) => apiClient.createWorkOrder(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['work-orders'] }) },
+  })
+}
+
+export function useUpdateWorkOrder() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<WorkOrder> }) => apiClient.updateWorkOrder(id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['work-orders'] }) },
+  })
+}
+
+export function useCreateTripOrder() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: Omit<TripOrder, 'id' | 'createdAt' | 'status'>) => apiClient.createTripOrder(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trip-orders'] })
+      qc.invalidateQueries({ queryKey: ['work-orders'] })
+    },
+  })
+}
+
+export function useUpdateTripOrder() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<TripOrder> }) => apiClient.updateTripOrder(id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['trip-orders'] }) },
+  })
+}
+
+export function useReconcile() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ workOrderId, tripOrderId }: { workOrderId: number; tripOrderId: number }) =>
+      apiClient.reconcile(workOrderId, tripOrderId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trip-orders'] })
+      qc.invalidateQueries({ queryKey: ['work-orders'] })
+    },
+  })
+}
+
+export function useCalculateSalary() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ driverId, startDate, endDate }: { driverId: number; startDate: string; endDate: string }) =>
+      apiClient.calculateSalary(driverId, startDate, endDate),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['salary-periods'] }) },
+  })
+}
+
+export function useCreateDriver() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { username: string; phone: string; tractorPlate?: string; vendor?: string }) =>
+      apiClient.createDriver(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.drivers }) },
+  })
+}
+
+export function useCreateUser() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) => api.post('/users', data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.users }) },
+  })
+}
+
+export function useUpdateUser() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Record<string, unknown> }) => api.put(`/users/${id}`, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.users }) },
+  })
+}
+
+export function useDeleteUser() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => api.delete(`/users/${id}`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.users }) },
+  })
+}
+
+export function useUpdateSalaryConfig() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { from_day: number; to_day: number }) => api.put('/salary-config', data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.salaryConfig }) },
+  })
+}
+
+export function useUpdateSalaryPeriod() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<SalaryPeriod> }) => apiClient.updateSalaryPeriod(id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['salary-periods'] }) },
+  })
+}

@@ -78,24 +78,16 @@ async def get_dashboard_summary(
         for row in driver_salary_q.all()
     ]
 
-    # Unmatched work order count (PENDING or PRICED, not in any trip)
+    # Unmatched work order count using NOT EXISTS (avoids full-table scan)
     from app.models.domain import TripOrderWorkOrder
 
-    matched_wo_q = await db.execute(
-        select(TripOrderWorkOrder.work_order_id)
-    )
-    matched_wo_ids = {row[0] for row in matched_wo_q.all()}
-
-    if matched_wo_ids:
-        unmatched_q = await db.execute(
-            select(func.count(WorkOrder.id)).where(
-                WorkOrder.id.notin_(matched_wo_ids)
+    unmatched_q = await db.execute(
+        select(func.count(WorkOrder.id)).where(
+            ~WorkOrder.id.in_(
+                select(TripOrderWorkOrder.work_order_id)
             )
         )
-    else:
-        unmatched_q = await db.execute(
-            select(func.count(WorkOrder.id))
-        )
+    )
     unmatched_work_order_count = unmatched_q.scalar() or 0
 
     # Pending trip count

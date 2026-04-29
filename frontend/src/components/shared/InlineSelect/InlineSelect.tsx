@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { ChevronDown, Search, Check } from 'lucide-react'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/Popover/Popover'
 
@@ -30,15 +30,16 @@ export function InlineSelect({ placeholder, value, options, onChange }: InlineSe
       )
     : options
 
-  useEffect(() => {
-    if (open) {
+  const handleOpenChange = useCallback((nextOpen: boolean) => {
+    setOpen(nextOpen)
+    if (nextOpen) {
       setQuery('')
       requestAnimationFrame(() => searchRef.current?.focus())
     }
-  }, [open])
+  }, [])
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <button
           type="button"

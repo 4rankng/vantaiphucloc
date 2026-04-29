@@ -1,42 +1,34 @@
-import { useEffect, useState, useMemo } from 'react'
-import { apiClient } from '@/services/api'
+import { useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useTripOrders, useWorkOrders, useUpdateTripOrder, useReconcile } from '@/hooks/use-queries'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { ContBadge } from '@/components/shared/ContBadge'
-import { formatCurrencyFull, type TripOrder, type WorkOrder, WORK_TYPES, type WorkType } from '@/data/domain'
-import { Building2, Route, UserCircle, Wallet, Link2, Pencil, Trash2 } from 'lucide-react'
+import { formatCurrencyFull, WORK_TYPES, type WorkType } from '@/data/domain'
+import { Building2, Route, UserCircle, Wallet, Link2, Pencil } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { useToast } from '@/components/atoms/Toast'
+import { useParams } from 'react-router-dom'
 
-export function TripDetail({ tripId }: { tripId: string }) {
-  const [trip, setTrip] = useState<TripOrder | null>(null)
-  const [jobs, setJobs] = useState<WorkOrder[]>([])
-  const [loading, setLoading] = useState(true)
-
-  // Edit trip dialog
+export function TripDetail() {
+  const { tripId: tripIdStr } = useParams<{ tripId: string }>()
+  const tripId = Number(tripIdStr)
+  const { data: trips = [], isLoading: loadingTrips } = useTripOrders()
+  const { data: jobs = [], isLoading: loadingJobs } = useWorkOrders()
   const [editTrip, setEditTrip] = useState(false)
   const [editClientName, setEditClientName] = useState('')
   const [editRoute, setEditRoute] = useState('')
   const [editWorkType, setEditWorkType] = useState<WorkType>('E20')
-
-  // Match dialog — pick from unmatched jobs
   const [showMatchDialog, setShowMatchDialog] = useState(false)
   const toast = useToast()
+  const updateTripOrder = useUpdateTripOrder()
+  const reconcile = useReconcile()
+  const qc = useQueryClient()
 
-  useEffect(() => {
-    let cancelled = false
-    Promise.all([apiClient.getTripOrders(), apiClient.getWorkOrders()])
-      .then(([t, j]) => {
-        if (!cancelled) {
-          if (t.success) setTrip(t.data.find(t => t.id === tripId) ?? null)
-          if (j.success) setJobs(j.data)
-          setLoading(false)
-        }
-      })
-    return () => { cancelled = true }
-  }, [tripId])
+  const loading = loadingTrips || loadingJobs
+  const trip = useMemo(() => trips.find(t => t.id === tripId) ?? null, [trips, tripId])
 
   const matchedJobs = useMemo(() => {
     if (!trip) return []
@@ -44,10 +36,6 @@ export function TripDetail({ tripId }: { tripId: string }) {
   }, [trip, jobs])
 
   const unmatchedJobs = useMemo(() => {
-    const allMatchedIds = new Set(
-      // All jobs matched to ANY trip
-      [] as string[]
-    )
     return jobs.filter(j => j.status === 'PENDING' && !trip?.matchedWorkOrderIds.includes(j.id))
   }, [jobs, trip])
 
@@ -66,40 +54,37 @@ export function TripDetail({ tripId }: { tripId: string }) {
     setEditTrip(true)
   }
 
-  const handleSaveEdit = async () => {
+  const handleSaveEdit = () => {
     if (!trip) return
-    const res = await apiClient.updateTripOrder(trip.id, {
-      clientName: editClientName,
-      route: editRoute,
-      workType: editWorkType,
-    })
-    if (res.success) {
-      setTrip(res.data)
-      toast.success('Đã lưu')
-    } else {
-      toast.error('Lỗi', 'Không thể cập nhật')
-    }
-    setEditTrip(false)
+    updateTripOrder.mutate(
+      { id: trip.id, data: { clientName: editClientName, route: editRoute, workType: editWorkType } },
+      {
+        onSuccess: (res) => {
+          if (res.success) toast.success('Đã lưu')
+          else toast.error('Lỗi', 'Không thể cập nhật')
+          setEditTrip(false)
+        },
+      },
+    )
   }
 
-  const handleMatch = async (jobId: string) => {
+  const handleMatch = (jobId: number) => {
     if (!trip) return
-    try {
-      const res = await apiClient.reconcile(jobId, trip.id)
-      if (res.success) {
-        // Reload trip data with new matches
-        const tripRes = await apiClient.getTripOrders()
-        if (tripRes.success) {
-          const updated = tripRes.data.find(t => t.id === trip.id)
-          if (updated) setTrip(updated)
-        }
-        toast.success('Đã khớp')
-      } else {
-        toast.error('Lỗi', res.message ?? 'Không thể khớp')
-      }
-    } catch {
-      toast.error('Lỗi', 'Không thể khớp')
-    }
+    reconcile.mutate(
+      { workOrderId: jobId, tripOrderId: trip.id },
+      {
+        onSuccess: (res) => {
+          if (res.success) {
+            qc.invalidateQueries({ queryKey: ['trip-orders'] })
+            qc.invalidateQueries({ queryKey: ['work-orders'] })
+            toast.success('Đã khớp')
+          } else {
+            toast.error('Lỗi', res.message ?? 'Không thể khớp')
+          }
+        },
+        onError: () => { toast.error('Lỗi', 'Không thể khớp') },
+      },
+    )
     setShowMatchDialog(false)
   }
 

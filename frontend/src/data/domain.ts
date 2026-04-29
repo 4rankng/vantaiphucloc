@@ -38,7 +38,7 @@ export const ROLE_LABELS: Record<Role, string> = {
 // export interface Trailer { ... }
 
 export interface Driver {
-  id: string
+  id: number
   username: string
   phone: string
   tractorPlate: string | null
@@ -48,7 +48,7 @@ export interface Driver {
 }
 
 export interface Client {
-  id: string
+  id: number
   name: string
   type: ClientType
   taxCode?: string
@@ -90,12 +90,12 @@ export interface RoutePrice {
 // export interface PeriodClose { ... }
 
 export interface WorkOrder {
-  id: string
+  id: number
   containers: ContainerItem[]
-  clientId: string
+  clientId: number
   clientName: string
   route: string
-  driverId: string
+  driverId: number
   driverName: string
   tractorPlate: string
   gpsLat: number
@@ -105,7 +105,7 @@ export interface WorkOrder {
   driverSalary: number
   allowance: number
   earning: number
-  pricingId?: string
+  pricingId?: number
   createdAt: string
   status: WorkOrderStatus
   /** True when created offline, not yet synced to server */
@@ -118,8 +118,8 @@ export interface PricingLine {
 }
 
 export interface Pricing {
-  id: string
-  clientId: string
+  id: number
+  clientId: number
   clientName: string
   workType: WorkType
   route: string
@@ -132,29 +132,29 @@ export interface Pricing {
 }
 
 export interface TripOrder {
-  id: string
+  id: number
   tripDate: string
-  clientId: string
+  clientId: number
   clientName: string
   workType: WorkType
   route: string
   tractorPlate: string
-  driverId: string
+  driverId: number
   driverName: string
   containerNumber: string
-  pricingId: string
+  pricingId: number
   unitPrice: number
   driverSalary: number
   allowance: number
   revenue: number
-  matchedWorkOrderIds: string[]
+  matchedWorkOrderIds: number[]
   status: TripOrderStatus
   createdAt: string
 }
 
 export interface SalaryPeriod {
-  id: string
-  driverId: string
+  id: number
+  driverId: number
   driverName: string
   startDate: string
   endDate: string

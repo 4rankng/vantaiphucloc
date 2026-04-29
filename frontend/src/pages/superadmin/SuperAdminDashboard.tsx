@@ -1,4 +1,4 @@
-import { Users, LayoutDashboard, Truck, CircleDollarSign, Search } from 'lucide-react'
+import { LayoutDashboard, Truck, CircleDollarSign, Search } from 'lucide-react'
 import { FilterPills } from '@/components/shared/FilterPills'
 import { UserCard } from '@/components/shared/UserCard'
 import { ROLE_LABELS, type Role } from '@/data/domain'

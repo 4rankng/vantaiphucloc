@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react'
 import type { Role } from '@/data/domain'
 import { api, setTokens, clearTokens } from '@/services/api/client'

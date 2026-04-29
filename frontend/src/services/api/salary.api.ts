@@ -1,5 +1,5 @@
 import { api } from './client'
-import { normalizeMany, normalizeOne, toSnake, ok, fail } from './utils'
+import { toCamel, toSnake, ok, fail } from './utils'
 import type { SalaryPeriod, ApiResponse } from '@/data/domain'
 
 export interface AsyncJobResult {
@@ -14,7 +14,7 @@ export interface JobStatus {
 }
 
 export async function calculateSalary(
-  driverId: string,
+  driverId: number,
   startDate: string,
   endDate: string,
 ): Promise<ApiResponse<AsyncJobResult>> {
@@ -24,7 +24,7 @@ export async function calculateSalary(
       start_date: startDate,
       end_date: endDate,
     })
-    return ok(normalizeOne<AsyncJobResult>(res.data))
+    return ok(toCamel<AsyncJobResult>(res.data))
   } catch (err) {
     return fail(err)
   }
@@ -33,30 +33,30 @@ export async function calculateSalary(
 export async function getJobStatus(jobId: string): Promise<ApiResponse<JobStatus>> {
   try {
     const res = await api.get(`/jobs/${jobId}`)
-    return ok(normalizeOne<JobStatus>(res.data))
+    return ok(toCamel<JobStatus>(res.data))
   } catch (err) {
     return fail(err)
   }
 }
 
-export async function getSalaryPeriods(driverId?: string): Promise<ApiResponse<SalaryPeriod[]>> {
+export async function getSalaryPeriods(driverId?: number): Promise<ApiResponse<SalaryPeriod[]>> {
   try {
     const params: Record<string, string> = {}
-    if (driverId) params.driver_id = driverId
+    if (driverId) params.driver_id = String(driverId)
     const res = await api.get('/salary', { params })
-    return ok(normalizeMany<SalaryPeriod>(res.data))
+    return ok(toCamel<SalaryPeriod[]>(res.data))
   } catch (err) {
     return fail(err)
   }
 }
 
 export async function updateSalaryPeriod(
-  id: string,
+  id: number,
   data: Partial<SalaryPeriod>,
 ): Promise<ApiResponse<SalaryPeriod>> {
   try {
     const res = await api.put(`/salary/${id}`, toSnake(data))
-    return ok(normalizeOne<SalaryPeriod>(res.data))
+    return ok(toCamel<SalaryPeriod>(res.data))
   } catch (err) {
     return fail(err)
   }

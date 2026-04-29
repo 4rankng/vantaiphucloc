@@ -1,5 +1,17 @@
+from typing import Generic, TypeVar
+
 from pydantic import BaseModel, field_validator
 from datetime import datetime
+
+T = TypeVar("T")
+
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    items: list[T]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
 
 
 # ── Input sanitization ──────────────────────────────────────────────

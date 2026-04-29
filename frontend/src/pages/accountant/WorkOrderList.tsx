@@ -1,30 +1,17 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Search } from 'lucide-react'
 import { Input } from '@/components/ui'
 import { WorkOrderJobCard } from '@/components/shared/WorkOrderJobCard'
-import { apiClient } from '@/services/api'
-import { useAppStore } from '@/hooks/use-app-store'
-import { type WorkOrder, type TripOrder } from '@/data/domain'
+import { useWorkOrders, useTripOrders } from '@/hooks/use-queries'
+import { useNavigate } from 'react-router-dom'
 
 export function WorkOrderList() {
-  const { navigate } = useAppStore()
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
-  const [trips, setTrips] = useState<TripOrder[]>([])
-  const [loading, setLoading] = useState(true)
+  const navigate = useNavigate()
+  const { data: workOrders = [], isLoading: loadingWO } = useWorkOrders()
+  const { data: trips = [], isLoading: loadingTrips } = useTripOrders()
   const [searchPlate, setSearchPlate] = useState('')
 
-  useEffect(() => {
-    let cancelled = false
-    Promise.all([apiClient.getWorkOrders(), apiClient.getTripOrders()])
-      .then(([w, t]) => {
-        if (!cancelled) {
-          if (w.success) setWorkOrders(w.data)
-          if (t.success) setTrips(t.data)
-          setLoading(false)
-        }
-      })
-    return () => { cancelled = true }
-  }, [])
+  const loading = loadingWO || loadingTrips
 
   const matchedIds = useMemo(() => new Set(trips.flatMap(t => t.matchedWorkOrderIds)), [trips])
   const unmatched = useMemo(() => workOrders.filter(w => !matchedIds.has(w.id)), [workOrders, matchedIds])

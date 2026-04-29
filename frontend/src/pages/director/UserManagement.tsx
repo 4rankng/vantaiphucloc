@@ -88,7 +88,10 @@ export function UserManagement() {
     }
   }, [toast])
 
-  useEffect(() => { fetchUsers() }, [fetchUsers])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchUsers()
+  }, [fetchUsers])
 
   const filtered = filterRole === 'ALL' ? users : users.filter(u => u.role === filterRole)
 

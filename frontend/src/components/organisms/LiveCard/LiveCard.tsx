@@ -1,5 +1,3 @@
-import { Navigation } from 'lucide-react'
-
 interface LiveCardProps {
   title: string
   subtitle?: string
