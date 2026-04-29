@@ -395,3 +395,26 @@ class BatchWorkOrderResult(BaseModel):
     id: int | None = None
     success: bool
     error: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# Dashboard
+# ---------------------------------------------------------------------------
+
+class DriverSalarySummaryItem(BaseModel):
+    driver_id: int
+    driver_name: str
+    tractor_plate: str | None = None
+    total_jobs: int
+    total_salary: int
+
+
+class DashboardSummaryOut(BaseModel):
+    total_revenue: int
+    total_expense: int
+    trip_count: int
+    active_trips: int
+    outstanding_debt: int
+    driver_salary_summary: list[DriverSalarySummaryItem] = []
+    unmatched_work_order_count: int = 0
+    pending_trip_count: int = 0

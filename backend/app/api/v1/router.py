@@ -14,6 +14,7 @@ from app.api.v1.salary_config import router as salary_config_router
 from app.api.v1.drivers import router as drivers_router
 from app.api.v1.push import router as push_router
 from app.api.v1.users import router as users_router
+from app.api.v1.dashboard import router as dashboard_router
 from app.core.deps import get_current_user, get_worker_pool
 from app.models.base import User
 from app.schemas.domain import JobStatusResponse
@@ -32,6 +33,7 @@ router.include_router(salary_config_router)
 router.include_router(drivers_router)
 router.include_router(push_router)
 router.include_router(users_router)
+router.include_router(dashboard_router)
 
 
 @router.get("/health")
