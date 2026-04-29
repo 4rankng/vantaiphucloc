@@ -7,23 +7,34 @@ logger = logging.getLogger(__name__)
 
 
 async def cleanup_expired_sessions(ctx: dict) -> None:
-    """Remove expired rate-limit and session entries from Redis.
+    """Remove stale rate-limit sorted-set entries that have leaked past their TTL.
 
-    Redis TTL handles most expiration, but this sweeps stale sorted-set entries.
+    Most rate-limit keys are cleaned up by Redis TTL automatically, but
+    this sweeps any entries in long-lived sorted sets that have no remaining
+    members within the window.
     """
     redis: ArqRedis = ctx["redis"]
     cursor = 0
     cleaned = 0
+    import time
+    now = time.time()
     while True:
         cursor, keys = await redis.scan(cursor, match="rl:*", count=100)
         if keys:
-            await redis.delete(*keys)
-            cleaned += len(keys)
+            stale = []
+            for key in keys:
+                ttl = await redis.ttl(key)
+                # TTL of -2 means key no longer exists; -1 means no expiry set (leaked)
+                if ttl == -1:
+                    stale.append(key)
+            if stale:
+                await redis.delete(*stale)
+                cleaned += len(stale)
         if cursor == 0:
             break
 
     if cleaned:
-        logger.info("Cleaned up %d stale rate-limit keys", cleaned)
+        logger.info("Cleaned up %d stale rate-limit keys (no TTL)", cleaned)
 
 
 async def cleanup_old_audit_logs(ctx: dict) -> None:

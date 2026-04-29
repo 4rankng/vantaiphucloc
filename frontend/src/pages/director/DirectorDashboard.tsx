@@ -1,22 +1,15 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import { Users, Truck, TrendingUp, UserCircle, Building2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { apiClient } from '@/services/api'
 import { formatCurrencyFull as formatCurrency } from '@/data/domain'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { StatsRow } from '@/components/shared/StatsRow'
-import type { WorkOrder, Client, Driver } from '@/data/domain'
+import type { WorkOrder } from '@/data/domain'
 
-interface DirectorDashboardProps {
-  onManageUsers?: () => void
-  onViewDriverJobs?: (driverId: string) => void
-  onViewClientJobs?: (clientId: string) => void
-  onViewClientPricing?: (clientId: string) => void
-}
-
-export function DirectorDashboard({ onManageUsers, onViewDriverJobs, onViewClientJobs, onViewClientPricing }: DirectorDashboardProps) {
+export function DirectorDashboard() {
+  const navigate = useNavigate()
   const [jobs, setJobs] = useState<WorkOrder[]>([])
-  const [clients, setClients] = useState<Client[]>([])
-  const [drivers, setDrivers] = useState<Driver[]>([])
   const [month, setMonth] = useState(() => {
     const d = new Date()
     return { year: d.getFullYear(), month: d.getMonth() + 1 }
@@ -24,27 +17,12 @@ export function DirectorDashboard({ onManageUsers, onViewDriverJobs, onViewClien
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([
-      apiClient.getWorkOrders(),
-      apiClient.getClients(),
-    ]).then(([jRes, cRes]) => {
+    apiClient.getWorkOrders().then((jRes) => {
       if (!cancelled) {
         if (jRes.success) setJobs(jRes.data)
-        if (cRes.success) setClients(cRes.data)
       }
     })
     return () => { cancelled = true }
-  }, [])
-
-  // Load drivers from users store
-  useEffect(() => {
-    const raw = localStorage.getItem('ttransport_users')
-    if (raw) {
-      try {
-        const users = JSON.parse(raw)
-        setDrivers(users.filter((u: { role: string }) => u.role === 'driver'))
-      } catch { /* */ }
-    }
   }, [])
 
   // Filter jobs by selected month
@@ -61,7 +39,7 @@ export function DirectorDashboard({ onManageUsers, onViewDriverJobs, onViewClien
 
   // Per-driver breakdown
   const driverBreakdown = useMemo(() => {
-    const map = new Map<string, { name: string; plate: string; trips: number; earning: number }>()
+    const map = new Map<number, { name: string; plate: string; trips: number; earning: number }>()
     for (const j of monthlyJobs) {
       const existing = map.get(j.driverId) ?? { name: j.driverName, plate: j.tractorPlate, trips: 0, earning: 0 }
       existing.trips++
@@ -74,7 +52,7 @@ export function DirectorDashboard({ onManageUsers, onViewDriverJobs, onViewClien
 
   // Per-client breakdown
   const clientBreakdown = useMemo(() => {
-    const map = new Map<string, { name: string; trips: number; revenue: number }>()
+    const map = new Map<number, { name: string; trips: number; revenue: number }>()
     for (const j of monthlyJobs) {
       const existing = map.get(j.clientId) ?? { name: j.clientName, trips: 0, revenue: 0 }
       existing.trips++
@@ -128,7 +106,7 @@ export function DirectorDashboard({ onManageUsers, onViewDriverJobs, onViewClien
       {/* Quick actions */}
       <div className="px-4 pb-3 flex gap-2">
         <button
-          onClick={onManageUsers}
+          onClick={() => navigate('/director/users')}
           className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold touch-manipulation"
           style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)', border: '1px solid var(--theme-border-default)' }}
         >
@@ -144,7 +122,7 @@ export function DirectorDashboard({ onManageUsers, onViewDriverJobs, onViewClien
             {driverBreakdown.map((d, i) => (
               <button
                 key={d.id}
-                onClick={() => onViewDriverJobs?.(d.id)}
+                onClick={() => navigate(`/director/driver-jobs/${d.id}`)}
                 className="w-full flex items-center justify-between px-4 py-3 touch-manipulation card-lift"
                 style={{
                   borderBottom: i < driverBreakdown.length - 1 ? '1px solid var(--theme-border-default)' : 'none',
@@ -178,7 +156,7 @@ export function DirectorDashboard({ onManageUsers, onViewDriverJobs, onViewClien
             {clientBreakdown.map((c, i) => (
               <button
                 key={c.id}
-                onClick={() => onViewClientJobs?.(c.id)}
+                onClick={() => navigate(`/director/client-jobs/${c.id}`)}
                 className="w-full flex items-center justify-between px-4 py-3 touch-manipulation card-lift"
                 style={{
                   borderBottom: i < clientBreakdown.length - 1 ? '1px solid var(--theme-border-default)' : 'none',

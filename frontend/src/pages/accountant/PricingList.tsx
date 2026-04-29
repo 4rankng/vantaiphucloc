@@ -1,6 +1,6 @@
-import { useEffect, useState, useMemo } from 'react'
-import { apiClient } from '@/services/api'
-import { formatCurrencyFull, WORK_TYPES, WORK_TYPE_LABELS, type Pricing, type PricingLine, type WorkType, type Client, type RoutePrice } from '@/data/domain'
+import { useState, useMemo } from 'react'
+import { usePricings, useClients, useRoutes, useCreatePricing, useUpdatePricing, useDeletePricing } from '@/hooks/use-queries'
+import { formatCurrencyFull, WORK_TYPES, type Pricing, type PricingLine, type WorkType } from '@/data/domain'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
@@ -110,11 +110,11 @@ function LineEditor({ lines, onChange }: {
 // ─── Pricing Form ─────────────────────────────────────────────────────────────
 function PricingForm({ initial, clients, routes, onSave, onCancel }: {
   initial?: Pricing
-  clients: Client[]; routes: RoutePrice[]
+  clients: { id: number; name: string }[]; routes: { route: string }[]
   onSave: (data: Omit<Pricing, 'id' | 'createdAt' | 'updatedAt'>) => void
   onCancel: () => void
 }) {
-  const [clientId, setClientId] = useState(initial?.clientId ?? '')
+  const [clientId, setClientId] = useState(String(initial?.clientId ?? ''))
   const [route, setRoute] = useState(initial?.route ?? '')
   const [lines, setLines] = useState<PricingLine[]>(
     initial?.lines ?? [{ workType: 'E20' as WorkType, quantity: 1 }]
@@ -123,15 +123,15 @@ function PricingForm({ initial, clients, routes, onSave, onCancel }: {
   const [driverSalary, setDriverSalary] = useState(initial?.driverSalary ?? 0)
   const [allowance, setAllowance] = useState(initial?.allowance ?? 0)
 
-  const clientOptions = useMemo(() => clients.map(c => ({ value: c.id, label: c.name })), [clients])
+  const clientOptions = useMemo(() => clients.map(c => ({ value: String(c.id), label: c.name })), [clients])
   const routeOptions = useMemo(() => routes.map(r => ({ value: r.route, label: r.route })), [routes])
-  const clientName = clients.find(c => c.id === clientId)?.name ?? ''
+  const clientName = clients.find(c => String(c.id) === clientId)?.name ?? ''
   // Derive primary workType from first line for compatibility
   const workType = lines[0]?.workType ?? 'E20'
 
   const handleSubmit = () => {
     if (!clientId || !route || lines.length === 0) return
-    onSave({ clientId, clientName, workType, route, lines, unitPrice, driverSalary, allowance })
+    onSave({ clientId: Number(clientId), clientName, workType, route, lines, unitPrice, driverSalary, allowance })
   }
 
   return (
@@ -187,27 +187,16 @@ function PricingForm({ initial, clients, routes, onSave, onCancel }: {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export function PricingList() {
-  const [pricings, setPricings] = useState<Pricing[]>([])
-  const [clients, setClients] = useState<Client[]>([])
-  const [routes, setRoutes] = useState<RoutePrice[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: pricings = [], isLoading: loading } = usePricings()
+  const { data: clients = [] } = useClients()
+  const { data: routes = [] } = useRoutes()
+  const createPricing = useCreatePricing()
+  const updatePricing = useUpdatePricing()
+  const deletePricing = useDeletePricing()
+
   const [showForm, setShowForm] = useState(false)
   const [editingPricing, setEditingPricing] = useState<Pricing | undefined>()
   const [searchQuery, setSearchQuery] = useState('')
-
-  useEffect(() => {
-    let cancelled = false
-    Promise.all([apiClient.getPricings(), apiClient.getClients(), apiClient.getRoutes()])
-      .then(([p, c, r]) => {
-        if (!cancelled) {
-          if (p.success) setPricings(p.data)
-          if (c.success) setClients(c.data)
-          if (r.success) setRoutes(r.data)
-          setLoading(false)
-        }
-      })
-    return () => { cancelled = true }
-  }, [])
 
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return pricings
@@ -229,23 +218,26 @@ export function PricingList() {
     return Array.from(map.entries())
   }, [filtered])
 
-  const handleSave = async (data: Omit<Pricing, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const handleSave = (data: Omit<Pricing, 'id' | 'createdAt' | 'updatedAt'>) => {
     if (editingPricing) {
-      const res = await apiClient.updatePricing(editingPricing.id, data)
-      if (res.success) {
-        setPricings(prev => prev.map(p => p.id === editingPricing.id ? { ...p, ...data, updatedAt: new Date().toISOString() } : p))
-      }
+      updatePricing.mutate({ id: editingPricing.id, data }, {
+        onSuccess: () => {
+          setShowForm(false)
+          setEditingPricing(undefined)
+        },
+      })
     } else {
-      const res = await apiClient.createPricing(data)
-      if (res.success) setPricings(prev => [...prev, res.data])
+      createPricing.mutate(data, {
+        onSuccess: () => {
+          setShowForm(false)
+          setEditingPricing(undefined)
+        },
+      })
     }
-    setShowForm(false)
-    setEditingPricing(undefined)
   }
 
-  const handleDelete = async (id: string) => {
-    const res = await apiClient.deletePricing(id)
-    if (res.success) setPricings(prev => prev.filter(p => p.id !== id))
+  const handleDelete = (id: number) => {
+    deletePricing.mutate(id)
   }
 
   if (loading) {

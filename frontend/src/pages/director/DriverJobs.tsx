@@ -4,7 +4,7 @@ import { apiClient } from '@/services/api'
 import { formatCurrencyFull as formatCurrency } from '@/data/domain'
 import type { WorkOrder, Driver } from '@/data/domain'
 
-export function DriverJobs({ driverId, onBack }: { driverId: string; onBack: () => void }) {
+export function DriverJobs({ driverId, onBack }: { driverId: number; onBack: () => void }) {
   const [jobs, setJobs] = useState<WorkOrder[]>([])
   const [driver, setDriver] = useState<Driver | null>(null)
 

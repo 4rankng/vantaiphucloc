@@ -108,9 +108,9 @@ class PricingCreate(BaseModel):
     work_type: str
     route: str
     lines: list[PricingLineCreate]
-    unit_price: int
-    driver_salary: int
-    allowance: int
+    unit_price: int = Field(ge=0)
+    driver_salary: int = Field(ge=0)
+    allowance: int = Field(ge=0)
 
 
 class PricingUpdate(BaseModel):
@@ -234,10 +234,10 @@ class TripOrderCreate(BaseModel):
     driver_name: str
     container_number: str
     pricing_id: int | None = None
-    unit_price: int
-    driver_salary: int
-    allowance: int
-    revenue: int
+    unit_price: int = Field(ge=0)
+    driver_salary: int = Field(ge=0)
+    allowance: int = Field(ge=0)
+    revenue: int = Field(ge=0)
     matched_work_order_ids: list[int] = []
 
 
@@ -352,6 +352,7 @@ class DriverCreate(BaseModel):
     username: str
     phone: str
     tractor_plate: str | None = None
+    vendor: str | None = None  # defaults to "Phúc Lộc" if omitted
 
 
 class DriverOut(BaseModel):
@@ -359,6 +360,7 @@ class DriverOut(BaseModel):
     username: str
     phone: str
     tractor_plate: str | None = None
+    vendor: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -393,3 +395,26 @@ class BatchWorkOrderResult(BaseModel):
     id: int | None = None
     success: bool
     error: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# Dashboard
+# ---------------------------------------------------------------------------
+
+class DriverSalarySummaryItem(BaseModel):
+    driver_id: int
+    driver_name: str
+    tractor_plate: str | None = None
+    total_jobs: int
+    total_salary: int
+
+
+class DashboardSummaryOut(BaseModel):
+    total_revenue: int
+    total_expense: int
+    trip_count: int
+    active_trips: int
+    outstanding_debt: int
+    driver_salary_summary: list[DriverSalarySummaryItem] = []
+    unmatched_work_order_count: int = 0
+    pending_trip_count: int = 0

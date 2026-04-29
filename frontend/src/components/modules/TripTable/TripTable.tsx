@@ -11,15 +11,6 @@ interface TripTableProps {
   showActions?: boolean
 }
 
-const columns = [
-  { key: 'id', label: 'Mã' },
-  { key: 'jobDate', label: 'Ngày' },
-  { key: 'route', label: 'Tuyến' },
-  { key: 'driverName', label: 'Tài xế' },
-  { key: 'status', label: 'Trạng thái' },
-  { key: 'revenue', label: 'Cước', align: 'right' as const },
-] as const
-
 export function TripTable({ data, onRowClick, showActions }: TripTableProps) {
   return (
     <GlassCard className="overflow-hidden">

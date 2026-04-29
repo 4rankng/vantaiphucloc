@@ -1,12 +1,10 @@
 """
 Domain ORM models for Vantaiphucloc.
 
-All models inherit from Base (defined in app.database) and carry a
-company_id FK for multi-tenancy.  Monetary fields are stored as Integer
-(Vietnamese Dong, no decimals).  All timestamps use DateTime(timezone=True)
-so PostgreSQL stores them as TIMESTAMP WITH TIME ZONE.
-
-Company is defined first because User.company_id references it.
+Single-tenant app — Phúc Lộc is the only company. No company_id FKs.
+Monetary fields are stored as Integer (Vietnamese Dong, no decimals).
+All timestamps use DateTime(timezone=True) so PostgreSQL stores them
+as TIMESTAMP WITH TIME ZONE.
 """
 
 from datetime import datetime, date, timezone
@@ -32,18 +30,6 @@ def _utcnow() -> datetime:
 
 
 # ---------------------------------------------------------------------------
-# Company
-# ---------------------------------------------------------------------------
-
-class Company(Base):
-    __tablename__ = "companies"
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), nullable=False)
-    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
-
-
-# ---------------------------------------------------------------------------
 # Client
 # ---------------------------------------------------------------------------
 
@@ -51,7 +37,6 @@ class Client(Base):
     __tablename__ = "clients"
 
     id = Column(Integer, primary_key=True, index=True)
-    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
     name = Column(String(255), nullable=False, index=True)
     type = Column(String(20), nullable=False)          # company | individual
     phone = Column(String(50), nullable=False)
@@ -73,7 +58,6 @@ class Route(Base):
     __tablename__ = "routes"
 
     id = Column(Integer, primary_key=True, index=True)
-    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
     route = Column(String(500), nullable=False)        # route name / description
     type_20ft = Column(Integer, nullable=False)        # VND
     type_40ft = Column(Integer, nullable=False)        # VND
@@ -92,7 +76,6 @@ class Pricing(Base):
     __tablename__ = "pricings"
 
     id = Column(Integer, primary_key=True, index=True)
-    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
     client_name = Column(String(255), nullable=False)  # denormalized for display
     work_type = Column(String(10), nullable=False)     # E20 | E40 | F20 | F40
@@ -123,6 +106,10 @@ class PricingLine(Base):
     work_type = Column(String(10), nullable=False)
     quantity = Column(Integer, nullable=False)
 
+    __table_args__ = (
+        UniqueConstraint("pricing_id", "work_type", name="uq_pricing_lines_pricing_work_type"),
+    )
+
 
 # ---------------------------------------------------------------------------
 # WorkOrder
@@ -132,7 +119,6 @@ class WorkOrder(Base):
     __tablename__ = "work_orders"
 
     id = Column(Integer, primary_key=True, index=True)
-    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
     client_name = Column(String(255), nullable=False)  # denormalized
     route = Column(String(500), nullable=False)
@@ -154,7 +140,6 @@ class WorkOrder(Base):
     )
 
     __table_args__ = (
-        Index("ix_work_orders_company_id_status", "company_id", "status"),
         Index("ix_work_orders_driver_id_status", "driver_id", "status"),
     )
 
@@ -190,7 +175,6 @@ class TripOrder(Base):
     __tablename__ = "trip_orders"
 
     id = Column(Integer, primary_key=True, index=True)
-    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
     trip_date = Column(Date, nullable=False)
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
     client_name = Column(String(255), nullable=False)  # denormalized
@@ -212,7 +196,6 @@ class TripOrder(Base):
     )
 
     __table_args__ = (
-        Index("ix_trip_orders_company_id_status", "company_id", "status"),
         Index("ix_trip_orders_driver_id_trip_date", "driver_id", "trip_date"),
     )
 
@@ -232,7 +215,7 @@ class TripOrderWorkOrder(Base):
     )
     work_order_id = Column(
         Integer,
-        ForeignKey("work_orders.id"),
+        ForeignKey("work_orders.id", ondelete="CASCADE"),
         primary_key=True,
         nullable=False,
     )
@@ -246,7 +229,6 @@ class SalaryPeriod(Base):
     __tablename__ = "salary_periods"
 
     id = Column(Integer, primary_key=True, index=True)
-    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False, index=True)
     driver_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     driver_name = Column(String(255), nullable=False)  # denormalized
     start_date = Column(Date, nullable=False)
@@ -265,20 +247,13 @@ class SalaryPeriod(Base):
 
 
 # ---------------------------------------------------------------------------
-# SalaryPeriodConfig  (one row per company)
+# SalaryPeriodConfig  (singleton — one row for the whole app)
 # ---------------------------------------------------------------------------
 
 class SalaryPeriodConfig(Base):
     __tablename__ = "salary_period_configs"
 
     id = Column(Integer, primary_key=True, index=True)
-    company_id = Column(
-        Integer,
-        ForeignKey("companies.id"),
-        nullable=False,
-        unique=True,
-        index=True,
-    )
     from_day = Column(Integer, nullable=False)   # 1–28
     to_day = Column(Integer, nullable=False)     # 1–28
     updated_at = Column(

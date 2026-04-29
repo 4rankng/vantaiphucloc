@@ -25,7 +25,6 @@ async def calculate_salary(
     try:
         job_id = await enqueue(
             "calculate_salary_task",
-            company_id=current_user.company_id,
             driver_id=body.driver_id,
             start_date=body.start_date.isoformat(),
             end_date=body.end_date.isoformat(),
@@ -41,7 +40,7 @@ async def list_salary_periods(
     current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
-    query = select(SalaryPeriod).where(SalaryPeriod.company_id == current_user.company_id)
+    query = select(SalaryPeriod)
 
     if driver_id is not None:
         query = query.where(SalaryPeriod.driver_id == driver_id)
@@ -58,10 +57,7 @@ async def update_salary_period(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(SalaryPeriod).where(
-            SalaryPeriod.id == salary_id,
-            SalaryPeriod.company_id == current_user.company_id,
-        )
+        select(SalaryPeriod).where(SalaryPeriod.id == salary_id)
     )
     salary_period = result.scalar_one_or_none()
     if salary_period is None:

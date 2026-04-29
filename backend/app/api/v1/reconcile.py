@@ -9,8 +9,7 @@ from app.models.base import User
 from app.models.domain import WorkOrder, TripOrder, TripOrderWorkOrder
 from app.schemas.domain import ReconcileRequest, TripOrderOut
 from app.core.deps import require_roles
-from app.api.v1.trip_orders import _load_trip_order_out
-from app.services.salary_service import get_salary_period_dates
+from app.api.v1.trip_orders import _load_trip_order_out, _enqueue_salary_recalc
 
 _logger = logging.getLogger(__name__)
 
@@ -56,21 +55,7 @@ async def reconcile(
     await db.commit()
     await db.refresh(trip_order)
 
-    # Enqueue salary recalculation for the driver
-    try:
-        from app.workers import enqueue, salary_recalc_job_id
-        ref_date = work_order.created_at.date() if work_order.created_at else trip_order.trip_date
-        start, end = await get_salary_period_dates(db, work_order.company_id, ref_date)
-        job_id = salary_recalc_job_id(work_order.company_id, work_order.driver_id, start.isoformat(), end.isoformat())
-        await enqueue(
-            "calculate_salary_task",
-            _job_id=job_id,
-            company_id=work_order.company_id,
-            driver_id=work_order.driver_id,
-            start_date=start.isoformat(),
-            end_date=end.isoformat(),
-        )
-    except RuntimeError:
-        _logger.warning("Failed to enqueue salary recalculation for driver %s", work_order.driver_id)
+    ref_date = work_order.created_at.date() if work_order.created_at else trip_order.trip_date
+    await _enqueue_salary_recalc(db, work_order.driver_id, ref_date)
 
     return await _load_trip_order_out(db, trip_order)
