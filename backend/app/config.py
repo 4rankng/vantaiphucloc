@@ -32,10 +32,6 @@ class Settings(BaseSettings):
     WORKER_TIMEOUT: int = 600
     WORKER_MAX_TRIES: int = 3
 
-    # App version (for PWA force-update)
-    APP_VERSION: str = "2026.04.29.2"
-    MINIMUM_VERSION: str = "2026.04.22.0"
-
     # Push notifications (VAPID)
     VAPID_PUBLIC_KEY: str = ""
     VAPID_PRIVATE_KEY: str = ""
