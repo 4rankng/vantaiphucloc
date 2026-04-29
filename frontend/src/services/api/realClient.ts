@@ -382,6 +382,23 @@ export async function updateTripOrder(id: string, data: Partial<TripOrder>): Pro
   }
 }
 
+// ─── Reconcile ──────────────────────────────────────────────────────────────
+
+export async function reconcile(
+  workOrderId: string,
+  tripOrderId: string,
+): Promise<ApiResponse<TripOrder>> {
+  try {
+    const res = await api.post('/reconcile', {
+      work_order_id: workOrderId,
+      trip_order_id: tripOrderId,
+    })
+    return ok(normalizeOne<TripOrder>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
 // ─── Salary ───────────────────────────────────────────────────────────────────
 
 export interface AsyncJobResult {

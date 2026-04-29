@@ -4,9 +4,9 @@ from sqlalchemy import select
 
 from app.database import get_db
 from app.models.base import User
-from app.schemas.base import UserOut, UserCreate, UserUpdate
+from app.schemas.base import UserOut, UserCreate, UserUpdate, ChangePassword, MessageResponse
 from app.core.deps import require_roles
-from app.core.security import hash_password
+from app.core.security import hash_password, verify_password
 
 router = APIRouter()
 
@@ -92,3 +92,16 @@ async def delete_user(
     # Soft delete — deactivate instead of removing
     user.is_active = False
     await db.commit()
+
+
+@router.post("/change-password", response_model=MessageResponse)
+async def change_password(
+    body: ChangePassword,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not verify_password(body.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    current_user.hashed_password = hash_password(body.new_password)
+    await db.commit()
+    return MessageResponse(message="Password changed successfully")
