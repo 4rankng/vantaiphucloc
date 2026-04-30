@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useMatchTrip } from '@/hooks/use-match-trip'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { InlineSelect } from '@/components/shared/InlineSelect'
@@ -7,13 +7,59 @@ import { EditDialog } from '@/components/shared/EditDialog'
 import { CompareRow } from '@/components/shared/CompareRow'
 import { ContCompareRow } from '@/components/shared/ContCompareRow'
 import { WORK_TYPES } from '@/data/domain'
-import { Check, ChevronDown, X } from 'lucide-react'
+import type { WOSuggestion } from '@/data/domain'
+import { Check, ChevronDown, X, Sparkles } from 'lucide-react'
 import { Button, Input, Label } from '@/components/ui'
+
+function WOSuggestionCard({ suggestion, onSelect }: { suggestion: WOSuggestion; onSelect: () => void }) {
+  const { workOrder, confidence, matchedFields } = suggestion
+  const isFull = confidence === 'full'
+  const isPartial = confidence === 'partial'
+
+  return (
+    <button onClick={onSelect}
+      className="w-full text-left px-3 py-2.5 rounded-xl touch-manipulation"
+      style={{
+        background: isFull ? 'var(--theme-status-success-light)' : isPartial ? 'var(--theme-status-warning-light, #FEF3C7)' : 'var(--theme-bg-secondary)',
+        border: `1px solid ${isFull ? 'var(--theme-status-success)' : isPartial ? 'var(--theme-status-warning)' : 'var(--theme-border-default)'}`,
+      }}>
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {workOrder.containers.map((c, i) => (
+            <span key={i} className="flex items-center gap-1">
+              <ContBadge type={c.workType} />
+              <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
+            </span>
+          ))}
+        </div>
+        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+          style={{
+            background: isFull ? 'var(--theme-status-success)' : isPartial ? 'var(--theme-status-warning)' : 'var(--theme-bg-tertiary)',
+            color: isFull ? '#fff' : isPartial ? '#92400E' : 'var(--theme-text-muted)',
+          }}>
+          {isFull ? 'Khớp đầy đủ' : isPartial ? 'Khớp một phần' : 'Không khớp'}
+        </span>
+      </div>
+      <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+        {workOrder.driverName} · {workOrder.clientName} · {workOrder.route}
+      </p>
+      <div className="flex flex-wrap gap-1 mt-1">
+        {matchedFields.map(f => (
+          <span key={f} className="text-[10px] px-1 py-0.5 rounded"
+            style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}>
+            {f === 'driver' ? 'Tài xế' : f === 'client' ? 'Khách hàng' : f === 'route' ? 'Cung đường' : 'Container'}
+          </span>
+        ))}
+      </div>
+    </button>
+  )
+}
 
 export function MatchTrip() {
   const { tripId: tripIdStr } = useParams<{ tripId: string }>()
+  const navigate = useNavigate()
   const {
-    loading, submitting, pickMode, setPickMode,
+    loading, loadingSuggestions, submitting, pickMode, setPickMode,
     editDialog,
     editedJob, setEditedJob,
     editedTrip, setEditedTrip,
@@ -24,7 +70,8 @@ export function MatchTrip() {
     selectedJob, selectedTrip,
     selectedTripId, setSelectedTripId,
     selectedJobId, setSelectedJobId,
-    tripClient, jobClient, tripRoute, jobRoute, tripCont, jobConts,
+    suggestions,
+    tripClient, jobClient, tripRoute, jobRoute, tripConts, jobConts,
     contMatched, clientMatched, routeMatched,
     openEdit, saveDialog, handleMatch,
   } = useMatchTrip(Number(tripIdStr))
@@ -45,8 +92,12 @@ export function MatchTrip() {
               <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--theme-status-warning)' }}>Chuyến yêu cầu</p>
               {selectedTrip ? (
                 <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                  <ContBadge type={selectedTrip.workType} />
-                  <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{selectedTrip.containerNumber}</span>
+                  {(selectedTrip.containers?.length ? selectedTrip.containers : []).map((c, i) => (
+                    <span key={i} className="flex items-center gap-1">
+                      <ContBadge type={c.workType} />
+                      <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
+                    </span>
+                  ))}
                 </div>
               ) : (
                 <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>Chọn chuyến yêu cầu</p>
@@ -77,11 +128,26 @@ export function MatchTrip() {
           </button>
         </div>
 
-        {/* ── MIDDLE: Comparison rows (tappable) ── */}
+        {/* ── Suggestions panel ── */}
+        {suggestions.length > 0 && !selectedJobId && (
+          <div className="px-4 pb-2 shrink-0">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Sparkles className="w-3.5 h-3.5" style={{ color: 'var(--theme-brand-primary)' }} />
+              <p className="text-xs font-bold" style={{ color: 'var(--theme-text-primary)' }}>Gợi ý khớp</p>
+            </div>
+            <div className="space-y-2">
+              {suggestions.map(s => (
+                <WOSuggestionCard key={s.workOrder.id} suggestion={s} onSelect={() => setSelectedJobId(s.workOrder.id)} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── MIDDLE: Comparison rows ── */}
         {selectedTrip && selectedJob && editedTrip && editedJob ? (
           <div className="flex-1 overflow-y-auto px-4 pb-2 space-y-2">
             <ContCompareRow
-              left={tripCont!} right={jobConts} matched={contMatched}
+              left={tripConts} right={jobConts} matched={contMatched}
               leftLabel="Yêu cầu" rightLabel="Đã chạy"
               onTapLeft={() => openEdit('cont-left')}
               onTapRight={() => openEdit('cont-right')}
@@ -105,12 +171,17 @@ export function MatchTrip() {
 
         {/* ── BOTTOM ── */}
         {selectedTrip && selectedJob && (
-          <div className="px-4 pb-4 pt-2 shrink-0" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
+          <div className="px-4 pb-4 pt-2 shrink-0 space-y-2" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
             <Button onClick={handleMatch} disabled={submitting}
               className="w-full h-12 font-bold rounded-xl text-sm"
               style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
               <Check className="w-4 h-4 mr-1.5" /> {submitting ? 'Đang khớp...' : 'Khớp chuyến'}
             </Button>
+            <button onClick={() => navigate('/accountant/create-trip', { state: { fromTripOrder: selectedTrip } })}
+              className="w-full py-2 text-xs font-medium"
+              style={{ color: 'var(--theme-brand-primary)' }}>
+              + Tạo chuyến yêu cầu mới
+            </button>
           </div>
         )}
       </div>
@@ -121,8 +192,12 @@ export function MatchTrip() {
         renderLabel={trip => (
           <div>
             <div className="flex flex-wrap items-center gap-1.5">
-              <ContBadge type={trip.workType} />
-              <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{trip.containerNumber}</span>
+              {(trip.containers?.length ? trip.containers : []).map((c, i) => (
+                <span key={i} className="flex items-center gap-1">
+                  <ContBadge type={c.workType} />
+                  <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
+                </span>
+              ))}
             </div>
             <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>{trip.clientName}</p>
             <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{trip.route}</p>
@@ -148,28 +223,44 @@ export function MatchTrip() {
       />
 
       {/* ── Edit dialogs ── */}
-      {/* Container - left (yêu cầu / trip) */}
+      {/* Container - left (yêu cầu / trip) — now multi-container */}
       <EditDialog open={editDialog === 'cont-left'} title="Sửa container · Yêu cầu" color="var(--theme-status-warning)" onClose={saveDialog}>
-        <div className="rounded-xl p-3 space-y-3"
-          style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Loại công</Label>
-            <div className="flex flex-wrap gap-1.5">
-              {WORK_TYPES.map(w => (
-                <button key={w} onClick={() => setDialogContLeft(prev => ({ ...prev, type: w }))}
-                  className="px-3 py-1.5 rounded-lg text-xs font-bold touch-manipulation"
-                  style={{ background: dialogContLeft.type === w ? 'var(--theme-status-warning)' : 'var(--theme-bg-tertiary)', color: dialogContLeft.type === w ? '#fff' : 'var(--theme-text-primary)' }}>
-                  {w}
+        {dialogContLeft.map((c, i) => (
+          <div key={i} className="rounded-xl p-3 space-y-3"
+            style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Container {i + 1}</span>
+              {dialogContLeft.length > 1 && (
+                <button onClick={() => setDialogContLeft(prev => prev.filter((_, j) => j !== i))}
+                  className="touch-manipulation" style={{ color: 'var(--theme-status-error)' }}>
+                  <X className="w-4 h-4" />
                 </button>
-              ))}
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Loại công</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {WORK_TYPES.map(w => (
+                  <button key={w} onClick={() => setDialogContLeft(prev => prev.map((c2, j) => j === i ? { ...c2, type: w } : c2))}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold touch-manipulation"
+                    style={{ background: c.type === w ? 'var(--theme-status-warning)' : 'var(--theme-bg-tertiary)', color: c.type === w ? '#fff' : 'var(--theme-text-primary)' }}>
+                    {w}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Số cont</Label>
+              <Input value={c.number} onChange={e => setDialogContLeft(prev => prev.map((c2, j) => j === i ? { ...c2, number: e.target.value } : c2))}
+                className="text-sm font-mono h-10" autoFocus />
             </div>
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Số cont</Label>
-            <Input value={dialogContLeft.number} onChange={e => setDialogContLeft(prev => ({ ...prev, number: e.target.value }))}
-              className="text-sm font-mono h-10" autoFocus />
-          </div>
-        </div>
+        ))}
+        <button onClick={() => setDialogContLeft(prev => [...prev, { type: 'E20', number: '' }])}
+          className="w-full py-2.5 rounded-xl text-xs font-medium touch-manipulation"
+          style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)', border: '1px dashed var(--theme-border-default)' }}>
+          + Thêm container
+        </button>
       </EditDialog>
 
       {/* Container - right (đã chạy / work order) */}

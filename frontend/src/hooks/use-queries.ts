@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
 import { api } from '@/services/api/client'
-import type { Pricing, WorkOrder, TripOrder, WorkType, Client, RoutePrice, SalaryPeriod } from '@/data/domain'
+import type { Pricing, WorkOrder, TripOrder, WorkType, Client, RoutePrice, SalaryPeriod, SuggestMatchesResponse, SuggestWosResponse } from '@/data/domain'
 import type { Vendor } from '@/services/api/vendors.api'
 
 // ─── Query key factories ─────────────────────────────────────────────────────
@@ -28,6 +28,8 @@ export const queryKeys = {
   notifications: ['notifications'] as const,
   salaryConfig: ['salary-config'] as const,
   vendors: ['vendors'] as const,
+  suggestMatches: (woId: number) => ['suggest-matches', woId] as const,
+  suggestWos: (toId: number) => ['suggest-wos', toId] as const,
 }
 
 // ─── Query hooks (GET) ───────────────────────────────────────────────────────
@@ -162,6 +164,28 @@ export function useSalaryConfig() {
       const res = await api.get('/salary-config')
       return res.data as { from_day: number; to_day: number } | null
     },
+  })
+}
+
+export function useSuggestMatches(workOrderId: number | null) {
+  return useQuery({
+    queryKey: queryKeys.suggestMatches(workOrderId!),
+    queryFn: async () => {
+      const res = await apiClient.suggestMatches(workOrderId!)
+      return res.success ? res.data : null
+    },
+    enabled: workOrderId !== null,
+  })
+}
+
+export function useSuggestWosForTrip(tripOrderId: number | null) {
+  return useQuery({
+    queryKey: queryKeys.suggestWos(tripOrderId!),
+    queryFn: async () => {
+      const res = await apiClient.suggestWosForTrip(tripOrderId!)
+      return res.success ? res.data : null
+    },
+    enabled: tripOrderId !== null,
   })
 }
 

@@ -131,17 +131,23 @@ export interface Pricing {
   updatedAt: string
 }
 
+export interface TripOrderContainerItem {
+  containerNumber: string
+  workType: WorkType
+}
+
 export interface TripOrder {
   id: number
   tripDate: string
   clientId: number
   clientName: string
-  workType: WorkType
+  workType?: WorkType
   route: string
   tractorPlate: string
   driverId: number
   driverName: string
-  containerNumber: string
+  containerNumber?: string
+  containers: TripOrderContainerItem[]
   pricingId: number
   unitPrice: number
   driverSalary: number
@@ -171,6 +177,34 @@ export interface ApiResponse<T> {
   data: T
   success: boolean
   message?: string
+}
+
+// ─── Match Suggestions ────────────────────────────────────────────────────────
+
+export type MatchConfidence = 'full' | 'partial' | 'none'
+
+export interface MatchSuggestion {
+  tripOrder: TripOrder
+  confidence: MatchConfidence
+  matchedFields: string[]
+  score: number
+}
+
+export interface SuggestMatchesResponse {
+  workOrderId: number
+  suggestions: MatchSuggestion[]
+}
+
+export interface WOSuggestion {
+  workOrder: WorkOrder
+  confidence: MatchConfidence
+  matchedFields: string[]
+  score: number
+}
+
+export interface SuggestWosResponse {
+  tripOrderId: number
+  suggestions: WOSuggestion[]
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
