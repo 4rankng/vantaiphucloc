@@ -99,7 +99,7 @@ export function Sidebar({ items, title, basePath }: SidebarProps) {
           </div>
       <div className="min-w-0">
           <p className="text-sm font-medium truncate" style={{ color: 'var(--theme-sidebar-active-text)', opacity: 0.8 }}>{roleLabel}</p>
-          <p className="text-xs" style={{ color: 'var(--theme-sidebar-text-muted)' }}>Vận Tái Phúc Lộc</p>
+          <p className="text-xs" style={{ color: 'var(--theme-sidebar-text-muted)' }}>Phúc Lộc</p>
         </div>
         </button>
         <button
