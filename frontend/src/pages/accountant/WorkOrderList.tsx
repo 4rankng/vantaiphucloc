@@ -50,7 +50,7 @@ export function WorkOrderList() {
           <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không có số công cần đối soát</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-3">
           {filtered.map(job => (
             <WorkOrderJobCard
               key={job.id}

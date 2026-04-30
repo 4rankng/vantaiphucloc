@@ -82,7 +82,7 @@ export function ClientList() {
   return (
     <div>
       {/* Client list — clean cards, tap to see detail */}
-      <div className="space-y-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2 lg:gap-3">
         {clients.length === 0 ? (
           <div className="rounded-2xl p-10 text-center" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
             <Building2 className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--theme-text-muted)' }} />

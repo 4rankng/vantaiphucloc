@@ -73,8 +73,8 @@ export function DriverHome() {
         </p>
 
         {loading ? (
-          <div className="animate-pulse space-y-2.5">
-            {[1, 2, 3].map(i => (
+          <div className="animate-pulse grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+            {[1, 2, 3, 4].map(i => (
               <div key={i} className="h-24 rounded-2xl" style={{ background: 'var(--theme-bg-tertiary)' }} />
             ))}
           </div>
@@ -84,14 +84,16 @@ export function DriverHome() {
             <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có chuyến nào trong tháng này</p>
           </div>
         ) : (
-          filteredJobs.map(job => (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+          {filteredJobs.map(job => (
             <WorkOrderCard
               key={job.id}
               variant="driver"
               data={job}
               onClick={() => navigate(`/driver/job/${job.id}`)}
             />
-          ))
+          ))}
+          </div>
         )}
       </div>
 

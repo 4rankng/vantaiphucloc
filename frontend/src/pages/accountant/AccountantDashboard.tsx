@@ -64,7 +64,7 @@ export function AccountantDashboard() {
   return (
     <div className="pb-6">
       {/* Quick actions */}
-      <div className="px-4 pt-3 grid grid-cols-5 gap-2">
+      <div className="px-4 pt-3 grid grid-cols-5 gap-2 lg:gap-3 lg:max-w-none">
         {QUICK_ACTIONS.map(({ label, icon: Icon, path }) => (
           <button
             key={path}
@@ -82,6 +82,8 @@ export function AccountantDashboard() {
         ))}
       </div>
 
+      {/* Desktop: side-by-side layout for main sections */}
+      <div className="lg:grid lg:grid-cols-2 lg:gap-6">
       {/* Driver salary section */}
       {salaryByDriver.length > 0 && (
         <div className="px-4 mt-4">
@@ -107,6 +109,10 @@ export function AccountantDashboard() {
         </div>
       )}
 
+      </div>{/* end lg:grid */}
+
+      {/* Desktop: 3-column grid for work sections */}
+      <div className="lg:grid lg:grid-cols-3 lg:gap-6">
       {/* Can doi soat — unmatched jobs */}
       {unmatchedJobs.length > 0 && (
         <div className="px-4 mt-4">
@@ -147,6 +153,8 @@ export function AccountantDashboard() {
           </div>
         </div>
       )}
+
+      </div>{/* end lg:grid 3-col */}
 
       {/* Trips pending doi soat */}
       {pendingTrips.length > 0 && (

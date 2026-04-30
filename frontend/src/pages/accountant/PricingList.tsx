@@ -277,7 +277,7 @@ export function PricingList() {
         {grouped.map(([clientName, items]) => (
           <div key={clientName} className="mt-4">
             <p className="text-xs font-bold uppercase tracking-wide mb-1.5" style={{ color: 'var(--theme-text-muted)' }}>{clientName}</p>
-            <div className="space-y-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2 lg:gap-3">
               {items.map(p => (
                 <PricingCard key={p.id} pricing={p}
                   onEdit={() => { setEditingPricing(p); setShowForm(true) }}
