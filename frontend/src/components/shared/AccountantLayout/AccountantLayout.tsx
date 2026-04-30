@@ -46,7 +46,7 @@ export function AccountantLayout() {
           ? {
               variant: 'home',
               name: user.name,
-              onNotifications: () => {},
+              onNotifications: () => navigate('/accountant/notifications'),
               onProfile: () => setDropdownOpen(true),
             }
           : { variant: 'page', title, onBack: () => navigate(-1) }
