@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { KeyRound, LogOut } from 'lucide-react'
+import { KeyRound, LogOut, Bell, BellOff } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog/Dialog'
 import { Button } from '@/components/ui/Button/Button'
 import { Input } from '@/components/ui/Input/Input'
 import { Label } from '@/components/ui/Label/Label'
+import { subscribeToPush, unsubscribeFromPush, isPushSupported, getPushSubscriptionStatus } from '@/lib/push-subscription'
 
 export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [currentPw, setCurrentPw] = useState('')
@@ -52,6 +53,8 @@ export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () =>
 export function UserDropdown({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { logout } = useAuth()
   const [showPwDialog, setShowPwDialog] = useState(false)
+  const [pushEnabled, setPushEnabled] = useState(false)
+  const pushSupported = isPushSupported()
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -62,6 +65,23 @@ export function UserDropdown({ open, onClose }: { open: boolean; onClose: () => 
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [open, onClose])
+
+  // Check push subscription status when dropdown opens
+  useEffect(() => {
+    if (open && pushSupported) {
+      getPushSubscriptionStatus().then(s => setPushEnabled(s.subscribed))
+    }
+  }, [open, pushSupported])
+
+  const togglePush = useCallback(async () => {
+    if (pushEnabled) {
+      await unsubscribeFromPush()
+      setPushEnabled(false)
+    } else {
+      const ok = await subscribeToPush()
+      setPushEnabled(ok)
+    }
+  }, [pushEnabled])
 
   if (!open) return null
 
@@ -76,6 +96,20 @@ export function UserDropdown({ open, onClose }: { open: boolean; onClose: () => 
           border: '1px solid var(--theme-border-default)',
         }}
       >
+        {pushSupported && (
+          <button
+            onClick={togglePush}
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium touch-manipulation"
+            style={{ color: 'var(--theme-text-primary)' }}
+          >
+            {pushEnabled ? (
+              <Bell className="w-4 h-4" style={{ color: 'var(--theme-brand-primary)' }} />
+            ) : (
+              <BellOff className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
+            )}
+            {pushEnabled ? 'Tắt thông báo đẩy' : 'Bật thông báo đẩy'}
+          </button>
+        )}
         <button
           onClick={() => { onClose(); setShowPwDialog(true) }}
           className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium touch-manipulation"
