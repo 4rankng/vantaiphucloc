@@ -20,6 +20,7 @@ export const Profile              = lazy(() => import('@/pages/driver/Profile').
 // ─── Accountant pages ─────────────────────────────────────────────────────────
 export const AccountantDashboard  = lazy(() => import('@/pages/accountant/AccountantDashboard').then(m => ({ default: m.AccountantDashboard })))
 export const ClientList           = lazy(() => import('@/pages/accountant/ClientList').then(m => ({ default: m.ClientList })))
+export const ClientsAndVendors    = lazy(() => import('@/pages/accountant/ClientsAndVendors').then(m => ({ default: m.ClientsAndVendors })))
 export const RouteList            = lazy(() => import('@/pages/accountant/RouteList').then(m => ({ default: m.RouteList })))
 export const WorkOrderList        = lazy(() => import('@/pages/accountant/WorkOrderList').then(m => ({ default: m.WorkOrderList })))
 export const TripList             = lazy(() => import('@/pages/accountant/TripList').then(m => ({ default: m.TripList })))

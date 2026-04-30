@@ -1,12 +1,11 @@
 import { useState, useCallback, useEffect } from 'react'
 import { Plus } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { AppTopBar } from '@/components/shared/AppTopBar'
+import { AppShell } from '@/components/shared/AppShell'
 import { UserDropdown } from '@/components/shared/ProfileDialog'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { UserDetailDialog } from '@/components/shared/UserDetailDialog'
 import { CreateUserDialog } from '@/components/shared/CreateUserDialog'
-import { DesktopShell, SUPERADMIN_NAV } from '@/components/shared/DesktopShell'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useToast } from '@/components/atoms/Toast'
 import { api } from '@/services/api/client'
@@ -46,15 +45,23 @@ export function SuperAdminApp() {
 
   if (loading) {
     return (
-      <div className="min-h-[100dvh]" style={{ background: 'var(--theme-bg-primary)' }}>
-        <AppTopBar variant="home" name={user?.name ?? ''} onProfile={() => {}} onNotifications={() => {}} />
+      <AppShell
+        topbarProps={{ variant: 'home', name: user?.name ?? '', onProfile: () => {}, onNotifications: () => {} }}
+      >
         <div className="p-4 text-center py-12" style={{ color: 'var(--theme-text-muted)' }}>Đang tải...</div>
-      </div>
+      </AppShell>
     )
   }
 
-  const content = (
-    <>
+  return (
+    <AppShell
+      topbarProps={{
+        variant: 'home',
+        name: user?.name ?? '',
+        onProfile: () => setDropdownOpen(true),
+        onNotifications: () => {},
+      }}
+    >
       <SuperAdminDashboard
         users={users}
         filterRole={filterRole}
@@ -76,26 +83,6 @@ export function SuperAdminApp() {
       <UserDropdown open={dropdownOpen} onClose={() => setDropdownOpen(false)} />
       <CreateUserDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreated={fetchUsers} />
       <UserDetailDialog user={selectedUser} open={!!selectedUser} onClose={() => setSelectedUser(null)} />
-    </>
-  )
-
-  if (!isMobile) {
-    return (
-      <DesktopShell navItems={SUPERADMIN_NAV} roleLabel="SuperAdmin">
-        {content}
-      </DesktopShell>
-    )
-  }
-
-  return (
-    <div className="min-h-[100dvh]" style={{ background: 'var(--theme-bg-primary)' }}>
-      <AppTopBar
-        variant="home"
-        name={user?.name ?? ''}
-        onProfile={() => setDropdownOpen(true)}
-        onNotifications={() => {}}
-      />
-      {content}
-    </div>
+    </AppShell>
   )
 }

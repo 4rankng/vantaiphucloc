@@ -1,16 +1,14 @@
 import { useState } from 'react'
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
-import { AppTopBar } from '@/components/shared/AppTopBar'
+import { AppShell } from '@/components/shared/AppShell'
 import { UserDropdown } from '@/components/shared/ProfileDialog'
-import { DesktopShell, ACCOUNTANT_NAV } from '@/components/shared/DesktopShell'
-import { useIsMobile } from '@/hooks/use-mobile'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Role } from '@/data/domain'
 
 const ALLOWED_ROLES: Role[] = ['accountant']
 
 const TITLES: Record<string, string> = {
-  '/accountant/clients': 'Khách hàng',
+  '/accountant/clients': 'Khách hàng & Nhà thầu',
   '/accountant/routes': 'Cung đường',
   '/accountant/work-orders': 'Đối soát tài xế',
   '/accountant/trips': 'Chuyến',
@@ -24,7 +22,6 @@ export function AccountantLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const [dropdownOpen, setDropdownOpen] = useState(false)
-  const isMobile = useIsMobile()
 
   if (!user || !ALLOWED_ROLES.includes(user.role)) {
     return <Navigate to="/" replace />
@@ -42,31 +39,22 @@ export function AccountantLayout() {
     title = 'Đối soát'
   }
 
-  if (!isMobile) {
-    return (
-      <DesktopShell navItems={ACCOUNTANT_NAV} roleLabel="Kế toán">
-        <Outlet />
-      </DesktopShell>
-    )
-  }
-
   return (
-    <div className="min-h-[100dvh]" style={{ background: 'var(--theme-bg-primary)' }}>
-      {isHome ? (
-        <AppTopBar
-          variant="home"
-          name={user.name}
-          onNotifications={() => {}}
-          onProfile={() => setDropdownOpen(true)}
-        />
-      ) : (
-        <AppTopBar variant="page" title={title} onBack={() => navigate(-1)} />
-      )}
-
-      <main className={isHome || isFullPage ? undefined : 'p-4 space-y-4'}>
-        <Outlet />
-      </main>
+    <AppShell
+      topbarProps={
+        isHome
+          ? {
+              variant: 'home',
+              name: user.name,
+              onNotifications: () => {},
+              onProfile: () => setDropdownOpen(true),
+            }
+          : { variant: 'page', title, onBack: () => navigate(-1) }
+      }
+      contentClassName={isHome || isFullPage ? undefined : 'p-4 space-y-4'}
+    >
+      <Outlet />
       <UserDropdown open={dropdownOpen} onClose={() => setDropdownOpen(false)} />
-    </div>
+    </AppShell>
   )
 }

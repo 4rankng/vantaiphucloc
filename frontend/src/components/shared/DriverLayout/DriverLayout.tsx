@@ -1,9 +1,7 @@
 import { useState } from 'react'
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
-import { AppTopBar } from '@/components/shared/AppTopBar'
+import { AppShell } from '@/components/shared/AppShell'
 import { UserDropdown } from '@/components/shared/ProfileDialog'
-import { DesktopShell, DRIVER_NAV } from '@/components/shared/DesktopShell'
-import { useIsMobile } from '@/hooks/use-mobile'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Role } from '@/data/domain'
 
@@ -21,7 +19,6 @@ export function DriverLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const [dropdownOpen, setDropdownOpen] = useState(false)
-  const isMobile = useIsMobile()
 
   if (!user || !ALLOWED_ROLES.includes(user.role)) {
     return <Navigate to="/" replace />
@@ -34,41 +31,32 @@ export function DriverLayout() {
     title = 'Chi tiết chuyến'
   }
 
-  if (!isMobile) {
-    return (
-      <DesktopShell navItems={DRIVER_NAV} roleLabel="Tài xế">
-        <Outlet />
-      </DesktopShell>
-    )
-  }
-
   if (isHome) {
     return (
-      <div className="min-h-[100dvh]" style={{ background: 'var(--theme-bg-primary)' }}>
-        <AppTopBar
-          variant="home"
-          name={user.name}
-          onNotifications={() => navigate('/driver/notifications')}
-          onProfile={() => setDropdownOpen(true)}
-        />
-        <main>
-          <Outlet />
-        </main>
+      <AppShell
+        topbarProps={{
+          variant: 'home',
+          name: user.name,
+          onNotifications: () => navigate('/driver/notifications'),
+          onProfile: () => setDropdownOpen(true),
+        }}
+      >
+        <Outlet />
         <UserDropdown open={dropdownOpen} onClose={() => setDropdownOpen(false)} />
-      </div>
+      </AppShell>
     )
   }
 
   return (
-    <div className="min-h-[100dvh]" style={{ background: 'var(--theme-bg-primary)' }}>
-      <AppTopBar
-        variant="page"
-        title={title}
-        onBack={() => navigate(-1)}
-      />
-      <main className="p-4 space-y-4">
-        <Outlet />
-      </main>
-    </div>
+    <AppShell
+      topbarProps={{
+        variant: 'page',
+        title,
+        onBack: () => navigate(-1),
+      }}
+      contentClassName="p-4 space-y-4"
+    >
+      <Outlet />
+    </AppShell>
   )
 }
