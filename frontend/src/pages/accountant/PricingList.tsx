@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react'
-import { usePricings, useClients, useRoutes, useCreatePricing, useUpdatePricing, useDeletePricing } from '@/hooks/use-queries'
+import { usePricings, useClients, useRoutes, useCreatePricing, useUpdatePricing, useDeletePricing, useCreateClient } from '@/hooks/use-queries'
 import { formatCurrencyFull, WORK_TYPES, type Pricing, type PricingLine, type WorkType } from '@/data/domain'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect'
+import { QuickCreateDialog } from '@/components/shared/QuickCreateDialog'
 import { Plus, Pencil, Trash2, X, Check, Search } from 'lucide-react'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 
@@ -108,11 +109,12 @@ function LineEditor({ lines, onChange }: {
 }
 
 // ─── Pricing Form ─────────────────────────────────────────────────────────────
-function PricingForm({ initial, clients, routes, onSave, onCancel }: {
+function PricingForm({ initial, clients, routes, onSave, onCancel, onCreateClient }: {
   initial?: Pricing
   clients: { id: number; name: string }[]; routes: { route: string }[]
   onSave: (data: Omit<Pricing, 'id' | 'createdAt' | 'updatedAt'>) => void
   onCancel: () => void
+  onCreateClient: () => void
 }) {
   const [clientId, setClientId] = useState(String(initial?.clientId ?? ''))
   const [route, setRoute] = useState(initial?.route ?? '')
@@ -148,7 +150,14 @@ function PricingForm({ initial, clients, routes, onSave, onCancel }: {
 
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</Label>
-        <InlineSelect options={clientOptions} value={clientId} onChange={setClientId} placeholder="Chọn khách hàng" />
+        <InlineSelect
+          options={clientOptions}
+          value={clientId}
+          onChange={setClientId}
+          placeholder="Chọn khách hàng"
+          onCreateNew={onCreateClient}
+          createNewLabel="Tạo khách hàng mới"
+        />
       </div>
 
       <div className="space-y-1.5">
@@ -193,10 +202,12 @@ export function PricingList() {
   const createPricing = useCreatePricing()
   const updatePricing = useUpdatePricing()
   const deletePricing = useDeletePricing()
+  const createClient = useCreateClient()
 
   const [showForm, setShowForm] = useState(false)
   const [editingPricing, setEditingPricing] = useState<Pricing | undefined>()
   const [searchQuery, setSearchQuery] = useState('')
+  const [createClientOpen, setCreateClientOpen] = useState(false)
 
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return pricings
@@ -257,7 +268,10 @@ export function PricingList() {
 
         {showForm && (
           <PricingForm initial={editingPricing} clients={clients} routes={routes}
-            onSave={handleSave} onCancel={() => { setShowForm(false); setEditingPricing(undefined) }} />
+            onSave={handleSave}
+            onCancel={() => { setShowForm(false); setEditingPricing(undefined) }}
+            onCreateClient={() => setCreateClientOpen(true)}
+          />
         )}
 
         {grouped.map(([clientName, items]) => (
@@ -283,6 +297,20 @@ export function PricingList() {
       </div>
 
       <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => { setEditingPricing(undefined); setShowForm(true) }} label="Thêm bảng giá" />
+
+      <QuickCreateDialog
+        open={createClientOpen}
+        onClose={() => setCreateClientOpen(false)}
+        title="Thêm khách hàng"
+        label="Tên khách hàng"
+        placeholder="Tên khách hàng"
+        onConfirm={(name) => {
+          createClient.mutate(
+            { name, type: 'company', phone: '', taxCode: '', address: '', contactPerson: '' },
+            { onSuccess: () => setCreateClientOpen(false) },
+          )
+        }}
+      />
     </div>
   )
 }
