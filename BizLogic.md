@@ -421,7 +421,7 @@ These features are referenced in code comments or frontend TODOs but not yet bui
 - [ ] **Auto-update outstanding_debt** — when trip order status → INVOICED, add to client's outstanding_debt
 - [ ] **Deductions** — `total_deduction` in salary is always 0. Future: fuel, fines, advances
 - [ ] **Invoice generation** — Trip Order → INVOICED status exists but no PDF/export
-- [ ] **Push notifications** — Backend infrastructure ready (VAPID, subscriptions), frontend not wired
+- [ ] **Push notifications** — ✅ Backend VAPID + push service ready. Frontend: profile dropdown has toggle, auto-subscribe on login, SW handles push events. Needs testing with actual notifications triggered by business events.
 - [ ] **Vehicle management** — Tractor/trailer registry (currently just `tractor_plate` string on user)
 - [ ] **Partner management** — Referenced in TODO comments
 - [ ] **Expense tracking** — Referenced in TODO comments
