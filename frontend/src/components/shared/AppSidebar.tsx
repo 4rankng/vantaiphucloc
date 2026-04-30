@@ -316,7 +316,7 @@ export function AppSidebar({ role }: AppSidebarProps) {
       <Sidebar
         collapsible="icon"
         className="border-r border-white/[0.06]"
-        style={{ background: 'var(--theme-sidebar, #00963E)' } as React.CSSProperties}
+        style={{ background: 'var(--theme-sidebar, #0a2e1a)' } as React.CSSProperties}
       >
         {/* Header — logo */}
         <SidebarHeader className="p-0 shrink-0 border-b border-white/[0.06]">
