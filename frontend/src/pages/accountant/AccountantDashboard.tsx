@@ -31,6 +31,9 @@ export function AccountantDashboard() {
           setLoading(false)
         }
       })
+      .catch(() => {
+        if (!cancelled) setLoading(false)
+      })
     return () => { cancelled = true }
   }, [])
 
@@ -171,6 +174,17 @@ export function AccountantDashboard() {
               />
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Empty state — nothing to show */}
+      {salaryByDriver.length === 0 && unmatchedJobs.length === 0 && matchedJobs.length === 0 && pendingTrips.length === 0 && (
+        <div className="px-4 mt-8 flex flex-col items-center text-center gap-2">
+          <Receipt className="w-10 h-10" style={{ color: 'var(--theme-text-muted)', opacity: 0.4 }} />
+          <p className="text-sm font-medium" style={{ color: 'var(--theme-text-muted)' }}>Chưa có dữ liệu</p>
+          <p className="text-xs" style={{ color: 'var(--theme-text-muted)', opacity: 0.7 }}>
+            Tạo chuyến mới hoặc nhập lệnh công để bắt đầu đối soát.
+          </p>
         </div>
       )}
     </div>

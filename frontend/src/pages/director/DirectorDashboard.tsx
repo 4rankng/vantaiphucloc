@@ -15,13 +15,18 @@ export function DirectorDashboard() {
     return { year: d.getFullYear(), month: d.getMonth() + 1 }
   })
 
+  const [loading, setLoading] = useState(true)
+
   useEffect(() => {
     let cancelled = false
-    apiClient.getWorkOrders().then((jRes) => {
-      if (!cancelled) {
-        if (jRes.success) setJobs(jRes.data)
-      }
-    })
+    apiClient.getWorkOrders()
+      .then((jRes) => {
+        if (!cancelled) {
+          if (jRes.success) setJobs(jRes.data)
+          setLoading(false)
+        }
+      })
+      .catch(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [])
 
@@ -86,12 +91,12 @@ export function DirectorDashboard() {
           items={[
             {
               label: 'Doanh thu',
-              value: formatCurrency(totalRevenue),
+              value: loading ? '...' : formatCurrency(totalRevenue),
               icon: <TrendingUp className="w-3 h-3" style={{ color: 'var(--theme-brand-primary)' }} />,
             },
             {
               label: 'Chi tài xế',
-              value: formatCurrency(totalDriverEarning),
+              value: loading ? '...' : formatCurrency(totalDriverEarning),
               icon: <Truck className="w-3 h-3" style={{ color: 'var(--theme-brand-primary)' }} />,
             },
           ]}
@@ -187,9 +192,15 @@ export function DirectorDashboard() {
       </div>{/* end lg:grid */}
 
       {/* Empty state */}
-      {monthlyJobs.length === 0 && (
+      {!loading && monthlyJobs.length === 0 && (
         <div className="px-4 mt-8 flex flex-col items-center">
           <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không có dữ liệu tháng {month.month}/{month.year}</p>
+        </div>
+      )}
+
+      {loading && (
+        <div className="p-4 space-y-2">
+          {[1, 2, 3].map(i => <div key={i} className="h-16 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}
         </div>
       )}
     </div>

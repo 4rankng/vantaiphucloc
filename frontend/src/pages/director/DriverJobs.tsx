@@ -10,13 +10,15 @@ export function DriverJobs({ driverId, onBack }: { driverId: number; onBack: () 
 
   useEffect(() => {
     let cancelled = false
-    apiClient.getWorkOrders().then(res => {
-      if (!cancelled && res.success) {
-        setJobs(res.data.filter(j => j.driverId === driverId))
-        const d = res.data.find(j => j.driverId === driverId)
-        if (d) setDriver({ id: d.driverId, name: d.driverName, role: 'driver', phone: '', tractorPlate: d.tractorPlate })
-      }
-    })
+    apiClient.getWorkOrders()
+      .then(res => {
+        if (!cancelled && res.success) {
+          setJobs(res.data.filter(j => j.driverId === driverId))
+          const d = res.data.find(j => j.driverId === driverId)
+          if (d) setDriver({ id: d.driverId, name: d.driverName, role: 'driver', phone: '', tractorPlate: d.tractorPlate })
+        }
+      })
+      .catch(() => {})
     return () => { cancelled = true }
   }, [driverId])
 

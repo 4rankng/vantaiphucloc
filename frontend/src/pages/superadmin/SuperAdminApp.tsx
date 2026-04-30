@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { Plus } from 'lucide-react'
+import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { AppShell } from '@/components/shared/AppShell'
 import { UserDropdown } from '@/components/shared/ProfileDialog'
@@ -14,6 +15,17 @@ import { SuperAdminDashboard } from './SuperAdminDashboard'
 import { toUserAccount, type UserAccount } from './types'
 
 export function SuperAdminApp() {
+  const { user } = useAuth()
+
+  // Guard: only superadmin may access this page
+  if (!user || user.role !== 'superadmin') {
+    return <Navigate to="/" replace />
+  }
+
+  return <SuperAdminAppInner />
+}
+
+function SuperAdminAppInner() {
   const { user } = useAuth()
   const toast = useToast()
   const [dropdownOpen, setDropdownOpen] = useState(false)
