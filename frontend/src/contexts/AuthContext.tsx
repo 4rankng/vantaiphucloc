@@ -1,7 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, useEffect, type ReactNode } from 'react'
 import type { Role } from '@/data/domain'
 import { api, setTokens, clearTokens } from '@/services/api/client'
+import { subscribeToPush, isPushSupported, getPushSubscriptionStatus } from '@/lib/push-subscription'
 
 export interface UserInfo {
   id: string
@@ -49,6 +50,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearTokens()
     setUser(null)
   }, [])
+
+  // Auto-subscribe to push notifications after login
+  useEffect(() => {
+    if (!user || !isPushSupported()) return
+    getPushSubscriptionStatus().then(status => {
+      if (!status.subscribed && Notification.permission === 'granted') {
+        subscribeToPush().catch(() => {})
+      }
+    })
+  }, [user])
 
   const value = useMemo(() => ({ user, login, logout }), [user, login, logout])
 

@@ -30,6 +30,7 @@ export const SalarySetup          = lazy(() => import('@/pages/accountant/Salary
 export const MatchJob             = lazy(() => import('@/pages/accountant/MatchJob').then(m => ({ default: m.MatchJob })))
 export const MatchTrip            = lazy(() => import('@/pages/accountant/MatchTrip').then(m => ({ default: m.MatchTrip })))
 export const PricingList          = lazy(() => import('@/pages/accountant/PricingList').then(m => ({ default: m.PricingList })))
+export const AccountantNotifications = lazy(() => import('@/pages/accountant/AccountantNotifications').then(m => ({ default: m.AccountantNotifications })))
 
 // ─── Director pages ───────────────────────────────────────────────────────────
 export const DirectorDashboard      = lazy(() => import('@/pages/director/DirectorDashboard').then(m => ({ default: m.DirectorDashboard })))

@@ -71,6 +71,7 @@ export function createAppRouter() {
             { path: 'pricing',               element: h(Lazy, { component: R.PricingList }) },
             { path: 'match/:jobId',          element: h(Lazy, { component: R.MatchJob }) },
             { path: 'match-trip/:tripId',    element: h(Lazy, { component: R.MatchTrip }) },
+            { path: 'notifications',         element: ebc('Notifications', h(Lazy, { component: R.AccountantNotifications })) },
           ],
         },
         // ─── Director ──────────────────────────────────────────
