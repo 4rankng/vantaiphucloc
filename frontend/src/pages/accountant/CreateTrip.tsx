@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
-import { useClients, useDrivers, useRoutes, useCreateTripOrder } from '@/hooks/use-queries'
+import { useClients, useDrivers, useRoutes, useCreateTripOrder, useCreateClient } from '@/hooks/use-queries'
 import { WORK_TYPES, type WorkType } from '@/data/domain'
 import { InlineSelect } from '@/components/shared/InlineSelect'
+import { QuickCreateDialog } from '@/components/shared/QuickCreateDialog'
 import { Plus, Trash2 } from 'lucide-react'
 
 interface CongItem {
@@ -20,6 +21,7 @@ export function CreateTrip() {
   const { data: drivers = [] } = useDrivers()
   const { data: routes = [] } = useRoutes()
   const createTripOrder = useCreateTripOrder()
+  const createClient = useCreateClient()
 
   const clientOptions = useMemo(() => clients.map(x => ({ value: String(x.id), label: x.name })), [clients])
   const driverOptions = useMemo(() => drivers.map(x => ({ value: String(x.id), label: `${x.name} (${x.tractorPlate})` })), [drivers])
@@ -36,6 +38,7 @@ export function CreateTrip() {
   const [driverSalary, setDriverSalary] = useState(0)
   const [allowance, setAllowance] = useState(0)
   const [submitting, setSubmitting] = useState(false)
+  const [createClientOpen, setCreateClientOpen] = useState(false)
 
   const addCong = () => {
     setCongItems(prev => [...prev, { id: String(prev.length + 1), workType: 'E20', containerNumber: '' }])
@@ -82,7 +85,14 @@ export function CreateTrip() {
       {/* Client */}
       <div className="space-y-2">
         <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Khách hàng</Label>
-        <InlineSelect options={clientOptions} value={clientId} onChange={setClientId} placeholder="Chọn khách hàng" />
+        <InlineSelect
+          options={clientOptions}
+          value={clientId}
+          onChange={setClientId}
+          placeholder="Chọn khách hàng"
+          onCreateNew={() => setCreateClientOpen(true)}
+          createNewLabel="Tạo khách hàng mới"
+        />
       </div>
 
       {/* Route */}
@@ -160,6 +170,20 @@ export function CreateTrip() {
         style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
         {submitting ? 'Đang tạo...' : 'Tạo chuyến'}
       </Button>
+
+      <QuickCreateDialog
+        open={createClientOpen}
+        onClose={() => setCreateClientOpen(false)}
+        title="Thêm khách hàng"
+        label="Tên khách hàng"
+        placeholder="Tên khách hàng"
+        onConfirm={(name) => {
+          createClient.mutate(
+            { name, type: 'company', phone: '', taxCode: '', address: '', contactPerson: '' },
+            { onSuccess: () => setCreateClientOpen(false) },
+          )
+        }}
+      />
     </div>
   )
 }

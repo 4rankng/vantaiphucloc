@@ -4,11 +4,12 @@ import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect'
+import { QuickCreateDialog } from '@/components/shared/QuickCreateDialog'
 import { useToast } from '@/components/atoms/Toast'
 import { api } from '@/services/api/client'
 import type { Role } from '@/data/domain'
 import { ROLE_LABELS } from '@/data/domain'
-import { useVendors } from '@/hooks/use-queries'
+import { useVendors, useCreateVendor } from '@/hooks/use-queries'
 
 const PHUC_LOC = 'Phúc Lộc'
 
@@ -38,6 +39,8 @@ export function CreateUserDialog({
   const toast = useToast()
   const [saving, setSaving] = useState(false)
   const { data: vendors } = useVendors()
+  const createVendor = useCreateVendor()
+  const [createVendorOpen, setCreateVendorOpen] = useState(false)
   const [form, setForm] = useState({
     username: '',
     fullName: '',
@@ -139,6 +142,8 @@ export function CreateUserDialog({
                   value={form.vendor}
                   onChange={v => setForm(f => ({ ...f, vendor: v }))}
                   placeholder="Chọn nhà thầu"
+                  onCreateNew={() => setCreateVendorOpen(true)}
+                  createNewLabel="Tạo nhà thầu mới"
                 />
               </div>
             ) : <div />}
@@ -169,5 +174,17 @@ export function CreateUserDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <QuickCreateDialog
+      open={createVendorOpen}
+      onClose={() => setCreateVendorOpen(false)}
+      title="Thêm nhà thầu"
+      label="Tên nhà thầu"
+      placeholder="Tên nhà thầu"
+      onConfirm={(name) => {
+        createVendor.mutate({ name }, { onSuccess: () => setCreateVendorOpen(false) })
+      }}
+    />
+    </>
   )
 }
