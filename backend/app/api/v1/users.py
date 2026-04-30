@@ -58,6 +58,17 @@ async def create_user(
         if existing.scalar_one_or_none():
             raise HTTPException(status_code=409, detail="Phone number already registered")
 
+    # Check username uniqueness
+    existing_username = await db.execute(select(User).where(User.username == body.username))
+    if existing_username.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="Username already registered")
+
+    # Check email uniqueness (only if email provided)
+    if body.email:
+        existing_email = await db.execute(select(User).where(User.email == body.email))
+        if existing_email.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail="Email already registered")
+
     # Check CCCD uniqueness (only if CCCD provided)
     if body.cccd:
         existing_cccd = await db.execute(select(User).where(User.cccd == body.cccd))
@@ -103,6 +114,22 @@ async def update_user(
         )
         if existing.scalar_one_or_none():
             raise HTTPException(status_code=409, detail="Phone number already registered")
+
+    # Validate username uniqueness if being updated
+    if "username" in update_data and update_data["username"]:
+        existing_username = await db.execute(
+            select(User).where(User.username == update_data["username"], User.id != user_id)
+        )
+        if existing_username.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail="Username already registered")
+
+    # Validate email uniqueness if being updated
+    if "email" in update_data and update_data["email"]:
+        existing_email = await db.execute(
+            select(User).where(User.email == update_data["email"], User.id != user_id)
+        )
+        if existing_email.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail="Email already registered")
 
     # Validate CCCD uniqueness if being updated
     if "cccd" in update_data and update_data["cccd"]:
