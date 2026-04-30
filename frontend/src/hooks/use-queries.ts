@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
 import { api } from '@/services/api/client'
 import type { Pricing, WorkOrder, TripOrder, WorkType, Client, RoutePrice, SalaryPeriod } from '@/data/domain'
+import type { Vendor } from '@/services/api/vendors.api'
 
 // ─── Query key factories ─────────────────────────────────────────────────────
 
@@ -26,6 +27,7 @@ export const queryKeys = {
   users: ['users'] as const,
   notifications: ['notifications'] as const,
   salaryConfig: ['salary-config'] as const,
+  vendors: ['vendors'] as const,
 }
 
 // ─── Query hooks (GET) ───────────────────────────────────────────────────────
@@ -339,5 +341,39 @@ export function useUpdateSalaryPeriod() {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<SalaryPeriod> }) => apiClient.updateSalaryPeriod(id, data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['salary-periods'] }) },
+  })
+}
+
+export function useVendors() {
+  return useQuery({
+    queryKey: queryKeys.vendors,
+    queryFn: async () => {
+      const res = await apiClient.getVendors()
+      return res.success ? res.data : []
+    },
+  })
+}
+
+export function useCreateVendor() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { name: string }) => apiClient.createVendor(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.vendors }) },
+  })
+}
+
+export function useUpdateVendor() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: { name: string } }) => apiClient.updateVendor(id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.vendors }) },
+  })
+}
+
+export function useDeleteVendor() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => apiClient.deleteVendor(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.vendors }) },
   })
 }

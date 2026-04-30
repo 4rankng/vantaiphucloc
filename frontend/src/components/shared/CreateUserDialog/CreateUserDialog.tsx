@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
@@ -8,6 +8,7 @@ import { useToast } from '@/components/atoms/Toast'
 import { api } from '@/services/api/client'
 import type { Role } from '@/data/domain'
 import { ROLE_LABELS } from '@/data/domain'
+import { useVendors } from '@/hooks/use-queries'
 
 const PHUC_LOC = 'Phúc Lộc'
 
@@ -16,6 +17,14 @@ const CREATEABLE_ROLES: { value: Role; label: string }[] = [
   { value: 'driver', label: ROLE_LABELS.driver },
   { value: 'accountant', label: ROLE_LABELS.accountant },
 ]
+
+function RequiredLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+      {children} <span className="text-xs" style={{ color: 'var(--theme-status-error)' }}>*</span>
+    </Label>
+  )
+}
 
 export function CreateUserDialog({
   open,
@@ -28,21 +37,29 @@ export function CreateUserDialog({
 }) {
   const toast = useToast()
   const [saving, setSaving] = useState(false)
+  const { data: vendors } = useVendors()
   const [form, setForm] = useState({
     username: '',
     fullName: '',
     phone: '',
     cccd: '',
     role: 'driver' as Role,
-    vendor: PHUC_LOC,
+    vendor: '',
     password: '',
     tractorPlate: '',
   })
+
+  useEffect(() => {
+    if (form.vendor === '' && vendors && vendors.length > 0) {
+      setForm(f => ({ ...f, vendor: String(vendors[0].id) }))
+    }
+  }, [vendors, form.vendor])
 
   const handleSubmit = async () => {
     if (!form.username.trim() || !form.password.trim()) return
     setSaving(true)
     try {
+      const vendorObj = vendors?.find(v => String(v.id) === form.vendor)
       await api.post('/users', {
         username: form.username.trim(),
         full_name: form.fullName.trim() || undefined,
@@ -50,11 +67,11 @@ export function CreateUserDialog({
         cccd: form.cccd.trim() || undefined,
         role: form.role,
         password: form.password,
-        vendor: form.role === 'driver' ? form.vendor : undefined,
+        vendor: form.role === 'driver' ? (vendorObj?.name ?? PHUC_LOC) : undefined,
         tractor_plate: form.role === 'driver' && form.tractorPlate.trim() ? form.tractorPlate.trim() : undefined,
       })
       toast.success('Đã tạo tài khoản')
-      setForm({ username: '', fullName: '', phone: '', cccd: '', role: 'driver', vendor: PHUC_LOC, password: '', tractorPlate: '' })
+      setForm({ username: '', fullName: '', phone: '', cccd: '', role: 'driver', vendor: '', password: '', tractorPlate: '' })
       onClose()
       onCreated()
     } catch (err: unknown) {
@@ -73,7 +90,7 @@ export function CreateUserDialog({
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tên đăng nhập</Label>
+            <RequiredLabel>Tên đăng nhập</RequiredLabel>
             <Input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} placeholder="nguyenvana" className="text-sm" />
           </div>
           <div className="space-y-2">
@@ -89,7 +106,7 @@ export function CreateUserDialog({
             <Input value={form.cccd} onChange={e => setForm(f => ({ ...f, cccd: e.target.value }))} placeholder="001234567890" className="text-sm font-mono" />
           </div>
           <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Vai trò</Label>
+            <RequiredLabel>Vai trò</RequiredLabel>
             <InlineSelect
               options={CREATEABLE_ROLES}
               value={form.role}
@@ -98,7 +115,7 @@ export function CreateUserDialog({
                 setForm(f => ({
                   ...f,
                   role: newRole,
-                  vendor: (newRole === 'director' || newRole === 'accountant') ? PHUC_LOC : f.vendor,
+                  vendor: (newRole === 'director' || newRole === 'accountant') ? '' : f.vendor,
                 }))
               }}
               placeholder="Chọn vai trò"
@@ -106,16 +123,13 @@ export function CreateUserDialog({
           </div>
           {form.role === 'driver' && (
             <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Nhà thầu</Label>
-              <Input
+              <RequiredLabel>Nhà thầu</RequiredLabel>
+              <InlineSelect
+                options={(vendors ?? []).map(v => ({ value: String(v.id), label: v.name }))}
                 value={form.vendor}
-                onChange={e => setForm(f => ({ ...f, vendor: e.target.value }))}
-                placeholder={PHUC_LOC}
-                className="text-sm"
+                onChange={v => setForm(f => ({ ...f, vendor: v }))}
+                placeholder="Chọn nhà thầu"
               />
-              <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                Mặc định "Phúc Lộc". Đổi thành tên nhà thầu nếu tài xế thuê ngoài.
-              </p>
             </div>
           )}
           {form.role === 'driver' && (
@@ -125,7 +139,7 @@ export function CreateUserDialog({
             </div>
           )}
           <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mật khẩu</Label>
+            <RequiredLabel>Mật khẩu</RequiredLabel>
             <Input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" className="text-sm" />
           </div>
         </div>
