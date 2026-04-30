@@ -12,7 +12,7 @@ export interface Vendor {
 export async function getVendors(): Promise<ApiResponse<Vendor[]>> {
   try {
     const res = await api.get('/vendors')
-    return ok(toCamel<Vendor[]>(res.data))
+    return ok(toCamel<Vendor[]>(unwrapList(res.data)))
   } catch (err) {
     return fail(err)
   }

@@ -10,12 +10,14 @@ interface AppShellProps {
 export function AppShell({ topbarProps, contentClassName, children }: AppShellProps) {
   return (
     <div className="min-h-[100dvh]" style={{ background: 'var(--theme-bg-primary)' }}>
+      {/* Topbar: full-width brand bar, content centered on desktop */}
       <div style={{ background: 'var(--theme-brand-primary)' }}>
-        <div className="max-w-[1280px] mx-auto">
+        <div className="max-w-[1600px] mx-auto lg:px-6">
           <AppTopBar {...topbarProps} />
         </div>
       </div>
-      <div className="max-w-[1280px] mx-auto w-full">
+      {/* Content: full-width on desktop for multi-column layouts, centered padding on mobile */}
+      <div className="w-full max-w-[1600px] mx-auto lg:px-6">
         <main className={contentClassName}>
           {children}
         </main>
