@@ -107,7 +107,7 @@ export function UserDropdown({ open, onClose }: { open: boolean; onClose: () => 
             ) : (
               <BellOff className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
             )}
-            {pushEnabled ? 'Tắt thông báo đẩy' : 'Bật thông báo đẩy'}
+            {pushEnabled ? 'Tắt thông báo' : 'Bật thông báo'}
           </button>
         )}
         <button
