@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
-import { ChevronDown, Search, Check } from 'lucide-react'
+import { ChevronDown, Search, Check, Plus } from 'lucide-react'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/Popover/Popover'
 
 export interface InlineSelectOption {
@@ -14,9 +14,12 @@ interface InlineSelectProps {
   value: string
   options: InlineSelectOption[]
   onChange: (value: string) => void
+  /** When provided, shows a "+ Tạo mới" footer button in the dropdown */
+  onCreateNew?: () => void
+  createNewLabel?: string
 }
 
-export function InlineSelect({ placeholder, value, options, onChange }: InlineSelectProps) {
+export function InlineSelect({ placeholder, value, options, onChange, onCreateNew, createNewLabel = 'Tạo mới' }: InlineSelectProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
@@ -117,6 +120,23 @@ export function InlineSelect({ placeholder, value, options, onChange }: InlineSe
             })
           )}
         </div>
+
+        {onCreateNew && (
+          <div className="border-t" style={{ borderColor: 'var(--theme-border-default)' }}>
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false)
+                onCreateNew()
+              }}
+              className="w-full flex items-center gap-2 px-4 py-3 text-sm font-semibold transition-colors touch-manipulation"
+              style={{ color: 'var(--theme-brand-primary)' }}
+            >
+              <Plus className="w-4 h-4 shrink-0" />
+              {createNewLabel}
+            </button>
+          </div>
+        )}
       </PopoverContent>
     </Popover>
   )
