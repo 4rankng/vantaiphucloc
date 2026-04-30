@@ -62,9 +62,10 @@ const NavItem = ({ item, isCollapsed, onNavigate }: NavItemProps) => {
               : 'h-9 w-9 justify-center mx-auto'
             : 'h-8 px-2.5',
           isActive
-            ? 'bg-white/[0.20] text-white shadow-[-3px_0_8px_-2px_rgba(255,255,255,0.15)]'
-            : 'text-white hover:bg-white/[0.10] hover:translate-x-0.5'
+            ? 'bg-white/[0.20] shadow-[-3px_0_8px_-2px_rgba(255,255,255,0.15)]'
+            : 'hover:bg-white/[0.10] hover:translate-x-0.5'
         )}
+        style={{ color: isActive ? 'var(--theme-sidebar-active-text, #ffffff)' : 'var(--theme-sidebar-text, #e8f5ed)' }}
       >
         {isActive && !isCollapsed && (
           <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full animate-pill-appear"
@@ -74,13 +75,12 @@ const NavItem = ({ item, isCollapsed, onNavigate }: NavItemProps) => {
           className={cn(
             'shrink-0 transition-all duration-150',
             isCollapsed ? 'w-[17px] h-[17px]' : 'w-[15px] h-[15px]',
-            isActive ? 'text-[var(--theme-sidebar-active-text,#ffffff)]' : 'text-white'
           )}
         />
         {!isCollapsed && (
           <span className={cn(
             'text-[13px] leading-none truncate flex-1 transition-all duration-150',
-            isActive ? 'font-medium text-white' : 'font-normal'
+            isActive ? 'font-medium' : 'font-normal'
           )}>
             {item.title}
           </span>
@@ -149,14 +149,18 @@ const NavGroup = ({ label, groupKey, items, isCollapsed, isExpanded, onToggle, o
         className="flex items-center w-full px-2.5 py-1 mt-4 select-none cursor-pointer group/label"
         aria-expanded={isExpanded}
       >
-        <span className="flex-1 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-white/50 group-hover/label:text-white/70 transition-colors">
+        <span
+          className="flex-1 text-left text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors"
+          style={{ color: 'var(--theme-sidebar-text-muted, rgba(232,245,237,0.60))' }}
+        >
           {label}
         </span>
         <ChevronDown
           className={cn(
-            'w-3.5 h-3.5 shrink-0 text-white/40 group-hover/label:text-white/60 transition-all duration-200',
+            'w-3.5 h-3.5 shrink-0 transition-all duration-200',
             isExpanded && 'rotate-180'
           )}
+          style={{ color: 'var(--theme-sidebar-text-muted, rgba(232,245,237,0.60))' }}
         />
       </button>
       <div
@@ -377,17 +381,17 @@ export function AppSidebar({ role }: AppSidebarProps) {
                 )}
               >
                 {isCollapsed && user && (
-                  <span className="text-[11px] font-bold text-white/80">
+                  <span className="text-[11px] font-bold" style={{ color: 'var(--theme-sidebar-text, #e8f5ed)' }}>
                     {user.name?.charAt(0)?.toUpperCase() || 'U'}
                   </span>
                 )}
                 {!isCollapsed && user && (
                   <>
                     <div className="flex flex-col min-w-0 flex-1 text-left">
-                      <span className="text-[10px] text-white/45 truncate leading-tight uppercase font-semibold tracking-wide">Xin chào</span>
-                      <span className="text-[13px] font-medium truncate leading-tight text-white/90">{user.name}</span>
+                      <span className="text-[10px] truncate leading-tight uppercase font-semibold tracking-wide" style={{ color: 'var(--theme-sidebar-text-muted, rgba(232,245,237,0.60))' }}>Xin chào</span>
+                      <span className="text-[13px] font-medium truncate leading-tight" style={{ color: 'var(--theme-sidebar-text, #e8f5ed)' }}>{user.name}</span>
                     </div>
-                    <ChevronUp className="w-3.5 h-3.5 shrink-0 text-white/45" />
+                    <ChevronUp className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--theme-sidebar-text-muted, rgba(232,245,237,0.60))' }} />
                   </>
                 )}
                 {unread > 0 && (
