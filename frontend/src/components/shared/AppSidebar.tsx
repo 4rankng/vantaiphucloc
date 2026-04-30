@@ -62,19 +62,19 @@ const NavItem = ({ item, isCollapsed, onNavigate }: NavItemProps) => {
               : 'h-9 w-9 justify-center mx-auto'
             : 'h-8 px-2.5',
           isActive
-            ? 'bg-white/[0.08] text-white shadow-[-3px_0_8px_-2px_rgba(0,150,62,0.15)]'
+            ? 'bg-white/[0.15] text-white shadow-[-3px_0_8px_-2px_rgba(255,255,255,0.1)]'
             : 'text-white/50 hover:bg-white/[0.04] hover:text-white/80 hover:translate-x-0.5'
         )}
       >
         {isActive && !isCollapsed && (
           <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full animate-pill-appear"
-            style={{ background: 'var(--theme-sidebar-active-text, #00963E)' }} />
+            style={{ background: 'var(--theme-sidebar-active-text, #ffffff)' }} />
         )}
         <item.icon
           className={cn(
             'shrink-0 transition-all duration-150',
             isCollapsed ? 'w-[17px] h-[17px]' : 'w-[15px] h-[15px]',
-            isActive ? 'text-[var(--theme-sidebar-active-text,#00963E)]' : 'text-white/80'
+            isActive ? 'text-[var(--theme-sidebar-active-text,#ffffff)]' : 'text-white/80'
           )}
         />
         {!isCollapsed && (
@@ -316,7 +316,7 @@ export function AppSidebar({ role }: AppSidebarProps) {
       <Sidebar
         collapsible="icon"
         className="border-r border-white/[0.06]"
-        style={{ background: 'var(--theme-sidebar, #0a2e1a)' } as React.CSSProperties}
+        style={{ background: 'var(--theme-sidebar, #00963E)' } as React.CSSProperties}
       >
         {/* Header — logo */}
         <SidebarHeader className="p-0 shrink-0 border-b border-white/[0.06]">
