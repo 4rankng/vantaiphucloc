@@ -67,7 +67,7 @@ export function AccountantDashboard() {
   return (
     <div className="pb-6">
       {/* Quick actions — hidden on desktop (sidebar replaces them) */}
-      <div className="px-4 pt-3 grid grid-cols-5 gap-2 lg:gap-3 lg:max-w-none lg:hidden">
+      <div className="px-4 pt-3 grid grid-cols-5 gap-2 lg:hidden">
         {QUICK_ACTIONS.map(({ label, icon: Icon, path }) => (
           <button
             key={path}
@@ -89,7 +89,7 @@ export function AccountantDashboard() {
       <div className="lg:grid lg:grid-cols-2 lg:gap-6">
       {/* Driver salary section */}
       {salaryByDriver.length > 0 && (
-        <div className="px-4 mt-4">
+        <div className="px-4 mt-4 lg:px-0">
           <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--theme-text-muted)' }}>
             <Wallet className="w-3 h-3 inline mr-1" />
             Lương tài xế (kỳ hiện tại)
@@ -118,7 +118,7 @@ export function AccountantDashboard() {
       <div className="lg:grid lg:grid-cols-3 lg:gap-6">
       {/* Can doi soat — unmatched jobs */}
       {unmatchedJobs.length > 0 && (
-        <div className="px-4 mt-4">
+        <div className="px-4 mt-4 lg:px-0">
           <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--theme-status-warning)' }}>
             Đối soát tài xế ({unmatchedJobs.length})
           </p>
@@ -145,7 +145,7 @@ export function AccountantDashboard() {
 
       {/* Chuyến đã khớp */}
       {matchedJobs.length > 0 && (
-        <div className="px-4 mt-4">
+        <div className="px-4 mt-4 lg:px-0">
           <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--theme-status-success)' }}>
             Chuyến đã khớp ({matchedJobs.length})
           </p>
@@ -161,7 +161,7 @@ export function AccountantDashboard() {
 
       {/* Trips pending doi soat */}
       {pendingTrips.length > 0 && (
-        <div className="px-4 mt-4">
+        <div className="px-4 mt-4 lg:px-0">
           <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--theme-status-warning)' }}>
             Đối soát khách hàng ({pendingTrips.length})
           </p>
@@ -179,7 +179,7 @@ export function AccountantDashboard() {
 
       {/* Empty state — nothing to show */}
       {salaryByDriver.length === 0 && unmatchedJobs.length === 0 && matchedJobs.length === 0 && pendingTrips.length === 0 && (
-        <div className="px-4 mt-8 flex flex-col items-center text-center gap-2">
+        <div className="px-4 mt-8 flex flex-col items-center text-center gap-2 lg:px-0">
           <Receipt className="w-10 h-10" style={{ color: 'var(--theme-text-muted)', opacity: 0.4 }} />
           <p className="text-sm font-medium" style={{ color: 'var(--theme-text-muted)' }}>Chưa có dữ liệu</p>
           <p className="text-xs" style={{ color: 'var(--theme-text-muted)', opacity: 0.7 }}>
