@@ -43,7 +43,7 @@
 | Configure salary periods | ✅ | — | ✅ | — |
 | CRUD users | ✅ | ✅ | — | — |
 | Delete users (deactivate) | ✅ | — | — | — |
-| CRUD vendors | ✅ | Read only | ✅ (no delete) | — |
+| CRUD vendors | ✅ | Read only | ✅ | — |
 | CRUD drivers | ✅ | — | ✅ | — |
 
 ---

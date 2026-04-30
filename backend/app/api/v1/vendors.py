@@ -86,7 +86,7 @@ async def update_vendor(
 @router.delete("/vendors/{vendor_id}", status_code=204)
 async def delete_vendor(
     vendor_id: int,
-    current_user: User = Depends(require_roles("superadmin")),
+    current_user: User = Depends(require_roles("accountant", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(Vendor).where(Vendor.id == vendor_id))
