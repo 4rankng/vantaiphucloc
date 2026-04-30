@@ -86,6 +86,7 @@ export function CreateUserDialog({
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
