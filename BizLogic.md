@@ -176,12 +176,13 @@ Created by **accountants**. Represents the commercial/financial record of a trip
 | trip_date | date | Date of the trip |
 | client_id | int (FK) | Client being charged |
 | client_name | string | Denormalized |
-| work_type | WorkType | Container type |
+| work_type | WorkType | Container type (legacy field, nullable — use containers table) |
 | route | string | Route |
 | tractor_plate | string | Truck plate |
 | driver_id | int (FK) | Driver who drove |
 | driver_name | string | Denormalized |
-| container_number | string | Single container (one trip order = one container) |
+| container_number | string | Container ID (legacy field, nullable — use containers table) |
+| containers | TripOrderContainer[] | Child table with multiple containers (container_number, work_type) |
 | pricing_id | int (FK)? | Pricing used |
 | unit_price | int (VND) | Revenue from client |
 | driver_salary | int (VND) | Driver base pay |
@@ -202,26 +203,79 @@ At any point → CANCELLED
 ```
 
 **Business Rules:**
-- A trip order represents **one container** movement (`container_number` is singular).
+- **Multi-container support:** TripOrder has a child table `trip_order_containers` (trip_order_id, container_number, work_type). One TO can have 1, 2, or more containers.
+- **Legacy fields:** `container_number` and `work_type` on TripOrder are nullable for backwards compatibility. New code should use the `containers` child table.
 - A trip order can match **multiple work orders** (via `TripOrderWorkOrder` join table).
 - When work orders are matched, their status is set to `MATCHED`.
 - Salary recalculation is auto-triggered when trip order is created or when matched work orders change.
+
+### 3.6.1 TripOrderContainer (Container trong Lệnh điều hành)
+
+Child table of TripOrder, storing multiple containers per trip order. Mirrors the WorkOrderContainer pattern.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | int | Primary key |
+| trip_order_id | int (FK) | Parent TripOrder (CASCADE delete) |
+| container_number | string | Container ID |
+| work_type | WorkType | E20/E40/F20/F40 |
+
+**Business Rules:**
+- Cascade delete: Deleting a TripOrder deletes all its TripOrderContainer records.
+- At least one container is required per TripOrder (enforced by application logic).
+- Container numbers should be unique within a single TripOrder (enforced by application logic).
 
 ### 3.7 Reconciliation (Đối soát)
 
 The process of matching Work Orders (physical reality from drivers) with Trip Orders (commercial records from accountants).
 
+**Match Suggestion System:**
+- System provides **suggestions** based on weighted scoring algorithm
+- **Confidence levels:**
+  - `full` (score = 1.0): All fields match — highest confidence, auto-confirm or minimal review
+  - `partial` (score ≥ 0.3): Some fields match — Accountant decides whether to confirm or reject
+  - `none` (score < 0.3): No meaningful match — treat as "no suggestion"
+- **Matching fields & weights:**
+  | Field | Weight | Description |
+  |-------|--------|------------|
+  | driver | 0.3 | Same driver |
+  | client | 0.3 | Same client |
+  | route | 0.2 | Same route |
+  | containers | 0.2 | At least one overlapping container number |
+- **Candidates filtering:** Only shows TOs/WOs that match on at least ONE of: driver, client, OR container overlap
+- **No partial match?** → Show all TOs as candidates + allow Accountant to create a new TO
+
 **Flow:**
-1. Accountant selects a Work Order and a Trip Order
-2. System links them via `TripOrderWorkOrder` join table
-3. Work Order status → `MATCHED`
-4. Work Order earning = Trip Order's `driver_salary + allowance`
-5. Salary recalculation is auto-queued for the driver
+1. System analyzes unmatched WOs and TOs, generates match suggestions with confidence scores
+2. Accountant reviews suggestions sorted by score (highest first)
+3. Accountant confirms or rejects each suggestion
+4. If no good match exists, Accountant selects any TO as candidate or creates new TO
+5. System links WO and TO via `TripOrderWorkOrder` join table
+6. Work Order status → `MATCHED`
+7. Work Order earning = Trip Order's `driver_salary + allowance`
+8. Salary recalculation is auto-queued for the driver
 
 **Rules:**
 - A work order can only be matched once (status must not already be `MATCHED`).
 - One trip order can match multiple work orders.
+- Both WOs and TOs can have 1, 2, or more containers (via child tables).
 - Only accountants and superadmins can reconcile.
+- This is a **human-in-the-loop** system — the software suggests, the Accountant decides.
+
+### 3.7.1 TripOrderWorkOrder (Liên kết WO—TO)
+
+Join table linking Work Orders to Trip Orders for reconciliation.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| trip_order_id | int (FK) | TripOrder (CASCADE delete) |
+| work_order_id | int (FK) | WorkOrder (CASCADE delete) |
+
+**Business Rules:**
+- Composite primary key: `(trip_order_id, work_order_id)`.
+- CASCADE delete on both sides — deleting a TO or WO removes the link.
+- One WO can only be linked to one TO (enforced by WO status = MATCHED).
+- One TO can be linked to multiple WOs.
 
 ### 3.8 Salary (Lương tài xế)
 
