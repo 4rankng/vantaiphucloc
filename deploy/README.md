@@ -54,7 +54,26 @@ Cloud-init installs Docker, Nginx, Certbot, pulls images, and starts all contain
 sudo certbot --nginx -d phucloc.tingting.vip
 ```
 
-### 5. Initial database setup
+### 5. Create the production env file
+
+The compose file reads secrets from `deploy/.env` (relative to `/opt/vantaiphucloc`).
+
+```bash
+# Generate a secret key
+SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
+
+# Create the env file
+cat > /opt/vantaiphucloc/deploy/.env <<EOF
+SECRET_KEY=${SECRET}
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=1440
+REFRESH_TOKEN_EXPIRE_DAYS=7
+CORS_ORIGINS=https://phucloc.tingting.vip
+ENVIRONMENT=production
+EOF
+```
+
+### 6. Initial database setup
 
 ```bash
 cd /opt/vantaiphucloc
@@ -66,15 +85,9 @@ docker compose -f deploy/docker-compose.prod.yml exec backend alembic upgrade he
 docker compose -f deploy/docker-compose.prod.yml exec backend python -m app.seed
 ```
 
-### 6. Update secrets
+### 7. Restart to pick up the env file
 
 ```bash
-# Generate a real secret key and update .env
-python3 -c "import secrets; print(secrets.token_urlsafe(32))"
-nano /opt/vantaiphucloc/backend/.env
-# Replace SECRET_KEY=CHANGE-ME-... with the generated key
-
-# Restart backend + worker to pick up new key
 docker compose -f deploy/docker-compose.prod.yml up -d --force-recreate backend worker
 ```
 

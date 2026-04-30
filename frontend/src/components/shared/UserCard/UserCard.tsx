@@ -23,7 +23,7 @@ export function UserCard({ user, onTap }: { user: UserAccount; onTap: () => void
           <RoleIcon className="w-4 h-4" style={{ color: 'var(--theme-brand-primary)' }} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold truncate" style={{ color: 'var(--theme-text-primary)' }}>{user.username}</p>
+          <p className="text-sm font-bold truncate" style={{ color: 'var(--theme-text-primary)' }}>{user.fullName || user.username}</p>
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-xs font-semibold px-1.5 py-0.5 rounded"
               style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>

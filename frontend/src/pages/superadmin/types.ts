@@ -6,7 +6,9 @@ const PHUC_LOC = 'Phúc Lộc'
 export interface UserAccount {
   id: string
   username: string
-  phone: string
+  fullName: string | null
+  phone: string | null
+  cccd: string | null
   email?: string
   role: Role
   vendor: string
@@ -25,7 +27,9 @@ export function toUserAccount(obj: Record<string, unknown>): UserAccount {
   return {
     id: String(obj.id),
     username: obj.username as string,
-    phone: obj.phone as string,
+    fullName: (obj.full_name as string) ?? null,
+    phone: (obj.phone as string) ?? null,
+    cccd: (obj.cccd as string) ?? null,
     email: obj.email as string | undefined,
     role: obj.role as Role,
     vendor: (obj.vendor as string) || PHUC_LOC,

@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
 import { AppTopBar } from '@/components/shared/AppTopBar'
 import { UserDropdown } from '@/components/shared/ProfileDialog'
+import { DesktopShell, ACCOUNTANT_NAV } from '@/components/shared/DesktopShell'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Role } from '@/data/domain'
 
@@ -22,6 +24,7 @@ export function AccountantLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const isMobile = useIsMobile()
 
   if (!user || !ALLOWED_ROLES.includes(user.role)) {
     return <Navigate to="/" replace />
@@ -37,6 +40,14 @@ export function AccountantLayout() {
     title = 'Đối soát'
   } else if (location.pathname.startsWith('/accountant/match-trip/')) {
     title = 'Đối soát'
+  }
+
+  if (!isMobile) {
+    return (
+      <DesktopShell navItems={ACCOUNTANT_NAV} roleLabel="Kế toán">
+        <Outlet />
+      </DesktopShell>
+    )
   }
 
   return (

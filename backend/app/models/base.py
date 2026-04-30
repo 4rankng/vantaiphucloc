@@ -27,11 +27,16 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
 
     # Login credentials — any of phone, email, or username can be used to log in
-    phone = Column(String(20), unique=True, index=True, nullable=False)
+    phone = Column(String(20), unique=True, index=True, nullable=True)
     email = Column(String(255), unique=True, nullable=True, index=True)
 
-    # Display name / full name (also usable as login identifier)
+    # Login identifier
     username = Column(String(100), nullable=False, index=True)
+
+    # Full name for display (e.g. "Nguyễn Văn A")
+    full_name = Column(String(200), nullable=True)
+    # Vietnamese citizen ID (Căn cước công dân), 12 digits
+    cccd = Column(String(12), unique=True, nullable=True, index=True)
 
     hashed_password = Column(String(255), nullable=False)
 

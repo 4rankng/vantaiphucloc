@@ -29,7 +29,9 @@ export function SuperAdminDashboard({
     const roleOk = filterRole === 'ALL' || u.role === filterRole
     const searchOk = !searchQuery.trim() ||
       u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.phone.includes(searchQuery) ||
+      (u.fullName ?? '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (u.phone ?? '').includes(searchQuery) ||
+      (u.cccd ?? '').includes(searchQuery) ||
       u.vendor.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (u.tractorPlate ?? '').toLowerCase().includes(searchQuery.toLowerCase())
     return roleOk && searchOk
