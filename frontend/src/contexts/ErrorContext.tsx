@@ -2,7 +2,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { createContext, useContext, useCallback, useState } from 'react'
+import { createContext, useContext, useCallback, useMemo, useState } from 'react'
 
 interface ErrorState {
   error: Error | null
@@ -36,8 +36,10 @@ export function ErrorBoundaryProvider({ children }: { children: ReactNode }) {
     setState({ error: null, component: null, context: null })
   }, [])
 
+  const value = useMemo(() => ({ captureError, clearError, state }), [captureError, clearError, state])
+
   return (
-    <ErrorContext.Provider value={{ captureError, clearError, state }}>
+    <ErrorContext.Provider value={value}>
       {children}
     </ErrorContext.Provider>
   )
