@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus, Truck, CircleDollarSign, LayoutDashboard, Phone, Pencil, Trash2, ChevronRight } from 'lucide-react'
+import { Navigate } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
@@ -14,6 +15,7 @@ import type { Role } from '@/data/domain'
 import { ROLE_LABELS } from '@/data/domain'
 import { useVendors, useCreateVendor, useUpdateVendor, useDeleteVendor } from '@/hooks/use-queries'
 import type { Vendor } from '@/services/api/vendors.api'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface UserAccount {
   id: string
@@ -213,7 +215,7 @@ function VendorManagement() {
 
 // ─── User management ──────────────────────────────────────────────────────────
 
-export function UserManagement() {
+function UserManagementInner() {
   const toast = useToast()
   const [users, setUsers] = useState<UserAccount[]>([])
   const [loading, setLoading] = useState(true)
@@ -652,4 +654,15 @@ export function UserManagement() {
       />
     </div>
   )
+}
+
+export function UserManagement() {
+  const { user } = useAuth()
+
+  // Guard: only director and superadmin may access this page
+  if (!user || !['director', 'superadmin'].includes(user.role)) {
+    return <Navigate to="/" replace />
+  }
+
+  return <UserManagementInner />
 }

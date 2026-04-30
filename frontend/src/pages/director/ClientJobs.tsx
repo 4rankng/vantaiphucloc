@@ -16,16 +16,18 @@ export function ClientJobs({ clientId, onBack }: { clientId: number; onBack: () 
       apiClient.getWorkOrders(),
       apiClient.getClients(),
       apiClient.getPricings({ clientId }),
-    ]).then(([jRes, cRes, pRes]) => {
-      if (!cancelled) {
-        if (jRes.success) setJobs(jRes.data.filter(j => j.clientId === clientId))
-        if (cRes.success) {
-          const c = (cRes.data as Client[]).find(c => c.id === clientId)
-          setClientName(c?.name ?? String(clientId))
+    ])
+      .then(([jRes, cRes, pRes]) => {
+        if (!cancelled) {
+          if (jRes.success) setJobs(jRes.data.filter(j => j.clientId === clientId))
+          if (cRes.success) {
+            const c = (cRes.data as Client[]).find(c => c.id === clientId)
+            setClientName(c?.name ?? String(clientId))
+          }
+          if (pRes.success) setPricings(pRes.data)
         }
-        if (pRes.success) setPricings(pRes.data)
-      }
-    })
+      })
+      .catch(() => {})
     return () => { cancelled = true }
   }, [clientId])
 
