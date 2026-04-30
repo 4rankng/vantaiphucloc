@@ -17,7 +17,7 @@ export const DRIVER_NAV: NavItem[] = [
 
 export const ACCOUNTANT_NAV: NavItem[] = [
   { path: '/accountant', label: 'Trang chủ', icon: Home, exact: true },
-  { path: '/accountant/clients', label: 'Khách hàng', icon: Users },
+  { path: '/accountant/partners', label: 'Đối tác', icon: Users },
   { path: '/accountant/routes', label: 'Cung đường', icon: Route },
   { path: '/accountant/work-orders', label: 'Đối soát', icon: Briefcase },
   { path: '/accountant/trips', label: 'Chuyến', icon: Truck },
