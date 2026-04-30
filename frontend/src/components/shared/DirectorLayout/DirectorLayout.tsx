@@ -52,12 +52,14 @@ function DirectorInner() {
 
   // Desktop: sidebar layout
   return (
-    <div className="flex min-h-screen" style={{ background: 'var(--theme-bg-primary)' }}>
+    <>
       <AppSidebar role="director" />
-      <main className="flex-1 min-h-screen overflow-auto">
-        <Outlet />
+      <main className="flex-1 min-h-screen overflow-auto" style={{ background: 'var(--theme-bg-primary)' }}>
+        <div className="mx-auto w-full max-w-5xl px-8 py-8">
+          <Outlet />
+        </div>
       </main>
-    </div>
+    </>
   )
 }
 

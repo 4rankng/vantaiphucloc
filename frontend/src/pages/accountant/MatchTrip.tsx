@@ -35,7 +35,7 @@ export function MatchTrip() {
 
   return (
     <>
-      <div className="flex flex-col h-[calc(100dvh-56px)]">
+      <div className="flex flex-col h-[calc(100dvh-56px)] lg:-mx-8 lg:-my-8 lg:h-screen">
         {/* ── TOP: Selector buttons ── */}
         <div className="px-4 pt-3 pb-2 space-y-2 shrink-0">
           <button onClick={() => setPickMode('trip')}
