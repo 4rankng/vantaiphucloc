@@ -499,3 +499,24 @@ select {
   background-size: 200% 100%;
   animation: live-shimmer 3s ease-in-out infinite;
 }
+
+/* ─── Dialog / Sheet scroll fix (iOS Safari) ───────────── */
+/* Radix dialog & sheet content: enable momentum scroll on iOS */
+[data-radix-dialog-content] {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Bottom sheets: prevent scroll bleed to page behind */
+[data-radix-dialog-content][data-side="bottom"],
+[data-radix-dialog-content].rounded-t-3xl,
+[data-radix-dialog-content].rounded-t-2xl {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Inner scroll containers inside dialogs/sheets */
+[data-radix-dialog-content] .overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}

@@ -33,6 +33,17 @@ def _utcnow() -> datetime:
 # Client
 # ---------------------------------------------------------------------------
 
+class Vendor(Base):
+    __tablename__ = "vendors"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False, unique=True, index=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+    )
+
+
 class Client(Base):
     __tablename__ = "clients"
 
