@@ -63,8 +63,8 @@ export function AccountantDashboard() {
 
   return (
     <div className="pb-6">
-      {/* Quick actions */}
-      <div className="px-4 pt-3 grid grid-cols-5 gap-2 lg:gap-3 lg:max-w-none">
+      {/* Quick actions — hidden on desktop (sidebar replaces them) */}
+      <div className="px-4 pt-3 grid grid-cols-5 gap-2 lg:gap-3 lg:max-w-none lg:hidden">
         {QUICK_ACTIONS.map(({ label, icon: Icon, path }) => (
           <button
             key={path}
