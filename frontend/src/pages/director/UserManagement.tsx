@@ -6,12 +6,14 @@ import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect'
+import { QuickCreateDialog } from '@/components/shared/QuickCreateDialog'
 import { useToast } from '@/components/atoms/Toast'
 import { FilterPills } from '@/components/shared/FilterPills'
 import { api } from '@/services/api/client'
 import type { Role } from '@/data/domain'
 import { ROLE_LABELS } from '@/data/domain'
-import { useVendors } from '@/hooks/use-queries'
+import { useVendors, useCreateVendor, useUpdateVendor, useDeleteVendor } from '@/hooks/use-queries'
+import type { Vendor } from '@/services/api/vendors.api'
 
 interface UserAccount {
   id: string
@@ -78,12 +80,149 @@ function toCamelCase(obj: Record<string, unknown>): UserAccount {
   }
 }
 
+// ─── Vendor management ────────────────────────────────────────────────────────
+
+function VendorManagement() {
+  const { data: vendors = [], isLoading: loading } = useVendors()
+  const createVendor = useCreateVendor()
+  const updateVendor = useUpdateVendor()
+  const deleteVendor = useDeleteVendor()
+
+  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editing, setEditing] = useState<Vendor | null>(null)
+  const [name, setName] = useState('')
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
+
+  const handleOpenCreate = useCallback(() => {
+    setEditing(null)
+    setName('')
+    setDialogOpen(true)
+  }, [])
+
+  const handleOpenEdit = useCallback((vendor: Vendor) => {
+    setEditing(vendor)
+    setName(vendor.name)
+    setSelectedVendor(null)
+    setDialogOpen(true)
+  }, [])
+
+  const handleSubmit = useCallback(() => {
+    if (editing) {
+      updateVendor.mutate({ id: editing.id, data: { name } }, { onSuccess: () => setDialogOpen(false) })
+    } else {
+      createVendor.mutate({ name }, { onSuccess: () => setDialogOpen(false) })
+    }
+  }, [editing, name, createVendor, updateVendor])
+
+  const handleDelete = useCallback((id: number) => {
+    deleteVendor.mutate(id, {
+      onSuccess: () => { setDeleteConfirm(null); setSelectedVendor(null) },
+    })
+  }, [deleteVendor])
+
+  if (loading) {
+    return (
+      <div className="p-4 space-y-2">
+        {[1, 2, 3].map(i => <div key={i} className="h-14 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-4 space-y-2">
+      {vendors.length === 0 ? (
+        <div className="rounded-2xl p-10 text-center" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
+          <Truck className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--theme-text-muted)' }} />
+          <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Chưa có nhà thầu</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Nhấn + để thêm nhà thầu mới</p>
+        </div>
+      ) : vendors.map(vendor => (
+        <button
+          key={vendor.id}
+          onClick={() => setSelectedVendor(vendor)}
+          className="w-full text-left rounded-2xl p-3 transition-all active:scale-[0.98] touch-manipulation"
+          style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
+        >
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--theme-bg-tertiary)' }}>
+              <Truck className="h-4 w-4" style={{ color: 'var(--theme-text-muted)' }} />
+            </div>
+            <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{vendor.name}</p>
+          </div>
+        </button>
+      ))}
+
+      {/* Detail dialog */}
+      <Dialog open={!!selectedVendor} onOpenChange={() => setSelectedVendor(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{selectedVendor?.name}</DialogTitle></DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm(selectedVendor!.id)} className="flex-1" style={{ color: 'var(--theme-status-error)' }}>
+              <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Xoá
+            </Button>
+            <Button onClick={() => handleOpenEdit(selectedVendor!)} className="flex-1" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+              <Pencil className="w-3.5 h-3.5 mr-1.5" /> Sửa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create/Edit dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{editing ? 'Sửa nhà thầu' : 'Thêm nhà thầu'}</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tên nhà thầu</Label>
+            <Input value={name} onChange={e => setName(e.target.value)} placeholder="Tên nhà thầu" className="text-sm" autoFocus />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} className="flex-1">Huỷ</Button>
+            <Button onClick={handleSubmit} disabled={!name.trim()} className="flex-1" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+              {editing ? 'Cập nhật' : 'Xác nhận'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirm */}
+      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Xoá nhà thầu?</DialogTitle></DialogHeader>
+          <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Hành động này không thể hoàn tác.</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="flex-1">Huỷ</Button>
+            <Button variant="destructive" className="flex-1" onClick={() => deleteConfirm !== null && handleDelete(deleteConfirm)}>Xác nhận</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {createPortal(
+        <button
+          onClick={handleOpenCreate}
+          className="fixed bottom-6 right-5 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90 touch-manipulation"
+          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+        >
+          <Plus className="w-6 h-6" />
+        </button>,
+        document.body,
+      )}
+    </div>
+  )
+}
+
+// ─── User management ──────────────────────────────────────────────────────────
+
 export function UserManagement() {
   const toast = useToast()
   const [users, setUsers] = useState<UserAccount[]>([])
   const [loading, setLoading] = useState(true)
   const [filterRole, setFilterRole] = useState<Role | 'ALL'>('ALL')
   const { data: vendors } = useVendors()
+  const createVendor = useCreateVendor()
+
+  const [tab, setTab] = useState<'users' | 'vendors'>('users')
+  const [createVendorOpen, setCreateVendorOpen] = useState(false)
 
   const [createOpen, setCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState<UserForm>(EMPTY_FORM)
@@ -232,6 +371,29 @@ export function UserManagement() {
 
   return (
     <div className="p-4 space-y-4">
+      {/* Tab switcher */}
+      <div className="flex gap-1 p-1 rounded-2xl" style={{ background: 'var(--theme-bg-tertiary)' }}>
+        {([
+          { key: 'users', label: 'Tài khoản' },
+          { key: 'vendors', label: 'Nhà thầu' },
+        ] as { key: 'users' | 'vendors'; label: string }[]).map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className="flex-1 py-2 rounded-xl text-sm font-semibold transition-all touch-manipulation"
+            style={{
+              background: tab === key ? 'var(--theme-bg-primary)' : 'transparent',
+              color: tab === key ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)',
+              boxShadow: tab === key ? 'var(--theme-shadow-card)' : 'none',
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'vendors' ? <VendorManagement /> : (
+        <>
       <FilterPills
         options={[
           { value: 'ALL', label: 'Tất cả', count: roleCounts.ALL },
@@ -347,6 +509,8 @@ export function UserManagement() {
                   value={createForm.vendor}
                   onChange={v => updateCreateField('vendor', v)}
                   placeholder="Chọn nhà thầu"
+                  onCreateNew={() => setCreateVendorOpen(true)}
+                  createNewLabel="Tạo nhà thầu mới"
                 />
               </div>
             )}
@@ -422,6 +586,8 @@ export function UserManagement() {
                     value={editForm.vendor}
                     onChange={v => updateEditField('vendor', v)}
                     placeholder="Chọn nhà thầu"
+                    onCreateNew={() => setCreateVendorOpen(true)}
+                    createNewLabel="Tạo nhà thầu mới"
                   />
                 </div>
               )}
@@ -471,6 +637,19 @@ export function UserManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </>
+      )}
+
+      <QuickCreateDialog
+        open={createVendorOpen}
+        onClose={() => setCreateVendorOpen(false)}
+        title="Thêm nhà thầu"
+        label="Tên nhà thầu"
+        placeholder="Tên nhà thầu"
+        onConfirm={(name) => {
+          createVendor.mutate({ name }, { onSuccess: () => setCreateVendorOpen(false) })
+        }}
+      />
     </div>
   )
 }
