@@ -1,10 +1,12 @@
 import re
-from typing import Generic, TypeVar
+from datetime import datetime
+from typing import Generic, Literal, TypeVar
 
 from pydantic import BaseModel, field_validator
-from datetime import datetime
 
 T = TypeVar("T")
+
+RoleType = Literal["superadmin", "director", "accountant", "driver"]
 
 
 class PaginatedResponse(BaseModel, Generic[T]):
@@ -55,7 +57,7 @@ class UserOut(BaseModel):
     vendor: str | None = None
     tractor_plate: str | None = None
     is_active: bool
-    created_at: datetime | None
+    created_at: datetime
 
     class Config:
         from_attributes = True
@@ -83,7 +85,7 @@ class UserCreate(BaseModel):
     email: str | None = None
     username: str
     password: str
-    role: str = "driver"
+    role: RoleType = "driver"
     full_name: str | None = None
     cccd: str | None = None
     vendor: str | None = None
@@ -104,7 +106,7 @@ class UserUpdate(BaseModel):
     full_name: str | None = None
     cccd: str | None = None
     vendor: str | None = None
-    role: str | None = None
+    role: RoleType | None = None
     password: str | None = None
     tractor_plate: str | None = None
     is_active: bool | None = None

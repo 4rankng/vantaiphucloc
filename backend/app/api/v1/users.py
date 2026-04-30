@@ -6,6 +6,7 @@ from sqlalchemy import select, func
 
 from app.database import get_db
 from app.models.base import User
+from app.models.domain import WorkOrder
 from app.schemas.base import UserOut, UserCreate, UserUpdate, ChangePassword, MessageResponse, PaginatedResponse
 from app.core.deps import require_roles, get_current_user
 from app.core.security import hash_password, verify_password
@@ -135,6 +136,19 @@ async def delete_user(
     user = result.scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
+
+    # Guard: prevent deactivating drivers with active unmatched work orders
+    if user.role == "driver":
+        active_wo = await db.execute(
+            select(WorkOrder)
+            .where(WorkOrder.driver_id == user_id, WorkOrder.status != "MATCHED")
+            .limit(1)
+        )
+        if active_wo.scalar_one_or_none():
+            raise HTTPException(
+                status_code=409,
+                detail="Cannot deactivate driver with active (unmatched) work orders",
+            )
 
     # Soft delete — deactivate instead of removing
     user.is_active = False
