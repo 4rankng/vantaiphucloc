@@ -20,6 +20,7 @@ import * as tripOrdersApi from './tripOrders.api'
 import * as salaryApi from './salary.api'
 import * as driversApi from './drivers.api'
 import * as dashboardApi from './dashboard.api'
+import * as vendorsApi from './vendors.api'
 
 export const apiClient = {
   // Clients
@@ -60,6 +61,12 @@ export const apiClient = {
   // Drivers
   getDrivers: driversApi.getDrivers,
   createDriver: driversApi.createDriver,
+
+  // Vendors
+  getVendors: vendorsApi.getVendors,
+  createVendor: vendorsApi.createVendor,
+  updateVendor: vendorsApi.updateVendor,
+  deleteVendor: vendorsApi.deleteVendor,
 
   // Dashboard & Notifications
   getDashboardSummary: dashboardApi.getDashboardSummary,
