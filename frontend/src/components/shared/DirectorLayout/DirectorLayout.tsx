@@ -1,45 +1,76 @@
 import { useState } from 'react'
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
 import { AppShell } from '@/components/shared/AppShell'
+import { SidebarProvider } from '@/components/ui/sidebar'
+import { AppSidebar } from '@/components/shared/AppSidebar'
 import { UserDropdown } from '@/components/shared/ProfileDialog'
 import { useAuth } from '@/contexts/AuthContext'
+import { useIsMobile } from '@/hooks/use-mobile'
 import type { Role } from '@/data/domain'
 
 const ALLOWED_ROLES: Role[] = ['director', 'superadmin']
 
-export function DirectorLayout() {
+const TITLES: Record<string, string> = {
+  '/director/users': 'Quản lý tài khoản',
+  '/director/notifications': 'Thông báo',
+}
+
+function DirectorInner() {
   const { user } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
   const [dropdownOpen, setDropdownOpen] = useState(false)
+
+  const isHome = location.pathname === '/director'
+
+  let title = TITLES[location.pathname] ?? ''
+  if (location.pathname.startsWith('/director/driver-jobs/')) title = 'Tài xế'
+  else if (location.pathname.startsWith('/director/client-jobs/')) title = 'Khách hàng'
+
+  if (isMobile) {
+    return (
+      <>
+        <AppShell
+          topbarProps={
+            isHome
+              ? {
+                  variant: 'home' as const,
+                  name: user?.name ?? '',
+                  onNotifications: () => navigate('/director/notifications'),
+                  onProfile: () => setDropdownOpen(true),
+                }
+              : { variant: 'page' as const, title, onBack: () => navigate(-1) }
+          }
+        >
+          <Outlet />
+        </AppShell>
+        <UserDropdown open={dropdownOpen} onClose={() => setDropdownOpen(false)} />
+      </>
+    )
+  }
+
+  // Desktop: sidebar layout
+  return (
+    <div className="flex min-h-screen" style={{ background: 'var(--theme-bg-primary)' }}>
+      <AppSidebar role="director" />
+      <main className="flex-1 min-h-screen overflow-auto">
+        <Outlet />
+      </main>
+    </div>
+  )
+}
+
+export function DirectorLayout() {
+  const { user } = useAuth()
 
   if (!user || !ALLOWED_ROLES.includes(user.role)) {
     return <Navigate to="/" replace />
   }
 
-  const isHome = location.pathname === '/director'
-
-  let title = ''
-  if (location.pathname === '/director/users') title = 'Quản lý tài khoản'
-  else if (location.pathname === '/director/notifications') title = 'Thông báo'
-  else if (location.pathname.startsWith('/director/driver-jobs/')) title = 'Tài xế'
-  else if (location.pathname.startsWith('/director/client-jobs/')) title = 'Khách hàng'
-
   return (
-    <AppShell
-      topbarProps={
-        isHome
-          ? {
-              variant: 'home',
-              name: user.name,
-              onNotifications: () => navigate('/director/notifications'),
-              onProfile: () => setDropdownOpen(true),
-            }
-          : { variant: 'page', title, onBack: () => navigate(-1) }
-      }
-    >
-      <Outlet />
-      <UserDropdown open={dropdownOpen} onClose={() => setDropdownOpen(false)} />
-    </AppShell>
+    <SidebarProvider defaultOpen={true}>
+      <DirectorInner />
+    </SidebarProvider>
   )
 }
