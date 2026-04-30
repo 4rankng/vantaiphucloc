@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useWorkOrders, useTripOrders, useClients, useRoutes, useUpdateWorkOrder, useUpdateTripOrder, useCreateTripOrder } from '@/hooks/use-queries'
+import { useWorkOrders, useTripOrders, useClients, useRoutes, useUpdateWorkOrder, useUpdateTripOrder, useCreateTripOrder, useSuggestMatches } from '@/hooks/use-queries'
 import { type WorkType } from '@/data/domain'
 
 type EditDialogMode = 'cont-left' | 'cont-right' | 'client-left' | 'client-right' | 'route-left' | 'route-right' | null
@@ -13,8 +13,7 @@ interface EditedJob {
 interface EditedTrip {
   clientName: string
   route: string
-  contType: string
-  contNumber: string
+  containers: { type: string; number: string }[]
 }
 
 export function useMatchJob(initialJobId: number) {
@@ -23,6 +22,7 @@ export function useMatchJob(initialJobId: number) {
   const { data: trips = [], isLoading: loadingTrips } = useTripOrders()
   const { data: clients = [], isLoading: loadingClients } = useClients()
   const { data: routes = [], isLoading: loadingRoutes } = useRoutes()
+  const { data: suggestionsData, isLoading: loadingSuggestions } = useSuggestMatches(initialJobId)
   const updateWorkOrder = useUpdateWorkOrder()
   const updateTripOrder = useUpdateTripOrder()
   const createTripOrder = useCreateTripOrder()
@@ -43,7 +43,7 @@ export function useMatchJob(initialJobId: number) {
 
   // Dialog-local state for container editing
   const [dialogContainers, setDialogContainers] = useState<{ type: string; number: string }[]>([])
-  const [dialogContRight, setDialogContRight] = useState<{ type: string; number: string }>({ type: 'E20', number: '' })
+  const [dialogContRight, setDialogContRight] = useState<{ type: string; number: string }[]>([])
 
   const matchedIds = useMemo(() => new Set(trips.flatMap(t => t.matchedWorkOrderIds)), [trips])
   const unmatchedJobs = useMemo(() => workOrders.filter(w => !matchedIds.has(w.id)), [workOrders, matchedIds])
@@ -52,7 +52,10 @@ export function useMatchJob(initialJobId: number) {
   const selectedJob = useMemo(() => workOrders.find(w => w.id === selectedJobId), [workOrders, selectedJobId])
   const selectedTrip = useMemo(() => trips.find(t => t.id === selectedTripId), [trips, selectedTripId])
 
-  // Derived base values (reset overrides when selection changes)
+  // Suggestions from backend
+  const suggestions = suggestionsData?.suggestions ?? []
+
+  // Derived base values
   const baseJob = useMemo(() => selectedJob ? {
     clientName: selectedJob.clientName,
     route: selectedJob.route,
@@ -62,8 +65,9 @@ export function useMatchJob(initialJobId: number) {
   const baseTrip = useMemo(() => selectedTrip ? {
     clientName: selectedTrip.clientName,
     route: selectedTrip.route,
-    contType: selectedTrip.workType,
-    contNumber: selectedTrip.containerNumber,
+    containers: (selectedTrip.containers?.length ? selectedTrip.containers : (
+      selectedTrip.containerNumber ? [{ type: selectedTrip.workType ?? 'E20', number: selectedTrip.containerNumber }] : []
+    )).map(c => ({ type: c.workType, number: c.containerNumber })),
   } : null, [selectedTrip])
 
   // Final edited values: override takes precedence
@@ -81,18 +85,22 @@ export function useMatchJob(initialJobId: number) {
     setTripOverride(null)
   }, [])
 
+  // Client/route options
+  const clientOptions = useMemo(() => clients.map(c => ({ value: c.name, label: c.name })), [clients])
+  const routeOptions = useMemo(() => routes.map(r => ({ value: r.route, label: r.route })), [routes])
+
   // Open edit dialog with current values
   const openEdit = (mode: EditDialogMode) => {
     if (!mode) return
     if (mode === 'cont-left' && editedJob) setDialogContainers([...editedJob.containers])
-    if (mode === 'cont-right' && editedTrip) setDialogContRight({ type: editedTrip.contType, number: editedTrip.contNumber })
+    if (mode === 'cont-right' && editedTrip) setDialogContRight([...editedTrip.containers])
     setEditDialog(mode)
   }
 
   const saveDialog = () => {
     if (!editDialog) return
     if (editDialog === 'cont-left' && editedJob) setJobOverride({ ...editedJob, containers: [...dialogContainers] })
-    if (editDialog === 'cont-right' && editedTrip) setTripOverride({ ...editedTrip, contType: dialogContRight.type, contNumber: dialogContRight.number })
+    if (editDialog === 'cont-right' && editedTrip) setTripOverride({ ...editedTrip, containers: [...dialogContRight] })
     setEditDialog(null)
   }
 
@@ -102,9 +110,11 @@ export function useMatchJob(initialJobId: number) {
   const jobRoute = editedJob?.route ?? ''
   const tripRoute = editedTrip?.route ?? ''
   const jobConts = editedJob?.containers ?? []
-  const tripCont = editedTrip ? { type: editedTrip.contType, number: editedTrip.contNumber } : null
+  const tripConts = editedTrip?.containers ?? []
 
-  const contMatched = tripCont ? jobConts.some(c => c.type === tripCont.type && c.number === tripCont.number) : false
+  const contMatched = tripConts.length > 0 && tripConts.every(tc =>
+    jobConts.some(jc => jc.type === tc.type && jc.number === tc.number)
+  )
   const clientMatched = jobClient === tripClient && jobClient !== ''
   const routeMatched = jobRoute === tripRoute && jobRoute !== ''
 
@@ -120,19 +130,17 @@ export function useMatchJob(initialJobId: number) {
       await updateTripOrder.mutateAsync({ id: selectedTripId, data: {
         clientName: editedTrip.clientName,
         route: editedTrip.route,
-        workType: editedTrip.contType as WorkType,
-        containerNumber: editedTrip.contNumber,
+        containers: editedTrip.containers.map(c => ({ containerNumber: c.number, workType: c.type as WorkType })),
       }})
       await createTripOrder.mutateAsync({
         tripDate: selectedTrip.tripDate,
         clientId: selectedTrip.clientId,
         clientName: editedTrip.clientName,
-        workType: editedTrip.contType as WorkType,
         route: editedTrip.route,
         tractorPlate: selectedJob.tractorPlate,
         driverId: selectedJob.driverId,
         driverName: selectedJob.driverName,
-        containerNumber: editedTrip.contNumber,
+        containers: editedTrip.containers.map(c => ({ containerNumber: c.number, workType: c.type as WorkType })),
         pricingId: selectedTrip.pricingId,
         unitPrice: selectedTrip.unitPrice,
         driverSalary: selectedTrip.driverSalary,
@@ -146,20 +154,22 @@ export function useMatchJob(initialJobId: number) {
 
   return {
     // State
-    loading, submitting, pickMode, setPickMode,
+    loading, loadingSuggestions, submitting, pickMode, setPickMode,
     editDialog, setEditDialog,
     editedJob, setEditedJob: setJobOverride,
     editedTrip, setEditedTrip: setTripOverride,
     dialogContainers, setDialogContainers,
     dialogContRight, setDialogContRight,
     // Data
-    clients, routes,
+    clientOptions, routeOptions,
     unmatchedJobs, draftTrips,
     selectedJob, selectedTrip,
     selectedJobId, setSelectedJobId: handleSelectJob,
     selectedTripId, setSelectedTripId: handleSelectTrip,
+    // Suggestions
+    suggestions,
     // Validation
-    jobClient, tripClient, jobRoute, tripRoute, jobConts, tripCont,
+    jobClient, tripClient, jobRoute, tripRoute, jobConts, tripConts,
     contMatched, clientMatched, routeMatched,
     // Handlers
     openEdit, saveDialog, handleMatch,
