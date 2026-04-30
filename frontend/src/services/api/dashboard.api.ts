@@ -4,7 +4,12 @@ import type { ApiResponse } from '@/data/domain'
 
 // TODO: Add backend GET /notifications endpoint. For now, return empty.
 export async function getNotifications(): Promise<ApiResponse<unknown[]>> {
-  return ok([])
+  try {
+    const res = await api.get('/dashboard/notifications')
+    return ok(toCamel(res.data) as unknown[])
+  } catch (err) {
+    return fail(err)
+  }
 }
 
 export interface DriverSalarySummary {
