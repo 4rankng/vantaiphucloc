@@ -7,9 +7,7 @@ import { NotificationPanel, useUnreadCount } from '@/components/shared/Notificat
  *
  * Variants:
  *  - "home"  : shows greeting ("Xin chào, / Name") on the left + bell + user icons on the right
- *  - "page"  : shows a back arrow + page title (used on sub-pages)
- *
- * All props are optional so callers only pass what they need.
+ *  - "page"  : shows a back arrow + page title + bell icon on the right
  */
 
 interface AppTopBarBaseProps {
@@ -91,37 +89,35 @@ export function AppTopBar(props: AppTopBarProps) {
         {/* ── Right ── */}
         <div className="flex items-center gap-1 shrink-0">
           {props.actions}
-          {props.variant === 'home' && (
-            <>
-              {props.onNotifications && (
-                <button
-                  onClick={handleBellClick}
-                  className="w-8 h-8 flex items-center justify-center rounded-full relative touch-manipulation"
-                  style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--theme-text-on-brand)' }}
-                  aria-label="Thông báo"
-                >
-                  <Bell className="w-[17px] h-[17px]" />
-                  {unread > 0 && (
-                    <span
-                      className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center rounded-full text-[9px] font-bold leading-none px-1"
-                      style={{ background: 'var(--theme-status-error)', color: '#fff' }}
-                    >
-                      {unread > 99 ? '99+' : unread}
-                    </span>
-                  )}
-                </button>
-              )}
-              {props.onProfile && (
-                <button
-                  onClick={props.onProfile}
-                  className="w-8 h-8 flex items-center justify-center rounded-full touch-manipulation"
-                  style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--theme-text-on-brand)' }}
-                  aria-label="Tài khoản"
-                >
-                  <UserCircle className="w-[17px] h-[17px]" />
-                </button>
-              )}
-            </>
+
+          {/* Bell — always visible */}
+          <button
+            onClick={handleBellClick}
+            className="w-8 h-8 flex items-center justify-center rounded-full relative touch-manipulation"
+            style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--theme-text-on-brand)' }}
+            aria-label="Thông báo"
+          >
+            <Bell className="w-[17px] h-[17px]" />
+            {unread > 0 && (
+              <span
+                className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center rounded-full text-[9px] font-bold leading-none px-1"
+                style={{ background: 'var(--theme-status-error)', color: '#fff' }}
+              >
+                {unread > 99 ? '99+' : unread}
+              </span>
+            )}
+          </button>
+
+          {/* Profile — home variant only */}
+          {props.variant === 'home' && props.onProfile && (
+            <button
+              onClick={props.onProfile}
+              className="w-8 h-8 flex items-center justify-center rounded-full touch-manipulation"
+              style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--theme-text-on-brand)' }}
+              aria-label="Tài khoản"
+            >
+              <UserCircle className="w-[17px] h-[17px]" />
+            </button>
           )}
         </div>
       </div>
