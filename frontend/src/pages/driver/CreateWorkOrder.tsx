@@ -47,12 +47,14 @@ export function CreateWorkOrder() {
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([apiClient.getClients(), apiClient.getRoutes()]).then(([cRes, rRes]) => {
-      if (!cancelled) {
-        if (cRes.success) setClients(cRes.data)
-        if (rRes.success) setRoutes(rRes.data)
-      }
-    })
+    Promise.all([apiClient.getClients(), apiClient.getRoutes()])
+      .then(([cRes, rRes]) => {
+        if (!cancelled) {
+          if (cRes.success) setClients(cRes.data)
+          if (rRes.success) setRoutes(rRes.data)
+        }
+      })
+      .catch(() => {})
     return () => { cancelled = true }
   }, [])
 
@@ -89,12 +91,14 @@ export function CreateWorkOrder() {
   // Get driver info from API for plate etc
   const [driverPlate, setDriverPlate] = useState('')
   useEffect(() => {
-    apiClient.getDrivers().then(res => {
-      if (res.success) {
-        const d = res.data.find((d: { id: number; tractorPlate?: string }) => d.id === Number(user!.id))
-        if (d) setDriverPlate(d.tractorPlate ?? '')
-      }
-    })
+    apiClient.getDrivers()
+      .then(res => {
+        if (res.success) {
+          const d = res.data.find((d: { id: number; tractorPlate?: string }) => d.id === Number(user!.id))
+          if (d) setDriverPlate(d.tractorPlate ?? '')
+        }
+      })
+      .catch(() => {})
   }, [user])
 
   const handleSubmit = useCallback(async () => {

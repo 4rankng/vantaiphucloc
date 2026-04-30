@@ -18,15 +18,17 @@ export function Profile() {
 
   useEffect(() => {
     if (user) {
-      apiClient.getDrivers().then(res => {
-        if (res.success) {
-          const d = res.data.find((d: { id: number; tractorPlate?: string; phone?: string }) => d.id === Number(user.id))
-          if (d) {
-            setDriverPlate(d.tractorPlate ?? '')
-            setPhone(d.phone ?? '')
+      apiClient.getDrivers()
+        .then(res => {
+          if (res.success) {
+            const d = res.data.find((d: { id: number; tractorPlate?: string; phone?: string }) => d.id === Number(user.id))
+            if (d) {
+              setDriverPlate(d.tractorPlate ?? '')
+              setPhone(d.phone ?? '')
+            }
           }
-        }
-      })
+        })
+        .catch(() => {})
     }
   }, [user])
 
