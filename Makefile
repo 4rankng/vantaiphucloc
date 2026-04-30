@@ -1,17 +1,27 @@
-.PHONY: help install migrate dev dev-backend dev-frontend dev-worker lint deploy seed adminer
+.PHONY: help install migrate dev dev-backend dev-frontend dev-worker lint seed adminer push-all deploy-all push-backend push-frontend deploy-backend deploy-frontend
 
 ## help: Print a description of all available targets
 help:
-	@echo "Available targets:"
-	@echo "  install       Install Python and Node dependencies"
-	@echo "  migrate       Run Alembic database migrations (alembic upgrade head)"
-	@echo "  seed          Create initial admin user (admin/admin123)"
-	@echo "  dev           Start backend, frontend, worker, and adminer concurrently"
-	@echo "  dev-backend   Start the FastAPI backend with hot-reload"
-	@echo "  dev-frontend  Start the Vite frontend dev server"
-	@echo "  lint          Run ruff (backend) and eslint (frontend)"
-	@echo "  deploy        Build frontend, rsync to droplet, run migrations, seed, restart"
-	@echo "  adminer       Start Adminer (DB management UI) on port 8081"
+	@echo "Development:"
+	@echo "  install          Install Python and Node dependencies"
+	@echo "  migrate          Run Alembic database migrations"
+	@echo "  seed             Create initial admin user (admin/admin123)"
+	@echo "  dev              Start backend, frontend, worker, and adminer"
+	@echo "  dev-backend      Start the FastAPI backend with hot-reload"
+	@echo "  dev-frontend     Start the Vite frontend dev server"
+	@echo "  dev-worker       Start the arq background worker"
+	@echo "  lint             Run ruff (backend) and eslint (frontend)"
+	@echo "  adminer          Start Adminer on port 8081"
+	@echo ""
+	@echo "Production deploy (Docker Hub → droplet):"
+	@echo "  push-all         Build & push all images to Docker Hub"
+	@echo "  push-backend     Build & push backend image"
+	@echo "  push-frontend    Build & push frontend image"
+	@echo "  deploy-all       Pull & restart all services on droplet"
+	@echo "  deploy-backend   Pull & restart backend + worker on droplet"
+	@echo "  deploy-frontend  Pull & restart frontend on droplet"
+
+# ── Development ──────────────────────────────────────────────────────────────
 
 ## install: Install Python dependencies (backend) and Node dependencies (frontend)
 install:
@@ -63,14 +73,26 @@ lint:
 	cd backend && ruff check .
 	cd frontend && pnpm eslint src
 
-## deploy: Build frontend, rsync to droplet, run migrations, seed admin, restart backend service
-## Requires DROPLET_HOST and DROPLET_USER env vars (e.g. DROPLET_HOST=1.2.3.4 DROPLET_USER=deploy)
-deploy:
-	@if [ -z "$(DROPLET_HOST)" ]; then echo "Error: DROPLET_HOST is not set"; exit 1; fi
-	@if [ -z "$(DROPLET_USER)" ]; then echo "Error: DROPLET_USER is not set"; exit 1; fi
-	cd frontend && pnpm build
-	rsync -avz --delete frontend/dist/ $(DROPLET_USER)@$(DROPLET_HOST):/var/www/vantaiphucloc/frontend/dist/
-	rsync -avz --delete --exclude '__pycache__' --exclude '*.pyc' --exclude '.env' \
-		backend/ $(DROPLET_USER)@$(DROPLET_HOST):/opt/vantaiphucloc/backend/
-	ssh $(DROPLET_USER)@$(DROPLET_HOST) \
-		"cd /opt/vantaiphucloc/backend && PYTHONPATH=. alembic upgrade head && PYTHONPATH=. python -m app.seed && systemctl restart vantaiphucloc-backend"
+# ── Production deploy ────────────────────────────────────────────────────────
+
+## push-backend: Build & push backend image to Docker Hub
+push-backend:
+	$(MAKE) -C backend push
+
+## push-frontend: Build & push frontend image to Docker Hub
+push-frontend:
+	$(MAKE) -C frontend push
+
+## push-all: Build & push all images to Docker Hub
+push-all: push-backend push-frontend
+
+## deploy-backend: Pull & restart backend + worker on droplet
+deploy-backend:
+	$(MAKE) -C backend deploy
+
+## deploy-frontend: Pull & restart frontend on droplet
+deploy-frontend:
+	$(MAKE) -C frontend deploy
+
+## deploy-all: Pull & restart all services on droplet
+deploy-all: deploy-backend deploy-frontend
