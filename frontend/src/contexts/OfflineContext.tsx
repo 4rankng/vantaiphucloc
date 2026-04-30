@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { isFullyOnline, onNetworkChange } from '@/lib/network'
 import {
   syncQueue,
@@ -176,8 +176,10 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     prevOnlineRef.current = isOnline
   }, [isOnline, pendingCount, syncing, syncNow])
 
+  const value = useMemo(() => ({ isOnline, pendingCount, syncing, syncProgress, queueAction, clearQueue, syncNow }), [isOnline, pendingCount, syncing, syncProgress, queueAction, clearQueue, syncNow])
+
   return (
-    <OfflineContext.Provider value={{ isOnline, pendingCount, syncing, syncProgress, queueAction, clearQueue, syncNow }}>
+    <OfflineContext.Provider value={value}>
       {children}
     </OfflineContext.Provider>
   )
