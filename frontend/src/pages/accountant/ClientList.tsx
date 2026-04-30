@@ -83,7 +83,13 @@ export function ClientList() {
     <div>
       {/* Client list — clean cards, tap to see detail */}
       <div className="space-y-2">
-        {clients.map(client => (
+        {clients.length === 0 ? (
+          <div className="rounded-2xl p-10 text-center" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
+            <Building2 className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--theme-text-muted)' }} />
+            <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Chưa có khách hàng</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Nhấn + để thêm khách hàng mới</p>
+          </div>
+        ) : clients.map(client => (
           <button
             key={client.id}
             onClick={() => setSelectedClient(client)}

@@ -1,12 +1,12 @@
 import { api } from './client'
-import { toCamel, toSnake, ok, fail, isNetworkError } from './utils'
+import { toCamel, toSnake, ok, fail, isNetworkError, unwrapList } from './utils'
 import { setCache, getCache } from '@/lib/offline-db'
 import type { RoutePrice, ApiResponse } from '@/data/domain'
 
 export async function getRoutes(): Promise<ApiResponse<RoutePrice[]>> {
   try {
     const res = await api.get('/routes')
-    const data = toCamel<RoutePrice[]>(res.data)
+    const data = toCamel<RoutePrice[]>(unwrapList(res.data))
     await setCache('routes', data)
     return ok(data)
   } catch (err) {

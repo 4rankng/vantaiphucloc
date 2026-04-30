@@ -1,5 +1,5 @@
 import { api } from './client'
-import { toCamel, toSnake, ok, fail, isNetworkError } from './utils'
+import { toCamel, toSnake, ok, fail, isNetworkError, unwrapList } from './utils'
 import { setCache, getCache } from '@/lib/offline-db'
 import { offlineQueue } from '@/lib/offline-queue'
 import type { WorkOrder, ApiResponse } from '@/data/domain'
@@ -22,7 +22,7 @@ export async function getWorkOrders(filters?: WorkOrderFilters): Promise<ApiResp
     if (filters?.dateTo) params.date_to = filters.dateTo
     if (filters?.status) params.status = filters.status
     const res = await api.get('/work-orders', { params })
-    const data = toCamel<WorkOrder[]>(res.data)
+    const data = toCamel<WorkOrder[]>(unwrapList(res.data))
     await setCache(cacheKey, data)
     return ok(data)
   } catch (err) {

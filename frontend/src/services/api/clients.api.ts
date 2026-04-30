@@ -1,12 +1,12 @@
 import { api } from './client'
-import { toCamel, toSnake, ok, fail, isNetworkError } from './utils'
+import { toCamel, toSnake, ok, fail, isNetworkError, unwrapList } from './utils'
 import { setCache, getCache } from '@/lib/offline-db'
 import type { Client, ApiResponse } from '@/data/domain'
 
 export async function getClients(): Promise<ApiResponse<Client[]>> {
   try {
     const res = await api.get('/clients')
-    const data = toCamel<Client[]>(res.data)
+    const data = toCamel<Client[]>(unwrapList(res.data))
     await setCache('clients', data)
     return ok(data)
   } catch (err) {
