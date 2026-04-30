@@ -49,7 +49,7 @@ async def get_dashboard_summary(
     # Active trips (DRAFT + CONFIRMED)
     active_q = await db.execute(
         select(func.count(TripOrder.id)).where(
-            TripOrder.status.in_(["DRAFT", "CONFIRMED"])
+            TripOrder.status.in_(["DRAFT", "PENDING"])
         )
     )
     active_trips = active_q.scalar() or 0
@@ -70,7 +70,7 @@ async def get_dashboard_summary(
             func.coalesce(func.sum(WorkOrder.earning), 0).label("total_salary"),
         )
         .join(WorkOrder, WorkOrder.driver_id == User.id)
-        .where(WorkOrder.status == "MATCHED")
+        .where(WorkOrder.status.in_(["MATCHED", "COMPLETED"]))
         .group_by(User.id, User.username, User.tractor_plate)
     )
     driver_salary_summary = [

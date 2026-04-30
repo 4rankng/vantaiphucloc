@@ -17,6 +17,7 @@ from app.api.v1.users import router as users_router
 from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.vendors import router as vendors_router
 from app.api.v1.sse import router as sse_router
+from app.api.v1.payments import router as payments_router
 from app.core.deps import get_current_user, get_worker_pool
 from app.models.base import User
 from app.schemas.domain import JobStatusResponse
@@ -38,6 +39,7 @@ router.include_router(users_router)
 router.include_router(dashboard_router)
 router.include_router(vendors_router)
 router.include_router(sse_router)
+router.include_router(payments_router)
 
 
 @router.get("/health")
