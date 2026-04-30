@@ -34,6 +34,9 @@ migrate:
 
 ## dev: Start PostgreSQL, Redis, backend, frontend, worker, and adminer concurrently
 dev:
+	@echo "Killing stale dev processes..."
+	@lsof -ti :8000,:5173 2>/dev/null | xargs kill -9 2>/dev/null || true
+	@docker stop vantai-adminer 2>/dev/null || true
 	@docker start vantai-postgres 2>/dev/null || docker run -d --name vantai-postgres \
 		-e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=vantaihanghoa \
 		-p 5432:5432 postgres:16-alpine
