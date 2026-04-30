@@ -1,8 +1,9 @@
 import { useTripOrders } from '@/hooks/use-queries'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { TripOrderCard } from '@/components/shared/TripOrderCard'
-import { Plus } from 'lucide-react'
+import { Plus, Truck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { Button } from '@/components/ui'
 
 export function TripList() {
   const { data: trips = [], isLoading: loading } = useTripOrders()
@@ -19,14 +20,37 @@ export function TripList() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-3">
-      {trips.map(trip => (
-        <TripOrderCard
-          key={trip.id}
-          trip={trip}
-          onClick={() => navigate(`/accountant/trip/${trip.id}`)}
-        />
-      ))}
+    <div className="space-y-3">
+      {trips.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+          <div className="h-16 w-16 rounded-2xl flex items-center justify-center"
+            style={{ background: 'var(--theme-bg-secondary)' }}>
+            <Truck className="w-8 h-8" style={{ color: 'var(--theme-text-muted)' }} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Chưa có chuyến nào</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Nhấn nút bên dưới để tạo chuyến mới</p>
+          </div>
+          {/* Desktop shortcut — FAB is hidden on desktop */}
+          <Button
+            onClick={() => navigate('/accountant/create-trip')}
+            className="hidden lg:flex items-center gap-2 h-10 px-5 font-semibold rounded-xl"
+            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+          >
+            <Plus className="w-4 h-4" /> Tạo chuyến
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-3">
+          {trips.map(trip => (
+            <TripOrderCard
+              key={trip.id}
+              trip={trip}
+              onClick={() => navigate(`/accountant/trip/${trip.id}`)}
+            />
+          ))}
+        </div>
+      )}
       <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => navigate('/accountant/create-trip')} label="Tạo chuyến" />
     </div>
   )

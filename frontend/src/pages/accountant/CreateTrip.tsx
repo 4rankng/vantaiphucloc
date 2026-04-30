@@ -6,7 +6,7 @@ import { Label } from '@/components/ui'
 import { useClients, useDrivers, useRoutes, useCreateTripOrder, useCreateClient } from '@/hooks/use-queries'
 import { WORK_TYPES, type WorkType } from '@/data/domain'
 import { InlineSelect } from '@/components/shared/InlineSelect'
-import { QuickCreateDialog } from '@/components/shared/QuickCreateDialog'
+import { CreateClientDialog } from '@/components/shared/CreateClientDialog'
 import { Plus, Trash2 } from 'lucide-react'
 
 interface CongItem {
@@ -171,15 +171,12 @@ export function CreateTrip() {
         {submitting ? 'Đang tạo...' : 'Tạo chuyến'}
       </Button>
 
-      <QuickCreateDialog
+      <CreateClientDialog
         open={createClientOpen}
         onClose={() => setCreateClientOpen(false)}
-        title="Thêm khách hàng"
-        label="Tên khách hàng"
-        placeholder="Tên khách hàng"
-        onConfirm={(name) => {
+        onConfirm={(data) => {
           createClient.mutate(
-            { name, type: 'company', phone: '', taxCode: '', address: '', contactPerson: '' },
+            { ...data, outstandingDebt: 0 },
             { onSuccess: () => setCreateClientOpen(false) },
           )
         }}

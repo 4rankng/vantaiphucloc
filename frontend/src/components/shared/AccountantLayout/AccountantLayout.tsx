@@ -64,7 +64,10 @@ function AccountantInner() {
     <>
       <AppSidebar role="accountant" />
       <main className="flex-1 min-h-screen overflow-auto" style={{ background: 'var(--theme-bg-primary)' }}>
-        <div className="mx-auto w-full max-w-5xl px-8 py-8">
+        <div className="w-full px-8 py-8">
+          {title && (
+            <h1 className="text-xl font-bold mb-6" style={{ color: 'var(--theme-text-primary)' }}>{title}</h1>
+          )}
           <Outlet />
         </div>
       </main>

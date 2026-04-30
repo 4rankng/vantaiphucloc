@@ -6,7 +6,7 @@ import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect'
-import { QuickCreateDialog } from '@/components/shared/QuickCreateDialog'
+import { CreateClientDialog } from '@/components/shared/CreateClientDialog'
 import { Plus, Pencil, Trash2, X, Check, Search } from 'lucide-react'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 
@@ -298,15 +298,12 @@ export function PricingList() {
 
       <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => { setEditingPricing(undefined); setShowForm(true) }} label="Thêm bảng giá" />
 
-      <QuickCreateDialog
+      <CreateClientDialog
         open={createClientOpen}
         onClose={() => setCreateClientOpen(false)}
-        title="Thêm khách hàng"
-        label="Tên khách hàng"
-        placeholder="Tên khách hàng"
-        onConfirm={(name) => {
+        onConfirm={(data) => {
           createClient.mutate(
-            { name, type: 'company', phone: '', taxCode: '', address: '', contactPerson: '' },
+            { ...data, outstandingDebt: 0 },
             { onSuccess: () => setCreateClientOpen(false) },
           )
         }}
