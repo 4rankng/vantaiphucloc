@@ -26,7 +26,8 @@ export function SuperAdminApp() {
   const fetchUsers = useCallback(async () => {
     try {
       const res = await api.get('/users')
-      const list = (res.data as Record<string, unknown>[]).map(toUserAccount)
+      const items = (res.data as { items: Record<string, unknown>[] }).items ?? res.data
+      const list = (items as Record<string, unknown>[]).map(toUserAccount)
       setUsers(list)
     } catch {
       toast.error('Lỗi', 'Không thể tải danh sách tài khoản')
