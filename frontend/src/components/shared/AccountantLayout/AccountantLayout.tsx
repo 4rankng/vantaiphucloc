@@ -8,7 +8,7 @@ import type { Role } from '@/data/domain'
 const ALLOWED_ROLES: Role[] = ['accountant']
 
 const TITLES: Record<string, string> = {
-  '/accountant/clients': 'Khách hàng & Nhà thầu',
+  '/accountant/clients': 'Khách hàng',
   '/accountant/routes': 'Cung đường',
   '/accountant/work-orders': 'Đối soát tài xế',
   '/accountant/trips': 'Chuyến',
