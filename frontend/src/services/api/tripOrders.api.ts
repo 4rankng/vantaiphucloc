@@ -1,6 +1,11 @@
 import { api } from './client'
 import { toCamel, toSnake, ok, fail, unwrapList } from './utils'
-import type { TripOrder, ApiResponse } from '@/data/domain'
+import type {
+  TripOrder,
+  ApiResponse,
+  SuggestMatchesResponse,
+  SuggestWosResponse,
+} from '@/data/domain'
 
 interface TripOrderFilters {
   clientId?: number
@@ -55,6 +60,28 @@ export async function reconcile(
       trip_order_id: tripOrderId,
     })
     return ok(toCamel<TripOrder>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export async function suggestMatches(
+  workOrderId: number,
+): Promise<ApiResponse<SuggestMatchesResponse>> {
+  try {
+    const res = await api.get(`/suggest-matches/${workOrderId}`)
+    return ok(toCamel<SuggestMatchesResponse>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export async function suggestWosForTrip(
+  tripOrderId: number,
+): Promise<ApiResponse<SuggestWosResponse>> {
+  try {
+    const res = await api.get(`/suggest-wos/${tripOrderId}`)
+    return ok(toCamel<SuggestWosResponse>(res.data))
   } catch (err) {
     return fail(err)
   }

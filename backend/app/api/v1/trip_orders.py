@@ -9,9 +9,9 @@ from sqlalchemy import select, delete, func
 
 from app.database import get_db
 from app.models.base import User
-from app.models.domain import TripOrder, TripOrderWorkOrder, WorkOrder
+from app.models.domain import TripOrder, TripOrderContainer, TripOrderWorkOrder, WorkOrder
 from app.schemas.base import PaginatedResponse
-from app.schemas.domain import TripOrderCreate, TripOrderUpdate, TripOrderOut
+from app.schemas.domain import TripOrderCreate, TripOrderUpdate, TripOrderOut, TripContainerOut
 from app.core.deps import get_current_user, require_roles
 from app.services.salary_service import get_salary_period_dates
 
@@ -50,32 +50,91 @@ async def _batch_get_matched_work_order_ids(
     return mapping
 
 
+async def _get_trip_containers(db: AsyncSession, trip_order_id: int) -> list[TripContainerOut]:
+    """Load containers for a single trip order."""
+    result = await db.execute(
+        select(TripOrderContainer).where(TripOrderContainer.trip_order_id == trip_order_id)
+    )
+    return [TripContainerOut.model_validate(c) for c in result.scalars().all()]
+
+
+async def _batch_get_trip_containers(
+    db: AsyncSession, trip_order_ids: list[int]
+) -> dict[int, list[TripContainerOut]]:
+    """Batch-load containers for multiple trip orders."""
+    if not trip_order_ids:
+        return {}
+    result = await db.execute(
+        select(TripOrderContainer).where(TripOrderContainer.trip_order_id.in_(trip_order_ids))
+    )
+    mapping: dict[int, list[TripContainerOut]] = defaultdict(list)
+    for c in result.scalars().all():
+        mapping[c.trip_order_id].append(TripContainerOut.model_validate(c))
+    return mapping
+
+
 async def _load_trip_order_out(db: AsyncSession, trip_order: TripOrder) -> TripOrderOut:
-    """Load a TripOrder with matched work order IDs and return a TripOrderOut."""
+    """Load a TripOrder with matched work order IDs and containers."""
     matched_ids = await _get_matched_work_order_ids(db, trip_order.id)
-    data = {
-        col.name: getattr(trip_order, col.name)
-        for col in TripOrder.__table__.columns
-    }
-    data["matched_work_order_ids"] = matched_ids
-    return TripOrderOut.model_validate(data)
+    containers = await _get_trip_containers(db, trip_order.id)
+    return TripOrderOut(
+        id=trip_order.id,
+        trip_date=trip_order.trip_date,
+        client_id=trip_order.client_id,
+        client_name=trip_order.client_name,
+        work_type=trip_order.work_type,
+        route=trip_order.route,
+        tractor_plate=trip_order.tractor_plate,
+        driver_id=trip_order.driver_id,
+        driver_name=trip_order.driver_name,
+        container_number=trip_order.container_number,
+        containers=containers,
+        pricing_id=trip_order.pricing_id,
+        unit_price=trip_order.unit_price,
+        driver_salary=trip_order.driver_salary,
+        allowance=trip_order.allowance,
+        revenue=trip_order.revenue,
+        status=trip_order.status,
+        matched_work_order_ids=matched_ids,
+        created_at=trip_order.created_at,
+        updated_at=trip_order.updated_at,
+    )
 
 
 async def _batch_load_trip_order_outs(
     db: AsyncSession, trip_orders: list[TripOrder]
 ) -> list[TripOrderOut]:
-    """Batch-load matched work order IDs for multiple trip orders."""
+    """Batch-load matched work order IDs and containers for multiple trip orders."""
     if not trip_orders:
         return []
 
     to_ids = [to.id for to in trip_orders]
-    mapping = await _batch_get_matched_work_order_ids(db, to_ids)
+    matched_mapping = await _batch_get_matched_work_order_ids(db, to_ids)
+    containers_mapping = await _batch_get_trip_containers(db, to_ids)
 
     return [
-        TripOrderOut.model_validate({
-            **{col.name: getattr(to, col.name) for col in TripOrder.__table__.columns},
-            "matched_work_order_ids": mapping.get(to.id, []),
-        })
+        TripOrderOut(
+            id=to.id,
+            trip_date=to.trip_date,
+            client_id=to.client_id,
+            client_name=to.client_name,
+            work_type=to.work_type,
+            route=to.route,
+            tractor_plate=to.tractor_plate,
+            driver_id=to.driver_id,
+            driver_name=to.driver_name,
+            container_number=to.container_number,
+            containers=containers_mapping.get(to.id, []),
+            pricing_id=to.pricing_id,
+            unit_price=to.unit_price,
+            driver_salary=to.driver_salary,
+            allowance=to.allowance,
+            revenue=to.revenue,
+            status=to.status,
+            matched_work_order_ids=matched_mapping.get(to.id, []),
+            created_at=to.created_at,
+            updated_at=to.updated_at,
+        )
         for to in trip_orders
     ]
 
@@ -113,7 +172,12 @@ async def create_trip_order(
     db: AsyncSession = Depends(get_db),
 ):
     matched_ids = body.matched_work_order_ids
-    trip_data = body.model_dump(exclude={"matched_work_order_ids"})
+    trip_data = body.model_dump(exclude={"matched_work_order_ids", "containers"})
+
+    # Derive legacy fields from first container
+    if body.containers:
+        trip_data["container_number"] = body.containers[0].container_number
+        trip_data["work_type"] = body.containers[0].work_type
 
     trip_order = TripOrder(
         status="DRAFT",
@@ -121,6 +185,13 @@ async def create_trip_order(
     )
     db.add(trip_order)
     await db.flush()
+
+    for c in body.containers:
+        db.add(TripOrderContainer(
+            trip_order_id=trip_order.id,
+            container_number=c.container_number,
+            work_type=c.work_type,
+        ))
 
     for wo_id in matched_ids:
         db.add(TripOrderWorkOrder(
@@ -224,9 +295,26 @@ async def update_trip_order(
 
     update_data = body.model_dump(exclude_unset=True)
     new_matched_ids = update_data.pop("matched_work_order_ids", None)
+    new_containers = update_data.pop("containers", None)
 
     for field, value in update_data.items():
         setattr(trip_order, field, value)
+
+    if new_containers is not None:
+        await db.execute(
+            delete(TripOrderContainer).where(
+                TripOrderContainer.trip_order_id == trip_order.id
+            )
+        )
+        for c_data in new_containers:
+            db.add(TripOrderContainer(
+                trip_order_id=trip_order.id,
+                container_number=c_data["container_number"],
+                work_type=c_data["work_type"],
+            ))
+        if new_containers:
+            trip_order.container_number = new_containers[0]["container_number"]
+            trip_order.work_type = new_containers[0]["work_type"]
 
     if new_matched_ids is not None:
         # Remove old join table entries that are no longer in the list

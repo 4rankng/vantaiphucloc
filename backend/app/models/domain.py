@@ -189,12 +189,12 @@ class TripOrder(Base):
     trip_date = Column(Date, nullable=False)
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
     client_name = Column(String(255), nullable=False)  # denormalized
-    work_type = Column(String(10), nullable=False)
+    work_type = Column(String(10), nullable=True)       # legacy — derived from first container
     route = Column(String(500), nullable=False)
     tractor_plate = Column(String(20), nullable=False)
     driver_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     driver_name = Column(String(255), nullable=False)  # denormalized
-    container_number = Column(String(50), nullable=False)
+    container_number = Column(String(50), nullable=True)  # legacy — use trip_order_containers
     pricing_id = Column(Integer, ForeignKey("pricings.id"), nullable=True)
     unit_price = Column(Integer, nullable=False)       # VND
     driver_salary = Column(Integer, nullable=False)    # VND
@@ -209,6 +209,24 @@ class TripOrder(Base):
     __table_args__ = (
         Index("ix_trip_orders_driver_id_trip_date", "driver_id", "trip_date"),
     )
+
+
+# ---------------------------------------------------------------------------
+# TripOrderContainer  (child of TripOrder — cascade delete)
+# ---------------------------------------------------------------------------
+
+class TripOrderContainer(Base):
+    __tablename__ = "trip_order_containers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    trip_order_id = Column(
+        Integer,
+        ForeignKey("trip_orders.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    container_number = Column(String(50), nullable=False)
+    work_type = Column(String(10), nullable=False)     # E20 | E40 | F20 | F40
 
 
 # ---------------------------------------------------------------------------

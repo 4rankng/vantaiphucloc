@@ -244,16 +244,30 @@ class WorkOrderOut(BaseModel):
 # TripOrder
 # ---------------------------------------------------------------------------
 
+class TripContainerCreate(BaseModel):
+    container_number: str
+    work_type: str
+
+
+class TripContainerOut(BaseModel):
+    id: int
+    container_number: str
+    work_type: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class TripOrderCreate(BaseModel):
     trip_date: date
     client_id: int
     client_name: str
-    work_type: str
+    work_type: str | None = None  # legacy — derived from first container
     route: str
     tractor_plate: str
     driver_id: int
     driver_name: str
-    container_number: str
+    containers: list[TripContainerCreate]
+    container_number: str | None = None  # legacy
     pricing_id: int | None = None
     unit_price: int = Field(ge=0)
     driver_salary: int = Field(ge=0)
@@ -272,6 +286,7 @@ class TripOrderUpdate(BaseModel):
     driver_id: int | None = None
     driver_name: str | None = None
     container_number: str | None = None
+    containers: list[TripContainerCreate] | None = None
     pricing_id: int | None = None
     unit_price: int | None = None
     driver_salary: int | None = None
@@ -286,12 +301,13 @@ class TripOrderOut(BaseModel):
     trip_date: date
     client_id: int
     client_name: str
-    work_type: str
+    work_type: str | None
     route: str
     tractor_plate: str
     driver_id: int
     driver_name: str
-    container_number: str
+    container_number: str | None
+    containers: list[TripContainerOut] = []
     pricing_id: int | None
     unit_price: int
     driver_salary: int
@@ -312,6 +328,30 @@ class TripOrderOut(BaseModel):
 class ReconcileRequest(BaseModel):
     work_order_id: int
     trip_order_id: int
+
+
+class MatchSuggestion(BaseModel):
+    trip_order: TripOrderOut
+    confidence: Literal["full", "partial", "none"]
+    matched_fields: list[str]
+    score: float
+
+
+class SuggestMatchesResponse(BaseModel):
+    work_order_id: int
+    suggestions: list[MatchSuggestion]
+
+
+class WOSuggestion(BaseModel):
+    work_order: WorkOrderOut
+    confidence: Literal["full", "partial", "none"]
+    matched_fields: list[str]
+    score: float
+
+
+class SuggestWosResponse(BaseModel):
+    trip_order_id: int
+    suggestions: list[WOSuggestion]
 
 
 # ---------------------------------------------------------------------------
