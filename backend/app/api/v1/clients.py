@@ -7,7 +7,7 @@ from sqlalchemy import select, func
 
 from app.database import get_db
 from app.models.base import User
-from app.models.domain import Client
+from app.models.domain import Client, WorkOrder, TripOrder
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import ClientCreate, ClientUpdate, ClientOut
 from app.core.deps import require_roles
@@ -107,6 +107,25 @@ async def delete_client(
     client = result.scalar_one_or_none()
     if client is None:
         raise HTTPException(status_code=404, detail="Client not found")
+
+    # Guard: check for associated work orders or trip orders
+    wo_count = await db.execute(
+        select(func.count(WorkOrder.id)).where(WorkOrder.client_id == client_id)
+    )
+    if (wo_count.scalar() or 0) > 0:
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete client with associated work orders",
+        )
+
+    to_count = await db.execute(
+        select(func.count(TripOrder.id)).where(TripOrder.client_id == client_id)
+    )
+    if (to_count.scalar() or 0) > 0:
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete client with associated trip orders",
+        )
 
     await db.delete(client)
     await db.commit()
