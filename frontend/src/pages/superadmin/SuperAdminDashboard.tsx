@@ -39,7 +39,7 @@ export function SuperAdminDashboard({
 
   return (
     <div className="pb-24">
-      <div className="px-4 pt-4 grid grid-cols-3 gap-2">
+      <div className="px-4 pt-4 grid grid-cols-3 gap-2 lg:gap-4">
         {([
           { label: ROLE_LABELS.director, value: counts.director, icon: LayoutDashboard },
           { label: ROLE_LABELS.driver, value: counts.driver, icon: Truck },
@@ -86,7 +86,7 @@ export function SuperAdminDashboard({
         <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--theme-text-muted)' }}>
           {filtered.length} tài khoản
         </p>
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2 lg:gap-3">
           {filtered.map(u => (
             <UserCard key={u.id} user={u} onTap={() => onViewUser(u)} />
           ))}

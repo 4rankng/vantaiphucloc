@@ -67,15 +67,16 @@ export function DriverHistory() {
         </div>
       )}
 
-      <div className="px-4 space-y-2">
+      <div className="px-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-3">
         {loading ? (
-          <div className="animate-pulse space-y-2">
+          <>
             {[1, 2, 3, 4].map(i => (
               <div key={i} className="h-20 rounded-2xl" style={{ background: 'var(--theme-bg-tertiary)' }} />
             ))}
-          </div>
+          </>
         ) : filtered.length === 0 ? (
-          <div className="rounded-2xl p-8 text-center" style={{ background: 'var(--theme-bg-secondary)' }}>
+          <div className="col-span-full rounded-2xl p-8 text-center" style={{ background: 'var(--theme-bg-secondary)' }}>
             <Camera className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--theme-text-muted)' }} />
             <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có số công nào</p>
           </div>
@@ -84,6 +85,7 @@ export function DriverHistory() {
             <WorkOrderCard key={wo.id} variant="accountant" data={wo} />
           ))
         )}
+        </div>
       </div>
     </div>
   )

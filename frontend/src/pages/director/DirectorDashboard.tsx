@@ -104,7 +104,7 @@ export function DirectorDashboard() {
       </div>
 
       {/* Quick actions */}
-      <div className="px-4 pb-3 flex gap-2">
+      <div className="px-4 pb-3 flex gap-2 lg:gap-3">
         <button
           onClick={() => navigate('/director/users')}
           className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold touch-manipulation"
@@ -113,6 +113,9 @@ export function DirectorDashboard() {
           <Users className="w-3.5 h-3.5" style={{ color: 'var(--theme-brand-primary)' }} /> Nhân sự
         </button>
       </div>
+
+      {/* Desktop: side-by-side KPI panels */}
+      <div className="lg:grid lg:grid-cols-2 lg:gap-6">
 
       {/* Driver KPI breakdown */}
       {driverBreakdown.length > 0 && (
@@ -180,6 +183,8 @@ export function DirectorDashboard() {
           </div>
         </div>
       )}
+
+      </div>{/* end lg:grid */}
 
       {/* Empty state */}
       {monthlyJobs.length === 0 && (
