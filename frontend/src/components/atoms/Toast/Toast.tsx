@@ -1,4 +1,4 @@
-import { useState, useCallback, createContext, useContext, type ReactNode } from 'react'
+import { useState, useCallback, useMemo, createContext, useContext, type ReactNode } from 'react'
 import {
   ToastProvider as RadixToastProvider,
   Toast,
@@ -38,12 +38,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000)
   }, [])
 
-  const value: ToastContextValue = {
+  const value: ToastContextValue = useMemo(() => ({
     toast: addToast,
     success: (title, description) => addToast({ title, description, variant: 'success' }),
     error: (title, description) => addToast({ title, description, variant: 'error' }),
     info: (title, description) => addToast({ title, description, variant: 'default' }),
-  }
+  }), [addToast])
 
   return (
     <ToastContext.Provider value={value}>
