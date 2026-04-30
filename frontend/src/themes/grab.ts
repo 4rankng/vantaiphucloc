@@ -40,7 +40,7 @@ export const grabTheme: ThemeDefinition = {
     statusInfoLight: '#E3F2FD',
     statusInfoText: '#0D47A1',
 
-    sidebar: '#00963E',
+    sidebar: '#0a2e1a',
     sidebarBorder: 'rgba(255, 255, 255, 0.08)',
     sidebarText: 'rgba(255, 255, 255, 0.55)',
     sidebarTextMuted: 'rgba(255, 255, 255, 0.25)',
