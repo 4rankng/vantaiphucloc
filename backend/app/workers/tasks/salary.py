@@ -1,5 +1,5 @@
 import logging
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import select
 
@@ -20,6 +20,10 @@ async def calculate_salary_task(
     start = date.fromisoformat(start_date)
     end = date.fromisoformat(end_date)
 
+    # Use exclusive upper bound (next day midnight) to include the entire end_date
+    start_dt = datetime(start.year, start.month, start.day, tzinfo=timezone.utc)
+    end_dt = datetime(end.year, end.month, end.day, tzinfo=timezone.utc) + timedelta(days=1)
+
     async with async_session() as db:
         try:
             # Load driver name
@@ -32,8 +36,8 @@ async def calculate_salary_task(
                 select(WorkOrder).where(
                     WorkOrder.driver_id == driver_id,
                     WorkOrder.status == "MATCHED",
-                    WorkOrder.created_at >= start,
-                    WorkOrder.created_at <= end,
+                    WorkOrder.created_at >= start_dt,
+                    WorkOrder.created_at < end_dt,
                 )
             )
             work_orders = result.scalars().all()

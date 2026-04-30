@@ -23,14 +23,14 @@ async def generate_monthly_report_task(
         end = date(year, month + 1, 1) - timedelta(days=1)
 
     start_dt = datetime(start.year, start.month, start.day, tzinfo=timezone.utc)
-    end_dt = datetime(end.year, end.month, end.day, 23, 59, 59, tzinfo=timezone.utc)
+    end_dt = datetime(end.year, end.month, end.day, tzinfo=timezone.utc) + timedelta(days=1)
 
     async with async_session() as db:
         try:
             result = await db.execute(
                 select(WorkOrder).where(
                     WorkOrder.created_at >= start_dt,
-                    WorkOrder.created_at <= end_dt,
+                    WorkOrder.created_at < end_dt,
                 )
             )
             orders = result.scalars().all()
