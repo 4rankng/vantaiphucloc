@@ -41,10 +41,10 @@ dev:
 		-p 6379:6379 redis:7-alpine redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
 	@sleep 1
 	cd backend && PYTHONPATH=. alembic upgrade head
-	@trap 'kill 0' INT; \
-	cd backend && PYTHONPATH=. uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 & \
-	cd backend && PYTHONPATH=. arq app.workers.worker.WorkerSettings & \
-	cd frontend && pnpm dev & \
+	@trap 'kill %1 %2 %3 %4 2>/dev/null' INT; \
+	(cd backend && PYTHONPATH=. uvicorn app.main:app --reload --host 0.0.0.0 --port 8000) & \
+	(cd backend && PYTHONPATH=. arq app.workers.worker.WorkerSettings) & \
+	(cd frontend && pnpm dev) & \
 	docker run --rm --name vantai-adminer -p 8081:8080 -e ADMINER_DESIGN=pepa-linha adminer & \
 	wait
 

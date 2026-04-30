@@ -30,7 +30,7 @@ export default defineConfig({
           { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
         ],
       },
-      devOptions: { enabled: true, type: 'module' },
+      devOptions: { enabled: false },
     }),
   ],
   resolve: {

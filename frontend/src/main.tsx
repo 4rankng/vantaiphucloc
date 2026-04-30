@@ -4,6 +4,16 @@ import './index.css'
 import App from './App'
 import { ErrorFallback } from '@/components/shared/ErrorFallback/ErrorFallback'
 
+// In development, unregister any stale service workers that could intercept
+// requests and cause a blank page.
+if (import.meta.env.DEV && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    for (const registration of registrations) {
+      registration.unregister()
+    }
+  })
+}
+
 interface EBState { error: Error | null }
 
 class RootErrorBoundary extends Component<{ children: ReactNode }, EBState> {
@@ -16,7 +26,6 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, EBState> {
 
   render() {
     if (!this.state.error) return this.props.children
-
     return (
       <ErrorFallback
         error={this.state.error}
@@ -26,15 +35,7 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, EBState> {
   }
 }
 
-interface RootContainer extends HTMLElement {
-  _reactRootContainer?: ReturnType<typeof createRoot>
-}
-
-const container = document.getElementById('root')! as RootContainer
-const root = container._reactRootContainer ?? createRoot(container)
-container._reactRootContainer = root
-
-root.render(
+createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <RootErrorBoundary>
       <App />
