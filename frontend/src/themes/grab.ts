@@ -42,8 +42,8 @@ export const grabTheme: ThemeDefinition = {
 
     sidebar: '#0a2e1a',
     sidebarBorder: 'rgba(255, 255, 255, 0.08)',
-    sidebarText: 'rgba(255, 255, 255, 0.55)',
-    sidebarTextMuted: 'rgba(255, 255, 255, 0.25)',
+    sidebarText: 'rgba(255, 255, 255, 0.8)',
+    sidebarTextMuted: 'rgba(255, 255, 255, 0.45)',
     sidebarActive: 'rgba(255, 255, 255, 0.15)',
     sidebarActiveText: '#ffffff',
     sidebarHover: 'rgba(255, 255, 255, 0.08)',
