@@ -66,7 +66,7 @@ function useNotificationsData() {
       })) as AppNotification[]
     },
     staleTime: 30_000,
-    refetchInterval: 60_000,
+    refetchInterval: 300_000, // 5 min fallback — SSE handles real-time
   })
 }
 
