@@ -63,6 +63,15 @@ export function toSnake(value: unknown): unknown {
   return value
 }
 
+/** Unwrap paginated response { items: T[] } or pass through if already an array */
+export function unwrapList(data: unknown): unknown[] {
+  if (Array.isArray(data)) return data
+  if (data !== null && typeof data === 'object' && 'items' in (data as object)) {
+    return (data as { items: unknown[] }).items
+  }
+  return data as unknown[]
+}
+
 /** Wrap a successful result in the ApiResponse shape */
 export function ok<T>(data: T): ApiResponse<T> {
   return { data, success: true }

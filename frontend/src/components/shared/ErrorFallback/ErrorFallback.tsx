@@ -1,7 +1,8 @@
-import { AlertCircle, RefreshCw, Home, Copy } from 'lucide-react'
+import { AlertCircle, RefreshCw, Home, Copy, Check } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
 import { getErrorMessage } from '@/lib/error-utils'
+import { useState } from 'react'
 
 type Variant = 'network' | 'runtime' | 'permission' | 'not-found'
 
@@ -23,15 +24,33 @@ interface Props {
 
 export function ErrorFallback({ variant = 'runtime', error, component, onRetry, onHome, className }: Props) {
   const message = error ? getErrorMessage(error) : undefined
+  const [copied, setCopied] = useState(false)
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     const text = [
       `Component: ${component || 'Unknown'}`,
       `Variant: ${variant}`,
       `Error: ${error?.name}: ${error?.message}`,
       error?.stack,
     ].filter(Boolean).join('\n')
-    navigator.clipboard.writeText(text)
+
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Fallback for browsers that block clipboard API
+      const el = document.createElement('textarea')
+      el.value = text
+      el.style.position = 'fixed'
+      el.style.opacity = '0'
+      document.body.appendChild(el)
+      el.select()
+      document.execCommand('copy')
+      document.body.removeChild(el)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
   }
 
   return (
@@ -57,8 +76,11 @@ export function ErrorFallback({ variant = 'runtime', error, component, onRetry, 
                 <Home className="mr-2 h-4 w-4" /> Về trang chủ
               </Button>
             )}
-            <button onClick={handleCopy} className="text-xs text-[var(--theme-text-muted)] hover:text-[var(--theme-text-primary)] flex items-center justify-center gap-1.5 mx-auto">
-              <Copy className="h-3.5 w-3.5" /> Sao chép chi tiết lỗi
+            <button onClick={handleCopy} className="text-xs text-[var(--theme-text-muted)] hover:text-[var(--theme-text-primary)] flex items-center justify-center gap-1.5 mx-auto transition-colors">
+              {copied
+                ? <><Check className="h-3.5 w-3.5 text-green-500" /> <span className="text-green-500">Đã sao chép</span></>
+                : <><Copy className="h-3.5 w-3.5" /> Sao chép chi tiết lỗi</>
+              }
             </button>
           </div>
         </div>

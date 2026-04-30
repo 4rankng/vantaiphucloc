@@ -1,5 +1,5 @@
 import { api } from './client'
-import { toCamel, toSnake, ok, fail } from './utils'
+import { toCamel, toSnake, ok, fail, unwrapList } from './utils'
 import type { SalaryPeriod, ApiResponse } from '@/data/domain'
 
 export interface AsyncJobResult {
@@ -44,7 +44,7 @@ export async function getSalaryPeriods(driverId?: number): Promise<ApiResponse<S
     const params: Record<string, string> = {}
     if (driverId) params.driver_id = String(driverId)
     const res = await api.get('/salary', { params })
-    return ok(toCamel<SalaryPeriod[]>(res.data))
+    return ok(toCamel<SalaryPeriod[]>(unwrapList(res.data)))
   } catch (err) {
     return fail(err)
   }

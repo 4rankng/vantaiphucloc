@@ -1,5 +1,5 @@
 import { api } from './client'
-import { toCamel, toSnake, ok, fail } from './utils'
+import { toCamel, toSnake, ok, fail, unwrapList } from './utils'
 import type { TripOrder, ApiResponse } from '@/data/domain'
 
 interface TripOrderFilters {
@@ -19,7 +19,7 @@ export async function getTripOrders(filters?: TripOrderFilters): Promise<ApiResp
     if (filters?.dateFrom) params.date_from = filters.dateFrom
     if (filters?.dateTo) params.date_to = filters.dateTo
     const res = await api.get('/trip-orders', { params })
-    return ok(toCamel<TripOrder[]>(res.data))
+    return ok(toCamel<TripOrder[]>(unwrapList(res.data)))
   } catch (err) {
     return fail(err)
   }
