@@ -21,11 +21,11 @@ interface SheetSelectProps {
 export function SheetSelect({ open, onOpenChange, title, options, value, onChange }: SheetSelectProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-3xl max-h-[60vh] pb-safe">
+      <SheetContent side="bottom" className="rounded-t-3xl max-h-[60dvh] pb-safe">
         <SheetHeader className="pb-3">
           <SheetTitle className="text-base font-bold text-left">{title}</SheetTitle>
         </SheetHeader>
-        <div className="space-y-2 overflow-y-auto max-h-[45vh]">
+        <div className="space-y-2 overflow-y-auto max-h-[45dvh]">
           {options.map(opt => {
             const selected = value === opt.value
             return (

@@ -19,6 +19,27 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 # ---------------------------------------------------------------------------
+# Vendor
+# ---------------------------------------------------------------------------
+
+class VendorCreate(BaseModel):
+    name: str
+
+
+class VendorUpdate(BaseModel):
+    name: str | None = None
+
+
+class VendorOut(BaseModel):
+    id: int
+    name: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
 # Client
 # ---------------------------------------------------------------------------
 
