@@ -27,7 +27,7 @@ export function ClientJobs({ clientId, onBack }: { clientId: number; onBack: () 
           if (pRes.success) setPricings(pRes.data)
         }
       })
-      .catch(() => {})
+      .catch((err) => { console.error('Failed to load client jobs:', err) })
     return () => { cancelled = true }
   }, [clientId])
 

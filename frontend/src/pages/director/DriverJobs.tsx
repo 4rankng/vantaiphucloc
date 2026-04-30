@@ -18,7 +18,7 @@ export function DriverJobs({ driverId, onBack }: { driverId: number; onBack: () 
           if (d) setDriver({ id: d.driverId, name: d.driverName, role: 'driver', phone: '', tractorPlate: d.tractorPlate })
         }
       })
-      .catch(() => {})
+      .catch((err) => { console.error('Failed to load driver jobs:', err) })
     return () => { cancelled = true }
   }, [driverId])
 
