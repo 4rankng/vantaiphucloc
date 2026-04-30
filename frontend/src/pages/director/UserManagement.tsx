@@ -79,7 +79,8 @@ export function UserManagement() {
   const fetchUsers = useCallback(async () => {
     try {
       const res = await api.get('/users')
-      const list = (res.data as Record<string, unknown>[]).map(toCamelCase)
+      const items = (res.data as { items: Record<string, unknown>[] }).items ?? res.data
+      const list = (items as Record<string, unknown>[]).map(toCamelCase)
       setUsers(list.filter(u => u.isActive))
     } catch {
       toast.error('Lỗi', 'Không thể tải danh sách tài khoản')
