@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { Plus, Pencil, Trash2, Building2, UserCircle } from 'lucide-react'
+import { Plus, Pencil, Trash2, Building2, UserCircle, Truck } from 'lucide-react'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
@@ -8,10 +8,12 @@ import { Label } from '@/components/ui'
 import { InfoRow } from '@/components/shared/InfoRow'
 import {
   useClients, useCreateClient, useUpdateClient, useDeleteClient,
+  useVendors, useCreateVendor, useUpdateVendor, useDeleteVendor,
 } from '@/hooks/use-queries'
 import type { Client, ClientType } from '@/data/domain'
+import type { Vendor } from '@/services/api/vendors.api'
 
-// ─── Clients tab ─────────────────────────────────────────────────────────────
+// ─── Khách hàng tab ───────────────────────────────────────────────────────────
 
 const EMPTY_CLIENT = {
   name: '', type: 'company' as ClientType, taxCode: '', address: '', phone: '', contactPerson: '',
@@ -57,10 +59,7 @@ function ClientsTab() {
 
   const handleDelete = useCallback((id: number) => {
     deleteClient.mutate(id, {
-      onSuccess: () => {
-        setDeleteConfirm(null)
-        setSelectedClient(null)
-      },
+      onSuccess: () => { setDeleteConfirm(null); setSelectedClient(null) },
     })
   }, [deleteClient])
 
@@ -110,12 +109,10 @@ function ClientsTab() {
         ))}
       </div>
 
-      {/* Client Detail Dialog */}
+      {/* Detail dialog */}
       <Dialog open={!!selectedClient} onOpenChange={() => setSelectedClient(null)}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{selectedClient?.name}</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>{selectedClient?.name}</DialogTitle></DialogHeader>
           {selectedClient && (
             <div className="space-y-1">
               <InfoRow icon={selectedClient.type === 'company' ? Building2 : UserCircle} label="Loại" value={selectedClient.type === 'company' ? 'Công ty' : 'Cá nhân'} />
@@ -136,12 +133,10 @@ function ClientsTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Create/Edit Dialog */}
+      {/* Create/Edit dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editing ? 'Sửa khách hàng' : 'Thêm khách hàng'}</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>{editing ? 'Sửa khách hàng' : 'Thêm khách hàng'}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tên</Label>
@@ -190,7 +185,7 @@ function ClientsTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
+      {/* Delete confirm */}
       <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Xoá khách hàng?</DialogTitle></DialogHeader>
@@ -207,12 +202,7 @@ function ClientsTab() {
   )
 }
 
-// ─── Page export ──────────────────────────────────────────────────────────────
-
-export function ClientsAndVendors() {
-  return <ClientsTab />
-}
-
+// ─── Nhà thầu tab ─────────────────────────────────────────────────────────────
 
 function VendorsTab() {
   const { data: vendors = [], isLoading: loading } = useVendors()
@@ -250,10 +240,7 @@ function VendorsTab() {
 
   const handleDelete = useCallback((id: number) => {
     deleteVendor.mutate(id, {
-      onSuccess: () => {
-        setDeleteConfirm(null)
-        setSelectedVendor(null)
-      },
+      onSuccess: () => { setDeleteConfirm(null); setSelectedVendor(null) },
     })
   }, [deleteVendor])
 
@@ -286,20 +273,16 @@ function VendorsTab() {
               <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--theme-bg-tertiary)' }}>
                 <Truck className="h-4 w-4" style={{ color: 'var(--theme-text-muted)' }} />
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{vendor.name}</p>
-              </div>
+              <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{vendor.name}</p>
             </div>
           </button>
         ))}
       </div>
 
-      {/* Vendor Detail Dialog */}
+      {/* Detail dialog */}
       <Dialog open={!!selectedVendor} onOpenChange={() => setSelectedVendor(null)}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{selectedVendor?.name}</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>{selectedVendor?.name}</DialogTitle></DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteConfirm(selectedVendor!.id)} className="flex-1" style={{ color: 'var(--theme-status-error)' }}>
               <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Xoá
@@ -311,17 +294,13 @@ function VendorsTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Create/Edit Dialog */}
+      {/* Create/Edit dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editing ? 'Sửa nhà thầu' : 'Thêm nhà thầu'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tên nhà thầu</Label>
-              <Input value={name} onChange={e => setName(e.target.value)} placeholder="Tên nhà thầu" className="text-sm" />
-            </div>
+          <DialogHeader><DialogTitle>{editing ? 'Sửa nhà thầu' : 'Thêm nhà thầu'}</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tên nhà thầu</Label>
+            <Input value={name} onChange={e => setName(e.target.value)} placeholder="Tên nhà thầu" className="text-sm" autoFocus />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} className="flex-1">Huỷ</Button>
@@ -332,7 +311,7 @@ function VendorsTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
+      {/* Delete confirm */}
       <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Xoá nhà thầu?</DialogTitle></DialogHeader>
@@ -349,7 +328,7 @@ function VendorsTab() {
   )
 }
 
-// ─── Combined page ────────────────────────────────────────────────────────────
+// ─── Đối tác page ─────────────────────────────────────────────────────────────
 
 type Tab = 'clients' | 'vendors'
 
@@ -358,7 +337,6 @@ export function ClientsAndVendors() {
 
   return (
     <div>
-      {/* Tab switcher */}
       <div className="flex gap-1 mb-4 p-1 rounded-2xl" style={{ background: 'var(--theme-bg-tertiary)' }}>
         {([
           { key: 'clients', label: 'Khách hàng' },
@@ -367,7 +345,7 @@ export function ClientsAndVendors() {
           <button
             key={key}
             onClick={() => setTab(key)}
-            className="flex-1 py-2 rounded-xl text-sm font-semibold transition-all"
+            className="flex-1 py-2 rounded-xl text-sm font-semibold transition-all touch-manipulation"
             style={{
               background: tab === key ? 'var(--theme-bg-primary)' : 'transparent',
               color: tab === key ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)',
