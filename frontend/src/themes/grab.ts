@@ -40,13 +40,13 @@ export const grabTheme: ThemeDefinition = {
     statusInfoLight: '#E3F2FD',
     statusInfoText: '#0D47A1',
 
-    sidebar: '#1C1C1C',
-    sidebarBorder: 'rgba(255, 255, 255, 0.06)',
+    sidebar: '#0a2e1a',
+    sidebarBorder: 'rgba(255, 255, 255, 0.08)',
     sidebarText: 'rgba(255, 255, 255, 0.55)',
     sidebarTextMuted: 'rgba(255, 255, 255, 0.25)',
     sidebarActive: 'rgba(0, 177, 79, 0.15)',
     sidebarActiveText: '#00963E',
-    sidebarHover: 'rgba(255, 255, 255, 0.04)',
+    sidebarHover: 'rgba(255, 255, 255, 0.06)',
 
     bottomNav: 'rgba(255, 255, 255, 0.96)',
     bottomNavBorder: 'rgba(0, 0, 0, 0.06)',
