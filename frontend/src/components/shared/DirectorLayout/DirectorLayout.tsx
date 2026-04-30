@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
 import { AppTopBar } from '@/components/shared/AppTopBar'
 import { UserDropdown } from '@/components/shared/ProfileDialog'
+import { DesktopShell, DIRECTOR_NAV } from '@/components/shared/DesktopShell'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Role } from '@/data/domain'
 
@@ -12,6 +14,7 @@ export function DirectorLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const isMobile = useIsMobile()
 
   if (!user || !ALLOWED_ROLES.includes(user.role)) {
     return <Navigate to="/" replace />
@@ -24,6 +27,14 @@ export function DirectorLayout() {
   else if (location.pathname === '/director/notifications') title = 'Thông báo'
   else if (location.pathname.startsWith('/director/driver-jobs/')) title = 'Tài xế'
   else if (location.pathname.startsWith('/director/client-jobs/')) title = 'Khách hàng'
+
+  if (!isMobile) {
+    return (
+      <DesktopShell navItems={DIRECTOR_NAV} roleLabel="Giám đốc">
+        <Outlet />
+      </DesktopShell>
+    )
+  }
 
   return (
     <div className="min-h-[100dvh]" style={{ background: 'var(--theme-bg-primary)' }}>

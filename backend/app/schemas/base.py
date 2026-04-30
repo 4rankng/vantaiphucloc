@@ -1,3 +1,4 @@
+import re
 from typing import Generic, TypeVar
 
 from pydantic import BaseModel, field_validator
@@ -45,9 +46,11 @@ class TokenResponse(BaseModel):
 
 class UserOut(BaseModel):
     id: int
-    phone: str
+    phone: str | None = None
     email: str | None = None
     username: str
+    full_name: str | None = None
+    cccd: str | None = None
     role: str
     vendor: str | None = None
     tractor_plate: str | None = None
@@ -76,22 +79,42 @@ class MessageResponse(BaseModel):
 
 # User CRUD
 class UserCreate(BaseModel):
-    phone: str
+    phone: str | None = None
     email: str | None = None
     username: str
     password: str
     role: str = "driver"
+    full_name: str | None = None
+    cccd: str | None = None
+    vendor: str | None = None
     tractor_plate: str | None = None
+
+    @field_validator("cccd")
+    @classmethod
+    def validate_cccd(cls, v: str | None) -> str | None:
+        if v is not None and not re.match(r"^\d{12}$", v):
+            raise ValueError("CCCD must be exactly 12 digits")
+        return v
 
 
 class UserUpdate(BaseModel):
     phone: str | None = None
     email: str | None = None
     username: str | None = None
+    full_name: str | None = None
+    cccd: str | None = None
+    vendor: str | None = None
     role: str | None = None
     password: str | None = None
     tractor_plate: str | None = None
     is_active: bool | None = None
+
+    @field_validator("cccd")
+    @classmethod
+    def validate_cccd(cls, v: str | None) -> str | None:
+        if v is not None and not re.match(r"^\d{12}$", v):
+            raise ValueError("CCCD must be exactly 12 digits")
+        return v
 
 
 class ChangePassword(BaseModel):

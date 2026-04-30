@@ -51,18 +51,28 @@ async def create_user(
     current_user: User = Depends(require_roles("director", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
-    # Check phone uniqueness
-    existing = await db.execute(select(User).where(User.phone == body.phone))
-    if existing.scalar_one_or_none():
-        raise HTTPException(status_code=409, detail="Phone number already registered")
+    # Check phone uniqueness (only if phone provided)
+    if body.phone:
+        existing = await db.execute(select(User).where(User.phone == body.phone))
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail="Phone number already registered")
+
+    # Check CCCD uniqueness (only if CCCD provided)
+    if body.cccd:
+        existing_cccd = await db.execute(select(User).where(User.cccd == body.cccd))
+        if existing_cccd.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail="CCCD already registered")
 
     user = User(
         phone=body.phone,
         email=body.email,
         username=body.username,
+        full_name=body.full_name,
+        cccd=body.cccd,
         hashed_password=hash_password(body.password),
         role=body.role,
         is_active=True,
+        vendor=body.vendor,
         tractor_plate=body.tractor_plate,
     )
     db.add(user)
@@ -84,6 +94,22 @@ async def update_user(
         raise HTTPException(status_code=404, detail="User not found")
 
     update_data = body.model_dump(exclude_unset=True)
+
+    # Validate phone uniqueness if being updated
+    if "phone" in update_data and update_data["phone"]:
+        existing = await db.execute(
+            select(User).where(User.phone == update_data["phone"], User.id != user_id)
+        )
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail="Phone number already registered")
+
+    # Validate CCCD uniqueness if being updated
+    if "cccd" in update_data and update_data["cccd"]:
+        existing_cccd = await db.execute(
+            select(User).where(User.cccd == update_data["cccd"], User.id != user_id)
+        )
+        if existing_cccd.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail="CCCD already registered")
 
     # If password is being updated, hash it
     if "password" in update_data and update_data["password"]:

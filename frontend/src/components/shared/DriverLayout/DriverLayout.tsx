@@ -2,14 +2,11 @@ import { useState } from 'react'
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
 import { AppTopBar } from '@/components/shared/AppTopBar'
 import { UserDropdown } from '@/components/shared/ProfileDialog'
+import { DesktopShell, DRIVER_NAV } from '@/components/shared/DesktopShell'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Role } from '@/data/domain'
 
-/**
- * DriverLayout wraps all driver pages.
- * - Home (/driver): shows "home" variant top bar
- * - Sub-pages: shows "page" variant with back + title
- */
 const TITLES: Record<string, string> = {
   '/driver/work-orders/new': 'Tạo chuyến',
   '/driver/history': 'Lịch sử',
@@ -24,6 +21,7 @@ export function DriverLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const isMobile = useIsMobile()
 
   if (!user || !ALLOWED_ROLES.includes(user.role)) {
     return <Navigate to="/" replace />
@@ -31,10 +29,17 @@ export function DriverLayout() {
 
   const isHome = location.pathname === '/driver'
 
-  // Determine title for sub-pages
   let title = TITLES[location.pathname] ?? ''
   if (location.pathname.startsWith('/driver/job/')) {
     title = 'Chi tiết chuyến'
+  }
+
+  if (!isMobile) {
+    return (
+      <DesktopShell navItems={DRIVER_NAV} roleLabel="Tài xế">
+        <Outlet />
+      </DesktopShell>
+    )
   }
 
   if (isHome) {
