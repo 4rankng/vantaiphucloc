@@ -49,8 +49,7 @@ class Settings(BaseSettings):
         if self.is_production and self.SECRET_KEY == "change-me-to-a-random-secret-key":
             raise ValueError("SECRET_KEY must be changed from default in production")
 
-    class Config:
-        env_file = ".env"
+    model_config = {"env_file": ".env", "extra": "ignore"}
 
 
 settings = Settings()

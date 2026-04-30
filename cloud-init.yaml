@@ -1,0 +1,209 @@
+#cloud-config
+#
+# Vantaiphucloc — DigitalOcean Droplet one-time provisioning
+#
+# All services (PostgreSQL, Redis, backend, worker, frontend) run as Docker containers.
+# No source code on the droplet — only pre-built images from Docker Hub.
+#
+# Usage:
+#   doctl compute droplet create vantaiphucloc \
+#     --image ubuntu-24-04-x64 \
+#     --size s-2vcpu-4gb \
+#     --user-data-file cloud-init.yaml \
+#     --enable-monitoring \
+#     --ssh-keys <your-key-id>
+#
+# After the Droplet boots:
+#   1. Point DNS  phucloc.tingting.vip → Droplet IP
+#   2. Wait for cloud-init to finish: cloud-init status --wait
+#   3. sudo certbot --nginx -d phucloc.tingting.vip
+#   4. cd /opt/vantaiphucloc && docker compose -f deploy/docker-compose.prod.yml exec backend alembic upgrade head
+#   5. docker compose -f deploy/docker-compose.prod.yml exec backend python -m app.seed
+#
+# Debug: cat /var/log/cloud-init-output.log
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - nginx
+  - certbot
+  - python3-certbot-nginx
+  - ufw
+  - curl
+  - ca-certificates
+  - gnupg
+
+write_files:
+  # Nginx reverse proxy
+  - path: /etc/nginx/sites-available/vantaiphucloc
+    content: |
+      server {
+          listen 80;
+          listen [::]:80;
+          server_name phucloc.tingting.vip;
+
+          location /.well-known/acme-challenge/ {
+              root /var/www/certbot;
+          }
+
+          location / {
+              return 301 https://$host$request_uri;
+          }
+      }
+
+      server {
+          listen 443 ssl http2;
+          listen [::]:443 ssl http2;
+          server_name phucloc.tingting.vip;
+
+          add_header X-Frame-Options "SAMEORIGIN" always;
+          add_header X-Content-Type-Options "nosniff" always;
+          add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+          location /api/ {
+              proxy_pass         http://127.0.0.1:8000;
+              proxy_http_version 1.1;
+              proxy_set_header   Host              $host;
+              proxy_set_header   X-Real-IP         $remote_addr;
+              proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+              proxy_set_header   X-Forwarded-Proto $scheme;
+              proxy_read_timeout 60s;
+              proxy_connect_timeout 10s;
+          }
+
+          location / {
+              proxy_pass         http://127.0.0.1:3000;
+              proxy_http_version 1.1;
+              proxy_set_header   Host              $host;
+              proxy_set_header   X-Real-IP         $remote_addr;
+              proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+              proxy_set_header   X-Forwarded-Proto $scheme;
+          }
+      }
+
+  # Backend .env — update SECRET_KEY before going live
+  - path: /opt/vantaiphucloc/backend/.env
+    owner: root:root
+    permissions: "0640"
+    content: |
+      DATABASE_URL=postgresql://vantaiphucloc:vantaiphucloc@postgres:5432/vantaihanghoa
+      SECRET_KEY=CHANGE-ME-run-python3--c-"import-secrets;-print(secrets.token_urlsafe(32))"
+      ALGORITHM=HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES=1440
+      REFRESH_TOKEN_EXPIRE_DAYS=7
+      CORS_ORIGINS=https://phucloc.tingting.vip
+      ENVIRONMENT=production
+      REDIS_URL=redis://redis:6379/0
+
+  # Production docker-compose
+  - path: /opt/vantaiphucloc/deploy/docker-compose.prod.yml
+    content: |
+      services:
+        postgres:
+          image: postgres:16-alpine
+          restart: unless-stopped
+          environment:
+            POSTGRES_USER: vantaiphucloc
+            POSTGRES_PASSWORD: vantaiphucloc
+            POSTGRES_DB: vantaihanghoa
+          volumes:
+            - postgres_data:/var/lib/postgresql/data
+          expose:
+            - "5432"
+          healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U vantaiphucloc -d vantaihanghoa"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+        redis:
+          image: redis:7-alpine
+          restart: unless-stopped
+          command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru --appendonly yes
+          expose:
+            - "6379"
+          volumes:
+            - redis_data:/data
+          healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+        backend:
+          image: franknguyenvd/phucloc-backend:latest
+          restart: unless-stopped
+          env_file:
+            - /opt/vantaiphucloc/backend/.env
+          environment:
+            - PYTHONPATH=/app
+            - REDIS_URL=redis://redis:6379/0
+            - DATABASE_URL=postgresql://vantaiphucloc:vantaiphucloc@postgres:5432/vantaihanghoa
+          expose:
+            - "8000"
+          ports:
+            - "127.0.0.1:8000:8000"
+          depends_on:
+            postgres:
+              condition: service_healthy
+            redis:
+              condition: service_healthy
+
+        worker:
+          image: franknguyenvd/phucloc-backend:latest
+          restart: unless-stopped
+          env_file:
+            - /opt/vantaiphucloc/backend/.env
+          environment:
+            - PYTHONPATH=/app
+            - REDIS_URL=redis://redis:6379/0
+            - DATABASE_URL=postgresql://vantaiphucloc:vantaiphucloc@postgres:5432/vantaihanghoa
+          command: ["arq", "app.workers.worker.WorkerSettings"]
+          depends_on:
+            postgres:
+              condition: service_healthy
+            redis:
+              condition: service_healthy
+
+        frontend:
+          image: franknguyenvd/phucloc-frontend:latest
+          restart: unless-stopped
+          expose:
+            - "80"
+          ports:
+            - "127.0.0.1:3000:80"
+
+      volumes:
+        postgres_data:
+        redis_data:
+
+runcmd:
+  # 1. Install Docker
+  - curl -fsSL https://get.docker.com | sh
+
+  # 2. Create directory structure
+  - mkdir -p /var/www/certbot
+
+  # 3. Configure Nginx
+  - rm -f /etc/nginx/sites-enabled/default
+  - ln -sf /etc/nginx/sites-available/vantaiphucloc /etc/nginx/sites-enabled/
+  - nginx -t && systemctl enable nginx && systemctl restart nginx
+
+  # 4. Firewall — only SSH, HTTP, HTTPS
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow OpenSSH
+  - ufw allow "Nginx Full"
+  - ufw --force enable
+
+  # 5. Pull images and start services
+  - cd /opt/vantaiphucloc && docker compose -f deploy/docker-compose.prod.yml pull
+  - cd /opt/vantaiphucloc && docker compose -f deploy/docker-compose.prod.yml up -d
+
+  # 6. Done
+  - echo "=== cloud-init complete ==="
+  - echo "Next: point DNS phucloc.tingting.vip → this droplet IP"
+  - echo "Then: sudo certbot --nginx -d phucloc.tingting.vip"
+  - echo "Then: cd /opt/vantaiphucloc && docker compose -f deploy/docker-compose.prod.yml exec backend alembic upgrade head"
+  - echo "Then: docker compose -f deploy/docker-compose.prod.yml exec backend python -m app.seed"
