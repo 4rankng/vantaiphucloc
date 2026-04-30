@@ -28,7 +28,7 @@ export function Profile() {
             }
           }
         })
-        .catch(() => {})
+        .catch((err) => { console.error('Failed to load driver data:', err) })
     }
   }, [user])
 

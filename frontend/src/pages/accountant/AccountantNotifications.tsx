@@ -8,7 +8,7 @@ export function AccountantNotifications() {
   useEffect(() => {
     apiClient.getNotifications().then(res => {
       if (res.success) setNotifications(res.data as AppNotification[])
-    }).catch(() => {})
+    }).catch((err) => { console.error('Failed to load notifications:', err) })
   }, [])
 
   return <NotificationList notifications={notifications} />

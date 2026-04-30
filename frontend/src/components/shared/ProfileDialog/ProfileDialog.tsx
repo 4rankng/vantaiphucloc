@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { api } from '@/services/api/client'
+import { useToast } from '@/components/atoms/Toast'
 import { KeyRound, LogOut, Bell, BellOff } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog/Dialog'
 import { Button } from '@/components/ui/Button/Button'
@@ -8,15 +10,38 @@ import { Label } from '@/components/ui/Label/Label'
 import { subscribeToPush, unsubscribeFromPush, isPushSupported, getPushSubscriptionStatus } from '@/lib/push-subscription'
 
 export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const toast = useToast()
   const [currentPw, setCurrentPw] = useState('')
   const [newPw, setNewPw] = useState('')
   const [confirmPw, setConfirmPw] = useState('')
+  const [saving, setSaving] = useState(false)
 
   const handleClose = () => {
     setCurrentPw('')
     setNewPw('')
     setConfirmPw('')
     onClose()
+  }
+
+  const handleSubmit = async () => {
+    if (newPw !== confirmPw) {
+      toast.error('Lỗi', 'Mật khẩu xác nhận không khớp')
+      return
+    }
+    setSaving(true)
+    try {
+      await api.post('/users/change-password', {
+        current_password: currentPw,
+        new_password: newPw,
+      })
+      toast.success('Đã đổi mật khẩu')
+      handleClose()
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Lỗi không xác định'
+      toast.error('Lỗi', detail)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -39,10 +64,10 @@ export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () =>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={handleClose} className="flex-1">Huỷ</Button>
-          <Button onClick={handleClose} disabled={!currentPw || !newPw || newPw !== confirmPw} className="flex-1"
+          <Button onClick={handleSubmit} disabled={!currentPw || !newPw || newPw !== confirmPw || saving} className="flex-1"
             style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
           >
-            Xác nhận
+            {saving ? 'Đang lưu...' : 'Xác nhận'}
           </Button>
         </DialogFooter>
       </DialogContent>

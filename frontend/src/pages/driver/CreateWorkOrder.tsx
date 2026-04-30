@@ -54,7 +54,7 @@ export function CreateWorkOrder() {
           if (rRes.success) setRoutes(rRes.data)
         }
       })
-      .catch(() => {})
+      .catch((err) => { console.error('Failed to load clients/routes:', err) })
     return () => { cancelled = true }
   }, [])
 
@@ -98,7 +98,7 @@ export function CreateWorkOrder() {
           if (d) setDriverPlate(d.tractorPlate ?? '')
         }
       })
-      .catch(() => {})
+      .catch((err) => { console.error('Failed to load driver info:', err) })
   }, [user])
 
   const handleSubmit = useCallback(async () => {

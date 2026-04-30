@@ -99,7 +99,7 @@ export function Sidebar({ items, title, basePath }: SidebarProps) {
           </div>
       <div className="min-w-0">
           <p className="text-sm font-medium truncate" style={{ color: 'var(--theme-sidebar-active-text)', opacity: 0.8 }}>{roleLabel}</p>
-          <p className="text-xs" style={{ color: 'var(--theme-sidebar-text-muted)' }}>Phiên bản demo</p>
+          <p className="text-xs" style={{ color: 'var(--theme-sidebar-text-muted)' }}>Vận Tái Phúc Lộc</p>
         </div>
         </button>
         <button
@@ -131,16 +131,12 @@ export function Sidebar({ items, title, basePath }: SidebarProps) {
             </div>
             <div className="space-y-3 text-sm">
               <div className="flex justify-between py-2" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
-                <span className="text-[var(--theme-text-muted)]">Email</span>
-                <span className="text-[var(--theme-text-primary)] font-medium">{role}@ttransport.vn</span>
-              </div>
-              <div className="flex justify-between py-2" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
-                <span className="text-[var(--theme-text-muted)]">Trạng thái</span>
-                <span className="text-emerald-600 font-medium">● Hoạt động</span>
+                <span className="text-[var(--theme-text-muted)]">Vai trò</span>
+                <span className="text-[var(--theme-text-primary)] font-medium">{roleLabel}</span>
               </div>
               <div className="flex justify-between py-2">
-                <span className="text-[var(--theme-text-muted)]">Phiên bản</span>
-                <span className="text-[var(--theme-text-primary)] font-medium">v1.0.0</span>
+                <span className="text-[var(--theme-text-muted)]">Trạng thái</span>
+                <span className="text-emerald-600 font-medium">● Hoạt động</span>
               </div>
             </div>
           </div>
