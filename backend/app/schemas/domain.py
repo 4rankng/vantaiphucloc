@@ -379,7 +379,7 @@ class DriverCreate(BaseModel):
 class DriverOut(BaseModel):
     id: int
     username: str
-    phone: str
+    phone: str | None = None
     tractor_plate: str | None = None
     vendor: str | None = None
     created_at: datetime

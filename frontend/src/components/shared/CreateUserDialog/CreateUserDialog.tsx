@@ -89,55 +89,70 @@ export function CreateUserDialog({
           <DialogTitle>Tạo tài khoản</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="space-y-2">
-            <RequiredLabel>Tên đăng nhập</RequiredLabel>
-            <Input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} placeholder="nguyenvana" className="text-sm" />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Họ và tên</Label>
-            <Input value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} placeholder="Nguyễn Văn A" className="text-sm" />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số điện thoại</Label>
-            <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="0901 234 567" className="text-sm" />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Căn cước công dân</Label>
-            <Input value={form.cccd} onChange={e => setForm(f => ({ ...f, cccd: e.target.value }))} placeholder="001234567890" className="text-sm font-mono" />
-          </div>
-          <div className="space-y-2">
-            <RequiredLabel>Vai trò</RequiredLabel>
-            <InlineSelect
-              options={CREATEABLE_ROLES}
-              value={form.role}
-              onChange={v => {
-                const newRole = v as Role
-                setForm(f => ({
-                  ...f,
-                  role: newRole,
-                  vendor: (newRole === 'director' || newRole === 'accountant') ? '' : f.vendor,
-                }))
-              }}
-              placeholder="Chọn vai trò"
-            />
-          </div>
-          {form.role === 'driver' && (
+          {/* Row 1: Username + Full name */}
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <RequiredLabel>Nhà thầu</RequiredLabel>
+              <RequiredLabel>Tên đăng nhập</RequiredLabel>
+              <Input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} placeholder="nguyenvana" className="text-sm" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Họ và tên</Label>
+              <Input value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} placeholder="Nguyễn Văn A" className="text-sm" />
+            </div>
+          </div>
+
+          {/* Row 2: Phone + CCCD */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số điện thoại</Label>
+              <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="0901 234 567" className="text-sm" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Căn cước công dân</Label>
+              <Input value={form.cccd} onChange={e => setForm(f => ({ ...f, cccd: e.target.value }))} placeholder="001234567890" className="text-sm font-mono" />
+            </div>
+          </div>
+
+          {/* Row 3: Role + Vendor/Tractor plate (driver only) */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <RequiredLabel>Vai trò</RequiredLabel>
               <InlineSelect
-                options={(vendors ?? []).map(v => ({ value: String(v.id), label: v.name }))}
-                value={form.vendor}
-                onChange={v => setForm(f => ({ ...f, vendor: v }))}
-                placeholder="Chọn nhà thầu"
+                options={CREATEABLE_ROLES}
+                value={form.role}
+                onChange={v => {
+                  const newRole = v as Role
+                  setForm(f => ({
+                    ...f,
+                    role: newRole,
+                    vendor: (newRole === 'director' || newRole === 'accountant') ? '' : f.vendor,
+                  }))
+                }}
+                placeholder="Chọn vai trò"
               />
             </div>
-          )}
+            {form.role === 'driver' ? (
+              <div className="space-y-2">
+                <RequiredLabel>Nhà thầu</RequiredLabel>
+                <InlineSelect
+                  options={(vendors ?? []).map(v => ({ value: String(v.id), label: v.name }))}
+                  value={form.vendor}
+                  onChange={v => setForm(f => ({ ...f, vendor: v }))}
+                  placeholder="Chọn nhà thầu"
+                />
+              </div>
+            ) : <div />}
+          </div>
+
+          {/* Tractor plate — driver only, full width */}
           {form.role === 'driver' && (
             <div className="space-y-2">
               <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Biển số đầu kéo</Label>
               <Input value={form.tractorPlate} onChange={e => setForm(f => ({ ...f, tractorPlate: e.target.value }))} placeholder="15C-123.45" className="text-sm font-mono" />
             </div>
           )}
+
+          {/* Password — full width */}
           <div className="space-y-2">
             <RequiredLabel>Mật khẩu</RequiredLabel>
             <Input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" className="text-sm" />
