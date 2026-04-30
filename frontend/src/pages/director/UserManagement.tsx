@@ -5,11 +5,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
+import { InlineSelect } from '@/components/shared/InlineSelect'
 import { useToast } from '@/components/atoms/Toast'
 import { FilterPills } from '@/components/shared/FilterPills'
 import { api } from '@/services/api/client'
 import type { Role } from '@/data/domain'
 import { ROLE_LABELS } from '@/data/domain'
+import { useVendors } from '@/hooks/use-queries'
 
 interface UserAccount {
   id: string
@@ -40,6 +42,14 @@ const ROLE_COLORS: Record<Role, { bg: string; color: string }> = {
 
 const CREATABLE_ROLES: Role[] = ['driver', 'accountant', 'director']
 
+function RequiredLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+      {children} <span className="text-xs" style={{ color: 'var(--theme-status-error)' }}>*</span>
+    </Label>
+  )
+}
+
 interface UserForm {
   username: string
   fullName: string
@@ -48,9 +58,10 @@ interface UserForm {
   role: Role
   tractorPlate: string
   password: string
+  vendor: string
 }
 
-const EMPTY_FORM: UserForm = { username: '', fullName: '', phone: '', cccd: '', role: 'driver', tractorPlate: '', password: '' }
+const EMPTY_FORM: UserForm = { username: '', fullName: '', phone: '', cccd: '', role: 'driver', tractorPlate: '', password: '', vendor: '' }
 
 function toCamelCase(obj: Record<string, unknown>): UserAccount {
   return {
@@ -72,6 +83,7 @@ export function UserManagement() {
   const [users, setUsers] = useState<UserAccount[]>([])
   const [loading, setLoading] = useState(true)
   const [filterRole, setFilterRole] = useState<Role | 'ALL'>('ALL')
+  const { data: vendors } = useVendors()
 
   const [createOpen, setCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState<UserForm>(EMPTY_FORM)
@@ -81,6 +93,12 @@ export function UserManagement() {
   const [editForm, setEditForm] = useState<UserForm>(EMPTY_FORM)
 
   const [deleteId, setDeleteId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (createForm.vendor === '' && vendors && vendors.length > 0 && createForm.role === 'driver') {
+      setCreateForm(prev => ({ ...prev, vendor: String(vendors[0].id) }))
+    }
+  }, [vendors, createForm.vendor, createForm.role])
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -114,6 +132,7 @@ export function UserManagement() {
     if (!createForm.username.trim() || !createForm.password.trim()) return
     setSaving(true)
     try {
+      const vendorObj = vendors?.find(v => String(v.id) === createForm.vendor)
       await api.post('/users', {
         username: createForm.username.trim(),
         full_name: createForm.fullName.trim() || undefined,
@@ -121,6 +140,7 @@ export function UserManagement() {
         cccd: createForm.cccd.trim() || undefined,
         role: createForm.role,
         password: createForm.password,
+        vendor: createForm.role === 'driver' ? (vendorObj?.name ?? 'Phúc Lộc') : undefined,
         tractor_plate: createForm.role === 'driver' ? createForm.tractorPlate.trim() : undefined,
       })
       toast.success('Đã tạo tài khoản')
@@ -133,7 +153,7 @@ export function UserManagement() {
     } finally {
       setSaving(false)
     }
-  }, [createForm, toast, fetchUsers])
+  }, [createForm, toast, fetchUsers, vendors])
 
   const openDetail = useCallback((user: UserAccount) => {
     setDetailUser(user)
@@ -145,6 +165,7 @@ export function UserManagement() {
       role: user.role,
       tractorPlate: user.tractorPlate ?? '',
       password: '',
+      vendor: '',
     })
   }, [])
 
@@ -152,6 +173,7 @@ export function UserManagement() {
     if (!detailUser || !editForm.username.trim()) return
     setSaving(true)
     try {
+      const vendorObj = vendors?.find(v => String(v.id) === editForm.vendor)
       const payload: Record<string, unknown> = {
         username: editForm.username.trim(),
         full_name: editForm.fullName.trim() || undefined,
@@ -159,8 +181,13 @@ export function UserManagement() {
         cccd: editForm.cccd.trim() || undefined,
         role: editForm.role,
       }
-      if (editForm.role === 'driver' && editForm.tractorPlate.trim()) {
-        payload.tractor_plate = editForm.tractorPlate.trim()
+      if (editForm.role === 'driver') {
+        if (editForm.tractorPlate.trim()) {
+          payload.tractor_plate = editForm.tractorPlate.trim()
+        }
+        if (vendorObj) {
+          payload.vendor = vendorObj.name
+        }
       }
       if (editForm.password.trim()) {
         payload.password = editForm.password.trim()
@@ -174,7 +201,7 @@ export function UserManagement() {
     } finally {
       setSaving(false)
     }
-  }, [detailUser, editForm, toast, fetchUsers])
+  }, [detailUser, editForm, toast, fetchUsers, vendors])
 
   const handleDelete = useCallback(async () => {
     if (!deleteId) return
@@ -279,7 +306,7 @@ export function UserManagement() {
           <DialogHeader><DialogTitle>Thêm tài khoản</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Vai trò</Label>
+              <RequiredLabel>Vai trò</RequiredLabel>
               <div className="grid grid-cols-3 gap-2">
                 {CREATABLE_ROLES.map(r => (
                   <button
@@ -297,7 +324,7 @@ export function UserManagement() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tên đăng nhập</Label>
+              <RequiredLabel>Tên đăng nhập</RequiredLabel>
               <Input value={createForm.username} onChange={e => updateCreateField('username', e.target.value)} placeholder="nguyenvana" className="text-sm" />
             </div>
             <div className="space-y-2">
@@ -305,13 +332,24 @@ export function UserManagement() {
               <Input value={createForm.fullName} onChange={e => updateCreateField('fullName', e.target.value)} placeholder="Nguyễn Văn A" className="text-sm" />
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số điện thoại (không bắt buộc)</Label>
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số điện thoại</Label>
               <Input value={createForm.phone} onChange={e => updateCreateField('phone', e.target.value)} placeholder="0912-345-678" className="text-sm" />
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Căn cước công dân (không bắt buộc)</Label>
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Căn cước công dân</Label>
               <Input value={createForm.cccd} onChange={e => updateCreateField('cccd', e.target.value)} placeholder="001234567890" className="text-sm font-mono" />
             </div>
+            {createForm.role === 'driver' && (
+              <div className="space-y-2">
+                <RequiredLabel>Nhà thầu</RequiredLabel>
+                <InlineSelect
+                  options={(vendors ?? []).map(v => ({ value: String(v.id), label: v.name }))}
+                  value={createForm.vendor}
+                  onChange={v => updateCreateField('vendor', v)}
+                  placeholder="Chọn nhà thầu"
+                />
+              </div>
+            )}
             {createForm.role === 'driver' && (
               <div className="space-y-2">
                 <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Biển số đầu kéo</Label>
@@ -319,7 +357,7 @@ export function UserManagement() {
               </div>
             )}
             <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mật khẩu mặc định</Label>
+              <RequiredLabel>Mật khẩu mặc định</RequiredLabel>
               <Input type="password" value={createForm.password} onChange={e => updateCreateField('password', e.target.value)} placeholder="••••••••" className="text-sm" />
             </div>
           </div>
@@ -343,7 +381,7 @@ export function UserManagement() {
           {detailUser && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Vai trò</Label>
+                <RequiredLabel>Vai trò</RequiredLabel>
                 <div className="grid grid-cols-3 gap-2">
                   {CREATABLE_ROLES.map(r => (
                     <button
@@ -361,7 +399,7 @@ export function UserManagement() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tên đăng nhập</Label>
+                <RequiredLabel>Tên đăng nhập</RequiredLabel>
                 <Input value={editForm.username} onChange={e => updateEditField('username', e.target.value)} className="text-sm" />
               </div>
               <div className="space-y-2">
@@ -369,13 +407,24 @@ export function UserManagement() {
                 <Input value={editForm.fullName} onChange={e => updateEditField('fullName', e.target.value)} className="text-sm" placeholder="Nguyễn Văn A" />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số điện thoại (không bắt buộc)</Label>
+                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số điện thoại</Label>
                 <Input value={editForm.phone} onChange={e => updateEditField('phone', e.target.value)} className="text-sm" placeholder="0912-345-678" />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Căn cước công dân (không bắt buộc)</Label>
+                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Căn cước công dân</Label>
                 <Input value={editForm.cccd} onChange={e => updateEditField('cccd', e.target.value)} className="text-sm font-mono" placeholder="001234567890" />
               </div>
+              {editForm.role === 'driver' && (
+                <div className="space-y-2">
+                  <RequiredLabel>Nhà thầu</RequiredLabel>
+                  <InlineSelect
+                    options={(vendors ?? []).map(v => ({ value: String(v.id), label: v.name }))}
+                    value={editForm.vendor}
+                    onChange={v => updateEditField('vendor', v)}
+                    placeholder="Chọn nhà thầu"
+                  />
+                </div>
+              )}
               {editForm.role === 'driver' && (
                 <div className="space-y-2">
                   <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Biển số đầu kéo</Label>
