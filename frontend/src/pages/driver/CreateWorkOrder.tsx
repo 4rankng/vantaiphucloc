@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect'
-import { QuickCreateDialog } from '@/components/shared/QuickCreateDialog'
+import { CreateClientDialog } from '@/components/shared/CreateClientDialog'
 import { ContainerScanner } from '@/components/shared/ContainerScanner'
 import type { PhotoMeta } from '@/components/shared/ContainerScanner'
 import { apiClient } from '@/services/api'
@@ -349,14 +349,11 @@ export function CreateWorkOrder() {
         {submitting ? 'Đang gửi...' : isOnline ? 'Gửi chuyến' : 'Lưu offline'}
       </Button>
 
-      <QuickCreateDialog
+      <CreateClientDialog
         open={createClientOpen}
         onClose={() => setCreateClientOpen(false)}
-        title="Thêm khách hàng"
-        label="Tên khách hàng"
-        placeholder="Tên khách hàng"
-        onConfirm={async (name) => {
-          const res = await apiClient.createClient({ name, type: 'company', phone: '', taxCode: '', address: '', contactPerson: '' })
+        onConfirm={async (data) => {
+          const res = await apiClient.createClient({ ...data, outstandingDebt: 0 })
           if (res.success) {
             setClients(prev => [...prev, res.data])
             setClientId(String(res.data.id))

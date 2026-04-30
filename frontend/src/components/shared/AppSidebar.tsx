@@ -197,7 +197,6 @@ import {
 const ACCOUNTANT_MENU: MenuItem[] = [
   { title: 'Tổng quan', icon: Home, path: '/accountant', end: true, group: 'top' },
   { title: 'Thông báo', icon: BellIcon, path: '/accountant/notifications', group: 'top' },
-  { title: 'Tạo chuyến', icon: Plus, path: '/accountant/create-trip', group: 'hang-hoa' },
   { title: 'Chuyến', icon: Truck, path: '/accountant/trips', group: 'hang-hoa' },
   { title: 'Đối soát tài xế', icon: ClipboardList, path: '/accountant/work-orders', group: 'hang-hoa' },
   { title: 'Bảng giá', icon: Receipt, path: '/accountant/pricing', group: 'danh-muc' },
