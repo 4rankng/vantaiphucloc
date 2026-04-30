@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { Plus, Pencil, Trash2, Building2, UserCircle, Truck } from 'lucide-react'
+import { Plus, Pencil, Trash2, Building2, UserCircle } from 'lucide-react'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
@@ -8,10 +8,8 @@ import { Label } from '@/components/ui'
 import { InfoRow } from '@/components/shared/InfoRow'
 import {
   useClients, useCreateClient, useUpdateClient, useDeleteClient,
-  useVendors, useCreateVendor, useUpdateVendor, useDeleteVendor,
 } from '@/hooks/use-queries'
 import type { Client, ClientType } from '@/data/domain'
-import type { Vendor } from '@/services/api/vendors.api'
 
 // ─── Clients tab ─────────────────────────────────────────────────────────────
 
@@ -209,7 +207,12 @@ function ClientsTab() {
   )
 }
 
-// ─── Vendors tab ─────────────────────────────────────────────────────────────
+// ─── Page export ──────────────────────────────────────────────────────────────
+
+export function ClientsAndVendors() {
+  return <ClientsTab />
+}
+
 
 function VendorsTab() {
   const { data: vendors = [], isLoading: loading } = useVendors()
