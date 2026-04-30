@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { Plus, Building2, Route, Settings, Wallet, ChevronDown, Receipt } from 'lucide-react'
+import { Plus, Handshake, Route, Settings, Wallet, ChevronDown, Receipt } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { apiClient } from '@/services/api'
 import { formatCurrencyFull, type WorkOrder, type TripOrder } from '@/data/domain'
@@ -9,7 +9,7 @@ import { TripOrderCard } from '@/components/shared/TripOrderCard'
 const QUICK_ACTIONS = [
   { label: 'Tạo chuyến', icon: Plus, path: '/accountant/create-trip' },
   { label: 'Bảng giá', icon: Receipt, path: '/accountant/pricing' },
-  { label: 'Khách hàng', icon: Building2, path: '/accountant/clients' },
+  { label: 'Đối tác', icon: Handshake, path: '/accountant/partners' },
   { label: 'Cung đường', icon: Route, path: '/accountant/routes' },
   { label: 'Thiết lập', icon: Settings, path: '/accountant/salary-setup' },
 ] as const

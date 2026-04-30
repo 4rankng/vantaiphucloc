@@ -12,7 +12,7 @@ export interface NavItem {
 
 // ─── Accountant ────────────────────────────────────────────
 export const accountantNav: NavItem[] = [
-  { label: 'Khách hàng', icon: Users, path: '/accountant/clients' },
+  { label: 'Đối tác', icon: Users, path: '/accountant/partners' },
   { label: 'Cung đường', icon: Route, path: '/accountant/routes' },
   { label: 'Đơn giá', icon: CircleDollarSign, path: '/accountant/pricings' },
   { label: 'Số công', icon: Camera, path: '/accountant/work-orders' },
@@ -24,7 +24,7 @@ export const accountantNav: NavItem[] = [
 export const pageTitles: Record<string, string> = {
   '/director': 'Tổng quan',
   '/accountant': 'Tổng quan',
-  '/accountant/clients': 'Khách hàng',
+  '/accountant/partners': 'Đối tác',
   '/accountant/routes': 'Cung đường',
   '/accountant/pricings': 'Đơn giá',
   '/accountant/work-orders': 'Số công',
