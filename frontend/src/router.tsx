@@ -1,47 +1,22 @@
 /* eslint-disable react-refresh/only-export-components */
+// @refresh reset
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
+import { Suspense, type ComponentType } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Login } from '@/pages/Login'
 import { ScrollToTop } from '@/components/shared/ScrollToTop'
-
-// Layouts
-import { DriverLayout } from '@/components/shared/DriverLayout'
-import { AccountantLayout } from '@/components/shared/AccountantLayout'
-import { DirectorLayout } from '@/components/shared/DirectorLayout'
-
-// Driver pages
-import { DriverHome } from '@/pages/driver/DriverHome'
-import { CreateWorkOrder } from '@/pages/driver/CreateWorkOrder'
-import { DriverHistory } from '@/pages/driver/DriverHistory'
-import { DriverNotifications } from '@/pages/driver/DriverNotifications'
-import { JobDetail } from '@/pages/driver/JobDetail'
-import { Profile } from '@/pages/driver/Profile'
-
-// Accountant pages
-import { AccountantDashboard } from '@/pages/accountant/AccountantDashboard'
-import { ClientList } from '@/pages/accountant/ClientList'
-import { RouteList } from '@/pages/accountant/RouteList'
-import { WorkOrderList } from '@/pages/accountant/WorkOrderList'
-import { TripList } from '@/pages/accountant/TripList'
-import { TripDetail } from '@/pages/accountant/TripDetail'
-import { CreateTrip } from '@/pages/accountant/CreateTrip'
-import { SalarySetup } from '@/pages/accountant/SalarySetup'
-import { MatchJob } from '@/pages/accountant/MatchJob'
-import { MatchTrip } from '@/pages/accountant/MatchTrip'
-import { PricingList } from '@/pages/accountant/PricingList'
-
-// Director pages
-import { DirectorDashboard } from '@/pages/director/DirectorDashboard'
-import { UserManagement } from '@/pages/director/UserManagement'
-import { DirectorNotifications } from '@/pages/director/DirectorNotifications'
-import { DriverJobs } from '@/pages/director/DriverJobs'
-import { ClientJobs } from '@/pages/director/ClientJobs'
-
-// SuperAdmin pages
-import { SuperAdminApp } from '@/pages/superadmin/SuperAdminApp'
-
-// Error boundary
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
+import * as R from '@/routes'
+
+// ─── Shared components ────────────────────────────────────────────────────────
+
+function Lazy({ component: Component }: { component: ComponentType }) {
+  return (
+    <Suspense fallback={null}>
+      <Component />
+    </Suspense>
+  )
+}
 
 function AuthGuard() {
   const { user } = useAuth()
@@ -66,63 +41,71 @@ function RoleRedirect() {
   return <Navigate to={targets[user.role] ?? '/driver'} replace />
 }
 
-export const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <Login />,
-  },
-  {
-    element: <AuthGuard />,
-    children: [
-      {
-        index: true,
-        element: <RoleRedirect />,
-      },
-      // ─── Driver ────────────────────────────────────────────────
-      {
-        element: <DriverLayout />,
-        children: [
-          { path: 'driver', element: <ErrorBoundary component="DriverHome" level="page"><DriverHome /></ErrorBoundary> },
-          { path: 'driver/work-orders/new', element: <ErrorBoundary component="CreateWorkOrder" level="page"><CreateWorkOrder /></ErrorBoundary> },
-          { path: 'driver/history', element: <ErrorBoundary component="DriverHistory" level="page"><DriverHistory /></ErrorBoundary> },
-          { path: 'driver/notifications', element: <ErrorBoundary component="Notifications" level="page"><DriverNotifications /></ErrorBoundary> },
-          { path: 'driver/job/:jobId', element: <ErrorBoundary component="JobDetail" level="page"><JobDetail /></ErrorBoundary> },
-          { path: 'driver/profile', element: <ErrorBoundary component="Profile" level="page"><Profile /></ErrorBoundary> },
-        ],
-      },
-      // ─── Accountant ─────────────────────────────────────────────
-      {
-        element: <AccountantLayout />,
-        children: [
-          { path: 'accountant', element: <AccountantDashboard /> },
-          { path: 'accountant/clients', element: <ClientList /> },
-          { path: 'accountant/routes', element: <RouteList /> },
-          { path: 'accountant/work-orders', element: <WorkOrderList /> },
-          { path: 'accountant/trips', element: <TripList /> },
-          { path: 'accountant/trip/:tripId', element: <TripDetail /> },
-          { path: 'accountant/create-trip', element: <CreateTrip /> },
-          { path: 'accountant/salary-setup', element: <SalarySetup /> },
-          { path: 'accountant/pricing', element: <PricingList /> },
-          { path: 'accountant/match/:jobId', element: <MatchJob /> },
-          { path: 'accountant/match-trip/:tripId', element: <MatchTrip /> },
-        ],
-      },
-      // ─── Director ───────────────────────────────────────────────
-      {
-        element: <DirectorLayout />,
-        children: [
-          { path: 'director', element: <DirectorDashboard /> },
-          { path: 'director/users', element: <UserManagement /> },
-          { path: 'director/notifications', element: <DirectorNotifications /> },
-          { path: 'director/driver-jobs/:driverId', element: <DriverJobs /> },
-          { path: 'director/client-jobs/:clientId', element: <ClientJobs /> },
-        ],
-      },
-      // ─── SuperAdmin ─────────────────────────────────────────────
-      {
-        path: 'superadmin',
-        element: <SuperAdminApp />,
-      },
-    ],
-  },
-])
+// ─── Router factory — called once inside App ──────────────────────────────────
+
+export function createAppRouter() {
+  return createBrowserRouter([
+    {
+      path: '/',
+      element: <Login />,
+    },
+    {
+      element: <AuthGuard />,
+      children: [
+        {
+          index: true,
+          element: <RoleRedirect />,
+        },
+        // ─── Driver ──────────────────────────────────────────────
+        {
+          element: <Lazy component={R.DriverLayout} />,
+          children: [
+            { path: 'driver',                 element: <ErrorBoundary component="DriverHome"      level="page"><Lazy component={R.DriverHome} /></ErrorBoundary> },
+            { path: 'driver/work-orders/new', element: <ErrorBoundary component="CreateWorkOrder" level="page"><Lazy component={R.CreateWorkOrder} /></ErrorBoundary> },
+            { path: 'driver/history',         element: <ErrorBoundary component="DriverHistory"   level="page"><Lazy component={R.DriverHistory} /></ErrorBoundary> },
+            { path: 'driver/notifications',   element: <ErrorBoundary component="Notifications"   level="page"><Lazy component={R.DriverNotifications} /></ErrorBoundary> },
+            { path: 'driver/job/:jobId',      element: <ErrorBoundary component="JobDetail"       level="page"><Lazy component={R.JobDetail} /></ErrorBoundary> },
+            { path: 'driver/profile',         element: <ErrorBoundary component="Profile"         level="page"><Lazy component={R.Profile} /></ErrorBoundary> },
+          ],
+        },
+        // ─── Accountant ──────────────────────────────────────────
+        {
+          element: <Lazy component={R.AccountantLayout} />,
+          children: [
+            { path: 'accountant',                    element: <Lazy component={R.AccountantDashboard} /> },
+            { path: 'accountant/clients',            element: <Lazy component={R.ClientList} /> },
+            { path: 'accountant/routes',             element: <Lazy component={R.RouteList} /> },
+            { path: 'accountant/work-orders',        element: <Lazy component={R.WorkOrderList} /> },
+            { path: 'accountant/trips',              element: <Lazy component={R.TripList} /> },
+            { path: 'accountant/trip/:tripId',       element: <Lazy component={R.TripDetail} /> },
+            { path: 'accountant/create-trip',        element: <Lazy component={R.CreateTrip} /> },
+            { path: 'accountant/salary-setup',       element: <Lazy component={R.SalarySetup} /> },
+            { path: 'accountant/pricing',            element: <Lazy component={R.PricingList} /> },
+            { path: 'accountant/match/:jobId',       element: <Lazy component={R.MatchJob} /> },
+            { path: 'accountant/match-trip/:tripId', element: <Lazy component={R.MatchTrip} /> },
+          ],
+        },
+        // ─── Director ────────────────────────────────────────────
+        {
+          element: <Lazy component={R.DirectorLayout} />,
+          children: [
+            { path: 'director',                       element: <Lazy component={R.DirectorDashboard} /> },
+            { path: 'director/users',                 element: <Lazy component={R.UserManagement} /> },
+            { path: 'director/notifications',         element: <Lazy component={R.DirectorNotifications} /> },
+            { path: 'director/driver-jobs/:driverId', element: <Lazy component={R.DriverJobs} /> },
+            { path: 'director/client-jobs/:clientId', element: <Lazy component={R.ClientJobs} /> },
+          ],
+        },
+        // ─── SuperAdmin ──────────────────────────────────────────
+        {
+          path: 'superadmin',
+          element: <Lazy component={R.SuperAdminApp} />,
+        },
+      ],
+    },
+    {
+      path: '*',
+      element: <Navigate to="/" replace />,
+    },
+  ])
+}
