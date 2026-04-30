@@ -9,6 +9,12 @@ const themeMap = new Map(themes.map(t => [t.name, t]));
 
 const STORAGE_KEY = 'ttransport-theme';
 
+// Apply theme synchronously before first render so CSS vars are available immediately.
+const _initialThemeName = (() => {
+  try { return localStorage.getItem(STORAGE_KEY) || grabTheme.name; } catch { return grabTheme.name; }
+})()
+applyThemeToDOM(themeMap.get(_initialThemeName) ?? grabTheme)
+
 interface ThemeContextValue {
   theme: ThemeDefinition;
   setThemeByName: (name: string) => void;

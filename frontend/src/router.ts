@@ -1,0 +1,97 @@
+// Pure .ts — NO JSX. Avoids @vitejs/plugin-react preamble crash.
+import { createElement, Fragment, Suspense, type ComponentType } from 'react'
+import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom' // eslint-disable-line
+import { useAuth } from '@/contexts/AuthContext'
+import { Login } from '@/pages/Login'
+import { ScrollToTop } from '@/components/shared/ScrollToTop'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
+import * as R from '@/routes'
+
+const h = createElement
+
+function Lazy({ component: Component }: { component: ComponentType }) {
+  return h(Suspense, { fallback: null }, h(Component))
+}
+
+function AuthGuard() {
+  const { user } = useAuth()
+  if (!user) return h(Login)
+  return h(Fragment, null, h(ScrollToTop), h(Outlet))
+}
+
+function RoleRedirect() {
+  const { user } = useAuth()
+  if (!user) return h(Navigate, { to: '/', replace: true })
+  const targets: Record<string, string> = {
+    driver: '/driver',
+    accountant: '/accountant',
+    director: '/director',
+    superadmin: '/superadmin',
+  }
+  return h(Navigate, { to: targets[user.role] ?? '/driver', replace: true })
+}
+
+function ebc(name: string, child: ReturnType<typeof createElement>) {
+  return h(ErrorBoundary, { component: name, level: 'page' }, child)
+}
+
+export function createAppRouter() {
+  return createBrowserRouter([
+    {
+      path: '/',
+      element: h(AuthGuard),
+      children: [
+        { index: true, element: h(RoleRedirect) },
+        // ─── Driver ────────────────────────────────────────────
+        {
+          path: 'driver',
+          element: h(Lazy, { component: R.DriverLayout }),
+          children: [
+            { index: true,               element: ebc('DriverHome', h(Lazy, { component: R.DriverHome })) },
+            { path: 'work-orders/new',   element: ebc('CreateWorkOrder', h(Lazy, { component: R.CreateWorkOrder })) },
+            { path: 'history',           element: ebc('DriverHistory', h(Lazy, { component: R.DriverHistory })) },
+            { path: 'notifications',     element: ebc('Notifications', h(Lazy, { component: R.DriverNotifications })) },
+            { path: 'job/:jobId',        element: ebc('JobDetail', h(Lazy, { component: R.JobDetail })) },
+            { path: 'profile',           element: ebc('Profile', h(Lazy, { component: R.Profile })) },
+          ],
+        },
+        // ─── Accountant ────────────────────────────────────────
+        {
+          path: 'accountant',
+          element: h(Lazy, { component: R.AccountantLayout }),
+          children: [
+            { index: true,                   element: h(Lazy, { component: R.AccountantDashboard }) },
+            { path: 'clients',               element: h(Lazy, { component: R.ClientList }) },
+            { path: 'routes',                element: h(Lazy, { component: R.RouteList }) },
+            { path: 'work-orders',           element: h(Lazy, { component: R.WorkOrderList }) },
+            { path: 'trips',                 element: h(Lazy, { component: R.TripList }) },
+            { path: 'trip/:tripId',          element: h(Lazy, { component: R.TripDetail }) },
+            { path: 'create-trip',           element: h(Lazy, { component: R.CreateTrip }) },
+            { path: 'salary-setup',          element: h(Lazy, { component: R.SalarySetup }) },
+            { path: 'pricing',               element: h(Lazy, { component: R.PricingList }) },
+            { path: 'match/:jobId',          element: h(Lazy, { component: R.MatchJob }) },
+            { path: 'match-trip/:tripId',    element: h(Lazy, { component: R.MatchTrip }) },
+          ],
+        },
+        // ─── Director ──────────────────────────────────────────
+        {
+          path: 'director',
+          element: h(Lazy, { component: R.DirectorLayout }),
+          children: [
+            { index: true,                       element: h(Lazy, { component: R.DirectorDashboard }) },
+            { path: 'users',                     element: h(Lazy, { component: R.UserManagement }) },
+            { path: 'notifications',             element: h(Lazy, { component: R.DirectorNotifications }) },
+            { path: 'driver-jobs/:driverId',     element: h(Lazy, { component: R.DriverJobs }) },
+            { path: 'client-jobs/:clientId',     element: h(Lazy, { component: R.ClientJobs }) },
+          ],
+        },
+        // ─── SuperAdmin ────────────────────────────────────────
+        {
+          path: 'superadmin',
+          element: h(Lazy, { component: R.SuperAdminApp }),
+        },
+      ],
+    },
+    { path: '*', element: h(Navigate, { to: '/', replace: true }) },
+  ])
+}

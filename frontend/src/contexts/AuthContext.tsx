@@ -11,7 +11,7 @@ export interface UserInfo {
 
 interface AuthContextType {
   user: UserInfo | null
-  login: (username: string, password: string) => Promise<boolean>
+  login: (username: string, password: string) => Promise<UserInfo | null>
   logout: () => void
 }
 
@@ -23,7 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return saved ? JSON.parse(saved) : null
   })
 
-  const login = useCallback(async (username: string, password: string): Promise<boolean> => {
+  const login = useCallback(async (username: string, password: string): Promise<UserInfo | null> => {
     try {
       const res = await api.post('/auth/login', { username, password })
       const { access_token, refresh_token } = res.data
@@ -38,9 +38,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       localStorage.setItem('ttransport_user', JSON.stringify(u))
       setUser(u)
-      return true
+      return u
     } catch {
-      return false
+      return null
     }
   }, [])
 

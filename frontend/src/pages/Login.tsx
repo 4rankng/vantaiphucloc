@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
@@ -6,6 +7,7 @@ import { Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react'
 
 export function Login() {
   const { login } = useAuth()
+  const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -16,10 +18,19 @@ export function Login() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const success = await login(username, password)
+    const loggedInUser = await login(username, password)
     setLoading(false)
-    if (!success) {
+    if (!loggedInUser) {
       setError('Thông tin đăng nhập không hợp lệ. Vui lòng thử lại.')
+    } else {
+      // Navigate to role-specific dashboard after successful login
+      const roleRoutes: Record<string, string> = {
+        driver: '/driver',
+        accountant: '/accountant',
+        director: '/director',
+        superadmin: '/superadmin',
+      }
+      navigate(roleRoutes[loggedInUser.role] ?? '/driver', { replace: true })
     }
   }
 
