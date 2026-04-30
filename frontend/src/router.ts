@@ -61,7 +61,7 @@ export function createAppRouter() {
           element: h(Lazy, { component: R.AccountantLayout }),
           children: [
             { index: true,                   element: h(Lazy, { component: R.AccountantDashboard }) },
-            { path: 'clients',               element: h(Lazy, { component: R.ClientsAndVendors }) },
+            { path: 'partners',              element: h(Lazy, { component: R.ClientsAndVendors }) },
             { path: 'routes',                element: h(Lazy, { component: R.RouteList }) },
             { path: 'work-orders',           element: h(Lazy, { component: R.WorkOrderList }) },
             { path: 'trips',                 element: h(Lazy, { component: R.TripList }) },
