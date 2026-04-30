@@ -3,6 +3,7 @@
 
 from .base import User  # noqa: F401
 from .domain import (  # noqa: F401
+    Vendor,
     Client,
     Route,
     Pricing,
@@ -17,6 +18,7 @@ from .domain import (  # noqa: F401
 
 __all__ = [
     "User",
+    "Vendor",
     "Client",
     "Route",
     "Pricing",

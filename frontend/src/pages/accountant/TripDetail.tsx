@@ -217,7 +217,7 @@ export function TripDetail() {
               <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không có số công nào chưa khớp</p>
             </div>
           ) : (
-            <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+            <div className="space-y-2 max-h-[50dvh] overflow-y-auto">
               {unmatchedJobs.map(job => (
                 <button key={job.id}
                   onClick={() => handleMatch(job.id)}
