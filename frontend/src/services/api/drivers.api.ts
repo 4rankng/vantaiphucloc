@@ -1,11 +1,11 @@
 import { api } from './client'
-import { toCamel, toSnake, ok, fail } from './utils'
+import { toCamel, toSnake, ok, fail, unwrapList } from './utils'
 import type { Driver, ApiResponse } from '@/data/domain'
 
 export async function getDrivers(): Promise<ApiResponse<Driver[]>> {
   try {
     const res = await api.get('/drivers')
-    return ok(toCamel<Driver[]>(res.data))
+    return ok(toCamel<Driver[]>(unwrapList(res.data)))
   } catch (err) {
     return fail(err)
   }

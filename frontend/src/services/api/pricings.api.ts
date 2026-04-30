@@ -1,5 +1,5 @@
 import { api } from './client'
-import { toCamel, toSnake, ok, fail } from './utils'
+import { toCamel, toSnake, ok, fail, unwrapList } from './utils'
 import type { Pricing, ApiResponse, WorkType } from '@/data/domain'
 
 export async function getPricings(
@@ -11,7 +11,7 @@ export async function getPricings(
     if (filters?.workType) params.work_type = filters.workType
     if (filters?.route) params.route = filters.route
     const res = await api.get('/pricings', { params })
-    return ok(toCamel<Pricing[]>(res.data))
+    return ok(toCamel<Pricing[]>(unwrapList(res.data)))
   } catch (err) {
     return fail(err)
   }
