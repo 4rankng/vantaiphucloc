@@ -15,6 +15,7 @@ from .domain import (  # noqa: F401
     SalaryPeriod,
     SalaryPeriodConfig,
 )
+from .payment import Payment  # noqa: F401
 
 __all__ = [
     "User",
@@ -29,4 +30,5 @@ __all__ = [
     "TripOrderWorkOrder",
     "SalaryPeriod",
     "SalaryPeriodConfig",
+    "Payment",
 ]

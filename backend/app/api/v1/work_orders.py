@@ -1,3 +1,4 @@
+import base64
 import math
 import logging
 from collections import defaultdict
@@ -18,9 +19,12 @@ from app.schemas.domain import (
     ContainerOut,
     BatchWorkOrderCreate,
     BatchWorkOrderResult,
+    ContainerOCRRequest,
+    ContainerOCRResponse,
 )
 from app.core.deps import get_current_user, require_roles
 from app.services.pricing_service import find_pricing
+from app.services.ocr_service import OCRAttempt, extract_container_number
 
 _logger = logging.getLogger(__name__)
 
@@ -298,6 +302,16 @@ async def _create_work_order_db(
     driver_id = current_user.id if current_user.role == "driver" else body.driver_id
     driver_name = current_user.username if current_user.role == "driver" else body.driver_name
 
+    # All financials default to 0 — pricing is used for TO, not WO
+    unit_price = 0
+    driver_salary = 0
+    allowance = 0
+    earning = 0
+
+    # Status only tracks if pricing was found for reference, not for financials
+    # New states: PENDING (no match), MATCHED (match but no pricing), COMPLETED (match + pricing)
+    status = "PENDING"
+
     pricing = await find_pricing(
         db,
         client_id=body.client_id,
@@ -305,20 +319,8 @@ async def _create_work_order_db(
         route=body.route,
     )
 
-    if pricing is not None:
-        unit_price = pricing.unit_price
-        driver_salary = pricing.driver_salary
-        allowance = pricing.allowance
-        earning = driver_salary + allowance
-        status = "PRICED"
-        pricing_id = pricing.id
-    else:
-        unit_price = 0
-        driver_salary = 0
-        allowance = 0
-        earning = 0
-        status = "PENDING"
-        pricing_id = None
+    # Store pricing_id for reference, but don't use it for financials
+    pricing_id = pricing.id if pricing else None
 
     work_order = WorkOrder(
         client_id=body.client_id,
@@ -353,3 +355,59 @@ async def _create_work_order_db(
 
     await db.flush()
     return work_order
+
+
+# Simple in-memory storage for OCR attempts (in production, use Redis)
+_ocr_attempts: dict[int, OCRAttempt] = {}
+
+
+@router.post("/work-orders/ocr-container", response_model=ContainerOCRResponse)
+async def ocr_container_number(
+    body: ContainerOCRRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """Extract container number from image using Gemini OCR.
+
+    Driver workflow:
+    1. Upload image (base64-encoded)
+    2. AI attempts OCR (max 2 attempts per container)
+    3. If both fail → driver enters manually
+    4. Backend validates against ISO 6346
+    """
+    # Decode base64 image
+    try:
+        image_bytes = base64.b64decode(body.image_data)
+    except Exception as e:
+        _logger.error("WO_OCR_BASE64_DECODE_FAILED", e, "work_orders")
+        return ContainerOCRResponse(
+            success=False,
+            container_number=None,
+            error="Invalid base64 image data",
+            attempts_remaining=2,
+        )
+
+    # Get or create OCR attempt tracker for this user
+    user_id = current_user.id
+    if user_id not in _ocr_attempts:
+        _ocr_attempts[user_id] = OCRAttempt(max_attempts=2)
+
+    attempt = _ocr_attempts[user_id]
+
+    # Check if attempts are exhausted
+    if attempt.is_exhausted():
+        _logger.warn("WO_OCR_ATTEMPTS_EXHAUSTED", f"User {user_id} exhausted OCR attempts", "work_orders")
+        return ContainerOCRResponse(
+            success=False,
+            container_number=None,
+            error="Maximum OCR attempts reached. Please enter container number manually.",
+            attempts_remaining=0,
+        )
+
+    # Call OCR service
+    result = await extract_container_number(
+        image_bytes=image_bytes,
+        mime_type=body.mime_type,
+        attempt=attempt,
+    )
+
+    return ContainerOCRResponse(**result)
