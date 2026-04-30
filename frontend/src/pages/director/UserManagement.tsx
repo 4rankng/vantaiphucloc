@@ -14,7 +14,9 @@ import { ROLE_LABELS } from '@/data/domain'
 interface UserAccount {
   id: string
   username: string
-  phone: string
+  fullName: string | null
+  phone: string | null
+  cccd: string | null
   email?: string
   role: Role
   tractorPlate?: string
@@ -40,19 +42,23 @@ const CREATABLE_ROLES: Role[] = ['driver', 'accountant', 'director']
 
 interface UserForm {
   username: string
+  fullName: string
   phone: string
+  cccd: string
   role: Role
   tractorPlate: string
   password: string
 }
 
-const EMPTY_FORM: UserForm = { username: '', phone: '', role: 'driver', tractorPlate: '', password: '' }
+const EMPTY_FORM: UserForm = { username: '', fullName: '', phone: '', cccd: '', role: 'driver', tractorPlate: '', password: '' }
 
 function toCamelCase(obj: Record<string, unknown>): UserAccount {
   return {
     id: String(obj.id),
     username: obj.username as string,
-    phone: obj.phone as string,
+    fullName: (obj.full_name as string) ?? null,
+    phone: (obj.phone as string) ?? null,
+    cccd: (obj.cccd as string) ?? null,
     email: obj.email as string | undefined,
     role: obj.role as Role,
     tractorPlate: obj.tractor_plate as string | undefined,
@@ -105,12 +111,14 @@ export function UserManagement() {
   }, [])
 
   const handleCreate = useCallback(async () => {
-    if (!createForm.username.trim() || !createForm.phone.trim() || !createForm.password.trim()) return
+    if (!createForm.username.trim() || !createForm.password.trim()) return
     setSaving(true)
     try {
       await api.post('/users', {
         username: createForm.username.trim(),
-        phone: createForm.phone.trim(),
+        full_name: createForm.fullName.trim() || undefined,
+        phone: createForm.phone.trim() || undefined,
+        cccd: createForm.cccd.trim() || undefined,
         role: createForm.role,
         password: createForm.password,
         tractor_plate: createForm.role === 'driver' ? createForm.tractorPlate.trim() : undefined,
@@ -131,7 +139,9 @@ export function UserManagement() {
     setDetailUser(user)
     setEditForm({
       username: user.username,
-      phone: user.phone,
+      fullName: user.fullName ?? '',
+      phone: user.phone ?? '',
+      cccd: user.cccd ?? '',
       role: user.role,
       tractorPlate: user.tractorPlate ?? '',
       password: '',
@@ -139,12 +149,14 @@ export function UserManagement() {
   }, [])
 
   const handleEdit = useCallback(async () => {
-    if (!detailUser || !editForm.username.trim() || !editForm.phone.trim()) return
+    if (!detailUser || !editForm.username.trim()) return
     setSaving(true)
     try {
       const payload: Record<string, unknown> = {
         username: editForm.username.trim(),
-        phone: editForm.phone.trim(),
+        full_name: editForm.fullName.trim() || undefined,
+        phone: editForm.phone.trim() || undefined,
+        cccd: editForm.cccd.trim() || undefined,
         role: editForm.role,
       }
       if (editForm.role === 'driver' && editForm.tractorPlate.trim()) {
@@ -233,14 +245,24 @@ export function UserManagement() {
                 <RoleIcon className="w-4.5 h-4.5" style={{ color: roleColor.color }} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{u.username}</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <Phone className="w-3 h-3" style={{ color: 'var(--theme-text-muted)' }} />
-                  <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{u.phone}</span>
+                <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{u.fullName || u.username}</p>
+                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                  {u.phone && (
+                    <>
+                      <Phone className="w-3 h-3" style={{ color: 'var(--theme-text-muted)' }} />
+                      <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{u.phone}</span>
+                    </>
+                  )}
                   {u.tractorPlate && (
                     <>
                       <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>·</span>
                       <span className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>{u.tractorPlate}</span>
+                    </>
+                  )}
+                  {u.cccd && (
+                    <>
+                      <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>·</span>
+                      <span className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>CCCD: {u.cccd}</span>
                     </>
                   )}
                 </div>
@@ -279,8 +301,16 @@ export function UserManagement() {
               <Input value={createForm.username} onChange={e => updateCreateField('username', e.target.value)} placeholder="nguyenvana" className="text-sm" />
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số điện thoại</Label>
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Họ và tên</Label>
+              <Input value={createForm.fullName} onChange={e => updateCreateField('fullName', e.target.value)} placeholder="Nguyễn Văn A" className="text-sm" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số điện thoại (không bắt buộc)</Label>
               <Input value={createForm.phone} onChange={e => updateCreateField('phone', e.target.value)} placeholder="0912-345-678" className="text-sm" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Căn cước công dân (không bắt buộc)</Label>
+              <Input value={createForm.cccd} onChange={e => updateCreateField('cccd', e.target.value)} placeholder="001234567890" className="text-sm font-mono" />
             </div>
             {createForm.role === 'driver' && (
               <div className="space-y-2">
@@ -295,7 +325,7 @@ export function UserManagement() {
           </div>
           <DialogFooter className="flex-row gap-2">
             <Button variant="outline" onClick={() => setCreateOpen(false)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleCreate} disabled={!createForm.username.trim() || !createForm.phone.trim() || !createForm.password.trim() || saving} className="flex-1"
+            <Button onClick={handleCreate} disabled={!createForm.username.trim() || !createForm.password.trim() || saving} className="flex-1"
               style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
             >
               Xác nhận
@@ -335,8 +365,16 @@ export function UserManagement() {
                 <Input value={editForm.username} onChange={e => updateEditField('username', e.target.value)} className="text-sm" />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số điện thoại</Label>
-                <Input value={editForm.phone} onChange={e => updateEditField('phone', e.target.value)} className="text-sm" />
+                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Họ và tên</Label>
+                <Input value={editForm.fullName} onChange={e => updateEditField('fullName', e.target.value)} className="text-sm" placeholder="Nguyễn Văn A" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số điện thoại (không bắt buộc)</Label>
+                <Input value={editForm.phone} onChange={e => updateEditField('phone', e.target.value)} className="text-sm" placeholder="0912-345-678" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Căn cước công dân (không bắt buộc)</Label>
+                <Input value={editForm.cccd} onChange={e => updateEditField('cccd', e.target.value)} className="text-sm font-mono" placeholder="001234567890" />
               </div>
               {editForm.role === 'driver' && (
                 <div className="space-y-2">
@@ -360,7 +398,7 @@ export function UserManagement() {
               <Trash2 className="w-3.5 h-3.5" /> Xoá
             </Button>
             <Button variant="outline" onClick={() => setDetailUser(null)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleEdit} disabled={!editForm.username.trim() || !editForm.phone.trim() || saving} className="flex-1 gap-1.5"
+            <Button onClick={handleEdit} disabled={!editForm.username.trim() || saving} className="flex-1 gap-1.5"
               style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
             >
               <Pencil className="w-3.5 h-3.5" /> Lưu

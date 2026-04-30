@@ -6,6 +6,8 @@ import { UserDropdown } from '@/components/shared/ProfileDialog'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { UserDetailDialog } from '@/components/shared/UserDetailDialog'
 import { CreateUserDialog } from '@/components/shared/CreateUserDialog'
+import { DesktopShell, SUPERADMIN_NAV } from '@/components/shared/DesktopShell'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { useToast } from '@/components/atoms/Toast'
 import { api } from '@/services/api/client'
 import type { Role } from '@/data/domain'
@@ -22,6 +24,7 @@ export function SuperAdminApp() {
   const [searchQuery, setSearchQuery] = useState('')
   const [users, setUsers] = useState<UserAccount[]>([])
   const [loading, setLoading] = useState(true)
+  const isMobile = useIsMobile()
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -50,14 +53,8 @@ export function SuperAdminApp() {
     )
   }
 
-  return (
-    <div className="min-h-[100dvh]" style={{ background: 'var(--theme-bg-primary)' }}>
-      <AppTopBar
-        variant="home"
-        name={user?.name ?? ''}
-        onProfile={() => setDropdownOpen(true)}
-        onNotifications={() => {}}
-      />
+  const content = (
+    <>
       <SuperAdminDashboard
         users={users}
         filterRole={filterRole}
@@ -66,10 +63,39 @@ export function SuperAdminApp() {
         setSearchQuery={setSearchQuery}
         onViewUser={setSelectedUser}
       />
-      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => setCreateOpen(true)} label="Tạo tài khoản" />
+      {isMobile && <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => setCreateOpen(true)} label="Tạo tài khoản" />}
+      {!isMobile && (
+        <button
+          onClick={() => setCreateOpen(true)}
+          className="fixed bottom-6 right-6 z-50 h-10 px-5 rounded-xl flex items-center gap-2 text-sm font-semibold shadow-lg transition-transform active:scale-95"
+          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+        >
+          <Plus className="w-4 h-4" /> Tạo tài khoản
+        </button>
+      )}
       <UserDropdown open={dropdownOpen} onClose={() => setDropdownOpen(false)} />
       <CreateUserDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreated={fetchUsers} />
       <UserDetailDialog user={selectedUser} open={!!selectedUser} onClose={() => setSelectedUser(null)} />
+    </>
+  )
+
+  if (!isMobile) {
+    return (
+      <DesktopShell navItems={SUPERADMIN_NAV} roleLabel="SuperAdmin">
+        {content}
+      </DesktopShell>
+    )
+  }
+
+  return (
+    <div className="min-h-[100dvh]" style={{ background: 'var(--theme-bg-primary)' }}>
+      <AppTopBar
+        variant="home"
+        name={user?.name ?? ''}
+        onProfile={() => setDropdownOpen(true)}
+        onNotifications={() => {}}
+      />
+      {content}
     </div>
   )
 }

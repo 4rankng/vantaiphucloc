@@ -1,4 +1,4 @@
-import { Users, Truck } from 'lucide-react'
+import { Users, Truck, Phone, CreditCard } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { InfoRow } from '@/components/shared/InfoRow'
@@ -27,7 +27,7 @@ export function UserDetailDialog({
             <RoleIcon className="w-6 h-6" style={{ color: 'var(--theme-brand-primary)' }} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>{user.username}</p>
+            <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>{user.fullName || user.username}</p>
             <span className="text-xs font-semibold px-2 py-0.5 rounded-full inline-block mt-0.5"
               style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
               {ROLE_LABELS[user.role]}
@@ -35,6 +35,9 @@ export function UserDetailDialog({
           </div>
         </div>
         <div className="space-y-0">
+          {user.fullName && <InfoRow icon={Users} label="Họ và tên" value={user.fullName} noBorder />}
+          {user.phone && <InfoRow icon={Phone} label="Số điện thoại" value={user.phone} noBorder />}
+          {user.cccd && <InfoRow icon={CreditCard} label="Căn cước công dân" value={user.cccd} noBorder />}
           <InfoRow icon={Users} label={user.role === 'driver' ? 'Nhà thầu' : 'Công ty'} value={user.vendor} noBorder />
           {user.tractorPlate && <InfoRow icon={Truck} label="Biển số đầu kéo" value={user.tractorPlate} noBorder />}
         </div>

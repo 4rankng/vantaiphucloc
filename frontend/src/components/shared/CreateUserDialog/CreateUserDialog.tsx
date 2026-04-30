@@ -30,7 +30,9 @@ export function CreateUserDialog({
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     username: '',
+    fullName: '',
     phone: '',
+    cccd: '',
     role: 'driver' as Role,
     vendor: PHUC_LOC,
     password: '',
@@ -38,19 +40,21 @@ export function CreateUserDialog({
   })
 
   const handleSubmit = async () => {
-    if (!form.username.trim() || !form.phone.trim() || !form.password.trim()) return
+    if (!form.username.trim() || !form.password.trim()) return
     setSaving(true)
     try {
       await api.post('/users', {
         username: form.username.trim(),
-        phone: form.phone.trim(),
+        full_name: form.fullName.trim() || undefined,
+        phone: form.phone.trim() || undefined,
+        cccd: form.cccd.trim() || undefined,
         role: form.role,
         password: form.password,
         vendor: form.role === 'driver' ? form.vendor : undefined,
         tractor_plate: form.role === 'driver' && form.tractorPlate.trim() ? form.tractorPlate.trim() : undefined,
       })
       toast.success('Đã tạo tài khoản')
-      setForm({ username: '', phone: '', role: 'driver', vendor: PHUC_LOC, password: '', tractorPlate: '' })
+      setForm({ username: '', fullName: '', phone: '', cccd: '', role: 'driver', vendor: PHUC_LOC, password: '', tractorPlate: '' })
       onClose()
       onCreated()
     } catch (err: unknown) {
@@ -73,8 +77,16 @@ export function CreateUserDialog({
             <Input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} placeholder="nguyenvana" className="text-sm" />
           </div>
           <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số điện thoại</Label>
+            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Họ và tên</Label>
+            <Input value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} placeholder="Nguyễn Văn A" className="text-sm" />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số điện thoại (không bắt buộc)</Label>
             <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="0901 234 567" className="text-sm" />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Căn cước công dân (không bắt buộc)</Label>
+            <Input value={form.cccd} onChange={e => setForm(f => ({ ...f, cccd: e.target.value }))} placeholder="001234567890" className="text-sm font-mono" />
           </div>
           <div className="space-y-2">
             <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Vai trò</Label>
@@ -120,7 +132,7 @@ export function CreateUserDialog({
         <DialogFooter>
           <Button variant="outline" onClick={onClose} className="flex-1">Huỷ</Button>
           <Button onClick={handleSubmit}
-            disabled={!form.username.trim() || !form.phone.trim() || !form.password.trim() || saving}
+            disabled={!form.username.trim() || !form.password.trim() || saving}
             className="flex-1"
             style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
             {saving ? 'Đang tạo...' : 'Xác nhận'}
