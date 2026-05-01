@@ -2,12 +2,19 @@ import { useTripOrders } from '@/hooks/use-queries'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { TripOrderCard } from '@/components/shared/TripOrderCard'
 import { Plus, Truck } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui'
 
 export function TripList() {
   const { data: trips = [], isLoading: loading } = useTripOrders()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // Derive base path from current location so this page works under both
+  // /accountant/trips and /director/trips
+  const basePath = location.pathname.startsWith('/director') ? '/director' : '/accountant'
+  const createTripPath = `${basePath}/create-trip`
+  const tripDetailPath = (id: number) => `${basePath}/trip/${id}`
 
   if (loading) {
     return (
@@ -33,7 +40,7 @@ export function TripList() {
           </div>
           {/* Desktop shortcut — FAB is hidden on desktop */}
           <Button
-            onClick={() => navigate('/accountant/create-trip')}
+            onClick={() => navigate(createTripPath)}
             className="hidden lg:flex items-center gap-2 h-10 px-5 font-semibold rounded-xl"
             style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
           >
@@ -46,12 +53,12 @@ export function TripList() {
             <TripOrderCard
               key={trip.id}
               trip={trip}
-              onClick={() => navigate(`/accountant/trip/${trip.id}`)}
+              onClick={() => navigate(tripDetailPath(trip.id))}
             />
           ))}
         </div>
       )}
-      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => navigate('/accountant/create-trip')} />
+      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => navigate(createTripPath)} />
     </div>
   )
 }

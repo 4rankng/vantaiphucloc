@@ -134,7 +134,7 @@ async def list_pricings(
 @router.post("/pricings", response_model=PricingOut, status_code=201)
 async def create_pricing(
     body: PricingCreate,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
@@ -163,7 +163,7 @@ async def create_pricing(
 async def update_pricing(
     pricing_id: int,
     body: PricingUpdate,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
@@ -201,7 +201,7 @@ async def update_pricing(
 @router.delete("/pricings/{pricing_id}", status_code=204)
 async def delete_pricing(
     pricing_id: int,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
