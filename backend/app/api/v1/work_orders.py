@@ -322,9 +322,15 @@ async def _create_work_order_db(
     # Store pricing_id for reference, but don't use it for financials
     pricing_id = pricing.id if pricing else None
 
+    # Fetch client code for denormalized storage
+    from app.models.domain import Client
+    client_result = await db.execute(select(Client.code).where(Client.id == body.client_id))
+    client_code = client_result.scalar_one_or_none()
+
     work_order = WorkOrder(
         client_id=body.client_id,
         client_name=body.client_name,
+        client_code=client_code,
         route=body.route,
         driver_id=driver_id,
         driver_name=driver_name,
