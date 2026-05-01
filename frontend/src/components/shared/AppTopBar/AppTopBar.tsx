@@ -42,10 +42,8 @@ export function AppTopBar(props: AppTopBarProps) {
 
   return (
     <>
-      <div
-        className="px-4 py-2.5 flex items-center justify-between gap-3"
-        style={{ background: 'var(--theme-brand-primary)' }}
-      >
+      <div style={{ background: 'var(--theme-brand-primary)' }}>
+        <div className="px-4 py-2.5 flex items-center justify-between gap-3 md:max-w-4xl md:mx-auto">
         {/* ── Left ── */}
         <div className="flex items-center gap-2 min-w-0">
           <img src="/logo.avif" alt="" className="w-8 h-8 shrink-0 object-contain rounded-md" />
@@ -119,6 +117,7 @@ export function AppTopBar(props: AppTopBarProps) {
               <UserCircle className="w-[17px] h-[17px]" />
             </button>
           )}
+        </div>
         </div>
       </div>
 

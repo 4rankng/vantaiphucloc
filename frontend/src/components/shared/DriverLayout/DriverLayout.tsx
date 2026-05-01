@@ -12,7 +12,7 @@ const TITLES: Record<string, string> = {
   '/driver/work-orders/new': 'Tạo chuyến',
   '/driver/history': 'Lịch sử',
   '/driver/notifications': 'Thông báo',
-  '/driver/profile': 'Hồ sơ',
+  '/driver/profile': 'Thông tin cá nhân',
 }
 
 function resolveTitle(pathname: string): string {
@@ -47,8 +47,7 @@ function DriverMobile() {
               }
             : { variant: 'page' as const, title, onBack: () => navigate(-1) }
         }
-        // On mobile: standard 4-unit padding. On desktop: centre with max-width.
-        contentClassName="px-4 py-4 space-y-4 md:px-0 md:py-6 md:max-w-2xl md:mx-auto"
+        contentClassName="px-4 py-4 space-y-4 md:px-6 md:py-6 md:max-w-4xl md:mx-auto"
       >
         <Outlet />
       </AppShell>
