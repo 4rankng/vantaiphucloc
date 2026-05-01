@@ -47,19 +47,17 @@ def preprocess_image(image_bytes: bytes) -> tuple[bytes, str]:
     return buf.getvalue(), "image/jpeg"
 
 # Prompt for container number extraction
-CONTAINER_PROMPT = """You are analyzing a photo of a shipping container taken at a port/depot.
+CONTAINER_PROMPT = """Look at the photo and find the container number painted on the shipping container.
 
-TASK: Find the container number — the large text painted on the container body (side, door, or top). It is the biggest, most prominent marking on the container.
+The container number is the large text in format: 4 letters followed by 7 digits (example: MSKU1234567). It may have hyphens.
 
-FORMAT: ISO 6346 — 4 uppercase letters + 7 digits (e.g. MSKU1234567). Hyphens may be present (MSKU-123456-7).
+CRITICAL: Your entire response must be EXACTLY one of these two things and NOTHING else:
+- The 11-character container number in uppercase with no spaces or hyphens (e.g. MSKU1234567)
+- The word NONE if you cannot find a container number
 
-RULES:
-- Ignore everything else: signs, QR codes, license plates, labels, other containers
-- Return ONLY the 11-character number, uppercase, no spaces or hyphens
-- If multiple numbers visible, return the one on the closest/largest container
-- If no valid container number found, return NONE
+Do NOT include explanations, calculations, reasoning, or any other text. Do NOT compute check digits. Just return the raw number as printed on the container.
 
-Example outputs:
+Examples:
 MSKU1234567
 TCLU9876543
 NONE"""
