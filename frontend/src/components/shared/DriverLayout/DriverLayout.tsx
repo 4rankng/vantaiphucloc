@@ -57,7 +57,7 @@ function DriverInner() {
     <>
       <AppSidebar role="driver" />
       <main className="flex-1 min-h-screen overflow-auto" style={{ background: 'var(--theme-bg-primary)' }}>
-        <div className="mx-auto w-full max-w-5xl px-8 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <Outlet />
         </div>
       </main>
