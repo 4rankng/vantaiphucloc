@@ -183,7 +183,7 @@ async def _enqueue_salary_recalc(db: AsyncSession, driver_id: int, ref_date: dat
 @router.post("/trip-orders", response_model=TripOrderOut, status_code=201)
 async def create_trip_order(
     body: TripOrderCreate,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
     matched_ids = body.matched_work_order_ids
@@ -322,7 +322,7 @@ async def get_trip_order(
 async def update_trip_order(
     trip_order_id: int,
     body: TripOrderUpdate,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -395,7 +395,7 @@ async def update_trip_order(
 @router.put("/trip-orders/{trip_order_id}/cancel", response_model=TripOrderOut)
 async def cancel_trip_order(
     trip_order_id: int,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
     """Cancel a trip order (only DRAFT or PENDING can be cancelled)."""
@@ -440,7 +440,7 @@ async def cancel_trip_order(
 @router.put("/trip-orders/{trip_order_id}/confirm", response_model=TripOrderOut)
 async def toggle_trip_order_confirmation(
     trip_order_id: int,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
     """

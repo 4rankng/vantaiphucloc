@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { Users, Truck, TrendingUp, UserCircle, Building2, Handshake } from 'lucide-react'
+import { Users, Truck, TrendingUp, UserCircle, Building2, Handshake, Receipt, Briefcase } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { apiClient } from '@/services/api'
 import { formatCurrencyFull as formatCurrency } from '@/data/domain'
@@ -103,7 +103,7 @@ export function DirectorDashboard() {
       <MonthNavigator year={month.year} month={month.month} onPrev={prevMonth} onNext={nextMonth} />
 
       {/* Quick actions — mobile only (sidebar replaces on desktop) */}
-      <div className="flex gap-2 lg:hidden">
+      <div className="flex flex-wrap gap-2 lg:hidden">
         <button
           onClick={() => navigate('/director/users')}
           className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold touch-manipulation"
@@ -117,6 +117,20 @@ export function DirectorDashboard() {
           style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)', border: '1px solid var(--theme-border-default)' }}
         >
           <Handshake className="w-3.5 h-3.5" style={{ color: 'var(--theme-brand-primary)' }} /> Đối tác
+        </button>
+        <button
+          onClick={() => navigate('/director/pricing')}
+          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold touch-manipulation"
+          style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)', border: '1px solid var(--theme-border-default)' }}
+        >
+          <Receipt className="w-3.5 h-3.5" style={{ color: 'var(--theme-brand-primary)' }} /> Bảng giá
+        </button>
+        <button
+          onClick={() => navigate('/director/trips')}
+          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold touch-manipulation"
+          style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)', border: '1px solid var(--theme-border-default)' }}
+        >
+          <Briefcase className="w-3.5 h-3.5" style={{ color: 'var(--theme-brand-primary)' }} /> Lệnh điều hành
         </button>
       </div>
 
