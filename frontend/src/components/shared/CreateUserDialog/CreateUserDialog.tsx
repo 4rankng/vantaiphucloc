@@ -13,7 +13,7 @@ import { useVendors, useCreateVendor } from '@/hooks/use-queries'
 
 const PHUC_LOC = 'Phúc Lộc'
 
-const CREATEABLE_ROLES: { value: Role; label: string }[] = [
+const DEFAULT_CREATABLE_ROLES: { value: Role; label: string }[] = [
   { value: 'director', label: ROLE_LABELS.director },
   { value: 'driver', label: ROLE_LABELS.driver },
   { value: 'accountant', label: ROLE_LABELS.accountant },
@@ -31,10 +31,12 @@ export function CreateUserDialog({
   open,
   onClose,
   onCreated,
+  roles,
 }: {
   open: boolean
   onClose: () => void
   onCreated: () => void
+  roles?: { value: Role; label: string }[]
 }) {
   const toast = useToast()
   const [saving, setSaving] = useState(false)
@@ -98,7 +100,7 @@ export function CreateUserDialog({
             <div className="space-y-2">
               <RequiredLabel>Vai trò</RequiredLabel>
               <InlineSelect
-                options={CREATEABLE_ROLES}
+                options={roles ?? DEFAULT_CREATABLE_ROLES}
                 value={form.role}
                 onChange={v => {
                   const newRole = v as Role
