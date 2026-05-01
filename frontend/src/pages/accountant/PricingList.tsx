@@ -296,7 +296,7 @@ export function PricingList() {
         )}
       </div>
 
-      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => { setEditingPricing(undefined); setShowForm(true) }} label="Thêm bảng giá" />
+      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => { setEditingPricing(undefined); setShowForm(true) }} />
 
       <CreateClientDialog
         open={createClientOpen}
