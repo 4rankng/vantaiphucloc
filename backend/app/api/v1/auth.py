@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -9,10 +10,12 @@ from app.schemas.base import (
 )
 from app.core.security import (
     verify_password, create_access_token, create_refresh_token,
-    decode_refresh_token,
+    decode_refresh_token, decode_access_token,
 )
 from app.core.deps import get_current_user
 from app.core.identifier import detect_identifier_type
+
+_optional_bearer = HTTPBearer(auto_error=False)
 from app.core.redis import get_redis
 from app.core.rate_limit import RateLimiter
 from app.config import settings
@@ -104,8 +107,7 @@ async def refresh_token(body: RefreshTokenRequest, db: AsyncSession = Depends(ge
 
 @router.post("/logout", response_model=MessageResponse)
 async def logout(
-    _current_user: User = Depends(get_current_user),
-    redis: Redis = Depends(get_redis),
+    credentials: HTTPAuthorizationCredentials | None = Depends(_optional_bearer),
 ):
     # TODO: Accept the current access token jti and blacklist it.
     # For now, the short-lived tokens expire naturally.
