@@ -15,7 +15,7 @@ import re
 from typing import Optional
 
 import httpx
-from PIL import Image, ImageEnhance, ImageOps
+from PIL import Image, ImageEnhance
 
 from app.utils.iso6346 import validate_container_number
 
@@ -28,28 +28,17 @@ GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta"
 
 
 def preprocess_image(image_bytes: bytes) -> tuple[bytes, str]:
-    """Enhance image for Gemini OCR: keep color, boost contrast/sharpness, fix lighting.
+    """Sharpen and enhance contrast only. Gemini handles the rest.
 
-    Gemini is multimodal and benefits from color context — no binarization.
     Returns (processed_bytes, mime_type).
     """
     img = Image.open(io.BytesIO(image_bytes))
 
-    # Ensure RGB (handle RGBA, palette, etc.)
     if img.mode not in ("RGB", "L"):
         img = img.convert("RGB")
 
-    # Standardize size — aim for ~2000px on the long side
-    img.thumbnail((2000, 2000), Image.Resampling.LANCZOS)
-
-    # Auto-level lighting — fixes shadows common in port photos
-    img = ImageOps.autocontrast(img, cutoff=1)
-
-    # Boost contrast — makes text stand out from container paint
-    img = ImageEnhance.Contrast(img).enhance(1.5)
-
-    # Boost sharpness — crucial for dusty/slightly blurry port photos
-    img = ImageEnhance.Sharpness(img).enhance(2.5)
+    img = ImageEnhance.Sharpness(img).enhance(2.0)
+    img = ImageEnhance.Contrast(img).enhance(1.4)
 
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=90)
@@ -129,9 +118,8 @@ async def extract_container_number(
     if attempt:
         attempt.record_attempt()
 
-    # Check if API key is configured
     if not GEMINI_API_KEY:
-        _logger.error("OCR_GEMINI_NO_KEY", "GEMINI_API_KEY not configured", "ocr_service")
+        _logger.error("[OCR] GEMINI_API_KEY not configured")
         return {
             "success": False,
             "container_number": None,
@@ -139,17 +127,15 @@ async def extract_container_number(
             "attempts_remaining": attempt.max_attempts - attempt.attempts if attempt else 0,
         }
 
-    # Preprocess image for better OCR accuracy
     try:
         image_bytes, mime_type = preprocess_image(image_bytes)
     except Exception as e:
-        _logger.warning("OCR_PREPROCESS_FAILED", f"Skipping preprocess: {e}", "ocr_service")
+        _logger.warning("[OCR] preprocess failed, using raw image: %s", e)
 
-    # Encode image to base64
     try:
         encoded = base64.b64encode(image_bytes).decode("utf-8")
     except Exception as e:
-        _logger.error("OCR_BASE64_ENCODE_FAILED", e, "ocr_service")
+        _logger.error("[OCR] base64 encode failed: %s", e)
         return {
             "success": False,
             "container_number": None,
@@ -192,7 +178,7 @@ async def extract_container_number(
             result = response.json()
 
     except httpx.HTTPStatusError as e:
-        _logger.error("OCR_GEMINI_HTTP_ERROR", f"HTTP {e.response.status_code}", "ocr_service")
+        _logger.error("[OCR] Gemini HTTP %s", e.response.status_code)
         return {
             "success": False,
             "container_number": None,
@@ -200,7 +186,7 @@ async def extract_container_number(
             "attempts_remaining": attempt.max_attempts - attempt.attempts if attempt else 0,
         }
     except httpx.RequestError as e:
-        _logger.error("OCR_GEMINI_REQUEST_ERROR", e, "ocr_service")
+        _logger.error("[OCR] Gemini request failed: %s", e)
         return {
             "success": False,
             "container_number": None,
@@ -208,7 +194,7 @@ async def extract_container_number(
             "attempts_remaining": attempt.max_attempts - attempt.attempts if attempt else 0,
         }
     except Exception as e:
-        _logger.error("OCR_GEMINI_UNEXPECTED_ERROR", e, "ocr_service")
+        _logger.error("[OCR] Gemini unexpected error: %s", e)
         return {
             "success": False,
             "container_number": None,
@@ -220,7 +206,7 @@ async def extract_container_number(
     try:
         candidates = result.get("candidates", [])
         if not candidates:
-            _logger.error("OCR_GEMINI_NO_CANDIDATES", None, "ocr_service")
+            _logger.warning("[OCR] Gemini returned no candidates")
             return {
                 "success": False,
                 "container_number": None,
@@ -242,7 +228,7 @@ async def extract_container_number(
 
         # Handle "NONE" response (AI couldn't find a container)
         if text.upper() == "NONE":
-            _logger.warning("OCR_GEMINI_NONE_RESPONSE", None, "ocr_service")
+            _logger.info("[OCR] Gemini could not find container number")
             return {
                 "success": False,
                 "container_number": None,
@@ -254,11 +240,7 @@ async def extract_container_number(
         is_valid, error_msg = validate_container_number(text)
 
         if not is_valid:
-            _logger.warning(
-                "OCR_GEMINI_INVALID_FORMAT",
-                f"Extracted '{text}' - {error_msg}",
-                "ocr_service",
-            )
+            _logger.warning("[OCR] invalid format: raw='%s' reason=%s", text, error_msg)
             return {
                 "success": False,
                 "container_number": text,
@@ -270,11 +252,7 @@ async def extract_container_number(
         if attempt:
             attempt.record_attempt(success=True)
 
-        _logger.info(
-            "OCR_GEMINI_SUCCESS",
-            f"Extracted valid container number: {text}",
-            "ocr_service",
-        )
+        _logger.info("[OCR] success: %s", text)
         return {
             "success": True,
             "container_number": text,
@@ -283,7 +261,7 @@ async def extract_container_number(
         }
 
     except Exception as e:
-        _logger.error("OCR_GEMINI_PARSE_ERROR", e, "ocr_service")
+        _logger.error("[OCR] parse error: %s", e)
         return {
             "success": False,
             "container_number": None,
