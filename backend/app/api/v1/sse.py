@@ -12,14 +12,12 @@ import asyncio
 import json
 import logging
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from redis.asyncio.connection import AsyncConnection
 
+from app.config import settings
 from app.core.deps import get_current_user
-from app.core.redis import get_redis
-from app.database import get_db
 from app.models.base import User
 
 logger = logging.getLogger(__name__)
@@ -32,8 +30,8 @@ MAX_CONNECTION_TIME = 300  # 5 min — client auto-reconnects
 
 async def _event_stream(user_id: int):
     """Generate SSE events from Redis pub/sub for a specific user."""
-    redis = await get_redis()
-    pubsub = redis.pubsub()
+    conn = AsyncConnection.from_url(settings.REDIS_URL, decode_responses=True)
+    pubsub = conn.pubsub()
 
     try:
         await pubsub.subscribe(f"sse:user:{user_id}")
@@ -66,8 +64,12 @@ async def _event_stream(user_id: int):
     except Exception:
         logger.exception("SSE error for user=%s", user_id)
     finally:
-        await pubsub.unsubscribe(f"sse:user:{user_id}")
-        await pubsub.aclose()
+        try:
+            await pubsub.unsubscribe(f"sse:user:{user_id}")
+            await pubsub.aclose()
+        except Exception:
+            logger.warning("SSE cleanup error for user=%s", user_id, exc_info=True)
+        await conn.aclose()
 
 
 @router.get("/notifications")
