@@ -14,7 +14,7 @@ import logging
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
-from redis.asyncio.connection import AsyncConnection
+from redis.asyncio.connection import Connection
 
 from app.config import settings
 from app.core.deps import get_current_user
@@ -30,7 +30,7 @@ MAX_CONNECTION_TIME = 300  # 5 min — client auto-reconnects
 
 async def _event_stream(user_id: int):
     """Generate SSE events from Redis pub/sub for a specific user."""
-    conn = AsyncConnection.from_url(settings.REDIS_URL, decode_responses=True)
+    conn = Connection.from_url(settings.REDIS_URL, decode_responses=True)
     pubsub = conn.pubsub()
 
     try:
