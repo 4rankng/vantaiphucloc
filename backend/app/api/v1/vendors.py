@@ -44,7 +44,7 @@ async def list_vendors(
 @router.post("/vendors", response_model=VendorOut, status_code=201)
 async def create_vendor(
     body: VendorCreate,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
     existing = await db.execute(select(Vendor).where(Vendor.name == body.name))
@@ -69,7 +69,7 @@ async def create_vendor(
 async def update_vendor(
     vendor_id: int,
     body: VendorUpdate,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(Vendor).where(Vendor.id == vendor_id))
@@ -104,7 +104,7 @@ async def update_vendor(
 @router.delete("/vendors/{vendor_id}", status_code=204)
 async def delete_vendor(
     vendor_id: int,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(Vendor).where(Vendor.id == vendor_id))

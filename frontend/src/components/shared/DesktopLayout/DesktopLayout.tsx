@@ -80,6 +80,7 @@ const DIRECTOR_NAV: NavGroup[] = [
     label: 'Quản lý',
     items: [
       { path: '/director/users', label: 'Tài khoản', icon: UserCog },
+      { path: '/director/partners', label: 'Đối tác', icon: Handshake },
     ],
   },
 ]

@@ -198,7 +198,7 @@ async def update_user(
 @router.delete("/users/{user_id}", status_code=204)
 async def delete_user(
     user_id: int,
-    current_user: User = Depends(require_roles("superadmin")),
+    current_user: User = Depends(require_roles("director", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(User).where(User.id == user_id))

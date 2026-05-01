@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { Users, Truck, TrendingUp, UserCircle, Building2 } from 'lucide-react'
+import { Users, Truck, TrendingUp, UserCircle, Building2, Handshake } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { apiClient } from '@/services/api'
 import { formatCurrencyFull as formatCurrency } from '@/data/domain'
@@ -110,6 +110,13 @@ export function DirectorDashboard() {
           style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)', border: '1px solid var(--theme-border-default)' }}
         >
           <Users className="w-3.5 h-3.5" style={{ color: 'var(--theme-brand-primary)' }} /> Nhân sự
+        </button>
+        <button
+          onClick={() => navigate('/director/partners')}
+          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold touch-manipulation"
+          style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)', border: '1px solid var(--theme-border-default)' }}
+        >
+          <Handshake className="w-3.5 h-3.5" style={{ color: 'var(--theme-brand-primary)' }} /> Đối tác
         </button>
       </div>
 
