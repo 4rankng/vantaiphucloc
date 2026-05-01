@@ -15,7 +15,7 @@ export function DesktopShell({
     <div className="min-h-screen" style={{ background: 'var(--theme-bg-primary)' }}>
       <DesktopSidebar navItems={navItems} label={roleLabel} />
       <main className="lg:pl-64">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {children}
         </div>
       </main>
