@@ -140,6 +140,7 @@ class WorkOrder(Base):
     id = Column(Integer, primary_key=True, index=True)
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
     client_name = Column(String(255), nullable=False)  # denormalized
+    client_code = Column(String(50), nullable=True)  # denormalized
     route = Column(String(500), nullable=False)
     driver_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     driver_name = Column(String(255), nullable=False)  # denormalized

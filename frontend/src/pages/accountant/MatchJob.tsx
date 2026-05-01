@@ -6,10 +6,13 @@ import { PickModal } from '@/components/shared/PickModal'
 import { EditDialog } from '@/components/shared/EditDialog'
 import { CompareRow } from '@/components/shared/CompareRow'
 import { ContCompareRow } from '@/components/shared/ContCompareRow'
+import { ConfirmationCheckbox } from '@/components/shared/ConfirmationCheckbox'
 import { WORK_TYPES } from '@/data/domain'
 import type { MatchSuggestion } from '@/data/domain'
 import { Check, ChevronDown, X, Sparkles } from 'lucide-react'
 import { Button, Input, Label } from '@/components/ui'
+import { useToggleTripConfirmation } from '@/hooks/use-queries'
+import { useToast } from '@/components/atoms/Toast'
 
 function SuggestionCard({ suggestion, onSelect }: { suggestion: MatchSuggestion; onSelect: () => void }) {
   const { tripOrder, confidence, matchedFields, score } = suggestion
@@ -58,6 +61,8 @@ function SuggestionCard({ suggestion, onSelect }: { suggestion: MatchSuggestion;
 export function MatchJob() {
   const { jobId: jobIdStr } = useParams<{ jobId: string }>()
   const navigate = useNavigate()
+  const toast = useToast()
+  const { mutate: toggleConfirmation, isPending: toggling } = useToggleTripConfirmation()
   const {
     loading, loadingSuggestions, submitting, pickMode, setPickMode,
     editDialog,
@@ -75,6 +80,19 @@ export function MatchJob() {
     contMatched, clientMatched, routeMatched,
     openEdit, saveDialog, handleMatch,
   } = useMatchJob(Number(jobIdStr))
+
+  const handleToggleConfirmation = () => {
+    if (!selectedTrip) return
+
+    toggleConfirmation(selectedTrip.id, {
+      onSuccess: () => {
+        toast.success('Thành công', selectedTrip.isConfirmed ? 'Đã bỏ chốt chuyến' : 'Đã chốt chuyến')
+      },
+      onError: () => {
+        toast.error('Lỗi', 'Không thể thay đổi trạng thái chốt')
+      },
+    })
+  }
 
   if (loading) {
     return <div className="space-y-2">{[1, 2].map(i => <div key={i} className="h-20 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}</div>
@@ -172,6 +190,19 @@ export function MatchJob() {
         {/* ── BOTTOM ── */}
         {selectedJob && selectedTrip && (
           <div className="px-4 pb-4 pt-2 shrink-0 space-y-2" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
+            {/* Confirmation Checkbox */}
+            <div className="flex items-center justify-between px-2">
+              <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>
+                Trạng thái đối soát
+              </span>
+              <ConfirmationCheckbox
+                isConfirmed={selectedTrip.isConfirmed}
+                onToggle={handleToggleConfirmation}
+                disabled={toggling}
+                label="Đã chốt"
+              />
+            </div>
+
             <Button onClick={handleMatch} disabled={submitting}
               className="w-full h-12 font-bold rounded-xl text-sm"
               style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
