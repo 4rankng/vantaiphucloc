@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useTripOrders, useWorkOrders, useUpdateTripOrder, useReconcile } from '@/hooks/use-queries'
+import { useTripOrders, useWorkOrders, useUpdateTripOrder, useReconcile, useToggleTripConfirmation } from '@/hooks/use-queries'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { ContBadge } from '@/components/shared/ContBadge'
+import { ConfirmationCheckbox } from '@/components/shared/ConfirmationCheckbox'
 import { formatCurrencyFull, WORK_TYPES, type WorkType } from '@/data/domain'
 import { Building2, Route, UserCircle, Wallet, Link2, Pencil } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
@@ -25,6 +26,7 @@ export function TripDetail() {
   const toast = useToast()
   const updateTripOrder = useUpdateTripOrder()
   const reconcile = useReconcile()
+  const { mutate: toggleConfirmation, isPending: toggling } = useToggleTripConfirmation()
   const qc = useQueryClient()
 
   const loading = loadingTrips || loadingJobs
@@ -88,6 +90,19 @@ export function TripDetail() {
     setShowMatchDialog(false)
   }
 
+  const handleToggleConfirmation = () => {
+    if (!trip) return
+
+    toggleConfirmation(trip.id, {
+      onSuccess: () => {
+        toast.success('Thành công', trip.isConfirmed ? 'Đã bỏ chốt chuyến' : 'Đã chốt chuyến')
+      },
+      onError: () => {
+        toast.error('Lỗi', 'Không thể thay đổi trạng thái chốt')
+      },
+    })
+  }
+
   return (
     <div className="space-y-4">
       {/* Trip info card */}
@@ -96,6 +111,12 @@ export function TripDetail() {
         <div className="flex items-center justify-between mb-2">
           <p className="text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>Chuyến</p>
           <div className="flex items-center gap-2">
+            <ConfirmationCheckbox
+              isConfirmed={trip.isConfirmed}
+              onToggle={handleToggleConfirmation}
+              disabled={toggling}
+              label="Đã chốt"
+            />
             <button onClick={handleOpenEdit}
               className="h-7 w-7 flex items-center justify-center rounded-lg touch-manipulation"
               style={{ color: 'var(--theme-text-muted)' }}>

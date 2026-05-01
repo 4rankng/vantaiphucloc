@@ -348,7 +348,7 @@ export function CreateWorkOrder() {
           label="Chọn khách hàng"
           placeholder="Chọn khách hàng"
           value={clientId}
-          options={clients.map(c => ({ value: String(c.id), label: c.name, sublabel: c.phone }))}
+          options={clients.map(c => ({ value: String(c.id), label: c.code || c.name, sublabel: c.code ? c.name : c.phone }))}
           onChange={setClientId}
           onCreateNew={() => setCreateClientOpen(true)}
           createNewLabel="Tạo khách hàng mới"
