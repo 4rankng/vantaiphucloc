@@ -1,6 +1,7 @@
-import { type ReactNode, useState, useCallback } from 'react'
+import { type ReactNode, useState, useCallback, useRef } from 'react'
 import { Bell, UserCircle, ArrowLeft } from 'lucide-react'
 import { NotificationPanel, useUnreadCount } from '@/components/shared/NotificationPanel/NotificationPanel'
+import { UserDropdown } from '@/components/shared/ProfileDialog'
 
 /**
  * AppTopBar — the brand-coloured top bar used across all mobile app screens.
@@ -20,7 +21,6 @@ interface HomeVariantProps extends AppTopBarBaseProps {
   /** Full name of the logged-in user */
   name: string
   onNotifications?: () => void
-  onProfile?: () => void
 }
 
 interface PageVariantProps extends AppTopBarBaseProps {
@@ -34,6 +34,8 @@ export type AppTopBarProps = HomeVariantProps | PageVariantProps
 
 export function AppTopBar(props: AppTopBarProps) {
   const [notifOpen, setNotifOpen] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const profileBtnRef = useRef<HTMLDivElement>(null)
   const unread = useUnreadCount()
 
   const handleBellClick = useCallback(() => {
@@ -106,16 +108,24 @@ export function AppTopBar(props: AppTopBarProps) {
             )}
           </button>
 
-          {/* Profile — home variant only */}
-          {props.variant === 'home' && props.onProfile && (
-            <button
-              onClick={props.onProfile}
-              className="w-8 h-8 flex items-center justify-center rounded-full touch-manipulation"
-              style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--theme-text-on-brand)' }}
-              aria-label="Tài khoản"
-            >
-              <UserCircle className="w-[17px] h-[17px]" />
-            </button>
+          {/* Profile — home variant only, self-contained with anchored dropdown */}
+          {props.variant === 'home' && (
+            <div ref={profileBtnRef} className="relative">
+              <button
+                onClick={() => setProfileOpen(v => !v)}
+                className="w-8 h-8 flex items-center justify-center rounded-full touch-manipulation"
+                style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--theme-text-on-brand)' }}
+                aria-label="Tài khoản"
+              >
+                <UserCircle className="w-[17px] h-[17px]" />
+              </button>
+              {/* Dropdown anchored to this button via right-0 top-full */}
+              <UserDropdown
+                open={profileOpen}
+                onClose={() => setProfileOpen(false)}
+                anchorRef={profileBtnRef}
+              />
+            </div>
           )}
         </div>
         </div>
