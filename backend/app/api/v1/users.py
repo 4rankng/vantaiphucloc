@@ -67,6 +67,11 @@ async def list_users(
     query = select(User).order_by(User.username.asc())
     count_query = select(func.count(User.id))
 
+    # Directors cannot see superadmin users
+    if current_user.role == "director":
+        query = query.where(User.role != "superadmin")
+        count_query = count_query.where(User.role != "superadmin")
+
     if role:
         query = query.where(User.role == role)
         count_query = count_query.where(User.role == role)
@@ -94,6 +99,10 @@ async def create_user(
     current_user: User = Depends(require_roles("director", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
+    # Directors cannot create superadmin users
+    if current_user.role == "director" and body.role == "superadmin":
+        raise HTTPException(status_code=403, detail="Directors cannot create superadmin users")
+
     # Check phone uniqueness (only if phone provided)
     if body.phone:
         existing = await db.execute(select(User).where(User.phone == body.phone))
@@ -146,6 +155,14 @@ async def update_user(
     user = result.scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
+
+    # Directors cannot update superadmin users
+    if current_user.role == "director" and user.role == "superadmin":
+        raise HTTPException(status_code=403, detail="Directors cannot update superadmin users")
+
+    # Directors cannot promote users to superadmin
+    if current_user.role == "director" and body.role == "superadmin":
+        raise HTTPException(status_code=403, detail="Directors cannot promote users to superadmin")
 
     update_data = body.model_dump(exclude_unset=True)
 
@@ -205,6 +222,10 @@ async def delete_user(
     user = result.scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
+
+    # Directors cannot delete superadmin users
+    if current_user.role == "director" and user.role == "superadmin":
+        raise HTTPException(status_code=403, detail="Directors cannot delete superadmin users")
 
     # Guard: prevent deactivating drivers with active unmatched work orders
     if user.role == "driver":
