@@ -38,6 +38,11 @@ class Vendor(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False, unique=True, index=True)
+    type = Column(String(20), nullable=True)           # company | individual
+    phone = Column(String(50), nullable=True)
+    tax_code = Column(String(50), nullable=True)
+    address = Column(String(500), nullable=True)
+    contact_person = Column(String(255), nullable=True)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False

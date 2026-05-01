@@ -51,7 +51,14 @@ async def create_vendor(
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="Vendor already exists")
 
-    vendor = Vendor(name=body.name)
+    vendor = Vendor(
+        name=body.name,
+        type=body.type,
+        phone=body.phone,
+        tax_code=body.tax_code,
+        address=body.address,
+        contact_person=body.contact_person,
+    )
     db.add(vendor)
     await db.commit()
     await db.refresh(vendor)
@@ -77,6 +84,17 @@ async def update_vendor(
         if existing.scalar_one_or_none():
             raise HTTPException(status_code=409, detail="Vendor name already exists")
         vendor.name = body.name
+
+    if body.type is not None:
+        vendor.type = body.type
+    if body.phone is not None:
+        vendor.phone = body.phone
+    if body.tax_code is not None:
+        vendor.tax_code = body.tax_code
+    if body.address is not None:
+        vendor.address = body.address
+    if body.contact_person is not None:
+        vendor.contact_person = body.contact_person
 
     await db.commit()
     await db.refresh(vendor)
