@@ -8,6 +8,7 @@ const ALLOWED_ROLES: Role[] = ['director', 'superadmin']
 const TITLES: Record<string, string> = {
   '/director': 'Tổng quan',
   '/director/users': 'Quản lý tài khoản',
+  '/director/partners': 'Đối tác',
   '/director/notifications': 'Thông báo',
   '/director/profile': 'Thông tin cá nhân',
 }

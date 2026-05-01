@@ -82,6 +82,7 @@ export function createAppRouter() {
           children: [
             { index: true,                       element: h(Lazy, { component: R.DirectorDashboard }) },
             { path: 'users',                     element: h(Lazy, { component: R.UserManagement }) },
+            { path: 'partners',                  element: h(Lazy, { component: R.ClientsAndVendors }) },
             { path: 'notifications',             element: h(Lazy, { component: R.DirectorNotifications }) },
             { path: 'driver-jobs/:driverId',     element: h(Lazy, { component: R.DriverJobs }) },
             { path: 'client-jobs/:clientId',     element: h(Lazy, { component: R.ClientJobs }) },
