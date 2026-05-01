@@ -52,12 +52,19 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
     const video = webcam.video
     if (!video) return
 
-    const overlay = getOverlayDimensions(scanMode, video.clientWidth)
+    // Use window dimensions as the container — the overlay is `fixed inset-0`
+    // so it always equals the viewport exactly. This avoids DOM measurement
+    // timing issues (stale clientHeight on iOS Safari / Android Chrome when
+    // the address bar shifts the viewport after initial render).
+    const containerW = window.innerWidth
+    const containerH = window.innerHeight
+
+    const overlay = getOverlayDimensions(scanMode, containerW)
     const crop = calculateObjectCoverCrop({
       sourceWidth: video.videoWidth,
       sourceHeight: video.videoHeight,
-      containerWidth: video.clientWidth,
-      containerHeight: video.clientHeight,
+      containerWidth: containerW,
+      containerHeight: containerH,
       rectWidth: overlay.width,
       rectHeight: overlay.height,
     })
