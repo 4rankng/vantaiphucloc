@@ -6,10 +6,10 @@ interface TripOrderCardProps {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
-  DRAFT:     { label: 'Đối soát khách hàng', bg: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' },
-  CONFIRMED: { label: 'Đã xác nhận',         bg: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' },
-  INVOICED:  { label: 'Đã xuất hoá đơn',     bg: 'var(--theme-status-info-light)',    color: 'var(--theme-status-info)' },
-  CANCELLED: { label: 'Đã huỷ',              bg: 'var(--theme-status-error-light)',   color: 'var(--theme-status-error)' },
+  DRAFT:     { label: 'Nháp',               bg: 'var(--theme-status-neutral-light)',  color: 'var(--theme-status-neutral)'  },
+  PENDING:   { label: 'Chờ đối soát',       bg: 'var(--theme-status-warning-light)',  color: 'var(--theme-status-warning)'  },
+  COMPLETED: { label: 'Hoàn thành',         bg: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' },
+  CANCELLED: { label: 'Đã huỷ',              bg: 'var(--theme-status-error-light)',   color: 'var(--theme-status-error)'   },
 }
 
 export function TripOrderCard({ trip, onClick }: TripOrderCardProps) {

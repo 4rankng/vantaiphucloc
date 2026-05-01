@@ -144,7 +144,7 @@ class WorkOrder(Base):
     allowance = Column(Integer, nullable=False)        # VND
     earning = Column(Integer, nullable=False)          # = driver_salary + allowance
     pricing_id = Column(Integer, ForeignKey("pricings.id"), nullable=True)
-    status = Column(String(20), nullable=False, default="PENDING")  # PENDING | PRICED | MATCHED
+    status = Column(String(20), nullable=False, default="PENDING")  # PENDING | MATCHED | COMPLETED
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
@@ -200,7 +200,7 @@ class TripOrder(Base):
     driver_salary = Column(Integer, nullable=False)    # VND
     allowance = Column(Integer, nullable=False)        # VND
     revenue = Column(Integer, nullable=False)          # VND
-    status = Column(String(20), nullable=False, default="DRAFT")  # DRAFT | CONFIRMED | INVOICED | CANCELLED
+    status = Column(String(20), nullable=False, default="DRAFT")  # DRAFT | PENDING | COMPLETED | CANCELLED
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False

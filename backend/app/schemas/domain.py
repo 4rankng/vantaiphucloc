@@ -13,9 +13,27 @@ All Out schemas use model_config = ConfigDict(from_attributes=True).
 from __future__ import annotations
 
 from datetime import date, datetime
+from enum import Enum
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+# ---------------------------------------------------------------------------
+# Status Enums
+# ---------------------------------------------------------------------------
+
+class WorkOrderStatus(str, Enum):
+    PENDING = "PENDING"
+    MATCHED = "MATCHED"
+    COMPLETED = "COMPLETED"
+
+
+class TripOrderStatus(str, Enum):
+    DRAFT = "DRAFT"
+    PENDING = "PENDING"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
 
 
 # ---------------------------------------------------------------------------
@@ -456,6 +474,22 @@ class BatchWorkOrderResult(BaseModel):
     id: int | None = None
     success: bool
     error: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# OCR (Container Number Extraction)
+# ---------------------------------------------------------------------------
+
+class ContainerOCRRequest(BaseModel):
+    image_data: str  # base64-encoded image
+    mime_type: str = "image/jpeg"
+
+
+class ContainerOCRResponse(BaseModel):
+    success: bool
+    container_number: str | None = None
+    error: str | None = None
+    attempts_remaining: int = 0
 
 
 # ---------------------------------------------------------------------------

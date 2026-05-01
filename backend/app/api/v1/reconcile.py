@@ -44,13 +44,21 @@ async def reconcile(
     if trip_order is None:
         raise HTTPException(status_code=404, detail="Trip order not found")
 
-    # Check if already matched
-    if work_order.status == "MATCHED":
+    # Check if already matched or completed
+    if work_order.status in ("MATCHED", "COMPLETED"):
         raise HTTPException(status_code=409, detail="Work order is already matched")
 
-    # Set work order status and earning
-    work_order.status = "MATCHED"
+    # Sync salary fields from TO to WO
+    work_order.driver_salary = trip_order.driver_salary
+    work_order.allowance = trip_order.allowance
     work_order.earning = trip_order.driver_salary + trip_order.allowance
+    # WO.unit_price stays 0 (revenue tracked in TO only)
+
+    # Determine WO status based on whether TO has pricing data
+    if trip_order.unit_price > 0 and trip_order.driver_salary > 0:
+        work_order.status = "COMPLETED"
+    else:
+        work_order.status = "MATCHED"
 
     # Add to join table
     db.add(TripOrderWorkOrder(

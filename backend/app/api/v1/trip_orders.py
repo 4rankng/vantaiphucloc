@@ -9,7 +9,7 @@ from sqlalchemy import select, delete, func
 
 from app.database import get_db
 from app.models.base import User
-from app.models.domain import TripOrder, TripOrderContainer, TripOrderWorkOrder, WorkOrder
+from app.models.domain import TripOrder, TripOrderContainer, TripOrderWorkOrder, WorkOrder, Client
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import TripOrderCreate, TripOrderUpdate, TripOrderOut, TripContainerOut
 from app.core.deps import get_current_user, require_roles
@@ -148,6 +148,21 @@ async def _set_work_orders_matched(db: AsyncSession, work_order_ids: list[int]) 
             wo.status = "MATCHED"
 
 
+async def _update_client_debt(db: AsyncSession, client_id: int, amount: int) -> None:
+    """Update client's outstanding debt by adding the amount."""
+    if amount <= 0:
+        return
+    result = await db.execute(select(Client).where(Client.id == client_id))
+    client = result.scalar_one_or_none()
+    if client is not None:
+        client.outstanding_debt += amount
+        _logger.info(
+            "CLIENT_DEBT_UPDATED",
+            f"Client #{client_id}: debt increased by {amount}, new debt: {client.outstanding_debt}",
+            "trip_orders",
+        )
+
+
 async def _enqueue_salary_recalc(db: AsyncSession, driver_id: int, ref_date: date) -> None:
     """Enqueue salary recalculation for a driver in the period containing ref_date."""
     try:
@@ -179,10 +194,34 @@ async def create_trip_order(
         trip_data["container_number"] = body.containers[0].container_number
         trip_data["work_type"] = body.containers[0].work_type
 
-    trip_order = TripOrder(
-        status="DRAFT",
-        **trip_data,
-    )
+    # Auto-lookup pricing from bang gia
+    work_type = trip_data.get("work_type")
+    if body.containers and work_type:
+        from app.services.pricing_service import find_pricing
+        pricing = await find_pricing(
+            db,
+            client_id=body.client_id,
+            work_type=work_type,
+            route=body.route,
+        )
+        if pricing:
+            trip_data["unit_price"] = pricing.unit_price
+            trip_data["driver_salary"] = pricing.driver_salary
+            trip_data["allowance"] = pricing.allowance
+            trip_data["pricing_id"] = pricing.id
+    # else: use values provided in body (or defaults)
+
+    # Determine initial status based on whether all required fields are provided
+    # Required fields: containers, client_id, route, pricing (unit_price > 0)
+    has_containers = bool(body.containers)
+    has_pricing = trip_data.get("unit_price", 0) > 0 and trip_data.get("driver_salary", 0) > 0
+
+    if has_containers and has_pricing:
+        trip_data["status"] = "PENDING"  # All info provided, ready for matching
+    else:
+        trip_data["status"] = "DRAFT"    # Missing info
+
+    trip_order = TripOrder(**trip_data)
     db.add(trip_order)
     await db.flush()
 
@@ -337,6 +376,11 @@ async def update_trip_order(
                 ))
         await _set_work_orders_matched(db, new_matched_ids)
 
+        # If TO has pricing and now has matched work orders, update client debt
+        # This simulates "invoicing" when the trip is completed
+        if trip_order.unit_price > 0 and len(new_matched_ids) > 0:
+            await _update_client_debt(db, trip_order.client_id, trip_order.unit_price)
+
     await db.commit()
     await db.refresh(trip_order)
 
@@ -344,5 +388,50 @@ async def update_trip_order(
     if new_matched_ids:
         ref_date = trip_order.trip_date if hasattr(trip_order, "trip_date") and trip_order.trip_date else date.today()
         await _enqueue_salary_recalc(db, trip_order.driver_id, ref_date)
+
+    return await _load_trip_order_out(db, trip_order)
+
+
+@router.put("/trip-orders/{trip_order_id}/cancel", response_model=TripOrderOut)
+async def cancel_trip_order(
+    trip_order_id: int,
+    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Cancel a trip order (only DRAFT or PENDING can be cancelled)."""
+    result = await db.execute(
+        select(TripOrder).where(TripOrder.id == trip_order_id)
+    )
+    trip_order = result.scalar_one_or_none()
+    if trip_order is None:
+        raise HTTPException(status_code=404, detail="Trip order not found")
+
+    # Initialize state machine and validate transition
+    from app.services.state_machine import initialize_to_state_machine
+    machine = initialize_to_state_machine(trip_order.status)
+
+    # Try to cancel based on current status
+    if trip_order.status == "DRAFT":
+        trip_order.status = "CANCELLED"
+    elif trip_order.status == "PENDING":
+        trip_order.status = "CANCELLED"
+    elif trip_order.status == "COMPLETED":
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot cancel COMPLETED trip orders"
+        )
+    elif trip_order.status == "CANCELLED":
+        raise HTTPException(
+            status_code=400,
+            detail="Trip order is already cancelled"
+        )
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid status for cancellation: {trip_order.status}"
+        )
+
+    await db.commit()
+    await db.refresh(trip_order)
 
     return await _load_trip_order_out(db, trip_order)
