@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     RATE_LIMIT_API_MAX: int = 100
     RATE_LIMIT_API_WINDOW: int = 60
 
+    # Photo storage
+    PHOTO_STORAGE_ROOT: str = "./data/photos"
+
     # Worker
     WORKER_TIMEOUT: int = 600
     WORKER_MAX_TRIES: int = 3

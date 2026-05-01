@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import math
 import logging
@@ -25,6 +26,7 @@ from app.schemas.domain import (
 from app.core.deps import get_current_user, require_roles
 from app.services.pricing_service import find_pricing
 from app.services.ocr_service import MAX_OCR_ATTEMPTS, OCRAttempt, extract_container_number
+from app.services.photo_storage import save_base64_photo
 
 _logger = logging.getLogger(__name__)
 
@@ -241,11 +243,14 @@ async def update_work_order(
             )
         )
         for container in new_containers:
+            photo_url = container.get("photo_url")
+            if photo_url and photo_url.startswith("data:"):
+                photo_url = await asyncio.to_thread(save_base64_photo, photo_url)
             db.add(WorkOrderContainer(
                 work_order_id=work_order.id,
                 container_number=container["container_number"],
                 work_type=container["work_type"],
-                photo_url=container.get("photo_url"),
+                photo_url=photo_url,
             ))
 
     await db.commit()
@@ -349,11 +354,15 @@ async def _create_work_order_db(
     await db.flush()
 
     for container in containers_data:
+        photo_url = container.photo_url
+        if photo_url and photo_url.startswith("data:"):
+            photo_url = await asyncio.to_thread(save_base64_photo, photo_url)
+
         db.add(WorkOrderContainer(
             work_order_id=work_order.id,
             container_number=container.container_number,
             work_type=container.work_type,
-            photo_url=container.photo_url,
+            photo_url=photo_url,
             photo_lat=container.photo_lat,
             photo_lng=container.photo_lng,
             photo_timestamp=container.photo_timestamp,
