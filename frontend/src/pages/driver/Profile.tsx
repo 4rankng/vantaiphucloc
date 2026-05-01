@@ -63,8 +63,7 @@ export function Profile() {
   }
 
   return (
-    <div className="pb-6">
-      <div className="px-4 pt-4 space-y-4">
+    <div className="pb-6 space-y-4">
         {/* Avatar + name */}
         <div
           className="flex items-center gap-3 rounded-2xl p-4"
@@ -134,7 +133,6 @@ export function Profile() {
           <LogOut className="w-4 h-4" />
           Đăng xuất
         </button>
-      </div>
 
       {/* Change password dialog */}
       <Dialog open={pwDialog} onOpenChange={setPwDialog}>

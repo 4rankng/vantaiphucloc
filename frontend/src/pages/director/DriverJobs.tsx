@@ -1,10 +1,12 @@
 import { useEffect, useState, useMemo } from 'react'
-import { AppTopBar } from '@/components/shared/AppTopBar'
+import { useParams } from 'react-router-dom'
 import { apiClient } from '@/services/api'
 import { formatCurrencyFull as formatCurrency } from '@/data/domain'
 import type { WorkOrder, Driver } from '@/data/domain'
 
-export function DriverJobs({ driverId, onBack }: { driverId: number; onBack: () => void }) {
+export function DriverJobs() {
+  const { driverId: driverIdStr } = useParams<{ driverId: string }>()
+  const driverId = Number(driverIdStr)
   const [jobs, setJobs] = useState<WorkOrder[]>([])
   const [driver, setDriver] = useState<Driver | null>(null)
 
@@ -26,8 +28,7 @@ export function DriverJobs({ driverId, onBack }: { driverId: number; onBack: () 
 
   return (
     <>
-      <AppTopBar variant="page" title={driver ? `${driver.name} · ${driver.tractorPlate}` : 'Tài xế'} onBack={onBack} />
-      <div className="p-4 space-y-3">
+      <div className="space-y-3">
         {/* Summary */}
         <div className="rounded-2xl p-3 flex items-center justify-between" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
           <div>

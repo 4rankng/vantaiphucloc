@@ -87,6 +87,28 @@ export async function createWorkOrder(
   }
 }
 
+export interface OCRContainerResponse {
+  success: boolean
+  containerNumber: string | null
+  error: string | null
+  attemptsRemaining: number
+}
+
+export async function ocrContainer(imageDataUrl: string): Promise<OCRContainerResponse> {
+  // Strip data URI prefix: "data:image/jpeg;base64," → raw base64
+  const base64 = imageDataUrl.replace(/^data:[^;]+;base64,/, '')
+  const res = await api.post('/work-orders/ocr-container', {
+    image_data: base64,
+    mime_type: 'image/jpeg',
+  })
+  return {
+    success: res.data.success,
+    containerNumber: res.data.container_number,
+    error: res.data.error,
+    attemptsRemaining: res.data.attempts_remaining,
+  }
+}
+
 export async function updateWorkOrder(id: number, data: Partial<WorkOrder>): Promise<ApiResponse<WorkOrder>> {
   try {
     const res = await api.put(`/work-orders/${id}`, toSnake(data))
