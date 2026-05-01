@@ -45,27 +45,17 @@ def preprocess_image(image_bytes: bytes) -> tuple[bytes, str]:
     return buf.getvalue(), "image/jpeg"
 
 # Prompt for container number extraction
-CONTAINER_PROMPT = """You are looking at a photo taken by a truck driver of a shipping container.
+CONTAINER_PROMPT = """You are analyzing a photo of a shipping container taken at a port/depot.
 
-YOUR TASK: Find and return ONLY the container number painted on the container.
+TASK: Find the container number — the large text painted on the container body (side, door, or top). It is the biggest, most prominent marking on the container.
 
-IMPORTANT CONTEXT:
-- The photo is taken in a busy port/depot environment — there will be lots of noise: signs, labels, QR codes, truck license plates, other containers, graffiti, text on the ground, etc.
-- IGNORE ALL OF THAT. Focus ONLY on the large, bold text painted directly on the container body.
-- The container number is usually the biggest, most prominent text on the container — typically painted in large black or white characters.
-- It may appear on the side, door, or top of the container.
-
-FORMAT — ISO 6346 container number:
-- 4 uppercase letters + 6 digits + 1 check digit = 11 characters total
-- Examples: MSKU1234567, TCLU9876543, OOLU5567890
-- May have hyphens like MSKU-123456-7 — remove them in your output
+FORMAT: ISO 6346 — 4 uppercase letters + 7 digits (e.g. MSKU1234567). Hyphens may be present (MSKU-123456-7).
 
 RULES:
-1. Return ONLY the 11-character container number, uppercase, no hyphens, no spaces
-2. If you can see multiple container numbers (e.g., stacked containers), return the one on the CLOSEST/largest container
-3. If you cannot find a valid container number, return exactly: NONE
-4. Do NOT include any explanation, reasoning, or extra text
-5. Double-check: your output must be exactly 4 letters followed by 7 digits
+- Ignore everything else: signs, QR codes, license plates, labels, other containers
+- Return ONLY the 11-character number, uppercase, no spaces or hyphens
+- If multiple numbers visible, return the one on the closest/largest container
+- If no valid container number found, return NONE
 
 Example outputs:
 MSKU1234567
@@ -160,7 +150,7 @@ async def extract_container_number(
         ],
         "generationConfig": {
             "temperature": 0.1,
-            "maxOutputTokens": 100,
+            "maxOutputTokens": 1000,
         },
     }
 
