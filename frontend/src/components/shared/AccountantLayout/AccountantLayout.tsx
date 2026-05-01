@@ -1,10 +1,8 @@
 import { useState } from 'react'
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
 import { AppShell } from '@/components/shared/AppShell'
-import { DesktopLayout } from '@/components/shared/DesktopLayout'
 import { UserDropdown } from '@/components/shared/ProfileDialog'
 import { useAuth } from '@/contexts/AuthContext'
-import { useIsMobile } from '@/hooks/use-mobile'
 import type { Role } from '@/data/domain'
 
 const ALLOWED_ROLES: Role[] = ['accountant']
@@ -19,6 +17,7 @@ const TITLES: Record<string, string> = {
   '/accountant/salary-setup': 'Thiết lập kỳ lương',
   '/accountant/pricing': 'Bảng giá',
   '/accountant/notifications': 'Thông báo',
+  '/accountant/profile': 'Thông tin cá nhân',
 }
 
 function resolveTitle(pathname: string): string {
@@ -29,9 +28,7 @@ function resolveTitle(pathname: string): string {
   return ''
 }
 
-// ─── Mobile ───────────────────────────────────────────────────────────────────
-
-function AccountantMobile() {
+function AccountantShell() {
   const { user } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -43,6 +40,10 @@ function AccountantMobile() {
     location.pathname.startsWith('/accountant/match/') ||
     location.pathname.startsWith('/accountant/match-trip/')
   const title = resolveTitle(location.pathname)
+
+  const contentClassName = isFullPage
+    ? undefined
+    : 'px-4 py-4 space-y-4 md:px-6 md:py-6 md:max-w-4xl md:mx-auto'
 
   return (
     <>
@@ -57,7 +58,7 @@ function AccountantMobile() {
               }
             : { variant: 'page' as const, title, onBack: () => navigate(-1) }
         }
-        contentClassName={isHome || isFullPage ? undefined : 'px-4 py-4 space-y-4'}
+        contentClassName={contentClassName}
       >
         <Outlet />
       </AppShell>
@@ -66,28 +67,12 @@ function AccountantMobile() {
   )
 }
 
-// ─── Desktop ──────────────────────────────────────────────────────────────────
-
-function AccountantDesktop() {
-  const location = useLocation()
-  const title = resolveTitle(location.pathname)
-
-  return (
-    <DesktopLayout role="accountant" title={title}>
-      <Outlet />
-    </DesktopLayout>
-  )
-}
-
-// ─── Layout ───────────────────────────────────────────────────────────────────
-
 export function AccountantLayout() {
   const { user } = useAuth()
-  const isMobile = useIsMobile()
 
   if (!user || !ALLOWED_ROLES.includes(user.role)) {
     return <Navigate to="/" replace />
   }
 
-  return isMobile ? <AccountantMobile /> : <AccountantDesktop />
+  return <AccountantShell />
 }

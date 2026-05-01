@@ -1,10 +1,8 @@
 import { useState } from 'react'
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
 import { AppShell } from '@/components/shared/AppShell'
-import { DesktopLayout } from '@/components/shared/DesktopLayout'
 import { UserDropdown } from '@/components/shared/ProfileDialog'
 import { useAuth } from '@/contexts/AuthContext'
-import { useIsMobile } from '@/hooks/use-mobile'
 import type { Role } from '@/data/domain'
 
 const ALLOWED_ROLES: Role[] = ['director', 'superadmin']
@@ -13,6 +11,7 @@ const TITLES: Record<string, string> = {
   '/director': 'Tổng quan',
   '/director/users': 'Quản lý tài khoản',
   '/director/notifications': 'Thông báo',
+  '/director/profile': 'Thông tin cá nhân',
 }
 
 function resolveTitle(pathname: string): string {
@@ -22,9 +21,7 @@ function resolveTitle(pathname: string): string {
   return ''
 }
 
-// ─── Mobile ───────────────────────────────────────────────────────────────────
-
-function DirectorMobile() {
+function DirectorShell() {
   const { user } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -46,7 +43,7 @@ function DirectorMobile() {
               }
             : { variant: 'page' as const, title, onBack: () => navigate(-1) }
         }
-        contentClassName="px-4 py-4 space-y-4"
+        contentClassName="px-4 py-4 space-y-4 md:px-6 md:py-6 md:max-w-3xl md:mx-auto"
       >
         <Outlet />
       </AppShell>
@@ -55,28 +52,12 @@ function DirectorMobile() {
   )
 }
 
-// ─── Desktop ──────────────────────────────────────────────────────────────────
-
-function DirectorDesktop() {
-  const location = useLocation()
-  const title = resolveTitle(location.pathname)
-
-  return (
-    <DesktopLayout role="director" title={title}>
-      <Outlet />
-    </DesktopLayout>
-  )
-}
-
-// ─── Layout ───────────────────────────────────────────────────────────────────
-
 export function DirectorLayout() {
   const { user } = useAuth()
-  const isMobile = useIsMobile()
 
   if (!user || !ALLOWED_ROLES.includes(user.role)) {
     return <Navigate to="/" replace />
   }
 
-  return isMobile ? <DirectorMobile /> : <DirectorDesktop />
+  return <DirectorShell />
 }

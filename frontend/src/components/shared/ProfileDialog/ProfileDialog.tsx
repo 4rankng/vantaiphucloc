@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { api } from '@/services/api/client'
 import { useToast } from '@/components/atoms/Toast'
-import { KeyRound, LogOut, Bell, BellOff, UserCircle, ChevronRight, X } from 'lucide-react'
+import { LogOut, Bell, BellOff, UserCircle, ChevronRight, X } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog/Dialog'
 import { Button } from '@/components/ui/Button/Button'
 import { Input } from '@/components/ui/Input/Input'
@@ -15,6 +15,8 @@ const ROLE_LABELS: Record<string, string> = {
   accountant: 'Kế toán',
   director: 'Giám đốc',
 }
+
+// ─── Change Password Dialog ───────────────────────────────────────────────────
 
 export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const toast = useToast()
@@ -82,9 +84,11 @@ export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () =>
   )
 }
 
+// ─── User Dropdown (topbar profile button) ────────────────────────────────────
+
 export function UserDropdown({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { logout } = useAuth()
-  const [showPwDialog, setShowPwDialog] = useState(false)
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
   const [pushEnabled, setPushEnabled] = useState(false)
   const pushSupported = isPushSupported()
   const ref = useRef<HTMLDivElement>(null)
@@ -98,7 +102,6 @@ export function UserDropdown({ open, onClose }: { open: boolean; onClose: () => 
     return () => document.removeEventListener('mousedown', handler)
   }, [open, onClose])
 
-  // Check push subscription status when dropdown opens
   useEffect(() => {
     if (open && pushSupported) {
       getPushSubscriptionStatus().then(s => setPushEnabled(s.subscribed))
@@ -115,56 +118,73 @@ export function UserDropdown({ open, onClose }: { open: boolean; onClose: () => 
     }
   }, [pushEnabled])
 
+  const goToProfile = useCallback(() => {
+    onClose()
+    if (user?.role) navigate(`/${user.role}/profile`)
+  }, [onClose, navigate, user])
+
+  const handleLogout = useCallback(() => {
+    onClose()
+    logout()
+  }, [onClose, logout])
+
   if (!open) return null
 
   return (
-    <>
-      <div
-        ref={ref}
-        className="absolute right-4 top-14 z-50 rounded-xl py-1 min-w-[180px]"
-        style={{
-          background: 'var(--theme-bg-secondary)',
-          boxShadow: 'var(--theme-shadow-elevated)',
-          border: '1px solid var(--theme-border-default)',
-        }}
-      >
-        {pushSupported && (
+    <div
+      ref={ref}
+      className="absolute right-4 top-14 z-50 rounded-xl overflow-hidden min-w-[200px]"
+      style={{
+        background: 'var(--theme-bg-secondary)',
+        boxShadow: 'var(--theme-shadow-elevated)',
+        border: '1px solid var(--theme-border-default)',
+      }}
+    >
+      {/* Push notifications toggle */}
+      {pushSupported && (
+        <>
           <button
             onClick={togglePush}
-            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium touch-manipulation"
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium touch-manipulation transition-colors hover:bg-[var(--theme-bg-tertiary)]"
             style={{ color: 'var(--theme-text-primary)' }}
           >
             {pushEnabled ? (
-              <Bell className="w-4 h-4" style={{ color: 'var(--theme-brand-primary)' }} />
+              <Bell className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-brand-primary)' }} />
             ) : (
-              <BellOff className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
+              <BellOff className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
             )}
-            {pushEnabled ? 'Tắt thông báo' : 'Bật thông báo'}
+            <span className="flex-1 text-left">{pushEnabled ? 'Tắt thông báo' : 'Bật thông báo'}</span>
           </button>
-        )}
-        <button
-          onClick={() => { onClose(); setShowPwDialog(true) }}
-          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium touch-manipulation"
-          style={{ color: 'var(--theme-text-primary)' }}
-        >
-          <KeyRound className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
-          Đổi mật khẩu
-        </button>
-        <button
-          onClick={() => { onClose(); logout() }}
-          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium touch-manipulation"
-          style={{ color: 'var(--theme-status-error-text)' }}
-        >
-          <LogOut className="w-4 h-4" />
-          Đăng xuất
-        </button>
-      </div>
-      <ProfileDialog open={showPwDialog} onClose={() => setShowPwDialog(false)} />
-    </>
+          <div style={{ borderTop: '1px solid var(--theme-border-light)' }} />
+        </>
+      )}
+
+      {/* Profile info */}
+      <button
+        onClick={goToProfile}
+        className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium touch-manipulation transition-colors hover:bg-[var(--theme-bg-tertiary)]"
+        style={{ color: 'var(--theme-text-primary)' }}
+      >
+        <UserCircle className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
+        <span className="flex-1 text-left">Thông tin cá nhân</span>
+      </button>
+
+      <div style={{ borderTop: '1px solid var(--theme-border-light)' }} />
+
+      {/* Logout */}
+      <button
+        onClick={handleLogout}
+        className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium touch-manipulation transition-colors hover:bg-red-50"
+        style={{ color: 'var(--theme-status-error)' }}
+      >
+        <LogOut className="w-4 h-4 shrink-0" />
+        <span className="flex-1 text-left">Đăng xuất</span>
+      </button>
+    </div>
   )
 }
 
-// ─── Sidebar profile modal ────────────────────────────────────────────────────
+// ─── Sidebar profile modal (desktop sidebar, kept for legacy) ─────────────────
 
 export function SidebarProfileDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user, logout } = useAuth()
@@ -261,8 +281,8 @@ export function SidebarProfileDialog({ open, onClose }: { open: boolean; onClose
               className="w-full flex items-center gap-3 px-5 py-3.5 text-sm font-medium transition-colors hover:bg-[var(--theme-bg-tertiary)]"
               style={{ color: 'var(--theme-text-primary)' }}
             >
-              <KeyRound className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
-              <span className="flex-1 text-left">Đổi mật khẩu</span>
+              <UserCircle className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
+              <span className="flex-1 text-left">Thông tin cá nhân</span>
               <ChevronRight className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
             </button>
           </div>

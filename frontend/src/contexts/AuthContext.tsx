@@ -14,6 +14,7 @@ interface AuthContextType {
   user: UserInfo | null
   login: (username: string, password: string) => Promise<UserInfo | null>
   logout: () => void
+  updateUser: (patch: Partial<Pick<UserInfo, 'name'>>) => void
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -28,13 +29,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await api.post('/auth/login', { username, password })
       const { access_token, refresh_token } = res.data
-      const { id, username: name, role } = res.data.user
+      const { id, username, full_name, role } = res.data.user
 
       setTokens(access_token, refresh_token)
 
       const u: UserInfo = {
         id: String(id),
-        name,
+        name: full_name || username,
         role,
       }
       localStorage.setItem('ttransport_user', JSON.stringify(u))
@@ -51,6 +52,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
   }, [])
 
+  const updateUser = useCallback((patch: Partial<Pick<UserInfo, 'name'>>) => {
+    setUser(prev => {
+      if (!prev) return prev
+      const next = { ...prev, ...patch }
+      localStorage.setItem('ttransport_user', JSON.stringify(next))
+      return next
+    })
+  }, [])
+
   // Auto-subscribe to push notifications after login
   useEffect(() => {
     if (!user || !isPushSupported()) return
@@ -61,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
   }, [user])
 
-  const value = useMemo(() => ({ user, login, logout }), [user, login, logout])
+  const value = useMemo(() => ({ user, login, logout, updateUser }), [user, login, logout, updateUser])
 
   return (
     <AuthContext.Provider value={value}>
