@@ -1,60 +1,94 @@
-import { WifiOff, CloudOff, RefreshCw } from 'lucide-react'
+import { WifiOff, CloudOff, RefreshCw, Loader2 } from 'lucide-react'
 import { useOffline } from '@/contexts/OfflineContext'
 
+/**
+ * OfflineIndicator — compact pill snackbar anchored to the top of the screen.
+ *
+ * Positioning:
+ *  - Mobile  : top-4, centered horizontally (mx-auto), max-w-sm
+ *  - Desktop : top-4, right-4 (md:right-4 md:left-auto md:mx-0)
+ *
+ * This keeps it well clear of the login card and any bottom-anchored content.
+ */
 export function OfflineIndicator() {
   const { isOnline, pendingCount, syncing, syncProgress, syncNow } = useOffline()
 
   if (isOnline && pendingCount === 0) return null
 
-  // Online but has pending items to sync
+  // ── Online but has pending items to sync ──────────────────────────────────
   if (isOnline && pendingCount > 0) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-50 mb-16 md:mb-0 animate-slide-up">
-        <div className="mx-4 mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 shadow-lg dark:border-blue-800 dark:bg-blue-950/30">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CloudOff className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-              <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                {syncing
-                  ? `Đang đồng bộ ${syncProgress ? `(${syncProgress.synced}/${syncProgress.total})` : '...'}`
-                  : `${pendingCount} chờ đồng bộ`}
-              </span>
-            </div>
-            {!syncing && (
-              <button
-                onClick={syncNow}
-                className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 dark:text-blue-300 dark:hover:bg-blue-900/50 touch-manipulation"
-              >
-                <RefreshCw className="h-3 w-3" />
-                Đồng bộ
-              </button>
-            )}
-          </div>
+      <div className="fixed top-4 left-4 right-4 z-[200] flex justify-center md:left-auto md:right-4 md:justify-end pointer-events-none">
+        <div
+          className="pointer-events-auto flex items-center gap-2.5 rounded-full px-4 py-2.5 shadow-lg ring-1 ring-black/5 animate-in slide-in-from-top-2 fade-in duration-300"
+          style={{
+            background: 'var(--theme-bg-secondary)',
+            border: '1px solid var(--theme-border-default)',
+          }}
+        >
+          {syncing ? (
+            <Loader2
+              className="h-4 w-4 shrink-0 animate-spin"
+              style={{ color: 'var(--theme-brand-primary)' }}
+            />
+          ) : (
+            <CloudOff
+              className="h-4 w-4 shrink-0"
+              style={{ color: 'var(--theme-status-info)' }}
+            />
+          )}
+          <span
+            className="text-sm font-medium whitespace-nowrap"
+            style={{ color: 'var(--theme-text-primary)' }}
+          >
+            {syncing
+              ? `Đang đồng bộ${syncProgress ? ` ${syncProgress.synced}/${syncProgress.total}` : '…'}`
+              : `${pendingCount} mục chờ đồng bộ`}
+          </span>
+          {!syncing && (
+            <button
+              onClick={syncNow}
+              className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold touch-manipulation transition-colors"
+              style={{
+                background: 'var(--theme-brand-primary)',
+                color: 'var(--theme-text-on-brand)',
+              }}
+            >
+              <RefreshCw className="h-3 w-3" />
+              Đồng bộ
+            </button>
+          )}
         </div>
       </div>
     )
   }
 
-  // Fully offline
+  // ── Fully offline ─────────────────────────────────────────────────────────
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 mb-16 md:mb-0 animate-slide-up">
-      <div className="mx-4 mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 shadow-lg dark:border-amber-800 dark:bg-amber-950/30">
-        <div className="flex items-center gap-3">
-          <WifiOff className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-          <span className="text-sm font-medium text-amber-900 dark:text-amber-100">
+    <div className="fixed top-4 left-4 right-4 z-[200] flex justify-center md:left-auto md:right-4 md:justify-end pointer-events-none">
+      <div
+        className="pointer-events-auto flex items-center gap-2.5 rounded-full px-4 py-2.5 shadow-lg ring-1 ring-black/5 animate-in slide-in-from-top-2 fade-in duration-300"
+        style={{
+          background: '#78350f',   /* amber-900 — rich, readable dark amber */
+          border: '1px solid #92400e',
+        }}
+      >
+        <WifiOff className="h-4 w-4 shrink-0 text-amber-300" />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-amber-100 whitespace-nowrap">
             Bạn đang ngoại tuyến
-          </span>
-        </div>
-        <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
-          {pendingCount > 0 ? (
-            <span className="inline-flex items-center gap-1">
-              <CloudOff className="h-3 w-3" />
+          </p>
+          {pendingCount > 0 && (
+            <p className="text-xs text-amber-300 whitespace-nowrap">
               {pendingCount} hành động chờ đồng bộ
-            </span>
-          ) : (
-            'Dữ liệu sẽ được đồng bộ khi có kết nối'
+            </p>
           )}
-        </p>
+          {pendingCount === 0 && (
+            <p className="text-xs text-amber-300 whitespace-nowrap">
+              Dữ liệu sẽ đồng bộ khi có kết nối
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )
