@@ -153,13 +153,13 @@ def validate_container_number(container_number: str) -> tuple[bool, str]:
         - If invalid: (False, error_message)
     """
     if not container_number:
-        return False, "Container number is required"
+        return False, "Vui lòng nhập số container"
 
     normalized = normalize_container_number(container_number)
 
     # Check format
     if not validate_format(normalized):
-        return False, "Invalid format. Expected: XXXX-NNNNNN-N (4 letters, 6 digits, 1 check digit)"
+        return False, "Sai định dạng. Đúng: XXXXNNNNNNN (4 chữ cái + 7 số, vd: MSKU1234567)"
 
     # Check check digit
     if not validate_check_digit(normalized):
@@ -167,8 +167,8 @@ def validate_container_number(container_number: str) -> tuple[bool, str]:
         try:
             expected = calculate_check_digit(normalized[:10])
         except ValueError:
-            return False, "Failed to calculate check digit"
-        return False, f"Invalid check digit. Provided: {provided}, Expected: {expected}"
+            return False, "Không thể tính số kiểm tra"
+        return False, f"Số kiểm tra sai. Nhập: {provided}, Đúng: {expected}"
 
     return True, ""
 
