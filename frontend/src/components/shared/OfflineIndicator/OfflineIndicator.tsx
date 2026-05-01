@@ -1,5 +1,6 @@
 import { WifiOff, CloudOff, RefreshCw, Loader2 } from 'lucide-react'
 import { useOffline } from '@/contexts/OfflineContext'
+import { useState, useEffect } from 'react'
 
 /**
  * OfflineIndicator — compact pill snackbar anchored to the top of the screen.
@@ -12,8 +13,17 @@ import { useOffline } from '@/contexts/OfflineContext'
  */
 export function OfflineIndicator() {
   const { isOnline, pendingCount, syncing, syncProgress, syncNow } = useOffline()
+  // Grace period: don't show the offline banner for the first 5 seconds after
+  // page load. This prevents a false-positive flash while the health check runs.
+  const [graceExpired, setGraceExpired] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setGraceExpired(true), 5000)
+    return () => clearTimeout(t)
+  }, [])
 
   if (isOnline && pendingCount === 0) return null
+  // Suppress the offline banner during the grace period (pending sync is still shown)
+  if (!isOnline && !graceExpired) return null
 
   // ── Online but has pending items to sync ──────────────────────────────────
   if (isOnline && pendingCount > 0) {
