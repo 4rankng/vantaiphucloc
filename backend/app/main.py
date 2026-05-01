@@ -11,7 +11,7 @@ from app.api.v1.router import router as api_v1_router
 from app.core.redis import init_redis, close_redis
 from app.core.worker import init_arq_pool, close_arq_pool
 
-MAX_REQUEST_BODY_BYTES = 1_048_576  # 1 MB
+MAX_REQUEST_BODY_BYTES = 5_242_880  # 5 MB
 
 
 class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
