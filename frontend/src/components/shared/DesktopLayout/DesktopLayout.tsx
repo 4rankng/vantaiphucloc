@@ -9,7 +9,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUnreadCount } from '@/components/shared/NotificationPanel/NotificationPanel'
-import { UserDropdown } from '@/components/shared/ProfileDialog'
+import { SidebarProfileDialog } from '@/components/shared/ProfileDialog'
 import type { ReactNode } from 'react'
 
 // ─── Nav config ───────────────────────────────────────────────────────────────
@@ -187,14 +187,19 @@ function DesktopSidebar({ role, collapsed, onToggle }: DesktopSidebarProps) {
   const unread = useUnreadCount()
   const [profileOpen, setProfileOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
+  const footerRef = useRef<HTMLDivElement>(null)
+  const popupRef = useRef<HTMLDivElement>(null)
+  const footerBtnRef = useRef<HTMLButtonElement>(null)
   const groups = NAV_CONFIG[role] ?? []
 
   // Close user menu on outside click
   useEffect(() => {
     if (!userMenuOpen) return
     const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      const inFooter = footerRef.current?.contains(target)
+      const inPopup = popupRef.current?.contains(target)
+      if (!inFooter && !inPopup) {
         setUserMenuOpen(false)
       }
     }
@@ -206,6 +211,19 @@ function DesktopSidebar({ role, collapsed, onToggle }: DesktopSidebarProps) {
     logout()
     navigate('/')
   }, [logout, navigate])
+
+  // Compute popup position from footer button
+  const [popupStyle, setPopupStyle] = useState<React.CSSProperties>({})
+  useEffect(() => {
+    if (!userMenuOpen || !footerBtnRef.current) return
+    const rect = footerBtnRef.current.getBoundingClientRect()
+    setPopupStyle({
+      position: 'fixed',
+      bottom: window.innerHeight - rect.top + 8,
+      left: rect.left,
+      width: collapsed ? 160 : rect.width,
+    })
+  }, [userMenuOpen, collapsed])
 
   return (
     <>
@@ -230,8 +248,7 @@ function DesktopSidebar({ role, collapsed, onToggle }: DesktopSidebarProps) {
           <img src="/logo.avif" alt="Logo" className="h-7 w-7 shrink-0 object-contain rounded-md" />
           {!collapsed && (
             <div className="min-w-0">
-              <p className="text-[13px] font-bold text-white/95 leading-tight truncate">Phúc Lộc</p>
-              <p className="text-[10px] text-white/50 leading-tight">{ROLE_LABELS[role] ?? role}</p>
+              <p className="text-[13px] font-bold text-white/95 leading-tight truncate">Vận Tải Phúc Lộc</p>
             </div>
           )}
         </div>
@@ -266,38 +283,10 @@ function DesktopSidebar({ role, collapsed, onToggle }: DesktopSidebarProps) {
         <div
           className="shrink-0 p-2"
           style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
-          ref={menuRef}
+          ref={footerRef}
         >
-          {/* User menu popup */}
-          {userMenuOpen && (
-            <div
-              className={cn(
-                'absolute bottom-[calc(100%+8px)] rounded-xl overflow-hidden shadow-xl z-50',
-                collapsed ? 'left-[68px] bottom-2' : 'left-2 right-2',
-              )}
-              style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
-            >
-              <button
-                onClick={() => { setProfileOpen(true); setUserMenuOpen(false) }}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium transition-colors hover:bg-[var(--theme-bg-tertiary)]"
-                style={{ color: 'var(--theme-text-primary)' }}
-              >
-                <User className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
-                Hồ sơ
-              </button>
-              <div style={{ borderTop: '1px solid var(--theme-border-light)' }} />
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium transition-colors hover:bg-red-50"
-                style={{ color: 'var(--theme-status-error)' }}
-              >
-                <LogOut className="w-4 h-4 shrink-0" />
-                Đăng xuất
-              </button>
-            </div>
-          )}
-
           <button
+            ref={footerBtnRef}
             onClick={() => setUserMenuOpen(v => !v)}
             className={cn(
               'w-full flex items-center rounded-xl transition-all duration-150 cursor-pointer',
@@ -341,7 +330,38 @@ function DesktopSidebar({ role, collapsed, onToggle }: DesktopSidebarProps) {
         </button>
       </aside>
 
-      <UserDropdown open={profileOpen} onClose={() => setProfileOpen(false)} />
+      {/* User menu popup — rendered outside aside to avoid overflow clipping */}
+      {userMenuOpen && (
+        <div
+          ref={popupRef}
+          className="rounded-xl overflow-hidden shadow-xl z-[60]"
+          style={{
+            ...popupStyle,
+            background: 'var(--theme-bg-secondary)',
+            border: '1px solid var(--theme-border-default)',
+          }}
+        >
+          <button
+            onClick={() => { setProfileOpen(true); setUserMenuOpen(false) }}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium transition-colors hover:bg-[var(--theme-bg-tertiary)]"
+            style={{ color: 'var(--theme-text-primary)' }}
+          >
+            <User className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
+            Thông tin
+          </button>
+          <div style={{ borderTop: '1px solid var(--theme-border-light)' }} />
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium transition-colors hover:bg-red-50"
+            style={{ color: 'var(--theme-status-error)' }}
+          >
+            <LogOut className="w-4 h-4 shrink-0" />
+            Đăng xuất
+          </button>
+        </div>
+      )}
+
+      <SidebarProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} />
     </>
   )
 }
