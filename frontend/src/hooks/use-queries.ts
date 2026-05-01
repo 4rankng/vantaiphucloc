@@ -310,6 +310,35 @@ export function useReconcile() {
   })
 }
 
+export function useToggleTripConfirmation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (tripOrderId: number) => apiClient.toggleTripConfirmation(tripOrderId),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['trip-orders'] }) },
+  })
+}
+
+export function useUploadCustomerExcel() {
+  return useMutation({
+    mutationFn: ({ file, clientId, dateFrom, dateTo }: {
+      file: File
+      clientId: number
+      dateFrom?: string
+      dateTo?: string
+    }) => apiClient.uploadCustomerExcel(file, clientId, dateFrom, dateTo),
+  })
+}
+
+export function useExportReconciliationExcel() {
+  return useMutation({
+    mutationFn: ({ clientId, dateFrom, dateTo }: {
+      clientId: number
+      dateFrom?: string
+      dateTo?: string
+    }) => apiClient.exportReconciliationExcel(clientId, dateFrom, dateTo),
+  })
+}
+
 export function useCalculateSalary() {
   const qc = useQueryClient()
   return useMutation({

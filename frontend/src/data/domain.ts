@@ -49,6 +49,7 @@ export interface Driver {
 
 export interface Client {
   id: number
+  code?: string
   name: string
   type: ClientType
   taxCode?: string
@@ -78,6 +79,8 @@ export interface Client {
 
 export interface RoutePrice {
   route: string
+  pickupLocation?: string
+  dropoffLocation?: string
   type20ft: number
   type40ft: number
   isTwoWay?: boolean
@@ -155,6 +158,9 @@ export interface TripOrder {
   revenue: number
   matchedWorkOrderIds: number[]
   status: TripOrderStatus
+  isConfirmed: boolean
+  confirmedBy?: number
+  confirmedAt?: string
   createdAt: string
 }
 
@@ -205,6 +211,28 @@ export interface WOSuggestion {
 export interface SuggestWosResponse {
   tripOrderId: number
   suggestions: WOSuggestion[]
+}
+
+// ─── Reconciliation ────────────────────────────────────────────────────────────
+
+export interface ReconciliationResult {
+  containerNumber: string
+  normalizedNumber: string
+  workOrderId?: number
+  tripOrderId?: number
+  status: 'confirmed' | 'pending' | 'rejected'
+  isDuplicate: boolean
+}
+
+export interface ReconciliationUploadResponse {
+  success: boolean
+  data: {
+    totalContainers: number
+    duplicatesFound: number
+    confirmed: number
+    pending: number
+    results: ReconciliationResult[]
+  }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
