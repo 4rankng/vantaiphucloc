@@ -186,7 +186,7 @@ export function RouteList() {
         </DialogContent>
       </Dialog>
 
-      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={handleOpenCreate} label="Thêm cung đường" />
+      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={handleOpenCreate} />
     </div>
   )
 }

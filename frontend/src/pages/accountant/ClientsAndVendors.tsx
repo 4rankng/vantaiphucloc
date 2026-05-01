@@ -197,7 +197,7 @@ function ClientsTab() {
         </DialogContent>
       </Dialog>
 
-      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={handleOpenCreate} label="Thêm khách hàng" />
+      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={handleOpenCreate} />
     </div>
   )
 }
@@ -323,7 +323,7 @@ function VendorsTab() {
         </DialogContent>
       </Dialog>
 
-      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={handleOpenCreate} label="Thêm nhà thầu" />
+      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={handleOpenCreate} />
     </div>
   )
 }

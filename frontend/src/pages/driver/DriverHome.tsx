@@ -91,7 +91,7 @@ export function DriverHome() {
       </div>
 
       {/* FAB — mobile only */}
-      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => navigate('/driver/work-orders/new')} label="Tạo chuyến mới" />
+      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => navigate('/driver/work-orders/new')} />
     </div>
   )
 }
