@@ -72,6 +72,7 @@ export function createAppRouter() {
             { path: 'match/:jobId',          element: h(Lazy, { component: R.MatchJob }) },
             { path: 'match-trip/:tripId',    element: h(Lazy, { component: R.MatchTrip }) },
             { path: 'notifications',         element: ebc('Notifications', h(Lazy, { component: R.AccountantNotifications })) },
+            { path: 'profile',               element: ebc('Profile', h(Lazy, { component: R.Profile })) },
           ],
         },
         // ─── Director ──────────────────────────────────────────
@@ -84,6 +85,7 @@ export function createAppRouter() {
             { path: 'notifications',             element: h(Lazy, { component: R.DirectorNotifications }) },
             { path: 'driver-jobs/:driverId',     element: h(Lazy, { component: R.DriverJobs }) },
             { path: 'client-jobs/:clientId',     element: h(Lazy, { component: R.ClientJobs }) },
+            { path: 'profile',                   element: ebc('Profile', h(Lazy, { component: R.Profile })) },
           ],
         },
         // ─── SuperAdmin ────────────────────────────────────────
