@@ -1,5 +1,5 @@
 # Web framework
-fastapi==0.115.5
+fastapi==0.124.4
 uvicorn[standard]==0.30.6
 
 # Database
@@ -9,9 +9,9 @@ asyncpg==0.29.0
 psycopg2-binary==2.9.9
 
 # Auth
-PyJWT[cryptography]==2.10.1
+PyJWT[cryptography]==2.12.1
 passlib[bcrypt]==1.7.4
-python-multipart==0.0.20
+python-multipart==0.0.27
 itsdangerous==2.2.0
 
 # Validation
@@ -34,8 +34,8 @@ python-statemachine>=2.0.0
 # Push notifications
 pywebpush>=2.0
 
-# CORS & middleware — pinned by FastAPI: >=0.40.0,<0.42.0
-starlette==0.41.3
+# CORS & middleware — pinned by FastAPI: >=0.40.0,<0.51.0
+starlette==0.49.3
 
 # Date/time
 python-dateutil==2.9.0
