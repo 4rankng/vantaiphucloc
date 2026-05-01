@@ -42,15 +42,30 @@ class TripOrderStatus(str, Enum):
 
 class VendorCreate(BaseModel):
     name: str
+    type: Literal["company", "individual"] | None = None
+    phone: str | None = None
+    tax_code: str | None = None
+    address: str | None = None
+    contact_person: str | None = None
 
 
 class VendorUpdate(BaseModel):
     name: str | None = None
+    type: Literal["company", "individual"] | None = None
+    phone: str | None = None
+    tax_code: str | None = None
+    address: str | None = None
+    contact_person: str | None = None
 
 
 class VendorOut(BaseModel):
     id: int
     name: str
+    type: str | None = None
+    phone: str | None = None
+    tax_code: str | None = None
+    address: str | None = None
+    contact_person: str | None = None
     created_at: datetime
     updated_at: datetime
 

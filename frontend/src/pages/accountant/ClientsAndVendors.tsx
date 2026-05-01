@@ -11,12 +11,18 @@ import {
   useVendors, useCreateVendor, useUpdateVendor, useDeleteVendor,
 } from '@/hooks/use-queries'
 import type { Client, ClientType } from '@/data/domain'
-import type { Vendor } from '@/services/api/vendors.api'
+import type { Vendor, VendorType } from '@/services/api/vendors.api'
 
 // ─── Khách hàng tab ───────────────────────────────────────────────────────────
 
 const EMPTY_CLIENT = {
   name: '', type: 'company' as ClientType, taxCode: '', address: '', phone: '', contactPerson: '',
+}
+
+// ─── Nhà thầu tab ─────────────────────────────────────────────────────────────
+
+const EMPTY_VENDOR = {
+  name: '', type: 'company' as VendorType, taxCode: '', address: '', phone: '', contactPerson: '',
 }
 
 function ClientsTab() {
@@ -210,7 +216,7 @@ function VendorsTab() {
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Vendor | null>(null)
-  const [name, setName] = useState('')
+  const [form, setForm] = useState(EMPTY_VENDOR)
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
 
   const createVendor = useCreateVendor()
@@ -219,30 +225,41 @@ function VendorsTab() {
 
   const handleOpenCreate = useCallback(() => {
     setEditing(null)
-    setName('')
+    setForm(EMPTY_VENDOR)
     setDialogOpen(true)
   }, [])
 
   const handleOpenEdit = useCallback((vendor: Vendor) => {
     setEditing(vendor)
-    setName(vendor.name)
+    setForm({
+      name: vendor.name,
+      type: vendor.type ?? 'company',
+      taxCode: vendor.taxCode ?? '',
+      address: vendor.address ?? '',
+      phone: vendor.phone ?? '',
+      contactPerson: vendor.contactPerson ?? '',
+    })
     setSelectedVendor(null)
     setDialogOpen(true)
   }, [])
 
   const handleSubmit = useCallback(() => {
     if (editing) {
-      updateVendor.mutate({ id: editing.id, data: { name } }, { onSuccess: () => setDialogOpen(false) })
+      updateVendor.mutate({ id: editing.id, data: form }, { onSuccess: () => setDialogOpen(false) })
     } else {
-      createVendor.mutate({ name }, { onSuccess: () => setDialogOpen(false) })
+      createVendor.mutate(form, { onSuccess: () => setDialogOpen(false) })
     }
-  }, [editing, name, createVendor, updateVendor])
+  }, [editing, form, createVendor, updateVendor])
 
   const handleDelete = useCallback((id: number) => {
     deleteVendor.mutate(id, {
       onSuccess: () => { setDeleteConfirm(null); setSelectedVendor(null) },
     })
   }, [deleteVendor])
+
+  const updateField = useCallback((field: string, value: string) => {
+    setForm(prev => ({ ...prev, [field]: value }))
+  }, [])
 
   if (loading) {
     return (
@@ -273,7 +290,14 @@ function VendorsTab() {
               <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--theme-bg-tertiary)' }}>
                 <Truck className="h-4 w-4" style={{ color: 'var(--theme-text-muted)' }} />
               </div>
-              <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{vendor.name}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{vendor.name}</p>
+                {(vendor.phone || vendor.taxCode) && (
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+                    {vendor.phone}{vendor.taxCode ? ` · MST: ${vendor.taxCode}` : ''}
+                  </p>
+                )}
+              </div>
             </div>
           </button>
         ))}
@@ -283,6 +307,17 @@ function VendorsTab() {
       <Dialog open={!!selectedVendor} onOpenChange={() => setSelectedVendor(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>{selectedVendor?.name}</DialogTitle></DialogHeader>
+          {selectedVendor && (
+            <div className="space-y-1">
+              {selectedVendor.type && (
+                <InfoRow icon={Truck} label="Loại" value={selectedVendor.type === 'company' ? 'Công ty' : 'Cá nhân'} />
+              )}
+              {selectedVendor.phone && <InfoRow label="Điện thoại" value={selectedVendor.phone} />}
+              {selectedVendor.taxCode && <InfoRow label="Mã số thuế" value={selectedVendor.taxCode} />}
+              {selectedVendor.address && <InfoRow label="Địa chỉ" value={selectedVendor.address} />}
+              {selectedVendor.contactPerson && <InfoRow label="Người liên hệ" value={selectedVendor.contactPerson} />}
+            </div>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteConfirm(selectedVendor!.id)} className="flex-1" style={{ color: 'var(--theme-status-error)' }}>
               <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Xoá
@@ -298,13 +333,48 @@ function VendorsTab() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>{editing ? 'Sửa nhà thầu' : 'Thêm nhà thầu'}</DialogTitle></DialogHeader>
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tên nhà thầu</Label>
-            <Input value={name} onChange={e => setName(e.target.value)} placeholder="Tên nhà thầu" className="text-sm" autoFocus />
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tên</Label>
+              <Input value={form.name} onChange={e => updateField('name', e.target.value)} placeholder="Tên nhà thầu" className="text-sm" autoFocus />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Loại</Label>
+              <div className="flex gap-2">
+                {(['company', 'individual'] as VendorType[]).map(t => (
+                  <button key={t} onClick={() => updateField('type', t)}
+                    className="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors"
+                    style={{
+                      background: form.type === t ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
+                      color: form.type === t ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
+                    }}>
+                    {t === 'company' ? 'Công ty' : 'Cá nhân'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mã số thuế</Label>
+                <Input value={form.taxCode ?? ''} onChange={e => updateField('taxCode', e.target.value)} placeholder="0123456789" className="text-sm" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điện thoại</Label>
+                <Input value={form.phone ?? ''} onChange={e => updateField('phone', e.target.value)} placeholder="0225-123-456" className="text-sm" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Địa chỉ</Label>
+              <Input value={form.address ?? ''} onChange={e => updateField('address', e.target.value)} placeholder="Địa chỉ" className="text-sm" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Người liên hệ</Label>
+              <Input value={form.contactPerson ?? ''} onChange={e => updateField('contactPerson', e.target.value)} placeholder="Họ tên" className="text-sm" />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleSubmit} disabled={!name.trim()} className="flex-1" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+            <Button onClick={handleSubmit} disabled={!form.name.trim()} className="flex-1" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
               {editing ? 'Cập nhật' : 'Xác nhận'}
             </Button>
           </DialogFooter>

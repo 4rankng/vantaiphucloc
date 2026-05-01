@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
 import { api } from '@/services/api/client'
 import type { Pricing, WorkOrder, TripOrder, WorkType, Client, RoutePrice, SalaryPeriod, SuggestMatchesResponse, SuggestWosResponse } from '@/data/domain'
-import type { Vendor } from '@/services/api/vendors.api'
+import type { Vendor, VendorFormData } from '@/services/api/vendors.api'
 
 // ─── Query key factories ─────────────────────────────────────────────────────
 
@@ -410,7 +410,7 @@ export function useVendors() {
 export function useCreateVendor() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { name: string }) => apiClient.createVendor(data),
+    mutationFn: (data: VendorFormData) => apiClient.createVendor(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.vendors }) },
   })
 }
@@ -418,7 +418,7 @@ export function useCreateVendor() {
 export function useUpdateVendor() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: { name: string } }) => apiClient.updateVendor(id, data),
+    mutationFn: ({ id, data }: { id: number; data: VendorFormData }) => apiClient.updateVendor(id, data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.vendors }) },
   })
 }
