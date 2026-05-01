@@ -1,4 +1,4 @@
-import { Truck, CircleDollarSign, LayoutDashboard, type LucideIcon } from 'lucide-react'
+import { Truck, CircleDollarSign, LayoutDashboard, Shield, type LucideIcon } from 'lucide-react'
 import type { Role } from '@/data/domain'
 
 const PHUC_LOC = 'Phúc Lộc'
@@ -18,6 +18,7 @@ export interface UserAccount {
 }
 
 export const ROLE_ICONS: Record<string, LucideIcon> = {
+  superadmin: Shield,
   director: LayoutDashboard,
   driver: Truck,
   accountant: CircleDollarSign,

@@ -8,14 +8,21 @@ import { UserDetailDialog } from '@/components/shared/UserDetailDialog'
 import { CreateUserDialog } from '@/components/shared/CreateUserDialog'
 import { useToast } from '@/components/atoms/Toast'
 import { api } from '@/services/api/client'
-import type { Role } from '@/data/domain'
+import { ROLE_LABELS, type Role } from '@/data/domain'
+import { useVendors } from '@/hooks/use-queries'
 import { SuperAdminDashboard } from './SuperAdminDashboard'
 import { toUserAccount, type UserAccount } from './types'
+
+const ALL_ROLES: { value: Role; label: string }[] = [
+  { value: 'superadmin', label: ROLE_LABELS.superadmin },
+  { value: 'director', label: ROLE_LABELS.director },
+  { value: 'driver', label: ROLE_LABELS.driver },
+  { value: 'accountant', label: ROLE_LABELS.accountant },
+]
 
 export function SuperAdminApp() {
   const { user } = useAuth()
 
-  // Guard: only superadmin may access this page
   if (!user || user.role !== 'superadmin') {
     return <Navigate to="/" replace />
   }
@@ -26,12 +33,14 @@ export function SuperAdminApp() {
 function SuperAdminAppInner() {
   const { user } = useAuth()
   const toast = useToast()
+  const { data: vendors } = useVendors()
   const [createOpen, setCreateOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<UserAccount | null>(null)
   const [filterRole, setFilterRole] = useState<Role | 'ALL'>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
   const [users, setUsers] = useState<UserAccount[]>([])
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -50,6 +59,34 @@ function SuperAdminAppInner() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchUsers()
   }, [fetchUsers])
+
+  const handleEditUser = useCallback(async (userId: string, data: Record<string, unknown>) => {
+    setSaving(true)
+    try {
+      await api.put(`/users/${userId}`, data)
+      toast.success('Đã cập nhật')
+      setSelectedUser(null)
+      fetchUsers()
+    } catch {
+      toast.error('Lỗi', 'Không thể cập nhật')
+    } finally {
+      setSaving(false)
+    }
+  }, [toast, fetchUsers])
+
+  const handleDeleteUser = useCallback(async (userId: string) => {
+    setSaving(true)
+    try {
+      await api.delete(`/users/${userId}`)
+      toast.success('Đã xoá tài khoản')
+      setSelectedUser(null)
+      fetchUsers()
+    } catch {
+      toast.error('Lỗi', 'Không thể xoá tài khoản')
+    } finally {
+      setSaving(false)
+    }
+  }, [toast, fetchUsers])
 
   if (loading) {
     return (
@@ -80,8 +117,17 @@ function SuperAdminAppInner() {
         onViewUser={setSelectedUser}
       />
       <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => setCreateOpen(true)} />
-      <CreateUserDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreated={fetchUsers} />
-      <UserDetailDialog user={selectedUser} open={!!selectedUser} onClose={() => setSelectedUser(null)} />
+      <CreateUserDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreated={fetchUsers} roles={ALL_ROLES} />
+      <UserDetailDialog
+        user={selectedUser}
+        open={!!selectedUser}
+        onClose={() => setSelectedUser(null)}
+        onEdit={handleEditUser}
+        onDelete={handleDeleteUser}
+        editableRoles={ALL_ROLES}
+        vendors={(vendors ?? []).map(v => ({ id: v.id, name: v.name }))}
+        saving={saving}
+      />
     </AppShell>
   )
 }
