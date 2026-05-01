@@ -263,7 +263,7 @@ class WorkOrderOut(BaseModel):
     client_id: int
     client_name: str
     client_code: str | None = None
-    route: string
+    route: str
     driver_id: int
     driver_name: str
     tractor_plate: str
@@ -275,7 +275,7 @@ class WorkOrderOut(BaseModel):
     allowance: int
     earning: int
     pricing_id: int | None
-    status: string
+    status: str
     containers: list[ContainerOut] = []
     created_at: datetime
     updated_at: datetime
