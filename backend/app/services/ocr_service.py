@@ -2,8 +2,8 @@
 
 Driver workflow:
 1. Take photo of container
-2. AI attempts OCR (max 2 attempts)
-3. If both fail → driver enters manually
+2. AI attempts OCR (max MAX_OCR_ATTEMPTS attempts)
+3. If all fail → driver enters manually
 4. Backend validates against ISO 6346
 """
 
@@ -18,6 +18,8 @@ import httpx
 from PIL import Image, ImageEnhance
 
 from app.utils.iso6346 import validate_container_number
+
+MAX_OCR_ATTEMPTS = 5
 
 _logger = logging.getLogger(__name__)
 
@@ -66,7 +68,7 @@ NONE"""
 class OCRAttempt:
     """Track OCR attempts for rate limiting and fallback."""
 
-    def __init__(self, max_attempts: int = 2):
+    def __init__(self, max_attempts: int = MAX_OCR_ATTEMPTS):
         self.max_attempts = max_attempts
         self.attempts = 0
         self.success = False
