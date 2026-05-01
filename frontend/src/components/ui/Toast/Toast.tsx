@@ -8,14 +8,14 @@ import { cn } from "@/lib/utils"
 const ToastProvider = ToastPrimitive.Provider
 
 const toastVariants = cva(
-  "group pointer-events-auto relative flex w-full items-center justify-between space-x-3 overflow-hidden rounded-lg border p-4 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full",
+  "group pointer-events-auto relative flex w-full items-center justify-between space-x-3 overflow-hidden rounded-xl border p-4 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full",
   {
     variants: {
       variant: {
         default: "border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] text-[var(--theme-text-primary)]",
-        success: "border-emerald-200 bg-emerald-50 text-emerald-900",
-        warning: "border-amber-200 bg-amber-50 text-amber-900",
-        error: "border-red-200 bg-red-50 text-red-900",
+        success: "border-emerald-200 bg-emerald-50 text-emerald-900 [&_svg]:text-emerald-600",
+        warning: "border-amber-200 bg-amber-50 text-amber-900 [&_svg]:text-amber-600",
+        error:   "border-red-200 bg-red-50 text-red-900 [&_svg]:text-red-600",
       },
     },
     defaultVariants: { variant: "default" },
@@ -81,7 +81,12 @@ const ToastViewport = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitive.Viewport
     ref={ref}
-    className={cn("fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:top-auto sm:bottom-0 sm:right-0 sm:flex-col md:max-w-[420px]", className)}
+    className={cn(
+      // Mobile: centered at top, below the offline pill (top-16 ≈ 64px)
+      // Desktop: top-right corner, same vertical offset
+      "fixed top-16 left-4 right-4 z-[190] flex max-h-screen flex-col gap-2 md:left-auto md:right-4 md:w-[380px]",
+      className
+    )}
     {...props}
   />
 ))

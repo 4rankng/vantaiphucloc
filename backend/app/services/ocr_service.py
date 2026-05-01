@@ -15,7 +15,7 @@ import re
 from typing import Optional
 
 import httpx
-from PIL import Image, ImageEnhance, ImageFilter
+from PIL import Image, ImageEnhance, ImageOps
 
 from app.utils.iso6346 import validate_container_number
 
@@ -28,20 +28,28 @@ GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta"
 
 
 def preprocess_image(image_bytes: bytes) -> tuple[bytes, str]:
-    """Enhance image for OCR: grayscale, contrast boost, sharpen.
+    """Enhance image for Gemini OCR: keep color, boost contrast/sharpness, fix lighting.
 
+    Gemini is multimodal and benefits from color context — no binarization.
     Returns (processed_bytes, mime_type).
     """
     img = Image.open(io.BytesIO(image_bytes))
 
-    # Convert to grayscale
-    img = img.convert("L")
+    # Ensure RGB (handle RGBA, palette, etc.)
+    if img.mode not in ("RGB", "L"):
+        img = img.convert("RGB")
 
-    # Boost contrast
-    img = ImageEnhance.Contrast(img).enhance(1.8)
+    # Standardize size — aim for ~2000px on the long side
+    img.thumbnail((2000, 2000), Image.Resampling.LANCZOS)
 
-    # Sharpen to counteract motion blur
-    img = img.filter(ImageFilter.UnsharpMask(radius=2, percent=150, threshold=3))
+    # Auto-level lighting — fixes shadows common in port photos
+    img = ImageOps.autocontrast(img, cutoff=1)
+
+    # Boost contrast — makes text stand out from container paint
+    img = ImageEnhance.Contrast(img).enhance(1.5)
+
+    # Boost sharpness — crucial for dusty/slightly blurry port photos
+    img = ImageEnhance.Sharpness(img).enhance(2.5)
 
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=90)
