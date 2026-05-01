@@ -77,7 +77,7 @@ export function CreateWorkOrder() {
 
     if (!isOnline) return
 
-    apiClient.ocrContainer(imageSrc)
+    apiClient.ocrContainer(imageSrc, idx)
       .then((result) => {
         setContainers(prev => prev.map((c, i) => {
           if (i !== idx) return c

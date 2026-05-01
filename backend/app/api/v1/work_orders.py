@@ -358,7 +358,7 @@ async def _create_work_order_db(
 
 
 # Simple in-memory storage for OCR attempts (in production, use Redis)
-_ocr_attempts: dict[int, OCRAttempt] = {}
+_ocr_attempts: dict[tuple[int, int], OCRAttempt] = {}
 
 
 @router.post("/work-orders/ocr-container", response_model=ContainerOCRResponse)
@@ -386,12 +386,13 @@ async def ocr_container_number(
             attempts_remaining=MAX_OCR_ATTEMPTS,
         )
 
-    # Get or create OCR attempt tracker for this user
+    # Get or create OCR attempt tracker for this user + container slot
     user_id = current_user.id
-    if user_id not in _ocr_attempts:
-        _ocr_attempts[user_id] = OCRAttempt(max_attempts=MAX_OCR_ATTEMPTS)
+    key = (user_id, body.container_index)
+    if key not in _ocr_attempts:
+        _ocr_attempts[key] = OCRAttempt(max_attempts=MAX_OCR_ATTEMPTS)
 
-    attempt = _ocr_attempts[user_id]
+    attempt = _ocr_attempts[key]
 
     # Check if attempts are exhausted
     if attempt.is_exhausted():
