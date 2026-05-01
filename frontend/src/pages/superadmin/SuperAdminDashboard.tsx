@@ -38,8 +38,8 @@ export function SuperAdminDashboard({
   })
 
   return (
-    <div className="pb-24">
-      <div className="px-4 pt-4 grid grid-cols-3 gap-2 lg:gap-4">
+    <div className="pb-24 space-y-4">
+      <div className="grid grid-cols-3 gap-2 lg:gap-4">
         {([
           { label: ROLE_LABELS.director, value: counts.director, icon: LayoutDashboard },
           { label: ROLE_LABELS.driver, value: counts.driver, icon: Truck },
@@ -59,7 +59,7 @@ export function SuperAdminDashboard({
         ))}
       </div>
 
-      <div className="px-4 mt-4 space-y-2">
+      <div className="space-y-2">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: 'var(--theme-text-muted)' }} />
           <input
@@ -82,7 +82,7 @@ export function SuperAdminDashboard({
         />
       </div>
 
-      <div className="px-4 mt-3">
+      <div>
         <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: 'var(--theme-text-muted)' }}>
           {filtered.length} tài khoản
         </p>

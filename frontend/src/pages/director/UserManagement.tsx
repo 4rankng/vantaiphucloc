@@ -125,14 +125,14 @@ function VendorManagement() {
 
   if (loading) {
     return (
-      <div className="p-4 space-y-2">
+      <div className="space-y-2">
         {[1, 2, 3].map(i => <div key={i} className="h-14 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}
       </div>
     )
   }
 
   return (
-    <div className="p-4 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2 lg:gap-3">
+    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2 lg:gap-3">
       {vendors.length === 0 ? (
         <div className="rounded-2xl p-10 text-center" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
           <Truck className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--theme-text-muted)' }} />
@@ -372,7 +372,7 @@ function UserManagementInner() {
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="space-y-4">
       {/* Tab switcher */}
       <div className="flex gap-1 p-1 rounded-2xl" style={{ background: 'var(--theme-bg-tertiary)' }}>
         {([

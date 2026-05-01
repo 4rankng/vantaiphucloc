@@ -51,7 +51,7 @@ export function TripList() {
           ))}
         </div>
       )}
-      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => navigate('/accountant/create-trip')} label="Tạo chuyến" />
+      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => navigate('/accountant/create-trip')} />
     </div>
   )
 }
