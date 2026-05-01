@@ -54,6 +54,9 @@ export const apiClient = {
   reconcile: tripOrdersApi.reconcile,
   suggestMatches: tripOrdersApi.suggestMatches,
   suggestWosForTrip: tripOrdersApi.suggestWosForTrip,
+  toggleTripConfirmation: tripOrdersApi.toggleTripConfirmation,
+  uploadCustomerExcel: tripOrdersApi.uploadCustomerExcel,
+  exportReconciliationExcel: tripOrdersApi.exportReconciliationExcel,
 
   // Salary
   calculateSalary: salaryApi.calculateSalary,
