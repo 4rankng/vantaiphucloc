@@ -1,5 +1,6 @@
 import { CheckCircle, Clock, CircleDollarSign } from 'lucide-react'
 import { ContBadge } from '@/components/shared/ContBadge'
+import { RouteDisplay } from '@/components/shared/RouteDisplay'
 import { formatCurrencyFull, type WorkOrder } from '@/data/domain'
 
 const STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle; color: string; bg: string }> = {
@@ -60,8 +61,10 @@ function DriverCard({ wo, onClick }: { wo: WorkOrder; onClick: () => void }) {
         ))}
       </div>
 
-      <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>{wo.clientName}</p>
-      <p className="text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>{wo.route}</p>
+      <p className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>
+        {wo.clientCode || wo.clientName}
+      </p>
+      <RouteDisplay route={wo.route} className="mt-1" />
 
       <div className="flex items-center justify-between mt-2 pt-2" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
         {wo.earning > 0 ? (
@@ -110,9 +113,11 @@ function AccountantCard({ wo }: { wo: WorkOrder }) {
       <p className="text-xs font-mono mb-1" style={{ color: 'var(--theme-text-muted)' }}>
         {wo.tractorPlate}
       </p>
-      <p className="text-xs truncate mb-2" style={{ color: 'var(--theme-text-muted)' }}>
-        {wo.clientName}
-      </p>
+      <div className="mb-2">
+        <p className="text-xs font-medium" style={{ color: 'var(--theme-text-secondary)' }}>
+          {wo.clientCode || wo.clientName}
+        </p>
+      </div>
 
       {wo.earning > 0 ? (
         <div className="flex items-center gap-1.5 mb-1">

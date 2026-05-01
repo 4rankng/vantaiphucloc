@@ -97,6 +97,7 @@ export interface WorkOrder {
   containers: ContainerItem[]
   clientId: number
   clientName: string
+  clientCode?: string
   route: string
   driverId: number
   driverName: string
