@@ -42,28 +42,37 @@ export function SalarySetup() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl p-4 space-y-4"
+      <div className="max-w-md w-full mx-auto rounded-2xl p-6 space-y-4"
         style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1 mb-1">
+          <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Kỳ lương hàng tháng</p>
+          <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Nhập ngày bắt đầu và kết thúc của kỳ tính lương</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Từ ngày</Label>
             <Input
-              type="text"
+              type="number"
+              min={1}
+              max={31}
               value={fromDay}
               onChange={e => setFromDay(e.target.value)}
               placeholder="26"
-              className="text-sm font-mono"
+              className="text-base font-mono text-center h-11"
             />
           </div>
           <div className="space-y-2">
             <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Đến ngày</Label>
             <Input
-              type="text"
+              type="number"
+              min={1}
+              max={31}
               value={toDay}
               onChange={e => setToDay(e.target.value)}
               placeholder="25"
-              className="text-sm font-mono"
+              className="text-base font-mono text-center h-11"
             />
           </div>
         </div>
