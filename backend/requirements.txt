@@ -34,7 +34,7 @@ state_machine>=0.3.0
 pywebpush>=2.0
 
 # CORS & middleware — pinned by FastAPI: >=0.40.0,<0.42.0
-starlette==0.41.3
+starlette==0.49.1
 
 # Date/time
 python-dateutil==2.9.0
