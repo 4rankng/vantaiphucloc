@@ -9,6 +9,10 @@ const TITLES: Record<string, string> = {
   '/director': 'Tổng quan',
   '/director/users': 'Quản lý tài khoản',
   '/director/partners': 'Đối tác',
+  '/director/routes': 'Cung đường',
+  '/director/pricing': 'Bảng giá',
+  '/director/trips': 'Lệnh điều hành',
+  '/director/create-trip': 'Tạo lệnh điều hành',
   '/director/notifications': 'Thông báo',
   '/director/profile': 'Thông tin cá nhân',
 }
@@ -17,6 +21,7 @@ function resolveTitle(pathname: string): string {
   if (TITLES[pathname]) return TITLES[pathname]
   if (pathname.startsWith('/director/driver-jobs/')) return 'Tài xế'
   if (pathname.startsWith('/director/client-jobs/')) return 'Khách hàng'
+  if (pathname.startsWith('/director/trip/')) return 'Chi tiết lệnh'
   return ''
 }
 

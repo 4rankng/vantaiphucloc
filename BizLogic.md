@@ -21,8 +21,8 @@
 | Role | Vietnamese | Can Do | Cannot Do |
 |------|-----------|--------|-----------|
 | **superadmin** | SuperAdmin | Everything — full CRUD on all entities, manage users, delete vendors, configure salary | — |
-| **director** | Giám đốc | Read dashboards, view reports, manage users (create/edit/deactivate), view clients/routes/pricings/salary | Cannot create/edit/delete clients, routes, pricings, trip orders, work orders, salary config |
-| **accountant** | Kế toán | Create/edit clients, routes, pricings, trip orders, reconcile, calculate salary, manage salary config, manage vendors, manage drivers | Cannot manage users, cannot delete vendors |
+| **director** | Giám đốc | View dashboard, full CRUD on users, clients, vendors, routes, pricings, trip orders | Cannot reconcile (match WO→TO), cannot create work orders, cannot calculate/configure salary |
+| **accountant** | Kế toán | Create/edit clients, routes, pricings, trip orders, reconcile, calculate salary, manage salary config, manage vendors, manage drivers | Cannot manage users |
 | **driver** | Tài xế | Create work orders (single + batch), view own work orders, view own salary | Cannot access any other entity |
 
 ### Detailed Permission Matrix
@@ -30,20 +30,20 @@
 | Action | superadmin | director | accountant | driver |
 |--------|:----------:|:--------:|:----------:|:------:|
 | View dashboard/summary | ✅ | ✅ | ✅ | — |
-| CRUD clients | ✅ | Read only | ✅ | — |
-| CRUD routes | ✅ | Read only | ✅ | — |
-| CRUD pricings | ✅ | Read only | ✅ | — |
+| CRUD clients | ✅ | ✅ | ✅ | — |
+| CRUD routes | ✅ | ✅ | ✅ | — |
+| CRUD pricings | ✅ | ✅ | ✅ | — |
 | Create work orders | — | — | — | ✅ |
 | Edit work orders | ✅ | — | ✅ | — |
 | View work orders | ✅ | ✅ | ✅ | Own only |
-| CRUD trip orders | ✅ | Read only | ✅ | — |
+| CRUD trip orders | ✅ | ✅ | ✅ | — |
 | Reconcile (match WO→TO) | ✅ | — | ✅ | — |
 | Calculate salary | ✅ | — | ✅ | — |
 | View salary periods | ✅ | ✅ | ✅ | — |
 | Configure salary periods | ✅ | — | ✅ | — |
 | CRUD users | ✅ | ✅ | — | — |
-| Delete users (deactivate) | ✅ | — | — | — |
-| CRUD vendors | ✅ | Read only | ✅ | — |
+| Delete users (deactivate) | ✅ | ✅ | — | — |
+| CRUD vendors | ✅ | ✅ | ✅ | — |
 | CRUD drivers | ✅ | — | ✅ | — |
 
 ---
@@ -380,7 +380,10 @@ OPEN → CALCULATED (auto-computed by worker) → PAID (accountant marks as paid
 2. View detailed client jobs (per-client history)
 3. View detailed driver jobs (per-driver history)
 4. Manage user accounts (create, edit, deactivate)
-5. View notifications
+5. Manage clients and vendors (full CRUD)
+6. Manage routes and pricings (full CRUD)
+7. Manage trip orders (create, edit, cancel)
+8. View notifications
 ```
 
 ### 4.4 SuperAdmin's View
@@ -565,25 +568,25 @@ Backend validates all container numbers against ISO 6346 standard.
 | Method | Path | Access | Description |
 |--------|------|--------|-------------|
 | GET | `/clients` | accountant, director, superadmin | List (paginated) |
-| POST | `/clients` | accountant, superadmin | Create |
-| PUT | `/clients/{id}` | accountant, superadmin | Update |
-| DELETE | `/clients/{id}` | accountant, superadmin | Delete (guarded) |
+| POST | `/clients` | accountant, director, superadmin | Create |
+| PUT | `/clients/{id}` | accountant, director, superadmin | Update |
+| DELETE | `/clients/{id}` | accountant, director, superadmin | Delete (guarded) |
 
 ### Routes
 | Method | Path | Access | Description |
 |--------|------|--------|-------------|
 | GET | `/routes` | accountant, director, superadmin | List (paginated) |
-| POST | `/routes` | accountant, superadmin | Create |
-| PUT | `/routes/{id}` | accountant, superadmin | Update |
-| DELETE | `/routes/{id}` | accountant, superadmin | Delete |
+| POST | `/routes` | accountant, director, superadmin | Create |
+| PUT | `/routes/{id}` | accountant, director, superadmin | Update |
+| DELETE | `/routes/{id}` | accountant, director, superadmin | Delete |
 
 ### Pricings
 | Method | Path | Access | Description |
 |--------|------|--------|-------------|
 | GET | `/pricings` | accountant, director, superadmin | List (paginated, filterable) |
-| POST | `/pricings` | accountant, superadmin | Create |
-| PUT | `/pricings/{id}` | accountant, superadmin | Update |
-| DELETE | `/pricings/{id}` | accountant, superadmin | Delete |
+| POST | `/pricings` | accountant, director, superadmin | Create |
+| PUT | `/pricings/{id}` | accountant, director, superadmin | Update |
+| DELETE | `/pricings/{id}` | accountant, director, superadmin | Delete |
 
 ### Work Orders
 | Method | Path | Access | Description |
@@ -599,8 +602,8 @@ Backend validates all container numbers against ISO 6346 standard.
 |--------|------|--------|-------------|
 | GET | `/trip-orders` | accountant, director, superadmin | List (filterable, paginated) |
 | GET | `/trip-orders/{id}` | accountant, director, superadmin | Get single |
-| POST | `/trip-orders` | accountant, superadmin | Create |
-| PUT | `/trip-orders/{id}` | accountant, superadmin | Update |
+| POST | `/trip-orders` | accountant, director, superadmin | Create |
+| PUT | `/trip-orders/{id}` | accountant, director, superadmin | Update |
 
 ### Reconciliation
 | Method | Path | Access | Description |
@@ -626,9 +629,9 @@ Backend validates all container numbers against ISO 6346 standard.
 | Method | Path | Access | Description |
 |--------|------|--------|-------------|
 | GET | `/vendors` | accountant, director, superadmin | List (paginated) |
-| POST | `/vendors` | accountant, superadmin | Create |
-| PUT | `/vendors/{id}` | accountant, superadmin | Update |
-| DELETE | `/vendors/{id}` | superadmin | Delete (guarded) |
+| POST | `/vendors` | accountant, director, superadmin | Create |
+| PUT | `/vendors/{id}` | accountant, director, superadmin | Update |
+| DELETE | `/vendors/{id}` | accountant, director, superadmin | Delete (guarded) |
 
 ### Users
 | Method | Path | Access | Description |
@@ -636,7 +639,7 @@ Backend validates all container numbers against ISO 6346 standard.
 | GET | `/users` | director, superadmin | List (filterable by role) |
 | POST | `/users` | director, superadmin | Create |
 | PUT | `/users/{id}` | director, superadmin | Update |
-| DELETE | `/users/{id}` | superadmin | Deactivate (soft delete) |
+| DELETE | `/users/{id}` | director, superadmin | Deactivate (soft delete) |
 
 ### Dashboard
 | Method | Path | Access | Description |

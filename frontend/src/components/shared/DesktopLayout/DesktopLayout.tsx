@@ -81,6 +81,9 @@ const DIRECTOR_NAV: NavGroup[] = [
     items: [
       { path: '/director/users', label: 'Tài khoản', icon: UserCog },
       { path: '/director/partners', label: 'Đối tác', icon: Handshake },
+      { path: '/director/routes', label: 'Cung đường', icon: Route },
+      { path: '/director/pricing', label: 'Bảng giá', icon: Receipt },
+      { path: '/director/trips', label: 'Lệnh điều hành', icon: Briefcase },
     ],
   },
 ]

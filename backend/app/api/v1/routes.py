@@ -58,7 +58,7 @@ async def list_routes(
 @router.post("/routes", response_model=RouteOut, status_code=201)
 async def create_route(
     body: RouteCreate,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
@@ -74,7 +74,7 @@ async def create_route(
 async def update_route(
     route_id: int,
     body: RouteUpdate,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
@@ -97,7 +97,7 @@ async def update_route(
 @router.delete("/routes/{route_id}", status_code=204)
 async def delete_route(
     route_id: int,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
