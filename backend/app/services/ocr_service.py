@@ -8,12 +8,14 @@ Driver workflow:
 """
 
 import base64
+import io
 import logging
 import os
 import re
 from typing import Optional
 
 import httpx
+from PIL import Image, ImageEnhance, ImageFilter
 
 from app.utils.iso6346 import validate_container_number
 
@@ -23,6 +25,27 @@ _logger = logging.getLogger(__name__)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
 GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta"
+
+
+def preprocess_image(image_bytes: bytes) -> tuple[bytes, str]:
+    """Enhance image for OCR: grayscale, contrast boost, sharpen.
+
+    Returns (processed_bytes, mime_type).
+    """
+    img = Image.open(io.BytesIO(image_bytes))
+
+    # Convert to grayscale
+    img = img.convert("L")
+
+    # Boost contrast
+    img = ImageEnhance.Contrast(img).enhance(1.8)
+
+    # Sharpen to counteract motion blur
+    img = img.filter(ImageFilter.UnsharpMask(radius=2, percent=150, threshold=3))
+
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=90)
+    return buf.getvalue(), "image/jpeg"
 
 # Prompt for container number extraction
 CONTAINER_PROMPT = """You are looking at a photo taken by a truck driver of a shipping container.
@@ -107,6 +130,12 @@ async def extract_container_number(
             "error": "Không nhận dạng được số cont",
             "attempts_remaining": attempt.max_attempts - attempt.attempts if attempt else 0,
         }
+
+    # Preprocess image for better OCR accuracy
+    try:
+        image_bytes, mime_type = preprocess_image(image_bytes)
+    except Exception as e:
+        _logger.warning("OCR_PREPROCESS_FAILED", f"Skipping preprocess: {e}", "ocr_service")
 
     # Encode image to base64
     try:
