@@ -61,6 +61,12 @@ api.interceptors.response.use(
     const originalRequest = error.config as InternalAxiosRequestConfig | undefined
 
     if (error.response?.status === 401 && originalRequest) {
+      // Don't intercept 401s on auth endpoints — they're expected (wrong credentials)
+      const url = originalRequest.url ?? ''
+      if (url.startsWith('/auth/login') || url.startsWith('/auth/refresh')) {
+        return Promise.reject(error)
+      }
+
       const refreshToken = getRefreshToken()
 
       if (!refreshToken) {
