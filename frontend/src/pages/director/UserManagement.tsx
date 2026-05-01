@@ -7,7 +7,7 @@ import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect'
-import { QuickCreateDialog } from '@/components/shared/QuickCreateDialog'
+import { CreateVendorDialog } from '@/components/shared/CreateVendorDialog'
 import { useToast } from '@/components/atoms/Toast'
 import { FilterPills } from '@/components/shared/FilterPills'
 import { api } from '@/services/api/client'
@@ -642,14 +642,11 @@ function UserManagementInner() {
         </>
       )}
 
-      <QuickCreateDialog
+      <CreateVendorDialog
         open={createVendorOpen}
         onClose={() => setCreateVendorOpen(false)}
-        title="Thêm nhà thầu"
-        label="Tên nhà thầu"
-        placeholder="Tên nhà thầu"
-        onConfirm={(name) => {
-          createVendor.mutate({ name }, { onSuccess: () => setCreateVendorOpen(false) })
+        onConfirm={(data) => {
+          createVendor.mutate(data, { onSuccess: () => setCreateVendorOpen(false) })
         }}
       />
     </div>
