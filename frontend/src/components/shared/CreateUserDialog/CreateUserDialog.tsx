@@ -87,7 +87,7 @@ export function CreateUserDialog({
 
   return (
     <>
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen && !createVendorOpen) onClose() }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Tạo tài khoản</DialogTitle>
@@ -150,19 +150,24 @@ export function CreateUserDialog({
             ) : <div />}
           </div>
 
-          {/* Tractor plate — driver only, full width */}
-          {form.role === 'driver' && (
+          {/* Row 4: Tractor plate + Password (driver) or Password full-width (others) */}
+          {form.role === 'driver' ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Biển số đầu kéo</Label>
+                <Input value={form.tractorPlate} onChange={e => setForm(f => ({ ...f, tractorPlate: e.target.value }))} placeholder="15C-123.45" className="text-sm font-mono" />
+              </div>
+              <div className="space-y-2">
+                <RequiredLabel>Mật khẩu</RequiredLabel>
+                <Input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" className="text-sm" />
+              </div>
+            </div>
+          ) : (
             <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Biển số đầu kéo</Label>
-              <Input value={form.tractorPlate} onChange={e => setForm(f => ({ ...f, tractorPlate: e.target.value }))} placeholder="15C-123.45" className="text-sm font-mono" />
+              <RequiredLabel>Mật khẩu</RequiredLabel>
+              <Input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" className="text-sm" />
             </div>
           )}
-
-          {/* Password — full width */}
-          <div className="space-y-2">
-            <RequiredLabel>Mật khẩu</RequiredLabel>
-            <Input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="••••••••" className="text-sm" />
-          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose} className="flex-1">Huỷ</Button>
@@ -180,7 +185,14 @@ export function CreateUserDialog({
       open={createVendorOpen}
       onClose={() => setCreateVendorOpen(false)}
       onConfirm={(data) => {
-        createVendor.mutate(data, { onSuccess: () => setCreateVendorOpen(false) })
+        createVendor.mutate(data, {
+          onSuccess: (res) => {
+            setCreateVendorOpen(false)
+            if (res.success && res.data?.id) {
+              setForm(f => ({ ...f, vendor: String(res.data.id) }))
+            }
+          },
+        })
       }}
     />
     </>
