@@ -1,1 +1,1 @@
-export { ProfileDialog, UserDropdown } from './ProfileDialog'
+export { ProfileDialog, UserDropdown, SidebarProfileDialog } from './ProfileDialog'
