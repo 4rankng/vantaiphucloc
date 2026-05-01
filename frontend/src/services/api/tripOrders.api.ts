@@ -5,6 +5,8 @@ import type {
   ApiResponse,
   SuggestMatchesResponse,
   SuggestWosResponse,
+  ReconciliationUploadResponse,
+  ReconciliationResult,
 } from '@/data/domain'
 
 interface TripOrderFilters {
@@ -85,4 +87,55 @@ export async function suggestWosForTrip(
   } catch (err) {
     return fail(err)
   }
+}
+
+export async function toggleTripConfirmation(
+  tripOrderId: number,
+): Promise<ApiResponse<TripOrder>> {
+  try {
+    const res = await api.put(`/trip-orders/${tripOrderId}/confirm`)
+    return ok(toCamel<TripOrder>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export async function uploadCustomerExcel(
+  file: File,
+  clientId: number,
+  dateFrom?: string,
+  dateTo?: string,
+): Promise<ApiResponse<ReconciliationUploadResponse>> {
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const params = new URLSearchParams()
+    params.append('client_id', String(clientId))
+    if (dateFrom) params.append('date_from', dateFrom)
+    if (dateTo) params.append('date_to', dateTo)
+
+    const res = await api.post(`/reconcile/upload-excel?${params.toString()}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return ok(toCamel<ReconciliationUploadResponse>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export async function exportReconciliationExcel(
+  clientId: number,
+  dateFrom?: string,
+  dateTo?: string,
+): Promise<Blob> {
+  const params = new URLSearchParams()
+  params.append('client_id', String(clientId))
+  if (dateFrom) params.append('date_from', dateFrom)
+  if (dateTo) params.append('date_to', dateTo)
+
+  const res = await api.get(`/reconcile/export-excel?${params.toString()}`, {
+    responseType: 'blob',
+  })
+  return res.data
 }
