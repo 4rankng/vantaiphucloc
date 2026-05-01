@@ -24,7 +24,7 @@ from app.schemas.domain import (
 )
 from app.core.deps import get_current_user, require_roles
 from app.services.pricing_service import find_pricing
-from app.services.ocr_service import OCRAttempt, extract_container_number
+from app.services.ocr_service import MAX_OCR_ATTEMPTS, OCRAttempt, extract_container_number
 
 _logger = logging.getLogger(__name__)
 
@@ -370,8 +370,8 @@ async def ocr_container_number(
 
     Driver workflow:
     1. Upload image (base64-encoded)
-    2. AI attempts OCR (max 2 attempts per container)
-    3. If both fail → driver enters manually
+    2. AI attempts OCR (max MAX_OCR_ATTEMPTS attempts per container)
+    3. If all fail → driver enters manually
     4. Backend validates against ISO 6346
     """
     # Decode base64 image
@@ -382,14 +382,14 @@ async def ocr_container_number(
         return ContainerOCRResponse(
             success=False,
             container_number=None,
-            error="Invalid base64 image data",
-            attempts_remaining=2,
+            error="Dữ liệu hình ảnh không hợp lệ",
+            attempts_remaining=MAX_OCR_ATTEMPTS,
         )
 
     # Get or create OCR attempt tracker for this user
     user_id = current_user.id
     if user_id not in _ocr_attempts:
-        _ocr_attempts[user_id] = OCRAttempt(max_attempts=2)
+        _ocr_attempts[user_id] = OCRAttempt(max_attempts=MAX_OCR_ATTEMPTS)
 
     attempt = _ocr_attempts[user_id]
 
@@ -399,7 +399,7 @@ async def ocr_container_number(
         return ContainerOCRResponse(
             success=False,
             container_number=None,
-            error="Maximum OCR attempts reached. Please enter container number manually.",
+            error="Đã hết số lần quét OCR. Vui lòng nhập số container thủ công.",
             attempts_remaining=0,
         )
 

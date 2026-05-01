@@ -171,7 +171,7 @@ Driver creates WO → PENDING
 - **Offline support:** Drivers can create work orders offline. They are queued locally and synced when back online via `offlineQueue`. Batch creation supports up to 50 WOs at once.
 - **Multi-container support:** One work order can have 1, 2, or more containers (via `WorkOrderContainer` child table).
 - **When matched to TO:** WO's `driver_salary`, `allowance`, `earning` are synced from TO. `WO.unit_price` stays 0 (revenue tracked in TO only).
-- **Container OCR:** Drivers can upload photo of container for AI OCR extraction. AI has max 2 attempts. If both fail, driver enters manually. Backend validates against ISO 6346.
+- **Container OCR:** Drivers can upload photo of container for AI OCR extraction. AI has max 5 attempts. If all fail, driver enters manually. Backend validates against ISO 6346.
 
 ### 3.6 Trip Order (Lệnh điều hành)
 
@@ -535,7 +535,7 @@ Backend validates all container numbers against ISO 6346 standard.
 
 **OCR Workflow:**
 1. Driver uploads photo of container
-2. AI (Gemini) attempts OCR extraction (max 2 attempts per user)
+2. AI (Gemini) attempts OCR extraction (max 5 attempts per user)
 3. Backend validates extracted number against ISO 6346
 4. If valid → auto-fill container number
 5. If invalid → show error, allow retry or manual entry
