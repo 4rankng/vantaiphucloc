@@ -2,9 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { api } from '@/services/api/client'
 import { useToast } from '@/components/atoms/Toast'
-import {
-  Phone, LogOut, KeyRound, ChevronRight, UserCircle, User, Pencil, Check, X,
-} from 'lucide-react'
+import { LogOut, KeyRound, Pencil, Check, X, Phone, AtSign } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
@@ -16,15 +14,17 @@ const ROLE_LABELS: Record<string, string> = {
   director: 'Giám đốc',
 }
 
-// ─── Inline editable field ────────────────────────────────────────────────────
+// ─── Inline editable row ──────────────────────────────────────────────────────
 
-function EditableField({
+function EditableRow({
+  icon: Icon,
   label,
   value,
   onSave,
   type = 'text',
   placeholder,
 }: {
+  icon: React.ComponentType<{ className?: string }>
   label: string
   value: string
   onSave: (val: string) => Promise<void>
@@ -35,7 +35,6 @@ function EditableField({
   const [draft, setDraft] = useState(value)
   const [saving, setSaving] = useState(false)
 
-  // Sync if parent value changes
   useEffect(() => { if (!editing) setDraft(value) }, [value, editing])
 
   const handleSave = async () => {
@@ -49,29 +48,44 @@ function EditableField({
     }
   }
 
-  const handleCancel = () => {
-    setDraft(value)
-    setEditing(false)
-  }
+  const handleCancel = () => { setDraft(value); setEditing(false) }
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 gap-3">
-      <span className="text-sm shrink-0 w-28" style={{ color: 'var(--theme-text-muted)' }}>{label}</span>
-      {editing ? (
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+    <div className="flex items-center gap-3 px-4 py-3.5">
+      <div
+        className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+        style={{ background: 'var(--theme-bg-tertiary)' }}
+      >
+        <Icon className="w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' } as React.CSSProperties} />
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <p className="text-[11px] font-medium uppercase tracking-wide mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+          {label}
+        </p>
+        {editing ? (
           <Input
             type={type}
             value={draft}
             onChange={e => setDraft(e.target.value)}
             placeholder={placeholder}
-            className="text-sm h-8 flex-1"
+            className="text-sm h-7 px-2"
             autoFocus
             onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') handleCancel() }}
           />
+        ) : (
+          <p className="text-sm font-medium truncate" style={{ color: value ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}>
+            {value || placeholder || '—'}
+          </p>
+        )}
+      </div>
+
+      {editing ? (
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-7 h-7 flex items-center justify-center rounded-full shrink-0 transition-colors"
+            className="w-7 h-7 flex items-center justify-center rounded-full transition-colors"
             style={{ background: 'var(--theme-brand-primary)', color: 'white' }}
             aria-label="Lưu"
           >
@@ -79,7 +93,7 @@ function EditableField({
           </button>
           <button
             onClick={handleCancel}
-            className="w-7 h-7 flex items-center justify-center rounded-full shrink-0 transition-colors"
+            className="w-7 h-7 flex items-center justify-center rounded-full transition-colors"
             style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
             aria-label="Huỷ"
           >
@@ -87,22 +101,44 @@ function EditableField({
           </button>
         </div>
       ) : (
-        <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-          <span className="text-sm font-medium truncate" style={{ color: 'var(--theme-text-primary)' }}>
-            {value || <span style={{ color: 'var(--theme-text-muted)' }}>Chưa cập nhật</span>}
-          </span>
-          <button
-            onClick={() => setEditing(true)}
-            className="w-7 h-7 flex items-center justify-center rounded-full shrink-0 transition-colors hover:bg-[var(--theme-bg-tertiary)]"
-            style={{ color: 'var(--theme-text-muted)' }}
-            aria-label={`Sửa ${label}`}
-          >
-            <Pencil className="w-3.5 h-3.5" />
-          </button>
-        </div>
+        <button
+          onClick={() => setEditing(true)}
+          className="w-7 h-7 flex items-center justify-center rounded-full shrink-0 transition-colors hover:bg-[var(--theme-bg-tertiary)]"
+          style={{ color: 'var(--theme-text-muted)' }}
+          aria-label={`Sửa ${label}`}
+        >
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
       )}
     </div>
   )
+}
+
+// ─── Section label ────────────────────────────────────────────────────────────
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-[11px] font-semibold uppercase tracking-widest px-1 mb-1.5" style={{ color: 'var(--theme-text-muted)' }}>
+      {children}
+    </p>
+  )
+}
+
+// ─── Card wrapper ─────────────────────────────────────────────────────────────
+
+function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div
+      className={`rounded-2xl overflow-hidden ${className}`}
+      style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}
+    >
+      {children}
+    </div>
+  )
+}
+
+function Divider() {
+  return <div className="mx-4" style={{ borderTop: '1px solid var(--theme-border-light)' }} />
 }
 
 // ─── Profile page ─────────────────────────────────────────────────────────────
@@ -113,34 +149,37 @@ export function Profile() {
 
   const [phone, setPhone] = useState('')
   const [fullName, setFullName] = useState(user?.name ?? '')
+  const [username, setUsername] = useState('')
 
-  // Load current profile from API
   useEffect(() => {
     api.get('/users/me').then(res => {
       setPhone(res.data.phone ?? '')
       setFullName(res.data.full_name ?? user?.name ?? '')
+      setUsername(res.data.username ?? '')
     }).catch(() => {})
   }, [user?.id])
 
-  const saveField = async (field: 'full_name' | 'phone', value: string) => {
+  const saveField = async (field: 'full_name' | 'phone' | 'username', value: string) => {
     try {
       const res = await api.put('/users/me', { [field]: value })
       if (field === 'full_name') {
         setFullName(res.data.full_name ?? value)
         updateUser({ name: res.data.full_name ?? value })
         toast.success('Đã cập nhật họ tên')
-      } else {
+      } else if (field === 'phone') {
         setPhone(res.data.phone ?? value)
         toast.success('Đã cập nhật số điện thoại')
+      } else {
+        setUsername(res.data.username ?? value)
+        toast.success('Đã cập nhật tên đăng nhập')
       }
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Lỗi không xác định'
       toast.error('Lỗi', detail)
-      throw err // re-throw so EditableField stays in edit mode
+      throw err
     }
   }
 
-  // Change password dialog
   const [pwDialog, setPwDialog] = useState(false)
   const [currentPw, setCurrentPw] = useState('')
   const [newPw, setNewPw] = useState('')
@@ -148,16 +187,10 @@ export function Profile() {
   const [savingPw, setSavingPw] = useState(false)
 
   const handleChangePw = async () => {
-    if (newPw !== confirmPw) {
-      toast.error('Lỗi', 'Mật khẩu xác nhận không khớp')
-      return
-    }
+    if (newPw !== confirmPw) { toast.error('Lỗi', 'Mật khẩu xác nhận không khớp'); return }
     setSavingPw(true)
     try {
-      await api.post('/users/change-password', {
-        current_password: currentPw,
-        new_password: newPw,
-      })
+      await api.post('/users/change-password', { current_password: currentPw, new_password: newPw })
       toast.success('Đã đổi mật khẩu')
       setPwDialog(false)
       setCurrentPw(''); setNewPw(''); setConfirmPw('')
@@ -169,101 +202,97 @@ export function Profile() {
     }
   }
 
+  const initials = (fullName || user?.name || '?').charAt(0).toUpperCase()
   const roleLabel = ROLE_LABELS[user?.role ?? ''] ?? user?.role ?? ''
 
   return (
-    <div className="pb-6 space-y-4">
-      {/* Avatar + name card */}
-      <div
-        className="flex items-center gap-3 rounded-2xl p-4"
-        style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}
-      >
+    <div className="pb-8 space-y-5">
+
+      {/* ── Simple profile header ── */}
+      <div className="flex items-center gap-4 px-1 py-2">
         <div
-          className="w-14 h-14 rounded-full flex items-center justify-center shrink-0 text-xl font-bold"
-          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+          className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold text-white shrink-0"
+          style={{ background: 'var(--theme-brand-primary)' }}
         >
-          {fullName?.charAt(0)?.toUpperCase() ?? <UserCircle className="w-7 h-7" />}
+          {initials}
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-base font-bold truncate" style={{ color: 'var(--theme-text-primary)' }}>{fullName || user?.name}</p>
+        <div className="min-w-0">
+          <p className="text-base font-bold leading-tight truncate" style={{ color: 'var(--theme-text-primary)' }}>
+            {fullName || user?.name || '—'}
+          </p>
           {phone && (
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <Phone className="w-3 h-3" style={{ color: 'var(--theme-text-muted)' }} />
-              <span className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>{phone}</span>
-            </div>
+            <p className="text-sm mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{phone}</p>
           )}
+          <span
+            className="inline-block text-xs font-semibold px-2 py-0.5 rounded-full mt-1"
+            style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
+          >
+            {roleLabel}
+          </span>
         </div>
-        <span
-          className="text-xs font-semibold px-2 py-1 rounded-full shrink-0"
-          style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
-        >
-          {roleLabel}
-        </span>
       </div>
 
-      {/* Editable info */}
-      <div
-        className="rounded-2xl overflow-hidden divide-y"
-        style={{
-          background: 'var(--theme-bg-secondary)',
-          boxShadow: 'var(--theme-shadow-card)',
-          divideColor: 'var(--theme-border-light)',
-        }}
-      >
-        {/* Read-only: account ID */}
-        <div className="flex items-center justify-between px-4 py-3">
-          <span className="text-sm w-28 shrink-0" style={{ color: 'var(--theme-text-muted)' }}>Mã tài khoản</span>
-          <span className="text-sm font-semibold font-mono" style={{ color: 'var(--theme-text-primary)' }}>#{user?.id}</span>
-        </div>
-
-        <div style={{ borderTop: '1px solid var(--theme-border-light)' }}>
-          <EditableField
+      {/* ── Thông tin cá nhân ── */}
+      <div>
+        <SectionLabel>Thông tin cá nhân</SectionLabel>
+        <Card>
+          <EditableRow
+            icon={({ className }) => (
+              <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            )}
             label="Họ và tên"
             value={fullName}
             onSave={val => saveField('full_name', val)}
             placeholder="Nhập họ và tên"
           />
-        </div>
 
-        <div style={{ borderTop: '1px solid var(--theme-border-light)' }}>
-          <EditableField
+          <Divider />
+
+          <EditableRow
+            icon={AtSign}
+            label="Tên đăng nhập"
+            value={username}
+            onSave={val => saveField('username', val)}
+            placeholder="Nhập tên đăng nhập"
+          />
+
+          <Divider />
+
+          <EditableRow
+            icon={Phone}
             label="Số điện thoại"
             value={phone}
             onSave={val => saveField('phone', val)}
             type="tel"
             placeholder="Nhập số điện thoại"
           />
-        </div>
+        </Card>
       </div>
 
-      {/* Security */}
-      <div
-        className="rounded-2xl overflow-hidden"
-        style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}
-      >
+      {/* ── Actions row ── */}
+      <div className="flex gap-3">
         <button
           onClick={() => setPwDialog(true)}
-          className="w-full flex items-center justify-between px-4 py-3.5 touch-manipulation transition-colors hover:bg-[var(--theme-bg-tertiary)]"
+          className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold text-sm touch-manipulation transition-opacity hover:opacity-80"
+          style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)', boxShadow: 'var(--theme-shadow-card)' }}
         >
-          <div className="flex items-center gap-3">
-            <KeyRound className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
-            <span className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Đổi mật khẩu</span>
-          </div>
-          <ChevronRight className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
+          <KeyRound className="w-4 h-4" />
+          Đổi mật khẩu
+        </button>
+        <button
+          onClick={logout}
+          className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold text-sm touch-manipulation transition-opacity hover:opacity-80"
+          style={{ background: 'var(--theme-status-error-light)', color: 'var(--theme-status-error)' }}
+        >
+          <LogOut className="w-4 h-4" />
+          Đăng xuất
         </button>
       </div>
 
-      {/* Logout */}
-      <button
-        onClick={logout}
-        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold text-sm touch-manipulation transition-colors"
-        style={{ background: 'var(--theme-status-error-light)', color: 'var(--theme-status-error)' }}
-      >
-        <LogOut className="w-4 h-4" />
-        Đăng xuất
-      </button>
-
-      {/* Change password dialog */}
+      {/* ── Change password dialog ── */}
       <Dialog open={pwDialog} onOpenChange={open => { if (!open) { setPwDialog(false); setCurrentPw(''); setNewPw(''); setConfirmPw('') } }}>
         <DialogContent>
           <DialogHeader>

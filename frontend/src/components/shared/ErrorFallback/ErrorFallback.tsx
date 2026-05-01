@@ -56,27 +56,31 @@ export function ErrorFallback({ variant = 'runtime', error, component, onRetry, 
   return (
     <div className={cn('flex min-h-[400px] items-center justify-center p-4', className)}>
       <div className="w-full max-w-md">
-        <div className="rounded-xl border border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] p-6 shadow-sm text-center">
+        <div className="rounded-xl border border-[var(--theme-border-default)] bg-white p-6 shadow-md text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
             <AlertCircle className="h-8 w-8 text-red-600 dark:text-red-400" />
           </div>
-          <h2 className="text-lg font-semibold text-[var(--theme-text-primary)]">{TITLES[variant]}</h2>
-          <p className="mt-2 text-sm text-[var(--theme-text-muted)]">
-            {component && <span className="block mb-1 font-medium">{component}</span>}
+          <h2 className="text-lg font-semibold text-gray-900">{TITLES[variant]}</h2>
+          <p className="mt-2 text-sm text-gray-500">
+            {component && <span className="block mb-1 font-medium text-gray-700">{component}</span>}
             {message || 'Vui lòng thử lại hoặc quay về trang chủ'}
           </p>
-          <div className="mt-6 flex flex-col gap-3">
-            {onRetry && (
-              <Button onClick={onRetry} className="w-full">
-                <RefreshCw className="mr-2 h-4 w-4" /> Thử lại
-              </Button>
-            )}
-            {onHome && (
-              <Button onClick={onHome} variant="outline" className="w-full">
-                <Home className="mr-2 h-4 w-4" /> Về trang chủ
-              </Button>
-            )}
-            <button onClick={handleCopy} className="text-xs text-[var(--theme-text-muted)] hover:text-[var(--theme-text-primary)] flex items-center justify-center gap-1.5 mx-auto transition-colors">
+          {(onRetry || onHome) && (
+            <div className="mt-6 flex flex-col gap-3">
+              {onRetry && (
+                <Button onClick={onRetry} className="w-full">
+                  <RefreshCw className="mr-2 h-4 w-4" /> Thử lại
+                </Button>
+              )}
+              {onHome && (
+                <Button onClick={onHome} variant="outline" className="w-full">
+                  <Home className="mr-2 h-4 w-4" /> Về trang chủ
+                </Button>
+              )}
+            </div>
+          )}
+          <div className="mt-4">
+            <button onClick={handleCopy} className="text-xs text-gray-400 hover:text-gray-700 flex items-center justify-center gap-1.5 mx-auto transition-colors">
               {copied
                 ? <><Check className="h-3.5 w-3.5 text-green-500" /> <span className="text-green-500">Đã sao chép</span></>
                 : <><Copy className="h-3.5 w-3.5" /> Sao chép chi tiết lỗi</>

@@ -14,6 +14,48 @@ from app.core.security import hash_password, verify_password
 router = APIRouter()
 
 
+@router.get("/users/me", response_model=UserOut)
+async def get_own_profile(
+    current_user: User = Depends(get_current_user),
+):
+    return current_user
+
+
+@router.put("/users/me", response_model=UserOut)
+async def update_own_profile(
+    body: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Allow any authenticated user to update their own full_name and phone."""
+    update_data = body.model_dump(exclude_unset=True)
+
+    # Only allow safe self-editable fields
+    allowed = {"full_name", "phone", "username"}
+    update_data = {k: v for k, v in update_data.items() if k in allowed}
+
+    if "phone" in update_data and update_data["phone"]:
+        existing = await db.execute(
+            select(User).where(User.phone == update_data["phone"], User.id != current_user.id)
+        )
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail="Phone number already registered")
+
+    if "username" in update_data and update_data["username"]:
+        existing = await db.execute(
+            select(User).where(User.username == update_data["username"], User.id != current_user.id)
+        )
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail="Tên đăng nhập đã được sử dụng")
+
+    for field, value in update_data.items():
+        setattr(current_user, field, value)
+
+    await db.commit()
+    await db.refresh(current_user)
+    return current_user
+
+
 @router.get("/users", response_model=PaginatedResponse[UserOut])
 async def list_users(
     role: str | None = None,
@@ -182,42 +224,7 @@ async def delete_user(
     await db.commit()
 
 
-@router.get("/users/me", response_model=UserOut)
-async def get_own_profile(
-    current_user: User = Depends(get_current_user),
-):
-    return current_user
-
-
-@router.put("/users/me", response_model=UserOut)
-async def update_own_profile(
-    body: UserUpdate,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Allow any authenticated user to update their own full_name and phone."""
-    update_data = body.model_dump(exclude_unset=True)
-
-    # Only allow safe self-editable fields
-    allowed = {"full_name", "phone"}
-    update_data = {k: v for k, v in update_data.items() if k in allowed}
-
-    if "phone" in update_data and update_data["phone"]:
-        existing = await db.execute(
-            select(User).where(User.phone == update_data["phone"], User.id != current_user.id)
-        )
-        if existing.scalar_one_or_none():
-            raise HTTPException(status_code=409, detail="Phone number already registered")
-
-    for field, value in update_data.items():
-        setattr(current_user, field, value)
-
-    await db.commit()
-    await db.refresh(current_user)
-    return current_user
-
-
-
+@router.post("/change-password", response_model=MessageResponse)
 async def change_password(
     body: ChangePassword,
     current_user: User = Depends(get_current_user),
