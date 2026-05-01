@@ -94,12 +94,13 @@ export interface OCRContainerResponse {
   attemptsRemaining: number
 }
 
-export async function ocrContainer(imageDataUrl: string): Promise<OCRContainerResponse> {
+export async function ocrContainer(imageDataUrl: string, containerIndex: number): Promise<OCRContainerResponse> {
   // Strip data URI prefix: "data:image/jpeg;base64," → raw base64
   const base64 = imageDataUrl.replace(/^data:[^;]+;base64,/, '')
   const res = await api.post('/work-orders/ocr-container', {
     image_data: base64,
     mime_type: 'image/jpeg',
+    container_index: containerIndex,
   })
   return {
     success: res.data.success,

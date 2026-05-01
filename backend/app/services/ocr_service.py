@@ -19,7 +19,7 @@ from PIL import Image, ImageEnhance
 
 from app.utils.iso6346 import validate_container_number
 
-MAX_OCR_ATTEMPTS = 5
+MAX_OCR_ATTEMPTS = 3
 
 _logger = logging.getLogger(__name__)
 
