@@ -156,7 +156,7 @@ async def suggest_wo_matches(
     )
 
     query = select(WorkOrder).where(
-        WorkOrder.status.in_(["PENDING", "PRICED"]),
+        WorkOrder.status.in_(["PENDING"]),
         or_(
             WorkOrder.driver_id == trip_order.driver_id,
             WorkOrder.client_id == trip_order.client_id,
