@@ -35,7 +35,7 @@ class User(Base):
 
     # Full name for display (e.g. "Nguyễn Văn A")
     full_name = Column(String(200), nullable=True)
-    # Vietnamese citizen ID (Căn cước công dân), 12 digits
+    # Vietnamese citizen ID (CCCD), 12 digits
     cccd = Column(String(12), unique=True, nullable=True, index=True)
 
     hashed_password = Column(String(255), nullable=False)

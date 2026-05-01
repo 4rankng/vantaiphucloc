@@ -282,6 +282,7 @@ function UserManagementInner() {
 
   const [tab, setTab] = useState<'users' | 'vendors'>('users')
   const [createVendorOpen, setCreateVendorOpen] = useState(false)
+  const [vendorOpenedFrom, setVendorOpenedFrom] = useState<'create' | 'edit' | null>(null)
 
   const [createOpen, setCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState<UserForm>(EMPTY_FORM)
@@ -522,7 +523,7 @@ function UserManagementInner() {
       </div>
 
       {/* Create dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={createOpen} onOpenChange={(open) => { if (!open && !createVendorOpen) setCreateOpen(false) }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Thêm tài khoản</DialogTitle></DialogHeader>
           <div className="space-y-4">
@@ -557,7 +558,7 @@ function UserManagementInner() {
               <Input value={createForm.phone} onChange={e => updateCreateField('phone', e.target.value)} placeholder="0912-345-678" className="text-sm" />
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Căn cước công dân</Label>
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>CCCD</Label>
               <Input value={createForm.cccd} onChange={e => updateCreateField('cccd', e.target.value)} placeholder="001234567890" className="text-sm font-mono" />
             </div>
             {createForm.role === 'driver' && (
@@ -568,21 +569,29 @@ function UserManagementInner() {
                   value={createForm.vendor}
                   onChange={v => updateCreateField('vendor', v)}
                   placeholder="Chọn nhà thầu"
-                  onCreateNew={() => setCreateVendorOpen(true)}
+                  onCreateNew={() => { setVendorOpenedFrom('create'); setCreateVendorOpen(true) }}
                   createNewLabel="Tạo nhà thầu mới"
                 />
               </div>
             )}
-            {createForm.role === 'driver' && (
+            {/* Tractor plate + Password on same row for driver, password full-width otherwise */}
+            {createForm.role === 'driver' ? (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Biển số đầu kéo</Label>
+                  <Input value={createForm.tractorPlate} onChange={e => updateCreateField('tractorPlate', e.target.value)} placeholder="15C-136.31" className="text-sm font-mono" />
+                </div>
+                <div className="space-y-2">
+                  <RequiredLabel>Mật khẩu mặc định</RequiredLabel>
+                  <Input type="password" value={createForm.password} onChange={e => updateCreateField('password', e.target.value)} placeholder="••••••••" className="text-sm" />
+                </div>
+              </div>
+            ) : (
               <div className="space-y-2">
-                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Biển số đầu kéo</Label>
-                <Input value={createForm.tractorPlate} onChange={e => updateCreateField('tractorPlate', e.target.value)} placeholder="15C-136.31" className="text-sm font-mono" />
+                <RequiredLabel>Mật khẩu mặc định</RequiredLabel>
+                <Input type="password" value={createForm.password} onChange={e => updateCreateField('password', e.target.value)} placeholder="••••••••" className="text-sm" />
               </div>
             )}
-            <div className="space-y-2">
-              <RequiredLabel>Mật khẩu mặc định</RequiredLabel>
-              <Input type="password" value={createForm.password} onChange={e => updateCreateField('password', e.target.value)} placeholder="••••••••" className="text-sm" />
-            </div>
           </div>
           <DialogFooter className="flex-row gap-2">
             <Button variant="outline" onClick={() => setCreateOpen(false)} className="flex-1">Huỷ</Button>
@@ -596,7 +605,7 @@ function UserManagementInner() {
       </Dialog>
 
       {/* Detail/Edit dialog */}
-      <Dialog open={!!detailUser} onOpenChange={(open) => { if (!open) setDetailUser(null) }}>
+      <Dialog open={!!detailUser} onOpenChange={(open) => { if (!open && !createVendorOpen) setDetailUser(null) }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Thông tin tài khoản</DialogTitle>
@@ -634,7 +643,7 @@ function UserManagementInner() {
                 <Input value={editForm.phone} onChange={e => updateEditField('phone', e.target.value)} className="text-sm" placeholder="0912-345-678" />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Căn cước công dân</Label>
+                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>CCCD</Label>
                 <Input value={editForm.cccd} onChange={e => updateEditField('cccd', e.target.value)} className="text-sm font-mono" placeholder="001234567890" />
               </div>
               {editForm.role === 'driver' && (
@@ -645,21 +654,29 @@ function UserManagementInner() {
                     value={editForm.vendor}
                     onChange={v => updateEditField('vendor', v)}
                     placeholder="Chọn nhà thầu"
-                    onCreateNew={() => setCreateVendorOpen(true)}
+                    onCreateNew={() => { setVendorOpenedFrom('edit'); setCreateVendorOpen(true) }}
                     createNewLabel="Tạo nhà thầu mới"
                   />
                 </div>
               )}
-              {editForm.role === 'driver' && (
+              {/* Tractor plate + Password on same row for driver, password full-width otherwise */}
+              {editForm.role === 'driver' ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Biển số đầu kéo</Label>
+                    <Input value={editForm.tractorPlate} onChange={e => updateEditField('tractorPlate', e.target.value)} className="text-sm font-mono" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mật khẩu mới (để trống nếu không đổi)</Label>
+                    <Input type="password" value={editForm.password} onChange={e => updateEditField('password', e.target.value)} placeholder="••••••••" className="text-sm" />
+                  </div>
+                </div>
+              ) : (
                 <div className="space-y-2">
-                  <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Biển số đầu kéo</Label>
-                  <Input value={editForm.tractorPlate} onChange={e => updateEditField('tractorPlate', e.target.value)} className="text-sm font-mono" />
+                  <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mật khẩu mới (để trống nếu không đổi)</Label>
+                  <Input type="password" value={editForm.password} onChange={e => updateEditField('password', e.target.value)} placeholder="••••••••" className="text-sm" />
                 </div>
               )}
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mật khẩu mới (để trống nếu không đổi)</Label>
-                <Input type="password" value={editForm.password} onChange={e => updateEditField('password', e.target.value)} placeholder="••••••••" className="text-sm" />
-              </div>
             </div>
           )}
           <DialogFooter>
@@ -703,7 +720,20 @@ function UserManagementInner() {
         open={createVendorOpen}
         onClose={() => setCreateVendorOpen(false)}
         onConfirm={(data) => {
-          createVendor.mutate(data, { onSuccess: () => setCreateVendorOpen(false) })
+          createVendor.mutate(data, {
+            onSuccess: (res) => {
+              setCreateVendorOpen(false)
+              if (res.success && res.data?.id) {
+                const newId = String(res.data.id)
+                if (vendorOpenedFrom === 'create') {
+                  setCreateForm(prev => ({ ...prev, vendor: newId }))
+                } else if (vendorOpenedFrom === 'edit') {
+                  setEditForm(prev => ({ ...prev, vendor: newId }))
+                }
+              }
+              setVendorOpenedFrom(null)
+            },
+          })
         }}
       />
     </div>
