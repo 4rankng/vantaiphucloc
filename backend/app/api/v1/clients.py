@@ -58,7 +58,7 @@ async def list_clients(
 @router.post("/clients", response_model=ClientOut, status_code=201)
 async def create_client(
     body: ClientCreate,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
@@ -74,7 +74,7 @@ async def create_client(
 async def update_client(
     client_id: int,
     body: ClientUpdate,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
@@ -97,7 +97,7 @@ async def update_client(
 @router.delete("/clients/{client_id}", status_code=204)
 async def delete_client(
     client_id: int,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
