@@ -93,31 +93,7 @@ export function CreateUserDialog({
           <DialogTitle>Tạo tài khoản</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          {/* Row 1: Username + Full name */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <RequiredLabel>Tên đăng nhập</RequiredLabel>
-              <Input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} placeholder="nguyenvana" className="text-sm" />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Họ và tên</Label>
-              <Input value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} placeholder="Nguyễn Văn A" className="text-sm" />
-            </div>
-          </div>
-
-          {/* Row 2: Phone + CCCD */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số điện thoại</Label>
-              <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="0901 234 567" className="text-sm" />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>CCCD</Label>
-              <Input value={form.cccd} onChange={e => setForm(f => ({ ...f, cccd: e.target.value }))} placeholder="001234567890" className="text-sm font-mono" />
-            </div>
-          </div>
-
-          {/* Row 3: Role + Vendor/Tractor plate (driver only) */}
+          {/* Row 1: Role + Vendor (driver only) */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <RequiredLabel>Vai trò</RequiredLabel>
@@ -148,6 +124,30 @@ export function CreateUserDialog({
                 />
               </div>
             ) : <div />}
+          </div>
+
+          {/* Row 2: Username + Full name */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <RequiredLabel>Tên đăng nhập</RequiredLabel>
+              <Input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} placeholder="nguyenvana" className="text-sm" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Họ và tên</Label>
+              <Input value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} placeholder="Nguyễn Văn A" className="text-sm" />
+            </div>
+          </div>
+
+          {/* Row 3: Phone + CCCD */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số điện thoại</Label>
+              <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="0901 234 567" className="text-sm" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>CCCD</Label>
+              <Input value={form.cccd} onChange={e => setForm(f => ({ ...f, cccd: e.target.value }))} placeholder="001234567890" className="text-sm font-mono" />
+            </div>
           </div>
 
           {/* Row 4: Tractor plate + Password (driver) or Password full-width (others) */}
