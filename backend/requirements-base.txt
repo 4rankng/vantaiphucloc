@@ -41,6 +41,9 @@ python-dateutil==2.9.0
 # Image processing (OCR preprocessing)
 Pillow>=10.0.0
 
+# Excel processing
+openpyxl>=3.1.0
+
 # Monitoring
 sentry-sdk==2.13.0
 prometheus-fastapi-instrumentator==7.0.0

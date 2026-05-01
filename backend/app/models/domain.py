@@ -48,6 +48,7 @@ class Client(Base):
     __tablename__ = "clients"
 
     id = Column(Integer, primary_key=True, index=True)
+    code = Column(String(50), nullable=True, unique=True, index=True)  # Customer code
     name = Column(String(255), nullable=False, index=True)
     type = Column(String(20), nullable=False)          # company | individual
     phone = Column(String(50), nullable=False)
@@ -70,6 +71,8 @@ class Route(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     route = Column(String(500), nullable=False)        # route name / description
+    pickup_location = Column(String(255), nullable=True)   # Điểm lấy
+    dropoff_location = Column(String(255), nullable=True)  # Điểm trả
     type_20ft = Column(Integer, nullable=False)        # VND
     type_40ft = Column(Integer, nullable=False)        # VND
     is_two_way = Column(Boolean, default=False, nullable=False)
@@ -201,6 +204,9 @@ class TripOrder(Base):
     allowance = Column(Integer, nullable=False)        # VND
     revenue = Column(Integer, nullable=False)          # VND
     status = Column(String(20), nullable=False, default="DRAFT")  # DRAFT | PENDING | COMPLETED | CANCELLED
+    is_confirmed = Column(Boolean, nullable=False, default=False)  # Reconciliation confirmation
+    confirmed_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # Who confirmed
+    confirmed_at = Column(DateTime(timezone=True), nullable=True)  # When confirmed
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
@@ -208,6 +214,8 @@ class TripOrder(Base):
 
     __table_args__ = (
         Index("ix_trip_orders_driver_id_trip_date", "driver_id", "trip_date"),
+        Index("ix_trip_orders_is_confirmed", "is_confirmed"),
+        Index("ix_trip_orders_confirmed_by", "confirmed_by"),
     )
 
 
