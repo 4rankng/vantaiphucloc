@@ -51,7 +51,9 @@ function getAuthHeaders(): Record<string, string> {
 }
 
 export function OfflineProvider({ children }: { children: ReactNode }) {
-  const [isOnline, setIsOnline] = useState(isFullyOnline)
+  // Start optimistically online — the health check will correct this if needed.
+  // This prevents a false "offline" flash on page load before the first check completes.
+  const [isOnline, setIsOnline] = useState(true)
   const [pendingCount, setPendingCount] = useState(0)
   const [syncing, setSyncing] = useState(false)
   const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null)

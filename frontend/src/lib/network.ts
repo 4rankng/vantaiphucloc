@@ -9,8 +9,9 @@
  */
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api/v1'
-const HEALTH_TIMEOUT = 3000
+const HEALTH_TIMEOUT = 8000   // increased: cold droplet can be slow
 const POLL_INTERVAL = 30_000
+const INITIAL_RETRY_DELAY = 3000  // retry once after 3s on initial load failure
 
 let _backendOnline = true
 let _pollTimer: ReturnType<typeof setInterval> | null = null
@@ -124,8 +125,16 @@ function stopPolling() {
 // ── Auto-init on import ───────────────────────────────────────────────
 
 if (typeof window !== 'undefined') {
+  // Initial check — if it fails, retry once after a short delay
+  // (handles slow cold-start on production servers)
   checkBackendHealth().then(ok => {
-    setBackendOnline(ok)
+    if (ok) {
+      setBackendOnline(true)
+    } else {
+      setTimeout(() => {
+        checkBackendHealth().then(retryOk => setBackendOnline(retryOk))
+      }, INITIAL_RETRY_DELAY)
+    }
   })
 
   window.addEventListener('online', () => {
