@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '010_add_client_code_to_work_orders'
-down_revision = '009_add_vendor_contact_fields'
+revision = '010'
+down_revision = '009'
 branch_labels = None
 depends_on = None
 
