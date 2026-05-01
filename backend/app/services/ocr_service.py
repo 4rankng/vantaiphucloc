@@ -10,6 +10,7 @@ Driver workflow:
 import base64
 import logging
 import os
+import re
 from typing import Optional
 
 import httpx
@@ -20,24 +21,36 @@ _logger = logging.getLogger(__name__)
 
 # Configuration
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
 GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta"
 
 # Prompt for container number extraction
-CONTAINER_PROMPT = """Extract the container number from this image.
+CONTAINER_PROMPT = """You are looking at a photo taken by a truck driver of a shipping container.
 
-Container numbers follow ISO 6346 format:
-- Format: XXXX-NNNNNN-N (4 letters, 6 digits, 1 check digit)
-- Example: MSKU-1234567-1, TCLU-9876543-2
+YOUR TASK: Find and return ONLY the container number painted on the container.
 
-Rules:
-- Return ONLY the container number, no additional text
-- Include all 11 characters (including check digit)
-- If you cannot find a valid container number, return "NONE"
-- Do not include explanation or reasoning
+IMPORTANT CONTEXT:
+- The photo is taken in a busy port/depot environment — there will be lots of noise: signs, labels, QR codes, truck license plates, other containers, graffiti, text on the ground, etc.
+- IGNORE ALL OF THAT. Focus ONLY on the large, bold text painted directly on the container body.
+- The container number is usually the biggest, most prominent text on the container — typically painted in large black or white characters.
+- It may appear on the side, door, or top of the container.
 
-Example output:
-MSKU-1234567-1"""
+FORMAT — ISO 6346 container number:
+- 4 uppercase letters + 6 digits + 1 check digit = 11 characters total
+- Examples: MSKU1234567, TCLU9876543, OOLU5567890
+- May have hyphens like MSKU-123456-7 — remove them in your output
+
+RULES:
+1. Return ONLY the 11-character container number, uppercase, no hyphens, no spaces
+2. If you can see multiple container numbers (e.g., stacked containers), return the one on the CLOSEST/largest container
+3. If you cannot find a valid container number, return exactly: NONE
+4. Do NOT include any explanation, reasoning, or extra text
+5. Double-check: your output must be exactly 4 letters followed by 7 digits
+
+Example outputs:
+MSKU1234567
+TCLU9876543
+NONE"""
 
 
 class OCRAttempt:
@@ -91,7 +104,7 @@ async def extract_container_number(
         return {
             "success": False,
             "container_number": None,
-            "error": "AI service not configured",
+            "error": "Không nhận dạng được số cont",
             "attempts_remaining": attempt.max_attempts - attempt.attempts if attempt else 0,
         }
 
@@ -103,7 +116,7 @@ async def extract_container_number(
         return {
             "success": False,
             "container_number": None,
-            "error": f"Failed to encode image: {str(e)}",
+            "error": "Không nhận dạng được số cont",
             "attempts_remaining": attempt.max_attempts - attempt.attempts if attempt else 0,
         }
 
@@ -146,7 +159,7 @@ async def extract_container_number(
         return {
             "success": False,
             "container_number": None,
-            "error": f"AI service error: HTTP {e.response.status_code}",
+            "error": "Không nhận dạng được số cont",
             "attempts_remaining": attempt.max_attempts - attempt.attempts if attempt else 0,
         }
     except httpx.RequestError as e:
@@ -154,7 +167,7 @@ async def extract_container_number(
         return {
             "success": False,
             "container_number": None,
-            "error": "AI service temporarily unavailable",
+            "error": "Không nhận dạng được số cont",
             "attempts_remaining": attempt.max_attempts - attempt.attempts if attempt else 0,
         }
     except Exception as e:
@@ -162,7 +175,7 @@ async def extract_container_number(
         return {
             "success": False,
             "container_number": None,
-            "error": f"Unexpected error: {str(e)}",
+            "error": "Không nhận dạng được số cont",
             "attempts_remaining": attempt.max_attempts - attempt.attempts if attempt else 0,
         }
 
@@ -174,19 +187,29 @@ async def extract_container_number(
             return {
                 "success": False,
                 "container_number": None,
-                "error": "AI returned no result",
+                "error": "Không nhận dạng được số cont",
                 "attempts_remaining": attempt.max_attempts - attempt.attempts if attempt else 0,
             }
 
         text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
 
+        # Normalize AI output: strip markdown formatting, quotes, whitespace
+        text = re.sub(r"[`\"'\n\r]", "", text).strip()
+
+        # Extract container number pattern (4 letters + 6 digits + 1 check digit)
+        match = re.search(r"[A-Z]{4}\d{7}", text.upper())
+        if match:
+            text = match.group(0)
+        else:
+            text = text.upper()
+
         # Handle "NONE" response (AI couldn't find a container)
         if text.upper() == "NONE":
-            _logger.warn("OCR_GEMINI_NONE_RESPONSE", None, "ocr_service")
+            _logger.warning("OCR_GEMINI_NONE_RESPONSE", None, "ocr_service")
             return {
                 "success": False,
                 "container_number": None,
-                "error": "AI could not identify a container number",
+                "error": "Không nhận dạng được số cont",
                 "attempts_remaining": attempt.max_attempts - attempt.attempts if attempt else 0,
             }
 
@@ -194,7 +217,7 @@ async def extract_container_number(
         is_valid, error_msg = validate_container_number(text)
 
         if not is_valid:
-            _logger.warn(
+            _logger.warning(
                 "OCR_GEMINI_INVALID_FORMAT",
                 f"Extracted '{text}' - {error_msg}",
                 "ocr_service",
@@ -202,7 +225,7 @@ async def extract_container_number(
             return {
                 "success": False,
                 "container_number": text,
-                "error": f"Invalid format: {error_msg}",
+                "error": "Không nhận dạng được số cont",
                 "attempts_remaining": attempt.max_attempts - attempt.attempts if attempt else 0,
             }
 
@@ -227,6 +250,6 @@ async def extract_container_number(
         return {
             "success": False,
             "container_number": None,
-            "error": f"Failed to parse AI response: {str(e)}",
+            "error": "Không nhận dạng được số cont",
             "attempts_remaining": attempt.max_attempts - attempt.attempts if attempt else 0,
         }

@@ -1,6 +1,6 @@
 import { useRef, useCallback, useState, useEffect } from 'react'
 import Webcam from 'react-webcam'
-import { X, RotateCcw } from 'lucide-react'
+import { X, RotateCcw, RectangleHorizontal, Square } from 'lucide-react'
 import { calculateObjectCoverCrop } from '@/lib/crop-utils'
 
 export interface PhotoMeta {
@@ -14,13 +14,26 @@ interface ContainerScannerProps {
   onClose: () => void
 }
 
+type ScanMode = 'rectangle' | 'square'
+
 // Target rectangle dimensions — must match CSS values
 const RECT_WIDTH_PERCENT = 0.85
 const RECT_HEIGHT_PX = 100
+const SQUARE_SIZE_PERCENT = 0.75
+const MAX_CAPTURE_WIDTH = 1200
+
+function getOverlayDimensions(mode: ScanMode, containerWidth: number) {
+  if (mode === 'square') {
+    const side = containerWidth * SQUARE_SIZE_PERCENT
+    return { width: side, height: side }
+  }
+  return { width: containerWidth * RECT_WIDTH_PERCENT, height: RECT_HEIGHT_PX }
+}
 
 export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) {
   const webcamRef = useRef<Webcam>(null)
   const [captured, setCaptured] = useState<string | null>(null)
+  const [scanMode, setScanMode] = useState<ScanMode>('rectangle')
   const [gpsCoords, setGpsCoords] = useState<{ lat: number | null; lng: number | null }>({ lat: null, lng: null })
 
   useEffect(() => {
@@ -39,13 +52,14 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
     const video = webcam.video
     if (!video) return
 
+    const overlay = getOverlayDimensions(scanMode, video.clientWidth)
     const crop = calculateObjectCoverCrop({
       sourceWidth: video.videoWidth,
       sourceHeight: video.videoHeight,
       containerWidth: video.clientWidth,
       containerHeight: video.clientHeight,
-      rectWidth: video.clientWidth * RECT_WIDTH_PERCENT,
-      rectHeight: RECT_HEIGHT_PX,
+      rectWidth: overlay.width,
+      rectHeight: overlay.height,
     })
 
     const canvas = document.createElement('canvas')
@@ -55,9 +69,19 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
     const ctx = canvas.getContext('2d')!
     ctx.drawImage(video, crop.x, crop.y, crop.width, crop.height, 0, 0, crop.width, crop.height)
 
-    const croppedImage = canvas.toDataURL('image/jpeg', 0.8)
+    // Downscale if wider than max — saves bandwidth for OCR and submission
+    let outputCanvas = canvas
+    if (crop.width > MAX_CAPTURE_WIDTH) {
+      const scale = MAX_CAPTURE_WIDTH / crop.width
+      outputCanvas = document.createElement('canvas')
+      outputCanvas.width = MAX_CAPTURE_WIDTH
+      outputCanvas.height = Math.round(crop.height * scale)
+      outputCanvas.getContext('2d')!.drawImage(canvas, 0, 0, outputCanvas.width, outputCanvas.height)
+    }
+
+    const croppedImage = outputCanvas.toDataURL('image/jpeg', 0.8)
     setCaptured(croppedImage)
-  }, [])
+  }, [scanMode])
 
   const handleRetake = useCallback(() => {
     setCaptured(null)
@@ -133,7 +157,7 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
             className="w-full h-full object-cover"
           />
 
-          {/* Overlay with rectangle hole */}
+          {/* Overlay with overlay hole */}
           <div
             className="absolute inset-0 flex flex-col items-center justify-center"
             style={{ pointerEvents: 'none' }}
@@ -141,8 +165,9 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
             <div
               className="relative rounded-xl"
               style={{
-                width: `${RECT_WIDTH_PERCENT * 100}%`,
-                height: `${RECT_HEIGHT_PX}px`,
+                width: scanMode === 'square' ? `${SQUARE_SIZE_PERCENT * 100}%` : `${RECT_WIDTH_PERCENT * 100}%`,
+                height: scanMode === 'rectangle' ? `${RECT_HEIGHT_PX}px` : undefined,
+                aspectRatio: scanMode === 'square' ? '1 / 1' : undefined,
                 boxShadow: '0 0 0 1000px rgba(0, 0, 0, 0.6)',
                 border: '2px solid rgba(255,255,255,0.4)',
               }}
@@ -160,6 +185,27 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
             >
               Căn số cont vào khung
             </p>
+          </div>
+
+          {/* Scan mode toggle */}
+          <div
+            className="absolute top-4 left-4 z-10 flex items-center gap-1 rounded-full p-1"
+            style={{ background: 'rgba(0,0,0,0.5)', pointerEvents: 'auto' }}
+          >
+            <button
+              onClick={() => setScanMode('rectangle')}
+              className="flex items-center justify-center w-9 h-9 rounded-full touch-manipulation transition-colors"
+              style={{ background: scanMode === 'rectangle' ? 'var(--theme-brand-primary)' : 'transparent', color: '#fff' }}
+            >
+              <RectangleHorizontal className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setScanMode('square')}
+              className="flex items-center justify-center w-9 h-9 rounded-full touch-manipulation transition-colors"
+              style={{ background: scanMode === 'square' ? 'var(--theme-brand-primary)' : 'transparent', color: '#fff' }}
+            >
+              <Square className="w-4 h-4" />
+            </button>
           </div>
 
           {/* Capture button */}
