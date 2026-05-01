@@ -493,37 +493,6 @@ class ContainerOCRResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Payments
-# ---------------------------------------------------------------------------
-
-class PaymentCreate(BaseModel):
-    client_id: int
-    amount: int = Field(ge=0)
-    payment_method: str | None = None
-    reference: str | None = None
-
-
-class PaymentUpdate(BaseModel):
-    amount: int | None = None
-    payment_method: str | None = None
-    reference: str | None = None
-
-
-class PaymentOut(BaseModel):
-    id: int
-    client_id: int
-    client_name: str
-    amount: int
-    payment_method: str | None
-    reference: str | None
-    created_at: datetime
-    created_by_id: int | None
-    created_by_name: str | None
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-# ---------------------------------------------------------------------------
 # Dashboard
 # ---------------------------------------------------------------------------
 
