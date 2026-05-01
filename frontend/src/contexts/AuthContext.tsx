@@ -29,13 +29,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await api.post('/auth/login', { username, password })
       const { access_token, refresh_token } = res.data
-      const { id, username, full_name, role } = res.data.user
+      const { id, username: userUsername, full_name, role } = res.data.user
 
       setTokens(access_token, refresh_token)
 
       const u: UserInfo = {
         id: String(id),
-        name: full_name || username,
+        name: full_name || userUsername,
         role,
       }
       localStorage.setItem('ttransport_user', JSON.stringify(u))
