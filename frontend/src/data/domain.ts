@@ -3,8 +3,8 @@ export type TrailerType = '20FT' | '40FT'
 export type JobStatus = 'DRAFT' | 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 export type ClientType = 'company' | 'individual'
 export type WorkType = 'E20' | 'E40' | 'F20' | 'F40'
-export type WorkOrderStatus = 'PENDING' | 'PRICED' | 'MATCHED'
-export type TripOrderStatus = 'DRAFT' | 'CONFIRMED' | 'INVOICED' | 'CANCELLED'
+export type WorkOrderStatus = 'PENDING' | 'MATCHED' | 'COMPLETED'
+export type TripOrderStatus = 'DRAFT' | 'PENDING' | 'COMPLETED' | 'CANCELLED'
 export type SalaryPeriodStatus = 'OPEN' | 'CALCULATED' | 'PAID'
 
 export interface ContainerItem {
@@ -238,16 +238,16 @@ export function getJobStatusBadge(status: JobStatus): { variant: 'default'|'succ
 export function getWorkOrderStatusBadge(status: WorkOrderStatus): { variant: 'default'|'success'|'warning'|'danger'|'info'|'neutral'; label: string } {
   switch (status) {
     case 'PENDING': return { variant: 'warning', label: 'Chờ đối soát' }
-    case 'PRICED': return { variant: 'success', label: 'Đã tính giá' }
-    case 'MATCHED': return { variant: 'info', label: 'Đã đối soát' }
+    case 'MATCHED': return { variant: 'info', label: 'Đã đối soát (chờ giá)' }
+    case 'COMPLETED': return { variant: 'success', label: 'Hoàn thành' }
   }
 }
 
 export function getTripOrderStatusBadge(status: TripOrderStatus): { variant: 'default'|'success'|'warning'|'danger'|'info'|'neutral'; label: string } {
   switch (status) {
     case 'DRAFT': return { variant: 'neutral', label: 'Nháp' }
-    case 'CONFIRMED': return { variant: 'success', label: 'Đã xác nhận' }
-    case 'INVOICED': return { variant: 'info', label: 'Đã xuất hoá đơn' }
+    case 'PENDING': return { variant: 'warning', label: 'Chờ đối soát' }
+    case 'COMPLETED': return { variant: 'success', label: 'Hoàn thành' }
     case 'CANCELLED': return { variant: 'danger', label: 'Đã huỷ' }
   }
 }

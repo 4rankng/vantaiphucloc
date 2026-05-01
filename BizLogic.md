@@ -137,12 +137,12 @@ Created by **drivers** in the field. Records the physical work done: which conta
 | tractor_plate | string | Truck plate number |
 | gps_lat, gps_lng | float? | GPS coordinates at creation time |
 | gps_address | string? | Reverse-geocoded address (async via worker) |
-| unit_price | int (VND) | Auto-filled from Pricing if match found, else 0 |
-| driver_salary | int (VND) | Auto-filled from Pricing if match found, else 0 |
-| allowance | int (VND) | Auto-filled from Pricing if match found, else 0 |
-| earning | int (VND) | = driver_salary + allowance |
-| pricing_id | int (FK)? | Link to the Pricing record that matched |
-| status | `PENDING` → `PRICED` → `MATCHED` | Lifecycle status |
+| unit_price | int (VND) | Always 0 on creation (revenue tracked in TO only) |
+| driver_salary | int (VND) | 0 on creation, synced from TO when matched |
+| allowance | int (VND) | 0 on creation, synced from TO when matched |
+| earning | int (VND) | 0 on creation, = TO.driver_salary + TO.allowance when matched |
+| pricing_id | int (FK)? | Link to Pricing record found at creation (for reference only) |
+| status | `PENDING` → `MATCHED` → `COMPLETED` | Lifecycle status |
 
 **Container Item:**
 | Field | Type | Description |
@@ -155,17 +155,26 @@ Created by **drivers** in the field. Records the physical work done: which conta
 
 **Work Order Lifecycle:**
 ```
-Driver creates WO → PENDING (no pricing match) or PRICED (pricing match found)
-                          ↓
-Accountant reconciles WO with a TripOrder → MATCHED
+Driver creates WO → PENDING (no match)
+                          ↓ (match found, no pricing)
+Accountant reconciles WO with a TripOrder → MATCHED (chờ giá)
+                          ↓ (pricing provided)
+                     COMPLETED (hoàn thành)
+
+Or directly:
+Driver creates WO → PENDING
+                          ↓ (match found + pricing provided)
+                     COMPLETED
 ```
 
 **Business Rules:**
-- **Auto-pricing:** On creation, the system looks up `Pricing` by `(client_id, work_type, route)`. If found → status = `PRICED`, fills unit_price/driver_salary/allowance. If not found → status = `PENDING`, all financials = 0.
+- **No auto-pricing on creation:** WO financials (`unit_price`, `driver_salary`, `allowance`, `earning`) always default to 0 on creation. Pricing is used for TO, not WO.
+- **Status only tracks match state:** PENDING (no match), MATCHED (match found but no pricing), COMPLETED (match found + pricing).
 - **GPS capture:** Driver's GPS coordinates are captured at creation time. Background worker reverse-geocodes the address.
 - **Offline support:** Drivers can create work orders offline. They are queued locally and synced when back online via `offlineQueue`. Batch creation supports up to 50 WOs at once.
-- **One work order can have multiple containers** (e.g., a truck carrying 2 containers on one trip).
-- When matched to a trip order, earning is recalculated from the trip order's `driver_salary + allowance`.
+- **Multi-container support:** One work order can have 1, 2, or more containers (via `WorkOrderContainer` child table).
+- **When matched to TO:** WO's `driver_salary`, `allowance`, `earning` are synced from TO. `WO.unit_price` stays 0 (revenue tracked in TO only).
+- **Container OCR:** Drivers can upload photo of container for AI OCR extraction. AI has max 2 attempts. If both fail, driver enters manually. Backend validates against ISO 6346.
 
 ### 3.6 Trip Order (Lệnh điều hành)
 
@@ -193,20 +202,23 @@ Created by **accountants**. Represents the commercial/financial record of a trip
 
 **Trip Order Lifecycle:**
 ```
-Accountant creates TO → DRAFT
-                          ↓ (confirm)
-                     CONFIRMED
-                          ↓ (issue invoice)
-                     INVOICED
+Accountant creates TO → DRAFT (missing required info: containers, client, route, or pricing)
+                          ↓ (all info provided)
+                     PENDING (ready for matching)
+                          ↓ (match found with WO)
+                     COMPLETED
 
-At any point → CANCELLED
+DRAFT/PENDING → CANCELLED (cannot cancel COMPLETED)
 ```
 
 **Business Rules:**
 - **Multi-container support:** TripOrder has a child table `trip_order_containers` (trip_order_id, container_number, work_type). One TO can have 1, 2, or more containers.
 - **Legacy fields:** `container_number` and `work_type` on TripOrder are nullable for backwards compatibility. New code should use the `containers` child table.
 - A trip order can match **multiple work orders** (via `TripOrderWorkOrder` join table).
-- When work orders are matched, their status is set to `MATCHED`.
+- **Auto-pricing on create:** When creating a TO, the system auto-looks up pricing from `Pricing` table by `(client_id, work_type, route)`. If found, `unit_price`, `driver_salary`, `allowance` are auto-filled. If not found, accountant must enter manually or create new bang gia.
+- **Status determination:** On TO create, status = `DRAFT` if missing required info (containers, client, route, or pricing), else `PENDING`.
+- **When matched to WO:** TO status → `COMPLETED`.
+- **Can cancel:** TO can only be cancelled while in `DRAFT` or `PENDING`. Cannot cancel `COMPLETED` TOs.
 - Salary recalculation is auto-triggered when trip order is created or when matched work orders change.
 
 ### 3.6.1 TripOrderContainer (Container trong Lệnh điều hành)
@@ -251,16 +263,23 @@ The process of matching Work Orders (physical reality from drivers) with Trip Or
 3. Accountant confirms or rejects each suggestion
 4. If no good match exists, Accountant selects any TO as candidate or creates new TO
 5. System links WO and TO via `TripOrderWorkOrder` join table
-6. Work Order status → `MATCHED`
-7. Work Order earning = Trip Order's `driver_salary + allowance`
-8. Salary recalculation is auto-queued for the driver
+6. **Determine WO status:**
+   - If TO has pricing data (`unit_price > 0`, `driver_salary > 0`) → WO status = `COMPLETED`
+   - Else → WO status = `MATCHED`
+7. **Sync financials:** WO's `driver_salary`, `allowance`, `earning` = TO's values. `WO.unit_price` stays 0.
+8. **Determine TO status:** TO status → `COMPLETED`
+9. Salary recalculation is auto-queued for the driver
 
 **Rules:**
-- A work order can only be matched once (status must not already be `MATCHED`).
+- A work order can only be matched once (status must not already be `MATCHED` or `COMPLETED`).
 - One trip order can match multiple work orders.
 - Both WOs and TOs can have 1, 2, or more containers (via child tables).
 - Only accountants and superadmins can reconcile.
 - This is a **human-in-the-loop** system — the software suggests, the Accountant decides.
+- **Categories for UI:**
+  - `matched` — WO and TO matched with complete pricing data
+  - `matched_but_required_price_data` — matched but missing pricing (WO status = MATCHED, TO status = PENDING or DRAFT)
+  - `not_match` — WO and TO don't match on criteria
 
 ### 3.7.1 TripOrderWorkOrder (Liên kết WO—TO)
 
@@ -468,7 +487,78 @@ SalaryPeriod (kỳ lương) — calculated per driver per period
 
 ---
 
-## 10. Not Yet Implemented (Future)
+## 10. State Machine & Validation
+
+### 10.1 Work Order State Machine
+
+Implemented using `python-statemachine` library. State is persisted in database (WO.status), machine re-initializes on restart.
+
+**States:**
+- `PENDING` — No match found yet
+- `MATCHED` — Match found with TO, but missing pricing data (driver_salary + allowance)
+- `COMPLETED` — Match found with TO, pricing data complete
+
+**Valid Transitions:**
+- `PENDING → COMPLETED` (match found + pricing data provided at same time)
+- `PENDING → MATCHED` (match found, no pricing data)
+- `MATCHED → COMPLETED` (pricing data provided later via TO update or new bang gia)
+
+**Triggers:**
+- `PENDING → COMPLETED` or `PENDING → MATCHED` — when WO is matched to TO via reconcile endpoint
+- `MATCHED → COMPLETED` — when linked TO is updated with pricing data or new bang gia is created (auto-recalc)
+
+### 10.2 Trip Order State Machine
+
+**States:**
+- `DRAFT` — Missing required info (containers, client, route, or pricing)
+- `PENDING` — All info provided, ready for matching
+- `COMPLETED` — Match found with WO
+- `CANCELLED` — Cancelled (final state)
+
+**Valid Transitions:**
+- `DRAFT → PENDING` — when all required fields are provided (containers, client, route, pricing)
+- `PENDING → COMPLETED` — when match found with WO
+- `DRAFT → CANCELLED` — while still in draft
+- `PENDING → CANCELLED` — before matching
+
+**Triggers:**
+- Initial status is auto-determined on create: `DRAFT` if missing any required field, else `PENDING`
+- `PENDING → COMPLETED` — when WO is matched to TO
+- `DRAFT/PENDING → CANCELLED` — when accountant cancels the TO
+- Cannot cancel `COMPLETED` TOs
+
+### 10.3 ISO 6346 Container Number Validation
+
+Backend validates all container numbers against ISO 6346 standard.
+
+**Format:** `XXXX-NNNNNN-N`
+- XXXX: 4 letters (owner code)
+- NNNNNN: 6 digits (serial number)
+- N: 1 digit (check digit)
+
+**Validation:**
+- Strict check: format + check digit calculation
+- Check digit calculation: sum of (character_value × 2^position) % 11, with 10 → 0
+- Implemented in `app/utils/iso6346.py`
+
+**OCR Workflow:**
+1. Driver uploads photo of container
+2. AI (Gemini) attempts OCR extraction (max 2 attempts per user)
+3. Backend validates extracted number against ISO 6346
+4. If valid → auto-fill container number
+5. If invalid → show error, allow retry or manual entry
+6. After 2 failed attempts → require manual entry
+
+**AI Service:**
+- Provider: Google Gemini (`gemini-2.5-flash`)
+- Prompt: Extract container number, return "NONE" if not found
+- Response: Raw container number (11 characters)
+- Timeout: 30 seconds
+- Implemented in `app/services/ocr_service.py`
+
+---
+
+## 11. Not Yet Implemented (Future)
 
 These features are referenced in code comments or frontend TODOs but not yet built:
 
