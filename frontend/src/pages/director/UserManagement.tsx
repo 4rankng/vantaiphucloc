@@ -526,7 +526,7 @@ function UserManagementInner() {
       <Dialog open={createOpen} onOpenChange={(open) => { if (!open && !createVendorOpen) setCreateOpen(false) }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Thêm tài khoản</DialogTitle></DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="space-y-2">
               <RequiredLabel>Vai trò</RequiredLabel>
               <div className="grid grid-cols-3 gap-2">
@@ -545,24 +545,31 @@ function UserManagementInner() {
                 ))}
               </div>
             </div>
-            <div className="space-y-2">
-              <RequiredLabel>Tên đăng nhập</RequiredLabel>
-              <Input value={createForm.username} onChange={e => updateCreateField('username', e.target.value)} placeholder="nguyenvana" className="text-sm" />
+            {/* Row 1: username + full name */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <RequiredLabel>Tên đăng nhập</RequiredLabel>
+                <Input value={createForm.username} onChange={e => updateCreateField('username', e.target.value)} placeholder="nguyenvana" className="text-sm" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Họ và tên</Label>
+                <Input value={createForm.fullName} onChange={e => updateCreateField('fullName', e.target.value)} placeholder="Nguyễn Văn A" className="text-sm" />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Họ và tên</Label>
-              <Input value={createForm.fullName} onChange={e => updateCreateField('fullName', e.target.value)} placeholder="Nguyễn Văn A" className="text-sm" />
+            {/* Row 2: phone + CCCD */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số điện thoại</Label>
+                <Input value={createForm.phone} onChange={e => updateCreateField('phone', e.target.value)} placeholder="0912-345-678" className="text-sm" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>CCCD</Label>
+                <Input value={createForm.cccd} onChange={e => updateCreateField('cccd', e.target.value)} placeholder="001234567890" className="text-sm font-mono" />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số điện thoại</Label>
-              <Input value={createForm.phone} onChange={e => updateCreateField('phone', e.target.value)} placeholder="0912-345-678" className="text-sm" />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>CCCD</Label>
-              <Input value={createForm.cccd} onChange={e => updateCreateField('cccd', e.target.value)} placeholder="001234567890" className="text-sm font-mono" />
-            </div>
+            {/* Driver-only: vendor full-width */}
             {createForm.role === 'driver' && (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <RequiredLabel>Nhà thầu</RequiredLabel>
                 <InlineSelect
                   options={(vendors ?? []).map(v => ({ value: String(v.id), label: v.name }))}
@@ -574,24 +581,19 @@ function UserManagementInner() {
                 />
               </div>
             )}
-            {/* Tractor plate + Password on same row for driver, password full-width otherwise */}
-            {createForm.role === 'driver' ? (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
+            {/* Row 3: tractor plate (driver) + password */}
+            <div className="grid grid-cols-2 gap-3">
+              {createForm.role === 'driver' && (
+                <div className="space-y-1.5">
                   <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Biển số đầu kéo</Label>
                   <Input value={createForm.tractorPlate} onChange={e => updateCreateField('tractorPlate', e.target.value)} placeholder="15C-136.31" className="text-sm font-mono" />
                 </div>
-                <div className="space-y-2">
-                  <RequiredLabel>Mật khẩu mặc định</RequiredLabel>
-                  <Input type="password" value={createForm.password} onChange={e => updateCreateField('password', e.target.value)} placeholder="••••••••" className="text-sm" />
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-2">
+              )}
+              <div className={`space-y-1.5 ${createForm.role !== 'driver' ? 'col-span-2' : ''}`}>
                 <RequiredLabel>Mật khẩu mặc định</RequiredLabel>
                 <Input type="password" value={createForm.password} onChange={e => updateCreateField('password', e.target.value)} placeholder="••••••••" className="text-sm" />
               </div>
-            )}
+            </div>
           </div>
           <DialogFooter className="flex-row gap-2">
             <Button variant="outline" onClick={() => setCreateOpen(false)} className="flex-1">Huỷ</Button>
@@ -611,7 +613,7 @@ function UserManagementInner() {
             <DialogTitle>Thông tin tài khoản</DialogTitle>
           </DialogHeader>
           {detailUser && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="space-y-2">
                 <RequiredLabel>Vai trò</RequiredLabel>
                 <div className="grid grid-cols-3 gap-2">
@@ -630,24 +632,31 @@ function UserManagementInner() {
                   ))}
                 </div>
               </div>
-              <div className="space-y-2">
-                <RequiredLabel>Tên đăng nhập</RequiredLabel>
-                <Input value={editForm.username} onChange={e => updateEditField('username', e.target.value)} className="text-sm" />
+              {/* Row 1: username + full name */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <RequiredLabel>Tên đăng nhập</RequiredLabel>
+                  <Input value={editForm.username} onChange={e => updateEditField('username', e.target.value)} className="text-sm" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Họ và tên</Label>
+                  <Input value={editForm.fullName} onChange={e => updateEditField('fullName', e.target.value)} className="text-sm" placeholder="Nguyễn Văn A" />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Họ và tên</Label>
-                <Input value={editForm.fullName} onChange={e => updateEditField('fullName', e.target.value)} className="text-sm" placeholder="Nguyễn Văn A" />
+              {/* Row 2: phone + CCCD */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số điện thoại</Label>
+                  <Input value={editForm.phone} onChange={e => updateEditField('phone', e.target.value)} className="text-sm" placeholder="0912-345-678" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>CCCD</Label>
+                  <Input value={editForm.cccd} onChange={e => updateEditField('cccd', e.target.value)} className="text-sm font-mono" placeholder="001234567890" />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số điện thoại</Label>
-                <Input value={editForm.phone} onChange={e => updateEditField('phone', e.target.value)} className="text-sm" placeholder="0912-345-678" />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>CCCD</Label>
-                <Input value={editForm.cccd} onChange={e => updateEditField('cccd', e.target.value)} className="text-sm font-mono" placeholder="001234567890" />
-              </div>
+              {/* Driver-only: vendor full-width */}
               {editForm.role === 'driver' && (
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <RequiredLabel>Nhà thầu</RequiredLabel>
                   <InlineSelect
                     options={(vendors ?? []).map(v => ({ value: String(v.id), label: v.name }))}
@@ -659,24 +668,19 @@ function UserManagementInner() {
                   />
                 </div>
               )}
-              {/* Tractor plate + Password on same row for driver, password full-width otherwise */}
-              {editForm.role === 'driver' ? (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
+              {/* Row 3: tractor plate (driver) + password */}
+              <div className="grid grid-cols-2 gap-3">
+                {editForm.role === 'driver' && (
+                  <div className="space-y-1.5">
                     <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Biển số đầu kéo</Label>
                     <Input value={editForm.tractorPlate} onChange={e => updateEditField('tractorPlate', e.target.value)} className="text-sm font-mono" />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mật khẩu mới (để trống nếu không đổi)</Label>
-                    <Input type="password" value={editForm.password} onChange={e => updateEditField('password', e.target.value)} placeholder="••••••••" className="text-sm" />
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mật khẩu mới (để trống nếu không đổi)</Label>
+                )}
+                <div className={`space-y-1.5 ${editForm.role !== 'driver' ? 'col-span-2' : ''}`}>
+                  <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mật khẩu mới</Label>
                   <Input type="password" value={editForm.password} onChange={e => updateEditField('password', e.target.value)} placeholder="••••••••" className="text-sm" />
                 </div>
-              )}
+              </div>
             </div>
           )}
           <DialogFooter>
