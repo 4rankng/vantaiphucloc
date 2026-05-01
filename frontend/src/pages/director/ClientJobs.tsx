@@ -48,7 +48,7 @@ export function ClientJobs({ clientId, onBack }: { clientId: number; onBack: () 
   return (
     <>
       <AppTopBar variant="page" title={clientName} onBack={onBack} />
-      <div className="p-4 space-y-3 lg:max-w-[1600px] lg:mx-auto">
+      <div className="p-4 space-y-3 w-full">
         {/* Stats */}
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-2xl p-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
