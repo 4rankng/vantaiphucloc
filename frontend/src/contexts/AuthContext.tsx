@@ -61,13 +61,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
-  // Auto-subscribe to push notifications after login
+  // Auto-subscribe to push on login — request permission if not yet decided, then subscribe
   useEffect(() => {
     if (!user || !isPushSupported()) return
-    getPushSubscriptionStatus().then(status => {
-      if (!status.subscribed && Notification.permission === 'granted') {
-        subscribeToPush().catch(() => {})
-      }
+    getPushSubscriptionStatus().then(async status => {
+      if (status.subscribed) return
+      // If permission already denied, nothing we can do silently
+      if (Notification.permission === 'denied') return
+      // Request permission (no-op if already granted), then subscribe
+      subscribeToPush().catch(() => {})
     })
   }, [user])
 

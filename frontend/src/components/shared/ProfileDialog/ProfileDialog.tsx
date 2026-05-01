@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import type React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { api } from '@/services/api/client'
@@ -86,37 +87,26 @@ export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () =>
 
 // ─── User Dropdown (topbar profile button) ────────────────────────────────────
 
-export function UserDropdown({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function UserDropdown({ open, onClose, anchorRef }: {
+  open: boolean
+  onClose: () => void
+  anchorRef?: React.RefObject<HTMLDivElement | null>
+}) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const [pushEnabled, setPushEnabled] = useState(false)
-  const pushSupported = isPushSupported()
-  const ref = useRef<HTMLDivElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
+      const target = e.target as Node
+      const inAnchor = anchorRef?.current?.contains(target)
+      const inDropdown = dropdownRef.current?.contains(target)
+      if (!inAnchor && !inDropdown) onClose()
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [open, onClose])
-
-  useEffect(() => {
-    if (open && pushSupported) {
-      getPushSubscriptionStatus().then(s => setPushEnabled(s.subscribed))
-    }
-  }, [open, pushSupported])
-
-  const togglePush = useCallback(async () => {
-    if (pushEnabled) {
-      await unsubscribeFromPush()
-      setPushEnabled(false)
-    } else {
-      const ok = await subscribeToPush()
-      setPushEnabled(ok)
-    }
-  }, [pushEnabled])
+  }, [open, onClose, anchorRef])
 
   const goToProfile = useCallback(() => {
     onClose()
@@ -132,33 +122,14 @@ export function UserDropdown({ open, onClose }: { open: boolean; onClose: () => 
 
   return (
     <div
-      ref={ref}
-      className="absolute right-4 top-14 z-50 rounded-xl overflow-hidden min-w-[200px]"
+      ref={dropdownRef}
+      className="absolute right-0 top-full mt-2 z-50 rounded-xl overflow-hidden min-w-[200px]"
       style={{
         background: 'var(--theme-bg-secondary)',
         boxShadow: 'var(--theme-shadow-elevated)',
         border: '1px solid var(--theme-border-default)',
       }}
     >
-      {/* Push notifications toggle */}
-      {pushSupported && (
-        <>
-          <button
-            onClick={togglePush}
-            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium touch-manipulation transition-colors hover:bg-[var(--theme-bg-tertiary)]"
-            style={{ color: 'var(--theme-text-primary)' }}
-          >
-            {pushEnabled ? (
-              <Bell className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-brand-primary)' }} />
-            ) : (
-              <BellOff className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
-            )}
-            <span className="flex-1 text-left">{pushEnabled ? 'Tắt thông báo' : 'Bật thông báo'}</span>
-          </button>
-          <div style={{ borderTop: '1px solid var(--theme-border-light)' }} />
-        </>
-      )}
-
       {/* Profile info */}
       <button
         onClick={goToProfile}

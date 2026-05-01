@@ -1,7 +1,5 @@
-import { useState } from 'react'
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
 import { AppShell } from '@/components/shared/AppShell'
-import { UserDropdown } from '@/components/shared/ProfileDialog'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Role } from '@/data/domain'
 
@@ -32,10 +30,8 @@ function AccountantShell() {
   const { user } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
-  const [dropdownOpen, setDropdownOpen] = useState(false)
 
   const isHome = location.pathname === '/accountant'
-  // Match/full-page views get no padding — they manage their own layout
   const isFullPage =
     location.pathname.startsWith('/accountant/match/') ||
     location.pathname.startsWith('/accountant/match-trip/')
@@ -46,24 +42,20 @@ function AccountantShell() {
     : 'px-4 py-4 space-y-4 md:px-6 md:py-6 md:max-w-4xl md:mx-auto'
 
   return (
-    <>
-      <AppShell
-        topbarProps={
-          isHome
-            ? {
-                variant: 'home' as const,
-                name: user?.name ?? '',
-                onNotifications: () => navigate('/accountant/notifications'),
-                onProfile: () => setDropdownOpen(true),
-              }
-            : { variant: 'page' as const, title, onBack: () => navigate(-1) }
-        }
-        contentClassName={contentClassName}
-      >
-        <Outlet />
-      </AppShell>
-      <UserDropdown open={dropdownOpen} onClose={() => setDropdownOpen(false)} />
-    </>
+    <AppShell
+      topbarProps={
+        isHome
+          ? {
+              variant: 'home' as const,
+              name: user?.name ?? '',
+              onNotifications: () => navigate('/accountant/notifications'),
+            }
+          : { variant: 'page' as const, title, onBack: () => navigate(-1) }
+      }
+      contentClassName={contentClassName}
+    >
+      <Outlet />
+    </AppShell>
   )
 }
 

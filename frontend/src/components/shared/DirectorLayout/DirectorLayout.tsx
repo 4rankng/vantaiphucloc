@@ -1,7 +1,5 @@
-import { useState } from 'react'
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
 import { AppShell } from '@/components/shared/AppShell'
-import { UserDropdown } from '@/components/shared/ProfileDialog'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Role } from '@/data/domain'
 
@@ -25,30 +23,25 @@ function DirectorShell() {
   const { user } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
-  const [dropdownOpen, setDropdownOpen] = useState(false)
 
   const isHome = location.pathname === '/director'
   const title = resolveTitle(location.pathname)
 
   return (
-    <>
-      <AppShell
-        topbarProps={
-          isHome
-            ? {
-                variant: 'home' as const,
-                name: user?.name ?? '',
-                onNotifications: () => navigate('/director/notifications'),
-                onProfile: () => setDropdownOpen(true),
-              }
-            : { variant: 'page' as const, title, onBack: () => navigate(-1) }
-        }
-        contentClassName="px-4 py-4 space-y-4 md:px-6 md:py-6 md:max-w-3xl md:mx-auto"
-      >
-        <Outlet />
-      </AppShell>
-      <UserDropdown open={dropdownOpen} onClose={() => setDropdownOpen(false)} />
-    </>
+    <AppShell
+      topbarProps={
+        isHome
+          ? {
+              variant: 'home' as const,
+              name: user?.name ?? '',
+              onNotifications: () => navigate('/director/notifications'),
+            }
+          : { variant: 'page' as const, title, onBack: () => navigate(-1) }
+      }
+      contentClassName="px-4 py-4 space-y-4 md:px-6 md:py-6 md:max-w-3xl md:mx-auto"
+    >
+      <Outlet />
+    </AppShell>
   )
 }
 
