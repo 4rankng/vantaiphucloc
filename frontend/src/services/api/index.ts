@@ -45,6 +45,7 @@ export const apiClient = {
   getWorkOrders: workOrdersApi.getWorkOrders,
   createWorkOrder: workOrdersApi.createWorkOrder,
   updateWorkOrder: workOrdersApi.updateWorkOrder,
+  ocrContainer: workOrdersApi.ocrContainer,
 
   // Trip Orders
   getTripOrders: tripOrdersApi.getTripOrders,

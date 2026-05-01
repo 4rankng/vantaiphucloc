@@ -50,24 +50,17 @@ export function DriverHome() {
   )
 
   return (
-    <div className="pb-20">
-      {/* Stats row */}
-      <div className="px-4 pt-4">
-        <StatsRow
-          items={[
-            { label: 'Thu nhập', value: formatCurrencyFull(totalEarnings) },
-            { label: 'Số chuyến', value: filteredJobs.length },
-          ]}
-        />
-      </div>
+    <div className="pb-20 space-y-4">
+      <StatsRow
+        items={[
+          { label: 'Thu nhập', value: formatCurrencyFull(totalEarnings) },
+          { label: 'Số chuyến', value: filteredJobs.length },
+        ]}
+      />
 
-      {/* Month navigator */}
-      <div className="px-4 mt-4">
-        <MonthNavigator year={year} month={month} onPrev={handlePrevMonth} onNext={handleNextMonth} />
-      </div>
+      <MonthNavigator year={year} month={month} onPrev={handlePrevMonth} onNext={handleNextMonth} />
 
-      {/* Job list */}
-      <div className="px-4 mt-4 space-y-2.5">
+      <div className="space-y-2.5">
         <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
           Lịch sử chuyến
         </p>
@@ -85,19 +78,19 @@ export function DriverHome() {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
-          {filteredJobs.map(job => (
-            <WorkOrderCard
-              key={job.id}
-              variant="driver"
-              data={job}
-              onClick={() => navigate(`/driver/job/${job.id}`)}
-            />
-          ))}
+            {filteredJobs.map(job => (
+              <WorkOrderCard
+                key={job.id}
+                variant="driver"
+                data={job}
+                onClick={() => navigate(`/driver/job/${job.id}`)}
+              />
+            ))}
           </div>
         )}
       </div>
 
-      {/* FAB */}
+      {/* FAB — mobile only */}
       <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => navigate('/driver/work-orders/new')} label="Tạo chuyến mới" />
     </div>
   )

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Camera, RotateCcw, Plus, Trash2, AlertCircle, WifiOff } from 'lucide-react'
+import { Camera, RotateCcw, Plus, Trash2, AlertCircle, WifiOff, Loader2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui'
@@ -20,9 +20,11 @@ interface ContainerForm {
   photoLat?: number | null
   photoLng?: number | null
   photoTimestamp?: string | null
+  ocrLoading: boolean
+  ocrError?: string
 }
 
-const EMPTY_CONT: ContainerForm = { containerNumber: '', workType: 'E20', photoTaken: false }
+const EMPTY_CONT: ContainerForm = { containerNumber: '', workType: 'E20', photoTaken: false, ocrLoading: false }
 
 export function CreateWorkOrder() {
   const navigate = useNavigate()
@@ -65,13 +67,32 @@ export function CreateWorkOrder() {
   }, [])
 
   const handleScanComplete = useCallback((imageSrc: string, meta: PhotoMeta) => {
+    const idx = activeContIdx
     setContainers(prev => prev.map((c, i) =>
-      i === activeContIdx
-        ? { ...c, photoTaken: true, photoDataUrl: imageSrc, photoLat: meta.lat, photoLng: meta.lng, photoTimestamp: meta.timestamp }
+      i === idx
+        ? { ...c, photoTaken: true, photoDataUrl: imageSrc, photoLat: meta.lat, photoLng: meta.lng, photoTimestamp: meta.timestamp, ocrLoading: isOnline, ocrError: undefined }
         : c,
     ))
     setScannerOpen(false)
-  }, [activeContIdx])
+
+    if (!isOnline) return
+
+    apiClient.ocrContainer(imageSrc)
+      .then((result) => {
+        setContainers(prev => prev.map((c, i) => {
+          if (i !== idx) return c
+          if (result.success && result.containerNumber) {
+            return { ...c, containerNumber: result.containerNumber, ocrLoading: false }
+          }
+          return { ...c, ocrLoading: false, ocrError: result.error ?? 'Không nhận diện được' }
+        }))
+      })
+      .catch(() => {
+        setContainers(prev => prev.map((c, i) =>
+          i === idx ? { ...c, ocrLoading: false, ocrError: 'Lỗi kết nối AI' } : c,
+        ))
+      })
+  }, [activeContIdx, isOnline])
 
   // Container management
   const updateContainer = useCallback((idx: number, field: keyof ContainerForm, value: string) => {
@@ -224,15 +245,15 @@ export function CreateWorkOrder() {
             >
               <div className="flex flex-col items-center gap-2 w-full">
                 <div
-                  className="w-full rounded-lg border-2 flex items-center justify-center"
+                  className="w-full rounded-lg border-2 flex items-center justify-center px-2"
                   style={{
                     borderColor: 'var(--theme-brand-primary)',
                     opacity: 0.6,
-                    height: '48px',
+                    minHeight: '48px',
                     background: 'var(--theme-brand-primary-light)',
                   }}
                 >
-                  <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--theme-brand-primary)', opacity: 0.7 }}>
+                  <span className="text-xs font-bold uppercase tracking-wider text-center leading-tight" style={{ color: 'var(--theme-brand-primary)', opacity: 0.7 }}>
                     Căn số cont vào khung
                   </span>
                 </div>
@@ -258,20 +279,27 @@ export function CreateWorkOrder() {
                   </button>
                 )}
               </div>
-              <input
-                value={cont.containerNumber}
-                onChange={e => updateContainer(idx, 'containerNumber', e.target.value)}
-                className="w-full h-10 rounded-xl px-3 text-sm font-mono font-semibold"
-                style={{
-                  background: 'var(--theme-bg-tertiary)',
-                  border: '1px solid var(--theme-border-default)',
-                  color: 'var(--theme-text-primary)',
-                }}
-                placeholder="VD: MSKU-1234567"
-              />
-              <p className="text-xs flex items-center gap-1" style={{ color: 'var(--theme-text-muted)' }}>
+              <div className="relative">
+                <input
+                  value={cont.containerNumber}
+                  onChange={e => updateContainer(idx, 'containerNumber', e.target.value)}
+                  className="w-full h-10 rounded-xl px-3 text-sm font-mono font-semibold"
+                  style={{
+                    background: 'var(--theme-bg-tertiary)',
+                    border: '1px solid var(--theme-border-default)',
+                    color: 'var(--theme-text-primary)',
+                    paddingRight: cont.ocrLoading ? '40px' : undefined,
+                  }}
+                  placeholder={cont.ocrLoading ? 'Đang nhận diện...' : 'VD: MSKU-1234567'}
+                  readOnly={cont.ocrLoading}
+                />
+                {cont.ocrLoading && (
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin" style={{ color: 'var(--theme-brand-primary)' }} />
+                )}
+              </div>
+              <p className="text-xs flex items-center gap-1" style={{ color: cont.ocrError ? 'var(--theme-status-warning)' : 'var(--theme-text-muted)' }}>
                 <AlertCircle className="w-3 h-3" />
-                {isOnline ? 'Sửa nếu PM nhận diện sai' : 'Nhập số cont thủ công'}
+                {cont.ocrError ?? (isOnline ? 'Sửa nếu PM nhận diện sai' : 'Nhập số cont thủ công')}
               </p>
             </div>
 

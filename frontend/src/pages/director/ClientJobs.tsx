@@ -1,10 +1,12 @@
 import { useEffect, useState, useMemo } from 'react'
-import { AppTopBar } from '@/components/shared/AppTopBar'
+import { useParams } from 'react-router-dom'
 import { apiClient } from '@/services/api'
 import { formatCurrencyFull as formatCurrency } from '@/data/domain'
 import type { WorkOrder, Pricing, Client } from '@/data/domain'
 
-export function ClientJobs({ clientId, onBack }: { clientId: number; onBack: () => void }) {
+export function ClientJobs() {
+  const { clientId: clientIdStr } = useParams<{ clientId: string }>()
+  const clientId = Number(clientIdStr)
   const [jobs, setJobs] = useState<WorkOrder[]>([])
   const [pricings, setPricings] = useState<Pricing[]>([])
   const [clientName, setClientName] = useState('')
@@ -46,9 +48,7 @@ export function ClientJobs({ clientId, onBack }: { clientId: number; onBack: () 
   }, [jobs])
 
   return (
-    <>
-      <AppTopBar variant="page" title={clientName} onBack={onBack} />
-      <div className="p-4 space-y-3 w-full">
+    <div className="space-y-3 w-full">
         {/* Stats */}
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-2xl p-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
@@ -154,6 +154,5 @@ export function ClientJobs({ clientId, onBack }: { clientId: number; onBack: () 
           </div>
         ))}
       </div>
-    </>
   )
 }

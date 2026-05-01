@@ -84,32 +84,26 @@ export function DirectorDashboard() {
   }, [])
 
   return (
-    <div className="pb-8">
-      {/* Stats */}
-      <div className="px-4 pt-4 pb-2">
-        <StatsRow
-          items={[
-            {
-              label: 'Doanh thu',
-              value: loading ? '...' : formatCurrency(totalRevenue),
-              icon: <TrendingUp className="w-3 h-3" style={{ color: 'var(--theme-brand-primary)' }} />,
-            },
-            {
-              label: 'Chi tài xế',
-              value: loading ? '...' : formatCurrency(totalDriverEarning),
-              icon: <Truck className="w-3 h-3" style={{ color: 'var(--theme-brand-primary)' }} />,
-            },
-          ]}
-        />
-      </div>
+    <div className="pb-8 space-y-4">
+      <StatsRow
+        items={[
+          {
+            label: 'Doanh thu',
+            value: loading ? '...' : formatCurrency(totalRevenue),
+            icon: <TrendingUp className="w-3 h-3" style={{ color: 'var(--theme-brand-primary)' }} />,
+          },
+          {
+            label: 'Chi tài xế',
+            value: loading ? '...' : formatCurrency(totalDriverEarning),
+            icon: <Truck className="w-3 h-3" style={{ color: 'var(--theme-brand-primary)' }} />,
+          },
+        ]}
+      />
 
-      {/* Month navigator */}
-      <div className="px-4 pb-2">
-        <MonthNavigator year={month.year} month={month.month} onPrev={prevMonth} onNext={nextMonth} />
-      </div>
+      <MonthNavigator year={month.year} month={month.month} onPrev={prevMonth} onNext={nextMonth} />
 
-      {/* Quick actions — hidden on desktop (sidebar replaces them) */}
-      <div className="px-4 pb-3 flex gap-2 lg:gap-3 lg:hidden">
+      {/* Quick actions — mobile only (sidebar replaces on desktop) */}
+      <div className="flex gap-2 lg:hidden">
         <button
           onClick={() => navigate('/director/users')}
           className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold touch-manipulation"
@@ -119,87 +113,78 @@ export function DirectorDashboard() {
         </button>
       </div>
 
-      {/* Desktop: side-by-side KPI panels */}
-      <div className="lg:grid lg:grid-cols-2 lg:gap-6">
-
-      {/* Driver KPI breakdown */}
-      {driverBreakdown.length > 0 && (
-        <div className="px-4 mt-4">
-          <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--theme-text-muted)' }}>Theo tài xế</p>
-          <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
-            {driverBreakdown.map((d, i) => (
-              <button
-                key={d.id}
-                onClick={() => navigate(`/director/driver-jobs/${d.id}`)}
-                className="w-full flex items-center justify-between px-4 py-3 touch-manipulation card-lift"
-                style={{
-                  borderBottom: i < driverBreakdown.length - 1 ? '1px solid var(--theme-border-default)' : 'none',
-                }}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
-                    <UserCircle className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0 text-left">
-                    <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{d.name}</p>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>{d.plate}</span>
-                      <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>·</span>
-                      <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{d.trips} chuyến</span>
+      {/* KPI panels — 2-col on desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {driverBreakdown.length > 0 && (
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--theme-text-muted)' }}>Theo tài xế</p>
+            <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
+              {driverBreakdown.map((d, i) => (
+                <button
+                  key={d.id}
+                  onClick={() => navigate(`/director/driver-jobs/${d.id}`)}
+                  className="w-full flex items-center justify-between px-4 py-3 touch-manipulation card-lift"
+                  style={{ borderBottom: i < driverBreakdown.length - 1 ? '1px solid var(--theme-border-default)' : 'none' }}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
+                      <UserCircle className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 text-left">
+                      <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{d.name}</p>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>{d.plate}</span>
+                        <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>·</span>
+                        <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{d.trips} chuyến</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <span className="text-sm font-bold tabular-nums shrink-0" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(d.earning)}</span>
-              </button>
-            ))}
+                  <span className="text-sm font-bold tabular-nums shrink-0" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(d.earning)}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Client KPI breakdown */}
-      {clientBreakdown.length > 0 && (
-        <div className="px-4 mt-4">
-          <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--theme-text-muted)' }}>Theo khách hàng</p>
-          <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
-            {clientBreakdown.map((c, i) => (
-              <button
-                key={c.id}
-                onClick={() => navigate(`/director/client-jobs/${c.id}`)}
-                className="w-full flex items-center justify-between px-4 py-3 touch-manipulation card-lift"
-                style={{
-                  borderBottom: i < clientBreakdown.length - 1 ? '1px solid var(--theme-border-default)' : 'none',
-                }}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
-                    <Building2 className="w-4 h-4" />
+        {clientBreakdown.length > 0 && (
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--theme-text-muted)' }}>Theo khách hàng</p>
+            <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
+              {clientBreakdown.map((c, i) => (
+                <button
+                  key={c.id}
+                  onClick={() => navigate(`/director/client-jobs/${c.id}`)}
+                  className="w-full flex items-center justify-between px-4 py-3 touch-manipulation card-lift"
+                  style={{ borderBottom: i < clientBreakdown.length - 1 ? '1px solid var(--theme-border-default)' : 'none' }}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
+                      <Building2 className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 text-left">
+                      <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{c.name}</p>
+                      <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{c.trips} chuyến</p>
+                    </div>
                   </div>
-                  <div className="min-w-0 text-left">
-                    <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{c.name}</p>
-                    <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{c.trips} chuyến</p>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(c.revenue)}</p>
+                    <p className="text-xs font-medium" style={{ color: 'var(--theme-brand-primary)' }}>Chi tiết →</p>
                   </div>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(c.revenue)}</p>
-                  <p className="text-xs font-medium" style={{ color: 'var(--theme-brand-primary)' }}>Chi tiết →</p>
-                </div>
-              </button>
-            ))}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      </div>{/* end lg:grid */}
-
-      {/* Empty state */}
       {!loading && monthlyJobs.length === 0 && (
-        <div className="px-4 mt-8 flex flex-col items-center">
+        <div className="flex flex-col items-center py-8">
           <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không có dữ liệu tháng {month.month}/{month.year}</p>
         </div>
       )}
 
       {loading && (
-        <div className="p-4 space-y-2">
+        <div className="space-y-2">
           {[1, 2, 3].map(i => <div key={i} className="h-16 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}
         </div>
       )}

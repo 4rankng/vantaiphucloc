@@ -46,29 +46,22 @@ export function DriverHistory() {
   const filterOptions = FILTER_OPTIONS.map(opt => ({ ...opt, count: counts[opt.value] }))
 
   return (
-    <div className="pb-6" style={{ background: 'var(--theme-bg-primary)' }}>
-      {/* Filter tabs */}
-      <div className="px-4 pt-3 pb-2">
-        <FilterPills<FilterValue> options={filterOptions} value={filter} onChange={setFilter} />
-      </div>
+    <div className="pb-6 space-y-3">
+      <FilterPills<FilterValue> options={filterOptions} value={filter} onChange={setFilter} />
 
-      {/* Total earnings bar */}
       {totalEarnings > 0 && (
-        <div className="px-4 mb-3">
-          <div className="rounded-xl px-4 py-2.5 flex items-center justify-between"
-            style={{ background: 'var(--theme-brand-primary-light)' }}>
-            <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>
-              Tổng ({filtered.length} công)
-            </span>
-            <span className="text-base font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>
-              {formatCurrencyFull(totalEarnings)}
-            </span>
-          </div>
+        <div className="rounded-xl px-4 py-2.5 flex items-center justify-between"
+          style={{ background: 'var(--theme-brand-primary-light)' }}>
+          <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>
+            Tổng ({filtered.length} công)
+          </span>
+          <span className="text-base font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>
+            {formatCurrencyFull(totalEarnings)}
+          </span>
         </div>
       )}
 
-      <div className="px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-3">
         {loading ? (
           <>
             {[1, 2, 3, 4].map(i => (
@@ -85,7 +78,6 @@ export function DriverHistory() {
             <WorkOrderCard key={wo.id} variant="accountant" data={wo} />
           ))
         )}
-        </div>
       </div>
     </div>
   )
