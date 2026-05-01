@@ -483,6 +483,7 @@ class BatchWorkOrderResult(BaseModel):
 class ContainerOCRRequest(BaseModel):
     image_data: str  # base64-encoded image
     mime_type: str = "image/jpeg"
+    container_index: int = 0  # which container slot (0-based) this OCR attempt is for
 
 
 class ContainerOCRResponse(BaseModel):
