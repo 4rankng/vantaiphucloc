@@ -62,11 +62,8 @@ The companies or individuals that hire Phúc Lộc to transport containers.
 | tax_code | string? | Tax code (mã số thuế) |
 | address | string? | Address |
 | contact_person | string? | Contact person name |
-| outstanding_debt | int (VND) | Amount owed to Phúc Lộc |
 
-**Business Rules:**
-- Cannot delete a client that has associated work orders or trip orders.
-- `outstanding_debt` is a running total (currently not auto-updated — future: update when trip orders are invoiced).
+
 
 ### 3.2 Vendor (Nhà thầu)
 
@@ -376,8 +373,6 @@ OPEN → CALCULATED (auto-computed by worker) → PAID (accountant marks as paid
 
 ```
 1. Director logs in → sees overview dashboard:
-   - Total revenue, total expense, trip count
-   - Outstanding debt (công nợ)
    - Per-driver salary breakdown
    - Per-client revenue breakdown
    - Unmatched work order count (needs reconciliation)
@@ -407,9 +402,7 @@ The `/dashboard/summary` endpoint computes:
 |--------|-------------|
 | total_revenue | SUM of all TripOrder.revenue |
 | total_expense | SUM of all WorkOrder.earning |
-| trip_count | COUNT of all trip orders |
-| active_trips | COUNT of trip orders with status DRAFT or CONFIRMED |
-| outstanding_debt | SUM of Client.outstanding_debt |
+| trip_count | COUNT of all trip orders
 | driver_salary_summary | For each driver: count of MATCHED work orders + total earnings |
 | unmatched_work_order_count | COUNT of work orders NOT in TripOrderWorkOrder join table |
 | pending_trip_count | COUNT of trip orders with status DRAFT |
@@ -482,8 +475,7 @@ SalaryPeriod (kỳ lương) — calculated per driver per period
 - Sum of `WorkOrder.earning` for all MATCHED work orders within `[start_date, end_date]`
 - `net_pay = total_salary + total_allowance - total_deduction`
 
-### Outstanding debt (công nợ)
-- `Client.outstanding_debt` — manual field, not auto-updated currently
+
 
 ---
 
@@ -558,19 +550,6 @@ Backend validates all container numbers against ISO 6346 standard.
 
 ---
 
-## 11. Not Yet Implemented (Future)
-
-These features are referenced in code comments or frontend TODOs but not yet built:
-
-- [ ] **Auto-update outstanding_debt** — when trip order status → INVOICED, add to client's outstanding_debt
-- [ ] **Deductions** — `total_deduction` in salary is always 0. Future: fuel, fines, advances
-- [ ] **Push notifications** — ✅ Backend VAPID + push service ready. Frontend: profile dropdown has toggle, auto-subscribe on login, SW handles push events. Needs testing with actual notifications triggered by business events.
-- [ ] **Vehicle management** — Tractor/trailer registry (currently just `tractor_plate` string on user)
-- [ ] **Partner management** 
-- [ ] **Monthly revenue chart** — `monthlyRevenue` field in dashboard API exists but returns empty array
-- [ ] **Report generation** — Worker task `generate_monthly_report_task` exists but no UI trigger
-
----
 
 ## 11. API Endpoints Reference
 
