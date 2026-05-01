@@ -37,7 +37,7 @@ export function UserDetailDialog({
         <div className="space-y-0">
           {user.fullName && <InfoRow icon={Users} label="Họ và tên" value={user.fullName} noBorder />}
           {user.phone && <InfoRow icon={Phone} label="Số điện thoại" value={user.phone} noBorder />}
-          {user.cccd && <InfoRow icon={CreditCard} label="Căn cước công dân" value={user.cccd} noBorder />}
+          {user.cccd && <InfoRow icon={CreditCard} label="CCCD" value={user.cccd} noBorder />}
           <InfoRow icon={Users} label={user.role === 'driver' ? 'Nhà thầu' : 'Công ty'} value={user.vendor} noBorder />
           {user.tractorPlate && <InfoRow icon={Truck} label="Biển số đầu kéo" value={user.tractorPlate} noBorder />}
         </div>
