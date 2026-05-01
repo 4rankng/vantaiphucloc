@@ -63,6 +63,7 @@ class VendorOut(BaseModel):
 
 class ClientCreate(BaseModel):
     name: str
+    code: str | None = None
     type: Literal["company", "individual"]
     phone: str
     tax_code: str | None = None
@@ -72,6 +73,7 @@ class ClientCreate(BaseModel):
 
 class ClientUpdate(BaseModel):
     name: str | None = None
+    code: str | None = None
     type: Literal["company", "individual"] | None = None
     phone: str | None = None
     tax_code: str | None = None
@@ -81,6 +83,7 @@ class ClientUpdate(BaseModel):
 
 class ClientOut(BaseModel):
     id: int
+    code: str | None
     name: str
     type: str
     phone: str
@@ -100,6 +103,8 @@ class ClientOut(BaseModel):
 
 class RouteCreate(BaseModel):
     route: str
+    pickup_location: str | None = None
+    dropoff_location: str | None = None
     type_20ft: int
     type_40ft: int
     is_two_way: bool
@@ -107,6 +112,8 @@ class RouteCreate(BaseModel):
 
 class RouteUpdate(BaseModel):
     route: str | None = None
+    pickup_location: str | None = None
+    dropoff_location: str | None = None
     type_20ft: int | None = None
     type_40ft: int | None = None
     is_two_way: bool | None = None
@@ -115,6 +122,8 @@ class RouteUpdate(BaseModel):
 class RouteOut(BaseModel):
     id: int
     route: str
+    pickup_location: str | None
+    dropoff_location: str | None
     type_20ft: int
     type_40ft: int
     is_two_way: bool
@@ -311,6 +320,9 @@ class TripOrderUpdate(BaseModel):
     allowance: int | None = None
     revenue: int | None = None
     status: str | None = None
+    is_confirmed: bool | None = None
+    confirmed_by: int | None = None
+    confirmed_at: datetime | None = None
     matched_work_order_ids: list[int] | None = None
 
 
@@ -332,6 +344,9 @@ class TripOrderOut(BaseModel):
     allowance: int
     revenue: int
     status: str
+    is_confirmed: bool = False
+    confirmed_by: int | None = None
+    confirmed_at: datetime | None = None
     matched_work_order_ids: list[int] = []
     created_at: datetime
     updated_at: datetime
