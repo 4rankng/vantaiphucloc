@@ -187,9 +187,26 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
             </p>
           </div>
 
+          {/* Capture button */}
+          <div
+            className="absolute bottom-8 left-0 right-0 flex justify-center"
+            style={{ pointerEvents: 'auto' }}
+          >
+            <button
+              onClick={handleCapture}
+              className="w-16 h-16 rounded-full flex items-center justify-center touch-manipulation transition-transform active:scale-90"
+              style={{
+                background: 'var(--theme-brand-primary)',
+                border: '4px solid rgba(255,255,255,0.3)',
+              }}
+            >
+              <div className="w-12 h-12 rounded-full" style={{ background: '#fff', opacity: 0.9 }} />
+            </button>
+          </div>
+
           {/* Scan mode toggle */}
           <div
-            className="absolute top-4 left-4 z-10 flex items-center gap-1 rounded-full p-1"
+            className="absolute bottom-8 right-6 z-10 flex items-center gap-1 rounded-full p-1"
             style={{ background: 'rgba(0,0,0,0.5)', pointerEvents: 'auto' }}
           >
             <button
@@ -205,23 +222,6 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
               style={{ background: scanMode === 'square' ? 'var(--theme-brand-primary)' : 'transparent', color: '#fff' }}
             >
               <Square className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Capture button */}
-          <div
-            className="absolute bottom-8 left-0 right-0 flex justify-center"
-            style={{ pointerEvents: 'auto' }}
-          >
-            <button
-              onClick={handleCapture}
-              className="w-16 h-16 rounded-full flex items-center justify-center touch-manipulation transition-transform active:scale-90"
-              style={{
-                background: 'var(--theme-brand-primary)',
-                border: '4px solid rgba(255,255,255,0.3)',
-              }}
-            >
-              <div className="w-12 h-12 rounded-full" style={{ background: '#fff', opacity: 0.9 }} />
             </button>
           </div>
         </>
