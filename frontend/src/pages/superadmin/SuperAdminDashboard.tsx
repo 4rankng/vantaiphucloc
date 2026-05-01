@@ -1,4 +1,4 @@
-import { LayoutDashboard, Truck, CircleDollarSign, Search } from 'lucide-react'
+import { LayoutDashboard, Truck, CircleDollarSign, Shield, Search } from 'lucide-react'
 import { FilterPills } from '@/components/shared/FilterPills'
 import { UserCard } from '@/components/shared/UserCard'
 import { ROLE_LABELS, type Role } from '@/data/domain'
@@ -20,6 +20,7 @@ export function SuperAdminDashboard({
   onViewUser: (u: UserAccount) => void
 }) {
   const counts = {
+    superadmin: users.filter(u => u.role === 'superadmin' && u.active).length,
     director: users.filter(u => u.role === 'director' && u.active).length,
     driver: users.filter(u => u.role === 'driver' && u.active).length,
     accountant: users.filter(u => u.role === 'accountant' && u.active).length,
@@ -39,8 +40,9 @@ export function SuperAdminDashboard({
 
   return (
     <div className="pb-24 space-y-4">
-      <div className="grid grid-cols-3 gap-2 lg:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-4">
         {([
+          { label: ROLE_LABELS.superadmin, value: counts.superadmin, icon: Shield },
           { label: ROLE_LABELS.director, value: counts.director, icon: LayoutDashboard },
           { label: ROLE_LABELS.driver, value: counts.driver, icon: Truck },
           { label: ROLE_LABELS.accountant, value: counts.accountant, icon: CircleDollarSign },
@@ -73,6 +75,7 @@ export function SuperAdminDashboard({
         <FilterPills
           options={[
             { value: 'ALL', label: 'Tất cả', count: users.length },
+            { value: 'superadmin', label: ROLE_LABELS.superadmin, count: users.filter(u => u.role === 'superadmin').length },
             { value: 'director', label: ROLE_LABELS.director, count: users.filter(u => u.role === 'director').length },
             { value: 'driver', label: ROLE_LABELS.driver, count: users.filter(u => u.role === 'driver').length },
             { value: 'accountant', label: ROLE_LABELS.accountant, count: users.filter(u => u.role === 'accountant').length },
