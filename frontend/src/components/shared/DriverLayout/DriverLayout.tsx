@@ -1,10 +1,8 @@
 import { useState } from 'react'
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
 import { AppShell } from '@/components/shared/AppShell'
-import { DesktopLayout } from '@/components/shared/DesktopLayout'
 import { UserDropdown } from '@/components/shared/ProfileDialog'
 import { useAuth } from '@/contexts/AuthContext'
-import { useIsMobile } from '@/hooks/use-mobile'
 import type { Role } from '@/data/domain'
 
 const ALLOWED_ROLES: Role[] = ['driver']
@@ -23,7 +21,9 @@ function resolveTitle(pathname: string): string {
   return ''
 }
 
-// ─── Mobile ───────────────────────────────────────────────────────────────────
+// ─── Driver layout (mobile + desktop, no sidebar) ─────────────────────────────
+// On desktop the green topbar stays full-bleed; content is centred with a
+// max-width cap so cards don't stretch across a wide monitor.
 
 function DriverMobile() {
   const { user } = useAuth()
@@ -47,7 +47,8 @@ function DriverMobile() {
               }
             : { variant: 'page' as const, title, onBack: () => navigate(-1) }
         }
-        contentClassName="px-4 py-4 space-y-4"
+        // On mobile: standard 4-unit padding. On desktop: centre with max-width.
+        contentClassName="px-4 py-4 space-y-4 md:px-0 md:py-6 md:max-w-2xl md:mx-auto"
       >
         <Outlet />
       </AppShell>
@@ -56,28 +57,14 @@ function DriverMobile() {
   )
 }
 
-// ─── Desktop ──────────────────────────────────────────────────────────────────
-
-function DriverDesktop() {
-  const location = useLocation()
-  const title = resolveTitle(location.pathname)
-
-  return (
-    <DesktopLayout role="driver" title={title}>
-      <Outlet />
-    </DesktopLayout>
-  )
-}
-
 // ─── Layout ───────────────────────────────────────────────────────────────────
 
 export function DriverLayout() {
   const { user } = useAuth()
-  const isMobile = useIsMobile()
 
   if (!user || !ALLOWED_ROLES.includes(user.role)) {
     return <Navigate to="/" replace />
   }
 
-  return isMobile ? <DriverMobile /> : <DriverDesktop />
+  return <DriverMobile />
 }
