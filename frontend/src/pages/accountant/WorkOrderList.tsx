@@ -1,98 +1,35 @@
-import { useMemo, useState, useRef, useEffect } from 'react'
-import { Search, Upload, Download, Link2, FileCheck } from 'lucide-react'
+import { useMemo, useState, useRef } from 'react'
+import { Search, Upload, Download, ArrowLeft } from 'lucide-react'
 import { Input, Button } from '@/components/ui'
 import { WorkOrderJobCard } from '@/components/shared/WorkOrderJobCard'
-import { TripOrderCard } from '@/components/shared/TripOrderCard'
-import { useWorkOrders, useTripOrders, useUploadCustomerExcel, useExportReconciliationExcel, useClients } from '@/hooks/use-queries'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useWorkOrders, useUploadCustomerExcel, useExportReconciliationExcel, useClients } from '@/hooks/use-queries'
+import { useNavigate } from 'react-router-dom'
 import { useToast } from '@/components/atoms/Toast'
+import { useIsMobile } from '@/hooks/use-mobile'
 import type { WorkOrder } from '@/data/domain'
 
-type SubTab = 'match' | 'client'
+type StatusFilter = 'all' | 'PENDING' | 'MATCHED' | 'COMPLETED'
 
-// ─── Khớp WO–TO sub-tab ──────────────────────────────────────────────────────
+const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
+  { value: 'all', label: 'Tất cả' },
+  { value: 'PENDING', label: 'Chờ khớp' },
+  { value: 'MATCHED', label: 'Đã khớp' },
+  { value: 'COMPLETED', label: 'Hoàn thành' },
+]
 
-function MatchTab() {
+export function WorkOrderList() {
   const navigate = useNavigate()
-  const { data: workOrders = [], isLoading: loadingWO } = useWorkOrders()
-  const { data: trips = [], isLoading: loadingTrips } = useTripOrders()
-  const [search, setSearch] = useState('')
-
-  const loading = loadingWO || loadingTrips
-
-  const unmatchedWOs = useMemo(() =>
-    workOrders.filter(w => w.status === 'PENDING'),
-    [workOrders]
-  )
-
-  const filtered = useMemo(() => {
-    if (!search.trim()) return unmatchedWOs
-    const q = search.toLowerCase()
-    return unmatchedWOs.filter(w =>
-      w.tractorPlate.toLowerCase().includes(q) ||
-      w.driverName.toLowerCase().includes(q) ||
-      w.clientName.toLowerCase().includes(q) ||
-      w.containers.some(c => c.containerNumber.toLowerCase().includes(q))
-    )
-  }, [unmatchedWOs, search])
-
-  if (loading) {
-    return <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-20 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}</div>
-  }
-
-  return (
-    <div className="space-y-3">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-        <Input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Tìm biển số, tài xế, container..."
-          className="text-sm pl-9 h-9"
-        />
-      </div>
-
-      {filtered.length === 0 ? (
-        <div className="rounded-2xl p-10 text-center" style={{ background: 'var(--theme-bg-secondary)' }}>
-          <Link2 className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--theme-text-muted)', opacity: 0.5 }} />
-          <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-            {search ? 'Không tìm thấy phiếu nào' : 'Không có phiếu chờ khớp'}
-          </p>
-          {!search && (
-            <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Tất cả phiếu đã được đối soát</p>
-          )}
-        </div>
-      ) : (
-        <>
-          <p className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
-            {filtered.length} phiếu chờ khớp
-          </p>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-3">
-            {filtered.map(job => (
-              <WorkOrderJobCard
-                key={job.id}
-                job={job}
-                status="unmatched"
-                onClick={() => navigate(`/accountant/match/${job.id}`)}
-              />
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
-// ─── Đối soát KH sub-tab ─────────────────────────────────────────────────────
-
-function ClientReconcileTab() {
-  const navigate = useNavigate()
+  const isMobile = useIsMobile()
   const toast = useToast()
-  const { data: trips = [], isLoading: loadingTrips } = useTripOrders()
+  const { data: workOrders = [], isLoading: loading } = useWorkOrders()
   const { data: clients = [] } = useClients()
   const { mutate: uploadExcel, isPending: uploading } = useUploadCustomerExcel()
   const { mutate: exportExcel, isPending: exporting } = useExportReconciliationExcel()
 
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+
+  // Excel state
   const [uploadOpen, setUploadOpen] = useState(false)
   const [selectedClient, setSelectedClient] = useState<number | ''>('')
   const [dateFrom, setDateFrom] = useState('')
@@ -100,11 +37,20 @@ function ClientReconcileTab() {
   const [file, setFile] = useState<File | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  // Trips that are matched but not yet confirmed with client
-  const pendingConfirm = useMemo(() =>
-    trips.filter(t => t.status === 'COMPLETED' && !t.isConfirmed),
-    [trips]
-  )
+  const filtered = useMemo(() => {
+    let result = workOrders
+    if (statusFilter !== 'all') result = result.filter(w => w.status === statusFilter)
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      result = result.filter(w =>
+        w.tractorPlate.toLowerCase().includes(q) ||
+        w.driverName.toLowerCase().includes(q) ||
+        w.clientName.toLowerCase().includes(q) ||
+        w.containers.some(c => c.containerNumber.toLowerCase().includes(q))
+      )
+    }
+    return result.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  }, [workOrders, statusFilter, search])
 
   const handleUpload = () => {
     if (!file || !selectedClient) {
@@ -114,13 +60,10 @@ function ClientReconcileTab() {
     uploadExcel(
       { file, clientId: Number(selectedClient), dateFrom: dateFrom || undefined, dateTo: dateTo || undefined },
       {
-        onSuccess: (res) => {
-          toast.success('Thành công', `Đã tải lên ${res.data.totalContainers} container`)
+        onSuccess: () => {
+          toast.success('Thành công', 'Đã tải lên file Excel')
           setUploadOpen(false)
           setFile(null)
-          setSelectedClient('')
-          setDateFrom('')
-          setDateTo('')
         },
         onError: () => toast.error('Lỗi', 'Không thể tải lên file Excel'),
       }
@@ -149,12 +92,44 @@ function ClientReconcileTab() {
     )
   }
 
-  if (loadingTrips) {
-    return <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-20 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}</div>
+  if (loading) {
+    return <div className="space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-20 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}</div>
   }
 
   return (
     <div className="space-y-3">
+      {/* Back button (desktop only — mobile has AppShell back) */}
+      {!isMobile && (
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1.5 text-sm font-medium transition hover:opacity-70"
+          style={{ color: 'var(--theme-text-muted)' }}
+        >
+          <ArrowLeft className="w-4 h-4" /> Quay lại
+        </button>
+      )}
+
+      {/* Search + Status filter */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Tìm biển số, tài xế, container..."
+            className="text-sm pl-9 h-9"
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value as StatusFilter)}
+          className="h-9 rounded-xl px-3 text-sm shrink-0"
+          style={{ background: 'var(--theme-bg-tertiary)', border: '1px solid var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
+        >
+          {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </div>
+
       {/* Excel actions */}
       <div className="flex gap-2">
         <Button
@@ -162,7 +137,7 @@ function ClientReconcileTab() {
           className="flex items-center gap-1.5 h-9 px-3 text-xs font-semibold rounded-lg flex-1"
           style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
         >
-          <Upload className="w-3.5 h-3.5" /> Tải Excel KH
+          <Upload className="w-3.5 h-3.5" /> Nhập Excel KH
         </Button>
         <Button
           onClick={handleExport}
@@ -174,9 +149,9 @@ function ClientReconcileTab() {
         </Button>
       </div>
 
-      {/* Client + date filter (shared for upload/export) */}
+      {/* Excel filter (shared for upload/export) */}
       <div className="rounded-2xl p-3 space-y-2" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
-        <p className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Bộ lọc đối soát</p>
+        <p className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Bộ lọc Excel</p>
         <select
           value={selectedClient}
           onChange={e => setSelectedClient(e.target.value ? Number(e.target.value) : '')}
@@ -196,28 +171,30 @@ function ClientReconcileTab() {
         </div>
       </div>
 
-      {/* Pending confirmation list */}
-      <div>
-        <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--theme-text-muted)' }}>
-          Lệnh chờ chốt với khách ({pendingConfirm.length})
-        </p>
-        {pendingConfirm.length === 0 ? (
-          <div className="rounded-2xl p-8 text-center" style={{ background: 'var(--theme-bg-secondary)' }}>
-            <FileCheck className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--theme-status-success)', opacity: 0.6 }} />
-            <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Không có lệnh chờ chốt</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-3">
-            {pendingConfirm.map(trip => (
-              <TripOrderCard
-                key={trip.id}
-                trip={trip}
-                onClick={() => navigate(`/accountant/trip/${trip.id}`)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Count */}
+      <p className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
+        {filtered.length} phiếu
+      </p>
+
+      {/* List */}
+      {filtered.length === 0 ? (
+        <div className="rounded-2xl p-10 text-center" style={{ background: 'var(--theme-bg-secondary)' }}>
+          <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+            {search || statusFilter !== 'all' ? 'Không tìm thấy phiếu nào' : 'Chưa có phiếu nào'}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-3">
+          {filtered.map(job => (
+            <WorkOrderJobCard
+              key={job.id}
+              job={job}
+              status={job.status === 'PENDING' ? 'unmatched' : job.status === 'MATCHED' ? 'matched' : 'completed'}
+              onClick={() => navigate(`/accountant/match/${job.id}`)}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Upload modal */}
       {uploadOpen && (
@@ -247,7 +224,7 @@ function ClientReconcileTab() {
               className="w-full h-10 rounded-xl text-sm font-medium border-2 border-dashed transition-colors"
               style={{ borderColor: file ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)', color: file ? 'var(--theme-brand-primary)' : 'var(--theme-text-muted)' }}
             >
-              {file ? `📎 ${file.name}` : 'Chọn file Excel (.xlsx)'}
+              {file ? file.name : 'Chọn file Excel (.xlsx)'}
             </button>
             <div className="flex gap-2 pt-1">
               <Button onClick={() => setUploadOpen(false)} disabled={uploading}
@@ -264,55 +241,6 @@ function ClientReconcileTab() {
           </div>
         </div>
       )}
-    </div>
-  )
-}
-
-// ─── Main page ────────────────────────────────────────────────────────────────
-
-export function WorkOrderList() {
-  const location = useLocation()
-  const searchParams = new URLSearchParams(location.search)
-  const defaultTab = searchParams.get('tab') === 'client' ? 'client' : 'match'
-  const [activeTab, setActiveTab] = useState<SubTab>(defaultTab)
-
-  // Sync tab from URL param changes
-  useEffect(() => {
-    const params = new URLSearchParams(location.search)
-    setActiveTab(params.get('tab') === 'client' ? 'client' : 'match')
-  }, [location.search])
-
-  return (
-    <div className="space-y-3">
-      {/* Sub-tab toggle */}
-      <div className="flex gap-1 p-1 rounded-2xl" style={{ background: 'var(--theme-bg-tertiary)' }}>
-        <button
-          onClick={() => setActiveTab('match')}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-semibold transition-all touch-manipulation"
-          style={{
-            background: activeTab === 'match' ? 'var(--theme-bg-primary)' : 'transparent',
-            color: activeTab === 'match' ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)',
-            boxShadow: activeTab === 'match' ? 'var(--theme-shadow-card)' : 'none',
-          }}
-        >
-          <Link2 className="w-3.5 h-3.5" />
-          Khớp WO – TO
-        </button>
-        <button
-          onClick={() => setActiveTab('client')}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-semibold transition-all touch-manipulation"
-          style={{
-            background: activeTab === 'client' ? 'var(--theme-bg-primary)' : 'transparent',
-            color: activeTab === 'client' ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)',
-            boxShadow: activeTab === 'client' ? 'var(--theme-shadow-card)' : 'none',
-          }}
-        >
-          <FileCheck className="w-3.5 h-3.5" />
-          Đối soát KH
-        </button>
-      </div>
-
-      {activeTab === 'match' ? <MatchTab /> : <ClientReconcileTab />}
     </div>
   )
 }
