@@ -175,8 +175,10 @@ export function useCreateWorkOrder() {
 
   // Validation
   const canSubmit = useMemo(() =>
-    containers.every(c => c.containerNumber.trim() && c.photoTaken) && !!clientId && !!pickupLocation && !!dropoffLocation,
-    [containers, clientId, pickupLocation, dropoffLocation],
+    containers.every(c => c.containerNumber.trim() && c.photoTaken)
+    && !!clientId && !!pickupLocation && !!dropoffLocation
+    && Object.keys(containerErrors).length === 0,
+    [containers, clientId, pickupLocation, dropoffLocation, containerErrors],
   )
 
   const missingFields = useMemo(() => {

@@ -272,6 +272,11 @@ export function CreateWorkOrder() {
             Còn thiếu: {missingFields.join(', ')}
           </p>
         )}
+        {missingFields.length === 0 && !canSubmit && Object.keys(containerErrors).length > 0 && (
+          <p className="text-xs font-medium text-center" style={{ color: 'var(--theme-status-error)' }}>
+            Số container không hợp lệ — vui lòng kiểm tra
+          </p>
+        )}
         <div className="flex gap-2">
           <button
             onClick={() => navigate(-1)}
