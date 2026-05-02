@@ -17,7 +17,6 @@ import {
 } from '@/data/domain'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { InlineCell } from '@/components/shared/InlineCell'
-import { Button } from '@/components/ui'
 import { CreateClientDialog } from '@/components/shared/CreateClientDialog'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { PricingForm } from './PricingForm'
@@ -124,16 +123,16 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Mobile back + title */}
-      <div className="flex items-center gap-2 lg:hidden">
+      {/* Desktop back button — mobile gets it from AppShell topbar */}
+      <div className="hidden lg:flex items-center gap-2">
         <button
           onClick={() => navigate(`${basePath}/pricing`)}
-          className="p-1.5 rounded-lg touch-manipulation"
+          className="p-1.5 rounded-lg touch-manipulation hover:bg-[var(--theme-bg-tertiary)] transition-colors"
           style={{ color: 'var(--theme-text-muted)' }}
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
-        <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>{clientName}</p>
+        <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-muted)' }}>{clientName}</p>
       </div>
 
       {showForm && (
@@ -151,19 +150,19 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
           <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có bảng giá cho khách hàng này</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {grouped.map(([route, items]) => {
             const [pickup, dropoff] = route.split(' - ')
 
             return (
-              <div key={route}>
+              <div key={route} className="flex flex-col gap-2">
                 {/* Route header */}
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold truncate" style={{ color: 'var(--theme-text-muted)' }}>
                     {pickup}
                   </span>
-                  <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>→</span>
-                  <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+                  <span className="text-xs shrink-0" style={{ color: 'var(--theme-text-muted)' }}>→</span>
+                  <span className="text-xs font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
                     {dropoff}
                   </span>
                 </div>
@@ -175,7 +174,7 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
                   return (
                     <div
                       key={pricing.id}
-                      className="overflow-x-auto rounded-xl mb-2"
+                      className="overflow-x-auto rounded-xl"
                       style={{
                         background: 'var(--theme-bg-secondary)',
                         border: isEditing
@@ -375,18 +374,7 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
         </div>
       )}
 
-      {/* Desktop add button */}
-      <div className="hidden lg:flex justify-end">
-        <Button
-          onClick={() => setShowForm(true)}
-          className="h-9 px-4 font-semibold rounded-xl text-sm"
-          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-        >
-          <Plus className="w-4 h-4 mr-1.5" /> Thêm mức giá
-        </Button>
-      </div>
-
-      {/* Mobile FAB */}
+      {/* FAB — add new pricing for this client */}
       <FloatingActionButton
         icon={<Plus className="w-6 h-6" />}
         onClick={() => setShowForm(true)}
