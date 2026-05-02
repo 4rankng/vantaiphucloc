@@ -11,9 +11,9 @@ import { OfflineTopBarIcon } from '@/components/shared/OfflineIndicator/OfflineI
  * Text and icons use dark green for contrast against the tinted glass.
  */
 
-const DARK_GREEN = '#003d15'
-const MUTED_GREEN = 'rgba(0, 80, 30, 0.5)'
-const ICON_BG = 'rgba(0, 80, 30, 0.08)'
+const DARK_GREEN = '#00632a'
+const MUTED_GREEN = 'rgba(0, 99, 42, 0.6)'
+const ICON_BG = 'rgba(0, 99, 42, 0.08)'
 
 interface AppTopBarBaseProps {
   actions?: ReactNode
