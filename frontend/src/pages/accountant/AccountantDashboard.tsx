@@ -4,19 +4,25 @@ import {
   useWorkOrders,
   useTripOrders,
   useDashboardSummary,
+  useUpdateWorkOrder,
+  useUpdateTripOrder,
+  useSuggestMatches,
 } from '@/hooks/use-queries'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { StatsGrid } from '@/components/shared/StatsGrid'
 import { QuickActionsBar } from '@/components/shared/QuickActionsBar'
 import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
+import { EditDialog } from '@/components/shared/EditDialog'
+import { Input } from '@/components/ui'
+import { Label } from '@/components/ui'
 import { useMonthParams } from './use-month-params'
 import { formatCurrencyFull as fmt, type WorkOrder, type TripOrder } from '@/data/domain'
 import {
   Sparkles, ArrowRight, ChevronLeft, ChevronRight,
   CheckCircle2, Plus, Wallet, Tag, Users, MapPin,
   FileText, Truck, Car, Briefcase, DollarSign, Clock, AlertTriangle,
-  Calendar, User, ArrowLeftRight,
+  Calendar, User, Pencil,
 } from 'lucide-react'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -247,7 +253,7 @@ function TripMiniCard({ trip, isSelected, onClick }: {
       {/* Label */}
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
-          Lệnh điều hành
+          Đơn hàng
         </span>
         {isSelected && (
           <span className="text-[10px] font-bold" style={{ color: 'var(--theme-brand-primary)' }}>✓ Đã chọn</span>
@@ -294,7 +300,7 @@ function TripMiniCard({ trip, isSelected, onClick }: {
 
 // ─── Work order mini-card ─────────────────────────────────────────────────────
 
-function WorkOrderMiniCard({ wo }: { wo: WorkOrder }) {
+function WorkOrderMiniCard({ wo, onClick }: { wo: WorkOrder; onClick?: () => void }) {
   const containerNums = wo.containers.map(c => c.containerNumber).filter(Boolean).slice(0, 2).join(', ')
   const types = wo.containers.length > 0
     ? (() => {
@@ -305,18 +311,24 @@ function WorkOrderMiniCard({ wo }: { wo: WorkOrder }) {
     : ''
 
   return (
-    <div
-      className="w-full rounded-xl p-3"
+    <button
+      onClick={onClick}
+      disabled={!onClick}
+      className="w-full text-left rounded-xl p-3 transition-all"
       style={{
         background: 'var(--theme-bg-primary)',
         border: '1.5px solid var(--theme-border-default)',
+        cursor: onClick ? 'pointer' : 'default',
       }}
     >
       {/* Label */}
-      <div className="mb-1.5">
+      <div className="flex items-center justify-between mb-1.5">
         <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
           Phiếu tài xế
         </span>
+        {onClick && (
+          <span className="text-[10px] font-bold" style={{ color: 'var(--theme-brand-primary)' }}>✎ Sửa</span>
+        )}
       </div>
       {/* Client */}
       <p className="text-sm font-semibold leading-tight truncate mb-1" style={{ color: 'var(--theme-text-primary)' }}>
@@ -352,7 +364,7 @@ function WorkOrderMiniCard({ wo }: { wo: WorkOrder }) {
           </span>
         )}
       </div>
-    </div>
+    </button>
   )
 }
 
@@ -364,6 +376,9 @@ function MatchRow({ wo, trips, onMatch, isLast }: {
   onMatch: (woId: number) => void
   isLast?: boolean
 }) {
+  const updateWO = useUpdateWorkOrder()
+  const updateTrip = useUpdateTripOrder()
+
   // Build ranked candidates
   const candidates = useMemo(() => {
     const woRoute = wo.route.toLowerCase()
@@ -383,8 +398,47 @@ function MatchRow({ wo, trips, onMatch, isLast }: {
 
   const [selectedIdx, setSelectedIdx] = useState(0)
   const selectedCandidate = candidates[selectedIdx] ?? null
-  const confidence = selectedCandidate ? Math.min(100, selectedCandidate.score) : 0
-  const confidenceColor = confidence >= 70 ? 'var(--theme-status-success)' : confidence >= 40 ? 'var(--theme-status-warning)' : 'var(--theme-text-muted)'
+  const isFullMatch = (selectedCandidate?.score ?? 0) >= 100
+
+  // WO edit state
+  const [editWO, setEditWO] = useState(false)
+  const [woClient, setWoClient] = useState('')
+  const [woRoute, setWoRoute] = useState('')
+  const [woDriver, setWoDriver] = useState('')
+
+  // Trip edit state
+  const [editTrip, setEditTrip] = useState(false)
+  const [tripClient, setTripClient] = useState('')
+  const [tripRoute, setTripRoute] = useState('')
+  const [tripDriver, setTripDriver] = useState('')
+
+  const openEditWO = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setWoClient(wo.clientName)
+    setWoRoute(wo.route)
+    setWoDriver(wo.driverName)
+    setEditWO(true)
+  }
+
+  const saveWO = () => {
+    updateWO.mutate({ id: wo.id, data: { clientName: woClient, route: woRoute, driverName: woDriver } })
+    setEditWO(false)
+  }
+
+  const openEditTrip = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!selectedCandidate) return
+    setTripClient(selectedCandidate.trip.clientName)
+    setTripRoute(selectedCandidate.trip.route)
+    setTripDriver(selectedCandidate.trip.driverName)
+    setEditTrip(true)
+  }
+
+  const saveTrip = () => {
+    if (!selectedCandidate) return
+    updateTrip.mutate({ id: selectedCandidate.trip.id, data: { clientName: tripClient, route: tripRoute, driverName: tripDriver } })
+    setEditTrip(false)
+  }
 
   const handlePrev = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -400,25 +454,16 @@ function MatchRow({ wo, trips, onMatch, isLast }: {
       className="px-4 py-4"
       style={{ borderBottom: isLast ? 'none' : '1px solid var(--theme-border-light)' }}
     >
-      {/* Confidence bar + label */}
-      <div className="flex items-center gap-2 mb-3">
-        <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--theme-bg-tertiary)' }}>
-          <div
-            className="h-full rounded-full transition-all"
-            style={{ width: `${confidence}%`, background: confidenceColor }}
-          />
-        </div>
-        <span className="text-xs font-bold tabular-nums shrink-0" style={{ color: confidenceColor }}>
-          {confidence}% khớp
-        </span>
-      </div>
-
       {/* Two-panel layout */}
       <div className="grid grid-cols-2 gap-2 mb-3">
-        {/* Left: Trip order (selectable) */}
+        {/* Left: Trip order (selectable + editable) */}
         <div className="flex flex-col gap-1.5">
           {selectedCandidate ? (
-            <TripMiniCard trip={selectedCandidate.trip} isSelected />
+            <TripMiniCard
+              trip={selectedCandidate.trip}
+              isSelected
+              onClick={openEditTrip}
+            />
           ) : (
             <div
               className="rounded-xl p-3 flex items-center justify-center"
@@ -455,32 +500,57 @@ function MatchRow({ wo, trips, onMatch, isLast }: {
           )}
         </div>
 
-        {/* Right: Work order (fixed) */}
-        <WorkOrderMiniCard wo={wo} />
-      </div>
-
-      {/* Center connector icon */}
-      <div className="flex items-center justify-center -mt-1 mb-3">
-        <div
-          className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
-          style={{
-            background: confidenceColor,
-            color: '#fff',
-          }}
-        >
-          <ArrowLeftRight className="h-3.5 w-3.5" />
-          Ghép lệnh ↔ phiếu
-        </div>
+        {/* Right: Work order (editable) */}
+        <WorkOrderMiniCard wo={wo} onClick={openEditWO} />
       </div>
 
       {/* Action button */}
-      <button
-        onClick={() => onMatch(wo.id)}
-        className="w-full rounded-xl py-2.5 text-sm font-semibold transition hover:opacity-90 active:scale-[0.98]"
-        style={{ background: 'var(--theme-brand-primary)', color: '#fff' }}
-      >
-        Xem & xác nhận ghép
-      </button>
+      <div className="flex justify-center">
+        <button
+          onClick={() => isFullMatch && onMatch(wo.id)}
+          disabled={!isFullMatch}
+          className="rounded-lg px-3 py-1.5 text-xs font-semibold transition active:scale-[0.98]"
+          style={{
+            background: isFullMatch ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
+            color: isFullMatch ? '#fff' : 'var(--theme-text-muted)',
+            cursor: isFullMatch ? 'pointer' : 'not-allowed',
+          }}
+        >
+          Xác nhận
+        </button>
+      </div>
+
+      {/* Inline edit: Work Order */}
+      <EditDialog open={editWO} title="Sửa phiếu tài xế" color="var(--theme-brand-primary)" onClose={saveWO}>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</Label>
+          <Input value={woClient} onChange={e => setWoClient(e.target.value)} className="text-sm h-10" autoFocus />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</Label>
+          <Input value={woRoute} onChange={e => setWoRoute(e.target.value)} className="text-sm h-10" />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Tài xế</Label>
+          <Input value={woDriver} onChange={e => setWoDriver(e.target.value)} className="text-sm h-10" />
+        </div>
+      </EditDialog>
+
+      {/* Inline edit: Trip Order */}
+      <EditDialog open={editTrip} title="Sửa lệnh điều hành" color="var(--theme-status-warning)" onClose={saveTrip}>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</Label>
+          <Input value={tripClient} onChange={e => setTripClient(e.target.value)} className="text-sm h-10" autoFocus />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</Label>
+          <Input value={tripRoute} onChange={e => setTripRoute(e.target.value)} className="text-sm h-10" />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Tài xế</Label>
+          <Input value={tripDriver} onChange={e => setTripDriver(e.target.value)} className="text-sm h-10" />
+        </div>
+      </EditDialog>
     </div>
   )
 }
@@ -571,9 +641,9 @@ function DesktopDashboard() {
 
       {/* 3-column workbench — needs enough room, so xl breakpoint (1280px) */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        {/* Left: Lệnh điều hành */}
+        {/* Left: Đơn hàng */}
         <WorkbenchCard
-          title="Lệnh điều hành gần đây"
+          title="Đơn hàng gần đây"
           footerLabel="Xem tất cả lệnh"
           onFooter={() => navigate('/accountant/trips')}
         >
@@ -718,9 +788,9 @@ function MobileDashboard() {
         ))}
       </div>
 
-      {/* Lệnh điều hành */}
+      {/* Đơn hàng */}
       <WorkbenchCard
-        title="Lệnh điều hành"
+        title="Đơn hàng"
         footerLabel="Xem tất cả lệnh"
         onFooter={() => navigate('/accountant/trips')}
         minHeight="200px"

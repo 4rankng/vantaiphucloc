@@ -9,7 +9,7 @@ interface MonthNavigatorProps {
   /** When provided, show salary period range instead of calendar month range */
   periodStart?: Date
   periodEnd?: Date
-  /** Optional label shown on the right side (e.g. "8 lệnh trong tháng") */
+  /** Optional label shown to the right of the navigator */
   rightLabel?: React.ReactNode
 }
 
@@ -37,50 +37,47 @@ export function MonthNavigator({
         })()
 
   return (
-    <div
-      className="flex items-center justify-between rounded-2xl px-3 py-2"
-      style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
-    >
-      {/* Left chevron */}
-      <button
-        onClick={onPrev}
-        className="w-9 h-9 flex items-center justify-center rounded-lg touch-manipulation transition-colors active:scale-90 shrink-0"
-        style={{ color: 'var(--theme-text-secondary)' }}
-        aria-label="Tháng trước"
-      >
-        <ChevronLeft className="w-5 h-5" />
-      </button>
-
-      {/* Center: title + range */}
-      <div className="flex flex-col items-center gap-0.5 flex-1">
-        <span
-          className="text-base font-bold tabular-nums font-display leading-tight whitespace-nowrap"
-          style={{ color: 'var(--theme-text-primary)' }}
-        >
-          Tháng {mm}/{year}
-        </span>
-        <span
-          className="text-xs tabular-nums whitespace-nowrap"
+    <div className="flex items-center gap-3">
+      {/* Navigator: chevron · title+range · chevron — tightly grouped */}
+      <div className="flex items-center gap-0.5">
+        <button
+          onClick={onPrev}
+          className="w-7 h-7 flex items-center justify-center rounded-md touch-manipulation transition-opacity hover:opacity-60 active:scale-90"
           style={{ color: 'var(--theme-text-secondary)' }}
+          aria-label="Tháng trước"
         >
-          {rangeLabel}
-        </span>
-      </div>
+          <ChevronLeft className="w-4 h-4" />
+        </button>
 
-      {/* Right chevron */}
-      <button
-        onClick={onNext}
-        className="w-9 h-9 flex items-center justify-center rounded-lg touch-manipulation transition-colors active:scale-90 shrink-0"
-        style={{ color: 'var(--theme-text-secondary)' }}
-        aria-label="Tháng sau"
-      >
-        <ChevronRight className="w-5 h-5" />
-      </button>
+        <div className="flex flex-col items-center gap-0">
+          <span
+            className="text-sm font-bold tabular-nums leading-tight whitespace-nowrap"
+            style={{ color: 'var(--theme-text-primary)' }}
+          >
+            Tháng {mm}/{year}
+          </span>
+          <span
+            className="text-xs tabular-nums whitespace-nowrap leading-tight"
+            style={{ color: 'var(--theme-text-secondary)' }}
+          >
+            {rangeLabel}
+          </span>
+        </div>
+
+        <button
+          onClick={onNext}
+          className="w-7 h-7 flex items-center justify-center rounded-md touch-manipulation transition-opacity hover:opacity-60 active:scale-90"
+          style={{ color: 'var(--theme-text-secondary)' }}
+          aria-label="Tháng sau"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
 
       {/* Optional right label */}
       {rightLabel != null && (
         <span
-          className="text-xs whitespace-nowrap pl-2 pr-1 shrink-0"
+          className="text-xs whitespace-nowrap"
           style={{ color: 'var(--theme-text-muted)' }}
         >
           {rightLabel}
