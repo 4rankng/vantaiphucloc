@@ -177,7 +177,28 @@ async def seed() -> None:
                         )
                         pricing_ids.append(result.scalar())
             print(f"  Created {len(pricing_ids)} pricings")
+
+            # Seed pricing_lines for newly created pricings
+            for pid in pricing_ids:
+                await db.execute(
+                    text("""INSERT INTO pricing_lines (pricing_id, work_type, quantity, unit_price, driver_salary, allowance)
+                        SELECT id, work_type, 1, unit_price, driver_salary, allowance
+                        FROM pricings WHERE id = :pid"""),
+                    {"pid": pid},
+                )
+            print(f"  Created {len(pricing_ids)} pricing_lines")
         else:
+            # Backfill pricing_lines for existing pricings that have none
+            result = await db.execute(text("""
+                INSERT INTO pricing_lines (pricing_id, work_type, quantity, unit_price, driver_salary, allowance)
+                SELECT id, work_type, 1, unit_price, driver_salary, allowance
+                FROM pricings
+                WHERE NOT EXISTS (SELECT 1 FROM pricing_lines WHERE pricing_lines.pricing_id = pricings.id)
+                RETURNING id
+            """))
+            backfill_count = len(result.fetchall())
+            if backfill_count:
+                print(f"  Backfilled {backfill_count} pricing_lines")
             print(f"  Pricings: {pricing_count} already exist")
 
         # ── 6. Work Orders + Containers ───────────────────────────────
