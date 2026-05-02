@@ -1,184 +1,41 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Camera, RotateCcw, Plus, Trash2, AlertCircle, WifiOff, Loader2 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
-import { useAuth } from '@/contexts/AuthContext'
-import { Button } from '@/components/ui'
-import { InlineSelect } from '@/components/shared/InlineSelect'
+import { Camera, RotateCcw, Trash2, AlertCircle, WifiOff, Loader2 } from 'lucide-react'
 import { ContainerScanner } from '@/components/shared/ContainerScanner'
-import type { PhotoMeta } from '@/components/shared/ContainerScanner'
-import { apiClient } from '@/services/api'
+import { ContainerTypeGrid } from '@/components/shared/ContainerTypeGrid'
+import { TripSummaryDialog } from '@/components/shared/TripSummaryDialog'
+import { SuccessOverlay } from '@/components/shared/SuccessOverlay'
+import { AddMorePrompt } from '@/components/shared/AddMorePrompt'
+import { RecentTripSuggestions } from '@/components/shared/RecentTripSuggestions'
+import { SheetPicker } from '@/components/shared/SheetPicker'
+import { useCreateWorkOrder } from './useCreateWorkOrder'
 import { useToast } from '@/components/atoms/Toast'
-import { useOffline } from '@/contexts/OfflineContext'
-import { WORK_TYPES, type Client, type RoutePrice, type WorkType, type ContainerItem } from '@/data/domain'
-
-interface ContainerForm {
-  containerNumber: string
-  workType: WorkType
-  photoTaken: boolean
-  photoDataUrl?: string
-  photoLat?: number | null
-  photoLng?: number | null
-  photoTimestamp?: string | null
-  ocrLoading: boolean
-  ocrError?: string
-}
-
-const EMPTY_CONT: ContainerForm = { containerNumber: '', workType: 'E20', photoTaken: false, ocrLoading: false }
 
 export function CreateWorkOrder() {
-  const navigate = useNavigate()
-  const { user } = useAuth()
+  const {
+    clients, routes, recentOrders,
+    containers, clientId, pickupLocation, dropoffLocation,
+    submitting, scannerOpen, isOnline, summaryOpen, showSuccess,
+    showAddMore, forceManualEntry, missingFields,
+    canSubmit, summaryContainers, summaryClientName,
+    setClientId, setPickupLocation, setDropoffLocation,
+    openScanner, handleScanComplete, setScannerOpen,
+    updateContainer, addContainer, removeContainer,
+    handleRecentTripSelect,
+    onRequestSubmit, confirmSubmit, setSummaryOpen,
+    dismissAddMore,
+  } = useCreateWorkOrder()
+
   const toast = useToast()
-  const { isOnline } = useOffline()
-  const [clients, setClients] = useState<Client[]>([])
-  const [routes, setRoutes] = useState<RoutePrice[]>([])
 
-  // Containers
-  const [containers, setContainers] = useState<ContainerForm[]>([{ ...EMPTY_CONT }])
-
-  // Common fields
-  const [clientId, setClientId] = useState('')
-  const [pickupLocation, setPickupLocation] = useState('')
-  const [dropoffLocation, setDropoffLocation] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-
-  // Scanner state
-  const [scannerOpen, setScannerOpen] = useState(false)
-  const [activeContIdx, setActiveContIdx] = useState(0)
-
-  useEffect(() => {
-    let cancelled = false
-    Promise.all([apiClient.getClients(), apiClient.getRoutes()])
-      .then(([cRes, rRes]) => {
-        if (!cancelled) {
-          if (cRes.success) setClients(cRes.data)
-          if (rRes.success) setRoutes(rRes.data)
-        }
-      })
-      .catch((err) => { console.error('Failed to load clients/routes:', err) })
-    return () => { cancelled = true }
-  }, [])
-
-  // Handle scanner
-  const openScanner = useCallback((idx: number) => () => {
-    setActiveContIdx(idx)
-    setScannerOpen(true)
-  }, [])
-
-  const handleScanComplete = useCallback((imageSrc: string, meta: PhotoMeta) => {
-    const idx = activeContIdx
-    setContainers(prev => prev.map((c, i) =>
-      i === idx
-        ? { ...c, photoTaken: true, photoDataUrl: imageSrc, photoLat: meta.lat, photoLng: meta.lng, photoTimestamp: meta.timestamp, ocrLoading: isOnline, ocrError: undefined }
-        : c,
-    ))
-    setScannerOpen(false)
-
-    if (!isOnline) return
-
-    apiClient.ocrContainer(imageSrc, idx)
-      .then((result) => {
-        setContainers(prev => prev.map((c, i) => {
-          if (i !== idx) return c
-          if (result.success && result.containerNumber) {
-            return { ...c, containerNumber: result.containerNumber, ocrLoading: false }
-          }
-          return { ...c, ocrLoading: false, ocrError: result.error ?? 'Không nhận diện được' }
-        }))
-      })
-      .catch(() => {
-        setContainers(prev => prev.map((c, i) =>
-          i === idx ? { ...c, ocrLoading: false, ocrError: 'Lỗi kết nối AI' } : c,
-        ))
-      })
-  }, [activeContIdx, isOnline])
-
-  // Container management
-  const updateContainer = useCallback((idx: number, field: keyof ContainerForm, value: string) => {
-    setContainers(prev => prev.map((c, i) =>
-      i === idx ? { ...c, [field]: value } : c,
-    ))
-  }, [])
-
-  const addContainer = useCallback(() => {
-    setContainers(prev => [...prev, { ...EMPTY_CONT }])
-  }, [])
-
-  const removeContainer = useCallback((idx: number) => {
-    setContainers(prev => prev.filter((_, i) => i !== idx))
-  }, [])
-
-  // Get driver info from API for plate etc
-  const [driverPlate, setDriverPlate] = useState('')
-  useEffect(() => {
-    apiClient.getDrivers()
-      .then(res => {
-        if (res.success) {
-          const d = res.data.find((d: { id: number; tractorPlate?: string }) => d.id === Number(user!.id))
-          if (d) setDriverPlate(d.tractorPlate ?? '')
-        }
-      })
-      .catch((err) => { console.error('Failed to load driver info:', err) })
-  }, [user])
-
-  const handleSubmit = useCallback(async () => {
-    if (containers.some(c => !c.containerNumber.trim()) || !clientId || !pickupLocation || !dropoffLocation) return
-    setSubmitting(true)
-
+  const handleConfirmSubmit = async () => {
     try {
-      const client = clients.find(c => String(c.id) === clientId)
-      const containerItems: ContainerItem[] = containers.map(c => ({
-        containerNumber: c.containerNumber.trim(),
-        workType: c.workType,
-        photoUrl: c.photoDataUrl ?? '',
-        photoLat: c.photoLat ?? null,
-        photoLng: c.photoLng ?? null,
-        photoTimestamp: c.photoTimestamp ?? null,
-      }))
-
-      const gps = await new Promise<{ lat: number; lng: number }>((resolve) => {
-        if (!navigator.geolocation) return resolve({ lat: 0, lng: 0 })
-        navigator.geolocation.getCurrentPosition(
-          (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-          () => resolve({ lat: 0, lng: 0 }),
-          { enableHighAccuracy: true, timeout: 5000 },
-        )
-      })
-
-      // Build route string from pickup + dropoff
-      const route = `${pickupLocation} - ${dropoffLocation}`
-
-      const res = await apiClient.createWorkOrder({
-        containers: containerItems,
-        clientId: Number(clientId),
-        clientName: client?.name ?? '',
-        route,
-        pickupLocation,
-        dropoffLocation,
-        driverId: Number(user!.id),
-        driverName: user!.name,
-        tractorPlate: driverPlate,
-        gpsLat: gps.lat,
-        gpsLng: gps.lng,
-      })
-
-      navigate('/driver')
-      if (!isOnline || res.data?.pendingSync) {
-        toast.success('Đã lưu offline', 'Sẽ đồng bộ khi có mạng')
-      } else {
-        toast.success('Gửi chuyến thành công')
-      }
-    } catch (err) {
-      console.error('Submit failed:', err)
+      await confirmSubmit()
+    } catch {
       toast.error('Gửi thất bại', 'Vui lòng thử lại')
-      setSubmitting(false)
     }
-  }, [containers, clientId, pickupLocation, dropoffLocation, clients, user, driverPlate, navigate, isOnline, toast])
-
-  const canSubmit = containers.every(c => c.containerNumber.trim()) && clientId && pickupLocation && dropoffLocation
+  }
 
   return (
-    <div className="space-y-4 pb-6">
+    <div className="space-y-5 pb-24">
       {/* Offline hint */}
       {!isOnline && (
         <div
@@ -200,31 +57,35 @@ export function CreateWorkOrder() {
         />
       )}
 
-      {/* ── Container cards ── */}
+      {/* Container cards */}
       <div className="space-y-3">
+        <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
+          Container
+        </p>
+
         {containers.map((cont, idx) => (
           <div
             key={idx}
-            className="rounded-2xl p-4 space-y-3"
+            className="rounded-2xl p-4 space-y-4"
             style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
           >
             {/* Header */}
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold" style={{ color: 'var(--theme-text-secondary)' }}>
+              <span className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
                 Cont {idx + 1}
               </span>
               {containers.length > 1 && (
                 <button
                   onClick={() => removeContainer(idx)}
-                  className="w-7 h-7 flex items-center justify-center rounded-full touch-manipulation"
+                  className="w-8 h-8 flex items-center justify-center rounded-full touch-manipulation"
                   style={{ background: 'var(--theme-status-error-light)' }}
                 >
-                  <Trash2 className="w-3.5 h-3.5" style={{ color: 'var(--theme-status-error)' }} />
+                  <Trash2 className="w-4 h-4" style={{ color: 'var(--theme-status-error)' }} />
                 </button>
               )}
             </div>
 
-            {/* Photo preview or camera trigger */}
+            {/* Camera trigger / photo preview */}
             {cont.photoTaken && cont.photoDataUrl ? (
               <button
                 onClick={openScanner(idx)}
@@ -239,34 +100,31 @@ export function CreateWorkOrder() {
                 />
               </button>
             ) : (
-            <button
-              onClick={openScanner(idx)}
-              className="w-full rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-6 px-4 transition-colors touch-manipulation"
-              style={{
-                background: 'transparent',
-                borderColor: 'var(--theme-border-default)',
-              }}
-            >
-              <div className="flex flex-col items-center gap-2 w-full">
-                <div
-                  className="w-full rounded-lg border-2 flex items-center justify-center px-2"
-                  style={{
-                    borderColor: 'var(--theme-brand-primary)',
-                    opacity: 0.6,
-                    minHeight: '48px',
-                    background: 'var(--theme-brand-primary-light)',
-                  }}
-                >
-                  <span className="text-xs font-bold uppercase tracking-wider text-center leading-tight" style={{ color: 'var(--theme-brand-primary)', opacity: 0.7 }}>
-                    Căn số cont vào khung
-                  </span>
+              <button
+                onClick={openScanner(idx)}
+                className="w-full rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-8 px-4 transition-colors touch-manipulation"
+                style={{ background: 'transparent', borderColor: 'var(--theme-border-default)' }}
+              >
+                <div className="flex flex-col items-center gap-3 w-full">
+                  <div
+                    className="w-full rounded-lg border-2 flex items-center justify-center px-3"
+                    style={{
+                      borderColor: 'var(--theme-brand-primary)',
+                      opacity: 0.6,
+                      minHeight: '56px',
+                      background: 'var(--theme-brand-primary-light)',
+                    }}
+                  >
+                    <span className="text-sm font-bold uppercase tracking-wider text-center" style={{ color: 'var(--theme-brand-primary)', opacity: 0.7 }}>
+                      Căn số cont vào khung
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Camera className="w-5 h-5" style={{ color: 'var(--theme-text-muted)' }} />
+                    <span className="text-sm font-medium" style={{ color: 'var(--theme-text-muted)' }}>Chạm để quét</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 mt-1">
-                  <Camera className="w-5 h-5" style={{ color: 'var(--theme-text-muted)' }} />
-                  <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Chạm để quét</span>
-                </div>
-              </div>
-            </button>
+              </button>
             )}
 
             {/* Container number input */}
@@ -287,10 +145,10 @@ export function CreateWorkOrder() {
                 <input
                   value={cont.containerNumber}
                   onChange={e => updateContainer(idx, 'containerNumber', e.target.value)}
-                  className="w-full h-10 rounded-xl px-3 text-sm font-mono font-semibold"
+                  className="w-full h-11 rounded-xl px-3 text-sm font-mono font-semibold"
                   style={{
                     background: 'var(--theme-bg-tertiary)',
-                    border: '1px solid var(--theme-border-default)',
+                    border: `1px solid ${cont.ocrError ? 'var(--theme-status-warning)' : 'var(--theme-border-default)'}`,
                     color: 'var(--theme-text-primary)',
                     paddingRight: cont.ocrLoading ? '40px' : undefined,
                   }}
@@ -301,99 +159,122 @@ export function CreateWorkOrder() {
                   <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin" style={{ color: 'var(--theme-brand-primary)' }} />
                 )}
               </div>
-              <p className="text-xs flex items-center gap-1" style={{ color: cont.ocrError ? 'var(--theme-status-warning)' : 'var(--theme-text-muted)' }}>
-                <AlertCircle className="w-3 h-3" />
-                {cont.ocrError ?? (isOnline ? 'Sửa nếu PM nhận diện sai' : 'Nhập số cont thủ công')}
-              </p>
+              {forceManualEntry && !cont.ocrLoading && (
+                <p className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--theme-status-warning)' }}>
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  Vui lòng nhập tay số cont
+                </p>
+              )}
+              {!forceManualEntry && (
+                <p className="text-xs flex items-center gap-1" style={{ color: cont.ocrError ? 'var(--theme-status-warning)' : 'var(--theme-text-muted)' }}>
+                  <AlertCircle className="w-3 h-3" />
+                  {cont.ocrError ?? (isOnline ? 'Sửa nếu nhận diện sai' : 'Nhập số cont thủ công')}
+                </p>
+              )}
             </div>
 
-            {/* Type selector */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Loại cont</label>
-              <div className="grid grid-cols-4 gap-1.5">
-                {WORK_TYPES.map(wt => (
-                  <button
-                    key={wt}
-                    onClick={() => updateContainer(idx, 'workType', wt)}
-                    className="py-2.5 rounded-lg text-xs font-bold transition-colors touch-manipulation"
-                    style={{
-                      background: cont.workType === wt ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
-                      color: cont.workType === wt ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
-                      border: `1px solid ${cont.workType === wt ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)'}`,
-                    }}
-                  >
-                    {wt}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* Container type selector — 2x2 big grid */}
+            <ContainerTypeGrid
+              value={cont.workType}
+              onChange={(wt) => updateContainer(idx, 'workType', wt)}
+            />
           </div>
         ))}
+      </div>
 
-        {/* Add container button */}
+      {/* Add more container prompt */}
+      <AddMorePrompt
+        visible={!!showAddMore}
+        onAdd={addContainer}
+        onDismiss={dismissAddMore}
+      />
+
+      {/* Customer & Route section */}
+      <div className="space-y-4">
+        <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
+          Khách & Tuyến
+        </p>
+
+        <RecentTripSuggestions
+          trips={recentOrders}
+          onSelect={handleRecentTripSelect}
+          onChooseOther={() => {}}
+        />
+
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Khách hàng</label>
+            <SheetPicker
+              label="Chọn khách hàng"
+              placeholder="Chọn khách hàng"
+              value={clientId}
+              options={clients.map(c => ({ value: String(c.id), label: c.code || c.name, sublabel: c.code ? c.name : c.phone }))}
+              onChange={setClientId}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Điểm lấy</label>
+            <SheetPicker
+              label="Chọn điểm lấy"
+              placeholder="Chọn điểm lấy"
+              value={pickupLocation}
+              options={[...new Set(routes.map(r => r.pickupLocation).filter(Boolean) as string[])].map(loc => ({ value: loc!, label: loc! }))}
+              onChange={(val: string) => {
+                setPickupLocation(val)
+                setDropoffLocation('')
+              }}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Điểm trả</label>
+            <SheetPicker
+              label="Chọn điểm trả"
+              placeholder="Chọn điểm trả"
+              value={dropoffLocation}
+              options={routes.filter(r => r.pickupLocation === pickupLocation).map(r => ({ value: r.dropoffLocation ?? '', label: r.dropoffLocation ?? '' }))}
+              onChange={setDropoffLocation}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Sticky submit bar */}
+      <div
+        className="fixed bottom-0 left-0 right-0 p-4 space-y-2 z-30"
+        style={{ background: 'var(--theme-bg-primary)', borderTop: '1px solid var(--theme-border-default)' }}
+      >
+        {missingFields.length > 0 && !canSubmit && (
+          <p className="text-xs font-medium text-center" style={{ color: 'var(--theme-status-warning)' }}>
+            Còn thiếu: {missingFields.join(', ')}
+          </p>
+        )}
         <button
-          onClick={addContainer}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-colors touch-manipulation"
+          onClick={onRequestSubmit}
+          disabled={!canSubmit || submitting}
+          className="w-full h-12 rounded-2xl text-base font-bold touch-manipulation transition-all active:scale-[0.98]"
           style={{
-            background: 'var(--theme-bg-secondary)',
-            color: 'var(--theme-brand-primary)',
-            border: '1px dashed var(--theme-brand-primary)',
+            background: canSubmit ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
+            color: canSubmit ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)',
           }}
         >
-          <Plus className="w-4 h-4" />
-          Thêm cont
+          {submitting ? 'Đang gửi...' : isOnline ? 'Gửi chuyến' : 'Lưu offline'}
         </button>
       </div>
 
-      {/* ── Customer ── */}
-      <div className="space-y-1.5">
-        <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Khách hàng</label>
-        <InlineSelect
-          label="Chọn khách hàng"
-          placeholder="Chọn khách hàng"
-          value={clientId}
-          options={clients.map(c => ({ value: String(c.id), label: c.code || c.name, sublabel: c.code ? c.name : c.phone }))}
-          onChange={setClientId}
-        />
-      </div>
+      {/* Summary dialog */}
+      <TripSummaryDialog
+        open={summaryOpen}
+        onConfirm={handleConfirmSubmit}
+        containers={summaryContainers}
+        clientName={summaryClientName}
+        pickupLocation={pickupLocation}
+        dropoffLocation={dropoffLocation}
+      />
 
-      {/* ── Pickup Location ── */}
-      <div className="space-y-1.5">
-        <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Điểm lấy</label>
-        <InlineSelect
-          label="Chọn điểm lấy"
-          placeholder="Chọn điểm lấy"
-          value={pickupLocation}
-          options={[...new Set(routes.map(r => r.pickupLocation).filter(Boolean) as string[])].map(loc => ({ value: loc!, label: loc! }))}
-          onChange={(val: string) => {
-            setPickupLocation(val)
-            setDropoffLocation('')
-          }}
-        />
-      </div>
-
-      {/* ── Dropoff Location ── */}
-      <div className="space-y-1.5">
-        <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Điểm trả</label>
-        <InlineSelect
-          label="Chọn điểm trả"
-          placeholder="Chọn điểm trả"
-          value={dropoffLocation}
-          options={routes.filter(r => r.pickupLocation === pickupLocation).map(r => ({ value: r.dropoffLocation ?? '', label: r.dropoffLocation ?? '' }))}
-          onChange={setDropoffLocation}
-        />
-      </div>
-
-      {/* ── Submit ── */}
-      <Button
-        onClick={handleSubmit}
-        disabled={!canSubmit || submitting}
-        className="w-full h-12 font-bold text-base rounded-2xl"
-        style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-      >
-        {submitting ? 'Đang gửi...' : isOnline ? 'Gửi chuyến' : 'Lưu offline'}
-      </Button>
-
+      {/* Success overlay */}
+      <SuccessOverlay visible={showSuccess} />
     </div>
   )
 }

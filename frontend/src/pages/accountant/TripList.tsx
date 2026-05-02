@@ -1,11 +1,13 @@
-import { useRef, useState, useMemo } from 'react'
+import { useRef, useState, useMemo, useCallback } from 'react'
 import { useTripOrders, useImportTripOrders, useExportTripOrdersExcel } from '@/hooks/use-queries'
 import { TripOrderCard } from '@/components/shared/TripOrderCard'
-import { Plus, Upload, Download, Search } from 'lucide-react'
+import { ImportResultDialog } from '@/components/shared/ImportResultDialog'
+import { Plus, Upload, Download, FileSpreadsheet, Search } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { useToast } from '@/components/atoms/Toast'
+import { downloadTripOrderTemplate } from '@/services/api/tripOrders.api'
 import type { TripOrderStatus } from '@/data/domain'
 
 const STATUS_FILTERS: { key: TripOrderStatus | 'ALL'; label: string; color?: string }[] = [
@@ -27,6 +29,7 @@ export function TripList() {
   const [importing, setImporting] = useState(false)
   const [statusFilter, setStatusFilter] = useState<TripOrderStatus | 'ALL'>('ALL')
   const [search, setSearch] = useState('')
+  const [importResult, setImportResult] = useState<{ created: number; errors: string[] } | null>(null)
 
   const basePath = location.pathname.startsWith('/director') ? '/director' : '/accountant'
   const createTripPath = `${basePath}/create-trip`
@@ -59,13 +62,27 @@ export function TripList() {
     setImporting(true)
     const res = await importMutation.mutateAsync(file)
     if (res.success) {
-      toast.success(`Nhập thành công ${res.data.created} lệnh`, res.data.errors.length ? `${res.data.errors.length} lỗi` : undefined)
+      if (res.data.errors.length > 0) {
+        setImportResult(res.data)
+      } else {
+        toast.success(`Nhập thành công ${res.data.created} lệnh`)
+      }
     } else {
       toast.error('Nhập thất bại')
     }
     setImporting(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
+
+  const handleDownloadTemplate = useCallback(async () => {
+    const blob = await downloadTripOrderTemplate()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'mau_nhap_lenh.xlsx'
+    a.click()
+    URL.revokeObjectURL(url)
+  }, [])
 
   const handleExport = async () => {
     const blob = await exportMutation.mutateAsync()
@@ -114,6 +131,13 @@ export function TripList() {
           style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
         >
           <Download className="w-3.5 h-3.5" /> Xuất
+        </Button>
+        <Button
+          onClick={handleDownloadTemplate}
+          className="flex items-center gap-1.5 h-9 px-3 text-xs font-semibold rounded-lg"
+          style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
+        >
+          <FileSpreadsheet className="w-3.5 h-3.5" /> Tải mẫu
         </Button>
       </div>
 
@@ -179,6 +203,15 @@ export function TripList() {
             />
           ))}
         </div>
+      )}
+
+      {importResult && (
+        <ImportResultDialog
+          open={!!importResult}
+          onClose={() => setImportResult(null)}
+          result={importResult}
+          onCreateManual={() => navigate(createTripPath)}
+        />
       )}
     </div>
   )

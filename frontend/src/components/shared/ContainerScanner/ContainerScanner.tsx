@@ -1,6 +1,6 @@
 import { useRef, useCallback, useState, useEffect } from 'react'
 import Webcam from 'react-webcam'
-import { X, RotateCcw, RectangleHorizontal, Square } from 'lucide-react'
+import { X, RotateCcw } from 'lucide-react'
 import { calculateCrop } from '@/lib/crop-utils'
 
 export interface PhotoMeta {
@@ -14,20 +14,20 @@ interface ContainerScannerProps {
   onClose: () => void
 }
 
-type ScanMode = 'rectangle' | 'square'
-
-// Target rectangle dimensions — must match CSS values
-const RECT_WIDTH_PERCENT = 0.85
-const RECT_HEIGHT_PX = 120
-const SQUARE_SIZE_PERCENT = 0.75
 const MAX_CAPTURE_WIDTH = 1200
+const STABILITY_THRESHOLD = 15
+const REQUIRED_STABLE_FRAMES = 3
+const CHECK_INTERVAL_MS = 500
 
 export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) {
   const webcamRef = useRef<Webcam>(null)
   const overlayBoxRef = useRef<HTMLDivElement>(null)
+  const prevFrameRef = useRef<Uint8ClampedArray | null>(null)
+  const stabilityCountRef = useRef(0)
   const [captured, setCaptured] = useState<string | null>(null)
-  const [scanMode, setScanMode] = useState<ScanMode>('rectangle')
   const [gpsCoords, setGpsCoords] = useState<{ lat: number | null; lng: number | null }>({ lat: null, lng: null })
+
+  const viewfinderHeight = typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.4) : 300
 
   useEffect(() => {
     if (!navigator.geolocation) return
@@ -48,8 +48,6 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
     const overlayBox = overlayBoxRef.current
     if (!overlayBox) return
 
-    // Measure the actual rendered position of the guide box in the viewport.
-    // This is the ground truth — no assumptions about centering or label height.
     const rect = overlayBox.getBoundingClientRect()
 
     const crop = calculateCrop({
@@ -57,7 +55,6 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
       sourceHeight: video.videoHeight,
       containerWidth: window.innerWidth,
       containerHeight: window.innerHeight,
-      // Use the real measured position instead of assuming centered
       rectLeft: rect.left,
       rectTop: rect.top,
       rectWidth: rect.width,
@@ -71,7 +68,6 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
     const ctx = canvas.getContext('2d')!
     ctx.drawImage(video, crop.x, crop.y, crop.width, crop.height, 0, 0, crop.width, crop.height)
 
-    // Downscale if wider than max — saves bandwidth for OCR and submission
     let outputCanvas = canvas
     if (crop.width > MAX_CAPTURE_WIDTH) {
       const scale = MAX_CAPTURE_WIDTH / crop.width
@@ -83,10 +79,53 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
 
     const croppedImage = outputCanvas.toDataURL('image/jpeg', 0.92)
     setCaptured(croppedImage)
-  }, [])  // no deps — everything is read from refs at call time
+  }, [])
+
+  // Auto-capture via motion stability detection
+  useEffect(() => {
+    if (captured) return
+
+    const interval = setInterval(() => {
+      const video = webcamRef.current?.video
+      if (!video || video.readyState < 2) return
+
+      const thumbCanvas = document.createElement('canvas')
+      thumbCanvas.width = 80
+      thumbCanvas.height = 60
+      const ctx = thumbCanvas.getContext('2d')!
+      ctx.drawImage(video, 0, 0, 80, 60)
+      const currentFrame = ctx.getImageData(0, 0, 80, 60).data
+
+      if (prevFrameRef.current) {
+        let diff = 0
+        const len = currentFrame.length
+        for (let i = 0; i < len; i += 4) {
+          diff += Math.abs(currentFrame[i] - prevFrameRef.current[i])
+          diff += Math.abs(currentFrame[i + 1] - prevFrameRef.current[i + 1])
+          diff += Math.abs(currentFrame[i + 2] - prevFrameRef.current[i + 2])
+        }
+        const avgDiff = diff / (80 * 60 * 3)
+
+        if (avgDiff < STABILITY_THRESHOLD) {
+          stabilityCountRef.current++
+          if (stabilityCountRef.current >= REQUIRED_STABLE_FRAMES) {
+            handleCapture()
+            stabilityCountRef.current = 0
+          }
+        } else {
+          stabilityCountRef.current = 0
+        }
+      }
+      prevFrameRef.current = currentFrame
+    }, CHECK_INTERVAL_MS)
+
+    return () => clearInterval(interval)
+  }, [captured, handleCapture])
 
   const handleRetake = useCallback(() => {
     setCaptured(null)
+    prevFrameRef.current = null
+    stabilityCountRef.current = 0
   }, [])
 
   const handleConfirm = useCallback(() => {
@@ -114,9 +153,8 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
       </button>
 
       {captured ? (
-        /* ── Preview mode ── */
+        /* Preview mode */
         <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6">
-          {/* Show the cropped image at full width — it already matches the overlay box */}
           <div className="w-full rounded-xl overflow-hidden" style={{ border: '2px solid var(--theme-brand-primary)' }}>
             <img
               src={captured}
@@ -145,9 +183,8 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
           </div>
         </div>
       ) : (
-        /* ── Scanner mode ── */
+        /* Scanner mode */
         <>
-          {/* Camera feed */}
           <div className="scanner-video">
             <Webcam
               audio={false}
@@ -156,31 +193,35 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
               screenshotQuality={0.8}
               videoConstraints={{
                 facingMode: 'environment',
-                // Request portrait 9:16 so the delivered aspect ratio matches
-                // the viewport — this makes the crop math exact with no hacks.
-                // The browser treats these as hints; actual resolution may vary
-                // but will be close enough for accurate overlay mapping.
-                width:  { ideal: 1080 },
+                width: { ideal: 1080 },
                 height: { ideal: 1920 },
               }}
               className="w-full h-full"
             />
           </div>
 
-          {/* Overlay with overlay hole */}
+          {/* Overlay */}
           <div
             className="absolute inset-0 flex flex-col items-center justify-center"
             style={{ pointerEvents: 'none' }}
           >
+            {/* Guide text above viewfinder */}
+            <p
+              className="text-sm font-bold mb-4"
+              style={{ color: 'rgba(255,255,255,0.9)', textShadow: '1px 1px 3px rgba(0,0,0,0.9)' }}
+            >
+              Đưa số container vào ô này
+            </p>
+
+            {/* Viewfinder box — dashed green, ~40% height */}
             <div
               ref={overlayBoxRef}
               className="relative rounded-xl"
               style={{
-                width: scanMode === 'square' ? `${SQUARE_SIZE_PERCENT * 100}%` : `${RECT_WIDTH_PERCENT * 100}%`,
-                height: scanMode === 'rectangle' ? `${RECT_HEIGHT_PX}px` : undefined,
-                aspectRatio: scanMode === 'square' ? '1 / 1' : undefined,
+                width: '85%',
+                height: `${viewfinderHeight}px`,
                 boxShadow: '0 0 0 1000px rgba(0, 0, 0, 0.6)',
-                border: '2px solid rgba(255,255,255,0.4)',
+                border: '2px dashed rgba(22, 163, 74, 0.5)',
               }}
             >
               {/* Corner markers */}
@@ -189,16 +230,9 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
               <div className="absolute -bottom-[2px] -left-[2px] w-6 h-6 border-b-2 border-l-2 rounded-bl-lg" style={{ borderColor: 'var(--theme-brand-primary)' }} />
               <div className="absolute -bottom-[2px] -right-[2px] w-6 h-6 border-b-2 border-r-2 rounded-br-lg" style={{ borderColor: 'var(--theme-brand-primary)' }} />
             </div>
-
-            <p
-              className="mt-4 text-xs font-bold uppercase tracking-wider"
-              style={{ color: 'rgba(255,255,255,0.8)', textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}
-            >
-              Căn số cont vào khung
-            </p>
           </div>
 
-          {/* Capture button */}
+          {/* Manual capture button — fallback */}
           <div
             className="absolute bottom-8 left-0 right-0 flex justify-center"
             style={{ pointerEvents: 'auto' }}
@@ -212,27 +246,6 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
               }}
             >
               <div className="w-12 h-12 rounded-full" style={{ background: '#fff', opacity: 0.9 }} />
-            </button>
-          </div>
-
-          {/* Scan mode toggle */}
-          <div
-            className="absolute bottom-8 right-6 z-10 flex items-center gap-1 rounded-full p-1"
-            style={{ background: 'rgba(0,0,0,0.5)', pointerEvents: 'auto' }}
-          >
-            <button
-              onClick={() => setScanMode('rectangle')}
-              className="flex items-center justify-center w-9 h-9 rounded-full touch-manipulation transition-colors"
-              style={{ background: scanMode === 'rectangle' ? 'var(--theme-brand-primary)' : 'transparent', color: '#fff' }}
-            >
-              <RectangleHorizontal className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setScanMode('square')}
-              className="flex items-center justify-center w-9 h-9 rounded-full touch-manipulation transition-colors"
-              style={{ background: scanMode === 'square' ? 'var(--theme-brand-primary)' : 'transparent', color: '#fff' }}
-            >
-              <Square className="w-4 h-4" />
             </button>
           </div>
         </>
