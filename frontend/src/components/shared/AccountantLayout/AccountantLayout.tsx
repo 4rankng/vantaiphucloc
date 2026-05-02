@@ -1,4 +1,4 @@
-import { Outlet, useLocation, useNavigate, Navigate, Link } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
 import { AppShell } from '@/components/shared/AppShell'
 import { AccountantSidebar } from '@/components/shared/AccountantSidebar'
 import { CommandPalette, useCommandPalette } from '@/components/shared/CommandPalette'
@@ -11,8 +11,7 @@ import {
   Command as CmdIcon,
   Bell,
   UserCircle,
-  Menu,
-  X,
+  ChevronRight,
 } from 'lucide-react'
 import { useState, useRef } from 'react'
 import type { Role } from '@/data/domain'
@@ -31,7 +30,7 @@ const TITLES: Record<string, string> = {
   '/accountant/create-trip':      'Tạo đơn hàng',
   '/accountant/notifications':    'Thông báo',
   '/accountant/profile':          'Thông tin cá nhân',
-  '/accountant/customers':        'Quản lý khách hàng',
+
 }
 
 function resolveTitle(pathname: string): string {
@@ -47,6 +46,9 @@ const FULLSCREEN_PREFIXES = [
   '/accountant/match/',
   '/accountant/match-trip/',
 ]
+
+const SIDEBAR_EXPANDED = 240
+const SIDEBAR_COLLAPSED = 72
 
 function AccountantDesktopShell() {
   const { user } = useAuth()
@@ -68,8 +70,26 @@ function AccountantDesktopShell() {
       {!isFullscreen && (
         <AccountantSidebar
           collapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
+      )}
+
+      {/* Sidebar toggle — fixed pill on sidebar edge */}
+      {!isFullscreen && (
+        <button
+          type="button"
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          aria-label={sidebarCollapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'}
+          className="fixed z-50 top-4 flex items-center justify-center w-2.5 h-9 rounded-r-md shadow-sm text-neutral-300 transition-all duration-300 ease-in-out"
+          style={{
+            left: sidebarCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED,
+            background: '#0a3520',
+            border: '1px solid rgba(255,255,255,0.12)',
+          }}
+        >
+          <ChevronRight
+            className={`w-3.5 h-3.5 transition-transform duration-200 ${!sidebarCollapsed ? 'rotate-180' : ''}`}
+          />
+        </button>
       )}
 
       {/* Main content area */}

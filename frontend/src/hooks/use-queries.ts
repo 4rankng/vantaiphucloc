@@ -407,7 +407,7 @@ export function useExportSalaryExcel() {
 export function useCalculateSalary() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ driverId, startDate, endDate }: { driverId: number; startDate: string; endDate: string }) =>
+    mutationFn: ({ driverId, startDate, endDate }: { driverId?: number; startDate: string; endDate: string }) =>
       apiClient.calculateSalary(driverId, startDate, endDate),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['salary-periods'] }) },
   })

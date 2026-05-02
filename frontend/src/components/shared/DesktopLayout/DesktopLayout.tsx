@@ -59,7 +59,7 @@ const ACCOUNTANT_NAV: NavGroup[] = [
       { path: '/accountant/pricing', label: 'Bảng giá', icon: Receipt },
       { path: '/accountant/partners', label: 'Đối tác', icon: Handshake },
       { path: '/accountant/routes', label: 'Cung đường', icon: Route },
-      { path: '/accountant/customers', label: 'Khách hàng', icon: Users },
+
     ],
   },
   {
@@ -284,12 +284,33 @@ function DesktopSidebar({ role, collapsed, onToggle }: DesktopSidebarProps) {
           ))}
         </nav>
 
-        {/* User footer */}
+        {/* User footer + collapse toggle */}
         <div
-          className="shrink-0 p-2"
+          className="shrink-0 p-2 space-y-1"
           style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
           ref={footerRef}
         >
+          {/* Collapse toggle row */}
+          <button
+            onClick={onToggle}
+            className={cn(
+              'w-full flex items-center rounded-xl transition-all duration-150 cursor-pointer text-white/50 hover:bg-white/[0.08] hover:text-white/80',
+              collapsed ? 'h-10 w-10 justify-center mx-auto' : 'gap-2.5 px-2.5 py-2',
+            )}
+            aria-label={collapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'}
+          >
+            {collapsed
+              ? <ChevronRight className="w-4 h-4 shrink-0" />
+              : (
+                <>
+                  <ChevronLeft className="w-4 h-4 shrink-0" />
+                  <span className="text-[12px] font-medium leading-none">Thu gọn</span>
+                </>
+              )
+            }
+          </button>
+
+          {/* User button */}
           <button
             ref={footerBtnRef}
             onClick={() => setUserMenuOpen(v => !v)}
@@ -319,20 +340,6 @@ function DesktopSidebar({ role, collapsed, onToggle }: DesktopSidebarProps) {
             )}
           </button>
         </div>
-
-        {/* Collapse toggle */}
-        <button
-          onClick={onToggle}
-          className="absolute -right-3 top-[52px] w-6 h-6 rounded-full flex items-center justify-center shadow-md transition-colors z-50"
-          style={{
-            background: 'var(--theme-bg-secondary)',
-            border: '1px solid var(--theme-border-default)',
-            color: 'var(--theme-text-muted)',
-          }}
-          aria-label={collapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'}
-        >
-          {collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
-        </button>
       </aside>
 
       {/* User menu popup — rendered outside aside to avoid overflow clipping */}

@@ -356,8 +356,6 @@ export function TripList() {
   // Desktop view with DataTablePro
   return (
     <PageContainer
-      title="Lệnh điều phối"
-      subtitle={`${filtered.length} lệnh trong tháng ${month}/${year}`}
       actions={headerActions}
     >
       <div className="space-y-4">
