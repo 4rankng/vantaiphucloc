@@ -6,7 +6,7 @@ import logging
 from collections import defaultdict
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, func
@@ -24,11 +24,13 @@ from app.schemas.domain import (
     BatchWorkOrderResult,
     ContainerOCRRequest,
     ContainerOCRResponse,
+    CancelRequest,
 )
 from app.core.deps import get_current_user, require_roles
 from app.services.pricing_service import find_pricing
 from app.services.ocr_service import MAX_OCR_ATTEMPTS, extract_container_number
 from app.services.photo_storage import save_base64_photo
+from app.services.audit_service import log_action
 from app.core.redis import get_redis
 
 _logger = logging.getLogger(__name__)
@@ -64,6 +66,9 @@ async def _load_work_order_out(db: AsyncSession, work_order: WorkOrder) -> WorkO
         earning=work_order.earning,
         pricing_id=work_order.pricing_id,
         status=work_order.status,
+        is_locked=getattr(work_order, 'is_locked', False),
+        locked_at=getattr(work_order, 'locked_at', None),
+        locked_by=getattr(work_order, 'locked_by', None),
         created_at=work_order.created_at,
         updated_at=work_order.updated_at,
         containers=[ContainerOut.model_validate(c) for c in containers],
@@ -111,6 +116,9 @@ async def _batch_load_work_order_outs(
             earning=wo.earning,
             pricing_id=wo.pricing_id,
             status=wo.status,
+            is_locked=getattr(wo, 'is_locked', False),
+            locked_at=getattr(wo, 'locked_at', None),
+            locked_by=getattr(wo, 'locked_by', None),
             created_at=wo.created_at,
             updated_at=wo.updated_at,
             containers=[
@@ -200,6 +208,14 @@ async def list_work_orders(
     # Batch-load containers instead of per-row queries
     items = await _batch_load_work_order_outs(db, work_orders)
 
+    # Hide salary from drivers on PENDING WOs
+    if current_user.role == "driver":
+        for i, wo in enumerate(work_orders):
+            if wo.status == "PENDING":
+                items[i].driver_salary = 0
+                items[i].allowance = 0
+                items[i].earning = 0
+
     return PaginatedResponse[WorkOrderOut](
         items=items,
         total=total,
@@ -222,13 +238,22 @@ async def get_work_order(
     if work_order is None:
         raise HTTPException(status_code=404, detail="Work order not found")
 
-    return await _load_work_order_out(db, work_order)
+    wo_out = await _load_work_order_out(db, work_order)
+
+    # Hide salary from driver until matched
+    if current_user.role == "driver" and work_order.status == "PENDING":
+        wo_out.driver_salary = 0
+        wo_out.allowance = 0
+        wo_out.earning = 0
+
+    return wo_out
 
 
 @router.put("/work-orders/{work_order_id}", response_model=WorkOrderOut)
 async def update_work_order(
     work_order_id: int,
     body: WorkOrderUpdate,
+    request: Request,
     current_user: User = Depends(require_roles("accountant", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
@@ -238,6 +263,9 @@ async def update_work_order(
     work_order = result.scalar_one_or_none()
     if work_order is None:
         raise HTTPException(status_code=404, detail="Work order not found")
+
+    if getattr(work_order, 'is_locked', False):
+        raise HTTPException(status_code=403, detail="Work order is locked. Unmatch first to edit.")
 
     update_data = body.model_dump(exclude_unset=True)
     new_containers = update_data.pop("containers", None)
@@ -261,6 +289,43 @@ async def update_work_order(
                 work_type=container["work_type"],
                 photo_url=photo_url,
             ))
+
+    await db.commit()
+    await db.refresh(work_order)
+
+    await log_action(db, user_id=current_user.id, action="UPDATE", table_name="work_orders",
+        record_id=work_order.id, request=request)
+
+    return await _load_work_order_out(db, work_order)
+
+
+@router.put("/work-orders/{work_order_id}/cancel", response_model=WorkOrderOut)
+async def cancel_work_order(
+    work_order_id: int,
+    body: CancelRequest,
+    request: Request,
+    current_user: User = Depends(require_roles("accountant", "superadmin", "driver")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Cancel a work order (only PENDING/unmatched). Reason required."""
+    result = await db.execute(
+        select(WorkOrder).where(WorkOrder.id == work_order_id)
+    )
+    work_order = result.scalar_one_or_none()
+    if work_order is None:
+        raise HTTPException(status_code=404, detail="Work order not found")
+
+    if current_user.role == "driver" and work_order.driver_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You can only cancel your own work orders")
+    if work_order.status != "PENDING":
+        raise HTTPException(status_code=400, detail="Only PENDING work orders can be cancelled")
+    if getattr(work_order, 'is_locked', False):
+        raise HTTPException(status_code=403, detail="Cannot cancel a matched work order. Unmatch first.")
+
+    work_order.status = "CANCELLED"
+
+    await log_action(db, user_id=current_user.id, action="CANCEL", table_name="work_orders",
+        record_id=work_order.id, reason=body.reason, request=request)
 
     await db.commit()
     await db.refresh(work_order)
