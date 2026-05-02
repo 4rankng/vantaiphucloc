@@ -15,6 +15,7 @@ from app.core.redis import get_redis
 from app.core.cache import CacheManager
 from app.config import settings
 from app.services.audit_service import log_action
+from app.core.audit_context import set_audit_reason
 
 router = APIRouter()
 
@@ -132,8 +133,7 @@ async def delete_client(
         )
 
     client.is_active = False
-    await log_action(db, user_id=current_user.id, action="UPDATE", table_name="clients",
-        record_id=client.id, reason=body.reason, request=request)
+    set_audit_reason(body.reason)
     await db.commit()
     await CacheManager(redis).invalidate_namespace("clients")
     return Response()

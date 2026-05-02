@@ -11,6 +11,7 @@ from app.workers.tasks.salary import calculate_salary_task
 from app.workers.tasks.notifications import send_notification_task
 from app.workers.tasks.geocoding import geocode_container_task, geocode_work_order_task
 from app.workers.tasks.reports import generate_monthly_report_task
+from app.workers.tasks.earning_sync import sync_wo_earning_on_to_update
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,7 @@ class WorkerSettings:
         generate_monthly_report_task,
         geocode_container_task,
         geocode_work_order_task,
+        sync_wo_earning_on_to_update,
     ]
     cron_jobs = [
         cron(cleanup_expired_sessions, hour=3, minute=0),

@@ -28,6 +28,7 @@ from app.services.excel_service import (
     generate_reconciliation_excel,
 )
 from app.services.audit_service import log_action
+from app.core.audit_context import set_audit_reason
 
 _logger = logging.getLogger(__name__)
 
@@ -184,9 +185,11 @@ async def unmatch(
     trip_order.locked_at = None
     trip_order.locked_by = None
 
+    set_audit_reason(body.reason)
+
     await db.flush()
 
-    # Audit log with mandatory reason
+    # Audit log for join table (not auto-audited)
     await log_action(
         db, user_id=current_user.id, action="UNMATCH", table_name="trip_order_work_orders",
         record_id=trip_order.id, reason=body.reason,

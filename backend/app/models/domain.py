@@ -23,6 +23,7 @@ from sqlalchemy import (
 )
 
 from app.database import Base
+from app.models.mixins import AuditableMixin
 
 
 def _utcnow() -> datetime:
@@ -33,7 +34,7 @@ def _utcnow() -> datetime:
 # Client
 # ---------------------------------------------------------------------------
 
-class Vendor(Base):
+class Vendor(AuditableMixin, Base):
     __tablename__ = "vendors"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -43,13 +44,14 @@ class Vendor(Base):
     tax_code = Column(String(50), nullable=True)
     address = Column(String(500), nullable=True)
     contact_person = Column(String(255), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
     )
 
 
-class Client(Base):
+class Client(AuditableMixin, Base):
     __tablename__ = "clients"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -72,7 +74,7 @@ class Client(Base):
 # Route
 # ---------------------------------------------------------------------------
 
-class Route(Base):
+class Route(AuditableMixin, Base):
     __tablename__ = "routes"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -82,6 +84,7 @@ class Route(Base):
     type_20ft = Column(Integer, nullable=False)        # VND
     type_40ft = Column(Integer, nullable=False)        # VND
     is_two_way = Column(Boolean, default=False, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
@@ -92,7 +95,7 @@ class Route(Base):
 # Pricing
 # ---------------------------------------------------------------------------
 
-class Pricing(Base):
+class Pricing(AuditableMixin, Base):
     __tablename__ = "pricings"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -105,6 +108,7 @@ class Pricing(Base):
     unit_price = Column(Integer, nullable=False)       # VND
     driver_salary = Column(Integer, nullable=False)    # VND
     allowance = Column(Integer, nullable=False)        # VND
+    is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
@@ -136,7 +140,7 @@ class PricingLine(Base):
 # WorkOrder
 # ---------------------------------------------------------------------------
 
-class WorkOrder(Base):
+class WorkOrder(AuditableMixin, Base):
     __tablename__ = "work_orders"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -198,7 +202,7 @@ class WorkOrderContainer(Base):
 # TripOrder
 # ---------------------------------------------------------------------------
 
-class TripOrder(Base):
+class TripOrder(AuditableMixin, Base):
     __tablename__ = "trip_orders"
 
     id = Column(Integer, primary_key=True, index=True)
