@@ -59,6 +59,7 @@ const ACCOUNTANT_NAV: NavGroup[] = [
       { path: '/accountant/pricing', label: 'Bảng giá', icon: Receipt },
       { path: '/accountant/partners', label: 'Đối tác', icon: Handshake },
       { path: '/accountant/routes', label: 'Cung đường', icon: Route },
+      { path: '/accountant/customers', label: 'Khách hàng', icon: Users },
     ],
   },
   {

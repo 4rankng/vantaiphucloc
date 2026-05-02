@@ -22,6 +22,7 @@ const TITLES: Record<string, string> = {
   '/accountant/create-trip':      'Tạo lệnh điều hành',
   '/accountant/notifications':    'Thông báo',
   '/accountant/profile':          'Thông tin cá nhân',
+  '/accountant/customers':        'Quản lý khách hàng',
 }
 
 function resolveTitle(pathname: string): string {
