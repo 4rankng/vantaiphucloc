@@ -84,7 +84,7 @@ const DIRECTOR_NAV: NavGroup[] = [
       { path: '/director/partners', label: 'Đối tác', icon: Handshake },
       { path: '/director/routes', label: 'Cung đường', icon: Route },
       { path: '/director/pricing', label: 'Bảng giá', icon: Receipt },
-      { path: '/director/trips', label: 'Lệnh điều hành', icon: Briefcase },
+      { path: '/director/trips', label: 'Đơn hàng', icon: Briefcase },
     ],
   },
 ]

@@ -153,28 +153,7 @@ export function FilterToolbar({
         {/* Extra filters slot */}
         {extraFilters}
 
-        {/* Clear filters button */}
-        {hasActiveFilters && onClearFilters && (
-          <button
-            onClick={onClearFilters}
-            className="flex items-center gap-1.5 h-10 px-3 rounded-xl text-sm font-medium transition-colors hover:opacity-80"
-            style={{
-              background: 'var(--theme-status-error-light)',
-              color: 'var(--theme-status-error)',
-            }}
-          >
-            <X className="h-3.5 w-3.5" />
-            Xóa bộ lọc
-            {showFilterBadge && activeFilterCount > 0 && (
-              <span
-                className="ml-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
-                style={{ background: 'var(--theme-status-error)', color: '#fff' }}
-              >
-                {activeFilterCount}
-              </span>
-            )}
-          </button>
-        )}
+
       </div>
 
       {/* Date range expanded row */}

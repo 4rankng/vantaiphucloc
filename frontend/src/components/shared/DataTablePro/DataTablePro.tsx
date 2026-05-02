@@ -191,7 +191,7 @@ export function DataTablePro<T>({
         className="overflow-x-auto"
         style={{ maxHeight: maxHeight ?? 'none' }}
       >
-        <table className="w-full border-collapse">
+        <table className="min-w-full border-collapse">
           <thead
             className={stickyHeader ? 'sticky top-0 z-10' : ''}
             style={{ background: 'var(--theme-bg-tertiary)' }}
