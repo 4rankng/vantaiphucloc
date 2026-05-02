@@ -1,12 +1,16 @@
 import { useMemo, useState, useRef, useCallback } from 'react'
-import { Search, Upload, Download, Eye, Truck, Calendar, Package, ChevronDown } from 'lucide-react'
-import { Button } from '@/components/ui'
+import { Upload, Eye, Truck, Calendar, Package, FileSpreadsheet, X } from 'lucide-react'
+import {
+  Button,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+} from '@/components/ui'
 import { WorkOrderJobCard } from '@/components/shared/WorkOrderJobCard'
 import { FilterToolbar } from '@/components/shared/FilterToolbar'
 import { DataTablePro, type Column } from '@/components/shared/DataTablePro'
 import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
 import { PageContainer } from '@/components/shared/PageContainer'
-import { useWorkOrders, useUploadCustomerExcel, useExportReconciliationExcel, useClients } from '@/hooks/use-queries'
+import { useWorkOrders, useUploadCustomerExcel, useClients } from '@/hooks/use-queries'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '@/components/atoms/Toast'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -47,18 +51,15 @@ export function WorkOrderList() {
   const { data: workOrders = [], isLoading: loading } = useWorkOrders()
   const { data: clients = [] } = useClients()
   const { mutate: uploadExcel, isPending: uploading } = useUploadCustomerExcel()
-  const { mutate: exportExcel, isPending: exporting } = useExportReconciliationExcel()
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
 
-  // Excel state
-  const [uploadOpen, setUploadOpen] = useState(false)
-  const [excelPanelOpen, setExcelPanelOpen] = useState(false)
-  const [selectedClient, setSelectedClient] = useState<number | ''>('')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
+  // Import Excel dialog state
+  const [importOpen, setImportOpen] = useState(false)
+  const [selectedClient, setSelectedClient] = useState<string>('')
   const [file, setFile] = useState<File | null>(null)
+  const [dragOver, setDragOver] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const filtered = useMemo(() => {
@@ -88,54 +89,32 @@ export function WorkOrderList() {
       return
     }
     uploadExcel(
-      { file, clientId: Number(selectedClient), dateFrom: dateFrom || undefined, dateTo: dateTo || undefined },
+      { file, clientId: Number(selectedClient) },
       {
         onSuccess: () => {
           toast.success('Thành công', 'Đã tải lên file Excel')
-          setUploadOpen(false)
+          setImportOpen(false)
           setFile(null)
+          setSelectedClient('')
         },
         onError: () => toast.error('Lỗi', 'Không thể tải lên file Excel'),
       }
     )
   }
 
-  const handleExport = () => {
-    if (!selectedClient) {
-      toast.error('Lỗi', 'Vui lòng chọn khách hàng')
-      return
+  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    setDragOver(false)
+    const dropped = e.dataTransfer.files[0]
+    if (dropped && (dropped.name.endsWith('.xlsx') || dropped.name.endsWith('.xls'))) {
+      setFile(dropped)
+    } else {
+      toast.error('Lỗi', 'Chỉ chấp nhận file .xlsx hoặc .xls')
     }
-    exportExcel(
-      { clientId: Number(selectedClient), dateFrom: dateFrom || undefined, dateTo: dateTo || undefined },
-      {
-        onSuccess: (blob) => {
-          const url = window.URL.createObjectURL(blob)
-          const a = document.createElement('a')
-          a.href = url
-          a.download = `doi_soat_kh_${selectedClient}_${new Date().toISOString().split('T')[0]}.xlsx`
-          a.click()
-          window.URL.revokeObjectURL(url)
-          toast.success('Đã xuất file Excel')
-        },
-        onError: () => toast.error('Lỗi', 'Không thể xuất file Excel'),
-      }
-    )
-  }
+  }, [toast])
 
   // Table columns for desktop
   const columns: Column<WorkOrder>[] = [
-    {
-      key: 'code',
-      header: 'Mã phiếu',
-      accessor: (row) => (
-        <span className="font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-          {row.code}
-        </span>
-      ),
-      sortable: true,
-      sortKey: (row) => row.code,
-      width: '120px',
-    },
     {
       key: 'date',
       header: 'Ngày',
@@ -244,104 +223,108 @@ export function WorkOrderList() {
     },
   ]
 
-  // Excel panel component
-  const ExcelPanel = () => (
-    <div
-      className="rounded-2xl p-4 space-y-3"
-      style={{
-        background: 'var(--theme-bg-secondary)',
-        border: '1px solid var(--theme-border-default)',
-      }}
-    >
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-          Nhập / Xuất Excel
-        </p>
-        <button
-          onClick={() => setExcelPanelOpen(!excelPanelOpen)}
-          className="flex items-center gap-1 text-xs font-medium"
-          style={{ color: 'var(--theme-brand-primary)' }}
-        >
-          {excelPanelOpen ? 'Thu gọn' : 'Mở rộng'}
-          <ChevronDown className={`h-4 w-4 transition-transform ${excelPanelOpen ? 'rotate-180' : ''}`} />
-        </button>
-      </div>
+  // Shared import dialog
+  const ImportDialog = () => (
+    <Dialog open={importOpen} onOpenChange={(open) => {
+      setImportOpen(open)
+      if (!open) { setFile(null); setSelectedClient('') }
+    }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Nhập Excel đối soát</DialogTitle>
+        </DialogHeader>
 
-      {excelPanelOpen && (
-        <>
-          <select
-            value={selectedClient}
-            onChange={e => setSelectedClient(e.target.value ? Number(e.target.value) : '')}
-            className="w-full h-10 rounded-xl px-3 text-sm"
+        <div className="space-y-4 pt-2">
+          {/* Client select */}
+          <Select value={selectedClient} onValueChange={setSelectedClient}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Chọn khách hàng" />
+            </SelectTrigger>
+            <SelectContent>
+              {clients.map(c => (
+                <SelectItem key={c.id} value={String(c.id)}>
+                  {c.code ? `[${c.code}] ` : ''}{c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* File dropzone */}
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".xlsx,.xls"
+            onChange={e => setFile(e.target.files?.[0] ?? null)}
+            className="hidden"
+          />
+          <div
+            onClick={() => fileRef.current?.click()}
+            onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleDrop}
+            className="w-full rounded-xl border-2 border-dashed cursor-pointer transition-colors flex flex-col items-center justify-center gap-2 py-8 px-4 text-center"
             style={{
-              background: 'var(--theme-bg-tertiary)',
-              border: '1px solid var(--theme-border-default)',
-              color: 'var(--theme-text-primary)',
+              borderColor: dragOver
+                ? 'var(--theme-brand-primary)'
+                : file
+                  ? 'var(--theme-brand-primary)'
+                  : 'var(--theme-border-default)',
+              background: dragOver ? 'var(--theme-bg-tertiary)' : 'transparent',
             }}
           >
-            <option value="">Chọn khách hàng</option>
-            {clients.map(c => (
-              <option key={c.id} value={c.id}>
-                {c.code ? `[${c.code}] ` : ''}{c.name}
-              </option>
-            ))}
-          </select>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--theme-text-muted)' }}>
-                Từ ngày
-              </label>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={e => setDateFrom(e.target.value)}
-                className="w-full h-10 rounded-xl px-3 text-sm"
-                style={{
-                  background: 'var(--theme-bg-tertiary)',
-                  border: '1px solid var(--theme-border-default)',
-                  color: 'var(--theme-text-primary)',
-                }}
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--theme-text-muted)' }}>
-                Đến ngày
-              </label>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={e => setDateTo(e.target.value)}
-                className="w-full h-10 rounded-xl px-3 text-sm"
-                style={{
-                  background: 'var(--theme-bg-tertiary)',
-                  border: '1px solid var(--theme-border-default)',
-                  color: 'var(--theme-text-primary)',
-                }}
-              />
-            </div>
+            {file ? (
+              <>
+                <FileSpreadsheet className="h-8 w-8" style={{ color: 'var(--theme-brand-primary)' }} />
+                <p className="text-sm font-medium" style={{ color: 'var(--theme-brand-primary)' }}>
+                  {file.name}
+                </p>
+                <button
+                  onClick={e => { e.stopPropagation(); setFile(null) }}
+                  className="flex items-center gap-1 text-xs"
+                  style={{ color: 'var(--theme-text-muted)' }}
+                >
+                  <X className="h-3 w-3" /> Xoá file
+                </button>
+              </>
+            ) : (
+              <>
+                <Upload className="h-8 w-8" style={{ color: 'var(--theme-text-muted)' }} />
+                <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
+                  Kéo thả file vào đây
+                </p>
+                <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                  hoặc click để chọn file .xlsx / .xls
+                </p>
+              </>
+            )}
           </div>
 
-          <div className="flex gap-2">
+          {/* Actions */}
+          <div className="flex gap-3 pt-1">
             <Button
-              onClick={() => setUploadOpen(true)}
-              className="flex items-center justify-center gap-1.5 h-10 px-4 text-sm font-semibold rounded-xl flex-1"
+              onClick={() => { setImportOpen(false); setFile(null); setSelectedClient('') }}
+              disabled={uploading}
+              className="flex-1 h-10 text-sm font-semibold rounded-xl"
+              style={{
+                background: 'var(--theme-bg-secondary)',
+                color: 'var(--theme-text-primary)',
+                border: '1px solid var(--theme-border-default)',
+              }}
+            >
+              Huỷ
+            </Button>
+            <Button
+              onClick={handleUpload}
+              disabled={uploading || !file || !selectedClient}
+              className="flex-1 h-10 text-sm font-semibold rounded-xl"
               style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
             >
-              <Upload className="w-4 h-4" /> Nhập Excel
-            </Button>
-            <Button
-              onClick={handleExport}
-              disabled={exporting || !selectedClient}
-              className="flex items-center justify-center gap-1.5 h-10 px-4 text-sm font-semibold rounded-xl flex-1"
-              style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
-            >
-              <Download className="w-4 h-4" /> Xuất Excel
+              {uploading ? 'Đang tải...' : 'Tải lên'}
             </Button>
           </div>
-        </>
-      )}
-    </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 
   if (loading) {
