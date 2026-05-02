@@ -379,15 +379,7 @@ function DesktopDashboard() {
   return (
     <div className="space-y-6">
       {/* Header with Month navigator */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold font-display" style={{ color: 'var(--theme-text-primary)' }}>
-            Tổng quan
-          </h1>
-          <p className="text-sm mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-            {completedTrips.length} chuyến hoàn thành trong tháng
-          </p>
-        </div>
+      <div className="flex items-center justify-end gap-4">
         <MonthNavigator
           year={year}
           month={month}
@@ -402,8 +394,8 @@ function DesktopDashboard() {
       {/* Quick actions */}
       <QuickActionsBar actions={quickActions} />
 
-      {/* 3-column workbench */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* 3-column workbench — needs enough room, so xl breakpoint (1280px) */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         {/* Left: Lệnh điều hành */}
         <WorkbenchCard
           title="Lệnh điều hành gần đây"

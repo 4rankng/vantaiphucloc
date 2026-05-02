@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTripOrders, useWorkOrders, useUpdateTripOrder, useReconcile, useToggleTripConfirmation } from '@/hooks/use-queries'
+import { BackButton } from '@/components/shared/BackButton'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { ConfirmationCheckbox } from '@/components/shared/ConfirmationCheckbox'
@@ -130,6 +131,8 @@ export function TripDetail() {
 
   return (
     <div className="space-y-4">
+      <BackButton />
+
       {/* Trip info card */}
       <div className="rounded-2xl p-4 space-y-1"
         style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>

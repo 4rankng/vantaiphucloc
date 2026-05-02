@@ -123,8 +123,7 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Desktop back button — mobile gets it from AppShell topbar */}
-      <div className="hidden lg:flex items-center gap-2">
+      <div className="flex items-center gap-2">
         <button
           onClick={() => navigate(`${basePath}/pricing`)}
           className="p-1.5 rounded-lg touch-manipulation hover:bg-[var(--theme-bg-tertiary)] transition-colors"

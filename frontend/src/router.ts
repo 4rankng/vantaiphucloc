@@ -76,7 +76,7 @@ export function createAppRouter() {
             { path: 'match-trip/:tripId',    element: h(Lazy, { component: R.MatchTrip }) },
             { path: 'notifications',         element: ebc('Notifications', h(Lazy, { component: R.AccountantNotifications })) },
             { path: 'profile',               element: ebc('Profile', h(Lazy, { component: R.Profile })) },
-            { path: 'customers',             element: h(Lazy, { component: R.CustomerManagement }) },
+
           ],
         },
         // ─── Director ──────────────────────────────────────────
@@ -86,7 +86,7 @@ export function createAppRouter() {
           children: [
             { index: true,                       element: h(Lazy, { component: R.DirectorDashboard }) },
             { path: 'users',                     element: h(Lazy, { component: R.UserManagement }) },
-            { path: 'partners',                  element: h(Lazy, { component: R.ClientsAndVendors }) },
+            { path: 'partners',                  element: h(Lazy, { component: R.DirectorPartners }) },
             { path: 'routes',                    element: h(Lazy, { component: R.RouteList }) },
             { path: 'pricing',                   element: h(Lazy, { component: R.DirectorPricingList }) },
             { path: 'pricing/:clientId',         element: h(Lazy, { component: R.DirectorPricingDetail }) },

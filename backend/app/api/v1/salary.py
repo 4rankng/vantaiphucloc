@@ -23,21 +23,33 @@ from app.workers import enqueue
 router = APIRouter()
 
 
-@router.post("/salary/calculate", response_model=SalaryCalculateAsyncResponse, status_code=202)
+@router.post("/salary/calculate", response_model=list[SalaryCalculateAsyncResponse], status_code=202)
 async def calculate_salary(
     body: SalaryCalculateRequest,
     current_user: User = Depends(require_permission("calculate", "Salary")),
+    db: AsyncSession = Depends(get_db),
 ):
-    try:
-        job_id = await enqueue(
-            "calculate_salary_task",
-            driver_id=body.driver_id,
-            start_date=body.start_date.isoformat(),
-            end_date=body.end_date.isoformat(),
-        )
-    except RuntimeError:
-        raise HTTPException(status_code=503, detail="Background worker unavailable")
-    return SalaryCalculateAsyncResponse(job_id=job_id)
+    driver_ids: list[int]
+    if body.driver_id is not None:
+        driver_ids = [body.driver_id]
+    else:
+        result = await db.execute(select(User).where(User.role == "driver"))
+        drivers = result.scalars().all()
+        driver_ids = [d.id for d in drivers]
+
+    responses: list[SalaryCalculateAsyncResponse] = []
+    for did in driver_ids:
+        try:
+            job_id = await enqueue(
+                "calculate_salary_task",
+                driver_id=did,
+                start_date=body.start_date.isoformat(),
+                end_date=body.end_date.isoformat(),
+            )
+            responses.append(SalaryCalculateAsyncResponse(job_id=job_id))
+        except RuntimeError:
+            raise HTTPException(status_code=503, detail="Background worker unavailable")
+    return responses
 
 
 @router.get("/salary", response_model=PaginatedResponse[SalaryPeriodOut])

@@ -444,7 +444,7 @@ class SuggestWosResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 class SalaryCalculateRequest(BaseModel):
-    driver_id: int
+    driver_id: int | None = None
     start_date: date
     end_date: date
 

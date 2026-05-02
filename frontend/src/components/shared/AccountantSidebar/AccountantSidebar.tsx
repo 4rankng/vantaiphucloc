@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useCallback } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -9,10 +9,6 @@ import {
   MapPin,
   Tag,
   Wallet,
-  ChevronLeft,
-  ChevronRight,
-  Plus,
-  Building2,
 } from 'lucide-react'
 
 export interface SidebarItem {
@@ -28,7 +24,6 @@ const NAV_ITEMS: SidebarItem[] = [
   { label: 'Chuyến đã đi', href: '/accountant/driver-trips', icon: Truck },
   { label: 'Đối soát', href: '/accountant/work-orders', icon: Briefcase },
   { label: 'Đối tác', href: '/accountant/partners', icon: Users },
-  { label: 'Khách hàng', href: '/accountant/customers', icon: Building2 },
   { label: 'Cung đường', href: '/accountant/routes', icon: MapPin },
   { label: 'Bảng giá', href: '/accountant/pricing', icon: Tag },
   { label: 'Kỳ lương', href: '/accountant/salary-setup', icon: Wallet },
@@ -37,15 +32,12 @@ const NAV_ITEMS: SidebarItem[] = [
 export interface AccountantSidebarProps {
   /** Whether sidebar is collapsed */
   collapsed?: boolean
-  /** Collapse toggle handler */
-  onToggleCollapse?: () => void
   /** Badge counts for nav items (keyed by href) */
   badges?: Record<string, number>
 }
 
 export function AccountantSidebar({
   collapsed = false,
-  onToggleCollapse,
   badges = {},
 }: AccountantSidebarProps) {
   const location = useLocation()
@@ -66,36 +58,19 @@ export function AccountantSidebar({
         collapsed ? 'w-[72px]' : 'w-[240px]'
       }`}
       style={{
-        background: 'var(--theme-sidebar-bg, #0F172A)',
-        borderRight: '1px solid var(--theme-sidebar-border, rgba(255,255,255,0.08))',
+        background: 'var(--theme-sidebar, #0a3520)',
+        borderRight: '1px solid rgba(255,255,255,0.08)',
       }}
     >
       {/* Logo area */}
       <div
         className="flex items-center gap-3 px-4 py-4"
-        style={{ borderBottom: '1px solid var(--theme-sidebar-border, rgba(255,255,255,0.08))' }}
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}
       >
-        <img src="/logo.avif" alt="" className="w-9 h-9 object-contain rounded-lg shrink-0" />
+        <img src="/logo.avif" alt="" className="h-7 w-7 object-contain rounded-md shrink-0" />
         {!collapsed && (
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-white truncate">Vạn Tài</p>
-            <p className="text-[10px] text-white/50 truncate">Kế toán</p>
-          </div>
+          <p className="text-[13px] font-bold text-white/95 leading-tight truncate">Vận Tải Phúc Lộc</p>
         )}
-      </div>
-
-      {/* Quick action */}
-      <div className="px-3 py-3">
-        <NavLink
-          to="/accountant/create-trip"
-          className={`flex items-center justify-center gap-2 rounded-xl py-2.5 px-3 text-sm font-semibold transition-all hover:opacity-90 ${
-            collapsed ? 'w-10 h-10 mx-auto p-0' : ''
-          }`}
-          style={{ background: 'var(--theme-brand-primary)', color: '#fff' }}
-        >
-          <Plus className="h-4 w-4 shrink-0" />
-          {!collapsed && <span>Tạo lệnh</span>}
-        </NavLink>
       </div>
 
       {/* Navigation */}
@@ -142,30 +117,6 @@ export function AccountantSidebar({
         })}
       </nav>
 
-      {/* Collapse toggle */}
-      {onToggleCollapse && (
-        <div
-          className="px-3 py-3"
-          style={{ borderTop: '1px solid var(--theme-sidebar-border, rgba(255,255,255,0.08))' }}
-        >
-          <button
-            onClick={onToggleCollapse}
-            className={`flex items-center justify-center gap-2 w-full rounded-xl py-2 text-xs font-medium transition-colors hover:opacity-80 ${
-              collapsed ? '' : ''
-            }`}
-            style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)' }}
-          >
-            {collapsed ? (
-              <ChevronRight className="h-4 w-4" />
-            ) : (
-              <>
-                <ChevronLeft className="h-4 w-4" />
-                <span>Thu gọn</span>
-              </>
-            )}
-          </button>
-        </div>
-      )}
     </aside>
   )
 }

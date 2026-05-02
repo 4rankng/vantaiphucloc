@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { apiClient } from '@/services/api'
 import { formatCurrencyFull as formatCurrency } from '@/data/domain'
+import { BackButton } from '@/components/shared/BackButton'
 import type { WorkOrder, Pricing, Client } from '@/data/domain'
 
 export function ClientJobs() {
@@ -49,6 +50,7 @@ export function ClientJobs() {
 
   return (
     <div className="space-y-3 w-full">
+      <BackButton />
         {/* Stats */}
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-2xl p-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
