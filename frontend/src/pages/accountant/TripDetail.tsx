@@ -244,7 +244,7 @@ export function TripDetail() {
           <button onClick={() => setShowMatchDialog(true)}
             className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold transition-all active:scale-[0.98] touch-manipulation"
             style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-            <Link2 className="w-4 h-4" /> Khớp số công
+            <Link2 className="w-4 h-4" /> Khớp số cont
           </button>
         </div>
       )}
@@ -257,7 +257,7 @@ export function TripDetail() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Loại công</Label>
+              <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Loại container</Label>
               <div className="flex flex-wrap gap-1.5">
                 {WORK_TYPES.map(w => (
                   <button key={w} onClick={() => setEditWorkType(w)}
@@ -293,11 +293,11 @@ export function TripDetail() {
       <Dialog open={showMatchDialog} onOpenChange={setShowMatchDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Chọn số công để khớp</DialogTitle>
+            <DialogTitle>Chọn số cont để khớp</DialogTitle>
           </DialogHeader>
           {unmatchedJobs.length === 0 ? (
             <div className="py-6 text-center">
-              <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không có số công nào chưa khớp</p>
+              <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không có số cont nào chưa khớp</p>
             </div>
           ) : (
             <div className="space-y-2 max-h-[50dvh] overflow-y-auto">
@@ -335,7 +335,7 @@ export function TripDetail() {
             <DialogTitle>Bỏ match</DialogTitle>
           </DialogHeader>
           <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>
-            Tách tất cả số công đã khớp với lệnh điều hành này. Hành động này không thể hoàn tác.
+            Tách tất cả số cont đã khớp với đơn hàng này. Hành động này không thể hoàn tác.
           </p>
           <div className="space-y-2">
             <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Lý do *</Label>

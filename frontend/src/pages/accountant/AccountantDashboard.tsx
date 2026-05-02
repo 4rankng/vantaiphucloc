@@ -33,7 +33,7 @@ function KpiCard({
 }) {
   return (
     <div
-      className="rounded-2xl border p-4 flex flex-col gap-1"
+      className="rounded-2xl border p-4 flex flex-col gap-1 min-w-0"
       style={{
         background: 'var(--theme-bg-secondary)',
         borderColor: 'var(--theme-border-default)',
@@ -43,7 +43,7 @@ function KpiCard({
         {label}
       </p>
       <p
-        className="text-2xl font-bold font-display tabular-nums leading-tight"
+        className="text-lg lg:text-2xl font-bold font-display tabular-nums leading-tight break-all"
         style={{ color: color ?? 'var(--theme-text-primary)' }}
       >
         {value}

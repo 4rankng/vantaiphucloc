@@ -20,10 +20,24 @@ export interface ContainerForm {
 
 const EMPTY_CONT: ContainerForm = { containerNumber: '', workType: 'E20', photoTaken: false, ocrLoading: false }
 
-export function useCreateWorkOrder() {
+function woToContainers(wo: WorkOrder): ContainerForm[] {
+  return wo.containers.map(c => ({
+    containerNumber: c.containerNumber,
+    workType: c.workType,
+    photoTaken: !!c.photoUrl,
+    photoDataUrl: c.photoUrl || undefined,
+    photoLat: c.photoLat,
+    photoLng: c.photoLng,
+    photoTimestamp: c.photoTimestamp,
+    ocrLoading: false,
+  }))
+}
+
+export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { isOnline } = useOffline()
+  const isEdit = !!existingWorkOrder
 
   // Reference data
   const [clients, setClients] = useState<Client[]>([])
@@ -31,11 +45,13 @@ export function useCreateWorkOrder() {
   const [driverPlate, setDriverPlate] = useState('')
   const [recentOrders, setRecentOrders] = useState<WorkOrder[]>([])
 
-  // Form state
-  const [containers, setContainers] = useState<ContainerForm[]>([{ ...EMPTY_CONT }])
-  const [clientId, setClientId] = useState('')
-  const [pickupLocation, setPickupLocation] = useState('')
-  const [dropoffLocation, setDropoffLocation] = useState('')
+  // Form state — pre-populate from existing WO when editing
+  const [containers, setContainers] = useState<ContainerForm[]>(
+    existingWorkOrder ? woToContainers(existingWorkOrder) : [{ ...EMPTY_CONT }],
+  )
+  const [clientId, setClientId] = useState(existingWorkOrder ? String(existingWorkOrder.clientId) : '')
+  const [pickupLocation, setPickupLocation] = useState(existingWorkOrder?.pickupLocation ?? '')
+  const [dropoffLocation, setDropoffLocation] = useState(existingWorkOrder?.dropoffLocation ?? '')
 
   // UI state
   const [submitting, setSubmitting] = useState(false)
@@ -173,13 +189,12 @@ export function useCreateWorkOrder() {
     setDropoffLocation(trip.dropoffLocation)
   }, [])
 
-  // Validation
-  const canSubmit = useMemo(() =>
-    containers.every(c => c.containerNumber.trim() && c.photoTaken)
-    && !!clientId && !!pickupLocation && !!dropoffLocation
-    && Object.keys(containerErrors).length === 0,
-    [containers, clientId, pickupLocation, dropoffLocation, containerErrors],
-  )
+  // Validation — for edit mode, existing photos are valid
+  const canSubmit = useMemo(() => {
+    const hasContainerInfo = containers.every(c => c.containerNumber.trim() && c.photoTaken)
+    return hasContainerInfo && !!clientId && !!pickupLocation && !!dropoffLocation
+      && Object.keys(containerErrors).length === 0
+  }, [containers, clientId, pickupLocation, dropoffLocation, containerErrors])
 
   const missingFields = useMemo(() => {
     const fields: string[] = []
@@ -227,44 +242,52 @@ export function useCreateWorkOrder() {
         photoTimestamp: c.photoTimestamp ?? null,
       }))
 
-      const gps = await new Promise<{ lat: number; lng: number }>((resolve) => {
-        if (!navigator.geolocation) return resolve({ lat: 0, lng: 0 })
-        navigator.geolocation.getCurrentPosition(
-          (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-          () => resolve({ lat: 0, lng: 0 }),
-          { enableHighAccuracy: true, timeout: 5000 },
-        )
-      })
-
       const route = `${pickupLocation} - ${dropoffLocation}`
 
-      const res = await apiClient.createWorkOrder({
-        containers: containerItems,
-        clientId: Number(clientId),
-        clientName: client?.name ?? '',
-        route,
-        pickupLocation,
-        dropoffLocation,
-        driverId: Number(user!.id),
-        driverName: user!.name,
-        tractorPlate: driverPlate,
-        gpsLat: gps.lat,
-        gpsLng: gps.lng,
-      })
+      if (isEdit && existingWorkOrder) {
+        await apiClient.updateWorkOrder(existingWorkOrder.id, {
+          containers: containerItems,
+          clientId: Number(clientId),
+          clientName: client?.name ?? '',
+          route,
+          pickupLocation,
+          dropoffLocation,
+        })
+      } else {
+        const gps = await new Promise<{ lat: number; lng: number }>((resolve) => {
+          if (!navigator.geolocation) return resolve({ lat: 0, lng: 0 })
+          navigator.geolocation.getCurrentPosition(
+            (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+            () => resolve({ lat: 0, lng: 0 }),
+            { enableHighAccuracy: true, timeout: 5000 },
+          )
+        })
+
+        await apiClient.createWorkOrder({
+          containers: containerItems,
+          clientId: Number(clientId),
+          clientName: client?.name ?? '',
+          route,
+          pickupLocation,
+          dropoffLocation,
+          driverId: Number(user!.id),
+          driverName: user!.name,
+          tractorPlate: driverPlate,
+          gpsLat: gps.lat,
+          gpsLng: gps.lng,
+        })
+      }
 
       setShowSuccess(true)
       setTimeout(() => {
         setShowSuccess(false)
         navigate('/driver')
-        if (!isOnline || res.data?.pendingSync) {
-          // Will show toast from SuccessOverlay
-        }
       }, 2000)
     } catch (err) {
       console.error('Submit failed:', err)
       setSubmitting(false)
     }
-  }, [containers, clientId, pickupLocation, dropoffLocation, clients, user, driverPlate, navigate, isOnline])
+  }, [containers, clientId, pickupLocation, dropoffLocation, clients, user, driverPlate, navigate, isOnline, isEdit, existingWorkOrder])
 
   // Summary data for dialog
   const summaryContainers = useMemo(() =>
@@ -277,10 +300,11 @@ export function useCreateWorkOrder() {
     return client?.name ?? ''
   }, [clients, clientId])
 
-  const dismissAddMore = useCallback(() => setAddMoreDismissed(true), [])
-
   // ─── Return ───────────────────────────────────────────────────────────────
   return {
+    // Mode
+    isEdit,
+
     // Reference data
     clients, routes, recentOrders,
 

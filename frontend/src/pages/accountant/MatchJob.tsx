@@ -269,7 +269,7 @@ export function MatchJob() {
               )}
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Loại công</Label>
+              <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Loại container</Label>
               <div className="flex flex-wrap gap-1.5">
                 {WORK_TYPES.map(w => (
                   <button key={w} onClick={() => setDialogContainers(prev => prev.map((c2, j) => j === i ? { ...c2, type: w } : c2))}
@@ -309,7 +309,7 @@ export function MatchJob() {
               )}
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Loại công</Label>
+              <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Loại container</Label>
               <div className="flex flex-wrap gap-1.5">
                 {WORK_TYPES.map(w => (
                   <button key={w} onClick={() => setDialogContRight(prev => prev.map((c2, j) => j === i ? { ...c2, type: w } : c2))}

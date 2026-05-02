@@ -103,7 +103,7 @@ export function ClientJobs() {
                     </div>
                     <div>
                       <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>Số lượng</span>
-                      <p className="text-xs font-bold tabular-nums" style={{ color: jobCount > 0 ? 'var(--theme-brand-primary)' : 'var(--theme-text-muted)' }}>{jobCount} công</p>
+                      <p className="text-xs font-bold tabular-nums" style={{ color: jobCount > 0 ? 'var(--theme-brand-primary)' : 'var(--theme-text-muted)' }}>{jobCount} cont</p>
                     </div>
                   </div>
                 </div>

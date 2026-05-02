@@ -12,7 +12,7 @@ const TITLES: Record<string, string> = {
   '/director/routes': 'Cung đường',
   '/director/pricing': 'Bảng giá',
   '/director/trips': 'Lệnh điều hành',
-  '/director/create-trip': 'Tạo lệnh điều hành',
+  '/director/create-trip': 'Tạo đơn hàng',
   '/director/notifications': 'Thông báo',
   '/director/profile': 'Thông tin cá nhân',
 }
