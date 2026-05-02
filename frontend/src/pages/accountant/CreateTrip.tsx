@@ -1,13 +1,15 @@
-import { useState, useMemo } from 'react'
+import { useRef, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
-import { useClients, useRoutes, useCreateTripOrder, useCreateClient } from '@/hooks/use-queries'
+import { useClients, useRoutes, useCreateTripOrder, useCreateClient, useImportTripOrders } from '@/hooks/use-queries'
 import { WORK_TYPES, type WorkType } from '@/data/domain'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { CreateClientDialog } from '@/components/shared/CreateClientDialog'
-import { Plus, Trash2 } from 'lucide-react'
+import { ImportResultDialog } from '@/components/shared/ImportResultDialog'
+import { Plus, Trash2, ArrowLeft, Upload } from 'lucide-react'
+import { useToast } from '@/components/atoms/Toast'
 
 interface CongItem {
   id: string
@@ -17,10 +19,16 @@ interface CongItem {
 
 export function CreateTrip() {
   const navigate = useNavigate()
+  const toast = useToast()
   const { data: clients = [] } = useClients()
   const { data: routes = [] } = useRoutes()
   const createTripOrder = useCreateTripOrder()
   const createClient = useCreateClient()
+  const importMutation = useImportTripOrders()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState<{ created: number; errors: string[] } | null>(null)
 
   const clientOptions = useMemo(() => clients.map(x => ({ value: String(x.id), label: x.name })), [clients])
   const pickupOptions = useMemo(() => [...new Set(routes.map(r => r.pickupLocation).filter(Boolean) as string[])].map(loc => ({ value: loc!, label: loc! })), [routes])
@@ -54,6 +62,25 @@ export function CreateTrip() {
     [routes, pickupLocation],
   )
 
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImporting(true)
+    const res = await importMutation.mutateAsync(file)
+    if (res.success) {
+      if (res.data.errors.length > 0) {
+        setImportResult(res.data)
+      } else {
+        toast.success(`Nhập thành công ${res.data.created} lệnh`)
+        navigate(-1)
+      }
+    } else {
+      toast.error('Nhập thất bại')
+    }
+    setImporting(false)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   const handleSubmit = () => {
     if (!clientId || !pickupLocation || !dropoffLocation || submitting) return
     setSubmitting(true)
@@ -83,6 +110,28 @@ export function CreateTrip() {
 
   return (
     <div className="space-y-4">
+      {/* Top bar: back + import */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => navigate(-1)}
+          className="w-9 h-9 flex items-center justify-center rounded-xl transition-colors touch-manipulation"
+          style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)' }}
+        >
+          <ArrowLeft className="w-4 h-4" />
+        </button>
+        <span className="text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>Tạo lệnh điều hành</span>
+        <div className="flex-1" />
+        <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden" />
+        <Button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={importing}
+          className="flex items-center gap-1.5 h-9 px-3 text-xs font-semibold rounded-lg"
+          style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
+        >
+          <Upload className="w-3.5 h-3.5" /> {importing ? 'Đang nhập...' : 'Nhập Excel'}
+        </Button>
+      </div>
+
       {/* Client */}
       <div className="space-y-2">
         <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Khách hàng</Label>
@@ -187,6 +236,15 @@ export function CreateTrip() {
           )
         }}
       />
+
+      {importResult && (
+        <ImportResultDialog
+          open={!!importResult}
+          onClose={() => setImportResult(null)}
+          result={importResult}
+          onCreateManual={() => setImportResult(null)}
+        />
+      )}
     </div>
   )
 }

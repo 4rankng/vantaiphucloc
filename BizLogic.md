@@ -637,6 +637,75 @@ AuditLog (nhật ký hệ thống) — auto-records all data changes, reason req
 
 ---
 
+## 14. Implementation Status (2026-05-02)
+
+### ✅ Done — Backend
+
+| Feature | Notes |
+|---------|-------|
+| Auth (login/refresh/logout) | With rate limiting |
+| Change password | `POST /change-password` |
+| Client CRUD + soft delete | With audit log |
+| Route CRUD | Delete is hard delete (not soft) |
+| Pricing CRUD + PricingLines | By quantity tier |
+| Work Order create (single + batch) | With OCR, GPS, Excel export |
+| Work Order update + cancel | With audit log |
+| Trip Order CRUD | With Excel import/export, template download |
+| Trip Order confirm + cancel | With audit log |
+| Reconciliation match/unmatch | 1-to-1, with suggest-matches |
+| Client reconciliation Excel | Upload + export |
+| Salary periods | List, calculate (async), update, export |
+| Salary dashboard | Per-driver breakdown |
+| Salary config (period) | Get/update singleton |
+| Driver list + create | Auto-password from phone |
+| Vendor CRUD | Delete is hard delete (not soft) |
+| User CRUD + deactivate | With profile `/me` endpoint |
+| Dashboard summary + notifications | Role-based |
+| Push notifications (VAPID) | Subscribe/unsubscribe |
+| Health check + worker status | `/health`, `/health/worker` |
+| Audit log model + manual logging | In WO, TO, reconcile handlers |
+| Background workers | salary calc, geocoding, notifications, reports |
+| Cron jobs | cleanup sessions, cleanup audit logs, salary reminders, recalc open periods |
+| ISO 6346 OCR validation | Backend validates OCR results |
+
+### ✅ Done — Frontend
+
+| Feature | Notes |
+|---------|-------|
+| Role-based routing (driver/accountant/director) | All roles have pages |
+| Work Order creation (single) | With camera/scanner, OCR |
+| Trip Order management | CRUD, Excel import with template |
+| Reconciliation match/unmatch | Full UI with suggestions |
+| Salary viewing + calculation | With async job polling |
+| Client reconciliation Excel | Upload + export tab |
+| Profile management | Edit name, phone, username, change password |
+| Dashboard | Role-specific metrics |
+| Push notifications | Subscription management |
+| Offline support (service worker + IndexedDB) | Queue + auto-sync when online |
+| Mobile + Desktop responsive layout | |
+
+### ❌ Not Done — Backend
+
+| Feature | Notes |
+|---------|-------|
+| `sync_wo_earning_on_to_update` task | Spec'd but not implemented; TO update handles earning sync inline |
+| Consistent soft delete | Routes, Pricings, Vendors, Clients use hard delete instead of `is_active=false` |
+| Auto audit log on ALL mutations | Only WO, TO, reconcile have manual `log_action()` calls; clients, routes, pricings, vendors, users do not |
+| Logout token blacklisting | Refresh token not invalidated server-side |
+
+### ❌ Not Done — Frontend
+
+| Feature | Notes |
+|---------|-------|
+| Batch Work Order creation UI | Backend supports it; no driver UI for batch create |
+| Cancel Work Order UI | Drivers & accountants cannot cancel WO from app |
+| Cancel Trip Order UI | Accountants cannot cancel TO from app |
+| ISO 6346 container number validation | No client-side format/check-digit validation |
+| Director dashboard detail | Basic overview only; no deep analytics |
+| Unmatch reconciliation UI | Backend supports unmatch; no frontend button |
+
+---
+
 ## Changelog
 
 | Date | Change |
