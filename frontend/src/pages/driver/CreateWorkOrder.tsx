@@ -6,7 +6,7 @@ import { TripSummaryDialog } from '@/components/shared/TripSummaryDialog'
 import { SuccessOverlay } from '@/components/shared/SuccessOverlay'
 import { AddMorePrompt } from '@/components/shared/AddMorePrompt'
 import { RecentTripSuggestions } from '@/components/shared/RecentTripSuggestions'
-import { SheetPicker } from '@/components/shared/SheetPicker'
+import { InlineSelect } from '@/components/shared/InlineSelect'
 import { useCreateWorkOrder } from './useCreateWorkOrder'
 import { useToast } from '@/components/atoms/Toast'
 
@@ -224,8 +224,7 @@ export function CreateWorkOrder() {
         <div className="space-y-3">
           <div className="space-y-1.5">
             <label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Khách hàng</label>
-            <SheetPicker
-              label="Chọn khách hàng"
+            <InlineSelect
               placeholder="Chọn khách hàng"
               value={clientId}
               options={clients.map(c => ({ value: String(c.id), label: c.code || c.name, sublabel: c.code ? c.name : c.phone }))}
@@ -235,8 +234,7 @@ export function CreateWorkOrder() {
 
           <div className="space-y-1.5">
             <label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm lấy</label>
-            <SheetPicker
-              label="Chọn điểm lấy"
+            <InlineSelect
               placeholder="Chọn điểm lấy"
               value={pickupLocation}
               options={[...new Set(routes.map(r => r.pickupLocation).filter(Boolean) as string[])].map(loc => ({ value: loc!, label: loc! }))}
@@ -249,8 +247,7 @@ export function CreateWorkOrder() {
 
           <div className="space-y-1.5">
             <label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm trả</label>
-            <SheetPicker
-              label="Chọn điểm trả"
+            <InlineSelect
               placeholder="Chọn điểm trả"
               value={dropoffLocation}
               options={routes.filter(r => r.pickupLocation === pickupLocation).map(r => ({ value: r.dropoffLocation ?? '', label: r.dropoffLocation ?? '' }))}
