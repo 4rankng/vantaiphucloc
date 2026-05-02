@@ -331,10 +331,9 @@ class TripOrderCreate(BaseModel):
     route: str
     pickup_location: str | None = None
     dropoff_location: str | None = None
-    tractor_plate: str
     driver_id: int | None = None
     driver_name: str | None = None
-    containers: list[TripContainerCreate]
+    containers: list[TripContainerCreate] = []
     container_number: str | None = None  # legacy
     pricing_id: int | None = None
     unit_price: int = Field(ge=0)

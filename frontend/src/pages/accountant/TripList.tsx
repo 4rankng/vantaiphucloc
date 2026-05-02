@@ -2,12 +2,14 @@ import { useRef, useState, useMemo, useCallback } from 'react'
 import { useTripOrders, useImportTripOrders, useExportTripOrdersExcel } from '@/hooks/use-queries'
 import { TripOrderCard } from '@/components/shared/TripOrderCard'
 import { ImportResultDialog } from '@/components/shared/ImportResultDialog'
+import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { Plus, Upload, Download, FileSpreadsheet, Search } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { useToast } from '@/components/atoms/Toast'
 import { downloadTripOrderTemplate } from '@/services/api/tripOrders.api'
+import { useMonthParams } from './use-month-params'
 import type { TripOrderStatus } from '@/data/domain'
 
 const STATUS_FILTERS: { key: TripOrderStatus | 'ALL'; label: string; color?: string }[] = [
@@ -19,7 +21,8 @@ const STATUS_FILTERS: { key: TripOrderStatus | 'ALL'; label: string; color?: str
 ]
 
 export function TripList() {
-  const { data: trips = [], isLoading: loading } = useTripOrders()
+  const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
+  const { data: trips = [], isLoading: loading } = useTripOrders({ dateFrom, dateTo })
   const navigate = useNavigate()
   const location = useLocation()
   const toast = useToast()
@@ -106,6 +109,9 @@ export function TripList() {
 
   return (
     <div className="space-y-3">
+      {/* ── Month navigator ── */}
+      <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
+
       {/* ── Header actions ── */}
       <div className="flex items-center gap-2">
         <Button
@@ -178,7 +184,7 @@ export function TripList() {
         <Input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Tìm khách hàng, biển số, container..."
+          placeholder="Tìm mã KH, tên KH, container, điểm nhận, điểm trả..."
           className="text-sm pl-9 h-9"
         />
       </div>
