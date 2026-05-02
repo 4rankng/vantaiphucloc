@@ -46,9 +46,13 @@ async def list_salary_periods(
     active_only: bool = Query(False, description="Only return drivers with work_order_count > 0"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_roles("accountant", "director", "superadmin", "driver")),
     db: AsyncSession = Depends(get_db),
 ):
+    # Drivers can only see their own salary periods
+    if current_user.role == "driver":
+        driver_id = current_user.id
+
     query = select(SalaryPeriod)
     count_query = select(func.count(SalaryPeriod.id))
 
