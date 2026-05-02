@@ -237,7 +237,7 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
         /* ── Gallery crop mode — react-easy-crop ── */
         <>
           {/* Crop area fills the screen */}
-          <div className="absolute inset-0" style={{ bottom: '120px' }}>
+          <div className="absolute inset-0" style={{ bottom: '100px' }}>
             <Cropper
               image={imageToCrop}
               crop={crop}
@@ -256,54 +256,54 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
             />
           </div>
 
-          {/* Zoom slider + confirm */}
+          {/* Bottom controls — pinch to zoom, compact buttons */}
           <div
-            className="absolute bottom-0 left-0 right-0 px-6 pb-10 pt-4 flex flex-col gap-4"
+            className="absolute bottom-0 left-0 right-0 px-6 pb-8 pt-3 flex items-center justify-center gap-5"
             style={{ background: 'rgba(0,0,0,0.7)' }}
           >
-            {/* Zoom slider */}
-            <div className="flex items-center gap-3">
-              <span className="text-xs" style={{ color: 'rgba(255,255,255,0.6)' }}>−</span>
-              <input
-                type="range"
-                min={1}
-                max={3}
-                step={0.05}
-                value={zoom}
-                onChange={e => setZoom(Number(e.target.value))}
-                className="flex-1 accent-[var(--theme-brand-primary)]"
-              />
-              <span className="text-xs" style={{ color: 'rgba(255,255,255,0.6)' }}>+</span>
+            {/* Choose another image (left) */}
+            <div className="flex flex-col items-center gap-1">
+              <button
+                onClick={() => { setImageToCrop(null); setCaptured(null); setCrop({ x: 0, y: 0 }); setZoom(1) }}
+                className="w-12 h-12 flex items-center justify-center rounded-full touch-manipulation"
+                style={{ background: 'rgba(255,255,255,0.15)', color: '#fff' }}
+              >
+                <RotateCcw className="w-5 h-5" />
+              </button>
+              <span className="text-[10px] font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                Chọn lại
+              </span>
             </div>
 
-            <div className="flex gap-3">
+            {/* Confirm — compact pill (center) */}
+            <button
+              onClick={handleGalleryCrop}
+              className="px-8 py-3 rounded-full text-sm font-bold touch-manipulation"
+              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+            >
+              Xác nhận
+            </button>
+
+            {/* Mode toggle (right) */}
+            <div className="flex flex-col items-center gap-1">
               <button
-                onClick={handleGalleryCrop}
-                className="flex-1 py-3 rounded-2xl text-sm font-bold touch-manipulation"
-                style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+                onClick={() => setScanMode(m => m === 'rectangle' ? 'square' : 'rectangle')}
+                className="w-12 h-12 flex items-center justify-center rounded-full touch-manipulation"
+                style={{ background: 'rgba(255,255,255,0.15)', color: '#fff' }}
               >
-                Xác nhận
+                {scanMode === 'rectangle' ? (
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <rect x="4" y="4" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                  </svg>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <rect x="1" y="5" width="18" height="10" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                  </svg>
+                )}
               </button>
-              <div className="flex flex-col items-center gap-1">
-                <button
-                  onClick={() => setScanMode(m => m === 'rectangle' ? 'square' : 'rectangle')}
-                  className="w-12 h-12 flex items-center justify-center rounded-full touch-manipulation"
-                  style={{ background: 'rgba(255,255,255,0.15)', color: '#fff' }}
-                >
-                  {scanMode === 'rectangle' ? (
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                      <rect x="4" y="4" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
-                    </svg>
-                  ) : (
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                      <rect x="1" y="5" width="18" height="10" rx="2" stroke="currentColor" strokeWidth="1.5" />
-                    </svg>
-                  )}
-                </button>
-                <span className="text-[10px] font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                  {scanMode === 'rectangle' ? 'Vuông' : 'Ngang'}
-                </span>
-              </div>
+              <span className="text-[10px] font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                {scanMode === 'rectangle' ? 'Vuông' : 'Ngang'}
+              </span>
             </div>
           </div>
         </>
