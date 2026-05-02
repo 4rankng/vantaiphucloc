@@ -1,52 +1,81 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { Home, PlusCircle, Clock, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useUnreadCount } from '@/components/shared/NotificationPanel/NotificationPanel'
+import type { LucideIcon } from 'lucide-react'
 
-interface TabItem {
-  label: string
-  icon: React.ComponentType<{ className?: string }>
+export interface TabItem {
   path: string
+  label: string
+  icon: LucideIcon
   exact?: boolean
+  badge?: 'notifications'
 }
 
 interface BottomTabBarProps {
-  items: TabItem[]
+  tabs: TabItem[]
 }
 
-export function BottomTabBar({ items }: BottomTabBarProps) {
+export function BottomTabBar({ tabs }: BottomTabBarProps) {
   const location = useLocation()
+  const unread = useUnreadCount()
+
+  // When there are many tabs, hide labels on inactive items to save space
+  const manyTabs = tabs.length > 5
 
   return (
-    <nav className="shell-bottomnav glass-overlay border-t" style={{ borderColor: 'var(--theme-border-default)' }}>
-      <div className="flex items-center justify-around h-[--shell-bottomnav-h]">
-        {items.map(item => {
-          const isActive = item.exact
-            ? location.pathname === item.path
-            : location.pathname.startsWith(item.path)
-          const Icon = item.icon
+    <nav
+      className="fixed bottom-0 inset-x-0 z-40 flex items-stretch"
+      style={{
+        background: 'var(--theme-bg-secondary)',
+        borderTop: '1px solid var(--theme-border-default)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}
+    >
+      {tabs.map(({ path, label, icon: Icon, exact, badge }) => {
+        const isActive = exact
+          ? location.pathname === path
+          : location.pathname === path || location.pathname.startsWith(path + '/')
+        const badgeCount = badge === 'notifications' ? unread : 0
+        const showLabel = !manyTabs || isActive
 
-          return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={cn(
-                'flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors touch-target',
+        return (
+          <NavLink
+            key={path}
+            to={path}
+            className={cn(
+              'relative flex flex-1 flex-col items-center justify-center gap-0.5 touch-manipulation select-none transition-colors',
+              showLabel ? 'py-2 min-h-[56px]' : 'py-3 min-h-[56px]',
+            )}
+            style={{ color: isActive ? 'var(--theme-brand-primary)' : 'var(--theme-text-muted)' }}
+          >
+            <div className="relative">
+              <Icon
+                className={cn('transition-transform', isActive ? 'w-[20px] h-[20px] scale-110' : 'w-[20px] h-[20px]')}
+                strokeWidth={isActive ? 2.2 : 1.8}
+              />
+              {badgeCount > 0 && (
+                <span
+                  className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 flex items-center justify-center rounded-full text-[9px] font-bold leading-none px-1 text-white"
+                  style={{ background: 'var(--theme-status-error)' }}
+                >
+                  {badgeCount > 99 ? '99+' : badgeCount}
+                </span>
               )}
-              style={{ color: isActive ? 'var(--theme-brand-primary)' : 'var(--theme-text-muted)' }}
-            >
-              <Icon className="w-5 h-5" />
-              <span className="text-2xs font-medium">{item.label}</span>
-            </NavLink>
-          )
-        })}
-      </div>
+            </div>
+            {showLabel && (
+              <span className={cn('text-[10px] leading-none max-w-[52px] text-center truncate', isActive ? 'font-semibold' : 'font-normal')}>
+                {label}
+              </span>
+            )}
+            {isActive && (
+              <span
+                className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-b-full"
+                style={{ background: 'var(--theme-brand-primary)' }}
+              />
+            )}
+          </NavLink>
+        )
+      })}
     </nav>
   )
 }
-
-export const DRIVER_TABS: TabItem[] = [
-  { label: 'Trang chủ', icon: Home, path: '/driver', exact: true },
-  { label: 'Tạo chuyến', icon: PlusCircle, path: '/driver/work-orders/new' },
-  { label: 'Lịch sử', icon: Clock, path: '/driver/history' },
-  { label: 'Hồ sơ', icon: User, path: '/driver/profile' },
-]

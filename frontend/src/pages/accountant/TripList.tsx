@@ -1,11 +1,20 @@
-import { useState, useRef } from 'react'
+import { useRef, useState, useMemo } from 'react'
 import { useTripOrders, useImportTripOrders, useExportTripOrdersExcel } from '@/hooks/use-queries'
-import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { TripOrderCard } from '@/components/shared/TripOrderCard'
-import { Plus, Truck, Upload, Download } from 'lucide-react'
+import { Plus, Upload, Download, Search } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui'
+import { Input } from '@/components/ui'
 import { useToast } from '@/components/atoms/Toast'
+import type { TripOrderStatus } from '@/data/domain'
+
+const STATUS_FILTERS: { key: TripOrderStatus | 'ALL'; label: string; color?: string }[] = [
+  { key: 'ALL',       label: 'Tất cả' },
+  { key: 'DRAFT',     label: 'Nháp',        color: 'var(--theme-text-muted)' },
+  { key: 'PENDING',   label: 'Chờ đối soát', color: 'var(--theme-status-warning)' },
+  { key: 'COMPLETED', label: 'Hoàn thành',   color: 'var(--theme-status-success)' },
+  { key: 'CANCELLED', label: 'Đã huỷ',       color: 'var(--theme-status-error)' },
+]
 
 export function TripList() {
   const { data: trips = [], isLoading: loading } = useTripOrders()
@@ -16,10 +25,33 @@ export function TripList() {
   const exportMutation = useExportTripOrdersExcel()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [importing, setImporting] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<TripOrderStatus | 'ALL'>('ALL')
+  const [search, setSearch] = useState('')
 
   const basePath = location.pathname.startsWith('/director') ? '/director' : '/accountant'
   const createTripPath = `${basePath}/create-trip`
   const tripDetailPath = (id: number) => `${basePath}/trip/${id}`
+
+  const filtered = useMemo(() => {
+    let list = trips
+    if (statusFilter !== 'ALL') list = list.filter(t => t.status === statusFilter)
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      list = list.filter(t =>
+        t.clientName.toLowerCase().includes(q) ||
+        t.tractorPlate.toLowerCase().includes(q) ||
+        t.route.toLowerCase().includes(q) ||
+        t.containers.some(c => c.containerNumber.toLowerCase().includes(q))
+      )
+    }
+    return list
+  }, [trips, statusFilter, search])
+
+  const counts = useMemo(() => {
+    const map: Record<string, number> = { ALL: trips.length }
+    trips.forEach(t => { map[t.status] = (map[t.status] ?? 0) + 1 })
+    return map
+  }, [trips])
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -27,7 +59,7 @@ export function TripList() {
     setImporting(true)
     const res = await importMutation.mutateAsync(file)
     if (res.success) {
-      toast.success(`Nhập thành công ${res.data.created} chuyến`, res.data.errors.length ? `${res.data.errors.length} lỗi` : undefined)
+      toast.success(`Nhập thành công ${res.data.created} lệnh`, res.data.errors.length ? `${res.data.errors.length} lỗi` : undefined)
     } else {
       toast.error('Nhập thất bại')
     }
@@ -40,7 +72,7 @@ export function TripList() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'trip_orders.xlsx'
+    a.download = 'lenh_dieu_hanh.xlsx'
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -57,8 +89,16 @@ export function TripList() {
 
   return (
     <div className="space-y-3">
-      {/* Action bar */}
+      {/* ── Header actions ── */}
       <div className="flex items-center gap-2">
+        <Button
+          onClick={() => navigate(createTripPath)}
+          className="flex items-center gap-1.5 h-9 px-4 text-sm font-bold rounded-xl"
+          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+        >
+          <Plus className="w-4 h-4" /> Tạo lệnh
+        </Button>
+        <div className="flex-1" />
         <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden" />
         <Button
           onClick={() => fileInputRef.current?.click()}
@@ -66,38 +106,72 @@ export function TripList() {
           className="flex items-center gap-1.5 h-9 px-3 text-xs font-semibold rounded-lg"
           style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
         >
-          <Upload className="w-3.5 h-3.5" /> {importing ? 'Đang nhập...' : 'Nhập Excel'}
+          <Upload className="w-3.5 h-3.5" /> {importing ? 'Đang nhập...' : 'Nhập'}
         </Button>
         <Button
           onClick={handleExport}
           className="flex items-center gap-1.5 h-9 px-3 text-xs font-semibold rounded-lg"
           style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
         >
-          <Download className="w-3.5 h-3.5" /> Xuất Excel
+          <Download className="w-3.5 h-3.5" /> Xuất
         </Button>
       </div>
 
-      {trips.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
-          <div className="h-16 w-16 rounded-2xl flex items-center justify-center"
-            style={{ background: 'var(--theme-bg-secondary)' }}>
-            <Truck className="w-8 h-8" style={{ color: 'var(--theme-text-muted)' }} />
-          </div>
-          <div>
-            <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Chưa có chuyến nào</p>
-            <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Nhấn nút bên dưới để tạo chuyến mới</p>
-          </div>
-          <Button
-            onClick={() => navigate(createTripPath)}
-            className="hidden lg:flex items-center gap-2 h-10 px-5 font-semibold rounded-xl"
-            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-          >
-            <Plus className="w-4 h-4" /> Tạo chuyến
-          </Button>
+      {/* ── Status filter tabs ── */}
+      <div className="flex gap-1.5 overflow-x-auto pb-0.5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        {STATUS_FILTERS.map(({ key, label, color }) => {
+          const isActive = statusFilter === key
+          const count = counts[key] ?? 0
+          return (
+            <button
+              key={key}
+              onClick={() => setStatusFilter(key)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all touch-manipulation"
+              style={{
+                background: isActive ? (color ?? 'var(--theme-brand-primary)') : 'var(--theme-bg-secondary)',
+                color: isActive ? (key === 'ALL' ? 'var(--theme-text-on-brand)' : '#fff') : (color ?? 'var(--theme-text-muted)'),
+                border: `1px solid ${isActive ? 'transparent' : 'var(--theme-border-default)'}`,
+              }}
+            >
+              {label}
+              {count > 0 && (
+                <span className="text-[10px] font-bold px-1 py-0.5 rounded-full min-w-[18px] text-center"
+                  style={{
+                    background: isActive ? 'rgba(255,255,255,0.25)' : 'var(--theme-bg-tertiary)',
+                    color: isActive ? '#fff' : 'var(--theme-text-muted)',
+                  }}>
+                  {count}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* ── Search ── */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
+        <Input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Tìm khách hàng, biển số, container..."
+          className="text-sm pl-9 h-9"
+        />
+      </div>
+
+      {/* ── List ── */}
+      {filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+          <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+            {search || statusFilter !== 'ALL' ? 'Không tìm thấy lệnh nào' : 'Chưa có lệnh điều hành'}
+          </p>
+          {!search && statusFilter === 'ALL' && (
+            <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Nhấn "Tạo lệnh" để bắt đầu</p>
+          )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 lg:gap-3">
-          {trips.map(trip => (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2 lg:gap-3">
+          {filtered.map(trip => (
             <TripOrderCard
               key={trip.id}
               trip={trip}
@@ -106,7 +180,6 @@ export function TripList() {
           ))}
         </div>
       )}
-      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => navigate(createTripPath)} />
     </div>
   )
 }

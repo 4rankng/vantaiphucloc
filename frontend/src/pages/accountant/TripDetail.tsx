@@ -5,7 +5,7 @@ import { InfoRow } from '@/components/shared/InfoRow'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { ConfirmationCheckbox } from '@/components/shared/ConfirmationCheckbox'
 import { formatCurrencyFull, WORK_TYPES, type WorkType } from '@/data/domain'
-import { Building2, Route, UserCircle, Wallet, Link2, Pencil } from 'lucide-react'
+import { Building2, Route, UserCircle, Wallet, Link2, Pencil, Lock } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
@@ -109,28 +109,54 @@ export function TripDetail() {
       <div className="rounded-2xl p-4 space-y-1"
         style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
         <div className="flex items-center justify-between mb-2">
-          <p className="text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>Chuyến</p>
+          <p className="text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>Lệnh điều hành</p>
           <div className="flex items-center gap-2">
             <ConfirmationCheckbox
               isConfirmed={trip.isConfirmed}
               onToggle={handleToggleConfirmation}
-              disabled={toggling}
+              disabled={toggling || trip.status === 'CANCELLED'}
               label="Đã chốt"
             />
-            <button onClick={handleOpenEdit}
-              className="h-7 w-7 flex items-center justify-center rounded-lg touch-manipulation"
-              style={{ color: 'var(--theme-text-muted)' }}>
-              <Pencil className="h-3.5 w-3.5" />
-            </button>
+            {trip.isConfirmed ? (
+              <div className="flex items-center gap-1 px-2 py-1 rounded-lg"
+                style={{ background: 'var(--theme-status-success-light)' }}>
+                <Lock className="w-3 h-3" style={{ color: 'var(--theme-status-success)' }} />
+                <span className="text-xs font-semibold" style={{ color: 'var(--theme-status-success)' }}>Đã khoá</span>
+              </div>
+            ) : (
+              <button onClick={handleOpenEdit}
+                className="h-7 w-7 flex items-center justify-center rounded-lg touch-manipulation"
+                style={{ color: 'var(--theme-text-muted)' }}>
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            )}
             <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
               style={{
-                background: trip.status === 'DRAFT' ? 'var(--theme-status-warning-light)' : 'var(--theme-status-success-light)',
-                color: trip.status === 'DRAFT' ? 'var(--theme-status-warning)' : 'var(--theme-status-success)',
+                background: trip.status === 'DRAFT' ? 'var(--theme-bg-tertiary)'
+                  : trip.status === 'PENDING' ? 'var(--theme-status-warning-light)'
+                  : trip.status === 'COMPLETED' ? 'var(--theme-status-success-light)'
+                  : 'var(--theme-status-error-light)',
+                color: trip.status === 'DRAFT' ? 'var(--theme-text-muted)'
+                  : trip.status === 'PENDING' ? 'var(--theme-status-warning)'
+                  : trip.status === 'COMPLETED' ? 'var(--theme-status-success)'
+                  : 'var(--theme-status-error)',
               }}>
-              {trip.status === 'DRAFT' ? 'Đối soát khách hàng' : 'Đã khớp'}
+              {trip.status === 'DRAFT' ? 'Nháp'
+                : trip.status === 'PENDING' ? 'Chờ đối soát'
+                : trip.status === 'COMPLETED' ? 'Đã khớp'
+                : 'Đã huỷ'}
             </span>
           </div>
         </div>
+        {trip.isConfirmed && (
+          <div className="rounded-xl px-3 py-2 mb-2 flex items-center gap-2"
+            style={{ background: 'var(--theme-status-success-light)' }}>
+            <Lock className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--theme-status-success)' }} />
+            <p className="text-xs font-semibold" style={{ color: 'var(--theme-status-success)' }}>
+              Lệnh đã chốt với khách — không thể thay đổi
+            </p>
+          </div>
+        )}
         <InfoRow icon={Building2} label="Khách hàng" value={trip.clientName} noBorder />
         <InfoRow icon={Route} label="Cung đường" value={trip.route} noBorder />
         <InfoRow icon={UserCircle} label="Tài xế" value={`${trip.driverName} · ${trip.tractorPlate}`} noBorder />

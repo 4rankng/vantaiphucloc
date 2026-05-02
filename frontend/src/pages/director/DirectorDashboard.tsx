@@ -102,8 +102,8 @@ export function DirectorDashboard() {
 
       <MonthNavigator year={month.year} month={month.month} onPrev={prevMonth} onNext={nextMonth} />
 
-      {/* Quick actions — mobile only (sidebar replaces on desktop) */}
-      <div className="flex flex-wrap gap-2 lg:hidden">
+      {/* Quick actions */}
+      <div className="flex flex-wrap gap-2">
         <button
           onClick={() => navigate('/director/users')}
           className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold touch-manipulation"
