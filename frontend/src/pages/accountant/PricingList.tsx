@@ -2,60 +2,13 @@ import { useState, useMemo } from 'react'
 import { usePricings, useClients, useRoutes, useCreatePricing, useUpdatePricing, useDeletePricing, useCreateClient } from '@/hooks/use-queries'
 import { formatCurrencyFull, WORK_TYPES, type Pricing, type PricingLine, type WorkType } from '@/data/domain'
 import { ContBadge } from '@/components/shared/ContBadge'
-import { RouteDisplay } from '@/components/shared/RouteDisplay'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { CreateClientDialog } from '@/components/shared/CreateClientDialog'
-import { Plus, Pencil, Trash2, X, Check, Search } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Check } from 'lucide-react'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
-
-// ─── Pricing Card ─────────────────────────────────────────────────────────────
-function PricingCard({ pricing, onEdit, onDelete }: {
-  pricing: Pricing; onEdit: () => void; onDelete: () => void
-}) {
-  return (
-    <div className="rounded-2xl p-3 space-y-2"
-      style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
-      <div className="flex items-center justify-between">
-        <div className="flex flex-wrap items-center gap-1.5">
-          {pricing.lines.map((line, i) => (
-            <span key={i} className="flex items-center gap-1">
-              {i > 0 && <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>+</span>}
-              <ContBadge type={line.workType} />
-              <span className="text-xs font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>×{line.quantity}</span>
-            </span>
-          ))}
-        </div>
-        <div className="flex items-center gap-1">
-          <button onClick={onEdit} className="p-1.5 rounded-lg touch-manipulation" style={{ color: 'var(--theme-text-muted)' }}>
-            <Pencil className="w-3.5 h-3.5" />
-          </button>
-          <button onClick={onDelete} className="p-1.5 rounded-lg touch-manipulation" style={{ color: 'var(--theme-status-error)' }}>
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-      <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{pricing.clientName}</p>
-      <RouteDisplay route={pricing.route} pickupLocation={pricing.pickupLocation} dropoffLocation={pricing.dropoffLocation} />
-      <div className="grid grid-cols-3 gap-2 pt-1" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
-        <div>
-          <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Đơn giá</p>
-          <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyFull(pricing.unitPrice)}</p>
-        </div>
-        <div>
-          <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Lương tài xế</p>
-          <p className="text-sm font-semibold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(pricing.driverSalary)}</p>
-        </div>
-        <div>
-          <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Phụ cấp</p>
-          <p className="text-sm font-semibold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(pricing.allowance)}</p>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 // ─── Line editor ──────────────────────────────────────────────────────────────
 function LineEditor({ lines, onChange }: {
@@ -260,28 +213,17 @@ export function PricingList() {
 
   const [showForm, setShowForm] = useState(false)
   const [editingPricing, setEditingPricing] = useState<Pricing | undefined>()
-  const [searchQuery, setSearchQuery] = useState('')
   const [createClientOpen, setCreateClientOpen] = useState(false)
-
-  const filtered = useMemo(() => {
-    if (!searchQuery.trim()) return pricings
-    const q = searchQuery.toLowerCase()
-    return pricings.filter(p =>
-      p.clientName.toLowerCase().includes(q) ||
-      p.route.toLowerCase().includes(q) ||
-      p.lines.some(l => l.workType.toLowerCase().includes(q))
-    )
-  }, [pricings, searchQuery])
 
   const grouped = useMemo(() => {
     const map = new Map<string, Pricing[]>()
-    filtered.forEach(p => {
+    pricings.forEach(p => {
       const list = map.get(p.clientName) ?? []
       list.push(p)
       map.set(p.clientName, list)
     })
     return Array.from(map.entries())
-  }, [filtered])
+  }, [pricings])
 
   const handleSave = (data: Omit<Pricing, 'id' | 'createdAt' | 'updatedAt'>) => {
     if (editingPricing) {
@@ -312,14 +254,6 @@ export function PricingList() {
   return (
     <div className="space-y-4">
       <div className="relative">
-        <div className="flex items-center gap-2">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-            <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Tìm khách hàng, cung đường..." className="text-xs h-9 pl-8" />
-          </div>
-        </div>
-
         {showForm && (
           <PricingForm initial={editingPricing} clients={clients} routes={routes}
             onSave={handleSave}
@@ -328,23 +262,73 @@ export function PricingList() {
           />
         )}
 
-        {grouped.map(([clientName, items]) => (
-          <div key={clientName} className="mt-4">
-            <p className="text-xs font-bold uppercase tracking-wide mb-1.5" style={{ color: 'var(--theme-text-muted)' }}>{clientName}</p>
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2 lg:gap-3">
-              {items.map(p => (
-                <PricingCard key={p.id} pricing={p}
-                  onEdit={() => { setEditingPricing(p); setShowForm(true) }}
-                  onDelete={() => handleDelete(p.id)} />
-              ))}
+        {grouped.map(([clientName, items]) => {
+          const rows = items.flatMap((p) =>
+            p.lines.map((line, lIdx, lines) => ({
+              pricing: p,
+              line,
+              lIdx,
+              linesCount: lines.length,
+            }))
+          )
+          return (
+            <div key={clientName} className="mt-4 first:mt-0">
+              <p className="text-xs font-bold uppercase tracking-wide mb-1.5" style={{ color: 'var(--theme-text-muted)' }}>{clientName}</p>
+              <div className="overflow-x-auto rounded-xl"
+                style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr style={{ background: 'var(--theme-bg-tertiary)' }}>
+                      <th className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>STT</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Điểm đến</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Điểm trả</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Loại cont</th>
+                      <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>SL</th>
+                      <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Đơn giá</th>
+                      <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Lương tài</th>
+                      <th className="px-3 py-2 text-right text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Phụ cấp</th>
+                      <th className="px-2 py-2 w-10" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((row, idx) => (
+                      <tr key={`${row.pricing.id}-${row.lIdx}`}
+                        style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
+                        <td className="px-3 py-2 text-xs tabular-nums" style={{ color: 'var(--theme-text-muted)' }}>{idx + 1}</td>
+                        <td className="px-3 py-2 text-xs" style={{ color: 'var(--theme-text-primary)' }}>{row.pricing.pickupLocation}</td>
+                        <td className="px-3 py-2 text-xs" style={{ color: 'var(--theme-text-primary)' }}>{row.pricing.dropoffLocation}</td>
+                        <td className="px-3 py-2"><ContBadge type={row.line.workType} /></td>
+                        <td className="px-3 py-2 text-xs text-right tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{row.line.quantity}</td>
+                        <td className="px-3 py-2 text-xs text-right tabular-nums font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyFull(row.line.unitPrice)}</td>
+                        <td className="px-3 py-2 text-xs text-right tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(row.line.driverSalary)}</td>
+                        <td className="px-3 py-2 text-xs text-right tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(row.line.allowance)}</td>
+                        {row.lIdx === 0 && (
+                          <td rowSpan={row.linesCount} className="px-2 py-2">
+                            <div className="flex items-center gap-0.5">
+                              <button onClick={() => { setEditingPricing(row.pricing); setShowForm(true) }}
+                                className="p-1 rounded-md touch-manipulation" style={{ color: 'var(--theme-text-muted)' }}>
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={() => handleDelete(row.pricing.id)}
+                                className="p-1 rounded-md touch-manipulation" style={{ color: 'var(--theme-status-error)' }}>
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
 
         {grouped.length === 0 && (
           <div className="text-center py-8">
             <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>
-              {searchQuery ? 'Không tìm thấy bảng giá' : 'Chưa có bảng giá'}
+              {'Chưa có bảng giá'}
             </p>
           </div>
         )}
