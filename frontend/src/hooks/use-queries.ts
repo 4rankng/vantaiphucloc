@@ -261,6 +261,21 @@ export function useUpdatePricing() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<Pricing> }) => apiClient.updatePricing(id, data),
+    onMutate: async ({ id, data }) => {
+      await qc.cancelQueries({ queryKey: ['pricings'] })
+      const previous = qc.getQueriesData<Pricing[]>({ queryKey: ['pricings'] })
+      qc.setQueriesData<Pricing[]>({ queryKey: ['pricings'] }, (old) =>
+        old?.map(p => p.id === id ? { ...p, ...data } : p),
+      )
+      return { previous }
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        for (const [key, data] of context.previous) {
+          qc.setQueryData(key, data)
+        }
+      }
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['pricings'] }) },
   })
 }

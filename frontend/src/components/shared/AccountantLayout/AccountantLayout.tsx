@@ -30,6 +30,7 @@ function resolveTitle(pathname: string): string {
   if (pathname.startsWith('/accountant/trip/'))       return 'Chi tiết lệnh'
   if (pathname.startsWith('/accountant/match/'))      return 'Đối soát'
   if (pathname.startsWith('/accountant/match-trip/')) return 'Đối soát'
+  if (pathname.startsWith('/accountant/pricing/'))    return 'Bảng giá'
   return ''
 }
 
