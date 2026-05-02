@@ -1,7 +1,7 @@
-# BizLogic.md — Phúc Lộc Transport Business Operations
+# BizLogic.md — Phúc Lộc Transport Business Operations (Updated 2026-05-02)
 
 > **Source of Truth** for all business logic in the vantaiphucloc system.
-> When discussing business operations with the client, reference this file. Update it when requirements change.
+> This update includes: pricing by quantity, strict container type rules, locking after confirmation, audit log, and deletion policies.
 
 ---
 
@@ -20,31 +20,9 @@
 | Role | Vietnamese | Can Do | Cannot Do |
 |------|-----------|--------|-----------|
 | **superadmin** | SuperAdmin | Everything — full CRUD on all entities, manage users, delete vendors, configure salary | — |
-| **director** | Giám đốc | View dashboard, full CRUD on users, clients, vendors, routes, pricings, trip orders | Cannot reconcile (match WO→TO), cannot create work orders, cannot calculate/configure salary |
+| **director** | Giám đốc | View dashboard, full CRUD on users, clients, vendors, routes, pricings, trip orders | Cannot reconcile, cannot create work orders, cannot configure salary |
 | **accountant** | Kế toán | Create/edit clients, routes, pricings, trip orders, reconcile, calculate salary, manage salary config, manage vendors, manage drivers | Cannot manage users |
 | **driver** | Tài xế | Create work orders (single + batch), view own work orders, view own salary | Cannot access any other entity |
-
-### Detailed Permission Matrix
-
-| Action | superadmin | director | accountant | driver |
-|--------|:----------:|:--------:|:----------:|:------:|
-| View dashboard/summary | ✅ | ✅ | ✅ | — |
-| CRUD clients | ✅ | ✅ | ✅ | — |
-| CRUD routes | ✅ | ✅ | ✅ | — |
-| CRUD pricings | ✅ | ✅ | ✅ | — |
-| Create work orders | — | — | — | ✅ |
-| Edit work orders | ✅ | — | ✅ | — |
-| View work orders | ✅ | ✅ | ✅ | Own only |
-| CRUD trip orders | ✅ | ✅ | ✅ | — |
-| Reconcile (match WO→TO) | ✅ | — | ✅ | — |
-| Client reconciliation (Excel) | ✅ | — | ✅ | — |
-| Calculate salary | ✅ | — | ✅ | — |
-| View salary periods | ✅ | ✅ | ✅ | — |
-| Configure salary periods | ✅ | — | ✅ | — |
-| CRUD users | ✅ | ✅ | — | — |
-| Delete users (deactivate) | ✅ | ✅ | — | — |
-| CRUD vendors | ✅ | ✅ | ✅ | — |
-| CRUD drivers | ✅ | — | ✅ | — |
 
 ---
 
@@ -52,104 +30,113 @@
 
 ### 3.1 Client (Khách hàng)
 
-The companies or individuals that hire Phúc Lộc to transport containers.
-
 | Field | Type | Description |
 |-------|------|-------------|
-| code | string? (unique) | Mã khách hàng — short code for easy identification by drivers |
+| code | string? (unique) | Mã khách hàng — for drivers to identify quickly |
 | name | string | Client full name |
 | type | `company` \| `individual` | Business type |
 | phone | string | Contact phone |
 | tax_code | string? | Tax code (mã số thuế) |
 | address | string? | Address |
 | contact_person | string? | Contact person name |
+| is_active | boolean | Soft delete flag — default true |
 
 **Business Rules:**
-- Drivers see client **code** instead of full name for quick identification in the field.
-- Code is optional but recommended for all active clients.
+- Drivers see client **code** instead of full name.
+- When client has existing TO or WO, cannot hard delete — only set `is_active = false`.
 
 ### 3.2 Vendor (Nhà thầu)
-
-External companies that provide drivers to Phúc Lộc. Internal drivers belong to "Phúc Lộc".
 
 | Field | Type | Description |
 |-------|------|-------------|
 | name | string (unique) | Vendor company name |
+| is_active | boolean | Soft delete flag |
 
 **Business Rules:**
-- Cannot delete a vendor that has associated drivers.
+- Cannot delete vendor with associated drivers — soft delete only.
 - Default vendor for internal drivers: "Phúc Lộc".
-- External drivers (lái xe ngoài/thuê xe ngoài) are associated with their vendor company. If there aren't enough internal trucks, Phúc Lộc hires external drivers who record work on paper/Excel and send to Phúc Lộc for processing.
 
 ### 3.3 Route (Tuyến đường)
 
-Predefined transport routes with reference pricing by container size.
-
 | Field | Type | Description |
 |-------|------|-------------|
-| route | string | Route name/description (e.g., "Cát Lái - Bình Dương") |
+| route | string | Route name/description |
 | pickup_location | string? | Điểm lấy (pickup point) |
 | dropoff_location | string? | Điểm trả (dropoff point) |
 | type_20ft | int (VND) | Reference price for 20ft container |
 | type_40ft | int (VND) | Reference price for 40ft container |
 | is_two_way | boolean | Whether the route is round-trip |
+| is_active | boolean | Soft delete flag |
 
 **Business Rules:**
-- Route reference prices are **guidelines only**. Actual prices come from the Pricing table per client.
-- Pickup and dropoff locations allow drivers and accountants to see the two endpoints of a route as separate lines.
+- Pickup + dropoff = route. No mixed routes in one Trip Order.
+- If route has existing Pricing, TO, or WO, soft delete only.
 
-### 3.4 Pricing (Bảng giá)
+### 3.4 Pricing (Bảng giá) — UPDATED
 
-Per-client pricing agreement. Defines how much a specific client pays for a specific work type on a specific route, and how much the driver earns.
+Per-client pricing agreement **BY QUANTITY** (số lượng container).
+Each quantity tier defines `unit_price`, `driver_salary`, `allowance`.
+
+**Pricing (parent):**
 
 | Field | Type | Description |
 |-------|------|-------------|
 | client_id | int (FK) | Which client this price applies to |
-| client_name | string | Denormalized for display |
-| work_type | `E20` \| `E40` \| `F20` \| `F40` | Container type + load type |
+| client_name | string | Denormalized |
 | route | string | Route description |
-| unit_price | int (VND) | Amount the client pays Phúc Lộc |
-| driver_salary | int (VND) | Base driver pay per job |
-| allowance | int (VND) | Additional driver allowance per job |
-| lines | PricingLine[] | Sub-items with work_type + quantity |
+| work_type | `E20` \| `E40` \| `F20` \| `F40` | Container type + load type |
+| is_active | boolean | Soft delete flag |
 
-**Work Types:**
-| Code | Meaning |
-|------|---------|
-| E20 | Container rỗng (empty) 20ft |
-| E40 | Container rỗng (empty) 40ft |
-| F20 | Container hàng (full/loaded) 20ft |
-| F40 | Container hàng (full/loaded) 40ft |
+**PricingLine (child table):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| quantity | int | Number of containers (1 or 2 for 20ft; only 1 for 40ft) |
+| unit_price | int (VND) | Amount the client pays Phúc Lộc for this quantity |
+| driver_salary | int (VND) | Base driver pay for this quantity |
+| allowance | int (VND) | Additional driver allowance for this quantity |
 
 **Business Rules:**
-- Pricing is matched by `(client_id, work_type, route)`. When a driver creates a work order, the system auto-looks up the pricing.
-- `unit_price` = revenue from client. `driver_salary` + `allowance` = driver cost. Profit = `unit_price - (driver_salary + allowance)`.
-- PricingLines allow quantity-based pricing tiers. Example: client X, route Cảng, work type E20 — quantity 1: 500K, quantity 2: 650K.
+- Pricing is matched by `(client_id, work_type, route, quantity)`.
+- For 40ft containers, only `quantity=1` is allowed. For 20ft, quantity can be 1 or 2.
+- When creating Trip Order with N containers, system looks up pricing for exact quantity.
+- If not found, accountant must enter all values manually.
+- No automatic multiplication from `quantity=1` to higher quantities.
+- If pricing has existing TO references, soft delete only (`is_active=false`).
 
-### 3.5 Work Order (Phiếu làm việc)
+**Example:**
 
-Created by **drivers** in the field. Records the physical work done: which containers were moved, from/to where, GPS location.
+| Client | Route | Work Type | Quantity | unit_price | driver_salary | allowance |
+|--------|-------|-----------|----------|------------|---------------|-----------|
+| Công ty A | Cát Lái - Sóng Thần | F20 | 1 | 2.000.000 | 100.000 | 0 |
+| Công ty A | Cát Lái - Sóng Thần | F20 | 2 | 3.500.000 | 200.000 | 50.000 |
+
+### 3.5 Work Order (Phiếu làm việc) — UPDATED
 
 | Field | Type | Description |
 |-------|------|-------------|
 | containers | ContainerItem[] | List of containers in this work order |
-| client_id | int (FK, nullable) | Client (may be null for driver-created WOs — filled later by accountant) |
+| client_id | int (FK, nullable) | Client |
 | client_name | string | Denormalized |
-| client_code | string? | Denormalized client code for display |
+| client_code | string? | Denormalized client code |
 | route | string | Route description |
 | driver_id | int (FK) | Driver who did the work |
 | driver_name | string | Denormalized |
 | tractor_plate | string | Truck plate number |
 | gps_lat, gps_lng | float? | GPS coordinates at creation time |
-| gps_address | string? | Reverse-geocoded address (async) |
+| gps_address | string? | Reverse-geocoded address |
 | unit_price | int (VND) | Always 0 on creation (revenue tracked in TO only) |
-| driver_salary | int (VND) | 0 on creation, synced from TO when matched |
-| allowance | int (VND) | 0 on creation, synced from TO when matched |
-| earning | int (VND) | 0 on creation, = TO.driver_salary + TO.allowance when matched |
-| pricing_id | int (FK)? | Link to Pricing record found at creation (for reference only) |
+| driver_salary | int (VND) | Synced from TO when matched |
+| allowance | int (VND) | Synced from TO when matched |
+| earning | int (VND) | = driver_salary + allowance when matched |
+| pricing_id | int (FK)? | Link to Pricing record (for reference) |
 | status | `PENDING` → `MATCHED` → `COMPLETED` | Lifecycle status |
+| is_locked | boolean | Locked when linked TO is confirmed. Default false. |
+| locked_at | datetime? | When locked |
+| locked_by | int (FK: user)? | Who locked |
 
 **Container Item:**
+
 | Field | Type | Description |
 |-------|------|-------------|
 | container_number | string | Container ID (e.g., "MSKU-1234567") |
@@ -161,79 +148,47 @@ Created by **drivers** in the field. Records the physical work done: which conta
 **Work Order Lifecycle:**
 ```
 Driver creates WO → PENDING (no match)
-                          ↓ (match found, no pricing)
-Accountant reconciles WO with a TripOrder → MATCHED (chờ giá)
-                          ↓ (pricing provided)
-                     COMPLETED (hoàn thành)
-
-Or directly:
-Driver creates WO → PENDING
-                          ↓ (match found + pricing provided)
-                     COMPLETED
+                          ↓ (match found, TO in PENDING)
+                     MATCHED (linked to TO, earning synced from TO)
+                          ↓ (TO becomes CONFIRMED)
+                     COMPLETED + LOCKED (cannot change)
 ```
 
 **Business Rules:**
-- **No auto-pricing on creation:** WO financials (`unit_price`, `driver_salary`, `allowance`, `earning`) always default to 0 on creation. Pricing is used for TO, not WO.
-- **Status only tracks match state:** PENDING (no match), MATCHED (match found but no pricing), COMPLETED (match found + pricing).
-- **GPS capture:** Driver's GPS coordinates are captured at creation time. Background worker reverse-geocodes the address.
-- **Offline support:** Drivers can create work orders offline. They are queued locally and synced when back online. Batch creation supports up to 50 WOs at once.
-- **Multi-container support:** One work order can have 1, 2, or more containers (via child table).
-- **When matched to TO:** WO's `driver_salary`, `allowance`, `earning` are synced from TO. `WO.unit_price` stays 0 (revenue tracked in TO only).
-- **Container OCR:** Drivers can upload photo of container for AI OCR extraction. AI has max 5 attempts. If all fail, driver enters manually. Backend validates against ISO 6346.
-- **Driver workflow:** Driver opens app → takes photo of container → system auto-fills container number → driver selects work type (E20/E40/F20/F40) → selects client (shown by code) → selects route. If OCR fails or recognizes incorrectly, driver can manually correct the container number.
+- `earning` is always 0 on creation. Only updated when matched to a Trip Order.
+- A Work Order can only be matched to a Trip Order that is in `PENDING` state (not `DRAFT`).
+- After matching, if Trip Order's `driver_salary` or `allowance` changes AND Trip Order is not yet confirmed (`is_confirmed=false`), the Work Order's `earning`, `driver_salary`, `allowance` are **automatically** updated and salary recalculation triggered.
+- Once linked Trip Order is confirmed (`is_confirmed=true`), Work Order becomes `is_locked=true`. No further changes allowed.
+- Accountant can edit `client_id` on Work Order during reconciliation (audit log recorded).
+- Driver can delete/edit Work Order when `status = PENDING`. Accountant can also delete/edit `PENDING` Work Orders.
+- Once `MATCHED` or `COMPLETED`, Work Order cannot be deleted.
 
-### 3.6 Trip Order (Lệnh điều hành)
-
-Created by **accountants**. Represents the commercial/financial record of a trip — what the client is charged.
+### 3.6 Trip Order (Lệnh điều hành) — UPDATED
 
 | Field | Type | Description |
 |-------|------|-------------|
 | trip_date | date | Date of the trip |
 | client_id | int (FK) | Client being charged |
 | client_name | string | Denormalized |
-| work_type | WorkType | Container type (legacy field, nullable — use containers table) |
+| work_type | WorkType | Legacy (nullable) — use containers table |
 | route | string | Route |
 | tractor_plate | string | Truck plate |
 | driver_id | int (FK) | Driver who drove |
 | driver_name | string | Denormalized |
-| container_number | string | Container ID (legacy field, nullable — use containers table) |
-| containers | TripOrderContainer[] | Child table with multiple containers (container_number, work_type) |
+| container_number | string | Legacy (nullable) — use containers table |
+| containers | TripOrderContainer[] | Child table with multiple containers |
 | pricing_id | int (FK)? | Pricing used |
 | unit_price | int (VND) | Revenue from client |
 | driver_salary | int (VND) | Driver base pay |
 | allowance | int (VND) | Driver allowance |
-| revenue | int (VND) | = unit_price (client-facing revenue) |
+| revenue | int (VND) | = unit_price |
 | matched_work_order_ids | int[] | Work orders linked to this trip |
-| is_confirmed | boolean | Whether trip is confirmed/locked with client ("Đã chốt") |
-| confirmed_by | int? (FK) | User who confirmed |
+| is_confirmed | boolean | "Đã chốt" with client — once true, locks this TO and all linked WOs |
+| confirmed_by | int (FK)? | User who confirmed |
 | confirmed_at | datetime? | When confirmed |
-| status | `DRAFT` → `CONFIRMED` → `INVOICED` or `CANCELLED` | Lifecycle |
+| status | `DRAFT` → `PENDING` → `COMPLETED` → `CANCELLED` | Lifecycle |
 
-**Trip Order Lifecycle:**
-```
-Accountant creates TO → DRAFT (missing required info: containers, client, route, or pricing)
-                          ↓ (all info provided)
-                     PENDING (ready for matching)
-                          ↓ (match found with WO)
-                     COMPLETED
-
-DRAFT/PENDING → CANCELLED (cannot cancel COMPLETED)
-```
-
-**Business Rules:**
-- **Multi-container support:** One TO can have 1, 2, or more containers (via `TripOrderContainer` child table).
-- **Legacy fields:** `container_number` and `work_type` on TripOrder are nullable for backwards compatibility. New code should use the `containers` child table.
-- A trip order can match **multiple work orders** (via join table).
-- **Auto-pricing on create:** When creating a TO, the system auto-looks up pricing from `Pricing` table by `(client_id, work_type, route)`. If found, `unit_price`, `driver_salary`, `allowance` are auto-filled. If not found, accountant must enter manually or create new pricing.
-- **Status determination:** On TO create, status = `DRAFT` if missing required info (containers, client, route, or pricing), else `PENDING`.
-- **When matched to WO:** TO status → `COMPLETED`.
-- **Can cancel:** TO can only be cancelled while in `DRAFT` or `PENDING`. Cannot cancel `COMPLETED` TOs.
-- **Confirmation ("Đã chốt"):** Accountant marks a trip order as confirmed after verifying container numbers match the client's records. This distinguishes containers that are fully reconciled with the client from those still pending — which may be due to driver recording wrong route or wrong client.
-- Salary recalculation is auto-triggered when trip order is created or when matched work orders change.
-
-### 3.6.1 TripOrderContainer (Container trong Lệnh điều hành)
-
-Child table of TripOrder, storing multiple containers per trip order. Mirrors the WorkOrderContainer pattern.
+**TripOrderContainer (child table):**
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -242,56 +197,31 @@ Child table of TripOrder, storing multiple containers per trip order. Mirrors th
 | container_number | string | Container ID |
 | work_type | WorkType | E20/E40/F20/F40 |
 
+**Trip Order Lifecycle:**
+```
+Accountant creates TO → DRAFT (missing info)
+                          ↓ (all info provided)
+                     PENDING (ready for matching)
+                          ↓ (match found with WO)
+                     COMPLETED (match exists)
+                          ↓ (accountant clicks "Confirm with client")
+                     CONFIRMED (locked, is_confirmed=true)
+```
+
 **Business Rules:**
-- Cascade delete: Deleting a TripOrder deletes all its TripOrderContainer records.
-- At least one container is required per TripOrder (enforced by application logic).
-- Container numbers should be unique within a single TripOrder (enforced by application logic).
+- **NO MIXED CONTAINER TYPES:** All containers in TripOrderContainer must have the **same work_type** (e.g., all F20 or all E40). System enforces this on create/edit.
+- **Pricing lookup:** When creating TO, system looks up Pricing by `(client, route, work_type, quantity = number of containers)`. If found, auto-fills `unit_price`, `driver_salary`, `allowance` from matching PricingLine. If not found, accountant must enter manually.
+- **Matching:** Only TOs in `PENDING` state are candidates for matching with Work Orders.
+- **Confirmation (`is_confirmed = true`):** Locks the Trip Order AND all linked Work Orders (sets `is_locked=true` on each linked WO). After confirmation:
+  - No edits to TO or linked WOs
+  - No unmatching
+  - No changes to salary calculations for those WOs
+- **Deletion rules:**
+  - Can delete TO in `DRAFT` or `PENDING`
+  - Cannot delete TO with `is_confirmed=true`
+  - Cannot delete TO that is `COMPLETED` (has match)
 
-### 3.7 Reconciliation (Đối soát WO—TO)
-
-The process of matching Work Orders (physical reality from drivers) with Trip Orders (commercial records from accountants).
-
-**Match Suggestion System:**
-- System provides **suggestions** based on weighted scoring algorithm
-- **Confidence levels:**
-  - `full` (score = 1.0): All fields match — highest confidence, auto-confirm or minimal review
-  - `partial` (score ≥ 0.3): Some fields match — Accountant decides whether to confirm or reject
-  - `none` (score < 0.3): No meaningful match — treat as "no suggestion"
-- **Matching fields & weights:**
-  | Field | Weight | Description |
-  |-------|--------|------------|
-  | driver | 0.3 | Same driver |
-  | client | 0.3 | Same client |
-  | route | 0.2 | Same route |
-  | containers | 0.2 | At least one overlapping container number |
-- **Candidates filtering:** Only shows TOs/WOs that match on at least ONE of: driver, client, OR container overlap
-- **No partial match?** → Show all TOs as candidates + allow Accountant to create a new TO
-
-**Flow:**
-1. System analyzes unmatched WOs and TOs, generates match suggestions with confidence scores
-2. Accountant reviews suggestions sorted by score (highest first)
-3. Accountant confirms or rejects each suggestion
-4. If no good match exists, Accountant selects any TO as candidate or creates new TO
-5. System links WO and TO via join table
-6. **Determine WO status:**
-   - If TO has pricing data (`unit_price > 0`, `driver_salary > 0`) → WO status = `COMPLETED`
-   - Else → WO status = `MATCHED`
-7. **Sync financials:** WO's `driver_salary`, `allowance`, `earning` = TO's values. `WO.unit_price` stays 0.
-8. **Determine TO status:** TO status → `COMPLETED`
-9. Salary recalculation is auto-queued for the driver
-
-**Rules:**
-- A work order can only be matched once (status must not already be `MATCHED` or `COMPLETED`).
-- One trip order can match multiple work orders.
-- Both WOs and TOs can have 1, 2, or more containers (via child tables).
-- Only accountants and superadmins can reconcile.
-- This is a **human-in-the-loop** system — the software suggests, the Accountant decides.
-- **Categories for UI:**
-  - `matched` — WO and TO matched with complete pricing data
-  - `matched_but_required_price_data` — matched but missing pricing (WO status = MATCHED, TO status = PENDING or DRAFT)
-  - `not_match` — WO and TO don't match on criteria
-
-### 3.7.1 TripOrderWorkOrder (Liên kết WO—TO)
+### 3.6.1 TripOrderWorkOrder (Liên kết WO—TO)
 
 Join table linking Work Orders to Trip Orders for reconciliation.
 
@@ -306,45 +236,66 @@ Join table linking Work Orders to Trip Orders for reconciliation.
 - One WO can only be linked to one TO (enforced by WO status = MATCHED).
 - One TO can be linked to multiple WOs.
 
-### 3.8 Client Reconciliation (Đối soát với khách hàng)
+### 3.7 Reconciliation (Đối soát WO—TO) — UPDATED
 
-The process of verifying container records against client-provided data. Clients send their own records of which containers were transported during a period, and Phúc Lộc's accountant cross-checks these against the system's records.
+Match Suggestion System with weighted scoring:
+
+| Field | Weight | Description |
+|-------|--------|-------------|
+| driver | 0.3 | Same driver |
+| client | 0.3 | Same client |
+| route | 0.2 | Same route |
+| containers | 0.2 | At least one overlapping container number |
+
+**Confidence levels:**
+- `full` (score = 1.0): Auto-confirm or minimal review
+- `partial` (score ≥ 0.3): Accountant decides
+- `none` (score < 0.3): No suggestion
 
 **Flow:**
-1. Client sends an Excel file listing their container numbers for the billing period
-2. Accountant uploads the client's Excel file to the system
-3. System compares client's container numbers against Phúc Lộc's system records (Work Orders and Trip Orders)
-4. System identifies **matching containers** — container numbers that appear in both client file and system records
-   - Match can be exact (full container number) or partial (matching digit portion)
-   - Matching containers are **highlighted distinctly** for easy visual identification
-5. Accountant reviews matched containers and marks each trip order as **"Đã chốt"** (confirmed with client)
-6. Accountant can export reconciliation results to Excel for records
+1. System analyzes unmatched WOs and TOs (only TOs with `status=PENDING`)
+2. Accountant reviews suggestions, can edit client on WO if needed
+3. Accountant confirms or rejects match
+4. System links WO and TO via join table
+5. TO status becomes `COMPLETED`
+6. WO `earning`, `driver_salary`, `allowance` synced from TO
+7. If TO has pricing data, WO gets `MATCHED` status (later `COMPLETED` when TO confirmed)
+8. Salary recalculation auto-queued
+
+**Business Rules:**
+- Only TOs with `status = PENDING` are considered for matching.
+- Accountant can edit `client_id` on Work Order during reconciliation (audit log recorded).
+- A work order can only be matched once.
+- One trip order can match multiple work orders.
+- Both WOs and TOs can have multiple containers (enforced same work_type within TO).
+
+### 3.8 Client Reconciliation (Đối soát với khách hàng)
+
+**Flow:**
+1. Client sends Excel file listing their container numbers for billing period
+2. Accountant uploads Excel to system
+3. System compares client's container numbers against system records (TOs and WOs)
+4. System identifies matching containers (exact or partial match)
+5. Accountant reviews and marks each Trip Order as "Đã chốt" (`is_confirmed = true`)
+6. This locks the TO and all linked WOs
 
 **Business Rules:**
 - Only accountants and superadmins can perform client reconciliation.
-- Containers not yet confirmed ("chưa chốt") may be due to:
-  - Driver recorded wrong route
-  - Driver recorded wrong client
-  - Container number typo
-- Confirmation status ("Đã chốt") is tracked per Trip Order.
-- The Excel upload follows a predefined template format matching the client's billing structure.
+- Confirmation ("Đã chốt") is tracked per Trip Order.
+- After confirmation, no further changes allowed.
 
-### 3.9 Salary (Lương tài xế)
+### 3.9 Salary (Lương tài xế) — UPDATED
 
-#### Salary Period Config (Cấu hình kỳ lương)
-Singleton config defining salary period boundaries.
+#### Salary Period Config (Cấu hình kỳ lương) — Singleton
 
 | Field | Type | Description |
 |-------|------|-------------|
 | from_day | int (1–28) | Start day of each period |
 | to_day | int (1–28) | End day of each period |
 
-**Default:** 1st → 28th of each month.
-
-**Cross-month periods:** If `from_day > to_day` (e.g., 26th → 25th), the period crosses month boundary. The system automatically computes the correct start/end dates.
+**Default:** 26th of current month → 25th of next month (`from_day=26`, `to_day=25`).
 
 #### Salary Period (Kỳ lương)
-Calculated salary for a driver over a period.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -356,185 +307,159 @@ Calculated salary for a driver over a period.
 | price_per_order | int (VND) | Average salary per order |
 | total_salary | int (VND) | Sum of driver_salary from matched WOs |
 | total_allowance | int (VND) | Sum of allowance from matched WOs |
-| total_deduction | int (VND) | Deductions (currently always 0 — future feature) |
+| total_deduction | int (VND) | Deductions (future feature) |
 | net_pay | int (VND) | = total_salary + total_allowance - total_deduction |
 | status | `OPEN` → `CALCULATED` → `PAID` | Lifecycle |
 
 **Salary Lifecycle:**
 ```
-OPEN → CALCULATED (auto-computed by worker) → PAID (accountant marks as paid)
+OPEN → CALCULATED (auto-computed) → PAID (accountant marks as paid)
 ```
 
 **Business Rules:**
-- Salary calculation counts only **MATCHED** work orders within the date range.
-- Calculation is **upsert** — if a salary period already exists for (driver_id, start_date, end_date), it's recalculated.
-- Auto-triggered when: trip order created, work orders matched to trip, or accountant manually requests calculation.
-- `price_per_order = total_salary / work_order_count` (integer division).
-- **Deductions not yet implemented** (total_deduction always 0) — future: fuel, fines, advances.
-- Accountant views only drivers who have salary for the current month. Salary here is the per-trip pay (tiền công theo chuyến).
-- Work orders can be filtered by vehicle plate number (biển số xe) and time period for salary review.
+- Salary calculation counts only **MATCHED** work orders within date range.
+- Calculation is **upsert** (recalculates if exists).
+- Auto-triggered when: trip order created/updated (if not confirmed), work orders matched, or manual request.
+- **Vendor drivers (external)** also have salary calculated via SalaryPeriod.
+- **AFTER `status = PAID`:** NO changes allowed to any data affecting that salary period (TOs, WOs, matches, pricing for those periods). System must enforce this lock.
+- Deductions not yet implemented (`total_deduction` always 0).
 
 ---
 
-## 4. Data Import & Export
+## 4. Audit Log (NEW)
 
-### 4.1 Trip Order Excel Import
+System **MUST** have audit log that auto-records any action that changes data.
 
-Accountant can create trip orders by uploading an Excel file instead of manual one-by-one entry.
+**Audit Log fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| id | int | Primary key |
+| user_id | int (FK) | Who performed action |
+| action | string | `CREATE`, `UPDATE`, `DELETE`, `CONFIRM`, `LOCK`, `MATCH`, `UNMATCH` |
+| table_name | string | Table affected (e.g., "work_orders", "trip_orders", "pricing") |
+| record_id | int | Record ID affected |
+| old_value | JSON? | Previous state |
+| new_value | JSON? | New state |
+| ip_address | string? | Request IP |
+| user_agent | string? | Request user agent |
+| created_at | datetime | When it happened |
 
 **Business Rules:**
-- Excel file must follow a predefined template format.
-- Each row in the Excel represents one trip order (or one container entry).
-- System validates and imports the data, creating trip orders in bulk.
-- Manual creation remains available as an alternative.
-
-### 4.2 Excel Export
-
-System can export data to Excel files for offline review, client reporting, or record-keeping.
-
-**Applicable to:**
-- Trip orders
-- Work orders
-- Salary reports
-- Client reconciliation results
-
-**Business Rules:**
-- Export follows predefined templates matching the company's reporting format.
-- Used when client needs paper records or accountant needs offline review.
-- Available for accountant and superadmin roles.
+- All modifications, including edits during reconciliation, confirmation, locking, and salary changes, must be logged.
 
 ---
 
-## 5. Workflows
+## 5. Deletion & Soft Delete Rules
 
-### 5.1 Driver's Daily Workflow
+| Entity | Hard Delete Allowed? | Soft Delete (`is_active=false`) |
+|--------|---------------------|-------------------------------|
+| Trip Order | Only if `DRAFT` or `PENDING` | N/A (hard delete only) |
+| Work Order | Only if `PENDING` (driver or accountant) | N/A |
+| Client | NO if has TO or WO | YES — set `is_active=false` |
+| Route | NO if used in Pricing, TO, or WO | YES — set `is_active=false` |
+| Pricing | NO if used in TO | YES — set `is_active=false` |
+| Vendor | NO if has associated drivers | YES — set `is_active=false` |
 
-```
-1. Driver logs in → sees own dashboard with today's work orders
-2. Driver taps "Create Work Order" → fills in:
-   - Take photo of container → system auto-fills container number via OCR
-   - If OCR fails or is incorrect → driver manually corrects the number
-   - Select work type (E20/E40/F20/F40)
-   - Select client (shown by client code for easy identification)
-   - Select route (pickup point + dropoff point)
-   - GPS captured automatically
-3. Work order saved (offline-capable — queued if no network)
-4. Driver can view own work history and monthly salary
-```
-
-### 5.2 Accountant's Daily Workflow
-
-```
-1. Accountant logs in → sees dashboard with stats
-2. Manage clients, routes, pricings as needed
-3. Create Trip Orders (commercial records):
-   - Select client, driver, route, container, work type
-   - Enter pricing (unit_price, driver_salary, allowance)
-   - Optionally match with existing work orders
-   - Can create via manual entry OR Excel file upload
-4. Reconcile unmatched work orders with trip orders (WO→TO matching)
-5. Client reconciliation: upload client's Excel, cross-check containers, mark "Đã chốt"
-6. Export data to Excel as needed
-7. Filter work orders by vehicle plate number and time period
-8. Calculate salary for drivers (manual trigger or auto)
-9. Mark salary periods as PAID when driver is paid
-```
-
-### 5.3 Director's View
-
-```
-1. Director logs in → sees overview dashboard:
-   - Per-driver salary breakdown
-   - Per-client revenue breakdown
-   - Unmatched work order count (needs reconciliation)
-   - Pending trip count
-2. View detailed client jobs (per-client history)
-3. View detailed driver jobs (per-driver history)
-4. Manage user accounts (create, edit, deactivate)
-5. Manage clients and vendors (full CRUD)
-6. Manage routes and pricings (full CRUD)
-7. Manage trip orders (create, edit, cancel)
-8. View notifications
-```
-
-### 5.4 SuperAdmin's View
-
-```
-1. Same as director + accountant combined
-2. Can delete vendors, deactivate users
-3. Full access to salary configuration
-4. User management with role assignment
-```
+- **After SalaryPeriod is `PAID`:** No deletion or modification of any related data.
 
 ---
 
-## 6. Dashboard Metrics
-
-The dashboard computes:
-
-| Metric | Computation |
-|--------|-------------|
-| total_revenue | SUM of all TripOrder.revenue |
-| total_expense | SUM of all WorkOrder.earning |
-| trip_count | COUNT of all trip orders |
-| driver_salary_summary | For each driver: count of MATCHED work orders + total earnings |
-| unmatched_work_order_count | COUNT of work orders NOT matched to any trip order |
-| pending_trip_count | COUNT of trip orders with status DRAFT |
-
----
-
-## 7. Background Workers
+## 6. Background Workers & Cron Jobs
 
 | Task | Trigger | Description |
 |------|---------|-------------|
-| `calculate_salary_task` | Trip order created, reconciliation, manual | Computes salary for a driver over a date range |
+| `calculate_salary_task` | TO created/updated (if not confirmed), WO matched, manual | Computes salary for driver over period |
+| `sync_wo_earning_on_to_update` | TO updated (`driver_salary`/`allowance` changed) | Auto-updates linked WO's earning if TO not confirmed |
 | `send_notification_task` | Work order created | Pushes in-app notification |
 | `geocode_work_order_task` | Work order created with GPS | Reverse-geocodes GPS → address |
 | `geocode_container_task` | Container photo with GPS | Reverse-geocodes photo GPS → address |
-| `generate_monthly_report_task` | Manual | Generates monthly revenue/expense report |
+| `generate_monthly_report_task` | Manual | Generates monthly report |
 
 ### Cron Jobs
 
 | Schedule | Task | Description |
 |----------|------|-------------|
 | Daily 03:00 | `cleanup_expired_sessions` | Removes old sessions |
-| Daily 03:30 | `cleanup_old_audit_logs` | Removes old audit logs |
+| Daily 03:30 | `cleanup_old_audit_logs` | Removes audit logs older than 1 year |
 | Daily 08:00 | `remind_salary_period_end` | Reminds about unpaid salary periods |
 | Daily 01:00 | `recalculate_open_periods` | Recalculates salary periods still in OPEN/CALCULATED |
 
 ---
 
-## 8. Notifications
+## 7. Offline Support for Drivers
 
-- Latest 50 notifications returned per user (newest first).
-- Current: in-app notifications only (polled via API).
-- Push notification infrastructure exists but **not yet wired to frontend**.
+- Driver app must preload clients (active only), routes (active only), work_types when online and cache locally.
+- App periodically syncs cached data to avoid stale data.
+- When offline Work Order is synced and references a client/route that was edited/deleted:
+  - System does **NOT** auto-reject or auto-fix.
+  - Work Order is synced with a flag `needs_review = true`.
+  - Accountant sees it on web and manually corrects (audit log records correction).
+- Batch creation supports up to 50 WOs at once.
 
 ---
 
-## 9. Data Model Summary
+## 8. Dashboard Metrics
+
+| Metric | Computation |
+|--------|-------------|
+| total_revenue | SUM of all TripOrder.revenue |
+| total_expense | SUM of all WorkOrder.earning (where not locked) |
+| trip_count | COUNT of all trip orders |
+| driver_salary_summary | For each driver: count MATCHED work orders + earnings |
+| unmatched_work_order_count | COUNT of work orders NOT matched to any trip order |
+| pending_trip_count | COUNT of trip orders with status `PENDING` |
+
+---
+
+## 9. State Machines (Summary)
+
+### Work Order
+```
+PENDING → (match with TO in PENDING) → MATCHED
+MATCHED → (TO becomes confirmed) → COMPLETED + LOCKED
+```
+
+### Trip Order
+```
+DRAFT → (all info provided) → PENDING
+PENDING → (match with WO) → COMPLETED
+COMPLETED → (accountant confirms with client) → CONFIRMED (locked)
+DRAFT or PENDING → CANCELLED
+```
+
+### Salary Period
+```
+OPEN → (calculation triggered) → CALCULATED
+CALCULATED → (accountant marks paid) → PAID (no further changes allowed)
+```
+
+---
+
+## 10. Data Model Summary
 
 ```
-Vendor (nhà thầu)
+Vendor (nhà thầu) — is_active
   └── User/driver (tài xế) — driver.vendor = Vendor.name
 
-Client (khách hàng)
-  ├── Pricing (bảng giá) — per client + work_type + route
-  │   └── PricingLine — sub-items (work_type + quantity)
-  ├── WorkOrder (phiếu làm việc) — created by driver
+Client (khách hàng) — is_active
+  ├── Pricing (bảng giá) — per client + work_type + route, is_active
+  │   └── PricingLine — quantity-based pricing (unit_price, driver_salary, allowance)
+  ├── WorkOrder (phiếu làm việc) — created by driver, is_locked, needs_review
   │   └── WorkOrderContainer — containers in the work order
-  └── TripOrder (lệnh điều hành) — created by accountant
-      ├── TripOrderContainer — containers in the trip order
+  └── TripOrder (lệnh điều hành) — created by accountant, is_confirmed
+      ├── TripOrderContainer — containers (same work_type enforced)
       └── TripOrderWorkOrder — join table (reconciliation)
 
-Route (tuyến đường) — reference prices only, with pickup/dropoff points
+Route (tuyến đường) — is_active, with pickup/dropoff points
 SalaryPeriodConfig (singleton) — period boundaries
 SalaryPeriod (kỳ lương) — calculated per driver per period
+AuditLog (nhật ký hệ thống) — auto-records all data changes
 ```
 
 ---
 
-## 10. Key Business Calculations
+## 11. Key Business Calculations
 
 ### Revenue = Client pays Phúc Lộc
 - `TripOrder.unit_price` (= `TripOrder.revenue`)
@@ -551,39 +476,7 @@ SalaryPeriod (kỳ lương) — calculated per driver per period
 
 ---
 
-## 11. State Machines & Validation
-
-### 11.1 Work Order State Machine
-
-**States:**
-- `PENDING` — No match found yet
-- `MATCHED` — Match found with TO, but missing pricing data (driver_salary + allowance)
-- `COMPLETED` — Match found with TO, pricing data complete
-
-**Valid Transitions:**
-- `PENDING → COMPLETED` (match found + pricing data provided at same time)
-- `PENDING → MATCHED` (match found, no pricing data)
-- `MATCHED → COMPLETED` (pricing data provided later via TO update or new pricing)
-
-### 11.2 Trip Order State Machine
-
-**States:**
-- `DRAFT` — Missing required info (containers, client, route, or pricing)
-- `PENDING` — All info provided, ready for matching
-- `COMPLETED` — Match found with WO
-- `CANCELLED` — Cancelled (final state)
-
-**Valid Transitions:**
-- `DRAFT → PENDING` — when all required fields are provided
-- `PENDING → COMPLETED` — when match found with WO
-- `DRAFT → CANCELLED` — while still in draft
-- `PENDING → CANCELLED` — before matching
-
-**Business Rules:**
-- Cannot cancel `COMPLETED` TOs.
-- Confirmation ("Đã chốt") is independent of lifecycle status — a COMPLETED TO can be confirmed or unconfirmed.
-
-### 11.3 ISO 6346 Container Number Validation
+## 12. ISO 6346 Container Number Validation
 
 **Format:** `XXXX-NNNNNN-N`
 - XXXX: 4 letters (owner code)
@@ -604,7 +497,7 @@ SalaryPeriod (kỳ lương) — calculated per driver per period
 
 ---
 
-## 12. API Endpoints Reference
+## 13. API Endpoints Reference
 
 ### Auth
 | Method | Path | Access | Description |
@@ -620,7 +513,7 @@ SalaryPeriod (kỳ lương) — calculated per driver per period
 | GET | `/clients` | accountant, director, superadmin | List (paginated) |
 | POST | `/clients` | accountant, director, superadmin | Create |
 | PUT | `/clients/{id}` | accountant, director, superadmin | Update |
-| DELETE | `/clients/{id}` | accountant, director, superadmin | Delete (guarded) |
+| DELETE | `/clients/{id}` | accountant, director, superadmin | Soft delete (is_active=false) |
 
 ### Routes
 | Method | Path | Access | Description |
@@ -628,7 +521,7 @@ SalaryPeriod (kỳ lương) — calculated per driver per period
 | GET | `/routes` | accountant, director, superadmin | List (paginated) |
 | POST | `/routes` | accountant, director, superadmin | Create |
 | PUT | `/routes/{id}` | accountant, director, superadmin | Update |
-| DELETE | `/routes/{id}` | accountant, director, superadmin | Delete |
+| DELETE | `/routes/{id}` | accountant, director, superadmin | Soft delete (is_active=false) |
 
 ### Pricings
 | Method | Path | Access | Description |
@@ -636,25 +529,28 @@ SalaryPeriod (kỳ lương) — calculated per driver per period
 | GET | `/pricings` | accountant, director, superadmin | List (paginated, filterable) |
 | POST | `/pricings` | accountant, director, superadmin | Create |
 | PUT | `/pricings/{id}` | accountant, director, superadmin | Update |
-| DELETE | `/pricings/{id}` | accountant, director, superadmin | Delete |
+| DELETE | `/pricings/{id}` | accountant, director, superadmin | Soft delete (is_active=false) |
 
 ### Work Orders
 | Method | Path | Access | Description |
 |--------|------|--------|-------------|
 | GET | `/work-orders` | Any authenticated | List (filterable by plate, time, driver) |
 | GET | `/work-orders/{id}` | Any authenticated | Get single |
-| POST | `/work-orders` | driver | Create (auto-pricing lookup) |
+| POST | `/work-orders` | driver | Create |
 | POST | `/work-orders/batch` | driver | Batch create (up to 50) |
-| PUT | `/work-orders/{id}` | accountant, superadmin | Update |
+| PUT | `/work-orders/{id}` | accountant, superadmin | Update (if not locked) |
+| DELETE | `/work-orders/{id}` | driver (own, PENDING), accountant, superadmin (PENDING) | Delete |
 
 ### Trip Orders
 | Method | Path | Access | Description |
 |--------|------|--------|-------------|
 | GET | `/trip-orders` | accountant, director, superadmin | List (filterable, paginated) |
 | GET | `/trip-orders/{id}` | accountant, director, superadmin | Get single |
-| POST | `/trip-orders` | accountant, director, superadmin | Create |
-| PUT | `/trip-orders/{id}` | accountant, director, superadmin | Update |
-| PUT | `/trip-orders/{id}/confirm` | accountant, superadmin | Toggle "Đã chốt" |
+| POST | `/trip-orders` | accountant, superadmin | Create |
+| POST | `/trip-orders/import` | accountant, superadmin | Batch import from Excel |
+| PUT | `/trip-orders/{id}` | accountant, superadmin | Update (if not confirmed) |
+| DELETE | `/trip-orders/{id}` | accountant, superadmin | Delete (DRAFT/PENDING only) |
+| PUT | `/trip-orders/{id}/confirm` | accountant, superadmin | Toggle "Đã chốt" (locks TO + linked WOs) |
 
 ### Reconciliation
 | Method | Path | Access | Description |
@@ -684,7 +580,7 @@ SalaryPeriod (kỳ lương) — calculated per driver per period
 | GET | `/vendors` | accountant, director, superadmin | List (paginated) |
 | POST | `/vendors` | accountant, director, superadmin | Create |
 | PUT | `/vendors/{id}` | accountant, director, superadmin | Update |
-| DELETE | `/vendors/{id}` | accountant, director, superadmin | Delete (guarded) |
+| DELETE | `/vendors/{id}` | accountant, director, superadmin | Soft delete (is_active=false) |
 
 ### Users
 | Method | Path | Access | Description |
@@ -720,5 +616,6 @@ SalaryPeriod (kỳ lương) — calculated per driver per period
 
 | Date | Change |
 |------|--------|
-| 2026-05-02 | Added: client code, route pickup/dropoff, trip order confirmation ("Đã chốt"), client reconciliation via Excel, Excel import/export, work order filtering by plate/time |
+| 2026-05-02 | Major update: pricing by quantity tier, locking on confirm, audit log, deletion/soft-delete rules, offline sync handling, no mixed container types in TO, earning sync on TO update, vendor driver salary via SalaryPeriod |
+| 2026-05-02 | Added: client code, route pickup/dropoff, trip order confirmation, client reconciliation via Excel, Excel import/export, work order filtering by plate/time |
 | 2026-04-30 | Initial creation — extracted from codebase audit |
