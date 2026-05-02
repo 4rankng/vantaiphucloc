@@ -119,7 +119,7 @@ export function CreateTrip() {
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
-        <span className="text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>Tạo lệnh điều hành</span>
+        <span className="text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>Tạo đơn hàng</span>
         <div className="flex-1" />
         <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden" />
         <Button
@@ -179,9 +179,9 @@ export function CreateTrip() {
       {/* Cong items */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Công</Label>
+          <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Container</Label>
           <button onClick={addCong} className="flex items-center gap-1 text-xs font-medium touch-manipulation" style={{ color: 'var(--theme-brand-primary)' }}>
-            <Plus className="w-3.5 h-3.5" /> Thêm công
+            <Plus className="w-3.5 h-3.5" /> Thêm cont
           </button>
         </div>
         <div className="space-y-3">
@@ -196,24 +196,26 @@ export function CreateTrip() {
                   </button>
                 )}
               </div>
-              <div className="flex flex-wrap gap-1.5">
-                {WORK_TYPES.map(w => (
-                  <button key={w} onClick={() => updateCong(item.id, 'workType', w)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors touch-manipulation"
-                    style={{
-                      background: item.workType === w ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
-                      color: item.workType === w ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
-                    }}>
-                    {w}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2">
+                <div className="flex flex-wrap gap-1.5 shrink-0">
+                  {WORK_TYPES.map(w => (
+                    <button key={w} onClick={() => updateCong(item.id, 'workType', w)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors touch-manipulation"
+                      style={{
+                        background: item.workType === w ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
+                        color: item.workType === w ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
+                      }}>
+                      {w}
+                    </button>
+                  ))}
+                </div>
+                <Input
+                  value={item.containerNumber}
+                  onChange={e => updateCong(item.id, 'containerNumber', e.target.value)}
+                  placeholder="Số cont"
+                  className="text-sm font-mono min-w-0 flex-1"
+                />
               </div>
-              <Input
-                value={item.containerNumber}
-                onChange={e => updateCong(item.id, 'containerNumber', e.target.value)}
-                placeholder="Số cont"
-                className="text-sm font-mono"
-              />
             </div>
           ))}
         </div>

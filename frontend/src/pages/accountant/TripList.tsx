@@ -194,7 +194,7 @@ export function TripList() {
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
           <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-            {search || statusFilter !== 'ALL' ? 'Không tìm thấy lệnh nào' : 'Chưa có lệnh điều hành'}
+            {search || statusFilter !== 'ALL' ? 'Không tìm thấy lệnh nào' : 'Chưa có đơn hàng'}
           </p>
           {!search && statusFilter === 'ALL' && (
             <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Nhấn "Tạo lệnh" để bắt đầu</p>

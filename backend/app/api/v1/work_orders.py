@@ -272,7 +272,7 @@ async def update_work_order(
     work_order_id: int,
     body: WorkOrderUpdate,
     request: Request,
-    current_user: User = Depends(require_permission("update", "WorkOrder")),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -282,11 +282,25 @@ async def update_work_order(
     if work_order is None:
         raise HTTPException(status_code=404, detail="Work order not found")
 
+    # Role-based authorization
+    if current_user.role == "driver":
+        if work_order.driver_id != current_user.id:
+            raise HTTPException(status_code=403, detail="You can only update your own work orders")
+        if work_order.status != "PENDING":
+            raise HTTPException(status_code=400, detail="Only PENDING work orders can be updated")
+    elif current_user.role not in ("accountant", "director", "superadmin"):
+        raise HTTPException(status_code=403, detail="Bạn không có quyền thực hiện thao tác này")
+
     if getattr(work_order, 'is_locked', False):
         raise HTTPException(status_code=403, detail="Work order is locked. Unmatch first to edit.")
 
     update_data = body.model_dump(exclude_unset=True)
     new_containers = update_data.pop("containers", None)
+
+    # Drivers cannot change financial fields
+    if current_user.role == "driver":
+        for field in ("unit_price", "driver_salary", "allowance", "earning", "status"):
+            update_data.pop(field, None)
 
     for field, value in update_data.items():
         setattr(work_order, field, value)
@@ -431,6 +445,12 @@ async def _create_work_order_db(
     client_result = await db.execute(select(Client.code).where(Client.id == body.client_id))
     client_code = client_result.scalar_one_or_none()
 
+    # Resolve GPS address: mark as "Không xác định" if no valid coords
+    gps_address = None
+    has_valid_gps = body.gps_lat and body.gps_lng
+    if not has_valid_gps:
+        gps_address = "Không xác định"
+
     work_order = WorkOrder(
         client_id=body.client_id,
         client_name=body.client_name,
@@ -443,7 +463,7 @@ async def _create_work_order_db(
         tractor_plate=body.tractor_plate,
         gps_lat=body.gps_lat,
         gps_lng=body.gps_lng,
-        gps_address=None,
+        gps_address=gps_address,
         unit_price=unit_price,
         driver_salary=driver_salary,
         allowance=allowance,

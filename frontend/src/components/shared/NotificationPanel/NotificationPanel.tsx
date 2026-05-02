@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Bell, CheckCircle, Wallet, UserPlus, Truck, ChevronRight, type LucideIcon } from 'lucide-react'
+import { X, Bell, CheckCircle, Wallet, UserPlus, Truck, type LucideIcon } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/services/api/client'
 import { queryKeys } from '@/hooks/use-queries'
@@ -225,11 +225,10 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps) {
         <div className="border-t px-4 py-2.5" style={{ borderColor: 'var(--theme-border-default)' }}>
           <button
             onClick={onClose}
-            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold touch-manipulation"
-            style={{ color: 'var(--theme-text-muted)', background: 'var(--theme-bg-secondary)' }}
+            className="w-full flex items-center justify-center py-2 rounded-xl text-xs font-semibold touch-manipulation"
+            style={{ color: 'var(--theme-brand-primary)', background: 'var(--theme-bg-secondary)' }}
           >
             Đóng
-            <ChevronRight className="w-3 h-3 rotate-90" />
           </button>
         </div>
       </div>

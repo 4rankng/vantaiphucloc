@@ -19,7 +19,7 @@ const TITLES: Record<string, string> = {
   '/accountant/partners':         'Đối tác',
   '/accountant/routes':           'Cung đường',
   '/accountant/salary-setup':     'Kỳ lương',
-  '/accountant/create-trip':      'Tạo lệnh điều hành',
+  '/accountant/create-trip':      'Tạo đơn hàng',
   '/accountant/notifications':    'Thông báo',
   '/accountant/profile':          'Thông tin cá nhân',
   '/accountant/customers':        'Quản lý khách hàng',

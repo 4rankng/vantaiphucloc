@@ -268,7 +268,7 @@ function SalaryPeriodsList() {
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     <div>
-                      <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Số công</p>
+                      <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Số cont</p>
                       <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>{period.workOrderCount}</p>
                     </div>
                     <div>

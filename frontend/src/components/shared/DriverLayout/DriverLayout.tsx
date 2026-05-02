@@ -17,6 +17,7 @@ const TITLES: Record<string, string> = {
 function resolveTitle(pathname: string): string {
   if (TITLES[pathname]) return TITLES[pathname]
   if (pathname.startsWith('/driver/job/')) return 'Chi tiết chuyến'
+  if (pathname.match(/\/driver\/work-orders\/\d+\/edit/)) return 'Sửa chuyến'
   return ''
 }
 
@@ -28,8 +29,8 @@ function DriverShell() {
   const isHome = location.pathname === '/driver'
   const title = resolveTitle(location.pathname)
 
-  const isCreateOrder = location.pathname === '/driver/work-orders/new'
-  const showBackFab = !isHome && !isCreateOrder
+  const isFormPage = location.pathname === '/driver/work-orders/new' || location.pathname.match(/\/driver\/work-orders\/\d+\/edit/)
+  const showBackFab = !isHome && !isFormPage
 
   return (
     <AppShell

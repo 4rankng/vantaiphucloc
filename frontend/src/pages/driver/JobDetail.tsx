@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react'
-import { MapPin, Calendar, Truck, Building2, Route as RouteIcon, Camera } from 'lucide-react'
-import { useParams } from 'react-router-dom'
+import { MapPin, Calendar, Truck, Building2, Route as RouteIcon, Camera, X, Pencil } from 'lucide-react'
+import { useParams, useNavigate } from 'react-router-dom'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { apiClient } from '@/services/api'
 import { formatCurrencyFull, type WorkOrder } from '@/data/domain'
 
 export function JobDetail() {
   const { jobId: jobIdStr } = useParams<{ jobId: string }>()
+  const navigate = useNavigate()
   const jobId = Number(jobIdStr)
   const [job, setJob] = useState<WorkOrder | null>(null)
   const [loading, setLoading] = useState(true)
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
 
   useEffect(() => {
     if (!jobIdStr) return
@@ -46,37 +48,72 @@ export function JobDetail() {
   const timeStr = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
 
   return (
+    <>
+      {/* Fullscreen lightbox */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.92)' }}
+          onClick={() => setLightboxUrl(null)}
+        >
+          <img
+            src={lightboxUrl}
+            alt="Ảnh container"
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            onClick={() => setLightboxUrl(null)}
+            className="absolute top-4 right-4 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold touch-manipulation"
+            style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', backdropFilter: 'blur(8px)' }}
+          >
+            <X className="w-4 h-4" />
+            Đóng
+          </button>
+        </div>
+      )}
+
     <div className="space-y-4 pb-20">
       {/* Photos */}
       <div className={`grid ${job.containers.length > 1 ? 'grid-cols-2' : 'grid-cols-1'} gap-2`}>
         {job.containers.map((c, i) => (
           <div
             key={i}
-            className="rounded-xl overflow-hidden"
+            className="relative rounded-xl overflow-hidden"
             style={{ border: '1px solid var(--theme-border-default)' }}
           >
             {c.photoUrl ? (
-              <img
-                src={c.photoUrl}
-                alt={c.containerNumber}
-                className="w-full object-contain"
-                style={{ maxHeight: '160px' }}
-              />
+              <button
+                className="block w-full touch-manipulation"
+                onClick={() => setLightboxUrl(c.photoUrl!)}
+                aria-label={`Xem ảnh ${c.containerNumber}`}
+              >
+                <img
+                  src={c.photoUrl}
+                  alt={c.containerNumber}
+                  className="w-full object-cover"
+                  style={{ height: '140px', display: 'block' }}
+                />
+              </button>
             ) : (
               <div
                 className="w-full flex flex-col items-center justify-center"
-                style={{ background: 'var(--theme-bg-tertiary)', height: '60px' }}
+                style={{ background: 'var(--theme-bg-tertiary)', height: '140px' }}
               >
-                <Camera className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
+                <Camera className="w-6 h-6" style={{ color: 'var(--theme-text-muted)' }} />
               </div>
             )}
-            <div className="px-2 py-1.5 flex items-center justify-between" style={{ background: 'var(--theme-bg-secondary)' }}>
-              <p className="text-xs font-mono font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
+            {/* Container info overlay at bottom */}
+            <div
+              className="absolute bottom-0 left-0 right-0 px-2 py-1.5 flex items-center justify-between"
+              style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
+            >
+              <p className="text-xs font-mono font-semibold truncate" style={{ color: '#fff' }}>
                 {c.containerNumber}
               </p>
               <span
-                className="text-xs font-bold px-1.5 py-0.5 rounded shrink-0"
-                style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
+                className="text-xs font-bold px-1.5 py-0.5 rounded shrink-0 ml-1"
+                style={{ background: 'var(--theme-brand-primary)', color: '#fff' }}
               >
                 {c.workType}
               </span>
@@ -93,7 +130,7 @@ export function JobDetail() {
         <InfoRow
           icon={MapPin}
           label="Vị trí"
-          value={job.gpsAddress ?? `${job.gpsLat}, ${job.gpsLng}`}
+          value={job.gpsAddress ?? (job.gpsLat && job.gpsLng ? `${job.gpsLat}, ${job.gpsLng}` : 'Không xác định')}
         />
         <InfoRow icon={Calendar} label="Thời gian" value={`${dateStr} ${timeStr}`} noBorder />
       </div>
@@ -121,6 +158,18 @@ export function JobDetail() {
           </span>
         )}
       </div>
+
+      {/* Edit button for PENDING orders */}
+      {job.status === 'PENDING' && (
+        <button
+          onClick={() => navigate(`/driver/work-orders/${job.id}/edit`)}
+          className="w-full h-12 rounded-2xl text-base font-bold flex items-center justify-center gap-2 touch-manipulation transition-all active:scale-[0.98]"
+          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+        >
+          <Pencil className="w-4 h-4" /> Sửa chuyến
+        </button>
+      )}
     </div>
+    </>
   )
 }

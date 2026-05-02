@@ -19,6 +19,8 @@ allow(user, "batch_create", "WorkOrder") if role_allow(user, "driver");
 allow(user, "read", "WorkOrder") if role_allow(user, "driver");
 allow(user, "read_list", "WorkOrder") if role_allow(user, "driver");
 allow(user, "update", "WorkOrder") if role_allow(user, "accountant");
+allow(user, "update", work_order) if
+    role_allow(user, "driver") and user.id = work_order.driver_id;
 allow(user, "export", "WorkOrder") if role_allow(user, "accountant");
 allow(user, "cancel", "WorkOrder") if role_allow(user, "accountant");
 allow(user, "cancel", work_order) if
