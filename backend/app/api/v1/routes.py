@@ -10,7 +10,7 @@ from app.models.base import User
 from app.models.domain import Route
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import RouteCreate, RouteUpdate, RouteOut
-from app.core.deps import require_roles
+from app.core.deps import require_permission
 from app.core.redis import get_redis
 from app.core.cache import CacheManager
 from app.config import settings
@@ -22,7 +22,7 @@ router = APIRouter()
 async def list_routes(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
-    current_user: User = Depends(require_roles("accountant", "director", "driver", "superadmin")),
+    current_user: User = Depends(require_permission("read", "Route")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
@@ -59,7 +59,7 @@ async def list_routes(
 @router.post("/routes", response_model=RouteOut, status_code=201)
 async def create_route(
     body: RouteCreate,
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_permission("update", "Route")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
@@ -75,7 +75,7 @@ async def create_route(
 async def update_route(
     route_id: int,
     body: RouteUpdate,
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_permission("update", "Route")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
@@ -98,7 +98,7 @@ async def update_route(
 @router.delete("/routes/{route_id}", status_code=204)
 async def delete_route(
     route_id: int,
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_permission("update", "Route")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):

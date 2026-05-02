@@ -9,7 +9,7 @@ from app.models.base import User
 from app.models.domain import Vendor
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import VendorCreate, VendorUpdate, VendorOut
-from app.core.deps import require_roles
+from app.core.deps import require_permission
 
 router = APIRouter()
 
@@ -18,7 +18,7 @@ router = APIRouter()
 async def list_vendors(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
-    current_user: User = Depends(require_roles("accountant", "director", "driver", "superadmin")),
+    current_user: User = Depends(require_permission("read", "Vendor")),
     db: AsyncSession = Depends(get_db),
 ):
     total_q = await db.execute(select(func.count(Vendor.id)).where(Vendor.is_active == True))
@@ -45,7 +45,7 @@ async def list_vendors(
 @router.post("/vendors", response_model=VendorOut, status_code=201)
 async def create_vendor(
     body: VendorCreate,
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_permission("update", "Vendor")),
     db: AsyncSession = Depends(get_db),
 ):
     existing = await db.execute(select(Vendor).where(Vendor.name == body.name))
@@ -70,7 +70,7 @@ async def create_vendor(
 async def update_vendor(
     vendor_id: int,
     body: VendorUpdate,
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_permission("update", "Vendor")),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(Vendor).where(Vendor.id == vendor_id))
@@ -105,7 +105,7 @@ async def update_vendor(
 @router.delete("/vendors/{vendor_id}", status_code=204)
 async def delete_vendor(
     vendor_id: int,
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_permission("update", "Vendor")),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(Vendor).where(Vendor.id == vendor_id))

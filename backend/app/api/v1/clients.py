@@ -10,7 +10,7 @@ from app.models.base import User
 from app.models.domain import Client, WorkOrder, TripOrder
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import ClientCreate, ClientUpdate, ClientOut, SoftDeleteRequest
-from app.core.deps import require_roles
+from app.core.deps import require_permission
 from app.core.redis import get_redis
 from app.core.cache import CacheManager
 from app.config import settings
@@ -24,7 +24,7 @@ router = APIRouter()
 async def list_clients(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
-    current_user: User = Depends(require_roles("accountant", "director", "driver", "superadmin")),
+    current_user: User = Depends(require_permission("read", "Client")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
@@ -61,7 +61,7 @@ async def list_clients(
 @router.post("/clients", response_model=ClientOut, status_code=201)
 async def create_client(
     body: ClientCreate,
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_permission("update", "Client")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
@@ -77,7 +77,7 @@ async def create_client(
 async def update_client(
     client_id: int,
     body: ClientUpdate,
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_permission("update", "Client")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
@@ -102,7 +102,7 @@ async def delete_client(
     client_id: int,
     body: SoftDeleteRequest,
     request: Request,
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_permission("update", "Client")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):

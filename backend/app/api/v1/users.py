@@ -8,7 +8,7 @@ from app.database import get_db
 from app.models.base import User
 from app.models.domain import WorkOrder
 from app.schemas.base import UserOut, UserCreate, UserUpdate, ChangePassword, MessageResponse, PaginatedResponse
-from app.core.deps import require_roles, get_current_user
+from app.core.deps import require_permission, get_current_user
 from app.core.security import hash_password, verify_password
 
 router = APIRouter()
@@ -61,7 +61,7 @@ async def list_users(
     role: str | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
-    current_user: User = Depends(require_roles("director", "superadmin")),
+    current_user: User = Depends(require_permission("list", "User")),
     db: AsyncSession = Depends(get_db),
 ):
     query = select(User).order_by(User.username.asc())
@@ -96,7 +96,7 @@ async def list_users(
 @router.post("/users", response_model=UserOut, status_code=201)
 async def create_user(
     body: UserCreate,
-    current_user: User = Depends(require_roles("director", "superadmin")),
+    current_user: User = Depends(require_permission("list", "User")),
     db: AsyncSession = Depends(get_db),
 ):
     # Directors cannot create superadmin users
@@ -148,7 +148,7 @@ async def create_user(
 async def update_user(
     user_id: int,
     body: UserUpdate,
-    current_user: User = Depends(require_roles("director", "superadmin")),
+    current_user: User = Depends(require_permission("list", "User")),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(User).where(User.id == user_id))
@@ -215,7 +215,7 @@ async def update_user(
 @router.delete("/users/{user_id}", status_code=204)
 async def delete_user(
     user_id: int,
-    current_user: User = Depends(require_roles("director", "superadmin")),
+    current_user: User = Depends(require_permission("list", "User")),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(User).where(User.id == user_id))
