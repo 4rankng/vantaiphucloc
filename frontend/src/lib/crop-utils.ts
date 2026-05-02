@@ -1,27 +1,26 @@
 /**
  * Calculate the crop rectangle in source video pixel coordinates.
  *
- * This assumes the camera was requested at the same aspect ratio as the
- * viewport (portrait 9:16). The browser may deliver a slightly different
- * resolution, so we use the *actual* video dimensions at capture time.
+ * The overlay box position is passed as measured screen coordinates
+ * (from getBoundingClientRect), so there is no assumption about centering.
+ * This is the ground truth — whatever the user sees in the guide box is
+ * exactly what gets cropped.
  *
- * With object-cover the video is scaled uniformly to fill the container,
- * cropping the axis that overflows. We reverse that scale to map the
- * overlay rect (centered in the container) back to source pixel coords.
- *
- * Because we request a portrait resolution that matches the viewport aspect
- * ratio, the cover scale is very close to 1:1 on both axes, making the
- * mapping accurate without any padding hacks.
+ * The video is rendered with object-cover into a container that fills the
+ * viewport. We reverse the cover scale to map from screen-space (CSS px)
+ * to source video pixel coordinates.
  */
 
 export interface CropParams {
   /** Actual pixel dimensions reported by video.videoWidth / videoHeight */
   sourceWidth: number
   sourceHeight: number
-  /** CSS dimensions of the container the video is rendered into */
+  /** Viewport dimensions (window.innerWidth / innerHeight) */
   containerWidth: number
   containerHeight: number
-  /** CSS dimensions of the overlay guide box */
+  /** Measured screen position of the guide box (from getBoundingClientRect) */
+  rectLeft: number
+  rectTop: number
   rectWidth: number
   rectHeight: number
 }
@@ -37,29 +36,29 @@ export function calculateCrop(params: CropParams): CropRect {
   const {
     sourceWidth, sourceHeight,
     containerWidth, containerHeight,
+    rectLeft, rectTop,
     rectWidth, rectHeight,
   } = params
 
-  // object-cover: scale so the video fills the container on both axes,
-  // cropping whichever axis overflows.
+  // object-cover scale: the video is scaled so it fills the container on
+  // both axes, with the longer axis cropped symmetrically.
   const coverScale = Math.max(
     containerWidth / sourceWidth,
     containerHeight / sourceHeight,
   )
 
-  // Overflow on each axis (how many rendered px extend beyond the container)
+  // How many rendered pixels overflow the container on each axis (half each side)
   const renderedW = sourceWidth * coverScale
   const renderedH = sourceHeight * coverScale
   const overflowX = (renderedW - containerWidth) / 2
   const overflowY = (renderedH - containerHeight) / 2
 
-  // Overlay rect top-left in container-space (always centered)
-  const rectLeft = (containerWidth - rectWidth) / 2
-  const rectTop  = (containerHeight - rectHeight) / 2
-
-  // Map to source-video-space: add the overflow offset then divide by scale
-  const cropX = (rectLeft + overflowX) / coverScale
-  const cropY = (rectTop  + overflowY) / coverScale
+  // Map screen-space rect position → source video pixel coordinates.
+  // rectLeft/rectTop are already in viewport-space (CSS px from top-left).
+  // Adding the overflow shifts into rendered-video-space, then dividing by
+  // coverScale converts to source pixel space.
+  const cropX = (rectLeft  + overflowX) / coverScale
+  const cropY = (rectTop   + overflowY) / coverScale
   const cropW = rectWidth  / coverScale
   const cropH = rectHeight / coverScale
 

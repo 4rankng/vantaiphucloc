@@ -22,14 +22,6 @@ const RECT_HEIGHT_PX = 120
 const SQUARE_SIZE_PERCENT = 0.75
 const MAX_CAPTURE_WIDTH = 1200
 
-function getOverlayDimensions(mode: ScanMode, containerWidth: number) {
-  if (mode === 'square') {
-    const side = containerWidth * SQUARE_SIZE_PERCENT
-    return { width: side, height: side }
-  }
-  return { width: containerWidth * RECT_WIDTH_PERCENT, height: RECT_HEIGHT_PX }
-}
-
 export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) {
   const webcamRef = useRef<Webcam>(null)
   const overlayBoxRef = useRef<HTMLDivElement>(null)
@@ -91,7 +83,7 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
 
     const croppedImage = outputCanvas.toDataURL('image/jpeg', 0.92)
     setCaptured(croppedImage)
-  }, [scanMode])
+  }, [])  // no deps — everything is read from refs at call time
 
   const handleRetake = useCallback(() => {
     setCaptured(null)
@@ -181,6 +173,7 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
             style={{ pointerEvents: 'none' }}
           >
             <div
+              ref={overlayBoxRef}
               className="relative rounded-xl"
               style={{
                 width: scanMode === 'square' ? `${SQUARE_SIZE_PERCENT * 100}%` : `${RECT_WIDTH_PERCENT * 100}%`,

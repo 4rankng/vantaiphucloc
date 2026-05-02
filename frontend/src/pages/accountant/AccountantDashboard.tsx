@@ -66,8 +66,8 @@ export function AccountantDashboard() {
 
   return (
     <div className="pb-6 space-y-4">
-      {/* Quick actions — mobile only (sidebar replaces on desktop) */}
-      <div className="grid grid-cols-4 gap-2 lg:hidden">
+      {/* Quick actions */}
+      <div className="grid grid-cols-5 gap-2">
         {QUICK_ACTIONS.map(({ label, icon: Icon, path }) => (
           <button
             key={path}
