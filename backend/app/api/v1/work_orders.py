@@ -39,6 +39,21 @@ _logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+@router.get("/validate-container")
+async def validate_container(
+    container_number: str = Query(..., description="Container number to validate"),
+    current_user: User = Depends(get_current_user),
+):
+    """Validate a container number against ISO 6346."""
+    from app.utils.iso6346 import validate_container_number, normalize_container_number
+    valid, error = validate_container_number(container_number)
+    return {
+        "valid": valid,
+        "error": error or None,
+        "normalized": normalize_container_number(container_number),
+    }
+
+
 async def _load_work_order_out(db: AsyncSession, work_order: WorkOrder) -> WorkOrderOut:
     """Load a single WorkOrder with its associated WorkOrderContainer rows."""
     containers_result = await db.execute(

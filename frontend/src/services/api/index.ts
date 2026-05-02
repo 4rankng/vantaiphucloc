@@ -52,6 +52,7 @@ export const apiClient = {
   createTripOrder: tripOrdersApi.createTripOrder,
   updateTripOrder: tripOrdersApi.updateTripOrder,
   reconcile: tripOrdersApi.reconcile,
+  unmatch: tripOrdersApi.unmatch,
   suggestMatches: tripOrdersApi.suggestMatches,
   suggestWosForTrip: tripOrdersApi.suggestWosForTrip,
   toggleTripConfirmation: tripOrdersApi.toggleTripConfirmation,

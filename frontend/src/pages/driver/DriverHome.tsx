@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Calendar, ChevronRight } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiClient } from '@/services/api'
@@ -66,67 +66,63 @@ export function DriverHome() {
     [filteredJobs],
   )
 
-  // Format a date string like "26/04" from ISO
-  const fmtShort = (iso: string) =>
-    new Date(iso).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
+  const displayMonth = month + 1
+  const earningsValue = latestPeriod ? latestPeriod.netPay : totalEarnings
 
   return (
     <div className="space-y-4">
-      <MonthNavigator year={year} month={month + 1} onPrev={handlePrevMonth} onNext={handleNextMonth} />
-
-      {/* ── Salary / earnings banner ── */}
-      <button
-        onClick={() => navigate('/driver/history')}
-        className="w-full text-left rounded-2xl p-4 flex items-center gap-4 transition-all active:scale-[0.98] touch-manipulation"
+      {/* ── Combined month + earnings card ── */}
+      <div
+        className="rounded-2xl overflow-hidden flex"
         style={{
           background: 'var(--theme-bg-secondary)',
           border: '1px solid var(--theme-border-default)',
           boxShadow: 'var(--theme-shadow-card)',
         }}
       >
-        {/* Icon */}
-        <div
-          className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-          style={{ background: 'var(--theme-brand-primary-light)' }}
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--theme-brand-primary)' }}>
-            <rect x="2" y="5" width="20" height="14" rx="2" />
-            <line x1="2" y1="10" x2="22" y2="10" />
-          </svg>
+        {/* Left: month navigator — 60% */}
+        <div className="w-[55%] flex items-center justify-center py-3 px-2">
+          <MonthNavigator
+            year={year}
+            month={displayMonth}
+            onPrev={handlePrevMonth}
+            onNext={handleNextMonth}
+          />
         </div>
 
-        {/* Text */}
-        <div className="flex-1 min-w-0">
-          {latestPeriod ? (
-            <p className="text-xs mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-              Kỳ lương {fmtShort(latestPeriod.startDate)} → {fmtShort(latestPeriod.endDate)}
-            </p>
-          ) : (
-            <p className="text-xs mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-              Tháng {month + 1}/{year}
-            </p>
-          )}
-          <p className="text-xl font-bold tabular-nums leading-tight" style={{ color: 'var(--theme-text-primary)' }}>
-            {formatCurrencyFull(latestPeriod ? latestPeriod.netPay : totalEarnings)}
-          </p>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-            {matchedCount} phiếu đã ghép
-          </p>
-        </div>
+        {/* Divider */}
+        <div className="w-px self-stretch my-3" style={{ background: 'var(--theme-border-default)' }} />
 
-        <ChevronRight className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
-      </button>
+        {/* Right: earnings stat — 40%, no button */}
+        <div className="w-[45%] flex items-center gap-2 px-3 py-3">
+          {/* Money icon */}
+          <img src="/icons/money.png" alt="" aria-hidden className="shrink-0 w-10 h-10 object-contain" />
+
+          {/* Text */}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold tabular-nums leading-tight truncate" style={{ color: 'var(--theme-text-primary)' }}>
+              {formatCurrencyFull(earningsValue)}
+            </p>
+            <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+              {matchedCount} chuyến
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* ── Recent work orders ── */}
       <div className="space-y-2.5">
         <div className="flex items-center justify-between">
-          <p className="text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>
-            Phiếu gần đây
+          <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+            Chuyến đã đi
           </p>
           <button
             onClick={() => navigate('/driver/history')}
-            className="text-xs font-semibold touch-manipulation"
-            style={{ color: 'var(--theme-brand-primary)' }}
+            className="text-xs font-semibold px-3 py-1 rounded-full border touch-manipulation transition-colors"
+            style={{
+              color: 'var(--theme-text-primary)',
+              borderColor: 'var(--theme-border-default)',
+            }}
           >
             Xem tất cả
           </button>
@@ -139,10 +135,19 @@ export function DriverHome() {
             ))}
           </div>
         ) : recentJobs.length === 0 ? (
-          <div className="rounded-2xl p-8 text-center" style={{ background: 'var(--theme-bg-secondary)' }}>
-            <Calendar className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--theme-text-muted)' }} />
-            <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Chưa có chuyến nào</p>
-            <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Nhấn + để tạo chuyến mới</p>
+          <div
+            className="rounded-2xl p-10 flex flex-col items-center justify-center text-center gap-3"
+            style={{ background: 'var(--theme-bg-secondary)' }}
+          >
+            <img src="/icons/calkey.png" alt="" aria-hidden className="w-32 h-32 object-contain" />
+            <div>
+              <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+                Chưa có chuyến nào
+              </p>
+              <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>
+                Nhấn + để tạo chuyến mới
+              </p>
+            </div>
           </div>
         ) : (
           <div className="space-y-2.5">

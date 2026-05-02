@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { Camera, RotateCcw, Trash2, AlertCircle, WifiOff, Loader2, Image, Plus } from 'lucide-react'
+import { Camera, RotateCcw, Trash2, AlertCircle, Loader2, Image, Plus } from 'lucide-react'
 import { ContainerScanner } from '@/components/shared/ContainerScanner'
 import { ContainerTypeGrid } from '@/components/shared/ContainerTypeGrid'
 import { TripSummaryDialog } from '@/components/shared/TripSummaryDialog'
@@ -14,14 +14,13 @@ export function CreateWorkOrder() {
     clients, routes, recentOrders,
     containers, clientId, pickupLocation, dropoffLocation,
     submitting, scannerOpen, galleryImage, isOnline, summaryOpen, showSuccess,
-    forceManualEntry, missingFields,
+    forceManualEntry, missingFields, containerErrors,
     canSubmit, summaryContainers, summaryClientName,
     setClientId, setPickupLocation, setDropoffLocation,
     openScanner, openGallery, handleScanComplete, setScannerOpen,
     updateContainer, addContainer, removeContainer,
     handleRecentTripSelect,
     onRequestSubmit, confirmSubmit, setSummaryOpen,
-    dismissAddMore,
   } = useCreateWorkOrder()
 
   const toast = useToast()
@@ -50,19 +49,6 @@ export function CreateWorkOrder() {
 
   return (
     <div className="space-y-6 pb-24">
-      {/* Offline hint */}
-      {!isOnline && (
-        <div
-          className="flex items-center gap-2 rounded-2xl px-4 py-3"
-          style={{ background: 'var(--theme-status-warning-light)', border: '1px solid var(--theme-status-warning)' }}
-        >
-          <WifiOff className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-status-warning)' }} />
-          <span className="text-xs font-semibold" style={{ color: 'var(--theme-status-warning)' }}>
-            Không có mạng — nhập số cont thủ công
-          </span>
-        </div>
-      )}
-
       {/* Scanner overlay */}
       {scannerOpen && (
         <ContainerScanner
@@ -168,7 +154,7 @@ export function CreateWorkOrder() {
                   className="w-full h-12 rounded-2xl px-4 text-sm font-mono font-semibold"
                   style={{
                     background: 'var(--theme-bg-tertiary)',
-                    border: `1.5px solid ${cont.ocrError ? 'var(--theme-status-warning)' : 'transparent'}`,
+                    border: `1.5px solid ${containerErrors[idx] ? 'var(--theme-status-error)' : cont.ocrError ? 'var(--theme-status-warning)' : 'transparent'}`,
                     color: 'var(--theme-text-primary)',
                     paddingRight: cont.ocrLoading ? '44px' : undefined,
                   }}
@@ -182,6 +168,11 @@ export function CreateWorkOrder() {
               {forceManualEntry && !cont.ocrLoading && (
                 <p className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--theme-status-warning)' }}>
                   <AlertCircle className="w-3.5 h-3.5" /> Vui lòng nhập tay số cont
+                </p>
+              )}
+              {containerErrors[idx] && (
+                <p className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--theme-status-error)' }}>
+                  <AlertCircle className="w-3.5 h-3.5" /> {containerErrors[idx]}
                 </p>
               )}
               {!forceManualEntry && (

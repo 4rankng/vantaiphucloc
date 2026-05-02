@@ -67,6 +67,21 @@ export async function reconcile(
   }
 }
 
+export async function unmatch(
+  tripOrderId: number,
+  reason: string,
+): Promise<ApiResponse<{ success: boolean; message: string }>> {
+  try {
+    const res = await api.post('/reconcile/unmatch', {
+      trip_order_id: tripOrderId,
+      reason,
+    })
+    return ok(res.data)
+  } catch (err) {
+    return fail(err)
+  }
+}
+
 export async function suggestMatches(
   workOrderId: number,
 ): Promise<ApiResponse<SuggestMatchesResponse>> {
