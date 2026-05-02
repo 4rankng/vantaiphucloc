@@ -7,28 +7,20 @@ import {
 } from '@/hooks/use-queries'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useMonthParams } from './use-month-params'
-import { formatCurrencyFull, type WorkOrder, type TripOrder } from '@/data/domain'
+import { formatCurrencyFull as fmt, type WorkOrder, type TripOrder } from '@/data/domain'
 import {
   Sparkles, ArrowRight, ChevronLeft, ChevronRight,
-  CheckCircle2, Plus, Link2, Wallet, Tag, Users, MapPin,
-  FileText,
+  CheckCircle2, Plus, Wallet, Tag, Users, MapPin,
+  FileText, Truck, Car, Briefcase,
 } from 'lucide-react'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const fmt = (n: number) => formatCurrencyFull(n)
 
 function resolveRoute(wo: WorkOrder | TripOrder): string {
   const parts = wo.route.split(' - ')
   const from = wo.pickupLocation || parts[0] || wo.route
   const to   = wo.dropoffLocation || parts[1] || null
   return to ? `${from} → ${to}` : from
-}
-
-function typeLabel(wo: WorkOrder): string {
-  const map: Record<string, number> = {}
-  wo.containers.forEach(c => { map[c.workType] = (map[c.workType] ?? 0) + 1 })
-  return Object.entries(map).map(([t, n]) => n > 1 ? `${t} × ${n}` : t).join(', ')
 }
 
 // ─── Month navigator ──────────────────────────────────────────────────────────
@@ -52,7 +44,7 @@ function MonthNavigator({
           {label}
         </p>
         {sublabel && (
-          <p className="text-sm mt-0.5" style={{ color: 'var(--theme-status-warning)' }}>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
             {sublabel}
           </p>
         )}
@@ -71,14 +63,17 @@ function MonthNavigator({
 // ─── KPI card ─────────────────────────────────────────────────────────────────
 
 function KpiCard({
-  label, value, unit, color,
+  label, value, color,
 }: {
-  label: string; value: string; unit?: string; color?: string
+  label: string; value: string; color?: string
 }) {
   return (
     <div
       className="rounded-2xl border p-4 flex flex-col gap-1"
-      style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)' }}
+      style={{
+        background: 'var(--theme-bg-secondary)',
+        borderColor: 'var(--theme-border-default)',
+      }}
     >
       <p className="text-xs font-medium leading-snug" style={{ color: 'var(--theme-text-muted)' }}>
         {label}
@@ -88,9 +83,6 @@ function KpiCard({
         style={{ color: color ?? 'var(--theme-text-primary)' }}
       >
         {value}
-        {unit && (
-          <span className="text-xl font-bold ml-1">{unit}</span>
-        )}
       </p>
     </div>
   )
@@ -108,8 +100,8 @@ function ActionPill({
       onClick={onClick}
       className="flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition hover:opacity-80 active:scale-[0.97] touch-manipulation"
       style={{
-        background: 'var(--surface-bg)',
-        borderColor: 'var(--surface-border)',
+        background: 'var(--theme-bg-secondary)',
+        borderColor: 'var(--theme-border-default)',
         color: 'var(--theme-text-primary)',
       }}
     >
@@ -149,12 +141,15 @@ function WorkbenchCard({
   return (
     <div
       className="flex flex-col rounded-2xl border overflow-hidden"
-      style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)' }}
+      style={{
+        background: 'var(--theme-bg-secondary)',
+        borderColor: 'var(--theme-border-default)',
+      }}
     >
       {/* Header */}
       <div
         className="flex items-center justify-between px-4 pt-4 pb-3"
-        style={{ borderBottom: '1px solid var(--surface-border)' }}
+        style={{ borderBottom: '1px solid var(--theme-border-default)' }}
       >
         <div className="text-sm font-semibold font-display" style={{ color: 'var(--theme-text-primary)' }}>
           {title}
@@ -162,14 +157,14 @@ function WorkbenchCard({
         {titleExtra}
       </div>
 
-      {/* Body */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2 min-h-[260px]">
+      {/* Body — flat list, rows handle their own dividers */}
+      <div className="flex-1 overflow-y-auto min-h-[280px]">
         {children}
       </div>
 
       {/* Footer */}
       {footerLabel && onFooter && (
-        <div style={{ borderTop: '1px solid var(--surface-border)' }}>
+        <div style={{ borderTop: '1px solid var(--theme-border-default)' }}>
           <button
             onClick={onFooter}
             className="flex w-full items-center gap-1.5 px-4 py-3 text-sm font-medium transition hover:opacity-70"
@@ -183,11 +178,12 @@ function WorkbenchCard({
   )
 }
 
-// ─── Trip order row ───────────────────────────────────────────────────────────
+// ─── Trip order row (flat list item) ─────────────────────────────────────────
 
-function TripRow({ trip, onClick }: { trip: TripOrder; onClick: () => void }) {
-  const isPending = trip.status === 'PENDING' || trip.status === 'DRAFT'
+function TripRow({ trip, onClick, isLast }: { trip: TripOrder; onClick: () => void; isLast?: boolean }) {
+  const isPending   = trip.status === 'PENDING' || trip.status === 'DRAFT'
   const isConfirmed = trip.isConfirmed
+  const isDraft     = trip.status === 'DRAFT'
 
   const types = trip.containers.length > 0
     ? (() => {
@@ -197,103 +193,119 @@ function TripRow({ trip, onClick }: { trip: TripOrder; onClick: () => void }) {
       })()
     : trip.workType ?? ''
 
+  const tripDate = trip.tripDate
+    ? new Date(trip.tripDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    : ''
+
+  let badge: { label: string; bg: string; color: string; border?: string }
+  if (isConfirmed) {
+    badge = { label: 'Đã xác nhận', bg: 'var(--theme-brand-primary)', color: '#fff' }
+  } else if (isDraft) {
+    badge = { label: 'Nháp', bg: 'transparent', color: 'var(--theme-text-muted)', border: '1px solid var(--theme-border-default)' }
+  } else if (trip.status === 'COMPLETED') {
+    badge = { label: 'Hoàn thành', bg: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' }
+  } else if (isPending) {
+    badge = { label: 'Chờ xử lý', bg: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' }
+  } else {
+    badge = { label: 'Đã ghép', bg: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }
+  }
+
   return (
     <button
       onClick={onClick}
-      className="w-full text-left rounded-xl border p-3 transition hover:shadow-sm active:scale-[0.99] touch-manipulation"
-      style={{ background: 'var(--theme-bg-primary)', borderColor: 'var(--surface-border)' }}
+      className="w-full text-left px-4 py-3 transition hover:bg-[color-mix(in_srgb,var(--theme-brand-primary)_4%,transparent)] active:scale-[0.99] touch-manipulation"
+      style={{ borderBottom: isLast ? 'none' : '1px solid var(--theme-border-light)' }}
     >
-      <div className="flex items-center justify-between gap-2 mb-1">
-        <div className="flex items-center gap-1.5">
-          <span className="font-mono text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
-            T0-{String(trip.id).padStart(4, '0')}
-          </span>
+      {/* Line 1: trip id • client name + badge */}
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
+          TO-{String(trip.id).padStart(3, '0')} • {trip.clientName}
+        </span>
+        <span
+          className="shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+          style={{
+            background: badge.bg,
+            color: badge.color,
+            border: badge.border,
+          }}
+        >
+          {badge.label}
+        </span>
+      </div>
+      {/* Line 2: date | route */}
+      <p className="mt-0.5 text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>
+        {tripDate}{tripDate && ' | '}{resolveRoute(trip)}
+      </p>
+      {/* Line 3: tractor plate + work type */}
+      {(trip.tractorPlate || types) && (
+        <div className="mt-1 flex items-center gap-3">
+          {trip.tractorPlate && (
+            <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+              <Truck className="h-3 w-3" />
+              {trip.tractorPlate}
+            </span>
+          )}
           {types && (
-            <span
-              className="rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold"
-              style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
-            >
+            <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+              <Car className="h-3 w-3" />
               {types}
             </span>
           )}
         </div>
-        {isPending ? (
-          <span
-            className="rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0"
-            style={{ background: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' }}
-          >
-            Chờ ghép
-          </span>
-        ) : isConfirmed ? (
-          <span
-            className="rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0"
-            style={{ background: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' }}
-          >
-            Đã chốt
-          </span>
-        ) : (
-          <span
-            className="rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0"
-            style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
-          >
-            Đã ghép
-          </span>
-        )}
-      </div>
-      <p className="text-sm font-semibold leading-snug truncate" style={{ color: 'var(--theme-text-primary)' }}>
-        {trip.clientName}
-      </p>
-      <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--theme-text-muted)' }}>
-        {resolveRoute(trip)}
-      </p>
-      <div className="mt-2 pt-2 flex items-center justify-between" style={{ borderTop: '1px solid var(--surface-border)' }}>
-        <span className="text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>
-          {trip.driverName ?? '—'}
-        </span>
-        <span className="font-mono text-xs font-semibold tabular-nums shrink-0" style={{ color: 'var(--theme-text-primary)' }}>
-          {fmt(trip.revenue ?? 0)}
-        </span>
-      </div>
+      )}
     </button>
   )
 }
 
-// ─── Unmatched WO row ─────────────────────────────────────────────────────────
+// ─── Unmatched WO row (flat list item) ───────────────────────────────────────
 
-function UnmatchedRow({ wo, onClick }: { wo: WorkOrder; onClick: () => void }) {
+function UnmatchedRow({ wo, onClick, isLast }: { wo: WorkOrder; onClick: () => void; isLast?: boolean }) {
+  const containerNums = wo.containers.map(c => c.containerNumber).filter(Boolean).slice(0, 1).join(', ')
+
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 rounded-xl border p-3 text-left transition hover:shadow-sm active:scale-[0.99] touch-manipulation"
-      style={{ background: 'var(--theme-bg-primary)', borderColor: 'var(--surface-border)' }}
+      className="w-full text-left px-4 py-3 transition hover:bg-[color-mix(in_srgb,var(--theme-brand-primary)_4%,transparent)] active:scale-[0.99] touch-manipulation"
+      style={{ borderBottom: isLast ? 'none' : '1px solid var(--theme-border-light)' }}
     >
-      <div
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-mono text-xs font-bold"
-        style={{
-          background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)',
-          color: 'var(--theme-brand-primary)',
-        }}
-      >
-        {wo.containers.length}
+      {/* Line 1: WO id • driver name + badge */}
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
+          WO-{String(wo.id).padStart(3, '0')} • {wo.driverName}
+        </span>
+        <span
+          className="shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+          style={{
+            background: 'var(--theme-status-warning-light)',
+            color: 'var(--theme-status-warning)',
+          }}
+        >
+          Chờ ghép
+        </span>
       </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5 mb-0.5">
-          <span className="font-mono text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-            WO-{String(wo.id).padStart(4, '0')}
+      {/* Line 2: client | route */}
+      <p className="mt-0.5 text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>
+        {wo.clientName} | {resolveRoute(wo)}
+      </p>
+      {/* Line 3: tractor + work type + container */}
+      <div className="mt-1 flex items-center gap-3">
+        {wo.tractorPlate && (
+          <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+            <Truck className="h-3 w-3" />
+            {wo.tractorPlate}
           </span>
-          <span
-            className="rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold"
-            style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
-          >
-            {typeLabel(wo)}
+        )}
+        {wo.containers[0]?.workType && (
+          <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+            <Car className="h-3 w-3" />
+            {wo.containers[0].workType}
           </span>
-        </div>
-        <p className="truncate text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
-          {wo.driverName}
-        </p>
-        <p className="truncate text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-          {resolveRoute(wo)}
-        </p>
+        )}
+        {containerNums && (
+          <span className="text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>
+            {containerNums}
+          </span>
+        )}
       </div>
     </button>
   )
@@ -301,13 +313,14 @@ function UnmatchedRow({ wo, onClick }: { wo: WorkOrder; onClick: () => void }) {
 
 // ─── Match suggestion row ─────────────────────────────────────────────────────
 
-function MatchRow({ wo, trips, onMatch }: {
+function MatchRow({ wo, trips, onMatch, isLast }: {
   wo: WorkOrder
   trips: TripOrder[]
   onMatch: (woId: number) => void
+  isLast?: boolean
 }) {
   const candidate = useMemo(() => {
-    const woRoute = wo.route.toLowerCase()
+    const woRoute  = wo.route.toLowerCase()
     const woClient = wo.clientName.toLowerCase()
     return trips
       .filter(t => t.status === 'DRAFT' || t.status === 'PENDING')
@@ -322,38 +335,59 @@ function MatchRow({ wo, trips, onMatch }: {
       .sort((a, b) => b.score - a.score)[0] ?? null
   }, [wo, trips])
 
-  const reasons: string[] = []
+  const details: string[] = []
   if (candidate) {
-    if (candidate.trip.clientName.toLowerCase() === wo.clientName.toLowerCase()) reasons.push('cùng khách')
-    if (candidate.trip.route.toLowerCase() === wo.route.toLowerCase()) reasons.push('cùng tuyến')
-    if (candidate.trip.driverId === wo.driverId) reasons.push('cùng tài xế')
+    if (wo.tractorPlate) details.push(wo.tractorPlate)
+    if (wo.containers[0]?.workType) details.push(wo.containers[0].workType)
+    if (wo.clientName) details.push(wo.clientName)
+    const route = resolveRoute(wo)
+    if (route) details.push(route)
   }
 
   return (
     <div
-      className="rounded-xl border p-3"
-      style={{ background: 'var(--theme-bg-primary)', borderColor: 'var(--surface-border)' }}
+      className="px-4 py-3"
+      style={{ borderBottom: isLast ? 'none' : '1px solid var(--theme-border-light)' }}
     >
-      <div className="flex items-center gap-2 mb-1.5">
-        <span className="font-mono text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
-          WO-{String(wo.id).padStart(4, '0')}
-        </span>
-        <Link2 className="h-3 w-3 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
-        <span className="font-mono text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
-          {candidate ? `T0-${String(candidate.trip.id).padStart(4, '0')}` : '—'}
-        </span>
+      {/* Two pill boxes connected by arrow */}
+      <div className="flex items-center gap-2 mb-2">
+        <div
+          className="flex-1 rounded-lg border px-3 py-1.5 text-xs font-semibold text-center"
+          style={{
+            borderColor: 'var(--theme-border-default)',
+            color: 'var(--theme-text-primary)',
+            background: 'var(--theme-bg-primary)',
+          }}
+        >
+          Lệnh: TO-{String(candidate?.trip.id ?? '???').padStart(3, '0')}
+        </div>
+        <ArrowRight className="h-4 w-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
+        <div
+          className="flex-1 rounded-lg border px-3 py-1.5 text-xs font-semibold text-center"
+          style={{
+            borderColor: 'var(--theme-border-default)',
+            color: 'var(--theme-text-primary)',
+            background: 'var(--theme-bg-primary)',
+          }}
+        >
+          Phiếu: WO-{String(wo.id).padStart(3, '0')}
+        </div>
       </div>
-      {reasons.length > 0 && (
-        <p className="text-xs mb-2.5" style={{ color: 'var(--theme-text-muted)' }}>
-          {reasons.join(' · ')}
+
+      {/* Detail line */}
+      {details.length > 0 && (
+        <p className="text-xs mb-2.5 truncate" style={{ color: 'var(--theme-text-muted)' }}>
+          {details.join('  ')}
         </p>
       )}
+
+      {/* Full-width Ghép button */}
       <button
         onClick={() => onMatch(wo.id)}
-        className="w-full rounded-lg py-1.5 text-xs font-bold transition hover:opacity-90 active:scale-[0.98]"
-        style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+        className="w-full rounded-lg py-2 text-sm font-semibold transition hover:opacity-90 active:scale-[0.98]"
+        style={{ background: 'var(--theme-brand-primary)', color: '#fff' }}
       >
-        Xác nhận ghép
+        Ghép
       </button>
     </div>
   )
@@ -386,7 +420,7 @@ function DesktopDashboard() {
 
   const quickActions = [
     { label: 'Tạo lệnh', path: '/accountant/create-trip', icon: Plus },
-    { label: 'Đối soát', path: '/accountant/work-orders', icon: Link2 },
+    { label: 'Đối soát', path: '/accountant/work-orders', icon: Briefcase },
     { label: 'Đối tác', path: '/accountant/partners', icon: Users },
     { label: 'Cung đường', path: '/accountant/routes', icon: MapPin },
     { label: 'Bảng giá', path: '/accountant/pricing', icon: Tag },
@@ -451,10 +485,11 @@ function DesktopDashboard() {
           {sortedTrips.length === 0 ? (
             <EmptyState icon={FileText} text="Chưa có lệnh nào" />
           ) : (
-            sortedTrips.map(trip => (
+            sortedTrips.map((trip, i) => (
               <TripRow
                 key={trip.id}
                 trip={trip}
+                isLast={i === sortedTrips.length - 1}
                 onClick={() => navigate(`/accountant/trip/${trip.id}`)}
               />
             ))
@@ -475,20 +510,21 @@ function DesktopDashboard() {
           {matchCandidates.length === 0 ? (
             <EmptyState icon={CheckCircle2} text="Tất cả phiếu đã ghép" />
           ) : (
-            matchCandidates.map(wo => (
+            matchCandidates.map((wo, i) => (
               <MatchRow
                 key={wo.id}
                 wo={wo}
                 trips={trips}
+                isLast={i === matchCandidates.length - 1}
                 onMatch={id => navigate(`/accountant/match/${id}`)}
               />
             ))
           )}
         </WorkbenchCard>
 
-        {/* ── Right: Phiếu chưa ghép ── */}
+        {/* ── Right: Phiếu tài xế chưa ghép ── */}
         <WorkbenchCard
-          title="Phiếu chưa ghép"
+          title="Phiếu tài xế chưa ghép"
           titleExtra={
             <button
               onClick={() => navigate('/accountant/work-orders')}
@@ -502,10 +538,11 @@ function DesktopDashboard() {
           {unmatchedWOs.length === 0 ? (
             <EmptyState icon={CheckCircle2} text="Không có phiếu chờ" />
           ) : (
-            unmatchedWOs.map(wo => (
+            unmatchedWOs.map((wo, i) => (
               <UnmatchedRow
                 key={wo.id}
                 wo={wo}
+                isLast={i === unmatchedWOs.length - 1}
                 onClick={() => navigate(`/accountant/match/${wo.id}`)}
               />
             ))
@@ -541,7 +578,7 @@ function MobileDashboard() {
 
   const quickActions = [
     { label: 'Tạo lệnh', path: '/accountant/create-trip', icon: Plus },
-    { label: 'Đối soát', path: '/accountant/work-orders', icon: Link2 },
+    { label: 'Đối soát', path: '/accountant/work-orders', icon: Briefcase },
     { label: 'Đối tác', path: '/accountant/partners', icon: Users },
     { label: 'Cung đường', path: '/accountant/routes', icon: MapPin },
     { label: 'Bảng giá', path: '/accountant/pricing', icon: Tag },
@@ -603,10 +640,11 @@ function MobileDashboard() {
         {recentTrips.length === 0 ? (
           <EmptyState icon={FileText} text="Chưa có lệnh nào" />
         ) : (
-          recentTrips.map(trip => (
+          recentTrips.map((trip, i) => (
             <TripRow
               key={trip.id}
               trip={trip}
+              isLast={i === recentTrips.length - 1}
               onClick={() => navigate(`/accountant/trip/${trip.id}`)}
             />
           ))
@@ -627,20 +665,21 @@ function MobileDashboard() {
         {pendingWOs.length === 0 ? (
           <EmptyState icon={CheckCircle2} text="Tất cả phiếu đã ghép" />
         ) : (
-          pendingWOs.slice(0, 3).map(wo => (
+          pendingWOs.slice(0, 3).map((wo, i) => (
             <MatchRow
               key={wo.id}
               wo={wo}
               trips={trips}
+              isLast={i === Math.min(pendingWOs.length, 3) - 1}
               onMatch={id => navigate(`/accountant/match/${id}`)}
             />
           ))
         )}
       </WorkbenchCard>
 
-      {/* Phiếu chưa ghép */}
+      {/* Phiếu tài xế chưa ghép */}
       <WorkbenchCard
-        title="Phiếu chưa ghép"
+        title="Phiếu tài xế chưa ghép"
         titleExtra={
           <button
             onClick={() => navigate('/accountant/work-orders')}
@@ -654,10 +693,11 @@ function MobileDashboard() {
         {unmatchedWOs.length === 0 ? (
           <EmptyState icon={CheckCircle2} text="Không có phiếu chờ" />
         ) : (
-          unmatchedWOs.map(wo => (
+          unmatchedWOs.map((wo, i) => (
             <UnmatchedRow
               key={wo.id}
               wo={wo}
+              isLast={i === unmatchedWOs.length - 1}
               onClick={() => navigate(`/accountant/match/${wo.id}`)}
             />
           ))

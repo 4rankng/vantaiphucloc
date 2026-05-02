@@ -57,6 +57,8 @@ export interface Client {
   phone: string
   contactPerson?: string
   outstandingDebt: number
+  isActive?: boolean
+  createdAt?: string
 }
 
 // TODO: Add when partner management feature is implemented

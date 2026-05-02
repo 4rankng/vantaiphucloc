@@ -74,6 +74,7 @@ export function createAppRouter() {
             { path: 'match-trip/:tripId',    element: h(Lazy, { component: R.MatchTrip }) },
             { path: 'notifications',         element: ebc('Notifications', h(Lazy, { component: R.AccountantNotifications })) },
             { path: 'profile',               element: ebc('Profile', h(Lazy, { component: R.Profile })) },
+            { path: 'customers',             element: h(Lazy, { component: R.CustomerManagement }) },
           ],
         },
         // ─── Director ──────────────────────────────────────────
