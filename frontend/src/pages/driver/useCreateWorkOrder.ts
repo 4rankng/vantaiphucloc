@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useOffline } from '@/contexts/OfflineContext'
 import { apiClient } from '@/services/api'
+import { api } from '@/services/api/client'
 import type { PhotoMeta } from '@/components/shared/ContainerScanner'
 import type { Client, RoutePrice, WorkType, WorkOrder } from '@/data/domain'
 
@@ -44,6 +45,7 @@ export function useCreateWorkOrder() {
   const [galleryImage, setGalleryImage] = useState<string | null>(null)
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [containerErrors, setContainerErrors] = useState<Record<number, string>>({})
 
   // Consecutive OCR failure tracking
   const [consecutiveOCRFailures, setConsecutiveOCRFailures] = useState(0)
@@ -152,6 +154,9 @@ export function useCreateWorkOrder() {
     setContainers(prev => prev.map((c, i) =>
       i === idx ? { ...c, [field]: value } : c,
     ))
+    if (field === 'containerNumber') {
+      setContainerErrors(prev => { const next = { ...prev }; delete next[idx]; return next })
+    }
   }, [])
 
   const addContainer = useCallback(() => {
@@ -186,10 +191,27 @@ export function useCreateWorkOrder() {
   }, [containers, clientId, pickupLocation, dropoffLocation])
 
   // Submit flow
-  const onRequestSubmit = useCallback(() => {
+  const onRequestSubmit = useCallback(async () => {
     if (!canSubmit) return
+    // Validate container numbers via backend
+    const errors: Record<number, string> = {}
+    const isOnlineFlag = navigator.onLine
+    if (isOnlineFlag) {
+      await Promise.all(containers.map(async (c, idx) => {
+        try {
+          const res = await api.get('/work-orders/validate-container', {
+            params: { container_number: c.containerNumber.trim() },
+          })
+          if (!res.data.valid) {
+            errors[idx] = res.data.error ?? 'Số container không hợp lệ'
+          }
+        } catch { /* skip validation on error */ }
+      }))
+    }
+    setContainerErrors(errors)
+    if (Object.keys(errors).length > 0) return
     setSummaryOpen(true)
-  }, [canSubmit])
+  }, [canSubmit, containers])
 
   const confirmSubmit = useCallback(async () => {
     setSummaryOpen(false)
@@ -268,7 +290,7 @@ export function useCreateWorkOrder() {
 
     // UI state
     submitting, scannerOpen, galleryImage, isOnline, summaryOpen, showSuccess,
-    forceManualEntry, missingFields,
+    forceManualEntry, missingFields, containerErrors,
 
     // Derived
     canSubmit, summaryContainers, summaryClientName,
