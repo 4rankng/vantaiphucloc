@@ -27,6 +27,7 @@ from app.models.domain import (
     WorkOrderContainer,
     TripOrder,
     TripOrderContainer,
+    TripOrderWorkOrder,
     Route,
 )
 from app.schemas.domain import (
@@ -99,8 +100,12 @@ async def suggest_trip_matches(
         .where(TripOrderContainer.container_number.in_(wo_container_numbers))
     )
 
+    # Exclude TOs that already have a match (1-to-1 enforcement)
+    matched_to_subquery = select(TripOrderWorkOrder.trip_order_id)
+
     query = select(TripOrder).where(
-        TripOrder.status.in_(["DRAFT", "PENDING"]),
+        TripOrder.status == "PENDING",
+        ~TripOrder.id.in_(matched_to_subquery),
         or_(
             TripOrder.client_id == work_order.client_id,
             TripOrder.route == work_order.route,
@@ -221,6 +226,7 @@ async def suggest_trip_matches(
             allowance=to.allowance,
             revenue=to.revenue,
             status=to.status,
+            is_locked=getattr(to, 'is_locked', False),
             matched_work_order_ids=[],
             created_at=to.created_at,
             updated_at=to.updated_at,
@@ -276,8 +282,12 @@ async def suggest_wo_matches(
         .where(WorkOrderContainer.container_number.in_(to_container_numbers))
     )
 
+    # Exclude WOs that already have a match (1-to-1 enforcement)
+    matched_wo_subquery = select(TripOrderWorkOrder.work_order_id)
+
     query = select(WorkOrder).where(
-        WorkOrder.status.in_(["PENDING"]),
+        WorkOrder.status == "PENDING",
+        ~WorkOrder.id.in_(matched_wo_subquery),
         or_(
             WorkOrder.client_id == trip_order.client_id,
             WorkOrder.route == trip_order.route,
@@ -395,6 +405,7 @@ async def suggest_wo_matches(
             earning=wo.earning,
             pricing_id=wo.pricing_id,
             status=wo.status,
+            is_locked=getattr(wo, 'is_locked', False),
             containers=containers_out,
             created_at=wo.created_at,
             updated_at=wo.updated_at,

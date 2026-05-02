@@ -140,13 +140,13 @@ async def find_tiered_pricing(
     if pricing is None:
         return None
 
-    # Look for the highest applicable tier (quantity <= requested)
+    # Look for exact quantity match (per BizLogic: "system looks up pricing for exact quantity")
     result = await db.execute(
         select(PricingLine).where(
             PricingLine.pricing_id == pricing.id,
             PricingLine.work_type == work_type,
-            PricingLine.quantity <= quantity,
-        ).order_by(PricingLine.quantity.desc()).limit(1)
+            PricingLine.quantity == quantity,
+        ).limit(1)
     )
     line = result.scalar_one_or_none()
 

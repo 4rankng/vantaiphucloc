@@ -1,6 +1,6 @@
 import math
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -9,11 +9,12 @@ from app.database import get_db
 from app.models.base import User
 from app.models.domain import Client, WorkOrder, TripOrder
 from app.schemas.base import PaginatedResponse
-from app.schemas.domain import ClientCreate, ClientUpdate, ClientOut
+from app.schemas.domain import ClientCreate, ClientUpdate, ClientOut, SoftDeleteRequest
 from app.core.deps import require_roles
 from app.core.redis import get_redis
 from app.core.cache import CacheManager
 from app.config import settings
+from app.services.audit_service import log_action
 
 router = APIRouter()
 
@@ -32,11 +33,12 @@ async def list_clients(
     if cached is not None:
         return PaginatedResponse(**cached)
 
-    total_q = await db.execute(select(func.count(Client.id)))
+    total_q = await db.execute(select(func.count(Client.id)).where(Client.is_active == True))
     total = total_q.scalar() or 0
 
     result = await db.execute(
         select(Client)
+        .where(Client.is_active == True)
         .order_by(Client.name.asc())
         .offset((page - 1) * page_size)
         .limit(page_size)
@@ -97,6 +99,8 @@ async def update_client(
 @router.delete("/clients/{client_id}", status_code=204)
 async def delete_client(
     client_id: int,
+    body: SoftDeleteRequest,
+    request: Request,
     current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
@@ -127,7 +131,9 @@ async def delete_client(
             detail="Cannot delete client with associated trip orders",
         )
 
-    await db.delete(client)
+    client.is_active = False
+    await log_action(db, user_id=current_user.id, action="UPDATE", table_name="clients",
+        record_id=client.id, reason=body.reason, request=request)
     await db.commit()
     await CacheManager(redis).invalidate_namespace("clients")
     return Response()
