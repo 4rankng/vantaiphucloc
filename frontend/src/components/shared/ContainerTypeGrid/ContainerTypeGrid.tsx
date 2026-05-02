@@ -18,14 +18,14 @@ export function ContainerTypeGrid({ value, onChange, error }: ContainerTypeGridP
   }
 
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-1.5">
       {WORK_TYPES.map(wt => {
         const selected = value === wt
         return (
           <button
             key={wt}
             onClick={() => handleSelect(wt)}
-            className="flex-1 min-h-[52px] rounded-2xl flex items-center justify-center gap-1.5 transition-all active:scale-95 touch-manipulation"
+            className="flex-1 min-h-[38px] rounded-xl flex items-center justify-center gap-1 transition-all active:scale-95 touch-manipulation"
             style={{
               background: selected ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
               color: selected ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
@@ -33,8 +33,8 @@ export function ContainerTypeGrid({ value, onChange, error }: ContainerTypeGridP
               boxShadow: selected ? 'none' : 'var(--theme-shadow-card)',
             }}
           >
-            <span className="text-base font-bold">{wt}</span>
-            {selected && <CheckCircle className="w-3.5 h-3.5" />}
+            <span className="text-sm font-bold">{wt}</span>
+            {selected && <CheckCircle className="w-3 h-3" />}
           </button>
         )
       })}
