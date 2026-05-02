@@ -7,127 +7,127 @@ import { PickModal } from '@/components/shared/PickModal'
 import { EditDialog } from '@/components/shared/EditDialog'
 import { CompareRow } from '@/components/shared/CompareRow'
 import { ContCompareRow } from '@/components/shared/ContCompareRow'
+import { ConfirmationCheckbox } from '@/components/shared/ConfirmationCheckbox'
+import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
 import { WORK_TYPES } from '@/data/domain'
 import type { WOSuggestion } from '@/data/domain'
-import { 
-  Check, 
-  ChevronDown, 
-  X, 
-  Sparkles, 
-  ArrowLeft, 
-  Command, 
-  ArrowUpDown,
-  Truck,
-  FileText,
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  Plus,
-  Keyboard
+import {
+  Check, ChevronDown, X, Sparkles, ArrowLeft, Command, ArrowUpDown,
+  Truck, FileText, AlertCircle, CheckCircle2, Plus, Keyboard,
 } from 'lucide-react'
 import { Button, Input, Label } from '@/components/ui'
+import { useToggleTripConfirmation } from '@/hooks/use-queries'
+import { useToast } from '@/components/atoms/Toast'
+import { useIsMobile } from '@/hooks/use-mobile'
 
-function WOSuggestionCard({ 
-  suggestion, 
-  onSelect, 
+function WOSuggestionCard({
+  suggestion,
+  onSelect,
   index,
-  isSelected 
-}: { 
+  isSelected,
+}: {
   suggestion: WOSuggestion
   onSelect: () => void
   index: number
   isSelected?: boolean
 }) {
-  const { workOrder, confidence, matchedFields } = suggestion
+  const { workOrder, confidence, matchedFields, score } = suggestion
   const isFull = confidence === 'full'
   const isPartial = confidence === 'partial'
 
+  const confidencePercent = Math.min(100, score ?? 0)
+  const confidenceColor = isFull ? 'var(--theme-status-success)' : isPartial ? 'var(--theme-status-warning)' : 'var(--theme-text-muted)'
+
   return (
-    <button 
+    <button
       onClick={onSelect}
-      className={`w-full text-left px-4 py-3 rounded-xl transition-all touch-manipulation group ${
+      className={`w-full text-left rounded-xl transition-all touch-manipulation overflow-hidden ${
         isSelected ? 'ring-2 ring-offset-2' : 'hover:scale-[1.01]'
       }`}
       style={{
-        background: isFull ? 'var(--theme-status-success-light)' : isPartial ? 'var(--theme-status-warning-light, #FEF3C7)' : 'var(--theme-bg-secondary)',
+        background: isFull ? 'var(--theme-status-success-light)' : isPartial ? 'var(--theme-status-warning-light)' : 'var(--theme-bg-secondary)',
         border: `1px solid ${isFull ? 'var(--theme-status-success)' : isPartial ? 'var(--theme-status-warning)' : 'var(--theme-border-default)'}`,
         ringColor: 'var(--theme-brand-primary)',
       }}
     >
-      <div className="flex items-start justify-between gap-3 mb-2">
-        <div className="flex items-center gap-3">
-          {/* Number badge for keyboard shortcut */}
-          <div 
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 transition-colors"
-            style={{ 
+      <div
+        className="px-3 py-2 flex items-center justify-between"
+        style={{ borderBottom: '1px solid var(--theme-border-light)' }}
+      >
+        <div className="flex items-center gap-2">
+          <div
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0"
+            style={{
               background: isSelected ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
-              color: isSelected ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)'
+              color: isSelected ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)',
             }}
           >
             {index + 1}
           </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {workOrder.containers.map((c, i) => (
-              <span key={i} className="flex items-center gap-1">
-                <ContBadge type={c.workType} />
-                <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                  {c.containerNumber}
-                </span>
-              </span>
-            ))}
-          </div>
+          <StatusBadgePro
+            variant={isFull ? 'success' : isPartial ? 'warning' : 'neutral'}
+            label={isFull ? 'Khớp đầy đủ' : isPartial ? 'Khớp một phần' : 'Gợi ý'}
+            size="sm"
+            showIcon
+          />
         </div>
         <div className="flex items-center gap-2">
-          <span 
-            className="text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1"
-            style={{
-              background: isFull ? 'var(--theme-status-success)' : isPartial ? 'var(--theme-status-warning)' : 'var(--theme-bg-tertiary)',
-              color: isFull ? '#fff' : isPartial ? '#92400E' : 'var(--theme-text-muted)',
-            }}
-          >
-            {isFull ? <CheckCircle2 className="w-3 h-3" /> : isPartial ? <Clock className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-            {isFull ? 'Khớp đầy đủ' : isPartial ? 'Khớp một phần' : 'Không khớp'}
+          <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--theme-bg-tertiary)' }}>
+            <div
+              className="h-full rounded-full transition-all"
+              style={{ width: `${confidencePercent}%`, background: confidenceColor }}
+            />
+          </div>
+          <span className="text-xs font-bold tabular-nums" style={{ color: confidenceColor }}>
+            {confidencePercent}%
           </span>
         </div>
       </div>
-      
-      <p className="text-sm mb-2" style={{ color: 'var(--theme-text-secondary)' }}>
-        <span className="font-medium">{workOrder.driverName}</span> · {workOrder.clientName} · {workOrder.route}
-      </p>
-      
-      <div className="flex flex-wrap gap-1.5">
-        {matchedFields.map(f => (
-          <span 
-            key={f} 
-            className="text-xs px-2 py-0.5 rounded-md font-medium flex items-center gap-1"
-            style={{ 
-              background: 'var(--theme-status-success-light)', 
-              color: 'var(--theme-status-success)' 
-            }}
-          >
-            <Check className="w-3 h-3" />
-            {f === 'driver' ? 'Tài xế' : f === 'client' ? 'Khách hàng' : f === 'route' ? 'Cung đường' : 'Container'}
-          </span>
-        ))}
+
+      <div className="px-3 py-2.5">
+        <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+          {workOrder.containers.map((c, i) => (
+            <span key={i} className="flex items-center gap-1">
+              <ContBadge type={c.workType} />
+              <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+                {c.containerNumber}
+              </span>
+            </span>
+          ))}
+        </div>
+        <p className="text-sm mb-1.5" style={{ color: 'var(--theme-text-secondary)' }}>
+          <span className="font-medium">{workOrder.driverName}</span> · {workOrder.clientName} · {workOrder.route}
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {matchedFields.map(f => (
+            <span
+              key={f}
+              className="text-xs px-2 py-0.5 rounded-md font-medium flex items-center gap-1"
+              style={{ background: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' }}
+            >
+              <Check className="w-3 h-3" />
+              {f === 'driver' ? 'Tài xế' : f === 'client' ? 'Khách hàng' : f === 'route' ? 'Cung đường' : 'Container'}
+            </span>
+          ))}
+        </div>
       </div>
     </button>
   )
 }
 
-// Keyboard shortcuts help panel
 function KeyboardShortcutsPanel({ onClose }: { onClose: () => void }) {
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
       onClick={onClose}
     >
-      <div 
+      <div
         className="rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl"
         style={{ background: 'var(--theme-bg-primary)' }}
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 mb-5">
-          <div 
+          <div
             className="p-2 rounded-xl"
             style={{ background: 'var(--theme-brand-primary-light)' }}
           >
@@ -145,15 +145,15 @@ function KeyboardShortcutsPanel({ onClose }: { onClose: () => void }) {
             { key: 'T', action: 'Chọn chuyến yêu cầu' },
             { key: 'J', action: 'Chọn chuyến đã chạy' },
             { key: 'Esc', action: 'Quay lại / Đóng' },
-            { key: '?', action: 'Hiện/ẩn phím tắt' }
+            { key: '?', action: 'Hiện/ẩn phím tắt' },
           ].map(({ key, action }) => (
             <div key={key} className="flex items-center justify-between">
-              <span 
+              <span
                 className="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold"
-                style={{ 
+                style={{
                   background: 'var(--theme-bg-secondary)',
                   color: 'var(--theme-text-primary)',
-                  border: '1px solid var(--theme-border-default)'
+                  border: '1px solid var(--theme-border-default)',
                 }}
               >
                 {key}
@@ -165,10 +165,7 @@ function KeyboardShortcutsPanel({ onClose }: { onClose: () => void }) {
         <button
           onClick={onClose}
           className="w-full mt-5 py-2.5 rounded-xl text-sm font-semibold transition-colors"
-          style={{ 
-            background: 'var(--theme-bg-secondary)',
-            color: 'var(--theme-text-primary)'
-          }}
+          style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)' }}
         >
           Đóng
         </button>
@@ -180,9 +177,12 @@ function KeyboardShortcutsPanel({ onClose }: { onClose: () => void }) {
 export function MatchTrip() {
   const { tripId: tripIdStr } = useParams<{ tripId: string }>()
   const navigate = useNavigate()
+  const toast = useToast()
+  const isMobile = useIsMobile()
+  const { mutate: toggleConfirmation, isPending: toggling } = useToggleTripConfirmation()
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState<number | null>(null)
-  
+
   const {
     loading, loadingSuggestions, submitting, pickMode, setPickMode,
     editDialog,
@@ -201,13 +201,9 @@ export function MatchTrip() {
     openEdit, saveDialog, handleMatch,
   } = useMatchTrip(Number(tripIdStr))
 
-  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger if user is typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return
-      }
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
 
       switch (e.key) {
         case 'Escape':
@@ -275,12 +271,26 @@ export function MatchTrip() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [suggestions, selectedTrip, selectedJob, submitting, pickMode, editDialog, showKeyboardHelp, navigate, setPickMode, saveDialog, handleMatch, setSelectedJobId])
 
-  // Auto-select suggestion with keyboard
   useEffect(() => {
     if (selectedSuggestionIndex !== null && suggestions[selectedSuggestionIndex]) {
       setSelectedJobId(suggestions[selectedSuggestionIndex].workOrder.id)
     }
   }, [selectedSuggestionIndex, suggestions, setSelectedJobId])
+
+  const handleToggleConfirmation = () => {
+    if (!selectedTrip) return
+
+    toggleConfirmation(selectedTrip.id, {
+      onSuccess: () => {
+        toast.success('Thành công', selectedTrip.isConfirmed ? 'Đã bỏ chốt chuyến' : 'Đã chốt chuyến')
+      },
+      onError: () => {
+        toast.error('Lỗi', 'Không thể thay đổi trạng thái chốt')
+      },
+    })
+  }
+
+  const allMatched = contMatched && clientMatched && routeMatched
 
   if (loading) {
     return (
@@ -297,17 +307,16 @@ export function MatchTrip() {
 
   return (
     <>
-      {/* Keyboard Help Modal */}
       {showKeyboardHelp && <KeyboardShortcutsPanel onClose={() => setShowKeyboardHelp(false)} />}
-      
-      <div className="flex flex-col min-h-[calc(100dvh-56px)] lg:min-h-screen">
+
+      <div className="flex flex-col h-[calc(100dvh-56px)] lg:h-screen">
         {/* Header - Desktop */}
-        <div 
+        <div
           className="hidden lg:flex items-center justify-between px-8 py-4 border-b shrink-0"
           style={{ borderColor: 'var(--theme-border-light)' }}
         >
           <div className="flex items-center gap-4">
-            <button 
+            <button
               onClick={() => navigate(-1)}
               className="p-2 rounded-xl transition-colors hover:opacity-80"
               style={{ background: 'var(--theme-bg-secondary)' }}
@@ -337,7 +346,7 @@ export function MatchTrip() {
         {/* Main Content */}
         <div className="flex-1 flex flex-col lg:flex-row">
           {/* Left Panel - Trip Selectors */}
-          <div 
+          <div
             className="lg:w-[420px] xl:w-[480px] shrink-0 p-4 lg:p-6 lg:border-r overflow-y-auto"
             style={{ borderColor: 'var(--theme-border-light)' }}
           >
@@ -345,31 +354,31 @@ export function MatchTrip() {
               {/* Trip Selector - Yêu cầu */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <div 
+                  <div
                     className="w-2 h-2 rounded-full"
                     style={{ background: 'var(--theme-status-warning)' }}
                   />
                   <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--theme-status-warning)' }}>
                     Chuyến yêu cầu
                   </span>
-                  <span 
+                  <span
                     className="text-[10px] px-1.5 py-0.5 rounded font-mono"
                     style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
                   >
                     T
                   </span>
                 </div>
-                <button 
+                <button
                   onClick={() => setPickMode('trip')}
                   className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl touch-manipulation transition-all hover:scale-[1.01]"
-                  style={{ 
-                    background: 'var(--theme-bg-secondary)', 
-                    boxShadow: 'var(--theme-shadow-card)', 
-                    border: selectedTrip ? '2px solid var(--theme-status-warning)' : '1px solid var(--theme-border-default)' 
+                  style={{
+                    background: 'var(--theme-bg-secondary)',
+                    boxShadow: 'var(--theme-shadow-card)',
+                    border: selectedTrip ? '2px solid var(--theme-status-warning)' : '1px solid var(--theme-border-default)',
                   }}
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
-                    <div 
+                    <div
                       className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                       style={{ background: 'var(--theme-status-warning-light)' }}
                     >
@@ -407,31 +416,31 @@ export function MatchTrip() {
               {/* Job Selector - Đã chạy */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <div 
+                  <div
                     className="w-2 h-2 rounded-full"
                     style={{ background: 'var(--theme-brand-primary)' }}
                   />
                   <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--theme-brand-primary)' }}>
                     Chuyến đã chạy
                   </span>
-                  <span 
+                  <span
                     className="text-[10px] px-1.5 py-0.5 rounded font-mono"
                     style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
                   >
                     J
                   </span>
                 </div>
-                <button 
+                <button
                   onClick={() => setPickMode('job')}
                   className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl touch-manipulation transition-all hover:scale-[1.01]"
-                  style={{ 
-                    background: 'var(--theme-bg-secondary)', 
-                    boxShadow: 'var(--theme-shadow-card)', 
-                    border: selectedJob ? '2px solid var(--theme-brand-primary)' : '1px solid var(--theme-border-default)' 
+                  style={{
+                    background: 'var(--theme-bg-secondary)',
+                    boxShadow: 'var(--theme-shadow-card)',
+                    border: selectedJob ? '2px solid var(--theme-brand-primary)' : '1px solid var(--theme-border-default)',
                   }}
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
-                    <div 
+                    <div
                       className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                       style={{ background: 'var(--theme-brand-primary-light)' }}
                     >
@@ -463,15 +472,15 @@ export function MatchTrip() {
 
               {/* Suggestions Panel */}
               {suggestions.length > 0 && !selectedJobId && (
-                <div 
+                <div
                   className="mt-6 p-4 rounded-2xl"
-                  style={{ 
-                    background: 'var(--theme-bg-secondary)', 
-                    border: '1px solid var(--theme-border-default)' 
+                  style={{
+                    background: 'var(--theme-bg-secondary)',
+                    border: '1px solid var(--theme-border-default)',
                   }}
                 >
                   <div className="flex items-center gap-2 mb-3">
-                    <div 
+                    <div
                       className="p-1.5 rounded-lg"
                       style={{ background: 'var(--theme-brand-primary-light)' }}
                     >
@@ -480,7 +489,7 @@ export function MatchTrip() {
                     <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
                       Gợi ý khớp
                     </p>
-                    <span 
+                    <span
                       className="text-xs px-2 py-0.5 rounded-full font-medium"
                       style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
                     >
@@ -489,15 +498,15 @@ export function MatchTrip() {
                   </div>
                   <div className="space-y-2">
                     {suggestions.map((s, index) => (
-                      <WOSuggestionCard 
-                        key={s.workOrder.id} 
-                        suggestion={s} 
+                      <WOSuggestionCard
+                        key={s.workOrder.id}
+                        suggestion={s}
                         index={index}
                         isSelected={selectedSuggestionIndex === index}
                         onSelect={() => {
                           setSelectedJobId(s.workOrder.id)
                           setSelectedSuggestionIndex(index)
-                        }} 
+                        }}
                       />
                     ))}
                   </div>
@@ -511,11 +520,11 @@ export function MatchTrip() {
             {selectedTrip && selectedJob && editedTrip && editedJob ? (
               <>
                 {/* Comparison Header */}
-                <div 
+                <div
                   className="hidden lg:flex items-center justify-between px-6 py-3 border-b shrink-0"
-                  style={{ 
+                  style={{
                     background: 'var(--theme-bg-secondary)',
-                    borderColor: 'var(--theme-border-light)' 
+                    borderColor: 'var(--theme-border-light)',
                   }}
                 >
                   <h2 className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
@@ -529,30 +538,30 @@ export function MatchTrip() {
                 {/* Comparison Rows */}
                 <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-3">
                   <ContCompareRow
-                    left={tripConts} 
-                    right={jobConts} 
+                    left={tripConts}
+                    right={jobConts}
                     matched={contMatched}
-                    leftLabel="Yêu cầu" 
+                    leftLabel="Yêu cầu"
                     rightLabel="Đã chạy"
                     onTapLeft={() => openEdit('cont-left')}
                     onTapRight={() => openEdit('cont-right')}
                   />
-                  <CompareRow 
-                    label="Khách hàng" 
-                    left={tripClient} 
-                    right={jobClient} 
+                  <CompareRow
+                    label="Khách hàng"
+                    left={tripClient}
+                    right={jobClient}
                     matched={clientMatched}
-                    leftLabel="Yêu cầu" 
+                    leftLabel="Yêu cầu"
                     rightLabel="Đã chạy"
                     onTapLeft={() => openEdit('client-left')}
                     onTapRight={() => openEdit('client-right')}
                   />
-                  <CompareRow 
-                    label="Cung đường" 
-                    left={tripRoute} 
-                    right={jobRoute} 
+                  <CompareRow
+                    label="Cung đường"
+                    left={tripRoute}
+                    right={jobRoute}
                     matched={routeMatched}
-                    leftLabel="Yêu cầu" 
+                    leftLabel="Yêu cầu"
                     rightLabel="Đã chạy"
                     onTapLeft={() => openEdit('route-left')}
                     onTapRight={() => openEdit('route-right')}
@@ -560,17 +569,17 @@ export function MatchTrip() {
                 </div>
 
                 {/* Action Footer */}
-                <div 
+                <div
                   className="px-4 lg:px-6 pb-4 lg:pb-6 pt-3 shrink-0 space-y-3"
                   style={{ borderTop: '1px solid var(--theme-border-light)' }}
                 >
                   {/* Match Status Summary */}
-                  <div 
+                  <div
                     className="flex items-center justify-between p-3 rounded-xl"
                     style={{ background: 'var(--theme-bg-secondary)' }}
                   >
                     <div className="flex items-center gap-3">
-                      {contMatched && clientMatched && routeMatched ? (
+                      {allMatched ? (
                         <>
                           <CheckCircle2 className="w-5 h-5" style={{ color: 'var(--theme-status-success)' }} />
                           <span className="text-sm font-medium" style={{ color: 'var(--theme-status-success)' }}>
@@ -586,31 +595,39 @@ export function MatchTrip() {
                         </>
                       )}
                     </div>
-                    <span 
-                      className="text-xs px-2 py-1 rounded font-mono hidden lg:inline"
-                      style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
-                    >
-                      Enter
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <ConfirmationCheckbox
+                        isConfirmed={selectedTrip.isConfirmed}
+                        onToggle={handleToggleConfirmation}
+                        disabled={toggling}
+                        label="Đã chốt"
+                      />
+                      <span
+                        className="text-xs px-2 py-1 rounded font-mono hidden lg:inline"
+                        style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
+                      >
+                        Enter
+                      </span>
+                    </div>
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-3">
-                    <Button 
-                      onClick={handleMatch} 
+                    <Button
+                      onClick={handleMatch}
                       disabled={submitting}
                       className="flex-1 h-12 font-bold rounded-xl text-sm gap-2"
                       style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
                     >
-                      <Check className="w-5 h-5" /> 
+                      <Check className="w-5 h-5" />
                       {submitting ? 'Đang khớp...' : 'Xác nhận khớp chuyến'}
                     </Button>
-                    <button 
+                    <button
                       onClick={() => navigate('/accountant/create-trip', { state: { fromTripOrder: selectedTrip } })}
                       className="h-12 px-4 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors"
-                      style={{ 
+                      style={{
                         background: 'var(--theme-bg-secondary)',
                         color: 'var(--theme-brand-primary)',
-                        border: '1px solid var(--theme-border-default)'
+                        border: '1px solid var(--theme-border-default)',
                       }}
                     >
                       <Plus className="w-4 h-4" />
@@ -620,10 +637,9 @@ export function MatchTrip() {
                 </div>
               </>
             ) : (
-              /* Empty State */
               <div className="flex-1 flex items-center justify-center p-8">
                 <div className="text-center max-w-sm">
-                  <div 
+                  <div
                     className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
                     style={{ background: 'var(--theme-bg-secondary)' }}
                   >
@@ -636,13 +652,13 @@ export function MatchTrip() {
                     Chọn một chuyến yêu cầu và một chuyến đã chạy để bắt đầu so sánh và khớp thông tin
                   </p>
                   <div className="flex flex-wrap justify-center gap-2">
-                    <span 
+                    <span
                       className="text-xs px-2 py-1 rounded font-mono"
                       style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
                     >
                       T - Chuyến yêu cầu
                     </span>
-                    <span 
+                    <span
                       className="text-xs px-2 py-1 rounded font-mono"
                       style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
                     >
@@ -656,13 +672,13 @@ export function MatchTrip() {
         </div>
       </div>
 
-      {/* ── Picker modals ── */}
-      <PickModal 
-        open={pickMode === 'trip'} 
+      {/* Picker modals */}
+      <PickModal
+        open={pickMode === 'trip'}
         title="Chọn chuyến yêu cầu"
-        items={draftTrips} 
-        selectedId={selectedTripId} 
-        onSelect={setSelectedTripId} 
+        items={draftTrips}
+        selectedId={selectedTripId}
+        onSelect={setSelectedTripId}
         onClose={() => setPickMode(null)}
         renderLabel={trip => (
           <div>
@@ -681,12 +697,12 @@ export function MatchTrip() {
           </div>
         )}
       />
-      <PickModal 
-        open={pickMode === 'job'} 
+      <PickModal
+        open={pickMode === 'job'}
         title="Chọn chuyến đã chạy"
-        items={unmatchedJobs} 
-        selectedId={selectedJobId} 
-        onSelect={setSelectedJobId} 
+        items={unmatchedJobs}
+        selectedId={selectedJobId}
+        onSelect={setSelectedJobId}
         onClose={() => setPickMode(null)}
         renderLabel={job => (
           <div>
@@ -706,8 +722,7 @@ export function MatchTrip() {
         )}
       />
 
-      {/* ── Edit dialogs ── */}
-      {/* Container - left (yêu cầu / trip) — now multi-container */}
+      {/* Edit dialogs */}
       <EditDialog open={editDialog === 'cont-left'} title="Sửa container · Yêu cầu" color="var(--theme-status-warning)" onClose={saveDialog}>
         {dialogContLeft.map((c, i) => (
           <div key={i} className="rounded-xl p-3 space-y-3"
@@ -747,7 +762,6 @@ export function MatchTrip() {
         </button>
       </EditDialog>
 
-      {/* Container - right (đã chạy / work order) */}
       <EditDialog open={editDialog === 'cont-right'} title="Sửa container · Đã chạy" color="var(--theme-brand-primary)" onClose={saveDialog}>
         {dialogContainers.map((c, i) => (
           <div key={i} className="rounded-xl p-3 space-y-3"
@@ -787,7 +801,6 @@ export function MatchTrip() {
         </button>
       </EditDialog>
 
-      {/* Khách hàng - left (yêu cầu / trip) */}
       <EditDialog open={editDialog === 'client-left'} title="Sửa khách hàng · Yêu cầu" color="var(--theme-status-warning)" onClose={saveDialog}>
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</Label>
@@ -800,7 +813,6 @@ export function MatchTrip() {
         </div>
       </EditDialog>
 
-      {/* Khách hàng - right (đã chạy / job) */}
       <EditDialog open={editDialog === 'client-right'} title="Sửa khách hàng · Đã chạy" color="var(--theme-brand-primary)" onClose={saveDialog}>
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</Label>
@@ -813,7 +825,6 @@ export function MatchTrip() {
         </div>
       </EditDialog>
 
-      {/* Cung đường - left (yêu cầu / trip) */}
       <EditDialog open={editDialog === 'route-left'} title="Sửa cung đường · Yêu cầu" color="var(--theme-status-warning)" onClose={saveDialog}>
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</Label>
@@ -826,7 +837,6 @@ export function MatchTrip() {
         </div>
       </EditDialog>
 
-      {/* Cung đường - right (đã chạy / job) */}
       <EditDialog open={editDialog === 'route-right'} title="Sửa cung đường · Đã chạy" color="var(--theme-brand-primary)" onClose={saveDialog}>
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</Label>
