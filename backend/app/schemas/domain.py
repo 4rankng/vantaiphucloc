@@ -155,12 +155,18 @@ class RouteOut(BaseModel):
 class PricingLineCreate(BaseModel):
     work_type: str
     quantity: int
+    unit_price: int = 0
+    driver_salary: int = 0
+    allowance: int = 0
 
 
 class PricingLineOut(BaseModel):
     id: int
     work_type: str
     quantity: int
+    unit_price: int = 0
+    driver_salary: int = 0
+    allowance: int = 0
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -170,6 +176,8 @@ class PricingCreate(BaseModel):
     client_name: str
     work_type: str
     route: str
+    pickup_location: str | None = None
+    dropoff_location: str | None = None
     lines: list[PricingLineCreate]
     unit_price: int = Field(ge=0)
     driver_salary: int = Field(ge=0)
@@ -181,6 +189,8 @@ class PricingUpdate(BaseModel):
     client_name: str | None = None
     work_type: str | None = None
     route: str | None = None
+    pickup_location: str | None = None
+    dropoff_location: str | None = None
     lines: list[PricingLineCreate] | None = None
     unit_price: int | None = None
     driver_salary: int | None = None
@@ -193,6 +203,8 @@ class PricingOut(BaseModel):
     client_name: str
     work_type: str
     route: str
+    pickup_location: str | None = None
+    dropoff_location: str | None = None
     lines: list[PricingLineOut] = []
     unit_price: int
     driver_salary: int
@@ -234,6 +246,8 @@ class WorkOrderCreate(BaseModel):
     client_id: int
     client_name: str
     route: str
+    pickup_location: str | None = None
+    dropoff_location: str | None = None
     driver_id: int
     driver_name: str
     tractor_plate: str
@@ -246,6 +260,8 @@ class WorkOrderUpdate(BaseModel):
     client_id: int | None = None
     client_name: str | None = None
     route: str | None = None
+    pickup_location: str | None = None
+    dropoff_location: str | None = None
     driver_id: int | None = None
     driver_name: str | None = None
     tractor_plate: str | None = None
@@ -264,6 +280,8 @@ class WorkOrderOut(BaseModel):
     client_name: str
     client_code: str | None = None
     route: str
+    pickup_location: str | None = None
+    dropoff_location: str | None = None
     driver_id: int
     driver_name: str
     tractor_plate: str
@@ -306,6 +324,8 @@ class TripOrderCreate(BaseModel):
     client_name: str
     work_type: str | None = None  # legacy — derived from first container
     route: str
+    pickup_location: str | None = None
+    dropoff_location: str | None = None
     tractor_plate: str
     driver_id: int
     driver_name: str
@@ -325,6 +345,8 @@ class TripOrderUpdate(BaseModel):
     client_name: str | None = None
     work_type: str | None = None
     route: str | None = None
+    pickup_location: str | None = None
+    dropoff_location: str | None = None
     tractor_plate: str | None = None
     driver_id: int | None = None
     driver_name: str | None = None
@@ -349,6 +371,8 @@ class TripOrderOut(BaseModel):
     client_name: str
     work_type: str | None
     route: str
+    pickup_location: str | None = None
+    dropoff_location: str | None = None
     tractor_plate: str
     driver_id: int
     driver_name: str

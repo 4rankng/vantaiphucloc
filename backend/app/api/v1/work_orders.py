@@ -1,11 +1,13 @@
 import asyncio
 import base64
+import io
 import math
 import logging
 from collections import defaultdict
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, func
 
@@ -25,8 +27,9 @@ from app.schemas.domain import (
 )
 from app.core.deps import get_current_user, require_roles
 from app.services.pricing_service import find_pricing
-from app.services.ocr_service import MAX_OCR_ATTEMPTS, OCRAttempt, extract_container_number
+from app.services.ocr_service import MAX_OCR_ATTEMPTS, extract_container_number
 from app.services.photo_storage import save_base64_photo
+from app.core.redis import get_redis
 
 _logger = logging.getLogger(__name__)
 
@@ -45,7 +48,10 @@ async def _load_work_order_out(db: AsyncSession, work_order: WorkOrder) -> WorkO
         id=work_order.id,
         client_id=work_order.client_id,
         client_name=work_order.client_name,
+        client_code=work_order.client_code,
         route=work_order.route,
+        pickup_location=work_order.pickup_location,
+        dropoff_location=work_order.dropoff_location,
         driver_id=work_order.driver_id,
         driver_name=work_order.driver_name,
         tractor_plate=work_order.tractor_plate,
@@ -89,7 +95,10 @@ async def _batch_load_work_order_outs(
             id=wo.id,
             client_id=wo.client_id,
             client_name=wo.client_name,
+            client_code=wo.client_code,
             route=wo.route,
+            pickup_location=wo.pickup_location,
+            dropoff_location=wo.dropoff_location,
             driver_id=wo.driver_id,
             driver_name=wo.driver_name,
             tractor_plate=wo.tractor_plate,
@@ -322,6 +331,8 @@ async def _create_work_order_db(
         client_id=body.client_id,
         work_type=work_type,
         route=body.route,
+        pickup_location=body.pickup_location,
+        dropoff_location=body.dropoff_location,
     )
 
     # Store pricing_id for reference, but don't use it for financials
@@ -337,6 +348,8 @@ async def _create_work_order_db(
         client_name=body.client_name,
         client_code=client_code,
         route=body.route,
+        pickup_location=body.pickup_location,
+        dropoff_location=body.dropoff_location,
         driver_id=driver_id,
         driver_name=driver_name,
         tractor_plate=body.tractor_plate,
@@ -372,16 +385,24 @@ async def _create_work_order_db(
     return work_order
 
 
-# Simple in-memory storage for OCR attempts (in production, use Redis)
-_ocr_attempts: dict[tuple[int, int], OCRAttempt] = {}
+# Redis-backed OCR attempt tracking
+_OCR_ATTEMPT_TTL = 600  # 10 minutes
+
+
+async def _get_ocr_attempts_remaining(redis, user_id: int, container_index: int) -> int:
+    key = f"ocr_attempts:{user_id}:{container_index}"
+    val = await redis.get(key)
+    attempts = int(val) if val else 0
+    return max(0, MAX_OCR_ATTEMPTS - attempts)
 
 
 @router.post("/work-orders/ocr-container", response_model=ContainerOCRResponse)
 async def ocr_container_number(
     body: ContainerOCRRequest,
     current_user: User = Depends(get_current_user),
+    redis=Depends(get_redis),
 ):
-    """Extract container number from image using Gemini OCR.
+    """Extract container number from image using Gemini AI OCR.
 
     Driver workflow:
     1. Upload image (base64-encoded)
@@ -389,29 +410,13 @@ async def ocr_container_number(
     3. If all fail → driver enters manually
     4. Backend validates against ISO 6346
     """
-    # Decode base64 image
-    try:
-        image_bytes = base64.b64decode(body.image_data)
-    except Exception as e:
-        _logger.error("WO_OCR_BASE64_DECODE_FAILED", e, "work_orders")
-        return ContainerOCRResponse(
-            success=False,
-            container_number=None,
-            error="Dữ liệu hình ảnh không hợp lệ",
-            attempts_remaining=MAX_OCR_ATTEMPTS,
-        )
-
-    # Get or create OCR attempt tracker for this user + container slot
     user_id = current_user.id
-    key = (user_id, body.container_index)
-    if key not in _ocr_attempts:
-        _ocr_attempts[key] = OCRAttempt(max_attempts=MAX_OCR_ATTEMPTS)
+    rkey = f"ocr_attempts:{user_id}:{body.container_index}"
 
-    attempt = _ocr_attempts[key]
-
-    # Check if attempts are exhausted
-    if attempt.is_exhausted():
-        _logger.warn("WO_OCR_ATTEMPTS_EXHAUSTED", f"User {user_id} exhausted OCR attempts", "work_orders")
+    # Check remaining attempts via Redis
+    attempts_remaining = await _get_ocr_attempts_remaining(redis, user_id, body.container_index)
+    if attempts_remaining <= 0:
+        _logger.warning("WO_OCR_ATTEMPTS_EXHAUSTED user=%s idx=%s", user_id, body.container_index)
         return ContainerOCRResponse(
             success=False,
             container_number=None,
@@ -419,11 +424,54 @@ async def ocr_container_number(
             attempts_remaining=0,
         )
 
-    # Call OCR service
+    # Decode base64 image
+    try:
+        image_bytes = base64.b64decode(body.image_data)
+    except Exception as e:
+        _logger.error("WO_OCR_BASE64_DECODE_FAILED: %s", e)
+        return ContainerOCRResponse(
+            success=False,
+            container_number=None,
+            error="Dữ liệu hình ảnh không hợp lệ",
+            attempts_remaining=attempts_remaining,
+        )
+
+    # Record this attempt in Redis
+    pipe = redis.pipeline()
+    pipe.incr(rkey)
+    pipe.expire(rkey, _OCR_ATTEMPT_TTL)
+    await pipe.execute()
+
+    # Call OCR service (no longer takes attempt tracker — pure AI extraction)
     result = await extract_container_number(
         image_bytes=image_bytes,
         mime_type=body.mime_type,
-        attempt=attempt,
     )
 
+    # Compute remaining after this attempt
+    attempts_remaining = await _get_ocr_attempts_remaining(redis, user_id, body.container_index)
+    result["attempts_remaining"] = attempts_remaining
+
     return ContainerOCRResponse(**result)
+
+
+@router.get("/work-orders/export")
+async def export_work_orders_excel(
+    date_from: date | None = None,
+    date_to: date | None = None,
+    status: str | None = None,
+    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Export work orders to Excel."""
+    from app.services.excel_service import generate_work_orders_excel
+
+    content = await generate_work_orders_excel(
+        db, date_from=date_from.isoformat() if date_from else None,
+        date_to=date_to.isoformat() if date_to else None, status=status,
+    )
+    return StreamingResponse(
+        io.BytesIO(content),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=work_orders.xlsx"},
+    )

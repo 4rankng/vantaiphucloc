@@ -60,7 +60,7 @@ function PricingCard({ pricing, onEdit, onDelete }: {
 function LineEditor({ lines, onChange }: {
   lines: PricingLine[]; onChange: (lines: PricingLine[]) => void
 }) {
-  const addLine = () => onChange([...lines, { workType: 'E20', quantity: 1 }])
+  const addLine = () => onChange([...lines, { workType: 'E20', quantity: 1, unitPrice: 0, driverSalary: 0, allowance: 0 }])
   const removeLine = (idx: number) => onChange(lines.filter((_, i) => i !== idx))
   const updateLine = (idx: number, field: keyof PricingLine, value: WorkType | number) => {
     onChange(lines.map((l, i) => i === idx ? { ...l, [field]: value } : l))
@@ -75,33 +75,53 @@ function LineEditor({ lines, onChange }: {
         </button>
       </div>
       {lines.map((line, i) => (
-        <div key={i} className="flex items-center gap-2 rounded-xl p-2"
+        <div key={i} className="rounded-xl p-2 space-y-2"
           style={{ background: 'var(--theme-bg-tertiary)', border: '1px solid var(--theme-border-default)' }}>
-          {/* Type selector */}
-          <div className="flex gap-0.5 shrink-0">
-            {WORK_TYPES.map(w => (
-              <button key={w} onClick={() => updateLine(i, 'workType', w)}
-                className="px-1.5 py-1 rounded text-xs font-bold touch-manipulation"
-                style={{
-                  background: line.workType === w ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
-                  color: line.workType === w ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
-                }}>
-                {w}
+          <div className="flex items-center gap-2">
+            {/* Type selector */}
+            <div className="flex gap-0.5 shrink-0">
+              {WORK_TYPES.map(w => (
+                <button key={w} onClick={() => updateLine(i, 'workType', w)}
+                  className="px-1.5 py-1 rounded text-xs font-bold touch-manipulation"
+                  style={{
+                    background: line.workType === w ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
+                    color: line.workType === w ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
+                  }}>
+                  {w}
+                </button>
+              ))}
+            </div>
+            {/* Quantity */}
+            <div className="flex items-center gap-1">
+              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>×‌</span>
+              <Input type="number" min={1} value={line.quantity} onChange={e => updateLine(i, 'quantity', Math.max(1, Number(e.target.value)))}
+                className="text-xs font-bold h-8 w-14 text-center" />
+            </div>
+            {/* Remove */}
+            {lines.length > 1 && (
+              <button onClick={() => removeLine(i)} className="touch-manipulation shrink-0" style={{ color: 'var(--theme-status-error)' }}>
+                <X className="w-3.5 h-3.5" />
               </button>
-            ))}
+            )}
           </div>
-          {/* Quantity */}
-          <div className="flex items-center gap-1">
-            <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>×‌</span>
-            <Input type="number" min={1} value={line.quantity} onChange={e => updateLine(i, 'quantity', Math.max(1, Number(e.target.value)))}
-              className="text-xs font-bold h-8 w-14 text-center" />
+          {/* Tiered pricing fields */}
+          <div className="grid grid-cols-3 gap-1.5">
+            <div>
+              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Đơn giá</span>
+              <Input type="number" min={0} value={line.unitPrice || ''} onChange={e => updateLine(i, 'unitPrice', Math.max(0, Number(e.target.value)))}
+                placeholder="0" className="text-xs font-mono h-7" />
+            </div>
+            <div>
+              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Lương TX</span>
+              <Input type="number" min={0} value={line.driverSalary || ''} onChange={e => updateLine(i, 'driverSalary', Math.max(0, Number(e.target.value)))}
+                placeholder="0" className="text-xs font-mono h-7" />
+            </div>
+            <div>
+              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Phụ cấp</span>
+              <Input type="number" min={0} value={line.allowance || ''} onChange={e => updateLine(i, 'allowance', Math.max(0, Number(e.target.value)))}
+                placeholder="0" className="text-xs font-mono h-7" />
+            </div>
           </div>
-          {/* Remove */}
-          {lines.length > 1 && (
-            <button onClick={() => removeLine(i)} className="touch-manipulation shrink-0" style={{ color: 'var(--theme-status-error)' }}>
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
         </div>
       ))}
     </div>
@@ -119,7 +139,7 @@ function PricingForm({ initial, clients, routes, onSave, onCancel, onCreateClien
   const [clientId, setClientId] = useState(String(initial?.clientId ?? ''))
   const [route, setRoute] = useState(initial?.route ?? '')
   const [lines, setLines] = useState<PricingLine[]>(
-    initial?.lines ?? [{ workType: 'E20' as WorkType, quantity: 1 }]
+    initial?.lines ?? [{ workType: 'E20' as WorkType, quantity: 1, unitPrice: 0, driverSalary: 0, allowance: 0 }]
   )
   const [unitPrice, setUnitPrice] = useState(initial?.unitPrice ?? 0)
   const [driverSalary, setDriverSalary] = useState(initial?.driverSalary ?? 0)

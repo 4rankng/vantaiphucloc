@@ -22,7 +22,7 @@ router = APIRouter()
 async def list_routes(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_roles("accountant", "director", "driver", "superadmin")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
