@@ -19,11 +19,7 @@ function resolveTitle(pathname: string): string {
   return ''
 }
 
-// ─── Driver layout (mobile + desktop, no sidebar) ─────────────────────────────
-// On desktop the green topbar stays full-bleed; content is centred with a
-// max-width cap so cards don't stretch across a wide monitor.
-
-function DriverMobile() {
+function DriverShell() {
   const { user } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -49,8 +45,6 @@ function DriverMobile() {
   )
 }
 
-// ─── Layout ───────────────────────────────────────────────────────────────────
-
 export function DriverLayout() {
   const { user } = useAuth()
 
@@ -58,5 +52,5 @@ export function DriverLayout() {
     return <Navigate to="/" replace />
   }
 
-  return <DriverMobile />
+  return <DriverShell />
 }

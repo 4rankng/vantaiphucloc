@@ -607,6 +607,34 @@ async def import_trip_orders(
     return {"created": created, "errors": errors}
 
 
+def generate_trip_order_template() -> bytes:
+    """Generate a blank Excel template for trip order import."""
+    headers = [
+        "Ngày", "Mã KH", "Tài xế", "Điểm lấy", "Điểm trả",
+        "Cung đường", "Số cont", "Loại cont", "Đơn giá",
+        "Lương TX", "Phụ cấp", "Biển số",
+    ]
+    examples = [
+        "01/05/2026", "KH001", "Nguyễn Văn A", "Cát lái", "KC Bình Dương",
+        "Cát lái - KC Bình Dương", "TCLU1234567", "E20", "1500000",
+        "500000", "100000", "51C-12345",
+    ]
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.title = "Nhập chuyến"
+    sheet.append(headers)
+    sheet.append(examples)
+
+    for col in sheet.iter_cols(min_row=1, max_row=1):
+        for cell in col:
+            cell.font = openpyxl.styles.Font(bold=True)
+
+    buf = io.BytesIO()
+    workbook.save(buf)
+    workbook.close()
+    return buf.getvalue()
+
+
 # ---------------------------------------------------------------------------
 # Excel Export for Work Orders, Trip Orders, Salary
 # ---------------------------------------------------------------------------

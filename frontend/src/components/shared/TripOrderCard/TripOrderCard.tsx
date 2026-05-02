@@ -1,4 +1,6 @@
 import { RouteDisplay } from '@/components/shared/RouteDisplay'
+import { ContBadge } from '@/components/shared/ContBadge'
+import { CheckCircle2, Lock } from 'lucide-react'
 import type { TripOrder } from '@/data/domain'
 
 interface TripOrderCardProps {
@@ -6,54 +8,81 @@ interface TripOrderCardProps {
   onClick?: () => void
 }
 
+// Per spec: gray=DRAFT, yellow=PENDING, green=COMPLETED, red=CANCELLED
 const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
-  DRAFT:     { label: 'Nháp',               bg: 'var(--theme-status-neutral-light)',  color: 'var(--theme-status-neutral)'  },
-  PENDING:   { label: 'Chờ đối soát',       bg: 'var(--theme-status-warning-light)',  color: 'var(--theme-status-warning)'  },
-  COMPLETED: { label: 'Hoàn thành',         bg: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' },
-  CANCELLED: { label: 'Đã huỷ',              bg: 'var(--theme-status-error-light)',   color: 'var(--theme-status-error)'   },
+  DRAFT:     { label: 'Nháp',         bg: 'var(--theme-bg-tertiary)',           color: 'var(--theme-text-muted)'    },
+  PENDING:   { label: 'Chờ đối soát', bg: 'var(--theme-status-warning-light)',  color: 'var(--theme-status-warning)' },
+  COMPLETED: { label: 'Đã khớp',      bg: 'var(--theme-status-success-light)',  color: 'var(--theme-status-success)' },
+  CANCELLED: { label: 'Đã huỷ',       bg: 'var(--theme-status-error-light)',    color: 'var(--theme-status-error)'   },
 }
 
 export function TripOrderCard({ trip, onClick }: TripOrderCardProps) {
   const statusCfg = STATUS_CONFIG[trip.status] ?? STATUS_CONFIG.DRAFT
+  const isLocked = trip.isConfirmed || trip.status === 'CANCELLED'
 
   const inner = (
     <>
-      <div className="flex items-center justify-between mb-1">
-        <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>{trip.clientName}</p>
-        <span
-          className="text-xs font-semibold px-2 py-0.5 rounded-full"
-          style={{ background: statusCfg.bg, color: statusCfg.color }}
-        >
-          {statusCfg.label}
-        </span>
+      {/* Header row */}
+      <div className="flex items-start justify-between gap-2 mb-1.5">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold truncate" style={{ color: 'var(--theme-text-primary)' }}>
+            {trip.clientName}
+          </p>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+            {trip.driverName}{trip.tractorPlate ? ` · ${trip.tractorPlate}` : ''}
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {trip.isConfirmed && (
+            <CheckCircle2 className="w-3.5 h-3.5" style={{ color: 'var(--theme-status-success)' }} />
+          )}
+          <span
+            className="text-xs font-semibold px-2 py-0.5 rounded-full"
+            style={{ background: statusCfg.bg, color: statusCfg.color }}
+          >
+            {trip.isConfirmed ? 'Đã chốt' : statusCfg.label}
+          </span>
+        </div>
       </div>
-      <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-        {trip.driverName}
-      </p>
+
+      {/* Route */}
       <RouteDisplay route={trip.route} pickupLocation={trip.pickupLocation} dropoffLocation={trip.dropoffLocation} />
+
+      {/* Containers */}
       {trip.containers.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-1.5">
           {trip.containers.map((c, i) => (
-            <span
-              key={i}
-              className="text-xs font-mono px-1.5 py-0.5 rounded"
-              style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
-            >
-              {c.workType}
+            <span key={i} className="flex items-center gap-1">
+              <ContBadge type={c.workType} />
+              {c.containerNumber && (
+                <span className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>
+                  {c.containerNumber}
+                </span>
+              )}
             </span>
           ))}
         </div>
       )}
-      <p className="text-xs mt-1.5" style={{ color: 'var(--theme-text-muted)' }}>
-        {new Date(trip.createdAt).toLocaleDateString('vi-VN')}
-      </p>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between mt-1.5">
+        <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+          {new Date(trip.tripDate || trip.createdAt).toLocaleDateString('vi-VN')}
+        </p>
+        {isLocked && (
+          <div className="flex items-center gap-1">
+            <Lock className="w-3 h-3" style={{ color: 'var(--theme-text-muted)' }} />
+            <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Đã khoá</span>
+          </div>
+        )}
+      </div>
     </>
   )
 
   const cardStyle = {
     background: 'var(--theme-bg-secondary)',
     boxShadow: 'var(--theme-shadow-card)',
-    border: '1px solid var(--theme-border-default)',
+    border: `1px solid ${trip.isConfirmed ? 'var(--theme-status-success)' : 'var(--theme-border-default)'}`,
   }
 
   if (onClick) {

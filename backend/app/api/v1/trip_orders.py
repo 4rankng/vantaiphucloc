@@ -519,6 +519,21 @@ async def toggle_trip_order_confirmation(
     return await _load_trip_order_out(db, trip_order)
 
 
+@router.get("/trip-orders/template")
+async def download_trip_order_template(
+    current_user: User = Depends(require_roles("accountant", "superadmin")),
+):
+    """Download blank Excel template for trip order import."""
+    from app.services.excel_service import generate_trip_order_template
+
+    content = generate_trip_order_template()
+    return StreamingResponse(
+        io.BytesIO(content),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=trip_order_template.xlsx"},
+    )
+
+
 @router.post("/trip-orders/import", status_code=200)
 async def import_trip_orders_excel(
     file: UploadFile = File(...),

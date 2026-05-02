@@ -11,12 +11,14 @@ import { formatCurrencyFull } from '@/data/domain'
 
 interface RouteForm {
   route: string
+  pickupLocation: string
+  dropoffLocation: string
   type20ft: number
   type40ft: number
   isTwoWay: boolean
 }
 
-const EMPTY_FORM: RouteForm = { route: '', type20ft: 0, type40ft: 0, isTwoWay: false }
+const EMPTY_FORM: RouteForm = { route: '', pickupLocation: '', dropoffLocation: '', type20ft: 0, type40ft: 0, isTwoWay: false }
 
 export function RouteList() {
   const { data: routes = [], isLoading: loading } = useRoutes()
@@ -45,7 +47,14 @@ export function RouteList() {
   const handleOpenEdit = useCallback((idx: number) => {
     const r = routes[idx]
     setEditIdx(idx)
-    setForm({ route: r.route, type20ft: r.type20ft, type40ft: r.type40ft, isTwoWay: r.isTwoWay ?? false })
+    setForm({
+      route: r.route,
+      pickupLocation: r.pickupLocation ?? '',
+      dropoffLocation: r.dropoffLocation ?? '',
+      type20ft: r.type20ft,
+      type40ft: r.type40ft,
+      isTwoWay: r.isTwoWay ?? false,
+    })
     setSelectedIdx(null)
     setDialogOpen(true)
   }, [routes])
@@ -105,7 +114,9 @@ export function RouteList() {
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{r.route}</p>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-                  20ft: {formatCurrencyFull(r.type20ft)} · 40ft: {formatCurrencyFull(r.type40ft)}
+                  {r.pickupLocation && r.dropoffLocation
+                    ? `${r.pickupLocation} → ${r.dropoffLocation}`
+                    : `20ft: ${formatCurrencyFull(r.type20ft)} · 40ft: ${formatCurrencyFull(r.type40ft)}`}
                 </p>
               </div>
             </div>
@@ -121,7 +132,10 @@ export function RouteList() {
           </DialogHeader>
           {selectedIdx !== null && (
             <div className="space-y-1">
-              <InfoRow icon={RouteIcon} label="Giá 20ft" value={formatCurrencyFull(routes[selectedIdx].type20ft)} />
+              <InfoRow icon={RouteIcon} label="Tuyến" value={routes[selectedIdx].route} />
+              {routes[selectedIdx].pickupLocation && <InfoRow label="Điểm lấy" value={routes[selectedIdx].pickupLocation!} />}
+              {routes[selectedIdx].dropoffLocation && <InfoRow label="Điểm trả" value={routes[selectedIdx].dropoffLocation!} />}
+              <InfoRow label="Giá 20ft" value={formatCurrencyFull(routes[selectedIdx].type20ft)} />
               <InfoRow label="Giá 40ft" value={formatCurrencyFull(routes[selectedIdx].type40ft)} />
               <InfoRow label="Hai chiều" value={routes[selectedIdx].isTwoWay ? 'Có' : 'Không'} />
             </div>
@@ -145,8 +159,18 @@ export function RouteList() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tuyến đường</Label>
-              <Input value={form.route} onChange={e => updateField('route', e.target.value)} placeholder="Hải Phòng → ..." className="text-sm" />
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tên tuyến</Label>
+              <Input value={form.route} onChange={e => updateField('route', e.target.value)} placeholder="Cát Lái - Sóng Thần" className="text-sm" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm lấy</Label>
+                <Input value={form.pickupLocation} onChange={e => updateField('pickupLocation', e.target.value)} placeholder="Cảng Cát Lái" className="text-sm" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm trả</Label>
+                <Input value={form.dropoffLocation} onChange={e => updateField('dropoffLocation', e.target.value)} placeholder="KCN Sóng Thần" className="text-sm" />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
