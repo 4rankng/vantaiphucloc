@@ -88,6 +88,7 @@ async def _load_trip_order_out(db: AsyncSession, trip_order: TripOrder) -> TripO
         trip_date=trip_order.trip_date,
         client_id=trip_order.client_id,
         client_name=trip_order.client_name,
+        code=trip_order.code,
         work_type=trip_order.work_type,
         route=trip_order.route,
         pickup_location=trip_order.pickup_location,
@@ -258,6 +259,10 @@ async def create_trip_order(
     trip_order = TripOrder(**trip_data)
     db.add(trip_order)
     await db.flush()
+
+    # Generate human-readable code (e.g. ABC0001)
+    from app.services.code_service import generate_trip_order_code
+    trip_order.code = await generate_trip_order_code(db, body.client_id)
 
     for c in body.containers:
         db.add(TripOrderContainer(

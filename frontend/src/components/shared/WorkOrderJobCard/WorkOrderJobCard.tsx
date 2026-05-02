@@ -20,7 +20,7 @@ function uniqueWorkTypes(job: WorkOrder) {
 }
 
 function allContNumbers(job: WorkOrder) {
-  return job.containers.map(c => c.containerNumber).filter(Boolean).join(' · ') || job.id
+  return job.containers.map(c => c.containerNumber).filter(Boolean).join(' · ') || job.code || ''
 }
 
 export function WorkOrderJobCard({ job, status = 'unmatched', onClick }: WorkOrderJobCardProps) {

@@ -96,6 +96,7 @@ export interface RoutePrice {
 
 export interface WorkOrder {
   id: number
+  code?: string
   containers: ContainerItem[]
   clientId: number
   clientName: string
@@ -151,6 +152,7 @@ export interface TripOrderContainerItem {
 
 export interface TripOrder {
   id: number
+  code?: string
   tripDate: string
   clientId: number
   clientName: string
