@@ -39,7 +39,7 @@ export function AccountantDashboard() {
 
   const matchedIds = useMemo(() => new Set(trips.flatMap(t => t.matchedWorkOrderIds)), [trips])
   const unmatchedJobs = useMemo(() => workOrders.filter(w => !matchedIds.has(w.id)), [workOrders, matchedIds])
-  const pendingTrips = useMemo(() => trips.filter(t => t.status === 'DRAFT'), [trips])
+  const pendingTrips = useMemo(() => trips.filter(t => t.status === 'PENDING'), [trips])
   const matchedJobs = useMemo(() => workOrders.filter(w => matchedIds.has(w.id)), [workOrders, matchedIds])
 
   const salaryByDriver = useMemo(() => {
@@ -67,7 +67,7 @@ export function AccountantDashboard() {
   return (
     <div className="pb-6 space-y-4">
       {/* Quick actions — mobile only (sidebar replaces on desktop) */}
-      <div className="grid grid-cols-5 gap-2 lg:hidden">
+      <div className="grid grid-cols-4 gap-2 lg:hidden">
         {QUICK_ACTIONS.map(({ label, icon: Icon, path }) => (
           <button
             key={path}

@@ -8,13 +8,13 @@ import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { WorkOrderCard } from '@/components/shared/WorkOrderCard'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { StatsRow } from '@/components/shared/StatsRow'
+
 export function DriverHome() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Month navigator state — default current month
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
@@ -37,7 +37,6 @@ export function DriverHome() {
     else setMonth(m => m + 1)
   }
 
-  // Filter jobs by selected month
   const filteredJobs = useMemo(() => {
     const start = new Date(year, month, 1).toISOString()
     const end = new Date(year, month + 1, 0, 23, 59, 59).toISOString()
@@ -50,7 +49,7 @@ export function DriverHome() {
   )
 
   return (
-    <div className="pb-20 space-y-4">
+    <div className="space-y-4">
       <StatsRow
         items={[
           { label: 'Thu nhập', value: formatCurrencyFull(totalEarnings) },
@@ -74,7 +73,8 @@ export function DriverHome() {
         ) : filteredJobs.length === 0 ? (
           <div className="rounded-2xl p-8 text-center" style={{ background: 'var(--theme-bg-secondary)' }}>
             <Calendar className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--theme-text-muted)' }} />
-            <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có chuyến nào trong tháng này</p>
+            <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Chưa có chuyến nào</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Nhấn + để tạo chuyến mới</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
@@ -90,8 +90,7 @@ export function DriverHome() {
         )}
       </div>
 
-      {/* FAB — mobile only */}
-      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => navigate('/driver/work-orders/new')} />
+      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => navigate('/driver/work-orders/new')} label="Tạo chuyến" />
     </div>
   )
 }
