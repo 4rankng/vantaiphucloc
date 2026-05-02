@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useCallback, useMemo, useEffect, t
 import type { Role } from '@/data/domain'
 import { api, setTokens, clearTokens } from '@/services/api/client'
 import { subscribeToPush, isPushSupported, getPushSubscriptionStatus } from '@/lib/push-subscription'
+import { startHealthMonitor, stopHealthMonitor } from '@/lib/network'
 
 export interface UserInfo {
   id: string
@@ -40,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       localStorage.setItem('ttransport_user', JSON.stringify(u))
       setUser(u)
+      startHealthMonitor()
       return u
     } catch {
       return null
@@ -49,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     api.post('/auth/logout').catch(() => {})
     clearTokens()
+    stopHealthMonitor()
     setUser(null)
   }, [])
 
