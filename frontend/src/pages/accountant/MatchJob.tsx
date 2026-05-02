@@ -585,7 +585,7 @@ export function MatchJob() {
                       }}
                     >
                       <Plus className="w-4 h-4" />
-                      Tạo lệnh mới
+                      Tạo đơn mới
                     </button>
                   </div>
                 </div>

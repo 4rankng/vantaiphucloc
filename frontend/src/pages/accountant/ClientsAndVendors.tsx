@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Plus, Pencil, Trash2, Building2, UserCircle, Truck, Phone, MapPin, User } from 'lucide-react'
-import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
@@ -8,7 +7,6 @@ import { Label } from '@/components/ui'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { FilterToolbar, type FilterOption } from '@/components/shared/FilterToolbar'
 import { StatusBadge } from '@/components/shared/StatusBadge'
-import { useIsMobile } from '@/hooks/use-mobile'
 import {
   useClients, useCreateClient, useUpdateClient, useDeleteClient,
   useVendors, useCreateVendor, useUpdateVendor, useDeleteVendor,
@@ -299,7 +297,6 @@ function DeleteDialog({ partner, onClose }: DeleteDialogProps) {
 export function ClientsAndVendors() {
   const { data: clients = [], isLoading: loadingClients } = useClients()
   const { data: vendors = [], isLoading: loadingVendors } = useVendors()
-  const isMobile = useIsMobile()
 
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('ALL')
@@ -448,59 +445,6 @@ export function ClientsAndVendors() {
     )
   }
 
-  // ─── Mobile cards ───────────────────────────────────────────────────────────
-
-  const renderMobile = () => {
-    if (!loading && filtered.length === 0) {
-      return (
-        <div className="rounded-2xl p-10 text-center" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
-          <Building2 className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--theme-text-muted)' }} />
-          <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Không có đối tác</p>
-          <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Nhấn + để thêm mới</p>
-        </div>
-      )
-    }
-
-    return (
-      <div className="space-y-2">
-        {filtered.map(partner => (
-          <button
-            key={`${partner.kind}-${partner.id}`}
-            onClick={() => setSelected(partner)}
-            className="w-full text-left rounded-2xl p-3 transition-all active:scale-[0.98] touch-manipulation"
-            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
-          >
-            <div className="flex items-start gap-3">
-              <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5" style={{ background: 'var(--theme-bg-tertiary)' }}>
-                {partner.kind === 'client'
-                  ? <Building2 className="h-4 w-4" style={{ color: 'var(--theme-text-muted)' }} />
-                  : <Truck className="h-4 w-4" style={{ color: 'var(--theme-text-muted)' }} />}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{partner.name}</p>
-                  <StatusBadge
-                    variant={partner.kind === 'client' ? 'info' : 'warning'}
-                    label={partner.kind === 'client' ? 'Khách hàng' : 'Nhà thầu'}
-                    size="sm"
-                  />
-                </div>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-                  {partner.phone}{partner.taxCode ? ` · MST: ${partner.taxCode}` : ''}
-                </p>
-                {partner.contactPerson && (
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-                    Liên hệ: {partner.contactPerson}
-                  </p>
-                )}
-              </div>
-            </div>
-          </button>
-        ))}
-      </div>
-    )
-  }
-
   return (
     <div>
       {/* Filters */}
@@ -527,27 +471,20 @@ export function ClientsAndVendors() {
       {/* Content */}
       {!loading && (
         <>
-          {/* Desktop add button */}
-          {!isMobile && (
-            <div className="flex justify-end mb-4">
-              <button
-                onClick={handleOpenCreate}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
-                style={{ background: 'var(--theme-text-primary)', color: 'var(--theme-bg-primary)' }}
-              >
-                <Plus className="w-4 h-4" />
-                Thêm
-              </button>
-            </div>
-          )}
+          {/* Add button */}
+          <div className="flex justify-end mb-4">
+            <Button
+              onClick={handleOpenCreate}
+              className="h-9 px-3 gap-1.5 text-sm font-semibold"
+              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+            >
+              <Plus className="w-4 h-4" />
+              Thêm
+            </Button>
+          </div>
 
-          {isMobile ? renderMobile() : renderDesktop()}
+          {renderDesktop()}
         </>
-      )}
-
-      {/* Mobile FAB */}
-      {isMobile && (
-        <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={handleOpenCreate} />
       )}
 
       {/* Dialogs */}

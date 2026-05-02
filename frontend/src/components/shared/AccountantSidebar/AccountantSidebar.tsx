@@ -1,5 +1,5 @@
-import { useCallback } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { useCallback, useState } from 'react'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   FileText,
@@ -9,7 +9,21 @@ import {
   MapPin,
   Tag,
   Wallet,
+  LogOut,
+  Bell,
+  UserCircle,
+  ChevronUp,
 } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
+import { useUnreadCount } from '@/components/shared/NotificationPanel/NotificationPanel'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui'
 
 export interface SidebarItem {
   label: string
@@ -20,7 +34,7 @@ export interface SidebarItem {
 
 const NAV_ITEMS: SidebarItem[] = [
   { label: 'Tổng quan', href: '/accountant', icon: LayoutDashboard },
-  { label: 'Lệnh điều phối', href: '/accountant/trips', icon: FileText },
+  { label: 'Đơn hàng', href: '/accountant/trips', icon: FileText },
   { label: 'Chuyến đã đi', href: '/accountant/driver-trips', icon: Truck },
   { label: 'Đối soát', href: '/accountant/work-orders', icon: Briefcase },
   { label: 'Đối tác', href: '/accountant/partners', icon: Users },
@@ -30,17 +44,20 @@ const NAV_ITEMS: SidebarItem[] = [
 ]
 
 export interface AccountantSidebarProps {
-  /** Whether sidebar is collapsed */
   collapsed?: boolean
-  /** Badge counts for nav items (keyed by href) */
   badges?: Record<string, number>
+  onNotificationsOpen?: () => void
 }
 
 export function AccountantSidebar({
   collapsed = false,
   badges = {},
+  onNotificationsOpen,
 }: AccountantSidebarProps) {
   const location = useLocation()
+  const navigate = useNavigate()
+  const { user, logout } = useAuth()
+  const unread = useUnreadCount()
 
   const isActive = useCallback(
     (href: string) => {
@@ -51,6 +68,11 @@ export function AccountantSidebar({
     },
     [location.pathname]
   )
+
+  const handleLogout = useCallback(() => {
+    logout()
+    navigate('/login')
+  }, [logout, navigate])
 
   return (
     <aside
@@ -97,7 +119,10 @@ export function AccountantSidebar({
             >
               <Icon
                 className="h-[18px] w-[18px] shrink-0"
-                style={{ color: active ? 'var(--theme-brand-primary)' : 'currentColor' }}
+                style={{
+                  color: active ? '#ffffff' : 'rgba(255,255,255,0.45)',
+                  filter: active ? 'drop-shadow(0 0 5px rgba(255,255,255,0.95)) brightness(1.3)' : 'none',
+                }}
               />
               {!collapsed && (
                 <>
@@ -117,6 +142,70 @@ export function AccountantSidebar({
         })}
       </nav>
 
+      {/* Footer — user menu */}
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} className="p-2 shrink-0">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className={`relative flex items-center w-full rounded-xl transition-all duration-200 cursor-pointer outline-none border border-white/[0.06] bg-white/[0.04] hover:bg-white/[0.08] hover:border-white/[0.1] ${
+                collapsed ? 'h-9 w-9 justify-center mx-auto' : 'min-h-[40px] px-2.5 py-2 gap-2.5'
+              }`}
+            >
+              {collapsed && user && (
+                <span className="text-[11px] font-bold text-white/80">
+                  {(user.name || user.username || 'U').charAt(0).toUpperCase()}
+                </span>
+              )}
+              {!collapsed && user && (
+                <>
+                  <div className="flex flex-col min-w-0 flex-1 text-left">
+                    <span className="text-[10px] text-white/45 truncate leading-tight uppercase font-semibold tracking-wide">Xin chào</span>
+                    <span className="text-[13px] font-medium truncate leading-tight text-white/90">{user.name || user.username}</span>
+                  </div>
+                  <ChevronUp className="w-3.5 h-3.5 shrink-0 text-white/45" />
+                </>
+              )}
+              {unread > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] font-semibold rounded-full bg-red-500 text-white">
+                  {unread > 99 ? '99+' : unread}
+                </span>
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            className="w-56 z-[9999]"
+            side="top"
+            align={collapsed ? 'center' : 'end'}
+            sideOffset={8}
+          >
+            {user && (
+              <>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col gap-0.5">
+                    <p className="text-sm font-semibold">{user.name || user.username}</p>
+                    <p className="text-xs text-muted-foreground">{user.role === 'accountant' ? 'Kế toán' : user.role}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+              </>
+            )}
+            <DropdownMenuItem onClick={() => navigate('/accountant/notifications')}>
+              <Bell className="mr-2 h-4 w-4" />
+              Thông báo
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/accountant/profile')}>
+              <UserCircle className="mr-2 h-4 w-4" />
+              Thông tin cá nhân
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600">
+              <LogOut className="mr-2 h-4 w-4" />
+              Đăng xuất
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </aside>
   )
 }
