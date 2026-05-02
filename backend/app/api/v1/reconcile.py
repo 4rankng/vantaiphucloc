@@ -19,7 +19,7 @@ from app.schemas.domain import (
     SuggestMatchesResponse,
     SuggestWosResponse,
 )
-from app.core.deps import require_roles
+from app.core.deps import require_permission
 from app.api.v1.trip_orders import _load_trip_order_out, _enqueue_salary_recalc
 from app.services.matching_service import suggest_trip_matches, suggest_wo_matches
 from app.services.excel_service import (
@@ -39,7 +39,7 @@ router = APIRouter()
 async def reconcile(
     body: ReconcileRequest,
     request: Request,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
     db: AsyncSession = Depends(get_db),
 ):
     # Load work order
@@ -126,7 +126,7 @@ async def reconcile(
 async def unmatch(
     body: UnmatchRequest,
     request: Request,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
     db: AsyncSession = Depends(get_db),
 ):
     # Find the join table entry — need either wo_id or to_id
@@ -210,7 +210,7 @@ async def unmatch(
 @router.get("/suggest-matches/{work_order_id}", response_model=SuggestMatchesResponse)
 async def suggest_matches(
     work_order_id: int,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
     db: AsyncSession = Depends(get_db),
 ):
     wo_result = await db.execute(
@@ -230,7 +230,7 @@ async def suggest_matches(
 @router.get("/suggest-wos/{trip_order_id}", response_model=SuggestWosResponse)
 async def suggest_wos(
     trip_order_id: int,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
     db: AsyncSession = Depends(get_db),
 ):
     to_result = await db.execute(
@@ -253,7 +253,7 @@ async def upload_customer_excel(
     client_id: int = Query(..., description="Customer ID for reconciliation"),
     date_from: str | None = Query(None, description="Filter from date (YYYY-MM-DD)"),
     date_to: str | None = Query(None, description="Filter to date (YYYY-MM-DD)"),
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
     db: AsyncSession = Depends(get_db),
 ):
     if not file.filename.endswith(('.xlsx', '.xls')):
@@ -295,7 +295,7 @@ async def export_reconciliation_excel(
     client_id: int = Query(..., description="Customer ID"),
     date_from: str | None = Query(None, description="Filter from date (YYYY-MM-DD)"),
     date_to: str | None = Query(None, description="Filter to date (YYYY-MM-DD)"),
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
     db: AsyncSession = Depends(get_db),
 ):
     try:

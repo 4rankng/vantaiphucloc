@@ -9,7 +9,7 @@ from app.database import get_db
 from app.models.base import User
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import DriverCreate, DriverOut
-from app.core.deps import get_current_user, require_roles
+from app.core.deps import get_current_user, require_permission
 from app.core.security import hash_password
 from app.core.redis import get_redis
 from app.core.cache import CacheManager
@@ -75,7 +75,7 @@ async def list_drivers(
 @router.post("/drivers", response_model=DriverOut, status_code=201)
 async def create_driver(
     body: DriverCreate,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_permission("create", "Driver")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):

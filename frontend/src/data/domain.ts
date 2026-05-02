@@ -80,6 +80,7 @@ export interface Client {
 // export interface LedgerEntry { ... }
 
 export interface RoutePrice {
+  id?: number
   route: string
   pickupLocation?: string
   dropoffLocation?: string

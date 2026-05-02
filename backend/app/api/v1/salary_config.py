@@ -6,14 +6,14 @@ from app.database import get_db
 from app.models.base import User
 from app.models.domain import SalaryPeriodConfig
 from app.schemas.domain import SalaryConfigOut, SalaryConfigUpdate
-from app.core.deps import require_roles
+from app.core.deps import require_permission
 
 router = APIRouter()
 
 
 @router.get("/salary-config", response_model=SalaryConfigOut)
 async def get_salary_config(
-    current_user: User = Depends(require_roles("accountant", "superadmin", "driver")),
+    current_user: User = Depends(require_permission("read", "SalaryConfig")),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(SalaryPeriodConfig))
@@ -35,7 +35,7 @@ async def get_salary_config(
 @router.put("/salary-config", response_model=SalaryConfigOut)
 async def update_salary_config(
     body: SalaryConfigUpdate,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_permission("update", "SalaryConfig")),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(SalaryPeriodConfig))

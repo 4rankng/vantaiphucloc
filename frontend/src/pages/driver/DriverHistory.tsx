@@ -46,7 +46,7 @@ export function DriverHistory() {
   const filterOptions = FILTER_OPTIONS.map(opt => ({ ...opt, count: counts[opt.value] }))
 
   return (
-    <div className="pb-6 space-y-3">
+    <div className="pb-20 space-y-3">
       <FilterPills<FilterValue> options={filterOptions} value={filter} onChange={setFilter} />
 
       {totalEarnings > 0 && (

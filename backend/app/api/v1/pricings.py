@@ -11,7 +11,7 @@ from app.models.base import User
 from app.models.domain import Pricing, PricingLine
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import PricingCreate, PricingUpdate, PricingOut, PricingLineOut
-from app.core.deps import require_roles
+from app.core.deps import require_permission
 from app.core.redis import get_redis
 from app.core.cache import CacheManager
 from app.config import settings
@@ -87,7 +87,7 @@ async def list_pricings(
     route: str | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
-    current_user: User = Depends(require_roles("accountant", "director", "driver", "superadmin")),
+    current_user: User = Depends(require_permission("read", "Pricing")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
@@ -138,7 +138,7 @@ async def list_pricings(
 @router.post("/pricings", response_model=PricingOut, status_code=201)
 async def create_pricing(
     body: PricingCreate,
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_permission("update", "Pricing")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
@@ -170,7 +170,7 @@ async def create_pricing(
 async def update_pricing(
     pricing_id: int,
     body: PricingUpdate,
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_permission("update", "Pricing")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
@@ -211,7 +211,7 @@ async def update_pricing(
 @router.delete("/pricings/{pricing_id}", status_code=204)
 async def delete_pricing(
     pricing_id: int,
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_permission("update", "Pricing")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):

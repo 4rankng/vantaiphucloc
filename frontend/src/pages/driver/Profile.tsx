@@ -211,7 +211,7 @@ export function Profile() {
   const roleLabel = ROLE_LABELS[user?.role ?? ''] ?? user?.role ?? ''
 
   return (
-    <div className="pb-8 space-y-5">
+    <div className="pb-20 space-y-5">
 
       {/* ── Simple profile header ── */}
       <div className="flex items-center gap-4 px-1 py-2">

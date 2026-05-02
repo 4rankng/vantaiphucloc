@@ -1,7 +1,7 @@
 import { ContBadge } from '@/components/shared/ContBadge'
 import type { WorkOrder } from '@/data/domain'
 
-type WorkOrderJobCardStatus = 'unmatched' | 'matched' | 'pending-client'
+type WorkOrderJobCardStatus = 'unmatched' | 'matched' | 'pending-client' | 'completed'
 
 interface WorkOrderJobCardProps {
   job: WorkOrder
@@ -10,9 +10,10 @@ interface WorkOrderJobCardProps {
 }
 
 const STATUS_LABELS: Record<WorkOrderJobCardStatus, { label: string; bg: string; color: string }> = {
-  unmatched:      { label: 'Đối soát tài xế',    bg: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' },
+  unmatched:      { label: 'Đối soát tài xê',    bg: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' },
   matched:        { label: 'Đã khớp',             bg: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' },
   'pending-client': { label: 'Đối soát khách hàng', bg: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' },
+  completed:      { label: 'Hoàn thành',          bg: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' },
 }
 
 function uniqueWorkTypes(job: WorkOrder) {
@@ -25,7 +26,7 @@ function allContNumbers(job: WorkOrder) {
 
 export function WorkOrderJobCard({ job, status = 'unmatched', onClick }: WorkOrderJobCardProps) {
   const types = uniqueWorkTypes(job)
-  const statusCfg = STATUS_LABELS[status]
+  const statusCfg = STATUS_LABELS[status] ?? STATUS_LABELS.unmatched
 
   const inner = (
     <>

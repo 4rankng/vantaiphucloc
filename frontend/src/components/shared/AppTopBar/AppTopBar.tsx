@@ -88,7 +88,7 @@ export function AppTopBar(props: AppTopBarProps) {
         </div>
 
         {/* ── Right ── */}
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0">
           {props.actions}
 
           {/* Offline icon */}
@@ -112,24 +112,22 @@ export function AppTopBar(props: AppTopBarProps) {
             )}
           </button>
 
-          {/* Profile — home variant only */}
-          {props.variant === 'home' && (
-            <div ref={profileBtnRef} className="relative">
-              <button
-                onClick={() => setProfileOpen(v => !v)}
-                className="w-8 h-8 flex items-center justify-center rounded-full touch-manipulation"
-                style={{ background: ICON_BG, color: DARK_GREEN }}
-                aria-label="Tài khoản"
-              >
-                <UserCircle className="w-[17px] h-[17px]" />
-              </button>
-              <UserDropdown
-                open={profileOpen}
-                onClose={() => setProfileOpen(false)}
-                anchorRef={profileBtnRef}
-              />
-            </div>
-          )}
+          {/* Profile */}
+          <div ref={profileBtnRef} className="relative">
+            <button
+              onClick={() => setProfileOpen(v => !v)}
+              className="w-8 h-8 flex items-center justify-center rounded-full touch-manipulation"
+              style={{ background: ICON_BG, color: DARK_GREEN }}
+              aria-label="Tài khoản"
+            >
+              <UserCircle className="w-[17px] h-[17px]" />
+            </button>
+            <UserDropdown
+              open={profileOpen}
+              onClose={() => setProfileOpen(false)}
+              anchorRef={profileBtnRef}
+            />
+          </div>
         </div>
         </div>
       </div>

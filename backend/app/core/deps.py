@@ -78,6 +78,65 @@ def require_roles(*roles: str):
     return _check
 
 
+def require_permission(action: str, resource: str):
+    """
+    Oso-backed authorization dependency.
+    Checks the Polar policy to decide if the current user may perform
+    `action` on `resource`.
+
+    Usage:
+        async def endpoint(
+            user: User = Depends(require_permission("create", "WorkOrder")),
+        ):
+            ...
+    """
+    from app.core.oso import get_oso
+
+    async def _check(
+        current_user: User = Depends(get_current_user),
+    ) -> User:
+        oso = get_oso()
+        if not oso.is_allowed(current_user, action, resource):
+            raise HTTPException(
+                status_code=403,
+                detail="Bạn không có quyền thực hiện thao tác này",
+            )
+        return current_user
+
+    return _check
+
+
+def require_permission_on_resource(action: str, resource_factory):
+    """
+    Oso-backed authorization with a resource-level check.
+    `resource_factory` is an async function(current_user) -> object
+    that loads the resource from the DB.
+
+    Usage:
+        async def endpoint(
+            user: User = Depends(require_permission_on_resource(
+                "cancel", lambda wo: wo,  # or a DB lookup
+            )),
+        ):
+            ...
+    """
+    from app.core.oso import get_oso
+
+    async def _check(
+        current_user: User = Depends(get_current_user),
+    ) -> User:
+        oso = get_oso()
+        resource = await resource_factory(current_user)
+        if not oso.is_allowed(current_user, action, resource):
+            raise HTTPException(
+                status_code=403,
+                detail="Bạn không có quyền thực hiện thao tác này",
+            )
+        return current_user
+
+    return _check
+
+
 async def get_worker_pool(request: Request) -> ArqRedis:
     """Return the arq pool from app state."""
     return get_arq_pool()
