@@ -19,7 +19,7 @@ import { Label } from '@/components/ui'
 import { useMonthParams } from './use-month-params'
 import { formatCurrencyFull as fmt, type WorkOrder, type TripOrder } from '@/data/domain'
 import {
-  Sparkles, ArrowRight, ChevronLeft, ChevronRight,
+  Sparkles, ArrowRight,
   CheckCircle2, Plus, Wallet, Tag, Users, MapPin,
   FileText, Truck, Car, Briefcase, DollarSign, Clock, AlertTriangle,
   Calendar, User, Pencil,
@@ -82,7 +82,7 @@ function WorkbenchCard({
       </div>
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto" style={{ minHeight }}>
+      <div className="flex flex-col flex-1 overflow-hidden" style={{ minHeight }}>
         {children}
       </div>
 
@@ -219,12 +219,97 @@ function UnmatchedRow({ wo, onClick, isLast }: { wo: WorkOrder; onClick: () => v
   )
 }
 
-// ─── Trip info mini-card ──────────────────────────────────────────────────────
+// ─── Chuyến đã đi card (left column — WorkOrder) ─────────────────────────────
 
-function TripMiniCard({ trip, isSelected, onClick }: {
-  trip: TripOrder
+function ChuyenCard({
+  wo,
+  isSelected,
+  onClick,
+  onEdit,
+}: {
+  wo: WorkOrder
   isSelected?: boolean
-  onClick?: () => void
+  onClick: () => void
+  onEdit: (e: React.MouseEvent) => void
+}) {
+  const containerNums = wo.containers.map(c => c.containerNumber).filter(Boolean).slice(0, 2).join(', ')
+  const types = wo.containers.length > 0
+    ? (() => {
+        const map: Record<string, number> = {}
+        wo.containers.forEach(c => { map[c.workType] = (map[c.workType] ?? 0) + 1 })
+        return Object.entries(map).map(([t, n]) => n > 1 ? `${t}×${n}` : t).join(' ')
+      })()
+    : ''
+
+  return (
+    <button
+      onClick={onClick}
+      className="w-full text-left rounded-xl p-3 transition-all touch-manipulation"
+      style={{
+        background: isSelected
+          ? 'color-mix(in srgb, var(--theme-brand-primary) 12%, var(--theme-bg-primary))'
+          : 'var(--theme-bg-primary)',
+        border: `1.5px solid ${isSelected ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)'}`,
+      }}
+    >
+      <div className="flex items-start justify-between gap-1 mb-1">
+        <p className="text-sm font-semibold leading-tight truncate" style={{ color: 'var(--theme-text-primary)' }}>
+          {wo.driverName}
+        </p>
+        <button
+          onClick={onEdit}
+          className="shrink-0 flex items-center justify-center w-6 h-6 rounded-md transition hover:opacity-70"
+          style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
+          aria-label="Sửa phiếu"
+        >
+          <Pencil className="h-3 w-3" />
+        </button>
+      </div>
+      <p className="text-xs truncate mb-1.5" style={{ color: 'var(--theme-text-secondary)' }}>
+        {wo.clientName} · {resolveRoute(wo)}
+      </p>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+        {wo.tractorPlate && (
+          <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+            <Truck className="h-3 w-3 shrink-0" />
+            {wo.tractorPlate}
+          </span>
+        )}
+        {types && (
+          <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+            <Car className="h-3 w-3 shrink-0" />
+            {types}
+          </span>
+        )}
+        {containerNums && (
+          <span className="text-xs font-mono truncate" style={{ color: 'var(--theme-text-muted)' }}>
+            {containerNums}
+          </span>
+        )}
+      </div>
+      {isSelected && (
+        <p className="mt-1.5 text-[10px] font-bold" style={{ color: 'var(--theme-brand-primary)' }}>
+          ✓ Đang xem gợi ý
+        </p>
+      )}
+    </button>
+  )
+}
+
+// ─── Đơn hàng card (right column — TripOrder) ────────────────────────────────
+
+function DonHangCard({
+  trip,
+  matchScore,
+  matchConfidence,
+  onEdit,
+  onNavigate,
+}: {
+  trip: TripOrder
+  matchScore?: number
+  matchConfidence?: 'full' | 'partial' | 'none'
+  onEdit: (e: React.MouseEvent) => void
+  onNavigate?: () => void
 }) {
   const tripDate = trip.tripDate
     ? new Date(trip.tripDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
@@ -237,48 +322,62 @@ function TripMiniCard({ trip, isSelected, onClick }: {
       })()
     : trip.workType ?? ''
 
+  const isFull = matchConfidence === 'full'
+  const isPartial = matchConfidence === 'partial'
+  const isHighlighted = isFull || isPartial
+
   return (
-    <button
-      onClick={onClick}
-      disabled={!onClick}
-      className="w-full text-left rounded-xl p-3 transition-all"
+    <div
+      className="rounded-xl p-3 transition-all"
       style={{
-        background: isSelected
-          ? 'color-mix(in srgb, var(--theme-brand-primary) 10%, var(--theme-bg-primary))'
+        background: isFull
+          ? 'color-mix(in srgb, var(--theme-status-success) 8%, var(--theme-bg-primary))'
+          : isPartial
+          ? 'color-mix(in srgb, var(--theme-status-warning) 8%, var(--theme-bg-primary))'
           : 'var(--theme-bg-primary)',
-        border: `1.5px solid ${isSelected ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)'}`,
-        cursor: onClick ? 'pointer' : 'default',
+        border: `1.5px solid ${
+          isFull
+            ? 'var(--theme-status-success)'
+            : isPartial
+            ? 'var(--theme-status-warning)'
+            : 'var(--theme-border-default)'
+        }`,
       }}
     >
-      {/* Label */}
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
-          Đơn hàng
-        </span>
-        {isSelected && (
-          <span className="text-[10px] font-bold" style={{ color: 'var(--theme-brand-primary)' }}>✓ Đã chọn</span>
-        )}
+      <div className="flex items-start justify-between gap-1 mb-1">
+        <p className="text-sm font-semibold leading-tight truncate" style={{ color: 'var(--theme-text-primary)' }}>
+          {trip.code ? `${trip.code} · ` : ''}{trip.clientName}
+        </p>
+        <div className="flex items-center gap-1 shrink-0">
+          {isHighlighted && matchScore !== undefined && (
+            <span
+              className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+              style={{
+                background: isFull ? 'var(--theme-status-success)' : 'var(--theme-status-warning)',
+                color: '#fff',
+              }}
+            >
+              {Math.round(matchScore)}%
+            </span>
+          )}
+          <button
+            onClick={onEdit}
+            className="flex items-center justify-center w-6 h-6 rounded-md transition hover:opacity-70"
+            style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
+            aria-label="Sửa đơn hàng"
+          >
+            <Pencil className="h-3 w-3" />
+          </button>
+        </div>
       </div>
-      {/* Client */}
-      <p className="text-sm font-semibold leading-tight truncate mb-1" style={{ color: 'var(--theme-text-primary)' }}>
-        {trip.clientName}
-      </p>
-      {/* Route */}
-      <p className="text-xs truncate mb-2" style={{ color: 'var(--theme-text-secondary)' }}>
+      <p className="text-xs truncate mb-1.5" style={{ color: 'var(--theme-text-secondary)' }}>
         {resolveRoute(trip)}
       </p>
-      {/* Meta row */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
         {tripDate && (
           <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
             <Calendar className="h-3 w-3 shrink-0" />
             {tripDate}
-          </span>
-        )}
-        {trip.driverName && (
-          <span className="flex items-center gap-1 text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>
-            <User className="h-3 w-3 shrink-0" />
-            {trip.driverName}
           </span>
         )}
         {trip.tractorPlate && (
@@ -294,234 +393,249 @@ function TripMiniCard({ trip, isSelected, onClick }: {
           </span>
         )}
       </div>
-    </button>
+      {isHighlighted && onNavigate && (
+        <div className="mt-2 flex justify-end">
+          <button
+            onClick={onNavigate}
+            className="text-[10px] font-bold px-2 py-1 rounded-lg transition hover:opacity-80 active:scale-[0.97]"
+            style={{
+              background: isFull ? 'var(--theme-status-success)' : 'var(--theme-status-warning)',
+              color: '#fff',
+            }}
+          >
+            Ghép ngay →
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
-// ─── Work order mini-card ─────────────────────────────────────────────────────
+// ─── Gợi ý ghép phiếu panel ───────────────────────────────────────────────────
 
-function WorkOrderMiniCard({ wo, onClick }: { wo: WorkOrder; onClick?: () => void }) {
-  const containerNums = wo.containers.map(c => c.containerNumber).filter(Boolean).slice(0, 2).join(', ')
-  const types = wo.containers.length > 0
-    ? (() => {
-        const map: Record<string, number> = {}
-        wo.containers.forEach(c => { map[c.workType] = (map[c.workType] ?? 0) + 1 })
-        return Object.entries(map).map(([t, n]) => n > 1 ? `${t}×${n}` : t).join(' ')
-      })()
-    : ''
-
-  return (
-    <button
-      onClick={onClick}
-      disabled={!onClick}
-      className="w-full text-left rounded-xl p-3 transition-all"
-      style={{
-        background: 'var(--theme-bg-primary)',
-        border: '1.5px solid var(--theme-border-default)',
-        cursor: onClick ? 'pointer' : 'default',
-      }}
-    >
-      {/* Label */}
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
-          Phiếu tài xế
-        </span>
-        {onClick && (
-          <span className="text-[10px] font-bold" style={{ color: 'var(--theme-brand-primary)' }}>✎ Sửa</span>
-        )}
-      </div>
-      {/* Client */}
-      <p className="text-sm font-semibold leading-tight truncate mb-1" style={{ color: 'var(--theme-text-primary)' }}>
-        {wo.clientName}
-      </p>
-      {/* Route */}
-      <p className="text-xs truncate mb-2" style={{ color: 'var(--theme-text-secondary)' }}>
-        {resolveRoute(wo)}
-      </p>
-      {/* Meta row */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        {wo.driverName && (
-          <span className="flex items-center gap-1 text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>
-            <User className="h-3 w-3 shrink-0" />
-            {wo.driverName}
-          </span>
-        )}
-        {wo.tractorPlate && (
-          <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-            <Truck className="h-3 w-3 shrink-0" />
-            {wo.tractorPlate}
-          </span>
-        )}
-        {types && (
-          <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-            <Car className="h-3 w-3 shrink-0" />
-            {types}
-          </span>
-        )}
-        {containerNums && (
-          <span className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>
-            {containerNums}
-          </span>
-        )}
-      </div>
-    </button>
-  )
-}
-
-// ─── Match suggestion row ─────────────────────────────────────────────────────
-
-function MatchRow({ wo, trips, onMatch, isLast }: {
-  wo: WorkOrder
-  trips: TripOrder[]
-  onMatch: (woId: number) => void
-  isLast?: boolean
+function MatchSuggestionPanel({
+  workOrders,
+  trips,
+  onNavigate,
+}: {
+  workOrders: WorkOrder[]  // left — chuyến đã đi (driver trips)
+  trips: TripOrder[]       // right — đơn hàng (accountant orders)
+  onNavigate: (woId: number) => void
 }) {
   const updateWO = useUpdateWorkOrder()
   const updateTrip = useUpdateTripOrder()
 
-  // Build ranked candidates
-  const candidates = useMemo(() => {
-    const woRoute = wo.route.toLowerCase()
-    const woClient = wo.clientName.toLowerCase()
-    return trips
-      .filter(t => t.status === 'DRAFT' || t.status === 'PENDING')
-      .map(t => {
-        let score = 0
-        if (t.clientName.toLowerCase() === woClient) score += 50
-        if (t.route.toLowerCase() === woRoute) score += 30
-        if (t.driverId === wo.driverId) score += 20
-        return { trip: t, score }
-      })
-      .filter(x => x.score > 0)
-      .sort((a, b) => b.score - a.score)
-  }, [wo, trips])
+  // Selected WorkOrder id (left column click)
+  const [selectedWoId, setSelectedWoId] = useState<number | null>(null)
 
-  const [selectedIdx, setSelectedIdx] = useState(0)
-  const selectedCandidate = candidates[selectedIdx] ?? null
-  const isFullMatch = (selectedCandidate?.score ?? 0) >= 100
-
-  // WO edit state
-  const [editWO, setEditWO] = useState(false)
+  // Edit state — work order (left)
+  const [editWO, setEditWO] = useState<WorkOrder | null>(null)
   const [woClient, setWoClient] = useState('')
   const [woRoute, setWoRoute] = useState('')
   const [woDriver, setWoDriver] = useState('')
 
-  // Trip edit state
-  const [editTrip, setEditTrip] = useState(false)
+  // Edit state — trip order (right)
+  const [editTrip, setEditTrip] = useState<TripOrder | null>(null)
   const [tripClient, setTripClient] = useState('')
   const [tripRoute, setTripRoute] = useState('')
   const [tripDriver, setTripDriver] = useState('')
 
-  const openEditWO = (e: React.MouseEvent) => {
+  // Fetch TripOrder suggestions for the selected WorkOrder
+  const { data: suggestData, isLoading: loadingSuggestions } = useSuggestMatches(selectedWoId)
+
+  // Build tripId → match info from backend response
+  const backendMatchMap = useMemo(() => {
+    const map = new Map<number, { score: number; confidence: 'full' | 'partial' | 'none' }>()
+    if (suggestData?.suggestions) {
+      for (const s of suggestData.suggestions) {
+        map.set(s.tripOrder.id, {
+          score: Math.min(100, Math.round((s.score ?? 0) * 100)),
+          confidence: s.confidence,
+        })
+      }
+    }
+    return map
+  }, [suggestData])
+
+  // Client-side fallback scoring (WO → TripOrders) while backend responds
+  const tripMatchMap = useMemo(() => {
+    if (backendMatchMap.size > 0) return backendMatchMap
+    if (!selectedWoId) return new Map<number, { score: number; confidence: 'full' | 'partial' | 'none' }>()
+
+    const wo = workOrders.find(w => w.id === selectedWoId)
+    if (!wo) return new Map()
+
+    const map = new Map<number, { score: number; confidence: 'full' | 'partial' | 'none' }>()
+    const woRouteLower = wo.route.toLowerCase()
+    const woClientLower = wo.clientName.toLowerCase()
+    const woContainers = new Set(wo.containers.map(c => c.containerNumber?.toLowerCase()).filter(Boolean))
+    const woTypes = new Set(wo.containers.map(c => c.workType))
+
+    for (const trip of trips) {
+      let matched = 0
+      const total = 4
+
+      if (trip.clientName.toLowerCase() === woClientLower) matched++
+      if (trip.route.toLowerCase() === woRouteLower) matched++
+      if (trip.driverId === wo.driverId) matched++
+
+      const tripContainers = new Set(trip.containers.map(c => c.containerNumber?.toLowerCase()).filter(Boolean))
+      const hasContainerMatch = [...woContainers].some(cn => tripContainers.has(cn))
+      if (hasContainerMatch) matched++
+
+      const tripTypes = new Set(trip.containers.map(c => c.workType))
+      const hasTypeMatch = [...woTypes].some(t => tripTypes.has(t))
+      if (!hasContainerMatch && hasTypeMatch) matched += 0.5
+
+      const score = (matched / total) * 100
+      if (score >= 50) {
+        map.set(trip.id, {
+          score,
+          confidence: score >= 100 ? 'full' : score >= 75 ? 'partial' : 'none',
+        })
+      }
+    }
+    return map
+  }, [selectedWoId, workOrders, trips, backendMatchMap])
+
+  // Sort trips: highlighted first
+  const sortedTrips = useMemo(() => {
+    return [...trips].sort((a, b) => {
+      const sa = tripMatchMap.get(a.id)?.score ?? 0
+      const sb = tripMatchMap.get(b.id)?.score ?? 0
+      return sb - sa
+    })
+  }, [trips, tripMatchMap])
+
+  const openEditWO = (e: React.MouseEvent, wo: WorkOrder) => {
     e.stopPropagation()
     setWoClient(wo.clientName)
     setWoRoute(wo.route)
     setWoDriver(wo.driverName)
-    setEditWO(true)
+    setEditWO(wo)
   }
 
   const saveWO = () => {
-    updateWO.mutate({ id: wo.id, data: { clientName: woClient, route: woRoute, driverName: woDriver } })
-    setEditWO(false)
+    if (!editWO) return
+    updateWO.mutate({ id: editWO.id, data: { clientName: woClient, route: woRoute, driverName: woDriver } })
+    setEditWO(null)
   }
 
-  const openEditTrip = (e: React.MouseEvent) => {
+  const openEditTrip = (e: React.MouseEvent, trip: TripOrder) => {
     e.stopPropagation()
-    if (!selectedCandidate) return
-    setTripClient(selectedCandidate.trip.clientName)
-    setTripRoute(selectedCandidate.trip.route)
-    setTripDriver(selectedCandidate.trip.driverName)
-    setEditTrip(true)
+    setTripClient(trip.clientName)
+    setTripRoute(trip.route)
+    setTripDriver(trip.driverName ?? '')
+    setEditTrip(trip)
   }
 
   const saveTrip = () => {
-    if (!selectedCandidate) return
-    updateTrip.mutate({ id: selectedCandidate.trip.id, data: { clientName: tripClient, route: tripRoute, driverName: tripDriver } })
-    setEditTrip(false)
+    if (!editTrip) return
+    updateTrip.mutate({ id: editTrip.id, data: { clientName: tripClient, route: tripRoute, driverName: tripDriver } })
+    setEditTrip(null)
   }
 
-  const handlePrev = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setSelectedIdx(i => Math.max(0, i - 1))
-  }
-  const handleNext = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setSelectedIdx(i => Math.min(candidates.length - 1, i + 1))
+  if (workOrders.length === 0 && trips.length === 0) {
+    return <EmptyState icon={CheckCircle2} text="Tất cả phiếu đã ghép" />
   }
 
   return (
-    <div
-      className="px-4 py-4"
-      style={{ borderBottom: isLast ? 'none' : '1px solid var(--theme-border-light)' }}
-    >
-      {/* Two-panel layout */}
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        {/* Left: Trip order (selectable + editable) */}
-        <div className="flex flex-col gap-1.5">
-          {selectedCandidate ? (
-            <TripMiniCard
-              trip={selectedCandidate.trip}
-              isSelected
-              onClick={openEditTrip}
-            />
-          ) : (
-            <div
-              className="rounded-xl p-3 flex items-center justify-center"
-              style={{ background: 'var(--theme-bg-primary)', border: '1.5px dashed var(--theme-border-default)', minHeight: 100 }}
-            >
-              <p className="text-xs text-center" style={{ color: 'var(--theme-text-muted)' }}>Không tìm thấy lệnh phù hợp</p>
-            </div>
-          )}
-          {/* Candidate navigator */}
-          {candidates.length > 1 && (
-            <div className="flex items-center justify-between px-1">
-              <button
-                onClick={handlePrev}
-                disabled={selectedIdx === 0}
-                className="flex items-center gap-0.5 text-xs font-medium transition disabled:opacity-30"
-                style={{ color: 'var(--theme-brand-primary)' }}
-              >
-                <ChevronLeft className="h-3.5 w-3.5" />
-                Trước
-              </button>
-              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                {selectedIdx + 1}/{candidates.length}
-              </span>
-              <button
-                onClick={handleNext}
-                disabled={selectedIdx === candidates.length - 1}
-                className="flex items-center gap-0.5 text-xs font-medium transition disabled:opacity-30"
-                style={{ color: 'var(--theme-brand-primary)' }}
-              >
-                Sau
-                <ChevronRight className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          )}
+    <>
+      <div className="grid grid-cols-2 gap-0 flex-1 overflow-hidden" style={{ minHeight: 0 }}>
+        {/* Left: Chuyến đã đi (WorkOrders) */}
+        <div
+          className="flex flex-col overflow-hidden"
+          style={{ borderRight: '1px solid var(--theme-border-default)' }}
+        >
+          <div
+            className="px-3 py-2 shrink-0"
+            style={{ borderBottom: '1px solid var(--theme-border-light)', background: 'var(--theme-bg-tertiary)' }}
+          >
+            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
+              Chuyến đã đi ({workOrders.length})
+            </p>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2 space-y-2">
+            {workOrders.length === 0 ? (
+              <p className="text-xs text-center py-6" style={{ color: 'var(--theme-text-muted)' }}>Không có chuyến</p>
+            ) : (
+              workOrders.map(wo => (
+                <ChuyenCard
+                  key={wo.id}
+                  wo={wo}
+                  isSelected={selectedWoId === wo.id}
+                  onClick={() => setSelectedWoId(prev => prev === wo.id ? null : wo.id)}
+                  onEdit={e => openEditWO(e, wo)}
+                />
+              ))
+            )}
+            {workOrders.length > 0 && !selectedWoId && (
+              <p className="text-[11px] text-center pt-1 pb-2" style={{ color: 'var(--theme-text-muted)' }}>
+                ☝️ Nhấn vào chuyến để tìm gợi ý
+              </p>
+            )}
+          </div>
         </div>
 
-        {/* Right: Work order (editable) */}
-        <WorkOrderMiniCard wo={wo} onClick={openEditWO} />
+        {/* Right: Đơn hàng (TripOrders) */}
+        <div className="flex flex-col overflow-hidden">
+          <div
+            className="px-3 py-2 shrink-0"
+            style={{ borderBottom: '1px solid var(--theme-border-light)', background: 'var(--theme-bg-tertiary)' }}
+          >
+            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
+              Đơn hàng ({trips.length})
+              {selectedWoId && !loadingSuggestions && tripMatchMap.size > 0 && (
+                <span className="ml-1.5 font-normal normal-case" style={{ color: 'var(--theme-status-warning)' }}>
+                  · {tripMatchMap.size} gợi ý
+                </span>
+              )}
+              {selectedWoId && loadingSuggestions && (
+                <span className="ml-1.5 font-normal normal-case" style={{ color: 'var(--theme-text-muted)' }}>
+                  · đang tìm…
+                </span>
+              )}
+            </p>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2 space-y-2">
+            {trips.length === 0 ? (
+              <p className="text-xs text-center py-6" style={{ color: 'var(--theme-text-muted)' }}>Không có đơn hàng</p>
+            ) : selectedWoId && !loadingSuggestions && tripMatchMap.size === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 gap-2 px-3">
+                <div
+                  className="flex h-10 w-10 items-center justify-center rounded-full"
+                  style={{ background: 'color-mix(in srgb, var(--theme-status-warning) 12%, transparent)' }}
+                >
+                  <AlertTriangle className="h-5 w-5" style={{ color: 'var(--theme-status-warning)' }} />
+                </div>
+                <p className="text-xs font-semibold text-center" style={{ color: 'var(--theme-text-primary)' }}>
+                  Không tìm thấy đơn hàng phù hợp
+                </p>
+                <p className="text-[11px] text-center" style={{ color: 'var(--theme-text-muted)' }}>
+                  Thử chỉnh sửa thông tin chuyến hoặc đối soát thủ công
+                </p>
+              </div>
+            ) : (
+              sortedTrips.map(trip => {
+                const match = tripMatchMap.get(trip.id)
+                return (
+                  <DonHangCard
+                    key={trip.id}
+                    trip={trip}
+                    matchScore={match?.score}
+                    matchConfidence={match?.confidence}
+                    onEdit={e => openEditTrip(e, trip)}
+                    onNavigate={match && selectedWoId ? () => onNavigate(selectedWoId) : undefined}
+                  />
+                )
+              })
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Action button */}
-      <div className="flex justify-center">
-        <button
-          onClick={() => isFullMatch && onMatch(wo.id)}
-          disabled={!isFullMatch}
-          className="rounded-lg px-3 py-1.5 text-xs font-semibold transition active:scale-[0.98]"
-          style={{
-            background: isFullMatch ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
-            color: isFullMatch ? '#fff' : 'var(--theme-text-muted)',
-            cursor: isFullMatch ? 'pointer' : 'not-allowed',
-          }}
-        >
-          Xác nhận
-        </button>
-      </div>
-
-      {/* Inline edit: Work Order */}
-      <EditDialog open={editWO} title="Sửa phiếu tài xế" color="var(--theme-brand-primary)" onClose={saveWO}>
+      {/* Edit: Work Order (left) */}
+      <EditDialog open={!!editWO} title="Sửa chuyến đã đi" color="var(--theme-brand-primary)" onClose={saveWO}>
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</Label>
           <Input value={woClient} onChange={e => setWoClient(e.target.value)} className="text-sm h-10" autoFocus />
@@ -536,8 +650,8 @@ function MatchRow({ wo, trips, onMatch, isLast }: {
         </div>
       </EditDialog>
 
-      {/* Inline edit: Trip Order */}
-      <EditDialog open={editTrip} title="Sửa lệnh điều hành" color="var(--theme-status-warning)" onClose={saveTrip}>
+      {/* Edit: Trip Order (right) */}
+      <EditDialog open={!!editTrip} title="Sửa đơn hàng" color="var(--theme-status-warning)" onClose={saveTrip}>
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</Label>
           <Input value={tripClient} onChange={e => setTripClient(e.target.value)} className="text-sm h-10" autoFocus />
@@ -551,7 +665,7 @@ function MatchRow({ wo, trips, onMatch, isLast }: {
           <Input value={tripDriver} onChange={e => setTripDriver(e.target.value)} className="text-sm h-10" />
         </div>
       </EditDialog>
-    </div>
+    </>
   )
 }
 
@@ -671,20 +785,13 @@ function DesktopDashboard() {
           }
           footerLabel="Mở đối soát đầy đủ"
           onFooter={() => navigate('/accountant/work-orders')}
+          minHeight="400px"
         >
-          {matchCandidates.length === 0 ? (
-            <EmptyState icon={CheckCircle2} text="Tất cả phiếu đã ghép" />
-          ) : (
-            matchCandidates.map((wo, i) => (
-              <MatchRow
-                key={wo.id}
-                wo={wo}
-                trips={trips}
-                isLast={i === matchCandidates.length - 1}
-                onMatch={id => navigate(`/accountant/match/${id}`)}
-              />
-            ))
-          )}
+          <MatchSuggestionPanel
+            workOrders={matchCandidates}
+            trips={pendingTrips.slice(0, 8)}
+            onNavigate={id => navigate(`/accountant/match/${id}`)}
+          />
         </WorkbenchCard>
 
         {/* Right: Phiếu tài xế chưa ghép */}
@@ -819,21 +926,13 @@ function MobileDashboard() {
         }
         footerLabel="Mở đối soát đầy đủ"
         onFooter={() => navigate('/accountant/work-orders')}
-        minHeight="200px"
+        minHeight="320px"
       >
-        {pendingWOs.length === 0 ? (
-          <EmptyState icon={CheckCircle2} text="Tất cả phiếu đã ghép" />
-        ) : (
-          pendingWOs.slice(0, 3).map((wo, i) => (
-            <MatchRow
-              key={wo.id}
-              wo={wo}
-              trips={trips}
-              isLast={i === Math.min(pendingWOs.length, 3) - 1}
-              onMatch={id => navigate(`/accountant/match/${id}`)}
-            />
-          ))
-        )}
+        <MatchSuggestionPanel
+          workOrders={pendingWOs.slice(0, 6)}
+          trips={pendingTrips.slice(0, 6)}
+          onNavigate={id => navigate(`/accountant/match/${id}`)}
+        />
       </WorkbenchCard>
 
       {/* Phiếu tài xế chưa ghép */}

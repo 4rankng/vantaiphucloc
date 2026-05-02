@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWorkOrders, useTripOrders, useClients, useRoutes, useUpdateWorkOrder, useUpdateTripOrder, useCreateTripOrder, useSuggestMatches } from '@/hooks/use-queries'
 import { type WorkType } from '@/data/domain'
@@ -33,6 +33,15 @@ export function useMatchJob(initialJobId: number) {
   const [selectedJobId, setSelectedJobId] = useState(initialJobId)
   const [selectedTripId, setSelectedTripId] = useState(0)
   const [pickMode, setPickMode] = useState<'job' | 'trip' | null>(null)
+
+  // Auto-select the best suggestion when suggestions load
+  useEffect(() => {
+    if (selectedTripId !== 0 || !suggestionsData?.suggestions?.length) return
+    const best = suggestionsData.suggestions[0]
+    if (best) {
+      setSelectedTripId(best.tripOrder.id)
+    }
+  }, [suggestionsData, selectedTripId])
 
   // Edit dialog
   const [editDialog, setEditDialog] = useState<EditDialogMode>(null)
