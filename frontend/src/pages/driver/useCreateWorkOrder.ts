@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useOffline } from '@/contexts/OfflineContext'
 import { apiClient } from '@/services/api'
-import { api } from '@/services/api/client'
 import type { PhotoMeta } from '@/components/shared/ContainerScanner'
 import type { Client, RoutePrice, WorkType, WorkOrder } from '@/data/domain'
 
@@ -199,11 +198,9 @@ export function useCreateWorkOrder() {
     if (isOnlineFlag) {
       await Promise.all(containers.map(async (c, idx) => {
         try {
-          const res = await api.get('/work-orders/validate-container', {
-            params: { container_number: c.containerNumber.trim() },
-          })
-          if (!res.data.valid) {
-            errors[idx] = res.data.error ?? 'Số container không hợp lệ'
+          const res = await apiClient.validateContainer(c.containerNumber.trim())
+          if (!res.success || !res.data?.valid) {
+            errors[idx] = res.data?.error ?? 'Số container không hợp lệ'
           }
         } catch { /* skip validation on error */ }
       }))

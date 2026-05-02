@@ -110,13 +110,17 @@ export function TripDetail() {
     if (!trip || !unmatchReason.trim()) return
     setUnmatching(true)
     try {
-      const { api } = await import('@/services/api/client')
-      await api.post('/reconcile/unmatch', { trip_order_id: trip.id, reason: unmatchReason.trim() })
-      toast.success('Đã bỏ match')
-      qc.invalidateQueries({ queryKey: ['trip-orders'] })
-      qc.invalidateQueries({ queryKey: ['work-orders'] })
-      setShowUnmatchDialog(false)
-      setUnmatchReason('')
+      const { apiClient } = await import('@/services/api')
+      const res = await apiClient.unmatch(trip.id, unmatchReason.trim())
+      if (res.success) {
+        toast.success('Đã bỏ match')
+        qc.invalidateQueries({ queryKey: ['trip-orders'] })
+        qc.invalidateQueries({ queryKey: ['work-orders'] })
+        setShowUnmatchDialog(false)
+        setUnmatchReason('')
+      } else {
+        toast.error('Lỗi', res.message ?? 'Không thể bỏ match')
+      }
     } catch {
       toast.error('Lỗi', 'Không thể bỏ match')
     } finally {

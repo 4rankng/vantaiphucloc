@@ -10,25 +10,13 @@ import { InlineSelect } from '@/components/shared/InlineSelect'
 import { CreateVendorDialog } from '@/components/shared/CreateVendorDialog'
 import { useToast } from '@/components/atoms/Toast'
 import { FilterPills } from '@/components/shared/FilterPills'
-import { api } from '@/services/api/client'
+import { apiClient } from '@/services/api'
 import type { Role } from '@/data/domain'
 import { ROLE_LABELS } from '@/data/domain'
 import { useVendors, useCreateVendor, useUpdateVendor, useDeleteVendor } from '@/hooks/use-queries'
 import type { Vendor, VendorType } from '@/services/api/vendors.api'
+import type { UserAccount } from '@/services/api/users.api'
 import { useAuth } from '@/contexts/AuthContext'
-
-interface UserAccount {
-  id: string
-  username: string
-  fullName: string | null
-  phone: string | null
-  cccd: string | null
-  email?: string
-  role: Role
-  tractorPlate?: string
-  isActive: boolean
-  createdAt: string
-}
 
 const ROLE_ICONS: Record<Role, typeof Truck> = {
   superadmin: LayoutDashboard,
@@ -66,21 +54,6 @@ interface UserForm {
 }
 
 const EMPTY_FORM: UserForm = { username: '', fullName: '', phone: '', cccd: '', role: 'driver', tractorPlate: '', password: '', vendor: '' }
-
-function toCamelCase(obj: Record<string, unknown>): UserAccount {
-  return {
-    id: String(obj.id),
-    username: obj.username as string,
-    fullName: (obj.full_name as string) ?? null,
-    phone: (obj.phone as string) ?? null,
-    cccd: (obj.cccd as string) ?? null,
-    email: obj.email as string | undefined,
-    role: obj.role as Role,
-    tractorPlate: obj.tractor_plate as string | undefined,
-    isActive: obj.is_active as boolean,
-    createdAt: obj.created_at as string,
-  }
-}
 
 // ─── Vendor management ────────────────────────────────────────────────────────
 
@@ -301,10 +274,8 @@ function UserManagementInner() {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const res = await api.get('/users')
-      const items = (res.data as { items: Record<string, unknown>[] }).items ?? res.data
-      const list = (items as Record<string, unknown>[]).map(toCamelCase)
-      setUsers(list.filter(u => u.isActive))
+      const res = await apiClient.getUsers()
+      if (res.success) setUsers(res.data.filter(u => u.isActive))
     } catch {
       toast.error('Lỗi', 'Không thể tải danh sách tài khoản')
     } finally {
@@ -332,20 +303,24 @@ function UserManagementInner() {
     setSaving(true)
     try {
       const vendorObj = vendors?.find(v => String(v.id) === createForm.vendor)
-      await api.post('/users', {
+      const res = await apiClient.createUser({
         username: createForm.username.trim(),
-        full_name: createForm.fullName.trim() || undefined,
+        fullName: createForm.fullName.trim() || undefined,
         phone: createForm.phone.trim() || undefined,
         cccd: createForm.cccd.trim() || undefined,
         role: createForm.role,
         password: createForm.password,
         vendor: createForm.role === 'driver' ? (vendorObj?.name ?? 'Phúc Lộc') : undefined,
-        tractor_plate: createForm.role === 'driver' ? createForm.tractorPlate.trim() : undefined,
+        tractorPlate: createForm.role === 'driver' ? createForm.tractorPlate.trim() : undefined,
       })
-      toast.success('Đã tạo tài khoản')
-      setCreateOpen(false)
-      setCreateForm(EMPTY_FORM)
-      fetchUsers()
+      if (res.success) {
+        toast.success('Đã tạo tài khoản')
+        setCreateOpen(false)
+        setCreateForm(EMPTY_FORM)
+        fetchUsers()
+      } else {
+        toast.error('Lỗi', res.message ?? 'Lỗi không xác định')
+      }
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Lỗi không xác định'
       toast.error('Lỗi', detail)
@@ -375,14 +350,14 @@ function UserManagementInner() {
       const vendorObj = vendors?.find(v => String(v.id) === editForm.vendor)
       const payload: Record<string, unknown> = {
         username: editForm.username.trim(),
-        full_name: editForm.fullName.trim() || undefined,
+        fullName: editForm.fullName.trim() || undefined,
         phone: editForm.phone.trim() || undefined,
         cccd: editForm.cccd.trim() || undefined,
         role: editForm.role,
       }
       if (editForm.role === 'driver') {
         if (editForm.tractorPlate.trim()) {
-          payload.tractor_plate = editForm.tractorPlate.trim()
+          payload.tractorPlate = editForm.tractorPlate.trim()
         }
         if (vendorObj) {
           payload.vendor = vendorObj.name
@@ -391,10 +366,14 @@ function UserManagementInner() {
       if (editForm.password.trim()) {
         payload.password = editForm.password.trim()
       }
-      await api.put(`/users/${detailUser.id}`, payload)
-      toast.success('Đã cập nhật')
-      setDetailUser(null)
-      fetchUsers()
+      const res = await apiClient.updateUser(detailUser.id, payload)
+      if (res.success) {
+        toast.success('Đã cập nhật')
+        setDetailUser(null)
+        fetchUsers()
+      } else {
+        toast.error('Lỗi', res.message ?? 'Không thể cập nhật')
+      }
     } catch {
       toast.error('Lỗi', 'Không thể cập nhật')
     } finally {
@@ -406,11 +385,15 @@ function UserManagementInner() {
     if (!deleteId) return
     setSaving(true)
     try {
-      await api.delete(`/users/${deleteId}`)
-      toast.success('Đã xoá tài khoản')
-      setDeleteId(null)
-      setDetailUser(null)
-      fetchUsers()
+      const res = await apiClient.deleteUser(deleteId)
+      if (res.success) {
+        toast.success('Đã xoá tài khoản')
+        setDeleteId(null)
+        setDetailUser(null)
+        fetchUsers()
+      } else {
+        toast.error('Lỗi', res.message ?? 'Không thể xoá tài khoản')
+      }
     } catch {
       toast.error('Lỗi', 'Không thể xoá tài khoản')
     } finally {

@@ -215,6 +215,9 @@ export function CreateWorkOrder() {
 
         <RecentTripSuggestions
           trips={recentOrders}
+          selectedClientId={clientId}
+          selectedPickup={pickupLocation}
+          selectedDropoff={dropoffLocation}
           onSelect={handleRecentTripSelect}
           onChooseOther={() => {}}
         />
@@ -225,7 +228,11 @@ export function CreateWorkOrder() {
             <InlineSelect
               placeholder="Chọn khách hàng"
               value={clientId}
-              options={clients.map(c => ({ value: String(c.id), label: c.code || c.name, sublabel: c.code ? c.name : c.phone }))}
+              options={clients.map(c => ({
+                value: String(c.id),
+                label: c.code ? `${c.code} - ${c.name}` : c.name,
+                sublabel: c.code ? undefined : c.phone,
+              }))}
               onChange={setClientId}
             />
           </div>
@@ -295,6 +302,7 @@ export function CreateWorkOrder() {
       <TripSummaryDialog
         open={summaryOpen}
         onConfirm={handleConfirmSubmit}
+        onClose={() => setSummaryOpen(false)}
         containers={summaryContainers}
         clientName={summaryClientName}
         pickupLocation={pickupLocation}

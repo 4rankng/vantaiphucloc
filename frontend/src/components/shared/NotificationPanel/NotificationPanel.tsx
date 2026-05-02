@@ -187,10 +187,9 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps) {
                 return (
                   <div
                     key={n.id}
-                    className="flex items-start gap-3 rounded-2xl p-3 transition-colors touch-manipulation"
+                    className="flex items-start gap-3 rounded-xl p-3 transition-colors touch-manipulation"
                     style={{
                       background: n.read ? 'transparent' : 'var(--theme-bg-secondary)',
-                      borderLeft: n.read ? 'none' : '3px solid var(--theme-brand-primary)',
                     }}
                   >
                     <div

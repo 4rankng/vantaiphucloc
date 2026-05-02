@@ -130,6 +130,17 @@ export async function updateWorkOrder(id: number, data: Partial<WorkOrder>): Pro
   }
 }
 
+export async function validateContainer(containerNumber: string): Promise<ApiResponse<{ valid: boolean; error?: string }>> {
+  try {
+    const res = await api.get('/work-orders/validate-container', {
+      params: { container_number: containerNumber },
+    })
+    return ok({ valid: res.data.valid, error: res.data.error })
+  } catch (err) {
+    return fail(err)
+  }
+}
+
 export async function exportWorkOrdersExcel(filters?: {
   dateFrom?: string; dateTo?: string; status?: string
 }): Promise<Blob> {
