@@ -697,11 +697,7 @@ AuditLog (nhật ký hệ thống) — auto-records all data changes, reason req
 
 | Feature | Notes |
 |---------|-------|
-| Batch Work Order creation UI | Backend supports it; no driver UI for batch create |
-| Cancel Work Order UI | Drivers & accountants cannot cancel WO from app |
-| Cancel Trip Order UI | Accountants cannot cancel TO from app |
 | ISO 6346 container number validation | No client-side format/check-digit validation |
-| Director dashboard detail | Basic overview only; no deep analytics |
 | Unmatch reconciliation UI | Backend supports unmatch; no frontend button |
 
 ---
