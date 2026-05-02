@@ -319,7 +319,7 @@ export function MatchJob() {
                     className="w-2 h-2 rounded-full"
                     style={{ background: 'var(--theme-brand-primary)' }}
                   />
-                  <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--theme-brand-primary)' }}>
+                  <span className="typo-label" style={{ color: 'var(--theme-brand-primary)' }}>
                     Chuyến đã chạy
                   </span>
                   <span
@@ -381,7 +381,7 @@ export function MatchJob() {
                     className="w-2 h-2 rounded-full"
                     style={{ background: 'var(--theme-status-warning)' }}
                   />
-                  <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--theme-status-warning)' }}>
+                  <span className="typo-label" style={{ color: 'var(--theme-status-warning)' }}>
                     Chuyến yêu cầu
                   </span>
                   <span
@@ -484,7 +484,7 @@ export function MatchJob() {
                     borderColor: 'var(--theme-border-light)',
                   }}
                 >
-                  <h2 className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+                  <h2 className="typo-h2">
                     So sánh chi tiết
                   </h2>
                   <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
@@ -691,7 +691,7 @@ export function MatchJob() {
               )}
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Loại container</Label>
+              <Label className="typo-form-label">Loại container</Label>
               <div className="flex flex-wrap gap-1.5">
                 {WORK_TYPES.map(w => (
                   <button key={w} onClick={() => setDialogContainers(prev => prev.map((c2, j) => j === i ? { ...c2, type: w } : c2))}
@@ -703,7 +703,7 @@ export function MatchJob() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Số cont</Label>
+              <Label className="typo-form-label">Số cont</Label>
               <Input value={c.number} onChange={e => setDialogContainers(prev => prev.map((c2, j) => j === i ? { ...c2, number: e.target.value } : c2))} className="text-sm font-mono h-10" autoFocus />
             </div>
           </div>
@@ -727,7 +727,7 @@ export function MatchJob() {
               )}
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Loại container</Label>
+              <Label className="typo-form-label">Loại container</Label>
               <div className="flex flex-wrap gap-1.5">
                 {WORK_TYPES.map(w => (
                   <button key={w} onClick={() => setDialogContRight(prev => prev.map((c2, j) => j === i ? { ...c2, type: w } : c2))}
@@ -739,7 +739,7 @@ export function MatchJob() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Số cont</Label>
+              <Label className="typo-form-label">Số cont</Label>
               <Input value={c.number} onChange={e => setDialogContRight(prev => prev.map((c2, j) => j === i ? { ...c2, number: e.target.value } : c2))} className="text-sm font-mono h-10" autoFocus />
             </div>
           </div>
@@ -753,28 +753,28 @@ export function MatchJob() {
 
       <EditDialog open={editDialog === 'client-left'} title="Sửa khách hàng · Đã chạy" color="var(--theme-brand-primary)" onClose={saveDialog}>
         <div className="space-y-1.5">
-          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</Label>
+          <Label className="typo-form-label">Khách hàng</Label>
           <InlineSelect placeholder="Chọn khách hàng..." value={editedJob?.clientName ?? ''} options={clientOptions} onChange={v => setEditedJob(prev => prev ? { ...prev, clientName: v } : null)} />
         </div>
       </EditDialog>
 
       <EditDialog open={editDialog === 'client-right'} title="Sửa khách hàng · Yêu cầu" color="var(--theme-status-warning)" onClose={saveDialog}>
         <div className="space-y-1.5">
-          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</Label>
+          <Label className="typo-form-label">Khách hàng</Label>
           <InlineSelect placeholder="Chọn khách hàng..." value={editedTrip?.clientName ?? ''} options={clientOptions} onChange={v => setEditedTrip(prev => prev ? { ...prev, clientName: v } : null)} />
         </div>
       </EditDialog>
 
       <EditDialog open={editDialog === 'route-left'} title="Sửa cung đường · Đã chạy" color="var(--theme-brand-primary)" onClose={saveDialog}>
         <div className="space-y-1.5">
-          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</Label>
+          <Label className="typo-form-label">Cung đường</Label>
           <InlineSelect placeholder="Chọn cung đường..." value={editedJob?.route ?? ''} options={routeOptions} onChange={v => setEditedJob(prev => prev ? { ...prev, route: v } : null)} />
         </div>
       </EditDialog>
 
       <EditDialog open={editDialog === 'route-right'} title="Sửa cung đường · Yêu cầu" color="var(--theme-status-warning)" onClose={saveDialog}>
         <div className="space-y-1.5">
-          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</Label>
+          <Label className="typo-form-label">Cung đường</Label>
           <InlineSelect placeholder="Chọn cung đường..." value={editedTrip?.route ?? ''} options={routeOptions} onChange={v => setEditedTrip(prev => prev ? { ...prev, route: v } : null)} />
         </div>
       </EditDialog>

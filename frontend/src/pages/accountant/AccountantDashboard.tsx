@@ -75,7 +75,7 @@ function WorkbenchCard({
         className="flex items-center justify-between px-4 pt-4 pb-3"
         style={{ borderBottom: '1px solid var(--theme-border-default)' }}
       >
-        <div className="text-sm font-semibold font-display" style={{ color: 'var(--theme-text-primary)' }}>
+        <div className="typo-h2" style={{ color: 'var(--theme-text-primary)' }}>
           {title}
         </div>
         {titleExtra}
@@ -551,7 +551,7 @@ function MatchSuggestionPanel({
             className="px-3 py-2 shrink-0"
             style={{ borderBottom: '1px solid var(--theme-border-light)', background: 'var(--theme-bg-tertiary)' }}
           >
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
+            <p className="typo-label">
               Chuyến đã đi ({workOrders.length})
             </p>
           </div>
@@ -583,7 +583,7 @@ function MatchSuggestionPanel({
             className="px-3 py-2 shrink-0"
             style={{ borderBottom: '1px solid var(--theme-border-light)', background: 'var(--theme-bg-tertiary)' }}
           >
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
+            <p className="typo-label">
               Đơn hàng ({trips.length})
               {selectedWoId && !loadingSuggestions && tripMatchMap.size > 0 && (
                 <span className="ml-1.5 font-normal normal-case" style={{ color: 'var(--theme-status-warning)' }}>
@@ -710,7 +710,7 @@ function DesktopDashboard() {
       onClick: () => navigate('/accountant/driver-trips'),
     },
     {
-      label: 'Lệnh chờ ghép',
+      label: 'Đơn chờ ghép',
       value: String(pendingTrips.length),
       valueColor: pendingTrips.length > 0 ? 'var(--theme-status-warning)' : undefined,
       icon: <Clock className="h-5 w-5" />,
@@ -850,7 +850,7 @@ function MobileDashboard() {
   const stats = [
     { label: 'Doanh thu tháng', value: fmt(revenue) },
     { label: 'Chi phí tài xế', value: fmt(totalDriverSalary) },
-    { label: 'Lệnh chờ ghép', value: String(pendingTrips.length), valueColor: pendingTrips.length > 0 ? 'var(--theme-status-warning)' : undefined },
+    { label: 'Đơn chờ ghép', value: String(pendingTrips.length), valueColor: pendingTrips.length > 0 ? 'var(--theme-status-warning)' : undefined },
     { label: 'Phiếu chưa ghép', value: String(pendingWOs.length), valueColor: pendingWOs.length > 0 ? 'var(--theme-status-warning)' : undefined },
   ]
 

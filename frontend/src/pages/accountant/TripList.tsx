@@ -279,7 +279,7 @@ export function TripList() {
             className="rounded-2xl p-3 flex flex-col gap-0.5"
             style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
           >
-            <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>
+            <p className="typo-label">
               Doanh thu
             </p>
             <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
@@ -290,7 +290,7 @@ export function TripList() {
             className="rounded-2xl p-3 flex flex-col gap-0.5"
             style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
           >
-            <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>
+            <p className="typo-label">
               Tổng lệnh
             </p>
             <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
@@ -468,18 +468,6 @@ export function TripList() {
             onStatusChange={(s) => setStatusFilter(s as TripOrderStatus | 'ALL')}
             onClearFilters={handleClearFilters}
           />
-        </div>
-
-        {/* Result count */}
-        <div
-          className="flex items-center justify-between px-4 py-2"
-          style={{ borderBottom: '1px solid var(--theme-border-light)', background: 'var(--theme-bg-tertiary)' }}
-        >
-          <p className="text-xs font-medium" style={{ color: 'var(--theme-text-muted)' }}>
-            <span className="font-bold" style={{ color: 'var(--theme-text-primary)' }}>{filtered.length}</span>
-            {' '}lệnh{statusFilter !== 'ALL' ? ` · ${STATUS_FILTERS.find(s => s.key === statusFilter)?.label}` : ''}
-          </p>
-
         </div>
 
         {/* Data table — no outer border since we're already inside the card */}

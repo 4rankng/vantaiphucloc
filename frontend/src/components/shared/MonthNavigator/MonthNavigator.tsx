@@ -57,8 +57,7 @@ export function MonthNavigator({
             Tháng {mm}/{year}
           </span>
           <span
-            className="text-xs tabular-nums whitespace-nowrap leading-tight"
-            style={{ color: 'var(--theme-text-secondary)' }}
+            className="typo-meta tabular-nums whitespace-nowrap leading-tight"
           >
             {rangeLabel}
           </span>

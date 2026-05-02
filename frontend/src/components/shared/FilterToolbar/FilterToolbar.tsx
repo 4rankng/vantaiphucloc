@@ -39,6 +39,8 @@ export interface FilterToolbarProps {
   onClearFilters?: () => void
   /** Show filter count badge */
   showFilterBadge?: boolean
+  /** Action button rendered at end of toolbar row */
+  extraAction?: ReactNode
 }
 
 export function FilterToolbar({
@@ -55,6 +57,7 @@ export function FilterToolbar({
   activeFilterCount = 0,
   onClearFilters,
   showFilterBadge = true,
+  extraAction,
 }: FilterToolbarProps) {
   const [dateExpanded, setDateExpanded] = useState(false)
 
@@ -153,6 +156,9 @@ export function FilterToolbar({
         {/* Extra filters slot */}
         {extraFilters}
 
+        {extraAction && (
+          <div className="ml-auto">{extraAction}</div>
+        )}
 
       </div>
 

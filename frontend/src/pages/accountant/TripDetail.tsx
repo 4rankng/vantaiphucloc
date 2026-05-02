@@ -134,7 +134,7 @@ export function TripDetail() {
       <div className="rounded-2xl p-4 space-y-1"
         style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
         <div className="flex items-center justify-between mb-2">
-          <p className="text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>Đơn hàng</p>
+          <p className="typo-h2">Đơn hàng</p>
           <div className="flex items-center gap-2">
             <ConfirmationCheckbox
               isConfirmed={trip.isConfirmed}
@@ -201,7 +201,7 @@ export function TripDetail() {
       {matchedJobs.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-status-success)' }}>
+            <p className="typo-label" style={{ color: 'var(--theme-status-success)' }}>
               Đã match ({matchedJobs.length})
             </p>
             {!trip.isConfirmed && (
@@ -257,7 +257,7 @@ export function TripDetail() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Loại container</Label>
+              <Label className="typo-form-label">Loại container</Label>
               <div className="flex flex-wrap gap-1.5">
                 {WORK_TYPES.map(w => (
                   <button key={w} onClick={() => setEditWorkType(w)}
@@ -272,11 +272,11 @@ export function TripDetail() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</Label>
+              <Label className="typo-form-label">Khách hàng</Label>
               <Input value={editClientName} onChange={e => setEditClientName(e.target.value)} className="text-sm" />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</Label>
+              <Label className="typo-form-label">Cung đường</Label>
               <Input value={editRoute} onChange={e => setEditRoute(e.target.value)} className="text-sm" />
             </div>
           </div>
@@ -338,7 +338,7 @@ export function TripDetail() {
             Tách tất cả số cont đã khớp với đơn hàng này. Hành động này không thể hoàn tác.
           </p>
           <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Lý do *</Label>
+            <Label className="typo-form-label">Lý do *</Label>
             <Input
               value={unmatchReason}
               onChange={e => setUnmatchReason(e.target.value)}

@@ -184,26 +184,26 @@ export function RouteList() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tên tuyến</Label>
+              <Label className="typo-form-label">Tên tuyến</Label>
               <Input value={form.route} onChange={e => updateField('route', e.target.value)} placeholder="Cát Lái - Sóng Thần" className="text-sm" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm lấy</Label>
+                <Label className="typo-form-label">Điểm lấy</Label>
                 <Input value={form.pickupLocation} onChange={e => updateField('pickupLocation', e.target.value)} placeholder="Cảng Cát Lái" className="text-sm" />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm trả</Label>
+                <Label className="typo-form-label">Điểm trả</Label>
                 <Input value={form.dropoffLocation} onChange={e => updateField('dropoffLocation', e.target.value)} placeholder="KCN Sóng Thần" className="text-sm" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Giá 20ft</Label>
+                <Label className="typo-form-label">Giá 20ft</Label>
                 <Input type="number" value={form.type20ft || ''} onChange={e => updateField('type20ft', Number(e.target.value))} placeholder="0" className="text-sm" />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Giá 40ft</Label>
+                <Label className="typo-form-label">Giá 40ft</Label>
                 <Input type="number" value={form.type40ft || ''} onChange={e => updateField('type40ft', Number(e.target.value))} placeholder="0" className="text-sm" />
               </div>
             </div>
