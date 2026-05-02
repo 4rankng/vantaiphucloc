@@ -22,6 +22,7 @@ function resolveTitle(pathname: string): string {
   if (pathname.startsWith('/director/driver-jobs/')) return 'Tài xế'
   if (pathname.startsWith('/director/client-jobs/')) return 'Khách hàng'
   if (pathname.startsWith('/director/trip/')) return 'Chi tiết lệnh'
+  if (pathname.startsWith('/director/pricing/')) return 'Bảng giá'
   return ''
 }
 
