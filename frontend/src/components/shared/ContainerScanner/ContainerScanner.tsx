@@ -1,7 +1,7 @@
 import { useRef, useCallback, useState, useEffect } from 'react'
 import Webcam from 'react-webcam'
 import { X, RotateCcw, RectangleHorizontal, Square } from 'lucide-react'
-import { calculateObjectCoverCrop } from '@/lib/crop-utils'
+import { calculateCrop } from '@/lib/crop-utils'
 
 export interface PhotoMeta {
   lat: number | null
@@ -18,7 +18,7 @@ type ScanMode = 'rectangle' | 'square'
 
 // Target rectangle dimensions — must match CSS values
 const RECT_WIDTH_PERCENT = 0.85
-const RECT_HEIGHT_PX = 100
+const RECT_HEIGHT_PX = 120
 const SQUARE_SIZE_PERCENT = 0.75
 const MAX_CAPTURE_WIDTH = 1200
 
@@ -32,6 +32,7 @@ function getOverlayDimensions(mode: ScanMode, containerWidth: number) {
 
 export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) {
   const webcamRef = useRef<Webcam>(null)
+  const overlayBoxRef = useRef<HTMLDivElement>(null)
   const [captured, setCaptured] = useState<string | null>(null)
   const [scanMode, setScanMode] = useState<ScanMode>('rectangle')
   const [gpsCoords, setGpsCoords] = useState<{ lat: number | null; lng: number | null }>({ lat: null, lng: null })
@@ -52,21 +53,23 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
     const video = webcam.video
     if (!video) return
 
-    // Use window dimensions as the container — the overlay is `fixed inset-0`
-    // so it always equals the viewport exactly. This avoids DOM measurement
-    // timing issues (stale clientHeight on iOS Safari / Android Chrome when
-    // the address bar shifts the viewport after initial render).
-    const containerW = window.innerWidth
-    const containerH = window.innerHeight
+    const overlayBox = overlayBoxRef.current
+    if (!overlayBox) return
 
-    const overlay = getOverlayDimensions(scanMode, containerW)
-    const crop = calculateObjectCoverCrop({
+    // Measure the actual rendered position of the guide box in the viewport.
+    // This is the ground truth — no assumptions about centering or label height.
+    const rect = overlayBox.getBoundingClientRect()
+
+    const crop = calculateCrop({
       sourceWidth: video.videoWidth,
       sourceHeight: video.videoHeight,
-      containerWidth: containerW,
-      containerHeight: containerH,
-      rectWidth: overlay.width,
-      rectHeight: overlay.height,
+      containerWidth: window.innerWidth,
+      containerHeight: window.innerHeight,
+      // Use the real measured position instead of assuming centered
+      rectLeft: rect.left,
+      rectTop: rect.top,
+      rectWidth: rect.width,
+      rectHeight: rect.height,
     })
 
     const canvas = document.createElement('canvas')
@@ -86,7 +89,7 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
       outputCanvas.getContext('2d')!.drawImage(canvas, 0, 0, outputCanvas.width, outputCanvas.height)
     }
 
-    const croppedImage = outputCanvas.toDataURL('image/jpeg', 0.8)
+    const croppedImage = outputCanvas.toDataURL('image/jpeg', 0.92)
     setCaptured(croppedImage)
   }, [scanMode])
 
@@ -120,21 +123,19 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
 
       {captured ? (
         /* ── Preview mode ── */
-        <div className="flex-1 flex flex-col items-center justify-center px-4">
-          <div
-            className="rounded-xl overflow-hidden w-full"
-            style={{ maxHeight: '50vh' }}
-          >
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6">
+          {/* Show the cropped image at full width — it already matches the overlay box */}
+          <div className="w-full rounded-xl overflow-hidden" style={{ border: '2px solid var(--theme-brand-primary)' }}>
             <img
               src={captured}
               alt="Captured container"
-              className="w-full h-auto object-contain"
+              className="w-full h-auto block"
             />
           </div>
-          <p className="text-xs mt-3 mb-4" style={{ color: 'rgba(255,255,255,0.7)' }}>
+          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>
             Kiểm tra số cont trong ảnh
           </p>
-          <div className="flex gap-4 px-6 w-full">
+          <div className="flex gap-4 w-full">
             <button
               onClick={handleRetake}
               className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold touch-manipulation"
@@ -155,14 +156,24 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
         /* ── Scanner mode ── */
         <>
           {/* Camera feed */}
-          <Webcam
-            audio={false}
-            ref={webcamRef}
-            screenshotFormat="image/jpeg"
-            screenshotQuality={0.8}
-            videoConstraints={{ facingMode: 'environment' }}
-            className="w-full h-full object-cover"
-          />
+          <div className="scanner-video">
+            <Webcam
+              audio={false}
+              ref={webcamRef}
+              screenshotFormat="image/jpeg"
+              screenshotQuality={0.8}
+              videoConstraints={{
+                facingMode: 'environment',
+                // Request portrait 9:16 so the delivered aspect ratio matches
+                // the viewport — this makes the crop math exact with no hacks.
+                // The browser treats these as hints; actual resolution may vary
+                // but will be close enough for accurate overlay mapping.
+                width:  { ideal: 1080 },
+                height: { ideal: 1920 },
+              }}
+              className="w-full h-full"
+            />
+          </div>
 
           {/* Overlay with overlay hole */}
           <div

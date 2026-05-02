@@ -107,6 +107,7 @@ class ClientOut(BaseModel):
     address: str | None
     contact_person: str | None
     outstanding_debt: int
+    is_active: bool = True
     created_at: datetime
     updated_at: datetime
 
