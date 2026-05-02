@@ -206,22 +206,29 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
           </div>
 
           {/* Mode toggle — single button, right side of screen */}
-          <button
-            onClick={() => setScanMode(m => m === 'rectangle' ? 'square' : 'rectangle')}
-            className="absolute bottom-8 right-6 z-10 w-12 h-12 flex items-center justify-center rounded-full touch-manipulation transition-colors"
-            style={{ background: 'rgba(0,0,0,0.5)', color: '#fff', pointerEvents: 'auto' }}
-            title={scanMode === 'rectangle' ? 'Chuyển sang vuông' : 'Chuyển sang chữ nhật'}
+          <div
+            className="absolute bottom-6 right-4 z-10 flex flex-col items-center gap-1"
+            style={{ pointerEvents: 'auto' }}
           >
-            {scanMode === 'rectangle' ? (
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <rect x="1" y="5" width="18" height="10" rx="2" stroke="currentColor" strokeWidth="1.5" />
-              </svg>
-            ) : (
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <rect x="4" y="4" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
-              </svg>
-            )}
-          </button>
+            <button
+              onClick={() => setScanMode(m => m === 'rectangle' ? 'square' : 'rectangle')}
+              className="w-12 h-12 flex items-center justify-center rounded-full touch-manipulation transition-colors"
+              style={{ background: 'rgba(0,0,0,0.5)', color: '#fff' }}
+            >
+              {scanMode === 'rectangle' ? (
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <rect x="1" y="5" width="18" height="10" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                </svg>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <rect x="4" y="4" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                </svg>
+              )}
+            </button>
+            <span className="text-[10px] font-medium leading-tight" style={{ color: 'rgba(255,255,255,0.7)' }}>
+              {scanMode === 'rectangle' ? 'Vuông' : 'Ngang'}
+            </span>
+          </div>
         </>
       )}
     </div>
