@@ -44,10 +44,11 @@ export function TripList() {
     if (search.trim()) {
       const q = search.toLowerCase()
       list = list.filter(t =>
-        t.clientName.toLowerCase().includes(q) ||
-        t.tractorPlate.toLowerCase().includes(q) ||
-        t.route.toLowerCase().includes(q) ||
-        t.containers.some(c => c.containerNumber.toLowerCase().includes(q))
+        (t.clientName ?? '').toLowerCase().includes(q) ||
+        (t.tractorPlate ?? '').toLowerCase().includes(q) ||
+        (t.route ?? '').toLowerCase().includes(q) ||
+        (t.driverName ?? '').toLowerCase().includes(q) ||
+        t.containers.some(c => (c.containerNumber ?? '').toLowerCase().includes(q))
       )
     }
     return list

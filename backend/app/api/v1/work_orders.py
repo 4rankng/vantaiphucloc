@@ -26,7 +26,7 @@ from app.schemas.domain import (
     ContainerOCRResponse,
     CancelRequest,
 )
-from app.core.deps import get_current_user, require_roles
+from app.core.deps import get_current_user, require_permission
 from app.services.pricing_service import find_pricing
 from app.services.ocr_service import MAX_OCR_ATTEMPTS, extract_container_number
 from app.services.photo_storage import save_base64_photo
@@ -151,7 +151,7 @@ async def _batch_load_work_order_outs(
 @router.post("/work-orders", response_model=WorkOrderOut, status_code=201)
 async def create_work_order(
     body: WorkOrderCreate,
-    current_user: User = Depends(require_roles("driver")),
+    current_user: User = Depends(require_permission("create", "WorkOrder")),
     db: AsyncSession = Depends(get_db),
 ):
     work_order = await _create_work_order_db(body, current_user, db)
@@ -272,7 +272,7 @@ async def update_work_order(
     work_order_id: int,
     body: WorkOrderUpdate,
     request: Request,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_permission("update", "WorkOrder")),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -319,7 +319,7 @@ async def cancel_work_order(
     work_order_id: int,
     body: CancelRequest,
     request: Request,
-    current_user: User = Depends(require_roles("accountant", "superadmin", "driver")),
+    current_user: User = Depends(require_permission("cancel", "WorkOrder")),
     db: AsyncSession = Depends(get_db),
 ):
     """Cancel a work order (only PENDING/unmatched). Reason required."""
@@ -349,7 +349,7 @@ async def cancel_work_order(
 @router.post("/work-orders/batch", status_code=207)
 async def batch_create_work_orders(
     body: BatchWorkOrderCreate,
-    current_user: User = Depends(require_roles("driver")),
+    current_user: User = Depends(require_permission("create", "WorkOrder")),
     db: AsyncSession = Depends(get_db),
 ):
     results: list[BatchWorkOrderResult] = []
@@ -552,7 +552,7 @@ async def export_work_orders_excel(
     date_from: date | None = None,
     date_to: date | None = None,
     status: str | None = None,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_permission("export", "WorkOrder")),
     db: AsyncSession = Depends(get_db),
 ):
     """Export work orders to Excel."""

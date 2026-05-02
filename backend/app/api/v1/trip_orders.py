@@ -14,7 +14,7 @@ from app.models.base import User
 from app.models.domain import TripOrder, TripOrderContainer, TripOrderWorkOrder, WorkOrder, Client
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import TripOrderCreate, TripOrderUpdate, TripOrderOut, TripContainerOut, CancelRequest
-from app.core.deps import get_current_user, require_roles
+from app.core.deps import get_current_user, require_permission
 from app.services.salary_service import get_salary_period_dates
 from app.services.audit_service import log_action
 from app.core.audit_context import set_audit_reason
@@ -207,7 +207,7 @@ async def _enqueue_salary_recalc(db: AsyncSession, driver_id: int, ref_date: dat
 async def create_trip_order(
     body: TripOrderCreate,
     request: Request,
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_permission("read", "TripOrder")),
     db: AsyncSession = Depends(get_db),
 ):
     matched_ids = body.matched_work_order_ids
@@ -298,7 +298,7 @@ async def list_trip_orders(
     date_to: date | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_permission("read", "TripOrder")),
     db: AsyncSession = Depends(get_db),
 ):
     query = select(TripOrder)
@@ -345,7 +345,7 @@ async def list_trip_orders(
 @router.get("/trip-orders/{trip_order_id}", response_model=TripOrderOut)
 async def get_trip_order(
     trip_order_id: int,
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_permission("read", "TripOrder")),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -363,7 +363,7 @@ async def update_trip_order(
     trip_order_id: int,
     body: TripOrderUpdate,
     request: Request,
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_permission("read", "TripOrder")),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -447,7 +447,7 @@ async def cancel_trip_order(
     trip_order_id: int,
     body: CancelRequest,
     request: Request,
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_permission("read", "TripOrder")),
     db: AsyncSession = Depends(get_db),
 ):
     """Cancel a trip order (only DRAFT or PENDING/unmatched can be cancelled). Reason required."""
@@ -482,7 +482,7 @@ async def cancel_trip_order(
 async def toggle_trip_order_confirmation(
     trip_order_id: int,
     request: Request,
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_permission("read", "TripOrder")),
     db: AsyncSession = Depends(get_db),
 ):
     """Toggle is_confirmed status for a trip order. Confirms and sets linked WOs to COMPLETED."""
@@ -521,7 +521,7 @@ async def toggle_trip_order_confirmation(
 
 @router.get("/trip-orders/template")
 async def download_trip_order_template(
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_permission("create", "TripOrder")),
 ):
     """Download blank Excel template for trip order import."""
     from app.services.excel_service import generate_trip_order_template
@@ -537,7 +537,7 @@ async def download_trip_order_template(
 @router.post("/trip-orders/import", status_code=200)
 async def import_trip_orders_excel(
     file: UploadFile = File(...),
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_permission("create", "TripOrder")),
     db: AsyncSession = Depends(get_db),
 ):
     """Import trip orders from Excel file."""
@@ -557,7 +557,7 @@ async def export_trip_orders_excel(
     date_from: date | None = None,
     date_to: date | None = None,
     status: str | None = None,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_permission("create", "TripOrder")),
     db: AsyncSession = Depends(get_db),
 ):
     """Export trip orders to Excel."""

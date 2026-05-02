@@ -43,10 +43,10 @@ export function WorkOrderList() {
     if (search.trim()) {
       const q = search.toLowerCase()
       result = result.filter(w =>
-        w.tractorPlate.toLowerCase().includes(q) ||
-        w.driverName.toLowerCase().includes(q) ||
-        w.clientName.toLowerCase().includes(q) ||
-        w.containers.some(c => c.containerNumber.toLowerCase().includes(q))
+        (w.tractorPlate ?? '').toLowerCase().includes(q) ||
+        (w.driverName ?? '').toLowerCase().includes(q) ||
+        (w.clientName ?? '').toLowerCase().includes(q) ||
+        w.containers.some(c => (c.containerNumber ?? '').toLowerCase().includes(q))
       )
     }
     return result.sort((a, b) => b.createdAt.localeCompare(a.createdAt))

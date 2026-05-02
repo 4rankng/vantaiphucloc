@@ -8,7 +8,7 @@ from app.database import get_db
 from app.models.audit_log import AuditLog
 from app.models.base import User
 from app.schemas.base import PaginatedResponse
-from app.core.deps import require_roles
+from app.core.deps import require_permission
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
@@ -38,7 +38,7 @@ async def list_audit_logs(
     page_size: int = Query(50, ge=1, le=200),
     table_name: str | None = Query(None),
     action: str | None = Query(None),
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_permission("read", "Audit")),
     db: AsyncSession = Depends(get_db),
 ):
     q = select(AuditLog)

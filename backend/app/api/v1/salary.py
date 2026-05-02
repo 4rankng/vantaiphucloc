@@ -17,7 +17,7 @@ from app.schemas.domain import (
     SalaryPeriodOut,
     SalaryPeriodUpdate,
 )
-from app.core.deps import require_roles, get_current_user
+from app.core.deps import require_permission, get_current_user
 from app.workers import enqueue
 
 router = APIRouter()
@@ -26,7 +26,7 @@ router = APIRouter()
 @router.post("/salary/calculate", response_model=SalaryCalculateAsyncResponse, status_code=202)
 async def calculate_salary(
     body: SalaryCalculateRequest,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_permission("calculate", "Salary")),
 ):
     try:
         job_id = await enqueue(
@@ -46,7 +46,7 @@ async def list_salary_periods(
     active_only: bool = Query(False, description="Only return drivers with work_order_count > 0"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_permission("read", "Salary")),
     db: AsyncSession = Depends(get_db),
 ):
     query = select(SalaryPeriod)
@@ -82,7 +82,7 @@ async def list_salary_periods(
 async def list_my_salary_periods(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
-    current_user: User = Depends(require_roles("driver")),
+    current_user: User = Depends(require_permission("read_own_salary", "Salary")),
     db: AsyncSession = Depends(get_db),
 ):
     query = select(SalaryPeriod).where(SalaryPeriod.driver_id == current_user.id)
@@ -111,7 +111,7 @@ async def list_my_salary_periods(
 async def salary_dashboard(
     period_start: date = Query(...),
     period_end: date = Query(...),
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_permission("read", "Salary")),
     db: AsyncSession = Depends(get_db),
 ):
     """Return salary breakdown for all active drivers in a period."""
@@ -144,7 +144,7 @@ async def salary_dashboard(
 async def update_salary_period(
     salary_id: int,
     body: SalaryPeriodUpdate,
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_permission("calculate", "Salary")),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -167,7 +167,7 @@ async def update_salary_period(
 async def export_salary_excel(
     start_date: date = Query(...),
     end_date: date = Query(...),
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_permission("calculate", "Salary")),
     db: AsyncSession = Depends(get_db),
 ):
     """Export salary breakdown to Excel."""

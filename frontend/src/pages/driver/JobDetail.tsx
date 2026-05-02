@@ -46,7 +46,7 @@ export function JobDetail() {
   const timeStr = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-20">
       {/* Photos */}
       <div className={`grid ${job.containers.length > 1 ? 'grid-cols-2' : 'grid-cols-1'} gap-2`}>
         {job.containers.map((c, i) => (
