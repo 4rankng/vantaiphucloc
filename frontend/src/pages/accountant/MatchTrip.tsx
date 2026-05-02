@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { useMatchTrip } from '@/hooks/use-match-trip'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { InlineSelect } from '@/components/shared/InlineSelect'
@@ -8,45 +9,103 @@ import { CompareRow } from '@/components/shared/CompareRow'
 import { ContCompareRow } from '@/components/shared/ContCompareRow'
 import { WORK_TYPES } from '@/data/domain'
 import type { WOSuggestion } from '@/data/domain'
-import { Check, ChevronDown, X, Sparkles } from 'lucide-react'
+import { 
+  Check, 
+  ChevronDown, 
+  X, 
+  Sparkles, 
+  ArrowLeft, 
+  Command, 
+  ArrowUpDown,
+  Truck,
+  FileText,
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  Plus,
+  Keyboard
+} from 'lucide-react'
 import { Button, Input, Label } from '@/components/ui'
 
-function WOSuggestionCard({ suggestion, onSelect }: { suggestion: WOSuggestion; onSelect: () => void }) {
+function WOSuggestionCard({ 
+  suggestion, 
+  onSelect, 
+  index,
+  isSelected 
+}: { 
+  suggestion: WOSuggestion
+  onSelect: () => void
+  index: number
+  isSelected?: boolean
+}) {
   const { workOrder, confidence, matchedFields } = suggestion
   const isFull = confidence === 'full'
   const isPartial = confidence === 'partial'
 
   return (
-    <button onClick={onSelect}
-      className="w-full text-left px-3 py-2.5 rounded-xl touch-manipulation"
+    <button 
+      onClick={onSelect}
+      className={`w-full text-left px-4 py-3 rounded-xl transition-all touch-manipulation group ${
+        isSelected ? 'ring-2 ring-offset-2' : 'hover:scale-[1.01]'
+      }`}
       style={{
         background: isFull ? 'var(--theme-status-success-light)' : isPartial ? 'var(--theme-status-warning-light, #FEF3C7)' : 'var(--theme-bg-secondary)',
         border: `1px solid ${isFull ? 'var(--theme-status-success)' : isPartial ? 'var(--theme-status-warning)' : 'var(--theme-border-default)'}`,
-      }}>
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex flex-wrap items-center gap-1.5">
-          {workOrder.containers.map((c, i) => (
-            <span key={i} className="flex items-center gap-1">
-              <ContBadge type={c.workType} />
-              <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
-            </span>
-          ))}
+        ringColor: 'var(--theme-brand-primary)',
+      }}
+    >
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div className="flex items-center gap-3">
+          {/* Number badge for keyboard shortcut */}
+          <div 
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 transition-colors"
+            style={{ 
+              background: isSelected ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
+              color: isSelected ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)'
+            }}
+          >
+            {index + 1}
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {workOrder.containers.map((c, i) => (
+              <span key={i} className="flex items-center gap-1">
+                <ContBadge type={c.workType} />
+                <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+                  {c.containerNumber}
+                </span>
+              </span>
+            ))}
+          </div>
         </div>
-        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-          style={{
-            background: isFull ? 'var(--theme-status-success)' : isPartial ? 'var(--theme-status-warning)' : 'var(--theme-bg-tertiary)',
-            color: isFull ? '#fff' : isPartial ? '#92400E' : 'var(--theme-text-muted)',
-          }}>
-          {isFull ? 'Khớp đầy đủ' : isPartial ? 'Khớp một phần' : 'Không khớp'}
-        </span>
+        <div className="flex items-center gap-2">
+          <span 
+            className="text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1"
+            style={{
+              background: isFull ? 'var(--theme-status-success)' : isPartial ? 'var(--theme-status-warning)' : 'var(--theme-bg-tertiary)',
+              color: isFull ? '#fff' : isPartial ? '#92400E' : 'var(--theme-text-muted)',
+            }}
+          >
+            {isFull ? <CheckCircle2 className="w-3 h-3" /> : isPartial ? <Clock className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+            {isFull ? 'Khớp đầy đủ' : isPartial ? 'Khớp một phần' : 'Không khớp'}
+          </span>
+        </div>
       </div>
-      <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-        {workOrder.driverName} · {workOrder.clientName} · {workOrder.route}
+      
+      <p className="text-sm mb-2" style={{ color: 'var(--theme-text-secondary)' }}>
+        <span className="font-medium">{workOrder.driverName}</span> · {workOrder.clientName} · {workOrder.route}
       </p>
-      <div className="flex flex-wrap gap-1 mt-1">
+      
+      <div className="flex flex-wrap gap-1.5">
         {matchedFields.map(f => (
-          <span key={f} className="text-[10px] px-1 py-0.5 rounded"
-            style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}>
+          <span 
+            key={f} 
+            className="text-xs px-2 py-0.5 rounded-md font-medium flex items-center gap-1"
+            style={{ 
+              background: 'var(--theme-status-success-light)', 
+              color: 'var(--theme-status-success)' 
+            }}
+          >
+            <Check className="w-3 h-3" />
             {f === 'driver' ? 'Tài xế' : f === 'client' ? 'Khách hàng' : f === 'route' ? 'Cung đường' : 'Container'}
           </span>
         ))}
@@ -55,9 +114,75 @@ function WOSuggestionCard({ suggestion, onSelect }: { suggestion: WOSuggestion; 
   )
 }
 
+// Keyboard shortcuts help panel
+function KeyboardShortcutsPanel({ onClose }: { onClose: () => void }) {
+  return (
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div 
+        className="rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl"
+        style={{ background: 'var(--theme-bg-primary)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-3 mb-5">
+          <div 
+            className="p-2 rounded-xl"
+            style={{ background: 'var(--theme-brand-primary-light)' }}
+          >
+            <Keyboard className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
+          </div>
+          <h3 className="text-lg font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+            Phím tắt
+          </h3>
+        </div>
+        <div className="space-y-3">
+          {[
+            { key: '1-5', action: 'Chọn gợi ý tương ứng' },
+            { key: '↑ / ↓', action: 'Di chuyển giữa gợi ý' },
+            { key: 'Enter', action: 'Xác nhận khớp chuyến' },
+            { key: 'T', action: 'Chọn chuyến yêu cầu' },
+            { key: 'J', action: 'Chọn chuyến đã chạy' },
+            { key: 'Esc', action: 'Quay lại / Đóng' },
+            { key: '?', action: 'Hiện/ẩn phím tắt' }
+          ].map(({ key, action }) => (
+            <div key={key} className="flex items-center justify-between">
+              <span 
+                className="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold"
+                style={{ 
+                  background: 'var(--theme-bg-secondary)',
+                  color: 'var(--theme-text-primary)',
+                  border: '1px solid var(--theme-border-default)'
+                }}
+              >
+                {key}
+              </span>
+              <span className="text-sm" style={{ color: 'var(--theme-text-secondary)' }}>{action}</span>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={onClose}
+          className="w-full mt-5 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+          style={{ 
+            background: 'var(--theme-bg-secondary)',
+            color: 'var(--theme-text-primary)'
+          }}
+        >
+          Đóng
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export function MatchTrip() {
   const { tripId: tripIdStr } = useParams<{ tripId: string }>()
   const navigate = useNavigate()
+  const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState<number | null>(null)
+  
   const {
     loading, loadingSuggestions, submitting, pickMode, setPickMode,
     editDialog,
@@ -76,126 +201,478 @@ export function MatchTrip() {
     openEdit, saveDialog, handleMatch,
   } = useMatchTrip(Number(tripIdStr))
 
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return
+      }
+
+      switch (e.key) {
+        case 'Escape':
+          if (showKeyboardHelp) {
+            setShowKeyboardHelp(false)
+          } else if (pickMode) {
+            setPickMode(null)
+          } else if (editDialog) {
+            saveDialog()
+          } else {
+            navigate(-1)
+          }
+          break
+        case '?':
+          setShowKeyboardHelp(prev => !prev)
+          break
+        case 'Enter':
+          if (selectedTrip && selectedJob && !submitting) {
+            handleMatch()
+          }
+          break
+        case 't':
+        case 'T':
+          if (!editDialog) setPickMode('trip')
+          break
+        case 'j':
+        case 'J':
+          if (!editDialog) setPickMode('job')
+          break
+        case 'ArrowUp':
+          if (suggestions.length > 0 && !pickMode && !editDialog) {
+            e.preventDefault()
+            setSelectedSuggestionIndex(prev => {
+              const newIndex = prev === null ? suggestions.length - 1 : Math.max(0, prev - 1)
+              return newIndex
+            })
+          }
+          break
+        case 'ArrowDown':
+          if (suggestions.length > 0 && !pickMode && !editDialog) {
+            e.preventDefault()
+            setSelectedSuggestionIndex(prev => {
+              const newIndex = prev === null ? 0 : Math.min(suggestions.length - 1, prev + 1)
+              return newIndex
+            })
+          }
+          break
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+          if (!pickMode && !editDialog) {
+            const index = parseInt(e.key) - 1
+            if (suggestions[index]) {
+              setSelectedJobId(suggestions[index].workOrder.id)
+              setSelectedSuggestionIndex(index)
+            }
+          }
+          break
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [suggestions, selectedTrip, selectedJob, submitting, pickMode, editDialog, showKeyboardHelp, navigate, setPickMode, saveDialog, handleMatch, setSelectedJobId])
+
+  // Auto-select suggestion with keyboard
+  useEffect(() => {
+    if (selectedSuggestionIndex !== null && suggestions[selectedSuggestionIndex]) {
+      setSelectedJobId(suggestions[selectedSuggestionIndex].workOrder.id)
+    }
+  }, [selectedSuggestionIndex, suggestions, setSelectedJobId])
+
   if (loading) {
-    return <div className="space-y-2">{[1, 2].map(i => <div key={i} className="h-20 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}</div>
+    return (
+      <div className="p-4 lg:p-8 space-y-4">
+        <div className="h-10 w-48 rounded-xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {[1, 2].map(i => (
+            <div key={i} className="h-64 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (
     <>
-      <div className="flex flex-col h-[calc(100dvh-56px)] lg:-mx-8 lg:-my-8 lg:h-screen">
-        {/* ── TOP: Selector buttons ── */}
-        <div className="px-4 pt-3 pb-2 space-y-2 shrink-0">
-          <button onClick={() => setPickMode('trip')}
-            className="w-full flex items-center justify-between px-4 py-3 rounded-2xl touch-manipulation"
-            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
-            <div className="flex-1 min-w-0 text-left">
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--theme-status-warning)' }}>Chuyến yêu cầu</p>
-              {selectedTrip ? (
-                <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                  {(selectedTrip.containers?.length ? selectedTrip.containers : []).map((c, i) => (
-                    <span key={i} className="flex items-center gap-1">
-                      <ContBadge type={c.workType} />
-                      <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>Chọn chuyến yêu cầu</p>
-              )}
+      {/* Keyboard Help Modal */}
+      {showKeyboardHelp && <KeyboardShortcutsPanel onClose={() => setShowKeyboardHelp(false)} />}
+      
+      <div className="flex flex-col min-h-[calc(100dvh-56px)] lg:min-h-screen">
+        {/* Header - Desktop */}
+        <div 
+          className="hidden lg:flex items-center justify-between px-8 py-4 border-b shrink-0"
+          style={{ borderColor: 'var(--theme-border-light)' }}
+        >
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate(-1)}
+              className="p-2 rounded-xl transition-colors hover:opacity-80"
+              style={{ background: 'var(--theme-bg-secondary)' }}
+            >
+              <ArrowLeft className="w-5 h-5" style={{ color: 'var(--theme-text-secondary)' }} />
+            </button>
+            <div>
+              <h1 className="text-xl font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+                Khớp chuyến đi
+              </h1>
+              <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>
+                So sánh và ghép nối chuyến yêu cầu với chuyến đã chạy
+              </p>
             </div>
-            <ChevronDown className="w-4 h-4 shrink-0 ml-2" style={{ color: 'var(--theme-text-muted)' }} />
-          </button>
-
-          <button onClick={() => setPickMode('job')}
-            className="w-full flex items-center justify-between px-4 py-3 rounded-2xl touch-manipulation"
-            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
-            <div className="flex-1 min-w-0 text-left">
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--theme-brand-primary)' }}>Chuyến đã chạy</p>
-              {selectedJob ? (
-                <div className="flex flex-wrap items-center gap-2 mt-1">
-                  {selectedJob.containers.map(c => (
-                    <span key={c.containerNumber} className="flex items-center gap-1">
-                      <ContBadge type={c.workType} />
-                      <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>Chọn chuyến đã chạy</p>
-              )}
-            </div>
-            <ChevronDown className="w-4 h-4 shrink-0 ml-2" style={{ color: 'var(--theme-text-muted)' }} />
+          </div>
+          <button
+            onClick={() => setShowKeyboardHelp(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl transition-colors hover:opacity-80"
+            style={{ background: 'var(--theme-bg-secondary)' }}
+            title="Phím tắt (?)"
+          >
+            <Command className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
+            <span className="text-sm font-medium" style={{ color: 'var(--theme-text-secondary)' }}>Phím tắt</span>
           </button>
         </div>
 
-        {/* ── Suggestions panel ── */}
-        {suggestions.length > 0 && !selectedJobId && (
-          <div className="px-4 pb-2 shrink-0">
-            <div className="flex items-center gap-1.5 mb-2">
-              <Sparkles className="w-3.5 h-3.5" style={{ color: 'var(--theme-brand-primary)' }} />
-              <p className="text-xs font-bold" style={{ color: 'var(--theme-text-primary)' }}>Gợi ý khớp</p>
-            </div>
-            <div className="space-y-2">
-              {suggestions.map(s => (
-                <WOSuggestionCard key={s.workOrder.id} suggestion={s} onSelect={() => setSelectedJobId(s.workOrder.id)} />
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col lg:flex-row">
+          {/* Left Panel - Trip Selectors */}
+          <div 
+            className="lg:w-[420px] xl:w-[480px] shrink-0 p-4 lg:p-6 lg:border-r overflow-y-auto"
+            style={{ borderColor: 'var(--theme-border-light)' }}
+          >
+            <div className="space-y-4">
+              {/* Trip Selector - Yêu cầu */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <div 
+                    className="w-2 h-2 rounded-full"
+                    style={{ background: 'var(--theme-status-warning)' }}
+                  />
+                  <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--theme-status-warning)' }}>
+                    Chuyến yêu cầu
+                  </span>
+                  <span 
+                    className="text-[10px] px-1.5 py-0.5 rounded font-mono"
+                    style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
+                  >
+                    T
+                  </span>
+                </div>
+                <button 
+                  onClick={() => setPickMode('trip')}
+                  className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl touch-manipulation transition-all hover:scale-[1.01]"
+                  style={{ 
+                    background: 'var(--theme-bg-secondary)', 
+                    boxShadow: 'var(--theme-shadow-card)', 
+                    border: selectedTrip ? '2px solid var(--theme-status-warning)' : '1px solid var(--theme-border-default)' 
+                  }}
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
+                    <div 
+                      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: 'var(--theme-status-warning-light)' }}
+                    >
+                      <FileText className="w-5 h-5" style={{ color: 'var(--theme-status-warning)' }} />
+                    </div>
+                    {selectedTrip ? (
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {(selectedTrip.containers?.length ? selectedTrip.containers : []).map((c, i) => (
+                            <span key={i} className="flex items-center gap-1">
+                              <ContBadge type={c.workType} />
+                              <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+                                {c.containerNumber}
+                              </span>
+                            </span>
+                          ))}
+                        </div>
+                        <p className="text-xs mt-1 truncate" style={{ color: 'var(--theme-text-muted)' }}>
+                          {selectedTrip.clientName} · {selectedTrip.route}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chọn chuyến yêu cầu</p>
+                    )}
+                  </div>
+                  <ChevronDown className="w-5 h-5 shrink-0 ml-2" style={{ color: 'var(--theme-text-muted)' }} />
+                </button>
+              </div>
 
-        {/* ── MIDDLE: Comparison rows ── */}
-        {selectedTrip && selectedJob && editedTrip && editedJob ? (
-          <div className="flex-1 overflow-y-auto px-4 pb-2 space-y-2">
-            <ContCompareRow
-              left={tripConts} right={jobConts} matched={contMatched}
-              leftLabel="Yêu cầu" rightLabel="Đã chạy"
-              onTapLeft={() => openEdit('cont-left')}
-              onTapRight={() => openEdit('cont-right')}
-            />
-            <CompareRow label="Khách hàng" left={tripClient} right={jobClient} matched={clientMatched}
-              leftLabel="Yêu cầu" rightLabel="Đã chạy"
-              onTapLeft={() => openEdit('client-left')}
-              onTapRight={() => openEdit('client-right')}
-            />
-            <CompareRow label="Cung đường" left={tripRoute} right={jobRoute} matched={routeMatched}
-              leftLabel="Yêu cầu" rightLabel="Đã chạy"
-              onTapLeft={() => openEdit('route-left')}
-              onTapRight={() => openEdit('route-right')}
-            />
-          </div>
-        ) : (
-          <div className="flex-1 flex items-center justify-center px-4">
-            <p className="text-xs text-center" style={{ color: 'var(--theme-text-muted)' }}>Chọn cả hai chuyến để so sánh</p>
-          </div>
-        )}
+              {/* Connection Line */}
+              <div className="flex items-center justify-center py-1">
+                <ArrowUpDown className="w-5 h-5" style={{ color: 'var(--theme-text-muted)' }} />
+              </div>
 
-        {/* ── BOTTOM ── */}
-        {selectedTrip && selectedJob && (
-          <div className="px-4 pb-4 pt-2 shrink-0 space-y-2" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
-            <Button onClick={handleMatch} disabled={submitting}
-              className="w-full h-12 font-bold rounded-xl text-sm"
-              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-              <Check className="w-4 h-4 mr-1.5" /> {submitting ? 'Đang khớp...' : 'Khớp chuyến'}
-            </Button>
-            <button onClick={() => navigate('/accountant/create-trip', { state: { fromTripOrder: selectedTrip } })}
-              className="w-full py-2 text-xs font-medium"
-              style={{ color: 'var(--theme-brand-primary)' }}>
-              + Tạo chuyến yêu cầu mới
-            </button>
+              {/* Job Selector - Đã chạy */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <div 
+                    className="w-2 h-2 rounded-full"
+                    style={{ background: 'var(--theme-brand-primary)' }}
+                  />
+                  <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--theme-brand-primary)' }}>
+                    Chuyến đã chạy
+                  </span>
+                  <span 
+                    className="text-[10px] px-1.5 py-0.5 rounded font-mono"
+                    style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
+                  >
+                    J
+                  </span>
+                </div>
+                <button 
+                  onClick={() => setPickMode('job')}
+                  className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl touch-manipulation transition-all hover:scale-[1.01]"
+                  style={{ 
+                    background: 'var(--theme-bg-secondary)', 
+                    boxShadow: 'var(--theme-shadow-card)', 
+                    border: selectedJob ? '2px solid var(--theme-brand-primary)' : '1px solid var(--theme-border-default)' 
+                  }}
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
+                    <div 
+                      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: 'var(--theme-brand-primary-light)' }}
+                    >
+                      <Truck className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
+                    </div>
+                    {selectedJob ? (
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {selectedJob.containers.map(c => (
+                            <span key={c.containerNumber} className="flex items-center gap-1">
+                              <ContBadge type={c.workType} />
+                              <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+                                {c.containerNumber}
+                              </span>
+                            </span>
+                          ))}
+                        </div>
+                        <p className="text-xs mt-1 truncate" style={{ color: 'var(--theme-text-muted)' }}>
+                          {selectedJob.driverName} · {selectedJob.clientName}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chọn chuyến đã chạy</p>
+                    )}
+                  </div>
+                  <ChevronDown className="w-5 h-5 shrink-0 ml-2" style={{ color: 'var(--theme-text-muted)' }} />
+                </button>
+              </div>
+
+              {/* Suggestions Panel */}
+              {suggestions.length > 0 && !selectedJobId && (
+                <div 
+                  className="mt-6 p-4 rounded-2xl"
+                  style={{ 
+                    background: 'var(--theme-bg-secondary)', 
+                    border: '1px solid var(--theme-border-default)' 
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <div 
+                      className="p-1.5 rounded-lg"
+                      style={{ background: 'var(--theme-brand-primary-light)' }}
+                    >
+                      <Sparkles className="w-4 h-4" style={{ color: 'var(--theme-brand-primary)' }} />
+                    </div>
+                    <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+                      Gợi ý khớp
+                    </p>
+                    <span 
+                      className="text-xs px-2 py-0.5 rounded-full font-medium"
+                      style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
+                    >
+                      {suggestions.length}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {suggestions.map((s, index) => (
+                      <WOSuggestionCard 
+                        key={s.workOrder.id} 
+                        suggestion={s} 
+                        index={index}
+                        isSelected={selectedSuggestionIndex === index}
+                        onSelect={() => {
+                          setSelectedJobId(s.workOrder.id)
+                          setSelectedSuggestionIndex(index)
+                        }} 
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        )}
+
+          {/* Right Panel - Comparison View */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {selectedTrip && selectedJob && editedTrip && editedJob ? (
+              <>
+                {/* Comparison Header */}
+                <div 
+                  className="hidden lg:flex items-center justify-between px-6 py-3 border-b shrink-0"
+                  style={{ 
+                    background: 'var(--theme-bg-secondary)',
+                    borderColor: 'var(--theme-border-light)' 
+                  }}
+                >
+                  <h2 className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+                    So sánh chi tiết
+                  </h2>
+                  <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                    Nhấn vào từng mục để chỉnh sửa
+                  </p>
+                </div>
+
+                {/* Comparison Rows */}
+                <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-3">
+                  <ContCompareRow
+                    left={tripConts} 
+                    right={jobConts} 
+                    matched={contMatched}
+                    leftLabel="Yêu cầu" 
+                    rightLabel="Đã chạy"
+                    onTapLeft={() => openEdit('cont-left')}
+                    onTapRight={() => openEdit('cont-right')}
+                  />
+                  <CompareRow 
+                    label="Khách hàng" 
+                    left={tripClient} 
+                    right={jobClient} 
+                    matched={clientMatched}
+                    leftLabel="Yêu cầu" 
+                    rightLabel="Đã chạy"
+                    onTapLeft={() => openEdit('client-left')}
+                    onTapRight={() => openEdit('client-right')}
+                  />
+                  <CompareRow 
+                    label="Cung đường" 
+                    left={tripRoute} 
+                    right={jobRoute} 
+                    matched={routeMatched}
+                    leftLabel="Yêu cầu" 
+                    rightLabel="Đã chạy"
+                    onTapLeft={() => openEdit('route-left')}
+                    onTapRight={() => openEdit('route-right')}
+                  />
+                </div>
+
+                {/* Action Footer */}
+                <div 
+                  className="px-4 lg:px-6 pb-4 lg:pb-6 pt-3 shrink-0 space-y-3"
+                  style={{ borderTop: '1px solid var(--theme-border-light)' }}
+                >
+                  {/* Match Status Summary */}
+                  <div 
+                    className="flex items-center justify-between p-3 rounded-xl"
+                    style={{ background: 'var(--theme-bg-secondary)' }}
+                  >
+                    <div className="flex items-center gap-3">
+                      {contMatched && clientMatched && routeMatched ? (
+                        <>
+                          <CheckCircle2 className="w-5 h-5" style={{ color: 'var(--theme-status-success)' }} />
+                          <span className="text-sm font-medium" style={{ color: 'var(--theme-status-success)' }}>
+                            Tất cả thông tin khớp
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="w-5 h-5" style={{ color: 'var(--theme-status-warning)' }} />
+                          <span className="text-sm font-medium" style={{ color: 'var(--theme-status-warning)' }}>
+                            Một số thông tin chưa khớp
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    <span 
+                      className="text-xs px-2 py-1 rounded font-mono hidden lg:inline"
+                      style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
+                    >
+                      Enter
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button 
+                      onClick={handleMatch} 
+                      disabled={submitting}
+                      className="flex-1 h-12 font-bold rounded-xl text-sm gap-2"
+                      style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+                    >
+                      <Check className="w-5 h-5" /> 
+                      {submitting ? 'Đang khớp...' : 'Xác nhận khớp chuyến'}
+                    </Button>
+                    <button 
+                      onClick={() => navigate('/accountant/create-trip', { state: { fromTripOrder: selectedTrip } })}
+                      className="h-12 px-4 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+                      style={{ 
+                        background: 'var(--theme-bg-secondary)',
+                        color: 'var(--theme-brand-primary)',
+                        border: '1px solid var(--theme-border-default)'
+                      }}
+                    >
+                      <Plus className="w-4 h-4" />
+                      Tạo chuyến mới
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              /* Empty State */
+              <div className="flex-1 flex items-center justify-center p-8">
+                <div className="text-center max-w-sm">
+                  <div 
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                    style={{ background: 'var(--theme-bg-secondary)' }}
+                  >
+                    <ArrowUpDown className="w-8 h-8" style={{ color: 'var(--theme-text-muted)' }} />
+                  </div>
+                  <h3 className="text-lg font-bold mb-2" style={{ color: 'var(--theme-text-primary)' }}>
+                    Chọn hai chuyến để so sánh
+                  </h3>
+                  <p className="text-sm mb-4" style={{ color: 'var(--theme-text-muted)' }}>
+                    Chọn một chuyến yêu cầu và một chuyến đã chạy để bắt đầu so sánh và khớp thông tin
+                  </p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <span 
+                      className="text-xs px-2 py-1 rounded font-mono"
+                      style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
+                    >
+                      T - Chuyến yêu cầu
+                    </span>
+                    <span 
+                      className="text-xs px-2 py-1 rounded font-mono"
+                      style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
+                    >
+                      J - Chuyến đã chạy
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* ── Picker modals ── */}
-      <PickModal open={pickMode === 'trip'} title="Chọn chuyến yêu cầu"
-        items={draftTrips} selectedId={selectedTripId} onSelect={setSelectedTripId} onClose={() => setPickMode(null)}
+      <PickModal 
+        open={pickMode === 'trip'} 
+        title="Chọn chuyến yêu cầu"
+        items={draftTrips} 
+        selectedId={selectedTripId} 
+        onSelect={setSelectedTripId} 
+        onClose={() => setPickMode(null)}
         renderLabel={trip => (
           <div>
             <div className="flex flex-wrap items-center gap-1.5">
               {(trip.containers?.length ? trip.containers : []).map((c, i) => (
                 <span key={i} className="flex items-center gap-1">
                   <ContBadge type={c.workType} />
-                  <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
+                  <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+                    {c.containerNumber}
+                  </span>
                 </span>
               ))}
             </div>
@@ -204,15 +681,22 @@ export function MatchTrip() {
           </div>
         )}
       />
-      <PickModal open={pickMode === 'job'} title="Chọn chuyến đã chạy"
-        items={unmatchedJobs} selectedId={selectedJobId} onSelect={setSelectedJobId} onClose={() => setPickMode(null)}
+      <PickModal 
+        open={pickMode === 'job'} 
+        title="Chọn chuyến đã chạy"
+        items={unmatchedJobs} 
+        selectedId={selectedJobId} 
+        onSelect={setSelectedJobId} 
+        onClose={() => setPickMode(null)}
         renderLabel={job => (
           <div>
             <div className="flex flex-wrap items-center gap-2">
               {job.containers.map(c => (
                 <span key={c.containerNumber} className="flex items-center gap-1">
                   <ContBadge type={c.workType} />
-                  <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
+                  <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+                    {c.containerNumber}
+                  </span>
                 </span>
               ))}
             </div>
@@ -232,7 +716,7 @@ export function MatchTrip() {
               <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Container {i + 1}</span>
               {dialogContLeft.length > 1 && (
                 <button onClick={() => setDialogContLeft(prev => prev.filter((_, j) => j !== i))}
-                  className="touch-manipulation" style={{ color: 'var(--theme-status-error)' }}>
+                  className="touch-manipulation p-1 rounded hover:opacity-80" style={{ color: 'var(--theme-status-error)' }}>
                   <X className="w-4 h-4" />
                 </button>
               )}
@@ -242,7 +726,7 @@ export function MatchTrip() {
               <div className="flex flex-wrap gap-1.5">
                 {WORK_TYPES.map(w => (
                   <button key={w} onClick={() => setDialogContLeft(prev => prev.map((c2, j) => j === i ? { ...c2, type: w } : c2))}
-                    className="px-3 py-1.5 rounded-lg text-xs font-bold touch-manipulation"
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold touch-manipulation transition-colors"
                     style={{ background: c.type === w ? 'var(--theme-status-warning)' : 'var(--theme-bg-tertiary)', color: c.type === w ? '#fff' : 'var(--theme-text-primary)' }}>
                     {w}
                   </button>
@@ -257,9 +741,9 @@ export function MatchTrip() {
           </div>
         ))}
         <button onClick={() => setDialogContLeft(prev => [...prev, { type: 'E20', number: '' }])}
-          className="w-full py-2.5 rounded-xl text-xs font-medium touch-manipulation"
+          className="w-full py-2.5 rounded-xl text-xs font-medium touch-manipulation flex items-center justify-center gap-2"
           style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)', border: '1px dashed var(--theme-border-default)' }}>
-          + Thêm container
+          <Plus className="w-4 h-4" /> Thêm container
         </button>
       </EditDialog>
 
@@ -272,7 +756,7 @@ export function MatchTrip() {
               <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Container {i + 1}</span>
               {dialogContainers.length > 1 && (
                 <button onClick={() => setDialogContainers(prev => prev.filter((_, j) => j !== i))}
-                  className="touch-manipulation" style={{ color: 'var(--theme-status-error)' }}>
+                  className="touch-manipulation p-1 rounded hover:opacity-80" style={{ color: 'var(--theme-status-error)' }}>
                   <X className="w-4 h-4" />
                 </button>
               )}
@@ -282,7 +766,7 @@ export function MatchTrip() {
               <div className="flex flex-wrap gap-1.5">
                 {WORK_TYPES.map(w => (
                   <button key={w} onClick={() => setDialogContainers(prev => prev.map((c2, j) => j === i ? { ...c2, type: w } : c2))}
-                    className="px-3 py-1.5 rounded-lg text-xs font-bold touch-manipulation"
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold touch-manipulation transition-colors"
                     style={{ background: c.type === w ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)', color: c.type === w ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)' }}>
                     {w}
                   </button>
@@ -297,9 +781,9 @@ export function MatchTrip() {
           </div>
         ))}
         <button onClick={() => setDialogContainers(prev => [...prev, { type: 'E20', number: '' }])}
-          className="w-full py-2.5 rounded-xl text-xs font-medium touch-manipulation"
+          className="w-full py-2.5 rounded-xl text-xs font-medium touch-manipulation flex items-center justify-center gap-2"
           style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)', border: '1px dashed var(--theme-border-default)' }}>
-          + Thêm container
+          <Plus className="w-4 h-4" /> Thêm container
         </button>
       </EditDialog>
 
