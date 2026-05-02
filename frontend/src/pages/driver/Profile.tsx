@@ -190,7 +190,7 @@ export function Profile() {
     if (newPw !== confirmPw) { toast.error('Lỗi', 'Mật khẩu xác nhận không khớp'); return }
     setSavingPw(true)
     try {
-      await api.post('/users/change-password', { current_password: currentPw, new_password: newPw })
+      await api.post('/change-password', { current_password: currentPw, new_password: newPw })
       toast.success('Đã đổi mật khẩu')
       setPwDialog(false)
       setCurrentPw(''); setNewPw(''); setConfirmPw('')

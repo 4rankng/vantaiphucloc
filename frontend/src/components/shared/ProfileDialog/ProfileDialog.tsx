@@ -40,7 +40,7 @@ export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () =>
     }
     setSaving(true)
     try {
-      await api.post('/users/change-password', {
+      await api.post('/change-password', {
         current_password: currentPw,
         new_password: newPw,
       })

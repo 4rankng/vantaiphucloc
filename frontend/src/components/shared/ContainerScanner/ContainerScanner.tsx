@@ -113,8 +113,12 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
   const handleGalleryCrop = useCallback(async () => {
     if (!imageToCrop || !croppedAreaPixels) return
     const result = await cropImageToDataUrl(imageToCrop, croppedAreaPixels)
-    setCaptured(result)
-  }, [imageToCrop, croppedAreaPixels])
+    onCapture(result, {
+      lat: gpsCoords.lat,
+      lng: gpsCoords.lng,
+      timestamp: new Date().toISOString(),
+    })
+  }, [imageToCrop, croppedAreaPixels, gpsCoords, onCapture])
 
   const handleRetake = useCallback(() => {
     setCaptured(null)
@@ -264,7 +268,7 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
             {/* Choose another image (left) */}
             <div className="flex flex-col items-center gap-1">
               <button
-                onClick={() => { setImageToCrop(null); setCaptured(null); setCrop({ x: 0, y: 0 }); setZoom(1) }}
+                onClick={() => { setCaptured(null); setCrop({ x: 0, y: 0 }); setZoom(1); fileInputRef.current?.click() }}
                 className="w-12 h-12 flex items-center justify-center rounded-full touch-manipulation"
                 style={{ background: 'rgba(255,255,255,0.15)', color: '#fff' }}
               >
