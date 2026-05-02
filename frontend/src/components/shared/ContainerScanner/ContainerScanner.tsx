@@ -49,10 +49,10 @@ async function cropImageToDataUrl(imageSrc: string, pixelCrop: Area): Promise<st
 
 export function ContainerScanner({ onCapture, onClose, galleryImage }: ContainerScannerProps) {
   const webcamRef = useRef<Webcam>(null)
-  const overlayBoxRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [captured, setCaptured] = useState<string | null>(null)
+  const [finalCropped, setFinalCropped] = useState<string | null>(null)
   const [imageToCrop, setImageToCrop] = useState<string | null>(galleryImage ?? null)
   const [scanMode, setScanMode] = useState<ScanMode>('rectangle')
   const [gpsCoords, setGpsCoords] = useState<{ lat: number | null; lng: number | null }>({ lat: null, lng: null })
@@ -86,61 +86,51 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
     )
   }, [])
 
-  // ── Camera capture: crop video frame using the overlay box ──────────────────
+  // ── Camera capture: capture FULL frame, then show crop view ───────────────
   const handleCapture = useCallback(() => {
     const video = webcamRef.current?.video
-    const overlayBox = overlayBoxRef.current
-    if (!video || !overlayBox) return
+    if (!video) return
 
-    // Get actual rendered dimensions of video element and overlay box
-    const videoRect = video.getBoundingClientRect()
-    const overlayRect = overlayBox.getBoundingClientRect()
-
-    // Calculate scale based on video element's rendered size vs actual video resolution
-    const scaleX = video.videoWidth / videoRect.width
-    const scaleY = video.videoHeight / videoRect.height
-
-    // Calculate overlay box position relative to video element
-    const sx = (overlayRect.left - videoRect.left) * scaleX
-    const sy = (overlayRect.top - videoRect.top) * scaleY
-    const sw = overlayRect.width * scaleX
-    const sh = overlayRect.height * scaleY
-
+    // Capture the full video frame
     const canvas = document.createElement('canvas')
-    const outW = Math.min(sw, MAX_CAPTURE_WIDTH)
-    const outH = Math.round(sh * (outW / sw))
-    canvas.width = outW
-    canvas.height = outH
-    canvas.getContext('2d')!.drawImage(video, sx, sy, sw, sh, 0, 0, outW, outH)
-    setCaptured(canvas.toDataURL('image/jpeg', 0.92))
+    const scale = Math.min(MAX_CAPTURE_WIDTH / video.videoWidth, 1)
+    canvas.width = video.videoWidth * scale
+    canvas.height = video.videoHeight * scale
+    canvas.getContext('2d')!.drawImage(video, 0, 0, canvas.width, canvas.height)
+    
+    const fullPhoto = canvas.toDataURL('image/jpeg', 0.92)
+    setCaptured(fullPhoto)
+    setImageToCrop(fullPhoto)  // Send to crop view
+    setCrop({ x: 0, y: 0 })
+    setZoom(1)
   }, [])
 
-  // ── Gallery crop: use react-easy-crop's croppedAreaPixels ──────────────────
-  const handleGalleryCrop = useCallback(async () => {
+  // ── Handle crop confirmation (from camera or gallery) ────────────────────────
+  const handleCropConfirm = useCallback(async () => {
     if (!imageToCrop || !croppedAreaPixels) return
     const result = await cropImageToDataUrl(imageToCrop, croppedAreaPixels)
-    onCapture(result, {
-      lat: gpsCoords.lat,
-      lng: gpsCoords.lng,
-      timestamp: new Date().toISOString(),
-    })
-  }, [imageToCrop, croppedAreaPixels, gpsCoords, onCapture])
+    setFinalCropped(result)
+    setCaptured(null)  // Exit crop view
+  }, [imageToCrop, croppedAreaPixels])
 
   const handleRetake = useCallback(() => {
+    // Go back to camera
     setCaptured(null)
+    setFinalCropped(null)
+    setImageToCrop(null)
     setCrop({ x: 0, y: 0 })
     setZoom(1)
   }, [])
 
   const handleConfirm = useCallback(() => {
-    if (captured) {
-      onCapture(captured, {
+    if (finalCropped) {
+      onCapture(finalCropped, {
         lat: gpsCoords.lat,
         lng: gpsCoords.lng,
         timestamp: new Date().toISOString(),
       })
     }
-  }, [captured, gpsCoords, onCapture])
+  }, [finalCropped, gpsCoords, onCapture])
 
   const handleGallerySelect = useCallback(() => {
     fileInputRef.current?.click()
@@ -160,7 +150,7 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
     e.target.value = ''
   }, [])
 
-  // ── Camera overlay box ──────────────────────────────────────────────────────
+  // ── Camera overlay box (visual guide only) ────────────────────────────────
   const overlayBoxStyle = {
     width: scanMode === 'square' ? `${SQUARE_SIZE_PERCENT * 100}%` : `${RECT_WIDTH_PERCENT * 100}%`,
     aspectRatio: scanMode === 'square' ? '1 / 1' : `${RECT_ASPECT_RATIO} / 1`,
@@ -169,7 +159,7 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
   } as React.CSSProperties
 
   const overlayBox = (
-    <div ref={overlayBoxRef} className="relative rounded-xl" style={overlayBoxStyle}>
+    <div className="relative rounded-xl" style={overlayBoxStyle}>
       <div className="absolute -top-[2px] -left-[2px] w-6 h-6 border-t-2 border-l-2 rounded-tl-lg" style={{ borderColor: 'var(--theme-brand-primary)' }} />
       <div className="absolute -top-[2px] -right-[2px] w-6 h-6 border-t-2 border-r-2 rounded-tr-lg" style={{ borderColor: 'var(--theme-brand-primary)' }} />
       <div className="absolute -bottom-[2px] -left-[2px] w-6 h-6 border-b-2 border-l-2 rounded-bl-lg" style={{ borderColor: 'var(--theme-brand-primary)' }} />
@@ -217,11 +207,11 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
         <X className="w-5 h-5 text-white" />
       </button>
 
-      {captured ? (
-        /* ── Preview ── */
+      {finalCropped ? (
+        /* ── Preview (final cropped result) ── */
         <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6">
           <div className="w-full rounded-xl overflow-hidden" style={{ border: '2px solid var(--theme-brand-primary)' }}>
-            <img src={captured} alt="Captured" className="w-full h-auto block" />
+            <img src={finalCropped} alt="Captured" className="w-full h-auto block" />
           </div>
           <p className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>Kiểm tra số cont trong ảnh</p>
           <div className="flex gap-4 w-full">
@@ -230,7 +220,7 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
               className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold touch-manipulation"
               style={{ background: 'rgba(255,255,255,0.15)', color: '#fff' }}
             >
-              <RotateCcw className="w-4 h-4" /> {imageToCrop ? 'Cắt lại' : 'Chụp lại'}
+              <RotateCcw className="w-4 h-4" /> Cắt lại
             </button>
             <button
               onClick={handleConfirm}
@@ -243,7 +233,7 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
         </div>
 
       ) : imageToCrop ? (
-        /* ── Gallery crop mode — react-easy-crop ── */
+        /* ── Crop mode — react-easy-crop (for both camera and gallery) ── */
         <>
           {/* Crop area fills the screen */}
           <div className="absolute inset-0" style={{ bottom: '100px' }}>
@@ -265,28 +255,28 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
             />
           </div>
 
-          {/* Bottom controls — pinch to zoom, compact buttons */}
+          {/* Bottom controls */}
           <div
             className="absolute bottom-0 left-0 right-0 px-6 pb-8 pt-3 flex items-center justify-center gap-5"
             style={{ background: 'rgba(0,0,0,0.7)' }}
           >
-            {/* Choose another image (left) */}
+            {/* Retake / Choose another (left) */}
             <div className="flex flex-col items-center gap-1">
               <button
-                onClick={() => { setCaptured(null); setCrop({ x: 0, y: 0 }); setZoom(1); fileInputRef.current?.click() }}
+                onClick={handleRetake}
                 className="w-12 h-12 flex items-center justify-center rounded-full touch-manipulation"
                 style={{ background: 'rgba(255,255,255,0.15)', color: '#fff' }}
               >
                 <RotateCcw className="w-5 h-5" />
               </button>
               <span className="text-[10px] font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                Chọn lại
+                Chụp lại
               </span>
             </div>
 
-            {/* Confirm — compact pill (center) */}
+            {/* Confirm crop (center) */}
             <button
-              onClick={handleGalleryCrop}
+              onClick={handleCropConfirm}
               className="px-8 py-3 rounded-full text-sm font-bold touch-manipulation"
               style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
             >
@@ -334,7 +324,7 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
           <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ pointerEvents: 'none' }}>
             {overlayBox}
             <p className="text-sm font-bold mt-4" style={{ color: '#ffffff', textShadow: '0 1px 4px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8)', position: 'relative', zIndex: 1 }}>
-              Đưa số container vào ô này
+              Chụp ảnh đầy đủ, sau đó cắt số container
             </p>
           </div>
 
