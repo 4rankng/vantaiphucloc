@@ -1,0 +1,1 @@
+export { RecentTripSuggestions } from './RecentTripSuggestions'
