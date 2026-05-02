@@ -1,11 +1,5 @@
-import { CheckCircle, Clock, CircleDollarSign } from 'lucide-react'
-import { ContBadge } from '@/components/shared/ContBadge'
-import { RouteDisplay } from '@/components/shared/RouteDisplay'
+import { Clock, CheckCircle, Lock } from 'lucide-react'
 import { formatCurrencyFull, type WorkOrder } from '@/data/domain'
-
-const STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle; color: string; bg: string }> = {
-  PENDING:  { label: 'Chờ đối soát', icon: Clock,       color: 'var(--theme-status-warning)', bg: 'var(--theme-status-warning-light)' },
-}
 
 type CardVariant = 'driver' | 'accountant'
 
@@ -28,114 +22,168 @@ type WorkOrderCardProps = DriverVariantProps | AccountantVariantProps
 
 export function WorkOrderCard(props: WorkOrderCardProps) {
   const { data: wo, variant = 'accountant' } = props
-
   if (variant === 'driver') {
     return <DriverCard wo={wo} onClick={(props as DriverVariantProps).onClick} />
   }
   return <AccountantCard wo={wo} />
 }
 
-/* ─── Driver variant: containers grid, client/route, earning badge ─── */
-function DriverCard({ wo, onClick }: { wo: WorkOrder; onClick: () => void }) {
-  const dateStr = new Date(wo.createdAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
+function resolveRoute(wo: WorkOrder): string {
+  const parts = wo.route.split(' - ')
+  const from = wo.pickupLocation || parts[0] || wo.route
+  const to   = wo.dropoffLocation || parts[1] || null
+  return to ? `${from} → ${to}` : from
+}
 
+function fmtDate(iso: string): string {
+  const d = new Date(iso)
+  const now = new Date()
+  const isToday =
+    d.getDate() === now.getDate() &&
+    d.getMonth() === now.getMonth() &&
+    d.getFullYear() === now.getFullYear()
+  const time = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+  const day = isToday
+    ? 'Hôm nay'
+    : `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  return `${day} · ${time}`
+}
+
+function ContainerList({ wo }: { wo: WorkOrder }) {
+  return (
+    <div className="flex flex-col gap-1">
+      {wo.containers.map((c, i) => (
+        <div key={i} className="flex items-center gap-1.5">
+          <span className="text-sm font-bold font-mono" style={{ color: 'var(--theme-text-primary)' }}>
+            {c.containerNumber || '—'}
+          </span>
+          <span
+            className="text-xs font-bold px-1.5 py-0.5 rounded-md shrink-0"
+            style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)', color: 'var(--theme-brand-primary)' }}
+          >
+            {c.workType}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function StatusPill({ status, variant }: { status: WorkOrder['status']; variant: 'driver' | 'accountant' }) {
+  if (status === 'PENDING') {
+    return (
+      <span
+        className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full shrink-0"
+        style={{
+          background: 'color-mix(in srgb, var(--theme-status-warning) 12%, transparent)',
+          color: 'var(--theme-status-warning)',
+        }}
+      >
+        <Clock className="w-3 h-3" />
+        {variant === 'driver' ? 'Chờ ghép' : 'Chờ đối soát'}
+      </span>
+    )
+  }
+  if (status === 'MATCHED' || status === 'COMPLETED') {
+    return (
+      <span
+        className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full shrink-0"
+        style={{
+          background: 'color-mix(in srgb, var(--theme-status-success, #16a34a) 12%, transparent)',
+          color: 'var(--theme-status-success, #16a34a)',
+        }}
+      >
+        {variant === 'driver'
+          ? <><CheckCircle className="w-3 h-3" /> Đã ghép</>
+          : <><Lock className="w-3 h-3" /> Đã chốt</>
+        }
+      </span>
+    )
+  }
+  return null
+}
+
+function DriverCard({ wo, onClick }: { wo: WorkOrder; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="w-full text-left rounded-2xl p-3.5 transition-all active:scale-[0.98] touch-manipulation"
+      className="w-full text-left rounded-2xl border p-4 transition-all active:scale-[0.98] touch-manipulation"
       style={{
-        background: 'var(--theme-bg-secondary)',
-        boxShadow: 'var(--theme-shadow-card)',
-        border: '1px solid var(--theme-border-default)',
+        background: 'var(--surface-bg)',
+        borderColor: 'var(--surface-border)',
       }}
     >
-      {/* Container numbers + types */}
-      <div className={`grid ${wo.containers.length > 1 ? 'grid-cols-2' : 'grid-cols-1'} gap-1 mb-2`}>
-        {wo.containers.map((c, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <p className="text-sm font-bold font-mono truncate" style={{ color: 'var(--theme-text-primary)' }}>
-              {c.containerNumber}
-            </p>
-            <ContBadge type={c.workType} />
-          </div>
-        ))}
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <ContainerList wo={wo} />
+        <StatusPill status={wo.status} variant="driver" />
       </div>
 
-      <p className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>
-        {wo.clientCode || wo.clientName}
+      <p className="text-sm font-bold leading-snug" style={{ color: 'var(--theme-text-primary)' }}>
+        {wo.clientCode ? `${wo.clientCode} · ${wo.clientName}` : wo.clientName}
       </p>
-      <RouteDisplay route={wo.route} pickupLocation={wo.pickupLocation} dropoffLocation={wo.dropoffLocation} className="mt-1" />
 
-      <div className="flex items-center justify-between mt-2 pt-2" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
+      <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+        {resolveRoute(wo)}
+      </p>
+
+      <div className="mt-3 pt-2.5 flex items-center justify-between" style={{ borderTop: '1px solid var(--surface-border)' }}>
+        <span className="text-xs tabular-nums" style={{ color: 'var(--theme-text-muted)' }}>
+          {fmtDate(wo.createdAt)}
+        </span>
         {wo.earning > 0 ? (
           <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>
             +{formatCurrencyFull(wo.earning)}
           </span>
         ) : (
-          <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-            style={{ background: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' }}>
-            Chờ đối soát
+          <span className="text-xs font-medium" style={{ color: 'var(--theme-text-muted)' }}>
+            Chưa ghép giá
           </span>
         )}
-        <span className="text-xs tabular-nums" style={{ color: 'var(--theme-text-muted)' }}>{dateStr}</span>
       </div>
     </button>
   )
 }
 
-/* ─── Accountant variant: WO number, driver/plate, status badge ─── */
 function AccountantCard({ wo }: { wo: WorkOrder }) {
-  const s = STATUS_CONFIG[wo.status] ?? STATUS_CONFIG.PENDING
-  const StatusIcon = s.icon
-
   return (
     <div
-      className="rounded-2xl p-3.5"
+      className="rounded-2xl border p-4"
       style={{
-        background: 'var(--theme-bg-secondary)',
-        boxShadow: 'var(--theme-shadow-card)',
-        border: '1px solid var(--theme-border-default)',
+        background: 'var(--surface-bg)',
+        borderColor: 'var(--surface-border)',
       }}
     >
-      <div className="flex items-center gap-1.5 mb-1.5">
-        <p className="text-sm font-bold font-mono truncate flex-1" style={{ color: 'var(--theme-text-primary)' }}>
-          {wo.workOrderNumber}
-        </p>
-        <span className="text-xs font-bold px-1.5 py-0.5 rounded shrink-0"
-          style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
-          {wo.workType}
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <ContainerList wo={wo} />
+        <StatusPill status={wo.status} variant="accountant" />
+      </div>
+
+      <p className="text-sm font-bold leading-snug" style={{ color: 'var(--theme-text-primary)' }}>
+        {wo.clientCode ? `${wo.clientCode} · ${wo.clientName}` : wo.clientName}
+      </p>
+
+      <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+        {resolveRoute(wo)}
+      </p>
+
+      <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>
+        {wo.driverName} · {wo.tractorPlate}
+      </p>
+
+      <div className="mt-3 pt-2.5 flex items-center justify-between" style={{ borderTop: '1px solid var(--surface-border)' }}>
+        <span className="text-xs tabular-nums" style={{ color: 'var(--theme-text-muted)' }}>
+          {fmtDate(wo.createdAt)}
         </span>
-      </div>
-
-      <p className="text-xs font-medium truncate mb-0.5" style={{ color: 'var(--theme-text-secondary)' }}>
-        {wo.driverName}
-      </p>
-      <p className="text-xs font-mono mb-1" style={{ color: 'var(--theme-text-muted)' }}>
-        {wo.tractorPlate}
-      </p>
-      <div className="mb-2">
-        <p className="text-xs font-medium" style={{ color: 'var(--theme-text-secondary)' }}>
-          {wo.clientCode || wo.clientName}
-        </p>
-      </div>
-
-      {wo.earning > 0 ? (
-        <div className="flex items-center gap-1.5 mb-1">
-          <CircleDollarSign className="w-3.5 h-3.5" style={{ color: 'var(--theme-brand-primary)' }} />
+        {wo.earning > 0 ? (
           <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>
-            {formatCurrencyFull(wo.earning)}
+            +{formatCurrencyFull(wo.earning)}
           </span>
-        </div>
-      ) : (
-        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full" style={{ background: s.bg }}>
-          <StatusIcon className="w-3 h-3" style={{ color: s.color }} />
-          <span className="text-xs font-semibold" style={{ color: s.color }}>{s.label}</span>
-        </div>
-      )}
-
-      <p className="text-xs mt-2" style={{ color: 'var(--theme-text-muted)' }}>
-        {new Date(wo.createdAt).toLocaleDateString('vi-VN')}
-      </p>
+        ) : (
+          <span className="text-xs font-medium" style={{ color: 'var(--theme-text-muted)' }}>
+            Chờ đối soát
+          </span>
+        )}
+      </div>
     </div>
   )
 }

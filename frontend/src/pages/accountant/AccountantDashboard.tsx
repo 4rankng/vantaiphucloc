@@ -5,15 +5,8 @@ import {
   useTripOrders,
   useDashboardSummary,
 } from '@/hooks/use-queries'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { useAuth } from '@/contexts/AuthContext'
-import {
-  StatCard,
-  QuickAction,
-  SectionCard,
-  StatusBadge,
-  EmptyState,
-  PeriodSwitcher,
-} from '@/components/dashboard'
 import { useMonthParams } from './use-month-params'
 import { formatCurrencyFull } from '@/data/domain'
 import {
@@ -21,23 +14,88 @@ import {
   Wallet,
   AlertTriangle,
   CheckCircle2,
-  ClipboardList,
-  GitMerge,
-  FileSpreadsheet,
-  Receipt,
-  Users,
-  FileText,
-  Container,
+  Sparkles,
+  Link2,
   ArrowRight,
-  Truck,
-  Building2,
+  Clock,
+  AlertCircle,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  Container,
 } from 'lucide-react'
+import { StatusBadge } from '@/components/dashboard/StatusBadge'
 
-const PREVIEW_COUNT = 5
+const fmt = (n: number) => n.toLocaleString('vi-VN') + '₫'
+const compact = (n: number) =>
+  n >= 1e9 ? (n / 1e9).toFixed(2) + ' tỷ' : n >= 1e6 ? (n / 1e6).toFixed(1) + ' tr' : n.toLocaleString('vi-VN')
+
+/* ── KPI card (phuc-loc-pages style) ── */
+function KPI({ label, value, tone = 'primary' }: { label: string; value: string; tone?: 'primary' | 'success' | 'warning' | 'info' }) {
+  const tones: Record<string, string> = {
+    primary: `color: var(--theme-brand-primary); background: color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)`,
+    success: `color: var(--theme-status-success, #16a34a); background: color-mix(in srgb, var(--theme-status-success, #16a34a) 10%, transparent)`,
+    warning: `color: var(--theme-status-warning); background: color-mix(in srgb, var(--theme-status-warning) 12%, transparent)`,
+    info: `color: var(--theme-status-info, #3b82f6); background: color-mix(in srgb, var(--theme-status-info, #3b82f6) 10%, transparent)`,
+  }
+  return (
+    <div
+      className="rounded-2xl border p-4"
+      style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)' }}
+    >
+      <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{label}</div>
+      <div
+        className="mt-1 inline-flex items-baseline rounded-md px-1.5 font-display text-lg font-bold"
+        style={{ ...(tones[tone] ? {} : {}), color: tones[tone]?.split(';')[0]?.split(':')[1]?.trim() }}
+      >
+        <span
+          className="rounded-md px-1.5 py-0.5"
+          dangerouslySetInnerHTML={{
+            __html: `<span style="${tones[tone]}">${value}</span>`,
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
+/* ── PeriodSwitcher (inline, compact) ── */
+function PeriodSwitcher({ label, sublabel, onPrev, onNext }: { label: string; sublabel?: string; onPrev: () => void; onNext: () => void }) {
+  return (
+    <div
+      className="inline-flex items-center gap-2 rounded-xl border px-2 py-1.5"
+      style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)' }}
+    >
+      <button
+        onClick={onPrev}
+        className="flex h-7 w-7 items-center justify-center rounded-lg transition active:scale-90"
+        style={{ color: 'var(--theme-text-primary)' }}
+        aria-label="Tháng trước"
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </button>
+      <div className="text-center">
+        <p className="text-xs font-semibold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{label}</p>
+        {sublabel && (
+          <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>{sublabel}</p>
+        )}
+      </div>
+      <button
+        onClick={onNext}
+        className="flex h-7 w-7 items-center justify-center rounded-lg transition active:scale-90"
+        style={{ color: 'var(--theme-text-primary)' }}
+        aria-label="Tháng sau"
+      >
+        <ChevronRight className="h-4 w-4" />
+      </button>
+    </div>
+  )
+}
 
 export function AccountantDashboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const isMobile = useIsMobile()
   const { year, month, dateFrom, dateTo, sublabel, onPrev, onNext } = useMonthParams()
 
   const { data: workOrders = [], isLoading: loadingWO } = useWorkOrders({ dateFrom, dateTo })
@@ -46,7 +104,6 @@ export function AccountantDashboard() {
 
   const loading = loadingWO || loadingTrips
 
-  // ── KPI derivations
   const pendingWOs = useMemo(
     () => workOrders.filter(w => w.status === 'PENDING'),
     [workOrders],
@@ -64,367 +121,354 @@ export function AccountantDashboard() {
 
   const revenue = summary?.totalRevenue ?? trips.reduce((s, t) => s + (t.revenue ?? 0), 0)
 
-  // ── Preview lists
-  const recentTrips = useMemo(
-    () =>
-      [...trips]
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-        .slice(0, PREVIEW_COUNT),
+  const sortedTrips = useMemo(
+    () => [...trips].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     [trips],
   )
 
   const topPendingWOs = useMemo(
-    () => pendingWOs.slice(0, PREVIEW_COUNT),
+    () => pendingWOs.slice(0, 10),
     [pendingWOs],
-  )
-
-  const driverSalaryList = useMemo(
-    () =>
-      [...(summary?.driverSalarySummary ?? [])]
-        .sort((a, b) => b.totalSalary - a.totalSalary)
-        .slice(0, 5),
-    [summary],
-  )
-
-  const uniqueDriverCount = useMemo(
-    () => new Set(workOrders.filter(w => w.status !== 'PENDING').map(w => w.driverId)).size,
-    [workOrders],
   )
 
   if (loading && loadingSummary) {
     return (
       <div className="space-y-3">
-        {[1, 2, 3, 4].map(i => (
-          <div
-            key={i}
-            className="h-24 rounded-2xl animate-pulse"
-            style={{ background: 'var(--theme-bg-tertiary)' }}
-          />
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-24 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
         ))}
       </div>
     )
   }
 
+  if (isMobile) {
+    return <MobileDashboard />
+  }
+
+  /* ── Desktop 3-column workbench ── */
+  return (
+    <div className="space-y-6">
+      {/* KPI strip */}
+      <section className="flex items-start justify-between gap-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-5 flex-1">
+          <KPI label="Doanh thu tháng" value={fmt(revenue)} tone="primary" />
+          <KPI label="Chi phí tài xế" value={fmt(totalDriverSalary)} tone="info" />
+          <KPI label="Lệnh chờ ghép" value={`${trips.filter(t => t.status === 'PENDING' || t.status === 'DRAFT').length}`} tone="warning" />
+          <KPI label="Phiếu chưa ghép" value={`${pendingWOs.length}`} tone="warning" />
+          <KPI label="Đã chốt khách" value={`${confirmedTrips.length}`} tone="success" />
+        </div>
+        <PeriodSwitcher label={`Tháng ${month}/${year}`} sublabel={sublabel} onPrev={onPrev} onNext={onNext} />
+      </section>
+
+      {/* 3-column workbench */}
+      <section className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        {/* Left: Trip Orders */}
+        <div className="lg:col-span-4">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="font-display text-base font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+              Lệnh điều hành
+            </h2>
+            <button
+              onClick={() => navigate('/accountant/create-trip')}
+              className="rounded-lg px-3 py-1.5 text-xs font-semibold transition hover:opacity-90"
+              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+            >
+              + Tạo lệnh
+            </button>
+          </div>
+          <div className="space-y-2">
+            {sortedTrips.slice(0, 8).map(trip => (
+              <button
+                key={trip.id}
+                onClick={() => navigate(`/accountant/trip/${trip.id}`)}
+                className="w-full rounded-2xl border p-4 text-left transition hover:shadow-sm"
+                style={{
+                  background: 'var(--surface-bg)',
+                  borderColor: 'var(--surface-border)',
+                }}
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs" style={{ color: 'var(--theme-text-muted)' }}>LDP-{trip.id}</span>
+                      <span
+                        className="rounded-md px-1.5 py-0.5 font-mono text-[10px] font-medium"
+                        style={{ background: 'var(--theme-bg-tertiary)' }}
+                      >
+                        {trip.containers.length}× {trip.workType ?? ''}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+                      {trip.clientName}
+                    </div>
+                    <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{trip.route}</div>
+                  </div>
+                  <StatusBadge status={trip.status} />
+                </div>
+                <div className="mt-3 flex items-center justify-between border-t pt-2.5" style={{ borderColor: 'var(--surface-border)' }}>
+                  <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                    {trip.driverName ?? '—'}
+                  </span>
+                  <span className="font-mono text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+                    {fmt(trip.revenue ?? 0)}
+                  </span>
+                </div>
+              </button>
+            ))}
+            <button
+              onClick={() => navigate('/accountant/trips')}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed py-3 text-xs font-medium transition hover:opacity-70"
+              style={{ borderColor: 'var(--surface-border)', color: 'var(--theme-text-muted)' }}
+            >
+              Xem tất cả lệnh <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Middle: Match suggestions */}
+        <div className="lg:col-span-4">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 font-display text-base font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+              <Sparkles className="h-4 w-4" style={{ color: 'var(--theme-status-warning)' }} />
+              Gợi ý ghép phiếu
+            </h2>
+            {pendingWOs.length > 0 && (
+              <span
+                className="rounded-full px-2 py-0.5 text-[10px] font-medium"
+                style={{ background: 'color-mix(in srgb, var(--theme-status-warning) 15%, transparent)', color: 'var(--theme-status-warning)' }}
+              >
+                {pendingWOs.length} mới
+              </span>
+            )}
+          </div>
+          <div className="space-y-2.5">
+            {pendingWOs.length === 0 ? (
+              <div className="rounded-2xl border p-8 text-center" style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)' }}>
+                <CheckCircle2 className="mx-auto h-8 w-8 mb-2" style={{ color: 'var(--theme-brand-primary)' }} />
+                <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Tất cả phiếu đã ghép</p>
+              </div>
+            ) : (
+              topPendingWOs.slice(0, 5).map(wo => (
+                <div
+                  key={wo.id}
+                  className="rounded-2xl border p-4"
+                  style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)' }}
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="rounded-md px-2 py-0.5 font-mono text-xs"
+                      style={{ background: 'color-mix(in srgb, var(--theme-status-info, #3b82f6) 10%, transparent)', color: 'var(--theme-status-info, #3b82f6)' }}
+                    >
+                      WO-{wo.id}
+                    </span>
+                    {wo.workType && (
+                      <span className="rounded px-1 font-mono text-[10px]" style={{ background: 'var(--theme-bg-tertiary)' }}>
+                        {wo.workType}
+                      </span>
+                    )}
+                    {wo.earning > 0 && (
+                      <span className="ml-auto font-mono text-xs font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>
+                        {compact(wo.earning)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-1.5 text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
+                    {wo.driverName}
+                  </div>
+                  <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                    {wo.route}
+                    {wo.containers?.[0]?.containerNumber && (
+                      <span> · {wo.containers[0].containerNumber}</span>
+                    )}
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={() => navigate(`/accountant/match/${wo.id}`)}
+                      className="flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition hover:opacity-90"
+                      style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+                    >
+                      Ghép lệnh
+                    </button>
+                    <button
+                      className="rounded-lg border px-3 py-1.5 text-xs font-medium transition hover:opacity-70"
+                      style={{ borderColor: 'var(--surface-border)', background: 'transparent' }}
+                    >
+                      Bỏ qua
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+            <button
+              onClick={() => navigate('/accountant/work-orders')}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed py-3 text-xs font-medium transition hover:opacity-70"
+              style={{ borderColor: 'var(--surface-border)', color: 'var(--theme-text-muted)' }}
+            >
+              Mở đối soát đầy đủ <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Right: Unmatched work orders */}
+        <div className="lg:col-span-4">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="font-display text-base font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+              Phiếu tài xế chưa ghép
+            </h2>
+            <button
+              onClick={() => navigate('/accountant/work-orders')}
+              className="text-xs font-medium transition hover:opacity-70"
+              style={{ color: 'var(--theme-brand-primary)' }}
+            >
+              Lọc
+            </button>
+          </div>
+          <div className="space-y-2">
+            {workOrders.filter(w => w.status !== 'MATCHED' && w.status !== 'COMPLETED').slice(0, 8).map(wo => (
+              <button
+                key={wo.id}
+                onClick={() => navigate(`/accountant/match/${wo.id}`)}
+                className="group flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition hover:shadow-sm"
+                style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)' }}
+              >
+                <div
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-mono text-xs font-semibold"
+                  style={{
+                    background: 'color-mix(in srgb, var(--theme-status-info, #3b82f6) 10%, transparent)',
+                    color: 'var(--theme-status-info, #3b82f6)',
+                  }}
+                >
+                  {wo.containers?.length ?? 0}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                      WO-{wo.id}
+                    </span>
+                    <span className="rounded px-1 font-mono text-[10px]" style={{ background: 'var(--theme-bg-tertiary)' }}>
+                      {wo.workType}
+                    </span>
+                  </div>
+                  <div className="truncate text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
+                    {wo.driverName}
+                  </div>
+                  <div className="truncate text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                    {wo.route}
+                  </div>
+                </div>
+                <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                  {wo.createdAt ? wo.createdAt.slice(5, 10).replace('-', '/') : '—'}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+/* ── Mobile fallback: compact stacked layout ── */
+function MobileDashboard() {
+  const navigate = useNavigate()
+  const { year, month, dateFrom, dateTo, sublabel, onPrev, onNext } = useMonthParams()
+  const { data: workOrders = [], isLoading: loadingWO } = useWorkOrders({ dateFrom, dateTo })
+  const { data: trips = [], isLoading: loadingTrips } = useTripOrders({ dateFrom, dateTo })
+  const { data: summary } = useDashboardSummary()
+
+  const pendingWOs = useMemo(() => workOrders.filter(w => w.status === 'PENDING'), [workOrders])
+  const confirmedTrips = useMemo(() => trips.filter(t => t.isConfirmed || t.status === 'COMPLETED'), [trips])
+  const totalDriverSalary = useMemo(() => workOrders.reduce((s, w) => s + (w.earning ?? 0), 0), [workOrders])
+  const revenue = summary?.totalRevenue ?? trips.reduce((s, t) => s + (t.revenue ?? 0), 0)
+  const recentTrips = useMemo(() => [...trips].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5), [trips])
+
   return (
     <div className="space-y-4 pb-8">
-      {/* ── Period ── */}
-      <div className="flex justify-center sm:justify-end">
-        <div className="w-full sm:w-80">
-          <PeriodSwitcher
-            label={`Tháng ${month} / ${year}`}
-            sublabel={sublabel}
-            onPrev={onPrev}
-            onNext={onNext}
-          />
-        </div>
+      {/* Period */}
+      <div className="flex justify-center">
+        <PeriodSwitcher label={`Tháng ${month}/${year}`} sublabel={sublabel} onPrev={onPrev} onNext={onNext} />
       </div>
 
-      {/* ── KPI Stats ── */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-        <StatCard
-          icon={TrendingUp}
-          label="Doanh thu kỳ này"
-          value={loadingSummary ? '...' : formatCurrencyFull(revenue)}
-          hint="VNĐ — từ lệnh điều hành"
-          tone="primary"
-        />
-        <StatCard
-          icon={Wallet}
-          label="Lương phải trả"
-          value={formatCurrencyFull(totalDriverSalary)}
-          hint="VNĐ — tổng lương tài xế"
-          tone="info"
-        />
-        <StatCard
-          icon={AlertTriangle}
-          label="Chờ đối soát"
-          value={`${pendingWOs.length}`}
-          hint="phiếu làm việc chưa ghép"
-          tone="warning"
-          onClick={() => navigate('/accountant/work-orders')}
-        />
-        <StatCard
-          icon={CheckCircle2}
-          label="Đã chốt với khách"
-          value={`${confirmedTrips.length} / ${trips.length}`}
-          hint="lệnh đã xác nhận"
-          tone="primary"
-          onClick={() => navigate('/accountant/trips')}
-        />
+      {/* KPI strip */}
+      <div className="grid grid-cols-2 gap-3">
+        <KPI label="Doanh thu" value={compact(revenue)} tone="primary" />
+        <KPI label="Chi phí TX" value={compact(totalDriverSalary)} tone="info" />
+        <KPI label="Chờ ghép" value={`${pendingWOs.length}`} tone="warning" />
+        <KPI label="Đã chốt" value={`${confirmedTrips.length}`} tone="success" />
       </div>
 
-      {/* ── Quick Actions ── */}
+      {/* Recent trips */}
       <div>
-        <h2
-          className="mb-2 text-xs font-semibold uppercase tracking-wide"
-          style={{ color: 'var(--theme-text-muted)' }}
-        >
-          Thao tác nhanh
-        </h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <QuickAction
-            icon={ClipboardList}
-            title="Tạo lệnh điều hành"
-            description="Lệnh mới cho khách hàng"
-            onClick={() => navigate('/accountant/create-trip')}
-          />
-          <QuickAction
-            icon={GitMerge}
-            title="Đối soát WO → TO"
-            description="Ghép phiếu làm việc với lệnh"
-            badge={pendingWOs.length > 0 ? `${pendingWOs.length} mới` : undefined}
-            onClick={() => navigate('/accountant/work-orders')}
-          />
-          <QuickAction
-            icon={FileSpreadsheet}
-            title="Đối soát với khách"
-            description="Nhập Excel & xác nhận đã chốt"
-            onClick={() => navigate('/accountant/work-orders?tab=client')}
-          />
-          <QuickAction
-            icon={Receipt}
-            title="Bảng giá"
-            description="Quản lý giá theo số lượng"
-            onClick={() => navigate('/accountant/pricing')}
-          />
-          <QuickAction
-            icon={Users}
-            title="Khách hàng"
-            description="Thêm / sửa thông tin khách"
-            onClick={() => navigate('/accountant/partners')}
-          />
-          <QuickAction
-            icon={Wallet}
-            title="Tính lương kỳ này"
-            description="Chốt lương tài xế"
-            onClick={() => navigate('/accountant/salary-setup')}
-          />
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
+            Lệnh điều hành gần đây
+          </h3>
+          <button
+            onClick={() => navigate('/accountant/trips')}
+            className="text-[11px] font-semibold"
+            style={{ color: 'var(--theme-brand-primary)' }}
+          >
+            Xem tất cả
+          </button>
+        </div>
+        <div className="space-y-2">
+          {recentTrips.length === 0 ? (
+            <div className="rounded-2xl p-6 text-center" style={{ background: 'var(--surface-bg)', border: '1px solid var(--surface-border)' }}>
+              <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có lệnh nào</p>
+            </div>
+          ) : (
+            recentTrips.map(trip => (
+              <button
+                key={trip.id}
+                onClick={() => navigate(`/accountant/trip/${trip.id}`)}
+                className="flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition active:scale-[0.98]"
+                style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)' }}
+              >
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+                  style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)', color: 'var(--theme-brand-primary)' }}
+                >
+                  <Container className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px] font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+                    {trip.clientName}
+                  </p>
+                  <p className="truncate text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
+                    {trip.route}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-[13px] font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
+                    {compact(trip.revenue ?? 0)}
+                  </p>
+                  <StatusBadge status={trip.status} />
+                </div>
+              </button>
+            ))
+          )}
         </div>
       </div>
 
-      {/* ── Two-column: Recent Trips + Reconcile Suggestions ── */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Left: Lệnh điều hành gần đây */}
-        <SectionCard
-          title="Lệnh điều hành gần đây"
-          count={trips.length}
-          icon={FileText}
-          className="lg:col-span-2"
-          onAction={() => navigate(`/accountant/trips?month=${month}&year=${year}`)}
-        >
-          {recentTrips.length === 0 ? (
-            <EmptyState icon={FileText} title="Chưa có lệnh nào trong kỳ" />
-          ) : (
-            <div className="space-y-2">
-              {recentTrips.map(trip => (
-                <button
-                  key={trip.id}
-                  onClick={() => navigate(`/accountant/trip/${trip.id}`)}
-                  className="group flex w-full items-center gap-3 rounded-xl border border-transparent p-3 text-left transition-[var(--transition-smooth)]"
-                  style={{
-                    background: 'color-mix(in srgb, var(--theme-brand-primary-light) 40%, transparent)',
-                    touchAction: 'manipulation',
-                  }}
-                >
-                  <div
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-                    style={{
-                      background: 'var(--theme-bg-secondary)',
-                      color: 'var(--theme-brand-primary)',
-                      border: '1px solid var(--theme-border-default)',
-                    }}
-                  >
-                    <Container className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="truncate text-[13px] font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                        {trip.clientName}
-                      </p>
-                      <StatusBadge status={trip.status} />
-                    </div>
-                    <p className="mt-0.5 truncate text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
-                      <span className="font-mono font-semibold" style={{ color: 'var(--theme-text-secondary)', opacity: 0.7 }}>
-                        LDP-{trip.id}
-                      </span>
-                      <span className="mx-1.5">·</span>
-                      {trip.route}
-                      <span className="mx-1.5">·</span>
-                      {trip.containers.length}× {trip.workType ?? ''}
-                    </p>
-                  </div>
-                  <div className="hidden text-right sm:block">
-                    <p className="text-[13px] font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
-                      {formatCurrencyFull(trip.revenue ?? 0)}
-                      <span className="ml-0.5 text-[10px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>đ</span>
-                    </p>
-                    <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
-                      {trip.createdAt ? trip.createdAt.slice(5, 10).replace('-', '/') : '—'}
-                    </p>
-                  </div>
-                  <ArrowRight
-                    className="hidden h-4 w-4 transition-[var(--transition-smooth)] group-hover:translate-x-0.5 sm:block"
-                    style={{ color: 'var(--theme-text-muted)' }}
-                  />
-                </button>
-              ))}
-            </div>
-          )}
-        </SectionCard>
-
-        {/* Right: Gợi ý đối soát */}
-        <SectionCard
-          title="Gợi ý đối soát"
-          count={pendingWOs.length}
-          icon={GitMerge}
-          onAction={() => navigate('/accountant/work-orders?tab=match')}
-        >
-          {topPendingWOs.length === 0 ? (
-            <EmptyState icon={GitMerge} title="Không có phiếu chờ khớp" />
-          ) : (
-            <div className="space-y-2">
-              {topPendingWOs.map(wo => (
-                <button
-                  key={wo.id}
-                  onClick={() => navigate(`/accountant/match/${wo.id}`)}
-                  className="group flex w-full items-center gap-3 rounded-xl border border-transparent p-2.5 text-left transition-[var(--transition-smooth)]"
-                  style={{
-                    background: 'color-mix(in srgb, var(--theme-status-warning) 5%, transparent)',
-                    touchAction: 'manipulation',
-                  }}
-                >
-                  <div
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-                    style={{
-                      background: 'var(--theme-bg-secondary)',
-                      color: 'var(--theme-status-warning)',
-                      border: '1px solid var(--theme-border-default)',
-                    }}
-                  >
-                    <GitMerge className="h-3.5 w-3.5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                      {wo.driverName}
-                    </p>
-                    <p className="truncate text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
-                      {wo.containers?.[0]?.containerNumber ?? '—'}
-                      <span className="mx-1.5">·</span>
-                      {wo.route}
-                    </p>
-                  </div>
-                  <ArrowRight
-                    className="hidden h-4 w-4 shrink-0 transition-[var(--transition-smooth)] group-hover:translate-x-0.5 sm:block"
-                    style={{ color: 'var(--theme-text-muted)' }}
-                  />
-                </button>
-              ))}
-            </div>
-          )}
-        </SectionCard>
-      </div>
-
-      {/* ── Bottom row: Salary + Driver Leaderboard ── */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {/* Lương kỳ này */}
-        <SectionCard
-          title="Lương kỳ này"
-          icon={Wallet}
-          actionLabel="Xem chi tiết"
-          onAction={() => navigate('/accountant/salary-setup')}
-        >
-          <div
-            className="rounded-xl p-4"
-            style={{ background: 'var(--gradient-primary)', color: '#fff' }}
+      {/* Quick actions */}
+      <div className="grid grid-cols-2 gap-2">
+        {[
+          { label: 'Tạo lệnh', path: '/accountant/create-trip', icon: Plus },
+          { label: 'Đối soát', path: '/accountant/work-orders', icon: Link2 },
+          { label: 'Bảng giá', path: '/accountant/pricing', icon: AlertCircle },
+          { label: 'Kỳ lương', path: '/accountant/salary-setup', icon: Wallet },
+        ].map(a => (
+          <button
+            key={a.label}
+            onClick={() => navigate(a.path)}
+            className="flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-semibold transition active:scale-[0.98]"
+            style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)', color: 'var(--theme-text-primary)' }}
           >
-            <p className="text-[11px] font-medium uppercase tracking-wider" style={{ opacity: 0.8 }}>
-              Tổng lương dự kiến
-            </p>
-            <p className="mt-1 text-2xl font-bold tabular-nums">
-              {formatCurrencyFull(totalDriverSalary)}
-              <span className="ml-1 text-xs font-medium" style={{ opacity: 0.8 }}>đ</span>
-            </p>
-            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-lg p-2" style={{ background: 'rgba(255,255,255,0.1)' }}>
-                <p className="text-base font-bold">{uniqueDriverCount}</p>
-                <p className="text-[10px] uppercase tracking-wide" style={{ opacity: 0.8 }}>Tài xế</p>
-              </div>
-              <div className="rounded-lg p-2" style={{ background: 'rgba(255,255,255,0.1)' }}>
-                <p className="text-base font-bold">{workOrders.length}</p>
-                <p className="text-[10px] uppercase tracking-wide" style={{ opacity: 0.8 }}>Chuyến</p>
-              </div>
-              <div className="rounded-lg p-2" style={{ background: 'rgba(255,255,255,0.1)' }}>
-                <p className="text-base font-bold tabular-nums">
-                  {uniqueDriverCount > 0 ? formatCurrencyFull(Math.round(totalDriverSalary / uniqueDriverCount / 1000) * 1000) : '0'}
-                </p>
-                <p className="text-[10px] uppercase tracking-wide" style={{ opacity: 0.8 }}>TB/chuyến</p>
-              </div>
-            </div>
-          </div>
-          <div
-            className="mt-3 flex items-center justify-between rounded-xl border border-dashed p-3"
-            style={{ borderColor: 'var(--theme-border-default)' }}
-          >
-            <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-              Trạng thái kỳ lương
-            </p>
-            <StatusBadge status="OPEN" />
-          </div>
-        </SectionCard>
-
-        {/* Top tài xế */}
-        <SectionCard
-          title="Top tài xế kỳ này"
-          icon={Truck}
-          actionLabel="Xem tất cả"
-          onAction={() => navigate('/accountant/salary-setup')}
-        >
-          {driverSalaryList.length === 0 ? (
-            <EmptyState icon={Truck} title="Chưa có dữ liệu tài xế" />
-          ) : (
-            <div className="space-y-2.5">
-              {driverSalaryList.map((d, i) => (
-                <button
-                  key={d.driverId}
-                  className="flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-[var(--transition-smooth)]"
-                  style={{ touchAction: 'manipulation' }}
-                >
-                  <div
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold`}
-                    style={{
-                      background: i === 0 ? 'var(--gradient-primary)' : 'var(--theme-bg-tertiary)',
-                      color: i === 0 ? '#fff' : 'var(--theme-text-secondary)',
-                    }}
-                  >
-                    {i + 1}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                      {d.driverName}
-                    </p>
-                    <p className="flex items-center gap-1 truncate text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
-                      <Building2 className="h-3 w-3" />
-                      {d.tractorPlate ?? '—'}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[13px] font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
-                      {formatCurrencyFull(d.totalSalary)}
-                    </p>
-                    <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
-                      {d.totalJobs} chuyến
-                    </p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </SectionCard>
+            <a.icon className="h-3.5 w-3.5" style={{ color: 'var(--theme-brand-primary)' }} />
+            {a.label}
+          </button>
+        ))}
       </div>
-
-      <p className="mt-10 text-center text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-        Phúc Lộc Transport · Hệ thống vận tải container
-      </p>
     </div>
   )
 }
