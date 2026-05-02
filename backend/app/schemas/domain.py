@@ -27,6 +27,7 @@ class WorkOrderStatus(str, Enum):
     PENDING = "PENDING"
     MATCHED = "MATCHED"
     COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
 
 
 class TripOrderStatus(str, Enum):
@@ -294,6 +295,9 @@ class WorkOrderOut(BaseModel):
     earning: int
     pricing_id: int | None
     status: str
+    is_locked: bool = False
+    locked_at: datetime | None = None
+    locked_by: int | None = None
     containers: list[ContainerOut] = []
     created_at: datetime
     updated_at: datetime
@@ -327,8 +331,8 @@ class TripOrderCreate(BaseModel):
     pickup_location: str | None = None
     dropoff_location: str | None = None
     tractor_plate: str
-    driver_id: int
-    driver_name: str
+    driver_id: int | None = None
+    driver_name: str | None = None
     containers: list[TripContainerCreate]
     container_number: str | None = None  # legacy
     pricing_id: int | None = None
@@ -374,8 +378,8 @@ class TripOrderOut(BaseModel):
     pickup_location: str | None = None
     dropoff_location: str | None = None
     tractor_plate: str
-    driver_id: int
-    driver_name: str
+    driver_id: int | None = None
+    driver_name: str | None = None
     container_number: str | None
     containers: list[TripContainerOut] = []
     pricing_id: int | None
@@ -387,6 +391,9 @@ class TripOrderOut(BaseModel):
     is_confirmed: bool = False
     confirmed_by: int | None = None
     confirmed_at: datetime | None = None
+    is_locked: bool = False
+    locked_at: datetime | None = None
+    locked_by: int | None = None
     matched_work_order_ids: list[int] = []
     created_at: datetime
     updated_at: datetime
@@ -569,3 +576,21 @@ class DashboardSummaryOut(BaseModel):
     driver_salary_summary: list[DriverSalarySummaryItem] = []
     unmatched_work_order_count: int = 0
     pending_trip_count: int = 0
+
+
+# ---------------------------------------------------------------------------
+# Cancel / Unmatch / Soft-delete requests
+# ---------------------------------------------------------------------------
+
+class CancelRequest(BaseModel):
+    reason: str = Field(..., min_length=1, description="Required reason for cancellation")
+
+
+class UnmatchRequest(BaseModel):
+    reason: str = Field(..., min_length=1, description="Required reason for unmatching")
+    work_order_id: int | None = None
+    trip_order_id: int | None = None
+
+
+class SoftDeleteRequest(BaseModel):
+    reason: str = Field(..., min_length=1, description="Required reason for soft deletion")

@@ -38,8 +38,18 @@ async def cleanup_expired_sessions(ctx: dict) -> None:
 
 
 async def cleanup_old_audit_logs(ctx: dict) -> None:
-    """Placeholder for cleaning up old audit logs.
+    """Delete audit_logs rows older than 1 year."""
+    from datetime import datetime, timezone, timedelta
+    from sqlalchemy import delete, select, func
+    from app.database import async_session_factory
+    from app.models.audit_log import AuditLog
 
-    Will be implemented when audit logging is added.
-    """
-    logger.info("Audit log cleanup ran (no-op)")
+    cutoff = datetime.now(timezone.utc) - timedelta(days=365)
+    async with async_session_factory() as db:
+        result = await db.execute(
+            delete(AuditLog).where(AuditLog.created_at < cutoff)
+        )
+        await db.commit()
+        count = result.rowcount
+        if count:
+            logger.info("Cleaned up %d audit log entries older than 1 year", count)

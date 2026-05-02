@@ -156,7 +156,10 @@ class WorkOrder(Base):
     allowance = Column(Integer, nullable=False)        # VND
     earning = Column(Integer, nullable=False)          # = driver_salary + allowance
     pricing_id = Column(Integer, ForeignKey("pricings.id"), nullable=True)
-    status = Column(String(20), nullable=False, default="PENDING")  # PENDING | MATCHED | COMPLETED
+    status = Column(String(20), nullable=False, default="PENDING")  # PENDING | MATCHED | COMPLETED | CANCELLED
+    is_locked = Column(Boolean, nullable=False, default=False)
+    locked_at = Column(DateTime(timezone=True), nullable=True)
+    locked_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
@@ -206,8 +209,8 @@ class TripOrder(Base):
     pickup_location = Column(String(255), nullable=True)
     dropoff_location = Column(String(255), nullable=True)
     tractor_plate = Column(String(20), nullable=False)
-    driver_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    driver_name = Column(String(255), nullable=False)  # denormalized
+    driver_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    driver_name = Column(String(255), nullable=True)  # denormalized
     container_number = Column(String(50), nullable=True)  # legacy — use trip_order_containers
     pricing_id = Column(Integer, ForeignKey("pricings.id"), nullable=True)
     unit_price = Column(Integer, nullable=False)       # VND
@@ -218,6 +221,9 @@ class TripOrder(Base):
     is_confirmed = Column(Boolean, nullable=False, default=False)  # Reconciliation confirmation
     confirmed_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # Who confirmed
     confirmed_at = Column(DateTime(timezone=True), nullable=True)  # When confirmed
+    is_locked = Column(Boolean, nullable=False, default=False)
+    locked_at = Column(DateTime(timezone=True), nullable=True)
+    locked_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False

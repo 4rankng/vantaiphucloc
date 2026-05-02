@@ -4,7 +4,7 @@ import logging
 from collections import defaultdict
 from datetime import date, datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, func
@@ -13,9 +13,11 @@ from app.database import get_db
 from app.models.base import User
 from app.models.domain import TripOrder, TripOrderContainer, TripOrderWorkOrder, WorkOrder, Client
 from app.schemas.base import PaginatedResponse
-from app.schemas.domain import TripOrderCreate, TripOrderUpdate, TripOrderOut, TripContainerOut
+from app.schemas.domain import TripOrderCreate, TripOrderUpdate, TripOrderOut, TripContainerOut, CancelRequest
 from app.core.deps import get_current_user, require_roles
 from app.services.salary_service import get_salary_period_dates
+from app.services.audit_service import log_action
+from app.validators.container import validate_container_quantity, validate_same_work_type
 
 _logger = logging.getLogger(__name__)
 
@@ -102,6 +104,9 @@ async def _load_trip_order_out(db: AsyncSession, trip_order: TripOrder) -> TripO
         is_confirmed=trip_order.is_confirmed,
         confirmed_by=trip_order.confirmed_by,
         confirmed_at=trip_order.confirmed_at,
+        is_locked=getattr(trip_order, 'is_locked', False),
+        locked_at=getattr(trip_order, 'locked_at', None),
+        locked_by=getattr(trip_order, 'locked_by', None),
         matched_work_order_ids=matched_ids,
         created_at=trip_order.created_at,
         updated_at=trip_order.updated_at,
@@ -143,6 +148,9 @@ async def _batch_load_trip_order_outs(
             is_confirmed=to.is_confirmed,
             confirmed_by=to.confirmed_by,
             confirmed_at=to.confirmed_at,
+            is_locked=getattr(to, 'is_locked', False),
+            locked_at=getattr(to, 'locked_at', None),
+            locked_by=getattr(to, 'locked_by', None),
             matched_work_order_ids=matched_mapping.get(to.id, []),
             created_at=to.created_at,
             updated_at=to.updated_at,
@@ -195,11 +203,18 @@ async def _enqueue_salary_recalc(db: AsyncSession, driver_id: int, ref_date: dat
 @router.post("/trip-orders", response_model=TripOrderOut, status_code=201)
 async def create_trip_order(
     body: TripOrderCreate,
+    request: Request,
     current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
     matched_ids = body.matched_work_order_ids
     trip_data = body.model_dump(exclude={"matched_work_order_ids", "containers"})
+
+    # Validate container rules
+    if body.containers:
+        validate_same_work_type(body.containers)
+        work_type_val = body.containers[0].work_type
+        validate_container_quantity(work_type_val, len(body.containers))
 
     # Derive legacy fields from first container
     if body.containers:
@@ -261,7 +276,11 @@ async def create_trip_order(
     await db.commit()
     await db.refresh(trip_order)
 
-    await _enqueue_salary_recalc(db, trip_order.driver_id, body.trip_date)
+    await log_action(db, user_id=current_user.id, action="CREATE", table_name="trip_orders",
+        record_id=trip_order.id, request=request)
+
+    if trip_order.driver_id:
+        await _enqueue_salary_recalc(db, trip_order.driver_id, body.trip_date)
 
     return await _load_trip_order_out(db, trip_order)
 
@@ -339,6 +358,7 @@ async def get_trip_order(
 async def update_trip_order(
     trip_order_id: int,
     body: TripOrderUpdate,
+    request: Request,
     current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
@@ -348,6 +368,11 @@ async def update_trip_order(
     trip_order = result.scalar_one_or_none()
     if trip_order is None:
         raise HTTPException(status_code=404, detail="Trip order not found")
+
+    if getattr(trip_order, 'is_locked', False):
+        raise HTTPException(status_code=403, detail="Trip order is locked. Unmatch first to edit.")
+    if trip_order.is_confirmed:
+        raise HTTPException(status_code=403, detail="Trip order is confirmed and cannot be edited.")
 
     update_data = body.model_dump(exclude_unset=True)
     new_matched_ids = update_data.pop("matched_work_order_ids", None)
@@ -401,6 +426,9 @@ async def update_trip_order(
     await db.commit()
     await db.refresh(trip_order)
 
+    await log_action(db, user_id=current_user.id, action="UPDATE", table_name="trip_orders",
+        record_id=trip_order.id, request=request)
+
     # Enqueue salary recalculation if matched work orders changed
     if new_matched_ids:
         ref_date = trip_order.trip_date if hasattr(trip_order, "trip_date") and trip_order.trip_date else date.today()
@@ -412,10 +440,12 @@ async def update_trip_order(
 @router.put("/trip-orders/{trip_order_id}/cancel", response_model=TripOrderOut)
 async def cancel_trip_order(
     trip_order_id: int,
+    body: CancelRequest,
+    request: Request,
     current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
-    """Cancel a trip order (only DRAFT or PENDING can be cancelled)."""
+    """Cancel a trip order (only DRAFT or PENDING/unmatched can be cancelled). Reason required."""
     result = await db.execute(
         select(TripOrder).where(TripOrder.id == trip_order_id)
     )
@@ -423,30 +453,20 @@ async def cancel_trip_order(
     if trip_order is None:
         raise HTTPException(status_code=404, detail="Trip order not found")
 
-    # Initialize state machine and validate transition
-    from app.services.state_machine import initialize_to_state_machine
-    machine = initialize_to_state_machine(trip_order.status)
+    if getattr(trip_order, 'is_locked', False):
+        raise HTTPException(status_code=403, detail="Cannot cancel a matched trip order. Unmatch first.")
 
-    # Try to cancel based on current status
     if trip_order.status == "DRAFT":
         trip_order.status = "CANCELLED"
     elif trip_order.status == "PENDING":
         trip_order.status = "CANCELLED"
-    elif trip_order.status == "COMPLETED":
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot cancel COMPLETED trip orders"
-        )
-    elif trip_order.status == "CANCELLED":
-        raise HTTPException(
-            status_code=400,
-            detail="Trip order is already cancelled"
-        )
+    elif trip_order.status in ("COMPLETED", "CANCELLED"):
+        raise HTTPException(status_code=400, detail=f"Cannot cancel trip order with status {trip_order.status}")
     else:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid status for cancellation: {trip_order.status}"
-        )
+        raise HTTPException(status_code=400, detail=f"Invalid status for cancellation: {trip_order.status}")
+
+    await log_action(db, user_id=current_user.id, action="CANCEL", table_name="trip_orders",
+        record_id=trip_order.id, reason=body.reason, request=request)
 
     await db.commit()
     await db.refresh(trip_order)
@@ -457,35 +477,41 @@ async def cancel_trip_order(
 @router.put("/trip-orders/{trip_order_id}/confirm", response_model=TripOrderOut)
 async def toggle_trip_order_confirmation(
     trip_order_id: int,
+    request: Request,
     current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
-    """
-    Toggle is_confirmed status for a trip order.
-
-    Only accountants and superadmins can call this.
-    """
+    """Toggle is_confirmed status for a trip order. Confirms and sets linked WOs to COMPLETED."""
     result = await db.execute(
         select(TripOrder).where(TripOrder.id == trip_order_id)
     )
     trip_order = result.scalar_one_or_none()
-
     if trip_order is None:
         raise HTTPException(status_code=404, detail="Trip order not found")
 
-    # Toggle confirmation
     trip_order.is_confirmed = not trip_order.is_confirmed
 
     if trip_order.is_confirmed:
-        # Set who confirmed and when
         trip_order.confirmed_by = current_user.id
         trip_order.confirmed_at = datetime.now(timezone.utc)
-        _logger.info(f"TripOrder #{trip_order_id} confirmed by user #{current_user.id}")
+
+        # Set linked WOs to COMPLETED
+        matched_wo_ids = await _get_matched_work_order_ids(db, trip_order.id)
+        for wo_id in matched_wo_ids:
+            wo_result = await db.execute(select(WorkOrder).where(WorkOrder.id == wo_id))
+            wo = wo_result.scalar_one_or_none()
+            if wo:
+                wo.status = "COMPLETED"
+
+        await log_action(db, user_id=current_user.id, action="CONFIRM", table_name="trip_orders",
+            record_id=trip_order.id, request=request)
+        _logger.info("TripOrder #%d confirmed by user #%d", trip_order_id, current_user.id)
     else:
-        # Clear confirmation
         trip_order.confirmed_by = None
         trip_order.confirmed_at = None
-        _logger.info(f"TripOrder #{trip_order_id} unconfirmed by user #{current_user.id}")
+        await log_action(db, user_id=current_user.id, action="UPDATE", table_name="trip_orders",
+            record_id=trip_order.id, request=request)
+        _logger.info("TripOrder #%d unconfirmed by user #%d", trip_order_id, current_user.id)
 
     await db.commit()
     await db.refresh(trip_order)
