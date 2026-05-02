@@ -269,11 +269,11 @@ export function MatchJob() {
     <>
       {showKeyboardHelp && <KeyboardShortcutsPanel onClose={() => setShowKeyboardHelp(false)} />}
 
-      <div className="flex flex-col h-[calc(100dvh-56px)] lg:h-screen">
+      <div className="flex flex-col h-[calc(100dvh-56px)] md:h-screen">
         {/* Desktop header */}
         {!isMobile && (
           <div
-            className="hidden lg:flex items-center justify-between px-8 py-4 border-b shrink-0"
+            className="flex items-center justify-between px-8 py-4 border-b shrink-0"
             style={{ borderColor: 'var(--theme-border-light)' }}
           >
             <div className="flex items-center gap-4">
@@ -478,7 +478,7 @@ export function MatchJob() {
               <>
                 {/* Comparison header */}
                 <div
-                  className="hidden lg:flex items-center justify-between px-6 py-3 border-b shrink-0"
+                  className="flex items-center justify-between px-6 py-3 border-b shrink-0"
                   style={{
                     background: 'var(--theme-bg-secondary)',
                     borderColor: 'var(--theme-border-light)',
@@ -569,7 +569,7 @@ export function MatchJob() {
                       <Check className="w-5 h-5" />
                       {submitting ? 'Đang khớp...' : 'Xác nhận khớp chuyến'}
                       <span
-                        className="text-[10px] font-mono px-1.5 py-0.5 rounded hidden lg:inline"
+                        className="text-[10px] font-mono px-1.5 py-0.5 rounded"
                         style={{ background: 'rgba(255,255,255,0.2)' }}
                       >
                         Enter

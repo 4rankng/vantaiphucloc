@@ -502,9 +502,7 @@ export function WorkOrderList() {
 
   // Desktop view with DataTablePro
   return (
-    <PageContainer
-      showBack
-    >
+    <PageContainer>
       <div className="space-y-4">
         {/* Filters */}
         <FilterToolbar

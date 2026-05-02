@@ -15,6 +15,7 @@ import {
   useVendors, useCreateVendor, useDeleteVendor,
 } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
+import { useIsMobile } from '@/hooks/use-mobile'
 import type { Client } from '@/data/domain'
 import type { Vendor } from '@/services/api/vendors.api'
 
@@ -48,6 +49,7 @@ function toVendorRow(v: Vendor): PartnerRow {
 
 export function DirectorPartners() {
   const toast = useToast()
+  const isMobile = useIsMobile()
   const { data: clients = [], isLoading: clientsLoading } = useClients()
   const { data: vendors = [], isLoading: vendorsLoading } = useVendors()
   const createClient = useCreateClient()
@@ -240,10 +242,10 @@ export function DirectorPartners() {
       />
 
       {/* FAB — mobile only */}
-      {createPortal(
+      {isMobile && createPortal(
         <button
           onClick={() => setCreateType('client')}
-          className="lg:hidden fixed bottom-6 right-5 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90 touch-manipulation"
+          className="fixed bottom-6 right-5 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90 touch-manipulation"
           style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
         >
           <Plus className="w-6 h-6" />
