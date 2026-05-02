@@ -7,32 +7,48 @@ interface MonthNavigatorProps {
   onNext: () => void
 }
 
+function getDaysInMonth(year: number, month: number) {
+  return new Date(year, month, 0).getDate()
+}
+
 export function MonthNavigator({ year, month, onPrev, onNext }: MonthNavigatorProps) {
+  const mm = String(month).padStart(2, '0')
+  const lastDay = getDaysInMonth(year, month)
+  const lastDayStr = String(lastDay).padStart(2, '0')
+
   return (
-    <div
-      className="flex items-center justify-center rounded-2xl border px-2 py-2"
-      style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)' }}
-    >
+    <div className="flex items-center justify-center gap-2 py-2 pointer-events-none">
       <button
         onClick={onPrev}
-        className="w-8 h-8 flex items-center justify-center rounded-lg touch-manipulation transition-colors active:scale-90"
-        style={{ color: 'var(--theme-brand-primary)' }}
+        className="w-10 h-10 flex items-center justify-center rounded-lg touch-manipulation transition-colors active:scale-90 pointer-events-auto"
+        style={{ color: 'var(--theme-text-secondary)' }}
         aria-label="Tháng trước"
       >
-        <ChevronLeft className="w-4 h-4" />
+        <ChevronLeft className="w-5 h-5" />
       </button>
 
-      <span className="text-sm font-bold tabular-nums px-3 font-display" style={{ color: 'var(--theme-text-primary)' }}>
-        Tháng {month} / {year}
-      </span>
+      <div className="flex flex-col items-center gap-0.5">
+        <span
+          className="text-sm font-bold tabular-nums font-display leading-tight whitespace-nowrap"
+          style={{ color: 'var(--theme-text-primary)' }}
+        >
+          Tháng {mm}/{year}
+        </span>
+        <span
+          className="text-xs tabular-nums whitespace-nowrap"
+          style={{ color: 'var(--theme-text-secondary)' }}
+        >
+          01/{mm} → {lastDayStr}/{mm}
+        </span>
+      </div>
 
       <button
         onClick={onNext}
-        className="w-8 h-8 flex items-center justify-center rounded-lg touch-manipulation transition-colors active:scale-90"
-        style={{ color: 'var(--theme-brand-primary)' }}
+        className="w-10 h-10 flex items-center justify-center rounded-lg touch-manipulation transition-colors active:scale-90 pointer-events-auto"
+        style={{ color: 'var(--theme-text-secondary)' }}
         aria-label="Tháng sau"
       >
-        <ChevronRight className="w-4 h-4" />
+        <ChevronRight className="w-5 h-5" />
       </button>
     </div>
   )

@@ -5,7 +5,7 @@ import { InfoRow } from '@/components/shared/InfoRow'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { ConfirmationCheckbox } from '@/components/shared/ConfirmationCheckbox'
 import { formatCurrencyFull, WORK_TYPES, type WorkType } from '@/data/domain'
-import { Building2, Route, UserCircle, Wallet, Link2, Pencil, Lock } from 'lucide-react'
+import { Building2, Route, UserCircle, Wallet, Link2, Pencil, Lock, Unlink } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
@@ -23,6 +23,9 @@ export function TripDetail() {
   const [editRoute, setEditRoute] = useState('')
   const [editWorkType, setEditWorkType] = useState<WorkType>('E20')
   const [showMatchDialog, setShowMatchDialog] = useState(false)
+  const [showUnmatchDialog, setShowUnmatchDialog] = useState(false)
+  const [unmatchReason, setUnmatchReason] = useState('')
+  const [unmatching, setUnmatching] = useState(false)
   const toast = useToast()
   const updateTripOrder = useUpdateTripOrder()
   const reconcile = useReconcile()
@@ -103,6 +106,24 @@ export function TripDetail() {
     })
   }
 
+  const handleUnmatch = async () => {
+    if (!trip || !unmatchReason.trim()) return
+    setUnmatching(true)
+    try {
+      const { api } = await import('@/services/api/client')
+      await api.post('/reconcile/unmatch', { trip_order_id: trip.id, reason: unmatchReason.trim() })
+      toast.success('Đã bỏ match')
+      qc.invalidateQueries({ queryKey: ['trip-orders'] })
+      qc.invalidateQueries({ queryKey: ['work-orders'] })
+      setShowUnmatchDialog(false)
+      setUnmatchReason('')
+    } catch {
+      toast.error('Lỗi', 'Không thể bỏ match')
+    } finally {
+      setUnmatching(false)
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Trip info card */}
@@ -175,9 +196,20 @@ export function TripDetail() {
       {/* Matched jobs */}
       {matchedJobs.length > 0 && (
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--theme-status-success)' }}>
-            Đã match ({matchedJobs.length})
-          </p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-status-success)' }}>
+              Đã match ({matchedJobs.length})
+            </p>
+            {!trip.isConfirmed && (
+              <button
+                onClick={() => setShowUnmatchDialog(true)}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold transition-colors touch-manipulation"
+                style={{ color: 'var(--theme-status-error)', background: 'var(--theme-status-error-light)' }}
+              >
+                <Unlink className="w-3 h-3" /> Bỏ match
+              </button>
+            )}
+          </div>
           <div className="space-y-2">
             {matchedJobs.map(job => (
               <div key={job.id} className="rounded-2xl p-3"
@@ -288,6 +320,38 @@ export function TripDetail() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowMatchDialog(false)} className="flex-1">Huỷ</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unmatch Dialog */}
+      <Dialog open={showUnmatchDialog} onOpenChange={open => { setShowUnmatchDialog(open); if (!open) setUnmatchReason('') }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bỏ match</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>
+            Tách tất cả số công đã khớp với lệnh điều hành này. Hành động này không thể hoàn tác.
+          </p>
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Lý do *</Label>
+            <Input
+              value={unmatchReason}
+              onChange={e => setUnmatchReason(e.target.value)}
+              placeholder="Nhập lý do bỏ match..."
+              className="text-sm"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUnmatchDialog(false)} className="flex-1">Huỷ</Button>
+            <Button
+              onClick={handleUnmatch}
+              disabled={!unmatchReason.trim() || unmatching}
+              className="flex-1"
+              style={{ background: 'var(--theme-status-error)', color: 'white' }}
+            >
+              {unmatching ? 'Đang xử lý...' : 'Bỏ match'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

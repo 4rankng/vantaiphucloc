@@ -1,9 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Chivo:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--theme-font-body, "Be Vietnam Pro", "Inter", ui-sans-serif, system-ui, sans-serif);
-  --font-display: var(--theme-font-display, "Be Vietnam Pro", "Inter", ui-sans-serif, system-ui, sans-serif);
-  --font-mono: var(--theme-font-mono, "JetBrains Mono", ui-monospace, monospace);
+  --font-sans: var(--theme-font-body, "Public Sans", system-ui, sans-serif);
+  --font-display: var(--theme-font-display, "Chivo", system-ui, sans-serif);
+  --font-mono: var(--theme-font-mono, "IBM Plex Mono", ui-monospace, monospace);
   --font-size-2xs: 0.625rem;
 }
 
@@ -21,7 +24,7 @@
   }
   body {
     margin: 0;
-    font-family: var(--theme-font-body, "Be Vietnam Pro", "Inter", ui-sans-serif, system-ui, sans-serif);
+    font-family: var(--theme-font-body, "Public Sans", system-ui, sans-serif);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     color: var(--theme-text-primary, #111827);
@@ -37,7 +40,7 @@
 /* ─── Utilities ─────────────────────────────────────────── */
 @layer utilities {
   .font-display {
-    font-family: var(--theme-font-display, "Be Vietnam Pro", "Inter", ui-sans-serif, system-ui, sans-serif);
+    font-family: var(--theme-font-display, "Chivo", system-ui, sans-serif);
   }
   .font-mono-num {
     font-family: var(--theme-font-mono, "JetBrains Mono", ui-monospace, monospace);
@@ -146,6 +149,11 @@
   --shell-bottomnav-h: 3.5rem;
   --shell-safe-top: env(safe-area-inset-top, 0px);
   --shell-safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* Typography */
+  --theme-font-display: "Chivo", system-ui, sans-serif;
+  --theme-font-body: "Public Sans", system-ui, sans-serif;
+  --theme-font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
   /* Dashboard design tokens (grab-green-ux inspired) */
   --gradient-primary: linear-gradient(135deg, #005c24 0%, #00963E 50%, #00b44e 100%);
