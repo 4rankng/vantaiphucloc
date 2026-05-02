@@ -126,16 +126,33 @@ function SidebarNavItem({
         'relative flex items-center gap-3 rounded-xl transition-all duration-150 select-none group/item',
         collapsed ? 'h-10 w-10 justify-center mx-auto' : 'h-9 px-3',
         isActive
-          ? 'bg-white/[0.18] text-white shadow-sm'
-          : 'text-white/70 hover:bg-white/[0.08] hover:text-white',
+          ? 'bg-white/20 text-white shadow-sm'
+          : 'text-white/55 hover:bg-white/10 hover:text-white/90',
       )}
     >
       {/* Active pill */}
       {isActive && !collapsed && (
-        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-white/90" />
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-yellow-300" />
       )}
 
-      <item.icon className={cn('shrink-0', collapsed ? 'w-[18px] h-[18px]' : 'w-4 h-4')} />
+      {/* Icon wrapper — highlighted on active */}
+      <span
+        className={cn(
+          'flex items-center justify-center rounded-lg transition-all duration-150 shrink-0',
+          collapsed ? 'w-[30px] h-[30px]' : 'w-[26px] h-[26px]',
+          isActive
+            ? 'bg-yellow-300/20'
+            : 'bg-transparent group-hover/item:bg-white/10',
+        )}
+      >
+        <item.icon
+          className={cn(
+            'shrink-0 transition-colors duration-150',
+            collapsed ? 'w-[16px] h-[16px]' : 'w-[14px] h-[14px]',
+            isActive ? 'text-yellow-300' : 'text-white/55 group-hover/item:text-white/90',
+          )}
+        />
+      </span>
 
       {!collapsed && (
         <span className={cn('text-[13px] leading-none flex-1 truncate', isActive ? 'font-semibold' : 'font-normal')}>

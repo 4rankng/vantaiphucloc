@@ -1,5 +1,5 @@
 import { useState, useCallback, type ReactNode } from 'react'
-import { Search, X, ChevronDown, Calendar, Filter } from 'lucide-react'
+import { Search, X, ChevronDown, Calendar } from 'lucide-react'
 
 export interface FilterOption {
   key: string
@@ -77,7 +77,7 @@ export function FilterToolbar({
       <div className="flex flex-wrap items-center gap-2">
         {/* Search input */}
         {onSearchChange && (
-          <div className="relative flex-1 min-w-[200px]">
+          <div className="relative flex-1 min-w-[160px]">
             <Search
               className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none"
               style={{ color: 'var(--theme-text-muted)' }}
@@ -103,6 +103,31 @@ export function FilterToolbar({
                 <X className="h-3 w-3" />
               </button>
             )}
+          </div>
+        )}
+
+        {/* Status filter tabs — inline with search */}
+        {statusOptions.length > 0 && onStatusChange && (
+          <div className="flex gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {statusOptions.map(({ key, label, color }) => {
+              const isActive = selectedStatus === key
+              return (
+                <button
+                  key={key}
+                  onClick={() => handleStatusClick(key)}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all touch-manipulation"
+                  style={{
+                    background: isActive
+                      ? color ?? 'var(--theme-brand-primary)'
+                      : 'var(--theme-bg-secondary)',
+                    color: isActive ? '#fff' : color ?? 'var(--theme-text-muted)',
+                    border: `1px solid ${isActive ? 'transparent' : 'var(--theme-border-default)'}`,
+                  }}
+                >
+                  {label}
+                </button>
+              )
+            })}
           </div>
         )}
 
@@ -196,30 +221,6 @@ export function FilterToolbar({
         </div>
       )}
 
-      {/* Status filter tabs */}
-      {statusOptions.length > 0 && onStatusChange && (
-        <div className="flex gap-1.5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {statusOptions.map(({ key, label, color }) => {
-            const isActive = selectedStatus === key
-            return (
-              <button
-                key={key}
-                onClick={() => handleStatusClick(key)}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all touch-manipulation"
-                style={{
-                  background: isActive
-                    ? color ?? 'var(--theme-brand-primary)'
-                    : 'var(--theme-bg-secondary)',
-                  color: isActive ? '#fff' : color ?? 'var(--theme-text-muted)',
-                  border: `1px solid ${isActive ? 'transparent' : 'var(--theme-border-default)'}`,
-                }}
-              >
-                {label}
-              </button>
-            )
-          })}
-        </div>
-      )}
     </div>
   )
 }
