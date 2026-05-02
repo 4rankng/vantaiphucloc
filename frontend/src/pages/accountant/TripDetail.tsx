@@ -222,7 +222,7 @@ export function TripDetail() {
                   <div className="flex items-center gap-2">
                     <ContBadge type={job.containers[0]?.workType ?? 'E20'} />
                     <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                      {job.containers[0]?.containerNumber || job.id}
+                      {job.code}
                     </span>
                   </div>
                   <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>
@@ -309,7 +309,7 @@ export function TripDetail() {
                   <div className="flex items-center gap-2">
                     <ContBadge type={job.containers[0]?.workType ?? 'E20'} />
                     <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                      {job.containers[0]?.containerNumber || job.id}
+                      {job.code}
                     </span>
                   </div>
                   <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>

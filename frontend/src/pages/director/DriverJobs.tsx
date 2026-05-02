@@ -48,7 +48,7 @@ export function DriverJobs() {
             style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-muted)' }}>{job.id}</span>
+              <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-muted)' }}>{job.code}</span>
               {job.status === 'PENDING' && (
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{
                   background: 'var(--theme-status-warning-light)',

@@ -284,6 +284,7 @@ class WorkOrderOut(BaseModel):
     client_id: int
     client_name: str
     client_code: str | None = None
+    code: str | None = None
     route: str
     pickup_location: str | None = None
     dropoff_location: str | None = None
@@ -376,6 +377,7 @@ class TripOrderOut(BaseModel):
     trip_date: date
     client_id: int
     client_name: str
+    code: str | None = None
     work_type: str | None
     route: str
     pickup_location: str | None = None

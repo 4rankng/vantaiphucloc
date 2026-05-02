@@ -147,6 +147,7 @@ class WorkOrder(AuditableMixin, Base):
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
     client_name = Column(String(255), nullable=False)  # denormalized
     client_code = Column(String(50), nullable=True)  # denormalized
+    code = Column(String(20), nullable=True, unique=True, index=True)  # e.g. ABC0011
     route = Column(String(500), nullable=False)
     pickup_location = Column(String(255), nullable=True)
     dropoff_location = Column(String(255), nullable=True)
@@ -209,6 +210,7 @@ class TripOrder(AuditableMixin, Base):
     trip_date = Column(Date, nullable=False)
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
     client_name = Column(String(255), nullable=False)  # denormalized
+    code = Column(String(20), nullable=True, unique=True, index=True)  # e.g. ABC0011
     work_type = Column(String(10), nullable=True)       # legacy — derived from first container
     route = Column(String(500), nullable=False)
     pickup_location = Column(String(255), nullable=True)

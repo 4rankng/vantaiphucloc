@@ -11,12 +11,13 @@ from app.models.base import User
 from app.core.audit_context import set_audit_context
 
 # HTTPBearer extracts the token from the Authorization: Bearer <token> header
-_bearer_scheme = HTTPBearer()
+# auto_error=False so we can raise 401 (not 403) for missing/invalid tokens
+_bearer_scheme = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
     request: Request,
-    credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User:
     """
@@ -28,6 +29,9 @@ async def get_current_user(
         detail="Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+    if credentials is None:
+        raise credentials_exception
 
     payload = decode_access_token(credentials.credentials)
     if payload is None:

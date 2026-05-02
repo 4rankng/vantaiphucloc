@@ -183,7 +183,7 @@ function TripRow({ trip, onClick, isLast }: { trip: TripOrder; onClick: () => vo
       {/* Line 1: trip id • client name + badge */}
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
-          TO-{String(trip.id).padStart(3, '0')} • {trip.clientName}
+          {trip.code} • {trip.clientName}
         </span>
         <span
           className="shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
@@ -235,7 +235,7 @@ function UnmatchedRow({ wo, onClick, isLast }: { wo: WorkOrder; onClick: () => v
       {/* Line 1: WO id • driver name + badge */}
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
-          WO-{String(wo.id).padStart(3, '0')} • {wo.driverName}
+          {wo.code} • {wo.driverName}
         </span>
         <span
           className="shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
@@ -334,7 +334,7 @@ function MatchRow({ wo, trips, onMatch, isLast }: {
             background: 'var(--theme-bg-primary)',
           }}
         >
-          Phiếu: WO-{String(wo.id).padStart(3, '0')}
+          Phiếu: {wo.code}
         </div>
       </div>
 

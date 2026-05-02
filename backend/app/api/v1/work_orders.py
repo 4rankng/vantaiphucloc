@@ -39,7 +39,7 @@ _logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.get("/validate-container")
+@router.get("/work-orders/validate-container")
 async def validate_container(
     container_number: str = Query(..., description="Container number to validate"),
     current_user: User = Depends(get_current_user),
@@ -67,6 +67,7 @@ async def _load_work_order_out(db: AsyncSession, work_order: WorkOrder) -> WorkO
         client_id=work_order.client_id,
         client_name=work_order.client_name,
         client_code=work_order.client_code,
+        code=work_order.code,
         route=work_order.route,
         pickup_location=work_order.pickup_location,
         dropoff_location=work_order.dropoff_location,
@@ -117,6 +118,7 @@ async def _batch_load_work_order_outs(
             client_id=wo.client_id,
             client_name=wo.client_name,
             client_code=wo.client_code,
+            code=wo.code,
             route=wo.route,
             pickup_location=wo.pickup_location,
             dropoff_location=wo.dropoff_location,
@@ -163,7 +165,7 @@ async def create_work_order(
             "send_notification_task",
             user_id=current_user.id,
             title="Phiếu làm việc mới",
-            message=f"WO#{work_order.id} đã được tạo bởi tài xế {work_order.driver_name}",
+            message=f"{work_order.code or work_order.id} đã được tạo bởi tài xế {work_order.driver_name}",
             channel="in_app",
         )
     except RuntimeError:
@@ -383,7 +385,17 @@ async def _create_work_order_db(
 ) -> WorkOrder:
     """Create WorkOrder + containers in the DB. Flushes but does NOT commit
     — the caller is responsible for committing (or letting the context manager do it)."""
+    from app.utils.iso6346 import validate_container_number
+
     containers_data = body.containers
+
+    for container in containers_data:
+        valid, error = validate_container_number(container.container_number)
+        if not valid:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Số container không hợp lệ: {container.container_number} — {error}",
+            )
 
     first_container = containers_data[0] if containers_data else None
     work_type = first_container.work_type if first_container else ""
@@ -441,6 +453,10 @@ async def _create_work_order_db(
     )
     db.add(work_order)
     await db.flush()
+
+    # Generate human-readable code (e.g. ABC0001)
+    from app.services.code_service import generate_work_order_code
+    work_order.code = await generate_work_order_code(db, body.client_id)
 
     for container in containers_data:
         photo_url = container.photo_url
