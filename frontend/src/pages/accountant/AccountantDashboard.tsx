@@ -10,7 +10,7 @@ import { useMonthParams } from './use-month-params'
 import { formatCurrencyFull, type WorkOrder, type TripOrder } from '@/data/domain'
 import {
   Sparkles, ArrowRight, Clock, ChevronLeft, ChevronRight,
-  CheckCircle2, Plus, Link2, Wallet, AlertCircle,
+  CheckCircle2, Plus, Link2, Wallet, Tag, Users, MapPin,
 } from 'lucide-react'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -353,6 +353,28 @@ function DesktopDashboard() {
         <PeriodSwitcher label={`Tháng ${month}/${year}`} sublabel={sublabel} onPrev={onPrev} onNext={onNext} />
       </div>
 
+      {/* Quick actions bar */}
+      <div className="flex flex-wrap gap-2">
+        {[
+          { label: 'Tạo lệnh', path: '/accountant/create-trip', icon: Plus },
+          { label: 'Đối soát', path: '/accountant/work-orders', icon: Link2 },
+          { label: 'Đối tác', path: '/accountant/partners', icon: Users },
+          { label: 'Cung đường', path: '/accountant/routes', icon: MapPin },
+          { label: 'Bảng giá', path: '/accountant/pricing', icon: Tag },
+          { label: 'Kỳ lương', path: '/accountant/salary-setup', icon: Wallet },
+        ].map(a => (
+          <button
+            key={a.label}
+            onClick={() => navigate(a.path)}
+            className="flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold transition hover:opacity-80 active:scale-[0.98]"
+            style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)', color: 'var(--theme-text-primary)' }}
+          >
+            <a.icon className="h-3.5 w-3.5" style={{ color: 'var(--theme-brand-primary)' }} />
+            {a.label}
+          </button>
+        ))}
+      </div>
+
       {/* 3-column workbench */}
       <div className="grid grid-cols-12 gap-4">
 
@@ -513,11 +535,13 @@ function MobileDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         {[
           { label: 'Tạo lệnh', path: '/accountant/create-trip', icon: Plus },
           { label: 'Đối soát', path: '/accountant/work-orders', icon: Link2 },
-          { label: 'Bảng giá', path: '/accountant/pricing', icon: AlertCircle },
+          { label: 'Đối tác', path: '/accountant/partners', icon: Users },
+          { label: 'Cung đường', path: '/accountant/routes', icon: MapPin },
+          { label: 'Bảng giá', path: '/accountant/pricing', icon: Tag },
           { label: 'Kỳ lương', path: '/accountant/salary-setup', icon: Wallet },
         ].map(a => (
           <button
