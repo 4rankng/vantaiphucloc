@@ -153,7 +153,7 @@ function TripRow({ trip, onClick, isLast }: { trip: TripOrder; onClick: () => vo
         </span>
         <StatusBadgePro variant={statusVariant} label={statusLabel} size="sm" />
       </div>
-      <p className="mt-0.5 text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>
+      <p className="mt-0.5 text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
         {tripDate}{tripDate && ' | '}{resolveRoute(trip)}
       </p>
       {(trip.tractorPlate || types) && (
@@ -193,7 +193,7 @@ function UnmatchedRow({ wo, onClick, isLast }: { wo: WorkOrder; onClick: () => v
         </span>
         <StatusBadgePro variant="warning" label="Chờ ghép" size="sm" />
       </div>
-      <p className="mt-0.5 text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>
+      <p className="mt-0.5 text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
         {wo.clientName} | {resolveRoute(wo)}
       </p>
       <div className="mt-1.5 flex items-center gap-3">

@@ -261,11 +261,11 @@ function SalaryPeriodsList() {
                     </div>
                     <div>
                       <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Lương</p>
-                      <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(period.totalSalary)}</p>
+                      <p className="typo-mono text-sm" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(period.totalSalary)}</p>
                     </div>
                     <div>
                       <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Thực nhận</p>
-                      <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyFull(period.netPay)}</p>
+                      <p className="typo-mono text-sm" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyFull(period.netPay)}</p>
                     </div>
                   </div>
 
