@@ -44,7 +44,6 @@ export function useCreateWorkOrder() {
   const [galleryImage, setGalleryImage] = useState<string | null>(null)
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
-  const [addMoreDismissed, setAddMoreDismissed] = useState(false)
 
   // Consecutive OCR failure tracking
   const [consecutiveOCRFailures, setConsecutiveOCRFailures] = useState(0)
@@ -186,14 +185,6 @@ export function useCreateWorkOrder() {
     return fields
   }, [containers, clientId, pickupLocation, dropoffLocation])
 
-  // First container completion check
-  const firstContComplete = useMemo(() => {
-    const c = containers[0]
-    return c && c.containerNumber.trim() && c.photoTaken
-  }, [containers])
-
-  const showAddMore = firstContComplete && containers.length < 2 && !addMoreDismissed
-
   // Submit flow
   const onRequestSubmit = useCallback(() => {
     if (!canSubmit) return
@@ -277,7 +268,7 @@ export function useCreateWorkOrder() {
 
     // UI state
     submitting, scannerOpen, galleryImage, isOnline, summaryOpen, showSuccess,
-    showAddMore, forceManualEntry, missingFields,
+    forceManualEntry, missingFields,
 
     // Derived
     canSubmit, summaryContainers, summaryClientName,
@@ -289,6 +280,5 @@ export function useCreateWorkOrder() {
     handleRecentTripSelect,
     onRequestSubmit, confirmSubmit,
     setSummaryOpen,
-    dismissAddMore,
   }
 }

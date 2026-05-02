@@ -17,8 +17,8 @@ const compact = (n: number) =>
     ? (n / 1e6).toFixed(1) + ' tr'
     : n.toLocaleString('vi-VN')
 
-function getWeekLabel(offset: number): string {
-  return `Tuần ${offset + 1}`
+function daysInMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate()
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -65,35 +65,48 @@ export function DirectorDashboard() {
       .slice(0, 5)
   }, [trips])
 
-  // Weekly bar chart — split current month into 4 weeks
-  const weeklyData = useMemo(() => {
-    const weeks = [0, 0, 0, 0]
+  // Daily bar chart — one bar per day in the selected month
+  const dailyData = useMemo(() => {
+    const days = daysInMonth(month.year, month.month)
+    const counts = Array(days).fill(0)
     for (const t of monthlyTrips) {
       const day = new Date(t.createdAt).getDate()
-      const weekIdx = Math.min(Math.floor((day - 1) / 7), 3)
-      weeks[weekIdx]++
+      counts[day - 1]++
     }
-    return weeks
-  }, [monthlyTrips])
+    return counts
+  }, [monthlyTrips, month])
 
-  const barData = useMemo(() => ({
-    labels: [0, 1, 2, 3].map(getWeekLabel),
-    datasets: [
-      {
-        label: 'Chuyến',
-        data: weeklyData,
-        backgroundColor: '#1e293b',
-        borderRadius: 6,
-        borderSkipped: false,
-      },
-    ],
-  }), [weeklyData])
+  const barData = useMemo(() => {
+    const days = daysInMonth(month.year, month.month)
+    return {
+      labels: Array.from({ length: days }, (_, i) => String(i + 1)),
+      datasets: [
+        {
+          label: 'Chuyến',
+          data: dailyData,
+          backgroundColor: '#1e293b',
+          borderRadius: 4,
+          borderSkipped: false,
+        },
+      ],
+    }
+  }, [dailyData, month])
 
   const barOptions = useMemo(() => ({
     plugins: { legend: { display: false } },
     scales: {
-      x: { grid: { display: false } },
-      y: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { stepSize: 10 } },
+      x: {
+        grid: { display: false },
+        ticks: {
+          // Only show every 5th day label to avoid crowding
+          callback: (_: unknown, index: number) => (index + 1) % 5 === 1 ? String(index + 1) : '',
+          maxRotation: 0,
+        },
+      },
+      y: {
+        grid: { color: 'rgba(0,0,0,0.04)' },
+        ticks: { stepSize: 1, precision: 0 },
+      },
     },
   }), [])
 
@@ -308,7 +321,7 @@ export function DirectorDashboard() {
         </div>
 
         {/* Weekly trips bar chart */}
-        <ChartCard title="Chuyến đi theo tuần" subtitle={`Tháng ${month.month}/${month.year}`}>
+        <ChartCard title="Chuyến đi theo ngày" subtitle={`Tháng ${month.month}/${month.year}`}>
           <BarChartWidget data={barData} height={220} options={barOptions} />
         </ChartCard>
       </div>

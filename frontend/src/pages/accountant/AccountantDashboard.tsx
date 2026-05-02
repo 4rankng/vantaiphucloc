@@ -6,10 +6,11 @@ import {
   useDashboardSummary,
 } from '@/hooks/use-queries'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { useMonthParams } from './use-month-params'
 import { formatCurrencyFull as fmt, type WorkOrder, type TripOrder } from '@/data/domain'
 import {
-  Sparkles, ArrowRight, ChevronLeft, ChevronRight,
+  Sparkles, ArrowRight,
   CheckCircle2, Plus, Wallet, Tag, Users, MapPin,
   FileText, Truck, Car, Briefcase,
 } from 'lucide-react'
@@ -21,43 +22,6 @@ function resolveRoute(wo: WorkOrder | TripOrder): string {
   const from = wo.pickupLocation || parts[0] || wo.route
   const to   = wo.dropoffLocation || parts[1] || null
   return to ? `${from} → ${to}` : from
-}
-
-// ─── Month navigator ──────────────────────────────────────────────────────────
-
-function MonthNavigator({
-  label, sublabel, onPrev, onNext,
-}: {
-  label: string; sublabel?: string; onPrev: () => void; onNext: () => void
-}) {
-  return (
-    <div className="flex items-center justify-center gap-4 py-2">
-      <button
-        onClick={onPrev}
-        className="flex h-8 w-8 items-center justify-center rounded-full transition hover:opacity-70 active:scale-90"
-        style={{ color: 'var(--theme-text-muted)' }}
-      >
-        <ChevronLeft className="h-5 w-5" />
-      </button>
-      <div className="text-center">
-        <p className="text-2xl font-bold font-display tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
-          {label}
-        </p>
-        {sublabel && (
-          <p className="text-sm mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-            {sublabel}
-          </p>
-        )}
-      </div>
-      <button
-        onClick={onNext}
-        className="flex h-8 w-8 items-center justify-center rounded-full transition hover:opacity-70 active:scale-90"
-        style={{ color: 'var(--theme-text-muted)' }}
-      >
-        <ChevronRight className="h-5 w-5" />
-      </button>
-    </div>
-  )
 }
 
 // ─── KPI card ─────────────────────────────────────────────────────────────────
@@ -397,7 +361,7 @@ function MatchRow({ wo, trips, onMatch, isLast }: {
 
 function DesktopDashboard() {
   const navigate = useNavigate()
-  const { year, month, dateFrom, dateTo, sublabel, onPrev, onNext } = useMonthParams()
+  const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
 
   const { data: workOrders = [] } = useWorkOrders({ dateFrom, dateTo })
   const { data: trips = [] } = useTripOrders({ dateFrom, dateTo })
@@ -431,8 +395,8 @@ function DesktopDashboard() {
     <div className="space-y-5">
       {/* Month navigator */}
       <MonthNavigator
-        label={`Tháng ${String(month).padStart(2, '0')}/${year}`}
-        sublabel={sublabel}
+        year={year}
+        month={month}
         onPrev={onPrev}
         onNext={onNext}
       />
@@ -558,7 +522,7 @@ function DesktopDashboard() {
 
 function MobileDashboard() {
   const navigate = useNavigate()
-  const { year, month, dateFrom, dateTo, sublabel, onPrev, onNext } = useMonthParams()
+  const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
   const { data: workOrders = [] } = useWorkOrders({ dateFrom, dateTo })
   const { data: trips = [] } = useTripOrders({ dateFrom, dateTo })
   const { data: summary } = useDashboardSummary()
@@ -589,8 +553,8 @@ function MobileDashboard() {
     <div className="space-y-4 pb-8">
       {/* Month navigator */}
       <MonthNavigator
-        label={`Tháng ${String(month).padStart(2, '0')}/${year}`}
-        sublabel={sublabel}
+        year={year}
+        month={month}
         onPrev={onPrev}
         onNext={onNext}
       />

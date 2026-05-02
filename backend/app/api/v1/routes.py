@@ -32,11 +32,12 @@ async def list_routes(
     if cached is not None:
         return PaginatedResponse(**cached)
 
-    total_q = await db.execute(select(func.count(Route.id)))
+    total_q = await db.execute(select(func.count(Route.id)).where(Route.is_active == True))
     total = total_q.scalar() or 0
 
     result = await db.execute(
         select(Route)
+        .where(Route.is_active == True)
         .order_by(Route.route.asc())
         .offset((page - 1) * page_size)
         .limit(page_size)
@@ -108,7 +109,7 @@ async def delete_route(
     if route is None:
         raise HTTPException(status_code=404, detail="Route not found")
 
-    await db.delete(route)
+    route.is_active = False
     await db.commit()
     await CacheManager(redis).invalidate_namespace("routes")
     return Response()

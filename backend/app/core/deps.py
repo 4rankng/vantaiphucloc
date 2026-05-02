@@ -8,12 +8,14 @@ from app.core.security import decode_access_token
 from app.core.worker import get_arq_pool
 from app.database import get_db
 from app.models.base import User
+from app.core.audit_context import set_audit_context
 
 # HTTPBearer extracts the token from the Authorization: Bearer <token> header
 _bearer_scheme = HTTPBearer()
 
 
 async def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User:
@@ -44,6 +46,7 @@ async def get_current_user(
     if not user.is_active:
         raise HTTPException(status_code=401, detail="Tài khoản đã bị vô hiệu hóa")
 
+    set_audit_context(user.id, request)
     return user
 
 

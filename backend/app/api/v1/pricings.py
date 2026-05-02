@@ -97,8 +97,8 @@ async def list_pricings(
     if cached is not None:
         return PaginatedResponse(**cached)
 
-    query = select(Pricing)
-    count_query = select(func.count(Pricing.id))
+    query = select(Pricing).where(Pricing.is_active == True)
+    count_query = select(func.count(Pricing.id)).where(Pricing.is_active == True)
 
     if client_id is not None:
         query = query.where(Pricing.client_id == client_id)
@@ -222,7 +222,7 @@ async def delete_pricing(
     if pricing is None:
         raise HTTPException(status_code=404, detail="Pricing not found")
 
-    await db.delete(pricing)
+    pricing.is_active = False
     await db.commit()
     await CacheManager(redis).invalidate_namespace("pricings")
     return Response()
