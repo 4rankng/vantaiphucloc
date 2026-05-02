@@ -50,6 +50,15 @@ export async function getSalaryPeriods(driverId?: number): Promise<ApiResponse<S
   }
 }
 
+export async function getMySalaryPeriods(): Promise<ApiResponse<SalaryPeriod[]>> {
+  try {
+    const res = await api.get('/driver/salary')
+    return ok(toCamel<SalaryPeriod[]>(unwrapList(res.data)))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
 export async function updateSalaryPeriod(
   id: number,
   data: Partial<SalaryPeriod>,

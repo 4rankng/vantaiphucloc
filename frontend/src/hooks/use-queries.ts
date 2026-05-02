@@ -108,6 +108,16 @@ export function useSalaryPeriods(driverId?: number) {
   })
 }
 
+export function useMySalaryPeriods() {
+  return useQuery({
+    queryKey: queryKeys.salaryPeriodsByDriver('me'),
+    queryFn: async () => {
+      const res = await apiClient.getMySalaryPeriods()
+      return res.success ? res.data : []
+    },
+  })
+}
+
 export function useDrivers() {
   return useQuery({
     queryKey: queryKeys.drivers,

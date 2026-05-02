@@ -77,7 +77,7 @@ function KpiCard({ label, value, color }: { label: string; value: string; color?
       style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)' }}
     >
       <p className="text-xs font-medium mb-1" style={{ color: 'var(--theme-text-muted)' }}>{label}</p>
-      <p className="text-xl font-bold font-display tabular-nums leading-tight" style={{ color: color ?? 'var(--theme-text-primary)' }}>
+      <p className="text-lg font-bold font-display tabular-nums leading-tight" style={{ color: color ?? 'var(--theme-text-primary)' }}>
         {value}
       </p>
     </div>
@@ -359,7 +359,7 @@ function DesktopDashboard() {
         {/* ── Left: Lệnh điều hành ── */}
         <div className="col-span-4">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-base font-semibold font-display" style={{ color: 'var(--theme-text-primary)' }}>
+            <h2 className="text-sm font-semibold font-display" style={{ color: 'var(--theme-text-primary)' }}>
               Lệnh điều hành
             </h2>
             <button
@@ -373,7 +373,7 @@ function DesktopDashboard() {
           <div className="space-y-2">
             {sortedTrips.length === 0 ? (
               <div className="rounded-2xl border p-8 text-center" style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)' }}>
-                <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có lệnh nào</p>
+                <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Chưa có lệnh nào</p>
               </div>
             ) : (
               sortedTrips.map(trip => (
@@ -393,8 +393,8 @@ function DesktopDashboard() {
         {/* ── Middle: Gợi ý ghép phiếu ── */}
         <div className="col-span-4">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-base font-semibold font-display" style={{ color: 'var(--theme-text-primary)' }}>
-              <Sparkles className="h-4 w-4" style={{ color: 'var(--theme-status-warning)' }} />
+            <h2 className="flex items-center gap-2 text-sm font-semibold font-display" style={{ color: 'var(--theme-text-primary)' }}>
+              <Sparkles className="h-3.5 w-3.5" style={{ color: 'var(--theme-status-warning)' }} />
               Gợi ý ghép phiếu
             </h2>
             {pendingWOs.length > 0 && (
@@ -409,8 +409,8 @@ function DesktopDashboard() {
           <div className="space-y-2.5">
             {matchCandidates.length === 0 ? (
               <div className="rounded-2xl border p-8 text-center" style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)' }}>
-                <CheckCircle2 className="mx-auto h-8 w-8 mb-2" style={{ color: 'var(--theme-brand-primary)' }} />
-                <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Tất cả phiếu đã ghép</p>
+                <CheckCircle2 className="mx-auto h-6 w-6 mb-2" style={{ color: 'var(--theme-brand-primary)' }} />
+                <p className="text-xs font-medium" style={{ color: 'var(--theme-text-muted)' }}>Tất cả phiếu đã ghép</p>
               </div>
             ) : (
               matchCandidates.map(wo => (
@@ -435,7 +435,7 @@ function DesktopDashboard() {
         {/* ── Right: Phiếu tài xế chưa ghép ── */}
         <div className="col-span-4">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-base font-semibold font-display" style={{ color: 'var(--theme-text-primary)' }}>
+            <h2 className="text-sm font-semibold font-display" style={{ color: 'var(--theme-text-primary)' }}>
               Phiếu tài xế chưa ghép
             </h2>
             <button
@@ -449,8 +449,8 @@ function DesktopDashboard() {
           <div className="space-y-2">
             {unmatchedWOs.length === 0 ? (
               <div className="rounded-2xl border p-8 text-center" style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)' }}>
-                <CheckCircle2 className="mx-auto h-8 w-8 mb-2" style={{ color: 'var(--theme-brand-primary)' }} />
-                <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Không có phiếu chờ</p>
+                <CheckCircle2 className="mx-auto h-6 w-6 mb-2" style={{ color: 'var(--theme-brand-primary)' }} />
+                <p className="text-xs font-medium" style={{ color: 'var(--theme-text-muted)' }}>Không có phiếu chờ</p>
               </div>
             ) : (
               unmatchedWOs.map(wo => (
