@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
 import { Plus, Pencil, Trash2, Route as RouteIcon, Search } from 'lucide-react'
-import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
@@ -103,11 +102,17 @@ export function RouteList() {
 
   return (
     <div>
-      {/* Search */}
-      <div className="relative mb-3">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-        <Input value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Tìm cung đường..." className="text-sm pl-9 h-9" />
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="relative flex-1 mr-3">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
+          <Input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Tìm cung đường..." className="text-sm pl-9 h-9" />
+        </div>
+        <Button onClick={handleOpenCreate} className="h-9 px-3 shrink-0 gap-1.5 text-sm font-semibold"
+          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+          <Plus className="w-4 h-4" /> Thêm
+        </Button>
       </div>
 
       {/* Route list — clean cards, tap to see detail */}
@@ -126,16 +131,16 @@ export function RouteList() {
           <button
             key={`${r.route}-${r.pickupLocation}-${r.dropoffLocation}`}
             onClick={() => setSelected(r)}
-            className="w-full text-left rounded-2xl p-3 transition-all active:scale-[0.98] touch-manipulation"
+            className="w-full text-left rounded-2xl p-3 transition-all active:scale-[0.98] touch-manipulation hover:shadow-md"
             style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: 'var(--theme-bg-tertiary)' }}>
-                <RouteIcon className="h-4 w-4" style={{ color: 'var(--theme-text-muted)' }} />
+                style={{ background: 'var(--theme-brand-primary-light)' }}>
+                <RouteIcon className="h-4 w-4" style={{ color: 'var(--theme-brand-primary)' }} />
               </div>
               <div className="min-w-0 flex-1">
                 <RouteDisplay route={r.route} pickupLocation={r.pickupLocation} dropoffLocation={r.dropoffLocation} />
-                <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+                <p className="text-xs mt-0.5 font-medium" style={{ color: 'var(--theme-text-secondary)' }}>
                   20ft: {formatCurrencyFull(r.type20ft)} · 40ft: {formatCurrencyFull(r.type40ft)}
                 </p>
               </div>
@@ -230,7 +235,6 @@ export function RouteList() {
         </DialogContent>
       </Dialog>
 
-      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={handleOpenCreate} />
     </div>
   )
 }

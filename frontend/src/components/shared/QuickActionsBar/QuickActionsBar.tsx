@@ -50,7 +50,7 @@ export function QuickActionsBar({
           onClick={action.onClick}
           disabled={action.disabled || action.loading}
           className={`
-            flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold
+            flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold
             transition-all hover:opacity-90 active:scale-[0.97] touch-manipulation
             disabled:opacity-50 disabled:cursor-not-allowed
             ${action.hideOnMobile ? 'hidden sm:flex' : 'flex'}

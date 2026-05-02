@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   useWorkOrders,
@@ -13,9 +13,10 @@ import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
 import { useMonthParams } from './use-month-params'
 import { formatCurrencyFull as fmt, type WorkOrder, type TripOrder } from '@/data/domain'
 import {
-  Sparkles, ArrowRight,
+  Sparkles, ArrowRight, ChevronLeft, ChevronRight,
   CheckCircle2, Plus, Wallet, Tag, Users, MapPin,
-  FileText, Truck, Car, Briefcase, TrendingUp, DollarSign, Clock, AlertTriangle,
+  FileText, Truck, Car, Briefcase, DollarSign, Clock, AlertTriangle,
+  Calendar, User, ArrowLeftRight,
 } from 'lucide-react'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -212,6 +213,149 @@ function UnmatchedRow({ wo, onClick, isLast }: { wo: WorkOrder; onClick: () => v
   )
 }
 
+// ─── Trip info mini-card ──────────────────────────────────────────────────────
+
+function TripMiniCard({ trip, isSelected, onClick }: {
+  trip: TripOrder
+  isSelected?: boolean
+  onClick?: () => void
+}) {
+  const tripDate = trip.tripDate
+    ? new Date(trip.tripDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
+    : null
+  const types = trip.containers.length > 0
+    ? (() => {
+        const map: Record<string, number> = {}
+        trip.containers.forEach(c => { map[c.workType] = (map[c.workType] ?? 0) + 1 })
+        return Object.entries(map).map(([t, n]) => n > 1 ? `${t}×${n}` : t).join(' ')
+      })()
+    : trip.workType ?? ''
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={!onClick}
+      className="w-full text-left rounded-xl p-3 transition-all"
+      style={{
+        background: isSelected
+          ? 'color-mix(in srgb, var(--theme-brand-primary) 10%, var(--theme-bg-primary))'
+          : 'var(--theme-bg-primary)',
+        border: `1.5px solid ${isSelected ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)'}`,
+        cursor: onClick ? 'pointer' : 'default',
+      }}
+    >
+      {/* Label */}
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
+          Lệnh điều hành
+        </span>
+        {isSelected && (
+          <span className="text-[10px] font-bold" style={{ color: 'var(--theme-brand-primary)' }}>✓ Đã chọn</span>
+        )}
+      </div>
+      {/* Client */}
+      <p className="text-sm font-semibold leading-tight truncate mb-1" style={{ color: 'var(--theme-text-primary)' }}>
+        {trip.clientName}
+      </p>
+      {/* Route */}
+      <p className="text-xs truncate mb-2" style={{ color: 'var(--theme-text-secondary)' }}>
+        {resolveRoute(trip)}
+      </p>
+      {/* Meta row */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        {tripDate && (
+          <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+            <Calendar className="h-3 w-3 shrink-0" />
+            {tripDate}
+          </span>
+        )}
+        {trip.driverName && (
+          <span className="flex items-center gap-1 text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>
+            <User className="h-3 w-3 shrink-0" />
+            {trip.driverName}
+          </span>
+        )}
+        {trip.tractorPlate && (
+          <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+            <Truck className="h-3 w-3 shrink-0" />
+            {trip.tractorPlate}
+          </span>
+        )}
+        {types && (
+          <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+            <Car className="h-3 w-3 shrink-0" />
+            {types}
+          </span>
+        )}
+      </div>
+    </button>
+  )
+}
+
+// ─── Work order mini-card ─────────────────────────────────────────────────────
+
+function WorkOrderMiniCard({ wo }: { wo: WorkOrder }) {
+  const containerNums = wo.containers.map(c => c.containerNumber).filter(Boolean).slice(0, 2).join(', ')
+  const types = wo.containers.length > 0
+    ? (() => {
+        const map: Record<string, number> = {}
+        wo.containers.forEach(c => { map[c.workType] = (map[c.workType] ?? 0) + 1 })
+        return Object.entries(map).map(([t, n]) => n > 1 ? `${t}×${n}` : t).join(' ')
+      })()
+    : ''
+
+  return (
+    <div
+      className="w-full rounded-xl p-3"
+      style={{
+        background: 'var(--theme-bg-primary)',
+        border: '1.5px solid var(--theme-border-default)',
+      }}
+    >
+      {/* Label */}
+      <div className="mb-1.5">
+        <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
+          Phiếu tài xế
+        </span>
+      </div>
+      {/* Client */}
+      <p className="text-sm font-semibold leading-tight truncate mb-1" style={{ color: 'var(--theme-text-primary)' }}>
+        {wo.clientName}
+      </p>
+      {/* Route */}
+      <p className="text-xs truncate mb-2" style={{ color: 'var(--theme-text-secondary)' }}>
+        {resolveRoute(wo)}
+      </p>
+      {/* Meta row */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        {wo.driverName && (
+          <span className="flex items-center gap-1 text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>
+            <User className="h-3 w-3 shrink-0" />
+            {wo.driverName}
+          </span>
+        )}
+        {wo.tractorPlate && (
+          <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+            <Truck className="h-3 w-3 shrink-0" />
+            {wo.tractorPlate}
+          </span>
+        )}
+        {types && (
+          <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+            <Car className="h-3 w-3 shrink-0" />
+            {types}
+          </span>
+        )}
+        {containerNums && (
+          <span className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>
+            {containerNums}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Match suggestion row ─────────────────────────────────────────────────────
 
 function MatchRow({ wo, trips, onMatch, isLast }: {
@@ -220,7 +364,8 @@ function MatchRow({ wo, trips, onMatch, isLast }: {
   onMatch: (woId: number) => void
   isLast?: boolean
 }) {
-  const candidate = useMemo(() => {
+  // Build ranked candidates
+  const candidates = useMemo(() => {
     const woRoute = wo.route.toLowerCase()
     const woClient = wo.clientName.toLowerCase()
     return trips
@@ -233,78 +378,108 @@ function MatchRow({ wo, trips, onMatch, isLast }: {
         return { trip: t, score }
       })
       .filter(x => x.score > 0)
-      .sort((a, b) => b.score - a.score)[0] ?? null
+      .sort((a, b) => b.score - a.score)
   }, [wo, trips])
 
-  const details: string[] = []
-  if (wo.tractorPlate) details.push(wo.tractorPlate)
-  if (wo.containers[0]?.workType) details.push(wo.containers[0].workType)
-  if (wo.clientName) details.push(wo.clientName)
-  const route = resolveRoute(wo)
-  if (route) details.push(route)
-
-  const confidence = candidate ? Math.min(100, candidate.score) : 0
+  const [selectedIdx, setSelectedIdx] = useState(0)
+  const selectedCandidate = candidates[selectedIdx] ?? null
+  const confidence = selectedCandidate ? Math.min(100, selectedCandidate.score) : 0
   const confidenceColor = confidence >= 70 ? 'var(--theme-status-success)' : confidence >= 40 ? 'var(--theme-status-warning)' : 'var(--theme-text-muted)'
+
+  const handlePrev = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setSelectedIdx(i => Math.max(0, i - 1))
+  }
+  const handleNext = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setSelectedIdx(i => Math.min(candidates.length - 1, i + 1))
+  }
 
   return (
     <div
-      className="px-4 py-3"
+      className="px-4 py-4"
       style={{ borderBottom: isLast ? 'none' : '1px solid var(--theme-border-light)' }}
     >
-      {/* Connection visual */}
-      <div className="flex items-center gap-2 mb-2">
+      {/* Confidence bar + label */}
+      <div className="flex items-center gap-2 mb-3">
+        <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--theme-bg-tertiary)' }}>
+          <div
+            className="h-full rounded-full transition-all"
+            style={{ width: `${confidence}%`, background: confidenceColor }}
+          />
+        </div>
+        <span className="text-xs font-bold tabular-nums shrink-0" style={{ color: confidenceColor }}>
+          {confidence}% khớp
+        </span>
+      </div>
+
+      {/* Two-panel layout */}
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        {/* Left: Trip order (selectable) */}
+        <div className="flex flex-col gap-1.5">
+          {selectedCandidate ? (
+            <TripMiniCard trip={selectedCandidate.trip} isSelected />
+          ) : (
+            <div
+              className="rounded-xl p-3 flex items-center justify-center"
+              style={{ background: 'var(--theme-bg-primary)', border: '1.5px dashed var(--theme-border-default)', minHeight: 100 }}
+            >
+              <p className="text-xs text-center" style={{ color: 'var(--theme-text-muted)' }}>Không tìm thấy lệnh phù hợp</p>
+            </div>
+          )}
+          {/* Candidate navigator */}
+          {candidates.length > 1 && (
+            <div className="flex items-center justify-between px-1">
+              <button
+                onClick={handlePrev}
+                disabled={selectedIdx === 0}
+                className="flex items-center gap-0.5 text-xs font-medium transition disabled:opacity-30"
+                style={{ color: 'var(--theme-brand-primary)' }}
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+                Trước
+              </button>
+              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                {selectedIdx + 1}/{candidates.length}
+              </span>
+              <button
+                onClick={handleNext}
+                disabled={selectedIdx === candidates.length - 1}
+                className="flex items-center gap-0.5 text-xs font-medium transition disabled:opacity-30"
+                style={{ color: 'var(--theme-brand-primary)' }}
+              >
+                Sau
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Right: Work order (fixed) */}
+        <WorkOrderMiniCard wo={wo} />
+      </div>
+
+      {/* Center connector icon */}
+      <div className="flex items-center justify-center -mt-1 mb-3">
         <div
-          className="flex-1 rounded-lg border px-3 py-2 text-xs font-semibold"
+          className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
           style={{
-            borderColor: 'var(--theme-border-default)',
-            color: 'var(--theme-text-primary)',
-            background: 'var(--theme-bg-primary)',
+            background: confidenceColor,
+            color: '#fff',
           }}
         >
-          <span style={{ color: 'var(--theme-text-muted)' }}>Lệnh:</span> TO-{String(candidate?.trip.id ?? '???').padStart(3, '0')}
-        </div>
-        <div className="flex h-8 w-8 items-center justify-center rounded-full" style={{ background: confidenceColor }}>
-          <ArrowRight className="h-4 w-4 text-white" />
-        </div>
-        <div
-          className="flex-1 rounded-lg border px-3 py-2 text-xs font-semibold"
-          style={{
-            borderColor: 'var(--theme-border-default)',
-            color: 'var(--theme-text-primary)',
-            background: 'var(--theme-bg-primary)',
-          }}
-        >
-          <span style={{ color: 'var(--theme-text-muted)' }}>Phiếu:</span> {wo.code}
+          <ArrowLeftRight className="h-3.5 w-3.5" />
+          Ghép lệnh ↔ phiếu
         </div>
       </div>
 
-      {/* Confidence indicator */}
-      {candidate && (
-        <div className="flex items-center gap-2 mb-2">
-          <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--theme-bg-tertiary)' }}>
-            <div
-              className="h-full rounded-full transition-all"
-              style={{ width: `${confidence}%`, background: confidenceColor }}
-            />
-          </div>
-          <span className="text-xs font-semibold" style={{ color: confidenceColor }}>{confidence}%</span>
-        </div>
-      )}
-
-      {/* Detail line */}
-      {details.length > 0 && (
-        <p className="text-xs mb-2.5 truncate" style={{ color: 'var(--theme-text-muted)' }}>
-          {details.join(' · ')}
-        </p>
-      )}
-
-      {/* Match button */}
+      {/* Action button */}
       <button
         onClick={() => onMatch(wo.id)}
         className="w-full rounded-xl py-2.5 text-sm font-semibold transition hover:opacity-90 active:scale-[0.98]"
         style={{ background: 'var(--theme-brand-primary)', color: '#fff' }}
       >
-        Ghép ngay
+        Xem & xác nhận ghép
       </button>
     </div>
   )
@@ -368,7 +543,7 @@ function DesktopDashboard() {
 
   // Quick actions
   const quickActions = [
-    { id: 'create', label: 'Tạo lệnh', icon: <Plus className="h-4 w-4" />, onClick: () => navigate('/accountant/create-trip'), primary: true },
+    { id: 'create', label: 'Tạo đơn', icon: <Plus className="h-4 w-4" />, onClick: () => navigate('/accountant/create-trip'), primary: true },
     { id: 'reconcile', label: 'Đối soát', icon: <Briefcase className="h-4 w-4" />, onClick: () => navigate('/accountant/work-orders') },
     { id: 'partners', label: 'Đối tác', icon: <Users className="h-4 w-4" />, onClick: () => navigate('/accountant/partners') },
     { id: 'routes', label: 'Cung đường', icon: <MapPin className="h-4 w-4" />, onClick: () => navigate('/accountant/routes') },
@@ -503,7 +678,7 @@ function MobileDashboard() {
   ]
 
   const quickActions = [
-    { id: 'create', label: 'Tạo lệnh', icon: <Plus className="h-4 w-4" />, onClick: () => navigate('/accountant/create-trip'), primary: true },
+    { id: 'create', label: 'Tạo đơn', icon: <Plus className="h-4 w-4" />, onClick: () => navigate('/accountant/create-trip'), primary: true },
     { id: 'reconcile', label: 'Đối soát', icon: <Briefcase className="h-4 w-4" />, onClick: () => navigate('/accountant/work-orders') },
     { id: 'partners', label: 'Đối tác', icon: <Users className="h-4 w-4" />, onClick: () => navigate('/accountant/partners') },
     { id: 'routes', label: 'Cung đường', icon: <MapPin className="h-4 w-4" />, onClick: () => navigate('/accountant/routes') },
@@ -530,7 +705,7 @@ function MobileDashboard() {
           <button
             key={a.id}
             onClick={a.onClick}
-            className="flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition hover:opacity-80 active:scale-[0.97] touch-manipulation shrink-0"
+            className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition hover:opacity-80 active:scale-[0.97] touch-manipulation shrink-0"
             style={{
               background: a.primary ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
               borderColor: a.primary ? 'transparent' : 'var(--theme-border-default)',

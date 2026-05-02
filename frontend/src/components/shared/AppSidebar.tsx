@@ -76,6 +76,10 @@ const NavItem = ({ item, isCollapsed, onNavigate }: NavItemProps) => {
             'shrink-0 transition-all duration-150',
             isCollapsed ? 'w-[17px] h-[17px]' : 'w-[15px] h-[15px]',
           )}
+          style={{
+            color: isActive ? '#ffffff' : 'rgba(255,255,255,0.45)',
+            filter: isActive ? 'drop-shadow(0 0 5px rgba(255,255,255,0.95)) brightness(1.3)' : 'none',
+          }}
         />
         {!isCollapsed && (
           <span className={cn(

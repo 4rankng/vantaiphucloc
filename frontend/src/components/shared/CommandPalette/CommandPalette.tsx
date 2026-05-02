@@ -39,8 +39,8 @@ const DEFAULT_COMMANDS: CommandItem[] = [
   },
   {
     id: 'trips',
-    label: 'Lệnh điều phối',
-    description: 'Quản lý lệnh điều phối',
+    label: 'Đơn hàng',
+    description: 'Quản lý đơn hàng',
     icon: <FileText className="h-4 w-4" />,
     href: '/accountant/trips',
     keywords: ['lenh', 'trip', 'order'],
@@ -102,8 +102,8 @@ const DEFAULT_COMMANDS: CommandItem[] = [
   },
   {
     id: 'create-trip',
-    label: 'Tạo lệnh mới',
-    description: 'Tạo lệnh điều phối mới',
+    label: 'Tạo đơn mới',
+    description: 'Tạo đơn hàng mới',
     icon: <Plus className="h-4 w-4" />,
     href: '/accountant/create-trip',
     keywords: ['tao lenh', 'create', 'new'],

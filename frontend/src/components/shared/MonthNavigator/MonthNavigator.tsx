@@ -9,36 +9,52 @@ interface MonthNavigatorProps {
   /** When provided, show salary period range instead of calendar month range */
   periodStart?: Date
   periodEnd?: Date
+  /** Optional label shown on the right side (e.g. "8 lệnh trong tháng") */
+  rightLabel?: React.ReactNode
 }
 
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate()
 }
 
-export function MonthNavigator({ year, month, onPrev, onNext, periodStart, periodEnd }: MonthNavigatorProps) {
+export function MonthNavigator({
+  year,
+  month,
+  onPrev,
+  onNext,
+  periodStart,
+  periodEnd,
+  rightLabel,
+}: MonthNavigatorProps) {
   const mm = String(month).padStart(2, '0')
 
-  const rangeLabel = periodStart && periodEnd
-    ? `${formatDDMM(periodStart)} → ${formatDDMM(periodEnd)}`
-    : (() => {
-        const lastDay = getDaysInMonth(year, month)
-        return `01/${mm} → ${String(lastDay).padStart(2, '0')}/${mm}`
-      })()
+  const rangeLabel =
+    periodStart && periodEnd
+      ? `${formatDDMM(periodStart)} → ${formatDDMM(periodEnd)}`
+      : (() => {
+          const lastDay = getDaysInMonth(year, month)
+          return `01/${mm} → ${String(lastDay).padStart(2, '0')}/${mm}`
+        })()
 
   return (
-    <div className="flex items-center justify-center gap-2 py-2 pointer-events-none">
+    <div
+      className="flex items-center justify-between rounded-2xl px-3 py-2"
+      style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
+    >
+      {/* Left chevron */}
       <button
         onClick={onPrev}
-        className="w-10 h-10 flex items-center justify-center rounded-lg touch-manipulation transition-colors active:scale-90 pointer-events-auto"
+        className="w-9 h-9 flex items-center justify-center rounded-lg touch-manipulation transition-colors active:scale-90 shrink-0"
         style={{ color: 'var(--theme-text-secondary)' }}
         aria-label="Tháng trước"
       >
         <ChevronLeft className="w-5 h-5" />
       </button>
 
-      <div className="flex flex-col items-center gap-0.5">
+      {/* Center: title + range */}
+      <div className="flex flex-col items-center gap-0.5 flex-1">
         <span
-          className="text-sm font-bold tabular-nums font-display leading-tight whitespace-nowrap"
+          className="text-base font-bold tabular-nums font-display leading-tight whitespace-nowrap"
           style={{ color: 'var(--theme-text-primary)' }}
         >
           Tháng {mm}/{year}
@@ -51,14 +67,25 @@ export function MonthNavigator({ year, month, onPrev, onNext, periodStart, perio
         </span>
       </div>
 
+      {/* Right chevron */}
       <button
         onClick={onNext}
-        className="w-10 h-10 flex items-center justify-center rounded-lg touch-manipulation transition-colors active:scale-90 pointer-events-auto"
+        className="w-9 h-9 flex items-center justify-center rounded-lg touch-manipulation transition-colors active:scale-90 shrink-0"
         style={{ color: 'var(--theme-text-secondary)' }}
         aria-label="Tháng sau"
       >
         <ChevronRight className="w-5 h-5" />
       </button>
+
+      {/* Optional right label */}
+      {rightLabel != null && (
+        <span
+          className="text-xs whitespace-nowrap pl-2 pr-1 shrink-0"
+          style={{ color: 'var(--theme-text-muted)' }}
+        >
+          {rightLabel}
+        </span>
+      )}
     </div>
   )
 }

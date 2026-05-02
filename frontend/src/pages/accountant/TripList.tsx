@@ -6,8 +6,11 @@ import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { FilterToolbar } from '@/components/shared/FilterToolbar'
 import { DataTablePro, type Column } from '@/components/shared/DataTablePro'
 import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
-import { PageContainer } from '@/components/shared/PageContainer'
-import { Plus, Upload, Download, FileSpreadsheet, Eye, Truck, Calendar } from 'lucide-react'
+import { StatsGrid } from '@/components/shared/StatsGrid'
+import {
+  Plus, Upload, Download, FileSpreadsheet, Truck, Calendar,
+  DollarSign, Clock, CheckCircle2, XCircle, Hash,
+} from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui'
 import { useToast } from '@/components/atoms/Toast'
@@ -83,10 +86,13 @@ export function TripList() {
     return list.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   }, [trips, statusFilter, search])
 
-  const counts = useMemo(() => {
-    const map: Record<string, number> = { ALL: trips.length }
-    trips.forEach(t => { map[t.status] = (map[t.status] ?? 0) + 1 })
-    return map
+  // KPI stats derived from the full (unfiltered) trip list
+  const stats = useMemo(() => {
+    const totalRevenue = trips.reduce((s, t) => s + (t.revenue ?? 0), 0)
+    const pending = trips.filter(t => t.status === 'PENDING' || t.status === 'DRAFT').length
+    const completed = trips.filter(t => t.status === 'COMPLETED').length
+    const cancelled = trips.filter(t => t.status === 'CANCELLED').length
+    return { totalRevenue, pending, completed, cancelled }
   }, [trips])
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -132,42 +138,36 @@ export function TripList() {
     setStatusFilter('ALL')
   }, [])
 
-  // Table columns for desktop
+  // ─── Desktop table columns ────────────────────────────────────────────────
+
   const columns: Column<TripOrder>[] = [
     {
-      key: 'code',
-      header: 'Mã lệnh',
+      key: 'trip',
+      header: 'Lệnh / Ngày',
       accessor: (row) => (
-        <span className="font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-          {row.code}
-        </span>
-      ),
-      sortable: true,
-      sortKey: (row) => row.code,
-      width: '120px',
-    },
-    {
-      key: 'date',
-      header: 'Ngày',
-      accessor: (row) => (
-        <span className="flex items-center gap-1.5 text-sm">
-          <Calendar className="h-3.5 w-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-          {row.tripDate ? new Date(row.tripDate).toLocaleDateString('vi-VN') : '-'}
-        </span>
+        <div className="min-w-0">
+          <p className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
+            {row.code ?? '—'}
+          </p>
+          <p className="flex items-center gap-1 text-xs mt-0.5" style={{ color: 'var(--theme-text-secondary)' }}>
+            <Calendar className="h-3 w-3 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
+            {row.tripDate ? new Date(row.tripDate).toLocaleDateString('vi-VN') : '—'}
+          </p>
+        </div>
       ),
       sortable: true,
       sortKey: (row) => row.tripDate ?? '',
-      width: '110px',
+      width: '120px',
     },
     {
       key: 'client',
       header: 'Khách hàng',
       accessor: (row) => (
         <div className="min-w-0">
-          <p className="font-medium truncate" style={{ color: 'var(--theme-text-primary)' }}>
+          <p className="font-semibold text-sm truncate" style={{ color: 'var(--theme-text-primary)' }}>
             {row.clientName}
           </p>
-          <p className="text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>
+          <p className="text-xs truncate mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
             {row.route}
           </p>
         </div>
@@ -177,36 +177,64 @@ export function TripList() {
     },
     {
       key: 'vehicle',
-      header: 'Phương tiện',
+      header: 'Xe / Tài xế',
       accessor: (row) => (
-        <div className="flex items-center gap-1.5">
-          <Truck className="h-3.5 w-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-          <span>{row.tractorPlate || '-'}</span>
+        <div className="min-w-0">
+          <p className="flex items-center gap-1.5 text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
+            <Truck className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
+            {row.tractorPlate || '—'}
+          </p>
+          <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--theme-text-muted)' }}>
+            {row.driverName || '—'}
+          </p>
         </div>
       ),
-      width: '130px',
+      sortable: true,
+      sortKey: (row) => row.driverName ?? '',
+      width: '160px',
       hideOnMobile: true,
     },
     {
-      key: 'driver',
-      header: 'Tài xế',
-      accessor: (row) => row.driverName || '-',
-      sortable: true,
-      sortKey: (row) => row.driverName ?? '',
+      key: 'containers',
+      header: 'Container',
+      accessor: (row) => (
+        <div className="flex flex-wrap gap-1">
+          {row.containers.length > 0 ? (
+            row.containers.slice(0, 3).map((c, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center gap-1 text-xs font-mono px-1.5 py-0.5 rounded"
+                style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
+              >
+                <span className="font-bold">{c.workType}</span>
+                {c.containerNumber && (
+                  <span style={{ color: 'var(--theme-text-secondary)' }}>{c.containerNumber}</span>
+                )}
+              </span>
+            ))
+          ) : (
+            <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>—</span>
+          )}
+          {row.containers.length > 3 && (
+            <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>+{row.containers.length - 3}</span>
+          )}
+        </div>
+      ),
+      width: '200px',
       hideOnMobile: true,
     },
     {
       key: 'revenue',
       header: 'Doanh thu',
       accessor: (row) => (
-        <span className="font-mono font-semibold tabular-nums">
+        <span className="font-mono font-bold text-sm tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
           {fmt(row.revenue ?? 0)}
         </span>
       ),
       sortable: true,
       sortKey: (row) => row.revenue ?? 0,
       align: 'right',
-      width: '130px',
+      width: '140px',
       hideOnMobile: true,
     },
     {
@@ -217,88 +245,80 @@ export function TripList() {
           variant={getStatusVariant(row.status, row.isConfirmed)}
           label={getStatusLabel(row.status, row.isConfirmed)}
           size="sm"
+          showIcon
         />
       ),
-      width: '130px',
+      width: '150px',
     },
   ]
 
-  const rowActions = [
-    {
-      label: 'Xem chi tiết',
-      icon: <Eye className="h-4 w-4" />,
-      onClick: (row: TripOrder) => navigate(tripDetailPath(row.id)),
-    },
-  ]
-
-  // Header actions
-  const headerActions = (
-    <div className="flex items-center gap-2">
-      <Button
-        onClick={() => navigate(createTripPath)}
-        className="flex items-center gap-1.5 h-9 px-4 text-sm font-bold rounded-xl"
-        style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-      >
-        <Plus className="w-4 h-4" /> Tạo lệnh
-      </Button>
-      <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden" />
-      <Button
-        onClick={() => fileInputRef.current?.click()}
-        disabled={importing}
-        className="hidden sm:flex items-center gap-1.5 h-9 px-3 text-xs font-semibold rounded-xl"
-        style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
-      >
-        <Upload className="w-3.5 h-3.5" /> {importing ? 'Đang nhập...' : 'Nhập'}
-      </Button>
-      <Button
-        onClick={handleExport}
-        className="hidden sm:flex items-center gap-1.5 h-9 px-3 text-xs font-semibold rounded-xl"
-        style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
-      >
-        <Download className="w-3.5 h-3.5" /> Xuất
-      </Button>
-      <Button
-        onClick={handleDownloadTemplate}
-        className="hidden sm:flex items-center gap-1.5 h-9 px-3 text-xs font-semibold rounded-xl"
-        style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
-      >
-        <FileSpreadsheet className="w-3.5 h-3.5" /> Tải mẫu
-      </Button>
-    </div>
-  )
+  // ─── Loading skeleton ─────────────────────────────────────────────────────
 
   if (loading) {
     return (
-      <div className="space-y-2">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="h-20 rounded-2xl skeleton-shimmer" />
-        ))}
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="h-20 rounded-2xl skeleton-shimmer" />
+          ))}
+        </div>
+        <div className="space-y-2">
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="h-16 rounded-2xl skeleton-shimmer" />
+          ))}
+        </div>
       </div>
     )
   }
 
-  // Mobile view with cards
+  // ─── Mobile view ──────────────────────────────────────────────────────────
+
   if (isMobile) {
     return (
       <div className="space-y-3">
         <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
 
-        {/* Header actions mobile */}
+        {/* KPI strip */}
+        <div className="grid grid-cols-2 gap-2">
+          <div
+            className="rounded-2xl p-3 flex flex-col gap-0.5"
+            style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
+          >
+            <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>
+              Doanh thu
+            </p>
+            <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
+              {fmt(stats.totalRevenue)}
+            </p>
+          </div>
+          <div
+            className="rounded-2xl p-3 flex flex-col gap-0.5"
+            style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
+          >
+            <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>
+              Tổng lệnh
+            </p>
+            <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
+              {trips.length} lệnh
+            </p>
+          </div>
+        </div>
+
+        {/* Action row */}
         <div className="flex items-center gap-2">
           <Button
             onClick={() => navigate(createTripPath)}
-            className="flex items-center gap-1.5 h-9 px-4 text-sm font-bold rounded-xl"
+            className="flex items-center gap-1.5 h-9 px-4 text-sm font-bold rounded-xl flex-1"
             style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
           >
-            <Plus className="w-4 h-4" /> Tạo lệnh
+            <Plus className="w-4 h-4" /> Tạo đơn
           </Button>
-          <div className="flex-1" />
           <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden" />
           <Button
             onClick={() => fileInputRef.current?.click()}
             disabled={importing}
-            className="flex items-center gap-1.5 h-9 px-3 text-xs font-semibold rounded-lg"
-            style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
+            className="flex items-center gap-1.5 h-9 px-3 text-xs font-semibold rounded-xl"
+            style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)', border: '1px solid var(--theme-border-default)' }}
           >
             <Upload className="w-3.5 h-3.5" />
           </Button>
@@ -314,19 +334,17 @@ export function TripList() {
           onClearFilters={handleClearFilters}
         />
 
-        {/* Count */}
         <p className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
           {filtered.length} lệnh
         </p>
 
-        {/* List */}
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
             <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
               {search || statusFilter !== 'ALL' ? 'Không tìm thấy lệnh nào' : 'Chưa có đơn hàng'}
             </p>
             {!search && statusFilter === 'ALL' && (
-              <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Nhấn "Tạo lệnh" để bắt đầu</p>
+              <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Nhấn "Tạo đơn" để bắt đầu</p>
             )}
           </div>
         ) : (
@@ -353,46 +371,155 @@ export function TripList() {
     )
   }
 
-  // Desktop view with DataTablePro
+  // ─── Desktop view ─────────────────────────────────────────────────────────
+
   return (
-    <PageContainer
-      actions={headerActions}
-    >
-      <div className="space-y-4">
-        {/* Month navigator */}
-        <div className="flex items-center justify-between">
-          <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
+    <div className="space-y-5">
+      {/* Page header */}
+      <div className="flex items-center justify-between gap-4">
+        <div />
+
+        <div className="flex items-center gap-2 shrink-0">
+          <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden" />
+          <Button
+            onClick={handleDownloadTemplate}
+            className="flex items-center gap-1.5 h-9 px-3 text-xs font-semibold rounded-xl"
+            style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-secondary)', border: '1px solid var(--theme-border-default)' }}
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" /> Tải mẫu
+          </Button>
+          <Button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+            className="flex items-center gap-1.5 h-9 px-3 text-xs font-semibold rounded-xl"
+            style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-secondary)', border: '1px solid var(--theme-border-default)' }}
+          >
+            <Upload className="w-3.5 h-3.5" /> {importing ? 'Đang nhập...' : 'Nhập'}
+          </Button>
+          <Button
+            onClick={handleExport}
+            className="flex items-center gap-1.5 h-9 px-3 text-xs font-semibold rounded-xl"
+            style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-secondary)', border: '1px solid var(--theme-border-default)' }}
+          >
+            <Download className="w-3.5 h-3.5" /> Xuất
+          </Button>
+          <Button
+            onClick={() => navigate(createTripPath)}
+            className="flex items-center gap-1.5 h-9 px-4 text-sm font-bold rounded-xl"
+            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+          >
+            <Plus className="w-4 h-4" /> Tạo đơn
+          </Button>
+        </div>
+      </div>
+
+      {/* Month navigator */}
+      <MonthNavigator
+        year={year}
+        month={month}
+        onPrev={onPrev}
+        onNext={onNext}
+        rightLabel={`${trips.length} lệnh trong tháng`}
+      />
+
+      {/* KPI stats */}
+      <StatsGrid
+        columns={4}
+        stats={[
+          {
+            label: 'Doanh thu tháng',
+            value: fmt(stats.totalRevenue),
+            icon: <DollarSign className="h-5 w-5" />,
+            onClick: () => setStatusFilter('ALL'),
+          },
+          {
+            label: 'Chờ đối soát',
+            value: String(stats.pending),
+            valueColor: stats.pending > 0 ? 'var(--theme-status-warning)' : undefined,
+            icon: <Clock className="h-5 w-5" />,
+            onClick: () => setStatusFilter('PENDING'),
+          },
+          {
+            label: 'Hoàn thành',
+            value: String(stats.completed),
+            valueColor: stats.completed > 0 ? 'var(--theme-status-success)' : undefined,
+            icon: <CheckCircle2 className="h-5 w-5" />,
+            onClick: () => setStatusFilter('COMPLETED'),
+          },
+          {
+            label: 'Đã huỷ',
+            value: String(stats.cancelled),
+            valueColor: stats.cancelled > 0 ? 'var(--theme-status-error)' : undefined,
+            icon: <XCircle className="h-5 w-5" />,
+            onClick: () => setStatusFilter('CANCELLED'),
+          },
+        ]}
+      />
+
+      {/* Table card */}
+      <div
+        className="rounded-2xl border overflow-hidden"
+        style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}
+      >
+        {/* Table toolbar */}
+        <div
+          className="px-4 py-3"
+          style={{ borderBottom: '1px solid var(--theme-border-default)' }}
+        >
+          <FilterToolbar
+            search={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Tìm mã lệnh, khách hàng, tài xế, container, biển số..."
+            statusOptions={STATUS_FILTERS.map(s => ({ ...s, key: s.key }))}
+            selectedStatus={statusFilter}
+            onStatusChange={(s) => setStatusFilter(s as TripOrderStatus | 'ALL')}
+            onClearFilters={handleClearFilters}
+          />
         </div>
 
-        {/* Filters */}
-        <FilterToolbar
-          search={search}
-          onSearchChange={setSearch}
-          searchPlaceholder="Tìm mã lệnh, khách hàng, tài xế, container, biển số..."
-          statusOptions={STATUS_FILTERS.map(s => ({ ...s, key: s.key }))}
-          selectedStatus={statusFilter}
-          onStatusChange={(s) => setStatusFilter(s as TripOrderStatus | 'ALL')}
-          onClearFilters={handleClearFilters}
-        />
+        {/* Result count */}
+        <div
+          className="flex items-center justify-between px-4 py-2"
+          style={{ borderBottom: '1px solid var(--theme-border-light)', background: 'var(--theme-bg-tertiary)' }}
+        >
+          <p className="text-xs font-medium" style={{ color: 'var(--theme-text-muted)' }}>
+            <span className="font-bold" style={{ color: 'var(--theme-text-primary)' }}>{filtered.length}</span>
+            {' '}lệnh{statusFilter !== 'ALL' ? ` · ${STATUS_FILTERS.find(s => s.key === statusFilter)?.label}` : ''}
+          </p>
+          {(search || statusFilter !== 'ALL') && (
+            <button
+              onClick={handleClearFilters}
+              className="text-xs font-medium transition hover:opacity-70"
+              style={{ color: 'var(--theme-brand-primary)' }}
+            >
+              Xoá bộ lọc
+            </button>
+          )}
+        </div>
 
-        {/* Data table */}
+        {/* Data table — no outer border since we're already inside the card */}
         <DataTablePro
           data={filtered}
           columns={columns}
           rowKey={(row) => row.id}
           onRowClick={(row) => navigate(tripDetailPath(row.id))}
-          rowActions={rowActions}
           loading={loading}
           stickyHeader
           striped
           emptyState={
-            <div className="py-8 text-center">
+            <div className="py-12 text-center">
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3"
+                style={{ background: 'var(--theme-bg-tertiary)' }}
+              >
+                <Hash className="h-6 w-6" style={{ color: 'var(--theme-text-muted)' }} />
+              </div>
               <p className="text-sm font-semibold mb-1" style={{ color: 'var(--theme-text-primary)' }}>
                 {search || statusFilter !== 'ALL' ? 'Không tìm thấy lệnh nào' : 'Chưa có đơn hàng'}
               </p>
               {!search && statusFilter === 'ALL' && (
                 <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                  Nhấn "Tạo lệnh" để bắt đầu
+                  Nhấn "Tạo đơn" để bắt đầu
                 </p>
               )}
             </div>
@@ -408,6 +535,6 @@ export function TripList() {
           onCreateManual={() => navigate(createTripPath)}
         />
       )}
-    </PageContainer>
+    </div>
   )
 }
