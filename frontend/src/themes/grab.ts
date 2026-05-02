@@ -4,9 +4,9 @@ export const grabTheme: ThemeDefinition = {
   name: 'grab',
   label: 'Grab Green',
   colors: {
-    bgPrimary: '#F7F7F7',
+    bgPrimary: '#f0f7f4',
     bgSecondary: '#FFFFFF',
-    bgTertiary: '#EEEEEE',
+    bgTertiary: '#e4f0eb',
     bgGlass: 'rgba(255, 255, 255, 0.92)',
 
     brandPrimary: '#00963E',
