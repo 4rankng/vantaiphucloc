@@ -1,38 +1,55 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWorkOrders, useTripOrders } from '@/hooks/use-queries'
-import { formatCurrencyFull } from '@/data/domain'
-import { AlertTriangle, CheckCircle2, Clock, Wallet, ArrowRight, Plus } from 'lucide-react'
+import { MonthNavigator } from '@/components/shared/MonthNavigator'
+import { TripOrderCard } from '@/components/shared/TripOrderCard'
+import { WorkOrderJobCard } from '@/components/shared/WorkOrderJobCard'
+import { useMonthParams } from './use-month-params'
+import { AlertTriangle, Wallet, ArrowRight, Receipt, Handshake, Route, Settings } from 'lucide-react'
+
+const PREVIEW_COUNT = 5
+
+const QUICK_ACTIONS = [
+  { label: 'Bảng giá', icon: Receipt, path: '/accountant/pricing' },
+  { label: 'Đối tác', icon: Handshake, path: '/accountant/partners' },
+  { label: 'Cung đường', icon: Route, path: '/accountant/routes' },
+  { label: 'Kỳ lương', icon: Settings, path: '/accountant/salary-setup' },
+] as const
 
 export function AccountantDashboard() {
   const navigate = useNavigate()
-  const { data: workOrders = [], isLoading: loadingWO } = useWorkOrders()
-  const { data: trips = [], isLoading: loadingTrips } = useTripOrders()
+  const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
+
+  const { data: workOrders = [], isLoading: loadingWO } = useWorkOrders({ dateFrom, dateTo })
+  const { data: trips = [], isLoading: loadingTrips } = useTripOrders({ dateFrom, dateTo })
 
   const loading = loadingWO || loadingTrips
 
-  const matchedIds = useMemo(() => new Set(trips.flatMap(t => t.matchedWorkOrderIds)), [trips])
-  const unmatchedWOs = useMemo(() => workOrders.filter(w => w.status === 'PENDING'), [workOrders])
-  const pendingTrips = useMemo(() => trips.filter(t => t.status === 'PENDING' && !t.isConfirmed), [trips])
-  const unconfirmedMatched = useMemo(() => trips.filter(t => t.status === 'COMPLETED' && !t.isConfirmed), [trips])
+  const pendingWOs = useMemo(() =>
+    workOrders.filter(w => w.status === 'PENDING'),
+    [workOrders],
+  )
 
-  const salaryByDriver = useMemo(() => {
-    const map = new Map<number, { name: string; plate: string; totalJobs: number; totalSalary: number }>()
-    workOrders.filter(w => matchedIds.has(w.id)).forEach(job => {
-      const existing = map.get(job.driverId) ?? { name: job.driverName, plate: job.tractorPlate, totalJobs: 0, totalSalary: 0 }
-      existing.totalJobs += 1
-      existing.totalSalary += job.earning
-      map.set(job.driverId, existing)
-    })
-    return Array.from(map.values())
-  }, [workOrders, matchedIds])
+  const driverCount = useMemo(() => {
+    const ids = new Set<number>()
+    workOrders.forEach(w => { if (w.status !== 'CANCELLED') ids.add(w.driverId) })
+    return ids.size
+  }, [workOrders])
 
-  const totalSalary = useMemo(() => salaryByDriver.reduce((s, d) => s + d.totalSalary, 0), [salaryByDriver])
+  const tripsForMonth = useMemo(() =>
+    [...trips].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, PREVIEW_COUNT),
+    [trips],
+  )
+
+  const driverTripsForMonth = useMemo(() =>
+    [...workOrders].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, PREVIEW_COUNT),
+    [workOrders],
+  )
 
   if (loading) {
     return (
       <div className="space-y-3">
-        {[1, 2, 3].map(i => (
+        {[1, 2, 3, 4].map(i => (
           <div key={i} className="h-20 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
         ))}
       </div>
@@ -41,136 +58,129 @@ export function AccountantDashboard() {
 
   return (
     <div className="space-y-4 pb-6">
-      {/* ── Primary action ── */}
-      <button
-        onClick={() => navigate('/accountant/create-trip')}
-        className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all active:scale-[0.99] touch-manipulation"
-        style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.2)' }}>
-            <Plus className="w-4 h-4" />
-          </div>
-          <span className="text-sm font-bold">Tạo lệnh điều hành mới</span>
-        </div>
-        <ArrowRight className="w-4 h-4 opacity-70" />
-      </button>
+      {/* ── Month navigator ── */}
+      <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
 
-      {/* ── Action cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {/* Unmatched WOs */}
+      {/* ── Pending action cards ── */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Chờ đối soát */}
         <button
           onClick={() => navigate('/accountant/work-orders')}
           className="text-left rounded-2xl p-4 transition-all active:scale-[0.98] touch-manipulation"
           style={{
-            background: unmatchedWOs.length > 0 ? 'var(--theme-status-warning-light)' : 'var(--theme-bg-secondary)',
-            border: `1px solid ${unmatchedWOs.length > 0 ? 'var(--theme-status-warning)' : 'var(--theme-border-default)'}`,
+            background: pendingWOs.length > 0 ? 'var(--theme-status-warning-light)' : 'var(--theme-bg-secondary)',
+            border: `1px solid ${pendingWOs.length > 0 ? 'var(--theme-status-warning)' : 'var(--theme-border-default)'}`,
             boxShadow: 'var(--theme-shadow-card)',
           }}
         >
-          <div className="flex items-start justify-between mb-2">
-            <AlertTriangle className="w-5 h-5 mt-0.5" style={{ color: unmatchedWOs.length > 0 ? 'var(--theme-status-warning)' : 'var(--theme-text-muted)' }} />
-            <ArrowRight className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
-          </div>
-          <p className="text-2xl font-bold tabular-nums" style={{ color: unmatchedWOs.length > 0 ? 'var(--theme-status-warning)' : 'var(--theme-text-primary)' }}>
-            {unmatchedWOs.length}
+          <AlertTriangle className="w-5 h-5 mb-2" style={{ color: pendingWOs.length > 0 ? 'var(--theme-status-warning)' : 'var(--theme-text-muted)' }} />
+          <p className="text-2xl font-bold tabular-nums" style={{ color: pendingWOs.length > 0 ? 'var(--theme-status-warning)' : 'var(--theme-text-primary)' }}>
+            {pendingWOs.length}
           </p>
-          <p className="text-xs font-medium mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-            {unmatchedWOs.length === 1 ? 'Phiếu chưa khớp' : 'Phiếu chưa khớp'}
-          </p>
-          {unmatchedWOs.length > 0 && (
-            <p className="text-xs mt-1 font-semibold" style={{ color: 'var(--theme-status-warning)' }}>
-              Cần đối soát tài xế →
-            </p>
-          )}
+          <p className="text-xs font-medium mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>Chờ đối soát</p>
         </button>
 
-        {/* Pending trips (waiting client reconciliation) */}
-        <button
-          onClick={() => navigate('/accountant/work-orders?tab=client')}
-          className="text-left rounded-2xl p-4 transition-all active:scale-[0.98] touch-manipulation"
-          style={{
-            background: pendingTrips.length > 0 ? '#FEF3C7' : 'var(--theme-bg-secondary)',
-            border: `1px solid ${pendingTrips.length > 0 ? '#F59E0B' : 'var(--theme-border-default)'}`,
-            boxShadow: 'var(--theme-shadow-card)',
-          }}
-        >
-          <div className="flex items-start justify-between mb-2">
-            <Clock className="w-5 h-5 mt-0.5" style={{ color: pendingTrips.length > 0 ? '#D97706' : 'var(--theme-text-muted)' }} />
-            <ArrowRight className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
-          </div>
-          <p className="text-2xl font-bold tabular-nums" style={{ color: pendingTrips.length > 0 ? '#D97706' : 'var(--theme-text-primary)' }}>
-            {pendingTrips.length}
-          </p>
-          <p className="text-xs font-medium mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>Lệnh chờ đối soát KH</p>
-          {pendingTrips.length > 0 && (
-            <p className="text-xs mt-1 font-semibold" style={{ color: '#D97706' }}>Cần chốt với khách →</p>
-          )}
-        </button>
-
-        {/* Salary summary */}
+        {/* Lương kỳ này */}
         <button
           onClick={() => navigate('/accountant/salary-setup')}
           className="text-left rounded-2xl p-4 transition-all active:scale-[0.98] touch-manipulation"
           style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', boxShadow: 'var(--theme-shadow-card)' }}
         >
-          <div className="flex items-start justify-between mb-2">
-            <Wallet className="w-5 h-5 mt-0.5" style={{ color: 'var(--theme-brand-primary)' }} />
-            <ArrowRight className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
-          </div>
-          <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
-            {formatCurrencyFull(totalSalary)}
+          <Wallet className="w-5 h-5 mb-2" style={{ color: 'var(--theme-brand-primary)' }} />
+          <p className="text-2xl font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
+            {driverCount}
           </p>
-          <p className="text-xs font-medium mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-            Lương kỳ này · {salaryByDriver.length} tài xế
-          </p>
+          <p className="text-xs font-medium mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>Lương kỳ này</p>
         </button>
       </div>
 
-      {/* ── Matched but unconfirmed ── */}
-      {unconfirmedMatched.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--theme-status-success)' }}>
-              <CheckCircle2 className="w-3 h-3 inline mr-1" />
-              Đã khớp, chờ chốt KH ({unconfirmedMatched.length})
-            </p>
-            <button onClick={() => navigate('/accountant/trips')} className="text-xs font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>
-              Xem tất cả →
-            </button>
-          </div>
+      {/* ── Quick action chips ── */}
+      <div className="grid grid-cols-4 gap-2">
+        {QUICK_ACTIONS.map(({ label, icon: Icon, path }) => (
+          <button
+            key={path}
+            onClick={() => navigate(path)}
+            className="flex flex-col items-center gap-1.5 py-3 rounded-2xl transition-all active:scale-95 touch-manipulation"
+            style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', boxShadow: 'var(--theme-shadow-card)' }}
+          >
+            <Icon className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
+            <span className="text-[11px] font-semibold leading-tight text-center" style={{ color: 'var(--theme-text-secondary)' }}>
+              {label}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* ── Preview: Lệnh điều phối ── */}
+      <div
+        className="rounded-2xl p-4 space-y-3"
+        style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', boxShadow: 'var(--theme-shadow-card)' }}
+      >
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
+            Lệnh điều phối
+          </p>
+          <button
+            onClick={() => navigate(`/accountant/trips?month=${month}&year=${year}`)}
+            className="flex items-center gap-1 text-xs font-semibold touch-manipulation"
+            style={{ color: 'var(--theme-brand-primary)' }}
+          >
+            Xem tất cả <ArrowRight className="w-3 h-3" />
+          </button>
+        </div>
+
+        {tripsForMonth.length === 0 ? (
+          <p className="text-xs text-center py-4" style={{ color: 'var(--theme-text-muted)' }}>
+            Chưa có lệnh điều phối trong kỳ
+          </p>
+        ) : (
           <div className="space-y-2">
-            {unconfirmedMatched.slice(0, 3).map(trip => (
-              <button
+            {tripsForMonth.map(trip => (
+              <TripOrderCard
                 key={trip.id}
+                trip={trip}
                 onClick={() => navigate(`/accountant/trip/${trip.id}`)}
-                className="w-full text-left rounded-2xl p-3 transition-all active:scale-[0.98] touch-manipulation"
-                style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', boxShadow: 'var(--theme-shadow-card)' }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{trip.clientName}</p>
-                    <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{trip.route} · {trip.tractorPlate}</p>
-                  </div>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ml-2"
-                    style={{ background: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' }}>
-                    Đã khớp
-                  </span>
-                </div>
-              </button>
+              />
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* ── Empty state ── */}
-      {unmatchedWOs.length === 0 && pendingTrips.length === 0 && unconfirmedMatched.length === 0 && (
-        <div className="flex flex-col items-center text-center gap-2 py-10">
-          <CheckCircle2 className="w-10 h-10" style={{ color: 'var(--theme-status-success)', opacity: 0.5 }} />
-          <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mọi thứ đã xong!</p>
-          <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Không có tác vụ nào đang chờ xử lý.</p>
+      {/* ── Preview: Chuyến đã đi ── */}
+      <div
+        className="rounded-2xl p-4 space-y-3"
+        style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', boxShadow: 'var(--theme-shadow-card)' }}
+      >
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
+            Chuyến đã đi
+          </p>
+          <button
+            onClick={() => navigate(`/accountant/driver-trips?month=${month}&year=${year}`)}
+            className="flex items-center gap-1 text-xs font-semibold touch-manipulation"
+            style={{ color: 'var(--theme-brand-primary)' }}
+          >
+            Xem tất cả <ArrowRight className="w-3 h-3" />
+          </button>
         </div>
-      )}
+
+        {driverTripsForMonth.length === 0 ? (
+          <p className="text-xs text-center py-4" style={{ color: 'var(--theme-text-muted)' }}>
+            Chưa có chuyến nào trong kỳ
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {driverTripsForMonth.map(job => (
+              <WorkOrderJobCard
+                key={job.id}
+                job={job}
+                status={job.status === 'PENDING' ? 'unmatched' : job.status === 'MATCHED' ? 'matched' : 'matched'}
+                onClick={() => navigate(`/accountant/match/${job.id}`)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

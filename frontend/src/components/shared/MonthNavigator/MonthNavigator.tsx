@@ -8,26 +8,31 @@ interface MonthNavigatorProps {
 }
 
 export function MonthNavigator({ year, month, onPrev, onNext }: MonthNavigatorProps) {
-  const monthLabel = `Tháng ${month}/${year}`
-
   return (
-    <div className="flex items-center justify-center gap-2">
+    <div
+      className="flex items-center justify-center rounded-2xl px-2 py-2"
+      style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
+    >
       <button
         onClick={onPrev}
-        className="w-8 h-8 flex items-center justify-center rounded-full touch-manipulation"
-        style={{ background: 'var(--theme-bg-secondary)' }}
+        className="w-8 h-8 flex items-center justify-center rounded-lg touch-manipulation transition-colors active:scale-90"
+        style={{ color: 'var(--theme-text-primary)' }}
+        aria-label="Tháng trước"
       >
-        <ChevronLeft className="w-4 h-4" style={{ color: 'var(--theme-text-primary)' }} />
+        <ChevronLeft className="w-4 h-4" />
       </button>
-      <span className="text-sm font-bold min-w-[120px] text-center" style={{ color: 'var(--theme-text-primary)' }}>
-        {monthLabel}
+
+      <span className="text-sm font-bold tabular-nums px-3" style={{ color: 'var(--theme-text-primary)' }}>
+        Tháng {month} / {year}
       </span>
+
       <button
         onClick={onNext}
-        className="w-8 h-8 flex items-center justify-center rounded-full touch-manipulation"
-        style={{ background: 'var(--theme-bg-secondary)' }}
+        className="w-8 h-8 flex items-center justify-center rounded-lg touch-manipulation transition-colors active:scale-90"
+        style={{ color: 'var(--theme-text-primary)' }}
+        aria-label="Tháng sau"
       >
-        <ChevronRight className="w-4 h-4" style={{ color: 'var(--theme-text-primary)' }} />
+        <ChevronRight className="w-4 h-4" />
       </button>
     </div>
   )

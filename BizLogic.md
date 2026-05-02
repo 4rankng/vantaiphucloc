@@ -645,3 +645,45 @@ AuditLog (nhật ký hệ thống) — auto-records all data changes, reason req
 | 2026-05-02 | Major update: pricing by quantity tier, locking on confirm, audit log, deletion/soft-delete rules, offline sync handling, no mixed container types in TO, earning sync on TO update, vendor driver salary via SalaryPeriod |
 | 2026-05-02 | Added: client code, route pickup/dropoff, trip order confirmation, client reconciliation via Excel, Excel import/export, work order filtering by plate/time |
 | 2026-04-30 | Initial creation — extracted from codebase audit |
+
+
+
+
+
+
+
+
+Ke toan page view,
+the base is like driver app view
+
+let us design without any sidebar and mobile bottom navbar
+
+when ke toan open page, it will see the top bar similar to driver app view
+
+for the body, it will see
+
+first, see month navigation/selector eg << Tháng 4 / 2026 >>
+default tháng này
+
+second see pending action card like
+
+- [ ] Chờ đối soát (hiện số lượng)(click to open list of pending work orders)
+- [ ] Lương kỳ này (hiện số lượng)(click to open list of drivers)
+
+below pending actions card are quick actions like
+Bảng giá, Đối tác, Cung đường, Kỳ lương
+
+
+third, showing list of lệnh điều phối tháng này (few rows latest first)
+click to open lệnh điều phối page
+in the lệnh điều phối page
+- link button to return to previous view
+- month navigation/selector eg << Tháng 4 / 2026 >>
+default tháng selected by previous view
+- buttons to Tạo lệnh, nhập excel
+- search bar để tìm theo mã khách hàng, tên khách hàng, biển container, điểm nhận, điểm trả
+- danh sách lệnh điều phối
+
+
+fourth, danh sách chuyến đã đi (submit by drivers) (few rows latest first)
+click to open chuyến đã đi page
