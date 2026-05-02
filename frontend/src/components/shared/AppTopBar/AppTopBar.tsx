@@ -5,28 +5,28 @@ import { UserDropdown } from '@/components/shared/ProfileDialog'
 import { OfflineTopBarIcon } from '@/components/shared/OfflineIndicator/OfflineIndicator'
 
 /**
- * AppTopBar — the brand-coloured top bar used across all mobile app screens.
+ * AppTopBar — glass-effect top bar used across all app screens.
  *
- * Variants:
- *  - "home"  : shows greeting ("Xin chào, / Name") on the left + bell + user icons on the right
- *  - "page"  : shows a back arrow + page title + bell icon on the right
+ * The body gradient (brand green) shows through the glass backdrop.
+ * Text and icons use dark green for contrast against the tinted glass.
  */
 
+const DARK_GREEN = '#003d15'
+const MUTED_GREEN = 'rgba(0, 80, 30, 0.5)'
+const ICON_BG = 'rgba(0, 80, 30, 0.08)'
+
 interface AppTopBarBaseProps {
-  /** Extra content rendered to the right of the left section */
   actions?: ReactNode
 }
 
 interface HomeVariantProps extends AppTopBarBaseProps {
   variant: 'home'
-  /** Full name of the logged-in user */
   name: string
   onNotifications?: () => void
 }
 
 interface PageVariantProps extends AppTopBarBaseProps {
   variant: 'page'
-  /** Page title shown next to the back arrow */
   title: string
   onBack?: () => void
 }
@@ -45,7 +45,7 @@ export function AppTopBar(props: AppTopBarProps) {
 
   return (
     <>
-      <div style={{ background: 'var(--theme-brand-primary)' }}>
+      <div>
         <div className="px-4 py-2.5 flex items-center justify-between gap-3 md:max-w-4xl md:mx-auto">
         {/* ── Left ── */}
         <div className="flex items-center gap-2 min-w-0">
@@ -54,13 +54,13 @@ export function AppTopBar(props: AppTopBarProps) {
             <div className="min-w-0">
               <p
                 className="text-xs leading-tight"
-                style={{ color: 'var(--theme-text-on-brand)', opacity: 0.75 }}
+                style={{ color: MUTED_GREEN }}
               >
                 Xin chào,
               </p>
               <p
                 className="text-sm font-semibold leading-tight truncate"
-                style={{ color: 'var(--theme-text-on-brand)' }}
+                style={{ color: DARK_GREEN }}
               >
                 {props.name}
               </p>
@@ -71,7 +71,7 @@ export function AppTopBar(props: AppTopBarProps) {
                 <button
                   onClick={props.onBack}
                   className="w-8 h-8 flex items-center justify-center rounded-full shrink-0 touch-manipulation"
-                  style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--theme-text-on-brand)' }}
+                  style={{ background: ICON_BG, color: DARK_GREEN }}
                   aria-label="Quay lại"
                 >
                   <ArrowLeft className="w-4 h-4" />
@@ -79,7 +79,7 @@ export function AppTopBar(props: AppTopBarProps) {
               )}
               <p
                 className="text-sm font-semibold truncate"
-                style={{ color: 'var(--theme-text-on-brand)' }}
+                style={{ color: DARK_GREEN }}
               >
                 {props.title}
               </p>
@@ -91,14 +91,14 @@ export function AppTopBar(props: AppTopBarProps) {
         <div className="flex items-center gap-1 shrink-0">
           {props.actions}
 
-          {/* Offline icon — appears after the banner collapses */}
+          {/* Offline icon */}
           <OfflineTopBarIcon />
 
-          {/* Bell — always visible */}
+          {/* Bell */}
           <button
             onClick={handleBellClick}
             className="w-8 h-8 flex items-center justify-center rounded-full relative touch-manipulation"
-            style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--theme-text-on-brand)' }}
+            style={{ background: ICON_BG, color: DARK_GREEN }}
             aria-label="Thông báo"
           >
             <Bell className="w-[17px] h-[17px]" />
@@ -112,18 +112,17 @@ export function AppTopBar(props: AppTopBarProps) {
             )}
           </button>
 
-          {/* Profile — home variant only, self-contained with anchored dropdown */}
+          {/* Profile — home variant only */}
           {props.variant === 'home' && (
             <div ref={profileBtnRef} className="relative">
               <button
                 onClick={() => setProfileOpen(v => !v)}
                 className="w-8 h-8 flex items-center justify-center rounded-full touch-manipulation"
-                style={{ background: 'rgba(255,255,255,0.2)', color: 'var(--theme-text-on-brand)' }}
+                style={{ background: ICON_BG, color: DARK_GREEN }}
                 aria-label="Tài khoản"
               >
                 <UserCircle className="w-[17px] h-[17px]" />
               </button>
-              {/* Dropdown anchored to this button via right-0 top-full */}
               <UserDropdown
                 open={profileOpen}
                 onClose={() => setProfileOpen(false)}

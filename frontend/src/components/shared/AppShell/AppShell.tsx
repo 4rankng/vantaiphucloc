@@ -8,18 +8,24 @@ interface AppShellProps {
 }
 
 /**
- * AppShell — mobile-only layout wrapper.
- * Full-width topbar + scrollable content area.
- * No max-width constraint: content fills the screen edge-to-edge on mobile.
+ * AppShell — mobile-first layout wrapper with glass topbar.
+ * Body gradient: brand color bleeds from top 140px, then fades to page bg.
+ * Topbar: sticky with backdrop blur (glass effect).
  */
 export function AppShell({ topbarProps, contentClassName, children }: AppShellProps) {
   return (
-    <div className="min-h-[100dvh] w-full" style={{ background: 'var(--theme-bg-primary)' }}>
-      {/* Topbar: full-bleed, no centering constraint on mobile */}
-      <header className="w-full" style={{ background: 'var(--theme-brand-primary)' }}>
+    <div className="min-h-[100dvh] w-full" style={{ background: 'var(--body-gradient)' }}>
+      <header
+        className="sticky top-0 z-20 w-full"
+        style={{
+          background: 'var(--glass-bg)',
+          backdropFilter: 'var(--glass-blur)',
+          WebkitBackdropFilter: 'var(--glass-blur)',
+          borderBottom: '1px solid var(--surface-border)',
+        }}
+      >
         <AppTopBar {...topbarProps} />
       </header>
-      {/* Content: full width, padding handled here */}
       <main className={contentClassName}>
         {children}
       </main>

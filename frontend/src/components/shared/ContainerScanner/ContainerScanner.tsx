@@ -1,6 +1,6 @@
 import { useRef, useCallback, useState, useEffect } from 'react'
 import Webcam from 'react-webcam'
-import { X, RotateCcw } from 'lucide-react'
+import { X, RotateCcw, Image } from 'lucide-react'
 import { calculateCrop } from '@/lib/crop-utils'
 
 export interface PhotoMeta {
@@ -23,6 +23,7 @@ const MAX_CAPTURE_WIDTH = 1200
 export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) {
   const webcamRef = useRef<Webcam>(null)
   const overlayBoxRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [captured, setCaptured] = useState<string | null>(null)
   const [scanMode, setScanMode] = useState<ScanMode>('rectangle')
   const [gpsCoords, setGpsCoords] = useState<{ lat: number | null; lng: number | null }>({ lat: null, lng: null })
@@ -93,11 +94,38 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
     }
   }, [captured, gpsCoords, onCapture])
 
+  const handleGallerySelect = useCallback(() => {
+    fileInputRef.current?.click()
+  }, [])
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = reader.result as string
+      setCaptured(dataUrl)
+    }
+    reader.readAsDataURL(file)
+    // Reset input so same file can be re-selected
+    e.target.value = ''
+  }, [])
+
   return (
     <div
       className="fixed inset-0 z-[100] flex flex-col"
       style={{ background: '#000' }}
     >
+      {/* Hidden file input for gallery */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
       {/* Close button */}
       <button
         onClick={onClose}
@@ -160,7 +188,6 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
             className="absolute inset-0 flex flex-col items-center justify-center"
             style={{ pointerEvents: 'none' }}
           >
-            {/* Guide text above viewfinder */}
             <p
               className="text-sm font-bold mb-4"
               style={{ color: 'rgba(255,255,255,0.9)', textShadow: '1px 1px 3px rgba(0,0,0,0.9)' }}
@@ -168,7 +195,6 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
               Đưa số container vào ô này
             </p>
 
-            {/* Viewfinder box */}
             <div
               ref={overlayBoxRef}
               className="relative rounded-xl"
@@ -180,7 +206,6 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
                 border: '2px dashed rgba(22, 163, 74, 0.5)',
               }}
             >
-              {/* Corner markers */}
               <div className="absolute -top-[2px] -left-[2px] w-6 h-6 border-t-2 border-l-2 rounded-tl-lg" style={{ borderColor: 'var(--theme-brand-primary)' }} />
               <div className="absolute -top-[2px] -right-[2px] w-6 h-6 border-t-2 border-r-2 rounded-tr-lg" style={{ borderColor: 'var(--theme-brand-primary)' }} />
               <div className="absolute -bottom-[2px] -left-[2px] w-6 h-6 border-b-2 border-l-2 rounded-bl-lg" style={{ borderColor: 'var(--theme-brand-primary)' }} />
@@ -188,11 +213,26 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
             </div>
           </div>
 
-          {/* Manual capture button */}
+          {/* Bottom controls */}
           <div
-            className="absolute bottom-8 left-0 right-0 flex justify-center"
+            className="absolute bottom-8 left-0 right-0 flex justify-center items-center gap-6"
             style={{ pointerEvents: 'auto' }}
           >
+            {/* Gallery button */}
+            <div className="flex flex-col items-center gap-1">
+              <button
+                onClick={handleGallerySelect}
+                className="w-12 h-12 flex items-center justify-center rounded-full touch-manipulation transition-colors"
+                style={{ background: 'rgba(0,0,0,0.5)', color: '#fff' }}
+              >
+                <Image className="w-5 h-5" />
+              </button>
+              <span className="text-[10px] font-medium leading-tight" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                Thư viện
+              </span>
+            </div>
+
+            {/* Capture shutter */}
             <button
               onClick={handleCapture}
               className="w-16 h-16 rounded-full flex items-center justify-center touch-manipulation transition-transform active:scale-90"
@@ -203,31 +243,28 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
             >
               <div className="w-12 h-12 rounded-full" style={{ background: '#fff', opacity: 0.9 }} />
             </button>
-          </div>
 
-          {/* Mode toggle — single button, right side of screen */}
-          <div
-            className="absolute bottom-6 right-4 z-10 flex flex-col items-center gap-1"
-            style={{ pointerEvents: 'auto' }}
-          >
-            <button
-              onClick={() => setScanMode(m => m === 'rectangle' ? 'square' : 'rectangle')}
-              className="w-12 h-12 flex items-center justify-center rounded-full touch-manipulation transition-colors"
-              style={{ background: 'rgba(0,0,0,0.5)', color: '#fff' }}
-            >
-              {scanMode === 'rectangle' ? (
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <rect x="1" y="5" width="18" height="10" rx="2" stroke="currentColor" strokeWidth="1.5" />
-                </svg>
-              ) : (
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <rect x="4" y="4" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
-                </svg>
-              )}
-            </button>
-            <span className="text-[10px] font-medium leading-tight" style={{ color: 'rgba(255,255,255,0.7)' }}>
-              {scanMode === 'rectangle' ? 'Vuông' : 'Ngang'}
-            </span>
+            {/* Mode toggle */}
+            <div className="flex flex-col items-center gap-1">
+              <button
+                onClick={() => setScanMode(m => m === 'rectangle' ? 'square' : 'rectangle')}
+                className="w-12 h-12 flex items-center justify-center rounded-full touch-manipulation transition-colors"
+                style={{ background: 'rgba(0,0,0,0.5)', color: '#fff' }}
+              >
+                {scanMode === 'rectangle' ? (
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <rect x="1" y="5" width="18" height="10" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                  </svg>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    <rect x="4" y="4" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
+                  </svg>
+                )}
+              </button>
+              <span className="text-[10px] font-medium leading-tight" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                {scanMode === 'rectangle' ? 'Vuông' : 'Ngang'}
+              </span>
+            </div>
           </div>
         </>
       )}

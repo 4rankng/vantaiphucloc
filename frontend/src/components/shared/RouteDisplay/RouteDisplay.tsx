@@ -10,12 +10,8 @@ export function RouteDisplay({ route, pickupLocation, dropoffLocation, className
   if (pickupLocation || dropoffLocation) {
     return (
       <div className={`flex flex-col gap-0.5 ${className}`}>
-        <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-          Điểm lấy: {pickupLocation || route.split(' - ')[0] || route}
-        </div>
-        <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-          Điểm trả: {dropoffLocation || route.split(' - ')[1] || route}
-        </div>
+        <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Điểm lấy: {pickupLocation || route.split(' - ')[0] || route}</div>
+        <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Điểm trả: {dropoffLocation || route.split(' - ')[1] || route}</div>
       </div>
     )
   }
@@ -25,12 +21,8 @@ export function RouteDisplay({ route, pickupLocation, dropoffLocation, className
   if (parts.length >= 2) {
     return (
       <div className={`flex flex-col gap-0.5 ${className}`}>
-        <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-          Điểm lấy: {parts[0]}
-        </div>
-        <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-          Điểm trả: {parts[1]}
-        </div>
+        <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Điểm lấy: {parts[0]}</div>
+        <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Điểm trả: {parts[1]}</div>
       </div>
     )
   }
