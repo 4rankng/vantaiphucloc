@@ -3,7 +3,7 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 const fabVariants = cva(
-  'fixed z-40 flex h-14 w-14 items-center justify-center rounded-2xl transition-all duration-200 active:scale-90 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-brand-secondary)] focus-visible:ring-offset-2',
+  'fixed z-40 flex h-14 w-14 items-center justify-center rounded-2xl transition-all duration-200 active:scale-90 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-brand-secondary)] focus-visible:ring-offset-2 lg:hidden',
   {
     variants: {
       position: {
