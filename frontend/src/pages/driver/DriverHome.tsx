@@ -7,7 +7,8 @@ import { formatCurrencyFull, type WorkOrder } from '@/data/domain'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { WorkOrderCard } from '@/components/shared/WorkOrderCard'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
-import { useMySalaryPeriods } from '@/hooks/use-queries'
+import { useMySalaryPeriods, useSalaryConfig } from '@/hooks/use-queries'
+import { getSalaryPeriodDates, dayBefore, dayAfter } from '@/utils/salaryPeriod'
 
 const PAGE_SIZE = 10
 
@@ -23,12 +24,23 @@ export function DriverHome() {
 
   const sentinelRef = useRef<HTMLDivElement>(null)
 
+  // Salary period config + navigation
+  const { data: config } = useSalaryConfig()
   const now = new Date()
-  const [year, setYear] = useState(now.getFullYear())
-  const [month, setMonth] = useState(now.getMonth())
+  const defaultPeriod = useMemo(
+    () => getSalaryPeriodDates(now, { fromDay: config?.from_day ?? 1, toDay: config?.to_day ?? 31 }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [config?.from_day, config?.to_day],
+  )
+  const [periodStart, setPeriodStart] = useState<Date>(defaultPeriod.startDate)
+
+  // Recompute end date from start + config
+  const currentPeriod = useMemo(
+    () => getSalaryPeriodDates(periodStart, { fromDay: config?.from_day ?? 1, toDay: config?.to_day ?? 31 }),
+    [periodStart, config?.from_day, config?.to_day],
+  )
 
   const { data: salaryPeriods = [] } = useMySalaryPeriods()
-  const latestPeriod = salaryPeriods[0] ?? null
 
   useEffect(() => {
     let cancelled = false
@@ -39,27 +51,26 @@ export function DriverHome() {
     return () => { cancelled = true }
   }, [user!.id])
 
-  // Reset visible count when month or filter changes
-  useEffect(() => { setVisibleCount(PAGE_SIZE) }, [year, month, filter])
+  // Reset visible count when period or filter changes
+  useEffect(() => { setVisibleCount(PAGE_SIZE) }, [periodStart, filter])
 
-  const handlePrevMonth = () => {
-    if (month === 0) { setMonth(11); setYear(y => y - 1) }
-    else setMonth(m => m - 1)
-  }
-  const handleNextMonth = () => {
-    if (month === 11) { setMonth(0); setYear(y => y + 1) }
-    else setMonth(m => m + 1)
-  }
+  const handlePrevPeriod = useCallback(() => {
+    setPeriodStart(getSalaryPeriodDates(dayBefore(currentPeriod.startDate), { fromDay: config?.from_day ?? 1, toDay: config?.to_day ?? 31 }).startDate)
+  }, [currentPeriod.startDate, config?.from_day, config?.to_day])
+
+  const handleNextPeriod = useCallback(() => {
+    setPeriodStart(getSalaryPeriodDates(dayAfter(currentPeriod.endDate), { fromDay: config?.from_day ?? 1, toDay: config?.to_day ?? 31 }).startDate)
+  }, [currentPeriod.endDate, config?.from_day, config?.to_day])
 
   const filteredJobs = useMemo(() => {
-    const start = new Date(year, month, 1).toISOString()
-    const end = new Date(year, month + 1, 0, 23, 59, 59).toISOString()
-    const byMonth = workOrders.filter(w => w.createdAt >= start && w.createdAt <= end)
+    const startISO = currentPeriod.startDate.toISOString()
+    const endISO = new Date(currentPeriod.endDate.getFullYear(), currentPeriod.endDate.getMonth(), currentPeriod.endDate.getDate(), 23, 59, 59).toISOString()
+    const byPeriod = workOrders.filter(w => w.createdAt >= startISO && w.createdAt <= endISO)
     const byFilter = filter === 'pending'
-      ? byMonth.filter(w => w.status === 'PENDING')
-      : byMonth
+      ? byPeriod.filter(w => w.status === 'PENDING')
+      : byPeriod
     return [...byFilter].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-  }, [workOrders, year, month, filter])
+  }, [workOrders, currentPeriod, filter])
 
   const visibleJobs = useMemo(
     () => filteredJobs.slice(0, visibleCount),
@@ -68,7 +79,7 @@ export function DriverHome() {
 
   const hasMore = visibleCount < filteredJobs.length
 
-  // Infinite scroll — load more when sentinel enters viewport
+  // Infinite scroll
   const loadMore = useCallback(() => {
     setVisibleCount(n => n + PAGE_SIZE)
   }, [])
@@ -94,12 +105,20 @@ export function DriverHome() {
     [filteredJobs],
   )
 
-  const displayMonth = month + 1
-  const earningsValue = latestPeriod ? latestPeriod.netPay : totalEarnings
+  // Match salary period for current date range
+  const matchedSalaryPeriod = useMemo(() => {
+    const startStr = currentPeriod.startDate.toISOString().split('T')[0]
+    const endStr = currentPeriod.endDate.toISOString().split('T')[0]
+    return salaryPeriods.find(p => p.startDate === startStr && p.endDate === endStr) ?? null
+  }, [salaryPeriods, currentPeriod])
+
+  const earningsValue = matchedSalaryPeriod ? matchedSalaryPeriod.netPay : totalEarnings
+  const displayMonth = currentPeriod.startDate.getMonth() + 1
+  const displayYear = currentPeriod.startDate.getFullYear()
 
   return (
     <div className="space-y-4">
-      {/* ── Combined month + earnings card ── */}
+      {/* Combined month + earnings card */}
       <div
         className="rounded-2xl overflow-hidden flex"
         style={{
@@ -108,20 +127,19 @@ export function DriverHome() {
           boxShadow: 'var(--theme-shadow-card)',
         }}
       >
-        {/* Left: month navigator — 55% */}
         <div className="w-[55%] flex items-center justify-center py-3 px-2">
           <MonthNavigator
-            year={year}
+            year={displayYear}
             month={displayMonth}
-            onPrev={handlePrevMonth}
-            onNext={handleNextMonth}
+            onPrev={handlePrevPeriod}
+            onNext={handleNextPeriod}
+            periodStart={currentPeriod.startDate}
+            periodEnd={currentPeriod.endDate}
           />
         </div>
 
-        {/* Divider */}
         <div className="w-px self-stretch my-3" style={{ background: 'var(--theme-border-default)' }} />
 
-        {/* Right: earnings stat — 45%, no button */}
         <div className="w-[45%] flex items-center gap-2 px-3 py-3">
           <img src="/icons/money.png" alt="" aria-hidden className="shrink-0 w-10 h-10 object-contain" />
           <div className="flex-1 min-w-0">
@@ -135,15 +153,13 @@ export function DriverHome() {
         </div>
       </div>
 
-      {/* ── Chuyến đã đi ── */}
+      {/* Trip list */}
       <div className="space-y-2.5">
-        {/* Header + filter pills */}
         <div className="flex items-center justify-between">
           <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
             Chuyến đã đi
           </p>
 
-          {/* Filter tabs */}
           <div
             className="flex rounded-full p-0.5 gap-0.5"
             style={{ background: 'var(--theme-bg-tertiary)' }}
@@ -155,14 +171,8 @@ export function DriverHome() {
                 className="text-xs px-3 py-1 rounded-full font-medium transition-all touch-manipulation"
                 style={
                   filter === tab
-                    ? {
-                        background: 'var(--theme-brand-primary)',
-                        color: '#fff',
-                      }
-                    : {
-                        background: 'transparent',
-                        color: 'var(--theme-text-muted)',
-                      }
+                    ? { background: 'var(--theme-brand-primary)', color: '#fff' }
+                    : { background: 'transparent', color: 'var(--theme-text-muted)' }
                 }
               >
                 {tab === 'all' ? 'Tất cả' : 'Chờ đối soát'}
@@ -171,7 +181,6 @@ export function DriverHome() {
           </div>
         </div>
 
-        {/* List */}
         {loading ? (
           <div className="space-y-2.5">
             {[1, 2, 3].map(i => (
@@ -206,10 +215,8 @@ export function DriverHome() {
               ))}
             </div>
 
-            {/* Infinite scroll sentinel */}
             <div ref={sentinelRef} className="h-1" />
 
-            {/* Loading more indicator */}
             {hasMore && (
               <div className="flex justify-center py-2">
                 <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'var(--theme-brand-primary)', borderTopColor: 'transparent' }} />

@@ -1,20 +1,29 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { formatDDMM } from '@/utils/salaryPeriod'
 
 interface MonthNavigatorProps {
   year: number
   month: number
   onPrev: () => void
   onNext: () => void
+  /** When provided, show salary period range instead of calendar month range */
+  periodStart?: Date
+  periodEnd?: Date
 }
 
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate()
 }
 
-export function MonthNavigator({ year, month, onPrev, onNext }: MonthNavigatorProps) {
+export function MonthNavigator({ year, month, onPrev, onNext, periodStart, periodEnd }: MonthNavigatorProps) {
   const mm = String(month).padStart(2, '0')
-  const lastDay = getDaysInMonth(year, month)
-  const lastDayStr = String(lastDay).padStart(2, '0')
+
+  const rangeLabel = periodStart && periodEnd
+    ? `${formatDDMM(periodStart)} → ${formatDDMM(periodEnd)}`
+    : (() => {
+        const lastDay = getDaysInMonth(year, month)
+        return `01/${mm} → ${String(lastDay).padStart(2, '0')}/${mm}`
+      })()
 
   return (
     <div className="flex items-center justify-center gap-2 py-2 pointer-events-none">
@@ -38,7 +47,7 @@ export function MonthNavigator({ year, month, onPrev, onNext }: MonthNavigatorPr
           className="text-xs tabular-nums whitespace-nowrap"
           style={{ color: 'var(--theme-text-secondary)' }}
         >
-          01/{mm} → {lastDayStr}/{mm}
+          {rangeLabel}
         </span>
       </div>
 
