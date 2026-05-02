@@ -124,9 +124,13 @@ function stopPolling() {
 
 // ── Auto-init on import ───────────────────────────────────────────────
 
-if (typeof window !== 'undefined') {
-  // Initial check — if it fails, retry once after a short delay
-  // (handles slow cold-start on production servers)
+function isAuthenticated(): boolean {
+  return !!localStorage.getItem('access_token')
+}
+
+function initHealthMonitoring() {
+  if (!isAuthenticated()) return
+
   checkBackendHealth().then(ok => {
     if (ok) {
       setBackendOnline(true)
@@ -137,17 +141,41 @@ if (typeof window !== 'undefined') {
     }
   })
 
-  window.addEventListener('online', () => {
-    checkBackendHealth().then(ok => setBackendOnline(ok))
-  })
-  window.addEventListener('offline', () => {
-    setBackendOnline(false)
-  })
+  window.addEventListener('online', onBrowserOnline)
+  window.addEventListener('offline', onBrowserOffline)
+  document.addEventListener('visibilitychange', onVisibilityChange)
+}
 
-  // Resume health check when tab becomes visible
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && isOnline() && !_backendOnline) {
-      checkBackendHealth().then(ok => setBackendOnline(ok))
-    }
-  })
+function cleanupHealthMonitoring() {
+  window.removeEventListener('online', onBrowserOnline)
+  window.removeEventListener('offline', onBrowserOffline)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
+  stopPolling()
+}
+
+function onBrowserOnline() {
+  if (isAuthenticated()) checkBackendHealth().then(ok => setBackendOnline(ok))
+}
+function onBrowserOffline() {
+  setBackendOnline(false)
+}
+function onVisibilityChange() {
+  if (document.visibilityState === 'visible' && isOnline() && !_backendOnline && isAuthenticated()) {
+    checkBackendHealth().then(ok => setBackendOnline(ok))
+  }
+}
+
+/** Start health monitoring after login. */
+export function startHealthMonitor() {
+  initHealthMonitoring()
+}
+
+/** Stop health monitoring after logout. */
+export function stopHealthMonitor() {
+  cleanupHealthMonitoring()
+  _backendOnline = true
+}
+
+if (typeof window !== 'undefined') {
+  initHealthMonitoring()
 }
