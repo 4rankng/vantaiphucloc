@@ -134,7 +134,7 @@ export function TripDetail() {
       <div className="rounded-2xl p-4 space-y-1"
         style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
         <div className="flex items-center justify-between mb-2">
-          <p className="text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>Lệnh điều hành</p>
+          <p className="text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>Đơn hàng</p>
           <div className="flex items-center gap-2">
             <ConfirmationCheckbox
               isConfirmed={trip.isConfirmed}

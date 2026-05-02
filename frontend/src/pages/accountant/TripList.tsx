@@ -143,31 +143,26 @@ export function TripList() {
   const columns: Column<TripOrder>[] = [
     {
       key: 'trip',
-      header: 'Lệnh / Ngày',
+      header: 'Ngày',
       accessor: (row) => (
-        <div className="min-w-0">
-          <p className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
-            {row.code ?? '—'}
-          </p>
-          <p className="flex items-center gap-1 text-xs mt-0.5" style={{ color: 'var(--theme-text-secondary)' }}>
-            <Calendar className="h-3 w-3 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
-            {row.tripDate ? new Date(row.tripDate).toLocaleDateString('vi-VN') : '—'}
-          </p>
-        </div>
+        <p className="flex items-center gap-1 text-xs whitespace-nowrap" style={{ color: 'var(--theme-text-secondary)' }}>
+          <Calendar className="h-3 w-3 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
+          {row.tripDate ? new Date(row.tripDate).toLocaleDateString('vi-VN') : '—'}
+        </p>
       ),
       sortable: true,
       sortKey: (row) => row.tripDate ?? '',
-      width: '120px',
+      width: '100px',
     },
     {
       key: 'client',
       header: 'Khách hàng',
       accessor: (row) => (
         <div className="min-w-0">
-          <p className="font-semibold text-sm truncate" style={{ color: 'var(--theme-text-primary)' }}>
+          <p className="font-semibold text-sm whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
             {row.clientName}
           </p>
-          <p className="text-xs truncate mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+          <p className="text-xs whitespace-nowrap mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
             {row.route}
           </p>
         </div>
@@ -180,11 +175,11 @@ export function TripList() {
       header: 'Xe / Tài xế',
       accessor: (row) => (
         <div className="min-w-0">
-          <p className="flex items-center gap-1.5 text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
+          <p className="flex items-center gap-1.5 text-sm font-medium whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
             <Truck className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
             {row.tractorPlate || '—'}
           </p>
-          <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--theme-text-muted)' }}>
+          <p className="text-xs mt-0.5 whitespace-nowrap" style={{ color: 'var(--theme-text-muted)' }}>
             {row.driverName || '—'}
           </p>
         </div>
@@ -198,12 +193,12 @@ export function TripList() {
       key: 'containers',
       header: 'Container',
       accessor: (row) => (
-        <div className="flex flex-wrap gap-1">
+        <div className="flex gap-1 flex-nowrap">
           {row.containers.length > 0 ? (
             row.containers.slice(0, 3).map((c, i) => (
               <span
                 key={i}
-                className="inline-flex items-center gap-1 text-xs font-mono px-1.5 py-0.5 rounded"
+                className="inline-flex items-center gap-1 text-xs font-mono px-1.5 py-0.5 rounded whitespace-nowrap"
                 style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
               >
                 <span className="font-bold">{c.workType}</span>
@@ -216,7 +211,7 @@ export function TripList() {
             <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>—</span>
           )}
           {row.containers.length > 3 && (
-            <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>+{row.containers.length - 3}</span>
+            <span className="text-xs whitespace-nowrap" style={{ color: 'var(--theme-text-muted)' }}>+{row.containers.length - 3}</span>
           )}
         </div>
       ),
@@ -227,7 +222,7 @@ export function TripList() {
       key: 'revenue',
       header: 'Doanh thu',
       accessor: (row) => (
-        <span className="font-mono font-bold text-sm tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
+        <span className="font-mono font-bold text-sm tabular-nums whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
           {fmt(row.revenue ?? 0)}
         </span>
       ),
@@ -375,9 +370,16 @@ export function TripList() {
 
   return (
     <div className="space-y-5">
-      {/* Page header */}
-      <div className="flex items-center justify-between gap-4">
-        <div />
+      {/* Month navigator + actions on the same row */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 min-w-0">
+          <MonthNavigator
+            year={year}
+            month={month}
+            onPrev={onPrev}
+            onNext={onNext}
+          />
+        </div>
 
         <div className="flex items-center gap-2 shrink-0">
           <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden" />
@@ -412,15 +414,6 @@ export function TripList() {
           </Button>
         </div>
       </div>
-
-      {/* Month navigator */}
-      <MonthNavigator
-        year={year}
-        month={month}
-        onPrev={onPrev}
-        onNext={onNext}
-        rightLabel={`${trips.length} lệnh trong tháng`}
-      />
 
       {/* KPI stats */}
       <StatsGrid
@@ -486,15 +479,7 @@ export function TripList() {
             <span className="font-bold" style={{ color: 'var(--theme-text-primary)' }}>{filtered.length}</span>
             {' '}lệnh{statusFilter !== 'ALL' ? ` · ${STATUS_FILTERS.find(s => s.key === statusFilter)?.label}` : ''}
           </p>
-          {(search || statusFilter !== 'ALL') && (
-            <button
-              onClick={handleClearFilters}
-              className="text-xs font-medium transition hover:opacity-70"
-              style={{ color: 'var(--theme-brand-primary)' }}
-            >
-              Xoá bộ lọc
-            </button>
-          )}
+
         </div>
 
         {/* Data table — no outer border since we're already inside the card */}
