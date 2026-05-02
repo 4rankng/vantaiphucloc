@@ -20,6 +20,7 @@ interface ContainerScannerProps {
 }
 
 const RECT_WIDTH_PERCENT = 0.85
+const RECT_ASPECT_RATIO = 2.5
 const SQUARE_SIZE_PERCENT = 0.75
 const MAX_CAPTURE_WIDTH = 1200
 
@@ -157,8 +158,7 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
   // ── Camera overlay box ──────────────────────────────────────────────────────
   const overlayBoxStyle = {
     width: scanMode === 'square' ? `${SQUARE_SIZE_PERCENT * 100}%` : `${RECT_WIDTH_PERCENT * 100}%`,
-    height: scanMode === 'rectangle' ? '120px' : undefined,
-    aspectRatio: scanMode === 'square' ? '1 / 1' : undefined,
+    aspectRatio: scanMode === 'square' ? '1 / 1' : `${RECT_ASPECT_RATIO} / 1`,
     boxShadow: '0 0 0 1000px rgba(0, 0, 0, 0.6)',
     border: '2px dashed rgba(22, 163, 74, 0.5)',
   } as React.CSSProperties
@@ -195,8 +195,8 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
     </div>
   )
 
-  // ── Crop aspect ratio for react-easy-crop ───────────────────────────────────
-  const cropAspect = scanMode === 'square' ? 1 : 3.5 // wide rectangle for container numbers
+  // ── Crop aspect ratio for react-easy-crop (must match overlay box) ─────────────
+  const cropAspect = scanMode === 'square' ? 1 : RECT_ASPECT_RATIO // wide rectangle for container numbers
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: '#000' }}>
