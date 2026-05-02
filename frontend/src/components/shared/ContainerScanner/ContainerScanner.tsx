@@ -19,9 +19,7 @@ interface ContainerScannerProps {
   galleryImage?: string | null
 }
 
-const RECT_WIDTH_PERCENT = 0.85
 const RECT_ASPECT_RATIO = 2.5
-const SQUARE_SIZE_PERCENT = 0.75
 const MAX_CAPTURE_WIDTH = 1200
 
 // ─── Crop a loaded image to the given pixel area ──────────────────────────────
@@ -149,23 +147,6 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
     reader.readAsDataURL(file)
     e.target.value = ''
   }, [])
-
-  // ── Camera overlay box (visual guide only) ────────────────────────────────
-  const overlayBoxStyle = {
-    width: scanMode === 'square' ? `${SQUARE_SIZE_PERCENT * 100}%` : `${RECT_WIDTH_PERCENT * 100}%`,
-    aspectRatio: scanMode === 'square' ? '1 / 1' : `${RECT_ASPECT_RATIO} / 1`,
-    boxShadow: '0 0 0 1000px rgba(0, 0, 0, 0.6)',
-    border: '2px dashed rgba(22, 163, 74, 0.5)',
-  } as React.CSSProperties
-
-  const overlayBox = (
-    <div className="relative rounded-xl" style={overlayBoxStyle}>
-      <div className="absolute -top-[2px] -left-[2px] w-6 h-6 border-t-2 border-l-2 rounded-tl-lg" style={{ borderColor: 'var(--theme-brand-primary)' }} />
-      <div className="absolute -top-[2px] -right-[2px] w-6 h-6 border-t-2 border-r-2 rounded-tr-lg" style={{ borderColor: 'var(--theme-brand-primary)' }} />
-      <div className="absolute -bottom-[2px] -left-[2px] w-6 h-6 border-b-2 border-l-2 rounded-bl-lg" style={{ borderColor: 'var(--theme-brand-primary)' }} />
-      <div className="absolute -bottom-[2px] -right-[2px] w-6 h-6 border-b-2 border-r-2 rounded-br-lg" style={{ borderColor: 'var(--theme-brand-primary)' }} />
-    </div>
-  )
 
   const modeToggleButton = (
     <div className="flex flex-col items-center gap-1">
@@ -322,9 +303,8 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
           </div>
 
           <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ pointerEvents: 'none' }}>
-            {overlayBox}
-            <p className="text-sm font-bold mt-4" style={{ color: '#ffffff', textShadow: '0 1px 4px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8)', position: 'relative', zIndex: 1 }}>
-              Chụp ảnh đầy đủ, sau đó cắt số container
+            <p className="text-sm font-bold" style={{ color: '#ffffff', textShadow: '0 1px 4px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8)', position: 'relative', zIndex: 1 }}>
+              Chụp ảnh số container
             </p>
           </div>
 
