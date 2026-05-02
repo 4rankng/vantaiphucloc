@@ -27,6 +27,8 @@ function DriverShell() {
   const isHome = location.pathname === '/driver'
   const title = resolveTitle(location.pathname)
 
+  const isCreateOrder = location.pathname === '/driver/work-orders/new'
+
   return (
     <AppShell
       topbarProps={
@@ -36,6 +38,8 @@ function DriverShell() {
               name: user?.name ?? '',
               onNotifications: () => navigate('/driver/notifications'),
             }
+          : isCreateOrder
+          ? { variant: 'page' as const, title }
           : { variant: 'page' as const, title, onBack: () => navigate(-1) }
       }
       contentClassName="px-4 py-4 space-y-4 md:px-6 md:py-6 md:max-w-4xl md:mx-auto"
