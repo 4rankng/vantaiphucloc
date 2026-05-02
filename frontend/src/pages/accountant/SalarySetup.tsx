@@ -60,7 +60,7 @@ function PeriodConfigSection() {
         <div className="flex items-center gap-2.5">
           <Settings className="w-4 h-4" style={{ color: 'var(--theme-brand-primary)' }} />
           <div className="text-left">
-            <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Cấu hình kỳ lương</p>
+            <p className="typo-h2">Cấu hình kỳ lương</p>
             {config && !open && (
               <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
                 Ngày {config.from_day} → ngày {config.to_day} tháng sau
@@ -162,7 +162,7 @@ function CalculateSection() {
     <div className="rounded-2xl p-4 space-y-3" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', boxShadow: 'var(--theme-shadow-card)' }}>
       <div className="flex items-center gap-2">
         <Calculator className="w-4 h-4" style={{ color: 'var(--theme-brand-primary)' }} />
-        <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tính lương kỳ này</p>
+        <p className="typo-h2">Tính lương kỳ này</p>
       </div>
       <div className="rounded-xl px-3 py-2" style={{ background: 'var(--theme-bg-tertiary)' }}>
         <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Kỳ hiện tại</p>
@@ -233,7 +233,7 @@ function SalaryPeriodsList() {
     <div className="space-y-4">
       {byDriver.map(([driverName, driverPeriods]) => (
         <div key={driverName}>
-          <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--theme-text-muted)' }}>
+          <p className="typo-label mb-2">
             {driverName}
           </p>
           <div className="space-y-2">
@@ -319,7 +319,7 @@ export function SalarySetup() {
       <PeriodConfigSection />
       <CalculateSection />
       <div>
-        <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--theme-text-muted)' }}>
+        <p className="typo-label mb-2">
           <Clock className="w-3 h-3 inline mr-1" />
           Lịch sử kỳ lương
         </p>

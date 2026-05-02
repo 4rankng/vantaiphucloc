@@ -92,16 +92,11 @@ function StatCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           {/* Label */}
-          <p
-            className="text-[10px] font-semibold uppercase tracking-wider mb-1"
-            style={{ color: 'var(--theme-text-muted)' }}
-          >
-            {label}
-          </p>
+          <p className="typo-label mb-1">{label}</p>
 
           {/* Value */}
           <p
-            className="text-sm lg:text-base font-bold font-display tabular-nums leading-tight break-all"
+            className="typo-value-lg font-display leading-tight break-all"
             style={{ color: valueColor ?? 'var(--theme-text-primary)' }}
           >
             {value}
@@ -109,16 +104,14 @@ function StatCard({
 
           {/* Subtitle */}
           {subtitle && (
-            <p className="mt-0.5 text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>
-              {subtitle}
-            </p>
+            <p className="typo-meta mt-0.5">{subtitle}</p>
           )}
 
           {/* Trend */}
           {typeof trend === 'number' && (
             <div className="flex items-center gap-1.5 mt-1.5">
               <div
-                className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+                className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 typo-label"
                 style={{
                   background: `color-mix(in srgb, ${trendColor} 12%, transparent)`,
                   color: trendColor,
@@ -128,9 +121,7 @@ function StatCard({
                 <span>{Math.abs(trend)}%</span>
               </div>
               {trendLabel && (
-                <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>
-                  {trendLabel}
-                </span>
+                <span className="typo-meta">{trendLabel}</span>
               )}
             </div>
           )}

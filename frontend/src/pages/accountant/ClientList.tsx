@@ -157,11 +157,11 @@ export function ClientList() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tên</Label>
+              <Label className="typo-form-label">Tên</Label>
               <Input value={form.name} onChange={e => updateField('name', e.target.value)} placeholder="Tên khách hàng" className="text-sm" />
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Loại</Label>
+              <Label className="typo-form-label">Loại</Label>
               <div className="flex gap-2">
                 {(['company', 'individual'] as ClientType[]).map(t => (
                   <button key={t} onClick={() => updateField('type', t)}
@@ -176,19 +176,19 @@ export function ClientList() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mã số thuế</Label>
+              <Label className="typo-form-label">Mã số thuế</Label>
               <Input value={form.taxCode} onChange={e => updateField('taxCode', e.target.value)} placeholder="0123456789" className="text-sm" />
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Địa chỉ</Label>
+              <Label className="typo-form-label">Địa chỉ</Label>
               <Input value={form.address} onChange={e => updateField('address', e.target.value)} placeholder="Địa chỉ" className="text-sm" />
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điện thoại</Label>
+              <Label className="typo-form-label">Điện thoại</Label>
               <Input value={form.phone} onChange={e => updateField('phone', e.target.value)} placeholder="0225-123-456" className="text-sm" />
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Người liên hệ</Label>
+              <Label className="typo-form-label">Người liên hệ</Label>
               <Input value={form.contactPerson} onChange={e => updateField('contactPerson', e.target.value)} placeholder="Họ tên" className="text-sm" />
             </div>
           </div>

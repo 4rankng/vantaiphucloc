@@ -219,7 +219,7 @@ export function DataTablePro<T>({
               {visibleColumns.map((col) => (
                 <th
                   key={col.key}
-                  className={`${headerPadding} text-left text-xs font-semibold uppercase tracking-wide whitespace-nowrap`}
+                  className={`${headerPadding} text-left typo-label whitespace-nowrap`}
                   style={{
                     color: 'var(--theme-text-muted)',
                     width: col.width,
