@@ -471,7 +471,7 @@ Client (khách hàng) — is_active
   │   └── PricingLine — quantity-based pricing (unit_price, driver_salary, allowance)
   ├── WorkOrder (phiếu làm việc) — created by driver, is_locked after match, needs_review
   │   └── WorkOrderContainer — containers in the work order
-  └── TripOrder (lệnh điều hành) — created by accountant, is_confirmed, driver_id optional
+  └── TripOrder (đơn hàng) — created by accountant, is_confirmed, driver_id optional
       ├── TripOrderContainer — containers (same work_type enforced)
       └── TripOrderWorkOrder — join table (1-to-1, reconciliation)
 
@@ -562,7 +562,7 @@ AuditLog (nhật ký hệ thống) — auto-records all data changes, reason req
 | GET | `/work-orders/{id}` | Any authenticated | Get single |
 | POST | `/work-orders` | driver | Create |
 | POST | `/work-orders/batch` | driver | Batch create (up to 50) |
-| PUT | `/work-orders/{id}` | accountant, superadmin | Update (if not locked) |
+| PUT | `/work-orders/{id}` | accountant, superadmin, driver (own, PENDING only) | Update (if not locked) |
 | DELETE | `/work-orders/{id}` | driver (own, PENDING), accountant, superadmin (PENDING) | Cancel (reason required) |
 
 ### Trip Orders

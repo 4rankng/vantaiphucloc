@@ -53,7 +53,7 @@ export function DriverHistory() {
         <div className="rounded-xl px-4 py-2.5 flex items-center justify-between"
           style={{ background: 'var(--theme-brand-primary-light)' }}>
           <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>
-            Tổng ({filtered.length} công)
+            Tổng ({filtered.length} cont)
           </span>
           <span className="text-base font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>
             {formatCurrencyFull(totalEarnings)}
@@ -71,7 +71,7 @@ export function DriverHistory() {
         ) : filtered.length === 0 ? (
           <div className="col-span-full rounded-2xl p-8 text-center" style={{ background: 'var(--theme-bg-secondary)' }}>
             <Camera className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--theme-text-muted)' }} />
-            <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có số công nào</p>
+            <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có số cont nào</p>
           </div>
         ) : (
           filtered.map(wo => (

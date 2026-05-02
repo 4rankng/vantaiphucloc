@@ -9,9 +9,11 @@ import { RecentTripSuggestions } from '@/components/shared/RecentTripSuggestions
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { useCreateWorkOrder } from './useCreateWorkOrder'
 import { useToast } from '@/components/atoms/Toast'
+import type { WorkOrder } from '@/data/domain'
 
-export function CreateWorkOrder() {
+export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: WorkOrder | null }) {
   const {
+    isEdit,
     clients, routes, recentOrders,
     containers, clientId, pickupLocation, dropoffLocation,
     submitting, scannerOpen, galleryImage, isOnline, summaryOpen, showSuccess,
@@ -22,7 +24,7 @@ export function CreateWorkOrder() {
     updateContainer, addContainer, removeContainer,
     handleRecentTripSelect,
     onRequestSubmit, confirmSubmit, setSummaryOpen,
-  } = useCreateWorkOrder()
+  } = useCreateWorkOrder(existingWorkOrder)
 
   const navigate = useNavigate()
   const toast = useToast()
@@ -298,7 +300,7 @@ export function CreateWorkOrder() {
               color: canSubmit ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)',
             }}
           >
-            {submitting ? 'Đang gửi...' : isOnline ? 'Gửi chuyến' : 'Lưu offline'}
+            {submitting ? 'Đang gửi...' : isEdit ? 'Cập nhật' : isOnline ? 'Gửi chuyến' : 'Lưu offline'}
           </button>
         </div>
       </div>
