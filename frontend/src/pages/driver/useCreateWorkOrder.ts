@@ -106,7 +106,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
           const seen = new Set<string>()
           const unique: WorkOrder[] = []
           for (const wo of sorted) {
-            const key = `${wo.clientId}-${wo.route}`
+            const key = `${wo.clientId}-${wo.pickupLocation}-${wo.dropoffLocation}`
             if (!seen.has(key)) {
               seen.add(key)
               unique.push(wo)
@@ -182,12 +182,18 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
     setContainers(prev => prev.filter((_, i) => i !== idx))
   }, [])
 
-  // Recent trip selection
+  // Recent trip selection (toggle: click again to deselect)
   const handleRecentTripSelect = useCallback((trip: { clientId: string; clientName: string; pickupLocation: string; dropoffLocation: string }) => {
-    setClientId(trip.clientId)
-    setPickupLocation(trip.pickupLocation)
-    setDropoffLocation(trip.dropoffLocation)
-  }, [])
+    if (clientId === trip.clientId && pickupLocation === trip.pickupLocation && dropoffLocation === trip.dropoffLocation) {
+      setClientId('')
+      setPickupLocation('')
+      setDropoffLocation('')
+    } else {
+      setClientId(trip.clientId)
+      setPickupLocation(trip.pickupLocation)
+      setDropoffLocation(trip.dropoffLocation)
+    }
+  }, [clientId, pickupLocation, dropoffLocation])
 
   // Validation — for edit mode, existing photos are valid
   const canSubmit = useMemo(() => {

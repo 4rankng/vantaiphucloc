@@ -211,9 +211,16 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
 
       {/* Customer & Route section */}
       <div className="space-y-4">
-        <p className="text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--theme-text-muted)' }}>
-          Khách & Tuyến
-        </p>
+        <div className="flex items-center gap-3">
+          <p className="text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--theme-text-muted)' }}>
+            Khách & Tuyến
+          </p>
+          {recentOrders.length > 0 && (
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--theme-text-muted)' }}>
+              · Gần đây
+            </p>
+          )}
+        </div>
 
         <RecentTripSuggestions
           trips={recentOrders}
@@ -221,7 +228,6 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
           selectedPickup={pickupLocation}
           selectedDropoff={dropoffLocation}
           onSelect={handleRecentTripSelect}
-          onChooseOther={() => {}}
         />
 
         <div className="space-y-3">
@@ -239,27 +245,29 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm lấy</label>
-            <InlineSelect
-              placeholder="Chọn điểm lấy"
-              value={pickupLocation}
-              options={[...new Set(routes.map(r => r.pickupLocation).filter(Boolean) as string[])].map(loc => ({ value: loc!, label: loc! }))}
-              onChange={(val: string) => {
-                setPickupLocation(val)
-                setDropoffLocation('')
-              }}
-            />
-          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm lấy</label>
+              <InlineSelect
+                placeholder="Chọn điểm lấy"
+                value={pickupLocation}
+                options={[...new Set(routes.map(r => r.pickupLocation).filter(Boolean) as string[])].map(loc => ({ value: loc!, label: loc! }))}
+                onChange={(val: string) => {
+                  setPickupLocation(val)
+                  setDropoffLocation('')
+                }}
+              />
+            </div>
 
-          <div className="space-y-1.5">
-            <label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm trả</label>
-            <InlineSelect
-              placeholder="Chọn điểm trả"
-              value={dropoffLocation}
-              options={routes.filter(r => r.pickupLocation === pickupLocation).map(r => ({ value: r.dropoffLocation ?? '', label: r.dropoffLocation ?? '' }))}
-              onChange={setDropoffLocation}
-            />
+            <div className="space-y-1.5">
+              <label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm trả</label>
+              <InlineSelect
+                placeholder="Chọn điểm trả"
+                value={dropoffLocation}
+                options={[...new Set(routes.map(r => r.dropoffLocation).filter(Boolean) as string[])].map(loc => ({ value: loc!, label: loc! }))}
+                onChange={setDropoffLocation}
+              />
+            </div>
           </div>
         </div>
       </div>
