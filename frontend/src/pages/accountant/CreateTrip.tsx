@@ -109,8 +109,7 @@ export function CreateTrip() {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Top bar: back + import */}
+    <div className="space-y-4 lg:space-y-6">
       <div className="flex items-center gap-3">
         <button
           onClick={() => navigate(-1)}
@@ -132,96 +131,94 @@ export function CreateTrip() {
         </Button>
       </div>
 
-      {/* Client */}
-      <div className="space-y-2">
-        <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Khách hàng</Label>
-        <InlineSelect
-          options={clientOptions}
-          value={clientId}
-          onChange={setClientId}
-          placeholder="Chọn khách hàng"
-          onCreateNew={() => setCreateClientOpen(true)}
-          createNewLabel="Tạo khách hàng mới"
-        />
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Khách hàng</Label>
+            <InlineSelect
+              options={clientOptions}
+              value={clientId}
+              onChange={setClientId}
+              placeholder="Chọn khách hàng"
+              onCreateNew={() => setCreateClientOpen(true)}
+              createNewLabel="Tạo khách hàng mới"
+            />
+          </div>
 
-      {/* Pickup Location */}
-      <div className="space-y-2">
-        <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm lấy</Label>
-        <InlineSelect
-          options={pickupOptions}
-          value={pickupLocation}
-          onChange={(val: string) => { setPickupLocation(val); setDropoffLocation('') }}
-          placeholder="Chọn điểm lấy"
-        />
-      </div>
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm lấy</Label>
+            <InlineSelect
+              options={pickupOptions}
+              value={pickupLocation}
+              onChange={(val: string) => { setPickupLocation(val); setDropoffLocation('') }}
+              placeholder="Chọn điểm lấy"
+            />
+          </div>
 
-      {/* Dropoff Location */}
-      <div className="space-y-2">
-        <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm trả</Label>
-        <InlineSelect options={dropoffOptions} value={dropoffLocation} onChange={setDropoffLocation} placeholder="Chọn điểm trả" />
-      </div>
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm trả</Label>
+            <InlineSelect options={dropoffOptions} value={dropoffLocation} onChange={setDropoffLocation} placeholder="Chọn điểm trả" />
+          </div>
 
-      {/* Trip-level salary & allowance */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-2">
-          <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Lương tài xế</Label>
-          <Input type="number" value={driverSalary || ''} onChange={e => setDriverSalary(Number(e.target.value))}
-            placeholder="0" className="text-sm" />
-        </div>
-        <div className="space-y-2">
-          <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Phụ cấp</Label>
-          <Input type="number" value={allowance || ''} onChange={e => setAllowance(Number(e.target.value))}
-            placeholder="0" className="text-sm" />
-        </div>
-      </div>
-
-      {/* Cong items */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Container</Label>
-          <button onClick={addCong} className="flex items-center gap-1 text-xs font-medium touch-manipulation" style={{ color: 'var(--theme-brand-primary)' }}>
-            <Plus className="w-3.5 h-3.5" /> Thêm cont
-          </button>
-        </div>
-        <div className="space-y-3">
-          {congItems.map((item, i) => (
-            <div key={item.id} className="rounded-2xl p-3 space-y-3"
-              style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Công {i + 1}</span>
-                {congItems.length > 1 && (
-                  <button onClick={() => removeCong(item.id)} className="touch-manipulation" style={{ color: 'var(--theme-status-error)' }}>
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex flex-wrap gap-1.5 shrink-0">
-                  {WORK_TYPES.map(w => (
-                    <button key={w} onClick={() => updateCong(item.id, 'workType', w)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors touch-manipulation"
-                      style={{
-                        background: item.workType === w ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
-                        color: item.workType === w ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
-                      }}>
-                      {w}
-                    </button>
-                  ))}
-                </div>
-                <Input
-                  value={item.containerNumber}
-                  onChange={e => updateCong(item.id, 'containerNumber', e.target.value)}
-                  placeholder="Số cont"
-                  className="text-sm font-mono min-w-0 flex-1"
-                />
-              </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Lương tài xế</Label>
+              <Input type="number" value={driverSalary || ''} onChange={e => setDriverSalary(Number(e.target.value))}
+                placeholder="0" className="text-sm" />
             </div>
-          ))}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Phụ cấp</Label>
+              <Input type="number" value={allowance || ''} onChange={e => setAllowance(Number(e.target.value))}
+                placeholder="0" className="text-sm" />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Container</Label>
+            <button onClick={addCong} className="flex items-center gap-1 text-xs font-medium touch-manipulation" style={{ color: 'var(--theme-brand-primary)' }}>
+              <Plus className="w-3.5 h-3.5" /> Thêm cont
+            </button>
+          </div>
+          <div className="space-y-3">
+            {congItems.map((item, i) => (
+              <div key={item.id} className="rounded-2xl p-3 space-y-3"
+                style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Công {i + 1}</span>
+                  {congItems.length > 1 && (
+                    <button onClick={() => removeCong(item.id)} className="touch-manipulation" style={{ color: 'var(--theme-status-error)' }}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap gap-1.5 shrink-0">
+                    {WORK_TYPES.map(w => (
+                      <button key={w} onClick={() => updateCong(item.id, 'workType', w)}
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors touch-manipulation"
+                        style={{
+                          background: item.workType === w ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
+                          color: item.workType === w ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
+                        }}>
+                        {w}
+                      </button>
+                    ))}
+                  </div>
+                  <Input
+                    value={item.containerNumber}
+                    onChange={e => updateCong(item.id, 'containerNumber', e.target.value)}
+                    placeholder="Số cont"
+                    className="text-sm font-mono min-w-0 flex-1"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Submit */}
       <Button onClick={handleSubmit} disabled={!clientId || !pickupLocation || !dropoffLocation || submitting}
         className="w-full h-11 font-bold rounded-xl"
         style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
