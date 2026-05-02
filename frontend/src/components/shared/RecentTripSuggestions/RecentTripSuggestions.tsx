@@ -19,7 +19,7 @@ export function RecentTripSuggestions({
   if (trips.length === 0) return null
 
   return (
-    <div className="grid grid-cols-2 gap-1.5">
+    <div className="flex flex-col gap-1.5">
       {trips.map((trip) => {
         const pickup = trip.pickupLocation || (trip.route || '').split(' - ')[0] || ''
         const dropoff = trip.dropoffLocation || (trip.route || '').split(' - ').slice(1).join(' - ') || ''

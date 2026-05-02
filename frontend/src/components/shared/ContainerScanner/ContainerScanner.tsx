@@ -327,10 +327,10 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
           </div>
 
           <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ pointerEvents: 'none' }}>
-            <p className="text-sm font-bold mb-4" style={{ color: 'rgba(255,255,255,0.9)', textShadow: '1px 1px 3px rgba(0,0,0,0.9)' }}>
+            {overlayBox}
+            <p className="text-sm font-bold mt-4" style={{ color: '#ffffff', textShadow: '0 1px 4px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8)', position: 'relative', zIndex: 1 }}>
               Đưa số container vào ô này
             </p>
-            {overlayBox}
           </div>
 
           <div className="absolute bottom-8 left-0 right-0 flex justify-center items-center gap-6" style={{ pointerEvents: 'auto' }}>
