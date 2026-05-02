@@ -22,7 +22,7 @@
 | **superadmin** | SuperAdmin | Everything — full CRUD on all entities, manage users, delete vendors, configure salary | — |
 | **director** | Giám đốc | View dashboard, full CRUD on users, clients, vendors, routes, pricings, trip orders | Cannot reconcile, cannot create work orders, cannot configure salary |
 | **accountant** | Kế toán | Create/edit clients, routes, pricings, trip orders, reconcile, calculate salary, manage salary config, manage vendors, manage drivers | Cannot manage users |
-| **driver** | Tài xế | Create work orders (single + batch), view own work orders, view own salary | Cannot access any other entity |
+| **driver** | Tài xế | Create work orders (single + batch), view own work orders, view own salary, see income per trip (only after Match) | Cannot access any other entity, cannot see salary/allowance on WO, cannot enter expenses |
 
 ---
 
@@ -128,10 +128,10 @@ Each quantity tier defines `unit_price`, `driver_salary`, `allowance`.
 | unit_price | int (VND) | Always 0 on creation (revenue tracked in TO only) |
 | driver_salary | int (VND) | Synced from TO when matched |
 | allowance | int (VND) | Synced from TO when matched |
-| earning | int (VND) | = driver_salary + allowance when matched |
+| earning | int (VND) | = driver_salary + allowance when matched (NOT visible to driver until matched) |
 | pricing_id | int (FK)? | Link to Pricing record (for reference) |
-| status | `PENDING` → `MATCHED` → `COMPLETED` | Lifecycle status |
-| is_locked | boolean | Locked when linked TO is confirmed. Default false. |
+| status | `PENDING` → `MATCHED` (+LOCKED) → `COMPLETED` → `CANCELLED` | Lifecycle status |
+| is_locked | boolean | Locked immediately after matching. Default false. |
 | locked_at | datetime? | When locked |
 | locked_by | int (FK: user)? | Who locked |
 
@@ -149,19 +149,24 @@ Each quantity tier defines `unit_price`, `driver_salary`, `allowance`.
 ```
 Driver creates WO → PENDING (no match)
                           ↓ (match found, TO in PENDING)
-                     MATCHED (linked to TO, earning synced from TO)
+                     MATCHED + LOCKED (linked to TO, earning synced from TO, cannot edit)
                           ↓ (TO becomes CONFIRMED)
-                     COMPLETED + LOCKED (cannot change)
+                     COMPLETED (final state)
+                     ↓ (if unmatched before confirmation)
+                     PENDING (back to unmatched, unlocked)
 ```
 
 **Business Rules:**
 - `earning` is always 0 on creation. Only updated when matched to a Trip Order.
+- **Driver cannot see** `driver_salary`, `allowance`, `earning` fields — income is only visible after accountant performs "Match".
+- **No expense tracking:** Driver pays incidental expenses from their own salary/allowance. App does NOT track incidental expenses.
 - A Work Order can only be matched to a Trip Order that is in `PENDING` state (not `DRAFT`).
-- After matching, if Trip Order's `driver_salary` or `allowance` changes AND Trip Order is not yet confirmed (`is_confirmed=false`), the Work Order's `earning`, `driver_salary`, `allowance` are **automatically** updated and salary recalculation triggered.
-- Once linked Trip Order is confirmed (`is_confirmed=true`), Work Order becomes `is_locked=true`. No further changes allowed.
-- Accountant can edit `client_id` on Work Order during reconciliation (audit log recorded).
-- Driver can delete/edit Work Order when `status = PENDING`. Accountant can also delete/edit `PENDING` Work Orders.
-- Once `MATCHED` or `COMPLETED`, Work Order cannot be deleted.
+- After matching, both TO and WO are **immediately locked** (`is_locked=true`). No edits allowed. Must "Unmatch" first to make changes.
+- Once linked Trip Order is confirmed (`is_confirmed=true`), Work Order becomes `COMPLETED`. No further changes allowed (no unmatch).
+- Accountant can edit `client_id` on Work Order during reconciliation (audit log recorded) — only before matching.
+- Driver can cancel Work Order when `status = PENDING`. Accountant can also cancel `PENDING` Work Orders.
+- Once `MATCHED` or `COMPLETED`, Work Order cannot be cancelled unless unmatch is performed first (only if TO is not yet confirmed).
+- **No hard delete** — only cancellation with reason (audit log).
 
 ### 3.6 Trip Order (Lệnh điều hành) — UPDATED
 
@@ -173,7 +178,7 @@ Driver creates WO → PENDING (no match)
 | work_type | WorkType | Legacy (nullable) — use containers table |
 | route | string | Route |
 | tractor_plate | string | Truck plate |
-| driver_id | int (FK) | Driver who drove |
+| driver_id | int (FK, nullable) | Driver who drove — **optional** at creation, matched via license plate + route |
 | driver_name | string | Denormalized |
 | container_number | string | Legacy (nullable) — use containers table |
 | containers | TripOrderContainer[] | Child table with multiple containers |
@@ -182,11 +187,11 @@ Driver creates WO → PENDING (no match)
 | driver_salary | int (VND) | Driver base pay |
 | allowance | int (VND) | Driver allowance |
 | revenue | int (VND) | = unit_price |
-| matched_work_order_ids | int[] | Work orders linked to this trip |
+| matched_work_order_ids | int[] | Work orders linked to this trip (strictly 1 WO per TO) |
 | is_confirmed | boolean | "Đã chốt" with client — once true, locks this TO and all linked WOs |
 | confirmed_by | int (FK)? | User who confirmed |
 | confirmed_at | datetime? | When confirmed |
-| status | `DRAFT` → `PENDING` → `COMPLETED` → `CANCELLED` | Lifecycle |
+| status | `DRAFT` → `PENDING` → `COMPLETED` (+LOCKED after match) → `CANCELLED` | Lifecycle |
 
 **TripOrderContainer (child table):**
 
@@ -203,23 +208,30 @@ Accountant creates TO → DRAFT (missing info)
                           ↓ (all info provided)
                      PENDING (ready for matching)
                           ↓ (match found with WO)
-                     COMPLETED (match exists)
+                     COMPLETED + LOCKED (match exists, both TO and WO locked)
                           ↓ (accountant clicks "Confirm with client")
-                     CONFIRMED (locked, is_confirmed=true)
+                     CONFIRMED (final, no unmatch allowed)
+                          ↓ (if unmatched before confirmation)
+                     PENDING (back to unmatched, unlocked)
 ```
 
 **Business Rules:**
 - **NO MIXED CONTAINER TYPES:** All containers in TripOrderContainer must have the **same work_type** (e.g., all F20 or all E40). System enforces this on create/edit.
+- **Driver not required at creation:** System does not require selecting a driver when creating TO. Only license plate (`tractor_plate`) and route are required for matching.
+- **No driver change mid-trip:** One TO is bound to one vehicle and one person from start to finish. No driver changes allowed.
+- **Accountant manual override:** Kế toán can manually edit `driver_salary` and `allowance` on TO without affecting the original Pricing.
 - **Pricing lookup:** When creating TO, system looks up Pricing by `(client, route, work_type, quantity = number of containers)`. If found, auto-fills `unit_price`, `driver_salary`, `allowance` from matching PricingLine. If not found, accountant must enter manually.
-- **Matching:** Only TOs in `PENDING` state are candidates for matching with Work Orders.
-- **Confirmation (`is_confirmed = true`):** Locks the Trip Order AND all linked Work Orders (sets `is_locked=true` on each linked WO). After confirmation:
-  - No edits to TO or linked WOs
+- **Matching (1-to-1):** One TO matches exactly **one** WO. Matching criteria: license plate (`tractor_plate`), route, container type (`work_type`), and client. Coordination via Zalo ensures accuracy before matching in system.
+- **Locking after match:** Both TO and WO are **immediately locked** after matching (`is_locked=true`). Must "Unmatch" to edit.
+- **Confirmation (`is_confirmed = true`):** Final state. After confirmation:
+  - No edits to TO or linked WO
   - No unmatching
-  - No changes to salary calculations for those WOs
-- **Deletion rules:**
-  - Can delete TO in `DRAFT` or `PENDING`
-  - Cannot delete TO with `is_confirmed=true`
-  - Cannot delete TO that is `COMPLETED` (has match)
+  - No changes to salary calculations
+- **Cancellation rules:**
+  - Can cancel TO in `DRAFT` or `PENDING` (unmatched only)
+  - Cannot cancel TO that is `COMPLETED` (has match) or `CONFIRMED`
+  - All cancellations require a reason (audit log)
+- **No hard delete** — only cancellation.
 
 ### 3.6.1 TripOrderWorkOrder (Liên kết WO—TO)
 
@@ -232,42 +244,46 @@ Join table linking Work Orders to Trip Orders for reconciliation.
 
 **Business Rules:**
 - Composite primary key: `(trip_order_id, work_order_id)`.
-- CASCADE delete on both sides — deleting a TO or WO removes the link.
-- One WO can only be linked to one TO (enforced by WO status = MATCHED).
-- One TO can be linked to multiple WOs.
+- **Strict 1-to-1:** One WO links to exactly one TO, and one TO links to exactly one WO.
+- Unmatch operation removes the link and unlocks both TO and WO (only allowed if TO is not yet confirmed).
+- After TO confirmation (`is_confirmed=true`), the link is permanent — no unmatch.
 
 ### 3.7 Reconciliation (Đối soát WO—TO) — UPDATED
 
-Match Suggestion System with weighted scoring:
+**Strict 1-to-1 matching** — one TO matches exactly one WO.
 
-| Field | Weight | Description |
-|-------|--------|-------------|
-| driver | 0.3 | Same driver |
-| client | 0.3 | Same client |
-| route | 0.2 | Same route |
-| containers | 0.2 | At least one overlapping container number |
+**Matching criteria:**
 
-**Confidence levels:**
-- `full` (score = 1.0): Auto-confirm or minimal review
-- `partial` (score ≥ 0.3): Accountant decides
-- `none` (score < 0.3): No suggestion
+| Criterion | Description |
+|-----------|-------------|
+| license plate | Same `tractor_plate` |
+| route | Same route |
+| container type | Same `work_type` |
+| client | Same client |
 
 **Flow:**
 1. System analyzes unmatched WOs and TOs (only TOs with `status=PENDING`)
-2. Accountant reviews suggestions, can edit client on WO if needed
-3. Accountant confirms or rejects match
-4. System links WO and TO via join table
-5. TO status becomes `COMPLETED`
+2. Coordination via Zalo ensures accuracy before matching in system
+3. Accountant reviews candidates and confirms match
+4. System links WO and TO (1-to-1 via join table)
+5. TO status becomes `COMPLETED` + **both TO and WO are locked** (`is_locked=true`)
 6. WO `earning`, `driver_salary`, `allowance` synced from TO
-7. If TO has pricing data, WO gets `MATCHED` status (later `COMPLETED` when TO confirmed)
+7. **Driver now sees income** for this trip on the app (only after match)
 8. Salary recalculation auto-queued
+
+**Unmatch (Hủy khớp):**
+- If TO is not yet confirmed (`is_confirmed=false`), accountant can perform "Unmatch"
+- Unmatch removes the WO-TO link, unlocks both records, and reverts TO to `PENDING`, WO to `PENDING`
+- Salary recalculation triggered after unmatch
 
 **Business Rules:**
 - Only TOs with `status = PENDING` are considered for matching.
-- Accountant can edit `client_id` on Work Order during reconciliation (audit log recorded).
-- A work order can only be matched once.
-- One trip order can match multiple work orders.
+- Accountant can edit `client_id` on Work Order before matching (audit log recorded).
+- A work order can only be matched once at a time.
+- One trip order matches exactly one work order (1-to-1 strict).
 - Both WOs and TOs can have multiple containers (enforced same work_type within TO).
+- After matching, both records are locked. Must unmatch to edit.
+- After TO confirmation (`is_confirmed=true`), unmatch is not allowed.
 
 ### 3.8 Client Reconciliation (Đối soát với khách hàng)
 
@@ -336,32 +352,37 @@ System **MUST** have audit log that auto-records any action that changes data.
 |-------|------|-------------|
 | id | int | Primary key |
 | user_id | int (FK) | Who performed action |
-| action | string | `CREATE`, `UPDATE`, `DELETE`, `CONFIRM`, `LOCK`, `MATCH`, `UNMATCH` |
+| action | string | `CREATE`, `UPDATE`, `CANCEL`, `CONFIRM`, `LOCK`, `MATCH`, `UNMATCH` |
 | table_name | string | Table affected (e.g., "work_orders", "trip_orders", "pricing") |
 | record_id | int | Record ID affected |
 | old_value | JSON? | Previous state |
 | new_value | JSON? | New state |
+| reason | string? | **Required for cancellations** — reason for cancelling/unmatching |
 | ip_address | string? | Request IP |
 | user_agent | string? | Request user agent |
 | created_at | datetime | When it happened |
 
 **Business Rules:**
 - All modifications, including edits during reconciliation, confirmation, locking, and salary changes, must be logged.
+- **All cancellations must include:** who cancelled, when, and the reason for cancellation. The `reason` field is mandatory for any `CANCEL` or `UNMATCH` action.
 
 ---
 
-## 5. Deletion & Soft Delete Rules
+## 5. Deletion, Cancellation & Soft Delete Rules
 
-| Entity | Hard Delete Allowed? | Soft Delete (`is_active=false`) |
-|--------|---------------------|-------------------------------|
-| Trip Order | Only if `DRAFT` or `PENDING` | N/A (hard delete only) |
-| Work Order | Only if `PENDING` (driver or accountant) | N/A |
-| Client | NO if has TO or WO | YES — set `is_active=false` |
-| Route | NO if used in Pricing, TO, or WO | YES — set `is_active=false` |
-| Pricing | NO if used in TO | YES — set `is_active=false` |
-| Vendor | NO if has associated drivers | YES — set `is_active=false` |
+**No hard delete allowed for any entity.** All deletions are either soft delete (`is_active=false`) or cancellation with reason.
 
-- **After SalaryPeriod is `PAID`:** No deletion or modification of any related data.
+| Entity | Cancellation / Soft Delete | Conditions |
+|--------|---------------------------|------------|
+| Trip Order | Cancel → `CANCELLED` status | Only if `DRAFT` or `PENDING` (unmatched). Reason required. |
+| Work Order | Cancel → `CANCELLED` status | Only if `PENDING` (unmatched). Reason required. |
+| Client | Soft delete (`is_active=false`) | Cannot cancel if has TO or WO |
+| Route | Soft delete (`is_active=false`) | Cannot cancel if used in Pricing, TO, or WO |
+| Pricing | Soft delete (`is_active=false`) | Cannot cancel if used in TO |
+| Vendor | Soft delete (`is_active=false`) | Cannot cancel if has associated drivers |
+
+- **All cancellations require a reason** (stored in audit log).
+- **After SalaryPeriod is `PAID`:** No cancellation or modification of any related data.
 
 ---
 
@@ -416,16 +437,19 @@ System **MUST** have audit log that auto-records any action that changes data.
 
 ### Work Order
 ```
-PENDING → (match with TO in PENDING) → MATCHED
-MATCHED → (TO becomes confirmed) → COMPLETED + LOCKED
+PENDING → (match with TO in PENDING) → MATCHED + LOCKED
+MATCHED + LOCKED → (unmatch, if TO not confirmed) → PENDING (unlocked)
+MATCHED + LOCKED → (TO becomes confirmed) → COMPLETED (permanent)
+PENDING → (cancel with reason) → CANCELLED
 ```
 
 ### Trip Order
 ```
 DRAFT → (all info provided) → PENDING
-PENDING → (match with WO) → COMPLETED
-COMPLETED → (accountant confirms with client) → CONFIRMED (locked)
-DRAFT or PENDING → CANCELLED
+PENDING → (match with WO, 1-to-1) → COMPLETED + LOCKED
+COMPLETED + LOCKED → (unmatch, if not confirmed) → PENDING (unlocked)
+COMPLETED + LOCKED → (accountant confirms with client) → CONFIRMED (permanent)
+DRAFT or PENDING (unmatched) → CANCELLED (with reason)
 ```
 
 ### Salary Period
@@ -445,16 +469,16 @@ Vendor (nhà thầu) — is_active
 Client (khách hàng) — is_active
   ├── Pricing (bảng giá) — per client + work_type + route, is_active
   │   └── PricingLine — quantity-based pricing (unit_price, driver_salary, allowance)
-  ├── WorkOrder (phiếu làm việc) — created by driver, is_locked, needs_review
+  ├── WorkOrder (phiếu làm việc) — created by driver, is_locked after match, needs_review
   │   └── WorkOrderContainer — containers in the work order
-  └── TripOrder (lệnh điều hành) — created by accountant, is_confirmed
+  └── TripOrder (lệnh điều hành) — created by accountant, is_confirmed, driver_id optional
       ├── TripOrderContainer — containers (same work_type enforced)
-      └── TripOrderWorkOrder — join table (reconciliation)
+      └── TripOrderWorkOrder — join table (1-to-1, reconciliation)
 
 Route (tuyến đường) — is_active, with pickup/dropoff points
 SalaryPeriodConfig (singleton) — period boundaries
 SalaryPeriod (kỳ lương) — calculated per driver per period
-AuditLog (nhật ký hệ thống) — auto-records all data changes
+AuditLog (nhật ký hệ thống) — auto-records all data changes, reason required for cancellations
 ```
 
 ---
@@ -513,7 +537,7 @@ AuditLog (nhật ký hệ thống) — auto-records all data changes
 | GET | `/clients` | accountant, director, superadmin | List (paginated) |
 | POST | `/clients` | accountant, director, superadmin | Create |
 | PUT | `/clients/{id}` | accountant, director, superadmin | Update |
-| DELETE | `/clients/{id}` | accountant, director, superadmin | Soft delete (is_active=false) |
+| DELETE | `/clients/{id}` | accountant, director, superadmin | Soft delete (is_active=false, reason required) |
 
 ### Routes
 | Method | Path | Access | Description |
@@ -521,7 +545,7 @@ AuditLog (nhật ký hệ thống) — auto-records all data changes
 | GET | `/routes` | accountant, director, superadmin | List (paginated) |
 | POST | `/routes` | accountant, director, superadmin | Create |
 | PUT | `/routes/{id}` | accountant, director, superadmin | Update |
-| DELETE | `/routes/{id}` | accountant, director, superadmin | Soft delete (is_active=false) |
+| DELETE | `/routes/{id}` | accountant, director, superadmin | Soft delete (is_active=false, reason required) |
 
 ### Pricings
 | Method | Path | Access | Description |
@@ -529,7 +553,7 @@ AuditLog (nhật ký hệ thống) — auto-records all data changes
 | GET | `/pricings` | accountant, director, superadmin | List (paginated, filterable) |
 | POST | `/pricings` | accountant, director, superadmin | Create |
 | PUT | `/pricings/{id}` | accountant, director, superadmin | Update |
-| DELETE | `/pricings/{id}` | accountant, director, superadmin | Soft delete (is_active=false) |
+| DELETE | `/pricings/{id}` | accountant, director, superadmin | Soft delete (is_active=false, reason required) |
 
 ### Work Orders
 | Method | Path | Access | Description |
@@ -539,7 +563,7 @@ AuditLog (nhật ký hệ thống) — auto-records all data changes
 | POST | `/work-orders` | driver | Create |
 | POST | `/work-orders/batch` | driver | Batch create (up to 50) |
 | PUT | `/work-orders/{id}` | accountant, superadmin | Update (if not locked) |
-| DELETE | `/work-orders/{id}` | driver (own, PENDING), accountant, superadmin (PENDING) | Delete |
+| DELETE | `/work-orders/{id}` | driver (own, PENDING), accountant, superadmin (PENDING) | Cancel (reason required) |
 
 ### Trip Orders
 | Method | Path | Access | Description |
@@ -549,13 +573,14 @@ AuditLog (nhật ký hệ thống) — auto-records all data changes
 | POST | `/trip-orders` | accountant, superadmin | Create |
 | POST | `/trip-orders/import` | accountant, superadmin | Batch import from Excel |
 | PUT | `/trip-orders/{id}` | accountant, superadmin | Update (if not confirmed) |
-| DELETE | `/trip-orders/{id}` | accountant, superadmin | Delete (DRAFT/PENDING only) |
+| DELETE | `/trip-orders/{id}` | accountant, superadmin | Cancel (DRAFT/PENDING/unmatched only, reason required) |
 | PUT | `/trip-orders/{id}/confirm` | accountant, superadmin | Toggle "Đã chốt" (locks TO + linked WOs) |
 
 ### Reconciliation
 | Method | Path | Access | Description |
 |--------|------|--------|-------------|
-| POST | `/reconcile` | accountant, superadmin | Match WO → TO |
+| POST | `/reconcile` | accountant, superadmin | Match WO → TO (1-to-1, locks both) |
+| POST | `/reconcile/unmatch` | accountant, superadmin | Unmatch WO ← TO (unlocks both, only if TO not confirmed, reason required) |
 | POST | `/reconcile/upload-excel` | accountant, superadmin | Upload client Excel for reconciliation |
 | POST | `/reconcile/export-excel` | accountant, superadmin | Export reconciliation results |
 
@@ -580,7 +605,7 @@ AuditLog (nhật ký hệ thống) — auto-records all data changes
 | GET | `/vendors` | accountant, director, superadmin | List (paginated) |
 | POST | `/vendors` | accountant, director, superadmin | Create |
 | PUT | `/vendors/{id}` | accountant, director, superadmin | Update |
-| DELETE | `/vendors/{id}` | accountant, director, superadmin | Soft delete (is_active=false) |
+| DELETE | `/vendors/{id}` | accountant, director, superadmin | Soft delete (is_active=false, reason required) |
 
 ### Users
 | Method | Path | Access | Description |
@@ -588,7 +613,7 @@ AuditLog (nhật ký hệ thống) — auto-records all data changes
 | GET | `/users` | director, superadmin | List (filterable by role) |
 | POST | `/users` | director, superadmin | Create |
 | PUT | `/users/{id}` | director, superadmin | Update |
-| DELETE | `/users/{id}` | director, superadmin | Deactivate (soft delete) |
+| DELETE | `/users/{id}` | director, superadmin | Deactivate (soft delete, reason required) |
 
 ### Dashboard
 | Method | Path | Access | Description |
@@ -616,6 +641,7 @@ AuditLog (nhật ký hệ thống) — auto-records all data changes
 
 | Date | Change |
 |------|--------|
+| 2026-05-02 | Major business rules update: 1-to-1 WO-TO matching, locking after match (not after confirm), unmatch operation, no hard delete (cancellation with reason only), driver_id optional on TO, no driver change mid-trip, driver cannot see salary until matched, no expense tracking, audit log requires cancellation reason, matching criteria updated (license plate + route + container type + client) |
 | 2026-05-02 | Major update: pricing by quantity tier, locking on confirm, audit log, deletion/soft-delete rules, offline sync handling, no mixed container types in TO, earning sync on TO update, vendor driver salary via SalaryPeriod |
 | 2026-05-02 | Added: client code, route pickup/dropoff, trip order confirmation, client reconciliation via Excel, Excel import/export, work order filtering by plate/time |
 | 2026-04-30 | Initial creation — extracted from codebase audit |
