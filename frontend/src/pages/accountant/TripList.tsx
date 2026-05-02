@@ -222,7 +222,7 @@ export function TripList() {
       key: 'revenue',
       header: 'Doanh thu',
       accessor: (row) => (
-        <span className="font-mono font-bold text-sm tabular-nums whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
+        <span className="typo-mono text-sm whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
           {fmt(row.revenue ?? 0)}
         </span>
       ),
@@ -282,7 +282,7 @@ export function TripList() {
             <p className="typo-label">
               Doanh thu
             </p>
-            <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
+            <p className="typo-mono text-sm" style={{ color: 'var(--theme-text-primary)' }}>
               {fmt(stats.totalRevenue)}
             </p>
           </div>
@@ -293,7 +293,7 @@ export function TripList() {
             <p className="typo-label">
               Tổng lệnh
             </p>
-            <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
+            <p className="typo-mono text-sm" style={{ color: 'var(--theme-text-primary)' }}>
               {trips.length} lệnh
             </p>
           </div>
