@@ -13,17 +13,17 @@ router = APIRouter()
 
 @router.get("/salary-config", response_model=SalaryConfigOut)
 async def get_salary_config(
-    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    current_user: User = Depends(require_roles("accountant", "superadmin", "driver")),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(SalaryPeriodConfig))
     config = result.scalar_one_or_none()
 
     if config is None:
-        # Create default config (singleton)
+        # Create default config (singleton) — full calendar month
         config = SalaryPeriodConfig(
             from_day=1,
-            to_day=28,
+            to_day=31,
         )
         db.add(config)
         await db.commit()
