@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useOffline } from '@/contexts/OfflineContext'
@@ -19,6 +19,16 @@ export interface ContainerForm {
 }
 
 const EMPTY_CONT: ContainerForm = { containerNumber: '', workType: 'E20', photoTaken: false, ocrLoading: false }
+
+/** Client-side ISO 6346 container number validation. Returns error message or null. */
+function validateContainerFormat(num: string): string | null {
+  const raw = num.replace(/-/g, '').toUpperCase().trim()
+  if (!raw) return null
+  if (raw.length < 11) return 'Cần 4 chữ cái + 7 số (vd: MSKU1234567)'
+  if (raw.length > 11) return 'Quá dài — đúng 11 ký tự (4 chữ cái + 7 số)'
+  if (!/^[A-Z]{4}\d{7}$/.test(raw)) return 'Sai định dạng. Đúng: 4 chữ cái + 7 số (vd: MSKU1234567)'
+  return null
+}
 
 function woToContainers(wo: WorkOrder): ContainerForm[] {
   return wo.containers.map(c => ({
@@ -165,12 +175,37 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
   }, [activeContIdx, isOnline])
 
   // Container management
+  const validateTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
+
   const updateContainer = useCallback((idx: number, field: keyof ContainerForm, value: string) => {
     setContainers(prev => prev.map((c, i) =>
       i === idx ? { ...c, [field]: value } : c,
     ))
     if (field === 'containerNumber') {
-      setContainerErrors(prev => { const next = { ...prev }; delete next[idx]; return next })
+      // Frontend format check — immediate
+      const fmtErr = validateContainerFormat(value)
+      if (fmtErr) {
+        setContainerErrors(prev => ({ ...prev, [idx]: fmtErr }))
+        clearTimeout(validateTimers.current[idx])
+        return
+      }
+      // Format OK — debounce backend ISO 6346 check (check digit)
+      clearTimeout(validateTimers.current[idx])
+      const raw = value.replace(/-/g, '').toUpperCase().trim()
+      if (!raw || raw.length !== 11) {
+        setContainerErrors(prev => { const next = { ...prev }; delete next[idx]; return next })
+        return
+      }
+      validateTimers.current[idx] = setTimeout(() => {
+        apiClient.validateContainer(raw).then(res => {
+          setContainerErrors(prev => {
+            if (!res.success || !res.data?.valid) {
+              return { ...prev, [idx]: res.data?.error ?? 'Số container không hợp lệ' }
+            }
+            const next = { ...prev }; delete next[idx]; return next
+          })
+        }).catch(() => { /* ignore network errors here */ })
+      }, 400)
     }
   }, [])
 

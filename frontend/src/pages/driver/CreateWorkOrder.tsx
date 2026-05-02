@@ -155,14 +155,14 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
                 <input
                   value={cont.containerNumber}
                   onChange={e => updateContainer(idx, 'containerNumber', e.target.value)}
-                  className="w-full h-12 rounded-2xl px-4 text-sm font-mono font-semibold"
+                  className="w-full h-12 rounded-2xl px-4 text-sm font-mono font-semibold [&::placeholder]:text-white/90"
                   style={{
                     background: 'var(--theme-bg-tertiary)',
                     border: `1.5px solid ${containerErrors[idx] ? 'var(--theme-status-error)' : cont.ocrError ? 'var(--theme-status-warning)' : 'transparent'}`,
                     color: 'var(--theme-text-primary)',
                     paddingRight: cont.ocrLoading ? '44px' : undefined,
                   }}
-                  placeholder={cont.ocrLoading ? 'Đang nhận diện...' : 'VD: MSKU-1234567'}
+                  placeholder={cont.ocrLoading ? 'Đang nhận diện...' : 'MSKU1234567'}
                   readOnly={cont.ocrLoading}
                 />
                 {cont.ocrLoading && (
@@ -245,7 +245,7 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-3">
             <div className="space-y-1.5">
               <label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm lấy</label>
               <InlineSelect
