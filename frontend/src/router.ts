@@ -69,6 +69,7 @@ export function createAppRouter() {
             { path: 'create-trip',           element: h(Lazy, { component: R.CreateTrip }) },
             { path: 'salary-setup',          element: h(Lazy, { component: R.SalarySetup }) },
             { path: 'pricing',               element: h(Lazy, { component: R.PricingList }) },
+            { path: 'driver-trips',          element: ebc('DriverTrips', h(Lazy, { component: R.DriverTrips })) },
             { path: 'match/:jobId',          element: h(Lazy, { component: R.MatchJob }) },
             { path: 'match-trip/:tripId',    element: h(Lazy, { component: R.MatchTrip }) },
             { path: 'notifications',         element: ebc('Notifications', h(Lazy, { component: R.AccountantNotifications })) },

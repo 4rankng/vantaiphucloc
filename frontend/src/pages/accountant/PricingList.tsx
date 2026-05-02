@@ -37,14 +37,18 @@ function PricingCard({ pricing, onEdit, onDelete }: {
         </div>
       </div>
       <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{pricing.clientName}</p>
-      <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{pricing.route}</p>
+      <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+        {pricing.pickupLocation && pricing.dropoffLocation
+          ? `${pricing.pickupLocation} → ${pricing.dropoffLocation}`
+          : pricing.route}
+      </p>
       <div className="grid grid-cols-3 gap-2 pt-1" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
         <div>
           <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Đơn giá</p>
           <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyFull(pricing.unitPrice)}</p>
         </div>
         <div>
-          <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Lương TX</p>
+          <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Lương tài xế</p>
           <p className="text-sm font-semibold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(pricing.driverSalary)}</p>
         </div>
         <div>
@@ -63,8 +67,15 @@ function LineEditor({ lines, onChange }: {
   const addLine = () => onChange([...lines, { workType: 'E20', quantity: 1, unitPrice: 0, driverSalary: 0, allowance: 0 }])
   const removeLine = (idx: number) => onChange(lines.filter((_, i) => i !== idx))
   const updateLine = (idx: number, field: keyof PricingLine, value: WorkType | number) => {
-    onChange(lines.map((l, i) => i === idx ? { ...l, [field]: value } : l))
+    const updated = lines.map((l, i) => i === idx ? { ...l, [field]: value } : l)
+    // Auto-reset qty to 1 when switching to 40ft
+    if (field === 'workType' && typeof value === 'string' && value.endsWith('40')) {
+      updated[idx] = { ...updated[idx], quantity: 1 }
+    }
+    onChange(updated)
   }
+
+  const is40ft = (wt: WorkType) => wt === 'E40' || wt === 'F40'
 
   return (
     <div className="space-y-2">
@@ -93,9 +104,23 @@ function LineEditor({ lines, onChange }: {
             </div>
             {/* Quantity */}
             <div className="flex items-center gap-1">
-              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>×‌</span>
-              <Input type="number" min={1} value={line.quantity} onChange={e => updateLine(i, 'quantity', Math.max(1, Number(e.target.value)))}
-                className="text-xs font-bold h-8 w-14 text-center" />
+              {is40ft(line.workType) ? (
+                <button className="px-2 py-1 rounded text-xs font-bold"
+                  style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+                  ×1
+                </button>
+              ) : (
+                [1, 2].map(q => (
+                  <button key={q} onClick={() => updateLine(i, 'quantity', q)}
+                    className="px-2 py-1 rounded text-xs font-bold touch-manipulation"
+                    style={{
+                      background: line.quantity === q ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
+                      color: line.quantity === q ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
+                    }}>
+                    ×{q}
+                  </button>
+                ))
+              )}
             </div>
             {/* Remove */}
             {lines.length > 1 && (
@@ -112,7 +137,7 @@ function LineEditor({ lines, onChange }: {
                 placeholder="0" className="text-xs font-mono h-7" />
             </div>
             <div>
-              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Lương TX</span>
+              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Lương tài xế</span>
               <Input type="number" min={0} value={line.driverSalary || ''} onChange={e => updateLine(i, 'driverSalary', Math.max(0, Number(e.target.value)))}
                 placeholder="0" className="text-xs font-mono h-7" />
             </div>
@@ -131,13 +156,14 @@ function LineEditor({ lines, onChange }: {
 // ─── Pricing Form ─────────────────────────────────────────────────────────────
 function PricingForm({ initial, clients, routes, onSave, onCancel, onCreateClient }: {
   initial?: Pricing
-  clients: { id: number; name: string }[]; routes: { route: string }[]
+  clients: { id: number; name: string }[]; routes: { route: string; pickupLocation?: string; dropoffLocation?: string }[]
   onSave: (data: Omit<Pricing, 'id' | 'createdAt' | 'updatedAt'>) => void
   onCancel: () => void
   onCreateClient: () => void
 }) {
   const [clientId, setClientId] = useState(String(initial?.clientId ?? ''))
-  const [route, setRoute] = useState(initial?.route ?? '')
+  const [pickupLocation, setPickupLocation] = useState(initial?.pickupLocation ?? '')
+  const [dropoffLocation, setDropoffLocation] = useState(initial?.dropoffLocation ?? '')
   const [lines, setLines] = useState<PricingLine[]>(
     initial?.lines ?? [{ workType: 'E20' as WorkType, quantity: 1, unitPrice: 0, driverSalary: 0, allowance: 0 }]
   )
@@ -146,14 +172,21 @@ function PricingForm({ initial, clients, routes, onSave, onCancel, onCreateClien
   const [allowance, setAllowance] = useState(initial?.allowance ?? 0)
 
   const clientOptions = useMemo(() => clients.map(c => ({ value: String(c.id), label: c.name })), [clients])
-  const routeOptions = useMemo(() => routes.map(r => ({ value: r.route, label: r.route })), [routes])
+  const pickupOptions = useMemo(() =>
+    [...new Set(routes.map(r => r.pickupLocation).filter(Boolean) as string[])].map(loc => ({ value: loc!, label: loc! })),
+    [routes],
+  )
+  const dropoffOptions = useMemo(() =>
+    routes.filter(r => r.pickupLocation === pickupLocation).map(r => ({ value: r.dropoffLocation ?? '', label: r.dropoffLocation ?? '' })),
+    [routes, pickupLocation],
+  )
   const clientName = clients.find(c => String(c.id) === clientId)?.name ?? ''
-  // Derive primary workType from first line for compatibility
+  const route = pickupLocation && dropoffLocation ? `${pickupLocation} - ${dropoffLocation}` : ''
   const workType = lines[0]?.workType ?? 'E20'
 
   const handleSubmit = () => {
     if (!clientId || !route || lines.length === 0) return
-    onSave({ clientId: Number(clientId), clientName, workType, route, lines, unitPrice, driverSalary, allowance })
+    onSave({ clientId: Number(clientId), clientName, workType, route, pickupLocation, dropoffLocation, lines, unitPrice, driverSalary, allowance })
   }
 
   return (
@@ -168,21 +201,25 @@ function PricingForm({ initial, clients, routes, onSave, onCancel, onCreateClien
         </button>
       </div>
 
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</Label>
-        <InlineSelect
-          options={clientOptions}
-          value={clientId}
-          onChange={setClientId}
-          placeholder="Chọn khách hàng"
-          onCreateNew={onCreateClient}
-          createNewLabel="Tạo khách hàng mới"
-        />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</Label>
-        <InlineSelect options={routeOptions} value={route} onChange={setRoute} placeholder="Chọn cung đường" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</Label>
+          <InlineSelect
+            options={clientOptions}
+            value={clientId}
+            onChange={setClientId}
+            placeholder="Chọn khách hàng"
+            onCreateNew={onCreateClient}
+            createNewLabel="Tạo khách hàng mới"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</Label>
+          <div className="space-y-1.5">
+            <InlineSelect options={pickupOptions} value={pickupLocation} onChange={v => { setPickupLocation(v); setDropoffLocation('') }} placeholder="Điểm lấy" />
+            <InlineSelect options={dropoffOptions} value={dropoffLocation} onChange={setDropoffLocation} placeholder="Điểm trả" />
+          </div>
+        </div>
       </div>
 
       <LineEditor lines={lines} onChange={setLines} />
@@ -194,7 +231,7 @@ function PricingForm({ initial, clients, routes, onSave, onCancel, onCreateClien
             placeholder="0" className="text-xs font-mono h-9" />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Lương TX</Label>
+          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Lương tài xế</Label>
           <Input type="number" value={driverSalary || ''} onChange={e => setDriverSalary(Number(e.target.value))}
             placeholder="0" className="text-xs font-mono h-9" />
         </div>
