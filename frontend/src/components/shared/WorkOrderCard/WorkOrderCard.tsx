@@ -51,7 +51,7 @@ function fmtDate(iso: string): string {
 
 function ContainerList({ wo }: { wo: WorkOrder }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-wrap gap-1.5">
       {wo.containers.map((c, i) => (
         <div key={i} className="flex items-center gap-1.5">
           <span className="text-sm font-bold font-mono" style={{ color: 'var(--theme-text-primary)' }}>

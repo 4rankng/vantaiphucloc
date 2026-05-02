@@ -26,7 +26,7 @@ function DriverShell() {
   const location = useLocation()
   const navigate = useNavigate()
 
-  const isHome = location.pathname === '/driver'
+  const isHome = location.pathname === '/driver' || location.pathname === '/driver/work-orders/new' || !!location.pathname.match(/\/driver\/work-orders\/\d+\/edit/)
   const title = resolveTitle(location.pathname)
 
   const isFormPage = location.pathname === '/driver/work-orders/new' || location.pathname.match(/\/driver\/work-orders\/\d+\/edit/)
