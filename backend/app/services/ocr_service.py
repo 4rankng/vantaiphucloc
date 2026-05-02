@@ -1,4 +1,8 @@
-"""OCR service for extracting container numbers from images using Gemini API.
+"""OCR service for extracting container numbers from images using AI.
+
+AI Provider Priority:
+1. DeepSeek (if API key available)
+2. Gemini (fallback)
 
 Driver workflow:
 1. Take photo of container
@@ -7,44 +11,19 @@ Driver workflow:
 4. Backend validates against ISO 6346
 """
 
-import base64
 import io
 import logging
-import os
 import re
 from typing import Optional
 
-import httpx
 from PIL import Image, ImageEnhance
 
+from app.services.ai_service import analyze_image_with_fallback, preprocess_image
 from app.utils.iso6346 import validate_container_number
 
 MAX_OCR_ATTEMPTS = 3
 
 _logger = logging.getLogger(__name__)
-
-# Configuration
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
-GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta"
-
-
-def preprocess_image(image_bytes: bytes) -> tuple[bytes, str]:
-    """Sharpen and enhance contrast only. Gemini handles the rest.
-
-    Returns (processed_bytes, mime_type).
-    """
-    img = Image.open(io.BytesIO(image_bytes))
-
-    if img.mode not in ("RGB", "L"):
-        img = img.convert("RGB")
-
-    img = ImageEnhance.Sharpness(img).enhance(2.0)
-    img = ImageEnhance.Contrast(img).enhance(1.4)
-
-    buf = io.BytesIO()
-    img.save(buf, format="JPEG", quality=90)
-    return buf.getvalue(), "image/jpeg"
 
 # Prompt for container number extraction
 CONTAINER_PROMPT = """Look at the photo and find the container number painted on the shipping container.
@@ -91,7 +70,9 @@ async def extract_container_number(
     mime_type: str = "image/jpeg",
     attempt: Optional[OCRAttempt] = None,
 ) -> dict:
-    """Extract container number from image using Gemini API.
+    """Extract container number from image using AI.
+
+    Tries DeepSeek first, falls back to Gemini.
 
     Args:
         image_bytes: Raw image data
@@ -104,157 +85,77 @@ async def extract_container_number(
         - container_number: str | None - Extracted container number
         - error: str | None - Error message if failed
         - attempts_remaining: int - Number of attempts left
+        - provider: str | None - Which AI provider succeeded ("deepseek" or "gemini")
     """
     if attempt:
         attempt.record_attempt()
 
-    if not GEMINI_API_KEY:
-        _logger.error("[OCR] GEMINI_API_KEY not configured")
-        return {
-            "success": False,
-            "container_number": None,
-            "error": "Không nhận dạng được số cont",
-            "attempts_remaining": attempt.max_attempts - attempt.attempts if attempt else 0,
-        }
-
+    # Preprocess image for better OCR
     try:
         image_bytes, mime_type = preprocess_image(image_bytes)
     except Exception as e:
         _logger.warning("[OCR] preprocess failed, using raw image: %s", e)
 
-    try:
-        encoded = base64.b64encode(image_bytes).decode("utf-8")
-    except Exception as e:
-        _logger.error("[OCR] base64 encode failed: %s", e)
+    # Call AI with automatic fallback (DeepSeek → Gemini)
+    result = await analyze_image_with_fallback(CONTAINER_PROMPT, image_bytes, mime_type)
+
+    if not result["success"]:
+        _logger.error("[OCR] AI provider failed: %s", result["error"])
         return {
             "success": False,
             "container_number": None,
             "error": "Không nhận dạng được số cont",
             "attempts_remaining": attempt.max_attempts - attempt.attempts if attempt else 0,
+            "provider": result.get("provider"),
         }
 
-    # Build request payload
-    payload = {
-        "contents": [
-            {
-                "parts": [
-                    {"text": CONTAINER_PROMPT},
-                    {
-                        "inline_data": {
-                            "mime_type": mime_type,
-                            "data": encoded,
-                        }
-                    },
-                ]
-            }
-        ],
-        "generationConfig": {
-            "temperature": 0.1,
-            "maxOutputTokens": 1000,
-        },
-    }
+    # Parse AI response
+    text = result["text"]
 
-    # Make request to Gemini API
-    url = f"{GEMINI_ENDPOINT}/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
+    # Normalize AI output: strip markdown formatting, quotes, whitespace
+    text = re.sub(r"[`\"'\n\r]", "", text).strip()
 
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                url,
-                json=payload,
-                headers={"Content-Type": "application/json"},
-            )
-            response.raise_for_status()
-            result = response.json()
+    # Extract container number pattern (4 letters + 7 digits including check digit)
+    match = re.search(r"[A-Z]{4}\d{7}", text.upper())
+    if match:
+        text = match.group(0)
+    else:
+        text = text.upper()
 
-    except httpx.HTTPStatusError as e:
-        _logger.error("[OCR] Gemini HTTP %s", e.response.status_code)
+    # Handle "NONE" response (AI couldn't find a container)
+    if text.upper() == "NONE":
+        _logger.info("[OCR] AI (%s) could not find container number", result["provider"])
         return {
             "success": False,
             "container_number": None,
             "error": "Không nhận dạng được số cont",
             "attempts_remaining": attempt.max_attempts - attempt.attempts if attempt else 0,
+            "provider": result["provider"],
         }
-    except httpx.RequestError as e:
-        _logger.error("[OCR] Gemini request failed: %s", e)
+
+    # Validate against ISO 6346
+    is_valid, error_msg = validate_container_number(text)
+
+    if not is_valid:
+        _logger.warning("[OCR] invalid format: raw='%s' reason=%s", text, error_msg)
         return {
             "success": False,
-            "container_number": None,
-            "error": "Không nhận dạng được số cont",
-            "attempts_remaining": attempt.max_attempts - attempt.attempts if attempt else 0,
-        }
-    except Exception as e:
-        _logger.error("[OCR] Gemini unexpected error: %s", e)
-        return {
-            "success": False,
-            "container_number": None,
-            "error": "Không nhận dạng được số cont",
-            "attempts_remaining": attempt.max_attempts - attempt.attempts if attempt else 0,
-        }
-
-    # Parse response
-    try:
-        candidates = result.get("candidates", [])
-        if not candidates:
-            _logger.warning("[OCR] Gemini returned no candidates")
-            return {
-                "success": False,
-                "container_number": None,
-                "error": "Không nhận dạng được số cont",
-                "attempts_remaining": attempt.max_attempts - attempt.attempts if attempt else 0,
-            }
-
-        text = candidates[0].get("content", {}).get("parts", [{}])[0].get("text", "").strip()
-
-        # Normalize AI output: strip markdown formatting, quotes, whitespace
-        text = re.sub(r"[`\"'\n\r]", "", text).strip()
-
-        # Extract container number pattern (4 letters + 6 digits + 1 check digit)
-        match = re.search(r"[A-Z]{4}\d{7}", text.upper())
-        if match:
-            text = match.group(0)
-        else:
-            text = text.upper()
-
-        # Handle "NONE" response (AI couldn't find a container)
-        if text.upper() == "NONE":
-            _logger.info("[OCR] Gemini could not find container number")
-            return {
-                "success": False,
-                "container_number": None,
-                "error": "Không nhận dạng được số cont",
-                "attempts_remaining": attempt.max_attempts - attempt.attempts if attempt else 0,
-            }
-
-        # Validate against ISO 6346
-        is_valid, error_msg = validate_container_number(text)
-
-        if not is_valid:
-            _logger.warning("[OCR] invalid format: raw='%s' reason=%s", text, error_msg)
-            return {
-                "success": False,
-                "container_number": text,
-                "error": "Không nhận dạng được số cont",
-                "attempts_remaining": attempt.max_attempts - attempt.attempts if attempt else 0,
-            }
-
-        # Success!
-        if attempt:
-            attempt.record_attempt(success=True)
-
-        _logger.info("[OCR] success: %s", text)
-        return {
-            "success": True,
             "container_number": text,
-            "error": None,
-            "attempts_remaining": attempt.max_attempts - attempt.attempts if attempt else 0,
-        }
-
-    except Exception as e:
-        _logger.error("[OCR] parse error: %s", e)
-        return {
-            "success": False,
-            "container_number": None,
             "error": "Không nhận dạng được số cont",
             "attempts_remaining": attempt.max_attempts - attempt.attempts if attempt else 0,
+            "provider": result["provider"],
         }
+
+    # Success!
+    if attempt:
+        attempt.record_attempt(success=True)
+
+    _logger.info("[OCR] success: %s (provider: %s, fallback: %s)", text, result["provider"], result["fallback_used"])
+    return {
+        "success": True,
+        "container_number": text,
+        "error": None,
+        "attempts_remaining": attempt.max_attempts - attempt.attempts if attempt else 0,
+        "provider": result["provider"],
+        "fallback_used": result["fallback_used"],
+    }
