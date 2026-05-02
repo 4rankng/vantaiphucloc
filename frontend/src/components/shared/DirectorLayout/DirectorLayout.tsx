@@ -1,8 +1,6 @@
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
 import { AppShell } from '@/components/shared/AppShell'
-import { SidebarLayout } from '@/components/shared/SidebarLayout'
 import { useAuth } from '@/contexts/AuthContext'
-import { useIsMobile } from '@/hooks/use-mobile'
 import type { Role } from '@/data/domain'
 
 const ALLOWED_ROLES: Role[] = ['director', 'superadmin']
@@ -27,22 +25,7 @@ function resolveTitle(pathname: string): string {
   return ''
 }
 
-export function DirectorLayout() {
-  const { user } = useAuth()
-  const isMobile = useIsMobile(1024)
-
-  if (!user || !ALLOWED_ROLES.includes(user.role)) {
-    return <Navigate to="/" replace />
-  }
-
-  if (isMobile) {
-    return <DirectorMobile />
-  }
-
-  return <SidebarLayout role={user!.role} titleMap={TITLES} />
-}
-
-function DirectorMobile() {
+function DirectorShell() {
   const { user } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -61,9 +44,19 @@ function DirectorMobile() {
             }
           : { variant: 'page' as const, title, onBack: () => navigate(-1) }
       }
-      contentClassName="px-4 py-4 space-y-4"
+      contentClassName="px-4 py-4 space-y-4 md:px-6 md:py-6 md:max-w-4xl md:mx-auto"
     >
       <Outlet />
     </AppShell>
   )
+}
+
+export function DirectorLayout() {
+  const { user } = useAuth()
+
+  if (!user || !ALLOWED_ROLES.includes(user.role)) {
+    return <Navigate to="/" replace />
+  }
+
+  return <DirectorShell />
 }

@@ -168,3 +168,8 @@ export async function exportTripOrdersExcel(filters?: {
   const res = await api.get(`/trip-orders/export?${params.toString()}`, { responseType: 'blob' })
   return res.data
 }
+
+export async function downloadTripOrderTemplate(): Promise<Blob> {
+  const res = await api.get('/trip-orders/template', { responseType: 'blob' })
+  return res.data
+}
