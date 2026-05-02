@@ -124,12 +124,18 @@ function stopPolling() {
 
 // ── Auto-init on import ───────────────────────────────────────────────
 
-function isAuthenticated(): boolean {
-  return !!localStorage.getItem('access_token')
+function isDriverAuthenticated(): boolean {
+  if (!localStorage.getItem('access_token')) return false
+  try {
+    const u = JSON.parse(localStorage.getItem('ttransport_user') || '')
+    return u?.role === 'driver'
+  } catch {
+    return false
+  }
 }
 
 function initHealthMonitoring() {
-  if (!isAuthenticated()) return
+  if (!isDriverAuthenticated()) return
 
   checkBackendHealth().then(ok => {
     if (ok) {
@@ -154,13 +160,13 @@ function cleanupHealthMonitoring() {
 }
 
 function onBrowserOnline() {
-  if (isAuthenticated()) checkBackendHealth().then(ok => setBackendOnline(ok))
+  if (isDriverAuthenticated()) checkBackendHealth().then(ok => setBackendOnline(ok))
 }
 function onBrowserOffline() {
   setBackendOnline(false)
 }
 function onVisibilityChange() {
-  if (document.visibilityState === 'visible' && isOnline() && !_backendOnline && isAuthenticated()) {
+  if (document.visibilityState === 'visible' && isOnline() && !_backendOnline && isDriverAuthenticated()) {
     checkBackendHealth().then(ok => setBackendOnline(ok))
   }
 }

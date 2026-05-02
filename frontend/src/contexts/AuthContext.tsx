@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       localStorage.setItem('ttransport_user', JSON.stringify(u))
       setUser(u)
-      startHealthMonitor()
+      if (role === 'driver') startHealthMonitor()
       return u
     } catch {
       return null

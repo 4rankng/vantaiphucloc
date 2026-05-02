@@ -70,6 +70,7 @@ export function createAppRouter() {
             { path: 'create-trip',           element: h(Lazy, { component: R.CreateTrip }) },
             { path: 'salary-setup',          element: h(Lazy, { component: R.SalarySetup }) },
             { path: 'pricing',               element: h(Lazy, { component: R.PricingList }) },
+            { path: 'pricing/:clientId',     element: h(Lazy, { component: R.PricingDetail }) },
             { path: 'driver-trips',          element: ebc('DriverTrips', h(Lazy, { component: R.DriverTrips })) },
             { path: 'match/:jobId',          element: h(Lazy, { component: R.MatchJob }) },
             { path: 'match-trip/:tripId',    element: h(Lazy, { component: R.MatchTrip }) },
@@ -87,7 +88,8 @@ export function createAppRouter() {
             { path: 'users',                     element: h(Lazy, { component: R.UserManagement }) },
             { path: 'partners',                  element: h(Lazy, { component: R.ClientsAndVendors }) },
             { path: 'routes',                    element: h(Lazy, { component: R.RouteList }) },
-            { path: 'pricing',                   element: h(Lazy, { component: R.PricingList }) },
+            { path: 'pricing',                   element: h(Lazy, { component: R.DirectorPricingList }) },
+            { path: 'pricing/:clientId',         element: h(Lazy, { component: R.DirectorPricingDetail }) },
             { path: 'trips',                     element: h(Lazy, { component: R.TripList }) },
             { path: 'trip/:tripId',              element: h(Lazy, { component: R.TripDetail }) },
             { path: 'create-trip',               element: h(Lazy, { component: R.CreateTrip }) },
@@ -100,7 +102,11 @@ export function createAppRouter() {
         // ─── SuperAdmin ────────────────────────────────────────
         {
           path: 'superadmin',
-          element: h(Lazy, { component: R.SuperAdminApp }),
+          element: h(Lazy, { component: R.SuperAdminLayout }),
+          children: [
+            { index: true, element: ebc('SuperAdminDashboard', h(Lazy, { component: R.SuperAdminApp })) },
+            { path: 'profile', element: ebc('Profile', h(Lazy, { component: R.Profile })) },
+          ],
         },
       ],
     },

@@ -8,6 +8,7 @@ import { lazy } from 'react'
 export const DriverLayout     = lazy(() => import('@/components/shared/DriverLayout').then(m => ({ default: m.DriverLayout })))
 export const AccountantLayout = lazy(() => import('@/components/shared/AccountantLayout').then(m => ({ default: m.AccountantLayout })))
 export const DirectorLayout   = lazy(() => import('@/components/shared/DirectorLayout').then(m => ({ default: m.DirectorLayout })))
+export const SuperAdminLayout = lazy(() => import('@/components/shared/SuperAdminLayout').then(m => ({ default: m.SuperAdminLayout })))
 
 // ─── Driver pages ─────────────────────────────────────────────────────────────
 export const DriverHome           = lazy(() => import('@/pages/driver/DriverHome').then(m => ({ default: m.DriverHome })))
@@ -31,6 +32,7 @@ export const SalarySetup          = lazy(() => import('@/pages/accountant/Salary
 export const MatchJob             = lazy(() => import('@/pages/accountant/MatchJob').then(m => ({ default: m.MatchJob })))
 export const MatchTrip            = lazy(() => import('@/pages/accountant/MatchTrip').then(m => ({ default: m.MatchTrip })))
 export const PricingList          = lazy(() => import('@/pages/accountant/PricingList').then(m => ({ default: m.PricingList })))
+export const PricingDetail        = lazy(() => import('@/pages/accountant/PricingDetail').then(m => ({ default: m.PricingDetail })))
 export const AccountantNotifications = lazy(() => import('@/pages/accountant/AccountantNotifications').then(m => ({ default: m.AccountantNotifications })))
 export const DriverTrips             = lazy(() => import('@/pages/accountant/DriverTrips').then(m => ({ default: m.DriverTrips })))
 export const CustomerManagement      = lazy(() => import('@/pages/accountant/CustomerManagement').then(m => ({ default: m.CustomerManagement })))
@@ -41,6 +43,8 @@ export const UserManagement         = lazy(() => import('@/pages/director/UserMa
 export const DirectorNotifications  = lazy(() => import('@/pages/director/DirectorNotifications').then(m => ({ default: m.DirectorNotifications })))
 export const DriverJobs             = lazy(() => import('@/pages/director/DriverJobs').then(m => ({ default: m.DriverJobs })))
 export const ClientJobs             = lazy(() => import('@/pages/director/ClientJobs').then(m => ({ default: m.ClientJobs })))
+export const DirectorPricingList    = lazy(() => import('@/pages/director/PricingList').then(m => ({ default: m.PricingList })))
+export const DirectorPricingDetail  = lazy(() => import('@/pages/director/PricingDetail').then(m => ({ default: m.PricingDetail })))
 
 // ─── SuperAdmin ───────────────────────────────────────────────────────────────
 export const SuperAdminApp = lazy(() => import('@/pages/superadmin/SuperAdminApp').then(m => ({ default: m.SuperAdminApp })))
