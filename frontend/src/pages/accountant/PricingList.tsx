@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { usePricings, useClients, useRoutes, useCreatePricing, useUpdatePricing, useDeletePricing, useCreateClient } from '@/hooks/use-queries'
 import { formatCurrencyFull, WORK_TYPES, type Pricing, type PricingLine, type WorkType } from '@/data/domain'
 import { ContBadge } from '@/components/shared/ContBadge'
+import { RouteDisplay } from '@/components/shared/RouteDisplay'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
@@ -37,11 +38,7 @@ function PricingCard({ pricing, onEdit, onDelete }: {
         </div>
       </div>
       <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{pricing.clientName}</p>
-      <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-        {pricing.pickupLocation && pricing.dropoffLocation
-          ? `${pricing.pickupLocation} → ${pricing.dropoffLocation}`
-          : pricing.route}
-      </p>
+      <RouteDisplay route={pricing.route} pickupLocation={pricing.pickupLocation} dropoffLocation={pricing.dropoffLocation} />
       <div className="grid grid-cols-3 gap-2 pt-1" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
         <div>
           <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Đơn giá</p>

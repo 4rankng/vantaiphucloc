@@ -146,6 +146,14 @@
   --shell-bottomnav-h: 3.5rem;
   --shell-safe-top: env(safe-area-inset-top, 0px);
   --shell-safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* Dashboard design tokens (grab-green-ux inspired) */
+  --gradient-primary: linear-gradient(135deg, #005c24 0%, #00963E 50%, #00b44e 100%);
+  --gradient-subtle: linear-gradient(180deg, var(--theme-bg-primary, #f5faf7) 0%, var(--theme-bg-tertiary, #eef5f1) 100%);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 70, 30, 0.04);
+  --shadow-md: 0 4px 12px -2px rgba(0, 70, 30, 0.08);
+  --shadow-glow: 0 8px 24px -6px rgba(0, 150, 62, 0.35);
+  --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .shell {
