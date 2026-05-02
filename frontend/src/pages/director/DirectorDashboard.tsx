@@ -1,20 +1,25 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { Users, Truck, TrendingUp, UserCircle, Building2, Handshake, Receipt, Briefcase } from 'lucide-react'
+import { Users, Truck, TrendingUp, TrendingDown, UserCircle, Building2, Handshake, Receipt, Briefcase, Trophy, MoreHorizontal, ChevronRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { apiClient } from '@/services/api'
 import { formatCurrencyFull as formatCurrency } from '@/data/domain'
-import { MonthNavigator } from '@/components/shared/MonthNavigator'
-import { StatsRow } from '@/components/shared/StatsRow'
 import type { WorkOrder } from '@/data/domain'
+import { useAuth } from '@/contexts/AuthContext'
+
+const compact = (n: number) =>
+  n >= 1e9 ? (n / 1e9).toFixed(2) + ' tỷ' : n >= 1e6 ? (n / 1e6).toFixed(1) + ' tr' : n.toLocaleString('vi-VN')
+
+const fmt = (n: number) => n.toLocaleString('vi-VN') + '₫'
 
 export function DirectorDashboard() {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const [menu, setMenu] = useState(false)
   const [jobs, setJobs] = useState<WorkOrder[]>([])
   const [month, setMonth] = useState(() => {
     const d = new Date()
     return { year: d.getFullYear(), month: d.getMonth() + 1 }
   })
-
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -30,7 +35,6 @@ export function DirectorDashboard() {
     return () => { cancelled = true }
   }, [])
 
-  // Filter jobs by selected month
   const monthlyJobs = useMemo(() => {
     return jobs.filter(j => {
       const d = new Date(j.createdAt)
@@ -38,11 +42,10 @@ export function DirectorDashboard() {
     })
   }, [jobs, month])
 
-  // Stats
   const totalRevenue = useMemo(() => monthlyJobs.reduce((s, j) => s + j.unitPrice, 0), [monthlyJobs])
   const totalDriverEarning = useMemo(() => monthlyJobs.reduce((s, j) => s + j.earning, 0), [monthlyJobs])
+  const profit = totalRevenue - totalDriverEarning
 
-  // Per-driver breakdown
   const driverBreakdown = useMemo(() => {
     const map = new Map<number, { name: string; plate: string; trips: number; earning: number }>()
     for (const j of monthlyJobs) {
@@ -55,7 +58,6 @@ export function DirectorDashboard() {
       .sort((a, b) => b.earning - a.earning)
   }, [monthlyJobs])
 
-  // Per-client breakdown
   const clientBreakdown = useMemo(() => {
     const map = new Map<number, { name: string; trips: number; revenue: number }>()
     for (const j of monthlyJobs) {
@@ -64,8 +66,10 @@ export function DirectorDashboard() {
       existing.revenue += j.unitPrice
       map.set(j.clientId, existing)
     }
-    return Array.from(map.entries()).map(([id, data]) => ({ id, ...data }))
+    const clients = Array.from(map.entries()).map(([id, data]) => ({ id, ...data }))
       .sort((a, b) => b.revenue - a.revenue)
+    const maxRev = clients[0]?.revenue ?? 1
+    return clients.map(c => ({ ...c, pct: c.revenue / maxRev }))
   }, [monthlyJobs])
 
   const prevMonth = useCallback(() => {
@@ -83,120 +87,204 @@ export function DirectorDashboard() {
     })
   }, [])
 
-  return (
-    <div className="pb-8 space-y-4">
-      <StatsRow
-        items={[
-          {
-            label: 'Doanh thu',
-            value: loading ? '...' : formatCurrency(totalRevenue),
-            icon: <TrendingUp className="w-3 h-3" style={{ color: 'var(--theme-brand-primary)' }} />,
-          },
-          {
-            label: 'Chi tài xế',
-            value: loading ? '...' : formatCurrency(totalDriverEarning),
-            icon: <Truck className="w-3 h-3" style={{ color: 'var(--theme-brand-primary)' }} />,
-          },
-        ]}
-      />
+  const unmatchedCount = useMemo(() => monthlyJobs.filter(j => j.status === 'PENDING').length, [monthlyJobs])
 
-      <MonthNavigator year={month.year} month={month.month} onPrev={prevMonth} onNext={nextMonth} />
+  return (
+    <div className="pb-8 space-y-5">
+      {/* Greeting */}
+      <section>
+        <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+          Tổng quan tháng {month.month}/{month.year}
+        </div>
+        <h1 className="font-display text-xl font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+          {user?.name ?? 'Giám đốc'}
+        </h1>
+      </section>
+
+      {/* Month navigator */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={prevMonth}
+          className="flex h-7 w-7 items-center justify-center rounded-lg transition active:scale-90"
+          style={{ color: 'var(--theme-text-primary)' }}
+          aria-label="Tháng trước"
+        >
+          <TrendingDown className="h-4 w-4" />
+        </button>
+        <span className="text-xs font-semibold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
+          Tháng {month.month}/{month.year}
+        </span>
+        <button
+          onClick={nextMonth}
+          className="flex h-7 w-7 items-center justify-center rounded-lg transition active:scale-90"
+          style={{ color: 'var(--theme-text-primary)' }}
+          aria-label="Tháng sau"
+        >
+          <TrendingUp className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Hero KPI card */}
+      <section
+        className="rounded-3xl border p-5 relative overflow-hidden"
+        style={{
+          background: 'linear-gradient(135deg, color-mix(in srgb, var(--theme-brand-primary) 8%, transparent), var(--surface-bg), color-mix(in srgb, var(--theme-brand-primary) 12%, transparent))',
+          borderColor: 'color-mix(in srgb, var(--theme-brand-primary) 20%, transparent)',
+        }}
+      >
+        <div className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--theme-brand-primary)' }}>
+          Lợi nhuận tháng
+        </div>
+        <div className="mt-1 font-display text-3xl font-bold tracking-tight" style={{ color: 'var(--theme-text-primary)' }}>
+          {loading ? '...' : compact(profit)} ₫
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div
+            className="rounded-xl p-3 ring-1"
+            style={{ background: 'color-mix(in srgb, var(--surface-bg) 80%, transparent)', ringColor: 'var(--surface-border)' }}
+          >
+            <div className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>Doanh thu</div>
+            <div className="font-display text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+              {loading ? '...' : compact(totalRevenue)}₫
+            </div>
+          </div>
+          <div
+            className="rounded-xl p-3 ring-1"
+            style={{ background: 'color-mix(in srgb, var(--surface-bg) 80%, transparent)', ringColor: 'var(--surface-border)' }}
+          >
+            <div className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>Chi phí tài xế</div>
+            <div className="font-display text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+              {loading ? '...' : compact(totalDriverEarning)}₫
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Stat tiles */}
+      <section className="grid grid-cols-2 gap-3">
+        {[
+          { i: Truck, label: 'Chuyến đã chạy', value: String(monthlyJobs.length), iconBg: 'color-mix(in srgb, var(--theme-status-info, #3b82f6) 12%, transparent)', iconColor: 'var(--theme-status-info, #3b82f6)' },
+          { i: Briefcase, label: 'Trung bình/chuyến', value: monthlyJobs.length > 0 ? compact(Math.round(totalRevenue / monthlyJobs.length)) : '0', iconBg: 'color-mix(in srgb, var(--theme-status-success, #16a34a) 12%, transparent)', iconColor: 'var(--theme-status-success, #16a34a)' },
+          { i: TrendingDown, label: 'Phiếu chưa ghép', value: String(unmatchedCount), iconBg: 'color-mix(in srgb, var(--theme-status-warning) 12%, transparent)', iconColor: 'var(--theme-status-warning)' },
+          { i: Receipt, label: 'Lệnh chờ chốt', value: String(clientBreakdown.length), iconBg: 'color-mix(in srgb, var(--theme-status-warning) 12%, transparent)', iconColor: 'var(--theme-status-warning)' },
+        ].map(s => (
+          <button
+            key={s.label}
+            className="rounded-2xl border p-4 text-left transition active:scale-[0.98]"
+            style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)' }}
+          >
+            <div
+              className="flex h-9 w-9 items-center justify-center rounded-xl"
+              style={{ background: s.iconBg, color: s.iconColor }}
+            >
+              <s.i className="h-4 w-4" />
+            </div>
+            <div className="mt-3 font-display text-xl font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+              {s.value}
+            </div>
+            <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{s.label}</div>
+          </button>
+        ))}
+      </section>
 
       {/* Quick actions */}
       <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => navigate('/director/users')}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold touch-manipulation"
-          style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)', border: '1px solid var(--theme-border-default)' }}
-        >
-          <Users className="w-3.5 h-3.5" style={{ color: 'var(--theme-brand-primary)' }} /> Nhân sự
-        </button>
-        <button
-          onClick={() => navigate('/director/partners')}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold touch-manipulation"
-          style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)', border: '1px solid var(--theme-border-default)' }}
-        >
-          <Handshake className="w-3.5 h-3.5" style={{ color: 'var(--theme-brand-primary)' }} /> Đối tác
-        </button>
-        <button
-          onClick={() => navigate('/director/pricing')}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold touch-manipulation"
-          style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)', border: '1px solid var(--theme-border-default)' }}
-        >
-          <Receipt className="w-3.5 h-3.5" style={{ color: 'var(--theme-brand-primary)' }} /> Bảng giá
-        </button>
-        <button
-          onClick={() => navigate('/director/trips')}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold touch-manipulation"
-          style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)', border: '1px solid var(--theme-border-default)' }}
-        >
-          <Briefcase className="w-3.5 h-3.5" style={{ color: 'var(--theme-brand-primary)' }} /> Lệnh điều hành
-        </button>
+        {[
+          { label: 'Nhân sự', path: '/director/users', icon: Users },
+          { label: 'Đối tác', path: '/director/partners', icon: Handshake },
+          { label: 'Bảng giá', path: '/director/pricing', icon: Receipt },
+          { label: 'Lệnh ĐH', path: '/director/trips', icon: Briefcase },
+        ].map(a => (
+          <button
+            key={a.label}
+            onClick={() => navigate(a.path)}
+            className="flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition active:scale-[0.98]"
+            style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)', color: 'var(--theme-text-primary)' }}
+          >
+            <a.icon className="h-3.5 w-3.5" style={{ color: 'var(--theme-brand-primary)' }} />
+            {a.label}
+          </button>
+        ))}
       </div>
 
-      {/* KPI panels — 2-col on desktop */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {driverBreakdown.length > 0 && (
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--theme-text-muted)' }}>Theo tài xế</p>
-            <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
-              {driverBreakdown.map((d, i) => (
-                <button
-                  key={d.id}
-                  onClick={() => navigate(`/director/driver-jobs/${d.id}`)}
-                  className="w-full flex items-center justify-between px-4 py-3 touch-manipulation card-lift"
-                  style={{ borderBottom: i < driverBreakdown.length - 1 ? '1px solid var(--theme-border-default)' : 'none' }}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
-                      <UserCircle className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0 text-left">
-                      <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{d.name}</p>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>{d.plate}</span>
-                        <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>·</span>
-                        <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{d.trips} chuyến</span>
-                      </div>
-                    </div>
-                  </div>
-                  <span className="text-sm font-bold tabular-nums shrink-0" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(d.earning)}</span>
-                </button>
-              ))}
-            </div>
+      {/* Driver leaderboard */}
+      {driverBreakdown.length > 0 && (
+        <section>
+          <div className="mb-3 flex items-baseline justify-between">
+            <h3 className="flex items-center gap-2 font-display text-base font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+              <Trophy className="h-4 w-4" style={{ color: 'var(--theme-status-warning)' }} />
+              Tài xế xuất sắc
+            </h3>
+            <button className="text-xs font-medium" style={{ color: 'var(--theme-brand-primary)' }}>Xem hết</button>
           </div>
-        )}
+          <div className="overflow-hidden rounded-2xl border" style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)' }}>
+            {driverBreakdown.map((d, i) => (
+              <button
+                key={d.id}
+                onClick={() => navigate(`/director/driver-jobs/${d.id}`)}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left transition active:scale-[0.99]"
+                style={{ borderBottom: i < driverBreakdown.length - 1 ? '1px solid var(--surface-border)' : 'none' }}
+              >
+                <div
+                  className="flex h-8 w-8 items-center justify-center rounded-full font-display text-sm font-bold"
+                  style={{
+                    background: i === 0
+                      ? 'color-mix(in srgb, var(--theme-status-warning) 25%, transparent)'
+                      : 'var(--theme-bg-tertiary)',
+                    color: i === 0 ? 'var(--theme-status-warning)' : 'var(--theme-text-muted)',
+                  }}
+                >
+                  {i + 1}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>{d.name}</div>
+                  <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                    {d.plate} · {d.trips} chuyến
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="font-mono text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+                    {fmt(d.earning)}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
-        {clientBreakdown.length > 0 && (
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--theme-text-muted)' }}>Theo khách hàng</p>
-            <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
-              {clientBreakdown.map((c, i) => (
-                <button
-                  key={c.id}
-                  onClick={() => navigate(`/director/client-jobs/${c.id}`)}
-                  className="w-full flex items-center justify-between px-4 py-3 touch-manipulation card-lift"
-                  style={{ borderBottom: i < clientBreakdown.length - 1 ? '1px solid var(--theme-border-default)' : 'none' }}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
-                      <Building2 className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0 text-left">
-                      <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{c.name}</p>
-                      <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{c.trips} chuyến</p>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(c.revenue)}</p>
-                    <p className="text-xs font-medium" style={{ color: 'var(--theme-brand-primary)' }}>Chi tiết →</p>
-                  </div>
-                </button>
-              ))}
-            </div>
+      {/* Client contribution */}
+      {clientBreakdown.length > 0 && (
+        <section>
+          <h3 className="mb-3 font-display text-base font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+            Khách hàng đóng góp
+          </h3>
+          <div className="space-y-2">
+            {clientBreakdown.map(c => (
+              <button
+                key={c.id}
+                onClick={() => navigate(`/director/client-jobs/${c.id}`)}
+                className="w-full rounded-xl border p-3 text-left transition active:scale-[0.99]"
+                style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)' }}
+              >
+                <div className="mb-2 flex items-center justify-between text-xs">
+                  <span className="font-medium" style={{ color: 'var(--theme-text-primary)' }}>{c.name}</span>
+                  <span style={{ color: 'var(--theme-text-muted)' }}>{fmt(c.revenue)}</span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full" style={{ background: 'var(--theme-bg-tertiary)' }}>
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${c.pct * 100}%`,
+                      background: 'var(--gradient-primary)',
+                    }}
+                  />
+                </div>
+              </button>
+            ))}
           </div>
-        )}
-      </div>
+        </section>
+      )}
 
       {!loading && monthlyJobs.length === 0 && (
         <div className="flex flex-col items-center py-8">

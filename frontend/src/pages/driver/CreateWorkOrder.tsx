@@ -1,4 +1,4 @@
-import { Camera, RotateCcw, Trash2, AlertCircle, WifiOff, Loader2 } from 'lucide-react'
+import { Camera, RotateCcw, Trash2, AlertCircle, WifiOff, Loader2, Image } from 'lucide-react'
 import { ContainerScanner } from '@/components/shared/ContainerScanner'
 import { ContainerTypeGrid } from '@/components/shared/ContainerTypeGrid'
 import { TripSummaryDialog } from '@/components/shared/TripSummaryDialog'
@@ -59,7 +59,7 @@ export function CreateWorkOrder() {
 
       {/* Container cards */}
       <div className="space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
+        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--theme-text-muted)' }}>
           Container
         </p>
 
@@ -191,7 +191,7 @@ export function CreateWorkOrder() {
 
       {/* Customer & Route section */}
       <div className="space-y-4">
-        <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
+        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--theme-text-muted)' }}>
           Khách & Tuyến
         </p>
 
