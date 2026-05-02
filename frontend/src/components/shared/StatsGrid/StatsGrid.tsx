@@ -36,15 +36,15 @@ export interface StatsGridProps {
 function StatCardSkeleton() {
   return (
     <div
-      className="rounded-2xl border p-4 lg:p-5"
+      className="rounded-2xl border p-3 lg:p-4"
       style={{
         background: 'var(--theme-bg-secondary)',
         borderColor: 'var(--theme-border-default)',
       }}
     >
-      <div className="skeleton-shimmer h-4 w-20 rounded mb-2" />
-      <div className="skeleton-shimmer h-8 w-32 rounded mb-1" />
-      <div className="skeleton-shimmer h-3 w-16 rounded" />
+      <div className="skeleton-shimmer h-3 w-16 rounded mb-1.5" />
+      <div className="skeleton-shimmer h-5 w-24 rounded mb-1" />
+      <div className="skeleton-shimmer h-2.5 w-12 rounded" />
     </div>
   )
 }
@@ -79,7 +79,7 @@ function StatCard({
   return (
     <Component
       onClick={onClick}
-      className={`rounded-2xl border p-4 lg:p-5 text-left transition-all ${
+      className={`rounded-2xl border p-3 lg:p-4 text-left transition-all ${
         isClickable
           ? 'cursor-pointer hover:border-[color-mix(in_srgb,var(--theme-brand-primary)_30%,transparent)] hover:shadow-md active:scale-[0.98]'
           : ''
@@ -93,7 +93,7 @@ function StatCard({
         <div className="min-w-0 flex-1">
           {/* Label */}
           <p
-            className="text-xs font-semibold uppercase tracking-wide mb-1.5"
+            className="text-[10px] font-semibold uppercase tracking-wider mb-1"
             style={{ color: 'var(--theme-text-muted)' }}
           >
             {label}
@@ -101,7 +101,7 @@ function StatCard({
 
           {/* Value */}
           <p
-            className="text-base lg:text-lg font-bold font-display tabular-nums leading-tight break-all"
+            className="text-sm lg:text-base font-bold font-display tabular-nums leading-tight break-all"
             style={{ color: valueColor ?? 'var(--theme-text-primary)' }}
           >
             {value}
@@ -109,26 +109,26 @@ function StatCard({
 
           {/* Subtitle */}
           {subtitle && (
-            <p className="mt-0.5 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+            <p className="mt-0.5 text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>
               {subtitle}
             </p>
           )}
 
           {/* Trend */}
           {typeof trend === 'number' && (
-            <div className="flex items-center gap-1.5 mt-2">
+            <div className="flex items-center gap-1.5 mt-1.5">
               <div
-                className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs font-semibold"
+                className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
                 style={{
                   background: `color-mix(in srgb, ${trendColor} 12%, transparent)`,
                   color: trendColor,
                 }}
               >
-                <TrendIcon className="h-3 w-3" />
+                <TrendIcon className="h-2.5 w-2.5" />
                 <span>{Math.abs(trend)}%</span>
               </div>
               {trendLabel && (
-                <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>
                   {trendLabel}
                 </span>
               )}

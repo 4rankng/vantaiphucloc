@@ -67,6 +67,8 @@ export interface DataTableProProps<T> {
   defaultSortKey?: string
   /** Default sort direction */
   defaultSortDir?: 'asc' | 'desc'
+  /** Remove outer border/rounded wrapper — use when embedding inside a card */
+  noBorder?: boolean
 }
 
 function SkeletonRow({ colCount }: { colCount: number }) {

@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react'
 import { Plus, Pencil, Trash2, Building2, UserCircle } from 'lucide-react'
-import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
@@ -81,6 +80,17 @@ export function ClientList() {
 
   return (
     <div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>
+          {clients.length} khách hàng
+        </p>
+        <Button onClick={handleOpenCreate} className="h-9 px-3 shrink-0 gap-1.5 text-sm font-semibold"
+          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+          <Plus className="w-4 h-4" /> Thêm
+        </Button>
+      </div>
+
       {/* Client list — clean cards, tap to see detail */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2 lg:gap-3">
         {clients.length === 0 ? (
@@ -204,8 +214,6 @@ export function ClientList() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={handleOpenCreate} />
     </div>
   )
 }

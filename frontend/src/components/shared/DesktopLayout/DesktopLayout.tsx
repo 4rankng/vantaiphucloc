@@ -132,27 +132,20 @@ function SidebarNavItem({
     >
       {/* Active pill */}
       {isActive && !collapsed && (
-        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-yellow-300" />
+        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full" style={{ background: '#ffffff' }} />
       )}
 
-      {/* Icon wrapper — highlighted on active */}
-      <span
+      {/* Icon — bright white on active, dim on inactive */}
+      <item.icon
         className={cn(
-          'flex items-center justify-center rounded-lg transition-all duration-150 shrink-0',
-          collapsed ? 'w-[30px] h-[30px]' : 'w-[26px] h-[26px]',
-          isActive
-            ? 'bg-yellow-300/20'
-            : 'bg-transparent group-hover/item:bg-white/10',
+          'shrink-0 transition-all duration-150',
+          collapsed ? 'w-[18px] h-[18px]' : 'w-[16px] h-[16px]',
         )}
-      >
-        <item.icon
-          className={cn(
-            'shrink-0 transition-colors duration-150',
-            collapsed ? 'w-[16px] h-[16px]' : 'w-[14px] h-[14px]',
-            isActive ? 'text-yellow-300' : 'text-white/55 group-hover/item:text-white/90',
-          )}
-        />
-      </span>
+        style={{
+          color: isActive ? '#ffffff' : 'rgba(255,255,255,0.45)',
+          filter: isActive ? 'drop-shadow(0 0 6px rgba(255,255,255,0.9))' : 'none',
+        }}
+      />
 
       {!collapsed && (
         <span className={cn('text-[13px] leading-none flex-1 truncate', isActive ? 'font-semibold' : 'font-normal')}>
