@@ -109,6 +109,10 @@ export function useCreateWorkOrder() {
     setScannerOpen(true)
   }, [])
 
+  const openGallery = useCallback((idx: number) => {
+    setActiveContIdx(idx)
+  }, [])
+
   const handleScanComplete = useCallback((imageSrc: string, meta: PhotoMeta) => {
     const idx = activeContIdx
     setContainers(prev => prev.map((c, i) =>
@@ -256,6 +260,9 @@ export function useCreateWorkOrder() {
     return client?.name ?? ''
   }, [clients, clientId])
 
+  const dismissAddMore = useCallback(() => setAddMoreDismissed(true), [])
+
+  // ─── Return ───────────────────────────────────────────────────────────────
   return {
     // Reference data
     clients, routes, recentOrders,
@@ -272,11 +279,11 @@ export function useCreateWorkOrder() {
 
     // Actions
     setClientId, setPickupLocation, setDropoffLocation,
-    openScanner, handleScanComplete, setScannerOpen,
+    openScanner, openGallery, handleScanComplete, setScannerOpen,
     updateContainer, addContainer, removeContainer,
     handleRecentTripSelect,
     onRequestSubmit, confirmSubmit,
     setSummaryOpen,
-    dismissAddMore: useCallback(() => setAddMoreDismissed(true), []),
+    dismissAddMore,
   }
 }

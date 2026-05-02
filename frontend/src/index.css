@@ -156,11 +156,11 @@
   --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Glass + surface tokens (phuc-loc-pages inspired) */
-  --glass-bg: rgba(255, 255, 255, 0.78);
+  --glass-bg: rgba(240, 247, 244, 0.97);
   --glass-blur: blur(20px) saturate(1.8);
   --surface-bg: #ffffff;
   --surface-border: rgba(0, 0, 0, 0.06);
-  --body-gradient: linear-gradient(180deg, var(--theme-brand-primary) 0%, var(--theme-brand-primary) 140px, var(--theme-bg-primary) 140px);
+  --body-gradient: linear-gradient(180deg, var(--theme-brand-primary) 0%, var(--theme-brand-primary) 52px, var(--theme-bg-primary) 52px);
 }
 
 .shell {

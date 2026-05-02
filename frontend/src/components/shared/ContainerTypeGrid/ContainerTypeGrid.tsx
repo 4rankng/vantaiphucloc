@@ -25,14 +25,15 @@ export function ContainerTypeGrid({ value, onChange, error }: ContainerTypeGridP
           <button
             key={wt}
             onClick={() => handleSelect(wt)}
-            className="flex-1 min-h-[48px] rounded-xl flex items-center justify-center gap-1.5 transition-all active:scale-95 touch-manipulation"
+            className="flex-1 min-h-[52px] rounded-2xl flex items-center justify-center gap-1.5 transition-all active:scale-95 touch-manipulation"
             style={{
-              background: selected ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
+              background: selected ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
               color: selected ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
               border: `2px solid ${error && !selected ? 'var(--theme-status-warning)' : selected ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)'}`,
+              boxShadow: selected ? 'none' : 'var(--theme-shadow-card)',
             }}
           >
-            <span className="text-lg font-bold">{wt}</span>
+            <span className="text-base font-bold">{wt}</span>
             {selected && <CheckCircle className="w-3.5 h-3.5" />}
           </button>
         )

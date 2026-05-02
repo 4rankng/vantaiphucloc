@@ -87,15 +87,18 @@ function AccountantDesktopShell() {
           {/* Bell */}
           <button
             onClick={() => setNotifOpen(true)}
-            className="relative rounded-lg p-2 transition hover:bg-[var(--theme-bg-tertiary)]"
-            style={{ color: 'var(--theme-text-secondary)' }}
+            className="relative w-8 h-8 flex items-center justify-center rounded-full transition touch-manipulation"
+            style={{ background: 'rgba(0, 80, 30, 0.08)', color: '#003d15' }}
+            aria-label="Thông báo"
           >
-            <Bell className="h-5 w-5" />
+            <Bell className="h-[17px] w-[17px]" />
             {unread > 0 && (
               <span
-                className="absolute right-1 top-1 h-2 w-2 rounded-full"
-                style={{ background: 'var(--theme-status-error)' }}
-              />
+                className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center rounded-full text-[9px] font-bold leading-none px-1"
+                style={{ background: 'var(--theme-status-error)', color: '#fff' }}
+              >
+                {unread > 99 ? '99+' : unread}
+              </span>
             )}
           </button>
 
@@ -103,11 +106,11 @@ function AccountantDesktopShell() {
           <div ref={profileBtnRef} className="relative">
             <button
               onClick={() => setProfileOpen(v => !v)}
-              className="flex h-9 w-9 items-center justify-center rounded-full transition hover:opacity-80"
-              style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
+              className="w-8 h-8 flex items-center justify-center rounded-full transition touch-manipulation"
+              style={{ background: 'rgba(0, 80, 30, 0.08)', color: '#003d15' }}
               aria-label="Tài khoản"
             >
-              <UserCircle className="h-5 w-5" />
+              <UserCircle className="h-[17px] w-[17px]" />
             </button>
             <UserDropdown
               open={profileOpen}

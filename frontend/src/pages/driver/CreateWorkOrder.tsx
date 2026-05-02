@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { Camera, RotateCcw, Trash2, AlertCircle, WifiOff, Loader2, Image } from 'lucide-react'
 import { ContainerScanner } from '@/components/shared/ContainerScanner'
 import { ContainerTypeGrid } from '@/components/shared/ContainerTypeGrid'
@@ -26,6 +27,24 @@ export function CreateWorkOrder() {
 
   const toast = useToast()
 
+  // One hidden file input per container for gallery picking (no `capture` = OS shows gallery)
+  const galleryRefs = useRef<(HTMLInputElement | null)[]>([])
+
+  const handleGalleryChange = (idx: number) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      handleScanComplete(reader.result as string, {
+        lat: null,
+        lng: null,
+        timestamp: new Date().toISOString(),
+      })
+    }
+    reader.readAsDataURL(file)
+    e.target.value = '' // reset so same file can be re-selected
+  }
+
   const handleConfirmSubmit = async () => {
     try {
       await confirmSubmit()
@@ -35,15 +54,15 @@ export function CreateWorkOrder() {
   }
 
   return (
-    <div className="space-y-5 pb-24">
+    <div className="space-y-6 pb-24">
       {/* Offline hint */}
       {!isOnline && (
         <div
-          className="flex items-center gap-2 rounded-xl px-3 py-2"
+          className="flex items-center gap-2 rounded-2xl px-4 py-3"
           style={{ background: 'var(--theme-status-warning-light)', border: '1px solid var(--theme-status-warning)' }}
         >
           <WifiOff className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-status-warning)' }} />
-          <span className="text-xs font-medium" style={{ color: 'var(--theme-status-warning)' }}>
+          <span className="text-xs font-semibold" style={{ color: 'var(--theme-status-warning)' }}>
             Không có mạng — nhập số cont thủ công
           </span>
         </div>
@@ -59,19 +78,19 @@ export function CreateWorkOrder() {
 
       {/* Container cards */}
       <div className="space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--theme-text-muted)' }}>
+        <p className="text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--theme-text-muted)' }}>
           Container
         </p>
 
         {containers.map((cont, idx) => (
           <div
             key={idx}
-            className="rounded-2xl p-4 space-y-4"
+            className="rounded-2xl p-5 space-y-4"
             style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
           >
             {/* Header */}
             <div className="flex items-center justify-between">
-              <span className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+              <span className="text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>
                 Cont {idx + 1}
               </span>
               {containers.length > 1 && (
@@ -85,11 +104,11 @@ export function CreateWorkOrder() {
               )}
             </div>
 
-            {/* Camera trigger / photo preview */}
+            {/* Photo area */}
             {cont.photoTaken && cont.photoDataUrl ? (
               <button
                 onClick={openScanner(idx)}
-                className="w-full rounded-xl overflow-hidden touch-manipulation"
+                className="w-full rounded-2xl overflow-hidden touch-manipulation"
                 style={{ border: '2px solid var(--theme-brand-primary)' }}
               >
                 <img
@@ -100,37 +119,42 @@ export function CreateWorkOrder() {
                 />
               </button>
             ) : (
-              <button
-                onClick={openScanner(idx)}
-                className="w-full rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-8 px-4 transition-colors touch-manipulation"
-                style={{ background: 'transparent', borderColor: 'var(--theme-border-default)' }}
-              >
-                <div className="flex flex-col items-center gap-3 w-full">
-                  <div
-                    className="w-full rounded-lg border-2 flex items-center justify-center px-3"
-                    style={{
-                      borderColor: 'var(--theme-brand-primary)',
-                      opacity: 0.6,
-                      minHeight: '56px',
-                      background: 'var(--theme-brand-primary-light)',
-                    }}
-                  >
-                    <span className="text-sm font-bold uppercase tracking-wider text-center" style={{ color: 'var(--theme-brand-primary)', opacity: 0.7 }}>
-                      Căn số cont vào khung
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Camera className="w-5 h-5" style={{ color: 'var(--theme-text-muted)' }} />
-                    <span className="text-sm font-medium" style={{ color: 'var(--theme-text-muted)' }}>Chạm để quét</span>
-                  </div>
-                </div>
-              </button>
+              <div className="grid grid-cols-2 gap-2.5">
+                {/* Camera button — opens scanner overlay */}
+                <button
+                  onClick={openScanner(idx)}
+                  className="rounded-2xl border-2 border-dashed flex flex-col items-center justify-center py-6 px-3 transition-colors touch-manipulation"
+                  style={{ background: 'transparent', borderColor: 'var(--theme-border-default)' }}
+                >
+                  <Camera className="w-6 h-6 mb-2" style={{ color: 'var(--theme-brand-primary)' }} />
+                  <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Chụp ảnh</span>
+                  <span className="text-[10px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>Quét camera</span>
+                </button>
+
+                {/* Gallery button — triggers hidden file input (no capture = OS gallery) */}
+                <input
+                  ref={el => { galleryRefs.current[idx] = el }}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleGalleryChange(idx)}
+                />
+                <button
+                  onClick={() => galleryRefs.current[idx]?.click()}
+                  className="rounded-2xl border-2 border-dashed flex flex-col items-center justify-center py-6 px-3 transition-colors touch-manipulation"
+                  style={{ background: 'transparent', borderColor: 'var(--theme-border-default)' }}
+                >
+                  <Image className="w-6 h-6 mb-2" style={{ color: 'var(--theme-brand-primary)' }} />
+                  <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Thư viện</span>
+                  <span className="text-[10px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>Chọn từ máy</span>
+                </button>
+              </div>
             )}
 
             {/* Container number input */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Số cont</label>
+                <label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số cont</label>
                 {cont.photoTaken && (
                   <button
                     onClick={openScanner(idx)}
@@ -145,12 +169,12 @@ export function CreateWorkOrder() {
                 <input
                   value={cont.containerNumber}
                   onChange={e => updateContainer(idx, 'containerNumber', e.target.value)}
-                  className="w-full h-11 rounded-xl px-3 text-sm font-mono font-semibold"
+                  className="w-full h-12 rounded-2xl px-4 text-sm font-mono font-semibold"
                   style={{
                     background: 'var(--theme-bg-tertiary)',
-                    border: `1px solid ${cont.ocrError ? 'var(--theme-status-warning)' : 'var(--theme-border-default)'}`,
+                    border: `1.5px solid ${cont.ocrError ? 'var(--theme-status-warning)' : 'transparent'}`,
                     color: 'var(--theme-text-primary)',
-                    paddingRight: cont.ocrLoading ? '40px' : undefined,
+                    paddingRight: cont.ocrLoading ? '44px' : undefined,
                   }}
                   placeholder={cont.ocrLoading ? 'Đang nhận diện...' : 'VD: MSKU-1234567'}
                   readOnly={cont.ocrLoading}
@@ -161,8 +185,7 @@ export function CreateWorkOrder() {
               </div>
               {forceManualEntry && !cont.ocrLoading && (
                 <p className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--theme-status-warning)' }}>
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  Vui lòng nhập tay số cont
+                  <AlertCircle className="w-3.5 h-3.5" /> Vui lòng nhập tay số cont
                 </p>
               )}
               {!forceManualEntry && (
@@ -173,7 +196,7 @@ export function CreateWorkOrder() {
               )}
             </div>
 
-            {/* Container type selector — 2x2 big grid */}
+            {/* Container type selector */}
             <ContainerTypeGrid
               value={cont.workType}
               onChange={(wt) => updateContainer(idx, 'workType', wt)}
@@ -191,7 +214,7 @@ export function CreateWorkOrder() {
 
       {/* Customer & Route section */}
       <div className="space-y-4">
-        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--theme-text-muted)' }}>
+        <p className="text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--theme-text-muted)' }}>
           Khách & Tuyến
         </p>
 
@@ -203,7 +226,7 @@ export function CreateWorkOrder() {
 
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Khách hàng</label>
+            <label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Khách hàng</label>
             <SheetPicker
               label="Chọn khách hàng"
               placeholder="Chọn khách hàng"
@@ -214,7 +237,7 @@ export function CreateWorkOrder() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Điểm lấy</label>
+            <label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm lấy</label>
             <SheetPicker
               label="Chọn điểm lấy"
               placeholder="Chọn điểm lấy"
@@ -228,7 +251,7 @@ export function CreateWorkOrder() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Điểm trả</label>
+            <label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm trả</label>
             <SheetPicker
               label="Chọn điểm trả"
               placeholder="Chọn điểm trả"
@@ -242,7 +265,7 @@ export function CreateWorkOrder() {
 
       {/* Sticky submit bar */}
       <div
-        className="fixed bottom-0 left-0 right-0 p-4 space-y-2 z-30"
+        className="fixed bottom-0 left-0 right-0 px-4 pt-3 pb-6 space-y-2 z-30"
         style={{ background: 'var(--theme-bg-primary)', borderTop: '1px solid var(--theme-border-default)' }}
       >
         {missingFields.length > 0 && !canSubmit && (
