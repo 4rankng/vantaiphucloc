@@ -46,13 +46,9 @@ async def list_salary_periods(
     active_only: bool = Query(False, description="Only return drivers with work_order_count > 0"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin", "driver")),
+    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
-    # Drivers can only see their own salary periods
-    if current_user.role == "driver":
-        driver_id = current_user.id
-
     query = select(SalaryPeriod)
     count_query = select(func.count(SalaryPeriod.id))
 
@@ -62,6 +58,35 @@ async def list_salary_periods(
     if active_only:
         query = query.where(SalaryPeriod.work_order_count > 0)
         count_query = count_query.where(SalaryPeriod.work_order_count > 0)
+
+    total_q = await db.execute(count_query)
+    total = total_q.scalar() or 0
+
+    result = await db.execute(
+        query.order_by(SalaryPeriod.id.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    data = result.scalars().all()
+
+    return PaginatedResponse[SalaryPeriodOut](
+        items=[SalaryPeriodOut.model_validate(s) for s in data],
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=math.ceil(total / page_size) if total > 0 else 0,
+    )
+
+
+@router.get("/driver/salary", response_model=PaginatedResponse[SalaryPeriodOut])
+async def list_my_salary_periods(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
+    current_user: User = Depends(require_roles("driver")),
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(SalaryPeriod).where(SalaryPeriod.driver_id == current_user.id)
+    count_query = select(func.count(SalaryPeriod.id)).where(SalaryPeriod.driver_id == current_user.id)
 
     total_q = await db.execute(count_query)
     total = total_q.scalar() or 0

@@ -64,6 +64,7 @@ export const apiClient = {
   calculateSalary: salaryApi.calculateSalary,
   getJobStatus: salaryApi.getJobStatus,
   getSalaryPeriods: salaryApi.getSalaryPeriods,
+  getMySalaryPeriods: salaryApi.getMySalaryPeriods,
   updateSalaryPeriod: salaryApi.updateSalaryPeriod,
   getSalaryDashboard: salaryApi.getSalaryDashboard,
   exportSalaryExcel: salaryApi.exportSalaryExcel,

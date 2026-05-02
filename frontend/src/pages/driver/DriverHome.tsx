@@ -7,7 +7,7 @@ import { formatCurrencyFull, type WorkOrder } from '@/data/domain'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { WorkOrderCard } from '@/components/shared/WorkOrderCard'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
-import { useSalaryPeriods } from '@/hooks/use-queries'
+import { useMySalaryPeriods } from '@/hooks/use-queries'
 
 const PREVIEW_COUNT = 10
 
@@ -22,7 +22,7 @@ export function DriverHome() {
   const [month, setMonth] = useState(now.getMonth())
 
   // Latest salary period for the banner
-  const { data: salaryPeriods = [] } = useSalaryPeriods(Number(user!.id))
+  const { data: salaryPeriods = [] } = useMySalaryPeriods()
   const latestPeriod = salaryPeriods[0] ?? null
 
   useEffect(() => {

@@ -57,7 +57,7 @@ export function ChangePasswordDialog({ open, onOpenChange }: {
     }
     setSaving(true)
     try {
-      await api.post('/users/change-password', {
+      await api.post('/change-password', {
         current_password: currentPw,
         new_password: newPw,
       })
