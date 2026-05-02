@@ -225,7 +225,7 @@ export function TripDetail() {
                       {job.code}
                     </span>
                   </div>
-                  <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>
+                  <span className="typo-mono text-sm" style={{ color: 'var(--theme-brand-primary)' }}>
                     {formatCurrencyFull(job.earning)}
                   </span>
                 </div>

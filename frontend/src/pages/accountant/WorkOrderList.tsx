@@ -191,7 +191,7 @@ export function WorkOrderList() {
       key: 'earning',
       header: 'Thu nhập TX',
       accessor: (row) => (
-        <span className="font-mono font-semibold tabular-nums">
+        <span className="typo-mono text-sm">
           {fmt(row.earning ?? 0)}
         </span>
       ),
