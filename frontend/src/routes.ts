@@ -32,6 +32,7 @@ export const MatchTrip            = lazy(() => import('@/pages/accountant/MatchT
 export const PricingList          = lazy(() => import('@/pages/accountant/PricingList').then(m => ({ default: m.PricingList })))
 export const AccountantNotifications = lazy(() => import('@/pages/accountant/AccountantNotifications').then(m => ({ default: m.AccountantNotifications })))
 export const DriverTrips             = lazy(() => import('@/pages/accountant/DriverTrips').then(m => ({ default: m.DriverTrips })))
+export const CustomerManagement      = lazy(() => import('@/pages/accountant/CustomerManagement').then(m => ({ default: m.CustomerManagement })))
 
 // ─── Director pages ───────────────────────────────────────────────────────────
 export const DirectorDashboard      = lazy(() => import('@/pages/director/DirectorDashboard').then(m => ({ default: m.DirectorDashboard })))

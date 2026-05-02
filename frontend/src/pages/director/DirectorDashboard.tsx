@@ -1,21 +1,31 @@
-import { useEffect, useState, useMemo, useCallback } from 'react'
-import { Users, Truck, TrendingUp, TrendingDown, UserCircle, Building2, Handshake, Receipt, Briefcase, Trophy, MoreHorizontal, ChevronRight } from 'lucide-react'
+import { useEffect, useState, useMemo, useCallback, type ReactNode } from 'react'
+import { Truck, AlertCircle, CheckCircle2, DollarSign, Users, Handshake, Receipt, Briefcase, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { apiClient } from '@/services/api'
-import { formatCurrencyFull as formatCurrency } from '@/data/domain'
-import type { WorkOrder } from '@/data/domain'
-import { useAuth } from '@/contexts/AuthContext'
+import type { TripOrder } from '@/data/domain'
+import { getTripOrderStatusBadge } from '@/data/domain'
+import { StatusBadge } from '@/components/shared/StatusBadge'
+import { ChartCard } from '@/components/shared/ChartCard'
+import { BarChartWidget } from '@/components/shared/Charts'
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const compact = (n: number) =>
-  n >= 1e9 ? (n / 1e9).toFixed(2) + ' tỷ' : n >= 1e6 ? (n / 1e6).toFixed(1) + ' tr' : n.toLocaleString('vi-VN')
+  n >= 1e9
+    ? (n / 1e9).toFixed(2) + ' tỷ'
+    : n >= 1e6
+    ? (n / 1e6).toFixed(1) + ' tr'
+    : n.toLocaleString('vi-VN')
 
-const fmt = (n: number) => n.toLocaleString('vi-VN') + '₫'
+function getWeekLabel(offset: number): string {
+  return `Tuần ${offset + 1}`
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function DirectorDashboard() {
   const navigate = useNavigate()
-  const { user } = useAuth()
-  const [menu, setMenu] = useState(false)
-  const [jobs, setJobs] = useState<WorkOrder[]>([])
+  const [trips, setTrips] = useState<TripOrder[]>([])
   const [month, setMonth] = useState(() => {
     const d = new Date()
     return { year: d.getFullYear(), month: d.getMonth() + 1 }
@@ -24,10 +34,10 @@ export function DirectorDashboard() {
 
   useEffect(() => {
     let cancelled = false
-    apiClient.getWorkOrders()
-      .then((jRes) => {
+    apiClient.getTripOrders()
+      .then((res) => {
         if (!cancelled) {
-          if (jRes.success) setJobs(jRes.data)
+          if (res.success) setTrips(res.data)
           setLoading(false)
         }
       })
@@ -35,42 +45,57 @@ export function DirectorDashboard() {
     return () => { cancelled = true }
   }, [])
 
-  const monthlyJobs = useMemo(() => {
-    return jobs.filter(j => {
-      const d = new Date(j.createdAt)
+  const monthlyTrips = useMemo(() => {
+    return trips.filter(t => {
+      const d = new Date(t.createdAt)
       return d.getFullYear() === month.year && d.getMonth() + 1 === month.month
     })
-  }, [jobs, month])
+  }, [trips, month])
 
-  const totalRevenue = useMemo(() => monthlyJobs.reduce((s, j) => s + j.unitPrice, 0), [monthlyJobs])
-  const totalDriverEarning = useMemo(() => monthlyJobs.reduce((s, j) => s + j.earning, 0), [monthlyJobs])
-  const profit = totalRevenue - totalDriverEarning
+  // KPI stats — all scoped to selected month
+  const requestedThisMonth = monthlyTrips.length
+  const completedThisMonth = useMemo(() => monthlyTrips.filter(t => t.status === 'COMPLETED').length, [monthlyTrips])
+  const pendingThisMonth = useMemo(() => monthlyTrips.filter(t => t.status === 'PENDING').length, [monthlyTrips])
+  const revenueThisMonth = useMemo(() => monthlyTrips.reduce((s, t) => s + (t.revenue ?? t.unitPrice), 0), [monthlyTrips])
 
-  const driverBreakdown = useMemo(() => {
-    const map = new Map<number, { name: string; plate: string; trips: number; earning: number }>()
-    for (const j of monthlyJobs) {
-      const existing = map.get(j.driverId) ?? { name: j.driverName, plate: j.tractorPlate, trips: 0, earning: 0 }
-      existing.trips++
-      existing.earning += j.earning
-      map.set(j.driverId, existing)
+  // Recent trips (last 5)
+  const recentTrips = useMemo(() => {
+    return [...trips]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 5)
+  }, [trips])
+
+  // Weekly bar chart — split current month into 4 weeks
+  const weeklyData = useMemo(() => {
+    const weeks = [0, 0, 0, 0]
+    for (const t of monthlyTrips) {
+      const day = new Date(t.createdAt).getDate()
+      const weekIdx = Math.min(Math.floor((day - 1) / 7), 3)
+      weeks[weekIdx]++
     }
-    return Array.from(map.entries()).map(([id, data]) => ({ id, ...data }))
-      .sort((a, b) => b.earning - a.earning)
-  }, [monthlyJobs])
+    return weeks
+  }, [monthlyTrips])
 
-  const clientBreakdown = useMemo(() => {
-    const map = new Map<number, { name: string; trips: number; revenue: number }>()
-    for (const j of monthlyJobs) {
-      const existing = map.get(j.clientId) ?? { name: j.clientName, trips: 0, revenue: 0 }
-      existing.trips++
-      existing.revenue += j.unitPrice
-      map.set(j.clientId, existing)
-    }
-    const clients = Array.from(map.entries()).map(([id, data]) => ({ id, ...data }))
-      .sort((a, b) => b.revenue - a.revenue)
-    const maxRev = clients[0]?.revenue ?? 1
-    return clients.map(c => ({ ...c, pct: c.revenue / maxRev }))
-  }, [monthlyJobs])
+  const barData = useMemo(() => ({
+    labels: [0, 1, 2, 3].map(getWeekLabel),
+    datasets: [
+      {
+        label: 'Chuyến',
+        data: weeklyData,
+        backgroundColor: '#1e293b',
+        borderRadius: 6,
+        borderSkipped: false,
+      },
+    ],
+  }), [weeklyData])
+
+  const barOptions = useMemo(() => ({
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { stepSize: 10 } },
+    },
+  }), [])
 
   const prevMonth = useCallback(() => {
     setMonth(prev => {
@@ -79,6 +104,7 @@ export function DirectorDashboard() {
       return { year: y, month: m }
     })
   }, [])
+
   const nextMonth = useCallback(() => {
     setMonth(prev => {
       const m = prev.month === 12 ? 1 : prev.month + 1
@@ -87,216 +113,240 @@ export function DirectorDashboard() {
     })
   }, [])
 
-  const unmatchedCount = useMemo(() => monthlyJobs.filter(j => j.status === 'PENDING').length, [monthlyJobs])
+  // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="pb-8 space-y-5">
-      {/* Greeting */}
-      <section>
-        <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-          Tổng quan tháng {month.month}/{month.year}
-        </div>
-        <h1 className="font-display text-xl font-bold" style={{ color: 'var(--theme-text-primary)' }}>
-          {user?.name ?? 'Giám đốc'}
-        </h1>
-      </section>
+    <div className="space-y-5 pb-8">
 
       {/* Month navigator */}
       <div className="flex items-center gap-2">
         <button
           onClick={prevMonth}
           className="flex h-7 w-7 items-center justify-center rounded-lg transition active:scale-90"
-          style={{ color: 'var(--theme-text-primary)' }}
+          style={{ color: 'var(--theme-text-muted)' }}
           aria-label="Tháng trước"
         >
-          <TrendingDown className="h-4 w-4" />
+          <ChevronLeft className="h-4 w-4" />
         </button>
-        <span className="text-xs font-semibold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
+        <span className="text-sm font-semibold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
           Tháng {month.month}/{month.year}
         </span>
         <button
           onClick={nextMonth}
           className="flex h-7 w-7 items-center justify-center rounded-lg transition active:scale-90"
-          style={{ color: 'var(--theme-text-primary)' }}
+          style={{ color: 'var(--theme-text-muted)' }}
           aria-label="Tháng sau"
         >
-          <TrendingUp className="h-4 w-4" />
+          <ChevronRight className="h-4 w-4" />
         </button>
       </div>
 
-      {/* Hero KPI card */}
-      <section
-        className="rounded-3xl border p-5 relative overflow-hidden"
-        style={{
-          background: 'linear-gradient(135deg, color-mix(in srgb, var(--theme-brand-primary) 8%, transparent), var(--surface-bg), color-mix(in srgb, var(--theme-brand-primary) 12%, transparent))',
-          borderColor: 'color-mix(in srgb, var(--theme-brand-primary) 20%, transparent)',
-        }}
-      >
-        <div className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--theme-brand-primary)' }}>
-          Lợi nhuận tháng
-        </div>
-        <div className="mt-1 font-display text-3xl font-bold tracking-tight" style={{ color: 'var(--theme-text-primary)' }}>
-          {loading ? '...' : compact(profit)} ₫
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div
-            className="rounded-xl p-3 ring-1"
-            style={{ background: 'color-mix(in srgb, var(--surface-bg) 80%, transparent)', ringColor: 'var(--surface-border)' }}
-          >
-            <div className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>Doanh thu</div>
-            <div className="font-display text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>
-              {loading ? '...' : compact(totalRevenue)}₫
-            </div>
-          </div>
-          <div
-            className="rounded-xl p-3 ring-1"
-            style={{ background: 'color-mix(in srgb, var(--surface-bg) 80%, transparent)', ringColor: 'var(--surface-border)' }}
-          >
-            <div className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>Chi phí tài xế</div>
-            <div className="font-display text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>
-              {loading ? '...' : compact(totalDriverEarning)}₫
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Stat tiles */}
-      <section className="grid grid-cols-2 gap-3">
-        {[
-          { i: Truck, label: 'Chuyến đã chạy', value: String(monthlyJobs.length), iconBg: 'color-mix(in srgb, var(--theme-status-info, #3b82f6) 12%, transparent)', iconColor: 'var(--theme-status-info, #3b82f6)' },
-          { i: Briefcase, label: 'Trung bình/chuyến', value: monthlyJobs.length > 0 ? compact(Math.round(totalRevenue / monthlyJobs.length)) : '0', iconBg: 'color-mix(in srgb, var(--theme-status-success, #16a34a) 12%, transparent)', iconColor: 'var(--theme-status-success, #16a34a)' },
-          { i: TrendingDown, label: 'Phiếu chưa ghép', value: String(unmatchedCount), iconBg: 'color-mix(in srgb, var(--theme-status-warning) 12%, transparent)', iconColor: 'var(--theme-status-warning)' },
-          { i: Receipt, label: 'Lệnh chờ chốt', value: String(clientBreakdown.length), iconBg: 'color-mix(in srgb, var(--theme-status-warning) 12%, transparent)', iconColor: 'var(--theme-status-warning)' },
-        ].map(s => (
-          <button
-            key={s.label}
-            className="rounded-2xl border p-4 text-left transition active:scale-[0.98]"
-            style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)' }}
-          >
-            <div
-              className="flex h-9 w-9 items-center justify-center rounded-xl"
-              style={{ background: s.iconBg, color: s.iconColor }}
-            >
-              <s.i className="h-4 w-4" />
-            </div>
-            <div className="mt-3 font-display text-xl font-bold" style={{ color: 'var(--theme-text-primary)' }}>
-              {s.value}
-            </div>
-            <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{s.label}</div>
-          </button>
-        ))}
+      {/* KPI stat cards */}
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile
+          label="Chuyến yêu cầu"
+          value={loading ? '—' : requestedThisMonth.toLocaleString('vi-VN')}
+          icon={<Truck className="h-4 w-4" />}
+          iconBg="bg-slate-100"
+          iconColor="text-slate-600"
+        />
+        <StatTile
+          label="Chuyến hoàn thành"
+          value={loading ? '—' : String(completedThisMonth)}
+          icon={<CheckCircle2 className="h-4 w-4" />}
+          iconBg="bg-emerald-50"
+          iconColor="text-emerald-600"
+          valueColor="text-emerald-600"
+        />
+        <StatTile
+          label="Chờ đối soát"
+          value={loading ? '—' : String(pendingThisMonth)}
+          icon={<AlertCircle className="h-4 w-4" />}
+          iconBg="bg-amber-50"
+          iconColor="text-amber-600"
+          valueColor="text-amber-600"
+        />
+        <StatTile
+          label="Doanh thu"
+          value={loading ? '—' : compact(revenueThisMonth) + ' ₫'}
+          icon={<DollarSign className="h-4 w-4" />}
+          iconBg="bg-blue-50"
+          iconColor="text-blue-600"
+        />
       </section>
 
       {/* Quick actions */}
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: 'Nhân sự', path: '/director/users', icon: Users },
-          { label: 'Đối tác', path: '/director/partners', icon: Handshake },
-          { label: 'Bảng giá', path: '/director/pricing', icon: Receipt },
-          { label: 'Lệnh ĐH', path: '/director/trips', icon: Briefcase },
+          { label: 'Quản lý nhân sự', desc: 'Tài khoản & tài xế', path: '/director/users', icon: Users },
+          { label: 'Khách hàng & đối tác', desc: 'Khách hàng, nhà thầu', path: '/director/partners', icon: Handshake },
+          { label: 'Lệnh điều hành', desc: 'Tạo & theo dõi lệnh', path: '/director/trips', icon: Briefcase },
+          { label: 'Bảng giá', desc: 'Giá theo tuyến & loại', path: '/director/pricing', icon: Receipt },
         ].map(a => (
           <button
             key={a.label}
             onClick={() => navigate(a.path)}
-            className="flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition active:scale-[0.98]"
-            style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)', color: 'var(--theme-text-primary)' }}
+            className="flex items-start gap-3 rounded-xl border p-3 text-left transition active:scale-[0.98] hover:shadow-sm"
+            style={{
+              background: 'var(--theme-bg-secondary)',
+              borderColor: 'var(--theme-border-default)',
+            }}
           >
-            <a.icon className="h-3.5 w-3.5" style={{ color: 'var(--theme-brand-primary)' }} />
-            {a.label}
+            <div
+              className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+              style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 12%, transparent)', color: 'var(--theme-brand-primary)' }}
+            >
+              <a.icon className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-semibold leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{a.label}</div>
+              <div className="mt-0.5 text-[11px] leading-tight" style={{ color: 'var(--theme-text-muted)' }}>{a.desc}</div>
+            </div>
           </button>
         ))}
       </div>
 
-      {/* Driver leaderboard */}
-      {driverBreakdown.length > 0 && (
-        <section>
-          <div className="mb-3 flex items-baseline justify-between">
-            <h3 className="flex items-center gap-2 font-display text-base font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-              <Trophy className="h-4 w-4" style={{ color: 'var(--theme-status-warning)' }} />
-              Tài xế xuất sắc
-            </h3>
-            <button className="text-xs font-medium" style={{ color: 'var(--theme-brand-primary)' }}>Xem hết</button>
+      {/* Main content: recent trips + weekly chart */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_340px]">
+
+        {/* Recent trip orders table */}
+        <div
+          className="rounded-2xl border overflow-hidden"
+          style={{
+            background: 'var(--theme-bg-secondary)',
+            borderColor: 'var(--theme-border-default)',
+          }}
+        >
+          <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--theme-border-default)' }}>
+            <h2 className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+              Lệnh vận chuyển gần đây
+            </h2>
+            <button
+              onClick={() => navigate('/director/trips')}
+              className="text-xs font-medium"
+              style={{ color: 'var(--theme-brand-primary)' }}
+            >
+              Xem tất cả
+            </button>
           </div>
-          <div className="overflow-hidden rounded-2xl border" style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)' }}>
-            {driverBreakdown.map((d, i) => (
-              <button
-                key={d.id}
-                onClick={() => navigate(`/director/driver-jobs/${d.id}`)}
-                className="flex w-full items-center gap-3 px-4 py-3 text-left transition active:scale-[0.99]"
-                style={{ borderBottom: i < driverBreakdown.length - 1 ? '1px solid var(--surface-border)' : 'none' }}
+
+          {loading ? (
+            <div className="space-y-2 p-4">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-10 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+              ))}
+            </div>
+          ) : recentTrips.length === 0 ? (
+            <div className="flex items-center justify-center py-10">
+              <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có lệnh nào</p>
+            </div>
+          ) : (
+            <>
+              {/* Table header — desktop */}
+              <div
+                className="hidden lg:grid grid-cols-[120px_1fr_1fr_60px_110px_100px] gap-3 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider"
+                style={{ color: 'var(--theme-text-muted)', borderBottom: '1px solid var(--theme-border-default)' }}
               >
-                <div
-                  className="flex h-8 w-8 items-center justify-center rounded-full font-display text-sm font-bold"
-                  style={{
-                    background: i === 0
-                      ? 'color-mix(in srgb, var(--theme-status-warning) 25%, transparent)'
-                      : 'var(--theme-bg-tertiary)',
-                    color: i === 0 ? 'var(--theme-status-warning)' : 'var(--theme-text-muted)',
-                  }}
-                >
-                  {i + 1}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>{d.name}</div>
-                  <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                    {d.plate} · {d.trips} chuyến
-                  </div>
-                </div>
-                <div className="text-right shrink-0">
-                  <div className="font-mono text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                    {fmt(d.earning)}
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
+                <span>Mã lệnh</span>
+                <span>Khách hàng</span>
+                <span>Tuyến đường</span>
+                <span>Loại</span>
+                <span>Trạng thái</span>
+                <span>Ngày tạo</span>
+              </div>
 
-      {/* Client contribution */}
-      {clientBreakdown.length > 0 && (
-        <section>
-          <h3 className="mb-3 font-display text-base font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-            Khách hàng đóng góp
-          </h3>
-          <div className="space-y-2">
-            {clientBreakdown.map(c => (
-              <button
-                key={c.id}
-                onClick={() => navigate(`/director/client-jobs/${c.id}`)}
-                className="w-full rounded-xl border p-3 text-left transition active:scale-[0.99]"
-                style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)' }}
-              >
-                <div className="mb-2 flex items-center justify-between text-xs">
-                  <span className="font-medium" style={{ color: 'var(--theme-text-primary)' }}>{c.name}</span>
-                  <span style={{ color: 'var(--theme-text-muted)' }}>{fmt(c.revenue)}</span>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full" style={{ background: 'var(--theme-bg-tertiary)' }}>
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${c.pct * 100}%`,
-                      background: 'var(--gradient-primary)',
-                    }}
-                  />
-                </div>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
+              {/* Rows */}
+              {recentTrips.map((t, i) => {
+                const badge = getTripOrderStatusBadge(t.status)
+                const date = new Date(t.createdAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                const tripCode = `T${String(t.id).padStart(4, '0')}`
+                const route = [t.pickupLocation, t.dropoffLocation].filter(Boolean).join(' → ') || t.route
 
-      {!loading && monthlyJobs.length === 0 && (
-        <div className="flex flex-col items-center py-8">
-          <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không có dữ liệu tháng {month.month}/{month.year}</p>
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => navigate(`/director/trip/${t.id}`)}
+                    className="w-full text-left transition active:scale-[0.99]"
+                    style={{ borderBottom: i < recentTrips.length - 1 ? '1px solid var(--theme-border-default)' : 'none' }}
+                  >
+                    {/* Mobile layout */}
+                    <div className="flex items-start justify-between gap-3 px-4 py-3 lg:hidden">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{tripCode}</span>
+                          <StatusBadge variant={badge.variant} label={badge.label} />
+                        </div>
+                        <div className="text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>{t.clientName}</div>
+                        <div className="text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>{route}</div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{date}</div>
+                        {t.workType && (
+                          <span className="mt-1 inline-block text-[11px] font-semibold px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}>
+                            {t.workType}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Desktop layout */}
+                    <div
+                      className="hidden lg:grid grid-cols-[120px_1fr_1fr_60px_110px_100px] gap-3 items-center px-4 py-3 hover:bg-[var(--theme-bg-tertiary)] transition-colors"
+                    >
+                      <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{tripCode}</span>
+                      <span className="text-xs truncate" style={{ color: 'var(--theme-text-primary)' }}>{t.clientName}</span>
+                      <span className="text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>{route}</span>
+                      <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>{t.workType ?? '—'}</span>
+                      <StatusBadge variant={badge.variant} label={badge.label} />
+                      <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{date}</span>
+                    </div>
+                  </button>
+                )
+              })}
+            </>
+          )}
         </div>
-      )}
 
-      {loading && (
-        <div className="space-y-2">
-          {[1, 2, 3].map(i => <div key={i} className="h-16 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}
+        {/* Weekly trips bar chart */}
+        <ChartCard title="Chuyến đi theo tuần" subtitle={`Tháng ${month.month}/${month.year}`}>
+          <BarChartWidget data={barData} height={220} options={barOptions} />
+        </ChartCard>
+      </div>
+    </div>
+  )
+}
+
+// ─── StatTile ─────────────────────────────────────────────────────────────────
+
+interface StatTileProps {
+  label: string
+  value: string
+  icon: ReactNode
+  iconBg: string
+  iconColor: string
+  valueColor?: string
+}
+
+function StatTile({ label, value, icon, iconBg, iconColor, valueColor }: StatTileProps) {
+  return (
+    <div
+      className="rounded-xl border p-4"
+      style={{
+        background: 'var(--theme-bg-secondary)',
+        borderColor: 'var(--theme-border-default)',
+      }}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-[11px] font-semibold uppercase tracking-wider leading-tight" style={{ color: 'var(--theme-text-muted)' }}>
+          {label}
+        </p>
+        <div className={`flex h-7 w-7 items-center justify-center rounded-md ${iconBg} ${iconColor}`}>
+          {icon}
         </div>
-      )}
+      </div>
+      <p className={`text-2xl font-bold leading-tight tracking-tight ${valueColor ?? ''}`} style={valueColor ? undefined : { color: 'var(--theme-text-primary)' }}>
+        {value}
+      </p>
     </div>
   )
 }
