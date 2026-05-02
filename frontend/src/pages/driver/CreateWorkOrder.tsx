@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect'
-import { CreateClientDialog } from '@/components/shared/CreateClientDialog'
 import { ContainerScanner } from '@/components/shared/ContainerScanner'
 import type { PhotoMeta } from '@/components/shared/ContainerScanner'
 import { apiClient } from '@/services/api'
@@ -39,9 +38,9 @@ export function CreateWorkOrder() {
 
   // Common fields
   const [clientId, setClientId] = useState('')
-  const [route, setRoute] = useState('')
+  const [pickupLocation, setPickupLocation] = useState('')
+  const [dropoffLocation, setDropoffLocation] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [createClientOpen, setCreateClientOpen] = useState(false)
 
   // Scanner state
   const [scannerOpen, setScannerOpen] = useState(false)
@@ -123,7 +122,7 @@ export function CreateWorkOrder() {
   }, [user])
 
   const handleSubmit = useCallback(async () => {
-    if (containers.some(c => !c.containerNumber.trim()) || !clientId || !route) return
+    if (containers.some(c => !c.containerNumber.trim()) || !clientId || !pickupLocation || !dropoffLocation) return
     setSubmitting(true)
 
     try {
@@ -146,11 +145,16 @@ export function CreateWorkOrder() {
         )
       })
 
+      // Build route string from pickup + dropoff
+      const route = `${pickupLocation} - ${dropoffLocation}`
+
       const res = await apiClient.createWorkOrder({
         containers: containerItems,
         clientId: Number(clientId),
         clientName: client?.name ?? '',
         route,
+        pickupLocation,
+        dropoffLocation,
         driverId: Number(user!.id),
         driverName: user!.name,
         tractorPlate: driverPlate,
@@ -169,9 +173,9 @@ export function CreateWorkOrder() {
       toast.error('Gửi thất bại', 'Vui lòng thử lại')
       setSubmitting(false)
     }
-  }, [containers, clientId, route, clients, user, driverPlate, navigate, isOnline, toast])
+  }, [containers, clientId, pickupLocation, dropoffLocation, clients, user, driverPlate, navigate, isOnline, toast])
 
-  const canSubmit = containers.every(c => c.containerNumber.trim()) && clientId && route
+  const canSubmit = containers.every(c => c.containerNumber.trim()) && clientId && pickupLocation && dropoffLocation
 
   return (
     <div className="space-y-4 pb-6">
@@ -350,20 +354,33 @@ export function CreateWorkOrder() {
           value={clientId}
           options={clients.map(c => ({ value: String(c.id), label: c.code || c.name, sublabel: c.code ? c.name : c.phone }))}
           onChange={setClientId}
-          onCreateNew={() => setCreateClientOpen(true)}
-          createNewLabel="Tạo khách hàng mới"
         />
       </div>
 
-      {/* ── Route ── */}
+      {/* ── Pickup Location ── */}
       <div className="space-y-1.5">
-        <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Cung đường</label>
+        <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Điểm lấy</label>
         <InlineSelect
-          label="Chọn cung đường"
-          placeholder="Chọn cung đường"
-          value={route}
-          options={routes.map((r) => ({ value: r.route, label: r.route }))}
-          onChange={setRoute}
+          label="Chọn điểm lấy"
+          placeholder="Chọn điểm lấy"
+          value={pickupLocation}
+          options={[...new Set(routes.map(r => r.pickupLocation).filter(Boolean) as string[])].map(loc => ({ value: loc!, label: loc! }))}
+          onChange={(val: string) => {
+            setPickupLocation(val)
+            setDropoffLocation('')
+          }}
+        />
+      </div>
+
+      {/* ── Dropoff Location ── */}
+      <div className="space-y-1.5">
+        <label className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>Điểm trả</label>
+        <InlineSelect
+          label="Chọn điểm trả"
+          placeholder="Chọn điểm trả"
+          value={dropoffLocation}
+          options={routes.filter(r => r.pickupLocation === pickupLocation).map(r => ({ value: r.dropoffLocation ?? '', label: r.dropoffLocation ?? '' }))}
+          onChange={setDropoffLocation}
         />
       </div>
 
@@ -377,18 +394,6 @@ export function CreateWorkOrder() {
         {submitting ? 'Đang gửi...' : isOnline ? 'Gửi chuyến' : 'Lưu offline'}
       </Button>
 
-      <CreateClientDialog
-        open={createClientOpen}
-        onClose={() => setCreateClientOpen(false)}
-        onConfirm={async (data) => {
-          const res = await apiClient.createClient({ ...data, outstandingDebt: 0 })
-          if (res.success) {
-            setClients(prev => [...prev, res.data])
-            setClientId(String(res.data.id))
-          }
-          setCreateClientOpen(false)
-        }}
-      />
     </div>
   )
 }

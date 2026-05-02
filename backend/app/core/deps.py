@@ -23,7 +23,7 @@ async def get_current_user(
     """
     credentials_exception = HTTPException(
         status_code=401,
-        detail="Could not validate credentials",
+        detail="Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại",
         headers={"WWW-Authenticate": "Bearer"},
     )
 
@@ -42,7 +42,7 @@ async def get_current_user(
         raise credentials_exception
 
     if not user.is_active:
-        raise HTTPException(status_code=401, detail="Inactive user")
+        raise HTTPException(status_code=401, detail="Tài khoản đã bị vô hiệu hóa")
 
     return user
 
@@ -64,7 +64,7 @@ def require_roles(*roles: str):
         if current_user.role not in roles:
             raise HTTPException(
                 status_code=403,
-                detail="Insufficient permissions",
+                detail="Bạn không có quyền thực hiện thao tác này",
             )
         return current_user
 

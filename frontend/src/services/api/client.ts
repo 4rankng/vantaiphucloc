@@ -124,13 +124,16 @@ api.interceptors.response.use(
         : 'Không thể kết nối đến máy chủ'
     } else {
       const status = error.response?.status
+      const backendMsg = (error.response?.data as { detail?: string; error?: string })?.detail
+        || (error.response?.data as { detail?: string; error?: string })?.error
       apiError.statusCode = status
       switch (status) {
-        case 403: apiError.type = 'auth'; apiError.message = 'Bạn không có quyền thực hiện'; break
-        case 404: apiError.type = 'not-found'; apiError.message = 'Không tìm thấy'; break
-        case 422: apiError.type = 'validation'; apiError.message = 'Dữ liệu không hợp lệ'; break
+        case 400: apiError.type = 'validation'; apiError.message = backendMsg || 'Dữ liệu không hợp lệ'; break
+        case 403: apiError.type = 'auth'; apiError.message = backendMsg || 'Bạn không có quyền thực hiện'; break
+        case 404: apiError.type = 'not-found'; apiError.message = backendMsg || 'Không tìm thấy'; break
+        case 422: apiError.type = 'validation'; apiError.message = backendMsg || 'Dữ liệu không hợp lệ'; break
         case 429: apiError.type = 'network'; apiError.message = 'Quá nhiều yêu cầu, vui lòng thử lại sau'; break
-        default: apiError.type = 'server'; apiError.message = 'Lỗi máy chủ, vui lòng thử lại sau'
+        default: apiError.type = 'server'; apiError.message = backendMsg || 'Lỗi máy chủ, vui lòng thử lại sau'
       }
     }
     return Promise.reject(apiError)

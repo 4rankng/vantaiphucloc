@@ -25,13 +25,14 @@ export function CreateTrip() {
 
   const clientOptions = useMemo(() => clients.map(x => ({ value: String(x.id), label: x.name })), [clients])
   const driverOptions = useMemo(() => drivers.map(x => ({ value: String(x.id), label: `${x.name} (${x.tractorPlate})` })), [drivers])
-  const routeOptions = useMemo(() => routes.map(x => ({ value: x.route, label: x.route })), [routes])
+  const pickupOptions = useMemo(() => [...new Set(routes.map(r => r.pickupLocation).filter(Boolean) as string[])].map(loc => ({ value: loc!, label: loc! })), [routes])
   const clientMap = useMemo(() => new Map(clients.map(x => [x.id, x.name])), [clients])
   const driverMap = useMemo(() => new Map(drivers.map(x => [x.id, { name: x.name, plate: x.tractorPlate }])), [drivers])
 
   const [clientId, setClientId] = useState('')
   const [driverId, setDriverId] = useState('')
-  const [route, setRoute] = useState('')
+  const [pickupLocation, setPickupLocation] = useState('')
+  const [dropoffLocation, setDropoffLocation] = useState('')
   const [congItems, setCongItems] = useState<CongItem[]>([
     { id: '1', workType: 'E20', containerNumber: '' },
   ])
@@ -52,18 +53,26 @@ export function CreateTrip() {
     setCongItems(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c))
   }
 
+  const dropoffOptions = useMemo(() =>
+    routes.filter(r => r.pickupLocation === pickupLocation).map(r => ({ value: r.dropoffLocation ?? '', label: r.dropoffLocation ?? '' })),
+    [routes, pickupLocation],
+  )
+
   const handleSubmit = () => {
-    if (!clientId || !driverId || !route || submitting) return
+    if (!clientId || !driverId || !pickupLocation || !dropoffLocation || submitting) return
     setSubmitting(true)
     const firstCong = congItems[0]
     const clientName = clientMap.get(Number(clientId)) ?? ''
     const driverInfo = driverMap.get(Number(driverId)) ?? { name: '', plate: '' }
+    const route = `${pickupLocation} - ${dropoffLocation}`
     createTripOrder.mutate({
       tripDate: new Date().toISOString().slice(0, 10),
       clientId: Number(clientId),
       clientName,
       workType: firstCong.workType,
       route,
+      pickupLocation,
+      dropoffLocation,
       tractorPlate: driverInfo.plate,
       driverId: Number(driverId),
       driverName: driverInfo.name,
@@ -95,10 +104,21 @@ export function CreateTrip() {
         />
       </div>
 
-      {/* Route */}
+      {/* Pickup Location */}
       <div className="space-y-2">
-        <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Cung đường</Label>
-        <InlineSelect options={routeOptions} value={route} onChange={setRoute} placeholder="Chọn cung đường" />
+        <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm lấy</Label>
+        <InlineSelect
+          options={pickupOptions}
+          value={pickupLocation}
+          onChange={(val: string) => { setPickupLocation(val); setDropoffLocation('') }}
+          placeholder="Chọn điểm lấy"
+        />
+      </div>
+
+      {/* Dropoff Location */}
+      <div className="space-y-2">
+        <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm trả</Label>
+        <InlineSelect options={dropoffOptions} value={dropoffLocation} onChange={setDropoffLocation} placeholder="Chọn điểm trả" />
       </div>
 
       {/* Driver */}
@@ -165,7 +185,7 @@ export function CreateTrip() {
       </div>
 
       {/* Submit */}
-      <Button onClick={handleSubmit} disabled={!clientId || !driverId || !route || submitting}
+      <Button onClick={handleSubmit} disabled={!clientId || !driverId || !pickupLocation || !dropoffLocation || submitting}
         className="w-full h-11 font-bold rounded-xl"
         style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
         {submitting ? 'Đang tạo...' : 'Tạo chuyến'}

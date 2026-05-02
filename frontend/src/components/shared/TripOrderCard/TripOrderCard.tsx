@@ -1,3 +1,4 @@
+import { RouteDisplay } from '@/components/shared/RouteDisplay'
 import type { TripOrder } from '@/data/domain'
 
 interface TripOrderCardProps {
@@ -27,8 +28,9 @@ export function TripOrderCard({ trip, onClick }: TripOrderCardProps) {
         </span>
       </div>
       <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-        {trip.driverName} · {trip.route}
+        {trip.driverName}
       </p>
+      <RouteDisplay route={trip.route} pickupLocation={trip.pickupLocation} dropoffLocation={trip.dropoffLocation} />
       {trip.containers.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-1.5">
           {trip.containers.map((c, i) => (

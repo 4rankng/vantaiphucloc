@@ -1,9 +1,11 @@
+import io
 import math
 import logging
 from collections import defaultdict
 from datetime import date, datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, func
 
@@ -84,6 +86,8 @@ async def _load_trip_order_out(db: AsyncSession, trip_order: TripOrder) -> TripO
         client_name=trip_order.client_name,
         work_type=trip_order.work_type,
         route=trip_order.route,
+        pickup_location=trip_order.pickup_location,
+        dropoff_location=trip_order.dropoff_location,
         tractor_plate=trip_order.tractor_plate,
         driver_id=trip_order.driver_id,
         driver_name=trip_order.driver_name,
@@ -95,6 +99,9 @@ async def _load_trip_order_out(db: AsyncSession, trip_order: TripOrder) -> TripO
         allowance=trip_order.allowance,
         revenue=trip_order.revenue,
         status=trip_order.status,
+        is_confirmed=trip_order.is_confirmed,
+        confirmed_by=trip_order.confirmed_by,
+        confirmed_at=trip_order.confirmed_at,
         matched_work_order_ids=matched_ids,
         created_at=trip_order.created_at,
         updated_at=trip_order.updated_at,
@@ -120,6 +127,8 @@ async def _batch_load_trip_order_outs(
             client_name=to.client_name,
             work_type=to.work_type,
             route=to.route,
+            pickup_location=to.pickup_location,
+            dropoff_location=to.dropoff_location,
             tractor_plate=to.tractor_plate,
             driver_id=to.driver_id,
             driver_name=to.driver_name,
@@ -131,6 +140,9 @@ async def _batch_load_trip_order_outs(
             allowance=to.allowance,
             revenue=to.revenue,
             status=to.status,
+            is_confirmed=to.is_confirmed,
+            confirmed_by=to.confirmed_by,
+            confirmed_at=to.confirmed_at,
             matched_work_order_ids=matched_mapping.get(to.id, []),
             created_at=to.created_at,
             updated_at=to.updated_at,
@@ -197,18 +209,23 @@ async def create_trip_order(
     # Auto-lookup pricing from bang gia
     work_type = trip_data.get("work_type")
     if body.containers and work_type:
-        from app.services.pricing_service import find_pricing
-        pricing = await find_pricing(
+        from app.services.pricing_service import find_tiered_pricing
+        # Count containers of same work_type for tiered pricing
+        container_count = sum(1 for c in body.containers if c.work_type == work_type) or 1
+        tiered = await find_tiered_pricing(
             db,
             client_id=body.client_id,
             work_type=work_type,
+            quantity=container_count,
             route=body.route,
+            pickup_location=body.pickup_location,
+            dropoff_location=body.dropoff_location,
         )
-        if pricing:
-            trip_data["unit_price"] = pricing.unit_price
-            trip_data["driver_salary"] = pricing.driver_salary
-            trip_data["allowance"] = pricing.allowance
-            trip_data["pricing_id"] = pricing.id
+        if tiered:
+            trip_data["unit_price"] = tiered.unit_price
+            trip_data["driver_salary"] = tiered.driver_salary
+            trip_data["allowance"] = tiered.allowance
+            trip_data["pricing_id"] = tiered.pricing.id
     # else: use values provided in body (or defaults)
 
     # Determine initial status based on whether all required fields are provided
@@ -474,3 +491,43 @@ async def toggle_trip_order_confirmation(
     await db.refresh(trip_order)
 
     return await _load_trip_order_out(db, trip_order)
+
+
+@router.post("/trip-orders/import", status_code=200)
+async def import_trip_orders_excel(
+    file: UploadFile = File(...),
+    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Import trip orders from Excel file."""
+    from app.services.excel_service import parse_trip_order_excel, import_trip_orders
+
+    content = await file.read()
+    rows = await parse_trip_order_excel(content)
+    if not rows:
+        raise HTTPException(status_code=400, detail="File Excel trống hoặc không đúng định dạng")
+
+    result = await import_trip_orders(db, rows, current_user.id)
+    return result
+
+
+@router.get("/trip-orders/export")
+async def export_trip_orders_excel(
+    date_from: date | None = None,
+    date_to: date | None = None,
+    status: str | None = None,
+    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Export trip orders to Excel."""
+    from app.services.excel_service import generate_trip_orders_excel
+
+    content = await generate_trip_orders_excel(
+        db, date_from=date_from.isoformat() if date_from else None,
+        date_to=date_to.isoformat() if date_to else None, status=status,
+    )
+    return StreamingResponse(
+        io.BytesIO(content),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=trip_orders.xlsx"},
+    )

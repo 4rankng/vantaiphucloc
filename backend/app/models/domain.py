@@ -99,6 +99,8 @@ class Pricing(Base):
     client_name = Column(String(255), nullable=False)  # denormalized for display
     work_type = Column(String(10), nullable=False)     # E20 | E40 | F20 | F40
     route = Column(String(500), nullable=False)
+    pickup_location = Column(String(255), nullable=True)
+    dropoff_location = Column(String(255), nullable=True)
     unit_price = Column(Integer, nullable=False)       # VND
     driver_salary = Column(Integer, nullable=False)    # VND
     allowance = Column(Integer, nullable=False)        # VND
@@ -124,10 +126,9 @@ class PricingLine(Base):
     )
     work_type = Column(String(10), nullable=False)
     quantity = Column(Integer, nullable=False)
-
-    __table_args__ = (
-        UniqueConstraint("pricing_id", "work_type", name="uq_pricing_lines_pricing_work_type"),
-    )
+    unit_price = Column(Integer, nullable=False, default=0)
+    driver_salary = Column(Integer, nullable=False, default=0)
+    allowance = Column(Integer, nullable=False, default=0)
 
 
 # ---------------------------------------------------------------------------
@@ -142,6 +143,8 @@ class WorkOrder(Base):
     client_name = Column(String(255), nullable=False)  # denormalized
     client_code = Column(String(50), nullable=True)  # denormalized
     route = Column(String(500), nullable=False)
+    pickup_location = Column(String(255), nullable=True)
+    dropoff_location = Column(String(255), nullable=True)
     driver_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     driver_name = Column(String(255), nullable=False)  # denormalized
     tractor_plate = Column(String(20), nullable=False)
@@ -200,6 +203,8 @@ class TripOrder(Base):
     client_name = Column(String(255), nullable=False)  # denormalized
     work_type = Column(String(10), nullable=True)       # legacy — derived from first container
     route = Column(String(500), nullable=False)
+    pickup_location = Column(String(255), nullable=True)
+    dropoff_location = Column(String(255), nullable=True)
     tractor_plate = Column(String(20), nullable=False)
     driver_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     driver_name = Column(String(255), nullable=False)  # denormalized

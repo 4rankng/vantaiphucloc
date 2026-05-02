@@ -18,7 +18,7 @@ router = APIRouter()
 async def list_vendors(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_roles("accountant", "director", "driver", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
     total_q = await db.execute(select(func.count(Vendor.id)))

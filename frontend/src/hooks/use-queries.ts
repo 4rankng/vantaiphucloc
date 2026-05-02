@@ -339,6 +339,46 @@ export function useExportReconciliationExcel() {
   })
 }
 
+export function useImportTripOrders() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (file: File) => apiClient.importTripOrders(file),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['trip-orders'] }) },
+  })
+}
+
+export function useExportTripOrdersExcel() {
+  return useMutation({
+    mutationFn: (filters?: { dateFrom?: string; dateTo?: string; status?: string }) =>
+      apiClient.exportTripOrdersExcel(filters),
+  })
+}
+
+export function useExportWorkOrdersExcel() {
+  return useMutation({
+    mutationFn: (filters?: { dateFrom?: string; dateTo?: string; status?: string }) =>
+      apiClient.exportWorkOrdersExcel(filters),
+  })
+}
+
+export function useSalaryDashboard(periodStart: string, periodEnd: string) {
+  return useQuery({
+    queryKey: ['salary-dashboard', periodStart, periodEnd],
+    queryFn: async () => {
+      const res = await apiClient.getSalaryDashboard(periodStart, periodEnd)
+      return res.success ? res.data : []
+    },
+    enabled: !!periodStart && !!periodEnd,
+  })
+}
+
+export function useExportSalaryExcel() {
+  return useMutation({
+    mutationFn: ({ startDate, endDate }: { startDate: string; endDate: string }) =>
+      apiClient.exportSalaryExcel(startDate, endDate),
+  })
+}
+
 export function useCalculateSalary() {
   const qc = useQueryClient()
   return useMutation({

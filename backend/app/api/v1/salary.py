@@ -1,12 +1,15 @@
+import io
 import math
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
 from app.database import get_db
 from app.models.base import User
-from app.models.domain import SalaryPeriod
+from app.models.domain import SalaryPeriod, WorkOrder
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import (
     SalaryCalculateRequest,
@@ -14,7 +17,7 @@ from app.schemas.domain import (
     SalaryPeriodOut,
     SalaryPeriodUpdate,
 )
-from app.core.deps import require_roles
+from app.core.deps import require_roles, get_current_user
 from app.workers import enqueue
 
 router = APIRouter()
@@ -40,6 +43,7 @@ async def calculate_salary(
 @router.get("/salary", response_model=PaginatedResponse[SalaryPeriodOut])
 async def list_salary_periods(
     driver_id: int | None = None,
+    active_only: bool = Query(False, description="Only return drivers with work_order_count > 0"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
@@ -51,6 +55,9 @@ async def list_salary_periods(
     if driver_id is not None:
         query = query.where(SalaryPeriod.driver_id == driver_id)
         count_query = count_query.where(SalaryPeriod.driver_id == driver_id)
+    if active_only:
+        query = query.where(SalaryPeriod.work_order_count > 0)
+        count_query = count_query.where(SalaryPeriod.work_order_count > 0)
 
     total_q = await db.execute(count_query)
     total = total_q.scalar() or 0
@@ -69,6 +76,39 @@ async def list_salary_periods(
         page_size=page_size,
         total_pages=math.ceil(total / page_size) if total > 0 else 0,
     )
+
+
+@router.get("/salary/dashboard")
+async def salary_dashboard(
+    period_start: date = Query(...),
+    period_end: date = Query(...),
+    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return salary breakdown for all active drivers in a period."""
+    # Get salary periods for this date range
+    result = await db.execute(
+        select(SalaryPeriod).where(
+            SalaryPeriod.start_date == period_start,
+            SalaryPeriod.end_date == period_end,
+            SalaryPeriod.work_order_count > 0,
+        ).order_by(SalaryPeriod.driver_name)
+    )
+    periods = result.scalars().all()
+
+    return [
+        {
+            "id": p.id,
+            "driver_id": p.driver_id,
+            "driver_name": p.driver_name,
+            "work_order_count": p.work_order_count,
+            "total_salary": p.total_salary,
+            "total_allowance": p.total_allowance,
+            "net_pay": p.net_pay,
+            "status": p.status,
+        }
+        for p in periods
+    ]
 
 
 @router.put("/salary/{salary_id}", response_model=SalaryPeriodOut)
@@ -92,3 +132,21 @@ async def update_salary_period(
     await db.refresh(salary_period)
 
     return salary_period
+
+
+@router.get("/salary/export")
+async def export_salary_excel(
+    start_date: date = Query(...),
+    end_date: date = Query(...),
+    current_user: User = Depends(require_roles("accountant", "superadmin")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Export salary breakdown to Excel."""
+    from app.services.excel_service import generate_salary_excel
+
+    content = await generate_salary_excel(db, start_date.isoformat(), end_date.isoformat())
+    return StreamingResponse(
+        io.BytesIO(content),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=salary.xlsx"},
+    )
