@@ -1,31 +1,23 @@
 import { Outlet, useLocation, useNavigate, Navigate, Link } from 'react-router-dom'
 import { AppShell } from '@/components/shared/AppShell'
+import { AccountantSidebar } from '@/components/shared/AccountantSidebar'
+import { CommandPalette, useCommandPalette } from '@/components/shared/CommandPalette'
 import { useAuth } from '@/contexts/AuthContext'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { NotificationPanel, useUnreadCount } from '@/components/shared/NotificationPanel/NotificationPanel'
 import { UserDropdown } from '@/components/shared/ProfileDialog'
-import { 
-  LayoutDashboard, FileText, Briefcase, Users, MapPin, Tag, Wallet, 
-  Bell, UserCircle, Search, ChevronRight, Menu, X,
-  TrendingUp, Clock
+import {
+  Search,
+  Command as CmdIcon,
+  Bell,
+  UserCircle,
+  Menu,
+  X,
 } from 'lucide-react'
 import { useState, useRef } from 'react'
 import type { Role } from '@/data/domain'
-import { cn } from '@/lib/utils'
 
 const ALLOWED_ROLES: Role[] = ['accountant']
-
-// Navigation items with icons
-const NAV_ITEMS = [
-  { path: '/accountant', label: 'Tổng quan', icon: LayoutDashboard, exact: true },
-  { path: '/accountant/trips', label: 'Lệnh điều phối', icon: FileText },
-  { path: '/accountant/driver-trips', label: 'Chuyến đã đi', icon: Clock },
-  { path: '/accountant/work-orders', label: 'Đối soát', icon: Briefcase },
-  { path: '/accountant/partners', label: 'Đối tác', icon: Users },
-  { path: '/accountant/routes', label: 'Cung đường', icon: MapPin },
-  { path: '/accountant/pricing', label: 'Bảng giá', icon: Tag },
-  { path: '/accountant/salary-setup', label: 'Kỳ lương', icon: Wallet },
-]
 
 const TITLES: Record<string, string> = {
   '/accountant':                  'Tổng quan',
@@ -56,201 +48,136 @@ const FULLSCREEN_PREFIXES = [
   '/accountant/match-trip/',
 ]
 
-// Desktop Sidebar Component
-function DesktopSidebar() {
-  const location = useLocation()
-  const navigate = useNavigate()
-  
-  const isActive = (path: string, exact?: boolean) => {
-    if (exact) return location.pathname === path
-    return location.pathname === path || location.pathname.startsWith(path + '/')
-  }
-
-  return (
-    <aside 
-      className="fixed left-0 top-0 bottom-0 w-[240px] flex flex-col z-30"
-      style={{ 
-        background: 'var(--theme-bg-secondary)',
-        borderRight: '1px solid var(--theme-border-default)',
-      }}
-    >
-      {/* Logo */}
-      <div className="h-16 flex items-center gap-3 px-5 shrink-0" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
-        <Link to="/accountant" className="flex items-center gap-3">
-          <div 
-            className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: 'var(--theme-brand-primary)' }}
-          >
-            <TrendingUp className="w-5 h-5 text-white" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-bold font-display truncate" style={{ color: 'var(--theme-text-primary)' }}>
-              Phúc Lộc
-            </p>
-            <p className="text-[10px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>
-              Kế toán
-            </p>
-          </div>
-        </Link>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-        {NAV_ITEMS.map(item => {
-          const active = isActive(item.path, item.exact)
-          const Icon = item.icon
-          return (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
-                "hover:bg-[var(--theme-bg-tertiary)] active:scale-[0.98]"
-              )}
-              style={{
-                background: active ? 'var(--theme-brand-primary-light)' : 'transparent',
-                color: active ? 'var(--theme-brand-primary)' : 'var(--theme-text-secondary)',
-              }}
-            >
-              <Icon className="w-[18px] h-[18px] shrink-0" />
-              <span className="truncate">{item.label}</span>
-              {active && (
-                <ChevronRight className="w-4 h-4 ml-auto shrink-0 opacity-50" />
-              )}
-            </button>
-          )
-        })}
-      </nav>
-
-      {/* Footer - version */}
-      <div className="px-5 py-4 shrink-0" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
-        <p className="text-[10px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>
-          Vận tải Phúc Lộc v2.0
-        </p>
-      </div>
-    </aside>
-  )
-}
-
-// Desktop Top Header
-function DesktopHeader() {
+function AccountantDesktopShell() {
   const { user } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const [notifOpen, setNotifOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const profileBtnRef = useRef<HTMLDivElement>(null)
   const unread = useUnreadCount()
+  const isFullscreen = FULLSCREEN_PREFIXES.some(p => location.pathname.startsWith(p))
+  const { open: cmdOpen, setOpen: setCmdOpen, close: closeCmdPalette } = useCommandPalette()
 
   const pageTitle = resolveTitle(location.pathname)
 
   return (
-    <>
-      <header
-        className="sticky top-0 z-20 h-16 flex items-center justify-between gap-4 px-6"
-        style={{
-          background: 'var(--theme-bg-secondary)',
-          borderBottom: '1px solid var(--theme-border-default)',
-        }}
-      >
-        {/* Page title */}
-        <div className="min-w-0">
-          <h1 className="text-lg font-bold font-display truncate" style={{ color: 'var(--theme-text-primary)' }}>
-            {pageTitle}
-          </h1>
-        </div>
-
-        {/* Right side actions */}
-        <div className="flex items-center gap-2">
-          {/* Search bar */}
-          <button
-            onClick={() => navigate('/accountant/work-orders')}
-            className="flex items-center gap-2.5 h-10 px-4 rounded-xl text-sm transition hover:bg-[var(--theme-bg-tertiary)]"
-            style={{
-              background: 'var(--theme-bg-tertiary)',
-              color: 'var(--theme-text-muted)',
-            }}
-          >
-            <Search className="w-4 h-4 shrink-0" />
-            <span className="hidden lg:inline">Tìm kiếm...</span>
-            <kbd
-              className="hidden lg:inline-flex items-center gap-0.5 ml-2 px-1.5 py-0.5 rounded text-[10px] font-mono"
-              style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-muted)' }}
-            >
-              ⌘K
-            </kbd>
-          </button>
-
-          {/* Notifications */}
-          <button
-            onClick={() => setNotifOpen(true)}
-            className="relative w-10 h-10 flex items-center justify-center rounded-xl transition hover:bg-[var(--theme-bg-tertiary)]"
-            style={{ color: 'var(--theme-text-secondary)' }}
-            aria-label="Thông báo"
-          >
-            <Bell className="w-[18px] h-[18px]" />
-            {unread > 0 && (
-              <span
-                className="absolute top-1.5 right-1.5 min-w-[16px] h-4 flex items-center justify-center rounded-full text-[9px] font-bold px-1"
-                style={{ background: 'var(--theme-status-error)', color: '#fff' }}
-              >
-                {unread > 99 ? '99+' : unread}
-              </span>
-            )}
-          </button>
-
-          {/* Profile */}
-          <div ref={profileBtnRef} className="relative">
-            <button
-              onClick={() => setProfileOpen(v => !v)}
-              className="flex items-center gap-2 h-10 pl-2 pr-3 rounded-xl transition hover:bg-[var(--theme-bg-tertiary)]"
-              style={{ color: 'var(--theme-text-secondary)' }}
-            >
-              <div 
-                className="w-7 h-7 rounded-lg flex items-center justify-center"
-                style={{ background: 'var(--theme-brand-primary-light)' }}
-              >
-                <UserCircle className="w-4 h-4" style={{ color: 'var(--theme-brand-primary)' }} />
-              </div>
-              <span className="text-sm font-medium hidden lg:inline" style={{ color: 'var(--theme-text-primary)' }}>
-                {user?.name?.split(' ').pop() ?? 'Tài khoản'}
-              </span>
-            </button>
-            <UserDropdown
-              open={profileOpen}
-              onClose={() => setProfileOpen(false)}
-              anchorRef={profileBtnRef}
-            />
-          </div>
-        </div>
-      </header>
-
-      <NotificationPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
-    </>
-  )
-}
-
-function AccountantDesktopShell() {
-  const location = useLocation()
-  const isFullscreen = FULLSCREEN_PREFIXES.some(p => location.pathname.startsWith(p))
-
-  return (
-    <div className="min-h-screen" style={{ background: 'var(--theme-bg-primary)' }}>
+    <div className="flex h-[100dvh] w-full overflow-hidden" style={{ background: 'var(--theme-bg-primary)' }}>
       {/* Sidebar */}
-      {!isFullscreen && <DesktopSidebar />}
-      
+      {!isFullscreen && (
+        <AccountantSidebar
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        />
+      )}
+
       {/* Main content area */}
-      <div className={cn(!isFullscreen && "ml-[240px]")}>
-        {!isFullscreen && <DesktopHeader />}
-        
-        <main className={cn(
-          isFullscreen ? "" : "px-6 py-6 min-h-[calc(100vh-64px)]"
-        )}>
-          <div className={cn(!isFullscreen && "max-w-[1400px] mx-auto")}>
+      <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
+        {/* Desktop header */}
+        <header
+          className="shrink-0 z-20 w-full"
+          style={{
+            background: 'var(--theme-bg-secondary)',
+            borderBottom: '1px solid var(--theme-border-default)',
+          }}
+        >
+          <div className="flex items-center gap-4 px-6 py-3">
+            {/* Page title for context */}
+            {pageTitle && (
+              <h1
+                className="hidden xl:block text-base font-semibold font-display truncate"
+                style={{ color: 'var(--theme-text-primary)' }}
+              >
+                {pageTitle}
+              </h1>
+            )}
+
+            {/* Spacer */}
+            <div className="flex-1" />
+
+            {/* Search bar - Command palette trigger */}
+            <button
+              onClick={() => setCmdOpen(true)}
+              className="flex items-center gap-3 rounded-xl border px-4 py-2 text-sm transition hover:border-[color-mix(in_srgb,var(--theme-brand-primary)_40%,transparent)] w-full max-w-md"
+              style={{
+                background: 'var(--theme-bg-primary)',
+                borderColor: 'var(--theme-border-default)',
+                color: 'var(--theme-text-muted)',
+              }}
+            >
+              <Search className="h-4 w-4 shrink-0" />
+              <span className="flex-1 text-left">Tìm kiếm nhanh...</span>
+              <kbd
+                className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-mono"
+                style={{
+                  borderColor: 'var(--theme-border-default)',
+                  background: 'var(--theme-bg-tertiary)',
+                  color: 'var(--theme-text-muted)',
+                }}
+              >
+                <CmdIcon className="h-3 w-3" />K
+              </kbd>
+            </button>
+
+            {/* Bell */}
+            <button
+              onClick={() => setNotifOpen(true)}
+              className="relative flex h-10 w-10 items-center justify-center rounded-xl transition touch-manipulation"
+              style={{
+                background: 'var(--theme-bg-primary)',
+                border: '1px solid var(--theme-border-default)',
+                color: 'var(--theme-text-primary)',
+              }}
+              aria-label="Thông báo"
+            >
+              <Bell className="h-[18px] w-[18px]" />
+              {unread > 0 && (
+                <span
+                  className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold leading-none px-1"
+                  style={{ background: 'var(--theme-status-error)', color: '#fff' }}
+                >
+                  {unread > 99 ? '99+' : unread}
+                </span>
+              )}
+            </button>
+
+            {/* Profile */}
+            <div ref={profileBtnRef} className="relative">
+              <button
+                onClick={() => setProfileOpen(v => !v)}
+                className="flex h-10 w-10 items-center justify-center rounded-xl transition touch-manipulation"
+                style={{
+                  background: 'var(--theme-bg-primary)',
+                  border: '1px solid var(--theme-border-default)',
+                  color: 'var(--theme-text-primary)',
+                }}
+                aria-label="Tài khoản"
+              >
+                <UserCircle className="h-[18px] w-[18px]" />
+              </button>
+              <UserDropdown
+                open={profileOpen}
+                onClose={() => setProfileOpen(false)}
+                anchorRef={profileBtnRef}
+              />
+            </div>
+          </div>
+        </header>
+
+        {/* Content */}
+        <main className={`flex-1 overflow-y-auto ${isFullscreen ? '' : 'px-6 py-6'}`}>
+          <div className={isFullscreen ? 'h-full' : 'mx-auto max-w-7xl'}>
             <Outlet />
           </div>
         </main>
       </div>
+
+      {/* Notification panel */}
+      <NotificationPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
+
+      {/* Command palette */}
+      <CommandPalette open={cmdOpen} onClose={closeCmdPalette} />
     </div>
   )
 }
