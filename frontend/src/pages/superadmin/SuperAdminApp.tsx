@@ -7,11 +7,11 @@ import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { UserDetailDialog } from '@/components/shared/UserDetailDialog'
 import { CreateUserDialog } from '@/components/shared/CreateUserDialog'
 import { useToast } from '@/components/atoms/Toast'
-import { api } from '@/services/api/client'
+import { apiClient } from '@/services/api'
 import { ROLE_LABELS, type Role } from '@/data/domain'
 import { useVendors } from '@/hooks/use-queries'
 import { SuperAdminDashboard } from './SuperAdminDashboard'
-import { toUserAccount, type UserAccount } from './types'
+import type { UserAccount } from '@/services/api/users.api'
 
 const ALL_ROLES: { value: Role; label: string }[] = [
   { value: 'superadmin', label: ROLE_LABELS.superadmin },
@@ -44,10 +44,8 @@ function SuperAdminAppInner() {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const res = await api.get('/users')
-      const items = (res.data as { items: Record<string, unknown>[] }).items ?? res.data
-      const list = (items as Record<string, unknown>[]).map(toUserAccount)
-      setUsers(list)
+      const res = await apiClient.getUsers()
+      if (res.success) setUsers(res.data)
     } catch {
       toast.error('Lỗi', 'Không thể tải danh sách tài khoản')
     } finally {
@@ -63,10 +61,14 @@ function SuperAdminAppInner() {
   const handleEditUser = useCallback(async (userId: string, data: Record<string, unknown>) => {
     setSaving(true)
     try {
-      await api.put(`/users/${userId}`, data)
-      toast.success('Đã cập nhật')
-      setSelectedUser(null)
-      fetchUsers()
+      const res = await apiClient.updateUser(userId, data)
+      if (res.success) {
+        toast.success('Đã cập nhật')
+        setSelectedUser(null)
+        fetchUsers()
+      } else {
+        toast.error('Lỗi', res.message ?? 'Không thể cập nhật')
+      }
     } catch {
       toast.error('Lỗi', 'Không thể cập nhật')
     } finally {
@@ -77,10 +79,14 @@ function SuperAdminAppInner() {
   const handleDeleteUser = useCallback(async (userId: string) => {
     setSaving(true)
     try {
-      await api.delete(`/users/${userId}`)
-      toast.success('Đã xoá tài khoản')
-      setSelectedUser(null)
-      fetchUsers()
+      const res = await apiClient.deleteUser(userId)
+      if (res.success) {
+        toast.success('Đã xoá tài khoản')
+        setSelectedUser(null)
+        fetchUsers()
+      } else {
+        toast.error('Lỗi', res.message ?? 'Không thể xoá tài khoản')
+      }
     } catch {
       toast.error('Lỗi', 'Không thể xoá tài khoản')
     } finally {

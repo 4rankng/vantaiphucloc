@@ -1,14 +1,23 @@
-import { ChevronRight } from 'lucide-react'
-import { RouteDisplay } from '@/components/shared/RouteDisplay'
+import { Check } from 'lucide-react'
 import type { WorkOrder } from '@/data/domain'
 
 interface RecentTripSuggestionsProps {
   trips: WorkOrder[]
+  selectedClientId?: string
+  selectedPickup?: string
+  selectedDropoff?: string
   onSelect: (trip: { clientId: string; clientName: string; pickupLocation: string; dropoffLocation: string }) => void
   onChooseOther: () => void
 }
 
-export function RecentTripSuggestions({ trips, onSelect, onChooseOther }: RecentTripSuggestionsProps) {
+export function RecentTripSuggestions({
+  trips,
+  selectedClientId,
+  selectedPickup,
+  selectedDropoff,
+  onSelect,
+  onChooseOther,
+}: RecentTripSuggestionsProps) {
   if (trips.length === 0) return null
 
   return (
@@ -20,6 +29,11 @@ export function RecentTripSuggestions({ trips, onSelect, onChooseOther }: Recent
         {trips.map((trip) => {
           const pickup = trip.pickupLocation || (trip.route || '').split(' - ')[0] || ''
           const dropoff = trip.dropoffLocation || (trip.route || '').split(' - ').slice(1).join(' - ') || ''
+          const clientLabel = trip.clientCode || trip.clientName
+          const isSelected =
+            selectedClientId === String(trip.clientId) &&
+            selectedPickup === pickup &&
+            selectedDropoff === dropoff
           return (
             <button
               key={trip.id}
@@ -29,16 +43,30 @@ export function RecentTripSuggestions({ trips, onSelect, onChooseOther }: Recent
                 pickupLocation: pickup,
                 dropoffLocation: dropoff,
               })}
-              className="w-full flex items-center justify-between px-3 py-3 rounded-xl transition-all active:scale-[0.98] touch-manipulation"
-              style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all active:scale-[0.98] touch-manipulation"
+              style={{
+                background: isSelected
+                  ? 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)'
+                  : 'var(--theme-bg-secondary)',
+                border: `1px solid ${isSelected ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)'}`,
+              }}
             >
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium truncate" style={{ color: 'var(--theme-text-primary)' }}>
-                  {trip.clientName}
+              <div className="min-w-0 flex-1 space-y-0.5 text-center">
+                <p
+                  className="text-sm font-bold truncate"
+                  style={{ color: isSelected ? 'var(--theme-brand-primary)' : 'var(--theme-text-primary)' }}
+                >
+                  {clientLabel}
                 </p>
-                <RouteDisplay route={trip.route} pickupLocation={trip.pickupLocation} dropoffLocation={trip.dropoffLocation} />
+                <div className="flex items-center justify-center gap-1.5 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                  <span className="truncate">{pickup || '—'}</span>
+                  <span className="shrink-0">→</span>
+                  <span className="truncate">{dropoff || '—'}</span>
+                </div>
               </div>
-              <ChevronRight className="w-4 h-4 shrink-0 ml-2" style={{ color: 'var(--theme-text-muted)' }} />
+              {isSelected && (
+                <Check className="w-4 h-4 shrink-0 ml-2" style={{ color: 'var(--theme-brand-primary)' }} />
+              )}
             </button>
           )
         })}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { api } from '@/services/api/client'
+import { apiClient } from '@/services/api'
 import { useToast } from '@/components/atoms/Toast'
 import { LogOut, KeyRound, Pencil, Check, X, Phone, AtSign } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
@@ -152,31 +152,32 @@ export function Profile() {
   const [username, setUsername] = useState('')
 
   useEffect(() => {
-    api.get('/users/me').then(res => {
-      setPhone(res.data.phone ?? '')
-      setFullName(res.data.full_name ?? user?.name ?? '')
-      setUsername(res.data.username ?? '')
+    apiClient.getProfile().then(res => {
+      if (res.success && res.data) {
+        setPhone(res.data.phone ?? '')
+        setFullName(res.data.fullName ?? user?.name ?? '')
+        setUsername(res.data.username ?? '')
+      }
     }).catch(() => {})
   }, [user?.id])
 
   const saveField = async (field: 'full_name' | 'phone' | 'username', value: string) => {
-    try {
-      const res = await api.put('/users/me', { [field]: value })
-      if (field === 'full_name') {
-        setFullName(res.data.full_name ?? value)
-        updateUser({ name: res.data.full_name ?? value })
-        toast.success('Đã cập nhật họ tên')
-      } else if (field === 'phone') {
-        setPhone(res.data.phone ?? value)
-        toast.success('Đã cập nhật số điện thoại')
-      } else {
-        setUsername(res.data.username ?? value)
-        toast.success('Đã cập nhật tên đăng nhập')
-      }
-    } catch (err: unknown) {
-      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Lỗi không xác định'
-      toast.error('Lỗi', detail)
-      throw err
+    const res = await apiClient.updateProfile(field, value)
+    if (!res.success) {
+      toast.error('Lỗi', res.message ?? 'Lỗi không xác định')
+      throw new Error(res.message)
+    }
+    const updated = res.data?.value ?? value
+    if (field === 'full_name') {
+      setFullName(updated)
+      updateUser({ name: updated })
+      toast.success('Đã cập nhật họ tên')
+    } else if (field === 'phone') {
+      setPhone(updated)
+      toast.success('Đã cập nhật số điện thoại')
+    } else {
+      setUsername(updated)
+      toast.success('Đã cập nhật tên đăng nhập')
     }
   }
 
@@ -190,10 +191,14 @@ export function Profile() {
     if (newPw !== confirmPw) { toast.error('Lỗi', 'Mật khẩu xác nhận không khớp'); return }
     setSavingPw(true)
     try {
-      await api.post('/change-password', { current_password: currentPw, new_password: newPw })
-      toast.success('Đã đổi mật khẩu')
-      setPwDialog(false)
-      setCurrentPw(''); setNewPw(''); setConfirmPw('')
+      const res = await apiClient.changePassword(currentPw, newPw)
+      if (res.success) {
+        toast.success('Đã đổi mật khẩu')
+        setPwDialog(false)
+        setCurrentPw(''); setNewPw(''); setConfirmPw('')
+      } else {
+        toast.error('Lỗi', res.message ?? 'Lỗi không xác định')
+      }
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Lỗi không xác định'
       toast.error('Lỗi', detail)

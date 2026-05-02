@@ -1,4 +1,4 @@
-"""Full database seed using raw SQL (matches actual DB schema with company_id).
+"""Full database seed using raw SQL.
 
 Usage:
     python -m app.seed_full
@@ -21,21 +21,7 @@ async def seed() -> None:
         now = datetime.now(timezone.utc)
         today = date.today()
 
-        # ── 1. Company ────────────────────────────────────────────────
-        result = await db.execute(text("SELECT id FROM companies LIMIT 1"))
-        row = result.first()
-        if row:
-            company_id = row[0]
-            print(f"Company exists: id={company_id}")
-        else:
-            result = await db.execute(
-                text("INSERT INTO companies (name, created_at) VALUES (:name, :now) RETURNING id"),
-                {"name": "Phúc Lộc", "now": now},
-            )
-            company_id = result.scalar()
-            print(f"Created company: id={company_id}")
-
-        # ── 2. Users ──────────────────────────────────────────────────
+        # ── 1. Users ──────────────────────────────────────────────────
         users_data = [
             ("admin", "0000000000", "Admin", "superadmin", None, None),
             ("ketoan", "01234555555", "Nguyễn Thị Hoa", "accountant", None, None),
@@ -56,36 +42,32 @@ async def seed() -> None:
                 user_info[username] = (full_name, plate)
                 print(f"  User exists: {username} (id={row[0]})")
             else:
-                # Check phone uniqueness
                 result = await db.execute(text("SELECT id FROM users WHERE phone = :p"), {"p": phone})
                 row = result.first()
                 if row:
                     user_ids[username] = row[0]
                     user_info[username] = (full_name, plate)
-                    # Update existing user to match our seed data
                     await db.execute(
-                        text("""UPDATE users SET full_name = :fn, tractor_plate = :tp, vendor = :v, company_id = :cid
-                            WHERE id = :id"""),
-                        {"fn": full_name, "tp": plate, "v": vendor, "cid": company_id, "id": row[0]},
+                        text("UPDATE users SET full_name = :fn, tractor_plate = :tp, vendor = :v WHERE id = :id"),
+                        {"fn": full_name, "tp": plate, "v": vendor, "id": row[0]},
                     )
                     print(f"  User exists (by phone): {username} (id={row[0]}) — updated info")
                     continue
                 result = await db.execute(
                     text("""INSERT INTO users
-                        (username, phone, full_name, hashed_password, role, company_id, vendor, tractor_plate, is_active, created_at, updated_at)
-                        VALUES (:u, :p, :fn, :pw, :r, :cid, :v, :tp, true, :now, :now)
+                        (username, phone, full_name, hashed_password, role, vendor, tractor_plate, is_active, created_at, updated_at)
+                        VALUES (:u, :p, :fn, :pw, :r, :v, :tp, true, :now, :now)
                         RETURNING id"""),
                     {"u": username, "p": phone, "fn": full_name, "pw": PASSWORD, "r": role,
-                     "cid": company_id, "v": vendor, "tp": plate, "now": now},
+                     "v": vendor, "tp": plate, "now": now},
                 )
                 user_ids[username] = result.scalar()
                 user_info[username] = (full_name, plate)
                 print(f"  Created user: {username} ({role}) id={user_ids[username]}")
 
         driver_usernames = [u[0] for u in users_data if u[3] == "driver"]
-        driver_ids = [user_ids[u] for u in driver_usernames]
 
-        # ── 3. Vendors ────────────────────────────────────────────────
+        # ── 2. Vendors ────────────────────────────────────────────────
         vendors_data = [
             ("Phúc Lộc", "company", "028-9999888", "Bình Dương", "Anh Lộc"),
             ("Hoàng Mai", "company", "028-7777666", "Đồng Nai", "Chị Mai"),
@@ -102,7 +84,7 @@ async def seed() -> None:
             else:
                 print(f"  Vendor exists: {name}")
 
-        # ── 4. Clients ────────────────────────────────────────────────
+        # ── 3. Clients ────────────────────────────────────────────────
         clients_data = [
             ("GCC", "Công ty CP GCC Việt Nam", "company", "028-1234567", "0301234567", "KCN Tân Bình, Q. Tân Bình, TP.HCM", "Anh Minh"),
             ("MAERSK", "Công ty TNHH Maersk Việt Nam", "company", "028-2345678", "0302345678", "479 Nguyễn Thị Định, Q. 2, TP.HCM", "Chị Lan"),
@@ -120,16 +102,16 @@ async def seed() -> None:
                 print(f"  Client exists: {code}")
             else:
                 result = await db.execute(
-                    text("""INSERT INTO clients (company_id, code, name, type, phone, tax_code, address, contact_person, outstanding_debt, is_active, created_at, updated_at)
-                        VALUES (:cid, :code, :name, :type, :phone, :tax, :addr, :contact, 0, true, :now, :now)
+                    text("""INSERT INTO clients (code, name, type, phone, tax_code, address, contact_person, outstanding_debt, is_active, created_at, updated_at)
+                        VALUES (:code, :name, :type, :phone, :tax, :addr, :contact, 0, true, :now, :now)
                         RETURNING id"""),
-                    {"cid": company_id, "code": code, "name": name, "type": ctype, "phone": phone,
+                    {"code": code, "name": name, "type": ctype, "phone": phone,
                      "tax": tax, "addr": addr, "contact": contact, "now": now},
                 )
                 client_ids.append(result.scalar())
                 print(f"  Created client: {code} — {name}")
 
-        # ── 5. Routes ─────────────────────────────────────────────────
+        # ── 4. Routes ─────────────────────────────────────────────────
         result = await db.execute(text("SELECT count(*) FROM routes"))
         route_count = result.scalar() or 0
 
@@ -146,10 +128,10 @@ async def seed() -> None:
             ]
             for r in routes_raw:
                 result = await db.execute(
-                    text("""INSERT INTO routes (company_id, route, pickup_location, dropoff_location, type_20ft, type_40ft, is_two_way, is_active, created_at, updated_at)
-                        VALUES (:cid, :route, :pickup, :dropoff, :t20, :t40, :tw, true, :now, :now)
+                    text("""INSERT INTO routes (route, pickup_location, dropoff_location, type_20ft, type_40ft, is_two_way, is_active, created_at, updated_at)
+                        VALUES (:route, :pickup, :dropoff, :t20, :t40, :tw, true, :now, :now)
                         RETURNING id"""),
-                    {"cid": company_id, "route": r[0], "pickup": r[1], "dropoff": r[2],
+                    {"route": r[0], "pickup": r[1], "dropoff": r[2],
                      "t20": r[3], "t40": r[4], "tw": r[5], "now": now},
                 )
                 routes_data.append({"id": result.scalar(), "route": r[0], "pickup": r[1],
@@ -162,7 +144,7 @@ async def seed() -> None:
                                     "dropoff": r[3], "type_20ft": r[4], "type_40ft": r[5]})
             print(f"  Routes: {route_count} already exist")
 
-        # ── 6. Pricings ───────────────────────────────────────────────
+        # ── 5. Pricings ───────────────────────────────────────────────
         result = await db.execute(text("SELECT count(*) FROM pricings"))
         pricing_count = result.scalar() or 0
 
@@ -185,11 +167,11 @@ async def seed() -> None:
                             allowance = 80000
 
                         result = await db.execute(
-                            text("""INSERT INTO pricings (company_id, client_id, client_name, work_type, route,
+                            text("""INSERT INTO pricings (client_id, client_name, work_type, route,
                                 pickup_location, dropoff_location, unit_price, driver_salary, allowance, is_active, created_at, updated_at)
-                                VALUES (:cid, :clid, :clname, :wt, :route, :pickup, :dropoff, :up, :ds, :alw, true, :now, :now)
+                                VALUES (:clid, :clname, :wt, :route, :pickup, :dropoff, :up, :ds, :alw, true, :now, :now)
                                 RETURNING id"""),
-                            {"cid": company_id, "clid": client_id, "clname": client_name, "wt": wt,
+                            {"clid": client_id, "clname": client_name, "wt": wt,
                              "route": route["route"], "pickup": route["pickup"], "dropoff": route["dropoff"],
                              "up": unit_price, "ds": driver_salary, "alw": allowance, "now": now},
                         )
@@ -198,7 +180,7 @@ async def seed() -> None:
         else:
             print(f"  Pricings: {pricing_count} already exist")
 
-        # ── 7. Work Orders + Containers ───────────────────────────────
+        # ── 6. Work Orders + Containers ───────────────────────────────
         result = await db.execute(text("SELECT count(*) FROM work_orders"))
         wo_count = result.scalar() or 0
 
@@ -235,14 +217,14 @@ async def seed() -> None:
                     container_num = f"{prefix}{1000000 + wo_index * 7:07d}"
 
                     result = await db.execute(
-                        text("""INSERT INTO work_orders (company_id, client_id, client_name, client_code, route,
+                        text("""INSERT INTO work_orders (client_id, client_name, client_code, route,
                             pickup_location, dropoff_location, driver_id, driver_name, tractor_plate,
                             unit_price, driver_salary, allowance, earning, status,
                             created_at, updated_at)
-                            VALUES (:cid, :clid, :clname, :clcode, :route, :pickup, :dropoff,
+                            VALUES (:clid, :clname, :clcode, :route, :pickup, :dropoff,
                             :did, :dname, :plate, :up, :ds, :alw, :earning, :status, :cat, :uat)
                             RETURNING id"""),
-                        {"cid": company_id, "clid": client_id, "clname": client_name, "clcode": client_code,
+                        {"clid": client_id, "clname": client_name, "clcode": client_code,
                          "route": route["route"], "pickup": route["pickup"], "dropoff": route["dropoff"],
                          "did": driver_id, "dname": driver_name, "plate": plate,
                          "up": unit_price, "ds": driver_salary, "alw": allowance,
@@ -262,7 +244,7 @@ async def seed() -> None:
         else:
             print(f"  Work Orders: {wo_count} already exist")
 
-        # ── 8. Trip Orders ────────────────────────────────────────────
+        # ── 7. Trip Orders ────────────────────────────────────────────
         result = await db.execute(text("SELECT count(*) FROM trip_orders"))
         to_count = result.scalar() or 0
 
@@ -283,20 +265,19 @@ async def seed() -> None:
                 is_confirmed = status == "COMPLETED"
 
                 result2 = await db.execute(
-                    text("""INSERT INTO trip_orders (company_id, trip_date, client_id, client_name, route,
+                    text("""INSERT INTO trip_orders (trip_date, client_id, client_name, route,
                         pickup_location, dropoff_location, tractor_plate, driver_id, driver_name,
                         unit_price, driver_salary, allowance, revenue, status, is_confirmed, created_at, updated_at)
-                        VALUES (:cid, :td, :clid, :clname, :route, :pickup, :dropoff, :plate,
+                        VALUES (:td, :clid, :clname, :route, :pickup, :dropoff, :plate,
                         :did, :dname, :up, :ds, :alw, :rev, :status, :confirmed, :cat, :cat)
                         RETURNING id"""),
-                    {"cid": company_id, "td": trip_date, "clid": cl_id, "clname": cl_name, "route": route,
+                    {"td": trip_date, "clid": cl_id, "clname": cl_name, "route": route,
                      "pickup": pickup, "dropoff": dropoff, "plate": plate,
                      "did": drv_id, "dname": drv_name, "up": up, "ds": ds, "alw": alw,
                      "rev": up, "status": trip_status, "confirmed": is_confirmed, "cat": cat},
                 )
                 trip_id = result2.scalar()
 
-                # Copy containers
                 result3 = await db.execute(
                     text("SELECT container_number, work_type FROM work_order_containers WHERE work_order_id = :woid"),
                     {"woid": wo_id},
@@ -307,40 +288,35 @@ async def seed() -> None:
                             VALUES (:tid, :cnum, :wt)"""),
                         {"tid": trip_id, "cnum": c[0], "wt": c[1]},
                     )
-
                 trip_count += 1
 
             print(f"  Created {trip_count} trip orders")
         else:
             print(f"  Trip Orders: {to_count} already exist")
 
-        # ── 9. Salary Periods ─────────────────────────────────────────
+        # ── 8. Salary Period (1 global) ───────────────────────────────
         result = await db.execute(text("SELECT count(*) FROM salary_periods"))
         sp_count = result.scalar() or 0
 
         if sp_count == 0:
             start = today.replace(day=1)
-            for drv_username in driver_usernames:
-                drv_id = user_ids[drv_username]
-                drv_name, _ = user_info[drv_username]
+            first_driver_id = user_ids[driver_usernames[0]]
+            result2 = await db.execute(
+                text("SELECT count(*), COALESCE(SUM(driver_salary), 0), COALESCE(SUM(allowance), 0) FROM work_orders"),
+            )
+            row = result2.one()
+            wo_cnt, total_salary, total_allowance = row[0], row[1], row[2]
+            net_pay = total_salary + total_allowance
 
-                result2 = await db.execute(
-                    text("SELECT count(*), COALESCE(SUM(driver_salary), 0), COALESCE(SUM(allowance), 0) FROM work_orders WHERE driver_id = :did"),
-                    {"did": drv_id},
-                )
-                row = result2.one()
-                wo_cnt, total_salary, total_allowance = row[0], row[1], row[2]
-                net_pay = total_salary + total_allowance
-
-                await db.execute(
-                    text("""INSERT INTO salary_periods (company_id, driver_id, driver_name, start_date, end_date,
-                        work_order_count, price_per_order, total_salary, total_allowance, total_deduction, net_pay, status, created_at, updated_at)
-                        VALUES (:cid, :did, :dname, :sd, :ed, :woc, :ppo, :ts, :ta, 0, :np, 'OPEN', :now, :now)"""),
-                    {"cid": company_id, "did": drv_id, "dname": drv_name, "sd": start, "ed": today,
-                     "woc": wo_cnt, "ppo": wo_cnt > 0 and (total_salary // wo_cnt) or 0,
-                     "ts": total_salary, "ta": total_allowance, "np": net_pay, "now": now},
-                )
-            print(f"  Created {len(driver_usernames)} salary periods")
+            await db.execute(
+                text("""INSERT INTO salary_periods (driver_id, driver_name, start_date, end_date,
+                    work_order_count, price_per_order, total_salary, total_allowance, total_deduction, net_pay, status, created_at, updated_at)
+                    VALUES (:did, 'Tất cả tài xế', :sd, :ed, :woc, :ppo, :ts, :ta, 0, :np, 'OPEN', :now, :now)"""),
+                {"did": first_driver_id, "sd": start, "ed": today,
+                 "woc": wo_cnt, "ppo": wo_cnt > 0 and (total_salary // wo_cnt) or 0,
+                 "ts": total_salary, "ta": total_allowance, "np": net_pay, "now": now},
+            )
+            print("  Created 1 global salary period")
         else:
             print(f"  Salary Periods: {sp_count} already exist")
 

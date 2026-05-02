@@ -21,6 +21,7 @@ import * as salaryApi from './salary.api'
 import * as driversApi from './drivers.api'
 import * as dashboardApi from './dashboard.api'
 import * as vendorsApi from './vendors.api'
+import * as usersApi from './users.api'
 
 export const apiClient = {
   // Clients
@@ -47,6 +48,7 @@ export const apiClient = {
   createWorkOrder: workOrdersApi.createWorkOrder,
   updateWorkOrder: workOrdersApi.updateWorkOrder,
   ocrContainer: workOrdersApi.ocrContainer,
+  validateContainer: workOrdersApi.validateContainer,
 
   // Trip Orders
   getTripOrders: tripOrdersApi.getTripOrders,
@@ -87,6 +89,15 @@ export const apiClient = {
   // Dashboard & Notifications
   getDashboardSummary: dashboardApi.getDashboardSummary,
   getNotifications: dashboardApi.getNotifications,
+
+  // Users
+  getUsers: usersApi.getUsers,
+  createUser: usersApi.createUser,
+  updateUser: usersApi.updateUser,
+  deleteUser: usersApi.deleteUser,
+  getProfile: usersApi.getProfile,
+  updateProfile: usersApi.updateProfile,
+  changePassword: usersApi.changePassword,
 }
 
 // Re-export types from salary.api
