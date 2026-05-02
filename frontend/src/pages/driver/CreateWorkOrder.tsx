@@ -1,5 +1,6 @@
 import { useRef } from 'react'
-import { Camera, RotateCcw, Trash2, AlertCircle, Loader2, Image, Plus } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Camera, RotateCcw, Trash2, AlertCircle, Loader2, Image, Plus, ChevronLeft } from 'lucide-react'
 import { ContainerScanner } from '@/components/shared/ContainerScanner'
 import { ContainerTypeGrid } from '@/components/shared/ContainerTypeGrid'
 import { TripSummaryDialog } from '@/components/shared/TripSummaryDialog'
@@ -23,6 +24,7 @@ export function CreateWorkOrder() {
     onRequestSubmit, confirmSubmit, setSummaryOpen,
   } = useCreateWorkOrder()
 
+  const navigate = useNavigate()
   const toast = useToast()
 
   // One hidden file input per container for gallery picking
@@ -263,17 +265,30 @@ export function CreateWorkOrder() {
             Còn thiếu: {missingFields.join(', ')}
           </p>
         )}
-        <button
-          onClick={onRequestSubmit}
-          disabled={!canSubmit || submitting}
-          className="w-full h-12 rounded-2xl text-base font-bold touch-manipulation transition-all active:scale-[0.98]"
-          style={{
-            background: canSubmit ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
-            color: canSubmit ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)',
-          }}
-        >
-          {submitting ? 'Đang gửi...' : isOnline ? 'Gửi chuyến' : 'Lưu offline'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => navigate(-1)}
+            className="h-12 px-4 rounded-2xl flex items-center justify-center gap-1 touch-manipulation transition-all active:scale-[0.98] shrink-0"
+            style={{
+              background: 'var(--theme-bg-secondary)',
+              color: 'var(--theme-text-secondary)',
+              border: '1.5px solid var(--theme-border-default)',
+            }}
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <button
+            onClick={onRequestSubmit}
+            disabled={!canSubmit || submitting}
+            className="flex-1 h-12 rounded-2xl text-base font-bold touch-manipulation transition-all active:scale-[0.98]"
+            style={{
+              background: canSubmit ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
+              color: canSubmit ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)',
+            }}
+          >
+            {submitting ? 'Đang gửi...' : isOnline ? 'Gửi chuyến' : 'Lưu offline'}
+          </button>
+        </div>
       </div>
 
       {/* Summary dialog */}

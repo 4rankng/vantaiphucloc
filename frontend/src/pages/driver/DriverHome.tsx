@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Plus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
@@ -9,19 +9,24 @@ import { WorkOrderCard } from '@/components/shared/WorkOrderCard'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { useMySalaryPeriods } from '@/hooks/use-queries'
 
-const PREVIEW_COUNT = 10
+const PAGE_SIZE = 10
+
+type FilterTab = 'all' | 'pending'
 
 export function DriverHome() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
   const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<FilterTab>('all')
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+
+  const sentinelRef = useRef<HTMLDivElement>(null)
 
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
 
-  // Latest salary period for the banner
   const { data: salaryPeriods = [] } = useMySalaryPeriods()
   const latestPeriod = salaryPeriods[0] ?? null
 
@@ -33,6 +38,9 @@ export function DriverHome() {
     })
     return () => { cancelled = true }
   }, [user!.id])
+
+  // Reset visible count when month or filter changes
+  useEffect(() => { setVisibleCount(PAGE_SIZE) }, [year, month, filter])
 
   const handlePrevMonth = () => {
     if (month === 0) { setMonth(11); setYear(y => y - 1) }
@@ -46,15 +54,35 @@ export function DriverHome() {
   const filteredJobs = useMemo(() => {
     const start = new Date(year, month, 1).toISOString()
     const end = new Date(year, month + 1, 0, 23, 59, 59).toISOString()
-    return workOrders.filter(w => w.createdAt >= start && w.createdAt <= end)
-  }, [workOrders, year, month])
+    const byMonth = workOrders.filter(w => w.createdAt >= start && w.createdAt <= end)
+    const byFilter = filter === 'pending'
+      ? byMonth.filter(w => w.status === 'PENDING')
+      : byMonth
+    return [...byFilter].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  }, [workOrders, year, month, filter])
 
-  const recentJobs = useMemo(() =>
-    [...filteredJobs]
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      .slice(0, PREVIEW_COUNT),
-    [filteredJobs],
+  const visibleJobs = useMemo(
+    () => filteredJobs.slice(0, visibleCount),
+    [filteredJobs, visibleCount],
   )
+
+  const hasMore = visibleCount < filteredJobs.length
+
+  // Infinite scroll — load more when sentinel enters viewport
+  const loadMore = useCallback(() => {
+    setVisibleCount(n => n + PAGE_SIZE)
+  }, [])
+
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      entries => { if (entries[0].isIntersecting && hasMore) loadMore() },
+      { rootMargin: '120px' },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasMore, loadMore])
 
   const matchedCount = useMemo(() =>
     filteredJobs.filter(w => w.status === 'MATCHED' || w.status === 'COMPLETED').length,
@@ -80,7 +108,7 @@ export function DriverHome() {
           boxShadow: 'var(--theme-shadow-card)',
         }}
       >
-        {/* Left: month navigator — 60% */}
+        {/* Left: month navigator — 55% */}
         <div className="w-[55%] flex items-center justify-center py-3 px-2">
           <MonthNavigator
             year={year}
@@ -93,12 +121,9 @@ export function DriverHome() {
         {/* Divider */}
         <div className="w-px self-stretch my-3" style={{ background: 'var(--theme-border-default)' }} />
 
-        {/* Right: earnings stat — 40%, no button */}
+        {/* Right: earnings stat — 45%, no button */}
         <div className="w-[45%] flex items-center gap-2 px-3 py-3">
-          {/* Money icon */}
           <img src="/icons/money.png" alt="" aria-hidden className="shrink-0 w-10 h-10 object-contain" />
-
-          {/* Text */}
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold tabular-nums leading-tight truncate" style={{ color: 'var(--theme-text-primary)' }}>
               {formatCurrencyFull(earningsValue)}
@@ -110,31 +135,50 @@ export function DriverHome() {
         </div>
       </div>
 
-      {/* ── Recent work orders ── */}
+      {/* ── Chuyến đã đi ── */}
       <div className="space-y-2.5">
+        {/* Header + filter pills */}
         <div className="flex items-center justify-between">
           <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
             Chuyến đã đi
           </p>
-          <button
-            onClick={() => navigate('/driver/history')}
-            className="text-xs font-semibold px-3 py-1 rounded-full border touch-manipulation transition-colors"
-            style={{
-              color: 'var(--theme-text-primary)',
-              borderColor: 'var(--theme-border-default)',
-            }}
+
+          {/* Filter tabs */}
+          <div
+            className="flex rounded-full p-0.5 gap-0.5"
+            style={{ background: 'var(--theme-bg-tertiary)' }}
           >
-            Xem tất cả
-          </button>
+            {(['all', 'pending'] as FilterTab[]).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setFilter(tab)}
+                className="text-xs px-3 py-1 rounded-full font-medium transition-all touch-manipulation"
+                style={
+                  filter === tab
+                    ? {
+                        background: 'var(--theme-brand-primary)',
+                        color: '#fff',
+                      }
+                    : {
+                        background: 'transparent',
+                        color: 'var(--theme-text-muted)',
+                      }
+                }
+              >
+                {tab === 'all' ? 'Tất cả' : 'Chờ đối soát'}
+              </button>
+            ))}
+          </div>
         </div>
 
+        {/* List */}
         {loading ? (
           <div className="space-y-2.5">
             {[1, 2, 3].map(i => (
               <div key={i} className="h-24 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
             ))}
           </div>
-        ) : recentJobs.length === 0 ? (
+        ) : filteredJobs.length === 0 ? (
           <div
             className="rounded-2xl p-10 flex flex-col items-center justify-center text-center gap-3"
             style={{ background: 'var(--theme-bg-secondary)' }}
@@ -150,16 +194,28 @@ export function DriverHome() {
             </div>
           </div>
         ) : (
-          <div className="space-y-2.5">
-            {recentJobs.map(job => (
-              <WorkOrderCard
-                key={job.id}
-                variant="driver"
-                data={job}
-                onClick={() => navigate(`/driver/job/${job.id}`)}
-              />
-            ))}
-          </div>
+          <>
+            <div className="space-y-2.5">
+              {visibleJobs.map(job => (
+                <WorkOrderCard
+                  key={job.id}
+                  variant="driver"
+                  data={job}
+                  onClick={() => navigate(`/driver/job/${job.id}`)}
+                />
+              ))}
+            </div>
+
+            {/* Infinite scroll sentinel */}
+            <div ref={sentinelRef} className="h-1" />
+
+            {/* Loading more indicator */}
+            {hasMore && (
+              <div className="flex justify-center py-2">
+                <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'var(--theme-brand-primary)', borderTopColor: 'transparent' }} />
+              </div>
+            )}
+          </>
         )}
       </div>
 
