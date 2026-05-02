@@ -61,6 +61,7 @@ class Client(Base):
     address = Column(String(500), nullable=True)
     contact_person = Column(String(255), nullable=True)
     outstanding_debt = Column(Integer, default=0, nullable=False)  # VND
+    is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False

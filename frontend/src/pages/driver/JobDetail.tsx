@@ -61,7 +61,7 @@ export function JobDetail() {
                 src={c.photoUrl}
                 alt={c.containerNumber}
                 className="w-full object-contain"
-                style={{ maxHeight: '80px' }}
+                style={{ maxHeight: '160px' }}
               />
             ) : (
               <div
