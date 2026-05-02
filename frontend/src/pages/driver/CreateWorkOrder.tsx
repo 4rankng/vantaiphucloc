@@ -52,7 +52,7 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
   }
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className="space-y-6">
       {/* Scanner overlay */}
       {scannerOpen && (
         <ContainerScanner
@@ -264,10 +264,9 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
         </div>
       </div>
 
-      {/* Sticky submit bar */}
+      {/* Submit bar */}
       <div
-        className="fixed bottom-0 left-0 right-0 px-4 pt-3 pb-6 space-y-2 z-30"
-        style={{ background: 'var(--theme-bg-primary)', borderTop: '1px solid var(--theme-border-default)' }}
+        className="pt-4 pb-2 space-y-2"
       >
         {missingFields.length > 0 && !canSubmit && (
           <p className="text-xs font-medium text-center" style={{ color: 'var(--theme-status-warning)' }}>
