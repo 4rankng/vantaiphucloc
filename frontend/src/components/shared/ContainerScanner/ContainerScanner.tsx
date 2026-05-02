@@ -9,25 +9,23 @@ export interface PhotoMeta {
   timestamp: string
 }
 
+type ScanMode = 'rectangle' | 'square'
+
 interface ContainerScannerProps {
   onCapture: (imageSrc: string, meta: PhotoMeta) => void
   onClose: () => void
 }
 
+const RECT_WIDTH_PERCENT = 0.85
+const SQUARE_SIZE_PERCENT = 0.75
 const MAX_CAPTURE_WIDTH = 1200
-const STABILITY_THRESHOLD = 15
-const REQUIRED_STABLE_FRAMES = 3
-const CHECK_INTERVAL_MS = 500
 
 export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) {
   const webcamRef = useRef<Webcam>(null)
   const overlayBoxRef = useRef<HTMLDivElement>(null)
-  const prevFrameRef = useRef<Uint8ClampedArray | null>(null)
-  const stabilityCountRef = useRef(0)
   const [captured, setCaptured] = useState<string | null>(null)
+  const [scanMode, setScanMode] = useState<ScanMode>('rectangle')
   const [gpsCoords, setGpsCoords] = useState<{ lat: number | null; lng: number | null }>({ lat: null, lng: null })
-
-  const viewfinderHeight = typeof window !== 'undefined' ? Math.round(window.innerHeight * 0.4) : 300
 
   useEffect(() => {
     if (!navigator.geolocation) return
@@ -81,51 +79,8 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
     setCaptured(croppedImage)
   }, [])
 
-  // Auto-capture via motion stability detection
-  useEffect(() => {
-    if (captured) return
-
-    const interval = setInterval(() => {
-      const video = webcamRef.current?.video
-      if (!video || video.readyState < 2) return
-
-      const thumbCanvas = document.createElement('canvas')
-      thumbCanvas.width = 80
-      thumbCanvas.height = 60
-      const ctx = thumbCanvas.getContext('2d')!
-      ctx.drawImage(video, 0, 0, 80, 60)
-      const currentFrame = ctx.getImageData(0, 0, 80, 60).data
-
-      if (prevFrameRef.current) {
-        let diff = 0
-        const len = currentFrame.length
-        for (let i = 0; i < len; i += 4) {
-          diff += Math.abs(currentFrame[i] - prevFrameRef.current[i])
-          diff += Math.abs(currentFrame[i + 1] - prevFrameRef.current[i + 1])
-          diff += Math.abs(currentFrame[i + 2] - prevFrameRef.current[i + 2])
-        }
-        const avgDiff = diff / (80 * 60 * 3)
-
-        if (avgDiff < STABILITY_THRESHOLD) {
-          stabilityCountRef.current++
-          if (stabilityCountRef.current >= REQUIRED_STABLE_FRAMES) {
-            handleCapture()
-            stabilityCountRef.current = 0
-          }
-        } else {
-          stabilityCountRef.current = 0
-        }
-      }
-      prevFrameRef.current = currentFrame
-    }, CHECK_INTERVAL_MS)
-
-    return () => clearInterval(interval)
-  }, [captured, handleCapture])
-
   const handleRetake = useCallback(() => {
     setCaptured(null)
-    prevFrameRef.current = null
-    stabilityCountRef.current = 0
   }, [])
 
   const handleConfirm = useCallback(() => {
@@ -213,13 +168,14 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
               Đưa số container vào ô này
             </p>
 
-            {/* Viewfinder box — dashed green, ~40% height */}
+            {/* Viewfinder box */}
             <div
               ref={overlayBoxRef}
               className="relative rounded-xl"
               style={{
-                width: '85%',
-                height: `${viewfinderHeight}px`,
+                width: scanMode === 'square' ? `${SQUARE_SIZE_PERCENT * 100}%` : `${RECT_WIDTH_PERCENT * 100}%`,
+                height: scanMode === 'rectangle' ? '120px' : undefined,
+                aspectRatio: scanMode === 'square' ? '1 / 1' : undefined,
                 boxShadow: '0 0 0 1000px rgba(0, 0, 0, 0.6)',
                 border: '2px dashed rgba(22, 163, 74, 0.5)',
               }}
@@ -232,7 +188,7 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
             </div>
           </div>
 
-          {/* Manual capture button — fallback */}
+          {/* Manual capture button */}
           <div
             className="absolute bottom-8 left-0 right-0 flex justify-center"
             style={{ pointerEvents: 'auto' }}
@@ -248,6 +204,24 @@ export function ContainerScanner({ onCapture, onClose }: ContainerScannerProps) 
               <div className="w-12 h-12 rounded-full" style={{ background: '#fff', opacity: 0.9 }} />
             </button>
           </div>
+
+          {/* Mode toggle — single button, right side of screen */}
+          <button
+            onClick={() => setScanMode(m => m === 'rectangle' ? 'square' : 'rectangle')}
+            className="absolute bottom-8 right-6 z-10 w-12 h-12 flex items-center justify-center rounded-full touch-manipulation transition-colors"
+            style={{ background: 'rgba(0,0,0,0.5)', color: '#fff', pointerEvents: 'auto' }}
+            title={scanMode === 'rectangle' ? 'Chuyển sang vuông' : 'Chuyển sang chữ nhật'}
+          >
+            {scanMode === 'rectangle' ? (
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <rect x="1" y="5" width="18" height="10" rx="2" stroke="currentColor" strokeWidth="1.5" />
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <rect x="4" y="4" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
+              </svg>
+            )}
+          </button>
         </>
       )}
     </div>
