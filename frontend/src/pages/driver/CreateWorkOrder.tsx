@@ -14,11 +14,11 @@ export function CreateWorkOrder() {
   const {
     clients, routes, recentOrders,
     containers, clientId, pickupLocation, dropoffLocation,
-    submitting, scannerOpen, isOnline, summaryOpen, showSuccess,
+    submitting, scannerOpen, galleryImage, isOnline, summaryOpen, showSuccess,
     showAddMore, forceManualEntry, missingFields,
     canSubmit, summaryContainers, summaryClientName,
     setClientId, setPickupLocation, setDropoffLocation,
-    openScanner, handleScanComplete, setScannerOpen,
+    openScanner, openGallery, handleScanComplete, setScannerOpen,
     updateContainer, addContainer, removeContainer,
     handleRecentTripSelect,
     onRequestSubmit, confirmSubmit, setSummaryOpen,
@@ -27,7 +27,7 @@ export function CreateWorkOrder() {
 
   const toast = useToast()
 
-  // One hidden file input per container for gallery picking (no `capture` = OS shows gallery)
+  // One hidden file input per container for gallery picking
   const galleryRefs = useRef<(HTMLInputElement | null)[]>([])
 
   const handleGalleryChange = (idx: number) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -35,14 +35,10 @@ export function CreateWorkOrder() {
     if (!file) return
     const reader = new FileReader()
     reader.onload = () => {
-      handleScanComplete(reader.result as string, {
-        lat: null,
-        lng: null,
-        timestamp: new Date().toISOString(),
-      })
+      openGallery(idx, reader.result as string)
     }
     reader.readAsDataURL(file)
-    e.target.value = '' // reset so same file can be re-selected
+    e.target.value = ''
   }
 
   const handleConfirmSubmit = async () => {
@@ -73,6 +69,7 @@ export function CreateWorkOrder() {
         <ContainerScanner
           onCapture={handleScanComplete}
           onClose={() => setScannerOpen(false)}
+          galleryImage={galleryImage}
         />
       )}
 

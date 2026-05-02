@@ -41,6 +41,7 @@ export function useCreateWorkOrder() {
   const [submitting, setSubmitting] = useState(false)
   const [scannerOpen, setScannerOpen] = useState(false)
   const [activeContIdx, setActiveContIdx] = useState(0)
+  const [galleryImage, setGalleryImage] = useState<string | null>(null)
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [addMoreDismissed, setAddMoreDismissed] = useState(false)
@@ -106,11 +107,14 @@ export function useCreateWorkOrder() {
   // Scanner handlers
   const openScanner = useCallback((idx: number) => () => {
     setActiveContIdx(idx)
+    setGalleryImage(null)
     setScannerOpen(true)
   }, [])
 
-  const openGallery = useCallback((idx: number) => {
+  const openGallery = useCallback((idx: number, dataUrl: string) => {
     setActiveContIdx(idx)
+    setGalleryImage(dataUrl)
+    setScannerOpen(true)
   }, [])
 
   const handleScanComplete = useCallback((imageSrc: string, meta: PhotoMeta) => {
@@ -121,6 +125,7 @@ export function useCreateWorkOrder() {
         : c,
     ))
     setScannerOpen(false)
+    setGalleryImage(null)
 
     if (!isOnline) return
 
@@ -271,7 +276,7 @@ export function useCreateWorkOrder() {
     containers, clientId, pickupLocation, dropoffLocation,
 
     // UI state
-    submitting, scannerOpen, isOnline, summaryOpen, showSuccess,
+    submitting, scannerOpen, galleryImage, isOnline, summaryOpen, showSuccess,
     showAddMore, forceManualEntry, missingFields,
 
     // Derived
