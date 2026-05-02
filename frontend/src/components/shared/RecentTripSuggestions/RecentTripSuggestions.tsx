@@ -1,4 +1,5 @@
 import { ChevronRight } from 'lucide-react'
+import { RouteDisplay } from '@/components/shared/RouteDisplay'
 import type { WorkOrder } from '@/data/domain'
 
 interface RecentTripSuggestionsProps {
@@ -17,9 +18,8 @@ export function RecentTripSuggestions({ trips, onSelect, onChooseOther }: Recent
       </p>
       <div className="space-y-1">
         {trips.map((trip) => {
-          const parts = (trip.route || '').split(' - ')
-          const pickup = parts[0] || ''
-          const dropoff = parts.slice(1).join(' - ') || ''
+          const pickup = trip.pickupLocation || (trip.route || '').split(' - ')[0] || ''
+          const dropoff = trip.dropoffLocation || (trip.route || '').split(' - ').slice(1).join(' - ') || ''
           return (
             <button
               key={trip.id}
@@ -36,9 +36,7 @@ export function RecentTripSuggestions({ trips, onSelect, onChooseOther }: Recent
                 <p className="text-sm font-medium truncate" style={{ color: 'var(--theme-text-primary)' }}>
                   {trip.clientName}
                 </p>
-                <p className="text-xs truncate mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-                  {trip.route}
-                </p>
+                <RouteDisplay route={trip.route} pickupLocation={trip.pickupLocation} dropoffLocation={trip.dropoffLocation} />
               </div>
               <ChevronRight className="w-4 h-4 shrink-0 ml-2" style={{ color: 'var(--theme-text-muted)' }} />
             </button>

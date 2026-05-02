@@ -7,6 +7,7 @@ import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { useRoutes, useCreateRoute, useUpdateRoute, useDeleteRoute } from '@/hooks/use-queries'
+import { RouteDisplay } from '@/components/shared/RouteDisplay'
 import { formatCurrencyFull } from '@/data/domain'
 
 interface RouteForm {
@@ -112,11 +113,9 @@ export function RouteList() {
                 <RouteIcon className="h-4 w-4" style={{ color: 'var(--theme-text-muted)' }} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{r.route}</p>
+                <RouteDisplay route={r.route} pickupLocation={r.pickupLocation} dropoffLocation={r.dropoffLocation} />
                 <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-                  {r.pickupLocation && r.dropoffLocation
-                    ? `${r.pickupLocation} → ${r.dropoffLocation}`
-                    : `20ft: ${formatCurrencyFull(r.type20ft)} · 40ft: ${formatCurrencyFull(r.type40ft)}`}
+                  20ft: {formatCurrencyFull(r.type20ft)} · 40ft: {formatCurrencyFull(r.type40ft)}
                 </p>
               </div>
             </div>

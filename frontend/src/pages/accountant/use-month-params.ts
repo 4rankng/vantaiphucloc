@@ -52,5 +52,7 @@ export function useMonthParams() {
     })
   }, [setSearchParams, defaultMonth, defaultYear])
 
-  return { year, month, dateFrom, dateTo, onPrev, onNext }
+  const sublabel = `${dateFrom.slice(8)}/${dateFrom.slice(5, 7)} → ${dateTo.slice(8)}/${dateTo.slice(5, 7)}`
+
+  return { year, month, dateFrom, dateTo, sublabel, onPrev, onNext }
 }
