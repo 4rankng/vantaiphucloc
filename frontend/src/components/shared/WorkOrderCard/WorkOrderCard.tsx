@@ -64,7 +64,7 @@ function DriverCard({ wo, onClick }: { wo: WorkOrder; onClick: () => void }) {
       <p className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>
         {wo.clientCode || wo.clientName}
       </p>
-      <RouteDisplay route={wo.route} className="mt-1" />
+      <RouteDisplay route={wo.route} pickupLocation={wo.pickupLocation} dropoffLocation={wo.dropoffLocation} className="mt-1" />
 
       <div className="flex items-center justify-between mt-2 pt-2" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
         {wo.earning > 0 ? (

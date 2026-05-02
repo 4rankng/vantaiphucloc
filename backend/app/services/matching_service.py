@@ -15,6 +15,7 @@ Confidence Levels:
 """
 
 import logging
+import re
 from collections import defaultdict
 from datetime import date
 
@@ -136,29 +137,46 @@ async def suggest_trip_matches(
         matched_fields: list[str] = []
         score = 0.0
 
-        # 1. Container number match (normalized, exact match only)
+        # 1. Container number match (normalized)
         to_cn_set = {normalize_container_number(c.container_number) for c in to_containers.get(to.id, []) if c.container_number}
         if wo_container_numbers & to_cn_set:
             matched_fields.append("container_number")
             score += WEIGHTS["container_number"]
+        else:
+            # Partial match: digits only
+            wo_digits = {re.sub(r'[^0-9]', '', cn) for cn in wo_container_numbers if cn}
+            to_digits = {re.sub(r'[^0-9]', '', cn) for cn in to_cn_set if cn}
+            if wo_digits & to_digits:
+                matched_fields.append("container_number_partial")
+                score += WEIGHTS["container_number"] * 0.5
 
         # 2. Date match (trip_date vs WO created_at date)
         if wo_date and to.trip_date == wo_date:
             matched_fields.append("date")
             score += WEIGHTS["date"]
 
-        # 3. Pickup location match (route.pickup_location)
-        # For now, skip since WO doesn't store pickup/dropoff separately
-        # This will need to be added when WO has these fields
-        # if route and route.pickup_location:
-        #     matched_fields.append("pickup_location")
-        #     score += WEIGHTS["pickup_location"]
+        # 3. Pickup location match
+        wo_pickup = work_order.pickup_location
+        to_pickup = to.pickup_location
+        # If TO has route but no pickup/dropoff, resolve from Route table
+        if not to_pickup and to.route and to.route in routes:
+            to_pickup = routes[to.route].pickup_location
+        if not wo_pickup and work_order.route and work_order.route in routes:
+            wo_pickup = routes[work_order.route].pickup_location
+        if wo_pickup and to_pickup and wo_pickup == to_pickup:
+            matched_fields.append("pickup_location")
+            score += WEIGHTS["pickup_location"]
 
-        # 4. Dropoff location match (route.dropoff_location)
-        # For now, skip since WO doesn't store pickup/dropoff separately
-        # if route and route.dropoff_location:
-        #     matched_fields.append("dropoff_location")
-        #     score += WEIGHTS["dropoff_location"]
+        # 4. Dropoff location match
+        wo_dropoff = work_order.dropoff_location
+        to_dropoff = to.dropoff_location
+        if not to_dropoff and to.route and to.route in routes:
+            to_dropoff = routes[to.route].dropoff_location
+        if not wo_dropoff and work_order.route and work_order.route in routes:
+            wo_dropoff = routes[work_order.route].dropoff_location
+        if wo_dropoff and to_dropoff and wo_dropoff == to_dropoff:
+            matched_fields.append("dropoff_location")
+            score += WEIGHTS["dropoff_location"]
 
         # 5. Client match
         if to.client_id == work_order.client_id:
@@ -190,6 +208,8 @@ async def suggest_trip_matches(
             client_name=to.client_name,
             work_type=to.work_type,
             route=to.route,
+            pickup_location=to.pickup_location,
+            dropoff_location=to.dropoff_location,
             tractor_plate=to.tractor_plate,
             driver_id=to.driver_id,
             driver_name=to.driver_name,
@@ -280,16 +300,30 @@ async def suggest_wo_matches(
     for c in cont_result.scalars().all():
         wo_containers[c.work_order_id].append(c)
 
+    # Load routes for location resolution
+    wo_route_names = {wo.route for wo in candidates if wo.route}
+    route_result = await db.execute(
+        select(Route).where(Route.route.in_(wo_route_names)) if wo_route_names else select(Route).where(False)
+    )
+    routes: dict[str, Route] = {r.route: r for r in route_result.scalars().all()}
+
     suggestions: list[WOSuggestion] = []
     for wo in candidates:
         matched_fields: list[str] = []
         score = 0.0
 
-        # 1. Container number match (normalized, exact match only)
+        # 1. Container number match (normalized)
         wo_cn_set = {normalize_container_number(c.container_number) for c in wo_containers.get(wo.id, []) if c.container_number}
         if to_container_numbers & wo_cn_set:
             matched_fields.append("container_number")
             score += WEIGHTS["container_number"]
+        else:
+            # Partial match: digits only
+            to_digits = {re.sub(r'[^0-9]', '', cn) for cn in to_container_numbers if cn}
+            wo_digits = {re.sub(r'[^0-9]', '', cn) for cn in wo_cn_set if cn}
+            if to_digits & wo_digits:
+                matched_fields.append("container_number_partial")
+                score += WEIGHTS["container_number"] * 0.5
 
         # 2. Date match (trip_date vs WO created_at date)
         wo_date = wo.created_at.date() if wo.created_at else None
@@ -297,8 +331,27 @@ async def suggest_wo_matches(
             matched_fields.append("date")
             score += WEIGHTS["date"]
 
-        # 3. Pickup location match (skip for now, WO doesn't have this)
-        # 4. Dropoff location match (skip for now, WO doesn't have this)
+        # 3. Pickup location match
+        to_pickup = trip_order.pickup_location
+        wo_pickup = wo.pickup_location
+        if not wo_pickup and wo.route and wo.route in routes:
+            wo_pickup = routes[wo.route].pickup_location
+        if not to_pickup and trip_order.route and trip_order.route in routes:
+            to_pickup = routes[trip_order.route].pickup_location
+        if wo_pickup and to_pickup and wo_pickup == to_pickup:
+            matched_fields.append("pickup_location")
+            score += WEIGHTS["pickup_location"]
+
+        # 4. Dropoff location match
+        to_dropoff = trip_order.dropoff_location
+        wo_dropoff = wo.dropoff_location
+        if not wo_dropoff and wo.route and wo.route in routes:
+            wo_dropoff = routes[wo.route].dropoff_location
+        if not to_dropoff and trip_order.route and trip_order.route in routes:
+            to_dropoff = routes[trip_order.route].dropoff_location
+        if wo_dropoff and to_dropoff and wo_dropoff == to_dropoff:
+            matched_fields.append("dropoff_location")
+            score += WEIGHTS["dropoff_location"]
 
         # 5. Client match
         if wo.client_id == trip_order.client_id:
@@ -326,7 +379,10 @@ async def suggest_wo_matches(
             id=wo.id,
             client_id=wo.client_id,
             client_name=wo.client_name,
+            client_code=wo.client_code,
             route=wo.route,
+            pickup_location=wo.pickup_location,
+            dropoff_location=wo.dropoff_location,
             driver_id=wo.driver_id,
             driver_name=wo.driver_name,
             tractor_plate=wo.tractor_plate,

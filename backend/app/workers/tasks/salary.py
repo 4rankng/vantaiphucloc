@@ -31,11 +31,11 @@ async def calculate_salary_task(
             driver = driver_result.scalar_one_or_none()
             driver_name = driver.username if driver else f"driver_{driver_id}"
 
-            # Query MATCHED work orders for the driver in the period
+            # Query MATCHED and COMPLETED work orders for the driver in the period
             result = await db.execute(
                 select(WorkOrder).where(
                     WorkOrder.driver_id == driver_id,
-                    WorkOrder.status == "MATCHED",
+                    WorkOrder.status.in_(["MATCHED", "COMPLETED"]),
                     WorkOrder.created_at >= start_dt,
                     WorkOrder.created_at < end_dt,
                 )

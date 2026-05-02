@@ -99,6 +99,8 @@ export interface WorkOrder {
   clientName: string
   clientCode?: string
   route: string
+  pickupLocation?: string
+  dropoffLocation?: string
   driverId: number
   driverName: string
   tractorPlate: string
@@ -119,6 +121,9 @@ export interface WorkOrder {
 export interface PricingLine {
   workType: WorkType
   quantity: number
+  unitPrice: number
+  driverSalary: number
+  allowance: number
 }
 
 export interface Pricing {
@@ -127,6 +132,8 @@ export interface Pricing {
   clientName: string
   workType: WorkType
   route: string
+  pickupLocation?: string
+  dropoffLocation?: string
   lines: PricingLine[]
   unitPrice: number
   driverSalary: number
@@ -147,6 +154,8 @@ export interface TripOrder {
   clientName: string
   workType?: WorkType
   route: string
+  pickupLocation?: string
+  dropoffLocation?: string
   tractorPlate: string
   driverId: number
   driverName: string
@@ -223,6 +232,7 @@ export interface ReconciliationResult {
   tripOrderId?: number
   status: 'confirmed' | 'pending' | 'rejected'
   isDuplicate: boolean
+  matchType: 'exact' | 'partial' | 'none'
 }
 
 export interface ReconciliationUploadResponse {

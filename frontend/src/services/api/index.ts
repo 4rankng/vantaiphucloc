@@ -57,12 +57,19 @@ export const apiClient = {
   toggleTripConfirmation: tripOrdersApi.toggleTripConfirmation,
   uploadCustomerExcel: tripOrdersApi.uploadCustomerExcel,
   exportReconciliationExcel: tripOrdersApi.exportReconciliationExcel,
+  importTripOrders: tripOrdersApi.importTripOrders,
+  exportTripOrdersExcel: tripOrdersApi.exportTripOrdersExcel,
 
   // Salary
   calculateSalary: salaryApi.calculateSalary,
   getJobStatus: salaryApi.getJobStatus,
   getSalaryPeriods: salaryApi.getSalaryPeriods,
   updateSalaryPeriod: salaryApi.updateSalaryPeriod,
+  getSalaryDashboard: salaryApi.getSalaryDashboard,
+  exportSalaryExcel: salaryApi.exportSalaryExcel,
+
+  // Work Order Export
+  exportWorkOrdersExcel: workOrdersApi.exportWorkOrdersExcel,
 
   // Drivers
   getDrivers: driversApi.getDrivers,

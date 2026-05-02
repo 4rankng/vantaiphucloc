@@ -31,6 +31,8 @@ async def _load_pricing_out(db: AsyncSession, pricing: Pricing) -> PricingOut:
         client_name=pricing.client_name,
         work_type=pricing.work_type,
         route=pricing.route,
+        pickup_location=pricing.pickup_location,
+        dropoff_location=pricing.dropoff_location,
         unit_price=pricing.unit_price,
         driver_salary=pricing.driver_salary,
         allowance=pricing.allowance,
@@ -65,6 +67,8 @@ async def _batch_load_pricing_outs(
             client_name=p.client_name,
             work_type=p.work_type,
             route=p.route,
+            pickup_location=p.pickup_location,
+            dropoff_location=p.dropoff_location,
             unit_price=p.unit_price,
             driver_salary=p.driver_salary,
             allowance=p.allowance,
@@ -83,7 +87,7 @@ async def list_pricings(
     route: str | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
-    current_user: User = Depends(require_roles("accountant", "director", "superadmin")),
+    current_user: User = Depends(require_roles("accountant", "director", "driver", "superadmin")),
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
@@ -150,6 +154,9 @@ async def create_pricing(
             pricing_id=pricing.id,
             work_type=line.work_type,
             quantity=line.quantity,
+            unit_price=line.unit_price,
+            driver_salary=line.driver_salary,
+            allowance=line.allowance,
         ))
 
     await db.commit()
@@ -189,6 +196,9 @@ async def update_pricing(
                 pricing_id=pricing.id,
                 work_type=line["work_type"],
                 quantity=line["quantity"],
+                unit_price=line.get("unit_price", 0),
+                driver_salary=line.get("driver_salary", 0),
+                allowance=line.get("allowance", 0),
             ))
 
     await db.commit()

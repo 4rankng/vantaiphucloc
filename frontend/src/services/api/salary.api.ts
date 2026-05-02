@@ -61,3 +61,29 @@ export async function updateSalaryPeriod(
     return fail(err)
   }
 }
+
+export async function getSalaryDashboard(
+  periodStart: string,
+  periodEnd: string,
+): Promise<ApiResponse<any[]>> {
+  try {
+    const params = new URLSearchParams()
+    params.append('period_start', periodStart)
+    params.append('period_end', periodEnd)
+    const res = await api.get(`/salary/dashboard?${params.toString()}`)
+    return ok(toCamel<any[]>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export async function exportSalaryExcel(
+  startDate: string,
+  endDate: string,
+): Promise<Blob> {
+  const params = new URLSearchParams()
+  params.append('start_date', startDate)
+  params.append('end_date', endDate)
+  const res = await api.get(`/salary/export?${params.toString()}`, { responseType: 'blob' })
+  return res.data
+}
