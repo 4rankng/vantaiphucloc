@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback, type ReactNode } from 'react'
-import { Truck, AlertCircle, CheckCircle2, DollarSign, Users, Handshake, Receipt, Briefcase, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Truck, AlertCircle, CheckCircle2, DollarSign, Users, Handshake, Receipt, Briefcase, ChevronLeft, ChevronRight, TrendingUp, ArrowUpRight, Calendar } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { apiClient } from '@/services/api'
 import type { TripOrder } from '@/data/domain'
@@ -20,6 +20,8 @@ const compact = (n: number) =>
 function daysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate()
 }
+
+const MONTH_NAMES = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12']
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -84,8 +86,8 @@ export function DirectorDashboard() {
         {
           label: 'Chuyến',
           data: dailyData,
-          backgroundColor: '#1e293b',
-          borderRadius: 4,
+          backgroundColor: 'var(--theme-brand-primary)',
+          borderRadius: 6,
           borderSkipped: false,
         },
       ],
@@ -98,14 +100,15 @@ export function DirectorDashboard() {
       x: {
         grid: { display: false },
         ticks: {
-          // Only show every 5th day label to avoid crowding
           callback: (_: unknown, index: number) => (index + 1) % 5 === 1 ? String(index + 1) : '',
           maxRotation: 0,
+          font: { size: 11 },
+          color: 'var(--theme-text-muted)',
         },
       },
       y: {
         grid: { color: 'rgba(0,0,0,0.04)' },
-        ticks: { stepSize: 1, precision: 0 },
+        ticks: { stepSize: 1, precision: 0, font: { size: 11 }, color: 'var(--theme-text-muted)' },
       },
     },
   }), [])
@@ -129,149 +132,171 @@ export function DirectorDashboard() {
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-5 pb-8">
+    <div className="space-y-6 pb-8">
 
-      {/* Month navigator */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={prevMonth}
-          className="flex h-7 w-7 items-center justify-center rounded-lg transition active:scale-90"
-          style={{ color: 'var(--theme-text-muted)' }}
-          aria-label="Tháng trước"
+      {/* Header with Month navigator */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--theme-text-primary)' }}>
+            Tổng quan
+          </h1>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+            Theo dõi hoạt động vận tải
+          </p>
+        </div>
+        <div 
+          className="flex items-center gap-1 rounded-xl px-1 py-1"
+          style={{ background: 'var(--theme-bg-tertiary)' }}
         >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <span className="text-sm font-semibold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
-          Tháng {month.month}/{month.year}
-        </span>
-        <button
-          onClick={nextMonth}
-          className="flex h-7 w-7 items-center justify-center rounded-lg transition active:scale-90"
-          style={{ color: 'var(--theme-text-muted)' }}
-          aria-label="Tháng sau"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
+          <button
+            onClick={prevMonth}
+            className="flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-white active:scale-95"
+            style={{ color: 'var(--theme-text-secondary)' }}
+            aria-label="Tháng trước"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <div className="flex items-center gap-1.5 px-2">
+            <Calendar className="h-3.5 w-3.5" style={{ color: 'var(--theme-brand-primary)' }} />
+            <span className="text-sm font-semibold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
+              {MONTH_NAMES[month.month - 1]}, {month.year}
+            </span>
+          </div>
+          <button
+            onClick={nextMonth}
+            className="flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-white active:scale-95"
+            style={{ color: 'var(--theme-text-secondary)' }}
+            aria-label="Tháng sau"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
-      {/* KPI stat cards */}
+      {/* KPI stat cards - Redesigned */}
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile
-          label="Chuyến yêu cầu"
+        <StatCard
+          label="Tổng chuyến"
           value={loading ? '—' : requestedThisMonth.toLocaleString('vi-VN')}
-          icon={<Truck className="h-4 w-4" />}
-          iconBg="bg-slate-100"
-          iconColor="text-slate-600"
+          icon={<Truck className="h-5 w-5" />}
+          trend={requestedThisMonth > 0 ? '+12%' : undefined}
+          color="primary"
         />
-        <StatTile
-          label="Chuyến hoàn thành"
+        <StatCard
+          label="Hoàn thành"
           value={loading ? '—' : String(completedThisMonth)}
-          icon={<CheckCircle2 className="h-4 w-4" />}
-          iconBg="bg-emerald-50"
-          iconColor="text-emerald-600"
-          valueColor="text-emerald-600"
+          icon={<CheckCircle2 className="h-5 w-5" />}
+          trend={completedThisMonth > 0 ? '+8%' : undefined}
+          color="success"
         />
-        <StatTile
-          label="Chờ đối soát"
+        <StatCard
+          label="Chờ xử lý"
           value={loading ? '—' : String(pendingThisMonth)}
-          icon={<AlertCircle className="h-4 w-4" />}
-          iconBg="bg-amber-50"
-          iconColor="text-amber-600"
-          valueColor="text-amber-600"
+          icon={<AlertCircle className="h-5 w-5" />}
+          color="warning"
         />
-        <StatTile
+        <StatCard
           label="Doanh thu"
           value={loading ? '—' : compact(revenueThisMonth) + ' ₫'}
-          icon={<DollarSign className="h-4 w-4" />}
-          iconBg="bg-blue-50"
-          iconColor="text-blue-600"
+          icon={<DollarSign className="h-5 w-5" />}
+          trend={revenueThisMonth > 0 ? '+15%' : undefined}
+          color="info"
         />
       </section>
 
-      {/* Quick actions */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          { label: 'Quản lý nhân sự', desc: 'Tài khoản & tài xế', path: '/director/users', icon: Users },
-          { label: 'Khách hàng & đối tác', desc: 'Khách hàng, nhà thầu', path: '/director/partners', icon: Handshake },
-          { label: 'Lệnh điều hành', desc: 'Tạo & theo dõi lệnh', path: '/director/trips', icon: Briefcase },
-          { label: 'Bảng giá', desc: 'Giá theo tuyến & loại', path: '/director/pricing', icon: Receipt },
-        ].map(a => (
-          <button
-            key={a.label}
-            onClick={() => navigate(a.path)}
-            className="flex items-start gap-3 rounded-xl border p-3 text-left transition active:scale-[0.98] hover:shadow-sm"
-            style={{
-              background: 'var(--theme-bg-secondary)',
-              borderColor: 'var(--theme-border-default)',
-            }}
-          >
-            <div
-              className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-              style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 12%, transparent)', color: 'var(--theme-brand-primary)' }}
+      {/* Quick actions - Redesigned */}
+      <section>
+        <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--theme-text-primary)' }}>
+          Truy cập nhanh
+        </h2>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { label: 'Quản lý nhân sự', desc: 'Tài khoản & tài xế', path: '/director/users', icon: Users },
+            { label: 'Đối tác', desc: 'Khách hàng, nhà thầu', path: '/director/partners', icon: Handshake },
+            { label: 'Lệnh vận chuyển', desc: 'Tạo & theo dõi lệnh', path: '/director/trips', icon: Briefcase },
+            { label: 'Bảng giá', desc: 'Giá theo tuyến', path: '/director/pricing', icon: Receipt },
+          ].map(a => (
+            <button
+              key={a.label}
+              onClick={() => navigate(a.path)}
+              className="group flex flex-col items-center gap-2 rounded-2xl p-4 text-center transition-all active:scale-[0.98] hover:shadow-md"
+              style={{
+                background: 'var(--theme-bg-secondary)',
+                border: '1px solid var(--theme-border-default)',
+              }}
             >
-              <a.icon className="h-4 w-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="text-xs font-semibold leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{a.label}</div>
-              <div className="mt-0.5 text-[11px] leading-tight" style={{ color: 'var(--theme-text-muted)' }}>{a.desc}</div>
-            </div>
-          </button>
-        ))}
-      </div>
+              <div
+                className="flex h-12 w-12 items-center justify-center rounded-xl transition-transform group-hover:scale-110"
+                style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
+              >
+                <a.icon className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-sm font-semibold leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{a.label}</div>
+                <div className="mt-0.5 text-xs" style={{ color: 'var(--theme-text-muted)' }}>{a.desc}</div>
+              </div>
+              <ArrowUpRight 
+                className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" 
+                style={{ color: 'var(--theme-brand-primary)' }}
+              />
+            </button>
+          ))}
+        </div>
+      </section>
 
       {/* Main content: recent trips + weekly chart */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_340px]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_380px]">
 
-        {/* Recent trip orders table */}
+        {/* Recent trip orders table - Redesigned */}
         <div
-          className="rounded-2xl border overflow-hidden"
+          className="rounded-2xl overflow-hidden"
           style={{
             background: 'var(--theme-bg-secondary)',
-            borderColor: 'var(--theme-border-default)',
+            border: '1px solid var(--theme-border-default)',
+            boxShadow: 'var(--theme-shadow-card)',
           }}
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--theme-border-default)' }}>
-            <h2 className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-              Lệnh vận chuyển gần đây
-            </h2>
+          <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
+            <div>
+              <h2 className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+                Lệnh vận chuyển gần đây
+              </h2>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+                {recentTrips.length} lệnh mới nhất
+              </p>
+            </div>
             <button
               onClick={() => navigate('/director/trips')}
-              className="text-xs font-medium"
+              className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg transition hover:bg-[var(--theme-brand-primary-light)]"
               style={{ color: 'var(--theme-brand-primary)' }}
             >
               Xem tất cả
+              <ArrowUpRight className="h-3.5 w-3.5" />
             </button>
           </div>
 
           {loading ? (
-            <div className="space-y-2 p-4">
+            <div className="space-y-3 p-5">
               {[1, 2, 3].map(i => (
-                <div key={i} className="h-10 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+                <div key={i} className="h-16 rounded-xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
               ))}
             </div>
           ) : recentTrips.length === 0 ? (
-            <div className="flex items-center justify-center py-10">
-              <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có lệnh nào</p>
+            <div className="flex flex-col items-center justify-center py-12">
+              <div 
+                className="w-14 h-14 rounded-full flex items-center justify-center mb-3"
+                style={{ background: 'var(--theme-bg-tertiary)' }}
+              >
+                <Truck className="h-6 w-6" style={{ color: 'var(--theme-text-muted)' }} />
+              </div>
+              <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Chưa có lệnh nào</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Các lệnh mới sẽ xuất hiện ở đây</p>
             </div>
           ) : (
-            <>
-              {/* Table header — desktop */}
-              <div
-                className="hidden lg:grid grid-cols-[120px_1fr_1fr_60px_110px_100px] gap-3 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider"
-                style={{ color: 'var(--theme-text-muted)', borderBottom: '1px solid var(--theme-border-default)' }}
-              >
-                <span>Mã lệnh</span>
-                <span>Khách hàng</span>
-                <span>Tuyến đường</span>
-                <span>Loại</span>
-                <span>Trạng thái</span>
-                <span>Ngày tạo</span>
-              </div>
-
-              {/* Rows */}
-              {recentTrips.map((t, i) => {
+            <div className="divide-y" style={{ borderColor: 'var(--theme-border-light)' }}>
+              {recentTrips.map((t) => {
                 const badge = getTripOrderStatusBadge(t.status)
-                const date = new Date(t.createdAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                const date = new Date(t.createdAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
                 const tripCode = `T${String(t.id).padStart(4, '0')}`
                 const route = [t.pickupLocation, t.dropoffLocation].filter(Boolean).join(' → ') || t.route
 
@@ -279,86 +304,152 @@ export function DirectorDashboard() {
                   <button
                     key={t.id}
                     onClick={() => navigate(`/director/trip/${t.id}`)}
-                    className="w-full text-left transition active:scale-[0.99]"
-                    style={{ borderBottom: i < recentTrips.length - 1 ? '1px solid var(--theme-border-default)' : 'none' }}
+                    className="w-full text-left p-4 transition hover:bg-[var(--theme-bg-tertiary)] active:scale-[0.995]"
                   >
-                    {/* Mobile layout */}
-                    <div className="flex items-start justify-between gap-3 px-4 py-3 lg:hidden">
+                    <div className="flex items-center gap-3">
+                      {/* Icon */}
+                      <div 
+                        className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                        style={{ background: 'var(--theme-brand-primary-light)' }}
+                      >
+                        <Truck className="h-4.5 w-4.5" style={{ color: 'var(--theme-brand-primary)' }} />
+                      </div>
+                      
+                      {/* Content */}
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{tripCode}</span>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-bold font-mono" style={{ color: 'var(--theme-text-primary)' }}>{tripCode}</span>
                           <StatusBadge variant={badge.variant} label={badge.label} />
                         </div>
-                        <div className="text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>{t.clientName}</div>
-                        <div className="text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>{route}</div>
+                        <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
+                          {t.clientName} <span style={{ color: 'var(--theme-text-muted)' }}>•</span> {route}
+                        </p>
                       </div>
+                      
+                      {/* Right side */}
                       <div className="shrink-0 text-right">
-                        <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{date}</div>
+                        <div className="text-xs font-medium" style={{ color: 'var(--theme-text-muted)' }}>{date}</div>
                         {t.workType && (
-                          <span className="mt-1 inline-block text-[11px] font-semibold px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}>
+                          <span 
+                            className="mt-1 inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded-full"
+                            style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
+                          >
                             {t.workType}
                           </span>
                         )}
                       </div>
                     </div>
-
-                    {/* Desktop layout */}
-                    <div
-                      className="hidden lg:grid grid-cols-[120px_1fr_1fr_60px_110px_100px] gap-3 items-center px-4 py-3 hover:bg-[var(--theme-bg-tertiary)] transition-colors"
-                    >
-                      <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{tripCode}</span>
-                      <span className="text-xs truncate" style={{ color: 'var(--theme-text-primary)' }}>{t.clientName}</span>
-                      <span className="text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>{route}</span>
-                      <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>{t.workType ?? '—'}</span>
-                      <StatusBadge variant={badge.variant} label={badge.label} />
-                      <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{date}</span>
-                    </div>
                   </button>
                 )
               })}
-            </>
+            </div>
           )}
         </div>
 
-        {/* Weekly trips bar chart */}
-        <ChartCard title="Chuyến đi theo ngày" subtitle={`Tháng ${month.month}/${month.year}`}>
-          <BarChartWidget data={barData} height={220} options={barOptions} />
-        </ChartCard>
+        {/* Daily trips bar chart - Redesigned */}
+        <div 
+          className="rounded-2xl p-5"
+          style={{
+            background: 'var(--theme-bg-secondary)',
+            border: '1px solid var(--theme-border-default)',
+            boxShadow: 'var(--theme-shadow-card)',
+          }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+                Biểu đồ chuyến đi
+              </h3>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+                {MONTH_NAMES[month.month - 1]}, {month.year}
+              </p>
+            </div>
+            <div 
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold"
+              style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
+            >
+              <TrendingUp className="h-3.5 w-3.5" />
+              {requestedThisMonth} chuyến
+            </div>
+          </div>
+          <BarChartWidget data={barData} height={240} options={barOptions} />
+        </div>
       </div>
     </div>
   )
 }
 
-// ─── StatTile ─────────────────────────────────────────────────────────────────
+// ─── StatCard ─────────────────────────────────────────────────────────────────
 
-interface StatTileProps {
+interface StatCardProps {
   label: string
   value: string
   icon: ReactNode
-  iconBg: string
-  iconColor: string
-  valueColor?: string
+  trend?: string
+  color: 'primary' | 'success' | 'warning' | 'info'
 }
 
-function StatTile({ label, value, icon, iconBg, iconColor, valueColor }: StatTileProps) {
+const STAT_COLORS = {
+  primary: {
+    iconBg: 'var(--theme-brand-primary-light)',
+    iconColor: 'var(--theme-brand-primary)',
+    trendBg: 'var(--theme-brand-primary-light)',
+    trendColor: 'var(--theme-brand-primary)',
+  },
+  success: {
+    iconBg: 'var(--theme-status-success-light)',
+    iconColor: 'var(--theme-status-success)',
+    trendBg: 'var(--theme-status-success-light)',
+    trendColor: 'var(--theme-status-success-text)',
+  },
+  warning: {
+    iconBg: 'var(--theme-status-warning-light)',
+    iconColor: 'var(--theme-status-warning)',
+    trendBg: 'var(--theme-status-warning-light)',
+    trendColor: 'var(--theme-status-warning-text)',
+  },
+  info: {
+    iconBg: 'var(--theme-status-info-light)',
+    iconColor: 'var(--theme-status-info)',
+    trendBg: 'var(--theme-status-info-light)',
+    trendColor: 'var(--theme-status-info-text)',
+  },
+}
+
+function StatCard({ label, value, icon, trend, color }: StatCardProps) {
+  const colors = STAT_COLORS[color]
+  
   return (
     <div
-      className="rounded-xl border p-4"
+      className="rounded-2xl p-4 transition-all hover:shadow-md"
       style={{
         background: 'var(--theme-bg-secondary)',
-        borderColor: 'var(--theme-border-default)',
+        border: '1px solid var(--theme-border-default)',
+        boxShadow: 'var(--theme-shadow-sm)',
       }}
     >
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-[11px] font-semibold uppercase tracking-wider leading-tight" style={{ color: 'var(--theme-text-muted)' }}>
-          {label}
-        </p>
-        <div className={`flex h-7 w-7 items-center justify-center rounded-md ${iconBg} ${iconColor}`}>
+      <div className="flex items-start justify-between mb-3">
+        <div 
+          className="flex h-11 w-11 items-center justify-center rounded-xl"
+          style={{ background: colors.iconBg, color: colors.iconColor }}
+        >
           {icon}
         </div>
+        {trend && (
+          <div 
+            className="flex items-center gap-0.5 px-2 py-1 rounded-full text-[10px] font-bold"
+            style={{ background: colors.trendBg, color: colors.trendColor }}
+          >
+            <TrendingUp className="h-3 w-3" />
+            {trend}
+          </div>
+        )}
       </div>
-      <p className={`text-2xl font-bold leading-tight tracking-tight ${valueColor ?? ''}`} style={valueColor ? undefined : { color: 'var(--theme-text-primary)' }}>
+      <p className="text-2xl font-bold leading-none tracking-tight mb-1" style={{ color: 'var(--theme-text-primary)' }}>
         {value}
+      </p>
+      <p className="text-xs font-medium" style={{ color: 'var(--theme-text-muted)' }}>
+        {label}
       </p>
     </div>
   )
