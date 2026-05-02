@@ -337,11 +337,9 @@ export function WorkOrderList() {
     )
   }
 
-  // Mobile view with cards
   if (isMobile) {
     return (
       <div className="space-y-3">
-        {/* Filters */}
         <FilterToolbar
           search={search}
           onSearchChange={setSearch}
@@ -350,17 +348,22 @@ export function WorkOrderList() {
           selectedStatus={statusFilter}
           onStatusChange={(s) => setStatusFilter(s as StatusFilter)}
           onClearFilters={handleClearFilters}
+          extraAction={
+            <Button
+              onClick={() => setImportOpen(true)}
+              className="h-8 gap-1.5 text-xs font-semibold rounded-lg"
+              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              Nhập Excel
+            </Button>
+          }
         />
 
-        {/* Excel panel */}
-        <ExcelPanel />
-
-        {/* Count */}
         <p className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
           {filtered.length} phiếu
         </p>
 
-        {/* List */}
         {filtered.length === 0 ? (
           <div
             className="rounded-2xl p-10 text-center"
@@ -383,111 +386,14 @@ export function WorkOrderList() {
           </div>
         )}
 
-        {/* Upload modal */}
-        {uploadOpen && (
-          <div
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
-            style={{ background: 'rgba(0,0,0,0.5)' }}
-          >
-            <div
-              className="rounded-2xl p-5 w-full max-w-md space-y-3"
-              style={{ background: 'var(--theme-bg-primary)' }}
-            >
-              <p className="text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>
-                Tải lên Excel đối soát
-              </p>
-              <select
-                value={selectedClient}
-                onChange={e => setSelectedClient(e.target.value ? Number(e.target.value) : '')}
-                className="w-full h-10 rounded-xl px-3 text-sm"
-                style={{
-                  background: 'var(--theme-bg-tertiary)',
-                  border: '1px solid var(--theme-border-default)',
-                  color: 'var(--theme-text-primary)',
-                }}
-              >
-                <option value="">Chọn khách hàng</option>
-                {clients.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.code ? `[${c.code}] ` : ''}{c.name}
-                  </option>
-                ))}
-              </select>
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={e => setDateFrom(e.target.value)}
-                  className="h-10 rounded-xl px-3 text-sm"
-                  style={{
-                    background: 'var(--theme-bg-tertiary)',
-                    border: '1px solid var(--theme-border-default)',
-                    color: 'var(--theme-text-primary)',
-                  }}
-                />
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={e => setDateTo(e.target.value)}
-                  className="h-10 rounded-xl px-3 text-sm"
-                  style={{
-                    background: 'var(--theme-bg-tertiary)',
-                    border: '1px solid var(--theme-border-default)',
-                    color: 'var(--theme-text-primary)',
-                  }}
-                />
-              </div>
-              <input
-                ref={fileRef}
-                type="file"
-                accept=".xlsx,.xls"
-                onChange={e => setFile(e.target.files?.[0] ?? null)}
-                className="hidden"
-              />
-              <button
-                onClick={() => fileRef.current?.click()}
-                className="w-full h-10 rounded-xl text-sm font-medium border-2 border-dashed transition-colors"
-                style={{
-                  borderColor: file ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)',
-                  color: file ? 'var(--theme-brand-primary)' : 'var(--theme-text-muted)',
-                }}
-              >
-                {file ? file.name : 'Chọn file Excel (.xlsx)'}
-              </button>
-              <div className="flex gap-2 pt-1">
-                <Button
-                  onClick={() => setUploadOpen(false)}
-                  disabled={uploading}
-                  className="flex-1 h-10 text-sm font-semibold"
-                  style={{
-                    background: 'var(--theme-bg-secondary)',
-                    color: 'var(--theme-text-primary)',
-                    border: '1px solid var(--theme-border-default)',
-                  }}
-                >
-                  Huỷ
-                </Button>
-                <Button
-                  onClick={handleUpload}
-                  disabled={uploading || !file || !selectedClient}
-                  className="flex-1 h-10 text-sm font-semibold"
-                  style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-                >
-                  {uploading ? 'Đang tải...' : 'Tải lên'}
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+        <ImportDialog />
       </div>
     )
   }
 
-  // Desktop view with DataTablePro
   return (
     <PageContainer>
       <div className="space-y-4">
-        {/* Filters */}
         <FilterToolbar
           search={search}
           onSearchChange={setSearch}
@@ -496,12 +402,18 @@ export function WorkOrderList() {
           selectedStatus={statusFilter}
           onStatusChange={(s) => setStatusFilter(s as StatusFilter)}
           onClearFilters={handleClearFilters}
+          extraAction={
+            <Button
+              onClick={() => setImportOpen(true)}
+              className="h-8 gap-1.5 text-xs font-semibold rounded-lg"
+              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              Nhập Excel
+            </Button>
+          }
         />
 
-        {/* Excel panel */}
-        <ExcelPanel />
-
-        {/* Data table */}
         <DataTablePro
           data={filtered}
           columns={columns}
@@ -521,112 +433,7 @@ export function WorkOrderList() {
         />
       </div>
 
-      {/* Upload modal */}
-      {uploadOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.5)' }}
-        >
-          <div
-            className="rounded-2xl p-6 w-full max-w-md space-y-4"
-            style={{ background: 'var(--theme-bg-primary)' }}
-          >
-            <p className="text-lg font-bold" style={{ color: 'var(--theme-text-primary)' }}>
-              Tải lên Excel đối soát
-            </p>
-            <select
-              value={selectedClient}
-              onChange={e => setSelectedClient(e.target.value ? Number(e.target.value) : '')}
-              className="w-full h-10 rounded-xl px-3 text-sm"
-              style={{
-                background: 'var(--theme-bg-tertiary)',
-                border: '1px solid var(--theme-border-default)',
-                color: 'var(--theme-text-primary)',
-              }}
-            >
-              <option value="">Chọn khách hàng</option>
-              {clients.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.code ? `[${c.code}] ` : ''}{c.name}
-                </option>
-              ))}
-            </select>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--theme-text-muted)' }}>
-                  Từ ngày
-                </label>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={e => setDateFrom(e.target.value)}
-                  className="w-full h-10 rounded-xl px-3 text-sm"
-                  style={{
-                    background: 'var(--theme-bg-tertiary)',
-                    border: '1px solid var(--theme-border-default)',
-                    color: 'var(--theme-text-primary)',
-                  }}
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--theme-text-muted)' }}>
-                  Đến ngày
-                </label>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={e => setDateTo(e.target.value)}
-                  className="w-full h-10 rounded-xl px-3 text-sm"
-                  style={{
-                    background: 'var(--theme-bg-tertiary)',
-                    border: '1px solid var(--theme-border-default)',
-                    color: 'var(--theme-text-primary)',
-                  }}
-                />
-              </div>
-            </div>
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={e => setFile(e.target.files?.[0] ?? null)}
-              className="hidden"
-            />
-            <button
-              onClick={() => fileRef.current?.click()}
-              className="w-full h-12 rounded-xl text-sm font-medium border-2 border-dashed transition-colors"
-              style={{
-                borderColor: file ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)',
-                color: file ? 'var(--theme-brand-primary)' : 'var(--theme-text-muted)',
-              }}
-            >
-              {file ? file.name : 'Chọn file Excel (.xlsx)'}
-            </button>
-            <div className="flex gap-3 pt-2">
-              <Button
-                onClick={() => setUploadOpen(false)}
-                disabled={uploading}
-                className="flex-1 h-11 text-sm font-semibold rounded-xl"
-                style={{
-                  background: 'var(--theme-bg-secondary)',
-                  color: 'var(--theme-text-primary)',
-                  border: '1px solid var(--theme-border-default)',
-                }}
-              >
-                Huỷ
-              </Button>
-              <Button
-                onClick={handleUpload}
-                disabled={uploading || !file || !selectedClient}
-                className="flex-1 h-11 text-sm font-semibold rounded-xl"
-                style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-              >
-                {uploading ? 'Đang tải...' : 'Tải lên'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ImportDialog />
     </PageContainer>
   )
 }

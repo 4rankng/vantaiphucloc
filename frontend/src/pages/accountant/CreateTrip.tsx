@@ -134,7 +134,7 @@ export function CreateTrip() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Khách hàng</Label>
+            <Label className="typo-form-label">Khách hàng</Label>
             <InlineSelect
               options={clientOptions}
               value={clientId}
@@ -146,7 +146,7 @@ export function CreateTrip() {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm lấy</Label>
+            <Label className="typo-form-label">Điểm lấy</Label>
             <InlineSelect
               options={pickupOptions}
               value={pickupLocation}
@@ -156,18 +156,18 @@ export function CreateTrip() {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm trả</Label>
+            <Label className="typo-form-label">Điểm trả</Label>
             <InlineSelect options={dropoffOptions} value={dropoffLocation} onChange={setDropoffLocation} placeholder="Chọn điểm trả" />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Lương tài xế</Label>
+              <Label className="typo-form-label">Lương tài xế</Label>
               <Input type="number" value={driverSalary || ''} onChange={e => setDriverSalary(Number(e.target.value))}
                 placeholder="0" className="text-sm" />
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Phụ cấp</Label>
+              <Label className="typo-form-label">Phụ cấp</Label>
               <Input type="number" value={allowance || ''} onChange={e => setAllowance(Number(e.target.value))}
                 placeholder="0" className="text-sm" />
             </div>
@@ -176,7 +176,7 @@ export function CreateTrip() {
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Container</Label>
+            <Label className="typo-form-label">Container</Label>
             <button onClick={addCong} className="flex items-center gap-1 text-xs font-medium touch-manipulation" style={{ color: 'var(--theme-brand-primary)' }}>
               <Plus className="w-3.5 h-3.5" /> Thêm cont
             </button>
