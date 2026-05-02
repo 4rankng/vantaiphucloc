@@ -92,14 +92,19 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
     const overlayBox = overlayBoxRef.current
     if (!video || !overlayBox) return
 
-    const rect = overlayBox.getBoundingClientRect()
-    const scaleX = video.videoWidth / window.innerWidth
-    const scaleY = video.videoHeight / window.innerHeight
+    // Get actual rendered dimensions of video element and overlay box
+    const videoRect = video.getBoundingClientRect()
+    const overlayRect = overlayBox.getBoundingClientRect()
 
-    const sx = rect.left * scaleX
-    const sy = rect.top * scaleY
-    const sw = rect.width * scaleX
-    const sh = rect.height * scaleY
+    // Calculate scale based on video element's rendered size vs actual video resolution
+    const scaleX = video.videoWidth / videoRect.width
+    const scaleY = video.videoHeight / videoRect.height
+
+    // Calculate overlay box position relative to video element
+    const sx = (overlayRect.left - videoRect.left) * scaleX
+    const sy = (overlayRect.top - videoRect.top) * scaleY
+    const sw = overlayRect.width * scaleX
+    const sh = overlayRect.height * scaleY
 
     const canvas = document.createElement('canvas')
     const outW = Math.min(sw, MAX_CAPTURE_WIDTH)
