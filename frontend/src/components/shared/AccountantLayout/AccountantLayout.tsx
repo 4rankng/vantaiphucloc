@@ -7,8 +7,6 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import { NotificationPanel, useUnreadCount } from '@/components/shared/NotificationPanel/NotificationPanel'
 import { UserDropdown } from '@/components/shared/ProfileDialog'
 import {
-  Search,
-  Command as CmdIcon,
   Bell,
   UserCircle,
   ChevronRight,
@@ -82,7 +80,7 @@ function AccountantDesktopShell() {
           className="fixed z-50 top-4 flex items-center justify-center w-2.5 h-9 rounded-r-md shadow-sm text-neutral-300 transition-all duration-300 ease-in-out"
           style={{
             left: sidebarCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED,
-            background: '#0a3520',
+            background: 'var(--theme-sidebar, #0a3520)',
             border: '1px solid rgba(255,255,255,0.12)',
           }}
         >
@@ -94,100 +92,77 @@ function AccountantDesktopShell() {
 
       {/* Main content area */}
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
-        {/* Desktop header */}
-        <header
-          className="shrink-0 z-20 w-full"
-          style={{
-            background: 'var(--theme-bg-secondary)',
-            borderBottom: '1px solid var(--theme-border-default)',
-          }}
-        >
-          <div className="flex items-center gap-4 px-6 py-3">
-            {/* Page title for context */}
-            {pageTitle && (
-              <h1
-                className="hidden xl:block text-base font-semibold font-display truncate"
-                style={{ color: 'var(--theme-text-primary)' }}
-              >
-                {pageTitle}
-              </h1>
-            )}
-
-            {/* Spacer */}
-            <div className="flex-1" />
-
-            {/* Search bar - Command palette trigger */}
-            <button
-              onClick={() => setCmdOpen(true)}
-              className="flex items-center gap-3 rounded-xl border px-4 py-2 text-sm transition hover:border-[color-mix(in_srgb,var(--theme-brand-primary)_40%,transparent)] w-full max-w-md"
-              style={{
-                background: 'var(--theme-bg-primary)',
-                borderColor: 'var(--theme-border-default)',
-                color: 'var(--theme-text-muted)',
-              }}
-            >
-              <Search className="h-4 w-4 shrink-0" />
-              <span className="flex-1 text-left">Tìm kiếm nhanh...</span>
-              <kbd
-                className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-mono"
-                style={{
-                  borderColor: 'var(--theme-border-default)',
-                  background: 'var(--theme-bg-tertiary)',
-                  color: 'var(--theme-text-muted)',
-                }}
-              >
-                <CmdIcon className="h-3 w-3" />K
-              </kbd>
-            </button>
-
-            {/* Bell */}
-            <button
-              onClick={() => setNotifOpen(true)}
-              className="relative flex h-10 w-10 items-center justify-center rounded-xl transition touch-manipulation"
-              style={{
-                background: 'var(--theme-bg-primary)',
-                border: '1px solid var(--theme-border-default)',
-                color: 'var(--theme-text-primary)',
-              }}
-              aria-label="Thông báo"
-            >
-              <Bell className="h-[18px] w-[18px]" />
-              {unread > 0 && (
-                <span
-                  className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[10px] font-bold leading-none px-1"
-                  style={{ background: 'var(--theme-status-error)', color: '#fff' }}
-                >
-                  {unread > 99 ? '99+' : unread}
-                </span>
-              )}
-            </button>
-
-            {/* Profile */}
-            <div ref={profileBtnRef} className="relative">
-              <button
-                onClick={() => setProfileOpen(v => !v)}
-                className="flex h-10 w-10 items-center justify-center rounded-xl transition touch-manipulation"
-                style={{
-                  background: 'var(--theme-bg-primary)',
-                  border: '1px solid var(--theme-border-default)',
-                  color: 'var(--theme-text-primary)',
-                }}
-                aria-label="Tài khoản"
-              >
-                <UserCircle className="h-[18px] w-[18px]" />
-              </button>
-              <UserDropdown
-                open={profileOpen}
-                onClose={() => setProfileOpen(false)}
-                anchorRef={profileBtnRef}
-              />
-            </div>
-          </div>
-        </header>
-
         {/* Content */}
-        <main className={`flex-1 overflow-y-auto ${isFullscreen ? '' : 'px-6 py-6'}`}>
-          <div className={isFullscreen ? 'h-full' : 'mx-auto max-w-7xl'}>
+        <main className="flex-1 overflow-y-auto">
+          {!isFullscreen && (
+            <header
+              className="w-full"
+              style={{
+                background: 'var(--theme-bg-secondary)',
+                borderBottom: '1px solid var(--theme-border-default)',
+              }}
+            >
+              <div className="flex items-center gap-3 px-6 py-1.5">
+                {/* Page title for context */}
+                {pageTitle && (
+                  <h1
+                    className="hidden xl:block text-sm font-semibold font-display truncate"
+                    style={{ color: 'var(--theme-text-primary)' }}
+                  >
+                    {pageTitle}
+                  </h1>
+                )}
+
+                {/* Spacer */}
+                <div className="flex-1" />
+
+                {/* Bell */}
+                <button
+                  onClick={() => setNotifOpen(true)}
+                  className="relative flex h-8 w-8 items-center justify-center rounded-lg transition touch-manipulation"
+                  style={{
+                    background: 'var(--theme-bg-primary)',
+                    border: '1px solid var(--theme-border-default)',
+                    color: 'var(--theme-text-primary)',
+                  }}
+                  aria-label="Thông báo"
+                >
+                  <Bell className="h-4 w-4" />
+                  {unread > 0 && (
+                    <span
+                      className="absolute -top-1 -right-1 min-w-[16px] h-4 flex items-center justify-center rounded-full text-[9px] font-bold leading-none px-0.5"
+                      style={{ background: 'var(--theme-status-error)', color: '#fff' }}
+                    >
+                      {unread > 99 ? '99+' : unread}
+                    </span>
+                  )}
+                </button>
+
+                {/* Profile */}
+                <div ref={profileBtnRef} className="relative">
+                  <button
+                    onClick={() => setProfileOpen(v => !v)}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg transition touch-manipulation"
+                    style={{
+                      background: 'var(--theme-bg-primary)',
+                      border: '1px solid var(--theme-border-default)',
+                      color: 'var(--theme-text-primary)',
+                    }}
+                    aria-label="Tài khoản"
+                  >
+                    <UserCircle className="h-4 w-4" />
+                  </button>
+                  <UserDropdown
+                    open={profileOpen}
+                    onClose={() => setProfileOpen(false)}
+                    anchorRef={profileBtnRef}
+                  />
+                </div>
+              </div>
+            </header>
+          )}
+
+          <div className={isFullscreen ? 'h-full' : 'px-6 py-6 mx-auto max-w-7xl'}>
             <Outlet />
           </div>
         </main>

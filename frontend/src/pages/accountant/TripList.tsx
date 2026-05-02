@@ -259,7 +259,7 @@ export function TripList() {
       </Button>
       <Button
         onClick={handleDownloadTemplate}
-        className="hidden lg:flex items-center gap-1.5 h-9 px-3 text-xs font-semibold rounded-xl"
+        className="hidden sm:flex items-center gap-1.5 h-9 px-3 text-xs font-semibold rounded-xl"
         style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
       >
         <FileSpreadsheet className="w-3.5 h-3.5" /> Tải mẫu

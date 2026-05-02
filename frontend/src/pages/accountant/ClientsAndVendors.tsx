@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Plus, Pencil, Trash2, Building2, UserCircle, Truck, Phone, MapPin, User } from 'lucide-react'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
@@ -27,6 +27,7 @@ interface UnifiedPartner {
   type: ClientType | VendorType
   phone: string
   taxCode: string
+  code: string
   address: string
   contactPerson: string
   raw: Client | Vendor
@@ -65,6 +66,7 @@ function toUnified(clients: Client[], vendors: Vendor[]): UnifiedPartner[] {
     type: c.type,
     phone: c.phone,
     taxCode: c.taxCode ?? '',
+    code: c.code ?? '',
     address: c.address ?? '',
     contactPerson: c.contactPerson ?? '',
     raw: c,
@@ -76,26 +78,12 @@ function toUnified(clients: Client[], vendors: Vendor[]): UnifiedPartner[] {
     type: v.type ?? 'company',
     phone: v.phone ?? '',
     taxCode: v.taxCode ?? '',
+    code: '',
     address: v.address ?? '',
     contactPerson: v.contactPerson ?? '',
     raw: v,
   }))
   return [...clientRows, ...vendorRows]
-}
-
-function Initials({ name }: { name: string }) {
-  const parts = name.trim().split(/\s+/)
-  const letters = parts.length >= 2
-    ? parts[0][0] + parts[parts.length - 1][0]
-    : name.slice(0, 2)
-  return (
-    <div
-      className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 select-none"
-      style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)', opacity: 0.85 }}
-    >
-      {letters.toUpperCase()}
-    </div>
-  )
 }
 
 // ─── Detail dialog ──────────────────────────────────────────────────────────────
@@ -158,22 +146,23 @@ function FormDialog({ open, onClose, kind, editing }: FormDialogProps) {
   const createVendor = useCreateVendor()
   const updateVendor = useUpdateVendor()
 
-  const handleOpenChange = useCallback((isOpen: boolean) => {
-    if (isOpen && editing) {
-      setForm({
+  // Populate form whenever the dialog opens or the editing target changes
+  useEffect(() => {
+    if (open) {
+      setForm(editing ? {
         name: editing.name,
         type: editing.type,
         taxCode: editing.taxCode,
         address: editing.address,
         phone: editing.phone,
         contactPerson: editing.contactPerson,
-      })
-    } else if (isOpen) {
-      setForm(EMPTY_FORM)
-    } else {
-      onClose()
+      } : EMPTY_FORM)
     }
-  }, [editing, onClose])
+  }, [open, editing])
+
+  const handleOpenChange = useCallback((isOpen: boolean) => {
+    if (!isOpen) onClose()
+  }, [onClose])
 
   const updateField = useCallback((field: string, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }))
@@ -375,8 +364,9 @@ export function ClientsAndVendors() {
     return (
       <div className="rounded-2xl border border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] overflow-hidden shadow-sm">
         {/* Header */}
-        <div className="hidden lg:grid grid-cols-[2fr_1fr_1fr_1.5fr_1fr_60px] gap-4 px-5 py-3 border-b border-[var(--theme-border-default)]">
-          {['Tên', 'Loại đối tác', 'Điện thoại', 'Địa chỉ', 'Người liên hệ', ''].map(h => (
+        <div className="overflow-x-auto">
+        <div className="grid grid-cols-[200px_100px_100px_120px_180px_150px] gap-4 px-5 py-3 border-b border-[var(--theme-border-default)] min-w-[850px]">
+          {['Tên', 'Mã đối tác', 'Nhóm', 'Điện thoại', 'Địa chỉ', 'Người liên hệ'].map(h => (
             <span key={h} className="text-[11px] font-semibold uppercase tracking-wider text-[var(--theme-text-muted)]">
               {h}
             </span>
@@ -389,20 +379,24 @@ export function ClientsAndVendors() {
             key={`${row.kind}-${row.id}`}
             onClick={() => setSelected(row)}
             className={`
-              hidden lg:grid lg:grid-cols-[2fr_1fr_1fr_1.5fr_1fr_60px] items-center gap-4 px-5 py-3.5
+              grid grid-cols-[200px_100px_100px_120px_180px_150px] items-center gap-4 px-5 py-3.5 min-w-[850px]
               cursor-pointer transition-colors hover:bg-[var(--theme-bg-tertiary)]
               ${i < filtered.length - 1 ? 'border-b border-[var(--theme-border-default)]' : ''}
             `}
           >
             {/* Name */}
             <div className="flex items-center gap-3 min-w-0">
-              <Initials name={row.name} />
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-[var(--theme-text-primary)] truncate">{row.name}</p>
+                <p className="text-xs font-semibold text-[var(--theme-text-primary)] truncate">{row.name}</p>
                 {row.taxCode && (
-                  <p className="text-xs text-[var(--theme-text-muted)] mt-0.5">MST: {row.taxCode}</p>
+                  <p className="text-[11px] text-[var(--theme-text-muted)] mt-0.5">MST: {row.taxCode}</p>
                 )}
               </div>
+            </div>
+
+            {/* Partner code */}
+            <div className="text-xs text-[var(--theme-text-secondary)] truncate">
+              {row.code || <span className="text-[var(--theme-text-muted)]">—</span>}
             </div>
 
             {/* Partner type badge */}
@@ -413,10 +407,10 @@ export function ClientsAndVendors() {
             />
 
             {/* Phone */}
-            <div className="flex items-center gap-1.5 text-sm text-[var(--theme-text-secondary)]">
+            <div className="flex items-center gap-1.5 text-xs text-[var(--theme-text-secondary)]">
               {row.phone ? (
                 <>
-                  <Phone size={13} className="shrink-0 text-[var(--theme-text-muted)]" />
+                  <Phone size={12} className="shrink-0 text-[var(--theme-text-muted)]" />
                   {row.phone}
                 </>
               ) : (
@@ -425,10 +419,10 @@ export function ClientsAndVendors() {
             </div>
 
             {/* Address */}
-            <div className="flex items-start gap-1.5 text-sm text-[var(--theme-text-secondary)]">
+            <div className="flex items-start gap-1.5 text-xs text-[var(--theme-text-secondary)]">
               {row.address ? (
                 <>
-                  <MapPin size={13} className="shrink-0 mt-0.5 text-[var(--theme-text-muted)]" />
+                  <MapPin size={12} className="shrink-0 mt-0.5 text-[var(--theme-text-muted)]" />
                   <span className="line-clamp-2 leading-snug">{row.address}</span>
                 </>
               ) : (
@@ -437,30 +431,19 @@ export function ClientsAndVendors() {
             </div>
 
             {/* Contact person */}
-            <div className="flex items-center gap-1.5 text-sm text-[var(--theme-text-secondary)]">
+            <div className="flex items-center gap-1.5 text-xs text-[var(--theme-text-secondary)]">
               {row.contactPerson ? (
                 <>
-                  <User size={13} className="shrink-0 text-[var(--theme-text-muted)]" />
+                  <User size={12} className="shrink-0 text-[var(--theme-text-muted)]" />
                   {row.contactPerson}
                 </>
               ) : (
                 <span className="text-[var(--theme-text-muted)]">—</span>
               )}
             </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-1 justify-end">
-              <button
-                onClick={e => { e.stopPropagation(); handleOpenEdit(row) }}
-                className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors hover:bg-[var(--theme-bg-tertiary)]"
-                style={{ color: 'var(--theme-text-muted)' }}
-                aria-label="Sửa"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-              </button>
-            </div>
           </div>
         ))}
+        </div>
       </div>
     )
   }
@@ -545,25 +528,27 @@ export function ClientsAndVendors() {
       {!loading && (
         <>
           {/* Desktop add button */}
-          <div className="hidden lg:flex justify-end mb-4">
-            <button
-              onClick={handleOpenCreate}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
-              style={{ background: 'var(--theme-text-primary)', color: 'var(--theme-bg-primary)' }}
-            >
-              <Plus className="w-4 h-4" />
-              Thêm
-            </button>
-          </div>
+          {!isMobile && (
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={handleOpenCreate}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+                style={{ background: 'var(--theme-text-primary)', color: 'var(--theme-bg-primary)' }}
+              >
+                <Plus className="w-4 h-4" />
+                Thêm
+              </button>
+            </div>
+          )}
 
           {isMobile ? renderMobile() : renderDesktop()}
         </>
       )}
 
       {/* Mobile FAB */}
-      <div className="lg:hidden">
+      {isMobile && (
         <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={handleOpenCreate} />
-      </div>
+      )}
 
       {/* Dialogs */}
       <DetailDialog

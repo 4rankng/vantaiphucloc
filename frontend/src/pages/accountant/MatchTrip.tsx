@@ -309,10 +309,11 @@ export function MatchTrip() {
     <>
       {showKeyboardHelp && <KeyboardShortcutsPanel onClose={() => setShowKeyboardHelp(false)} />}
 
-      <div className="flex flex-col h-[calc(100dvh-56px)] lg:h-screen">
+      <div className="flex flex-col h-[calc(100dvh-56px)] md:h-screen">
         {/* Header - Desktop */}
+        {!isMobile && (
         <div
-          className="hidden lg:flex items-center justify-between px-8 py-4 border-b shrink-0"
+          className="flex items-center justify-between px-8 py-4 border-b shrink-0"
           style={{ borderColor: 'var(--theme-border-light)' }}
         >
           <div className="flex items-center gap-4">
@@ -342,6 +343,7 @@ export function MatchTrip() {
             <span className="text-sm font-medium" style={{ color: 'var(--theme-text-secondary)' }}>Phím tắt</span>
           </button>
         </div>
+        )}
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col lg:flex-row">
@@ -521,7 +523,7 @@ export function MatchTrip() {
               <>
                 {/* Comparison Header */}
                 <div
-                  className="hidden lg:flex items-center justify-between px-6 py-3 border-b shrink-0"
+                  className="flex items-center justify-between px-6 py-3 border-b shrink-0"
                   style={{
                     background: 'var(--theme-bg-secondary)',
                     borderColor: 'var(--theme-border-light)',
@@ -603,7 +605,7 @@ export function MatchTrip() {
                         label="Đã chốt"
                       />
                       <span
-                        className="text-xs px-2 py-1 rounded font-mono hidden lg:inline"
+                        className="text-xs px-2 py-1 rounded font-mono"
                         style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
                       >
                         Enter
