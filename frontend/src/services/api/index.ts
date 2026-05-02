@@ -42,6 +42,7 @@ export const apiClient = {
   deletePricing: pricingsApi.deletePricing,
 
   // Work Orders
+  getWorkOrder: workOrdersApi.getWorkOrder,
   getWorkOrders: workOrdersApi.getWorkOrders,
   createWorkOrder: workOrdersApi.createWorkOrder,
   updateWorkOrder: workOrdersApi.updateWorkOrder,

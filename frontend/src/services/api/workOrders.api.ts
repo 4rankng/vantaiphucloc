@@ -12,6 +12,15 @@ interface WorkOrderFilters {
   status?: WorkOrder['status']
 }
 
+export async function getWorkOrder(id: number): Promise<ApiResponse<WorkOrder>> {
+  try {
+    const res = await api.get(`/work-orders/${id}`)
+    return ok(toCamel<WorkOrder>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
 export async function getWorkOrders(filters?: WorkOrderFilters): Promise<ApiResponse<WorkOrder[]>> {
   const cacheKey = `work-orders:${filters?.driverId || ''}:${filters?.status || ''}`
   try {

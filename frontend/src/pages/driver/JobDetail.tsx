@@ -14,11 +14,10 @@ export function JobDetail() {
   useEffect(() => {
     if (!jobIdStr) return
     let cancelled = false
-    apiClient.getWorkOrders({}).then(res => {
-      if (!cancelled && res.success) {
-        const found = res.data.find((w: WorkOrder) => w.id === jobId)
-        setJob(found ?? null)
-      }
+    apiClient.getWorkOrder(jobId).then(res => {
+      if (!cancelled && res.success) setJob(res.data)
+      if (!cancelled) setLoading(false)
+    }).catch(() => {
       if (!cancelled) setLoading(false)
     })
     return () => { cancelled = true }
