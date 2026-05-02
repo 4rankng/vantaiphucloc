@@ -503,8 +503,6 @@ export function WorkOrderList() {
   // Desktop view with DataTablePro
   return (
     <PageContainer
-      title="Đối soát phiếu công"
-      subtitle={`${filtered.length} phiếu`}
       showBack
     >
       <div className="space-y-4">

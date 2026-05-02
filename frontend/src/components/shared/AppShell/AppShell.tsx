@@ -10,13 +10,13 @@ interface AppShellProps {
 /**
  * AppShell — mobile-first layout wrapper with glass topbar.
  * Body gradient: brand color bleeds from top 140px, then fades to page bg.
- * Topbar: sticky with backdrop blur (glass effect).
+ * Topbar: static with backdrop blur (glass effect).
  */
 export function AppShell({ topbarProps, contentClassName, children }: AppShellProps) {
   return (
     <div className="min-h-[100dvh] w-full" style={{ background: 'var(--body-gradient)' }}>
       <header
-        className="sticky top-0 z-20 w-full"
+        className="z-20 w-full"
         style={{
           background: 'var(--glass-bg)',
           backdropFilter: 'var(--glass-blur)',

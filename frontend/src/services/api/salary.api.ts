@@ -14,17 +14,18 @@ export interface JobStatus {
 }
 
 export async function calculateSalary(
-  driverId: number,
+  driverId: number | undefined,
   startDate: string,
   endDate: string,
-): Promise<ApiResponse<AsyncJobResult>> {
+): Promise<ApiResponse<AsyncJobResult[]>> {
   try {
-    const res = await api.post('/salary/calculate', {
-      driver_id: driverId,
+    const payload: Record<string, unknown> = {
       start_date: startDate,
       end_date: endDate,
-    })
-    return ok(toCamel<AsyncJobResult>(res.data))
+    }
+    if (driverId != null) payload.driver_id = driverId
+    const res = await api.post('/salary/calculate', payload)
+    return ok(toCamel<AsyncJobResult[]>(res.data))
   } catch (err) {
     return fail(err)
   }

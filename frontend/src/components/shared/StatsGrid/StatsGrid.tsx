@@ -101,7 +101,7 @@ function StatCard({
 
           {/* Value */}
           <p
-            className="text-2xl lg:text-3xl font-bold font-display tabular-nums leading-tight truncate"
+            className="text-base lg:text-lg font-bold font-display tabular-nums leading-tight break-all"
             style={{ color: valueColor ?? 'var(--theme-text-primary)' }}
           >
             {value}
@@ -136,18 +136,7 @@ function StatCard({
           )}
         </div>
 
-        {/* Icon */}
-        {icon && (
-          <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-            style={{
-              background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)',
-              color: 'var(--theme-brand-primary)',
-            }}
-          >
-            {icon}
-          </div>
-        )}
+
       </div>
     </Component>
   )

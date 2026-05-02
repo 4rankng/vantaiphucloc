@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react'
-import { Button, Input, Label } from '@/components/ui'
+import { Button, Input } from '@/components/ui'
 import {
   useSalaryConfig, useUpdateSalaryConfig,
   useSalaryPeriods, useUpdateSalaryPeriod,
-  useCalculateSalary, useDrivers, useExportSalaryExcel,
+  useCalculateSalary, useExportSalaryExcel,
 } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { formatCurrencyFull, type SalaryPeriodStatus } from '@/data/domain'
@@ -73,23 +73,28 @@ function PeriodConfigSection() {
 
       {open && (
         <div className="px-4 pb-4 space-y-3" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
+          {/* Row 1 — inputs with inline labels */}
           <div className="grid grid-cols-2 gap-3 pt-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Từ ngày</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1.5 text-[10px] font-semibold leading-none pointer-events-none"
+                style={{ color: 'var(--theme-text-muted)' }}>Từ ngày</span>
               <Input type="number" min={1} max={31} value={fromDay} onChange={e => setFromDay(e.target.value)}
-                placeholder="26" className="text-base font-mono text-center h-11" />
+                placeholder="26" className="text-base font-mono text-center h-12 pt-4" />
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Đến ngày</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1.5 text-[10px] font-semibold leading-none pointer-events-none"
+                style={{ color: 'var(--theme-text-muted)' }}>Đến ngày</span>
               <Input type="number" min={1} max={31} value={toDay} onChange={e => setToDay(e.target.value)}
-                placeholder="25" className="text-base font-mono text-center h-11" />
+                placeholder="25" className="text-base font-mono text-center h-12 pt-4" />
             </div>
           </div>
+          {/* Row 2 — description */}
           {fromDay && toDay && (
             <div className="rounded-xl p-2.5" style={{ background: 'var(--theme-brand-primary-light)' }}>
               <p className="text-xs font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>{explanation}</p>
             </div>
           )}
+          {/* Row 3 — save button */}
           <Button onClick={handleSave} disabled={updateConfig.isPending || loading}
             className="w-full h-10 font-bold rounded-xl"
             style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
@@ -105,21 +110,18 @@ function PeriodConfigSection() {
 
 function CalculateSection() {
   const toast = useToast()
-  const { data: drivers = [] } = useDrivers()
   const { data: config } = useSalaryConfig()
   const calculateSalary = useCalculateSalary()
   const exportSalary = useExportSalaryExcel()
 
-  const [driverId, setDriverId] = useState<number | ''>('')
   const [calculating, setCalculating] = useState(false)
 
-  // Compute current period dates from config
   const { startDate, endDate } = useMemo(() => {
     const now = new Date()
     const fromDay = config?.from_day ?? 26
     const toDay = config?.to_day ?? 25
     const year = now.getFullYear()
-    const month = now.getMonth() // 0-indexed
+    const month = now.getMonth()
 
     let start: Date, end: Date
     if (now.getDate() >= fromDay) {
@@ -136,13 +138,9 @@ function CalculateSection() {
   }, [config])
 
   const handleCalculate = async () => {
-    if (!driverId) {
-      toast.error('Lỗi', 'Vui lòng chọn tài xế')
-      return
-    }
     setCalculating(true)
     calculateSalary.mutate(
-      { driverId: Number(driverId), startDate, endDate },
+      { startDate, endDate },
       {
         onSuccess: () => { toast.success('Đã tính lương', `Kỳ ${startDate} → ${endDate}`); setCalculating(false) },
         onError: () => { toast.error('Lỗi', 'Không thể tính lương'); setCalculating(false) },
@@ -172,21 +170,12 @@ function CalculateSection() {
           {startDate} → {endDate}
         </p>
       </div>
-      <select
-        value={driverId}
-        onChange={e => setDriverId(e.target.value ? Number(e.target.value) : '')}
-        className="w-full h-10 rounded-xl px-3 text-sm"
-        style={{ background: 'var(--theme-bg-tertiary)', border: '1px solid var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
-      >
-        <option value="">Chọn tài xế</option>
-        {drivers.map(d => <option key={d.id} value={d.id}>{d.username}{d.tractorPlate ? ` · ${d.tractorPlate}` : ''}</option>)}
-      </select>
       <div className="flex gap-2">
-        <Button onClick={handleCalculate} disabled={calculating || !driverId}
+        <Button onClick={handleCalculate} disabled={calculating}
           className="flex-1 h-10 font-bold rounded-xl text-sm"
           style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
           <Calculator className="w-4 h-4 mr-1.5" />
-          {calculating ? 'Đang tính...' : 'Tính lương'}
+          {calculating ? 'Đang tính...' : 'Tính lương tất cả'}
         </Button>
         <Button onClick={handleExport} disabled={exportSalary.isPending}
           className="h-10 px-3 rounded-xl"
@@ -205,6 +194,16 @@ function SalaryPeriodsList() {
   const { data: periods = [], isLoading } = useSalaryPeriods()
   const updatePeriod = useUpdateSalaryPeriod()
   const [confirmPay, setConfirmPay] = useState<number | null>(null)
+
+  const byDriver = useMemo(() => {
+    const map = new Map<string, typeof periods>()
+    periods.forEach(p => {
+      const list = map.get(p.driverName) ?? []
+      list.push(p)
+      map.set(p.driverName, list)
+    })
+    return Array.from(map.entries())
+  }, [periods])
 
   const handleMarkPaid = (id: number) => {
     updatePeriod.mutate(
@@ -229,17 +228,6 @@ function SalaryPeriodsList() {
       </div>
     )
   }
-
-  // Group by driver
-  const byDriver = useMemo(() => {
-    const map = new Map<string, typeof periods>()
-    periods.forEach(p => {
-      const list = map.get(p.driverName) ?? []
-      list.push(p)
-      map.set(p.driverName, list)
-    })
-    return Array.from(map.entries())
-  }, [periods])
 
   return (
     <div className="space-y-4">

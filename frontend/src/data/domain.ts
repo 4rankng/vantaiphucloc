@@ -253,7 +253,8 @@ export interface ReconciliationUploadResponse {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number | undefined | null): string {
+  if (amount == null) return '— ₫'
   return amount.toLocaleString('vi-VN') + ' ₫'
 }
 
