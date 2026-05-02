@@ -31,6 +31,7 @@ from app.services.pricing_service import find_pricing
 from app.services.ocr_service import MAX_OCR_ATTEMPTS, extract_container_number
 from app.services.photo_storage import save_base64_photo
 from app.services.audit_service import log_action
+from app.core.audit_context import set_audit_reason
 from app.core.redis import get_redis
 
 _logger = logging.getLogger(__name__)
@@ -293,9 +294,6 @@ async def update_work_order(
     await db.commit()
     await db.refresh(work_order)
 
-    await log_action(db, user_id=current_user.id, action="UPDATE", table_name="work_orders",
-        record_id=work_order.id, request=request)
-
     return await _load_work_order_out(db, work_order)
 
 
@@ -323,9 +321,7 @@ async def cancel_work_order(
         raise HTTPException(status_code=403, detail="Cannot cancel a matched work order. Unmatch first.")
 
     work_order.status = "CANCELLED"
-
-    await log_action(db, user_id=current_user.id, action="CANCEL", table_name="work_orders",
-        record_id=work_order.id, reason=body.reason, request=request)
+    set_audit_reason(body.reason)
 
     await db.commit()
     await db.refresh(work_order)

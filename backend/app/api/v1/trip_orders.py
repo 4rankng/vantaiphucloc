@@ -17,6 +17,8 @@ from app.schemas.domain import TripOrderCreate, TripOrderUpdate, TripOrderOut, T
 from app.core.deps import get_current_user, require_roles
 from app.services.salary_service import get_salary_period_dates
 from app.services.audit_service import log_action
+from app.core.audit_context import set_audit_reason
+from app.workers import enqueue
 from app.validators.container import validate_container_quantity, validate_same_work_type
 
 _logger = logging.getLogger(__name__)
@@ -276,9 +278,6 @@ async def create_trip_order(
     await db.commit()
     await db.refresh(trip_order)
 
-    await log_action(db, user_id=current_user.id, action="CREATE", table_name="trip_orders",
-        record_id=trip_order.id, request=request)
-
     if trip_order.driver_id:
         await _enqueue_salary_recalc(db, trip_order.driver_id, body.trip_date)
 
@@ -381,6 +380,10 @@ async def update_trip_order(
     for field, value in update_data.items():
         setattr(trip_order, field, value)
 
+    # If salary/allowance changed, enqueue earning sync for linked WOs
+    if "driver_salary" in update_data or "allowance" in update_data:
+        await enqueue("sync_wo_earning_on_to_update", trip_order_id=trip_order.id)
+
     if new_containers is not None:
         await db.execute(
             delete(TripOrderContainer).where(
@@ -426,9 +429,6 @@ async def update_trip_order(
     await db.commit()
     await db.refresh(trip_order)
 
-    await log_action(db, user_id=current_user.id, action="UPDATE", table_name="trip_orders",
-        record_id=trip_order.id, request=request)
-
     # Enqueue salary recalculation if matched work orders changed
     if new_matched_ids:
         ref_date = trip_order.trip_date if hasattr(trip_order, "trip_date") and trip_order.trip_date else date.today()
@@ -465,8 +465,7 @@ async def cancel_trip_order(
     else:
         raise HTTPException(status_code=400, detail=f"Invalid status for cancellation: {trip_order.status}")
 
-    await log_action(db, user_id=current_user.id, action="CANCEL", table_name="trip_orders",
-        record_id=trip_order.id, reason=body.reason, request=request)
+    set_audit_reason(body.reason)
 
     await db.commit()
     await db.refresh(trip_order)
@@ -503,14 +502,10 @@ async def toggle_trip_order_confirmation(
             if wo:
                 wo.status = "COMPLETED"
 
-        await log_action(db, user_id=current_user.id, action="CONFIRM", table_name="trip_orders",
-            record_id=trip_order.id, request=request)
         _logger.info("TripOrder #%d confirmed by user #%d", trip_order_id, current_user.id)
     else:
         trip_order.confirmed_by = None
         trip_order.confirmed_at = None
-        await log_action(db, user_id=current_user.id, action="UPDATE", table_name="trip_orders",
-            record_id=trip_order.id, request=request)
         _logger.info("TripOrder #%d unconfirmed by user #%d", trip_order_id, current_user.id)
 
     await db.commit()

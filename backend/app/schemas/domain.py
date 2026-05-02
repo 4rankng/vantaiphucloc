@@ -67,6 +67,7 @@ class VendorOut(BaseModel):
     tax_code: str | None = None
     address: str | None = None
     contact_person: str | None = None
+    is_active: bool = True
     created_at: datetime
     updated_at: datetime
 
@@ -144,6 +145,7 @@ class RouteOut(BaseModel):
     type_20ft: int
     type_40ft: int
     is_two_way: bool
+    is_active: bool = True
     created_at: datetime
     updated_at: datetime
 
@@ -211,6 +213,7 @@ class PricingOut(BaseModel):
     unit_price: int
     driver_salary: int
     allowance: int
+    is_active: bool = True
     created_at: datetime
     updated_at: datetime
 

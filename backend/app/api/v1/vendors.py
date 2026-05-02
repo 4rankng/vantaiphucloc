@@ -6,7 +6,7 @@ from sqlalchemy import select, func
 
 from app.database import get_db
 from app.models.base import User
-from app.models.domain import Vendor, WorkOrder, TripOrder
+from app.models.domain import Vendor
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import VendorCreate, VendorUpdate, VendorOut
 from app.core.deps import require_roles
@@ -21,11 +21,12 @@ async def list_vendors(
     current_user: User = Depends(require_roles("accountant", "director", "driver", "superadmin")),
     db: AsyncSession = Depends(get_db),
 ):
-    total_q = await db.execute(select(func.count(Vendor.id)))
+    total_q = await db.execute(select(func.count(Vendor.id)).where(Vendor.is_active == True))
     total = total_q.scalar() or 0
 
     result = await db.execute(
         select(Vendor)
+        .where(Vendor.is_active == True)
         .order_by(Vendor.id.asc())
         .offset((page - 1) * page_size)
         .limit(page_size)
@@ -112,15 +113,5 @@ async def delete_vendor(
     if vendor is None:
         raise HTTPException(status_code=404, detail="Vendor not found")
 
-    # Guard: check for drivers associated with this vendor
-    drivers_with_vendor = await db.execute(
-        select(User).where(User.vendor == vendor.name).limit(1)
-    )
-    if drivers_with_vendor.scalar_one_or_none():
-        raise HTTPException(
-            status_code=409,
-            detail="Cannot delete vendor with associated drivers",
-        )
-
-    await db.delete(vendor)
+    vendor.is_active = False
     await db.commit()

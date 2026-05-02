@@ -1,10 +1,9 @@
 import { useRef } from 'react'
-import { Camera, RotateCcw, Trash2, AlertCircle, WifiOff, Loader2, Image } from 'lucide-react'
+import { Camera, RotateCcw, Trash2, AlertCircle, WifiOff, Loader2, Image, Plus } from 'lucide-react'
 import { ContainerScanner } from '@/components/shared/ContainerScanner'
 import { ContainerTypeGrid } from '@/components/shared/ContainerTypeGrid'
 import { TripSummaryDialog } from '@/components/shared/TripSummaryDialog'
 import { SuccessOverlay } from '@/components/shared/SuccessOverlay'
-import { AddMorePrompt } from '@/components/shared/AddMorePrompt'
 import { RecentTripSuggestions } from '@/components/shared/RecentTripSuggestions'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { useCreateWorkOrder } from './useCreateWorkOrder'
@@ -15,7 +14,7 @@ export function CreateWorkOrder() {
     clients, routes, recentOrders,
     containers, clientId, pickupLocation, dropoffLocation,
     submitting, scannerOpen, galleryImage, isOnline, summaryOpen, showSuccess,
-    showAddMore, forceManualEntry, missingFields,
+    forceManualEntry, missingFields,
     canSubmit, summaryContainers, summaryClientName,
     setClientId, setPickupLocation, setDropoffLocation,
     openScanner, openGallery, handleScanComplete, setScannerOpen,
@@ -202,12 +201,18 @@ export function CreateWorkOrder() {
         ))}
       </div>
 
-      {/* Add more container prompt */}
-      <AddMorePrompt
-        visible={!!showAddMore}
-        onAdd={addContainer}
-        onDismiss={dismissAddMore}
-      />
+      {/* Add more container */}
+      <button
+        onClick={addContainer}
+        className="w-full h-12 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 touch-manipulation transition-colors active:scale-[0.98]"
+        style={{
+          background: 'transparent',
+          color: 'var(--theme-brand-primary)',
+          border: '2px dashed var(--theme-border-default)',
+        }}
+      >
+        <Plus className="w-4 h-4" /> Thêm cont
+      </button>
 
       {/* Customer & Route section */}
       <div className="space-y-4">
