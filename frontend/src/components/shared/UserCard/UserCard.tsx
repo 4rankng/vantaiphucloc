@@ -1,6 +1,7 @@
 import { Users } from 'lucide-react'
 import { ROLE_LABELS } from '@/data/domain'
-import { ROLE_ICONS, type UserAccount } from '@/pages/superadmin/types'
+import { ROLE_ICONS } from '@/pages/superadmin/types'
+import type { UserAccount } from '@/services/api/users.api'
 
 const PHUC_LOC = 'Phúc Lộc'
 
@@ -41,7 +42,7 @@ export function UserCard({ user, onTap }: { user: UserAccount; onTap: () => void
             )}
           </div>
         </div>
-        {!user.active && (
+        {!user.isActive && (
           <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0"
             style={{ background: 'var(--theme-status-error-light)', color: 'var(--theme-status-error-text)' }}>
             Ngưng

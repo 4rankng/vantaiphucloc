@@ -2,7 +2,7 @@ import { LayoutDashboard, Truck, CircleDollarSign, Shield, Search } from 'lucide
 import { FilterPills } from '@/components/shared/FilterPills'
 import { UserCard } from '@/components/shared/UserCard'
 import { ROLE_LABELS, type Role } from '@/data/domain'
-import { type UserAccount } from './types'
+import { type UserAccount } from '@/services/api/users.api'
 
 export function SuperAdminDashboard({
   users,
@@ -20,10 +20,10 @@ export function SuperAdminDashboard({
   onViewUser: (u: UserAccount) => void
 }) {
   const counts = {
-    superadmin: users.filter(u => u.role === 'superadmin' && u.active).length,
-    director: users.filter(u => u.role === 'director' && u.active).length,
-    driver: users.filter(u => u.role === 'driver' && u.active).length,
-    accountant: users.filter(u => u.role === 'accountant' && u.active).length,
+    superadmin: users.filter(u => u.role === 'superadmin' && u.isActive).length,
+    director: users.filter(u => u.role === 'director' && u.isActive).length,
+    driver: users.filter(u => u.role === 'driver' && u.isActive).length,
+    accountant: users.filter(u => u.role === 'accountant' && u.isActive).length,
   }
 
   const filtered = users.filter(u => {

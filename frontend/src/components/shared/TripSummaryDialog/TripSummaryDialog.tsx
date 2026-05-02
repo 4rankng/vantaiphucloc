@@ -12,6 +12,7 @@ import { playTick } from '@/lib/sound'
 interface TripSummaryDialogProps {
   open: boolean
   onConfirm: () => void
+  onClose: () => void
   containers: Array<{ number: string; type: WorkType }>
   clientName: string
   pickupLocation: string
@@ -21,6 +22,7 @@ interface TripSummaryDialogProps {
 export function TripSummaryDialog({
   open,
   onConfirm,
+  onClose,
   containers,
   clientName,
   pickupLocation,
@@ -33,14 +35,8 @@ export function TripSummaryDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={() => { /* unskippable */ }}>
-      <DialogContent
-        onInteractOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
-        className="max-w-sm"
-      >
-        {/* Hide the close X button */}
-        <style>{`[data-radix-dialog-close] { display: none !important; }`}</style>
+    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose() }}>
+      <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Gửi chuyến</DialogTitle>
           <DialogDescription>Xác nhận thông tin trước khi gửi</DialogDescription>
@@ -80,13 +76,26 @@ export function TripSummaryDialog({
           </div>
         </div>
 
-        <button
-          onClick={handleConfirm}
-          className="w-full h-12 rounded-2xl text-base font-bold touch-manipulation transition-colors active:scale-[0.98]"
-          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-        >
-          Xác nhận gửi
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={onClose}
+            className="flex-1 h-12 rounded-2xl text-base font-bold touch-manipulation transition-colors active:scale-[0.98]"
+            style={{
+              background: 'var(--theme-bg-secondary)',
+              color: 'var(--theme-text-secondary)',
+              border: '1.5px solid var(--theme-border-default)',
+            }}
+          >
+            Hủy
+          </button>
+          <button
+            onClick={handleConfirm}
+            className="flex-1 h-12 rounded-2xl text-base font-bold touch-manipulation transition-colors active:scale-[0.98]"
+            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+          >
+            Xác nhận
+          </button>
+        </div>
       </DialogContent>
     </Dialog>
   )
