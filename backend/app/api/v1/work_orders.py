@@ -311,13 +311,14 @@ async def update_work_order(
                 WorkOrderContainer.work_order_id == work_order.id
             )
         )
+        from app.utils.iso6346 import normalize_container_number as _norm
         for container in new_containers:
             photo_url = container.get("photo_url")
             if photo_url and photo_url.startswith("data:"):
                 photo_url = await asyncio.to_thread(save_base64_photo, photo_url)
             db.add(WorkOrderContainer(
                 work_order_id=work_order.id,
-                container_number=container["container_number"],
+                container_number=_norm(container["container_number"]),
                 work_type=container["work_type"],
                 photo_url=photo_url,
             ))
@@ -399,7 +400,7 @@ async def _create_work_order_db(
 ) -> WorkOrder:
     """Create WorkOrder + containers in the DB. Flushes but does NOT commit
     — the caller is responsible for committing (or letting the context manager do it)."""
-    from app.utils.iso6346 import validate_container_number
+    from app.utils.iso6346 import validate_container_number, normalize_container_number
 
     containers_data = body.containers
 
@@ -485,7 +486,7 @@ async def _create_work_order_db(
 
         db.add(WorkOrderContainer(
             work_order_id=work_order.id,
-            container_number=container.container_number,
+            container_number=normalize_container_number(container.container_number),
             work_type=container.work_type,
             photo_url=photo_url,
             photo_lat=container.photo_lat,

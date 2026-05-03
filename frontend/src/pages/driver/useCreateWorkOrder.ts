@@ -179,12 +179,16 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
   const validateTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
 
   const updateContainer = useCallback((idx: number, field: keyof ContainerForm, value: string) => {
+    // Normalize container numbers on input — strip hyphens, uppercase
+    const normalizedValue = field === 'containerNumber'
+      ? value.replace(/-/g, '').toUpperCase()
+      : value
     setContainers(prev => prev.map((c, i) =>
-      i === idx ? { ...c, [field]: value } : c,
+      i === idx ? { ...c, [field]: normalizedValue } : c,
     ))
     if (field === 'containerNumber') {
       // Frontend format check — immediate
-      const fmtErr = validateContainerFormat(value)
+      const fmtErr = validateContainerFormat(normalizedValue)
       if (fmtErr) {
         setContainerErrors(prev => ({ ...prev, [idx]: fmtErr }))
         clearTimeout(validateTimers.current[idx])
@@ -192,7 +196,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
       }
       // Format OK — debounce backend ISO 6346 check (check digit)
       clearTimeout(validateTimers.current[idx])
-      const raw = value.replace(/-/g, '').toUpperCase().trim()
+      const raw = normalizedValue.trim()
       if (!raw || raw.length !== 11) {
         setContainerErrors(prev => { const next = { ...prev }; delete next[idx]; return next })
         return

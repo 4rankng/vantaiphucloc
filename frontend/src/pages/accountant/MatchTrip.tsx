@@ -636,11 +636,11 @@ export function MatchTrip() {
                         value={c.number}
                         onChange={(e) => {
                           const updated = [...editDialogContainers]
-                          updated[idx].number = e.target.value
+                          updated[idx].number = e.target.value.replace(/-/g, '').toUpperCase()
                           setEditDialogContainers(updated)
                         }}
                         placeholder="Number"
-                        className="flex-1 px-3 py-2 rounded-lg border text-sm"
+                        className="flex-1 px-3 py-2 rounded-lg border text-sm font-mono"
                         style={{
                           background: 'var(--theme-bg-secondary)',
                           borderColor: 'var(--theme-border-default)',

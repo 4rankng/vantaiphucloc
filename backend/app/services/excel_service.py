@@ -517,10 +517,10 @@ async def import_trip_orders(
         dropoff = first_row.get("dropoff_location")
         route = first_row.get("route") or (f"{pickup} - {dropoff}" if pickup and dropoff else "")
 
-        # Build containers
+        # Build containers (normalize numbers — strip hyphens, uppercase)
         containers_data = []
         for row in group_rows:
-            cn = str(row.get("container_number", "")).strip()
+            cn = normalize_container_number(str(row.get("container_number", "")).strip())
             wt = str(row.get("work_type", "")).strip().upper()
             if cn:
                 containers_data.append({"container_number": cn, "work_type": wt or "E20"})
