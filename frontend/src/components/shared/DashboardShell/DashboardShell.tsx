@@ -21,7 +21,7 @@ export function DashboardShell({ title, description, actions, children, classNam
       {/* Header */}
       <div className="flex flex-col gap-4 px-5 pt-5 pb-0 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-xl font-bold text-[var(--theme-text-primary)]">{title}</h1>
+          <h1 className="typo-h1 text-[var(--theme-text-primary)]">{title}</h1>
           {description && (
             <p className="mt-1 text-sm text-[var(--theme-text-muted)]">{description}</p>
           )}

@@ -50,7 +50,7 @@ export function DriverHistory() {
       <FilterPills<FilterValue> options={filterOptions} value={filter} onChange={setFilter} />
 
       {totalEarnings > 0 && (
-        <div className="rounded-xl px-4 py-2.5 flex items-center justify-between"
+        <div className="rounded-lg px-4 py-2.5 flex items-center justify-between"
           style={{ background: 'var(--theme-brand-primary-light)' }}>
           <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>
             Tổng ({filtered.length} cont)
@@ -65,11 +65,11 @@ export function DriverHistory() {
         {loading ? (
           <>
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-20 rounded-2xl" style={{ background: 'var(--theme-bg-tertiary)' }} />
+              <div key={i} className="h-20 rounded-lg" style={{ background: 'var(--theme-bg-tertiary)' }} />
             ))}
           </>
         ) : filtered.length === 0 ? (
-          <div className="col-span-full rounded-2xl p-8 text-center" style={{ background: 'var(--theme-bg-secondary)' }}>
+          <div className="col-span-full rounded-lg p-8 text-center" style={{ background: 'var(--theme-bg-secondary)' }}>
             <Camera className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--theme-text-muted)' }} />
             <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có số cont nào</p>
           </div>

@@ -22,7 +22,7 @@ export function InlineStatStrip({ items, className }: InlineStatStripProps) {
 
   return (
     <div
-      className={cn('rounded-2xl overflow-hidden gap-px', className)}
+      className={cn('rounded-lg overflow-hidden gap-px', className)}
       style={{
         background: 'var(--theme-border-light)',
         boxShadow: 'var(--theme-shadow-card)',
@@ -83,7 +83,7 @@ export function StatCard({ icon: Icon, label, value, color, onClick }: StatCardP
   return (
     <div
       className={cn(
-        'rounded-2xl p-4 card-lift',
+        'rounded-lg p-4 card-lift',
         onClick && 'cursor-pointer',
       )}
       style={{

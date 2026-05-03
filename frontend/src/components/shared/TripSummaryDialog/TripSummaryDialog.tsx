@@ -38,7 +38,7 @@ export function TripSummaryDialog({
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose() }}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>Gửi chuyến</DialogTitle>
+          <DialogTitle>Xác nhận</DialogTitle>
           <DialogDescription>Xác nhận thông tin trước khi gửi</DialogDescription>
         </DialogHeader>
 
@@ -79,7 +79,7 @@ export function TripSummaryDialog({
         <div className="flex gap-2">
           <button
             onClick={onClose}
-            className="flex-1 h-12 rounded-2xl text-base font-bold touch-manipulation transition-colors active:scale-[0.98]"
+            className="flex-1 h-12 rounded-lg text-base font-bold touch-manipulation transition-colors active:scale-[0.98]"
             style={{
               background: 'var(--theme-bg-secondary)',
               color: 'var(--theme-text-secondary)',
@@ -90,7 +90,7 @@ export function TripSummaryDialog({
           </button>
           <button
             onClick={handleConfirm}
-            className="flex-1 h-12 rounded-2xl text-base font-bold touch-manipulation transition-colors active:scale-[0.98]"
+            className="flex-1 h-12 rounded-lg text-base font-bold touch-manipulation transition-colors active:scale-[0.98]"
             style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
           >
             Xác nhận

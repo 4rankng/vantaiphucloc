@@ -162,7 +162,7 @@ export function MatchTrip() {
         <div className="h-10 w-48 rounded-xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {[1, 2].map(i => (
-            <div key={i} className="h-64 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+            <div key={i} className="h-64 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
           ))}
         </div>
       </div>
@@ -174,24 +174,22 @@ export function MatchTrip() {
       {/* Header */}
       {!isMobile && (
         <div
-          className="flex items-center justify-between px-8 py-4 border-b shrink-0"
-          style={{ borderColor: 'var(--theme-border-light)' }}
+          className="flex items-center justify-between px-6 lg:px-8 py-4 border-b shrink-0"
+          style={{ borderColor: 'var(--theme-border-default)', background: 'var(--theme-bg-secondary)' }}
         >
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(-1)}
-              className="p-2 rounded-xl transition-colors hover:opacity-80"
-              style={{ background: 'var(--theme-bg-secondary)' }}
+              className="p-2 rounded-lg transition-colors"
+              style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
             >
-              <ArrowLeft className="w-5 h-5" style={{ color: 'var(--theme-text-secondary)' }} />
+              <ArrowLeft className="w-4 h-4" />
             </button>
             <div>
-              <h1 className="text-xl font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+              <h1 className="typo-h2" style={{ color: 'var(--theme-text-primary)' }}>
                 Khớp chuyến đi
               </h1>
-              <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>
-                So sánh và ghép nối chuyến yêu cầu với chuyến đã chạy
-              </p>
+              <p className="typo-meta">Ghép nối chuyến yêu cầu với chuyến đã chạy</p>
             </div>
           </div>
         </div>
@@ -215,7 +213,7 @@ export function MatchTrip() {
               </div>
               <button
                 onClick={() => setPickMode('trip')}
-                className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl touch-manipulation transition-all hover:scale-[1.01]"
+                className="w-full flex items-center justify-between px-4 py-3.5 rounded-lg touch-manipulation transition-all hover:scale-[1.01]"
                 style={{
                   background: 'var(--theme-bg-secondary)',
                   boxShadow: 'var(--theme-shadow-card)',
@@ -261,7 +259,7 @@ export function MatchTrip() {
               </div>
               <button
                 onClick={() => setPickMode('job')}
-                className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl touch-manipulation transition-all hover:scale-[1.01]"
+                className="w-full flex items-center justify-between px-4 py-3.5 rounded-lg touch-manipulation transition-all hover:scale-[1.01]"
                 style={{
                   background: 'var(--theme-bg-secondary)',
                   boxShadow: 'var(--theme-shadow-card)',
@@ -295,7 +293,7 @@ export function MatchTrip() {
             {/* Suggestions Panel */}
             {suggestions.length > 0 && !selectedJobId && (
               <div
-                className="mt-6 p-4 rounded-2xl"
+                className="mt-6 p-4 rounded-lg"
                 style={{
                   background: 'var(--theme-bg-secondary)',
                   border: '1px solid var(--theme-border-default)',
@@ -331,11 +329,11 @@ export function MatchTrip() {
             <>
               {/* Comparison Header */}
               <div
-                className="flex items-center justify-between px-6 py-3 border-b shrink-0"
-                style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-light)' }}
+                className="flex items-center justify-between px-6 py-4 border-b shrink-0"
+                style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}
               >
-                <h2 className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>So sánh chi tiết</h2>
-                <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Nhấn vào từng mục để chỉnh sửa</p>
+                <h2 className="typo-h3">So sánh chi tiết</h2>
+                <p className="typo-meta">Nhấn vào từng mục để chỉnh sửa</p>
               </div>
 
               {/* Comparison Rows */}
@@ -395,7 +393,7 @@ export function MatchTrip() {
           ) : (
             <div className="flex-1 flex items-center justify-center p-8">
               <div className="text-center max-w-sm">
-                <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: 'var(--theme-bg-secondary)' }}>
+                <div className="w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4" style={{ background: 'var(--theme-bg-secondary)' }}>
                   <ArrowUpDown className="w-8 h-8" style={{ color: 'var(--theme-text-muted)' }} />
                 </div>
                 <h3 className="text-lg font-bold mb-2" style={{ color: 'var(--theme-text-primary)' }}>Chọn hai chuyến để so sánh</h3>

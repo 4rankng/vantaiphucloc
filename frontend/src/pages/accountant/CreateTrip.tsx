@@ -5,10 +5,11 @@ import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { useClients, useRoutes, useCreateTripOrder, useCreateClient, useImportTripOrders } from '@/hooks/use-queries'
 import { WORK_TYPES, type WorkType } from '@/data/domain'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { CreateClientDialog } from '@/components/shared/CreateClientDialog'
 import { ImportResultDialog } from '@/components/shared/ImportResultDialog'
-import { Plus, Trash2, ArrowLeft, Upload } from 'lucide-react'
+import { Plus, Trash2, Upload, ChevronLeft } from 'lucide-react'
 import { useToast } from '@/components/atoms/Toast'
 
 interface CongItem {
@@ -109,121 +110,179 @@ export function CreateTrip() {
   }
 
   return (
-    <div className="space-y-4 lg:space-y-6">
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => navigate(-1)}
-          className="w-9 h-9 flex items-center justify-center rounded-xl transition-colors touch-manipulation"
-          style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)' }}
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </button>
-        <span className="text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>Tạo đơn hàng</span>
-        <div className="flex-1" />
+    <div className="page-container space-y-6">
+      {/* Page header */}
+      <PageHeader
+        title="Tạo chuyến"
+        breadcrumbs={
+          <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm" style={{ color: 'var(--theme-text-muted)' }}>
+            <ChevronLeft size={14} /> Đơn hàng
+          </button>
+        }
+      />
+
+      {/* Main form card */}
+      <div className="card p-6">
+        <div className="space-y-6">
+          {/* Section 1: Thông tin chung */}
+          <div>
+            <h3 className="typo-h3 mb-4">Thông tin chung</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 gap-y-4">
+              <div className="space-y-2">
+                <Label className="typo-form-label">Khách hàng *</Label>
+                <InlineSelect
+                  options={clientOptions}
+                  value={clientId}
+                  onChange={setClientId}
+                  placeholder="Chọn khách hàng"
+                  onCreateNew={() => setCreateClientOpen(true)}
+                  createNewLabel="Tạo khách hàng mới"
+                />
+              </div>
+              <div />
+            </div>
+          </div>
+
+          <div className="divider-h" />
+
+          {/* Section 2: Tuyến đường */}
+          <div>
+            <h3 className="typo-h3 mb-4">Tuyến đường</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 gap-y-4">
+              <div className="space-y-2">
+                <Label className="typo-form-label">Điểm lấy *</Label>
+                <InlineSelect
+                  options={pickupOptions}
+                  value={pickupLocation}
+                  onChange={(val: string) => { setPickupLocation(val); setDropoffLocation('') }}
+                  placeholder="Chọn điểm lấy"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="typo-form-label">Điểm trả *</Label>
+                <InlineSelect
+                  options={dropoffOptions}
+                  value={dropoffLocation}
+                  onChange={setDropoffLocation}
+                  placeholder="Chọn điểm trả"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="divider-h" />
+
+          {/* Section 3: Hàng hóa */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="typo-h3">Hàng hóa</h3>
+              <button onClick={addCong} className="flex items-center gap-1.5 text-xs font-medium touch-manipulation" style={{ color: 'var(--theme-brand-primary)' }}>
+                <Plus className="w-4 h-4" /> Thêm
+              </button>
+            </div>
+            <div className="space-y-3">
+              {congItems.map((item, i) => (
+                <div key={item.id} className="p-3 rounded-lg space-y-3" style={{ background: 'var(--theme-bg-tertiary)' }}>
+                  <div className="flex items-center justify-between">
+                    <span className="typo-label">Mục {i + 1}</span>
+                    {congItems.length > 1 && (
+                      <button onClick={() => removeCong(item.id)} className="touch-manipulation" style={{ color: 'var(--theme-status-error)' }}>
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap gap-1.5">
+                      {WORK_TYPES.map(w => (
+                        <button key={w} onClick={() => updateCong(item.id, 'workType', w)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors touch-manipulation"
+                          style={{
+                            background: item.workType === w ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
+                            color: item.workType === w ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
+                          }}>
+                          {w}
+                        </button>
+                      ))}
+                    </div>
+                    <Input
+                      value={item.containerNumber}
+                      onChange={e => updateCong(item.id, 'containerNumber', e.target.value)}
+                      placeholder="Số cont"
+                      className="text-sm font-mono min-w-0 flex-1"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="divider-h" />
+
+          {/* Section 4: Lương tài xế */}
+          <div>
+            <h3 className="typo-h3 mb-4">Lương tài xế</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 gap-y-4">
+              <div className="space-y-2">
+                <Label className="typo-form-label">Lương</Label>
+                <Input
+                  type="number"
+                  value={driverSalary || ''}
+                  onChange={e => setDriverSalary(Number(e.target.value))}
+                  placeholder="0"
+                  className="text-sm"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="typo-form-label">Phụ cấp</Label>
+                <Input
+                  type="number"
+                  value={allowance || ''}
+                  onChange={e => setAllowance(Number(e.target.value))}
+                  placeholder="0"
+                  className="text-sm"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Import option card */}
+      <div className="card p-4 flex items-center justify-between">
+        <div>
+          <p className="typo-body-sm">Hoặc nhập từ tệp Excel</p>
+        </div>
         <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden" />
-        <Button
+        <button
           onClick={() => fileInputRef.current?.click()}
           disabled={importing}
-          className="flex items-center gap-1.5 h-9 px-3 text-xs font-semibold rounded-lg"
-          style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
+          className="btn-secondary text-xs"
         >
-          <Upload className="w-3.5 h-3.5" /> {importing ? 'Đang nhập...' : 'Nhập Excel'}
-        </Button>
+          <Upload className="w-4 h-4" /> {importing ? 'Đang nhập...' : 'Nhập'}
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label className="typo-form-label">Khách hàng</Label>
-            <InlineSelect
-              options={clientOptions}
-              value={clientId}
-              onChange={setClientId}
-              placeholder="Chọn khách hàng"
-              onCreateNew={() => setCreateClientOpen(true)}
-              createNewLabel="Tạo khách hàng mới"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label className="typo-form-label">Điểm lấy</Label>
-            <InlineSelect
-              options={pickupOptions}
-              value={pickupLocation}
-              onChange={(val: string) => { setPickupLocation(val); setDropoffLocation('') }}
-              placeholder="Chọn điểm lấy"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label className="typo-form-label">Điểm trả</Label>
-            <InlineSelect options={dropoffOptions} value={dropoffLocation} onChange={setDropoffLocation} placeholder="Chọn điểm trả" />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label className="typo-form-label">Lương tài xế</Label>
-              <Input type="number" value={driverSalary || ''} onChange={e => setDriverSalary(Number(e.target.value))}
-                placeholder="0" className="text-sm" />
-            </div>
-            <div className="space-y-2">
-              <Label className="typo-form-label">Phụ cấp</Label>
-              <Input type="number" value={allowance || ''} onChange={e => setAllowance(Number(e.target.value))}
-                placeholder="0" className="text-sm" />
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <Label className="typo-form-label">Container</Label>
-            <button onClick={addCong} className="flex items-center gap-1 text-xs font-medium touch-manipulation" style={{ color: 'var(--theme-brand-primary)' }}>
-              <Plus className="w-3.5 h-3.5" /> Thêm cont
-            </button>
-          </div>
-          <div className="space-y-3">
-            {congItems.map((item, i) => (
-              <div key={item.id} className="rounded-2xl p-3 space-y-3"
-                style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Công {i + 1}</span>
-                  {congItems.length > 1 && (
-                    <button onClick={() => removeCong(item.id)} className="touch-manipulation" style={{ color: 'var(--theme-status-error)' }}>
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex flex-wrap gap-1.5 shrink-0">
-                    {WORK_TYPES.map(w => (
-                      <button key={w} onClick={() => updateCong(item.id, 'workType', w)}
-                        className="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors touch-manipulation"
-                        style={{
-                          background: item.workType === w ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
-                          color: item.workType === w ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
-                        }}>
-                        {w}
-                      </button>
-                    ))}
-                  </div>
-                  <Input
-                    value={item.containerNumber}
-                    onChange={e => updateCong(item.id, 'containerNumber', e.target.value)}
-                    placeholder="Số cont"
-                    className="text-sm font-mono min-w-0 flex-1"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+      {/* Sticky footer */}
+      <div className="surface fixed bottom-0 left-0 right-0 p-4 border-t" style={{ borderColor: 'var(--theme-border-default)' }}>
+        <div className="max-w-full flex items-center gap-3 justify-end">
+          <button
+            onClick={() => navigate(-1)}
+            className="btn-secondary h-10"
+          >
+            Hủy
+          </button>
+          <Button
+            onClick={handleSubmit}
+            disabled={!clientId || !pickupLocation || !dropoffLocation || submitting}
+            className="btn-primary h-10"
+          >
+            {submitting ? 'Đang tạo...' : 'Tạo chuyến'}
+          </Button>
         </div>
       </div>
 
-      <Button onClick={handleSubmit} disabled={!clientId || !pickupLocation || !dropoffLocation || submitting}
-        className="w-full h-11 font-bold rounded-xl"
-        style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-        {submitting ? 'Đang tạo...' : 'Tạo chuyến'}
-      </Button>
+      {/* Padding for footer */}
+      <div className="h-20" />
 
       <CreateClientDialog
         open={createClientOpen}

@@ -34,7 +34,7 @@ export function PickModal<T extends { id: number }>({
 
       {/* Panel — full screen on mobile, centered sheet on desktop */}
       <div
-        className="fixed inset-0 lg:inset-auto lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 lg:w-[560px] lg:max-h-[80vh] lg:rounded-2xl lg:shadow-2xl z-[200] flex flex-col"
+        className="fixed inset-0 lg:inset-auto lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 lg:w-[560px] lg:max-h-[80vh] lg:rounded-lg lg:shadow-2xl z-[200] flex flex-col"
         style={{ background: 'var(--theme-bg-primary)' }}
       >
         {/* Header */}

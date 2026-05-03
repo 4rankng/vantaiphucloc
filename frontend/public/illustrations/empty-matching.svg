@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 200" fill="none">
+  <!-- Soft background ellipse -->
+  <ellipse cx="120" cy="170" rx="80" ry="9" fill="#059669" fill-opacity="0.06"/>
+
+  <!-- Left card (work order) -->
+  <rect x="40" y="60" width="68" height="84" rx="8" fill="#FFFFFF" stroke="#E4E4E7" stroke-width="2"/>
+  <rect x="50" y="72" width="32" height="6" rx="2" fill="#E4E4E7"/>
+  <rect x="50" y="84" width="48" height="4" rx="1.5" fill="#F4F4F5"/>
+  <rect x="50" y="94" width="40" height="4" rx="1.5" fill="#F4F4F5"/>
+  <rect x="50" y="104" width="44" height="4" rx="1.5" fill="#F4F4F5"/>
+  <rect x="50" y="124" width="22" height="10" rx="3" fill="#ECFDF5"/>
+
+  <!-- Right card (trip) -->
+  <rect x="132" y="60" width="68" height="84" rx="8" fill="#FFFFFF" stroke="#E4E4E7" stroke-width="2"/>
+  <rect x="142" y="72" width="32" height="6" rx="2" fill="#E4E4E7"/>
+  <rect x="142" y="84" width="48" height="4" rx="1.5" fill="#F4F4F5"/>
+  <rect x="142" y="94" width="40" height="4" rx="1.5" fill="#F4F4F5"/>
+  <rect x="142" y="104" width="44" height="4" rx="1.5" fill="#F4F4F5"/>
+  <rect x="142" y="124" width="22" height="10" rx="3" fill="#ECFDF5"/>
+
+  <!-- Connecting flow (dashed) -->
+  <path d="M108 102 C 116 102, 124 102, 132 102" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="3 5"/>
+
+  <!-- Center linking dot / chain -->
+  <circle cx="120" cy="102" r="12" fill="#FFFFFF" stroke="#059669" stroke-width="2.5"/>
+  <path d="M115 102 L119 106 L125 99" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Sparkles -->
+  <g stroke="#059669" stroke-width="1.6" stroke-linecap="round" opacity="0.55">
+    <line x1="56" y1="46" x2="62" y2="52"/>
+    <line x1="62" y1="46" x2="56" y2="52"/>
+  </g>
+  <g stroke="#059669" stroke-width="1.6" stroke-linecap="round" opacity="0.55">
+    <line x1="184" y1="46" x2="190" y2="52"/>
+    <line x1="190" y1="46" x2="184" y2="52"/>
+  </g>
+</svg>

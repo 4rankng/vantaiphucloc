@@ -53,11 +53,11 @@ export function ClientJobs() {
       <BackButton />
         {/* Stats */}
         <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-2xl p-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
+          <div className="rounded-lg p-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
             <p className="text-[10px] font-semibold uppercase" style={{ color: 'var(--theme-text-muted)' }}>Doanh thu</p>
             <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(totalRevenue)}</p>
           </div>
-          <div className="rounded-2xl p-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
+          <div className="rounded-lg p-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
             <p className="text-[10px] font-semibold uppercase" style={{ color: 'var(--theme-text-muted)' }}>Chi tài xế</p>
             <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(totalDriverEarning)}</p>
           </div>
@@ -66,7 +66,7 @@ export function ClientJobs() {
         {/* ── Đơn giá section ── */}
         <button
           onClick={() => setShowPricing(!showPricing)}
-          className="w-full rounded-2xl p-3.5 flex items-center justify-between touch-manipulation"
+          className="w-full rounded-lg p-3.5 flex items-center justify-between touch-manipulation"
           style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
         >
           <span className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>Bảng giá</span>
@@ -80,7 +80,7 @@ export function ClientJobs() {
               return (
                 <div
                   key={p.id}
-                  className="rounded-2xl p-3 space-y-2"
+                  className="rounded-lg p-3 space-y-2"
                   style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
                 >
                   {/* Top: type + unit price */}
@@ -123,7 +123,7 @@ export function ClientJobs() {
         {jobs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(job => (
           <div
             key={job.id}
-            className="rounded-2xl p-3 space-y-2"
+            className="rounded-lg p-3 space-y-2"
             style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
           >
             <div className="flex items-center justify-between">

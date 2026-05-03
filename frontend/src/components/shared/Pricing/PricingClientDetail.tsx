@@ -13,12 +13,12 @@ import {
   type Pricing,
   type PricingLine,
 } from '@/data/domain'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { InlineCell } from '@/components/shared/InlineCell'
-import { SearchBar } from '@/components/shared/SearchBar'
 import { CreateClientDialog } from '@/components/shared/CreateClientDialog'
 import { PricingForm } from './PricingForm'
-import { Plus, Pencil, Trash2, ArrowLeft, MapPin } from 'lucide-react'
+import { Plus, Pencil, Trash2, ChevronLeft, MapPin } from 'lucide-react'
 
 interface Props {
   clientId: number
@@ -107,35 +107,33 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
 
   if (isLoading) {
     return (
-      <div className="space-y-3">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="h-32 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
-        ))}
+      <div className="space-y-6">
+        <PageHeader title="Bảng giá" />
+        <div className="space-y-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-32 rounded-lg animate-pulse skeleton-shimmer" />
+          ))}
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => navigate(`${basePath}/pricing`)}
-          className="p-1.5 rounded-lg touch-manipulation hover:bg-[var(--theme-bg-tertiary)] transition-colors"
-          style={{ color: 'var(--theme-text-muted)' }}
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </button>
-        <p className="text-sm font-semibold flex-1" style={{ color: 'var(--theme-text-primary)' }}>{clientName}</p>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold touch-manipulation transition-colors"
-          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Thêm
-        </button>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={clientName}
+        breadcrumbs={
+          <button
+            onClick={() => navigate(`${basePath}/pricing`)}
+            className="flex items-center gap-1 text-sm"
+            style={{ color: 'var(--theme-text-muted)' }}
+          >
+            <ChevronLeft size={14} /> Quay lại
+          </button>
+        }
+        onAdd={() => setShowForm(true)}
+        addLabel="Thêm mức giá"
+      />
 
       {showForm && (
         <PricingForm
@@ -148,45 +146,50 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
       )}
 
       {grouped.length > 0 && (
-        <SearchBar
-          placeholder="Tìm kiếm cung đường..."
-          value={routeSearch}
-          onChange={setRouteSearch}
-        />
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder="Tìm kiếm cung đường..."
+            value={routeSearch}
+            onChange={e => setRouteSearch(e.target.value)}
+            className="search-pill flex-1"
+          />
+        </div>
       )}
 
       {filteredGroups.length === 0 && !showForm ? (
-        <div className="text-center py-12">
-          <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>
-            {grouped.length === 0 ? 'Chưa có bảng giá cho khách hàng này' : 'Không tìm thấy cung đường'}
-          </p>
+        <div className="card p-8">
+          <div className="text-center">
+            <p className="typo-body-sm" style={{ color: 'var(--theme-text-muted)' }}>
+              {grouped.length === 0 ? 'Chưa có bảng giá cho khách hàng này' : 'Không tìm thấy cung đường'}
+            </p>
+          </div>
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-6">
           {filteredGroups.map(([route, items]) => {
             const [pickup, dropoff] = route.split(' - ')
 
             return (
               <div key={route}>
                 {/* Route header */}
-                <div
-                  className="flex items-center gap-2 px-3 py-2 rounded-t-xl"
-                  style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', borderBottom: 'none' }}
-                >
-                  <MapPin className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--theme-brand-primary)' }} />
-                  <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>{pickup}</span>
-                  <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>→</span>
-                  <span className="text-xs font-bold" style={{ color: 'var(--theme-text-primary)' }}>{dropoff}</span>
-                  <span
-                    className="ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                    style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
-                  >
-                    {items.length} mức giá
-                  </span>
+                <div className="card p-4 mb-2">
+                  <div className="flex items-center gap-2">
+                    <MapPin size={16} style={{ color: 'var(--theme-brand-primary)' }} />
+                    <span className="typo-h2">{pickup}</span>
+                    <span className="typo-body-sm">→</span>
+                    <span className="typo-h2">{dropoff}</span>
+                    <span
+                      className="ml-auto text-xs font-semibold px-2 py-1 rounded-md"
+                      style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
+                    >
+                      {items.length} mức
+                    </span>
+                  </div>
                 </div>
 
                 {/* Pricing tables for this route — one per work_type */}
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {items.map(pricing => {
                     const isEditing = editingPricingId === pricing.id
                     const lines = isEditing ? draftLines : pricing.lines
@@ -197,187 +200,172 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
                     return (
                       <div
                         key={pricing.id}
-                        className="overflow-x-auto"
+                        className="card overflow-hidden"
                         style={{
-                          background: 'var(--theme-bg-secondary)',
-                          border: isEditing
-                            ? '2px solid var(--theme-brand-primary)'
-                            : '1px solid var(--theme-border-default)',
-                          borderRadius: '0 0 0.75rem 0.75rem',
+                          borderColor: isEditing ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)',
+                          borderWidth: isEditing ? '2px' : '1px',
                         }}
                       >
-                        <table className="w-full text-xs">
-                          <thead>
-                            <tr style={{ background: 'var(--theme-bg-tertiary)' }}>
-                              <th className="px-3 py-2 text-left font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
-                                <ContBadge type={pricing.workType} />
-                              </th>
-                              <th className="px-3 py-2 text-center font-semibold w-16" style={{ color: 'var(--theme-text-muted)' }}>SL</th>
-                              <th className="px-3 py-2 text-right font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Đơn giá</th>
-                              <th className="px-3 py-2 text-right font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Lương tài</th>
-                              <th className="px-3 py-2 text-right font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Phụ cấp</th>
-                              <th className="px-2 py-2 w-16" />
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {lines.map((line, lIdx) => (
-                              <tr
-                                key={lIdx}
-                                style={{
-                                  borderBottom: lIdx < lines.length - 1 ? '1px solid var(--theme-border-light)' : undefined,
-                                  background: isEditing ? 'rgba(0, 150, 62, 0.03)' : undefined,
-                                }}
-                              >
-                                {/* Work type label (read-only — from parent pricing) */}
-                                <td className="px-3 py-2.5">
-                                  <ContBadge type={pricing.workType} />
-                                </td>
-
-                                {/* Quantity */}
-                                <td className="px-3 py-2.5 text-center">
-                                  {isEditing ? (
-                                    <div className="flex items-center gap-0.5 justify-center">
-                                      {[1, 2].map(q => (
-                                        <button
-                                          key={q}
-                                          onClick={e => { e.stopPropagation(); updateDraftLine(lIdx, 'quantity', q) }}
-                                          className="px-1.5 py-0.5 rounded text-xs font-bold touch-manipulation"
-                                          style={{
-                                            background: line.quantity === q ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
-                                            color: line.quantity === q ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
-                                          }}
-                                        >
-                                          ×{q}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    <span className="tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
-                                      {line.quantity}
-                                    </span>
-                                  )}
-                                </td>
-
-                                {/* Unit price */}
-                                <td className="px-3 py-2.5 text-right">
-                                  {isEditing ? (
-                                    <InlineCell value={line.unitPrice} onChange={v => updateDraftLine(lIdx, 'unitPrice', v)} editing />
-                                  ) : (
-                                    <span className="tabular-nums font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>
-                                      {formatCurrencyFull(line.unitPrice)}
-                                    </span>
-                                  )}
-                                </td>
-
-                                {/* Driver salary */}
-                                <td className="px-3 py-2.5 text-right">
-                                  {isEditing ? (
-                                    <InlineCell value={line.driverSalary} onChange={v => updateDraftLine(lIdx, 'driverSalary', v)} editing />
-                                  ) : (
-                                    <span className="tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
-                                      {formatCurrencyFull(line.driverSalary)}
-                                    </span>
-                                  )}
-                                </td>
-
-                                {/* Allowance */}
-                                <td className="px-3 py-2.5 text-right">
-                                  {isEditing ? (
-                                    <InlineCell value={line.allowance} onChange={v => updateDraftLine(lIdx, 'allowance', v)} editing />
-                                  ) : (
-                                    <span className="tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
-                                      {formatCurrencyFull(line.allowance)}
-                                    </span>
-                                  )}
-                                </td>
-
-                                {/* Row actions */}
-                                <td className="px-2 py-2.5 text-right">
-                                  {isEditing ? (
-                                    lines.length > 1 ? (
-                                      <button
-                                        onClick={() => removeDraftLine(lIdx)}
-                                        className="p-1 rounded touch-manipulation"
-                                        style={{ color: 'var(--theme-status-error)' }}
-                                        title="Xoá dòng"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </button>
-                                    ) : (
-                                      <span className="w-6 inline-block" />
-                                    )
-                                  ) : (
-                                    <div className="flex items-center gap-0.5 justify-end">
-                                      <button
-                                        onClick={() => startEdit(pricing)}
-                                        className="p-1 rounded touch-manipulation"
-                                        style={{ color: 'var(--theme-text-muted)' }}
-                                        title="Chỉnh sửa"
-                                      >
-                                        <Pencil className="w-3.5 h-3.5" />
-                                      </button>
-                                      <button
-                                        onClick={() => deletePricing.mutate(pricing.id)}
-                                        className="p-1 rounded touch-manipulation"
-                                        style={{ color: 'var(--theme-status-error)' }}
-                                        title="Xoá"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </button>
-                                    </div>
-                                  )}
-                                </td>
+                        <div className="p-4">
+                          <div className="flex items-center gap-2 mb-4 pb-4 border-b border-[var(--theme-border-light)]">
+                            <ContBadge type={pricing.workType} />
+                            <span className="typo-label flex-1">Mức giá theo số lượng container</span>
+                          </div>
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr>
+                                <th className="px-0 py-2 text-left typo-label">SL</th>
+                                <th className="px-0 py-2 text-right typo-label">Đơn giá</th>
+                                <th className="px-0 py-2 text-right typo-label">Lương tài xế</th>
+                                <th className="px-0 py-2 text-right typo-label">Phụ cấp</th>
+                                <th className="px-0 py-2 w-10" />
                               </tr>
-                            ))}
+                            </thead>
+                            <tbody>
+                              {lines.map((line, lIdx) => (
+                                <tr
+                                  key={lIdx}
+                                  style={{
+                                    borderBottom: lIdx < lines.length - 1 ? '1px solid var(--theme-border-light)' : undefined,
+                                    background: isEditing ? 'color-mix(in srgb, var(--theme-brand-primary) 5%, transparent)' : undefined,
+                                  }}
+                                >
+                                  {/* Quantity */}
+                                  <td className="px-0 py-3">
+                                    {isEditing ? (
+                                      <div className="flex items-center gap-1">
+                                        {[1, 2].map(q => (
+                                          <button
+                                            key={q}
+                                            onClick={e => { e.stopPropagation(); updateDraftLine(lIdx, 'quantity', q) }}
+                                            className="px-2 py-1 rounded-md text-xs font-bold"
+                                            style={{
+                                              background: line.quantity === q ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
+                                              color: line.quantity === q ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
+                                            }}
+                                          >
+                                            ×{q}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <span className="font-mono-num">{line.quantity}</span>
+                                    )}
+                                  </td>
 
-                            {/* Add row / Save-Cancel row */}
-                            <tr style={{ borderTop: '1px solid var(--theme-border-light)' }}>
-                              {isEditing ? (
-                                <>
-                                  <td colSpan={4} className="px-3 py-1.5">
+                                  {/* Unit price */}
+                                  <td className="px-0 py-3 text-right">
+                                    {isEditing ? (
+                                      <InlineCell value={line.unitPrice} onChange={v => updateDraftLine(lIdx, 'unitPrice', v)} editing />
+                                    ) : (
+                                      <span className="font-mono-num font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>
+                                        {formatCurrencyFull(line.unitPrice)}
+                                      </span>
+                                    )}
+                                  </td>
+
+                                  {/* Driver salary */}
+                                  <td className="px-0 py-3 text-right">
+                                    {isEditing ? (
+                                      <InlineCell value={line.driverSalary} onChange={v => updateDraftLine(lIdx, 'driverSalary', v)} editing />
+                                    ) : (
+                                      <span className="font-mono-num">{formatCurrencyFull(line.driverSalary)}</span>
+                                    )}
+                                  </td>
+
+                                  {/* Allowance */}
+                                  <td className="px-0 py-3 text-right">
+                                    {isEditing ? (
+                                      <InlineCell value={line.allowance} onChange={v => updateDraftLine(lIdx, 'allowance', v)} editing />
+                                    ) : (
+                                      <span className="font-mono-num">{formatCurrencyFull(line.allowance)}</span>
+                                    )}
+                                  </td>
+
+                                  {/* Row actions */}
+                                  <td className="px-0 py-3 text-right">
+                                    {isEditing ? (
+                                      lines.length > 1 ? (
+                                        <button
+                                          onClick={() => removeDraftLine(lIdx)}
+                                          className="p-1 rounded-md hover:bg-[var(--theme-bg-tertiary)]"
+                                          style={{ color: 'var(--theme-status-error)' }}
+                                          title="Xoá dòng"
+                                        >
+                                          <Trash2 size={16} />
+                                        </button>
+                                      ) : null
+                                    ) : (
+                                      <div className="flex items-center gap-1 justify-end">
+                                        <button
+                                          onClick={() => startEdit(pricing)}
+                                          className="p-1 rounded-md hover:bg-[var(--theme-bg-tertiary)]"
+                                          style={{ color: 'var(--theme-text-muted)' }}
+                                          title="Chỉnh sửa"
+                                        >
+                                          <Pencil size={16} />
+                                        </button>
+                                        <button
+                                          onClick={() => deletePricing.mutate(pricing.id)}
+                                          className="p-1 rounded-md hover:bg-[var(--theme-bg-tertiary)]"
+                                          style={{ color: 'var(--theme-status-error)' }}
+                                          title="Xoá"
+                                        >
+                                          <Trash2 size={16} />
+                                        </button>
+                                      </div>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+
+                              {/* Add row / Save-Cancel row */}
+                              <tr style={{ borderTop: '1px solid var(--theme-border-light)' }}>
+                                {isEditing ? (
+                                  <>
+                                    <td colSpan={3} className="px-0 py-3">
+                                      <button
+                                        onClick={() => addDraftLine()}
+                                        className="flex items-center gap-1.5 text-xs font-medium"
+                                        style={{ color: 'var(--theme-brand-primary)' }}
+                                      >
+                                        <Plus size={14} />
+                                        Thêm dòng
+                                      </button>
+                                    </td>
+                                    <td colSpan={2} className="px-0 py-3 text-right">
+                                      <div className="flex items-center gap-2 justify-end">
+                                        <button
+                                          onClick={() => cancelEdit()}
+                                          className="btn-secondary text-xs h-8"
+                                        >
+                                          Huỷ
+                                        </button>
+                                        <button
+                                          onClick={() => saveEdit(pricing)}
+                                          className="btn-primary text-xs h-8"
+                                        >
+                                          Lưu
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </>
+                                ) : (
+                                  <td colSpan={5} className="px-0 py-3">
                                     <button
-                                      onClick={() => addDraftLine()}
-                                      className="flex items-center gap-1 p-1 rounded-lg touch-manipulation text-xs"
-                                      style={{ color: 'var(--theme-brand-primary)' }}
+                                      onClick={() => { startEdit(pricing); addDraftLine() }}
+                                      className="flex items-center gap-1.5 text-xs font-medium"
+                                      style={{ color: 'var(--theme-text-muted)' }}
                                     >
-                                      <Plus className="w-3.5 h-3.5" />
-                                      <span>Thêm dòng</span>
+                                      <Plus size={14} />
+                                      Thêm dòng
                                     </button>
                                   </td>
-                                  <td colSpan={2} className="px-2 py-1.5 text-right">
-                                    <div className="flex items-center gap-1 justify-end">
-                                      <button
-                                        onClick={() => cancelEdit()}
-                                        className="px-3 py-1.5 rounded-lg text-xs font-semibold touch-manipulation"
-                                        style={{ color: 'var(--theme-text-muted)', background: 'var(--theme-bg-tertiary)' }}
-                                      >
-                                        Huỷ
-                                      </button>
-                                      <button
-                                        onClick={() => saveEdit(pricing)}
-                                        className="px-3 py-1.5 rounded-lg text-xs font-semibold touch-manipulation"
-                                        style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-                                      >
-                                        Lưu
-                                      </button>
-                                    </div>
-                                  </td>
-                                </>
-                              ) : (
-                                <td colSpan={6} className="px-3 py-1.5">
-                                  <button
-                                    onClick={() => { startEdit(pricing); addDraftLine() }}
-                                    className="flex items-center gap-1 p-1 rounded-lg touch-manipulation text-xs"
-                                    style={{ color: 'var(--theme-text-muted)' }}
-                                  >
-                                    <Plus className="w-3.5 h-3.5" />
-                                    <span>Thêm dòng</span>
-                                  </button>
-                                </td>
-                              )}
-                            </tr>
-                          </tbody>
-                        </table>
+                                )}
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     )
                   })}

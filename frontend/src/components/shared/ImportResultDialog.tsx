@@ -19,7 +19,7 @@ export function ImportResultDialog({ open, onClose, result, onCreateManual }: Im
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-md rounded-2xl">
+      <DialogContent className="max-w-md rounded-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base font-bold"
             style={{ color: 'var(--theme-text-primary)' }}>

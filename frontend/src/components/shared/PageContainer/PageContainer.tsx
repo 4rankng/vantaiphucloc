@@ -113,7 +113,7 @@ export function PageContainer({
                 <div className="min-w-0">
                   {title && (
                     <h1
-                      className="text-xl font-bold font-display leading-tight truncate lg:text-2xl"
+                      className="typo-h1 font-display leading-tight truncate lg:typo-display"
                       style={{ color: 'var(--theme-text-primary)' }}
                     >
                       {title}

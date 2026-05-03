@@ -19,7 +19,6 @@ const ALL_ROLES: { value: Role; label: string }[] = [
 ]
 
 export function SuperAdminApp() {
-  const { user } = useAuth()
   const toast = useToast()
   const { data: vendors } = useVendors()
   const [createOpen, setCreateOpen] = useState(false)
@@ -82,7 +81,11 @@ export function SuperAdminApp() {
   }, [toast, fetchUsers])
 
   if (loading) {
-    return <div className="p-4 text-center py-12" style={{ color: 'var(--theme-text-muted)' }}>Đang tải...</div>
+    return (
+      <div className="flex items-center justify-center py-16">
+        <div style={{ color: 'var(--theme-text-muted)' }} className="typo-body">Đang tải...</div>
+      </div>
+    )
   }
 
   return (

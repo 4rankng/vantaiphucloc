@@ -1,24 +1,77 @@
+import { useState, useCallback } from 'react'
 import { Navigate, Outlet } from 'react-router-dom'
+import {
+  LayoutDashboard,
+  Users,
+  Bell,
+  LogOut,
+  UserCircle,
+} from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { AppShell } from '@/components/shared/AppShell'
+import { AccountantSidebar } from '@/components/shared/AccountantSidebar/AccountantSidebar'
+import { BottomTabBar } from '@/components/shared/BottomTabBar/BottomTabBar'
+import { AppTopBar } from '@/components/shared/AppTopBar'
+
+interface SuperAdminTabItem {
+  path: string
+  label: string
+  icon: React.ElementType
+}
+
+const NAV_ITEMS: SuperAdminTabItem[] = [
+  { path: '/superadmin', label: 'Tổng quan', icon: LayoutDashboard },
+  { path: '/superadmin/users', label: 'Người dùng', icon: Users },
+  { path: '/superadmin/notifications', label: 'Thông báo', icon: Bell },
+]
 
 export function SuperAdminLayout() {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+
+  const handleLogout = useCallback(() => {
+    logout()
+  }, [logout])
 
   if (!user || user.role !== 'superadmin') {
     return <Navigate to="/" replace />
   }
 
+  const tabItems = NAV_ITEMS.map(item => ({
+    path: item.path,
+    label: item.label,
+    icon: item.icon,
+    exact: item.path === '/superadmin',
+  }))
+
   return (
-    <AppShell
-      topbarProps={{
-        variant: 'home',
-        name: user?.name ?? '',
-        onNotifications: () => {},
-      }}
-      contentClassName="px-4 py-4 space-y-4 md:px-6 md:py-6 md:max-w-4xl md:mx-auto"
-    >
-      <Outlet />
-    </AppShell>
+    <div className="min-h-screen flex flex-col lg:flex-row" style={{ background: 'var(--theme-bg-primary)' }}>
+      {/* Desktop sidebar (hidden on mobile) */}
+      <AccountantSidebar
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+      />
+
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col min-h-screen lg:min-h-auto">
+        {/* Mobile topbar (hidden on lg+) */}
+        <header className="lg:hidden z-20 w-full shrink-0" style={{ background: 'var(--glass-bg)', backdropFilter: 'var(--glass-blur)', WebkitBackdropFilter: 'var(--glass-blur)', borderBottom: '1px solid var(--theme-header-border, rgba(0, 0, 0, 0.06))' }}>
+          <AppTopBar
+            variant="home"
+            name={user?.name ?? ''}
+            theme="light"
+          />
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 flex flex-col pb-14 lg:pb-0">
+          <div className="page-container flex-1">
+            <Outlet />
+          </div>
+        </main>
+
+        {/* Mobile bottom tab bar */}
+        <BottomTabBar tabs={tabItems} />
+      </div>
+    </div>
   )
 }

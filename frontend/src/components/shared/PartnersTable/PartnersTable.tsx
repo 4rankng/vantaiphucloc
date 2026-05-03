@@ -37,7 +37,7 @@ function Initials({ name }: { name: string }) {
 export function PartnersTable({ partners, onRowClick, loading }: PartnersTableProps) {
   if (loading) {
     return (
-      <div className="rounded-2xl border border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] overflow-hidden">
+      <div className="rounded-lg border border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] overflow-hidden">
         {[...Array(4)].map((_, i) => (
           <div key={i} className="flex items-center gap-4 px-5 py-4 border-b border-[var(--theme-border-default)] last:border-0 animate-pulse">
             <div className="w-9 h-9 rounded-xl bg-[var(--theme-bg-tertiary)]" />
@@ -53,14 +53,14 @@ export function PartnersTable({ partners, onRowClick, loading }: PartnersTablePr
 
   if (partners.length === 0) {
     return (
-      <div className="rounded-2xl border border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] py-16 text-center text-sm text-[var(--theme-text-muted)]">
+      <div className="rounded-lg border border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] py-16 text-center text-sm text-[var(--theme-text-muted)]">
         Không có đối tác
       </div>
     )
   }
 
   return (
-    <div className="rounded-2xl border border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] overflow-hidden shadow-sm">
+    <div className="rounded-lg border border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] overflow-hidden shadow-sm">
       {/* Header */}
       <div className="hidden lg:grid grid-cols-[2fr_1fr_1fr_1.5fr_1fr] gap-4 px-5 py-3 border-b border-[var(--theme-border-default)]">
         {['Tên', 'Loại đối tác', 'Điện thoại', 'Địa chỉ', 'Người liên hệ'].map(h => (

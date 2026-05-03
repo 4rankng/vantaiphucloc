@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 200" fill="none">
+  <!-- Soft background ellipse -->
+  <ellipse cx="120" cy="170" rx="80" ry="9" fill="#059669" fill-opacity="0.06"/>
+
+  <!-- Person 2 (back, slightly muted) -->
+  <g opacity="0.55">
+    <circle cx="156" cy="78" r="16" fill="#E4E4E7" stroke="#A1A1AA" stroke-width="2"/>
+    <path d="M132 142 Q132 110 156 110 Q180 110 180 142 Z" fill="#E4E4E7" stroke="#A1A1AA" stroke-width="2" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Person 1 (front, brand) -->
+  <circle cx="100" cy="78" r="20" fill="#ECFDF5" stroke="#059669" stroke-width="2.5"/>
+  <!-- Hair / shadow -->
+  <path d="M84 76 Q84 64 100 62 Q116 64 116 76" fill="#059669" fill-opacity="0.18"/>
+  <!-- Smile -->
+  <path d="M93 82 Q100 87 107 82" stroke="#059669" stroke-width="2" stroke-linecap="round"/>
+  <!-- Eyes -->
+  <circle cx="94" cy="76" r="1.6" fill="#059669"/>
+  <circle cx="106" cy="76" r="1.6" fill="#059669"/>
+  <!-- Body -->
+  <path d="M70 150 Q70 110 100 110 Q130 110 130 150 Z" fill="#ECFDF5" stroke="#059669" stroke-width="2.5" stroke-linejoin="round"/>
+
+  <!-- Plus button to add new -->
+  <circle cx="186" cy="138" r="16" fill="#059669"/>
+  <line x1="186" y1="131" x2="186" y2="145" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="179" y1="138" x2="193" y2="138" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

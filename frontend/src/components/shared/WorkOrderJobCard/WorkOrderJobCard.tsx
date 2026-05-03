@@ -63,7 +63,7 @@ export function WorkOrderJobCard({ job, status = 'unmatched', onClick }: WorkOrd
     return (
       <button
         onClick={onClick}
-        className="w-full text-left rounded-2xl p-3 transition-all active:scale-[0.98] touch-manipulation"
+        className="w-full text-left rounded-lg p-3 transition-all active:scale-[0.98] touch-manipulation"
         style={cardStyle}
       >
         {inner}
@@ -72,7 +72,7 @@ export function WorkOrderJobCard({ job, status = 'unmatched', onClick }: WorkOrd
   }
 
   return (
-    <div className="w-full rounded-2xl p-3" style={cardStyle}>
+    <div className="w-full rounded-lg p-3" style={cardStyle}>
       {inner}
     </div>
   )

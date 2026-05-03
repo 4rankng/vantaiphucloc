@@ -120,7 +120,7 @@ export function DriverHome() {
     <div className="space-y-4">
       {/* Combined month + earnings card */}
       <div
-        className="rounded-2xl overflow-hidden flex"
+        className="rounded-lg overflow-hidden flex"
         style={{
           background: 'var(--theme-bg-secondary)',
           border: '1px solid var(--theme-border-default)',
@@ -161,14 +161,14 @@ export function DriverHome() {
           </p>
 
           <div
-            className="flex rounded-full p-0.5 gap-0.5"
+            className="flex rounded-full p-0.5 gap-0.5 shrink-0"
             style={{ background: 'var(--theme-bg-tertiary)' }}
           >
             {(['all', 'pending'] as FilterTab[]).map(tab => (
               <button
                 key={tab}
                 onClick={() => setFilter(tab)}
-                className="text-xs px-3 py-1 rounded-full font-medium transition-all touch-manipulation"
+                className="text-xs px-3 py-2 rounded-full font-medium transition-all touch-manipulation h-9 flex items-center shrink-0"
                 style={
                   filter === tab
                     ? { background: 'var(--theme-brand-primary)', color: '#fff' }
@@ -184,12 +184,12 @@ export function DriverHome() {
         {loading ? (
           <div className="space-y-2.5">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-24 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+              <div key={i} className="h-24 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
             ))}
           </div>
         ) : filteredJobs.length === 0 ? (
           <div
-            className="rounded-2xl p-10 flex flex-col items-center justify-center text-center gap-3"
+            className="rounded-lg p-10 flex flex-col items-center justify-center text-center gap-3"
             style={{ background: 'var(--theme-bg-secondary)' }}
           >
             <img src="/icons/calkey.png" alt="" aria-hidden className="w-32 h-32 object-contain" />
