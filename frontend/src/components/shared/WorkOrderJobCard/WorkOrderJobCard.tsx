@@ -1,4 +1,5 @@
 import { ContBadge } from '@/components/shared/ContBadge'
+import { Sparkles } from 'lucide-react'
 import type { WorkOrder } from '@/data/domain'
 
 type WorkOrderJobCardStatus = 'unmatched' | 'matched' | 'pending-client' | 'completed'
@@ -6,6 +7,7 @@ type WorkOrderJobCardStatus = 'unmatched' | 'matched' | 'pending-client' | 'comp
 interface WorkOrderJobCardProps {
   job: WorkOrder
   status?: WorkOrderJobCardStatus
+  matchCount?: number
   onClick?: () => void
 }
 
@@ -24,7 +26,7 @@ function allContNumbers(job: WorkOrder) {
   return job.containers.map(c => c.containerNumber).filter(Boolean).join(' · ') || job.code || ''
 }
 
-export function WorkOrderJobCard({ job, status = 'unmatched', onClick }: WorkOrderJobCardProps) {
+export function WorkOrderJobCard({ job, status = 'unmatched', matchCount, onClick }: WorkOrderJobCardProps) {
   const types = uniqueWorkTypes(job)
   const statusCfg = STATUS_LABELS[status] ?? STATUS_LABELS.unmatched
 
@@ -37,12 +39,24 @@ export function WorkOrderJobCard({ job, status = 'unmatched', onClick }: WorkOrd
             {allContNumbers(job)}
           </span>
         </div>
-        <span
-          className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ml-2"
-          style={{ background: statusCfg.bg, color: statusCfg.color }}
-        >
-          {statusCfg.label}
-        </span>
+        <div className="flex items-center gap-1.5 shrink-0 ml-2">
+          {status === 'unmatched' && matchCount !== undefined && matchCount > 0 && (
+            <span
+              className="inline-flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded-full"
+              style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
+              title={`${matchCount} đơn hàng tiềm năng`}
+            >
+              <Sparkles className="w-2.5 h-2.5" />
+              {matchCount}
+            </span>
+          )}
+          <span
+            className="text-xs font-semibold px-2 py-0.5 rounded-full"
+            style={{ background: statusCfg.bg, color: statusCfg.color }}
+          >
+            {statusCfg.label}
+          </span>
+        </div>
       </div>
       <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>
         {job.driverName} · {job.tractorPlate}

@@ -213,10 +213,6 @@ export function TripDetail() {
                 <dd className="typo-body text-right">{trip.route}</dd>
               </div>
               <div className="flex items-start justify-between">
-                <dt className="typo-form-label flex items-center gap-2"><UserCircle size={14} />Tài xế</dt>
-                <dd className="typo-body text-right">{trip.driverName} · {trip.tractorPlate}</dd>
-              </div>
-              <div className="flex items-start justify-between">
                 <dt className="typo-form-label flex items-center gap-2"><Wallet size={14} />Lương + Phụ cấp</dt>
                 <dd className="typo-mono text-right">{formatCurrencyFull(trip.driverSalary)} + {formatCurrencyFull(trip.allowance)}</dd>
               </div>

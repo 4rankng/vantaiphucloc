@@ -9,9 +9,6 @@ export interface TripData {
   jobDate: string
   route: string
   containerNumber: string
-  tractorPlate: string
-  trailerPlate: string
-  driverName: string
   clientName: string
   status: string
   trailerType: string
@@ -41,7 +38,7 @@ export function TripCard({ data, onClick, showActions }: TripCardProps) {
       <p className="text-[12px] text-[var(--theme-text-primary)] font-medium truncate">{data.route}</p>
       <div className="mt-2 space-y-1 text-[11px] text-[var(--theme-text-muted)]">
         <div className="flex justify-between">
-          <span>{data.jobDate} · {data.driverName}</span>
+          <span>{data.jobDate}</span>
           <span className="font-bold text-[var(--theme-text-primary)] font-mono-num">{formatCurrencyShort(data.revenue)}</span>
         </div>
         <div className="flex justify-between">
