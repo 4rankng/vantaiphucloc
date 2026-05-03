@@ -121,8 +121,8 @@ class ClientOut(BaseModel):
 
 class RouteCreate(BaseModel):
     route: str
-    pickup_location: str | None = None
-    dropoff_location: str | None = None
+    pickup_location: str
+    dropoff_location: str
     type_20ft: int
     type_40ft: int
     is_two_way: bool
@@ -140,8 +140,8 @@ class RouteUpdate(BaseModel):
 class RouteOut(BaseModel):
     id: int
     route: str
-    pickup_location: str | None
-    dropoff_location: str | None
+    pickup_location: str
+    dropoff_location: str
     type_20ft: int
     type_40ft: int
     is_two_way: bool
