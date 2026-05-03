@@ -222,9 +222,18 @@ export function TripDetail() {
           {/* Container info */}
           <div className="card p-4">
             <h3 className="typo-h3 mb-3">Container</h3>
-            <div className="flex items-center gap-3">
-              <ContBadge type={trip.workType} />
-              <span className="typo-mono">{trip.containerNumber}</span>
+            <div className="space-y-2">
+              {trip.containers.length > 0 ? trip.containers.map((c, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <ContBadge type={c.workType} />
+                  <span className="typo-mono">{c.containerNumber}</span>
+                </div>
+              )) : (
+                <div className="flex items-center gap-3">
+                  <ContBadge type={trip.workType ?? 'E20'} />
+                  <span className="typo-mono">{trip.containerNumber ?? '—'}</span>
+                </div>
+              )}
             </div>
           </div>
 

@@ -60,6 +60,9 @@ export function CreateUserDialog({
     }
   }, [vendors, form.vendor])
 
+  const effectiveRoles = roles ?? DEFAULT_CREATABLE_ROLES
+  const isFourRoles = effectiveRoles.length > 3
+
   const handleSubmit = async () => {
     if (!form.username.trim() || !form.password.trim()) return
     setSaving(true)
@@ -95,47 +98,50 @@ export function CreateUserDialog({
           <DialogTitle>Tạo tài khoản</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          {/* Row 1: Role + Vendor (driver only) */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <RequiredLabel>Vai trò</RequiredLabel>
-              <div className={`grid gap-2 ${(roles ?? DEFAULT_CREATABLE_ROLES).length <= 3 ? 'grid-cols-3' : 'grid-cols-2 lg:grid-cols-4'}`}>
-                {(roles ?? DEFAULT_CREATABLE_ROLES).map(r => (
-                  <button
-                    key={r.value}
-                    onClick={() => {
-                      const newRole = r.value as Role
-                      setForm(f => ({
-                        ...f,
-                        role: newRole,
-                        vendor: (newRole === 'director' || newRole === 'accountant') ? '' : f.vendor,
-                      }))
-                    }}
-                    className="py-2.5 px-3 rounded-xl text-sm font-medium transition-colors touch-manipulation"
-                    style={{
-                      background: form.role === r.value ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
-                      color: form.role === r.value ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
-                    }}
-                  >
-                    {r.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {form.role === 'driver' ? (
+          {/* Row 1: Role buttons — full-width when 4+ roles, side-by-side with vendor when ≤3 */}
+          {isFourRoles ? (
+            <>
               <div className="space-y-2">
-                <RequiredLabel>Nhà thầu</RequiredLabel>
-                <InlineSelect
-                  options={(vendors ?? []).map(v => ({ value: String(v.id), label: v.name }))}
-                  value={form.vendor}
-                  onChange={v => setForm(f => ({ ...f, vendor: v }))}
-                  placeholder="Chọn nhà thầu"
-                  onCreateNew={() => setCreateVendorOpen(true)}
-                  createNewLabel="Tạo nhà thầu mới"
-                />
+                <RequiredLabel>Vai trò</RequiredLabel>
+                <div className="grid gap-2 grid-cols-4">
+                  {effectiveRoles.map(r => (
+                    <button key={r.value} onClick={() => setForm(f => ({ ...f, role: r.value as Role, vendor: (r.value === 'director' || r.value === 'accountant') ? '' : f.vendor }))}
+                      className="py-2.5 px-3 rounded-xl text-sm font-medium transition-colors touch-manipulation"
+                      style={{ background: form.role === r.value ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)', color: form.role === r.value ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)' }}>
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            ) : <div />}
-          </div>
+              {form.role === 'driver' && (
+                <div className="space-y-2">
+                  <RequiredLabel>Nhà thầu</RequiredLabel>
+                  <InlineSelect options={(vendors ?? []).map(v => ({ value: String(v.id), label: v.name }))} value={form.vendor} onChange={v => setForm(f => ({ ...f, vendor: v }))} placeholder="Chọn nhà thầu" onCreateNew={() => setCreateVendorOpen(true)} createNewLabel="Tạo nhà thầu mới" />
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <RequiredLabel>Vai trò</RequiredLabel>
+                <div className="grid gap-2 grid-cols-3">
+                  {effectiveRoles.map(r => (
+                    <button key={r.value} onClick={() => setForm(f => ({ ...f, role: r.value as Role, vendor: (r.value === 'director' || r.value === 'accountant') ? '' : f.vendor }))}
+                      className="py-2.5 px-3 rounded-xl text-sm font-medium transition-colors touch-manipulation"
+                      style={{ background: form.role === r.value ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)', color: form.role === r.value ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)' }}>
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {form.role === 'driver' ? (
+                <div className="space-y-2">
+                  <RequiredLabel>Nhà thầu</RequiredLabel>
+                  <InlineSelect options={(vendors ?? []).map(v => ({ value: String(v.id), label: v.name }))} value={form.vendor} onChange={v => setForm(f => ({ ...f, vendor: v }))} placeholder="Chọn nhà thầu" onCreateNew={() => setCreateVendorOpen(true)} createNewLabel="Tạo nhà thầu mới" />
+                </div>
+              ) : <div />}
+            </div>
+          )}
 
           {/* Row 2: Username + Full name */}
           <div className="grid grid-cols-2 gap-4">

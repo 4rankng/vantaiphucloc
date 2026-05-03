@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import select
 
-from app.database import async_session
+from app.database import get_session
 from app.models.domain import WorkOrder, SalaryPeriod
 from app.workers import enqueue
 
@@ -25,34 +25,30 @@ async def generate_monthly_report_task(
     start_dt = datetime(start.year, start.month, start.day, tzinfo=timezone.utc)
     end_dt = datetime(end.year, end.month, end.day, tzinfo=timezone.utc) + timedelta(days=1)
 
-    async with async_session() as db:
-        try:
-            result = await db.execute(
-                select(WorkOrder).where(
-                    WorkOrder.created_at >= start_dt,
-                    WorkOrder.created_at < end_dt,
-                )
+    async with get_session() as db:
+        result = await db.execute(
+            select(WorkOrder).where(
+                WorkOrder.created_at >= start_dt,
+                WorkOrder.created_at < end_dt,
             )
-            orders = result.scalars().all()
+        )
+        orders = result.scalars().all()
 
-            total_revenue = sum(wo.unit_price or 0 for wo in orders)
-            total_driver_cost = sum(wo.driver_salary or 0 for wo in orders)
-            total_allowance = sum(wo.allowance or 0 for wo in orders)
+        total_revenue = sum(wo.unit_price or 0 for wo in orders)
+        total_driver_cost = sum(wo.driver_salary or 0 for wo in orders)
+        total_allowance = sum(wo.allowance or 0 for wo in orders)
 
-            report = {
-                "period": f"{year}-{month:02d}",
-                "total_orders": len(orders),
-                "total_revenue": total_revenue,
-                "total_driver_cost": total_driver_cost,
-                "total_allowance": total_allowance,
-                "gross_margin": total_revenue - total_driver_cost - total_allowance,
-            }
+        report = {
+            "period": f"{year}-{month:02d}",
+            "total_orders": len(orders),
+            "total_revenue": total_revenue,
+            "total_driver_cost": total_driver_cost,
+            "total_allowance": total_allowance,
+            "gross_margin": total_revenue - total_driver_cost - total_allowance,
+        }
 
-            logger.info("Monthly report generated: period=%s", report["period"])
-            return report
-        except Exception:
-            await db.rollback()
-            raise
+        logger.info("Monthly report generated: period=%s", report["period"])
+        return report
 
 
 async def remind_salary_period_end(ctx: dict) -> None:
@@ -60,7 +56,7 @@ async def remind_salary_period_end(ctx: dict) -> None:
     today = date.today()
     soon = today + timedelta(days=3)
 
-    async with async_session() as db:
+    async with get_session() as db:
         result = await db.execute(
             select(SalaryPeriod).where(
                 SalaryPeriod.status == "CALCULATED",
@@ -87,7 +83,7 @@ async def remind_salary_period_end(ctx: dict) -> None:
 
 async def recalculate_open_periods(ctx: dict) -> None:
     """Recalculate any OPEN salary periods."""
-    async with async_session() as db:
+    async with get_session() as db:
         result = await db.execute(
             select(SalaryPeriod).where(SalaryPeriod.status == "OPEN")
         )

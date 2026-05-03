@@ -1,15 +1,15 @@
 import math
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select
 
-from app.database import get_db
 from app.models.base import User
 from app.models.domain import WorkOrder
 from app.schemas.base import UserOut, UserCreate, UserUpdate, ChangePassword, MessageResponse, PaginatedResponse
 from app.core.deps import require_permission, get_current_user
 from app.core.security import hash_password, verify_password
+from app.repositories.user_repo import UserRepository
+from app.repositories.deps import get_user_repo
 
 router = APIRouter()
 
@@ -25,9 +25,8 @@ async def get_own_profile(
 async def update_own_profile(
     body: UserUpdate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    repo: UserRepository = Depends(get_user_repo),
 ):
-    """Allow any authenticated user to update their own full_name and phone."""
     update_data = body.model_dump(exclude_unset=True)
 
     # Only allow safe self-editable fields
@@ -35,24 +34,22 @@ async def update_own_profile(
     update_data = {k: v for k, v in update_data.items() if k in allowed}
 
     if "phone" in update_data and update_data["phone"]:
-        existing = await db.execute(
+        existing = await repo.session.execute(
             select(User).where(User.phone == update_data["phone"], User.id != current_user.id)
         )
         if existing.scalar_one_or_none():
             raise HTTPException(status_code=409, detail="Phone number already registered")
 
     if "username" in update_data and update_data["username"]:
-        existing = await db.execute(
+        existing = await repo.session.execute(
             select(User).where(User.username == update_data["username"], User.id != current_user.id)
         )
         if existing.scalar_one_or_none():
             raise HTTPException(status_code=409, detail="Tên đăng nhập đã được sử dụng")
 
-    for field, value in update_data.items():
-        setattr(current_user, field, value)
-
-    await db.commit()
-    await db.refresh(current_user)
+    await repo.update(current_user, **update_data)
+    await repo.session.commit()
+    await repo.session.refresh(current_user)
     return current_user
 
 
@@ -62,24 +59,27 @@ async def list_users(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     current_user: User = Depends(require_permission("list", "User")),
-    db: AsyncSession = Depends(get_db),
+    repo: UserRepository = Depends(get_user_repo),
 ):
-    query = select(User).order_by(User.username.asc())
-    count_query = select(func.count(User.id))
+    filters: dict = {}
+    if role:
+        filters["role"] = role
 
-    # Directors cannot see superadmin users
+    query = select(User).order_by(User.username.asc())
+    count_query = select(User.id)
+
     if current_user.role == "director":
         query = query.where(User.role != "superadmin")
         count_query = count_query.where(User.role != "superadmin")
-
     if role:
         query = query.where(User.role == role)
         count_query = count_query.where(User.role == role)
 
-    total_q = await db.execute(count_query)
+    from sqlalchemy import func
+    total_q = await repo.session.execute(select(func.count()).select_from(count_query.subquery()))
     total = total_q.scalar() or 0
 
-    result = await db.execute(
+    result = await repo.session.execute(
         query.offset((page - 1) * page_size).limit(page_size)
     )
     users = result.scalars().all()
@@ -97,36 +97,21 @@ async def list_users(
 async def create_user(
     body: UserCreate,
     current_user: User = Depends(require_permission("list", "User")),
-    db: AsyncSession = Depends(get_db),
+    repo: UserRepository = Depends(get_user_repo),
 ):
-    # Directors cannot create superadmin users
     if current_user.role == "director" and body.role == "superadmin":
         raise HTTPException(status_code=403, detail="Directors cannot create superadmin users")
 
-    # Check phone uniqueness (only if phone provided)
-    if body.phone:
-        existing = await db.execute(select(User).where(User.phone == body.phone))
-        if existing.scalar_one_or_none():
-            raise HTTPException(status_code=409, detail="Phone number already registered")
-
-    # Check username uniqueness
-    existing_username = await db.execute(select(User).where(User.username == body.username))
-    if existing_username.scalar_one_or_none():
+    if body.phone and await repo.find_by_phone(body.phone):
+        raise HTTPException(status_code=409, detail="Phone number already registered")
+    if await repo.find_by_username(body.username):
         raise HTTPException(status_code=409, detail="Username already registered")
+    if body.email and await repo.find_by_email(body.email):
+        raise HTTPException(status_code=409, detail="Email already registered")
+    if body.cccd and await repo.find_one(cccd=body.cccd):
+        raise HTTPException(status_code=409, detail="CCCD already registered")
 
-    # Check email uniqueness (only if email provided)
-    if body.email:
-        existing_email = await db.execute(select(User).where(User.email == body.email))
-        if existing_email.scalar_one_or_none():
-            raise HTTPException(status_code=409, detail="Email already registered")
-
-    # Check CCCD uniqueness (only if CCCD provided)
-    if body.cccd:
-        existing_cccd = await db.execute(select(User).where(User.cccd == body.cccd))
-        if existing_cccd.scalar_one_or_none():
-            raise HTTPException(status_code=409, detail="CCCD already registered")
-
-    user = User(
+    user = await repo.create(
         phone=body.phone,
         email=body.email,
         username=body.username,
@@ -138,9 +123,8 @@ async def create_user(
         vendor=body.vendor,
         tractor_plate=body.tractor_plate,
     )
-    db.add(user)
-    await db.commit()
-    await db.refresh(user)
+    await repo.session.commit()
+    await repo.session.refresh(user)
     return user
 
 
@@ -149,66 +133,53 @@ async def update_user(
     user_id: int,
     body: UserUpdate,
     current_user: User = Depends(require_permission("list", "User")),
-    db: AsyncSession = Depends(get_db),
+    repo: UserRepository = Depends(get_user_repo),
 ):
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+    user = await repo.get_by_id_or_404(user_id)
 
-    # Directors cannot update superadmin users
     if current_user.role == "director" and user.role == "superadmin":
         raise HTTPException(status_code=403, detail="Directors cannot update superadmin users")
-
-    # Directors cannot promote users to superadmin
     if current_user.role == "director" and body.role == "superadmin":
         raise HTTPException(status_code=403, detail="Directors cannot promote users to superadmin")
 
     update_data = body.model_dump(exclude_unset=True)
 
-    # Validate phone uniqueness if being updated
     if "phone" in update_data and update_data["phone"]:
-        existing = await db.execute(
+        existing = await repo.session.execute(
             select(User).where(User.phone == update_data["phone"], User.id != user_id)
         )
         if existing.scalar_one_or_none():
             raise HTTPException(status_code=409, detail="Phone number already registered")
 
-    # Validate username uniqueness if being updated
     if "username" in update_data and update_data["username"]:
-        existing_username = await db.execute(
+        existing = await repo.session.execute(
             select(User).where(User.username == update_data["username"], User.id != user_id)
         )
-        if existing_username.scalar_one_or_none():
+        if existing.scalar_one_or_none():
             raise HTTPException(status_code=409, detail="Username already registered")
 
-    # Validate email uniqueness if being updated
     if "email" in update_data and update_data["email"]:
-        existing_email = await db.execute(
+        existing = await repo.session.execute(
             select(User).where(User.email == update_data["email"], User.id != user_id)
         )
-        if existing_email.scalar_one_or_none():
+        if existing.scalar_one_or_none():
             raise HTTPException(status_code=409, detail="Email already registered")
 
-    # Validate CCCD uniqueness if being updated
     if "cccd" in update_data and update_data["cccd"]:
-        existing_cccd = await db.execute(
+        existing = await repo.session.execute(
             select(User).where(User.cccd == update_data["cccd"], User.id != user_id)
         )
-        if existing_cccd.scalar_one_or_none():
+        if existing.scalar_one_or_none():
             raise HTTPException(status_code=409, detail="CCCD already registered")
 
-    # If password is being updated, hash it
     if "password" in update_data and update_data["password"]:
-        user.hashed_password = hash_password(update_data.pop("password"))
+        update_data["hashed_password"] = hash_password(update_data.pop("password"))
     elif "password" in update_data:
         update_data.pop("password")
 
-    for field, value in update_data.items():
-        setattr(user, field, value)
-
-    await db.commit()
-    await db.refresh(user)
+    await repo.update(user, **update_data)
+    await repo.session.commit()
+    await repo.session.refresh(user)
     return user
 
 
@@ -216,20 +187,15 @@ async def update_user(
 async def delete_user(
     user_id: int,
     current_user: User = Depends(require_permission("list", "User")),
-    db: AsyncSession = Depends(get_db),
+    repo: UserRepository = Depends(get_user_repo),
 ):
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
+    user = await repo.get_by_id_or_404(user_id)
 
-    # Directors cannot delete superadmin users
     if current_user.role == "director" and user.role == "superadmin":
         raise HTTPException(status_code=403, detail="Directors cannot delete superadmin users")
 
-    # Guard: prevent deactivating drivers with active unmatched work orders
     if user.role == "driver":
-        active_wo = await db.execute(
+        active_wo = await repo.session.execute(
             select(WorkOrder)
             .where(WorkOrder.driver_id == user_id, WorkOrder.status != "MATCHED")
             .limit(1)
@@ -240,19 +206,18 @@ async def delete_user(
                 detail="Cannot deactivate driver with active (unmatched) work orders",
             )
 
-    # Soft delete — deactivate instead of removing
-    user.is_active = False
-    await db.commit()
+    await repo.soft_delete(user)
+    await repo.session.commit()
 
 
 @router.post("/change-password", response_model=MessageResponse)
 async def change_password(
     body: ChangePassword,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    repo: UserRepository = Depends(get_user_repo),
 ):
     if not verify_password(body.current_password, current_user.hashed_password):
         raise HTTPException(status_code=400, detail="Current password is incorrect")
-    current_user.hashed_password = hash_password(body.new_password)
-    await db.commit()
+    await repo.update(current_user, hashed_password=hash_password(body.new_password))
+    await repo.session.commit()
     return MessageResponse(message="Password changed successfully")

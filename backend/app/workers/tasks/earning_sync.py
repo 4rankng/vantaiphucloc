@@ -4,7 +4,7 @@ import logging
 
 from sqlalchemy import select
 
-from app.database import async_session
+from app.database import get_session
 from app.models.domain import TripOrder, WorkOrder, TripOrderWorkOrder
 
 logger = logging.getLogger(__name__)
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 async def sync_wo_earning_on_to_update(ctx: dict, *, trip_order_id: int) -> None:
     """After a TripOrder's salary/allowance changes, propagate to linked WorkOrders."""
-    async with async_session() as db:
+    async with get_session() as db:
         result = await db.execute(
             select(TripOrder).where(TripOrder.id == trip_order_id)
         )

@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useMemo, useCallback } from 'react'
-import { ArrowLeft, Check, CheckCircle2, AlertCircle, Pencil, X, Plus, Truck, FileText, Sparkles } from 'lucide-react'
+import { ArrowLeft, Check, CheckCircle2, Pencil, X, Plus, Truck, FileText, Sparkles } from 'lucide-react'
 import {
   useWorkOrders, useTripOrders, useSuggestMatches, useRoutes,
   useUpdateWorkOrder, useUpdateTripOrder, useCreateTripOrder,
@@ -170,87 +170,49 @@ function ContainerRow({
 // ─── Trip order row in right panel ───────────────────────────────────────────
 
 function TripRow({
-  trip, isSelected, matchedCount, totalWoConts, score, confidence, onClick,
+  trip, isSelected, matchedFieldsLen, totalCriteria, onClick,
 }: {
   trip: TripOrder
   isSelected: boolean
-  matchedCount: number
-  totalWoConts: number
-  score: number
-  confidence: string
+  matchedFieldsLen: number
+  totalCriteria: number
   onClick: () => void
 }) {
-  const isFull = confidence === 'full'
-  const isPartial = confidence === 'partial'
-  const accentColor = isFull
-    ? 'var(--theme-status-success)'
-    : isPartial
-    ? 'var(--theme-status-warning)'
-    : 'var(--theme-text-muted)'
 
   return (
     <button
       onClick={onClick}
-      className="w-full text-left px-4 py-3 flex items-start gap-3 transition-colors"
+      className="w-full text-left p-3 rounded-xl transition-colors relative"
       style={{
-        borderBottom: '1px solid var(--theme-border-light)',
         background: isSelected
           ? 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)'
-          : isFull
-          ? 'color-mix(in srgb, var(--theme-status-success) 5%, transparent)'
-          : 'transparent',
-        borderLeft: isSelected ? '3px solid var(--theme-brand-primary)' : '3px solid transparent',
+          : 'var(--theme-bg-secondary)',
+        border: isSelected ? '2px solid var(--theme-brand-primary)' : '1px solid var(--theme-border-light)',
       }}
     >
-      {/* Icon */}
-      <div
-        className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-        style={{ background: isSelected ? 'var(--theme-brand-primary-light)' : 'var(--theme-bg-tertiary)' }}
+      {/* Criteria match X/5 — top right */}
+      <span
+        className="absolute top-2 right-2.5 text-[11px] font-bold tabular-nums"
+        style={{ color: matchedFieldsLen === totalCriteria ? 'var(--theme-status-success)' : 'var(--theme-text-muted)' }}
       >
-        <FileText className="w-4 h-4" style={{ color: isSelected ? 'var(--theme-brand-primary)' : 'var(--theme-text-muted)' }} />
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        {/* Containers */}
-        <div className="flex flex-wrap items-center gap-1.5 mb-1">
-          {(trip.containers?.length ? trip.containers : []).map((c, i) => (
-            <span key={i} className="flex items-center gap-1">
-              <ContBadge type={c.workType} />
-              <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                {c.containerNumber}
-              </span>
+        {matchedFieldsLen}/{totalCriteria}
+      </span>
+      {/* Containers */}
+      <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+        {(trip.containers?.length ? trip.containers : []).map((c, i) => (
+          <span key={i} className="flex items-center gap-1">
+            <ContBadge type={c.workType} />
+            <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+              {c.containerNumber}
             </span>
-          ))}
-        </div>
-        {/* Client · Route */}
-        <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
-          <span className="font-medium">{trip.clientName}</span>
-          {trip.route ? <span> · {trip.route}</span> : null}
-        </p>
-        {/* Match chips */}
-        {matchedCount > 0 && (
-          <div className="flex items-center gap-1 mt-1">
-            <span
-              className="text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center gap-0.5"
-              style={{ background: 'color-mix(in srgb, var(--theme-status-success) 15%, transparent)', color: 'var(--theme-status-success)' }}
-            >
-              <Check className="w-2.5 h-2.5" />
-              {matchedCount}/{totalWoConts} cont khớp
-            </span>
-          </div>
-        )}
+          </span>
+        ))}
       </div>
-
-      {/* Score */}
-      <div className="shrink-0 flex flex-col items-end gap-1 pt-0.5">
-        <div className="w-10 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--theme-bg-tertiary)' }}>
-          <div className="h-full rounded-full" style={{ width: `${Math.min(100, score)}%`, background: accentColor }} />
-        </div>
-        <span className="text-[10px] font-bold tabular-nums" style={{ color: accentColor }}>
-          {Math.min(100, score)}%
-        </span>
-      </div>
+      {/* Client · Route */}
+      <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
+        <span className="font-medium">{trip.clientName}</span>
+        {trip.route ? <span> · {trip.route}</span> : null}
+      </p>
     </button>
   )
 }
@@ -384,13 +346,11 @@ export function MatchJob() {
     )
   }, [woContainers, tripContainers, selectedTrip])
 
-  const allContsMatch = woContainers.length > 0 && matchedWoIndices.size === woContainers.length
   // For non-container fields, trust backend matched_fields (they resolve route→pickup/dropoff)
   // but also check locally in case user edited values
   const clientMatch = backendMatchedFields.has('client') || (woClient !== '' && woClient === tripClient)
   const pickupMatch = backendMatchedFields.has('pickup_location') || (woPickup !== '' && woPickup === tripPickup)
   const dropoffMatch = backendMatchedFields.has('dropoff_location') || (woDropoff !== '' && woDropoff === tripDropoff)
-  const allMatch = allContsMatch && clientMatch && pickupMatch && dropoffMatch
 
   // ── Submit ────────────────────────────────────────────────────────────────
   const [submitting, setSubmitting] = useState(false)
@@ -524,27 +484,6 @@ export function MatchJob() {
           {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto p-4 lg:p-5 space-y-4">
 
-            {/* Match status banner */}
-            {selectedTrip && !allMatch && (
-              <div
-                className="flex items-center gap-2 px-3 py-2.5 rounded-lg"
-                style={{
-                  background: 'color-mix(in srgb, var(--theme-status-warning) 12%, transparent)',
-                  border: '1px solid var(--theme-status-warning)',
-                }}
-              >
-                  <AlertCircle className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-status-warning)' }} />
-                  <span className="text-xs font-medium" style={{ color: 'var(--theme-status-warning)' }}>
-                    {[
-                        `${matchedWoIndices.size}/${woContainers.length} container khớp`,
-                        !clientMatch && 'khách hàng chưa khớp',
-                        !pickupMatch && 'điểm lấy chưa khớp',
-                        !dropoffMatch && 'điểm trả chưa khớp',
-                      ].filter(Boolean).join(' · ')}
-                  </span>
-              </div>
-            )}
-
             {/* Containers section */}
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -624,15 +563,11 @@ export function MatchJob() {
                 <Sparkles className="w-3 h-3 animate-pulse" /> Đang phân tích...
               </span>
             )}
-            {suggestions.length > 0 && !loadingSuggestions && (
-              <span className="flex items-center gap-1 typo-caption px-2 py-0.5 rounded" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
-                <Sparkles className="w-3 h-3" /> {suggestions.length} đơn tiềm năng
-              </span>
-            )}
           </div>
 
           {/* Trip list */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto p-3">
+            <div className="grid grid-cols-2 gap-2">
             {suggestions.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full p-8 text-center gap-3">
                 <FileText className="w-10 h-10" style={{ color: 'var(--theme-text-muted)' }} />
@@ -650,28 +585,24 @@ export function MatchJob() {
               </div>
             ) : (
               <>
-                {/* Section label */}
-                <div className="px-4 pt-3 pb-1">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide flex items-center gap-1.5" style={{ color: 'var(--theme-brand-primary)' }}>
-                    <Sparkles className="w-3 h-3" /> Đơn hàng tiềm năng
-                  </p>
-                </div>
                 {suggestions.map(s => (
                   <TripRow
                     key={s.tripOrder.id}
                     trip={s.tripOrder}
                     isSelected={selectedTripId === s.tripOrder.id}
-                    matchedCount={(s.tripOrder.containers ?? []).filter(tc =>
-                      woContainers.some(wc => wc.containerNumber === tc.containerNumber)
-                    ).length}
-                    totalWoConts={woContainers.length}
-                    score={Math.round(s.score * 100)}
-                    confidence={s.confidence}
+                    matchedFieldsLen={s.matchedFields.length}
+                    totalCriteria={
+                      woContainers.length
+                      + (woClient !== '' ? 1 : 0)
+                      + (woPickup !== '' ? 1 : 0)
+                      + (woDropoff !== '' ? 1 : 0)
+                    }
                     onClick={() => setSelectedTripId(s.tripOrder.id)}
                   />
                 ))}
               </>
             )}
+            </div>
           </div>
 
           {/* Selected trip detail / edit panel */}

@@ -2,10 +2,8 @@ import math
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from redis.asyncio import Redis
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select
 
-from app.database import get_db
 from app.models.base import User
 from app.models.domain import Route, Location
 from app.schemas.base import PaginatedResponse
@@ -14,8 +12,28 @@ from app.core.deps import require_permission
 from app.core.redis import get_redis
 from app.core.cache import CacheManager
 from app.config import settings
+from app.repositories.route_repo import RouteRepository
+from app.repositories.deps import get_route_repo
 
 router = APIRouter()
+
+
+async def _resolve_location_fk(session, route: Route) -> None:
+    """Resolve pickup/dropoff location strings to FK IDs."""
+    if route.pickup_location:
+        loc_result = await session.execute(
+            select(Location).where(Location.name == route.pickup_location, Location.is_active == True)  # noqa: E712
+        )
+        loc = loc_result.scalar_one_or_none()
+        if loc:
+            route.pickup_location_id = loc.id
+    if route.dropoff_location:
+        loc_result = await session.execute(
+            select(Location).where(Location.name == route.dropoff_location, Location.is_active == True)  # noqa: E712
+        )
+        loc = loc_result.scalar_one_or_none()
+        if loc:
+            route.dropoff_location_id = loc.id
 
 
 @router.get("/routes", response_model=PaginatedResponse[RouteOut])
@@ -23,7 +41,7 @@ async def list_routes(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     current_user: User = Depends(require_permission("read", "Route")),
-    db: AsyncSession = Depends(get_db),
+    repo: RouteRepository = Depends(get_route_repo),
     redis: Redis = Depends(get_redis),
 ):
     cache = CacheManager(redis)
@@ -32,17 +50,9 @@ async def list_routes(
     if cached is not None:
         return PaginatedResponse(**cached)
 
-    total_q = await db.execute(select(func.count(Route.id)).where(Route.is_active == True))
-    total = total_q.scalar() or 0
-
-    result = await db.execute(
-        select(Route)
-        .where(Route.is_active == True)
-        .order_by(Route.route.asc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
+    data, total = await repo.paginate(
+        page, page_size, active_only=True, order_by=repo.model.route.asc()
     )
-    data = result.scalars().all()
 
     response = PaginatedResponse[RouteOut](
         items=[RouteOut.model_validate(r) for r in data],
@@ -60,30 +70,13 @@ async def list_routes(
 async def create_route(
     body: RouteCreate,
     current_user: User = Depends(require_permission("update", "Route")),
-    db: AsyncSession = Depends(get_db),
+    repo: RouteRepository = Depends(get_route_repo),
     redis: Redis = Depends(get_redis),
 ):
-    route = Route(**body.model_dump())
-
-    # Resolve location FKs
-    if route.pickup_location:
-        loc_result = await db.execute(
-            select(Location).where(Location.name == route.pickup_location, Location.is_active == True)
-        )
-        loc = loc_result.scalar_one_or_none()
-        if loc:
-            route.pickup_location_id = loc.id
-    if route.dropoff_location:
-        loc_result = await db.execute(
-            select(Location).where(Location.name == route.dropoff_location, Location.is_active == True)
-        )
-        loc = loc_result.scalar_one_or_none()
-        if loc:
-            route.dropoff_location_id = loc.id
-
-    db.add(route)
-    await db.commit()
-    await db.refresh(route)
+    route = await repo.create(**body.model_dump())
+    await _resolve_location_fk(repo.session, route)
+    await repo.session.commit()
+    await repo.session.refresh(route)
     await CacheManager(redis).invalidate_namespace("routes")
     return route
 
@@ -93,37 +86,14 @@ async def update_route(
     route_id: int,
     body: RouteUpdate,
     current_user: User = Depends(require_permission("update", "Route")),
-    db: AsyncSession = Depends(get_db),
+    repo: RouteRepository = Depends(get_route_repo),
     redis: Redis = Depends(get_redis),
 ):
-    result = await db.execute(
-        select(Route).where(Route.id == route_id)
-    )
-    route = result.scalar_one_or_none()
-    if route is None:
-        raise HTTPException(status_code=404, detail="Route not found")
-
-    for field, value in body.model_dump(exclude_unset=True).items():
-        setattr(route, field, value)
-
-    # Resolve location FKs if location strings changed
-    if route.pickup_location:
-        loc_result = await db.execute(
-            select(Location).where(Location.name == route.pickup_location, Location.is_active == True)
-        )
-        loc = loc_result.scalar_one_or_none()
-        if loc:
-            route.pickup_location_id = loc.id
-    if route.dropoff_location:
-        loc_result = await db.execute(
-            select(Location).where(Location.name == route.dropoff_location, Location.is_active == True)
-        )
-        loc = loc_result.scalar_one_or_none()
-        if loc:
-            route.dropoff_location_id = loc.id
-
-    await db.commit()
-    await db.refresh(route)
+    route = await repo.get_by_id_or_404(route_id)
+    await repo.update(route, **body.model_dump(exclude_unset=True))
+    await _resolve_location_fk(repo.session, route)
+    await repo.session.commit()
+    await repo.session.refresh(route)
     await CacheManager(redis).invalidate_namespace("routes")
     return route
 
@@ -132,17 +102,11 @@ async def update_route(
 async def delete_route(
     route_id: int,
     current_user: User = Depends(require_permission("update", "Route")),
-    db: AsyncSession = Depends(get_db),
+    repo: RouteRepository = Depends(get_route_repo),
     redis: Redis = Depends(get_redis),
 ):
-    result = await db.execute(
-        select(Route).where(Route.id == route_id)
-    )
-    route = result.scalar_one_or_none()
-    if route is None:
-        raise HTTPException(status_code=404, detail="Route not found")
-
-    route.is_active = False
-    await db.commit()
+    route = await repo.get_by_id_or_404(route_id)
+    await repo.soft_delete(route)
+    await repo.session.commit()
     await CacheManager(redis).invalidate_namespace("routes")
     return Response()

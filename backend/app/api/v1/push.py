@@ -2,12 +2,12 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, delete as sa_delete
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
 from app.models.push import PushSubscription
 from app.schemas.push import PushSubscriptionCreate, PushSubscriptionOut
 from app.core.deps import get_current_user
+from app.database import get_db
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 

@@ -9,7 +9,7 @@ Format: {CLIENT_CODE}{SEQ}  e.g. ABC0001, ABC0002, ABC10000
 
 import re
 
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import Client, WorkOrder, TripOrder
@@ -30,6 +30,16 @@ def _format_seq(n: int) -> str:
     return f"{n:0{digits}d}"
 
 
+def _extract_max_seq(codes: list[str]) -> int:
+    """Extract the maximum numeric suffix from a list of codes."""
+    max_seq = 0
+    for code in codes:
+        m = re.search(r"(\d+)$", code)
+        if m:
+            max_seq = max(max_seq, int(m.group(1)))
+    return max_seq
+
+
 async def generate_work_order_code(db: AsyncSession, client_id: int) -> str:
     client_res = await db.execute(
         select(Client.code, Client.name).where(Client.id == client_id)
@@ -40,11 +50,14 @@ async def generate_work_order_code(db: AsyncSession, client_id: int) -> str:
     client_code, client_name = row
     prefix = _clean_code(client_code, client_name)
 
-    count_res = await db.execute(
-        select(func.count(WorkOrder.id)).where(WorkOrder.client_id == client_id)
+    result = await db.execute(
+        select(WorkOrder.code).where(
+            WorkOrder.client_id == client_id,
+            WorkOrder.code.isnot(None),
+        )
     )
-    count = count_res.scalar() or 0
-    return f"{prefix}{_format_seq(count + 1)}"
+    max_seq = _extract_max_seq([r[0] for r in result.all()])
+    return f"{prefix}{_format_seq(max_seq + 1)}"
 
 
 async def generate_trip_order_code(db: AsyncSession, client_id: int) -> str:
@@ -57,8 +70,11 @@ async def generate_trip_order_code(db: AsyncSession, client_id: int) -> str:
     client_code, client_name = row
     prefix = _clean_code(client_code, client_name)
 
-    count_res = await db.execute(
-        select(func.count(TripOrder.id)).where(TripOrder.client_id == client_id)
+    result = await db.execute(
+        select(TripOrder.code).where(
+            TripOrder.client_id == client_id,
+            TripOrder.code.isnot(None),
+        )
     )
-    count = count_res.scalar() or 0
-    return f"{prefix}{_format_seq(count + 1)}"
+    max_seq = _extract_max_seq([r[0] for r in result.all()])
+    return f"{prefix}{_format_seq(max_seq + 1)}"
