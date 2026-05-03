@@ -47,21 +47,28 @@ function getStatusLabel(status: string): string {
   }
 }
 
-/** Client-side approximation: count draft trip orders that share ≥1 field with a work order */
+/** Client-side approximation: count draft trip orders that share ≥1 field with a work order.
+ *  Mirrors the backend MIN_MATCH_THRESHOLD logic (any single field match counts). */
 function usePotentialMatchCounts(workOrders: import('@/data/domain').WorkOrder[]) {
   const { data: trips = [] } = useTripOrders()
   return useMemo(() => {
     const draftTrips = trips.filter(t => t.status === 'DRAFT' || t.status === 'PENDING')
     const counts = new Map<number, number>()
     for (const wo of workOrders) {
-      const woContNums = new Set(wo.containers.map(c => c.containerNumber.replace(/\s/g, '').toUpperCase()))
+      const woContNums = new Set(
+        wo.containers.map(c => c.containerNumber.replace(/[\s-]/g, '').toUpperCase())
+      )
+      const woDate = wo.createdAt ? new Date(wo.createdAt).toISOString().slice(0, 10) : null
       let count = 0
       for (const trip of draftTrips) {
-        const tripContNums = (trip.containers?.length ? trip.containers : []).map(c => c.containerNumber.replace(/\s/g, '').toUpperCase())
+        const tripContNums = (trip.containers?.length ? trip.containers : []).map(
+          c => c.containerNumber.replace(/[\s-]/g, '').toUpperCase()
+        )
         const contMatch = tripContNums.some(n => woContNums.has(n))
         const clientMatch = trip.clientId === wo.clientId
         const routeMatch = trip.route === wo.route
-        if (contMatch || clientMatch || routeMatch) count++
+        const dateMatch = woDate !== null && trip.tripDate === woDate
+        if (contMatch || clientMatch || routeMatch || dateMatch) count++
       }
       counts.set(wo.id, count)
     }
@@ -434,6 +441,7 @@ export function WorkOrderList() {
     <div className="space-y-5">
       <PageHeader
         title="Đối soát"
+        icon="package"
         actions={
           <Button
             onClick={() => setImportOpen(true)}

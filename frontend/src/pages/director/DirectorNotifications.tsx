@@ -21,7 +21,7 @@ export function DirectorNotifications() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Thông báo" subtitle={subtitle} />
+      <PageHeader title="Thông báo" subtitle={subtitle} icon="schedule" />
       <NotificationList notifications={notifications} />
     </div>
   )

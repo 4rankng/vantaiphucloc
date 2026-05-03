@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     CACHE_ROUTES_TTL: int = 300
     CACHE_DRIVERS_TTL: int = 180
     CACHE_SALARY_TTL: int = 180
+    CACHE_LOCATIONS_TTL: int = 300
 
     # Rate limiting
     RATE_LIMIT_LOGIN_MAX: int = 20

@@ -7,7 +7,7 @@ from sqlalchemy import select, func
 
 from app.database import get_db
 from app.models.base import User
-from app.models.domain import Route
+from app.models.domain import Route, Location
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import RouteCreate, RouteUpdate, RouteOut
 from app.core.deps import require_permission
@@ -64,6 +64,23 @@ async def create_route(
     redis: Redis = Depends(get_redis),
 ):
     route = Route(**body.model_dump())
+
+    # Resolve location FKs
+    if route.pickup_location:
+        loc_result = await db.execute(
+            select(Location).where(Location.name == route.pickup_location, Location.is_active == True)
+        )
+        loc = loc_result.scalar_one_or_none()
+        if loc:
+            route.pickup_location_id = loc.id
+    if route.dropoff_location:
+        loc_result = await db.execute(
+            select(Location).where(Location.name == route.dropoff_location, Location.is_active == True)
+        )
+        loc = loc_result.scalar_one_or_none()
+        if loc:
+            route.dropoff_location_id = loc.id
+
     db.add(route)
     await db.commit()
     await db.refresh(route)
@@ -88,6 +105,22 @@ async def update_route(
 
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(route, field, value)
+
+    # Resolve location FKs if location strings changed
+    if route.pickup_location:
+        loc_result = await db.execute(
+            select(Location).where(Location.name == route.pickup_location, Location.is_active == True)
+        )
+        loc = loc_result.scalar_one_or_none()
+        if loc:
+            route.pickup_location_id = loc.id
+    if route.dropoff_location:
+        loc_result = await db.execute(
+            select(Location).where(Location.name == route.dropoff_location, Location.is_active == True)
+        )
+        loc = loc_result.scalar_one_or_none()
+        if loc:
+            route.dropoff_location_id = loc.id
 
     await db.commit()
     await db.refresh(route)
