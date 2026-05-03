@@ -21,8 +21,15 @@ export function RecentTripSuggestions({
   return (
     <div className="flex flex-col gap-1.5">
       {trips.map((trip) => {
-        const pickup = trip.pickupLocation || (trip.route || '').split(' - ')[0] || ''
-        const dropoff = trip.dropoffLocation || (trip.route || '').split(' - ').slice(1).join(' - ') || ''
+        // Parse route string — support both ' - ' and ' → ' separators
+        const routeStr = trip.route || ''
+        const routeParts = routeStr.includes(' - ')
+          ? routeStr.split(' - ')
+          : routeStr.includes(' → ')
+            ? routeStr.split(' → ')
+            : [routeStr]
+        const pickup = trip.pickupLocation || routeParts[0] || ''
+        const dropoff = trip.dropoffLocation || routeParts.slice(1).join(' - ') || ''
         const clientLabel = trip.clientCode || trip.clientName
         const isSelected =
           selectedClientId === String(trip.clientId) &&
