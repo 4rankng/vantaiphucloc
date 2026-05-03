@@ -78,6 +78,28 @@ class VendorOut(BaseModel):
 # Client
 # ---------------------------------------------------------------------------
 
+class LocationCreate(BaseModel):
+    name: str
+
+
+class LocationUpdate(BaseModel):
+    name: str | None = None
+
+
+class LocationOut(BaseModel):
+    id: int
+    name: str
+    is_active: bool = True
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# Client
+# ---------------------------------------------------------------------------
+
 class ClientCreate(BaseModel):
     name: str
     code: str | None = None
@@ -142,6 +164,8 @@ class RouteOut(BaseModel):
     route: str
     pickup_location: str
     dropoff_location: str
+    pickup_location_id: int | None = None
+    dropoff_location_id: int | None = None
     type_20ft: int
     type_40ft: int
     is_two_way: bool
@@ -201,6 +225,8 @@ class PricingOut(BaseModel):
     route: str
     pickup_location: str | None = None
     dropoff_location: str | None = None
+    pickup_location_id: int | None = None
+    dropoff_location_id: int | None = None
     lines: list[PricingLineOut] = []
     is_active: bool = True
     created_at: datetime
@@ -277,6 +303,8 @@ class WorkOrderOut(BaseModel):
     route: str
     pickup_location: str | None = None
     dropoff_location: str | None = None
+    pickup_location_id: int | None = None
+    dropoff_location_id: int | None = None
     driver_id: int
     driver_name: str
     tractor_plate: str
@@ -366,6 +394,8 @@ class TripOrderOut(BaseModel):
     route: str
     pickup_location: str | None = None
     dropoff_location: str | None = None
+    pickup_location_id: int | None = None
+    dropoff_location_id: int | None = None
     container_number: str | None
     containers: list[TripContainerOut] = []
     pricing_id: int | None

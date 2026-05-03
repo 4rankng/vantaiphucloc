@@ -62,6 +62,13 @@ allow(user, "create", "Route") if role_allow(user, "accountant");
 allow(user, "update", "Route") if role_allow(user, "accountant");
 allow(user, "delete", "Route") if role_allow(user, "accountant");
 
+# ── Locations ─────────────────────────────────────────────────────
+
+allow(user, "read", "Location") if role_allow(user, "driver");
+allow(user, "create", "Location") if role_allow(user, "accountant");
+allow(user, "update", "Location") if role_allow(user, "accountant");
+allow(user, "delete", "Location") if role_allow(user, "accountant");
+
 # ── Pricings ──────────────────────────────────────────────────────
 
 allow(user, "read", "Pricing") if role_allow(user, "driver");

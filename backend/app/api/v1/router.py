@@ -4,6 +4,7 @@ from arq.jobs import Job, JobStatus
 
 from app.api.v1.auth import router as auth_router
 from app.api.v1.clients import router as clients_router
+from app.api.v1.locations import router as locations_router
 from app.api.v1.routes import router as routes_router
 from app.api.v1.pricings import router as pricings_router
 from app.api.v1.work_orders import router as work_orders_router
@@ -26,6 +27,7 @@ router = APIRouter()
 
 router.include_router(auth_router)
 router.include_router(clients_router)
+router.include_router(locations_router)
 router.include_router(routes_router)
 router.include_router(pricings_router)
 router.include_router(work_orders_router)

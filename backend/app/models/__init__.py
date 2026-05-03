@@ -5,6 +5,7 @@ from .base import User  # noqa: F401
 from .domain import (  # noqa: F401
     Vendor,
     Client,
+    Location,
     Route,
     Pricing,
     PricingLine,
@@ -21,6 +22,7 @@ __all__ = [
     "User",
     "Vendor",
     "Client",
+    "Location",
     "Route",
     "Pricing",
     "PricingLine",

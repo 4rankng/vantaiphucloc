@@ -53,11 +53,14 @@ WEIGHTS = {
     "route": 1.0 / 6,
 }
 
-# Threshold for potential match: >80% = at least 5/6 criteria
-POTENTIAL_MATCH_THRESHOLD = 5.0 / 6.0  # ~83.3%
-
 # Threshold for full match: 100% = all 6 criteria
 FULL_MATCH_THRESHOLD = 1.0
+
+# Threshold for partial match: ≥3/6 = 50% (at least 3 criteria match)
+POTENTIAL_MATCH_THRESHOLD = 3.0 / 6.0  # 50%
+
+# Minimum threshold to appear in suggestions at all: any 1 field matches
+MIN_MATCH_THRESHOLD = 1.0 / 6.0  # ~16.7%
 
 
 async def suggest_trip_matches(
@@ -193,11 +196,13 @@ async def suggest_trip_matches(
             matched_fields.append("route")
             score += WEIGHTS["route"]
 
-        # Calculate confidence based on 80% threshold
+        # Calculate confidence based on thresholds
         if score >= FULL_MATCH_THRESHOLD:
             confidence = "full"
         elif score >= POTENTIAL_MATCH_THRESHOLD:
             confidence = "partial"
+        elif score >= MIN_MATCH_THRESHOLD:
+            confidence = "none"
         else:
             confidence = "none"
 
@@ -236,10 +241,9 @@ async def suggest_trip_matches(
             score=score,
         ))
 
-    # Sort by score (highest first) and return top 10
+    # Sort by score (highest first), return all with at least 1 matching field (top 30)
     suggestions.sort(key=lambda s: s.score, reverse=True)
-    # Only return suggestions with confidence of 'full' or 'partial'
-    return [s for s in suggestions if s.confidence in ("full", "partial")][:10]
+    return [s for s in suggestions if s.score >= MIN_MATCH_THRESHOLD][:30]
 
 
 async def suggest_wo_matches(
@@ -370,11 +374,13 @@ async def suggest_wo_matches(
             matched_fields.append("route")
             score += WEIGHTS["route"]
 
-        # Calculate confidence based on 80% threshold
+        # Calculate confidence based on thresholds
         if score >= FULL_MATCH_THRESHOLD:
             confidence = "full"
         elif score >= POTENTIAL_MATCH_THRESHOLD:
             confidence = "partial"
+        elif score >= MIN_MATCH_THRESHOLD:
+            confidence = "none"
         else:
             confidence = "none"
 
@@ -415,7 +421,6 @@ async def suggest_wo_matches(
             score=score,
         ))
 
-    # Sort by score (highest first) and return top 10
+    # Sort by score (highest first), return all with at least 1 matching field (top 30)
     suggestions.sort(key=lambda s: s.score, reverse=True)
-    # Only return suggestions with confidence of 'full' or 'partial'
-    return [s for s in suggestions if s.confidence in ("full", "partial")][:10]
+    return [s for s in suggestions if s.score >= MIN_MATCH_THRESHOLD][:30]

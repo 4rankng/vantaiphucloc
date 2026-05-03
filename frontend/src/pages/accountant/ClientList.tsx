@@ -7,6 +7,7 @@ import { Label } from '@/components/ui'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { InfoRow } from '@/components/shared/InfoRow'
+import { BrandIcon } from '@/components/atoms/BrandIcon'
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/use-queries'
 import type { Client, ClientType } from '@/data/domain'
 
@@ -94,10 +95,11 @@ export function ClientList() {
       {clients.length === 0 ? (
         <div className="card">
           <EmptyState
-            icon={<Building2 className="h-6 w-6" />}
+            icon={<BrandIcon name="calkey" className="w-24 h-24" />}
             title="Chưa có khách hàng"
             description="Nhấn + để thêm khách hàng mới"
             compact
+            illustration
           />
         </div>
       ) : (

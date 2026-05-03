@@ -13,7 +13,7 @@ from sqlalchemy import select, delete, func
 
 from app.database import get_db
 from app.models.base import User
-from app.models.domain import WorkOrder, WorkOrderContainer
+from app.models.domain import WorkOrder, WorkOrderContainer, Location
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import (
     WorkOrderCreate,
@@ -71,6 +71,8 @@ async def _load_work_order_out(db: AsyncSession, work_order: WorkOrder) -> WorkO
         route=work_order.route,
         pickup_location=work_order.pickup_location,
         dropoff_location=work_order.dropoff_location,
+        pickup_location_id=work_order.pickup_location_id,
+        dropoff_location_id=work_order.dropoff_location_id,
         driver_id=work_order.driver_id,
         driver_name=work_order.driver_name,
         tractor_plate=work_order.tractor_plate,
@@ -122,6 +124,8 @@ async def _batch_load_work_order_outs(
             route=wo.route,
             pickup_location=wo.pickup_location,
             dropoff_location=wo.dropoff_location,
+            pickup_location_id=wo.pickup_location_id,
+            dropoff_location_id=wo.dropoff_location_id,
             driver_id=wo.driver_id,
             driver_name=wo.driver_name,
             tractor_plate=wo.tractor_plate,
@@ -452,6 +456,24 @@ async def _create_work_order_db(
     if not has_valid_gps:
         gps_address = "Không xác định"
 
+    # Resolve location FKs
+    pickup_location_id = None
+    dropoff_location_id = None
+    if body.pickup_location:
+        loc_result = await db.execute(
+            select(Location).where(Location.name == body.pickup_location, Location.is_active == True)
+        )
+        loc = loc_result.scalar_one_or_none()
+        if loc:
+            pickup_location_id = loc.id
+    if body.dropoff_location:
+        loc_result = await db.execute(
+            select(Location).where(Location.name == body.dropoff_location, Location.is_active == True)
+        )
+        loc = loc_result.scalar_one_or_none()
+        if loc:
+            dropoff_location_id = loc.id
+
     work_order = WorkOrder(
         client_id=body.client_id,
         client_name=body.client_name,
@@ -459,6 +481,8 @@ async def _create_work_order_db(
         route=body.route,
         pickup_location=body.pickup_location,
         dropoff_location=body.dropoff_location,
+        pickup_location_id=pickup_location_id,
+        dropoff_location_id=dropoff_location_id,
         driver_id=driver_id,
         driver_name=driver_name,
         tractor_plate=body.tractor_plate,
