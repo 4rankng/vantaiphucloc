@@ -3,7 +3,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { ArrowLeft, Check, CheckCircle2, Pencil, X, Plus, Truck, FileText, Sparkles } from 'lucide-react'
 import {
   useWorkOrders, useTripOrders, useSuggestMatches, useRoutes,
-  useUpdateWorkOrder, useUpdateTripOrder, useCreateTripOrder,
+  useUpdateWorkOrder, useUpdateTripOrder, useReconcile,
 } from '@/hooks/use-queries'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { useToast } from '@/components/atoms/Toast'
@@ -240,7 +240,7 @@ export function MatchJob() {
 
   const updateWorkOrder = useUpdateWorkOrder()
   const updateTripOrder = useUpdateTripOrder()
-  const createTripOrder = useCreateTripOrder()
+  const reconcile = useReconcile()
 
   const loading = loadingWO || loadingTrips
 
@@ -358,43 +358,52 @@ export function MatchJob() {
   const handleMatch = async () => {
     if (!workOrder || !selectedTrip || submitting) return
     setSubmitting(true)
-    try {
-      await updateWorkOrder.mutateAsync({
-        id: workOrder.id,
-        data: {
-          clientName: woClient,
-          route: woRoute,
-          containers: woContainers.map(c => ({ containerNumber: c.containerNumber, workType: c.workType as WorkType, photoUrl: '' })),
-        },
-      })
-      await updateTripOrder.mutateAsync({
-        id: selectedTrip.id,
-        data: {
-          clientName: tripClient,
-          route: tripRoute,
-          containers: tripContainers.map(c => ({ containerNumber: c.containerNumber, workType: c.workType as WorkType })),
-        },
-      })
-      await createTripOrder.mutateAsync({
-        tripDate: selectedTrip.tripDate,
-        clientId: selectedTrip.clientId,
+
+    // Save any edits to the work order
+    const woResult = await updateWorkOrder.mutateAsync({
+      id: workOrder.id,
+      data: {
+        clientName: woClient,
+        route: woRoute,
+        pickupLocation: woPickup,
+        dropoffLocation: woDropoff,
+        containers: woContainers.map(c => ({ containerNumber: c.containerNumber, workType: c.workType as WorkType, photoUrl: '' })),
+      },
+    })
+    if (!woResult.success) {
+      toast.error('Lỗi', 'Không thể cập nhật phiếu chuyến')
+      setSubmitting(false)
+      return
+    }
+
+    // Save any edits to the selected trip order
+    const toResult = await updateTripOrder.mutateAsync({
+      id: selectedTrip.id,
+      data: {
         clientName: tripClient,
         route: tripRoute,
+        pickupLocation: tripPickup,
+        dropoffLocation: tripDropoff,
         containers: tripContainers.map(c => ({ containerNumber: c.containerNumber, workType: c.workType as WorkType })),
-        pricingId: selectedTrip.pricingId,
-        unitPrice: selectedTrip.unitPrice,
-        driverSalary: selectedTrip.driverSalary,
-        allowance: selectedTrip.allowance,
-        revenue: selectedTrip.unitPrice,
-        matchedWorkOrderIds: [workOrder.id],
-        isConfirmed: false,
-      })
-      toast.success('Thành công', 'Đã khớp chuyến thành công')
-      navigate(-1)
-    } catch {
-      toast.error('Lỗi', 'Không thể khớp chuyến')
+      },
+    })
+    if (!toResult.success) {
+      toast.error('Lỗi', 'Không thể cập nhật đơn hàng')
       setSubmitting(false)
+      return
     }
+
+    // Reconcile: link work order to trip order
+    const recResult = await reconcile.mutateAsync({ workOrderId: workOrder.id, tripOrderId: selectedTrip.id })
+    if (!recResult.success) {
+      const detail = (recResult.error as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      toast.error('Lỗi khớp', detail ?? 'Không thể khớp chuyến — kiểm tra trạng thái đơn hàng')
+      setSubmitting(false)
+      return
+    }
+
+    toast.success('Thành công', 'Đã khớp chuyến thành công')
+    navigate(-1)
   }
 
   // ── Loading ───────────────────────────────────────────────────────────────
