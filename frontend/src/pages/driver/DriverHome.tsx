@@ -1,13 +1,12 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useState, useMemo, useRef, useCallback } from 'react'
 import { Plus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { apiClient } from '@/services/api'
-import { formatCurrencyFull, type WorkOrder } from '@/data/domain'
+import { formatCurrencyFull } from '@/data/domain'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { WorkOrderCard } from '@/components/shared/WorkOrderCard'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
-import { useMySalaryPeriods, useSalaryConfig } from '@/hooks/use-queries'
+import { useMySalaryPeriods, useSalaryConfig, useWorkOrders } from '@/hooks/use-queries'
 import { getSalaryPeriodDates, dayBefore, dayAfter } from '@/utils/salaryPeriod'
 
 const PAGE_SIZE = 10
@@ -17,8 +16,7 @@ type FilterTab = 'all' | 'pending'
 export function DriverHome() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: workOrders = [], isLoading: loading } = useWorkOrders({ driverId: Number(user!.id) })
   const [filter, setFilter] = useState<FilterTab>('all')
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
@@ -41,15 +39,6 @@ export function DriverHome() {
   )
 
   const { data: salaryPeriods = [] } = useMySalaryPeriods()
-
-  useEffect(() => {
-    let cancelled = false
-    apiClient.getWorkOrders({ driverId: Number(user!.id) }).then(res => {
-      if (!cancelled && res.success) setWorkOrders(res.data)
-      if (!cancelled) setLoading(false)
-    })
-    return () => { cancelled = true }
-  }, [user!.id])
 
   // Reset visible count when period or filter changes
   useEffect(() => { setVisibleCount(PAGE_SIZE) }, [periodStart, filter])

@@ -1,29 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { MapPin, Calendar, Truck, Building2, Route as RouteIcon, Camera, X, Pencil } from 'lucide-react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { InfoRow } from '@/components/shared/InfoRow'
-import { apiClient } from '@/services/api'
-import { formatCurrencyFull, type WorkOrder } from '@/data/domain'
+import { formatCurrencyFull } from '@/data/domain'
+import { useWorkOrder } from '@/hooks/use-queries'
 
 export function JobDetail() {
   const { jobId: jobIdStr } = useParams<{ jobId: string }>()
   const navigate = useNavigate()
   const jobId = Number(jobIdStr)
-  const [job, setJob] = useState<WorkOrder | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { data: job = null, isLoading: loading } = useWorkOrder(jobId)
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!jobIdStr) return
-    let cancelled = false
-    apiClient.getWorkOrder(jobId).then(res => {
-      if (!cancelled && res.success) setJob(res.data)
-      if (!cancelled) setLoading(false)
-    }).catch(() => {
-      if (!cancelled) setLoading(false)
-    })
-    return () => { cancelled = true }
-  }, [jobId])
 
   if (loading) {
     return (
