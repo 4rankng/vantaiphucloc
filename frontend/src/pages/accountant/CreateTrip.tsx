@@ -55,7 +55,10 @@ export function CreateTrip() {
   }
 
   const updateCong = (id: string, field: keyof CongItem, value: string | number) => {
-    setCongItems(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c))
+    const normalizedValue = field === 'containerNumber' && typeof value === 'string'
+      ? value.replace(/-/g, '').toUpperCase()
+      : value
+    setCongItems(prev => prev.map(c => c.id === id ? { ...c, [field]: normalizedValue } : c))
   }
 
   const dropoffOptions = useMemo(() =>
