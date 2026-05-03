@@ -234,12 +234,10 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
       {/* Submit bar */}
       <div className="py-3 space-y-2">
           {missingFields.length > 0 && !canSubmit && (
-            <div className="text-xs font-medium text-center space-y-0.5" style={{ color: 'var(--theme-status-warning)' }}>
-              <p className="font-semibold">Còn thiếu:</p>
-              {missingFields.map((field, i) => (
-                <p key={i}>{field}</p>
-              ))}
-            </div>
+            <p className="text-xs font-medium text-center" style={{ color: 'var(--theme-status-warning)' }}>
+              <span className="font-semibold">Còn thiếu: </span>
+              {missingFields.join(', ')}
+            </p>
           )}
           {missingFields.length === 0 && !canSubmit && Object.keys(containerErrors).length > 0 && (
             <p className="text-xs font-medium text-center" style={{ color: 'var(--theme-status-error)' }}>
