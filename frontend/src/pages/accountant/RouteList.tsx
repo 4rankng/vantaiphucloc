@@ -189,7 +189,7 @@ export function RouteList() {
 
       {/* Route Detail Dialog */}
       <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
-        <DialogContent className="p-0 gap-0 overflow-hidden max-w-sm">
+        <DialogContent className="p-0 gap-0 overflow-hidden max-w-sm [&>button]:text-white [&>button]:hover:text-white [&>button]:opacity-80 [&>button]:hover:opacity-100">
           {selected && (() => {
             const parts = selected.route.split(/\s*→\s*|\s*->\s*|\s*-\s*/)
             const from = parts[0] ?? selected.route

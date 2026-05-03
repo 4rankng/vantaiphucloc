@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { useWorkOrders } from '@/hooks/use-queries'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { WorkOrderJobCard } from '@/components/shared/WorkOrderJobCard'
+import { ContBadge } from '@/components/shared/ContBadge'
 import { DataTablePro, type Column } from '@/components/shared/DataTablePro'
 import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
 import { PageContainer } from '@/components/shared/PageContainer'
 import { useMonthParams } from './use-month-params'
-import { Search, Calendar, Truck, Package, DollarSign } from 'lucide-react'
+import { Search, Calendar, Truck, DollarSign } from 'lucide-react'
 import { Input } from '@/components/ui'
 import { useIsMobile } from '@/hooks/use-mobile'
 import type { WorkOrder } from '@/data/domain'
@@ -105,23 +106,23 @@ export function DriverTrips() {
       key: 'container',
       header: 'Container',
       accessor: (row) => {
-        const containerCount = row.containers.length
-        const firstContainer = row.containers[0]?.containerNumber
+        if (row.containers.length === 0) {
+          return <span style={{ color: 'var(--theme-text-muted)' }}>—</span>
+        }
         return (
-          <div className="flex items-center gap-1.5">
-            <Package className="h-3.5 w-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-            <span>
-              {firstContainer || '-'}
-              {containerCount > 1 && (
-                <span className="ml-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                  +{containerCount - 1}
+          <div className="flex flex-col gap-0.5">
+            {row.containers.slice(0, 2).map((c, i) => (
+              <div key={i} className="flex items-center gap-1">
+                <ContBadge type={c.workType} />
+                <span className="text-xs font-mono" style={{ color: 'var(--theme-text-primary)' }}>
+                  {c.containerNumber}
                 </span>
-              )}
-            </span>
+              </div>
+            ))}
           </div>
         )
       },
-      width: '150px',
+      width: '200px',
       hideOnMobile: true,
     },
     {
