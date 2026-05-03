@@ -251,9 +251,9 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
             onClick={() => navigate(-1)}
             className="h-12 px-4 rounded-2xl flex items-center justify-center gap-1 touch-manipulation transition-all active:scale-[0.98] shrink-0"
             style={{
-              background: 'var(--theme-bg-tertiary)',
-              color: 'var(--theme-text-primary)',
-              border: '1px solid var(--theme-border-default)',
+              background: 'transparent',
+              color: 'var(--theme-status-error)',
+              border: '1.5px solid var(--theme-status-error)',
             }}
           >
             <ChevronLeft className="w-5 h-5" />
@@ -267,7 +267,7 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
               color: canSubmit ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)',
             }}
           >
-            {submitting ? 'Đang gửi...' : isEdit ? 'Cập nhật' : isOnline ? 'Gửi chuyến' : 'Lưu offline'}
+            {submitting ? 'Đang gửi...' : isEdit ? 'Cập nhật' : isOnline ? 'Xác nhận' : 'Lưu offline'}
           </button>
         </div>
       </div>
