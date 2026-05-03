@@ -50,14 +50,14 @@ export const grabTheme: ThemeDefinition = {
     statusInfoLight: '#EFF6FF',
     statusInfoText: '#1E40AF',
 
-    // ─── Sidebar (desktop) — dark slate Linear style ─────
-    sidebar: '#18181B',                              // zinc-900
-    sidebarBorder: 'rgba(255, 255, 255, 0.06)',
-    sidebarText: '#D4D4D8',                          // zinc-300
-    sidebarTextMuted: 'rgba(212, 212, 216, 0.55)',
-    sidebarActive: 'rgba(255, 255, 255, 0.08)',
+    // ─── Sidebar (desktop) — deep brand green, aligned with login hero ─────
+    sidebar: '#047857',                              // emerald-700 = brandPrimaryDark — same family as login green
+    sidebarBorder: 'rgba(255, 255, 255, 0.10)',
+    sidebarText: 'rgba(236, 253, 245, 0.85)',        // emerald-50 with alpha
+    sidebarTextMuted: 'rgba(236, 253, 245, 0.55)',
+    sidebarActive: 'rgba(255, 255, 255, 0.15)',
     sidebarActiveText: '#FFFFFF',
-    sidebarHover: 'rgba(255, 255, 255, 0.04)',
+    sidebarHover: 'rgba(255, 255, 255, 0.08)',
 
     // ─── Bottom nav (mobile) ─────────────────────────────
     bottomNav: 'rgba(255, 255, 255, 0.92)',
