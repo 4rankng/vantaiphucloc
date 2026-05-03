@@ -162,14 +162,6 @@ export function MatchJob() {
     setEditingTripId(null)
   }
 
-  // Memoize edit configs to prevent unnecessary re-renders
-  const clientEditLeft = useMemo(() => ({ options: clientOptions, onChange: setJobClient, placeholder: 'Chọn khách hàng...' }), [clientOptions, setJobClient])
-  const clientEditRight = useMemo(() => ({ options: clientOptions, onChange: setTripClient, placeholder: 'Chọn khách hàng...' }), [clientOptions, setTripClient])
-  const routeEditLeft = useMemo(() => ({ options: routeOptions, onChange: setJobRoute, placeholder: 'Chọn cung đường...' }), [routeOptions, setJobRoute])
-  const routeEditRight = useMemo(() => ({ options: routeOptions, onChange: setTripRoute, placeholder: 'Chọn cung đường...' }), [routeOptions, setTripRoute])
-  const contEditLeft = useMemo(() => ({ onChange: setJobContainers, accentColor: 'var(--theme-brand-primary)' }), [setJobContainers])
-  const contEditRight = useMemo(() => ({ onChange: setTripContainers, accentColor: 'var(--theme-status-warning)' }), [setTripContainers])
-
   const handleToggleConfirmation = () => {
     if (!selectedTrip) return
     toggleConfirmation(selectedTrip.id, {
