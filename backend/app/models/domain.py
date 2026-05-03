@@ -211,9 +211,6 @@ class TripOrder(AuditableMixin, Base):
     route = Column(String(500), nullable=False)
     pickup_location = Column(String(255), nullable=True)
     dropoff_location = Column(String(255), nullable=True)
-    tractor_plate = Column(String(20), nullable=False)
-    driver_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
-    driver_name = Column(String(255), nullable=True)  # denormalized
     container_number = Column(String(50), nullable=True)  # legacy — use trip_order_containers
     pricing_id = Column(Integer, ForeignKey("pricings.id"), nullable=True)
     unit_price = Column(Integer, nullable=False)       # VND
@@ -233,7 +230,6 @@ class TripOrder(AuditableMixin, Base):
     )
 
     __table_args__ = (
-        Index("ix_trip_orders_driver_id_trip_date", "driver_id", "trip_date"),
         Index("ix_trip_orders_is_confirmed", "is_confirmed"),
         Index("ix_trip_orders_confirmed_by", "confirmed_by"),
     )

@@ -324,8 +324,6 @@ class TripOrderCreate(BaseModel):
     route: str
     pickup_location: str | None = None
     dropoff_location: str | None = None
-    driver_id: int | None = None
-    driver_name: str | None = None
     containers: list[TripContainerCreate] = []
     container_number: str | None = None  # legacy
     pricing_id: int | None = None
@@ -344,9 +342,6 @@ class TripOrderUpdate(BaseModel):
     route: str | None = None
     pickup_location: str | None = None
     dropoff_location: str | None = None
-    tractor_plate: str | None = None
-    driver_id: int | None = None
-    driver_name: str | None = None
     container_number: str | None = None
     containers: list[TripContainerCreate] | None = None
     pricing_id: int | None = None
@@ -371,9 +366,6 @@ class TripOrderOut(BaseModel):
     route: str
     pickup_location: str | None = None
     dropoff_location: str | None = None
-    tractor_plate: str
-    driver_id: int | None = None
-    driver_name: str | None = None
     container_number: str | None
     containers: list[TripContainerOut] = []
     pricing_id: int | None

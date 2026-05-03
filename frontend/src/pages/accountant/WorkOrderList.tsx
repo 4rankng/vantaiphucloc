@@ -19,19 +19,18 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import type { WorkOrder } from '@/data/domain'
 import { formatCurrencyFull as fmt } from '@/data/domain'
 
-type StatusFilter = 'all' | 'PENDING' | 'MATCHED' | 'COMPLETED'
+type StatusFilter = 'all' | 'PENDING' | 'COMPLETED'
 
 const STATUS_OPTIONS = [
   { key: 'all', label: 'Tất cả' },
   { key: 'PENDING', label: 'Chờ khớp', color: 'var(--theme-status-warning)' },
-  { key: 'MATCHED', label: 'Đã khớp', color: 'var(--theme-brand-primary)' },
   { key: 'COMPLETED', label: 'Hoàn thành', color: 'var(--theme-status-success)' },
 ]
 
-function getStatusVariant(status: string): 'pending' | 'matched' | 'completed' | 'neutral' {
+function getStatusVariant(status: string): 'pending' | 'completed' | 'neutral' {
   switch (status) {
     case 'PENDING': return 'pending'
-    case 'MATCHED': return 'matched'
+    case 'MATCHED': return 'completed'
     case 'COMPLETED': return 'completed'
     default: return 'neutral'
   }
@@ -40,7 +39,7 @@ function getStatusVariant(status: string): 'pending' | 'matched' | 'completed' |
 function getStatusLabel(status: string): string {
   switch (status) {
     case 'PENDING': return 'Chờ khớp'
-    case 'MATCHED': return 'Đã khớp'
+    case 'MATCHED': return 'Hoàn thành'
     case 'COMPLETED': return 'Hoàn thành'
     default: return status
   }
@@ -55,7 +54,7 @@ export function WorkOrderList() {
   const { mutate: uploadExcel, isPending: uploading } = useUploadCustomerExcel()
 
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('PENDING')
 
   // Import Excel dialog state
   const [importOpen, setImportOpen] = useState(false)
@@ -381,7 +380,7 @@ export function WorkOrderList() {
               <WorkOrderJobCard
                 key={job.id}
                 job={job}
-                status={job.status === 'PENDING' ? 'unmatched' : job.status === 'MATCHED' ? 'matched' : 'completed'}
+                status={job.status === 'PENDING' ? 'unmatched' : 'completed'}
                 onClick={() => navigate(`/accountant/match/${job.id}`)}
               />
             ))}
@@ -454,7 +453,7 @@ export function WorkOrderList() {
               <WorkOrderJobCard
                 key={job.id}
                 job={job}
-                status={job.status === 'PENDING' ? 'unmatched' : job.status === 'MATCHED' ? 'matched' : 'completed'}
+                status={job.status === 'PENDING' ? 'unmatched' : 'completed'}
                 onClick={() => navigate(`/accountant/match/${job.id}`)}
               />
             ))
