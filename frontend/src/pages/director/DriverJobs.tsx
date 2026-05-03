@@ -1,31 +1,20 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useParams } from 'react-router-dom'
-import { apiClient } from '@/services/api'
 import { formatCurrencyFull as formatCurrency } from '@/data/domain'
 import { BackButton } from '@/components/shared/BackButton'
-import type { WorkOrder, Driver } from '@/data/domain'
+import { useWorkOrders } from '@/hooks/use-queries'
 
 export function DriverJobs() {
   const { driverId: driverIdStr } = useParams<{ driverId: string }>()
   const driverId = Number(driverIdStr)
-  const [jobs, setJobs] = useState<WorkOrder[]>([])
-  const [driver, setDriver] = useState<Driver | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    apiClient.getWorkOrders()
-      .then(res => {
-        if (!cancelled && res.success) {
-          setJobs(res.data.filter(j => j.driverId === driverId))
-          const d = res.data.find(j => j.driverId === driverId)
-          if (d) setDriver({ id: d.driverId, name: d.driverName, role: 'driver', phone: '', tractorPlate: d.tractorPlate })
-        }
-      })
-      .catch((err) => { console.error('Failed to load driver jobs:', err) })
-    return () => { cancelled = true }
-  }, [driverId])
+  const { data: jobs = [] } = useWorkOrders({ driverId })
 
   const totalEarning = useMemo(() => jobs.reduce((s, j) => s + j.earning, 0), [jobs])
+
+  const sortedJobs = useMemo(
+    () => [...jobs].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [jobs],
+  )
 
   return (
     <>
@@ -43,7 +32,7 @@ export function DriverJobs() {
         </div>
 
         {/* Job list */}
-        {jobs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(job => (
+        {sortedJobs.map(job => (
           <div
             key={job.id}
             className="rounded-lg p-3 space-y-2"

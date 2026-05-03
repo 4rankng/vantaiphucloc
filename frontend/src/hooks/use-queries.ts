@@ -15,6 +15,7 @@ export const queryKeys = {
   pricingsFiltered: (filters?: { clientId?: number; workType?: WorkType; route?: string }) =>
     ['pricings', filters] as const,
   workOrders: ['work-orders'] as const,
+  workOrder: (id: number) => ['work-orders', id] as const,
   workOrdersFiltered: (filters?: Record<string, string>) =>
     ['work-orders', filters] as const,
   tripOrders: ['trip-orders'] as const,
@@ -113,6 +114,17 @@ export function useWorkOrders(filters?: { driverId?: number; tractorPlate?: stri
       const res = await apiClient.getWorkOrders(filters)
       return res.success ? res.data : []
     },
+  })
+}
+
+export function useWorkOrder(id: number) {
+  return useQuery({
+    queryKey: queryKeys.workOrder(id),
+    queryFn: async () => {
+      const res = await apiClient.getWorkOrder(id)
+      return res.success ? res.data : null
+    },
+    enabled: !!id,
   })
 }
 

@@ -1032,3 +1032,41 @@ select {
   );
   background-size: 24px 24px;
 }
+
+/* ─── Theme token utilities ──────────────────────────────────────────────────
+   Replace inline style={{ color: 'var(--theme-*)' }} with these class names.
+   Example: style={{ color: 'var(--theme-text-muted)' }}  →  className="text-theme-muted"
+   ─────────────────────────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Text */
+  .text-theme-primary   { color: var(--theme-text-primary); }
+  .text-theme-secondary { color: var(--theme-text-secondary); }
+  .text-theme-muted     { color: var(--theme-text-muted); }
+  .text-theme-brand     { color: var(--theme-brand-primary); }
+  .text-theme-on-brand  { color: var(--theme-text-on-brand); }
+  .text-theme-error     { color: var(--theme-status-error); }
+  .text-theme-success   { color: var(--theme-status-success); }
+  .text-theme-warning   { color: var(--theme-status-warning); }
+  .text-theme-info      { color: var(--theme-status-info); }
+
+  /* Backgrounds */
+  .bg-theme-primary       { background: var(--theme-bg-primary); }
+  .bg-theme-secondary     { background: var(--theme-bg-secondary); }
+  .bg-theme-tertiary      { background: var(--theme-bg-tertiary); }
+  .bg-theme-brand         { background: var(--theme-brand-primary); }
+  .bg-theme-brand-light   { background: var(--theme-brand-primary-light); }
+  .bg-theme-error         { background: var(--theme-status-error); }
+  .bg-theme-error-light   { background: var(--theme-status-error-light); }
+  .bg-theme-success       { background: var(--theme-status-success); }
+  .bg-theme-success-light { background: var(--theme-status-success-light); }
+  .bg-theme-warning       { background: var(--theme-status-warning); }
+  .bg-theme-warning-light { background: var(--theme-status-warning-light); }
+
+  /* Borders */
+  .border-theme-default { border-color: var(--theme-border-default); }
+  .border-theme-light   { border-color: var(--theme-border-light); }
+  .border-theme-brand   { border-color: var(--theme-brand-primary); }
+
+  /* Shadow */
+  .shadow-theme-card { box-shadow: var(--theme-shadow-card); }
+}

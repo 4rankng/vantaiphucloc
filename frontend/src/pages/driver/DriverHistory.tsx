@@ -1,11 +1,11 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Camera } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { apiClient } from '@/services/api'
-import { formatCurrencyFull, type WorkOrder } from '@/data/domain'
+import { formatCurrencyFull } from '@/data/domain'
 import { FilterPills } from '@/components/shared/FilterPills'
 import { WorkOrderCard } from '@/components/shared/WorkOrderCard'
+import { useWorkOrders } from '@/hooks/use-queries'
 
 type FilterValue = 'ALL' | 'PENDING'
 
@@ -17,18 +17,8 @@ const FILTER_OPTIONS: { value: FilterValue; label: string }[] = [
 export function DriverHistory() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: workOrders = [], isLoading: loading } = useWorkOrders({ driverId: user!.id })
   const [filter, setFilter] = useState<FilterValue>('ALL')
-
-  useEffect(() => {
-    let cancelled = false
-    apiClient.getWorkOrders({ driverId: user!.id }).then(res => {
-      if (!cancelled && res.success) setWorkOrders(res.data)
-      if (!cancelled) setLoading(false)
-    })
-    return () => { cancelled = true }
-  }, [user!.id])
 
   const filtered = useMemo(() =>
     filter === 'ALL' ? workOrders : workOrders.filter(w => w.status === filter),
