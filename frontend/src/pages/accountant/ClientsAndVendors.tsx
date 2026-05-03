@@ -559,6 +559,7 @@ export function ClientsAndVendors() {
       {/* Page header */}
       <PageHeader
         title="Đối tác"
+        icon="warehouse"
         onAdd={handleOpenCreate}
         addLabel="Thêm"
       />

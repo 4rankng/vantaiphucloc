@@ -106,6 +106,7 @@ export function RouteList() {
       {/* Page header */}
       <PageHeader
         title="Cung đường"
+        icon="route"
         onAdd={handleOpenCreate}
         addLabel="Thêm"
         actions={

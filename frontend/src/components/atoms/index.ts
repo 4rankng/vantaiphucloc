@@ -6,4 +6,6 @@ export { Avatar, AvatarImage, AvatarFallback, avatarVariants } from '@/component
 export { Separator as Divider } from '@/components/ui/Separator'
 export { Pill } from './Pill'
 export { ThemedIcon as Icon } from './Icon'
+export { BrandIcon } from './BrandIcon'
+export type { BrandIconName } from './BrandIcon'
 export { useToast, Toaster } from './Toast'

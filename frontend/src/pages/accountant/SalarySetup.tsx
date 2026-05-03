@@ -338,6 +338,7 @@ export function SalarySetup() {
       <PageHeader
         title="Cấu hình lương"
         subtitle="Quản lý kỳ lương và tính toán lương tài xế"
+        icon="money"
       />
 
       {/* Top: config + calculate, equal-height side-by-side on desktop */}

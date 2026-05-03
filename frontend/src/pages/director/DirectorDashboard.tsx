@@ -1,11 +1,11 @@
 import { useEffect, useState, useMemo, useCallback, type ReactNode } from 'react'
-import { Truck, AlertCircle, CheckCircle2, DollarSign, Users, Handshake, Receipt, Briefcase, ChevronLeft, ChevronRight, TrendingUp, ArrowUpRight, Calendar } from 'lucide-react'
+import { Truck, AlertCircle, CheckCircle2, DollarSign, ChevronLeft, ChevronRight, TrendingUp, ArrowUpRight, Calendar } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { apiClient } from '@/services/api'
 import type { TripOrder } from '@/data/domain'
 import { getTripOrderStatusBadge } from '@/data/domain'
 import { StatusBadge } from '@/components/shared/StatusBadge'
-import { ChartCard } from '@/components/shared/ChartCard'
+import { BrandIcon, type BrandIconName } from '@/components/atoms/BrandIcon'
 import { BarChartWidget } from '@/components/shared/Charts'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -215,29 +215,29 @@ export function DirectorDashboard() {
           </span>
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {[
-            { label: 'Quản lý nhân sự', desc: 'Tài khoản & tài xế', path: '/director/users', icon: Users },
-            { label: 'Đối tác', desc: 'Khách hàng, nhà thầu', path: '/director/partners', icon: Handshake },
-            { label: 'Lệnh vận chuyển', desc: 'Tạo & theo dõi lệnh', path: '/director/trips', icon: Briefcase },
-            { label: 'Bảng giá', desc: 'Giá theo tuyến', path: '/director/pricing', icon: Receipt },
-          ].map(a => (
+          {([
+            { label: 'Quản lý nhân sự', desc: 'Tài khoản & tài xế', path: '/director/users', icon: 'team' },
+            { label: 'Đối tác', desc: 'Khách hàng, nhà thầu', path: '/director/partners', icon: 'warehouse' },
+            { label: 'Lệnh vận chuyển', desc: 'Tạo & theo dõi lệnh', path: '/director/trips', icon: 'truck' },
+            { label: 'Bảng giá', desc: 'Giá theo tuyến', path: '/director/pricing', icon: 'invoice' },
+          ] as { label: string; desc: string; path: string; icon: BrandIconName }[]).map(a => (
             <button
               key={a.label}
               onClick={() => navigate(a.path)}
               className="card-interactive group flex flex-col items-center gap-2 p-4 text-center"
             >
               <div
-                className="flex h-12 w-12 items-center justify-center rounded-xl transition-transform group-hover:scale-110"
-                style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
+                className="flex h-14 w-14 items-center justify-center rounded-2xl transition-transform group-hover:scale-110"
+                style={{ background: 'var(--theme-brand-primary-light)' }}
               >
-                <a.icon className="h-5 w-5" />
+                <BrandIcon name={a.icon} size={36} />
               </div>
               <div className="min-w-0">
                 <div className="text-sm font-semibold leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{a.label}</div>
                 <div className="mt-0.5 text-xs" style={{ color: 'var(--theme-text-muted)' }}>{a.desc}</div>
               </div>
-              <ArrowUpRight 
-                className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" 
+              <ArrowUpRight
+                className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
                 style={{ color: 'var(--theme-brand-primary)' }}
               />
             </button>
@@ -284,12 +284,7 @@ export function DirectorDashboard() {
             </div>
           ) : recentTrips.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <div 
-                className="w-14 h-14 rounded-full flex items-center justify-center mb-3"
-                style={{ background: 'var(--theme-bg-tertiary)' }}
-              >
-                <Truck className="h-6 w-6" style={{ color: 'var(--theme-text-muted)' }} />
-              </div>
+              <BrandIcon name="calkey" className="w-24 h-24 mb-3 opacity-90" />
               <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Chưa có lệnh nào</p>
               <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Các lệnh mới sẽ xuất hiện ở đây</p>
             </div>

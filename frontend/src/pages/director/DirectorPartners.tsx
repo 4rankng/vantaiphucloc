@@ -109,6 +109,7 @@ export function DirectorPartners() {
     <div className="space-y-4">
       <PageHeader
         title="Đối tác"
+        icon="warehouse"
         subtitle={`${counts.ALL} đối tác`}
         onAdd={() => setCreateType('client')}
         addLabel="Thêm đối tác"

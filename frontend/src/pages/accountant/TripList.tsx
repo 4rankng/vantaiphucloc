@@ -253,6 +253,7 @@ export function TripList() {
       <div className="space-y-3">
         <PageHeader
           title="Đơn hàng"
+          icon="document"
           onAdd={() => navigate(createTripPath)}
           addLabel="Tạo"
         />
@@ -370,6 +371,7 @@ export function TripList() {
       {/* Page header with actions */}
       <PageHeader
         title="Đơn hàng"
+        icon="document"
         onAdd={() => navigate(createTripPath)}
         addLabel="Tạo đơn"
         actions={actionButtons}
