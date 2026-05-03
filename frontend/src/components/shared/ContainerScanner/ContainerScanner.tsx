@@ -139,7 +139,7 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
   return createPortal(
     <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: '#000' }}>
       {/* Hidden file input (camera mode gallery button) - capture="" forces gallery only on most devices */}
-      <input ref={fileInputRef} type="file" accept="image/*" capture="" className="hidden" onChange={handleFileChange} />
+      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
 
       {/* Close */}
       <button
