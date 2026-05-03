@@ -10,6 +10,13 @@ import { useToast } from '@/components/atoms/Toast'
 import { useIsMobile } from '@/hooks/use-mobile'
 import type { TripOrder, WorkType } from '@/data/domain'
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function fmtDate(dateStr: string): string {
+  const d = new Date(dateStr)
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
 // ─── Inline editable field ────────────────────────────────────────────────────
 
 function InlineField({
@@ -168,16 +175,28 @@ function ContainerRow({
 }
 
 // ─── Trip order row in right panel ───────────────────────────────────────────
+// X/Y badge: X = criteria from this đơn hàng that match the chuyến đã đi;
+//            Y = total criteria count in the chuyến đã đi (per-container)
 
 function TripRow({
-  trip, isSelected, matchedFieldsLen, totalCriteria, onClick,
+  trip, isSelected, matchedCount, totalCriteria, onClick,
 }: {
   trip: TripOrder
   isSelected: boolean
-  matchedFieldsLen: number
+  matchedCount: number
   totalCriteria: number
   onClick: () => void
 }) {
+  const isFullMatch = totalCriteria > 0 && matchedCount === totalCriteria
+  const isPartialMatch = matchedCount > 0 && matchedCount < totalCriteria
+
+  const badgeColor = isFullMatch
+    ? 'var(--theme-status-success)'
+    : isPartialMatch
+    ? 'var(--theme-status-warning)'
+    : 'var(--theme-text-muted)'
+
+  const tripDateShort = trip.tripDate ? fmtDate(trip.tripDate) : null
 
   return (
     <button
@@ -190,13 +209,31 @@ function TripRow({
         border: isSelected ? '2px solid var(--theme-brand-primary)' : '1px solid var(--theme-border-light)',
       }}
     >
-      {/* Criteria match X/5 — top right */}
+      {/* X/Y badge — top right: X matched criteria / Y total WO criteria */}
       <span
         className="absolute top-2 right-2.5 text-[11px] font-bold tabular-nums"
-        style={{ color: matchedFieldsLen === totalCriteria ? 'var(--theme-status-success)' : 'var(--theme-text-muted)' }}
+        style={{ color: badgeColor }}
       >
-        {matchedFieldsLen}/{totalCriteria}
+        {matchedCount}/{totalCriteria}
       </span>
+
+      {/* Code + Date row */}
+      <div className="flex items-center gap-1.5 mb-1.5 pr-10">
+        {trip.code && (
+          <span
+            className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded"
+            style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
+          >
+            {trip.code}
+          </span>
+        )}
+        {tripDateShort && (
+          <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>
+            {tripDateShort}
+          </span>
+        )}
+      </div>
+
       {/* Containers */}
       <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
         {(trip.containers?.length ? trip.containers : []).map((c, i) => (
@@ -208,6 +245,7 @@ function TripRow({
           </span>
         ))}
       </div>
+
       {/* Client · Route */}
       <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
         <span className="font-medium">{trip.clientName}</span>
@@ -346,11 +384,30 @@ export function MatchJob() {
     )
   }, [woContainers, tripContainers, selectedTrip])
 
+  // Which trip containers match a WO container (used in edit panel)
+  const matchedTripContainerIndices = useMemo(() => {
+    const woSet = new Set(woContainers.map(c => `${c.workType}|${c.containerNumber}`))
+    return new Set(
+      tripContainers
+        .map((c, i) => (c.containerNumber && woSet.has(`${c.workType}|${c.containerNumber}`)) ? i : -1)
+        .filter(i => i >= 0)
+    )
+  }, [woContainers, tripContainers])
+
   // For non-container fields, trust backend matched_fields (they resolve route→pickup/dropoff)
   // but also check locally in case user edited values
   const clientMatch = backendMatchedFields.has('client') || (woClient !== '' && woClient === tripClient)
   const pickupMatch = backendMatchedFields.has('pickup_location') || (woPickup !== '' && woPickup === tripPickup)
   const dropoffMatch = backendMatchedFields.has('dropoff_location') || (woDropoff !== '' && woDropoff === tripDropoff)
+
+  // Total criteria count in the work order (Y in X/Y badge) — each container counts separately
+  const totalCriteria = useMemo(() =>
+    woContainers.length
+    + (woClient !== '' ? 1 : 0)
+    + (woPickup !== '' ? 1 : 0)
+    + (woDropoff !== '' ? 1 : 0),
+    [woContainers, woClient, woPickup, woDropoff]
+  )
 
   // ── Submit ────────────────────────────────────────────────────────────────
   const [submitting, setSubmitting] = useState(false)
@@ -594,21 +651,33 @@ export function MatchJob() {
               </div>
             ) : (
               <>
-                {suggestions.map(s => (
-                  <TripRow
-                    key={s.tripOrder.id}
-                    trip={s.tripOrder}
-                    isSelected={selectedTripId === s.tripOrder.id}
-                    matchedFieldsLen={s.matchedFields.length}
-                    totalCriteria={
-                      woContainers.length
-                      + (woClient !== '' ? 1 : 0)
-                      + (woPickup !== '' ? 1 : 0)
-                      + (woDropoff !== '' ? 1 : 0)
-                    }
-                    onClick={() => setSelectedTripId(s.tripOrder.id)}
-                  />
-                ))}
+                {suggestions.map(s => {
+                  // Compute X: how many WO criteria this đơn hàng matches, per-container
+                  const sTripContainers = s.tripOrder.containers?.length
+                    ? s.tripOrder.containers
+                    : s.tripOrder.containerNumber
+                      ? [{ workType: s.tripOrder.workType ?? 'E20', containerNumber: s.tripOrder.containerNumber }]
+                      : []
+                  const sTripContainerSet = new Set(sTripContainers.map(c => `${c.workType}|${c.containerNumber}`))
+                  const matchedContainersCount = woContainers.filter(
+                    c => c.containerNumber && sTripContainerSet.has(`${c.workType}|${c.containerNumber}`)
+                  ).length
+                  const matchedCount = matchedContainersCount
+                    + (s.matchedFields.includes('client') ? 1 : 0)
+                    + (s.matchedFields.includes('pickup_location') ? 1 : 0)
+                    + (s.matchedFields.includes('dropoff_location') ? 1 : 0)
+
+                  return (
+                    <TripRow
+                      key={s.tripOrder.id}
+                      trip={s.tripOrder}
+                      isSelected={selectedTripId === s.tripOrder.id}
+                      matchedCount={matchedCount}
+                      totalCriteria={totalCriteria}
+                      onClick={() => setSelectedTripId(s.tripOrder.id)}
+                    />
+                  )
+                })}
               </>
             )}
             </div>
@@ -633,31 +702,48 @@ export function MatchJob() {
                 </button>
               </div>
 
-              {/* Trip containers */}
+              {/* Trip containers — with match indicators */}
               <div className="space-y-1.5">
-                {tripContainers.map((c, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <input
-                      value={c.workType}
-                      onChange={e => updateTripContainer(idx, 'workType', e.target.value.toUpperCase())}
-                      className="w-14 px-2 py-1.5 rounded text-xs font-bold text-center border"
-                      style={{ borderColor: 'var(--theme-border-default)', background: 'var(--theme-bg-primary)', color: 'var(--theme-brand-primary)' }}
-                    />
-                    <input
-                      value={c.containerNumber}
-                      onChange={e => updateTripContainer(idx, 'containerNumber', e.target.value.toUpperCase())}
-                      className="flex-1 px-2 py-1.5 rounded text-xs font-mono border"
-                      style={{ borderColor: 'var(--theme-border-default)', background: 'var(--theme-bg-primary)', color: 'var(--theme-text-primary)' }}
-                    />
-                    <button
-                      onClick={() => setTripContainers(prev => prev.filter((_, i) => i !== idx))}
-                      className="p-1 rounded"
-                      style={{ color: 'var(--theme-text-muted)' }}
+                {tripContainers.map((c, idx) => {
+                  const isContainerMatched = matchedTripContainerIndices.has(idx)
+                  return (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-2 px-2 py-1.5 rounded-lg"
+                      style={{
+                        background: isContainerMatched
+                          ? 'color-mix(in srgb, var(--theme-status-success) 8%, transparent)'
+                          : 'var(--theme-bg-primary)',
+                        border: `1px solid ${isContainerMatched ? 'var(--theme-status-success)' : 'var(--theme-border-default)'}`,
+                      }}
                     >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
+                      {isContainerMatched ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--theme-status-success)' }} />
+                      ) : (
+                        <div className="w-3.5 h-3.5 rounded-full border-2 shrink-0" style={{ borderColor: 'var(--theme-border-default)' }} />
+                      )}
+                      <input
+                        value={c.workType}
+                        onChange={e => updateTripContainer(idx, 'workType', e.target.value.toUpperCase())}
+                        className="w-14 px-2 py-1 rounded text-xs font-bold text-center border"
+                        style={{ borderColor: 'var(--theme-border-default)', background: 'var(--theme-bg-secondary)', color: 'var(--theme-brand-primary)' }}
+                      />
+                      <input
+                        value={c.containerNumber}
+                        onChange={e => updateTripContainer(idx, 'containerNumber', e.target.value.toUpperCase())}
+                        className="flex-1 px-2 py-1 rounded text-xs font-mono border"
+                        style={{ borderColor: 'var(--theme-border-default)', background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)' }}
+                      />
+                      <button
+                        onClick={() => setTripContainers(prev => prev.filter((_, i) => i !== idx))}
+                        className="p-1 rounded"
+                        style={{ color: 'var(--theme-text-muted)' }}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )
+                })}
                 <button
                   onClick={() => setTripContainers(prev => [...prev, { workType: 'E20', containerNumber: '' }])}
                   className="text-xs font-medium flex items-center gap-1 px-2 py-1 rounded"
@@ -667,11 +753,26 @@ export function MatchJob() {
                 </button>
               </div>
 
-              {/* Trip info fields */}
+              {/* Trip info fields — with match indicators */}
               <div className="grid grid-cols-2 gap-3">
-                <InlineField label="Khách hàng" value={tripClient} onChange={setTripClient} />
-                <InlineField label="Điểm lấy" value={tripPickup} onChange={setTripPickup} />
-                <InlineField label="Điểm trả" value={tripDropoff} onChange={setTripDropoff} />
+                <InlineField
+                  label="Khách hàng"
+                  value={tripClient}
+                  onChange={setTripClient}
+                  matched={clientMatch}
+                />
+                <InlineField
+                  label="Điểm lấy"
+                  value={tripPickup}
+                  onChange={setTripPickup}
+                  matched={pickupMatch}
+                />
+                <InlineField
+                  label="Điểm trả"
+                  value={tripDropoff}
+                  onChange={setTripDropoff}
+                  matched={dropoffMatch}
+                />
               </div>
 
               {/* Confirm button — bottom on mobile */}
