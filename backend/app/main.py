@@ -1,11 +1,15 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import Response as StarletteResponse
+
+_logger = logging.getLogger(__name__)
 
 from app.config import settings
 from app.api.v1.router import router as api_v1_router
@@ -85,6 +89,7 @@ app.mount("/photos", StaticFiles(directory=str(_photos_root)), name="photos")
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
+    _logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"},
