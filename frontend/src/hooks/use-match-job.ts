@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { useWorkOrders, useTripOrders, useClients, useRoutes, useUpdateWorkOrder, useUpdateTripOrder, useCreateTripOrder, useSuggestMatches } from '@/hooks/use-queries'
 import { type WorkType } from '@/data/domain'
 
-type EditDialogMode = 'cont-left' | 'cont-right' | 'client-left' | 'client-right' | 'route-left' | 'route-right' | null
-
 interface EditedJob {
   clientName: string
   route: string
@@ -34,25 +32,14 @@ export function useMatchJob(initialJobId: number) {
   const [selectedTripId, setSelectedTripId] = useState(0)
   const [pickMode, setPickMode] = useState<'job' | 'trip' | null>(null)
 
-  // Auto-select the best suggestion when suggestions load
   useEffect(() => {
     if (selectedTripId !== 0 || !suggestionsData?.suggestions?.length) return
     const best = suggestionsData.suggestions[0]
-    if (best) {
-      setSelectedTripId(best.tripOrder.id)
-    }
+    if (best) setSelectedTripId(best.tripOrder.id)
   }, [suggestionsData, selectedTripId])
 
-  // Edit dialog
-  const [editDialog, setEditDialog] = useState<EditDialogMode>(null)
-
-  // Local editable overrides (null = use derived, non-null = user edited)
   const [jobOverride, setJobOverride] = useState<EditedJob | null>(null)
   const [tripOverride, setTripOverride] = useState<EditedTrip | null>(null)
-
-  // Dialog-local state for container editing
-  const [dialogContainers, setDialogContainers] = useState<{ type: string; number: string }[]>([])
-  const [dialogContRight, setDialogContRight] = useState<{ type: string; number: string }[]>([])
 
   const matchedIds = useMemo(() => new Set(trips.flatMap(t => t.matchedWorkOrderIds)), [trips])
   const unmatchedJobs = useMemo(() => workOrders.filter(w => !matchedIds.has(w.id)), [workOrders, matchedIds])
@@ -61,10 +48,8 @@ export function useMatchJob(initialJobId: number) {
   const selectedJob = useMemo(() => workOrders.find(w => w.id === selectedJobId), [workOrders, selectedJobId])
   const selectedTrip = useMemo(() => trips.find(t => t.id === selectedTripId), [trips, selectedTripId])
 
-  // Suggestions from backend
   const suggestions = suggestionsData?.suggestions ?? []
 
-  // Derived base values
   const baseJob = useMemo(() => selectedJob ? {
     clientName: selectedJob.clientName,
     route: selectedJob.route,
@@ -79,11 +64,9 @@ export function useMatchJob(initialJobId: number) {
     )).map(c => ({ type: c.workType, number: c.containerNumber })),
   } : null, [selectedTrip])
 
-  // Final edited values: override takes precedence
   const editedJob = jobOverride ?? baseJob
   const editedTrip = tripOverride ?? baseTrip
 
-  // When selection changes, clear overrides
   const handleSelectJob = useCallback((id: number) => {
     setSelectedJobId(id)
     setJobOverride(null)
@@ -94,26 +77,34 @@ export function useMatchJob(initialJobId: number) {
     setTripOverride(null)
   }, [])
 
-  // Client/route options
   const clientOptions = useMemo(() => clients.map(c => ({ value: c.name, label: c.name })), [clients])
   const routeOptions = useMemo(() => routes.map(r => ({ value: r.route, label: r.route })), [routes])
 
-  // Open edit dialog with current values
-  const openEdit = (mode: EditDialogMode) => {
-    if (!mode) return
-    if (mode === 'cont-left' && editedJob) setDialogContainers([...editedJob.containers])
-    if (mode === 'cont-right' && editedTrip) setDialogContRight([...editedTrip.containers])
-    setEditDialog(mode)
-  }
+  // Direct setter helpers — initialize override from base when needed
+  const setJobClient = useCallback((v: string) => {
+    setJobOverride(prev => ({ ...(prev ?? baseJob ?? { clientName: '', route: '', containers: [] }), clientName: v }))
+  }, [baseJob])
 
-  const saveDialog = () => {
-    if (!editDialog) return
-    if (editDialog === 'cont-left' && editedJob) setJobOverride({ ...editedJob, containers: [...dialogContainers] })
-    if (editDialog === 'cont-right' && editedTrip) setTripOverride({ ...editedTrip, containers: [...dialogContRight] })
-    setEditDialog(null)
-  }
+  const setJobRoute = useCallback((v: string) => {
+    setJobOverride(prev => ({ ...(prev ?? baseJob ?? { clientName: '', route: '', containers: [] }), route: v }))
+  }, [baseJob])
 
-  // Validation
+  const setJobContainers = useCallback((containers: { type: string; number: string }[]) => {
+    setJobOverride(prev => ({ ...(prev ?? baseJob ?? { clientName: '', route: '', containers: [] }), containers }))
+  }, [baseJob])
+
+  const setTripClient = useCallback((v: string) => {
+    setTripOverride(prev => ({ ...(prev ?? baseTrip ?? { clientName: '', route: '', containers: [] }), clientName: v }))
+  }, [baseTrip])
+
+  const setTripRoute = useCallback((v: string) => {
+    setTripOverride(prev => ({ ...(prev ?? baseTrip ?? { clientName: '', route: '', containers: [] }), route: v }))
+  }, [baseTrip])
+
+  const setTripContainers = useCallback((containers: { type: string; number: string }[]) => {
+    setTripOverride(prev => ({ ...(prev ?? baseTrip ?? { clientName: '', route: '', containers: [] }), containers }))
+  }, [baseTrip])
+
   const jobClient = editedJob?.clientName ?? ''
   const tripClient = editedTrip?.clientName ?? ''
   const jobRoute = editedJob?.route ?? ''
@@ -162,25 +153,17 @@ export function useMatchJob(initialJobId: number) {
   }
 
   return {
-    // State
     loading, loadingSuggestions, submitting, pickMode, setPickMode,
-    editDialog, setEditDialog,
-    editedJob, setEditedJob: setJobOverride,
-    editedTrip, setEditedTrip: setTripOverride,
-    dialogContainers, setDialogContainers,
-    dialogContRight, setDialogContRight,
-    // Data
     clientOptions, routeOptions,
     unmatchedJobs, draftTrips,
     selectedJob, selectedTrip,
     selectedJobId, setSelectedJobId: handleSelectJob,
     selectedTripId, setSelectedTripId: handleSelectTrip,
-    // Suggestions
     suggestions,
-    // Validation
     jobClient, tripClient, jobRoute, tripRoute, jobConts, tripConts,
     contMatched, clientMatched, routeMatched,
-    // Handlers
-    openEdit, saveDialog, handleMatch,
+    setJobClient, setJobRoute, setJobContainers,
+    setTripClient, setTripRoute, setTripContainers,
+    handleMatch,
   }
 }
