@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useRoutes } from '@/hooks/use-queries'
-import { type Pricing, type PricingLine, type WorkType } from '@/data/domain'
+import { type Pricing, type PricingLine } from '@/data/domain'
 import { Button } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect'
@@ -23,19 +23,25 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onCancel
   const [clientId, setClientId] = useState(
     String(lockedClientId ?? initial?.clientId ?? ''),
   )
+  const [workType, setWorkType] = useState(initial?.workType ?? 'E20')
   const [pickupLocation, setPickupLocation] = useState(initial?.pickupLocation ?? '')
   const [dropoffLocation, setDropoffLocation] = useState(initial?.dropoffLocation ?? '')
   const [lines, setLines] = useState<PricingLine[]>(
-    initial?.lines ?? [{ workType: 'E20' as WorkType, quantity: 1, unitPrice: 0, driverSalary: 0, allowance: 0 }],
+    initial?.lines?.length
+      ? initial.lines
+      : [{ quantity: 1, unitPrice: 0, driverSalary: 0, allowance: 0 }],
   )
-  const [unitPrice, setUnitPrice] = useState(initial?.unitPrice ?? 0)
-  const [driverSalary, setDriverSalary] = useState(initial?.driverSalary ?? 0)
-  const [allowance, setAllowance] = useState(initial?.allowance ?? 0)
 
   const clientOptions = useMemo(
     () => clients.map(c => ({ value: String(c.id), label: c.name })),
     [clients],
   )
+  const workTypeOptions = [
+    { value: 'E20', label: 'E20' },
+    { value: 'E40', label: 'E40' },
+    { value: 'F20', label: 'F20' },
+    { value: 'F40', label: 'F40' },
+  ]
   const pickupOptions = useMemo(
     () =>
       [...new Set(routes.map(r => r.pickupLocation).filter(Boolean) as string[])].map(loc => ({
@@ -54,21 +60,17 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onCancel
 
   const clientName = clients.find(c => String(c.id) === clientId)?.name ?? ''
   const route = pickupLocation && dropoffLocation ? `${pickupLocation} - ${dropoffLocation}` : ''
-  const workType = lines[0]?.workType ?? 'E20'
 
   const handleSubmit = () => {
     if (!clientId || !route || lines.length === 0) return
     onSave({
       clientId: Number(clientId),
       clientName,
-      workType,
+      workType: workType as Pricing['workType'],
       route,
       pickupLocation,
       dropoffLocation,
       lines,
-      unitPrice,
-      driverSalary,
-      allowance,
     })
   }
 
@@ -107,6 +109,28 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onCancel
             />
           </div>
         )}
+
+        {/* Work type */}
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
+            Loại cont
+          </Label>
+          <div className="flex gap-1">
+            {workTypeOptions.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setWorkType(opt.value)}
+                className="px-2 py-1.5 rounded-lg text-xs font-bold touch-manipulation"
+                style={{
+                  background: workType === opt.value ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
+                  color: workType === opt.value ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>

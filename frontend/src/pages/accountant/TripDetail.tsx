@@ -239,7 +239,7 @@ export function TripDetail() {
       )}
 
       {/* Unmatched jobs — match action */}
-      {trip.status === 'DRAFT' && (
+      {(trip.status === 'DRAFT' || trip.status === 'PENDING') && (
         <div>
           <button onClick={() => setShowMatchDialog(true)}
             className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold transition-all active:scale-[0.98] touch-manipulation"

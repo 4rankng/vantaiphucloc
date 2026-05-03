@@ -25,12 +25,12 @@ export function isNetworkError(err: unknown): boolean {
 
 /** Convert a single snake_case string to camelCase */
 function snakeToCamel(s: string): string {
-  return s.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase())
+  return s.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpperCase())
 }
 
 /** Convert a single camelCase string to snake_case */
 function camelToSnake(s: string): string {
-  return s.replace(/([A-Z])/g, (c: string) => '_' + c.toLowerCase())
+  return s.replace(/([A-Z])/g, (c: string) => '_' + c.toLowerCase()).replace(/([a-z])([0-9])/g, '$1_$2')
 }
 
 /** Recursively convert all object keys from snake_case to camelCase */

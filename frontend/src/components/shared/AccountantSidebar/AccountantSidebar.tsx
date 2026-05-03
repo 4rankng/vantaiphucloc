@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -12,6 +12,7 @@ import {
   LogOut,
   Bell,
   UserCircle,
+  ChevronLeft,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUnreadCount } from '@/components/shared/NotificationPanel/NotificationPanel'
@@ -44,6 +45,8 @@ export interface AccountantSidebarProps {
   collapsed?: boolean
   badges?: Record<string, number>
   onNotificationsOpen?: () => void
+  /** Called when the user clicks the collapse/expand toggle (desktop only). */
+  onToggle?: () => void
   /** When true, removes the lg:flex guard so the sidebar renders on mobile (e.g. inside a drawer). */
   forceVisible?: boolean
 }
@@ -52,6 +55,7 @@ export function AccountantSidebar({
   collapsed = false,
   badges = {},
   onNotificationsOpen,
+  onToggle,
   forceVisible = false,
 }: AccountantSidebarProps) {
   const location = useLocation()
@@ -61,12 +65,10 @@ export function AccountantSidebar({
 
   const isActive = useCallback(
     (href: string) => {
-      if (href === '/accountant') {
-        return location.pathname === '/accountant'
-      }
+      if (href === '/accountant') return location.pathname === '/accountant'
       return location.pathname.startsWith(href)
     },
-    [location.pathname]
+    [location.pathname],
   )
 
   const handleLogout = useCallback(() => {
@@ -76,7 +78,7 @@ export function AccountantSidebar({
 
   return (
     <aside
-      className={`${forceVisible ? 'flex' : 'hidden lg:flex'} flex-col shrink-0 h-full transition-all duration-200 ${
+      className={`${forceVisible ? 'flex' : 'hidden lg:flex'} flex-col shrink-0 h-full transition-all duration-200 relative ${
         collapsed ? 'w-[72px]' : 'w-[240px]'
       }`}
       style={{
@@ -145,7 +147,6 @@ export function AccountantSidebar({
       {/* Footer — user menu */}
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }} className="p-2 shrink-0">
         {collapsed ? (
-          /* Collapsed: logout icon only */
           <button
             type="button"
             onClick={handleLogout}
@@ -155,7 +156,6 @@ export function AccountantSidebar({
             <LogOut className="w-4 h-4 shrink-0" />
           </button>
         ) : (
-          /* Expanded: name dropdown trigger + logout button */
           <div className="flex items-center gap-1">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -167,7 +167,6 @@ export function AccountantSidebar({
                     <span className="text-[13px] font-medium truncate leading-tight text-white/90">{user?.name || user?.username}</span>
                     <span className="text-[10px] text-white/45 truncate leading-tight">{user?.role === 'accountant' ? 'Kế toán' : user?.role}</span>
                   </div>
-
                   {unread > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 h-4 min-w-4 flex items-center justify-center px-1 text-[10px] font-semibold rounded-full bg-red-500 text-white">
                       {unread > 99 ? '99+' : unread}
@@ -175,12 +174,7 @@ export function AccountantSidebar({
                   )}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent
-                className="w-56 z-[9999]"
-                side="top"
-                align="start"
-                sideOffset={8}
-              >
+              <DropdownMenuContent className="w-56 z-[9999]" side="top" align="start" sideOffset={8}>
                 <DropdownMenuItem onClick={() => navigate('/accountant/notifications')}>
                   <Bell className="mr-2 h-4 w-4" />
                   Thông báo
@@ -192,7 +186,6 @@ export function AccountantSidebar({
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Logout button */}
             <button
               type="button"
               onClick={handleLogout}
@@ -204,6 +197,25 @@ export function AccountantSidebar({
           </div>
         )}
       </div>
+
+      {/* Collapse / expand toggle — on the right edge, desktop only */}
+      {onToggle && (
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-label={collapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'}
+          className="absolute top-[72px] -right-3 z-10 w-6 h-6 flex items-center justify-center rounded-full shadow-md transition-colors hover:brightness-110"
+          style={{
+            background: 'var(--theme-sidebar, #0a3520)',
+            border: '1px solid rgba(255,255,255,0.15)',
+            color: 'rgba(255,255,255,0.7)',
+          }}
+        >
+          <ChevronLeft
+            className={`w-3.5 h-3.5 transition-transform duration-200 ${collapsed ? 'rotate-180' : ''}`}
+          />
+        </button>
+      )}
     </aside>
   )
 }

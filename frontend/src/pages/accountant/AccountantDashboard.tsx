@@ -969,6 +969,6 @@ function MobileDashboard() {
 // ─── Root export ──────────────────────────────────────────────────────────────
 
 export function AccountantDashboard() {
-  const isMobile = useIsMobile()
+  const isMobile = useIsMobile(1024)
   return isMobile ? <MobileDashboard /> : <DesktopDashboard />
 }

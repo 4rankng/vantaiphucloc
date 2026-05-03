@@ -157,7 +157,6 @@ class RouteOut(BaseModel):
 # ---------------------------------------------------------------------------
 
 class PricingLineCreate(BaseModel):
-    work_type: str
     quantity: int
     unit_price: int = 0
     driver_salary: int = 0
@@ -166,7 +165,6 @@ class PricingLineCreate(BaseModel):
 
 class PricingLineOut(BaseModel):
     id: int
-    work_type: str
     quantity: int
     unit_price: int = 0
     driver_salary: int = 0
@@ -183,9 +181,6 @@ class PricingCreate(BaseModel):
     pickup_location: str | None = None
     dropoff_location: str | None = None
     lines: list[PricingLineCreate]
-    unit_price: int = Field(ge=0)
-    driver_salary: int = Field(ge=0)
-    allowance: int = Field(ge=0)
 
 
 class PricingUpdate(BaseModel):
@@ -196,9 +191,6 @@ class PricingUpdate(BaseModel):
     pickup_location: str | None = None
     dropoff_location: str | None = None
     lines: list[PricingLineCreate] | None = None
-    unit_price: int | None = None
-    driver_salary: int | None = None
-    allowance: int | None = None
 
 
 class PricingOut(BaseModel):
@@ -210,9 +202,6 @@ class PricingOut(BaseModel):
     pickup_location: str | None = None
     dropoff_location: str | None = None
     lines: list[PricingLineOut] = []
-    unit_price: int
-    driver_salary: int
-    allowance: int
     is_active: bool = True
     created_at: datetime
     updated_at: datetime
