@@ -169,6 +169,8 @@ class WorkOrder(AuditableMixin, Base):
 
     __table_args__ = (
         Index("ix_work_orders_driver_id_status", "driver_id", "status"),
+        Index("ix_work_orders_status", "status"),
+        Index("ix_work_orders_created_at", "created_at"),
     )
 
 
@@ -186,7 +188,7 @@ class WorkOrderContainer(Base):
         nullable=False,
         index=True,
     )
-    container_number = Column(String(50), nullable=False)
+    container_number = Column(String(50), nullable=False, index=True)
     work_type = Column(String(10), nullable=False)     # E20 | E40 | F20 | F40
     photo_url = Column(String(1000), nullable=True)
     photo_lat = Column(Float, nullable=True)
@@ -232,6 +234,9 @@ class TripOrder(AuditableMixin, Base):
     __table_args__ = (
         Index("ix_trip_orders_is_confirmed", "is_confirmed"),
         Index("ix_trip_orders_confirmed_by", "confirmed_by"),
+        Index("ix_trip_orders_status", "status"),
+        Index("ix_trip_orders_trip_date", "trip_date"),
+        Index("ix_trip_orders_client_id_trip_date", "client_id", "trip_date"),
     )
 
 
@@ -249,7 +254,7 @@ class TripOrderContainer(Base):
         nullable=False,
         index=True,
     )
-    container_number = Column(String(50), nullable=False)
+    container_number = Column(String(50), nullable=False, index=True)
     work_type = Column(String(10), nullable=False)     # E20 | E40 | F20 | F40
 
 

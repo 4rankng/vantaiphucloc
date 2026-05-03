@@ -202,7 +202,7 @@ export function WorkOrderList() {
         return (
           <div className="flex flex-col gap-0.5">
             {row.containers.slice(0, 2).map((c, i) => (
-              <div key={i} className="flex items-center gap-1 whitespace-nowrap">
+              <div key={i} className="flex items-center gap-1 flex-nowrap">
                 <ContBadge type={c.workType} />
                 <span className="text-xs font-mono whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
                   {c.containerNumber}

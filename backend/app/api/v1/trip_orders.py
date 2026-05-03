@@ -207,15 +207,17 @@ async def create_trip_order(
     matched_ids = body.matched_work_order_ids
     trip_data = body.model_dump(exclude={"matched_work_order_ids", "containers"})
 
+    from app.utils.iso6346 import normalize_container_number as _norm
+
     # Validate container rules
     if body.containers:
         validate_same_work_type(body.containers)
         work_type_val = body.containers[0].work_type
         validate_container_quantity(work_type_val, len(body.containers))
 
-    # Derive legacy fields from first container
+    # Derive legacy fields from first container (normalized)
     if body.containers:
-        trip_data["container_number"] = body.containers[0].container_number
+        trip_data["container_number"] = _norm(body.containers[0].container_number)
         trip_data["work_type"] = body.containers[0].work_type
 
     # Auto-lookup pricing from bang gia
@@ -261,7 +263,7 @@ async def create_trip_order(
     for c in body.containers:
         db.add(TripOrderContainer(
             trip_order_id=trip_order.id,
-            container_number=c.container_number,
+            container_number=_norm(c.container_number),
             work_type=c.work_type,
         ))
 
@@ -382,14 +384,15 @@ async def update_trip_order(
                 TripOrderContainer.trip_order_id == trip_order.id
             )
         )
+        from app.utils.iso6346 import normalize_container_number as _norm
         for c_data in new_containers:
             db.add(TripOrderContainer(
                 trip_order_id=trip_order.id,
-                container_number=c_data["container_number"],
+                container_number=_norm(c_data["container_number"]),
                 work_type=c_data["work_type"],
             ))
         if new_containers:
-            trip_order.container_number = new_containers[0]["container_number"]
+            trip_order.container_number = _norm(new_containers[0]["container_number"])
             trip_order.work_type = new_containers[0]["work_type"]
 
     if new_matched_ids is not None:

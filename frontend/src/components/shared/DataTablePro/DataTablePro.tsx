@@ -318,6 +318,9 @@ export function DataTablePro<T>({
                         style={{
                           color: 'var(--theme-text-primary)',
                           textAlign: col.align ?? 'left',
+                          width: col.width,
+                          maxWidth: col.width,
+                          overflow: 'hidden',
                         }}
                       >
                         {col.accessor(row)}
