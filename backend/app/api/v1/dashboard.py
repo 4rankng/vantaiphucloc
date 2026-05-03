@@ -6,15 +6,15 @@ import json
 import logging
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, case
+from sqlalchemy import select, func
 
-from app.database import get_db
 from app.models.domain import TripOrder, WorkOrder, Client
 from app.models.base import User
 from app.core.deps import get_current_user
 from app.core.worker import get_arq_pool
 from app.schemas.domain import DashboardSummaryOut
+from app.repositories.user_repo import UserRepository
+from app.repositories.deps import get_user_repo
 
 logger = logging.getLogger(__name__)
 
@@ -24,29 +24,25 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 @router.get("/summary", response_model=DashboardSummaryOut)
 async def get_dashboard_summary(
     _current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    repo: UserRepository = Depends(get_user_repo),
 ):
-    """Compute dashboard summary via SQL aggregation."""
+    db = repo.session
 
-    # Total revenue from trip orders
     revenue_q = await db.execute(
         select(func.coalesce(func.sum(TripOrder.revenue), 0))
     )
     total_revenue = revenue_q.scalar() or 0
 
-    # Total expense (work order earnings)
     expense_q = await db.execute(
         select(func.coalesce(func.sum(WorkOrder.earning), 0))
     )
     total_expense = expense_q.scalar() or 0
 
-    # Trip count
     trip_count_q = await db.execute(
         select(func.count(TripOrder.id))
     )
     trip_count = trip_count_q.scalar() or 0
 
-    # Active trips (DRAFT + CONFIRMED)
     active_q = await db.execute(
         select(func.count(TripOrder.id)).where(
             TripOrder.status.in_(["DRAFT", "PENDING"])
@@ -54,13 +50,11 @@ async def get_dashboard_summary(
     )
     active_trips = active_q.scalar() or 0
 
-    # Outstanding debt
     debt_q = await db.execute(
         select(func.coalesce(func.sum(Client.outstanding_debt), 0))
     )
     outstanding_debt = debt_q.scalar() or 0
 
-    # Driver salary summary — matched work orders grouped by driver
     driver_salary_q = await db.execute(
         select(
             User.id.label("driver_id"),
@@ -84,7 +78,6 @@ async def get_dashboard_summary(
         for row in driver_salary_q.all()
     ]
 
-    # Unmatched work order count using NOT EXISTS (avoids full-table scan)
     from app.models.domain import TripOrderWorkOrder
 
     unmatched_q = await db.execute(
@@ -96,7 +89,6 @@ async def get_dashboard_summary(
     )
     unmatched_work_order_count = unmatched_q.scalar() or 0
 
-    # Pending trip count
     pending_q = await db.execute(
         select(func.count(TripOrder.id)).where(TripOrder.status == "DRAFT")
     )
@@ -118,11 +110,9 @@ async def get_dashboard_summary(
 async def get_notifications(
     current_user: User = Depends(get_current_user),
 ):
-    """Return the latest 50 in-app notifications for the current user from Redis."""
     try:
         redis = get_arq_pool()
         key = f"notifications:user:{current_user.id}"
-        # zrevrange returns newest-first (highest score = most recent timestamp)
         raw_items = await redis.zrevrange(key, 0, 49)
         notifications = []
         for i, raw in enumerate(raw_items):
@@ -141,6 +131,5 @@ async def get_notifications(
                 continue
         return notifications
     except RuntimeError:
-        # arq pool not initialized (e.g. in tests) — return empty list gracefully
         logger.warning("arq pool unavailable, returning empty notifications")
         return []

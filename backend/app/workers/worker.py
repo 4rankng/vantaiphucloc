@@ -41,6 +41,8 @@ class WorkerSettings:
 
     @staticmethod
     async def on_shutdown(ctx: dict) -> None:
+        from app.database import engine
+        await engine.dispose()
         logger.info("Worker stopped")
 
     @staticmethod

@@ -1,8 +1,10 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.responses import Response as StarletteResponse
 
 from app.config import settings
@@ -75,6 +77,10 @@ app.add_middleware(
 )
 
 app.include_router(api_v1_router, prefix="/api/v1")
+
+_photos_root = Path(settings.PHOTO_STORAGE_ROOT)
+_photos_root.mkdir(parents=True, exist_ok=True)
+app.mount("/photos", StaticFiles(directory=str(_photos_root)), name="photos")
 
 
 @app.exception_handler(Exception)

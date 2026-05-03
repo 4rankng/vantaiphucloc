@@ -34,6 +34,17 @@ interface NotificationListProps {
   emptyLabel?: string
 }
 
+function formatTime(ts: string): string {
+  const d = new Date(ts)
+  if (isNaN(d.getTime())) return ts
+  const diffHours = Math.floor((Date.now() - d.getTime()) / 3600000)
+  if (diffHours < 1) return 'Vừa xong'
+  if (diffHours < 24) return `${diffHours} giờ trước`
+  const diffDays = Math.floor(diffHours / 24)
+  if (diffDays < 7) return `${diffDays} ngày trước`
+  return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
 export function NotificationList({ notifications, typeConfig, emptyLabel = 'Không có thông báo' }: NotificationListProps) {
   const merged = { ...BUILT_IN_TYPE_CONFIG, ...typeConfig }
   const unreadCount = notifications.filter(n => !n.read).length
@@ -108,7 +119,7 @@ export function NotificationList({ notifications, typeConfig, emptyLabel = 'Khô
                     )}
                   </div>
                   <p className="typo-body-sm mb-1">{n.message}</p>
-                  <p className="typo-meta">{n.time}</p>
+                  <p className="typo-meta">{formatTime(n.time)}</p>
                 </div>
               </div>
             )

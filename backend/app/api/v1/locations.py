@@ -1,17 +1,18 @@
+import math
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from redis.asyncio import Redis
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
 
-from app.database import get_db
 from app.models.base import User
-from app.models.domain import Location
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import LocationCreate, LocationUpdate, LocationOut
 from app.core.deps import require_permission
 from app.core.redis import get_redis
 from app.core.cache import CacheManager
 from app.config import settings
+from app.repositories.location_repo import LocationRepository
+from app.repositories.deps import get_location_repo
 
 router = APIRouter()
 
@@ -21,7 +22,7 @@ async def list_locations(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     current_user: User = Depends(require_permission("read", "Location")),
-    db: AsyncSession = Depends(get_db),
+    repo: LocationRepository = Depends(get_location_repo),
     redis: Redis = Depends(get_redis),
 ):
     cache = CacheManager(redis)
@@ -30,21 +31,11 @@ async def list_locations(
     if cached is not None:
         return PaginatedResponse(**cached)
 
-    total_q = await db.execute(select(func.count(Location.id)).where(Location.is_active == True))
-    total = total_q.scalar() or 0
-
-    result = await db.execute(
-        select(Location)
-        .where(Location.is_active == True)
-        .order_by(Location.name.asc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
+    data, total = await repo.paginate(
+        page, page_size, active_only=True, order_by=repo.model.name.asc()
     )
-    data = result.scalars().all()
 
-    import math
-    from app.schemas.base import PaginatedResponse as PR
-    response = PR[LocationOut](
+    response = PaginatedResponse[LocationOut](
         items=[LocationOut.model_validate(loc) for loc in data],
         total=total,
         page=page,
@@ -59,14 +50,9 @@ async def list_locations(
 @router.get("/locations/all", response_model=list[LocationOut])
 async def list_all_locations(
     current_user: User = Depends(require_permission("read", "Location")),
-    db: AsyncSession = Depends(get_db),
+    repo: LocationRepository = Depends(get_location_repo),
 ):
-    result = await db.execute(
-        select(Location)
-        .where(Location.is_active == True)
-        .order_by(Location.name.asc())
-    )
-    data = result.scalars().all()
+    data = await repo.list_active(order_by=repo.model.name.asc(), limit=10000)
     return [LocationOut.model_validate(loc) for loc in data]
 
 
@@ -74,19 +60,15 @@ async def list_all_locations(
 async def create_location(
     body: LocationCreate,
     current_user: User = Depends(require_permission("update", "Location")),
-    db: AsyncSession = Depends(get_db),
+    repo: LocationRepository = Depends(get_location_repo),
     redis: Redis = Depends(get_redis),
 ):
-    existing = await db.execute(
-        select(Location).where(Location.name == body.name)
-    )
-    if existing.scalar_one_or_none():
+    if await repo.find_by_name(body.name):
         raise HTTPException(status_code=409, detail="Location already exists")
 
-    location = Location(name=body.name)
-    db.add(location)
-    await db.commit()
-    await db.refresh(location)
+    location = await repo.create(name=body.name)
+    await repo.session.commit()
+    await repo.session.refresh(location)
     await CacheManager(redis).invalidate_namespace("locations")
     return location
 
@@ -96,21 +78,13 @@ async def update_location(
     location_id: int,
     body: LocationUpdate,
     current_user: User = Depends(require_permission("update", "Location")),
-    db: AsyncSession = Depends(get_db),
+    repo: LocationRepository = Depends(get_location_repo),
     redis: Redis = Depends(get_redis),
 ):
-    result = await db.execute(
-        select(Location).where(Location.id == location_id)
-    )
-    location = result.scalar_one_or_none()
-    if location is None:
-        raise HTTPException(status_code=404, detail="Location not found")
-
-    for field, value in body.model_dump(exclude_unset=True).items():
-        setattr(location, field, value)
-
-    await db.commit()
-    await db.refresh(location)
+    location = await repo.get_by_id_or_404(location_id)
+    await repo.update(location, **body.model_dump(exclude_unset=True))
+    await repo.session.commit()
+    await repo.session.refresh(location)
     await CacheManager(redis).invalidate_namespace("locations")
     return location
 
@@ -119,18 +93,12 @@ async def update_location(
 async def delete_location(
     location_id: int,
     current_user: User = Depends(require_permission("update", "Location")),
-    db: AsyncSession = Depends(get_db),
+    repo: LocationRepository = Depends(get_location_repo),
     redis: Redis = Depends(get_redis),
 ):
-    result = await db.execute(
-        select(Location).where(Location.id == location_id)
-    )
-    location = result.scalar_one_or_none()
-    if location is None:
-        raise HTTPException(status_code=404, detail="Location not found")
+    location = await repo.get_by_id_or_404(location_id)
 
     # Guard: check for FK references
-    from sqlalchemy import text
     tables_cols = [
         ("routes", "pickup_location_id"),
         ("routes", "dropoff_location_id"),
@@ -142,7 +110,7 @@ async def delete_location(
         ("pricings", "dropoff_location_id"),
     ]
     for table, col in tables_cols:
-        r = await db.execute(
+        r = await repo.session.execute(
             text(f"SELECT 1 FROM {table} WHERE {col} = :lid LIMIT 1"),
             {"lid": location_id},
         )
@@ -152,7 +120,7 @@ async def delete_location(
                 detail=f"Cannot delete: location is referenced in {table}.{col}",
             )
 
-    location.is_active = False
-    await db.commit()
+    await repo.soft_delete(location)
+    await repo.session.commit()
     await CacheManager(redis).invalidate_namespace("locations")
     return Response()

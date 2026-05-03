@@ -8,10 +8,8 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, func
 
-from app.database import get_db
 from app.models.base import User
 from app.models.domain import WorkOrder, WorkOrderContainer, Location
 from app.schemas.base import PaginatedResponse
@@ -30,9 +28,10 @@ from app.core.deps import get_current_user, require_permission
 from app.services.pricing_service import find_pricing
 from app.services.ocr_service import MAX_OCR_ATTEMPTS, extract_container_number
 from app.services.photo_storage import save_base64_photo
-from app.services.audit_service import log_action
 from app.core.audit_context import set_audit_reason
 from app.core.redis import get_redis
+from app.repositories.work_order_repo import WorkOrderRepository
+from app.repositories.deps import get_work_order_repo
 
 _logger = logging.getLogger(__name__)
 
@@ -44,7 +43,6 @@ async def validate_container(
     container_number: str = Query(..., description="Container number to validate"),
     current_user: User = Depends(get_current_user),
 ):
-    """Validate a container number against ISO 6346."""
     from app.utils.iso6346 import validate_container_number, normalize_container_number
     valid, error = validate_container_number(container_number)
     return {
@@ -54,14 +52,8 @@ async def validate_container(
     }
 
 
-async def _load_work_order_out(db: AsyncSession, work_order: WorkOrder) -> WorkOrderOut:
-    """Load a single WorkOrder with its associated WorkOrderContainer rows."""
-    containers_result = await db.execute(
-        select(WorkOrderContainer).where(
-            WorkOrderContainer.work_order_id == work_order.id
-        )
-    )
-    containers = containers_result.scalars().all()
+async def _load_work_order_out(repo: WorkOrderRepository, work_order: WorkOrder) -> WorkOrderOut:
+    containers = await repo.get_containers(work_order.id)
     return WorkOrderOut(
         id=work_order.id,
         client_id=work_order.client_id,
@@ -95,21 +87,19 @@ async def _load_work_order_out(db: AsyncSession, work_order: WorkOrder) -> WorkO
 
 
 async def _batch_load_work_order_outs(
-    db: AsyncSession, work_orders: list[WorkOrder]
+    repo: WorkOrderRepository, work_orders: list[WorkOrder]
 ) -> list[WorkOrderOut]:
-    """Batch-load containers for multiple work orders at once (N+1 fix)."""
     if not work_orders:
         return []
 
     wo_ids = [wo.id for wo in work_orders]
-    containers_result = await db.execute(
+    containers_result = await repo.session.execute(
         select(WorkOrderContainer).where(
             WorkOrderContainer.work_order_id.in_(wo_ids)
         )
     )
     all_containers = containers_result.scalars().all()
 
-    # Group containers by work_order_id
     containers_by_wo: dict[int, list[WorkOrderContainer]] = defaultdict(list)
     for c in all_containers:
         containers_by_wo[c.work_order_id].append(c)
@@ -156,13 +146,13 @@ async def _batch_load_work_order_outs(
 async def create_work_order(
     body: WorkOrderCreate,
     current_user: User = Depends(require_permission("create", "WorkOrder")),
-    db: AsyncSession = Depends(get_db),
+    repo: WorkOrderRepository = Depends(get_work_order_repo),
 ):
+    db = repo.session
     work_order = await _create_work_order_db(body, current_user, db)
     await db.commit()
     await db.refresh(work_order)
 
-    # Fire-and-forget notification
     try:
         from app.workers import enqueue
         await enqueue(
@@ -175,7 +165,6 @@ async def create_work_order(
     except RuntimeError:
         _logger.warning("Failed to enqueue notification for WO#%s", work_order.id)
 
-    # Enqueue geocoding tasks (best-effort)
     try:
         from app.workers import enqueue
         if body.gps_lat and body.gps_lng:
@@ -183,7 +172,7 @@ async def create_work_order(
     except RuntimeError:
         pass
 
-    return await _load_work_order_out(db, work_order)
+    return await _load_work_order_out(repo, work_order)
 
 
 @router.get("/work-orders", response_model=PaginatedResponse[WorkOrderOut])
@@ -196,8 +185,9 @@ async def list_work_orders(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    repo: WorkOrderRepository = Depends(get_work_order_repo),
 ):
+    db = repo.session
     query = select(WorkOrder)
     count_query = select(func.count(WorkOrder.id))
 
@@ -227,10 +217,8 @@ async def list_work_orders(
     )
     work_orders = result.scalars().all()
 
-    # Batch-load containers instead of per-row queries
-    items = await _batch_load_work_order_outs(db, work_orders)
+    items = await _batch_load_work_order_outs(repo, work_orders)
 
-    # Hide salary from drivers on PENDING WOs
     if current_user.role == "driver":
         for i, wo in enumerate(work_orders):
             if wo.status == "PENDING":
@@ -251,18 +239,11 @@ async def list_work_orders(
 async def get_work_order(
     work_order_id: int,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    repo: WorkOrderRepository = Depends(get_work_order_repo),
 ):
-    result = await db.execute(
-        select(WorkOrder).where(WorkOrder.id == work_order_id)
-    )
-    work_order = result.scalar_one_or_none()
-    if work_order is None:
-        raise HTTPException(status_code=404, detail="Work order not found")
+    work_order = await repo.get_by_id_or_404(work_order_id)
+    wo_out = await _load_work_order_out(repo, work_order)
 
-    wo_out = await _load_work_order_out(db, work_order)
-
-    # Hide salary from driver until matched
     if current_user.role == "driver" and work_order.status == "PENDING":
         wo_out.driver_salary = 0
         wo_out.allowance = 0
@@ -277,16 +258,11 @@ async def update_work_order(
     body: WorkOrderUpdate,
     request: Request,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    repo: WorkOrderRepository = Depends(get_work_order_repo),
 ):
-    result = await db.execute(
-        select(WorkOrder).where(WorkOrder.id == work_order_id)
-    )
-    work_order = result.scalar_one_or_none()
-    if work_order is None:
-        raise HTTPException(status_code=404, detail="Work order not found")
+    db = repo.session
+    work_order = await repo.get_by_id_or_404(work_order_id)
 
-    # Role-based authorization
     if current_user.role == "driver":
         if work_order.driver_id != current_user.id:
             raise HTTPException(status_code=403, detail="You can only update your own work orders")
@@ -301,13 +277,11 @@ async def update_work_order(
     update_data = body.model_dump(exclude_unset=True)
     new_containers = update_data.pop("containers", None)
 
-    # Drivers cannot change financial fields
     if current_user.role == "driver":
         for field in ("unit_price", "driver_salary", "allowance", "earning", "status"):
             update_data.pop(field, None)
 
-    for field, value in update_data.items():
-        setattr(work_order, field, value)
+    await repo.update(work_order, **update_data)
 
     if new_containers is not None:
         await db.execute(
@@ -330,7 +304,7 @@ async def update_work_order(
     await db.commit()
     await db.refresh(work_order)
 
-    return await _load_work_order_out(db, work_order)
+    return await _load_work_order_out(repo, work_order)
 
 
 @router.put("/work-orders/{work_order_id:int}/cancel", response_model=WorkOrderOut)
@@ -339,15 +313,9 @@ async def cancel_work_order(
     body: CancelRequest,
     request: Request,
     current_user: User = Depends(require_permission("cancel", "WorkOrder")),
-    db: AsyncSession = Depends(get_db),
+    repo: WorkOrderRepository = Depends(get_work_order_repo),
 ):
-    """Cancel a work order (only PENDING/unmatched). Reason required."""
-    result = await db.execute(
-        select(WorkOrder).where(WorkOrder.id == work_order_id)
-    )
-    work_order = result.scalar_one_or_none()
-    if work_order is None:
-        raise HTTPException(status_code=404, detail="Work order not found")
+    work_order = await repo.get_by_id_or_404(work_order_id)
 
     if current_user.role == "driver" and work_order.driver_id != current_user.id:
         raise HTTPException(status_code=403, detail="You can only cancel your own work orders")
@@ -359,18 +327,19 @@ async def cancel_work_order(
     work_order.status = "CANCELLED"
     set_audit_reason(body.reason)
 
-    await db.commit()
-    await db.refresh(work_order)
+    await repo.session.commit()
+    await repo.session.refresh(work_order)
 
-    return await _load_work_order_out(db, work_order)
+    return await _load_work_order_out(repo, work_order)
 
 
 @router.post("/work-orders/batch", status_code=207)
 async def batch_create_work_orders(
     body: BatchWorkOrderCreate,
     current_user: User = Depends(require_permission("create", "WorkOrder")),
-    db: AsyncSession = Depends(get_db),
+    repo: WorkOrderRepository = Depends(get_work_order_repo),
 ):
+    db = repo.session
     results: list[BatchWorkOrderResult] = []
     async with db.begin():
         for i, item in enumerate(body.items):
@@ -382,7 +351,6 @@ async def batch_create_work_orders(
                     _logger.warning("Batch item %d failed: %s", i, exc)
                     results.append(BatchWorkOrderResult(index=i, success=False, error=str(exc)))
 
-    # Enqueue geocoding for successful items (best-effort, outside transaction)
     try:
         from app.workers import enqueue
         for r in results:
@@ -399,11 +367,7 @@ async def batch_create_work_orders(
     return results
 
 
-async def _create_work_order_db(
-    body: WorkOrderCreate, current_user: User, db: AsyncSession
-) -> WorkOrder:
-    """Create WorkOrder + containers in the DB. Flushes but does NOT commit
-    — the caller is responsible for committing (or letting the context manager do it)."""
+async def _create_work_order_db(body, current_user, db):
     from app.utils.iso6346 import validate_container_number, normalize_container_number
 
     containers_data = body.containers
@@ -419,19 +383,8 @@ async def _create_work_order_db(
     first_container = containers_data[0] if containers_data else None
     work_type = first_container.work_type if first_container else ""
 
-    # Drivers always create work orders under their own identity
     driver_id = current_user.id if current_user.role == "driver" else body.driver_id
     driver_name = current_user.username if current_user.role == "driver" else body.driver_name
-
-    # All financials default to 0 — pricing is used for TO, not WO
-    unit_price = 0
-    driver_salary = 0
-    allowance = 0
-    earning = 0
-
-    # Status only tracks if pricing was found for reference, not for financials
-    # New states: PENDING (no match), MATCHED (match but no pricing), COMPLETED (match + pricing)
-    status = "PENDING"
 
     pricing = await find_pricing(
         db,
@@ -441,34 +394,29 @@ async def _create_work_order_db(
         pickup_location=body.pickup_location,
         dropoff_location=body.dropoff_location,
     )
-
-    # Store pricing_id for reference, but don't use it for financials
     pricing_id = pricing.id if pricing else None
 
-    # Fetch client code for denormalized storage
     from app.models.domain import Client
     client_result = await db.execute(select(Client.code).where(Client.id == body.client_id))
     client_code = client_result.scalar_one_or_none()
 
-    # Resolve GPS address: mark as "Không xác định" if no valid coords
     gps_address = None
     has_valid_gps = body.gps_lat and body.gps_lng
     if not has_valid_gps:
         gps_address = "Không xác định"
 
-    # Resolve location FKs
     pickup_location_id = None
     dropoff_location_id = None
     if body.pickup_location:
         loc_result = await db.execute(
-            select(Location).where(Location.name == body.pickup_location, Location.is_active == True)
+            select(Location).where(Location.name == body.pickup_location, Location.is_active == True)  # noqa: E712
         )
         loc = loc_result.scalar_one_or_none()
         if loc:
             pickup_location_id = loc.id
     if body.dropoff_location:
         loc_result = await db.execute(
-            select(Location).where(Location.name == body.dropoff_location, Location.is_active == True)
+            select(Location).where(Location.name == body.dropoff_location, Location.is_active == True)  # noqa: E712
         )
         loc = loc_result.scalar_one_or_none()
         if loc:
@@ -489,17 +437,16 @@ async def _create_work_order_db(
         gps_lat=body.gps_lat,
         gps_lng=body.gps_lng,
         gps_address=gps_address,
-        unit_price=unit_price,
-        driver_salary=driver_salary,
-        allowance=allowance,
-        earning=earning,
+        unit_price=0,
+        driver_salary=0,
+        allowance=0,
+        earning=0,
         pricing_id=pricing_id,
-        status=status,
+        status="PENDING",
     )
     db.add(work_order)
     await db.flush()
 
-    # Generate human-readable code (e.g. ABC0001)
     from app.services.code_service import generate_work_order_code
     work_order.code = await generate_work_order_code(db, body.client_id)
 
@@ -522,8 +469,7 @@ async def _create_work_order_db(
     return work_order
 
 
-# Redis-backed OCR attempt tracking
-_OCR_ATTEMPT_TTL = 600  # 10 minutes
+_OCR_ATTEMPT_TTL = 600
 
 
 async def _get_ocr_attempts_remaining(redis, user_id: int, container_index: int) -> int:
@@ -539,18 +485,9 @@ async def ocr_container_number(
     current_user: User = Depends(get_current_user),
     redis=Depends(get_redis),
 ):
-    """Extract container number from image using Gemini AI OCR.
-
-    Driver workflow:
-    1. Upload image (base64-encoded)
-    2. AI attempts OCR (max MAX_OCR_ATTEMPTS attempts per container)
-    3. If all fail → driver enters manually
-    4. Backend validates against ISO 6346
-    """
     user_id = current_user.id
     rkey = f"ocr_attempts:{user_id}:{body.container_index}"
 
-    # Check remaining attempts via Redis
     attempts_remaining = await _get_ocr_attempts_remaining(redis, user_id, body.container_index)
     if attempts_remaining <= 0:
         _logger.warning("WO_OCR_ATTEMPTS_EXHAUSTED user=%s idx=%s", user_id, body.container_index)
@@ -561,7 +498,6 @@ async def ocr_container_number(
             attempts_remaining=0,
         )
 
-    # Decode base64 image
     try:
         image_bytes = base64.b64decode(body.image_data)
     except Exception as e:
@@ -573,19 +509,16 @@ async def ocr_container_number(
             attempts_remaining=attempts_remaining,
         )
 
-    # Record this attempt in Redis
     pipe = redis.pipeline()
     pipe.incr(rkey)
     pipe.expire(rkey, _OCR_ATTEMPT_TTL)
     await pipe.execute()
 
-    # Call OCR service (no longer takes attempt tracker — pure AI extraction)
     result = await extract_container_number(
         image_bytes=image_bytes,
         mime_type=body.mime_type,
     )
 
-    # Compute remaining after this attempt
     attempts_remaining = await _get_ocr_attempts_remaining(redis, user_id, body.container_index)
     result["attempts_remaining"] = attempts_remaining
 
@@ -598,13 +531,12 @@ async def export_work_orders_excel(
     date_to: date | None = None,
     status: str | None = None,
     current_user: User = Depends(require_permission("export", "WorkOrder")),
-    db: AsyncSession = Depends(get_db),
+    repo: WorkOrderRepository = Depends(get_work_order_repo),
 ):
-    """Export work orders to Excel."""
     from app.services.excel_service import generate_work_orders_excel
 
     content = await generate_work_orders_excel(
-        db, date_from=date_from.isoformat() if date_from else None,
+        repo.session, date_from=date_from.isoformat() if date_from else None,
         date_to=date_to.isoformat() if date_to else None, status=status,
     )
     return StreamingResponse(
