@@ -1,91 +1,108 @@
 import type { ThemeDefinition } from './types';
 
+/**
+ * Modern SaaS theme — Linear / Vercel inspired.
+ * Neutral zinc palette, single emerald accent, hairline borders, tight radii.
+ * (File name kept as `grab.ts` for backward compatibility with all import sites.)
+ */
 export const grabTheme: ThemeDefinition = {
   name: 'grab',
-  label: 'Grab Green',
+  label: 'Modern',
   colors: {
-    bgPrimary: '#f0f7f4',
-    bgSecondary: '#FFFFFF',
-    bgTertiary: '#e4f0eb',
-    bgGlass: 'rgba(255, 255, 255, 0.92)',
+    // ─── Backgrounds ─────────────────────────────────────
+    bgPrimary: '#FAFAFA',        // page background — very subtle gray (zinc-50)
+    bgSecondary: '#FFFFFF',      // cards, sheets, dialogs
+    bgTertiary: '#F4F4F5',       // muted surfaces (input bg, hover row, chip bg)
+    bgGlass: 'rgba(255, 255, 255, 0.85)',
 
-    brandPrimary: '#00963E',
-    brandPrimaryLight: '#E6F9EF',
-    brandPrimaryDark: '#008A3D',
-    brandSecondary: '#00963E',
-    brandGradient: 'linear-gradient(135deg, #00963E 0%, #008A3D 100%)',
-    brandGradientFrom: '#00963E',
-    brandGradientTo: '#008A3D',
+    // ─── Brand (single emerald accent) ───────────────────
+    brandPrimary: '#059669',     // emerald-600
+    brandPrimaryLight: '#ECFDF5', // emerald-50
+    brandPrimaryDark: '#047857', // emerald-700
+    brandSecondary: '#10B981',   // emerald-500 (subtle variation)
+    brandGradient: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+    brandGradientFrom: '#059669',
+    brandGradientTo: '#047857',
 
-    textPrimary: '#1C1C1C',
-    textSecondary: '#6B6B6B',
-    textMuted: '#9E9E9E',
+    // ─── Text (zinc neutral scale) ───────────────────────
+    textPrimary: '#09090B',      // zinc-950 — nearly black, max contrast
+    textSecondary: '#52525B',    // zinc-600 — body / secondary
+    textMuted: '#A1A1AA',        // zinc-400 — labels, hints
     textInverse: '#FFFFFF',
     textOnBrand: '#FFFFFF',
 
-    borderDefault: '#EBEBEB',
-    borderLight: '#F3F3F3',
-    borderGlass: 'rgba(255, 255, 255, 0.95)',
+    // ─── Borders (hairline) ──────────────────────────────
+    borderDefault: '#E4E4E7',    // zinc-200 — default 1px hairline
+    borderLight: '#F4F4F5',      // zinc-100 — softer divider
+    borderGlass: 'rgba(0, 0, 0, 0.06)',
 
-    statusSuccess: '#00963E',
-    statusSuccessLight: '#E6F9EF',
-    statusSuccessText: '#00662D',
-    statusWarning: '#FF9500',
-    statusWarningLight: '#FFF4E6',
-    statusWarningText: '#8A5200',
-    statusError: '#FF5252',
-    statusErrorLight: '#FFECEC',
-    statusErrorText: '#B71C1C',
-    statusInfo: '#2196F3',
-    statusInfoLight: '#E3F2FD',
-    statusInfoText: '#0D47A1',
+    // ─── Status (semantic, muted) ────────────────────────
+    statusSuccess: '#059669',
+    statusSuccessLight: '#ECFDF5',
+    statusSuccessText: '#065F46',
+    statusWarning: '#D97706',    // amber-600
+    statusWarningLight: '#FFFBEB',
+    statusWarningText: '#92400E',
+    statusError: '#DC2626',      // red-600
+    statusErrorLight: '#FEF2F2',
+    statusErrorText: '#991B1B',
+    statusInfo: '#2563EB',       // blue-600
+    statusInfoLight: '#EFF6FF',
+    statusInfoText: '#1E40AF',
 
-    sidebar: '#00782f',
-    sidebarBorder: 'rgba(255, 255, 255, 0.12)',
-    sidebarText: '#e8f5ed',
-    sidebarTextMuted: 'rgba(232, 245, 237, 0.60)',
-    sidebarActive: 'rgba(255, 255, 255, 0.18)',
-    sidebarActiveText: '#ffffff',
-    sidebarHover: 'rgba(255, 255, 255, 0.10)',
+    // ─── Sidebar (desktop) — dark slate Linear style ─────
+    sidebar: '#18181B',                              // zinc-900
+    sidebarBorder: 'rgba(255, 255, 255, 0.06)',
+    sidebarText: '#D4D4D8',                          // zinc-300
+    sidebarTextMuted: 'rgba(212, 212, 216, 0.55)',
+    sidebarActive: 'rgba(255, 255, 255, 0.08)',
+    sidebarActiveText: '#FFFFFF',
+    sidebarHover: 'rgba(255, 255, 255, 0.04)',
 
-    bottomNav: 'rgba(255, 255, 255, 0.96)',
+    // ─── Bottom nav (mobile) ─────────────────────────────
+    bottomNav: 'rgba(255, 255, 255, 0.92)',
     bottomNavBorder: 'rgba(0, 0, 0, 0.06)',
-    bottomNavActive: '#00963E',
-    bottomNavInactive: '#9E9E9E',
+    bottomNavActive: '#059669',
+    bottomNavInactive: '#71717A',                    // zinc-500
 
-    header: 'rgba(255, 255, 255, 0.96)',
+    // ─── Header (translucent + hairline) ────────────────
+    header: 'rgba(255, 255, 255, 0.85)',
     headerBorder: 'rgba(0, 0, 0, 0.06)',
 
-    shadowCard: '0 2px 8px rgba(0, 0, 0, 0.04)',
-    shadowElevated: '0 4px 12px rgba(0, 0, 0, 0.08)',
-    shadowSm: '0 1px 3px rgba(0, 0, 0, 0.03)',
+    // ─── Shadows (soft, sparingly used) ─────────────────
+    shadowCard: '0 1px 2px 0 rgba(9, 9, 11, 0.04)',
+    shadowElevated: '0 4px 16px -4px rgba(9, 9, 11, 0.08), 0 0 0 1px rgba(9, 9, 11, 0.03)',
+    shadowSm: '0 1px 1px 0 rgba(9, 9, 11, 0.03)',
 
-    glassBg: 'rgba(255, 255, 255, 0.92)',
-    glassBorder: 'rgba(255, 255, 255, 0.95)',
-    glassBlur: 'blur(16px) saturate(1.3)',
+    // ─── Glass ──────────────────────────────────────────
+    glassBg: 'rgba(255, 255, 255, 0.85)',
+    glassBorder: 'rgba(0, 0, 0, 0.06)',
+    glassBlur: 'blur(12px) saturate(1.4)',
 
-    skeletonBase: 'rgba(0, 0, 0, 0.04)',
-    skeletonShine: 'rgba(0, 0, 0, 0.08)',
+    // ─── Skeleton shimmer ───────────────────────────────
+    skeletonBase: 'rgba(9, 9, 11, 0.04)',
+    skeletonShine: 'rgba(9, 9, 11, 0.08)',
 
-    badgeFrom: '#00963E',
-    badgeTo: '#008A3D',
+    // ─── Badge (kept for legacy, mapped to brand) ───────
+    badgeFrom: '#059669',
+    badgeTo: '#047857',
   },
   typography: {
-    fontFamilyDisplay: '"Be Vietnam Pro", "Inter", ui-sans-serif, system-ui, sans-serif',
-    fontFamilyBody: '"Be Vietnam Pro", "Inter", ui-sans-serif, system-ui, sans-serif',
-    fontFamilyMono: '"JetBrains Mono", ui-monospace, monospace',
+    fontFamilyDisplay: '"Inter", "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif',
+    fontFamilyBody: '"Inter", "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif',
+    fontFamilyMono: '"JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace',
   },
   borderRadius: {
-    sm: '12px',
-    md: '16px',
-    lg: '16px',
-    xl: '20px',
+    sm: '6px',     // chips, small badges
+    md: '8px',     // inputs, buttons
+    lg: '10px',    // cards
+    xl: '14px',    // dialogs, sheets
     full: '9999px',
   },
   spacing: {
     pagePadding: '16px',
     cardPadding: '16px',
-    sectionGap: '12px',
+    sectionGap: '16px',
     topBarHeight: '3rem',
     bottomNavHeight: '3.5rem',
   },
@@ -93,25 +110,25 @@ export const grabTheme: ThemeDefinition = {
     space: {
       xs: '4px',
       sm: '8px',
-      md: '16px',
-      lg: '24px',
-      xl: '32px',
-      '2xl': '48px',
-      '3xl': '64px',
+      md: '12px',
+      lg: '16px',
+      xl: '24px',
+      '2xl': '32px',
+      '3xl': '48px',
     },
     sizing: {
-      iconSm: '16px',
-      iconMd: '20px',
-      iconLg: '24px',
-      avatarSm: '32px',
-      avatarMd: '40px',
-      avatarLg: '48px',
+      iconSm: '14px',
+      iconMd: '18px',
+      iconLg: '22px',
+      avatarSm: '28px',
+      avatarMd: '36px',
+      avatarLg: '44px',
     },
     opacity: {
-      disabled: '0.5',
-      hover: '0.8',
+      disabled: '0.45',
+      hover: '0.85',
       focus: '1.0',
-      background: '0.96',
+      background: '0.92',
     },
     zIndex: {
       base: '0',
@@ -124,9 +141,9 @@ export const grabTheme: ThemeDefinition = {
       tooltip: '600',
     },
     transition: {
-      fast: '150ms ease',
-      normal: '200ms ease',
-      slow: '300ms ease',
+      fast: '120ms cubic-bezier(0.4, 0, 0.2, 1)',
+      normal: '180ms cubic-bezier(0.4, 0, 0.2, 1)',
+      slow: '240ms cubic-bezier(0.4, 0, 0.2, 1)',
       spring: '300ms cubic-bezier(0.34, 1.56, 0.64, 1)',
     },
   },
