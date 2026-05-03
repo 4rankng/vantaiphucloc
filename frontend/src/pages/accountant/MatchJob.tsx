@@ -508,7 +508,7 @@ export function MatchJob() {
 
       {/* Edit Trip Dialog */}
       <Dialog open={editingTripId !== null} onOpenChange={handleCloseEditDialog}>
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        {editingTripId !== null && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto" style={{ background: 'var(--theme-bg-primary)' }}>
             <div className="sticky top-0 flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--theme-border-light)', background: 'var(--theme-bg-secondary)' }}>
               <h2 className="typo-h3" style={{ color: 'var(--theme-text-primary)' }}>Chỉnh sửa đơn hàng</h2>
@@ -638,7 +638,7 @@ export function MatchJob() {
               </Button>
             </div>
           </div>
-        </div>
+        </div>}
       </Dialog>
 
       {/* Picker modals */}
