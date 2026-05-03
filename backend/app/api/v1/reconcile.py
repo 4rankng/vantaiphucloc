@@ -217,7 +217,7 @@ async def unmatch(
     return {"success": True, "message": "Unmatched successfully"}
 
 
-@router.get("/suggest-matches/{work_order_id}", response_model=SuggestMatchesResponse)
+@router.get("/suggest-matches/{work_order_id:int}", response_model=SuggestMatchesResponse)
 async def suggest_matches(
     work_order_id: int,
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
