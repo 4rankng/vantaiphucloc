@@ -14,6 +14,12 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
     REDIS_POOL_SIZE: int = 10
 
+    # Database pool
+    DB_POOL_SIZE: int = 20
+    DB_MAX_OVERFLOW: int = 40
+    DB_POOL_TIMEOUT: int = 10
+    DB_POOL_RECYCLE: int = 600
+
     # Cache TTLs (seconds)
     CACHE_DEFAULT_TTL: int = 300
     CACHE_PRICING_TTL: int = 600

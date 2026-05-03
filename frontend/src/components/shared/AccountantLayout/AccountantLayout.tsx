@@ -52,7 +52,7 @@ function AccountantDesktopShell() {
 
       {/* Main content area — sidebar + content, no top bar.
           Page title / breadcrumbs / actions live inside each page's <PageHeader />. */}
-      <main className="flex-1 overflow-y-auto min-w-0">
+      <main className={`flex-1 overflow-y-auto min-w-0 bg-dot-grid`}>
         <div className={isFullscreen ? 'h-full' : 'page-container'}>
           <Outlet />
         </div>

@@ -1,47 +1,143 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 200" fill="none">
-  <!-- Soft background ellipse -->
-  <ellipse cx="120" cy="172" rx="78" ry="9" fill="#059669" fill-opacity="0.06"/>
+  <defs>
+    <linearGradient id="er-map" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F9FAFB"/>
+    </linearGradient>
+    <linearGradient id="er-pin-a" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+    <linearGradient id="er-pin-b" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F0FDF4"/>
+    </linearGradient>
+    <radialGradient id="er-shadow" cx="50%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#059669" stop-opacity="0.09"/>
+      <stop offset="100%" stop-color="#059669" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="er-drop-map" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#09090B" flood-opacity="0.07"/>
+    </filter>
+    <filter id="er-drop-pin" x="-40%" y="-20%" width="180%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#059669" flood-opacity="0.22"/>
+    </filter>
+  </defs>
 
-  <!-- Folded map paper background -->
-  <path d="M40 56 L92 48 L148 60 L200 52 L200 152 L148 160 L92 148 L40 156 Z"
-        fill="#FAFAFA" stroke="#E4E4E7" stroke-width="2" stroke-linejoin="round"/>
+  <!-- Ground shadow -->
+  <ellipse cx="120" cy="174" rx="78" ry="8" fill="url(#er-shadow)"/>
 
-  <!-- Map fold creases -->
-  <line x1="92" y1="48" x2="92" y2="148" stroke="#E4E4E7" stroke-width="1.5" stroke-dasharray="2 3"/>
-  <line x1="148" y1="60" x2="148" y2="160" stroke="#E4E4E7" stroke-width="1.5" stroke-dasharray="2 3"/>
+  <!-- ── Map paper ── -->
+  <g filter="url(#er-drop-map)">
+    <!-- Map base (folded paper shape) -->
+    <path d="M36 54 L92 46 L150 58 L204 50 L204 156 L150 164 L92 152 L36 160 Z"
+          fill="url(#er-map)" stroke="#E4E4E7" stroke-width="1.8" stroke-linejoin="round"/>
 
-  <!-- Subtle grid hint (terrain blobs) -->
-  <g opacity="0.7">
-    <path d="M52 84 Q66 78 78 88 Q72 96 60 94 Z" fill="#ECFDF5"/>
-    <path d="M156 110 Q172 104 184 116 Q176 124 162 122 Z" fill="#ECFDF5"/>
-    <path d="M104 126 Q116 120 128 130 Q120 138 110 136 Z" fill="#ECFDF5"/>
+    <!-- Map paper top highlight -->
+    <path d="M36 54 L92 46 L150 58 L204 50 L204 58 L150 66 L92 54 L36 62 Z"
+          fill="#FFFFFF" fill-opacity="0.55"/>
+
+    <!-- Fold crease lines -->
+    <line x1="92"  y1="46"  x2="92"  y2="152" stroke="#E4E4E7" stroke-width="1.2" stroke-dasharray="2 3.5"/>
+    <line x1="150" y1="58"  x2="150" y2="164" stroke="#E4E4E7" stroke-width="1.2" stroke-dasharray="2 3.5"/>
+
+    <!-- Map grid lines (light) -->
+    <g stroke="#F4F4F5" stroke-width="1">
+      <line x1="36"  y1="80"  x2="204" y2="76"/>
+      <line x1="36"  y1="104" x2="204" y2="100"/>
+      <line x1="36"  y1="128" x2="204" y2="124"/>
+    </g>
+
+    <!-- Terrain blobs (area highlights) -->
+    <path d="M46 84 Q64 76 80 86 Q74 98 58 96 Z"  fill="#ECFDF5" fill-opacity="0.9"/>
+    <path d="M156 108 Q174 100 188 114 Q180 124 164 120 Z" fill="#ECFDF5" fill-opacity="0.9"/>
+    <path d="M100 128 Q114 122 128 132 Q120 142 106 140 Z" fill="#ECFDF5" fill-opacity="0.7"/>
+
+    <!-- Terrain outlines -->
+    <path d="M46 84 Q64 76 80 86 Q74 98 58 96 Z"  stroke="#059669" stroke-width="0.8" stroke-opacity="0.25" fill="none"/>
+    <path d="M156 108 Q174 100 188 114 Q180 124 164 120 Z" stroke="#059669" stroke-width="0.8" stroke-opacity="0.25" fill="none"/>
+
+    <!-- Small road network lines -->
+    <g stroke="#D4D4D8" stroke-width="1" stroke-linecap="round">
+      <path d="M56 90 L70 104 L68 120" fill="none"/>
+      <path d="M100 100 L120 112 L140 108" fill="none"/>
+      <path d="M164 88 L172 106" fill="none"/>
+    </g>
+
+    <!-- Mini building dots -->
+    <g fill="#D1FAE5">
+      <rect x="104" y="98" width="5" height="6" rx="1"/>
+      <rect x="114" y="95" width="4" height="9" rx="1"/>
+      <rect x="162" y="85" width="5" height="5" rx="1"/>
+    </g>
+
+    <!-- Route path (dashed curved line from pin A to pin B) -->
+    <path d="M68 124 C 88 78, 154 76, 182 62"
+          stroke="#059669" stroke-width="2.8" stroke-linecap="round"
+          stroke-dasharray="5 7" fill="none"/>
+    <!-- Route path shadow under -->
+    <path d="M68 124 C 88 78, 154 76, 182 62"
+          stroke="#059669" stroke-width="5" stroke-linecap="round"
+          stroke-dasharray="5 7" fill="none" stroke-opacity="0.07"/>
+
+    <!-- ── Compass rose ── -->
+    <g transform="translate(178 138)">
+      <circle r="12" cx="0" cy="0" fill="#FFFFFF" stroke="#E4E4E7" stroke-width="1.5"/>
+      <!-- N cardinal -->
+      <path d="M0 -9 L2.8 -1 L0 7 L-2.8 -1 Z" fill="#059669"/>
+      <!-- S cardinal -->
+      <path d="M0 9 L2.2 3 L0 -1 L-2.2 3 Z" fill="#E4E4E7"/>
+      <!-- E/W ticks -->
+      <line x1="-9" y1="0" x2="-5" y2="0" stroke="#D4D4D8" stroke-width="1.2"/>
+      <line x1="5"  y1="0" x2="9"  y2="0" stroke="#D4D4D8" stroke-width="1.2"/>
+      <!-- N label -->
+      <text x="0" y="-14" font-family="ui-sans-serif, system-ui, sans-serif"
+            font-size="6.5" font-weight="700" fill="#059669" text-anchor="middle">N</text>
+    </g>
+
+    <!-- Distance label tag -->
+    <g transform="translate(120 92)">
+      <rect x="-18" y="-9" width="36" height="17" rx="5" fill="#ECFDF5" stroke="#059669" stroke-width="1"/>
+      <text x="0" y="3.5" font-family="ui-sans-serif, system-ui, sans-serif"
+            font-size="7" font-weight="600" fill="#059669" text-anchor="middle">– km –</text>
+    </g>
   </g>
 
-  <!-- Curved dashed route from pin A to pin B -->
-  <path d="M70 122 C 96 80, 152 80, 178 76"
-        stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="4 6" fill="none"/>
-
-  <!-- Pin A (origin) -->
-  <path d="M70 122 C 70 110, 80 102, 80 92 C 80 80, 70 74, 64 80 C 58 86, 60 96, 70 122 Z"
-        fill="#059669" stroke="#047857" stroke-width="1.5" stroke-linejoin="round"/>
-  <circle cx="70" cy="90" r="4.5" fill="#FFFFFF"/>
-
-  <!-- Pin B (destination) -->
-  <path d="M178 76 C 178 64, 188 56, 188 46 C 188 34, 178 28, 172 34 C 166 40, 168 50, 178 76 Z"
-        fill="#FFFFFF" stroke="#059669" stroke-width="2.5" stroke-linejoin="round"/>
-  <circle cx="178" cy="44" r="4" fill="#059669"/>
-
-  <!-- Compass rose detail (bottom-right) -->
-  <g transform="translate(176 132)" opacity="0.85">
-    <circle cx="0" cy="0" r="11" fill="#FFFFFF" stroke="#059669" stroke-width="1.8"/>
-    <path d="M0 -8 L2.5 0 L0 8 L-2.5 0 Z" fill="#059669"/>
-    <text x="0" y="-12.5" font-family="system-ui, sans-serif" font-size="6.5" font-weight="700"
-          fill="#059669" text-anchor="middle">N</text>
+  <!-- ── Pin A (origin, solid green) ── -->
+  <g filter="url(#er-drop-pin)">
+    <path d="M68 126 C 68 112, 80 104, 80 92 C 80 79, 70 72, 62 78 C 54 84, 56 96, 68 126 Z"
+          fill="url(#er-pin-a)" stroke="#047857" stroke-width="1.2"/>
+    <!-- Pin A inner dot -->
+    <circle cx="68" cy="90" r="5.5" fill="#FFFFFF"/>
+    <circle cx="68" cy="90" r="2.5" fill="#059669"/>
+    <!-- Pin A label -->
+    <rect x="76" y="108" width="13" height="11" rx="3" fill="#059669"/>
+    <text x="82.5" y="117.5" font-family="ui-sans-serif, system-ui, sans-serif"
+          font-size="7" font-weight="700" fill="#FFFFFF" text-anchor="middle">A</text>
   </g>
 
-  <!-- Sparkle accents -->
-  <g stroke="#059669" stroke-width="1.6" stroke-linecap="round" opacity="0.55">
-    <line x1="48" y1="40" x2="54" y2="46"/>
-    <line x1="54" y1="40" x2="48" y2="46"/>
+  <!-- ── Pin B (destination, outline) ── -->
+  <g filter="url(#er-drop-pin)">
+    <path d="M182 64 C 182 50, 193 42, 193 30 C 193 17, 182 11, 175 17 C 168 23, 170 35, 182 64 Z"
+          fill="url(#er-pin-b)" stroke="#059669" stroke-width="2"/>
+    <!-- Pin B inner dot -->
+    <circle cx="182" cy="28" r="5" fill="#059669"/>
+    <circle cx="182" cy="28" r="2.2" fill="#FFFFFF"/>
+    <!-- Pin B label -->
+    <rect x="160" y="44" width="13" height="11" rx="3" fill="#FFFFFF" stroke="#059669" stroke-width="1"/>
+    <text x="166.5" y="53.5" font-family="ui-sans-serif, system-ui, sans-serif"
+          font-size="7" font-weight="700" fill="#059669" text-anchor="middle">B</text>
   </g>
+
+  <!-- Sparkles -->
+  <g stroke="#059669" stroke-width="1.6" stroke-linecap="round" opacity="0.45">
+    <line x1="42" y1="38" x2="48" y2="44"/>
+    <line x1="48" y1="38" x2="42" y2="44"/>
+  </g>
+  <g stroke="#059669" stroke-width="1.2" stroke-linecap="round" opacity="0.3">
+    <line x1="208" y1="72" x2="212" y2="76"/>
+    <line x1="212" y1="72" x2="208" y2="76"/>
+  </g>
+  <circle cx="34"  cy="100" r="2"   fill="#059669" fill-opacity="0.18"/>
+  <circle cx="210" cy="136" r="1.5" fill="#059669" fill-opacity="0.22"/>
 </svg>

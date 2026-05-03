@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
-import { useClients, useRoutes, useCreateTripOrder, useCreateClient, useImportTripOrders } from '@/hooks/use-queries'
+import { useClients, useCreateTripOrder, useCreateClient, useImportTripOrders } from '@/hooks/use-queries'
 import { WORK_TYPES, type WorkType } from '@/data/domain'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { InlineSelect } from '@/components/shared/InlineSelect'
+import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
 import { CreateClientDialog } from '@/components/shared/CreateClientDialog'
 import { ImportResultDialog } from '@/components/shared/ImportResultDialog'
 import { Plus, Trash2, Upload, ChevronLeft } from 'lucide-react'
@@ -22,7 +23,6 @@ export function CreateTrip() {
   const navigate = useNavigate()
   const toast = useToast()
   const { data: clients = [] } = useClients()
-  const { data: routes = [] } = useRoutes()
   const createTripOrder = useCreateTripOrder()
   const createClient = useCreateClient()
   const importMutation = useImportTripOrders()
@@ -32,7 +32,6 @@ export function CreateTrip() {
   const [importResult, setImportResult] = useState<{ created: number; errors: string[] } | null>(null)
 
   const clientOptions = useMemo(() => clients.map(x => ({ value: String(x.id), label: x.name })), [clients])
-  const pickupOptions = useMemo(() => [...new Set(routes.map(r => r.pickupLocation).filter(Boolean) as string[])].map(loc => ({ value: loc!, label: loc! })), [routes])
   const clientMap = useMemo(() => new Map(clients.map(x => [x.id, x.name])), [clients])
 
   const [clientId, setClientId] = useState('')
@@ -60,11 +59,6 @@ export function CreateTrip() {
       : value
     setCongItems(prev => prev.map(c => c.id === id ? { ...c, [field]: normalizedValue } : c))
   }
-
-  const dropoffOptions = useMemo(() =>
-    routes.filter(r => r.pickupLocation === pickupLocation).map(r => ({ value: r.dropoffLocation ?? '', label: r.dropoffLocation ?? '' })),
-    [routes, pickupLocation],
-  )
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -157,8 +151,7 @@ export function CreateTrip() {
             </div>
             <div className="space-y-1.5 lg:col-span-1">
               <Label className="typo-form-label">Điểm lấy *</Label>
-              <InlineSelect
-                options={pickupOptions}
+              <LocationSelect
                 value={pickupLocation}
                 onChange={(val: string) => { setPickupLocation(val); setDropoffLocation('') }}
                 placeholder="Chọn điểm lấy"
@@ -166,8 +159,7 @@ export function CreateTrip() {
             </div>
             <div className="space-y-1.5 lg:col-span-2">
               <Label className="typo-form-label">Điểm trả *</Label>
-              <InlineSelect
-                options={dropoffOptions}
+              <LocationSelect
                 value={dropoffLocation}
                 onChange={setDropoffLocation}
                 placeholder="Chọn điểm trả"

@@ -509,12 +509,7 @@ export function MatchTrip() {
             >
               <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'var(--theme-bg-secondary)' }}>
                 <div className="flex items-center gap-3">
-                  {allMatched ? (
-                    <>
-                      <CheckCircle2 className="w-5 h-5" style={{ color: 'var(--theme-status-success)' }} />
-                      <span className="text-sm font-medium" style={{ color: 'var(--theme-status-success)' }}>Tất cả thông tin khớp</span>
-                    </>
-                  ) : (
+                  {!allMatched && (
                     <>
                       <AlertCircle className="w-5 h-5" style={{ color: 'var(--theme-status-warning)' }} />
                       <span className="text-sm font-medium" style={{ color: 'var(--theme-status-warning)' }}>Một số thông tin chưa khớp</span>

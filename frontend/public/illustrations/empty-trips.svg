@@ -1,37 +1,185 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 200" fill="none">
-  <!-- Soft background ellipse -->
-  <ellipse cx="120" cy="160" rx="90" ry="10" fill="#059669" fill-opacity="0.08"/>
+  <defs>
+    <linearGradient id="et-road" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#E4E4E7" stop-opacity="0"/>
+      <stop offset="15%" stop-color="#D4D4D8"/>
+      <stop offset="85%" stop-color="#D4D4D8"/>
+      <stop offset="100%" stop-color="#E4E4E7" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="et-cargo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F0FDF4"/>
+      <stop offset="100%" stop-color="#DCFCE7"/>
+    </linearGradient>
+    <linearGradient id="et-cab" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#065F46"/>
+    </linearGradient>
+    <linearGradient id="et-win" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.96"/>
+      <stop offset="100%" stop-color="#ECFDF5" stop-opacity="0.82"/>
+    </linearGradient>
+    <radialGradient id="et-wheel" cx="38%" cy="32%" r="62%">
+      <stop offset="0%" stop-color="#3F3F46"/>
+      <stop offset="100%" stop-color="#09090B"/>
+    </radialGradient>
+    <radialGradient id="et-hub" cx="38%" cy="32%" r="62%">
+      <stop offset="0%" stop-color="#A1A1AA"/>
+      <stop offset="100%" stop-color="#71717A"/>
+    </radialGradient>
+    <radialGradient id="et-shadow" cx="50%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#059669" stop-opacity="0.13"/>
+      <stop offset="100%" stop-color="#059669" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="et-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ECFDF5" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#F4F4F5" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="et-drop" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#059669" flood-opacity="0.12"/>
+    </filter>
+  </defs>
 
-  <!-- Road lines -->
-  <line x1="40" y1="150" x2="60" y2="150" stroke="#A1A1AA" stroke-width="2" stroke-linecap="round" stroke-dasharray="4 6"/>
-  <line x1="180" y1="150" x2="200" y2="150" stroke="#A1A1AA" stroke-width="2" stroke-linecap="round" stroke-dasharray="4 6"/>
+  <!-- Sky wash -->
+  <rect x="0" y="0" width="240" height="148" fill="url(#et-sky)"/>
 
-  <!-- Truck body (cargo box) -->
-  <rect x="78" y="78" width="78" height="58" rx="6" fill="#ECFDF5" stroke="#059669" stroke-width="2.5"/>
-  <!-- Cargo door lines -->
-  <line x1="117" y1="86" x2="117" y2="128" stroke="#059669" stroke-width="1.5" stroke-opacity="0.5"/>
-  <rect x="100" y="100" width="14" height="14" rx="1.5" fill="none" stroke="#059669" stroke-width="1.5" stroke-opacity="0.6"/>
-  <rect x="120" y="100" width="14" height="14" rx="1.5" fill="none" stroke="#059669" stroke-width="1.5" stroke-opacity="0.6"/>
+  <!-- Ground ellipse shadow -->
+  <ellipse cx="122" cy="157" rx="86" ry="8" fill="url(#et-shadow)"/>
 
-  <!-- Cab -->
-  <path d="M156 96 L180 96 Q186 96 186 102 L186 136 L156 136 Z" fill="#059669"/>
-  <!-- Cab window -->
-  <path d="M160 100 L180 100 Q182 100 182 102 L182 116 L160 116 Z" fill="#FFFFFF" fill-opacity="0.92"/>
-  <!-- Door handle -->
-  <circle cx="161" cy="124" r="1.5" fill="#FFFFFF" fill-opacity="0.6"/>
+  <!-- Road surface -->
+  <rect x="0" y="148" width="240" height="13" fill="url(#et-road)"/>
 
-  <!-- Wheels -->
-  <circle cx="98" cy="142" r="10" fill="#18181B"/>
-  <circle cx="98" cy="142" r="4" fill="#71717A"/>
-  <circle cx="166" cy="142" r="10" fill="#18181B"/>
-  <circle cx="166" cy="142" r="4" fill="#71717A"/>
+  <!-- Road center dashes -->
+  <g stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" opacity="0.5">
+    <line x1="16"  y1="154.5" x2="36"  y2="154.5"/>
+    <line x1="52"  y1="154.5" x2="72"  y2="154.5"/>
+    <line x1="88"  y1="154.5" x2="108" y2="154.5"/>
+    <line x1="124" y1="154.5" x2="144" y2="154.5"/>
+    <line x1="160" y1="154.5" x2="180" y2="154.5"/>
+    <line x1="196" y1="154.5" x2="216" y2="154.5"/>
+  </g>
 
-  <!-- Smoke / motion puffs -->
-  <circle cx="65" cy="98" r="6" fill="#E4E4E7" fill-opacity="0.7"/>
-  <circle cx="55" cy="106" r="4" fill="#E4E4E7" fill-opacity="0.5"/>
-  <circle cx="50" cy="116" r="3" fill="#E4E4E7" fill-opacity="0.35"/>
+  <!-- Motion streaks -->
+  <g stroke="#059669" stroke-linecap="round" opacity="0.12">
+    <line x1="12" y1="100" x2="46" y2="100" stroke-width="2.5"/>
+    <line x1="8"  y1="111" x2="38" y2="111" stroke-width="1.8"/>
+    <line x1="16" y1="122" x2="42" y2="122" stroke-width="1.2"/>
+  </g>
 
-  <!-- Empty box symbol on cargo -->
-  <circle cx="135" cy="64" r="14" fill="#FAFAFA" stroke="#E4E4E7" stroke-width="1.5"/>
-  <path d="M129 60 L141 60 M129 64 L139 64 M129 68 L141 68" stroke="#A1A1AA" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- === TRUCK (with soft drop shadow) === -->
+  <g filter="url(#et-drop)">
+
+    <!-- Chassis underframe -->
+    <rect x="62" y="138" width="90" height="8" rx="3" fill="#D1FAE5" stroke="#059669" stroke-width="1.4"/>
+    <!-- Mudflaps -->
+    <rect x="65"  y="141" width="8" height="7" rx="1.5" fill="#059669" fill-opacity="0.28"/>
+    <rect x="130" y="141" width="8" height="7" rx="1.5" fill="#059669" fill-opacity="0.28"/>
+
+    <!-- Cargo container -->
+    <rect x="60" y="74" width="92" height="68" rx="6" fill="url(#et-cargo)" stroke="#059669" stroke-width="2"/>
+    <!-- Container top highlight strip -->
+    <rect x="62" y="75" width="88" height="5" rx="2" fill="#FFFFFF" fill-opacity="0.5"/>
+    <!-- Vertical ribs -->
+    <g stroke="#059669" stroke-width="0.7" stroke-opacity="0.2">
+      <line x1="84"  y1="78" x2="84"  y2="138"/>
+      <line x1="104" y1="78" x2="104" y2="138"/>
+      <line x1="124" y1="78" x2="124" y2="138"/>
+    </g>
+    <!-- Door centre seam -->
+    <line x1="122" y1="78" x2="122" y2="138" stroke="#059669" stroke-width="1.2" stroke-opacity="0.3"/>
+    <!-- Lock hasp -->
+    <rect x="116" y="102" width="10" height="7" rx="2" fill="none" stroke="#059669" stroke-width="1.3" stroke-opacity="0.45"/>
+    <rect x="119" y="98" width="4" height="6" rx="1" fill="#059669" fill-opacity="0.2"/>
+    <!-- Small road-mark decoration on cargo -->
+    <g stroke="#059669" stroke-width="1.1" stroke-linecap="round" stroke-opacity="0.3">
+      <line x1="70" y1="112" x2="96" y2="112"/>
+      <line x1="70" y1="118" x2="84" y2="118"/>
+    </g>
+
+    <!-- Cab body -->
+    <path d="M152 82 L184 82 Q192 82 192 90 L192 140 L152 140 Z" fill="url(#et-cab)"/>
+    <!-- Cab bevel / front face -->
+    <path d="M190 100 L192 90 Q192 82 184 82 L179 82 L190 100 Z" fill="#047857" fill-opacity="0.7"/>
+    <!-- Cab roof curve accent -->
+    <path d="M152 82 Q166 76 184 82" fill="#059669"/>
+    <!-- Cab window frame -->
+    <path d="M156 88 L184 88 Q188 88 188 92 L188 118 L156 118 Z" fill="url(#et-win)"/>
+    <!-- Window chrome top -->
+    <path d="M156 88 L184 88 Q188 88 188 92 L188 90 Q188 86 184 86 L156 86 Z" fill="#FFFFFF" fill-opacity="0.38"/>
+    <!-- Window reflection -->
+    <line x1="160" y1="91" x2="170" y2="108" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" stroke-opacity="0.35"/>
+    <!-- Door seam horizontal -->
+    <line x1="152" y1="118" x2="192" y2="118" stroke="#047857" stroke-width="0.9" stroke-opacity="0.55"/>
+    <!-- Door handle -->
+    <rect x="154" y="126" width="11" height="3.5" rx="1.75" fill="#ECFDF5" fill-opacity="0.55"/>
+    <!-- Side mirror arm -->
+    <rect x="149" y="91" width="5" height="9" rx="2" fill="#065F46" stroke="#059669" stroke-width="0.75"/>
+    <rect x="150" y="92" width="3" height="4.5" rx="0.75" fill="#ECFDF5" fill-opacity="0.45"/>
+    <!-- Front grille panel -->
+    <rect x="189" y="100" width="3" height="28" rx="1" fill="#065F46"/>
+    <!-- Grille slats -->
+    <g stroke="#ECFDF5" stroke-width="0.7" stroke-opacity="0.3">
+      <line x1="189" y1="106" x2="192" y2="106"/>
+      <line x1="189" y1="112" x2="192" y2="112"/>
+      <line x1="189" y1="118" x2="192" y2="118"/>
+      <line x1="189" y1="124" x2="192" y2="124"/>
+    </g>
+    <!-- Headlight -->
+    <rect x="188" y="128" width="4" height="6" rx="1" fill="#FEF9C3" fill-opacity="0.92" stroke="#D97706" stroke-width="0.6"/>
+    <!-- Headlight glow -->
+    <ellipse cx="190" cy="131" rx="5.5" ry="3.5" fill="#FEF3C7" fill-opacity="0.18"/>
+  </g>
+
+  <!-- Rear wheel -->
+  <circle cx="90"  cy="148" r="12" fill="url(#et-wheel)"/>
+  <circle cx="90"  cy="148" r="7.5" fill="#3F3F46"/>
+  <circle cx="90"  cy="148" r="4.5" fill="url(#et-hub)"/>
+  <circle cx="90"  cy="148" r="1.8" fill="#D4D4D8"/>
+  <g stroke="#71717A" stroke-width="1" stroke-linecap="round">
+    <line x1="90" y1="142" x2="90" y2="145.5"/>
+    <line x1="90" y1="150.5" x2="90" y2="154"/>
+    <line x1="84" y1="148" x2="87.5" y2="148"/>
+    <line x1="92.5" y1="148" x2="96" y2="148"/>
+  </g>
+  <path d="M82 142 Q86 139 91 140" stroke="#A1A1AA" stroke-width="1" stroke-linecap="round" stroke-opacity="0.45"/>
+
+  <!-- Front wheel -->
+  <circle cx="174" cy="148" r="12" fill="url(#et-wheel)"/>
+  <circle cx="174" cy="148" r="7.5" fill="#3F3F46"/>
+  <circle cx="174" cy="148" r="4.5" fill="url(#et-hub)"/>
+  <circle cx="174" cy="148" r="1.8" fill="#D4D4D8"/>
+  <g stroke="#71717A" stroke-width="1" stroke-linecap="round">
+    <line x1="174" y1="142" x2="174" y2="145.5"/>
+    <line x1="174" y1="150.5" x2="174" y2="154"/>
+    <line x1="168" y1="148" x2="171.5" y2="148"/>
+    <line x1="176.5" y1="148" x2="180" y2="148"/>
+  </g>
+  <path d="M166 142 Q170 139 175 140" stroke="#A1A1AA" stroke-width="1" stroke-linecap="round" stroke-opacity="0.45"/>
+
+  <!-- Exhaust puffs -->
+  <circle cx="55" cy="94"  r="7"   fill="#F4F4F5" fill-opacity="0.65"/>
+  <circle cx="46" cy="104" r="5.5" fill="#F4F4F5" fill-opacity="0.5"/>
+  <circle cx="40" cy="113" r="3.5" fill="#F4F4F5" fill-opacity="0.35"/>
+
+  <!-- Floating empty-box icon above cargo -->
+  <g transform="translate(104 48)">
+    <circle r="17" cx="0" cy="0" fill="#FFFFFF" stroke="#E4E4E7" stroke-width="1.5"
+            style="filter:drop-shadow(0 2px 6px rgba(5,150,105,0.10))"/>
+    <!-- Package icon -->
+    <path d="M-7 -2 L0 -7 L7 -2 L7 6 L0 11 L-7 6 Z"
+          stroke="#A1A1AA" stroke-width="1.4" stroke-linejoin="round" fill="#F4F4F5"/>
+    <line x1="-7" y1="-2" x2="7" y2="-2" stroke="#A1A1AA" stroke-width="1.4"/>
+    <line x1="0" y1="-7" x2="0" y2="11" stroke="#A1A1AA" stroke-width="0.9" stroke-opacity="0.45"/>
+  </g>
+
+  <!-- Decorative sparkles -->
+  <g stroke="#059669" stroke-width="1.6" stroke-linecap="round" opacity="0.45">
+    <line x1="212" y1="86" x2="218" y2="92"/>
+    <line x1="218" y1="86" x2="212" y2="92"/>
+  </g>
+  <g stroke="#059669" stroke-width="1.2" stroke-linecap="round" opacity="0.3">
+    <line x1="26" y1="72" x2="30" y2="76"/>
+    <line x1="30" y1="72" x2="26" y2="76"/>
+  </g>
+  <circle cx="34"  cy="62" r="2"   fill="#059669" fill-opacity="0.18"/>
+  <circle cx="212" cy="68" r="1.5" fill="#059669" fill-opacity="0.22"/>
 </svg>

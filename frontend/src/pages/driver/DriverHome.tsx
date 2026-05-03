@@ -128,13 +128,32 @@ export function DriverHome() {
     <div className="space-y-4">
       {/* Combined month + earnings card */}
       <div
-        className="rounded-lg overflow-hidden flex"
+        className="rounded-xl overflow-hidden flex relative"
         style={{
-          background: 'var(--theme-bg-secondary)',
-          border: '1px solid var(--theme-border-default)',
-          boxShadow: 'var(--theme-shadow-card)',
+          background: 'linear-gradient(135deg, color-mix(in srgb, var(--theme-brand-primary) 5%, var(--theme-bg-secondary)) 0%, var(--theme-bg-secondary) 55%)',
+          border: '1px solid color-mix(in srgb, var(--theme-brand-primary) 14%, var(--theme-border-default))',
+          boxShadow: '0 2px 8px -2px rgba(5,150,105,0.10), var(--theme-shadow-card)',
         }}
       >
+        {/* Watermark truck silhouette */}
+        <svg
+          viewBox="0 0 120 60"
+          fill="none"
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            right: 0, bottom: 0,
+            width: 90, height: 45,
+            opacity: 0.045,
+            pointerEvents: 'none',
+          }}
+        >
+          <rect x="0"  y="10" width="72" height="35" rx="3" fill="#059669"/>
+          <path d="M72 14 L92 14 Q96 14 96 18 L96 45 L72 45 Z" fill="#059669"/>
+          <circle cx="18"  cy="48" r="8" fill="#059669"/>
+          <circle cx="82"  cy="48" r="8" fill="#059669"/>
+        </svg>
+
         <div className="flex-1 min-w-0 flex items-center justify-center py-3 px-2">
           <MonthNavigator
             year={displayYear}
@@ -146,7 +165,10 @@ export function DriverHome() {
           />
         </div>
 
-        <div className="w-px self-stretch my-3" style={{ background: 'var(--theme-border-default)' }} />
+        <div
+          className="w-px self-stretch my-3"
+          style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 18%, var(--theme-border-default))' }}
+        />
 
         <div className="flex-1 min-w-0 flex items-center gap-2 px-3 py-3">
           <img src="/icons/money.png" alt="" aria-hidden className="shrink-0 w-9 h-9 object-contain" />

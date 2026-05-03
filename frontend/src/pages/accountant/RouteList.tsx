@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { BrandIcon } from '@/components/atoms/BrandIcon'
 import { useRoutes, useCreateRoute, useUpdateRoute, useDeleteRoute } from '@/hooks/use-queries'
+import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
 import { RouteDisplay } from '@/components/shared/RouteDisplay'
 import { formatCurrencyFull, type RoutePrice } from '@/data/domain'
 
@@ -344,11 +345,11 @@ export function RouteList() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label className="typo-form-label">Điểm lấy</Label>
-                <Input value={form.pickupLocation} onChange={e => updateField('pickupLocation', e.target.value)} placeholder="Cảng Cát Lái" className="text-sm" />
+                <LocationSelect value={form.pickupLocation} onChange={v => updateField('pickupLocation', v)} placeholder="Chọn điểm lấy" />
               </div>
               <div className="space-y-2">
                 <Label className="typo-form-label">Điểm trả</Label>
-                <Input value={form.dropoffLocation} onChange={e => updateField('dropoffLocation', e.target.value)} placeholder="KCN Sóng Thần" className="text-sm" />
+                <LocationSelect value={form.dropoffLocation} onChange={v => updateField('dropoffLocation', v)} placeholder="Chọn điểm trả" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">

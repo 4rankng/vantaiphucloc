@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
 import { api } from '@/services/api/client'
-import type { Pricing, WorkOrder, TripOrder, WorkType, Client, RoutePrice, SalaryPeriod, SuggestMatchesResponse, SuggestWosResponse } from '@/data/domain'
+import type { Pricing, WorkOrder, TripOrder, WorkType, Client, RoutePrice, SalaryPeriod, SuggestMatchesResponse, SuggestWosResponse, Location } from '@/data/domain'
 import type { Vendor, VendorFormData } from '@/services/api/vendors.api'
 
 // ─── Query key factories ─────────────────────────────────────────────────────
@@ -10,6 +10,7 @@ export const queryKeys = {
   clients: ['clients'] as const,
   client: (id: number) => ['clients', id] as const,
   routes: ['routes'] as const,
+  locations: ['locations'] as const,
   pricings: ['pricings'] as const,
   pricingsFiltered: (filters?: { clientId?: number; workType?: WorkType; route?: string }) =>
     ['pricings', filters] as const,
@@ -51,6 +52,40 @@ export function useRoutes() {
       const res = await apiClient.getRoutes()
       return res.success ? res.data : []
     },
+  })
+}
+
+export function useLocations() {
+  return useQuery({
+    queryKey: queryKeys.locations,
+    queryFn: async () => {
+      const res = await apiClient.getLocations()
+      return res.success ? res.data : []
+    },
+  })
+}
+
+export function useCreateLocation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { name: string }) => apiClient.createLocation(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.locations }) },
+  })
+}
+
+export function useUpdateLocation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: { name?: string } }) => apiClient.updateLocation(id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.locations }) },
+  })
+}
+
+export function useDeleteLocation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => apiClient.deleteLocation(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.locations }) },
   })
 }
 
