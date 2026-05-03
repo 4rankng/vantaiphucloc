@@ -719,7 +719,7 @@ function DesktopDashboard() {
       label: 'Chi phí tài xế',
       value: fmt(totalDriverSalary),
       icon: <Wallet className="h-5 w-5" />,
-      onClick: () => navigate('/accountant/driver-trips'),
+      onClick: () => navigate('/accountant/work-orders'),
     },
     {
       label: 'Đơn chờ ghép',

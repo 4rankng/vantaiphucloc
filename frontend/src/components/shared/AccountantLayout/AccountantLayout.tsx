@@ -164,7 +164,6 @@ function AccountantMobileShell() {
 function resolveMobileTitle(pathname: string): string {
   const TITLES: Record<string, string> = {
     '/accountant/trips': 'Đơn hàng',
-    '/accountant/driver-trips': 'Chuyến đã đi',
     '/accountant/work-orders': 'Đối soát',
     '/accountant/partners': 'Đối tác',
     '/accountant/routes': 'Cung đường',

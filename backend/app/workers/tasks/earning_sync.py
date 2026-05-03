@@ -52,13 +52,19 @@ async def sync_wo_earning_on_to_update(ctx: dict, *, trip_order_id: int) -> None
                 updated, trip_order_id, trip_order.driver_salary, trip_order.allowance,
             )
 
-            # Enqueue salary recalc if driver exists
-            if trip_order.driver_id:
+            # Enqueue salary recalc for drivers of matched work orders
+            driver_ids_result = await db.execute(
+                select(WorkOrder.driver_id).where(
+                    WorkOrder.id.in_(wo_ids),
+                    WorkOrder.driver_id.isnot(None),
+                ).distinct()
+            )
+            for (driver_id,) in driver_ids_result.all():
                 from app.workers import enqueue
                 ref_date = trip_order.trip_date
                 await enqueue(
                     "calculate_salary_task",
-                    _job_id=f"salary-recalc-{trip_order.driver_id}-{ref_date}",
-                    driver_id=trip_order.driver_id,
+                    _job_id=f"salary-recalc-{driver_id}-{ref_date}",
+                    driver_id=driver_id,
                     period_date=ref_date.isoformat() if ref_date else None,
                 )

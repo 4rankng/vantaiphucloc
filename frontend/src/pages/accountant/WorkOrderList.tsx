@@ -11,11 +11,13 @@ import { ContBadge } from '@/components/shared/ContBadge'
 import { FilterToolbar } from '@/components/shared/FilterToolbar'
 import { DataTablePro, type Column } from '@/components/shared/DataTablePro'
 import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
+import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { PageContainer } from '@/components/shared/PageContainer'
 import { useWorkOrders, useUploadCustomerExcel, useClients } from '@/hooks/use-queries'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '@/components/atoms/Toast'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { useMonthParams } from './use-month-params'
 import type { WorkOrder } from '@/data/domain'
 import { formatCurrencyFull as fmt } from '@/data/domain'
 
@@ -49,7 +51,8 @@ export function WorkOrderList() {
   const navigate = useNavigate()
   const isMobile = useIsMobile(1024)
   const toast = useToast()
-  const { data: workOrders = [], isLoading: loading } = useWorkOrders()
+  const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
+  const { data: workOrders = [], isLoading: loading } = useWorkOrders({ dateFrom, dateTo })
   const { data: clients = [] } = useClients()
   const { mutate: uploadExcel, isPending: uploading } = useUploadCustomerExcel()
 
@@ -342,6 +345,8 @@ export function WorkOrderList() {
       <div className="space-y-3">
         <PageHeader title="Đối soát" />
 
+        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
+
         <FilterToolbar
           search={search}
           onSearchChange={setSearch}
@@ -409,6 +414,8 @@ export function WorkOrderList() {
 
       <div className="card overflow-hidden">
         <div className="flex items-center gap-3 p-3 border-b" style={{ borderColor: 'var(--theme-border-default)' }}>
+          <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
+          <div className="flex-1" />
           <FilterToolbar
             search={search}
             onSearchChange={setSearch}

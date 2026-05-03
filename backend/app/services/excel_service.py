@@ -390,9 +390,6 @@ _TRIP_IMPORT_COLUMNS = {
     "client_code": "client_code",
     "khach_hang": "client_code",
     "ma_khach_hang": "client_code",
-    "tai_xe": "driver_name",
-    "driver": "driver_name",
-    "driver_name": "driver_name",
     "diem_lay": "pickup_location",
     "pickup": "pickup_location",
     "pickup_location": "pickup_location",
@@ -413,9 +410,6 @@ _TRIP_IMPORT_COLUMNS = {
     "driver_salary": "driver_salary",
     "phu_cap": "allowance",
     "allowance": "allowance",
-    "bien_so": "tractor_plate",
-    "tractor_plate": "tractor_plate",
-    "plate": "tractor_plate",
 }
 
 
@@ -433,14 +427,12 @@ async def parse_trip_order_excel(file_content: bytes) -> list[dict[str, Any]]:
     Expected columns (Vietnamese or English):
     - trip_date (Ngày/Ngày chạy)
     - client_code (Mã KH/Mã khách hàng)
-    - driver_name (Tài xế)
     - pickup_location (Điểm lấy) + dropoff_location (Điểm trả) or route (Cung đường)
     - container_number (Số cont/Container)
     - work_type (Loại/Loại cont) — E20/E40/F20/F40
     - unit_price (Đơn giá) — optional
     - driver_salary (Lương TX) — optional
     - allowance (Phụ cấp) — optional
-    - tractor_plate (Biển số) — optional
     """
     try:
         import openpyxl
@@ -475,10 +467,9 @@ async def import_trip_orders(
 ) -> dict[str, Any]:
     """Validate and create trip orders from parsed Excel rows.
 
-    Groups rows by (trip_date, client_code, driver_name) to form trip orders.
+    Groups rows by (trip_date, client_code) to form trip orders.
     Returns { created: int, errors: list[str] }.
     """
-    from app.models.domain import User
     from app.services.pricing_service import find_tiered_pricing
 
     created = 0
@@ -489,7 +480,6 @@ async def import_trip_orders(
     for i, row in enumerate(rows):
         trip_date = row.get("trip_date")
         client_code = row.get("client_code")
-        driver_name = row.get("driver_name")
 
         if not trip_date or not client_code:
             errors.append(f"Dòng {i + 2}: thiếu ngày hoặc mã khách hàng")
@@ -507,11 +497,11 @@ async def import_trip_orders(
         elif hasattr(trip_date, "date"):
             pass  # already a date
 
-        key = (str(trip_date), str(client_code), str(driver_name or ""))
+        key = (str(trip_date), str(client_code))
         groups.setdefault(key, []).append(row)
 
     for key, group_rows in groups.items():
-        trip_date, client_code_str, driver_name_str = key
+        trip_date, client_code_str = key
 
         # Look up client by code
         client_result = await db.execute(
@@ -522,20 +512,10 @@ async def import_trip_orders(
             errors.append(f"Nhóm {key}: không tìm thấy khách hàng mã '{client_code_str}'")
             continue
 
-        # Look up driver by name
-        driver_result = await db.execute(
-            select(User).where(User.role == "driver", User.username == driver_name_str)
-        )
-        driver = driver_result.scalar_one_or_none()
-        if not driver:
-            errors.append(f"Nhóm {key}: không tìm thấy tài xế '{driver_name_str}'")
-            continue
-
         first_row = group_rows[0]
         pickup = first_row.get("pickup_location")
         dropoff = first_row.get("dropoff_location")
         route = first_row.get("route") or (f"{pickup} - {dropoff}" if pickup and dropoff else "")
-        tractor_plate = first_row.get("tractor_plate") or getattr(driver, "tractor_plate", "") or ""
 
         # Build containers
         containers_data = []
@@ -580,9 +560,6 @@ async def import_trip_orders(
             route=route,
             pickup_location=pickup,
             dropoff_location=dropoff,
-            tractor_plate=tractor_plate,
-            driver_id=driver.id,
-            driver_name=driver.username,
             container_number=containers_data[0]["container_number"],
             pricing_id=pricing_id,
             unit_price=unit_price,
@@ -610,14 +587,14 @@ async def import_trip_orders(
 def generate_trip_order_template() -> bytes:
     """Generate a blank Excel template for trip order import."""
     headers = [
-        "Ngày", "Mã KH", "Tài xế", "Điểm lấy", "Điểm trả",
+        "Ngày", "Mã KH", "Điểm lấy", "Điểm trả",
         "Cung đường", "Số cont", "Loại cont", "Đơn giá",
-        "Lương TX", "Phụ cấp", "Biển số",
+        "Lương TX", "Phụ cấp",
     ]
     examples = [
-        "01/05/2026", "KH001", "Nguyễn Văn A", "Cát lái", "KC Bình Dương",
+        "01/05/2026", "KH001", "Cát lái", "KC Bình Dương",
         "Cát lái - KC Bình Dương", "TCLU1234567", "E20", "1500000",
-        "500000", "100000", "51C-12345",
+        "500000", "100000",
     ]
     workbook = openpyxl.Workbook()
     sheet = workbook.active
@@ -743,7 +720,7 @@ async def generate_trip_orders_excel(
     ws = wb.active
     ws.title = "Đơn hàng"
 
-    headers = ["Mã TO", "Ngày chạy", "Khách hàng", "Điểm lấy", "Điểm trả", "Tài xế", "Biển số", "Số cont", "Loại", "Đơn giá", "Lương TX", "Phụ cấp", "Doanh thu", "Trạng thái", "Đã chốt"]
+    headers = ["Mã TO", "Ngày chạy", "Khách hàng", "Điểm lấy", "Điểm trả", "Số cont", "Loại", "Đơn giá", "Lương TX", "Phụ cấp", "Doanh thu", "Trạng thái", "Đã chốt"]
     ws.append(headers)
 
     header_font = Font(bold=True, color="FFFFFF")
@@ -762,7 +739,6 @@ async def generate_trip_orders_excel(
                 f"TO#{to.id}", to.trip_date,
                 to.client_name,
                 to.pickup_location or "", to.dropoff_location or "",
-                to.driver_name, to.tractor_plate,
                 c.container_number, c.work_type,
                 to.unit_price, to.driver_salary, to.allowance, to.revenue,
                 status_labels.get(to.status, to.status),
