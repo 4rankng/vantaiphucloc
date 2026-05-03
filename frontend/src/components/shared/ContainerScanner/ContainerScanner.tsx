@@ -1,4 +1,5 @@
 import { useRef, useCallback, useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Camera } from 'react-camera-pro'
 import Cropper from 'react-easy-crop'
 import type { Area } from 'react-easy-crop'
@@ -135,8 +136,8 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
     e.target.value = ''
   }, [])
 
-  return (
-    <div className="fixed inset-0 z-[100] relative" style={{ background: '#000' }}>
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: '#000' }}>
       {/* Hidden file input (camera mode gallery button) - capture="" forces gallery only on most devices */}
       <input ref={fileInputRef} type="file" accept="image/*" capture="" className="hidden" onChange={handleFileChange} />
 
@@ -264,6 +265,7 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
           </div>
         </>
       )}
-    </div>
+    </div>,
+    document.body,
   )
 }

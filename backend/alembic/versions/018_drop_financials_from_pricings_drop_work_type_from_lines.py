@@ -18,8 +18,8 @@ def upgrade() -> None:
     # Backfill any pricing_lines rows that are missing financials from their parent
     # (handles the orphaned records created without lines)
     conn.execute(sa.text("""
-        INSERT INTO pricing_lines (pricing_id, quantity, unit_price, driver_salary, allowance)
-        SELECT p.id, 1, p.unit_price, p.driver_salary, p.allowance
+        INSERT INTO pricing_lines (pricing_id, work_type, quantity, unit_price, driver_salary, allowance)
+        SELECT p.id, p.work_type, 1, p.unit_price, p.driver_salary, p.allowance
         FROM pricings p
         WHERE NOT EXISTS (
             SELECT 1 FROM pricing_lines pl WHERE pl.pricing_id = p.id
