@@ -247,25 +247,27 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
           <div className="flex items-center gap-3 mt-2">
             <button
               onClick={() => navigate(-1)}
-              className="w-11 h-11 rounded-lg flex items-center justify-center touch-manipulation transition-all active:scale-[0.98] shrink-0"
+              className="h-11 px-4 rounded-xl flex items-center justify-center gap-1.5 touch-manipulation transition-all active:scale-[0.97] shrink-0 text-sm font-semibold"
               style={{
-                background: 'transparent',
-                color: 'var(--theme-text-secondary)',
-                border: '1.5px solid var(--theme-border-default)',
+                background: 'var(--theme-text-primary)',
+                color: '#ffffff',
               }}
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="w-4 h-4" />
+              Quay lại
             </button>
             <button
               onClick={onRequestSubmit}
               disabled={!canSubmit || submitting}
-              className="flex-1 max-w-[240px] h-11 rounded-xl text-sm font-bold touch-manipulation transition-all active:scale-[0.98]"
+              className="flex-1 h-11 rounded-xl text-sm font-bold touch-manipulation transition-all active:scale-[0.97] flex items-center justify-center gap-1.5"
               style={{
                 background: canSubmit ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
                 color: canSubmit ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)',
               }}
             >
-              {submitting ? 'Đang gửi...' : isEdit ? 'Cập nhật' : isOnline ? 'Xác nhận' : 'Lưu offline'}
+              {submitting ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Đang gửi...</>
+              ) : isEdit ? 'Cập nhật' : isOnline ? 'Xác nhận' : 'Lưu offline'}
             </button>
           </div>
       </div>
