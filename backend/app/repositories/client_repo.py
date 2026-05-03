@@ -23,3 +23,12 @@ class ClientRepository(BaseRepository[Client]):
             select(func.count(TripOrder.id)).where(TripOrder.client_id == client_id)
         )
         return (result.scalar() or 0) > 0
+
+    async def increment_debt(self, client_id: int, amount: int) -> None:
+        """Add amount to outstanding_debt. No-op if amount ≤ 0. No commit — caller owns tx."""
+        if amount <= 0:
+            return
+        result = await self.session.execute(select(Client).where(Client.id == client_id))
+        client = result.scalar_one_or_none()
+        if client is not None:
+            client.outstanding_debt += amount
