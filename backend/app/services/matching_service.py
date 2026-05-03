@@ -222,6 +222,7 @@ async def suggest_trip_matches(
         ]
         to_out = TripOrderOut(
             id=to.id,
+            code=to.code,
             trip_date=to.trip_date,
             client_id=to.client_id,
             client_name=to.client_name,
