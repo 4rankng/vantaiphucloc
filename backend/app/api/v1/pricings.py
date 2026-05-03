@@ -3,10 +3,8 @@ from collections import defaultdict
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from redis.asyncio import Redis
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete, func
+from sqlalchemy import select, delete as sa_delete, func
 
-from app.database import get_db
 from app.models.base import User
 from app.models.domain import Pricing, PricingLine
 from app.schemas.base import PaginatedResponse
@@ -15,16 +13,14 @@ from app.core.deps import require_permission
 from app.core.redis import get_redis
 from app.core.cache import CacheManager
 from app.config import settings
+from app.repositories.pricing_repo import PricingRepository
+from app.repositories.deps import get_pricing_repo
 
 router = APIRouter()
 
 
-async def _load_pricing_out(db: AsyncSession, pricing: Pricing) -> PricingOut:
-    """Load a single Pricing with its PricingLine rows."""
-    lines_result = await db.execute(
-        select(PricingLine).where(PricingLine.pricing_id == pricing.id).order_by(PricingLine.id)
-    )
-    lines = lines_result.scalars().all()
+async def _load_pricing_out(repo: PricingRepository, pricing: Pricing) -> PricingOut:
+    lines = await repo.get_lines(pricing.id)
     return PricingOut(
         id=pricing.id,
         client_id=pricing.client_id,
@@ -41,14 +37,13 @@ async def _load_pricing_out(db: AsyncSession, pricing: Pricing) -> PricingOut:
 
 
 async def _batch_load_pricing_outs(
-    db: AsyncSession, pricings: list[Pricing]
+    repo: PricingRepository, pricings: list[Pricing]
 ) -> list[PricingOut]:
-    """Batch-load PricingLines for multiple Pricing rows at once (N+1 fix)."""
     if not pricings:
         return []
 
     pricing_ids = [p.id for p in pricings]
-    lines_result = await db.execute(
+    lines_result = await repo.session.execute(
         select(PricingLine)
         .where(PricingLine.pricing_id.in_(pricing_ids))
         .order_by(PricingLine.pricing_id, PricingLine.id)
@@ -85,7 +80,7 @@ async def list_pricings(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     current_user: User = Depends(require_permission("read", "Pricing")),
-    db: AsyncSession = Depends(get_db),
+    repo: PricingRepository = Depends(get_pricing_repo),
     redis: Redis = Depends(get_redis),
 ):
     cache = CacheManager(redis)
@@ -94,8 +89,8 @@ async def list_pricings(
     if cached is not None:
         return PaginatedResponse(**cached)
 
-    query = select(Pricing).where(Pricing.is_active == True)
-    count_query = select(func.count(Pricing.id)).where(Pricing.is_active == True)
+    query = select(Pricing).where(Pricing.is_active == True)  # noqa: E712
+    count_query = select(func.count(Pricing.id)).where(Pricing.is_active == True)  # noqa: E712
 
     if client_id is not None:
         query = query.where(Pricing.client_id == client_id)
@@ -107,17 +102,17 @@ async def list_pricings(
         query = query.where(Pricing.route == route)
         count_query = count_query.where(Pricing.route == route)
 
-    total_q = await db.execute(count_query)
+    total_q = await repo.session.execute(count_query)
     total = total_q.scalar() or 0
 
-    result = await db.execute(
+    result = await repo.session.execute(
         query.order_by(Pricing.id.asc())
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
     pricings = result.scalars().all()
 
-    data = await _batch_load_pricing_outs(db, pricings)
+    data = await _batch_load_pricing_outs(repo, pricings)
 
     response = PaginatedResponse[PricingOut](
         items=data,
@@ -135,11 +130,11 @@ async def list_pricings(
 async def create_pricing(
     body: PricingCreate,
     current_user: User = Depends(require_permission("update", "Pricing")),
-    db: AsyncSession = Depends(get_db),
+    repo: PricingRepository = Depends(get_pricing_repo),
     redis: Redis = Depends(get_redis),
 ):
     lines_data = body.lines
-    pricing = Pricing(
+    pricing = await repo.create(
         client_id=body.client_id,
         client_name=body.client_name,
         work_type=body.work_type,
@@ -147,11 +142,9 @@ async def create_pricing(
         pickup_location=body.pickup_location,
         dropoff_location=body.dropoff_location,
     )
-    db.add(pricing)
-    await db.flush()
 
     for line in lines_data:
-        db.add(PricingLine(
+        repo.session.add(PricingLine(
             pricing_id=pricing.id,
             quantity=line.quantity,
             unit_price=line.unit_price,
@@ -159,11 +152,11 @@ async def create_pricing(
             allowance=line.allowance,
         ))
 
-    await db.commit()
-    await db.refresh(pricing)
+    await repo.session.commit()
+    await repo.session.refresh(pricing)
     await CacheManager(redis).invalidate_namespace("pricings")
 
-    return await _load_pricing_out(db, pricing)
+    return await _load_pricing_out(repo, pricing)
 
 
 @router.put("/pricings/{pricing_id}", response_model=PricingOut)
@@ -171,24 +164,20 @@ async def update_pricing(
     pricing_id: int,
     body: PricingUpdate,
     current_user: User = Depends(require_permission("update", "Pricing")),
-    db: AsyncSession = Depends(get_db),
+    repo: PricingRepository = Depends(get_pricing_repo),
     redis: Redis = Depends(get_redis),
 ):
-    result = await db.execute(select(Pricing).where(Pricing.id == pricing_id))
-    pricing = result.scalar_one_or_none()
-    if pricing is None:
-        raise HTTPException(status_code=404, detail="Pricing not found")
+    pricing = await repo.get_by_id_or_404(pricing_id)
 
     update_data = body.model_dump(exclude_unset=True)
     new_lines = update_data.pop("lines", None)
 
-    for field, value in update_data.items():
-        setattr(pricing, field, value)
+    await repo.update(pricing, **update_data)
 
     if new_lines is not None:
-        await db.execute(delete(PricingLine).where(PricingLine.pricing_id == pricing.id))
+        await repo.session.execute(sa_delete(PricingLine).where(PricingLine.pricing_id == pricing.id))
         for line in new_lines:
-            db.add(PricingLine(
+            repo.session.add(PricingLine(
                 pricing_id=pricing.id,
                 quantity=line["quantity"],
                 unit_price=line.get("unit_price", 0),
@@ -196,26 +185,22 @@ async def update_pricing(
                 allowance=line.get("allowance", 0),
             ))
 
-    await db.commit()
-    await db.refresh(pricing)
+    await repo.session.commit()
+    await repo.session.refresh(pricing)
     await CacheManager(redis).invalidate_namespace("pricings")
 
-    return await _load_pricing_out(db, pricing)
+    return await _load_pricing_out(repo, pricing)
 
 
 @router.delete("/pricings/{pricing_id}", status_code=204)
 async def delete_pricing(
     pricing_id: int,
     current_user: User = Depends(require_permission("update", "Pricing")),
-    db: AsyncSession = Depends(get_db),
+    repo: PricingRepository = Depends(get_pricing_repo),
     redis: Redis = Depends(get_redis),
 ):
-    result = await db.execute(select(Pricing).where(Pricing.id == pricing_id))
-    pricing = result.scalar_one_or_none()
-    if pricing is None:
-        raise HTTPException(status_code=404, detail="Pricing not found")
-
-    pricing.is_active = False
-    await db.commit()
+    pricing = await repo.get_by_id_or_404(pricing_id)
+    await repo.soft_delete(pricing)
+    await repo.session.commit()
     await CacheManager(redis).invalidate_namespace("pricings")
     return Response()

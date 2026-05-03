@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
@@ -18,6 +19,12 @@ engine = create_async_engine(
     pool_pre_ping=True,
 )
 
+logger.info(
+    "DB pool: size=%d overflow=%d timeout=%ds recycle=%ds",
+    settings.DB_POOL_SIZE, settings.DB_MAX_OVERFLOW,
+    settings.DB_POOL_TIMEOUT, settings.DB_POOL_RECYCLE,
+)
+
 
 @event.listens_for(engine.sync_engine, "connect")
 def _on_connect(dbapi_conn, connection_record):
@@ -32,6 +39,17 @@ class Base(DeclarativeBase):
 
 
 async def get_db():
+    async with async_session() as session:
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise
+
+
+@asynccontextmanager
+async def get_session():
+    """Context manager for worker tasks — auto-commits on success."""
     async with async_session() as session:
         try:
             yield session

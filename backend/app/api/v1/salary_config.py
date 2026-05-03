@@ -1,12 +1,10 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
-from app.database import get_db
 from app.models.base import User
-from app.models.domain import SalaryPeriodConfig
 from app.schemas.domain import SalaryConfigOut, SalaryConfigUpdate
 from app.core.deps import require_permission
+from app.repositories.salary_repo import SalaryPeriodConfigRepository
+from app.repositories.deps import get_salary_config_repo
 
 router = APIRouter()
 
@@ -14,20 +12,14 @@ router = APIRouter()
 @router.get("/salary-config", response_model=SalaryConfigOut)
 async def get_salary_config(
     current_user: User = Depends(require_permission("read", "SalaryConfig")),
-    db: AsyncSession = Depends(get_db),
+    repo: SalaryPeriodConfigRepository = Depends(get_salary_config_repo),
 ):
-    result = await db.execute(select(SalaryPeriodConfig))
-    config = result.scalar_one_or_none()
+    config = await repo.get_current()
 
     if config is None:
-        # Create default config (singleton) — full calendar month
-        config = SalaryPeriodConfig(
-            from_day=1,
-            to_day=31,
-        )
-        db.add(config)
-        await db.commit()
-        await db.refresh(config)
+        config = await repo.create(from_day=1, to_day=31)
+        await repo.session.commit()
+        await repo.session.refresh(config)
 
     return config
 
@@ -36,23 +28,18 @@ async def get_salary_config(
 async def update_salary_config(
     body: SalaryConfigUpdate,
     current_user: User = Depends(require_permission("update", "SalaryConfig")),
-    db: AsyncSession = Depends(get_db),
+    repo: SalaryPeriodConfigRepository = Depends(get_salary_config_repo),
 ):
-    result = await db.execute(select(SalaryPeriodConfig))
-    config = result.scalar_one_or_none()
+    config = await repo.get_current()
 
     if config is None:
-        # Upsert: create with provided values
-        config = SalaryPeriodConfig(
+        config = await repo.create(
             from_day=body.from_day or 1,
             to_day=body.to_day or 28,
         )
-        db.add(config)
     else:
-        for field, value in body.model_dump(exclude_unset=True).items():
-            setattr(config, field, value)
+        await repo.update(config, **body.model_dump(exclude_unset=True))
 
-    await db.commit()
-    await db.refresh(config)
-
+    await repo.session.commit()
+    await repo.session.refresh(config)
     return config

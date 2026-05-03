@@ -64,6 +64,10 @@ export default defineConfig({
         changeOrigin: true,
         timeout: 0,
       },
+      '/photos': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
     },
   },
 })

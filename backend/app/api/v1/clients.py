@@ -2,20 +2,17 @@ import math
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from redis.asyncio import Redis
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
 
-from app.database import get_db
 from app.models.base import User
-from app.models.domain import Client, WorkOrder, TripOrder
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import ClientCreate, ClientUpdate, ClientOut, SoftDeleteRequest
 from app.core.deps import require_permission
 from app.core.redis import get_redis
 from app.core.cache import CacheManager
 from app.config import settings
-from app.services.audit_service import log_action
 from app.core.audit_context import set_audit_reason
+from app.repositories.client_repo import ClientRepository
+from app.repositories.deps import get_client_repo
 
 router = APIRouter()
 
@@ -25,7 +22,7 @@ async def list_clients(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     current_user: User = Depends(require_permission("read", "Client")),
-    db: AsyncSession = Depends(get_db),
+    repo: ClientRepository = Depends(get_client_repo),
     redis: Redis = Depends(get_redis),
 ):
     cache = CacheManager(redis)
@@ -34,17 +31,9 @@ async def list_clients(
     if cached is not None:
         return PaginatedResponse(**cached)
 
-    total_q = await db.execute(select(func.count(Client.id)).where(Client.is_active == True))
-    total = total_q.scalar() or 0
-
-    result = await db.execute(
-        select(Client)
-        .where(Client.is_active == True)
-        .order_by(Client.name.asc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
+    data, total = await repo.paginate(
+        page, page_size, active_only=True, order_by=repo.model.name.asc()
     )
-    data = result.scalars().all()
 
     response = PaginatedResponse[ClientOut](
         items=[ClientOut.model_validate(c) for c in data],
@@ -62,13 +51,12 @@ async def list_clients(
 async def create_client(
     body: ClientCreate,
     current_user: User = Depends(require_permission("update", "Client")),
-    db: AsyncSession = Depends(get_db),
+    repo: ClientRepository = Depends(get_client_repo),
     redis: Redis = Depends(get_redis),
 ):
-    client = Client(**body.model_dump())
-    db.add(client)
-    await db.commit()
-    await db.refresh(client)
+    client = await repo.create(**body.model_dump())
+    await repo.session.commit()
+    await repo.session.refresh(client)
     await CacheManager(redis).invalidate_namespace("clients")
     return client
 
@@ -78,21 +66,13 @@ async def update_client(
     client_id: int,
     body: ClientUpdate,
     current_user: User = Depends(require_permission("update", "Client")),
-    db: AsyncSession = Depends(get_db),
+    repo: ClientRepository = Depends(get_client_repo),
     redis: Redis = Depends(get_redis),
 ):
-    result = await db.execute(
-        select(Client).where(Client.id == client_id)
-    )
-    client = result.scalar_one_or_none()
-    if client is None:
-        raise HTTPException(status_code=404, detail="Client not found")
-
-    for field, value in body.model_dump(exclude_unset=True).items():
-        setattr(client, field, value)
-
-    await db.commit()
-    await db.refresh(client)
+    client = await repo.get_by_id_or_404(client_id)
+    await repo.update(client, **body.model_dump(exclude_unset=True))
+    await repo.session.commit()
+    await repo.session.refresh(client)
     await CacheManager(redis).invalidate_namespace("clients")
     return client
 
@@ -103,37 +83,18 @@ async def delete_client(
     body: SoftDeleteRequest,
     request: Request,
     current_user: User = Depends(require_permission("update", "Client")),
-    db: AsyncSession = Depends(get_db),
+    repo: ClientRepository = Depends(get_client_repo),
     redis: Redis = Depends(get_redis),
 ):
-    result = await db.execute(
-        select(Client).where(Client.id == client_id)
-    )
-    client = result.scalar_one_or_none()
-    if client is None:
-        raise HTTPException(status_code=404, detail="Client not found")
+    client = await repo.get_by_id_or_404(client_id)
 
-    # Guard: check for associated work orders or trip orders
-    wo_count = await db.execute(
-        select(func.count(WorkOrder.id)).where(WorkOrder.client_id == client_id)
-    )
-    if (wo_count.scalar() or 0) > 0:
-        raise HTTPException(
-            status_code=409,
-            detail="Cannot delete client with associated work orders",
-        )
+    if await repo.has_work_orders(client_id):
+        raise HTTPException(status_code=409, detail="Cannot delete client with associated work orders")
+    if await repo.has_trip_orders(client_id):
+        raise HTTPException(status_code=409, detail="Cannot delete client with associated trip orders")
 
-    to_count = await db.execute(
-        select(func.count(TripOrder.id)).where(TripOrder.client_id == client_id)
-    )
-    if (to_count.scalar() or 0) > 0:
-        raise HTTPException(
-            status_code=409,
-            detail="Cannot delete client with associated trip orders",
-        )
-
-    client.is_active = False
     set_audit_reason(body.reason)
-    await db.commit()
+    await repo.soft_delete(client)
+    await repo.session.commit()
     await CacheManager(redis).invalidate_namespace("clients")
     return Response()

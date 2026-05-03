@@ -1,15 +1,15 @@
 import math
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select
 
-from app.database import get_db
 from app.models.base import User
 from app.models.domain import Vendor
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import VendorCreate, VendorUpdate, VendorOut
 from app.core.deps import require_permission
+from app.repositories.vendor_repo import VendorRepository
+from app.repositories.deps import get_vendor_repo
 
 router = APIRouter()
 
@@ -19,19 +19,11 @@ async def list_vendors(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     current_user: User = Depends(require_permission("read", "Vendor")),
-    db: AsyncSession = Depends(get_db),
+    repo: VendorRepository = Depends(get_vendor_repo),
 ):
-    total_q = await db.execute(select(func.count(Vendor.id)).where(Vendor.is_active == True))
-    total = total_q.scalar() or 0
-
-    result = await db.execute(
-        select(Vendor)
-        .where(Vendor.is_active == True)
-        .order_by(Vendor.id.asc())
-        .offset((page - 1) * page_size)
-        .limit(page_size)
+    data, total = await repo.paginate(
+        page, page_size, active_only=True, order_by=repo.model.id.asc()
     )
-    data = result.scalars().all()
 
     return PaginatedResponse[VendorOut](
         items=[VendorOut.model_validate(v) for v in data],
@@ -46,13 +38,12 @@ async def list_vendors(
 async def create_vendor(
     body: VendorCreate,
     current_user: User = Depends(require_permission("update", "Vendor")),
-    db: AsyncSession = Depends(get_db),
+    repo: VendorRepository = Depends(get_vendor_repo),
 ):
-    existing = await db.execute(select(Vendor).where(Vendor.name == body.name))
-    if existing.scalar_one_or_none():
+    if await repo.find_one(name=body.name):
         raise HTTPException(status_code=409, detail="Vendor already exists")
 
-    vendor = Vendor(
+    vendor = await repo.create(
         name=body.name,
         type=body.type,
         phone=body.phone,
@@ -60,9 +51,8 @@ async def create_vendor(
         address=body.address,
         contact_person=body.contact_person,
     )
-    db.add(vendor)
-    await db.commit()
-    await db.refresh(vendor)
+    await repo.session.commit()
+    await repo.session.refresh(vendor)
     return vendor
 
 
@@ -71,34 +61,20 @@ async def update_vendor(
     vendor_id: int,
     body: VendorUpdate,
     current_user: User = Depends(require_permission("update", "Vendor")),
-    db: AsyncSession = Depends(get_db),
+    repo: VendorRepository = Depends(get_vendor_repo),
 ):
-    result = await db.execute(select(Vendor).where(Vendor.id == vendor_id))
-    vendor = result.scalar_one_or_none()
-    if vendor is None:
-        raise HTTPException(status_code=404, detail="Vendor not found")
+    vendor = await repo.get_by_id_or_404(vendor_id)
 
     if body.name is not None:
-        existing = await db.execute(
+        existing = await repo.session.execute(
             select(Vendor).where(Vendor.name == body.name, Vendor.id != vendor_id)
         )
         if existing.scalar_one_or_none():
             raise HTTPException(status_code=409, detail="Vendor name already exists")
-        vendor.name = body.name
 
-    if body.type is not None:
-        vendor.type = body.type
-    if body.phone is not None:
-        vendor.phone = body.phone
-    if body.tax_code is not None:
-        vendor.tax_code = body.tax_code
-    if body.address is not None:
-        vendor.address = body.address
-    if body.contact_person is not None:
-        vendor.contact_person = body.contact_person
-
-    await db.commit()
-    await db.refresh(vendor)
+    await repo.update(vendor, **body.model_dump(exclude_unset=True))
+    await repo.session.commit()
+    await repo.session.refresh(vendor)
     return vendor
 
 
@@ -106,12 +82,8 @@ async def update_vendor(
 async def delete_vendor(
     vendor_id: int,
     current_user: User = Depends(require_permission("update", "Vendor")),
-    db: AsyncSession = Depends(get_db),
+    repo: VendorRepository = Depends(get_vendor_repo),
 ):
-    result = await db.execute(select(Vendor).where(Vendor.id == vendor_id))
-    vendor = result.scalar_one_or_none()
-    if vendor is None:
-        raise HTTPException(status_code=404, detail="Vendor not found")
-
-    vendor.is_active = False
-    await db.commit()
+    vendor = await repo.get_by_id_or_404(vendor_id)
+    await repo.soft_delete(vendor)
+    await repo.session.commit()

@@ -2,10 +2,8 @@ import math
 
 from fastapi import APIRouter, Depends, Query
 from redis.asyncio import Redis
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 
-from app.database import get_db
 from app.models.base import User
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import DriverCreate, DriverOut
@@ -14,6 +12,8 @@ from app.core.security import hash_password
 from app.core.redis import get_redis
 from app.core.cache import CacheManager
 from app.config import settings
+from app.repositories.user_repo import UserRepository
+from app.repositories.deps import get_user_repo
 
 PHUC_LOC = "Phúc Lộc"
 
@@ -25,7 +25,7 @@ async def list_drivers(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    repo: UserRepository = Depends(get_user_repo),
     redis: Redis = Depends(get_redis),
 ):
     cache = CacheManager(redis)
@@ -37,10 +37,10 @@ async def list_drivers(
     base_q = select(User).where(User.role == "driver")
     count_q = select(func.count(User.id)).where(User.role == "driver")
 
-    total_q = await db.execute(count_q)
+    total_q = await repo.session.execute(count_q)
     total = total_q.scalar() or 0
 
-    result = await db.execute(
+    result = await repo.session.execute(
         base_q.order_by(User.username.asc())
         .offset((page - 1) * page_size)
         .limit(page_size)
@@ -76,10 +76,10 @@ async def list_drivers(
 async def create_driver(
     body: DriverCreate,
     current_user: User = Depends(require_permission("create", "Driver")),
-    db: AsyncSession = Depends(get_db),
+    repo: UserRepository = Depends(get_user_repo),
     redis: Redis = Depends(get_redis),
 ):
-    driver = User(
+    driver = await repo.create(
         phone=body.phone,
         username=body.username,
         hashed_password=hash_password(body.phone),
@@ -88,9 +88,8 @@ async def create_driver(
         is_active=True,
         tractor_plate=body.tractor_plate,
     )
-    db.add(driver)
-    await db.commit()
-    await db.refresh(driver)
+    await repo.session.commit()
+    await repo.session.refresh(driver)
     await CacheManager(redis).invalidate_namespace("drivers")
 
     return DriverOut(

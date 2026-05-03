@@ -6,29 +6,27 @@ from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File
 from fastapi.responses import StreamingResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, func
 
-from app.database import get_db
 from app.models.base import User
 from app.models.domain import TripOrder, TripOrderContainer, TripOrderWorkOrder, WorkOrder, Client
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import TripOrderCreate, TripOrderUpdate, TripOrderOut, TripContainerOut, CancelRequest
 from app.core.deps import get_current_user, require_permission
 from app.services.salary_service import get_salary_period_dates
-from app.services.audit_service import log_action
 from app.core.audit_context import set_audit_reason
 from app.workers import enqueue
 from app.validators.container import validate_container_quantity, validate_same_work_type
+from app.repositories.trip_order_repo import TripOrderRepository
+from app.repositories.deps import get_trip_order_repo
 
 _logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 
-async def _get_matched_work_order_ids(db: AsyncSession, trip_order_id: int) -> list[int]:
-    """Load matched work order IDs for a trip order from the join table."""
-    result = await db.execute(
+async def _get_matched_work_order_ids(session, trip_order_id: int) -> list[int]:
+    result = await session.execute(
         select(TripOrderWorkOrder.work_order_id).where(
             TripOrderWorkOrder.trip_order_id == trip_order_id
         )
@@ -37,12 +35,11 @@ async def _get_matched_work_order_ids(db: AsyncSession, trip_order_id: int) -> l
 
 
 async def _batch_get_matched_work_order_ids(
-    db: AsyncSession, trip_order_ids: list[int]
+    session, trip_order_ids: list[int]
 ) -> dict[int, list[int]]:
-    """Batch-load matched work order IDs for multiple trip orders."""
     if not trip_order_ids:
         return {}
-    result = await db.execute(
+    result = await session.execute(
         select(
             TripOrderWorkOrder.trip_order_id,
             TripOrderWorkOrder.work_order_id,
@@ -56,21 +53,19 @@ async def _batch_get_matched_work_order_ids(
     return mapping
 
 
-async def _get_trip_containers(db: AsyncSession, trip_order_id: int) -> list[TripContainerOut]:
-    """Load containers for a single trip order."""
-    result = await db.execute(
+async def _get_trip_containers(session, trip_order_id: int) -> list[TripContainerOut]:
+    result = await session.execute(
         select(TripOrderContainer).where(TripOrderContainer.trip_order_id == trip_order_id)
     )
     return [TripContainerOut.model_validate(c) for c in result.scalars().all()]
 
 
 async def _batch_get_trip_containers(
-    db: AsyncSession, trip_order_ids: list[int]
+    session, trip_order_ids: list[int]
 ) -> dict[int, list[TripContainerOut]]:
-    """Batch-load containers for multiple trip orders."""
     if not trip_order_ids:
         return {}
-    result = await db.execute(
+    result = await session.execute(
         select(TripOrderContainer).where(TripOrderContainer.trip_order_id.in_(trip_order_ids))
     )
     mapping: dict[int, list[TripContainerOut]] = defaultdict(list)
@@ -79,10 +74,9 @@ async def _batch_get_trip_containers(
     return mapping
 
 
-async def _load_trip_order_out(db: AsyncSession, trip_order: TripOrder) -> TripOrderOut:
-    """Load a TripOrder with matched work order IDs and containers."""
-    matched_ids = await _get_matched_work_order_ids(db, trip_order.id)
-    containers = await _get_trip_containers(db, trip_order.id)
+async def _load_trip_order_out(repo: TripOrderRepository, trip_order: TripOrder) -> TripOrderOut:
+    matched_ids = await repo.get_matched_work_order_ids(trip_order.id)
+    containers = await repo.get_containers(trip_order.id)
     return TripOrderOut(
         id=trip_order.id,
         trip_date=trip_order.trip_date,
@@ -94,7 +88,7 @@ async def _load_trip_order_out(db: AsyncSession, trip_order: TripOrder) -> TripO
         pickup_location=trip_order.pickup_location,
         dropoff_location=trip_order.dropoff_location,
         container_number=trip_order.container_number,
-        containers=containers,
+        containers=[TripContainerOut.model_validate(c) for c in containers],
         pricing_id=trip_order.pricing_id,
         unit_price=trip_order.unit_price,
         driver_salary=trip_order.driver_salary,
@@ -114,15 +108,14 @@ async def _load_trip_order_out(db: AsyncSession, trip_order: TripOrder) -> TripO
 
 
 async def _batch_load_trip_order_outs(
-    db: AsyncSession, trip_orders: list[TripOrder]
+    repo: TripOrderRepository, trip_orders: list[TripOrder]
 ) -> list[TripOrderOut]:
-    """Batch-load matched work order IDs and containers for multiple trip orders."""
     if not trip_orders:
         return []
 
     to_ids = [to.id for to in trip_orders]
-    matched_mapping = await _batch_get_matched_work_order_ids(db, to_ids)
-    containers_mapping = await _batch_get_trip_containers(db, to_ids)
+    matched_mapping = await _batch_get_matched_work_order_ids(repo.session, to_ids)
+    containers_mapping = await _batch_get_trip_containers(repo.session, to_ids)
 
     return [
         TripOrderOut(
@@ -156,35 +149,11 @@ async def _batch_load_trip_order_outs(
     ]
 
 
-async def _set_work_orders_matched(db: AsyncSession, work_order_ids: list[int]) -> None:
-    """Set status = MATCHED on each referenced work order."""
-    for wo_id in work_order_ids:
-        result = await db.execute(select(WorkOrder).where(WorkOrder.id == wo_id))
-        wo = result.scalar_one_or_none()
-        if wo is not None:
-            wo.status = "MATCHED"
-
-
-async def _update_client_debt(db: AsyncSession, client_id: int, amount: int) -> None:
-    """Update client's outstanding debt by adding the amount."""
-    if amount <= 0:
-        return
-    result = await db.execute(select(Client).where(Client.id == client_id))
-    client = result.scalar_one_or_none()
-    if client is not None:
-        client.outstanding_debt += amount
-        _logger.info(
-            "CLIENT_DEBT_UPDATED",
-            f"Client #{client_id}: debt increased by {amount}, new debt: {client.outstanding_debt}",
-            "trip_orders",
-        )
-
-
-async def _enqueue_salary_recalc(db: AsyncSession, driver_id: int, ref_date: date) -> None:
+async def _enqueue_salary_recalc(session, driver_id: int, ref_date: date) -> None:
     """Enqueue salary recalculation for a driver in the period containing ref_date."""
     try:
         from app.workers import enqueue, salary_recalc_job_id
-        start, end = await get_salary_period_dates(db, ref_date)
+        start, end = await get_salary_period_dates(session, ref_date)
         job_id = salary_recalc_job_id(driver_id, start.isoformat(), end.isoformat())
         await enqueue(
             "calculate_salary_task",
@@ -197,34 +166,48 @@ async def _enqueue_salary_recalc(db: AsyncSession, driver_id: int, ref_date: dat
         _logger.warning("Failed to enqueue salary recalculation for driver %s", driver_id)
 
 
+async def _set_work_orders_matched(session, work_order_ids: list[int]) -> None:
+    for wo_id in work_order_ids:
+        result = await session.execute(select(WorkOrder).where(WorkOrder.id == wo_id))
+        wo = result.scalar_one_or_none()
+        if wo is not None:
+            wo.status = "MATCHED"
+
+
+async def _update_client_debt(session, client_id: int, amount: int) -> None:
+    if amount <= 0:
+        return
+    result = await session.execute(select(Client).where(Client.id == client_id))
+    client = result.scalar_one_or_none()
+    if client is not None:
+        client.outstanding_debt += amount
+
+
 @router.post("/trip-orders", response_model=TripOrderOut, status_code=201)
 async def create_trip_order(
     body: TripOrderCreate,
     request: Request,
     current_user: User = Depends(require_permission("read", "TripOrder")),
-    db: AsyncSession = Depends(get_db),
+    repo: TripOrderRepository = Depends(get_trip_order_repo),
 ):
+    db = repo.session
     matched_ids = body.matched_work_order_ids
     trip_data = body.model_dump(exclude={"matched_work_order_ids", "containers"})
 
     from app.utils.iso6346 import normalize_container_number as _norm
 
-    # Validate container rules
     if body.containers:
         validate_same_work_type(body.containers)
         work_type_val = body.containers[0].work_type
         validate_container_quantity(work_type_val, len(body.containers))
 
-    # Derive legacy fields from first container (normalized)
     if body.containers:
         trip_data["container_number"] = _norm(body.containers[0].container_number)
         trip_data["work_type"] = body.containers[0].work_type
 
-    # Auto-lookup pricing from bang gia
     work_type = trip_data.get("work_type")
     if body.containers and work_type:
         from app.services.pricing_service import find_tiered_pricing
-        # Count containers of same work_type for tiered pricing
         container_count = sum(1 for c in body.containers if c.work_type == work_type) or 1
         tiered = await find_tiered_pricing(
             db,
@@ -240,23 +223,23 @@ async def create_trip_order(
             trip_data["driver_salary"] = tiered.driver_salary
             trip_data["allowance"] = tiered.allowance
             trip_data["pricing_id"] = tiered.pricing.id
-    # else: use values provided in body (or defaults)
 
-    # Determine initial status based on whether all required fields are provided
-    # Required fields: containers, client_id, route, pricing (unit_price > 0)
+    # Coerce pricing_id=0 to None to avoid FK violation (0 is not a valid pricing ID)
+    if not trip_data.get("pricing_id"):
+        trip_data["pricing_id"] = None
+
     has_containers = bool(body.containers)
     has_pricing = trip_data.get("unit_price", 0) > 0 and trip_data.get("driver_salary", 0) > 0
 
     if has_containers and has_pricing:
-        trip_data["status"] = "PENDING"  # All info provided, ready for matching
+        trip_data["status"] = "PENDING"
     else:
-        trip_data["status"] = "DRAFT"    # Missing info
+        trip_data["status"] = "DRAFT"
 
     trip_order = TripOrder(**trip_data)
     db.add(trip_order)
     await db.flush()
 
-    # Generate human-readable code (e.g. ABC0001)
     from app.services.code_service import generate_trip_order_code
     trip_order.code = await generate_trip_order_code(db, body.client_id)
 
@@ -279,7 +262,7 @@ async def create_trip_order(
     await db.commit()
     await db.refresh(trip_order)
 
-    return await _load_trip_order_out(db, trip_order)
+    return await _load_trip_order_out(repo, trip_order)
 
 
 @router.get("/trip-orders", response_model=PaginatedResponse[TripOrderOut])
@@ -291,8 +274,9 @@ async def list_trip_orders(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     current_user: User = Depends(require_permission("read", "TripOrder")),
-    db: AsyncSession = Depends(get_db),
+    repo: TripOrderRepository = Depends(get_trip_order_repo),
 ):
+    db = repo.session
     query = select(TripOrder)
     count_query = select(func.count(TripOrder.id))
 
@@ -319,8 +303,7 @@ async def list_trip_orders(
     )
     trip_orders = result.scalars().all()
 
-    # Batch-load matched IDs instead of per-row queries
-    items = await _batch_load_trip_order_outs(db, trip_orders)
+    items = await _batch_load_trip_order_outs(repo, trip_orders)
 
     return PaginatedResponse[TripOrderOut](
         items=items,
@@ -335,16 +318,10 @@ async def list_trip_orders(
 async def get_trip_order(
     trip_order_id: int,
     current_user: User = Depends(require_permission("read", "TripOrder")),
-    db: AsyncSession = Depends(get_db),
+    repo: TripOrderRepository = Depends(get_trip_order_repo),
 ):
-    result = await db.execute(
-        select(TripOrder).where(TripOrder.id == trip_order_id)
-    )
-    trip_order = result.scalar_one_or_none()
-    if trip_order is None:
-        raise HTTPException(status_code=404, detail="Trip order not found")
-
-    return await _load_trip_order_out(db, trip_order)
+    trip_order = await repo.get_by_id_or_404(trip_order_id)
+    return await _load_trip_order_out(repo, trip_order)
 
 
 @router.put("/trip-orders/{trip_order_id}", response_model=TripOrderOut)
@@ -353,14 +330,10 @@ async def update_trip_order(
     body: TripOrderUpdate,
     request: Request,
     current_user: User = Depends(require_permission("read", "TripOrder")),
-    db: AsyncSession = Depends(get_db),
+    repo: TripOrderRepository = Depends(get_trip_order_repo),
 ):
-    result = await db.execute(
-        select(TripOrder).where(TripOrder.id == trip_order_id)
-    )
-    trip_order = result.scalar_one_or_none()
-    if trip_order is None:
-        raise HTTPException(status_code=404, detail="Trip order not found")
+    db = repo.session
+    trip_order = await repo.get_by_id_or_404(trip_order_id)
 
     if getattr(trip_order, 'is_locked', False):
         raise HTTPException(status_code=403, detail="Trip order is locked. Unmatch first to edit.")
@@ -371,10 +344,8 @@ async def update_trip_order(
     new_matched_ids = update_data.pop("matched_work_order_ids", None)
     new_containers = update_data.pop("containers", None)
 
-    for field, value in update_data.items():
-        setattr(trip_order, field, value)
+    await repo.update(trip_order, **update_data)
 
-    # If salary/allowance changed, enqueue earning sync for linked WOs
     if "driver_salary" in update_data or "allowance" in update_data:
         await enqueue("sync_wo_earning_on_to_update", trip_order_id=trip_order.id)
 
@@ -396,8 +367,7 @@ async def update_trip_order(
             trip_order.work_type = new_containers[0]["work_type"]
 
     if new_matched_ids is not None:
-        # Remove old join table entries that are no longer in the list
-        existing_ids = await _get_matched_work_order_ids(db, trip_order.id)
+        existing_ids = await repo.get_matched_work_order_ids(trip_order.id)
         removed_ids = set(existing_ids) - set(new_matched_ids)
         for wo_id in removed_ids:
             await db.execute(
@@ -407,7 +377,6 @@ async def update_trip_order(
                 )
             )
 
-        # Add new join table entries
         for wo_id in new_matched_ids:
             if wo_id not in existing_ids:
                 db.add(TripOrderWorkOrder(
@@ -416,15 +385,13 @@ async def update_trip_order(
                 ))
         await _set_work_orders_matched(db, new_matched_ids)
 
-        # If TO has pricing and now has matched work orders, update client debt
-        # This simulates "invoicing" when the trip is completed
         if trip_order.unit_price > 0 and len(new_matched_ids) > 0:
             await _update_client_debt(db, trip_order.client_id, trip_order.unit_price)
 
     await db.commit()
     await db.refresh(trip_order)
 
-    return await _load_trip_order_out(db, trip_order)
+    return await _load_trip_order_out(repo, trip_order)
 
 
 @router.put("/trip-orders/{trip_order_id}/cancel", response_model=TripOrderOut)
@@ -433,22 +400,14 @@ async def cancel_trip_order(
     body: CancelRequest,
     request: Request,
     current_user: User = Depends(require_permission("read", "TripOrder")),
-    db: AsyncSession = Depends(get_db),
+    repo: TripOrderRepository = Depends(get_trip_order_repo),
 ):
-    """Cancel a trip order (only DRAFT or PENDING/unmatched can be cancelled). Reason required."""
-    result = await db.execute(
-        select(TripOrder).where(TripOrder.id == trip_order_id)
-    )
-    trip_order = result.scalar_one_or_none()
-    if trip_order is None:
-        raise HTTPException(status_code=404, detail="Trip order not found")
+    trip_order = await repo.get_by_id_or_404(trip_order_id)
 
     if getattr(trip_order, 'is_locked', False):
         raise HTTPException(status_code=403, detail="Cannot cancel a matched trip order. Unmatch first.")
 
-    if trip_order.status == "DRAFT":
-        trip_order.status = "CANCELLED"
-    elif trip_order.status == "PENDING":
+    if trip_order.status in ("DRAFT", "PENDING"):
         trip_order.status = "CANCELLED"
     elif trip_order.status in ("COMPLETED", "CANCELLED"):
         raise HTTPException(status_code=400, detail=f"Cannot cancel trip order with status {trip_order.status}")
@@ -457,10 +416,10 @@ async def cancel_trip_order(
 
     set_audit_reason(body.reason)
 
-    await db.commit()
-    await db.refresh(trip_order)
+    await repo.session.commit()
+    await repo.session.refresh(trip_order)
 
-    return await _load_trip_order_out(db, trip_order)
+    return await _load_trip_order_out(repo, trip_order)
 
 
 @router.put("/trip-orders/{trip_order_id}/confirm", response_model=TripOrderOut)
@@ -468,15 +427,10 @@ async def toggle_trip_order_confirmation(
     trip_order_id: int,
     request: Request,
     current_user: User = Depends(require_permission("read", "TripOrder")),
-    db: AsyncSession = Depends(get_db),
+    repo: TripOrderRepository = Depends(get_trip_order_repo),
 ):
-    """Toggle is_confirmed status for a trip order. Confirms and sets linked WOs to COMPLETED."""
-    result = await db.execute(
-        select(TripOrder).where(TripOrder.id == trip_order_id)
-    )
-    trip_order = result.scalar_one_or_none()
-    if trip_order is None:
-        raise HTTPException(status_code=404, detail="Trip order not found")
+    db = repo.session
+    trip_order = await repo.get_by_id_or_404(trip_order_id)
 
     trip_order.is_confirmed = not trip_order.is_confirmed
 
@@ -484,8 +438,7 @@ async def toggle_trip_order_confirmation(
         trip_order.confirmed_by = current_user.id
         trip_order.confirmed_at = datetime.now(timezone.utc)
 
-        # Set linked WOs to COMPLETED
-        matched_wo_ids = await _get_matched_work_order_ids(db, trip_order.id)
+        matched_wo_ids = await repo.get_matched_work_order_ids(trip_order.id)
         for wo_id in matched_wo_ids:
             wo_result = await db.execute(select(WorkOrder).where(WorkOrder.id == wo_id))
             wo = wo_result.scalar_one_or_none()
@@ -501,14 +454,13 @@ async def toggle_trip_order_confirmation(
     await db.commit()
     await db.refresh(trip_order)
 
-    return await _load_trip_order_out(db, trip_order)
+    return await _load_trip_order_out(repo, trip_order)
 
 
 @router.get("/trip-orders/template")
 async def download_trip_order_template(
     current_user: User = Depends(require_permission("create", "TripOrder")),
 ):
-    """Download blank Excel template for trip order import."""
     from app.services.excel_service import generate_trip_order_template
 
     content = generate_trip_order_template()
@@ -523,9 +475,8 @@ async def download_trip_order_template(
 async def import_trip_orders_excel(
     file: UploadFile = File(...),
     current_user: User = Depends(require_permission("create", "TripOrder")),
-    db: AsyncSession = Depends(get_db),
+    repo: TripOrderRepository = Depends(get_trip_order_repo),
 ):
-    """Import trip orders from Excel file."""
     from app.services.excel_service import parse_trip_order_excel, import_trip_orders
 
     content = await file.read()
@@ -533,7 +484,7 @@ async def import_trip_orders_excel(
     if not rows:
         raise HTTPException(status_code=400, detail="File Excel trống hoặc không đúng định dạng")
 
-    result = await import_trip_orders(db, rows, current_user.id)
+    result = await import_trip_orders(repo.session, rows, current_user.id)
     return result
 
 
@@ -543,13 +494,12 @@ async def export_trip_orders_excel(
     date_to: date | None = None,
     status: str | None = None,
     current_user: User = Depends(require_permission("create", "TripOrder")),
-    db: AsyncSession = Depends(get_db),
+    repo: TripOrderRepository = Depends(get_trip_order_repo),
 ):
-    """Export trip orders to Excel."""
     from app.services.excel_service import generate_trip_orders_excel
 
     content = await generate_trip_orders_excel(
-        db, date_from=date_from.isoformat() if date_from else None,
+        repo.session, date_from=date_from.isoformat() if date_from else None,
         date_to=date_to.isoformat() if date_to else None, status=status,
     )
     return StreamingResponse(
