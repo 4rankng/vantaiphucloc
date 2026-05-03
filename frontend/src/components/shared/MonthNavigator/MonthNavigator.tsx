@@ -54,13 +54,15 @@ export function MonthNavigator({
             className="text-sm font-bold tabular-nums leading-tight whitespace-nowrap"
             style={{ color: 'var(--theme-text-primary)' }}
           >
-            Tháng {mm}/{year}
+            {periodStart && periodEnd
+              ? `${formatDDMM(periodStart)} → ${formatDDMM(periodEnd)}`
+              : `Tháng ${mm}/${year}`}
           </span>
-          <span
-            className="typo-meta tabular-nums whitespace-nowrap leading-tight"
-          >
-            {rangeLabel}
-          </span>
+          {periodStart && periodEnd ? null : (
+            <span className="typo-meta tabular-nums whitespace-nowrap leading-tight">
+              {rangeLabel}
+            </span>
+          )}
         </div>
 
         <button
