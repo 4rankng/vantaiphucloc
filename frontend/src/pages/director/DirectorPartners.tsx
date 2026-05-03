@@ -183,7 +183,7 @@ export function DirectorPartners() {
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleDelete} className="flex-1" style={{ background: 'var(--theme-status-error)', color: '#fff' }}>Xoá</Button>
+            <Button onClick={handleDelete} className="flex-1" style={{ background: 'var(--theme-status-error)', color: 'white' }}>Xoá</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

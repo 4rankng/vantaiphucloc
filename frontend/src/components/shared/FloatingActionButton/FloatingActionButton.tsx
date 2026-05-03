@@ -31,10 +31,12 @@ interface FloatingActionButtonProps extends VariantProps<typeof fabVariants> {
  * `calc(env(...))` values reliably from class names.
  */
 export function FloatingActionButton({ icon, onClick, position, className, label }: FloatingActionButtonProps) {
-  // 3.5rem = bottom tab bar height (mobile). On desktop the tab bar is hidden,
-  // but keeping the offset is harmless and gives breathing room from the page edge.
+  // Sits low — 20px above viewport bottom (plus safe-area for notched phones).
+  // Driver shell has no bottom tab bar, so no extra offset needed.
+  // For roles with a bottom tab bar (director / admin mobile), the page content
+  // adds bottom padding so the last items clear both the tab bar and the FAB.
   const style: CSSProperties = {
-    bottom: 'calc(3.5rem + env(safe-area-inset-bottom, 0px) + 16px)',
+    bottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)',
     background: 'var(--theme-brand-primary)',
     color: 'var(--theme-text-on-brand)',
     boxShadow: '0 8px 20px -6px rgba(5, 150, 105, 0.55), 0 2px 6px rgba(9, 9, 11, 0.10)',

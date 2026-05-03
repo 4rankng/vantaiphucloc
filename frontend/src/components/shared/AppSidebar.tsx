@@ -77,7 +77,7 @@ const NavItem = ({ item, isCollapsed, onNavigate }: NavItemProps) => {
             isCollapsed ? 'w-[17px] h-[17px]' : 'w-[15px] h-[15px]',
           )}
           style={{
-            color: isActive ? '#ffffff' : 'rgba(255,255,255,0.45)',
+            color: isActive ? 'var(--theme-sidebar-active-text)' : 'var(--theme-sidebar-text)',
             filter: isActive ? 'drop-shadow(0 0 5px rgba(255,255,255,0.95)) brightness(1.3)' : 'none',
           }}
         />

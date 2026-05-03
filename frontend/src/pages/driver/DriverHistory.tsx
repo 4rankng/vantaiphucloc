@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Camera } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiClient } from '@/services/api'
@@ -14,6 +15,7 @@ const FILTER_OPTIONS: { value: FilterValue; label: string }[] = [
 ]
 
 export function DriverHistory() {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([])
   const [loading, setLoading] = useState(true)
@@ -47,6 +49,18 @@ export function DriverHistory() {
 
   return (
     <div className="pb-20 space-y-3">
+      {/* Back button — inline in page body */}
+      <button
+        onClick={() => navigate(-1)}
+        className="inline-flex items-center gap-1.5 text-sm font-medium mb-1"
+        style={{ color: 'var(--theme-text-secondary)' }}
+      >
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+          <path d="M19 12H5M12 19l-7-7 7-7" />
+        </svg>
+        Quay lại
+      </button>
+
       <FilterPills<FilterValue> options={filterOptions} value={filter} onChange={setFilter} />
 
       {totalEarnings > 0 && (

@@ -19,6 +19,12 @@ ChartJS.register(
 
 const BASE_FONT = '"Be Vietnam Pro", "Inter", ui-sans-serif, system-ui, sans-serif'
 
+// TODO: tokenize chart colors when theme switching is added
+// Currently using fixed neutral grays that align with the modern theme
+const CHART_TEXT_COLOR = '#9E9E9E'    // zinc-400 equivalent
+const CHART_BG_COLOR = '#1C1C1C'      // dark charcoal for contrast
+const CHART_GRID_COLOR = 'rgba(0,0,0,0.04)'
+
 function baseOptions(overrides?: ChartOptions<'bar'>): ChartOptions<'bar'> {
   return {
     responsive: true,
@@ -27,13 +33,13 @@ function baseOptions(overrides?: ChartOptions<'bar'>): ChartOptions<'bar'> {
       legend: {
         labels: {
           font: { family: BASE_FONT, size: 11 },
-          color: '#9E9E9E',
+          color: CHART_TEXT_COLOR,
           boxWidth: 10,
           padding: 12,
         },
       },
       tooltip: {
-        backgroundColor: '#1C1C1C',
+        backgroundColor: CHART_BG_COLOR,
         titleFont: { family: BASE_FONT, size: 11 },
         bodyFont: { family: BASE_FONT, size: 11 },
         padding: 10,
@@ -43,12 +49,12 @@ function baseOptions(overrides?: ChartOptions<'bar'>): ChartOptions<'bar'> {
     scales: {
       x: {
         grid: { display: false },
-        ticks: { font: { family: BASE_FONT, size: 10 }, color: '#9E9E9E' },
+        ticks: { font: { family: BASE_FONT, size: 10 }, color: CHART_TEXT_COLOR },
         border: { display: false },
       },
       y: {
-        grid: { color: 'rgba(0,0,0,0.04)' },
-        ticks: { font: { family: BASE_FONT, size: 10 }, color: '#9E9E9E' },
+        grid: { color: CHART_GRID_COLOR },
+        ticks: { font: { family: BASE_FONT, size: 10 }, color: CHART_TEXT_COLOR },
         border: { display: false },
       },
     },
@@ -87,7 +93,7 @@ export function LineChartWidget({ data, height = 200, options }: LineChartProps)
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: '#1C1C1C',
+        backgroundColor: CHART_BG_COLOR,
         titleFont: { family: BASE_FONT, size: 11 },
         bodyFont: { family: BASE_FONT, size: 11 },
         padding: 10,
@@ -97,12 +103,12 @@ export function LineChartWidget({ data, height = 200, options }: LineChartProps)
     scales: {
       x: {
         grid: { display: false },
-        ticks: { font: { family: BASE_FONT, size: 10 }, color: '#9E9E9E' },
+        ticks: { font: { family: BASE_FONT, size: 10 }, color: CHART_TEXT_COLOR },
         border: { display: false },
       },
       y: {
-        grid: { color: 'rgba(0,0,0,0.04)' },
-        ticks: { font: { family: BASE_FONT, size: 10 }, color: '#9E9E9E' },
+        grid: { color: CHART_GRID_COLOR },
+        ticks: { font: { family: BASE_FONT, size: 10 }, color: CHART_TEXT_COLOR },
         border: { display: false },
       },
     },
@@ -134,13 +140,13 @@ export function DoughnutChartWidget({ data, height = 180, options }: DoughnutCha
         position: 'bottom',
         labels: {
           font: { family: BASE_FONT, size: 11 },
-          color: '#9E9E9E',
+          color: CHART_TEXT_COLOR,
           boxWidth: 10,
           padding: 10,
         },
       },
       tooltip: {
-        backgroundColor: '#1C1C1C',
+        backgroundColor: CHART_BG_COLOR,
         titleFont: { family: BASE_FONT, size: 11 },
         bodyFont: { family: BASE_FONT, size: 11 },
         padding: 10,
