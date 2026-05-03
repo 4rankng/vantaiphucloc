@@ -525,32 +525,23 @@ export function MatchJob() {
           <div className="flex-1 overflow-y-auto p-4 lg:p-5 space-y-4">
 
             {/* Match status banner */}
-            {selectedTrip && (
+            {selectedTrip && !allMatch && (
               <div
                 className="flex items-center gap-2 px-3 py-2.5 rounded-lg"
                 style={{
-                  background: allMatch
-                    ? 'color-mix(in srgb, var(--theme-status-success) 12%, transparent)'
-                    : 'color-mix(in srgb, var(--theme-status-warning) 12%, transparent)',
-                  border: `1px solid ${allMatch ? 'var(--theme-status-success)' : 'var(--theme-status-warning)'}`,
+                  background: 'color-mix(in srgb, var(--theme-status-warning) 12%, transparent)',
+                  border: '1px solid var(--theme-status-warning)',
                 }}
               >
-                {allMatch ? (
-                  <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-status-success)' }} />
-                ) : (
                   <AlertCircle className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-status-warning)' }} />
-                )}
-                <span className="text-xs font-medium" style={{ color: allMatch ? 'var(--theme-status-success)' : 'var(--theme-status-warning)' }}>
-                  {allMatch
-                    ? 'Tất cả thông tin khớp — sẵn sàng xác nhận'
-                    : [
+                  <span className="text-xs font-medium" style={{ color: 'var(--theme-status-warning)' }}>
+                    {[
                         `${matchedWoIndices.size}/${woContainers.length} container khớp`,
                         !clientMatch && 'khách hàng chưa khớp',
                         !pickupMatch && 'điểm lấy chưa khớp',
                         !dropoffMatch && 'điểm trả chưa khớp',
-                      ].filter(Boolean).join(' · ')
-                  }
-                </span>
+                      ].filter(Boolean).join(' · ')}
+                  </span>
               </div>
             )}
 

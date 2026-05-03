@@ -2,158 +2,271 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Asset preview — TTransport</title>
+<title>Illustration preview — TTransport</title>
 <style>
   :root {
-    --emerald: #059669;
-    --emerald-light: #ECFDF5;
-    --zinc-50:  #FAFAFA;
-    --zinc-100: #F4F4F5;
-    --zinc-200: #E4E4E7;
-    --zinc-500: #71717A;
-    --zinc-900: #09090B;
+    --brand:         #059669;
+    --brand-dark:    #047857;
+    --brand-light:   #ECFDF5;
+    --brand-mid:     #D1FAE5;
+    --zinc-50:       #FAFAFA;
+    --zinc-100:      #F4F4F5;
+    --zinc-200:      #E4E4E7;
+    --zinc-400:      #A1A1AA;
+    --zinc-500:      #71717A;
+    --zinc-600:      #52525B;
+    --zinc-900:      #09090B;
     color-scheme: light;
   }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--zinc-50); color: var(--zinc-900);
-               font-family: 'Be Vietnam Pro', system-ui, sans-serif; }
-  .page { max-width: 1280px; margin: 0 auto; padding: 32px 24px 80px; }
-  h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 4px; }
-  .sub { color: var(--zinc-500); font-size: 14px; margin: 0 0 28px; }
-  h2 { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
-       color: var(--zinc-500); margin: 28px 0 12px; }
-  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
-  .card { background: #fff; border: 1px solid var(--zinc-200); border-radius: 10px;
-          overflow: hidden; transition: border-color 150ms ease; }
-  .card:hover { border-color: #d4d4d8; }
-  .preview { aspect-ratio: 6 / 5; display: flex; align-items: center; justify-content: center;
-             background: var(--zinc-50); border-bottom: 1px solid var(--zinc-200); padding: 16px; }
-  .preview img { max-height: 100%; max-width: 100%; }
-  .meta { padding: 12px 14px; }
-  .name { font-size: 13px; font-weight: 600; color: var(--zinc-900); margin: 0; letter-spacing: -0.01em; }
-  .desc { font-size: 12px; color: var(--zinc-500); margin: 2px 0 0; }
-  .file { font-size: 11px; font-family: 'JetBrains Mono', ui-monospace, monospace;
-          color: var(--emerald); margin-top: 4px; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--zinc-50);
+    color: var(--zinc-900);
+    font-family: 'Be Vietnam Pro', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+  }
+  .page { max-width: 1360px; margin: 0 auto; padding: 40px 28px 100px; }
 
-  .row { display: flex; gap: 24px; align-items: flex-end; flex-wrap: wrap; padding: 24px;
-         background: #fff; border: 1px solid var(--zinc-200); border-radius: 10px;
-         margin-bottom: 16px; }
-  .size-sample { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-  .size-sample img { object-fit: contain; }
-  .size-label { font-size: 11px; color: var(--zinc-500); font-weight: 500; }
+  /* Header */
+  .page-header { margin-bottom: 40px; }
+  .page-header h1 {
+    font-size: 26px; font-weight: 700; letter-spacing: -0.025em;
+    color: var(--zinc-900); margin-bottom: 6px;
+  }
+  .page-header p { font-size: 14px; color: var(--zinc-500); max-width: 560px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--brand-light); color: var(--brand-dark);
+    border: 1px solid color-mix(in srgb, var(--brand) 18%, transparent);
+    font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+    padding: 3px 9px; border-radius: 99px; text-transform: uppercase;
+    margin-bottom: 12px;
+  }
 
-  .empty-state-demo {
-    background: #fff; border: 1px solid var(--zinc-200); border-radius: 10px;
+  /* Section heading */
+  .section-label {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.07em; color: var(--zinc-400); margin: 36px 0 14px;
+  }
+
+  /* Illustration grid */
+  .grid {
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+  .card {
+    background: #fff; border: 1px solid var(--zinc-200); border-radius: 12px;
+    overflow: hidden; transition: border-color 140ms ease, box-shadow 140ms ease;
+  }
+  .card:hover {
+    border-color: #d4d4d8;
+    box-shadow: 0 4px 16px -4px rgba(9,9,11,0.08);
+  }
+  .preview {
+    aspect-ratio: 5 / 4; display: flex; align-items: center; justify-content: center;
+    background: var(--zinc-50); border-bottom: 1px solid var(--zinc-200); padding: 20px;
+    position: relative;
+  }
+  .preview::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 80%, var(--brand-light) 0%, transparent 70%);
+    opacity: 0.5; pointer-events: none;
+  }
+  .preview img { max-height: 100%; max-width: 100%; position: relative; z-index: 1; }
+  .meta { padding: 14px 16px; }
+  .meta-name { font-size: 13px; font-weight: 600; color: var(--zinc-900); letter-spacing: -0.01em; }
+  .meta-desc { font-size: 12px; color: var(--zinc-500); margin-top: 3px; }
+  .meta-file {
+    font-size: 11px; font-family: 'JetBrains Mono', ui-monospace, monospace;
+    color: var(--brand); margin-top: 6px; display: block;
+  }
+
+  /* Sizes row */
+  .sizes-row {
+    display: flex; gap: 28px; align-items: flex-end; flex-wrap: wrap;
+    padding: 24px 28px; background: #fff; border: 1px solid var(--zinc-200);
+    border-radius: 12px;
+  }
+  .size-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .size-item img { object-fit: contain; }
+  .size-item span { font-size: 11px; color: var(--zinc-400); font-weight: 500; }
+
+  /* In-context empty state demo */
+  .demo-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .demo-card {
+    background: #fff; border: 1px solid var(--zinc-200); border-radius: 12px;
     padding: 48px 24px; text-align: center;
   }
-  .empty-state-demo img { width: 120px; height: 120px; margin-bottom: 16px; }
-  .empty-state-demo h3 { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: -0.011em; }
-  .empty-state-demo p { font-size: 13px; color: var(--zinc-500); margin: 6px 0 16px; }
-  .empty-state-demo button {
-    background: var(--emerald); color: #fff; border: none; padding: 8px 14px;
+  .demo-card img { width: 120px; height: 100px; object-fit: contain; margin-bottom: 16px; }
+  .demo-card h3 { font-size: 15px; font-weight: 600; color: var(--zinc-900); letter-spacing: -0.011em; }
+  .demo-card p  { font-size: 13px; color: var(--zinc-500); margin: 6px 0 18px; }
+  .demo-card button {
+    background: var(--brand); color: #fff; border: none; padding: 9px 18px;
     border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer;
-    font-family: inherit;
+    font-family: inherit; letter-spacing: -0.01em;
   }
 
-  .alongside { display: flex; gap: 12px; padding: 16px; background: #fff;
-               border: 1px solid var(--zinc-200); border-radius: 10px; align-items: center; }
-  .alongside img { width: 48px; height: 48px; object-fit: contain; }
-  .alongside .lbl { font-size: 12px; color: var(--zinc-500); font-weight: 500; }
+  /* Side-by-side alignment check */
+  .alongside {
+    display: flex; gap: 16px; padding: 20px 24px; background: #fff;
+    border: 1px solid var(--zinc-200); border-radius: 12px; align-items: center;
+    flex-wrap: wrap;
+  }
+  .alongside img { width: 52px; height: 52px; object-fit: contain; }
+  .aside-divider { width: 1px; height: 40px; background: var(--zinc-200); }
+  .aside-lbl { font-size: 12px; color: var(--zinc-400); font-weight: 500; }
+
+  hr { border: none; border-top: 1px solid var(--zinc-100); margin: 36px 0; }
 </style>
 </head>
 <body>
-  <div class="page">
+<div class="page">
 
-    <h1>Asset preview</h1>
-    <p class="sub">Hand-crafted SVG illustrations for empty states. Each is themed with the brand emerald (#059669) on a soft tint background, designed to sit alongside your existing illustrated icons (calkey.png, money.png).</p>
+  <!-- Header -->
+  <div class="page-header">
+    <div class="badge">✦ Premium SVG Assets</div>
+    <h1>TTransport Illustration Library</h1>
+    <p>Hand-crafted empty-state SVG illustrations. Each uses the brand emerald palette with gradients, depth layers, and fine detail — designed to elevate the app's UI quality.</p>
+  </div>
 
-    <h2>Style alongside your existing icons</h2>
-    <div class="alongside">
-      <img src="/icons/calkey.png" alt="calkey">
-      <img src="/icons/money.png" alt="money">
-      <span style="width:1px; height:36px; background:#E4E4E7"></span>
-      <img src="/illustrations/empty-trips.svg" alt="empty trips">
-      <img src="/illustrations/empty-notifications.svg" alt="empty notifications">
-      <img src="/illustrations/empty-pricing.svg" alt="empty pricing">
-      <span class="lbl">← your icons | new SVG illustrations →</span>
-    </div>
+  <!-- Alignment check -->
+  <p class="section-label">Style alignment — alongside icon set</p>
+  <div class="alongside">
+    <img src="/icons/calkey.png"  alt="calkey">
+    <img src="/icons/money.png"   alt="money">
+    <img src="/icons/icon_truck.png" alt="truck">
+    <div class="aside-divider"></div>
+    <img src="/illustrations/empty-trips.svg"         alt="">
+    <img src="/illustrations/empty-notifications.svg" alt="">
+    <img src="/illustrations/empty-pricing.svg"       alt="">
+    <img src="/illustrations/empty-search.svg"        alt="">
+    <img src="/illustrations/empty-routes.svg"        alt="">
+    <span class="aside-lbl">← PNG icons &nbsp;|&nbsp; new SVG illustrations →</span>
+  </div>
 
-    <h2>The 6 illustrations</h2>
-    <div class="grid">
-      <div class="card">
-        <div class="preview"><img src="/illustrations/empty-trips.svg"></div>
-        <div class="meta">
-          <p class="name">Empty trips / orders</p>
-          <p class="desc">Friendly truck — for empty trip lists and order pages</p>
-          <p class="file">empty-trips.svg</p>
-        </div>
-      </div>
-      <div class="card">
-        <div class="preview"><img src="/illustrations/empty-notifications.svg"></div>
-        <div class="meta">
-          <p class="name">Empty notifications</p>
-          <p class="desc">Bell with subtle sparkles — inbox / notifications</p>
-          <p class="file">empty-notifications.svg</p>
-        </div>
-      </div>
-      <div class="card">
-        <div class="preview"><img src="/illustrations/empty-search.svg"></div>
-        <div class="meta">
-          <p class="name">No search results</p>
-          <p class="desc">Magnifier on document — empty filter / search states</p>
-          <p class="file">empty-search.svg</p>
-        </div>
-      </div>
-      <div class="card">
-        <div class="preview"><img src="/illustrations/empty-clients.svg"></div>
-        <div class="meta">
-          <p class="name">Empty clients / partners</p>
-          <p class="desc">Friendly avatar + add — for empty partner lists</p>
-          <p class="file">empty-clients.svg</p>
-        </div>
-      </div>
-      <div class="card">
-        <div class="preview"><img src="/illustrations/empty-matching.svg"></div>
-        <div class="meta">
-          <p class="name">Empty matching / work orders</p>
-          <p class="desc">Two cards linked — đối soát empty state</p>
-          <p class="file">empty-matching.svg</p>
-        </div>
-      </div>
-      <div class="card">
-        <div class="preview"><img src="/illustrations/empty-pricing.svg"></div>
-        <div class="meta">
-          <p class="name">Empty pricing</p>
-          <p class="desc">Price tag — bảng giá empty / no rules</p>
-          <p class="file">empty-pricing.svg</p>
-        </div>
+  <!-- Main grid -->
+  <p class="section-label">All 8 illustrations</p>
+  <div class="grid">
+    <div class="card">
+      <div class="preview"><img src="/illustrations/empty-trips.svg" alt=""></div>
+      <div class="meta">
+        <div class="meta-name">Empty trips / orders</div>
+        <div class="meta-desc">Detailed freight truck — danh sách chuyến xe trống</div>
+        <span class="meta-file">empty-trips.svg</span>
       </div>
     </div>
-
-    <h2>Sizes (responsive)</h2>
-    <div class="row">
-      <div class="size-sample"><img src="/illustrations/empty-trips.svg" style="width:48px"><span class="size-label">48px</span></div>
-      <div class="size-sample"><img src="/illustrations/empty-trips.svg" style="width:80px"><span class="size-label">80px</span></div>
-      <div class="size-sample"><img src="/illustrations/empty-trips.svg" style="width:120px"><span class="size-label">120px (default)</span></div>
-      <div class="size-sample"><img src="/illustrations/empty-trips.svg" style="width:180px"><span class="size-label">180px</span></div>
+    <div class="card">
+      <div class="preview"><img src="/illustrations/empty-clients.svg" alt=""></div>
+      <div class="meta">
+        <div class="meta-name">Empty clients / partners</div>
+        <div class="meta-desc">Avatar with business card — đối tác / khách hàng</div>
+        <span class="meta-file">empty-clients.svg</span>
+      </div>
     </div>
+    <div class="card">
+      <div class="preview"><img src="/illustrations/empty-search.svg" alt=""></div>
+      <div class="meta">
+        <div class="meta-name">No search results</div>
+        <div class="meta-desc">Frosted-glass magnifier — tìm kiếm không có kết quả</div>
+        <span class="meta-file">empty-search.svg</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="preview"><img src="/illustrations/empty-routes.svg" alt=""></div>
+      <div class="meta">
+        <div class="meta-name">Empty routes</div>
+        <div class="meta-desc">Folded map with A→B pins — danh sách tuyến đường</div>
+        <span class="meta-file">empty-routes.svg</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="preview"><img src="/illustrations/empty-pricing.svg" alt=""></div>
+      <div class="meta">
+        <div class="meta-name">Empty pricing</div>
+        <div class="meta-desc">Price tag with coin — bảng giá cước</div>
+        <span class="meta-file">empty-pricing.svg</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="preview"><img src="/illustrations/empty-matching.svg" alt=""></div>
+      <div class="meta">
+        <div class="meta-name">Empty matching</div>
+        <div class="meta-desc">Linked document cards — đối soát công việc</div>
+        <span class="meta-file">empty-matching.svg</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="preview"><img src="/illustrations/empty-notifications.svg" alt=""></div>
+      <div class="meta">
+        <div class="meta-name">Empty notifications</div>
+        <div class="meta-desc">Bell with ripple rings — hộp thư thông báo</div>
+        <span class="meta-file">empty-notifications.svg</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="preview"><img src="/illustrations/empty-error.svg" alt=""></div>
+      <div class="meta">
+        <div class="meta-name">Error / Network failure</div>
+        <div class="meta-desc">Disconnected plugs with sparks &amp; warning badge — lỗi kết nối</div>
+        <span class="meta-file">empty-error.svg</span>
+      </div>
+    </div>
+  </div>
 
-    <h2>In context: how it looks as an empty state</h2>
-    <div class="empty-state-demo">
+  <hr>
+
+  <!-- Sizes -->
+  <p class="section-label">Responsive sizes</p>
+  <div class="sizes-row">
+    <div class="size-item"><img src="/illustrations/empty-trips.svg" style="width:40px"><span>40 px</span></div>
+    <div class="size-item"><img src="/illustrations/empty-trips.svg" style="width:64px"><span>64 px</span></div>
+    <div class="size-item"><img src="/illustrations/empty-trips.svg" style="width:100px"><span>100 px</span></div>
+    <div class="size-item"><img src="/illustrations/empty-trips.svg" style="width:140px"><span>140 px (h-28)</span></div>
+    <div class="size-item"><img src="/illustrations/empty-trips.svg" style="width:200px"><span>200 px</span></div>
+  </div>
+
+  <hr>
+
+  <!-- In-context demos -->
+  <p class="section-label">In context — empty state demos</p>
+  <div class="demo-grid">
+    <div class="demo-card">
       <img src="/illustrations/empty-trips.svg" alt="">
       <h3>Chưa có chuyến nào</h3>
       <p>Tạo chuyến đầu tiên để bắt đầu quản lý vận tải.</p>
       <button>+ Tạo chuyến mới</button>
     </div>
-
-    <div style="height:16px"></div>
-
-    <div class="empty-state-demo">
+    <div class="demo-card">
       <img src="/illustrations/empty-notifications.svg" alt="">
-      <h3>Tất cả đã xem</h3>
-      <p>Bạn đã xem hết tất cả thông báo. Hệ thống sẽ thông báo khi có cập nhật mới.</p>
+      <h3>Chưa có thông báo</h3>
+      <p>Bạn đã xem hết tất cả. Hệ thống sẽ thông báo khi có cập nhật mới.</p>
     </div>
-
+    <div class="demo-card">
+      <img src="/illustrations/empty-search.svg" alt="">
+      <h3>Không tìm thấy kết quả</h3>
+      <p>Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm.</p>
+    </div>
+    <div class="demo-card">
+      <img src="/illustrations/empty-routes.svg" alt="">
+      <h3>Chưa có tuyến đường</h3>
+      <p>Thêm tuyến đường để hệ thống tự động phân công tài xế.</p>
+      <button>+ Thêm tuyến đường</button>
+    </div>
+    <div class="demo-card">
+      <img src="/illustrations/empty-pricing.svg" alt="">
+      <h3>Chưa có bảng giá</h3>
+      <p>Thiết lập giá cước cho từng tuyến đường và loại hàng hóa.</p>
+      <button>+ Tạo bảng giá</button>
+    </div>
+    <div class="demo-card">
+      <img src="/illustrations/empty-matching.svg" alt="">
+      <h3>Chưa có công việc cần đối soát</h3>
+      <p>Tất cả phiếu công việc đã được ghép với chuyến xe.</p>
+    </div>
   </div>
+
+</div>
 </body>
 </html>

@@ -183,6 +183,68 @@ export function AccountantSidebar({
         })}
       </nav>
 
+      {/* ── Sidebar art — road transport motif ── */}
+      {!collapsed && (
+        <div className="sidebar-art shrink-0 px-3 pb-2">
+          <svg
+            viewBox="0 0 200 68"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+            style={{ width: '100%', display: 'block' }}
+          >
+            {/* Stars */}
+            <circle cx="18"  cy="10" r="1"   fill="white" fillOpacity="0.5"/>
+            <circle cx="60"  cy="6"  r="0.8" fill="white" fillOpacity="0.4"/>
+            <circle cx="120" cy="9"  r="1.1" fill="white" fillOpacity="0.55"/>
+            <circle cx="170" cy="5"  r="0.9" fill="white" fillOpacity="0.4"/>
+            <circle cx="190" cy="14" r="0.8" fill="white" fillOpacity="0.35"/>
+            <circle cx="88"  cy="18" r="0.7" fill="white" fillOpacity="0.3"/>
+            {/* Horizon hill */}
+            <path d="M0 32 Q50 22 100 28 Q150 34 200 24 L200 36 L0 36 Z"
+                  fill="white" fillOpacity="0.05"/>
+            {/* Road surface */}
+            <rect x="0" y="36" width="200" height="32" fill="white" fillOpacity="0.05" rx="2"/>
+            {/* Road center dashes */}
+            <g stroke="white" strokeWidth="2" strokeLinecap="round" strokeOpacity="0.25">
+              <line x1="0"   y1="52" x2="22"  y2="52"/>
+              <line x1="34"  y1="52" x2="56"  y2="52"/>
+              <line x1="68"  y1="52" x2="90"  y2="52"/>
+              <line x1="102" y1="52" x2="124" y2="52"/>
+              <line x1="136" y1="52" x2="158" y2="52"/>
+              <line x1="170" y1="52" x2="192" y2="52"/>
+            </g>
+            {/* Road edges */}
+            <line x1="0" y1="36" x2="200" y2="36" stroke="white" strokeWidth="1" strokeOpacity="0.12"/>
+            {/* Truck body */}
+            <g transform="translate(18 37)">
+              <rect x="0" y="2" width="62" height="26" rx="2.5" fill="white" fillOpacity="0.12"/>
+              <rect x="0" y="2" width="62" height="4"  rx="2" fill="white" fillOpacity="0.08"/>
+              <path d="M62 6 L80 6 Q84 6 84 10 L84 28 L62 28 Z" fill="white" fillOpacity="0.16"/>
+              <rect x="64" y="9" width="18" height="11" rx="1.5" fill="white" fillOpacity="0.1"/>
+              <rect x="82" y="10" width="3" height="4" rx="1" fill="white" fillOpacity="0.35"/>
+              <circle cx="15"  cy="31" r="5.5" fill="white" fillOpacity="0.18"/>
+              <circle cx="15"  cy="31" r="2.2" fill="white" fillOpacity="0.1"/>
+              <circle cx="68"  cy="31" r="5.5" fill="white" fillOpacity="0.18"/>
+              <circle cx="68"  cy="31" r="2.2" fill="white" fillOpacity="0.1"/>
+            </g>
+            {/* Distant truck (right) */}
+            <g transform="translate(130 41)" opacity="0.55">
+              <rect x="0" y="1" width="36" height="16" rx="2" fill="white" fillOpacity="0.1"/>
+              <path d="M36 3 L48 3 Q51 3 51 6 L51 17 L36 17 Z" fill="white" fillOpacity="0.13"/>
+              <circle cx="8"  cy="19" r="3.5" fill="white" fillOpacity="0.14"/>
+              <circle cx="42" cy="19" r="3.5" fill="white" fillOpacity="0.14"/>
+            </g>
+            {/* Motion streaks */}
+            <g stroke="white" strokeLinecap="round" strokeOpacity="0.1">
+              <line x1="0"  y1="44" x2="14" y2="44" strokeWidth="2"/>
+              <line x1="0"  y1="49" x2="10" y2="49" strokeWidth="1.5"/>
+              <line x1="0"  y1="54" x2="7"  y2="54" strokeWidth="1"/>
+            </g>
+          </svg>
+        </div>
+      )}
+
       {/* Footer — user menu */}
       <div style={{ borderTop: '1px solid var(--theme-sidebar-border)' }} className="p-2 shrink-0">
         {collapsed ? (

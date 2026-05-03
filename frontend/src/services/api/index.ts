@@ -14,6 +14,7 @@ export { toCamel, toSnake, ok, fail, isNetworkError } from './utils'
 // Domain modules
 import * as clientsApi from './clients.api'
 import * as routesApi from './routes.api'
+import * as locationsApi from './locations.api'
 import * as pricingsApi from './pricings.api'
 import * as workOrdersApi from './workOrders.api'
 import * as tripOrdersApi from './tripOrders.api'
@@ -35,6 +36,12 @@ export const apiClient = {
   createRoute: routesApi.createRoute,
   updateRoute: routesApi.updateRoute,
   deleteRoute: routesApi.deleteRoute,
+
+  // Locations
+  getLocations: locationsApi.getLocations,
+  createLocation: locationsApi.createLocation,
+  updateLocation: locationsApi.updateLocation,
+  deleteLocation: locationsApi.deleteLocation,
 
   // Pricings
   getPricings: pricingsApi.getPricings,

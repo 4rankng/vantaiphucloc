@@ -838,3 +838,160 @@ select {
 .chip-error   { background: var(--theme-status-error-light);   color: var(--theme-status-error-text);   border-color: color-mix(in srgb, var(--theme-status-error) 18%, transparent); }
 .chip-info    { background: var(--theme-status-info-light);    color: var(--theme-status-info-text);    border-color: color-mix(in srgb, var(--theme-status-info) 18%, transparent); }
 .chip-brand   { background: var(--theme-brand-primary-light);  color: var(--theme-brand-primary-dark); border-color: color-mix(in srgb, var(--theme-brand-primary) 22%, transparent); }
+
+/* ─── Page background patterns ──────────────────────────── */
+
+/* Subtle emerald dot grid — apply to main page containers */
+.bg-dot-grid {
+  background-image:
+    radial-gradient(circle,
+      color-mix(in srgb, var(--theme-brand-primary, #059669) 7%, transparent) 1px,
+      transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* Neutral zinc dot grid — for lighter/plain backgrounds */
+.bg-dot-grid-zinc {
+  background-image:
+    radial-gradient(circle, rgba(9,9,11,0.045) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* Diagonal fine line grid */
+.bg-line-grid {
+  background-image:
+    linear-gradient(rgba(5,150,105,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(5,150,105,0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ─── Page header gradient band ─────────────────────────── */
+
+/* Wrap around any page's top title/header section */
+.page-header-band {
+  position: relative;
+  background: linear-gradient(
+    130deg,
+    color-mix(in srgb, var(--theme-brand-primary, #059669) 6%, var(--theme-bg-primary, #FAFAFA)) 0%,
+    var(--theme-bg-primary, #FAFAFA) 55%
+  );
+}
+
+/* Heavier brand wash for dashboard hero areas */
+.page-header-band-strong {
+  position: relative;
+  background: linear-gradient(
+    130deg,
+    color-mix(in srgb, var(--theme-brand-primary, #059669) 10%, var(--theme-bg-primary, #FAFAFA)) 0%,
+    color-mix(in srgb, var(--theme-brand-primary, #059669) 3%, var(--theme-bg-primary, #FAFAFA)) 45%,
+    var(--theme-bg-primary, #FAFAFA) 80%
+  );
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-brand-primary, #059669) 12%, transparent);
+}
+
+/* ─── Stat card corner decoration ───────────────────────── */
+
+/* Invisible positioning anchor — add to the stat card wrapper */
+.stat-card-relative { position: relative; overflow: hidden; }
+
+/* The glow spot itself — absolute top-right inside stat cards */
+.stat-card-glow {
+  position: absolute;
+  top: 0; right: 0;
+  width: 72px; height: 72px;
+  border-radius: 0 var(--theme-radius-lg, 10px) 0 72px;
+  background: radial-gradient(
+    ellipse at 100% 0%,
+    color-mix(in srgb, var(--theme-brand-primary, #059669) 12%, transparent) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Push stat-card content above the glow */
+.stat-card-relative > * { position: relative; z-index: 1; }
+
+/* ─── Error / network state illustration container ───────── */
+.state-error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 24px;
+  text-align: center;
+}
+
+/* ─── Sidebar decoration art container ──────────────────── */
+.sidebar-art {
+  padding: 0 12px 8px;
+  opacity: 0.55;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ─── Dashboard hero section with decorative watermark ──── */
+.dashboard-hero {
+  position: relative;
+  overflow: hidden;
+}
+.dashboard-hero-watermark {
+  position: absolute;
+  right: 0; bottom: 0;
+  opacity: 0.04;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ─── Earnings card accent ───────────────────────────────── */
+.earnings-card-bg {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--theme-brand-primary, #059669) 5%, var(--theme-bg-secondary, #fff)) 0%,
+    var(--theme-bg-secondary, #fff) 55%
+  );
+}
+
+/* ─── Notification dot / live badge ─────────────────────── */
+@keyframes ping-sm {
+  75%, 100% { transform: scale(1.8); opacity: 0; }
+}
+.notif-ping {
+  display: inline-flex;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--theme-status-error, #EF4444);
+  position: relative;
+}
+.notif-ping::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--theme-status-error, #EF4444);
+  animation: ping-sm 1.2s cubic-bezier(0,0,0.2,1) infinite;
+}
+
+/* ─── Focus ring for interactive empty states ────────────── */
+.empty-state-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: var(--theme-brand-primary, #059669);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.12s ease;
+  letter-spacing: -0.005em;
+}
+.empty-state-btn:hover {
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--theme-brand-primary, #059669) 38%, transparent);
+}
+.empty-state-btn:active { transform: scale(0.97); }
+.chip-brand   { background: var(--theme-brand-primary-light);  color: var(--theme-brand-primary-dark); border-color: color-mix(in srgb, var(--theme-brand-primary) 22%, transparent); }

@@ -53,16 +53,88 @@ export function Login() {
       <div className="login-bg-circle login-bg-circle--br" />
       <div className="login-bg-wave" />
 
-      {/* Subtle watermark illustration (bottom-right) */}
+      {/* Scenic background SVG illustration */}
       <div
-        className="absolute bottom-0 right-0 opacity-40 pointer-events-none"
+        className="absolute inset-0 pointer-events-none overflow-hidden"
         style={{ zIndex: 0 }}
+        aria-hidden="true"
       >
-        <img
-          src="/illustrations/empty-trips.svg"
-          alt=""
-          className="h-48 w-auto opacity-50"
-        />
+        <svg
+          viewBox="0 0 480 320"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="absolute bottom-0 left-0 w-full"
+          style={{ opacity: 0.18 }}
+          preserveAspectRatio="xMidYMax meet"
+        >
+          <defs>
+            <linearGradient id="lg-road-bg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0"/>
+              <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.25"/>
+            </linearGradient>
+          </defs>
+          {/* Stars / dots in sky */}
+          <circle cx="40"  cy="30"  r="1.5" fill="#FFFFFF" opacity="0.7"/>
+          <circle cx="120" cy="14"  r="1"   fill="#FFFFFF" opacity="0.6"/>
+          <circle cx="200" cy="22"  r="2"   fill="#FFFFFF" opacity="0.8"/>
+          <circle cx="300" cy="10"  r="1.5" fill="#FFFFFF" opacity="0.5"/>
+          <circle cx="380" cy="28"  r="1"   fill="#FFFFFF" opacity="0.65"/>
+          <circle cx="440" cy="16"  r="1.5" fill="#FFFFFF" opacity="0.7"/>
+          <circle cx="80"  cy="54"  r="1"   fill="#FFFFFF" opacity="0.45"/>
+          <circle cx="260" cy="38"  r="1.2" fill="#FFFFFF" opacity="0.55"/>
+          <circle cx="420" cy="50"  r="1"   fill="#FFFFFF" opacity="0.5"/>
+          {/* Horizon distant hills */}
+          <path d="M0 200 Q80 160 160 180 Q240 200 320 165 Q400 130 480 170 L480 320 L0 320 Z"
+                fill="#FFFFFF" fillOpacity="0.05"/>
+          {/* Ground road surface */}
+          <rect x="0" y="260" width="480" height="60" fill="#FFFFFF" fillOpacity="0.07"/>
+          {/* Road center dashes */}
+          <g stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeOpacity="0.3">
+            <line x1="0"   y1="290" x2="40"  y2="290"/>
+            <line x1="70"  y1="290" x2="110" y2="290"/>
+            <line x1="140" y1="290" x2="180" y2="290"/>
+            <line x1="210" y1="290" x2="250" y2="290"/>
+            <line x1="280" y1="290" x2="320" y2="290"/>
+            <line x1="350" y1="290" x2="390" y2="290"/>
+            <line x1="420" y1="290" x2="460" y2="290"/>
+          </g>
+          {/* Truck 1 (left, larger) */}
+          <g transform="translate(40 245)">
+            {/* Cargo */}
+            <rect x="0"  y="0"  width="100" height="46" rx="4" fill="#FFFFFF" fillOpacity="0.15"/>
+            <rect x="0"  y="0"  width="100" height="5"  rx="2" fill="#FFFFFF" fillOpacity="0.2"/>
+            {/* Cab */}
+            <path d="M100 8 L128 8 Q134 8 134 14 L134 46 L100 46 Z" fill="#FFFFFF" fillOpacity="0.22"/>
+            <rect x="103" y="12" width="27" height="18" rx="2" fill="#FFFFFF" fillOpacity="0.15"/>
+            {/* Wheels */}
+            <circle cx="20"  cy="50" r="9" fill="#FFFFFF" fillOpacity="0.25"/>
+            <circle cx="20"  cy="50" r="4" fill="#FFFFFF" fillOpacity="0.15"/>
+            <circle cx="112" cy="50" r="9" fill="#FFFFFF" fillOpacity="0.25"/>
+            <circle cx="112" cy="50" r="4" fill="#FFFFFF" fillOpacity="0.15"/>
+          </g>
+          {/* Truck 2 (right, smaller / distant) */}
+          <g transform="translate(310 254)" opacity="0.65">
+            <rect x="0"  y="0"  width="72" height="32" rx="3" fill="#FFFFFF" fillOpacity="0.12"/>
+            <path d="M72 6 L92 6 Q96 6 96 10 L96 32 L72 32 Z" fill="#FFFFFF" fillOpacity="0.18"/>
+            <rect x="74" y="9" width="18" height="12" rx="1.5" fill="#FFFFFF" fillOpacity="0.12"/>
+            <circle cx="15" cy="36" r="6" fill="#FFFFFF" fillOpacity="0.2"/>
+            <circle cx="82" cy="36" r="6" fill="#FFFFFF" fillOpacity="0.2"/>
+          </g>
+          {/* Motion lines behind truck 1 */}
+          <g stroke="#FFFFFF" strokeLinecap="round" strokeOpacity="0.15">
+            <line x1="0"  y1="262" x2="28" y2="262" strokeWidth="2.5"/>
+            <line x1="0"  y1="270" x2="22" y2="270" strokeWidth="1.8"/>
+            <line x1="0"  y1="278" x2="18" y2="278" strokeWidth="1.2"/>
+          </g>
+          {/* Distant building silhouettes */}
+          <g fill="#FFFFFF" fillOpacity="0.07">
+            <rect x="168" y="200" width="20" height="60"/>
+            <rect x="192" y="218" width="16" height="42"/>
+            <rect x="210" y="208" width="24" height="52"/>
+            <rect x="236" y="222" width="14" height="38"/>
+            <rect x="254" y="196" width="18" height="64"/>
+          </g>
+        </svg>
       </div>
 
       {/* Single self-contained card */}
