@@ -84,6 +84,8 @@ export interface RoutePrice {
   route: string
   pickupLocation?: string
   dropoffLocation?: string
+  pickupLocationId?: number | null
+  dropoffLocationId?: number | null
   type20ft: number
   type40ft: number
   isTwoWay?: boolean
@@ -105,6 +107,8 @@ export interface WorkOrder {
   route: string
   pickupLocation?: string
   dropoffLocation?: string
+  pickupLocationId?: number | null
+  dropoffLocationId?: number | null
   driverId: number
   driverName: string
   tractorPlate: string
@@ -246,6 +250,14 @@ export interface ReconciliationUploadResponse {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+export interface Location {
+  id: number
+  name: string
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
 
 export function formatCurrency(amount: number | undefined | null): string {
   if (amount == null) return '—'

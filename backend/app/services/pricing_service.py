@@ -10,7 +10,7 @@ import hashlib
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.models.domain import Pricing, PricingLine
+from app.models.domain import Pricing, PricingLine, Location
 from app.core.cache import CacheManager
 
 
@@ -31,7 +31,40 @@ async def find_pricing(
     dropoff_location: str | None = None,
     cache: CacheManager | None = None,
 ) -> Pricing | None:
-    # Try pickup/dropoff match first
+    # Resolve location FKs for FK-based lookup
+    pickup_loc_id = None
+    dropoff_loc_id = None
+    if pickup_location:
+        loc_result = await db.execute(
+            select(Location).where(Location.name == pickup_location, Location.is_active == True)
+        )
+        loc = loc_result.scalar_one_or_none()
+        if loc:
+            pickup_loc_id = loc.id
+    if dropoff_location:
+        loc_result = await db.execute(
+            select(Location).where(Location.name == dropoff_location, Location.is_active == True)
+        )
+        loc = loc_result.scalar_one_or_none()
+        if loc:
+            dropoff_loc_id = loc.id
+
+    # Try FK-based pickup/dropoff match first
+    if pickup_loc_id and dropoff_loc_id:
+        result = await db.execute(
+            select(Pricing).where(
+                Pricing.client_id == client_id,
+                Pricing.work_type == work_type,
+                Pricing.pickup_location_id == pickup_loc_id,
+                Pricing.dropoff_location_id == dropoff_loc_id,
+                Pricing.is_active == True,
+            ).limit(1)
+        )
+        pricing = result.scalar_one_or_none()
+        if pricing:
+            return pricing
+
+    # Try string-based pickup/dropoff match
     if pickup_location and dropoff_location:
         cache_key = _pricing_cache_key(client_id, work_type, pickup_location=pickup_location, dropoff_location=dropoff_location)
 
