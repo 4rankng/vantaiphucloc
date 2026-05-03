@@ -11,7 +11,7 @@ from sqlalchemy import select, delete, func
 
 from app.database import get_db
 from app.models.base import User
-from app.models.domain import WorkOrder, TripOrder, TripOrderWorkOrder
+from app.models.domain import WorkOrder, TripOrder, TripOrderWorkOrder, WorkOrderContainer
 from app.schemas.domain import (
     ReconcileRequest,
     UnmatchRequest,
@@ -49,6 +49,16 @@ async def reconcile(
     work_order = wo_result.scalar_one_or_none()
     if work_order is None:
         raise HTTPException(status_code=404, detail="Work order not found")
+
+    # Work order must have at least one container to be matched
+    container_count = await db.execute(
+        select(func.count()).where(WorkOrderContainer.work_order_id == work_order.id)
+    )
+    if container_count.scalar() == 0:
+        raise HTTPException(
+            status_code=409,
+            detail="Work order must have at least one container before matching",
+        )
 
     # Load trip order
     to_result = await db.execute(

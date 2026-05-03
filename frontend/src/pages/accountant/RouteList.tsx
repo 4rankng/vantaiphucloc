@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { Plus, Pencil, Trash2, Route as RouteIcon, Search } from 'lucide-react'
+import { Plus, Pencil, Trash2, Route as RouteIcon, Search, Container } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
@@ -189,69 +189,126 @@ export function RouteList() {
 
       {/* Route Detail Dialog */}
       <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
-        <DialogContent className="p-0 gap-0 overflow-hidden" style={{ background: 'var(--theme-bg-tertiary)' }}>
-          {/* Header */}
-          <DialogHeader className="px-5 pt-5 pb-4">
-            <DialogTitle className="text-xl font-bold">{selected?.route ?? ''}</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="p-0 gap-0 overflow-hidden max-w-sm">
+          {selected && (() => {
+            const parts = selected.route.split(/\s*→\s*|\s*->\s*|\s*-\s*/)
+            const from = parts[0] ?? selected.route
+            const to = parts[1] ?? ''
+            return (
+              <>
+                {/* Dark green header */}
+                <div className="px-6 pt-6 pb-7" style={{ background: '#0f4c2a' }}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-medium uppercase tracking-[0.1em] mb-1.5"
+                        style={{ color: 'rgba(255,255,255,0.5)' }}>Chi tiết tuyến</p>
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <span className="text-[22px] font-semibold text-white">{from}</span>
+                        {to && (
+                          <>
+                            <svg width="32" height="10" viewBox="0 0 32 10">
+                              <line x1="0" y1="5" x2="24" y2="5" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" strokeDasharray="3 3"/>
+                              <polygon points="24,0 32,5 24,10" fill="rgba(255,255,255,0.6)"/>
+                            </svg>
+                            <span className="text-[22px] font-semibold text-white">{to}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-          {selected && (
-            <div className="px-5 pb-5 space-y-4">
-              {/* Route card */}
-              <div className="flex items-center gap-3 rounded-2xl px-4 py-3" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
-                <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--theme-brand-primary-light)' }}>
-                  <RouteIcon className="h-4 w-4" style={{ color: 'var(--theme-brand-primary)' }} />
+                  {/* Pickup / Dropoff inside header */}
+                  <div className="flex gap-0 mt-5">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: '#6ee7b7' }} />
+                        <span className="text-[10px] font-medium uppercase tracking-[0.08em]"
+                          style={{ color: 'rgba(255,255,255,0.5)' }}>Điểm lấy</span>
+                      </div>
+                      <p className="text-[13px] font-semibold text-white pl-[15px]">
+                        {selected.pickupLocation || '—'}
+                      </p>
+                    </div>
+                    <div className="w-px mx-4 self-stretch" style={{ background: 'rgba(255,255,255,0.12)' }} />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: '#fbbf24' }} />
+                        <span className="text-[10px] font-medium uppercase tracking-[0.08em]"
+                          style={{ color: 'rgba(255,255,255,0.5)' }}>Điểm trả</span>
+                      </div>
+                      <p className="text-[13px] font-semibold text-white pl-[15px]">
+                        {selected.dropoffLocation || '—'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Tuyến:</p>
-                  <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{selected.route}</p>
-                </div>
-              </div>
 
-              {/* Fields grid */}
-              <div>
-                {/* Row 1: Điểm lấy / Điểm trả */}
-                <div className="grid grid-cols-2 gap-4 py-3" style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
-                  <div>
-                    <p className="text-xs mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>Điểm lấy</p>
-                    <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{selected.pickupLocation || '—'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>Điểm trả</p>
-                    <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{selected.dropoffLocation || '—'}</p>
+                {/* Price cards */}
+                <div className="px-6 pt-5">
+                  <p className="text-[10px] font-medium uppercase tracking-[0.09em] mb-3"
+                    style={{ color: '#9ca3af' }}>Giá cước</p>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {[
+                      { label: 'Container 20ft', raw: selected.type20ft },
+                      { label: 'Container 40ft', raw: selected.type40ft },
+                    ].map(({ label, raw }) => {
+                      const full = formatCurrencyFull(raw) // e.g. "1.400.000 đ"
+                      const match = full.match(/^([\d.]+)(.*)$/)
+                      const main = match?.[1] ?? full
+                      const suffix = match?.[2] ?? ''
+                      return (
+                        <div key={label} className="rounded-xl px-4 py-3.5"
+                          style={{ background: '#f8faf9', border: '1px solid #e5e7eb' }}>
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <Container className="w-3.5 h-3.5" style={{ color: '#6b7280' }} />
+                            <span className="text-[11px] font-semibold" style={{ color: '#6b7280' }}>{label}</span>
+                          </div>
+                          <p className="m-0 text-[20px] font-semibold leading-none" style={{ color: '#111827' }}>
+                            {main}<span className="text-[13px] font-medium" style={{ color: '#6b7280' }}>{suffix}</span>
+                          </p>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
-                {/* Row 2: Giá 20ft / Giá 40ft */}
-                <div className="grid grid-cols-2 gap-4 py-3" style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
-                  <div>
-                    <p className="text-xs mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>Giá 20ft</p>
-                    <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(selected.type20ft)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>Giá 40ft</p>
-                    <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(selected.type40ft)}</p>
-                  </div>
-                </div>
-                {/* Row 3: Hai chiều (full width) */}
-                <div className="py-3" style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
-                  <p className="text-xs mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>Hai chiều</p>
-                  <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{selected.isTwoWay ? 'Có' : 'Không'}</p>
-                </div>
-              </div>
 
-              {/* Footer buttons */}
-              <div className="flex gap-3 pt-1">
-                <Button variant="outline" onClick={() => setDeleteConfirm(true)} className="flex-1 h-11 font-semibold"
-                  style={{ color: 'var(--theme-status-error)', borderColor: 'var(--theme-status-error)' }}>
-                  <Trash2 className="w-4 h-4 mr-1.5" /> Xoá
-                </Button>
-                <Button onClick={() => handleOpenEdit(selected!)} className="flex-1 h-11 font-semibold"
-                  style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-                  <Pencil className="w-4 h-4 mr-1.5" /> Sửa
-                </Button>
-              </div>
-            </div>
-          )}
+                {/* Hai chiều row */}
+                <div className="px-6 pt-3.5">
+                  <div className="flex items-center justify-between rounded-xl px-4 py-3.5"
+                    style={{ background: '#f8faf9', border: '1px solid #e5e7eb' }}>
+                    <span className="text-[13px] font-medium" style={{ color: '#374151' }}>Hai chiều</span>
+                    {selected.isTwoWay ? (
+                      <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
+                        style={{ background: '#dcfce7', color: '#16a34a' }}>Có</span>
+                    ) : (
+                      <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
+                        style={{ background: '#fee2e2', color: '#dc2626' }}>Không</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div className="px-6 pt-5 pb-6 grid gap-2.5" style={{ gridTemplateColumns: '1fr 1.6fr' }}>
+                  <button
+                    onClick={() => setDeleteConfirm(true)}
+                    className="flex items-center justify-center gap-1.5 py-3 rounded-xl text-sm font-semibold transition-colors"
+                    style={{ border: '1.5px solid #fecaca', background: '#fff', color: '#dc2626' }}
+                    onMouseOver={e => (e.currentTarget.style.background = '#fef2f2')}
+                    onMouseOut={e => (e.currentTarget.style.background = '#fff')}>
+                    <Trash2 className="w-3.5 h-3.5" /> Xoá
+                  </button>
+                  <button
+                    onClick={() => handleOpenEdit(selected!)}
+                    className="flex items-center justify-center gap-1.5 py-3 rounded-xl text-sm font-semibold transition-colors"
+                    style={{ background: '#16a34a', color: '#fff', border: 'none' }}
+                    onMouseOver={e => (e.currentTarget.style.background = '#15803d')}
+                    onMouseOut={e => (e.currentTarget.style.background = '#16a34a')}>
+                    <Pencil className="w-3.5 h-3.5" /> Chỉnh sửa
+                  </button>
+                </div>
+              </>
+            )
+          })()}
         </DialogContent>
       </Dialog>
 
