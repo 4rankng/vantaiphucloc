@@ -9,13 +9,14 @@ import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
 import type { WOSuggestion } from '@/data/domain'
 import {
   Check, ChevronDown, X, Sparkles, ArrowLeft, ArrowUpDown,
-  Truck, FileText, AlertCircle, CheckCircle2, Plus,
+  Truck, FileText, AlertCircle, CheckCircle2, Plus, Pencil,
 } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { useToggleTripConfirmation } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { useIsMobile } from '@/hooks/use-mobile'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { Dialog } from '@/components/ui/Dialog'
 
 function WOSuggestionCard({
   suggestion,
@@ -118,6 +119,10 @@ export function MatchTrip() {
   const toast = useToast()
   const isMobile = useIsMobile(1024)
   const { mutate: toggleConfirmation, isPending: toggling } = useToggleTripConfirmation()
+  const [editingJobId, setEditingJobId] = useState<number | null>(null)
+  const [editDialogClient, setEditDialogClient] = useState('')
+  const [editDialogRoute, setEditDialogRoute] = useState('')
+  const [editDialogContainers, setEditDialogContainers] = useState<{ type: string; number: string }[]>([])
 
   const {
     loading, loadingSuggestions, submitting, pickMode, setPickMode,
@@ -133,6 +138,37 @@ export function MatchTrip() {
     setJobClient, setJobRoute, setJobContainers,
     handleMatch,
   } = useMatchTrip(Number(tripIdStr))
+
+  const editingJob = useMemo(() => unmatchedJobs.find(j => j.id === editingJobId), [unmatchedJobs, editingJobId])
+
+  const handleOpenEditDialog = (jobId: number) => {
+    const job = unmatchedJobs.find(j => j.id === jobId)
+    if (job) {
+      setEditDialogClient(job.clientName)
+      setEditDialogRoute(job.route)
+      setEditDialogContainers(job.containers.map(c => ({ type: c.workType, number: c.containerNumber })))
+    }
+  }
+
+  const handleEditDialogOpen = (jobId: number) => {
+    setEditingJobId(jobId)
+    handleOpenEditDialog(jobId)
+  }
+
+  const handleSaveEditDialog = () => {
+    if (!editingJob) return
+    if (editingJobId === selectedJobId) {
+      setJobClient(editDialogClient)
+      setJobRoute(editDialogRoute)
+      setJobContainers(editDialogContainers)
+    }
+    setEditingJobId(null)
+    toast.success('Thành công', 'Đã cập nhật thông tin chuyến')
+  }
+
+  const handleCloseEditDialog = () => {
+    setEditingJobId(null)
+  }
 
   // Memoize edit configs
   const clientEditLeft = useMemo(() => ({ options: clientOptions, onChange: setTripClient, placeholder: 'Chọn khách hàng...' }), [clientOptions, setTripClient])
@@ -197,447 +233,476 @@ export function MatchTrip() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col lg:flex-row">
-        {/* Left Panel - Full trip info card with match indicators */}
-        {selectedTrip && (
-          <div
-            className="lg:w-[420px] xl:w-[480px] shrink-0 p-4 lg:p-6 lg:border-r overflow-y-auto"
-            style={{ borderColor: 'var(--theme-border-light)' }}
-          >
-            {/* Header with "Đổi chuyến" button */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
+        {/* Left Panel - Trip Selectors */}
+        <div
+          className="lg:w-[420px] xl:w-[480px] shrink-0 p-4 lg:p-6 lg:border-r overflow-y-auto"
+          style={{ borderColor: 'var(--theme-border-light)' }}
+        >
+          <div className="space-y-4">
+            {/* Trip Selector - Yêu cầu */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
                 <div className="w-2 h-2 rounded-full" style={{ background: 'var(--theme-status-warning)' }} />
-                <span className="typo-label" style={{ color: 'var(--theme-status-warning)' }}>Chuyến yêu cầu</span>
+                <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--theme-status-warning)' }}>
+                  Chuyến yêu cầu
+                </span>
               </div>
               <button
                 onClick={() => setPickMode('trip')}
-                className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-4 py-3.5 rounded-lg touch-manipulation transition-all hover:scale-[1.01]"
                 style={{
-                  background: 'transparent',
-                  color: 'var(--theme-status-warning)',
-                  border: '1px solid var(--theme-status-warning)',
+                  background: 'var(--theme-bg-secondary)',
+                  boxShadow: 'var(--theme-shadow-card)',
+                  border: selectedTrip ? '2px solid var(--theme-status-warning)' : '1px solid var(--theme-border-default)',
                 }}
               >
-                Đổi chuyến
+                <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--theme-status-warning-light)' }}>
+                    <FileText className="w-5 h-5" style={{ color: 'var(--theme-status-warning)' }} />
+                  </div>
+                  {selectedTrip ? (
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {(selectedTrip.containers?.length ? selectedTrip.containers : []).map((c, i) => (
+                          <span key={i} className="flex items-center gap-1">
+                            <ContBadge type={c.workType} />
+                            <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
+                          </span>
+                        ))}
+                      </div>
+                      <p className="text-xs mt-1 truncate" style={{ color: 'var(--theme-text-muted)' }}>{selectedTrip.clientName} · {selectedTrip.route}</p>
+                    </div>
+                  ) : (
+                    <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chọn chuyến yêu cầu</p>
+                  )}
+                </div>
+                <ChevronDown className="w-5 h-5 shrink-0 ml-2" style={{ color: 'var(--theme-text-muted)' }} />
               </button>
             </div>
 
-            {/* Full trip info card */}
-            <div
-              className="rounded-lg p-4 space-y-4"
-              style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
-            >
-              {/* Client */}
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="typo-caption" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</p>
-                  <p className="typo-h3 font-medium" style={{ color: 'var(--theme-text-primary)' }}>{selectedTrip.clientName}</p>
-                </div>
-                {selectedJob && clientMatched && (
-                  <span className="chip chip-success text-xs">✓ Khớp</span>
-                )}
-                {selectedJob && !clientMatched && (
-                  <span className="chip chip-error text-xs">✗ Khác</span>
-                )}
+            {/* Connection Line */}
+            <div className="flex items-center justify-center py-1">
+              <ArrowUpDown className="w-5 h-5" style={{ color: 'var(--theme-text-muted)' }} />
+            </div>
+
+            {/* Job Selector - Đã chạy */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2 h-2 rounded-full" style={{ background: 'var(--theme-brand-primary)' }} />
+                <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--theme-brand-primary)' }}>
+                  Chuyến đã chạy
+                </span>
               </div>
-
-              <div style={{ borderTop: '1px solid var(--theme-border-light)' }} />
-
-              {/* Route */}
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="typo-caption" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</p>
-                  <p className="typo-body" style={{ color: 'var(--theme-text-primary)' }}>{selectedTrip.route}</p>
-                </div>
-                {selectedJob && routeMatched && (
-                  <span className="chip chip-success text-xs">✓ Khớp</span>
-                )}
-                {selectedJob && !routeMatched && (
-                  <span className="chip chip-error text-xs">✗ Khác</span>
-                )}
-              </div>
-
-              <div style={{ borderTop: '1px solid var(--theme-border-light)' }} />
-
-              {/* Containers */}
-              <div>
-                <p className="typo-caption mb-2" style={{ color: 'var(--theme-text-muted)' }}>Container</p>
-                <div className="space-y-2">
-                  {(selectedTrip.containers?.length ? selectedTrip.containers : []).map((c, i) => (
-                    <div key={i} className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <ContBadge type={c.workType} />
-                        <span className="text-sm font-mono" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
+              <button
+                onClick={() => setPickMode('job')}
+                className="w-full flex items-center justify-between px-4 py-3.5 rounded-lg touch-manipulation transition-all hover:scale-[1.01]"
+                style={{
+                  background: 'var(--theme-bg-secondary)',
+                  boxShadow: 'var(--theme-shadow-card)',
+                  border: selectedJob ? '2px solid var(--theme-brand-primary)' : '1px solid var(--theme-border-default)',
+                }}
+              >
+                <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--theme-brand-primary-light)' }}>
+                    <Truck className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
+                  </div>
+                  {selectedJob ? (
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {selectedJob.containers.map(c => (
+                          <span key={c.containerNumber} className="flex items-center gap-1">
+                            <ContBadge type={c.workType} />
+                            <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
+                          </span>
+                        ))}
                       </div>
-                      {selectedJob && contMatched && (
-                        <span className="chip chip-success text-xs">✓ Khớp</span>
-                      )}
-                      {selectedJob && !contMatched && (
-                        <span className="chip chip-error text-xs">✗ Khác</span>
-                      )}
+                      <p className="text-xs mt-1 truncate" style={{ color: 'var(--theme-text-muted)' }}>{selectedJob.driverName} · {selectedJob.clientName}</p>
                     </div>
+                  ) : (
+                    <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chọn chuyến đã chạy</p>
+                  )}
+                </div>
+                <ChevronDown className="w-5 h-5 shrink-0 ml-2" style={{ color: 'var(--theme-text-muted)' }} />
+              </button>
+            </div>
+
+            {/* Suggestions Panel */}
+            {suggestions.length > 0 && !selectedJobId && (
+              <div
+                className="mt-6 p-4 rounded-lg"
+                style={{
+                  background: 'var(--theme-bg-secondary)',
+                  border: '1px solid var(--theme-border-default)',
+                }}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-1.5 rounded-lg" style={{ background: 'var(--theme-brand-primary-light)' }}>
+                    <Sparkles className="w-4 h-4" style={{ color: 'var(--theme-brand-primary)' }} />
+                  </div>
+                  <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>Gợi ý khớp</p>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
+                    {suggestions.length}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {suggestions.map((s, index) => (
+                    <WOSuggestionCard
+                      key={s.workOrder.id}
+                      suggestion={s}
+                      index={index}
+                      onSelect={() => setSelectedJobId(s.workOrder.id)}
+                    />
                   ))}
                 </div>
               </div>
-            </div>
+            )}
+          </div>
+        </div>
 
-            {/* Action buttons when job selected */}
-            {selectedJob && (
-              <div className="space-y-3 mt-4">
-                <div className="flex items-center gap-2 p-3 rounded-lg" style={{ background: 'var(--theme-bg-secondary)' }}>
-                  {allMatched ? (
-                    <><CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-status-success)' }} /><span className="text-xs font-medium" style={{ color: 'var(--theme-status-success)' }}>Tất cả thông tin khớp</span></>
-                  ) : (
-                    <><AlertCircle className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-status-warning)' }} /><span className="text-xs font-medium" style={{ color: 'var(--theme-status-warning)' }}>Một số thông tin chưa khớp</span></>
+        {/* Right Panel - Work Order List */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div
+            className="flex items-center justify-between px-6 py-4 border-b shrink-0"
+            style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full" style={{ background: 'var(--theme-brand-primary)' }} />
+              <h2 className="typo-h3">Chọn chuyến đã chạy</h2>
+              <span className="typo-caption px-2 py-1 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}>
+                {unmatchedJobs.length}
+              </span>
+              {suggestions.length > 0 && (
+                <span className="flex items-center gap-1 typo-caption px-2 py-1 rounded" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
+                  <Sparkles className="w-3 h-3" /> {suggestions.length} gợi ý
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {unmatchedJobs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+                <Truck className="w-10 h-10 mb-3" style={{ color: 'var(--theme-text-muted)' }} />
+                <p className="text-sm font-semibold mb-1" style={{ color: 'var(--theme-text-primary)' }}>Không có chuyến đã chạy nào</p>
+                <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Tất cả chuyến đã được khớp</p>
+              </div>
+            ) : (() => {
+              const suggestedIds = new Set(suggestions.map(s => s.workOrder.id))
+              const unsuggestedJobs = unmatchedJobs.filter(j => !suggestedIds.has(j.id))
+              return (
+                <div>
+                  {suggestions.length > 0 && (
+                    <>
+                      <div className="px-4 pt-3 pb-1">
+                        <p className="text-xs font-semibold uppercase tracking-wide flex items-center gap-1.5" style={{ color: 'var(--theme-brand-primary)' }}>
+                          <Sparkles className="w-3 h-3" /> Gợi ý khớp
+                        </p>
+                      </div>
+                      {suggestions.map((s, idx) => {
+                        const isFull = s.confidence === 'full'
+                        const isPartial = s.confidence === 'partial'
+                        const pct = Math.min(100, s.score ?? 0)
+                        const color = isFull ? 'var(--theme-status-success)' : isPartial ? 'var(--theme-status-warning)' : 'var(--theme-text-muted)'
+                        return (
+                          <div
+                            key={s.workOrder.id}
+                            className="w-full px-4 py-3 flex items-start gap-3 touch-manipulation group"
+                            style={{ borderBottom: '1px solid var(--theme-border-light)', background: isFull ? 'var(--theme-status-success-light)' : isPartial ? 'var(--theme-status-warning-light)' : 'transparent' }}
+                          >
+                            <button
+                              onClick={() => setSelectedJobId(s.workOrder.id)}
+                              className="flex-1 flex items-start gap-3 text-left hover:opacity-80 transition-opacity"
+                            >
+                              <div className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 mt-0.5" style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-muted)' }}>{idx + 1}</div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+                                  {s.workOrder.containers.map((c, i) => (
+                                    <span key={i} className="flex items-center gap-1">
+                                      <ContBadge type={c.workType} />
+                                      <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
+                                    </span>
+                                  ))}
+                                </div>
+                                <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>{s.workOrder.driverName} · {s.workOrder.clientName} · {s.workOrder.route}</p>
+                                {s.matchedFields.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {s.matchedFields.map(f => (
+                                      <span key={f} className="text-[10px] px-1.5 py-0.5 rounded font-medium flex items-center gap-0.5" style={{ background: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' }}>
+                                        <Check className="w-2.5 h-2.5" />
+                                        {f === 'driver' ? 'Tài xế' : f === 'client' ? 'Khách hàng' : f === 'route' ? 'Cung đường' : 'Container'}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </button>
+                            <div className="flex flex-col items-end gap-2 shrink-0">
+                              <div className="flex flex-col items-end gap-1">
+                                <div className="w-12 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--theme-bg-tertiary)' }}>
+                                  <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+                                </div>
+                                <span className="text-[10px] font-bold tabular-nums" style={{ color }}>{pct}%</span>
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleEditDialogOpen(s.workOrder.id)
+                                }}
+                                className="p-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
+                                title="Chỉnh sửa"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </>
                   )}
-                  <div className="ml-auto">
-                    <ConfirmationCheckbox isConfirmed={selectedTrip.isConfirmed} onToggle={handleToggleConfirmation} disabled={toggling} label="Đã chốt" />
-                  </div>
+                  {unsuggestedJobs.length > 0 && (
+                    <>
+                      {suggestions.length > 0 && (
+                        <div className="px-4 pt-3 pb-1">
+                          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>Tất cả chuyến</p>
+                        </div>
+                      )}
+                      {unsuggestedJobs.map(job => (
+                        <div
+                          key={job.id}
+                          className="w-full px-4 py-3 flex items-start gap-3 touch-manipulation group"
+                          style={{ borderBottom: '1px solid var(--theme-border-light)' }}
+                        >
+                          <button
+                            onClick={() => setSelectedJobId(job.id)}
+                            className="flex-1 flex items-start gap-3 text-left hover:opacity-80 transition-opacity"
+                          >
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--theme-brand-primary-light)' }}>
+                              <Truck className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+                                {job.containers.map((c, i) => (
+                                  <span key={i} className="flex items-center gap-1">
+                                    <ContBadge type={c.workType} />
+                                    <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
+                                  </span>
+                                ))}
+                              </div>
+                              <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>{job.driverName} · {job.clientName} · {job.route}</p>
+                            </div>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleEditDialogOpen(job.id)
+                            }}
+                            className="p-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                            style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
+                            title="Chỉnh sửa"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
-                <Button
-                  onClick={handleMatch}
-                  disabled={submitting}
-                  className="w-full h-10 font-semibold rounded-lg text-sm flex items-center justify-center gap-2"
-                  style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-                >
-                  <Check className="w-4 h-4" />
-                  {submitting ? 'Đang khớp...' : 'Xác nhận khớp'}
-                </Button>
+              )
+            })()}
+          </div>
+
+          {/* Bottom action bar - always visible */}
+          {selectedTrip && selectedJob && (
+            <div
+              className="px-4 lg:px-6 pb-4 lg:pb-6 pt-3 shrink-0 space-y-3 border-t"
+              style={{ borderColor: 'var(--theme-border-light)' }}
+            >
+              <div className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'var(--theme-bg-secondary)' }}>
+                <div className="flex items-center gap-3">
+                  {allMatched ? (
+                    <>
+                      <CheckCircle2 className="w-5 h-5" style={{ color: 'var(--theme-status-success)' }} />
+                      <span className="text-sm font-medium" style={{ color: 'var(--theme-status-success)' }}>Tất cả thông tin khớp</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="w-5 h-5" style={{ color: 'var(--theme-status-warning)' }} />
+                      <span className="text-sm font-medium" style={{ color: 'var(--theme-status-warning)' }}>Một số thông tin chưa khớp</span>
+                    </>
+                  )}
+                </div>
+                <ConfirmationCheckbox
+                  isConfirmed={selectedTrip.isConfirmed}
+                  onToggle={handleToggleConfirmation}
+                  disabled={toggling}
+                  label="Đã chốt"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
                 <button
+                  type="button"
                   onClick={() => navigate('/accountant/create-trip', { state: { fromTripOrder: selectedTrip } })}
-                  className="w-full h-10 rounded-lg text-sm font-medium flex items-center justify-center gap-2"
+                  className="h-10 px-3 rounded-lg text-sm font-medium inline-flex items-center justify-center gap-1.5 shrink-0 transition-colors"
                   style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-brand-primary)', border: '1px solid var(--theme-border-default)' }}
                 >
                   <Plus className="w-4 h-4" /> Tạo chuyến mới
                 </button>
+                <Button
+                  onClick={handleMatch}
+                  disabled={submitting}
+                  className="flex-1 h-10 font-bold rounded-lg text-sm gap-2"
+                  style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+                >
+                  <Check className="w-4 h-4" />
+                  {submitting ? 'Đang khớp...' : 'Xác nhận khớp chuyến'}
+                </Button>
               </div>
-            )}
-          </div>
-        )}
-
-        {/* Empty state - select a trip first */}
-        {!selectedTrip && (
-          <div
-            className="lg:w-[420px] xl:w-[480px] shrink-0 p-4 lg:p-6 lg:border-r overflow-y-auto flex flex-col items-center justify-center"
-            style={{ borderColor: 'var(--theme-border-light)' }}
-          >
-            <div className="text-center">
-              <div
-                className="w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4"
-                style={{ background: 'var(--theme-bg-secondary)' }}
-              >
-                <FileText className="w-8 h-8" style={{ color: 'var(--theme-text-muted)' }} />
-              </div>
-              <p className="font-semibold mb-1" style={{ color: 'var(--theme-text-primary)' }}>Chọn chuyến yêu cầu</p>
-              <p className="text-xs mb-4" style={{ color: 'var(--theme-text-muted)' }}>Từ danh sách bên phải</p>
-              <button
-                onClick={() => setPickMode('trip')}
-                className="text-xs font-semibold px-4 py-2 rounded-lg transition-colors"
-                style={{
-                  background: 'var(--theme-status-warning)',
-                  color: 'var(--theme-text-on-brand)',
-                }}
-              >
-                Chọn chuyến
-              </button>
             </div>
-          </div>
-        )}
-
-        {/* Right Panel - Job candidate list / comparison view */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {selectedTrip && selectedJob ? (
-            <>
-              {/* Comparison Header */}
-              <div
-                className="flex items-center justify-between px-6 py-4 border-b shrink-0"
-                style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}
-              >
-                <h2 className="typo-h3">So sánh chi tiết</h2>
-                <p className="typo-meta">Nhấn vào từng mục để chỉnh sửa</p>
-              </div>
-
-              {/* Comparison Rows */}
-              <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-3">
-                <ContCompareRow left={tripConts} right={jobConts} matched={contMatched} leftLabel="Yêu cầu" rightLabel="Đã chạy" editLeft={contEditLeft} editRight={contEditRight} />
-                <CompareRow label="Khách hàng" left={tripClient} right={jobClient} matched={clientMatched} leftLabel="Yêu cầu" rightLabel="Đã chạy" editLeft={clientEditLeft} editRight={clientEditRight} />
-                <CompareRow label="Cung đường" left={tripRoute} right={jobRoute} matched={routeMatched} leftLabel="Yêu cầu" rightLabel="Đã chạy" editLeft={routeEditLeft} editRight={routeEditRight} />
-              </div>
-
-              {/* Action Footer */}
-              <div
-                className="px-4 lg:px-6 pb-4 lg:pb-6 pt-3 shrink-0 space-y-3"
-                style={{ borderTop: '1px solid var(--theme-border-light)' }}
-              >
-                <div className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'var(--theme-bg-secondary)' }}>
-                  <div className="flex items-center gap-3">
-                    {allMatched ? (
-                      <>
-                        <CheckCircle2 className="w-4 h-4" style={{ color: 'var(--theme-status-success)' }} />
-                        <span className="text-xs font-medium" style={{ color: 'var(--theme-status-success)' }}>Tất cả thông tin khớp</span>
-                      </>
-                    ) : (
-                      <>
-                        <AlertCircle className="w-4 h-4" style={{ color: 'var(--theme-status-warning)' }} />
-                        <span className="text-xs font-medium" style={{ color: 'var(--theme-status-warning)' }}>Một số thông tin chưa khớp</span>
-                      </>
-                    )}
-                  </div>
-                  <ConfirmationCheckbox
-                    isConfirmed={selectedTrip.isConfirmed}
-                    onToggle={handleToggleConfirmation}
-                    disabled={toggling}
-                    label="Đã chốt"
-                  />
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Button
-                    onClick={handleMatch}
-                    disabled={submitting}
-                    className="flex-1 h-10 font-semibold rounded-lg text-sm gap-2"
-                    style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-                  >
-                    <Check className="w-4 h-4" />
-                    {submitting ? 'Đang khớp...' : 'Xác nhận khớp'}
-                  </Button>
-                  <button
-                    onClick={() => navigate('/accountant/create-trip', { state: { fromTripOrder: selectedTrip } })}
-                    className="h-10 px-4 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors"
-                    style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-brand-primary)', border: '1px solid var(--theme-border-default)' }}
-                  >
-                    <Plus className="w-4 h-4" /> Tạo chuyến mới
-                  </button>
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <div
-                className="flex items-center justify-between px-6 py-4 border-b shrink-0"
-                style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full" style={{ background: 'var(--theme-brand-primary)' }} />
-                  <h2 className="typo-h3">Chọn chuyến đã chạy</h2>
-                  <span className="typo-caption px-2 py-1 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}>
-                    {unmatchedJobs.filter(j => j.status === 'PENDING').length}
-                  </span>
-                  {suggestions.length > 0 && (
-                    <span className="flex items-center gap-1 typo-caption px-2 py-1 rounded" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
-                      <Sparkles className="w-3 h-3" /> {suggestions.length} gợi ý
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-4">
-                {unmatchedJobs.filter(j => j.status === 'PENDING').length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-                    <Truck className="w-10 h-10 mb-3" style={{ color: 'var(--theme-text-muted)' }} />
-                    <p className="text-sm font-semibold mb-1" style={{ color: 'var(--theme-text-primary)' }}>Không có chuyến nào</p>
-                    <p className="text-xs mb-4" style={{ color: 'var(--theme-text-muted)' }}>Tạo chuyến mới để bắt đầu đối soát</p>
-                  </div>
-                ) : (() => {
-                  const pendingJobs = unmatchedJobs.filter(j => j.status === 'PENDING')
-                  const suggestedIds = new Set(suggestions.map(s => s.workOrder.id))
-                  const unsuggestedJobs = pendingJobs.filter(j => !suggestedIds.has(j.id))
-
-                  // Helper to check if job matches selected trip
-                  const getJobMatches = (job: any) => {
-                    if (!selectedTrip) return { clientMatches: false, routeMatches: false, contsMatch: false }
-                    const clientMatches = job.clientName === selectedTrip.clientName
-                    const routeMatches = job.route === selectedTrip.route
-                    const tripContNumbers = new Set((selectedTrip.containers ?? []).map(c => c.containerNumber))
-                    const jobContNumbers = new Set(job.containers.map(c => c.containerNumber))
-                    const contsMatch = tripContNumbers.size > 0 && jobContNumbers.size > 0 &&
-                      Array.from(tripContNumbers).every(num => jobContNumbers.has(num))
-                    return { clientMatches, routeMatches, contsMatch }
-                  }
-
-                  return (
-                    <div className="space-y-3">
-                      {suggestions.length > 0 && (
-                        <>
-                          <p className="text-xs font-semibold uppercase tracking-wide flex items-center gap-1.5 px-1" style={{ color: 'var(--theme-brand-primary)' }}>
-                            <Sparkles className="w-3 h-3" /> Gợi ý khớp
-                          </p>
-                          {suggestions.map((s, idx) => {
-                            const isFull = s.confidence === 'full'
-                            const isPartial = s.confidence === 'partial'
-                            const pct = Math.min(100, s.score ?? 0)
-                            const color = isFull ? 'var(--theme-status-success)' : isPartial ? 'var(--theme-status-warning)' : 'var(--theme-text-muted)'
-                            const isSelected = selectedJobId === s.workOrder.id
-                            const isBestMatch = idx === 0
-                            return (
-                              <div key={s.workOrder.id}>
-                                <div className="relative">
-                                  {isBestMatch && (
-                                    <div
-                                      className="absolute -top-2 -left-2 px-2 py-1 rounded-md text-xs font-semibold flex items-center gap-1 z-10"
-                                      style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-                                    >
-                                      <Sparkles className="w-3 h-3" /> Đề xuất tốt nhất
-                                    </div>
-                                  )}
-                                  <button
-                                    onClick={() => setSelectedJobId(s.workOrder.id)}
-                                    className="w-full text-left px-3 py-3 rounded-lg touch-manipulation transition-all"
-                                    style={{
-                                      background: isSelected ? 'var(--theme-brand-primary-light)' : isFull ? 'var(--theme-status-success-light)' : isPartial ? 'var(--theme-status-warning-light)' : 'var(--theme-bg-secondary)',
-                                      border: isSelected ? '2px solid var(--theme-brand-primary)' : isFull ? '1px solid var(--theme-status-success)' : isPartial ? '1px solid var(--theme-status-warning)' : '1px solid var(--theme-border-default)',
-                                    }}
-                                  >
-                                    <div className="flex items-start justify-between gap-2 mb-1.5">
-                                      <div className="flex items-center gap-2">
-                                      <div className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold shrink-0" style={{ background: isSelected ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)', color: isSelected ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)' }}>{idx + 1}</div>
-                                      <div className="flex flex-wrap items-center gap-1">
-                                        {s.workOrder.containers.map((c, i) => (
-                                          <span key={i} className="flex items-center gap-0.5">
-                                            <ContBadge type={c.workType} />
-                                            <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
-                                          </span>
-                                        ))}
-                                      </div>
-                                    </div>
-                                    <div className="flex flex-col items-end gap-0.5 shrink-0">
-                                      <div className="w-10 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--theme-bg-tertiary)' }}>
-                                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
-                                      </div>
-                                      <span className="text-[10px] font-bold tabular-nums" style={{ color }}>{pct}%</span>
-                                    </div>
-                                  </div>
-                                  <p className="text-xs mb-1.5" style={{ color: 'var(--theme-text-secondary)' }}>{s.workOrder.driverName} · {s.workOrder.clientName} · {s.workOrder.route}</p>
-                                  {s.matchedFields.length > 0 && (
-                                    <div className="flex flex-wrap gap-1">
-                                      {s.matchedFields.map(f => (
-                                        <span key={f} className="text-[10px] px-1.5 py-0.5 rounded font-medium flex items-center gap-0.5 chip chip-success" style={{ background: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' }}>
-                                          <Check className="w-2 h-2" />
-                                          {f === 'driver' ? 'Tài xế' : f === 'client' ? 'Khách hàng' : f === 'route' ? 'Cung đường' : 'Container'}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  )}
-                                </button>
-
-                                {/* Inline match details when selected */}
-                                {isSelected && (
-                                  <div className="mt-2 space-y-1 ml-1">
-                                    <p className="text-[10px] font-semibold uppercase" style={{ color: 'var(--theme-text-muted)' }}>Chi tiết khớp:</p>
-                                    <div className="text-xs space-y-0.5">
-                                      <div className="flex items-center gap-2">
-                                        {s.matchedFields.includes('client') ? (
-                                          <span className="chip chip-success">✓ Khách hàng</span>
-                                        ) : (
-                                          <span className="chip chip-error">✗ Khách hàng khác</span>
-                                        )}
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        {s.matchedFields.includes('route') ? (
-                                          <span className="chip chip-success">✓ Cung đường</span>
-                                        ) : (
-                                          <span className="chip chip-error">✗ Cung đường khác</span>
-                                        )}
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        {s.matchedFields.includes('container') ? (
-                                          <span className="chip chip-success">✓ Container</span>
-                                        ) : (
-                                          <span className="chip chip-error">✗ Container khác</span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            )
-                          })}
-                        </>
-                      )}
-                      {unsuggestedJobs.length > 0 && (
-                        <>
-                          {suggestions.length > 0 && (
-                            <p className="text-xs font-semibold uppercase tracking-wide mt-4" style={{ color: 'var(--theme-text-muted)' }}>Tất cả chuyến</p>
-                          )}
-                          {unsuggestedJobs.map(job => {
-                            const { clientMatches, routeMatches, contsMatch } = getJobMatches(job)
-                            const isSelected = selectedJobId === job.id
-                            return (
-                              <div key={job.id}>
-                                <button
-                                  onClick={() => setSelectedJobId(job.id)}
-                                  className="w-full text-left px-3 py-3 rounded-lg touch-manipulation transition-all"
-                                  style={{
-                                    background: isSelected ? 'var(--theme-brand-primary-light)' : 'var(--theme-bg-secondary)',
-                                    border: isSelected ? '2px solid var(--theme-brand-primary)' : '1px solid var(--theme-border-default)',
-                                  }}
-                                >
-                                  <div className="flex items-start gap-2.5 mb-1">
-                                    <div className="w-8 h-8 rounded flex items-center justify-center shrink-0 mt-0.5" style={{ background: isSelected ? 'var(--theme-brand-primary)' : 'var(--theme-brand-primary-light)' }}>
-                                      <Truck className="w-4 h-4" style={{ color: isSelected ? 'var(--theme-text-on-brand)' : 'var(--theme-brand-primary)' }} />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex flex-wrap items-center gap-1 mb-0.5">
-                                        {job.containers.map((c, i) => (
-                                          <span key={i} className="flex items-center gap-0.5">
-                                            <ContBadge type={c.workType} />
-                                            <span className="text-xs font-mono" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
-                                          </span>
-                                        ))}
-                                      </div>
-                                      <p className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>{job.driverName} · {job.clientName} · {job.route}</p>
-                                    </div>
-                                  </div>
-                                  </button>
-                                </div>
-
-                                {/* Inline match details when selected */}
-                                {isSelected && (
-                                  <div className="mt-2 space-y-1 ml-1">
-                                    <p className="text-[10px] font-semibold uppercase" style={{ color: 'var(--theme-text-muted)' }}>Chi tiết khớp:</p>
-                                    <div className="text-xs space-y-0.5">
-                                      <div className="flex items-center gap-2">
-                                        {clientMatches ? (
-                                          <span className="chip chip-success">✓ Khách hàng</span>
-                                        ) : (
-                                          <span className="chip chip-error">✗ {job.clientName}</span>
-                                        )}
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        {routeMatches ? (
-                                          <span className="chip chip-success">✓ Cung đường</span>
-                                        ) : (
-                                          <span className="chip chip-error">✗ {job.route}</span>
-                                        )}
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        {contsMatch ? (
-                                          <span className="chip chip-success">✓ Container</span>
-                                        ) : (
-                                          <span className="chip chip-error">✗ Khác</span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            )
-                          })}
-                        </>
-                      )}
-                    </div>
-                  )
-                })()}
-              </div>
-            </>
           )}
         </div>
       </div>
+
+      {/* Edit Job Dialog */}
+      <Dialog open={editingJobId !== null} onOpenChange={handleCloseEditDialog}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto" style={{ background: 'var(--theme-bg-primary)' }}>
+            <div className="sticky top-0 flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--theme-border-light)', background: 'var(--theme-bg-secondary)' }}>
+              <h2 className="typo-h3" style={{ color: 'var(--theme-text-primary)' }}>Chỉnh sửa chuyến</h2>
+              <button
+                onClick={handleCloseEditDialog}
+                className="p-1 rounded-lg"
+                style={{ color: 'var(--theme-text-muted)' }}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Client Select */}
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--theme-text-primary)' }}>Khách hàng</label>
+                <select
+                  value={editDialogClient}
+                  onChange={(e) => setEditDialogClient(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border text-sm"
+                  style={{
+                    background: 'var(--theme-bg-secondary)',
+                    borderColor: 'var(--theme-border-default)',
+                    color: 'var(--theme-text-primary)',
+                  }}
+                >
+                  <option value="">Chọn khách hàng...</option>
+                  {clientOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Route Select */}
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--theme-text-primary)' }}>Cung đường</label>
+                <select
+                  value={editDialogRoute}
+                  onChange={(e) => setEditDialogRoute(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border text-sm"
+                  style={{
+                    background: 'var(--theme-bg-secondary)',
+                    borderColor: 'var(--theme-border-default)',
+                    color: 'var(--theme-text-primary)',
+                  }}
+                >
+                  <option value="">Chọn cung đường...</option>
+                  {routeOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Containers */}
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--theme-text-primary)' }}>Container</label>
+                <div className="space-y-2">
+                  {editDialogContainers.map((c, idx) => (
+                    <div key={idx} className="flex gap-2 items-end">
+                      <input
+                        type="text"
+                        value={c.type}
+                        onChange={(e) => {
+                          const updated = [...editDialogContainers]
+                          updated[idx].type = e.target.value
+                          setEditDialogContainers(updated)
+                        }}
+                        placeholder="Type (e.g. E20)"
+                        className="flex-1 px-3 py-2 rounded-lg border text-sm"
+                        style={{
+                          background: 'var(--theme-bg-secondary)',
+                          borderColor: 'var(--theme-border-default)',
+                          color: 'var(--theme-text-primary)',
+                        }}
+                      />
+                      <input
+                        type="text"
+                        value={c.number}
+                        onChange={(e) => {
+                          const updated = [...editDialogContainers]
+                          updated[idx].number = e.target.value
+                          setEditDialogContainers(updated)
+                        }}
+                        placeholder="Number"
+                        className="flex-1 px-3 py-2 rounded-lg border text-sm"
+                        style={{
+                          background: 'var(--theme-bg-secondary)',
+                          borderColor: 'var(--theme-border-default)',
+                          color: 'var(--theme-text-primary)',
+                        }}
+                      />
+                      <button
+                        onClick={() => setEditDialogContainers(editDialogContainers.filter((_, i) => i !== idx))}
+                        className="p-2 rounded-lg"
+                        style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-muted)' }}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => setEditDialogContainers([...editDialogContainers, { type: 'E20', number: '' }])}
+                    className="w-full px-3 py-2 rounded-lg text-sm font-medium"
+                    style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-brand-primary)' }}
+                  >
+                    <Plus className="w-4 h-4 inline mr-1" /> Thêm container
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Dialog Footer */}
+            <div className="flex gap-2 p-6 border-t" style={{ borderColor: 'var(--theme-border-light)' }}>
+              <button
+                onClick={handleCloseEditDialog}
+                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium"
+                style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)' }}
+              >
+                Hủy
+              </button>
+              <Button
+                onClick={handleSaveEditDialog}
+                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium"
+                style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+              >
+                Lưu
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Dialog>
 
       {/* Picker modals */}
       <PickModal
         open={pickMode === 'trip'}
         title="Chọn đơn hàng"
-        items={draftTrips.filter(t => t.status === 'PENDING')}
+        items={draftTrips}
         selectedId={selectedTripId}
         onSelect={setSelectedTripId}
         onClose={() => setPickMode(null)}
@@ -660,7 +725,7 @@ export function MatchTrip() {
       <PickModal
         open={pickMode === 'job'}
         title="Chọn chuyến đã chạy"
-        items={unmatchedJobs.filter(j => j.status === 'PENDING')}
+        items={unmatchedJobs}
         selectedId={selectedJobId}
         onSelect={setSelectedJobId}
         onClose={() => setPickMode(null)}
