@@ -136,7 +136,7 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
   }, [])
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: '#000' }}>
+    <div className="fixed inset-0 z-[100] relative" style={{ background: '#000' }}>
       {/* Hidden file input (camera mode gallery button) - capture="" forces gallery only on most devices */}
       <input ref={fileInputRef} type="file" accept="image/*" capture="" className="hidden" onChange={handleFileChange} />
 
@@ -229,7 +229,7 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
       ) : (
         /* ── Camera mode ── */
         <>
-          <div className="scanner-video">
+          <div className="absolute inset-0 scanner-video">
             <Camera
               ref={cameraRef}
               facingMode="environment"
@@ -242,7 +242,7 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
             />
           </div>
 
-          <div className="absolute bottom-8 left-0 right-0 flex justify-center items-center gap-6 safe-area-bottom">
+          <div className="absolute bottom-0 left-0 right-0 z-10 flex justify-center items-center gap-6 pb-8 pt-3 safe-area-bottom" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)' }}>
             <div className="flex flex-col items-center gap-1">
               <button
                 onClick={handleGallerySelect}
