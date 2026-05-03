@@ -449,17 +449,17 @@ function UserManagementInner() {
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button
-              variant="outline"
+          <DialogFooter className="gap-2">
+            <button
               onClick={() => setDeleteId(detailUser?.id ?? null)}
-              className="flex-1 gap-1.5"
-              style={{ color: 'var(--theme-status-error)', borderColor: 'var(--theme-status-error)' }}
+              className="text-xs font-medium px-2 py-1.5 transition hover:opacity-70"
+              style={{ color: 'var(--theme-status-error)' }}
             >
-              <Trash2 className="w-3.5 h-3.5" /> Xoá
-            </Button>
-            <Button variant="outline" onClick={() => setDetailUser(null)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleEdit} disabled={!editForm.username.trim() || saving} className="flex-1 gap-1.5"
+              <Trash2 className="w-3 h-3 inline mr-0.5" /> Xoá
+            </button>
+            <div className="flex-1" />
+            <Button variant="outline" onClick={() => setDetailUser(null)}>Huỷ</Button>
+            <Button onClick={handleEdit} disabled={!editForm.username.trim() || saving} className="gap-1.5"
               style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
             >
               <Pencil className="w-3.5 h-3.5" /> Lưu

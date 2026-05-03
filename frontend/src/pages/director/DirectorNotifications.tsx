@@ -14,7 +14,7 @@ export function DirectorNotifications() {
 
   const unreadCount = notifications.filter(n => !n.read).length
   const subtitle = notifications.length === 0
-    ? 'Không có thông báo'
+    ? 'Cập nhật tự động'
     : unreadCount > 0
       ? `${unreadCount} thông báo chưa đọc`
       : `${notifications.length} thông báo`

@@ -10,7 +10,7 @@ export async function getPricings(
     if (filters?.clientId) params.client_id = String(filters.clientId)
     if (filters?.workType) params.work_type = filters.workType
     if (filters?.route) params.route = filters.route
-    const res = await api.get('/pricings', { params })
+    const res = await api.get('/pricings', { params: { ...params, page_size: 200 } })
     return ok(toCamel<Pricing[]>(unwrapList(res.data)))
   } catch (err) {
     return fail(err)

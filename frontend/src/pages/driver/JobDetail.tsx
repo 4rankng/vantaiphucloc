@@ -138,11 +138,10 @@ export function JobDetail() {
         <InfoRow icon={Building2} label="Khách hàng" value={job.clientName} />
         <InfoRow icon={RouteIcon} label="Cung đường" value={job.route} />
         <InfoRow icon={Truck} label="Biển số" value={job.tractorPlate} />
-        <InfoRow
-          icon={MapPin}
-          label="Vị trí"
-          value={job.gpsAddress ?? (job.gpsLat && job.gpsLng ? `${job.gpsLat}, ${job.gpsLng}` : 'Không xác định')}
-        />
+        {(() => {
+          const loc = job.gpsAddress ?? (job.gpsLat && job.gpsLng ? `${job.gpsLat}, ${job.gpsLng}` : null)
+          return loc ? <InfoRow icon={MapPin} label="Vị trí" value={loc} /> : null
+        })()}
         <InfoRow icon={Calendar} label="Thời gian" value={`${dateStr} ${timeStr}`} noBorder />
       </div>
 
@@ -150,17 +149,21 @@ export function JobDetail() {
       <div
         className="rounded-lg p-4 flex items-center justify-between"
         style={{
-          background: job.earning > 0 ? 'var(--theme-brand-primary)' : 'var(--theme-status-warning-light)',
-          boxShadow: 'var(--theme-shadow-card)',
+          background: job.earning > 0
+            ? 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)'
+            : 'var(--theme-status-warning-light)',
+          border: `1px solid ${job.earning > 0
+            ? 'color-mix(in srgb, var(--theme-brand-primary) 20%, transparent)'
+            : 'color-mix(in srgb, var(--theme-status-warning) 20%, transparent)'}`,
         }}
       >
         <p className="text-sm font-semibold" style={{
-          color: job.earning > 0 ? 'var(--theme-text-on-brand)' : 'var(--theme-status-warning)',
+          color: job.earning > 0 ? 'var(--theme-brand-primary)' : 'var(--theme-status-warning)',
         }}>
           Thu nhập
         </p>
         {job.earning > 0 ? (
-          <p className="text-xl font-bold tabular-nums" style={{ color: 'var(--theme-text-on-brand)' }}>
+          <p className="text-xl font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>
             {formatCurrencyFull(job.earning)}
           </p>
         ) : (

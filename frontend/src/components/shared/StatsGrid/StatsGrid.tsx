@@ -91,6 +91,14 @@ function StatCard({
       }}
     >
       <div className="flex items-start justify-between gap-3">
+        {icon && (
+          <div
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+            style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
+          >
+            {icon}
+          </div>
+        )}
         <div className="min-w-0 flex-1">
           {/* Label */}
           <p className="typo-label mb-2">{label}</p>

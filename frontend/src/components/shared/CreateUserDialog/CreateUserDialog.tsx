@@ -99,19 +99,28 @@ export function CreateUserDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <RequiredLabel>Vai trò</RequiredLabel>
-              <InlineSelect
-                options={roles ?? DEFAULT_CREATABLE_ROLES}
-                value={form.role}
-                onChange={v => {
-                  const newRole = v as Role
-                  setForm(f => ({
-                    ...f,
-                    role: newRole,
-                    vendor: (newRole === 'director' || newRole === 'accountant') ? '' : f.vendor,
-                  }))
-                }}
-                placeholder="Chọn vai trò"
-              />
+              <div className={`grid gap-2 ${(roles ?? DEFAULT_CREATABLE_ROLES).length <= 3 ? 'grid-cols-3' : 'grid-cols-2 lg:grid-cols-4'}`}>
+                {(roles ?? DEFAULT_CREATABLE_ROLES).map(r => (
+                  <button
+                    key={r.value}
+                    onClick={() => {
+                      const newRole = r.value as Role
+                      setForm(f => ({
+                        ...f,
+                        role: newRole,
+                        vendor: (newRole === 'director' || newRole === 'accountant') ? '' : f.vendor,
+                      }))
+                    }}
+                    className="py-2.5 px-3 rounded-xl text-sm font-medium transition-colors touch-manipulation"
+                    style={{
+                      background: form.role === r.value ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
+                      color: form.role === r.value ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
+                    }}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
             </div>
             {form.role === 'driver' ? (
               <div className="space-y-2">
