@@ -1,6 +1,7 @@
 import { Users, Phone, CreditCard, Truck } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState/EmptyState'
+import { BrandIcon } from '@/components/atoms/BrandIcon'
 import { FilterPills } from '@/components/shared/FilterPills'
 import { ROLE_LABELS, type Role } from '@/data/domain'
 import { ROLE_ICONS } from '@/pages/superadmin/types'
@@ -35,6 +36,7 @@ export function SuperAdminDashboard({
       {/* Page header */}
       <PageHeader
         title="Tổng quan"
+        icon="analytics"
         subtitle="Quản lý tài khoản và hệ thống"
         onAdd={onCreateUser}
         addLabel="Tạo tài khoản"
@@ -106,9 +108,10 @@ export function SuperAdminDashboard({
       {filtered.length === 0 ? (
         <div className="card">
           <EmptyState
-            icon={<Users size={24} />}
+            icon={<BrandIcon name="calkey" className="w-28 h-28" />}
             title="Không có tài khoản"
             description="Tạo tài khoản đầu tiên để bắt đầu quản lý hệ thống"
+            illustration
           />
         </div>
       ) : (

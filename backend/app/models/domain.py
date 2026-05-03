@@ -31,6 +31,22 @@ def _utcnow() -> datetime:
 
 
 # ---------------------------------------------------------------------------
+# Location
+# ---------------------------------------------------------------------------
+
+class Location(AuditableMixin, Base):
+    __tablename__ = "locations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False, unique=True, index=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+    )
+
+
+# ---------------------------------------------------------------------------
 # Client
 # ---------------------------------------------------------------------------
 
@@ -81,6 +97,8 @@ class Route(AuditableMixin, Base):
     route = Column(String(500), nullable=False)        # route name / description
     pickup_location = Column(String(255), nullable=True)   # Điểm lấy
     dropoff_location = Column(String(255), nullable=True)  # Điểm trả
+    pickup_location_id = Column(Integer, ForeignKey("locations.id"), nullable=True, index=True)
+    dropoff_location_id = Column(Integer, ForeignKey("locations.id"), nullable=True, index=True)
     type_20ft = Column(Integer, nullable=False)        # VND
     type_40ft = Column(Integer, nullable=False)        # VND
     is_two_way = Column(Boolean, default=False, nullable=False)
@@ -105,6 +123,8 @@ class Pricing(AuditableMixin, Base):
     route = Column(String(500), nullable=False)
     pickup_location = Column(String(255), nullable=True)
     dropoff_location = Column(String(255), nullable=True)
+    pickup_location_id = Column(Integer, ForeignKey("locations.id"), nullable=True, index=True)
+    dropoff_location_id = Column(Integer, ForeignKey("locations.id"), nullable=True, index=True)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(
@@ -147,6 +167,8 @@ class WorkOrder(AuditableMixin, Base):
     route = Column(String(500), nullable=False)
     pickup_location = Column(String(255), nullable=True)
     dropoff_location = Column(String(255), nullable=True)
+    pickup_location_id = Column(Integer, ForeignKey("locations.id"), nullable=True, index=True)
+    dropoff_location_id = Column(Integer, ForeignKey("locations.id"), nullable=True, index=True)
     driver_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     driver_name = Column(String(255), nullable=False)  # denormalized
     tractor_plate = Column(String(20), nullable=False)
@@ -213,6 +235,8 @@ class TripOrder(AuditableMixin, Base):
     route = Column(String(500), nullable=False)
     pickup_location = Column(String(255), nullable=True)
     dropoff_location = Column(String(255), nullable=True)
+    pickup_location_id = Column(Integer, ForeignKey("locations.id"), nullable=True, index=True)
+    dropoff_location_id = Column(Integer, ForeignKey("locations.id"), nullable=True, index=True)
     container_number = Column(String(50), nullable=True)  # legacy — use trip_order_containers
     pricing_id = Column(Integer, ForeignKey("pricings.id"), nullable=True)
     unit_price = Column(Integer, nullable=False)       # VND

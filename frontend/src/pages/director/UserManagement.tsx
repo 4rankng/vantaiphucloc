@@ -226,6 +226,7 @@ function UserManagementInner() {
     <div className="space-y-5">
       <PageHeader
         title="Quản lý tài khoản"
+        icon="team"
         subtitle={`${users.length} tài khoản đang hoạt động`}
         onAdd={() => { setCreateForm(EMPTY_FORM); setCreateOpen(true) }}
         addLabel="Tạo tài khoản"

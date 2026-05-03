@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useState } from 'react'
-import { Plus, Pencil, Trash2, Route as RouteIcon, Container } from 'lucide-react'
+import { Pencil, Trash2, Route as RouteIcon, Container } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { BrandIcon } from '@/components/atoms/BrandIcon'
 import { useRoutes, useCreateRoute, useUpdateRoute, useDeleteRoute } from '@/hooks/use-queries'
 import { RouteDisplay } from '@/components/shared/RouteDisplay'
 import { formatCurrencyFull, type RoutePrice } from '@/data/domain'
@@ -123,70 +124,83 @@ export function RouteList() {
       {filtered.length === 0 ? (
         <div className="card">
           <EmptyState
-            icon={<RouteIcon className="h-6 w-6" />}
+            icon={search
+              ? <RouteIcon className="h-6 w-6" />
+              : <BrandIcon name="calkey" className="w-24 h-24" />}
             title={search ? 'Không tìm thấy cung đường' : 'Chưa có cung đường'}
             description={search ? 'Thử từ khoá khác' : 'Nhấn + để thêm cung đường mới'}
             compact
+            illustration={!search}
           />
         </div>
       ) : (
         <>
-          {/* Mobile: card layout */}
-          <div className="grid grid-cols-1 gap-2 lg:hidden">
+          {/* Responsive card grid: 1 col mobile → 2 col lg → 3 col xl */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
             {filtered.map((r) => (
               <button
                 key={`${r.route}-${r.pickupLocation}-${r.dropoffLocation}`}
                 onClick={() => setSelected(r)}
-                className="card-interactive p-3"
+                className="card-interactive p-4 text-left"
               >
-                <div className="flex items-center gap-3">
+                {/* Card header */}
+                <div className="flex items-start gap-3 mb-3">
                   <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0"
                     style={{ background: 'var(--theme-brand-primary-light)' }}>
                     <RouteIcon className="h-4 w-4" style={{ color: 'var(--theme-brand-primary)' }} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <RouteDisplay route={r.route} pickupLocation={r.pickupLocation} dropoffLocation={r.dropoffLocation} />
-                    <p className="text-xs mt-0.5 font-medium" style={{ color: 'var(--theme-text-secondary)' }}>
-                      20ft: {formatCurrencyFull(r.type20ft)} · 40ft: {formatCurrencyFull(r.type40ft)}
+                    {r.isTwoWay && (
+                      <span className="inline-block mt-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-sm"
+                        style={{ background: 'color-mix(in srgb, var(--theme-status-success) 18%, transparent)', color: 'var(--theme-status-success)' }}>
+                        Hai chiều
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <div className="mb-3" style={{ borderTop: '1px solid var(--theme-border-default)' }} />
+
+                {/* Pickup / Dropoff */}
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <div>
+                    <p className="text-[10px] font-medium uppercase tracking-wide mb-0.5"
+                      style={{ color: 'var(--theme-text-muted)' }}>Điểm lấy</p>
+                    <p className="text-xs font-semibold truncate" style={{ color: 'var(--theme-text-secondary)' }}>
+                      {r.pickupLocation || '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-medium uppercase tracking-wide mb-0.5"
+                      style={{ color: 'var(--theme-text-muted)' }}>Điểm trả</p>
+                    <p className="text-xs font-semibold truncate" style={{ color: 'var(--theme-text-secondary)' }}>
+                      {r.dropoffLocation || '—'}
                     </p>
                   </div>
                 </div>
+
+                {/* Prices */}
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: '20ft', value: r.type20ft },
+                    { label: '40ft', value: r.type40ft },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="rounded-md px-3 py-2"
+                      style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <Container className="w-3 h-3" style={{ color: 'var(--theme-text-muted)' }} />
+                        <span className="text-[10px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>{label}</span>
+                      </div>
+                      <p className="text-sm font-semibold leading-none" style={{ color: 'var(--theme-text-primary)' }}>
+                        {formatCurrencyFull(value)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </button>
             ))}
-          </div>
-
-          {/* Desktop: table layout */}
-          <div className="hidden lg:block card overflow-hidden">
-            <table className="table-modern w-full">
-              <thead>
-                <tr>
-                  <th className="text-left px-4 py-3" style={{ color: 'var(--theme-text-muted)' }}>Tuyến</th>
-                  <th className="text-left px-4 py-3" style={{ color: 'var(--theme-text-muted)' }}>Điểm lấy</th>
-                  <th className="text-left px-4 py-3" style={{ color: 'var(--theme-text-muted)' }}>Điểm trả</th>
-                  <th className="text-right px-4 py-3" style={{ color: 'var(--theme-text-muted)' }}>Giá 20ft</th>
-                  <th className="text-right px-4 py-3" style={{ color: 'var(--theme-text-muted)' }}>Giá 40ft</th>
-                  <th className="text-center px-4 py-3" style={{ color: 'var(--theme-text-muted)' }}>Hai chiều</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((r) => (
-                  <tr
-                    key={`${r.route}-${r.pickupLocation}-${r.dropoffLocation}`}
-                    className="cursor-pointer"
-                    onClick={() => setSelected(r)}
-                  >
-                    <td className="px-4 py-3">
-                      <span className="font-medium" style={{ color: 'var(--theme-text-primary)' }}>{r.route}</span>
-                    </td>
-                    <td className="px-4 py-3" style={{ color: 'var(--theme-text-secondary)' }}>{r.pickupLocation || '—'}</td>
-                    <td className="px-4 py-3" style={{ color: 'var(--theme-text-secondary)' }}>{r.dropoffLocation || '—'}</td>
-                    <td className="px-4 py-3 text-right font-medium" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(r.type20ft)}</td>
-                    <td className="px-4 py-3 text-right font-medium" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(r.type40ft)}</td>
-                    <td className="px-4 py-3 text-center" style={{ color: 'var(--theme-text-secondary)' }}>{r.isTwoWay ? 'Có' : 'Không'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         </>
       )}
