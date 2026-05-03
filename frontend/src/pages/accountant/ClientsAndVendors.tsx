@@ -447,6 +447,18 @@ export function ClientsAndVendors() {
 
   return (
     <div>
+      {/* Add button */}
+      <div className="flex justify-end mb-4">
+        <Button
+          onClick={handleOpenCreate}
+          className="h-9 px-3 gap-1.5 text-sm font-semibold"
+          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+        >
+          <Plus className="w-4 h-4" />
+          Thêm
+        </Button>
+      </div>
+
       {/* Filters */}
       <div className="mb-4">
         <FilterToolbar
@@ -469,23 +481,7 @@ export function ClientsAndVendors() {
       )}
 
       {/* Content */}
-      {!loading && (
-        <>
-          {/* Add button */}
-          <div className="flex justify-end mb-4">
-            <Button
-              onClick={handleOpenCreate}
-              className="h-9 px-3 gap-1.5 text-sm font-semibold"
-              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-            >
-              <Plus className="w-4 h-4" />
-              Thêm
-            </Button>
-          </div>
-
-          {renderDesktop()}
-        </>
-      )}
+      {!loading && renderDesktop()}
 
       {/* Dialogs */}
       <DetailDialog

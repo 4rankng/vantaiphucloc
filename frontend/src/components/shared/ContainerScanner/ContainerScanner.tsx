@@ -1,5 +1,5 @@
 import { useRef, useCallback, useState, useEffect } from 'react'
-import Webcam from 'react-webcam'
+import { Camera } from 'react-camera-pro'
 import Cropper from 'react-easy-crop'
 import type { Area } from 'react-easy-crop'
 import { X, RotateCcw, Image } from 'lucide-react'
@@ -10,8 +10,6 @@ export interface PhotoMeta {
   timestamp: string
 }
 
-type ScanMode = 'rectangle' | 'square'
-
 interface ContainerScannerProps {
   onCapture: (imageSrc: string, meta: PhotoMeta) => void
   onClose: () => void
@@ -19,7 +17,6 @@ interface ContainerScannerProps {
   galleryImage?: string | null
 }
 
-const RECT_ASPECT_RATIO = 2.5
 const MAX_CAPTURE_WIDTH = 1200
 
 // ─── Crop a loaded image to the given pixel area ──────────────────────────────
@@ -46,13 +43,12 @@ async function cropImageToDataUrl(imageSrc: string, pixelCrop: Area): Promise<st
 }
 
 export function ContainerScanner({ onCapture, onClose, galleryImage }: ContainerScannerProps) {
-  const webcamRef = useRef<Webcam>(null)
+  const cameraRef = useRef<unknown>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [captured, setCaptured] = useState<string | null>(null)
   const [finalCropped, setFinalCropped] = useState<string | null>(null)
   const [imageToCrop, setImageToCrop] = useState<string | null>(galleryImage ?? null)
-  const [scanMode, setScanMode] = useState<ScanMode>('rectangle')
   const [gpsCoords, setGpsCoords] = useState<{ lat: number | null; lng: number | null }>({ lat: null, lng: null })
 
   // react-easy-crop state
@@ -84,21 +80,13 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
     )
   }, [])
 
-  // ── Camera capture: capture FULL frame, then show crop view ───────────────
+  // ── Camera capture: takePhoto() returns base64 directly ───────────────────
   const handleCapture = useCallback(() => {
-    const video = webcamRef.current?.video
-    if (!video) return
-
-    // Capture the full video frame
-    const canvas = document.createElement('canvas')
-    const scale = Math.min(MAX_CAPTURE_WIDTH / video.videoWidth, 1)
-    canvas.width = video.videoWidth * scale
-    canvas.height = video.videoHeight * scale
-    canvas.getContext('2d')!.drawImage(video, 0, 0, canvas.width, canvas.height)
-    
-    const fullPhoto = canvas.toDataURL('image/jpeg', 0.92)
-    setCaptured(fullPhoto)
-    setImageToCrop(fullPhoto)  // Send to crop view
+    const cam = cameraRef.current as { takePhoto: () => string } | null
+    if (!cam) return
+    const photo = cam.takePhoto()
+    setCaptured(photo)
+    setImageToCrop(photo)
     setCrop({ x: 0, y: 0 })
     setZoom(1)
   }, [])
@@ -108,11 +96,10 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
     if (!imageToCrop || !croppedAreaPixels) return
     const result = await cropImageToDataUrl(imageToCrop, croppedAreaPixels)
     setFinalCropped(result)
-    setCaptured(null)  // Exit crop view
+    setCaptured(null)
   }, [imageToCrop, croppedAreaPixels])
 
   const handleRetake = useCallback(() => {
-    // Go back to camera
     setCaptured(null)
     setFinalCropped(null)
     setImageToCrop(null)
@@ -147,32 +134,6 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
     reader.readAsDataURL(file)
     e.target.value = ''
   }, [])
-
-  const modeToggleButton = (
-    <div className="flex flex-col items-center gap-1">
-      <button
-        onClick={() => setScanMode(m => m === 'rectangle' ? 'square' : 'rectangle')}
-        className="w-12 h-12 flex items-center justify-center rounded-full touch-manipulation"
-        style={{ background: 'rgba(0,0,0,0.5)', color: '#fff' }}
-      >
-        {scanMode === 'rectangle' ? (
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <rect x="4" y="4" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
-          </svg>
-        ) : (
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <rect x="1" y="5" width="18" height="10" rx="2" stroke="currentColor" strokeWidth="1.5" />
-          </svg>
-        )}
-      </button>
-      <span className="text-[10px] font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>
-        {scanMode === 'rectangle' ? 'Vuông' : 'Ngang'}
-      </span>
-    </div>
-  )
-
-  // ── Crop aspect ratio for react-easy-crop (must match overlay box) ─────────────
-  const cropAspect = scanMode === 'square' ? 1 : RECT_ASPECT_RATIO // wide rectangle for container numbers
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: '#000' }}>
@@ -214,7 +175,7 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
         </div>
 
       ) : imageToCrop ? (
-        /* ── Crop mode — react-easy-crop (for both camera and gallery) ── */
+        /* ── Crop mode — react-easy-crop (square only) ── */
         <>
           {/* Crop area fills the screen */}
           <div className="absolute inset-0" style={{ bottom: '100px' }}>
@@ -222,7 +183,7 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
               image={imageToCrop}
               crop={crop}
               zoom={zoom}
-              aspect={cropAspect}
+              aspect={1}
               onCropChange={setCrop}
               onZoomChange={setZoom}
               onCropComplete={onCropComplete}
@@ -241,7 +202,7 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
             className="absolute bottom-0 left-0 right-0 px-6 pb-8 pt-3 flex items-center justify-center gap-5"
             style={{ background: 'rgba(0,0,0,0.7)' }}
           >
-            {/* Retake / Choose another (left) */}
+            {/* Retake (left) */}
             <div className="flex flex-col items-center gap-1">
               <button
                 onClick={handleRetake}
@@ -263,52 +224,26 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
             >
               Xác nhận
             </button>
-
-            {/* Mode toggle (right) */}
-            <div className="flex flex-col items-center gap-1">
-              <button
-                onClick={() => setScanMode(m => m === 'rectangle' ? 'square' : 'rectangle')}
-                className="w-12 h-12 flex items-center justify-center rounded-full touch-manipulation"
-                style={{ background: 'rgba(255,255,255,0.15)', color: '#fff' }}
-              >
-                {scanMode === 'rectangle' ? (
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <rect x="4" y="4" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
-                  </svg>
-                ) : (
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    <rect x="1" y="5" width="18" height="10" rx="2" stroke="currentColor" strokeWidth="1.5" />
-                  </svg>
-                )}
-              </button>
-              <span className="text-[10px] font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                {scanMode === 'rectangle' ? 'Vuông' : 'Ngang'}
-              </span>
-            </div>
           </div>
         </>
-
       ) : (
         /* ── Camera mode ── */
         <>
           <div className="scanner-video">
-            <Webcam
-              audio={false}
-              ref={webcamRef}
-              screenshotFormat="image/jpeg"
-              screenshotQuality={0.8}
-              videoConstraints={{ facingMode: 'environment', width: { ideal: 1080 }, height: { ideal: 1920 } }}
-              className="w-full h-full"
+            <Camera
+              ref={cameraRef}
+              aspectRatio="cover"
+              facingMode="environment"
+              errorMessages={{
+                noCameraAccessible: 'Không tìm thấy camera. Vui lòng kết nối camera hoặc thử trình duyệt khác.',
+                permissionDenied: 'Quyền truy cập camera bị từ chối. Vui lòng tải lại trang và cấp quyền.',
+                switchCamera: 'Không thể chuyển camera.',
+                canvas: 'Trình duyệt không hỗ trợ canvas.',
+              }}
             />
           </div>
 
-          <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ pointerEvents: 'none' }}>
-            <p className="text-sm font-bold" style={{ color: '#ffffff', textShadow: '0 1px 4px rgba(0,0,0,1), 0 0 12px rgba(0,0,0,0.8)', position: 'relative', zIndex: 1 }}>
-              Chụp ảnh số container
-            </p>
-          </div>
-
-          <div className="absolute bottom-8 left-0 right-0 flex justify-center items-center gap-6" style={{ pointerEvents: 'auto' }}>
+          <div className="absolute bottom-8 left-0 right-0 flex justify-center items-center gap-6">
             <div className="flex flex-col items-center gap-1">
               <button
                 onClick={handleGallerySelect}
@@ -327,8 +262,6 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
             >
               <div className="w-12 h-12 rounded-full" style={{ background: '#fff', opacity: 0.9 }} />
             </button>
-
-            {modeToggleButton}
           </div>
         </>
       )}

@@ -5,8 +5,8 @@ import { CommandPalette, useCommandPalette } from '@/components/shared/CommandPa
 import { useAuth } from '@/contexts/AuthContext'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { NotificationPanel } from '@/components/shared/NotificationPanel/NotificationPanel'
-import { ChevronRight } from 'lucide-react'
-import { useState } from 'react'
+import { ChevronRight, X } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 import type { Role } from '@/data/domain'
 
 const ALLOWED_ROLES: Role[] = ['accountant']
@@ -37,13 +37,13 @@ function AccountantDesktopShell() {
         />
       )}
 
-      {/* Sidebar toggle — fixed pill on sidebar edge */}
+      {/* Sidebar toggle — fixed pill on sidebar edge (desktop only) */}
       {!isFullscreen && (
         <button
           type="button"
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           aria-label={sidebarCollapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'}
-          className="fixed z-50 top-4 flex items-center justify-center w-2.5 h-9 rounded-r-md shadow-sm text-neutral-300 transition-all duration-300 ease-in-out"
+          className="hidden md:flex fixed z-50 top-4 items-center justify-center w-2.5 h-9 rounded-r-md shadow-sm text-neutral-300 transition-all duration-300 ease-in-out"
           style={{
             left: sidebarCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED,
             background: 'var(--theme-sidebar, #0a3520)',
@@ -78,33 +78,69 @@ function AccountantMobileShell() {
   const { user } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const isHome = location.pathname === '/accountant'
   const isFullscreen = FULLSCREEN_PREFIXES.some(p => location.pathname.startsWith(p))
 
+  const toggleSidebar = useCallback(() => setSidebarOpen(v => !v), [])
+  const closeSidebar = useCallback(() => setSidebarOpen(false), [])
+
+  // Auto-close sidebar on navigation
+  useEffect(() => { closeSidebar() }, [location.pathname, closeSidebar])
+
   return (
-    <AppShell
-      topbarProps={
-        isHome
-          ? {
-              variant: 'home' as const,
-              name: user?.name ?? '',
-              onNotifications: () => navigate('/accountant/notifications'),
-            }
-          : {
-              variant: 'page' as const,
-              title: resolveMobileTitle(location.pathname),
-              onBack: () => navigate(-1),
-            }
-      }
-      contentClassName={
-        isFullscreen
-          ? undefined
-          : 'px-4 py-4 space-y-4 md:px-6 md:py-6 md:max-w-4xl md:mx-auto'
-      }
-    >
-      <Outlet />
-    </AppShell>
+    <>
+      <AppShell
+        topbarProps={
+          isHome
+            ? {
+                variant: 'home' as const,
+                name: user?.name ?? '',
+                onMenu: toggleSidebar,
+              }
+            : {
+                variant: 'page' as const,
+                title: resolveMobileTitle(location.pathname),
+                onMenu: toggleSidebar,
+              }
+        }
+        contentClassName={
+          isFullscreen
+            ? undefined
+            : 'px-4 py-4 space-y-4 md:px-6 md:py-6 md:max-w-4xl md:mx-auto'
+        }
+      >
+        <Outlet />
+      </AppShell>
+
+      {/* Sidebar overlay drawer (mobile) */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={closeSidebar}
+          />
+          {/* Sidebar panel */}
+          <div className="relative z-10 h-full" style={{ width: SIDEBAR_EXPANDED }}>
+            <AccountantSidebar
+              collapsed={false}
+              onNotificationsOpen={closeSidebar}
+            />
+            {/* Close button */}
+            <button
+              onClick={closeSidebar}
+              className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full"
+              style={{ background: 'rgba(255,255,255,0.12)', color: '#fff' }}
+              aria-label="Đóng menu"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
