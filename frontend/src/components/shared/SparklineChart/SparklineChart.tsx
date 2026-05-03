@@ -27,7 +27,7 @@ export function SparklineChart({ data, color = 'var(--theme-brand-primary)', hei
             width={barWidth}
             height={barHeight}
             rx={1}
-            fill={isLast ? color : '#e2e8f0'}
+            fill={isLast ? color : 'var(--theme-border-light)'}
           />
         )
       })}

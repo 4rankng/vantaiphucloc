@@ -158,7 +158,7 @@ export function AccountantSidebar({
                   {badge && badge > 0 && (
                     <span
                       className="shrink-0 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-semibold"
-                      style={{ background: 'var(--theme-status-error)', color: '#fff' }}
+                      style={{ background: 'var(--theme-status-error)', color: 'white' }}
                     >
                       {badge > 99 ? '99+' : badge}
                     </span>
@@ -180,7 +180,7 @@ export function AccountantSidebar({
             style={{ color: 'var(--theme-sidebar-text-muted)' }}
             onMouseEnter={(e) => {
               ;(e.currentTarget as HTMLElement).style.background = 'var(--theme-sidebar-hover)'
-              ;(e.currentTarget as HTMLElement).style.color = '#fff'
+              ;(e.currentTarget as HTMLElement).style.color = 'white'
             }}
             onMouseLeave={(e) => {
               ;(e.currentTarget as HTMLElement).style.background = 'transparent'
@@ -209,7 +209,7 @@ export function AccountantSidebar({
                     className="h-7 w-7 shrink-0 flex items-center justify-center rounded-full text-[11px] font-semibold"
                     style={{
                       background: 'var(--theme-brand-primary)',
-                      color: '#fff',
+                      color: 'white',
                     }}
                   >
                     {(user?.name || user?.username || '?').charAt(0).toUpperCase()}
@@ -221,7 +221,7 @@ export function AccountantSidebar({
                     </span>
                   </div>
                   {unread > 0 && (
-                    <span className="absolute -top-1 -right-1 h-3.5 min-w-3.5 flex items-center justify-center px-1 text-[9px] font-semibold rounded-full" style={{ background: 'var(--theme-status-error)', color: '#fff' }}>
+                    <span className="absolute -top-1 -right-1 h-3.5 min-w-3.5 flex items-center justify-center px-1 text-[9px] font-semibold rounded-full" style={{ background: 'var(--theme-status-error)', color: 'white' }}>
                       {unread > 99 ? '99+' : unread}
                     </span>
                   )}
@@ -246,7 +246,7 @@ export function AccountantSidebar({
               style={{ color: 'var(--theme-sidebar-text-muted)' }}
               onMouseEnter={(e) => {
                 ;(e.currentTarget as HTMLElement).style.background = 'var(--theme-sidebar-hover)'
-                ;(e.currentTarget as HTMLElement).style.color = '#fff'
+                ;(e.currentTarget as HTMLElement).style.color = 'var(--theme-sidebar-active-text)'
               }}
               onMouseLeave={(e) => {
                 ;(e.currentTarget as HTMLElement).style.background = 'transparent'

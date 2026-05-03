@@ -62,15 +62,21 @@ export function DriverHome() {
     setPeriodStart(getSalaryPeriodDates(dayAfter(currentPeriod.endDate), { fromDay: config?.from_day ?? 1, toDay: config?.to_day ?? 31 }).startDate)
   }, [currentPeriod.endDate, config?.from_day, config?.to_day])
 
-  const filteredJobs = useMemo(() => {
+  // Trips in the current pay period — used by the monthly stat card (always
+  // reflects the period total regardless of the active list filter).
+  const periodJobs = useMemo(() => {
     const startISO = currentPeriod.startDate.toISOString()
     const endISO = new Date(currentPeriod.endDate.getFullYear(), currentPeriod.endDate.getMonth(), currentPeriod.endDate.getDate(), 23, 59, 59).toISOString()
-    const byPeriod = workOrders.filter(w => w.createdAt >= startISO && w.createdAt <= endISO)
+    return workOrders.filter(w => w.createdAt >= startISO && w.createdAt <= endISO)
+  }, [workOrders, currentPeriod])
+
+  // Trips that match BOTH the period and the active list filter — used by the list.
+  const filteredJobs = useMemo(() => {
     const byFilter = filter === 'pending'
-      ? byPeriod.filter(w => w.status === 'PENDING')
-      : byPeriod
+      ? periodJobs.filter(w => w.status === 'PENDING')
+      : periodJobs
     return [...byFilter].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-  }, [workOrders, currentPeriod, filter])
+  }, [periodJobs, filter])
 
   const visibleJobs = useMemo(
     () => filteredJobs.slice(0, visibleCount),
@@ -95,14 +101,16 @@ export function DriverHome() {
     return () => observer.disconnect()
   }, [hasMore, loadMore])
 
+  // Stat card aggregations use periodJobs (NOT filteredJobs) so the totals
+  // reflect the whole month regardless of which list tab the driver is viewing.
   const matchedCount = useMemo(() =>
-    filteredJobs.filter(w => w.status === 'MATCHED' || w.status === 'COMPLETED').length,
-    [filteredJobs],
+    periodJobs.filter(w => w.status === 'MATCHED' || w.status === 'COMPLETED').length,
+    [periodJobs],
   )
 
   const totalEarnings = useMemo(() =>
-    filteredJobs.reduce((sum, w) => sum + w.earning, 0),
-    [filteredJobs],
+    periodJobs.reduce((sum, w) => sum + w.earning, 0),
+    [periodJobs],
   )
 
   // Match salary period for current date range
@@ -127,7 +135,7 @@ export function DriverHome() {
           boxShadow: 'var(--theme-shadow-card)',
         }}
       >
-        <div className="w-[55%] flex items-center justify-center py-3 px-2">
+        <div className="flex-1 min-w-0 flex items-center justify-center py-3 px-2">
           <MonthNavigator
             year={displayYear}
             month={displayMonth}
@@ -140,10 +148,10 @@ export function DriverHome() {
 
         <div className="w-px self-stretch my-3" style={{ background: 'var(--theme-border-default)' }} />
 
-        <div className="w-[45%] flex items-center gap-2 px-3 py-3">
-          <img src="/icons/money.png" alt="" aria-hidden className="shrink-0 w-10 h-10 object-contain" />
+        <div className="flex-1 min-w-0 flex items-center gap-2 px-3 py-3">
+          <img src="/icons/money.png" alt="" aria-hidden className="shrink-0 w-9 h-9 object-contain" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold tabular-nums leading-tight truncate" style={{ color: 'var(--theme-text-primary)' }}>
+            <p className="text-[15px] font-bold tabular-nums leading-tight whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
               {formatCurrencyFull(earningsValue)}
             </p>
             <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
