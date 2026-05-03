@@ -38,14 +38,32 @@ export function PageHeader({
   icon,
 }: PageHeaderProps) {
   return (
-    <div className={compact ? '' : 'mb-4 lg:mb-6'}>
+    <div
+      className={`page-header-band rounded-xl ${compact ? 'px-4 py-3' : 'px-5 py-4 mb-4 lg:mb-6'}`}
+    >
       {breadcrumbs && <div className="mb-3">{breadcrumbs}</div>}
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-3">
+          {/* Brand accent bar */}
+          {!icon && (
+            <span
+              aria-hidden="true"
+              className="hidden lg:block shrink-0 self-stretch rounded-full"
+              style={{
+                width: '3px',
+                minHeight: '24px',
+                background: 'var(--theme-brand-primary)',
+                opacity: 0.7,
+              }}
+            />
+          )}
           {icon && (
             <div
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl lg:h-12 lg:w-12"
-              style={{ background: 'var(--theme-brand-primary-light)' }}
+              style={{
+                background: 'var(--theme-brand-primary-light)',
+                boxShadow: '0 0 0 1px color-mix(in srgb, var(--theme-brand-primary) 18%, transparent)',
+              }}
             >
               <BrandIcon name={icon} size={32} />
             </div>

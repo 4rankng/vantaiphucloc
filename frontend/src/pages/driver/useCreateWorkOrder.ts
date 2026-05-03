@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useOffline } from '@/contexts/OfflineContext'
 import { apiClient } from '@/services/api'
 import type { PhotoMeta } from '@/components/shared/ContainerScanner'
-import type { Client, RoutePrice, WorkType, WorkOrder } from '@/data/domain'
+import type { Client, WorkType, WorkOrder } from '@/data/domain'
 
 export interface ContainerForm {
   containerNumber: string
@@ -51,7 +51,6 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
 
   // Reference data
   const [clients, setClients] = useState<Client[]>([])
-  const [routes, setRoutes] = useState<RoutePrice[]>([])
   const [driverPlate, setDriverPlate] = useState('')
   const [recentOrders, setRecentOrders] = useState<WorkOrder[]>([])
 
@@ -80,14 +79,13 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
   // Load reference data
   useEffect(() => {
     let cancelled = false
-    Promise.all([apiClient.getClients(), apiClient.getRoutes()])
-      .then(([cRes, rRes]) => {
+    Promise.all([apiClient.getClients()])
+      .then(([cRes]) => {
         if (!cancelled) {
           if (cRes.success) setClients(cRes.data)
-          if (rRes.success) setRoutes(rRes.data)
         }
       })
-      .catch((err) => { console.error('Failed to load clients/routes:', err) })
+      .catch((err) => { console.error('Failed to load clients:', err) })
     return () => { cancelled = true }
   }, [])
 
@@ -355,7 +353,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
     isEdit,
 
     // Reference data
-    clients, routes, recentOrders,
+    clients, recentOrders,
 
     // Form state
     containers, clientId, pickupLocation, dropoffLocation,

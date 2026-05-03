@@ -1,26 +1,110 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 200" fill="none">
-  <!-- Soft background ellipse -->
-  <ellipse cx="120" cy="170" rx="70" ry="8" fill="#059669" fill-opacity="0.06"/>
+  <defs>
+    <linearGradient id="es-doc1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F9FAFB"/>
+    </linearGradient>
+    <linearGradient id="es-lens" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ECFDF5" stop-opacity="0.92"/>
+      <stop offset="100%" stop-color="#D1FAE5" stop-opacity="0.75"/>
+    </linearGradient>
+    <radialGradient id="es-shadow" cx="50%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#059669" stop-opacity="0.09"/>
+      <stop offset="100%" stop-color="#059669" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="es-drop-doc" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="1" dy="3" stdDeviation="4" flood-color="#09090B" flood-opacity="0.07"/>
+    </filter>
+    <filter id="es-drop-glass" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#059669" flood-opacity="0.18"/>
+    </filter>
+    <!-- Frosted glass effect on lens -->
+    <linearGradient id="es-glare" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="45%" stop-color="#FFFFFF" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
 
-  <!-- Document stack behind -->
-  <rect x="68" y="60" width="80" height="100" rx="8" fill="#FAFAFA" stroke="#E4E4E7" stroke-width="2" transform="rotate(-6 108 110)"/>
-  <rect x="76" y="64" width="80" height="100" rx="8" fill="#FFFFFF" stroke="#E4E4E7" stroke-width="2"/>
+  <!-- Ground shadow -->
+  <ellipse cx="120" cy="172" rx="72" ry="7.5" fill="url(#es-shadow)"/>
 
-  <!-- Document content lines -->
-  <rect x="86" y="78" width="42" height="6" rx="2" fill="#E4E4E7"/>
-  <rect x="86" y="92" width="60" height="4" rx="1.5" fill="#F4F4F5"/>
-  <rect x="86" y="102" width="48" height="4" rx="1.5" fill="#F4F4F5"/>
-  <rect x="86" y="112" width="54" height="4" rx="1.5" fill="#F4F4F5"/>
-  <rect x="86" y="122" width="40" height="4" rx="1.5" fill="#F4F4F5"/>
+  <!-- ── Document stack (2 back pages, tilted) ── -->
+  <!-- Page 3 (furthest back, most tilted) -->
+  <rect x="58" y="56" width="84" height="108" rx="8"
+        fill="#F4F4F5" stroke="#E4E4E7" stroke-width="1.5"
+        transform="rotate(-10 100 110)"/>
+  <!-- Page 2 (middle tilt) -->
+  <rect x="62" y="54" width="84" height="108" rx="8"
+        fill="#FAFAFA" stroke="#E4E4E7" stroke-width="1.5"
+        transform="rotate(-5 104 108)"/>
+  <!-- Folded corner on page 2 -->
+  <path d="M130 56 L142 56 L130 68 Z" fill="#E4E4E7" transform="rotate(-5 104 108)"/>
 
-  <!-- Magnifying glass -->
-  <circle cx="156" cy="120" r="26" fill="#ECFDF5" stroke="#059669" stroke-width="3"/>
-  <circle cx="156" cy="120" r="26" fill="#FFFFFF" fill-opacity="0.5"/>
-  <line x1="174" y1="138" x2="190" y2="156" stroke="#059669" stroke-width="6" stroke-linecap="round"/>
-  <!-- Highlight on glass -->
-  <path d="M144 110 Q144 102 152 102" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-opacity="0.85"/>
+  <!-- ── Main document (front) ── -->
+  <g filter="url(#es-drop-doc)">
+    <rect x="66" y="52" width="86" height="112" rx="9" fill="url(#es-doc1)" stroke="#E4E4E7" stroke-width="1.5"/>
+    <!-- Document header bar -->
+    <rect x="66" y="52" width="86" height="22" rx="9" fill="#F4F4F5"/>
+    <rect x="66" y="63" width="86" height="11" rx="0" fill="#F4F4F5"/>
+    <!-- Header title line -->
+    <rect x="76" y="60" width="44" height="7" rx="2.5" fill="#D1FAE5"/>
+    <!-- Doc icon top-right -->
+    <rect x="138" y="58" width="9" height="11" rx="1.5" fill="#ECFDF5" stroke="#059669" stroke-width="1" stroke-opacity="0.5"/>
+    <line x1="140" y1="63" x2="145" y2="63" stroke="#059669" stroke-width="0.8" stroke-opacity="0.45"/>
+    <line x1="140" y1="66" x2="145" y2="66" stroke="#059669" stroke-width="0.8" stroke-opacity="0.45"/>
+    <!-- Content lines -->
+    <rect x="76" y="82"  width="62" height="4.5" rx="2" fill="#E4E4E7"/>
+    <rect x="76" y="93"  width="50" height="4"   rx="2" fill="#F4F4F5"/>
+    <rect x="76" y="103" width="56" height="4"   rx="2" fill="#F4F4F5"/>
+    <rect x="76" y="113" width="44" height="4"   rx="2" fill="#F4F4F5"/>
+    <rect x="76" y="123" width="52" height="4"   rx="2" fill="#F4F4F5"/>
+    <rect x="76" y="133" width="38" height="4"   rx="2" fill="#F4F4F5"/>
+    <!-- Folded corner -->
+    <path d="M144 52 L152 52 L144 60 Z" fill="#E4E4E7"/>
+    <path d="M144 60 L152 52 L144 52" stroke="#D4D4D8" stroke-width="1"/>
+  </g>
 
-  <!-- Question mark inside glass -->
-  <text x="156" y="128" font-family="system-ui, sans-serif" font-size="22" font-weight="700"
-        fill="#059669" text-anchor="middle">?</text>
+  <!-- ── Magnifying glass ── -->
+  <g filter="url(#es-drop-glass)">
+    <!-- Handle -->
+    <line x1="176" y1="140" x2="197" y2="161"
+          stroke="#059669" stroke-width="7" stroke-linecap="round"/>
+    <line x1="176" y1="140" x2="197" y2="161"
+          stroke="#047857" stroke-width="3.5" stroke-linecap="round" stroke-opacity="0.4"/>
+    <!-- Lens rim -->
+    <circle cx="152" cy="118" r="29" fill="#059669" fill-opacity="0.12" stroke="#059669" stroke-width="3"/>
+    <!-- Lens glass fill -->
+    <circle cx="152" cy="118" r="26" fill="url(#es-lens)"/>
+    <!-- Glare / reflection -->
+    <circle cx="152" cy="118" r="26" fill="url(#es-glare)"/>
+    <!-- Inner rim highlight -->
+    <circle cx="152" cy="118" r="26" stroke="#FFFFFF" stroke-width="1.5" stroke-opacity="0.4"/>
+    <!-- Lens internal highlight arc -->
+    <path d="M137 107 Q139 98 148 98" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-opacity="0.8"/>
+    <!-- Question mark -->
+    <text x="152" y="126" font-family="ui-sans-serif, system-ui, sans-serif"
+          font-size="24" font-weight="700" fill="#059669" text-anchor="middle"
+          letter-spacing="-0.02em">?</text>
+    <!-- Lens outer glint dot -->
+    <circle cx="136" cy="102" r="2.5" fill="#FFFFFF" fill-opacity="0.65"/>
+  </g>
+
+  <!-- Floating search particles -->
+  <g fill="#059669" fill-opacity="0.18">
+    <circle cx="208" cy="62" r="3.5"/>
+    <circle cx="218" cy="82" r="2"/>
+    <circle cx="34"  cy="76" r="2.5"/>
+    <circle cx="26"  cy="96" r="1.5"/>
+  </g>
+
+  <!-- Sparkles -->
+  <g stroke="#059669" stroke-width="1.6" stroke-linecap="round" opacity="0.45">
+    <line x1="38"  y1="52" x2="44" y2="58"/>
+    <line x1="44"  y1="52" x2="38" y2="58"/>
+  </g>
+  <g stroke="#059669" stroke-width="1.2" stroke-linecap="round" opacity="0.3">
+    <line x1="208" y1="108" x2="212" y2="112"/>
+    <line x1="212" y1="108" x2="208" y2="112"/>
+  </g>
 </svg>

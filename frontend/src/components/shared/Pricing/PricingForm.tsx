@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react'
-import { useRoutes } from '@/hooks/use-queries'
 import { type Pricing, type PricingLine } from '@/data/domain'
 import { Button } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect'
+import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
 import { LineEditor } from './LineEditor'
 import { X, Check } from 'lucide-react'
 
@@ -18,8 +18,6 @@ interface Props {
 }
 
 export function PricingForm({ initial, clients, lockedClientId, onSave, onCancel, onCreateClient }: Props) {
-  const { data: routes = [] } = useRoutes()
-
   const [clientId, setClientId] = useState(
     String(lockedClientId ?? initial?.clientId ?? ''),
   )
@@ -42,21 +40,6 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onCancel
     { value: 'F20', label: 'F20' },
     { value: 'F40', label: 'F40' },
   ]
-  const pickupOptions = useMemo(
-    () =>
-      [...new Set(routes.map(r => r.pickupLocation).filter(Boolean) as string[])].map(loc => ({
-        value: loc,
-        label: loc,
-      })),
-    [routes],
-  )
-  const dropoffOptions = useMemo(
-    () =>
-      routes
-        .filter(r => r.pickupLocation === pickupLocation)
-        .map(r => ({ value: r.dropoffLocation ?? '', label: r.dropoffLocation ?? '' })),
-    [routes, pickupLocation],
-  )
 
   const clientName = clients.find(c => String(c.id) === clientId)?.name ?? ''
   const route = pickupLocation && dropoffLocation ? `${pickupLocation} - ${dropoffLocation}` : ''
@@ -140,8 +123,7 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onCancel
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="typo-form-label">Điểm lấy hàng</Label>
-              <InlineSelect
-                options={pickupOptions}
+              <LocationSelect
                 value={pickupLocation}
                 onChange={v => { setPickupLocation(v); setDropoffLocation('') }}
                 placeholder="Chọn điểm lấy"
@@ -149,8 +131,7 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onCancel
             </div>
             <div className="space-y-2">
               <Label className="typo-form-label">Điểm trả hàng</Label>
-              <InlineSelect
-                options={dropoffOptions}
+              <LocationSelect
                 value={dropoffLocation}
                 onChange={setDropoffLocation}
                 placeholder="Chọn điểm trả"

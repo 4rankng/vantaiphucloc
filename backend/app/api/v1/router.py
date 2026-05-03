@@ -3,6 +3,7 @@ from arq import ArqRedis
 from arq.jobs import Job, JobStatus
 
 from app.api.v1.auth import router as auth_router
+from app.database import engine
 from app.api.v1.clients import router as clients_router
 from app.api.v1.locations import router as locations_router
 from app.api.v1.routes import router as routes_router
@@ -17,7 +18,6 @@ from app.api.v1.push import router as push_router
 from app.api.v1.users import router as users_router
 from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.vendors import router as vendors_router
-from app.api.v1.sse import router as sse_router
 from app.api.v1.audit import router as audit_router
 from app.core.deps import get_current_user, get_worker_pool
 from app.models.base import User
@@ -40,7 +40,6 @@ router.include_router(push_router)
 router.include_router(users_router)
 router.include_router(dashboard_router)
 router.include_router(vendors_router)
-router.include_router(sse_router)
 router.include_router(audit_router)
 
 
@@ -58,6 +57,18 @@ async def worker_health(pool: ArqRedis = Depends(get_worker_pool)):
         "status": "ok",
         "workers": info.get("workers", []),
         "queued": info.get("queued", 0),
+    }
+
+
+@router.get("/health/db")
+async def db_health():
+    pool = engine.pool
+    return {
+        "status": "ok",
+        "pool_size": pool.size(),
+        "checked_in": pool.checkedin(),
+        "checked_out": pool.checkedout(),
+        "overflow": pool.overflow(),
     }
 
 

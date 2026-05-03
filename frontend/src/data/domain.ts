@@ -142,6 +142,8 @@ export interface Pricing {
   route: string
   pickupLocation?: string
   dropoffLocation?: string
+  pickupLocationId?: number | null
+  dropoffLocationId?: number | null
   lines: PricingLine[]
   createdAt: string
   updatedAt: string
@@ -162,6 +164,8 @@ export interface TripOrder {
   route: string
   pickupLocation?: string
   dropoffLocation?: string
+  pickupLocationId?: number | null
+  dropoffLocationId?: number | null
   containerNumber?: string
   containers: TripOrderContainerItem[]
   pricingId: number

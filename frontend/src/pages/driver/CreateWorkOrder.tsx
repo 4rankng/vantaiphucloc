@@ -6,6 +6,7 @@ import { TripSummaryDialog } from '@/components/shared/TripSummaryDialog'
 import { SuccessOverlay } from '@/components/shared/SuccessOverlay'
 import { RecentTripSuggestions } from '@/components/shared/RecentTripSuggestions'
 import { InlineSelect } from '@/components/shared/InlineSelect'
+import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
 import { useCreateWorkOrder } from './useCreateWorkOrder'
 import { useToast } from '@/components/atoms/Toast'
 import type { WorkOrder } from '@/data/domain'
@@ -13,7 +14,7 @@ import type { WorkOrder } from '@/data/domain'
 export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: WorkOrder | null }) {
   const {
     isEdit,
-    clients, routes, recentOrders,
+    clients, recentOrders,
     containers, clientId, pickupLocation, dropoffLocation,
     selectedTripId,
     submitting, scannerOpen, isOnline, summaryOpen, showSuccess,
@@ -207,10 +208,9 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
           <div className="space-y-3">
             <div className="space-y-1.5">
               <label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm lấy</label>
-              <InlineSelect
+              <LocationSelect
                 placeholder="Chọn điểm lấy"
                 value={pickupLocation}
-                options={[...new Set(routes.map(r => r.pickupLocation).filter(Boolean) as string[])].map(loc => ({ value: loc!, label: loc! }))}
                 onChange={(val: string) => {
                   setPickupLocation(val)
                   setDropoffLocation('')
@@ -220,10 +220,9 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
 
             <div className="space-y-1.5">
               <label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm trả</label>
-              <InlineSelect
+              <LocationSelect
                 placeholder="Chọn điểm trả"
                 value={dropoffLocation}
-                options={[...new Set(routes.map(r => r.dropoffLocation).filter(Boolean) as string[])].map(loc => ({ value: loc!, label: loc! }))}
                 onChange={setDropoffLocation}
               />
             </div>
