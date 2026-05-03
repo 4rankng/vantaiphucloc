@@ -48,20 +48,7 @@ export function BottomTabBar({ tabs }: BottomTabBarProps) {
             )}
             style={{ color: isActive ? 'var(--theme-brand-primary)' : 'var(--theme-text-muted)' }}
           >
-            {/* Active pill glow background */}
-            {isActive && (
-              <span
-                aria-hidden="true"
-                className="absolute inset-x-2 rounded-xl"
-                style={{
-                  top: 4,
-                  bottom: 4,
-                  background: 'radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--theme-brand-primary) 10%, transparent) 0%, transparent 70%)',
-                  pointerEvents: 'none',
-                }}
-              />
-            )}
-            <div className="relative z-10">
+            <div className="relative">
               <Icon
                 className={cn('transition-transform', isActive ? 'w-[20px] h-[20px] scale-110' : 'w-[20px] h-[20px]')}
                 strokeWidth={isActive ? 2.2 : 1.8}
@@ -76,7 +63,7 @@ export function BottomTabBar({ tabs }: BottomTabBarProps) {
               )}
             </div>
             {showLabel && (
-              <span className={cn('relative z-10 text-[10px] leading-none max-w-[52px] text-center truncate', isActive ? 'font-semibold' : 'font-normal')}>
+              <span className={cn('text-[10px] leading-none max-w-[52px] text-center truncate', isActive ? 'font-semibold' : 'font-normal')}>
                 {label}
               </span>
             )}

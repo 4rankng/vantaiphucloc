@@ -79,7 +79,7 @@ function StatCard({
   return (
     <Component
       onClick={onClick}
-      className={`card stat-card-relative p-4 text-left transition-all ${
+      className={`card p-4 text-left transition-all ${
         isClickable
           ? 'cursor-pointer hover:border-[color-mix(in_srgb,var(--theme-brand-primary)_30%,transparent)] active:scale-[0.98]'
           : ''
@@ -90,8 +90,6 @@ function StatCard({
         borderRadius: 'var(--theme-radius-lg, 10px)',
       }}
     >
-      {/* Decorative corner glow */}
-      <div className="stat-card-glow" aria-hidden="true" />
       <div className="flex items-start justify-between gap-3">
         {icon && (
           <div

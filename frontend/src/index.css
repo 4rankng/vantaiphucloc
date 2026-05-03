@@ -881,29 +881,6 @@ select {
   border-bottom: 1px solid color-mix(in srgb, var(--theme-brand-primary, #059669) 12%, transparent);
 }
 
-/* ─── Stat card corner decoration ───────────────────────── */
-
-/* Invisible positioning anchor — add to the stat card wrapper */
-.stat-card-relative { position: relative; overflow: hidden; }
-
-/* The glow spot itself — absolute top-right inside stat cards */
-.stat-card-glow {
-  position: absolute;
-  top: 0; right: 0;
-  width: 72px; height: 72px;
-  border-radius: 0 var(--theme-radius-lg, 10px) 0 72px;
-  background: radial-gradient(
-    ellipse at 100% 0%,
-    color-mix(in srgb, var(--theme-brand-primary, #059669) 12%, transparent) 0%,
-    transparent 70%
-  );
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Push stat-card content above the glow */
-.stat-card-relative > * { position: relative; z-index: 1; }
-
 /* ─── Error / network state illustration container ───────── */
 .state-error-container {
   display: flex;
