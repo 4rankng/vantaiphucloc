@@ -277,16 +277,12 @@ async def create_trip_order(
     await db.commit()
     await db.refresh(trip_order)
 
-    if trip_order.driver_id:
-        await _enqueue_salary_recalc(db, trip_order.driver_id, body.trip_date)
-
     return await _load_trip_order_out(db, trip_order)
 
 
 @router.get("/trip-orders", response_model=PaginatedResponse[TripOrderOut])
 async def list_trip_orders(
     client_id: int | None = None,
-    driver_id: int | None = None,
     status: str | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
@@ -301,9 +297,6 @@ async def list_trip_orders(
     if client_id is not None:
         query = query.where(TripOrder.client_id == client_id)
         count_query = count_query.where(TripOrder.client_id == client_id)
-    if driver_id is not None:
-        query = query.where(TripOrder.driver_id == driver_id)
-        count_query = count_query.where(TripOrder.driver_id == driver_id)
     if status is not None:
         query = query.where(TripOrder.status == status)
         count_query = count_query.where(TripOrder.status == status)
@@ -427,11 +420,6 @@ async def update_trip_order(
 
     await db.commit()
     await db.refresh(trip_order)
-
-    # Enqueue salary recalculation if matched work orders changed
-    if new_matched_ids:
-        ref_date = trip_order.trip_date if hasattr(trip_order, "trip_date") and trip_order.trip_date else date.today()
-        await _enqueue_salary_recalc(db, trip_order.driver_id, ref_date)
 
     return await _load_trip_order_out(db, trip_order)
 
