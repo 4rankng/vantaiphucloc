@@ -199,21 +199,21 @@ export function RouteList() {
             const to = parts[1] ?? ''
             return (
               <>
-                {/* Dark green header */}
-                <div className="px-6 pt-6 pb-7" style={{ background: '#0f4c2a' }}>
+                {/* Header */}
+                <div className="px-6 pt-6 pb-7" style={{ background: 'var(--theme-brand-primary)' }}>
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-[11px] font-medium uppercase tracking-[0.1em] mb-1.5"
                         style={{ color: 'rgba(255,255,255,0.5)' }}>Chi tiết tuyến</p>
                       <div className="flex items-center gap-2.5 flex-wrap">
-                        <span className="text-[22px] font-semibold text-white">{from}</span>
+                        <span className="text-[22px] font-semibold" style={{ color: 'var(--theme-text-on-brand)' }}>{from}</span>
                         {to && (
                           <>
                             <svg width="32" height="10" viewBox="0 0 32 10">
                               <line x1="0" y1="5" x2="24" y2="5" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" strokeDasharray="3 3"/>
                               <polygon points="24,0 32,5 24,10" fill="rgba(255,255,255,0.6)"/>
                             </svg>
-                            <span className="text-[22px] font-semibold text-white">{to}</span>
+                            <span className="text-[22px] font-semibold" style={{ color: 'var(--theme-text-on-brand)' }}>{to}</span>
                           </>
                         )}
                       </div>
@@ -224,22 +224,22 @@ export function RouteList() {
                   <div className="flex gap-0 mt-5">
                     <div className="flex-1">
                       <div className="flex items-center gap-1.5 mb-1">
-                        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: '#6ee7b7' }} />
+                        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: 'rgba(255,255,255,0.6)' }} />
                         <span className="text-[10px] font-medium uppercase tracking-[0.08em]"
-                          style={{ color: 'rgba(255,255,255,0.5)' }}>Điểm lấy</span>
+                          style={{ color: 'rgba(255,255,255,0.6)' }}>Điểm lấy</span>
                       </div>
-                      <p className="text-[13px] font-semibold text-white pl-[15px]">
+                      <p className="text-[13px] font-semibold pl-[15px]" style={{ color: 'var(--theme-text-on-brand)' }}>
                         {selected.pickupLocation || '—'}
                       </p>
                     </div>
                     <div className="w-px mx-4 self-stretch" style={{ background: 'rgba(255,255,255,0.12)' }} />
                     <div className="flex-1">
                       <div className="flex items-center gap-1.5 mb-1">
-                        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: '#fbbf24' }} />
+                        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: 'rgba(255,255,255,0.6)' }} />
                         <span className="text-[10px] font-medium uppercase tracking-[0.08em]"
-                          style={{ color: 'rgba(255,255,255,0.5)' }}>Điểm trả</span>
+                          style={{ color: 'rgba(255,255,255,0.6)' }}>Điểm trả</span>
                       </div>
-                      <p className="text-[13px] font-semibold text-white pl-[15px]">
+                      <p className="text-[13px] font-semibold pl-[15px]" style={{ color: 'var(--theme-text-on-brand)' }}>
                         {selected.dropoffLocation || '—'}
                       </p>
                     </div>
@@ -249,7 +249,7 @@ export function RouteList() {
                 {/* Price cards */}
                 <div className="px-6 pt-5">
                   <p className="text-[10px] font-medium uppercase tracking-[0.09em] mb-3"
-                    style={{ color: '#9ca3af' }}>Giá cước</p>
+                    style={{ color: 'var(--theme-text-muted)' }}>Giá cước</p>
                   <div className="grid grid-cols-2 gap-2.5">
                     {[
                       { label: 'Container 20ft', raw: selected.type20ft },
@@ -261,13 +261,13 @@ export function RouteList() {
                       const suffix = match?.[2] ?? ''
                       return (
                         <div key={label} className="rounded-lg px-4 py-3.5"
-                          style={{ background: '#f8faf9', border: '1px solid #e5e7eb' }}>
+                          style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
                           <div className="flex items-center gap-1.5 mb-1.5">
-                            <Container className="w-3.5 h-3.5" style={{ color: '#6b7280' }} />
-                            <span className="text-[11px] font-semibold" style={{ color: '#6b7280' }}>{label}</span>
+                            <Container className="w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
+                            <span className="text-[11px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>{label}</span>
                           </div>
-                          <p className="m-0 text-[20px] font-semibold leading-none" style={{ color: '#111827' }}>
-                            {main}<span className="text-[13px] font-medium" style={{ color: '#6b7280' }}>{suffix}</span>
+                          <p className="m-0 text-[20px] font-semibold leading-none" style={{ color: 'var(--theme-text-primary)' }}>
+                            {main}<span className="text-[13px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>{suffix}</span>
                           </p>
                         </div>
                       )
@@ -278,14 +278,14 @@ export function RouteList() {
                 {/* Hai chiều row */}
                 <div className="px-6 pt-3.5">
                   <div className="flex items-center justify-between rounded-lg px-4 py-3.5"
-                    style={{ background: '#f8faf9', border: '1px solid #e5e7eb' }}>
-                    <span className="text-[13px] font-medium" style={{ color: '#374151' }}>Hai chiều</span>
+                    style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
+                    <span className="text-[13px] font-medium" style={{ color: 'var(--theme-text-primary)' }}>Hai chiều</span>
                     {selected.isTwoWay ? (
                       <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-sm"
-                        style={{ background: '#dcfce7', color: '#16a34a' }}>Có</span>
+                        style={{ background: 'color-mix(in srgb, var(--theme-status-success) 20%, transparent)', color: 'var(--theme-status-success)' }}>Có</span>
                     ) : (
                       <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-sm"
-                        style={{ background: '#fee2e2', color: '#dc2626' }}>Không</span>
+                        style={{ background: 'color-mix(in srgb, var(--theme-status-error) 20%, transparent)', color: 'var(--theme-status-error)' }}>Không</span>
                     )}
                   </div>
                 </div>
@@ -295,17 +295,17 @@ export function RouteList() {
                   <button
                     onClick={() => setDeleteConfirm(true)}
                     className="flex items-center justify-center gap-1.5 py-3 rounded-lg text-sm font-semibold transition-colors"
-                    style={{ border: '1.5px solid #fecaca', background: '#fff', color: '#dc2626' }}
-                    onMouseOver={e => (e.currentTarget.style.background = '#fef2f2')}
-                    onMouseOut={e => (e.currentTarget.style.background = '#fff')}>
+                    style={{ border: '1.5px solid var(--theme-status-error)', background: 'var(--theme-bg-secondary)', color: 'var(--theme-status-error)' }}
+                    onMouseOver={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--theme-status-error) 8%, transparent)')}
+                    onMouseOut={e => (e.currentTarget.style.background = 'var(--theme-bg-secondary)')}>
                     <Trash2 className="w-3.5 h-3.5" /> Xoá
                   </button>
                   <button
                     onClick={() => handleOpenEdit(selected!)}
                     className="flex items-center justify-center gap-1.5 py-3 rounded-lg text-sm font-semibold transition-colors"
-                    style={{ background: '#16a34a', color: '#fff', border: 'none' }}
-                    onMouseOver={e => (e.currentTarget.style.background = '#15803d')}
-                    onMouseOut={e => (e.currentTarget.style.background = '#16a34a')}>
+                    style={{ background: 'var(--theme-status-success)', color: 'var(--theme-text-on-brand)', border: 'none' }}
+                    onMouseOver={e => (e.currentTarget.style.opacity = '0.9')}
+                    onMouseOut={e => (e.currentTarget.style.opacity = '1')}>
                     <Pencil className="w-3.5 h-3.5" /> Chỉnh sửa
                   </button>
                 </div>

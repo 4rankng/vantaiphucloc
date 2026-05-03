@@ -433,13 +433,6 @@ export function TripList() {
       <div className="card overflow-hidden">
         {/* Table toolbar */}
         <div className="flex items-center gap-3 p-3 border-b" style={{ borderColor: 'var(--theme-border-default)' }}>
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Tìm mã lệnh, khách hàng, tài xế, container, biển số..."
-            className="search-pill flex-1 max-w-sm"
-          />
           <FilterToolbar
             search={search}
             onSearchChange={setSearch}

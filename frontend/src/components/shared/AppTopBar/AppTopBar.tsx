@@ -21,10 +21,10 @@ import { OfflineTopBarIcon } from '@/components/shared/OfflineIndicator/OfflineI
 
 // Light theme tokens (glass over green gradient)
 const LIGHT = {
-  iconBg: 'rgba(0, 99, 42, 0.08)',
-  iconColor: '#00632a',
-  titleColor: '#00632a',
-  subtitleColor: 'rgba(0, 99, 42, 0.6)',
+  iconBg: 'rgba(5, 150, 105, 0.08)',
+  iconColor: 'var(--theme-brand-primary)',
+  titleColor: 'var(--theme-brand-primary)',
+  subtitleColor: 'rgba(5, 150, 105, 0.6)',
 }
 
 // Dark theme tokens (solid dark-green bar)
@@ -53,6 +53,11 @@ interface PageVariantProps extends AppTopBarBaseProps {
   title: string
   onBack?: () => void
   onMenu?: () => void
+  /**
+   * If true, show the back button in the top bar. Default: false.
+   * Recommended: add back navigation inline in the page body instead.
+   */
+  showBackButton?: boolean
 }
 
 export type AppTopBarProps = HomeVariantProps | PageVariantProps
@@ -91,8 +96,8 @@ export function AppTopBar(props: AppTopBarProps) {
             <img src="/logo.avif" alt="" className="w-8 h-8 shrink-0 object-contain rounded-md" />
           )}
 
-          {/* Back arrow — shown on page variant when onBack provided */}
-          {props.variant === 'page' && props.onBack && (
+          {/* Back arrow — shown on page variant when showBackButton is true AND onBack provided */}
+          {props.variant === 'page' && props.showBackButton && props.onBack && (
             <button
               onClick={props.onBack}
               className="w-8 h-8 flex items-center justify-center rounded-full shrink-0 touch-manipulation"

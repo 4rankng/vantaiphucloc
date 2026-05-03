@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { apiClient } from '@/services/api'
 import { useToast } from '@/components/atoms/Toast'
@@ -144,6 +145,7 @@ function Divider() {
 // ─── Profile page ─────────────────────────────────────────────────────────────
 
 export function Profile() {
+  const navigate = useNavigate()
   const { user, logout, updateUser } = useAuth()
   const toast = useToast()
 
@@ -213,7 +215,19 @@ export function Profile() {
   return (
     <div className="pb-20 space-y-5">
 
-      {/* ── Simple profile header ── */}
+      {/* Back button — inline in page body */}
+      <button
+        onClick={() => navigate(-1)}
+        className="inline-flex items-center gap-1.5 text-sm font-medium mb-2"
+        style={{ color: 'var(--theme-text-secondary)' }}
+      >
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+          <path d="M19 12H5M12 19l-7-7 7-7" />
+        </svg>
+        Quay lại
+      </button>
+
+      {/* ── Simple profile header (avatar + role only — info lives in form rows below) ── */}
       <div className="flex items-center gap-4 px-1 py-2">
         <div
           className="w-14 h-14 rounded-lg flex items-center justify-center text-xl font-bold text-white shrink-0"
@@ -221,20 +235,12 @@ export function Profile() {
         >
           {initials}
         </div>
-        <div className="min-w-0">
-          <p className="text-base font-bold leading-tight truncate" style={{ color: 'var(--theme-text-primary)' }}>
-            {fullName || user?.name || '—'}
-          </p>
-          {phone && (
-            <p className="text-sm mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{phone}</p>
-          )}
-          <span
-            className="inline-block text-xs font-semibold px-2 py-0.5 rounded-full mt-1"
-            style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
-          >
-            {roleLabel}
-          </span>
-        </div>
+        <span
+          className="inline-block text-xs font-semibold px-2.5 py-1 rounded-full"
+          style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
+        >
+          {roleLabel}
+        </span>
       </div>
 
       {/* ── Thông tin cá nhân ── */}
