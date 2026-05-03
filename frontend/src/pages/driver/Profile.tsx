@@ -81,33 +81,33 @@ function EditableRow({
       </div>
 
       {editing ? (
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-7 h-7 flex items-center justify-center rounded-full transition-colors"
+            className="touch-target w-10 h-10 flex items-center justify-center rounded-full transition-colors"
             style={{ background: 'var(--theme-brand-primary)', color: 'white' }}
             aria-label="Lưu"
           >
-            <Check className="w-3.5 h-3.5" />
+            <Check className="w-4 h-4" />
           </button>
           <button
             onClick={handleCancel}
-            className="w-7 h-7 flex items-center justify-center rounded-full transition-colors"
+            className="touch-target w-10 h-10 flex items-center justify-center rounded-full transition-colors"
             style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
             aria-label="Huỷ"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       ) : (
         <button
           onClick={() => setEditing(true)}
-          className="w-7 h-7 flex items-center justify-center rounded-full shrink-0 transition-colors hover:bg-[var(--theme-bg-tertiary)]"
+          className="touch-target w-10 h-10 flex items-center justify-center rounded-full shrink-0 transition-colors hover:bg-[var(--theme-bg-tertiary)]"
           style={{ color: 'var(--theme-text-muted)' }}
           aria-label={`Sửa ${label}`}
         >
-          <Pencil className="w-3.5 h-3.5" />
+          <Pencil className="w-4 h-4" />
         </button>
       )}
     </div>
@@ -129,7 +129,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
     <div
-      className={`rounded-2xl overflow-hidden ${className}`}
+      className={`rounded-lg overflow-hidden ${className}`}
       style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}
     >
       {children}
@@ -216,7 +216,7 @@ export function Profile() {
       {/* ── Simple profile header ── */}
       <div className="flex items-center gap-4 px-1 py-2">
         <div
-          className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold text-white shrink-0"
+          className="w-14 h-14 rounded-lg flex items-center justify-center text-xl font-bold text-white shrink-0"
           style={{ background: 'var(--theme-brand-primary)' }}
         >
           {initials}
@@ -281,7 +281,7 @@ export function Profile() {
       <div className="flex gap-3">
         <button
           onClick={() => setPwDialog(true)}
-          className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold text-sm touch-manipulation transition-opacity hover:opacity-80"
+          className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-lg font-semibold text-sm touch-manipulation transition-opacity hover:opacity-80"
           style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)', boxShadow: 'var(--theme-shadow-card)' }}
         >
           <KeyRound className="w-4 h-4" />
@@ -289,7 +289,7 @@ export function Profile() {
         </button>
         <button
           onClick={logout}
-          className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold text-sm touch-manipulation transition-opacity hover:opacity-80"
+          className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-lg font-semibold text-sm touch-manipulation transition-opacity hover:opacity-80"
           style={{ background: 'var(--theme-status-error-light)', color: 'var(--theme-status-error)' }}
         >
           <LogOut className="w-4 h-4" />

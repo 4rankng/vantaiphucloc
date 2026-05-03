@@ -44,6 +44,18 @@ export function Login() {
       <div className="login-bg-circle login-bg-circle--br" />
       <div className="login-bg-wave" />
 
+      {/* Subtle watermark illustration (bottom-right) */}
+      <div
+        className="absolute bottom-0 right-0 opacity-40 pointer-events-none"
+        style={{ zIndex: 0 }}
+      >
+        <img
+          src="/illustrations/empty-trips.svg"
+          alt=""
+          className="h-48 w-auto opacity-50"
+        />
+      </div>
+
       {/* Single self-contained card */}
       <div className="login-card animate-fade-slide-up">
 

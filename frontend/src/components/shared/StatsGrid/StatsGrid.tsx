@@ -36,7 +36,7 @@ export interface StatsGridProps {
 function StatCardSkeleton() {
   return (
     <div
-      className="rounded-2xl border p-3 lg:p-4"
+      className="rounded-lg border p-3 lg:p-4"
       style={{
         background: 'var(--theme-bg-secondary)',
         borderColor: 'var(--theme-border-default)',
@@ -79,24 +79,25 @@ function StatCard({
   return (
     <Component
       onClick={onClick}
-      className={`rounded-2xl border p-3 lg:p-4 text-left transition-all ${
+      className={`card p-4 text-left transition-all ${
         isClickable
-          ? 'cursor-pointer hover:border-[color-mix(in_srgb,var(--theme-brand-primary)_30%,transparent)] hover:shadow-md active:scale-[0.98]'
+          ? 'cursor-pointer hover:border-[color-mix(in_srgb,var(--theme-brand-primary)_30%,transparent)] active:scale-[0.98]'
           : ''
       }`}
       style={{
         background: 'var(--theme-bg-secondary)',
         borderColor: 'var(--theme-border-default)',
+        borderRadius: 'var(--theme-radius-lg, 10px)',
       }}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           {/* Label */}
-          <p className="typo-label mb-1">{label}</p>
+          <p className="typo-label mb-2">{label}</p>
 
-          {/* Value */}
+          {/* Value — using typo-display for lg screens */}
           <p
-            className="typo-value-lg font-display leading-tight break-all"
+            className="font-display text-2xl lg:text-3xl font-700 leading-tight break-all tabular-nums"
             style={{ color: valueColor ?? 'var(--theme-text-primary)' }}
           >
             {value}
@@ -104,20 +105,20 @@ function StatCard({
 
           {/* Subtitle */}
           {subtitle && (
-            <p className="typo-meta mt-0.5">{subtitle}</p>
+            <p className="typo-meta mt-1">{subtitle}</p>
           )}
 
           {/* Trend */}
           {typeof trend === 'number' && (
-            <div className="flex items-center gap-1.5 mt-1.5">
+            <div className="flex items-center gap-1.5 mt-2">
               <div
-                className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 typo-label"
+                className="flex items-center gap-0.5 px-2 py-1 text-xs font-semibold rounded-full"
                 style={{
                   background: `color-mix(in srgb, ${trendColor} 12%, transparent)`,
                   color: trendColor,
                 }}
               >
-                <TrendIcon className="h-2.5 w-2.5" />
+                <TrendIcon className="h-3 w-3" />
                 <span>{Math.abs(trend)}%</span>
               </div>
               {trendLabel && (

@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePricings, useClients, useCreatePricing, useCreateClient } from '@/hooks/use-queries'
+import { PageHeader } from '@/components/shared/PageHeader'
+import { EmptyState } from '@/components/shared/EmptyState'
 import type { Pricing } from '@/data/domain'
 import { CreateClientDialog } from '@/components/shared/CreateClientDialog'
 import { PricingForm } from './PricingForm'
-import { Plus, ChevronRight, Tag } from 'lucide-react'
+import { Plus, Tag } from 'lucide-react'
 
 interface Props {
   /** Base path for the role, e.g. "/accountant" or "/director" */
@@ -49,28 +51,28 @@ export function PricingClientCards({ basePath }: Props) {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {[1, 2, 3, 4].map(i => (
-          <div key={i} className="h-24 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
-        ))}
+      <div className="space-y-4">
+        <PageHeader
+          title="Bảng giá"
+          onAdd={() => setShowForm(true)}
+          addLabel="Thêm bảng giá"
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="h-20 rounded-lg animate-pulse skeleton-shimmer" />
+          ))}
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-4">
-      {/* Page header */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Bảng giá</p>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold touch-manipulation transition-colors"
-          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Thêm
-        </button>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Bảng giá"
+        onAdd={() => setShowForm(true)}
+        addLabel="Thêm bảng giá"
+      />
 
       {showForm && (
         <PricingForm
@@ -82,38 +84,44 @@ export function PricingClientCards({ basePath }: Props) {
       )}
 
       {clientSummaries.length === 0 && !showForm ? (
-        <div className="text-center py-12">
-          <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có bảng giá</p>
+        <div className="card p-8">
+          <EmptyState
+            icon={<img src="/illustrations/empty-pricing.svg" alt="" className="h-28 w-auto" />}
+            title="Chưa có bảng giá"
+            description="Tạo bảng giá đầu tiên để bắt đầu quản lý giá cước."
+            illustration
+            action={
+              <button
+                onClick={() => setShowForm(true)}
+                className="btn-primary"
+              >
+                <Plus size={16} />
+                Tạo bảng giá mới
+              </button>
+            }
+          />
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {clientSummaries.map(({ clientId, clientName, pricingCount, routeSet }) => (
             <button
               key={clientId}
               onClick={() => navigate(`${basePath}/pricing/${clientId}`)}
-              className="text-left rounded-2xl p-4 transition-all touch-manipulation hover:scale-[1.01] active:scale-[0.99]"
-              style={{
-                background: 'var(--theme-bg-secondary)',
-                border: '1px solid var(--theme-border-default)',
-                boxShadow: 'var(--theme-shadow-card)',
-              }}
+              className="card-interactive p-4 text-left"
             >
               <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-sm font-bold truncate" style={{ color: 'var(--theme-text-primary)' }}>
-                    {clientName}
-                  </p>
-                  <div className="flex items-center gap-3 mt-2">
-                    <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                      <Tag className="w-3 h-3" />
-                      {routeSet.size} cung đường
-                    </span>
-                    <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                <div className="min-w-0 flex-1">
+                  <h3 className="typo-h2 truncate">{clientName}</h3>
+                  <div className="flex flex-col gap-2 mt-3">
+                    <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--theme-text-secondary)' }}>
+                      <Tag size={14} />
+                      <span>{routeSet.size} cung đường</span>
+                    </div>
+                    <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
                       {pricingCount} mức giá
-                    </span>
+                    </div>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 shrink-0 mt-0.5" style={{ color: 'var(--theme-text-muted)' }} />
               </div>
             </button>
           ))}

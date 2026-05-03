@@ -5,6 +5,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from '@/components/ui'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { WorkOrderJobCard } from '@/components/shared/WorkOrderJobCard'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { FilterToolbar } from '@/components/shared/FilterToolbar'
@@ -332,7 +333,7 @@ export function WorkOrderList() {
     return (
       <div className="space-y-2">
         {[1, 2, 3].map(i => (
-          <div key={i} className="h-20 rounded-2xl skeleton-shimmer" />
+          <div key={i} className="h-20 rounded-lg skeleton-shimmer" />
         ))}
       </div>
     )
@@ -341,6 +342,8 @@ export function WorkOrderList() {
   if (isMobile) {
     return (
       <div className="space-y-3">
+        <PageHeader title="Đối soát" />
+
         <FilterToolbar
           search={search}
           onSearchChange={setSearch}
@@ -367,8 +370,7 @@ export function WorkOrderList() {
 
         {filtered.length === 0 ? (
           <div
-            className="rounded-2xl p-10 text-center"
-            style={{ background: 'var(--theme-bg-secondary)' }}
+            className="rounded-lg p-10 text-center card"
           >
             <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
               {search || statusFilter !== 'all' ? 'Không tìm thấy phiếu nào' : 'Chưa có phiếu nào'}
@@ -393,48 +395,82 @@ export function WorkOrderList() {
   }
 
   return (
-    <PageContainer>
-      <div className="space-y-4">
-        <FilterToolbar
-          search={search}
-          onSearchChange={setSearch}
-          searchPlaceholder="Tìm mã phiếu, biển số, tài xế, khách hàng, container..."
-          statusOptions={STATUS_OPTIONS}
-          selectedStatus={statusFilter}
-          onStatusChange={(s) => setStatusFilter(s as StatusFilter)}
-          onClearFilters={handleClearFilters}
-          extraAction={
-            <Button
-              onClick={() => setImportOpen(true)}
-              className="h-8 gap-1.5 text-xs font-semibold rounded-lg"
-              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-            >
-              <FileSpreadsheet className="h-3.5 w-3.5" />
-              Nhập Excel
-            </Button>
-          }
-        />
+    <div className="space-y-5">
+      <PageHeader
+        title="Đối soát"
+        actions={
+          <Button
+            onClick={() => setImportOpen(true)}
+            className="btn-primary h-9 gap-1.5 text-xs font-semibold"
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5" />
+            Nhập Excel
+          </Button>
+        }
+      />
 
-        <DataTablePro
-          data={filtered}
-          columns={columns}
-          rowKey={(row) => row.id}
-          onRowClick={(row) => navigate(`/accountant/match/${row.id}`)}
-          rowActions={rowActions}
-          loading={loading}
-          stickyHeader
-          striped
-          emptyState={
+      <div className="card overflow-hidden">
+        <div className="flex items-center gap-3 p-3 border-b" style={{ borderColor: 'var(--theme-border-default)' }}>
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Tìm mã phiếu, biển số, tài xế, khách hàng, container..."
+            className="search-pill flex-1 max-w-sm"
+          />
+          <FilterToolbar
+            search={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Tìm mã phiếu, biển số, tài xế, khách hàng, container..."
+            statusOptions={STATUS_OPTIONS}
+            selectedStatus={statusFilter}
+            onStatusChange={(s) => setStatusFilter(s as StatusFilter)}
+            onClearFilters={handleClearFilters}
+            compact
+          />
+        </div>
+
+        <div className="hidden lg:block overflow-x-auto">
+          <DataTablePro
+            data={filtered}
+            columns={columns}
+            rowKey={(row) => row.id}
+            onRowClick={(row) => navigate(`/accountant/match/${row.id}`)}
+            rowActions={rowActions}
+            loading={loading}
+            stickyHeader
+            striped
+            emptyState={
+              <div className="py-8 text-center">
+                <p className="text-sm font-semibold mb-1" style={{ color: 'var(--theme-text-primary)' }}>
+                  {search || statusFilter !== 'all' ? 'Không tìm thấy phiếu nào' : 'Chưa có phiếu nào'}
+                </p>
+              </div>
+            }
+          />
+        </div>
+
+        <div className="lg:hidden divide-y" style={{ borderColor: 'var(--theme-border-light)' }}>
+          {filtered.length === 0 ? (
             <div className="py-8 text-center">
-              <p className="text-sm font-semibold mb-1" style={{ color: 'var(--theme-text-primary)' }}>
+              <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
                 {search || statusFilter !== 'all' ? 'Không tìm thấy phiếu nào' : 'Chưa có phiếu nào'}
               </p>
             </div>
-          }
-        />
+          ) : (
+            filtered.map(job => (
+              <WorkOrderJobCard
+                key={job.id}
+                job={job}
+                status={job.status === 'PENDING' ? 'unmatched' : job.status === 'MATCHED' ? 'matched' : 'completed'}
+                onClick={() => navigate(`/accountant/match/${job.id}`)}
+              />
+            ))
+          )}
+        </div>
       </div>
 
       <ImportDialog />
-    </PageContainer>
+    </div>
   )
 }

@@ -1,20 +1,21 @@
 import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTripOrders, useWorkOrders, useUpdateTripOrder, useReconcile, useToggleTripConfirmation } from '@/hooks/use-queries'
-import { InfoRow } from '@/components/shared/InfoRow'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { ConfirmationCheckbox } from '@/components/shared/ConfirmationCheckbox'
 import { formatCurrencyFull, WORK_TYPES, type WorkType } from '@/data/domain'
-import { Building2, Route, UserCircle, Wallet, Link2, Pencil, Lock, Unlink } from 'lucide-react'
+import { Building2, Route, UserCircle, Wallet, Link2, Pencil, Lock, Unlink, Trash2, ChevronLeft } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { useToast } from '@/components/atoms/Toast'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 
 export function TripDetail() {
   const { tripId: tripIdStr } = useParams<{ tripId: string }>()
+  const navigate = useNavigate()
   const tripId = Number(tripIdStr)
   const { data: trips = [], isLoading: loadingTrips } = useTripOrders()
   const { data: jobs = [], isLoading: loadingJobs } = useWorkOrders()
@@ -45,11 +46,22 @@ export function TripDetail() {
   }, [jobs, trip])
 
   if (loading) {
-    return <div className="space-y-2">{[1, 2].map(i => <div key={i} className="h-20 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}</div>
+    return <div className="space-y-4">{[1, 2].map(i => <div key={i} className="h-24 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}</div>
   }
 
   if (!trip) {
-    return <div className="p-4 text-center" style={{ color: 'var(--theme-text-muted)' }}>Không tìm thấy chuyến</div>
+    return (
+      <div className="space-y-4">
+        <PageHeader
+          title="Không tìm thấy chuyến"
+          breadcrumbs={
+            <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm" style={{ color: 'var(--theme-text-muted)' }}>
+              <ChevronLeft size={14} /> Quay lại
+            </button>
+          }
+        />
+      </div>
+    )
   }
 
   const handleOpenEdit = () => {
@@ -128,126 +140,148 @@ export function TripDetail() {
     }
   }
 
+  const statusVariant = trip.status === 'DRAFT' ? 'draft' : trip.status === 'PENDING' ? 'warning' : trip.status === 'COMPLETED' ? 'success' : 'error'
+  const statusLabel = trip.status === 'DRAFT' ? 'Nháp' : trip.status === 'PENDING' ? 'Chờ đối soát' : trip.status === 'COMPLETED' ? 'Đã khớp' : 'Đã huỷ'
+
   return (
-    <div className="space-y-4">
-      {/* Trip info card */}
-      <div className="rounded-2xl p-4 space-y-1"
-        style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
-        <div className="flex items-center justify-between mb-2">
-          <p className="typo-h2">Đơn hàng</p>
+    <div className="space-y-6">
+      {/* Page header with title, breadcrumbs, and actions */}
+      <PageHeader
+        title={`#${trip.id}`}
+        subtitle={trip.clientName}
+        breadcrumbs={
+          <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm" style={{ color: 'var(--theme-text-muted)' }}>
+            <ChevronLeft size={14} /> Đơn hàng
+          </button>
+        }
+        actions={
           <div className="flex items-center gap-2">
-            <ConfirmationCheckbox
-              isConfirmed={trip.isConfirmed}
-              onToggle={handleToggleConfirmation}
-              disabled={toggling || trip.status === 'CANCELLED'}
-              label="Đã chốt"
-            />
-            {trip.isConfirmed ? (
-              <div className="flex items-center gap-1 px-2 py-1 rounded-lg"
-                style={{ background: 'var(--theme-status-success-light)' }}>
-                <Lock className="w-3 h-3" style={{ color: 'var(--theme-status-success)' }} />
-                <span className="text-xs font-semibold" style={{ color: 'var(--theme-status-success)' }}>Đã khoá</span>
-              </div>
-            ) : (
-              <button onClick={handleOpenEdit}
-                className="h-7 w-7 flex items-center justify-center rounded-lg touch-manipulation"
-                style={{ color: 'var(--theme-text-muted)' }}>
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
-            )}
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-              style={{
-                background: trip.status === 'DRAFT' ? 'var(--theme-bg-tertiary)'
-                  : trip.status === 'PENDING' ? 'var(--theme-status-warning-light)'
-                  : trip.status === 'COMPLETED' ? 'var(--theme-status-success-light)'
-                  : 'var(--theme-status-error-light)',
-                color: trip.status === 'DRAFT' ? 'var(--theme-text-muted)'
-                  : trip.status === 'PENDING' ? 'var(--theme-status-warning)'
-                  : trip.status === 'COMPLETED' ? 'var(--theme-status-success)'
-                  : 'var(--theme-status-error)',
-              }}>
-              {trip.status === 'DRAFT' ? 'Nháp'
-                : trip.status === 'PENDING' ? 'Chờ đối soát'
-                : trip.status === 'COMPLETED' ? 'Đã khớp'
-                : 'Đã huỷ'}
-            </span>
-          </div>
-        </div>
-        {trip.isConfirmed && (
-          <div className="rounded-xl px-3 py-2 mb-2 flex items-center gap-2"
-            style={{ background: 'var(--theme-status-success-light)' }}>
-            <Lock className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--theme-status-success)' }} />
-            <p className="text-xs font-semibold" style={{ color: 'var(--theme-status-success)' }}>
-              Lệnh đã chốt với khách — không thể thay đổi
-            </p>
-          </div>
-        )}
-        <InfoRow icon={Building2} label="Khách hàng" value={trip.clientName} noBorder />
-        <InfoRow icon={Route} label="Cung đường" value={trip.route} noBorder />
-        <InfoRow icon={UserCircle} label="Tài xế" value={`${trip.driverName} · ${trip.tractorPlate}`} noBorder />
-        <InfoRow icon={Wallet} label="Lương + Phụ cấp" value={`${formatCurrencyFull(trip.driverSalary)} + ${formatCurrencyFull(trip.allowance)}`} noBorder />
-      </div>
-
-      {/* Cong info */}
-      <div className="rounded-2xl p-3"
-        style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
-        <div className="flex items-center gap-2">
-          <ContBadge type={trip.workType} />
-          <span className="text-sm font-mono" style={{ color: 'var(--theme-text-primary)' }}>{trip.containerNumber}</span>
-        </div>
-      </div>
-
-      {/* Matched jobs */}
-      {matchedJobs.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <p className="typo-label" style={{ color: 'var(--theme-status-success)' }}>
-              Đã match ({matchedJobs.length})
-            </p>
             {!trip.isConfirmed && (
-              <button
-                onClick={() => setShowUnmatchDialog(true)}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold transition-colors touch-manipulation"
-                style={{ color: 'var(--theme-status-error)', background: 'var(--theme-status-error-light)' }}
-              >
-                <Unlink className="w-3 h-3" /> Bỏ match
+              <button onClick={handleOpenEdit} className="btn-secondary" aria-label="Sửa">
+                <Pencil size={16} />
+              </button>
+            )}
+            {trip.status !== 'COMPLETED' && (
+              <button onClick={() => setShowMatchDialog(true)} className="btn-primary">
+                <Link2 size={16} />
+                <span className="hidden sm:inline">Khớp cont</span>
               </button>
             )}
           </div>
-          <div className="space-y-2">
-            {matchedJobs.map(job => (
-              <div key={job.id} className="rounded-2xl p-3"
-                style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', borderLeft: '3px solid var(--theme-status-success)' }}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ContBadge type={job.containers[0]?.workType ?? 'E20'} />
-                    <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                      {job.code}
-                    </span>
-                  </div>
-                  <span className="typo-mono text-sm" style={{ color: 'var(--theme-brand-primary)' }}>
-                    {formatCurrencyFull(job.earning)}
+        }
+      />
+
+      {/* Main content — two column on desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left column — trip info (2/3 width) */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Header card with status and confirmation */}
+          <div className="card p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <span className={`chip chip-${statusVariant}`}>{statusLabel}</span>
+                {trip.isConfirmed && (
+                  <span className="chip chip-success">
+                    <Lock size={12} />
+                    Đã chốt
                   </span>
-                </div>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-                  {job.driverName} · {job.tractorPlate}
+                )}
+              </div>
+              <ConfirmationCheckbox
+                isConfirmed={trip.isConfirmed}
+                onToggle={handleToggleConfirmation}
+                disabled={toggling || trip.status === 'CANCELLED'}
+                label="Chốt chuyến"
+              />
+            </div>
+            {trip.isConfirmed && (
+              <div className="rounded-lg p-3 flex items-start gap-2 mb-4" style={{ background: 'var(--theme-status-success-light)' }}>
+                <Lock size={14} style={{ color: 'var(--theme-status-success)' }} className="mt-0.5 shrink-0" />
+                <p className="typo-meta" style={{ color: 'var(--theme-status-success-text)' }}>
+                  Lệnh đã chốt với khách — không thể thay đổi
                 </p>
               </div>
-            ))}
+            )}
+            <div className="divider-h mb-4" />
+            <dl className="space-y-3">
+              <div className="flex items-start justify-between">
+                <dt className="typo-form-label flex items-center gap-2"><Building2 size={14} />Khách hàng</dt>
+                <dd className="typo-body text-right">{trip.clientName}</dd>
+              </div>
+              <div className="flex items-start justify-between">
+                <dt className="typo-form-label flex items-center gap-2"><Route size={14} />Cung đường</dt>
+                <dd className="typo-body text-right">{trip.route}</dd>
+              </div>
+              <div className="flex items-start justify-between">
+                <dt className="typo-form-label flex items-center gap-2"><UserCircle size={14} />Tài xế</dt>
+                <dd className="typo-body text-right">{trip.driverName} · {trip.tractorPlate}</dd>
+              </div>
+              <div className="flex items-start justify-between">
+                <dt className="typo-form-label flex items-center gap-2"><Wallet size={14} />Lương + Phụ cấp</dt>
+                <dd className="typo-mono text-right">{formatCurrencyFull(trip.driverSalary)} + {formatCurrencyFull(trip.allowance)}</dd>
+              </div>
+            </dl>
           </div>
-        </div>
-      )}
 
-      {/* Unmatched jobs — match action */}
-      {(trip.status === 'DRAFT' || trip.status === 'PENDING') && (
-        <div>
-          <button onClick={() => setShowMatchDialog(true)}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold transition-all active:scale-[0.98] touch-manipulation"
-            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-            <Link2 className="w-4 h-4" /> Khớp số cont
-          </button>
+          {/* Container info */}
+          <div className="card p-4">
+            <h3 className="typo-h3 mb-3">Container</h3>
+            <div className="flex items-center gap-3">
+              <ContBadge type={trip.workType} />
+              <span className="typo-mono">{trip.containerNumber}</span>
+            </div>
+          </div>
+
+          {/* Matched jobs */}
+          {matchedJobs.length > 0 && (
+            <div className="card p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="typo-h3">Đã khớp ({matchedJobs.length})</h3>
+                {!trip.isConfirmed && (
+                  <button
+                    onClick={() => setShowUnmatchDialog(true)}
+                    className="btn-ghost text-xs"
+                    style={{ color: 'var(--theme-status-error)' }}
+                  >
+                    <Unlink size={14} />
+                    Bỏ match
+                  </button>
+                )}
+              </div>
+              <div className="divider-h mb-4" />
+              <div className="space-y-3">
+                {matchedJobs.map(job => (
+                  <div key={job.id} className="p-3 rounded-lg" style={{ background: 'var(--theme-bg-tertiary)', borderLeft: '2px solid var(--theme-status-success)' }}>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <ContBadge type={job.containers[0]?.workType ?? 'E20'} />
+                        <span className="typo-mono font-semibold">{job.code}</span>
+                      </div>
+                      <span className="typo-mono" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyFull(job.earning)}</span>
+                    </div>
+                    <p className="typo-meta">{job.driverName} · {job.tractorPlate}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Right column — secondary info (1/3 width) */}
+        <div className="space-y-4">
+          {/* Match suggestions card */}
+          {(trip.status === 'DRAFT' || trip.status === 'PENDING') && (
+            <div className="card p-4">
+              <h3 className="typo-h3 mb-3">Khớp hàng</h3>
+              <p className="typo-body-sm mb-4">Chọn số cont từ danh sách để khớp với đơn hàng này</p>
+              <button onClick={() => setShowMatchDialog(true)} className="btn-primary w-full">
+                <Link2 size={16} />
+                Khớp cont
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Edit Trip Dialog */}
       <Dialog open={editTrip} onOpenChange={setEditTrip}>

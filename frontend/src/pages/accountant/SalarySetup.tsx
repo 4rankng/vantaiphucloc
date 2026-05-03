@@ -13,7 +13,7 @@ import { Settings, Calculator, Download, CheckCircle2, Clock, Wallet, ChevronDow
 
 const STATUS_CONFIG: Record<SalaryPeriodStatus, { label: string; bg: string; color: string }> = {
   OPEN:       { label: 'Chờ tính',  bg: 'var(--theme-status-warning-light)',  color: 'var(--theme-status-warning)'  },
-  CALCULATED: { label: 'Đã tính',   bg: '#DBEAFE',                            color: '#1D4ED8'                      },
+  CALCULATED: { label: 'Đã tính',   bg: 'var(--theme-status-info-light)',  color: 'var(--theme-status-info)'     },
   PAID:       { label: 'Đã trả',    bg: 'var(--theme-status-success-light)',  color: 'var(--theme-status-success)'  },
 }
 
@@ -52,7 +52,7 @@ function PeriodConfigSection() {
   }
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', boxShadow: 'var(--theme-shadow-card)' }}>
+    <div className="rounded-lg overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', boxShadow: 'var(--theme-shadow-card)' }}>
       <button
         onClick={() => setOpen(v => !v)}
         className="w-full flex items-center justify-between px-4 py-3 touch-manipulation"
@@ -159,7 +159,7 @@ function CalculateSection() {
   }
 
   return (
-    <div className="rounded-2xl p-4 space-y-3" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', boxShadow: 'var(--theme-shadow-card)' }}>
+    <div className="rounded-lg p-4 space-y-3" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', boxShadow: 'var(--theme-shadow-card)' }}>
       <div className="flex items-center gap-2">
         <Calculator className="w-4 h-4" style={{ color: 'var(--theme-brand-primary)' }} />
         <p className="typo-h2">Tính lương kỳ này</p>
@@ -216,12 +216,12 @@ function SalaryPeriodsList() {
   }
 
   if (isLoading) {
-    return <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-20 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}</div>
+    return <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-20 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}</div>
   }
 
   if (periods.length === 0) {
     return (
-      <div className="rounded-2xl p-8 text-center" style={{ background: 'var(--theme-bg-secondary)' }}>
+      <div className="rounded-lg p-8 text-center" style={{ background: 'var(--theme-bg-secondary)' }}>
         <Wallet className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--theme-text-muted)', opacity: 0.5 }} />
         <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Chưa có kỳ lương nào</p>
         <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Nhấn "Tính lương" để tạo kỳ lương đầu tiên</p>
@@ -243,7 +243,7 @@ function SalaryPeriodsList() {
               const isConfirming = confirmPay === period.id
 
               return (
-                <div key={period.id} className="rounded-2xl p-3 space-y-2"
+                <div key={period.id} className="rounded-lg p-3 space-y-2"
                   style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', boxShadow: 'var(--theme-shadow-card)' }}>
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>
@@ -315,15 +315,32 @@ function SalaryPeriodsList() {
 
 export function SalarySetup() {
   return (
-    <div className="space-y-4 pb-6">
-      <PeriodConfigSection />
-      <CalculateSection />
-      <div>
-        <p className="typo-label mb-2">
-          <Clock className="w-3 h-3 inline mr-1" />
-          Lịch sử kỳ lương
-        </p>
-        <SalaryPeriodsList />
+    <div className="page-container pb-6">
+      <div className="space-y-6">
+        {/* Page title */}
+        <div>
+          <h1 className="typo-h1">Cấu hình lương</h1>
+          <p className="typo-body-sm mt-1">Quản lý kỳ lương và tính toán lương tài xế</p>
+        </div>
+
+        {/* Period config + calculate (2 col layout on desktop) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div>
+            <PeriodConfigSection />
+          </div>
+          <div>
+            <CalculateSection />
+          </div>
+        </div>
+
+        {/* History section */}
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <Clock className="w-4 h-4" style={{ color: 'var(--theme-text-primary)' }} />
+            <h2 className="typo-h2">Lịch sử kỳ lương</h2>
+          </div>
+          <SalaryPeriodsList />
+        </div>
       </div>
     </div>
   )

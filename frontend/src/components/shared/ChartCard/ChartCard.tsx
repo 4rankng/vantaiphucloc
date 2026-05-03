@@ -15,7 +15,7 @@ interface ChartCardProps {
 export function ChartCard({ title, subtitle, actions, children, loading, className }: ChartCardProps) {
   return (
     <div
-      className={cn('rounded-2xl p-5', className)}
+      className={cn('rounded-lg p-5', className)}
       style={{
         background: 'var(--theme-bg-secondary)',
         boxShadow: 'var(--theme-shadow-sm)',

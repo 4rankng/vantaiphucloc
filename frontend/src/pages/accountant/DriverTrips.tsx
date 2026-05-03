@@ -1,14 +1,13 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWorkOrders } from '@/hooks/use-queries'
-import { MonthNavigator } from '@/components/shared/MonthNavigator'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { WorkOrderJobCard } from '@/components/shared/WorkOrderJobCard'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { DataTablePro, type Column } from '@/components/shared/DataTablePro'
 import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
-import { PageContainer } from '@/components/shared/PageContainer'
 import { useMonthParams } from './use-month-params'
-import { Search, Calendar, Truck, DollarSign } from 'lucide-react'
+import { Search, Calendar, Truck } from 'lucide-react'
 import { Input } from '@/components/ui'
 import { useIsMobile } from '@/hooks/use-mobile'
 import type { WorkOrder } from '@/data/domain'
@@ -157,7 +156,7 @@ export function DriverTrips() {
     return (
       <div className="space-y-2">
         {[1, 2, 3].map(i => (
-          <div key={i} className="h-20 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+          <div key={i} className="h-20 rounded-lg skeleton-shimmer" />
         ))}
       </div>
     )
@@ -167,17 +166,15 @@ export function DriverTrips() {
   if (isMobile) {
     return (
       <div className="space-y-3">
-        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
+        <PageHeader title="Chuyến đã đi" />
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-          <Input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Tìm tài xế, biển số, container, khách hàng..."
-            className="text-sm pl-9 h-9"
-          />
-        </div>
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Tìm tài xế, biển số, container, khách hàng..."
+          className="search-pill w-full"
+        />
 
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
@@ -203,37 +200,58 @@ export function DriverTrips() {
 
   // Desktop view
   return (
-    <PageContainer>
-      <div className="space-y-4">
-        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
+    <div className="space-y-5">
+      <PageHeader title="Chuyến đã đi" />
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-          <Input
+      <div className="card overflow-hidden">
+        <div className="flex items-center gap-3 p-3 border-b" style={{ borderColor: 'var(--theme-border-default)' }}>
+          <input
+            type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Tìm tài xế, biển số, container, khách hàng..."
-            className="text-sm pl-9 h-9"
+            className="search-pill flex-1 max-w-sm"
           />
         </div>
 
-        <DataTablePro
-          data={filtered}
-          columns={columns}
-          rowKey={(row) => row.id}
-          onRowClick={(row) => navigate(`/accountant/match/${row.id}`)}
-          loading={loading}
-          stickyHeader
-          striped
-          emptyState={
+        <div className="hidden lg:block overflow-x-auto">
+          <DataTablePro
+            data={filtered}
+            columns={columns}
+            rowKey={(row) => row.id}
+            onRowClick={(row) => navigate(`/accountant/match/${row.id}`)}
+            loading={loading}
+            stickyHeader
+            striped
+            emptyState={
+              <div className="py-8 text-center">
+                <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+                  {search ? 'Không tìm thấy chuyến nào' : 'Chưa có chuyến nào trong kỳ'}
+                </p>
+              </div>
+            }
+          />
+        </div>
+
+        <div className="lg:hidden divide-y" style={{ borderColor: 'var(--theme-border-light)' }}>
+          {filtered.length === 0 ? (
             <div className="py-8 text-center">
               <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
                 {search ? 'Không tìm thấy chuyến nào' : 'Chưa có chuyến nào trong kỳ'}
               </p>
             </div>
-          }
-        />
+          ) : (
+            filtered.map(job => (
+              <WorkOrderJobCard
+                key={job.id}
+                job={job}
+                status={job.status === 'PENDING' ? 'unmatched' : 'matched'}
+                onClick={() => navigate(`/accountant/match/${job.id}`)}
+              />
+            ))
+          )}
+        </div>
       </div>
-    </PageContainer>
+    </div>
   )
 }

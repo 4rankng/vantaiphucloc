@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { FilterToolbar, type FilterOption } from '@/components/shared/FilterToolbar'
 import { StatusBadge } from '@/components/shared/StatusBadge'
@@ -352,7 +353,7 @@ export function ClientsAndVendors() {
   const renderMobile = () => {
     if (filtered.length === 0) {
       return (
-        <div className="rounded-2xl py-16 text-center" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
+        <div className="card py-16 text-center">
           <Building2 className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--theme-text-muted)' }} />
           <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Không có đối tác</p>
           <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Nhấn "+ Thêm" để bắt đầu</p>
@@ -366,8 +367,7 @@ export function ClientsAndVendors() {
           <button
             key={`${row.kind}-${row.id}`}
             onClick={() => setSelected(row)}
-            className="w-full text-left rounded-2xl p-3 transition-all active:scale-[0.98] touch-manipulation"
-            style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
+            className="card-interactive p-3"
           >
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
@@ -423,7 +423,7 @@ export function ClientsAndVendors() {
   const renderDesktop = () => {
     if (!loading && filtered.length === 0) {
       return (
-        <div className="rounded-2xl py-16 text-center" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
+        <div className="card py-16 text-center">
           <Building2 className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--theme-text-muted)' }} />
           <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Không có đối tác</p>
           <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Nhấn "+ Thêm" để bắt đầu</p>
@@ -432,7 +432,7 @@ export function ClientsAndVendors() {
     }
 
     return (
-      <div className="rounded-2xl border border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] overflow-hidden shadow-sm">
+      <div className="card overflow-hidden">
         {/* Header */}
         <div className="overflow-x-auto">
         <div className="grid grid-cols-[200px_100px_100px_120px_180px_150px] gap-4 px-5 py-3 border-b border-[var(--theme-border-default)] min-w-[850px]">
@@ -519,36 +519,29 @@ export function ClientsAndVendors() {
   }
 
   return (
-    <div>
-      {/* Add button */}
-      <div className="flex justify-end mb-4">
-        <Button
-          onClick={handleOpenCreate}
-          className="h-9 px-3 gap-1.5 text-sm font-semibold"
-          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-        >
-          <Plus className="w-4 h-4" />
-          Thêm
-        </Button>
-      </div>
+    <div className="space-y-5">
+      {/* Page header */}
+      <PageHeader
+        title="Đối tác"
+        onAdd={handleOpenCreate}
+        addLabel="Thêm"
+      />
 
       {/* Filters */}
-      <div className="mb-4">
-        <FilterToolbar
-          search={search}
-          onSearchChange={setSearch}
-          searchPlaceholder="Tìm tên, điện thoại, MST..."
-          statusOptions={PARTNER_FILTERS}
-          selectedStatus={filter}
-          onStatusChange={setFilter}
-        />
-      </div>
+      <FilterToolbar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Tìm tên, điện thoại, MST..."
+        statusOptions={PARTNER_FILTERS}
+        selectedStatus={filter}
+        onStatusChange={setFilter}
+      />
 
       {/* Loading */}
       {loading && (
         <div className="space-y-2">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="h-14 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+            <div key={i} className="h-14 rounded-lg skeleton-shimmer" />
           ))}
         </div>
       )}

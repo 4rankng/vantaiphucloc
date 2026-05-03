@@ -17,37 +17,24 @@ export function LineEditor({ lines, onChange }: {
   }
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
-          Mức giá theo số lượng
-        </Label>
-        <button
-          onClick={addLine}
-          className="flex items-center gap-1 text-xs font-medium touch-manipulation"
-          style={{ color: 'var(--theme-brand-primary)' }}
-        >
-          <Plus className="w-3.5 h-3.5" /> Thêm mức
-        </button>
-      </div>
-
+    <div className="space-y-3">
       {lines.map((line, i) => (
         <div
           key={i}
-          className="rounded-xl p-2 space-y-2"
-          style={{ background: 'var(--theme-bg-tertiary)', border: '1px solid var(--theme-border-default)' }}
+          className="card p-4"
         >
-          <div className="flex items-center gap-2">
-            {/* Quantity selector */}
-            <div className="flex items-center gap-1">
+          {/* Header: Quantity selector + Remove button */}
+          <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-1.5">
               {[1, 2].map(q => (
                 <button
                   key={q}
                   onClick={() => updateLine(i, 'quantity', q)}
-                  className="px-2 py-1 rounded text-xs font-bold touch-manipulation"
+                  className="px-3 py-2 rounded-md text-sm font-bold transition-colors"
                   style={{
-                    background: line.quantity === q ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
+                    background: line.quantity === q ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
                     color: line.quantity === q ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
+                    border: '1px solid var(--theme-border-default)',
                   }}
                 >
                   ×{q}
@@ -58,45 +45,66 @@ export function LineEditor({ lines, onChange }: {
             {lines.length > 1 && (
               <button
                 onClick={() => removeLine(i)}
-                className="touch-manipulation shrink-0 ml-auto"
+                className="ml-auto p-1 rounded-md hover:bg-[var(--theme-bg-tertiary)] transition-colors"
                 style={{ color: 'var(--theme-status-error)' }}
+                title="Xoá mức giá này"
               >
-                <X className="w-3.5 h-3.5" />
+                <X size={18} />
               </button>
             )}
           </div>
 
-          <div className="grid grid-cols-3 gap-1.5">
-            <div>
-              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Đơn giá</span>
+          {/* Input grid: 3 columns */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label className="typo-form-label">Đơn giá</Label>
               <Input
-                type="number" min={0}
+                type="number"
+                min={0}
                 value={line.unitPrice || ''}
                 onChange={e => updateLine(i, 'unitPrice', Math.max(0, Number(e.target.value)))}
-                placeholder="0" className="text-xs font-mono h-7"
+                placeholder="0"
+                className="font-mono-num"
               />
             </div>
-            <div>
-              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Lương tài xế</span>
+            <div className="space-y-2">
+              <Label className="typo-form-label">Lương tài xế</Label>
               <Input
-                type="number" min={0}
+                type="number"
+                min={0}
                 value={line.driverSalary || ''}
                 onChange={e => updateLine(i, 'driverSalary', Math.max(0, Number(e.target.value)))}
-                placeholder="0" className="text-xs font-mono h-7"
+                placeholder="0"
+                className="font-mono-num"
               />
             </div>
-            <div>
-              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Phụ cấp</span>
+            <div className="space-y-2">
+              <Label className="typo-form-label">Phụ cấp</Label>
               <Input
-                type="number" min={0}
+                type="number"
+                min={0}
                 value={line.allowance || ''}
                 onChange={e => updateLine(i, 'allowance', Math.max(0, Number(e.target.value)))}
-                placeholder="0" className="text-xs font-mono h-7"
+                placeholder="0"
+                className="font-mono-num"
               />
             </div>
           </div>
         </div>
       ))}
+
+      {/* Add button */}
+      <button
+        onClick={addLine}
+        className="flex items-center gap-2 text-sm font-medium py-2 px-3 rounded-md transition-colors"
+        style={{
+          color: 'var(--theme-brand-primary)',
+          background: 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)',
+        }}
+      >
+        <Plus size={16} />
+        Thêm mức giá
+      </button>
     </div>
   )
 }

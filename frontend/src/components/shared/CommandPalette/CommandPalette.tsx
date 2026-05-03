@@ -226,7 +226,7 @@ export function CommandPalette({
 
       {/* Palette */}
       <div
-        className="fixed left-1/2 top-[20%] z-50 w-full max-w-lg -translate-x-1/2 rounded-2xl border shadow-2xl animate-fade-slide-up"
+        className="fixed left-1/2 top-[20%] z-50 w-full max-w-lg -translate-x-1/2 rounded-lg border shadow-2xl animate-fade-slide-up"
         style={{
           background: 'var(--theme-bg-secondary)',
           borderColor: 'var(--theme-border-default)',

@@ -254,7 +254,7 @@ function UserManagementInner() {
             <button
               key={u.id}
               onClick={() => openDetail(u)}
-              className="w-full flex items-center gap-3 p-3.5 rounded-2xl text-left card-lift touch-manipulation"
+              className="w-full flex items-center gap-3 p-3.5 rounded-lg text-left card-lift touch-manipulation"
               style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}
             >
               <div

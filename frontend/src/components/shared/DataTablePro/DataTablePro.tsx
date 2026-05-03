@@ -181,7 +181,7 @@ export function DataTablePro<T>({
 
   return (
     <div
-      className="rounded-2xl border overflow-hidden"
+      className="rounded-lg border overflow-hidden"
       style={{
         background: 'var(--theme-bg-secondary)',
         borderColor: 'var(--theme-border-default)',

@@ -28,7 +28,7 @@ export function JobDetail() {
   if (loading) {
     return (
       <div className="animate-pulse space-y-3 p-4">
-        <div className="h-40 rounded-2xl" style={{ background: 'var(--theme-bg-tertiary)' }} />
+        <div className="h-40 rounded-lg" style={{ background: 'var(--theme-bg-tertiary)' }} />
         <div className="h-6 rounded w-2/3" style={{ background: 'var(--theme-bg-tertiary)' }} />
         <div className="h-4 rounded w-1/2" style={{ background: 'var(--theme-bg-tertiary)' }} />
       </div>
@@ -79,26 +79,25 @@ export function JobDetail() {
         {job.containers.map((c, i) => (
           <div
             key={i}
-            className="relative rounded-xl overflow-hidden"
+            className="relative rounded-lg overflow-hidden aspect-square"
             style={{ border: '1px solid var(--theme-border-default)' }}
           >
             {c.photoUrl ? (
               <button
-                className="block w-full touch-manipulation"
+                className="block w-full h-full touch-manipulation"
                 onClick={() => setLightboxUrl(c.photoUrl!)}
                 aria-label={`Xem ảnh ${c.containerNumber}`}
               >
                 <img
                   src={c.photoUrl}
                   alt={c.containerNumber}
-                  className="w-full object-cover"
-                  style={{ height: '140px', display: 'block' }}
+                  className="w-full h-full object-cover"
                 />
               </button>
             ) : (
               <div
-                className="w-full flex flex-col items-center justify-center"
-                style={{ background: 'var(--theme-bg-tertiary)', height: '140px' }}
+                className="w-full h-full flex flex-col items-center justify-center"
+                style={{ background: 'var(--theme-bg-tertiary)' }}
               >
                 <Camera className="w-6 h-6" style={{ color: 'var(--theme-text-muted)' }} />
               </div>
@@ -123,7 +122,7 @@ export function JobDetail() {
       </div>
 
       {/* Trip info */}
-      <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
+      <div className="rounded-lg overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
         <InfoRow icon={Building2} label="Khách hàng" value={job.clientName} />
         <InfoRow icon={RouteIcon} label="Cung đường" value={job.route} />
         <InfoRow icon={Truck} label="Biển số" value={job.tractorPlate} />
@@ -137,7 +136,7 @@ export function JobDetail() {
 
       {/* Earning */}
       <div
-        className="rounded-2xl p-4 flex items-center justify-between"
+        className="rounded-lg p-4 flex items-center justify-between"
         style={{
           background: job.earning > 0 ? 'var(--theme-brand-primary)' : 'var(--theme-status-warning-light)',
           boxShadow: 'var(--theme-shadow-card)',
@@ -163,7 +162,7 @@ export function JobDetail() {
       {job.status === 'PENDING' && (
         <button
           onClick={() => navigate(`/driver/work-orders/${job.id}/edit`)}
-          className="w-full h-12 rounded-2xl text-base font-bold flex items-center justify-center gap-2 touch-manipulation transition-all active:scale-[0.98]"
+          className="w-full h-12 rounded-lg text-base font-bold flex items-center justify-center gap-2 touch-manipulation transition-all active:scale-[0.98]"
           style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
         >
           <Pencil className="w-4 h-4" /> Sửa chuyến

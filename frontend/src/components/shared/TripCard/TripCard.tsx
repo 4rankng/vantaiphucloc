@@ -5,7 +5,7 @@ import { formatCurrencyShort, getJobStatusBadge, type JobStatus } from '@/data/d
 export function TripCard({ job, onClick }: { job: { status: string; route: string; containerNumber: string; distanceKm: number; jobDate: string; driverFee: number }; onClick: () => void }) {
   const s = getJobStatusBadge(job.status as JobStatus)
   return (
-    <button onClick={onClick} className="w-full text-left rounded-2xl p-4 card-lift"
+    <button onClick={onClick} className="w-full text-left rounded-lg p-4 card-lift"
       style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
       <div className="flex justify-between items-start mb-3">
         <div className="flex-1 min-w-0">

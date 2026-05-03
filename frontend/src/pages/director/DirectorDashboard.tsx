@@ -137,7 +137,7 @@ export function DirectorDashboard() {
       {/* Header with Month navigator */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight" style={{ color: 'var(--theme-text-primary)' }}>
+          <h1 className="typo-h1 tracking-tight" style={{ color: 'var(--theme-text-primary)' }}>
             Tổng quan
           </h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
@@ -219,7 +219,7 @@ export function DirectorDashboard() {
             <button
               key={a.label}
               onClick={() => navigate(a.path)}
-              className="group flex flex-col items-center gap-2 rounded-2xl p-4 text-center transition-all active:scale-[0.98] hover:shadow-md"
+              className="group flex flex-col items-center gap-2 rounded-lg p-4 text-center transition-all active:scale-[0.98] hover:shadow-md"
               style={{
                 background: 'var(--theme-bg-secondary)',
                 border: '1px solid var(--theme-border-default)',
@@ -249,7 +249,7 @@ export function DirectorDashboard() {
 
         {/* Recent trip orders table - Redesigned */}
         <div
-          className="rounded-2xl overflow-hidden"
+          className="rounded-lg overflow-hidden"
           style={{
             background: 'var(--theme-bg-secondary)',
             border: '1px solid var(--theme-border-default)',
@@ -347,8 +347,8 @@ export function DirectorDashboard() {
         </div>
 
         {/* Daily trips bar chart - Redesigned */}
-        <div 
-          className="rounded-2xl p-5"
+        <div
+          className="rounded-lg p-5"
           style={{
             background: 'var(--theme-bg-secondary)',
             border: '1px solid var(--theme-border-default)',
@@ -421,7 +421,7 @@ function StatCard({ label, value, icon, trend, color }: StatCardProps) {
   
   return (
     <div
-      className="rounded-2xl p-4 transition-all hover:shadow-md"
+      className="rounded-lg p-4 transition-all hover:shadow-md"
       style={{
         background: 'var(--theme-bg-secondary)',
         border: '1px solid var(--theme-border-default)',

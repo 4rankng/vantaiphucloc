@@ -107,7 +107,7 @@ function DriverCard({ wo, onClick }: { wo: WorkOrder; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="w-full text-left rounded-2xl border p-4 transition-all active:scale-[0.98] touch-manipulation"
+      className="w-full text-left rounded-lg border p-4 transition-all active:scale-[0.98] touch-manipulation"
       style={{
         background: 'var(--surface-bg)',
         borderColor: 'var(--surface-border)',
@@ -147,7 +147,7 @@ function DriverCard({ wo, onClick }: { wo: WorkOrder; onClick: () => void }) {
 function AccountantCard({ wo }: { wo: WorkOrder }) {
   return (
     <div
-      className="rounded-2xl border p-4"
+      className="rounded-lg border p-4"
       style={{
         background: 'var(--surface-bg)',
         borderColor: 'var(--surface-border)',
