@@ -167,7 +167,7 @@ function TripRow({ trip, onClick, isLast }: { trip: TripOrder; onClick: () => vo
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
-          {trip.code} · {trip.clientName}
+          {trip.code ? `${trip.code} · ` : ''}{trip.clientName}
         </span>
         <StatusBadgePro variant={statusVariant} label={statusLabel} size="sm" />
       </div>
