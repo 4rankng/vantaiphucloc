@@ -477,7 +477,7 @@ function UserManagementInner() {
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteId(null)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleDelete} disabled={saving} className="flex-1" style={{ background: 'var(--theme-status-error)', color: '#fff' }}>
+            <Button onClick={handleDelete} disabled={saving} className="flex-1" style={{ background: 'var(--theme-status-error)', color: 'white' }}>
               Xoá
             </Button>
           </DialogFooter>

@@ -31,7 +31,7 @@ export function StatTileCard({ data, onClick }: { data: StatTile; onClick: (path
           <Icon className="w-3.5 h-3.5" style={{ color: data.accent }} />
         </div>
       </div>
-      <p className="text-2xl font-bold leading-tight tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
+      <p className="text-lg lg:text-2xl font-bold leading-tight whitespace-nowrap tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
         {data.value}
       </p>
       {data.sub && (

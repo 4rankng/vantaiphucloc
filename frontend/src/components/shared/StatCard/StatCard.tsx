@@ -6,13 +6,13 @@ import { SparklineChart } from '@/components/shared/SparklineChart'
 type Variant = 'default' | 'success' | 'warning' | 'danger' | 'info' | 'teal' | 'gold'
 
 const variantStyles: Record<Variant, { iconBg: string; iconColor: string; sparkColor: string }> = {
-  default:  { iconBg: 'bg-slate-100', iconColor: 'text-slate-500', sparkColor: '#64748b' },
-  success:  { iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', sparkColor: '#059669' },
-  warning:  { iconBg: 'bg-amber-50', iconColor: 'text-amber-600', sparkColor: '#d97706' },
-  danger:   { iconBg: 'bg-red-50', iconColor: 'text-red-600', sparkColor: '#dc2626' },
-  info:     { iconBg: 'bg-blue-50', iconColor: 'text-blue-600', sparkColor: '#2563eb' },
-  teal:     { iconBg: 'bg-teal-50', iconColor: 'text-teal-600', sparkColor: '#0d9488' },
-  gold:     { iconBg: 'bg-amber-50', iconColor: 'text-amber-600', sparkColor: '#d97706' },
+  default:  { iconBg: 'bg-slate-100', iconColor: 'text-slate-500', sparkColor: 'var(--theme-text-muted)' },
+  success:  { iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', sparkColor: 'var(--theme-status-success)' },
+  warning:  { iconBg: 'bg-amber-50', iconColor: 'text-amber-600', sparkColor: 'var(--theme-status-warning)' },
+  danger:   { iconBg: 'bg-red-50', iconColor: 'text-red-600', sparkColor: 'var(--theme-status-error)' },
+  info:     { iconBg: 'bg-blue-50', iconColor: 'text-blue-600', sparkColor: 'var(--theme-status-info)' },
+  teal:     { iconBg: 'bg-teal-50', iconColor: 'text-teal-600', sparkColor: 'var(--theme-status-success)' },
+  gold:     { iconBg: 'bg-amber-50', iconColor: 'text-amber-600', sparkColor: 'var(--theme-status-warning)' },
 }
 
 interface StatCardProps {

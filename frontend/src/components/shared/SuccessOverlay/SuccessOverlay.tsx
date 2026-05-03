@@ -25,11 +25,11 @@ export function SuccessOverlay({ visible, message = 'Đã gửi chuyến', onDon
   return (
     <div
       className="fixed inset-0 z-[200] flex flex-col items-center justify-center gap-4"
-      style={{ background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)' }}
+      style={{ background: 'var(--theme-brand-gradient)' }}
     >
       <div className="animate-[scaleIn_0.3s_ease-out] flex flex-col items-center gap-4">
-        <CheckCircle2 className="w-16 h-16" style={{ color: '#fff' }} strokeWidth={1.5} />
-        <p className="typo-h1" style={{ color: '#fff' }}>
+        <CheckCircle2 className="w-16 h-16" style={{ color: 'var(--theme-text-on-brand)' }} strokeWidth={1.5} />
+        <p className="typo-h1" style={{ color: 'var(--theme-text-on-brand)' }}>
           {message}
         </p>
       </div>
