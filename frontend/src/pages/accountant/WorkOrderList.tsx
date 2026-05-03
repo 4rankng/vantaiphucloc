@@ -225,8 +225,7 @@ export function WorkOrderList() {
     },
   ]
 
-  // Shared import dialog
-  const ImportDialog = () => (
+  const importDialogJsx = (
     <Dialog open={importOpen} onOpenChange={(open) => {
       setImportOpen(open)
       if (!open) { setFile(null); setSelectedClient('') }
@@ -389,7 +388,7 @@ export function WorkOrderList() {
           </div>
         )}
 
-        <ImportDialog />
+        {importDialogJsx}
       </div>
     )
   }
@@ -463,7 +462,7 @@ export function WorkOrderList() {
         </div>
       </div>
 
-      <ImportDialog />
+      {importDialogJsx}
     </div>
   )
 }

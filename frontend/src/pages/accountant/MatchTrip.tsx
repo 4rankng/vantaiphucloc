@@ -2,8 +2,6 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useMatchTrip } from '@/hooks/use-match-trip'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { PickModal } from '@/components/shared/PickModal'
-import { CompareRow } from '@/components/shared/CompareRow'
-import { ContCompareRow } from '@/components/shared/ContCompareRow'
 import { ConfirmationCheckbox } from '@/components/shared/ConfirmationCheckbox'
 import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
 import type { WOSuggestion } from '@/data/domain'
@@ -169,14 +167,6 @@ export function MatchTrip() {
   const handleCloseEditDialog = () => {
     setEditingJobId(null)
   }
-
-  // Memoize edit configs
-  const clientEditLeft = useMemo(() => ({ options: clientOptions, onChange: setTripClient, placeholder: 'Chọn khách hàng...' }), [clientOptions, setTripClient])
-  const clientEditRight = useMemo(() => ({ options: clientOptions, onChange: setJobClient, placeholder: 'Chọn khách hàng...' }), [clientOptions, setJobClient])
-  const routeEditLeft = useMemo(() => ({ options: routeOptions, onChange: setTripRoute, placeholder: 'Chọn cung đường...' }), [routeOptions, setTripRoute])
-  const routeEditRight = useMemo(() => ({ options: routeOptions, onChange: setJobRoute, placeholder: 'Chọn cung đường...' }), [routeOptions, setJobRoute])
-  const contEditLeft = useMemo(() => ({ onChange: setTripContainers, accentColor: 'var(--theme-status-warning)' }), [setTripContainers])
-  const contEditRight = useMemo(() => ({ onChange: setJobContainers, accentColor: 'var(--theme-brand-primary)' }), [setJobContainers])
 
   const handleToggleConfirmation = () => {
     if (!selectedTrip) return
