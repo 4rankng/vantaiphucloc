@@ -30,8 +30,11 @@ export function SectionCard({
       }}
     >
       <header
-        className="flex items-center justify-between px-4 py-3"
-        style={{ borderBottom: '1px solid var(--theme-border-default)' }}
+        className="flex items-center justify-between px-4 py-3 rounded-t-2xl"
+        style={{
+          borderBottom: '1px solid var(--theme-border-default)',
+          background: 'linear-gradient(130deg, color-mix(in srgb, var(--theme-brand-primary) 4%, var(--theme-bg-secondary)) 0%, var(--theme-bg-secondary) 60%)',
+        }}
       >
         <div className="flex items-center gap-2">
           {Icon && (
