@@ -19,7 +19,6 @@ import { ContBadge } from '@/components/shared/ContBadge'
 import { InlineCell } from '@/components/shared/InlineCell'
 import { SearchBar } from '@/components/shared/SearchBar'
 import { CreateClientDialog } from '@/components/shared/CreateClientDialog'
-import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { PricingForm } from './PricingForm'
 import { Plus, Pencil, Trash2, Check, X, ArrowLeft, MapPin } from 'lucide-react'
 
@@ -140,7 +139,15 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
         >
           <ArrowLeft className="w-4 h-4" />
         </button>
-        <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{clientName}</p>
+        <p className="text-sm font-semibold flex-1" style={{ color: 'var(--theme-text-primary)' }}>{clientName}</p>
+        <button
+          onClick={() => setShowForm(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold touch-manipulation transition-colors"
+          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Thêm
+        </button>
       </div>
 
       {showForm && (
@@ -399,12 +406,6 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
           })}
         </div>
       )}
-
-      {/* FAB — add new pricing for this client */}
-      <FloatingActionButton
-        icon={<Plus className="w-6 h-6" />}
-        onClick={() => setShowForm(true)}
-      />
 
       <CreateClientDialog
         open={createClientOpen}

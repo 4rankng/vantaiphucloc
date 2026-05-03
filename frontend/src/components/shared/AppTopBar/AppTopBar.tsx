@@ -1,5 +1,5 @@
 import { type ReactNode, useState, useCallback, useRef } from 'react'
-import { Bell, UserCircle, ArrowLeft } from 'lucide-react'
+import { Bell, UserCircle, ArrowLeft, Menu } from 'lucide-react'
 import { NotificationPanel, useUnreadCount } from '@/components/shared/NotificationPanel/NotificationPanel'
 import { UserDropdown } from '@/components/shared/ProfileDialog'
 import { OfflineTopBarIcon } from '@/components/shared/OfflineIndicator/OfflineIndicator'
@@ -23,12 +23,14 @@ interface HomeVariantProps extends AppTopBarBaseProps {
   variant: 'home'
   name: string
   onNotifications?: () => void
+  onMenu?: () => void
 }
 
 interface PageVariantProps extends AppTopBarBaseProps {
   variant: 'page'
   title: string
   onBack?: () => void
+  onMenu?: () => void
 }
 
 export type AppTopBarProps = HomeVariantProps | PageVariantProps
@@ -49,7 +51,18 @@ export function AppTopBar(props: AppTopBarProps) {
         <div className="px-4 py-2.5 flex items-center justify-between gap-3 md:max-w-4xl md:mx-auto">
         {/* ── Left ── */}
         <div className="flex items-center gap-2 min-w-0">
-          <img src="/logo.avif" alt="" className="w-8 h-8 shrink-0 object-contain rounded-md" />
+          {props.onMenu ? (
+            <button
+              onClick={props.onMenu}
+              className="w-8 h-8 flex items-center justify-center rounded-full shrink-0 touch-manipulation"
+              style={{ background: ICON_BG, color: DARK_GREEN }}
+              aria-label="Menu"
+            >
+              <Menu className="w-[18px] h-[18px]" />
+            </button>
+          ) : (
+            <img src="/logo.avif" alt="" className="w-8 h-8 shrink-0 object-contain rounded-md" />
+          )}
           {props.variant === 'home' ? (
             <div className="min-w-0">
               <p
@@ -67,7 +80,7 @@ export function AppTopBar(props: AppTopBarProps) {
             </div>
           ) : (
             <>
-              {props.onBack && (
+              {!props.onMenu && props.onBack && (
                 <button
                   onClick={props.onBack}
                   className="w-8 h-8 flex items-center justify-center rounded-full shrink-0 touch-manipulation"

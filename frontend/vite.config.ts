@@ -8,6 +8,17 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    // Remove crossorigin from CSS links — Vite adds it but nginx has no CORS headers,
+    // so the browser blocks same-origin stylesheets as CSP violations.
+    {
+      name: 'remove-css-crossorigin',
+      transformIndexHtml: {
+        order: 'post',
+        handler(html: string) {
+          return html.replace(/(<link\s+rel="stylesheet")\s+crossorigin/g, '$1')
+        },
+      },
+    },
     VitePWA({
       registerType: 'prompt',
       strategies: 'injectManifest',

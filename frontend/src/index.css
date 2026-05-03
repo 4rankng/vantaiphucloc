@@ -165,15 +165,16 @@
 .stagger-6 { animation-delay: 0.3s; }
 
 /* ─── Container scanner video ──────────────────────────── */
-/* react-webcam applies className to wrapper div, not video.
-   The wrapper must fill the entire fixed container so the
-   video is full-screen and the overlay guide box is centered
-   over the actual camera feed. */
+/* Force react-camera-pro to fill the entire scanner overlay. */
 .scanner-video {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+}
+.scanner-video > div {
+  width: 100% !important;
+  height: 100% !important;
 }
 .scanner-video video {
   object-fit: cover !important;
