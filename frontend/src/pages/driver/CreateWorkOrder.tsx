@@ -15,6 +15,7 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
     isEdit,
     clients, routes, recentOrders,
     containers, clientId, pickupLocation, dropoffLocation,
+    selectedTripId,
     submitting, scannerOpen, isOnline, summaryOpen, showSuccess,
     forceManualEntry, missingFields, containerErrors,
     canSubmit, summaryContainers, summaryClientName,
@@ -176,17 +177,15 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
             Khách & Tuyến
           </p>
           {recentOrders.length > 0 && (
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--theme-text-muted)' }}>
-              · Gần đây
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: 'var(--theme-brand-primary)' }}>
+              · Tự động điền
             </p>
           )}
         </div>
 
         <RecentTripSuggestions
           trips={recentOrders}
-          selectedClientId={clientId}
-          selectedPickup={pickupLocation}
-          selectedDropoff={dropoffLocation}
+          selectedTripId={selectedTripId ?? undefined}
           onSelect={handleRecentTripSelect}
         />
 
@@ -235,9 +234,12 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
       {/* Submit bar */}
       <div className="py-3 space-y-2">
           {missingFields.length > 0 && !canSubmit && (
-            <p className="text-xs font-medium text-center" style={{ color: 'var(--theme-status-warning)' }}>
-              Còn thiếu: {missingFields.join(', ')}
-            </p>
+            <div className="text-xs font-medium text-center space-y-0.5" style={{ color: 'var(--theme-status-warning)' }}>
+              <p className="font-semibold">Còn thiếu:</p>
+              {missingFields.map((field, i) => (
+                <p key={i}>{field}</p>
+              ))}
+            </div>
           )}
           {missingFields.length === 0 && !canSubmit && Object.keys(containerErrors).length > 0 && (
             <p className="text-xs font-medium text-center" style={{ color: 'var(--theme-status-error)' }}>
