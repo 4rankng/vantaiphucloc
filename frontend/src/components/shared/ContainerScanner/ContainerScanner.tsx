@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Camera } from 'react-camera-pro'
 import Cropper from 'react-easy-crop'
 import type { Area } from 'react-easy-crop'
-import { X, RotateCcw, Image, Zap, SwitchCamera } from 'lucide-react'
+import { X, RotateCcw, Image, Zap } from 'lucide-react'
 
 export interface PhotoMeta {
   lat: number | null
@@ -97,17 +97,6 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
       // Flash not supported on this device
     }
   }, [flashOn])
-
-  // ── Flip camera ─────────────────────────────────────────────────────────
-  const handleFlipCamera = useCallback(() => {
-    const cam = cameraRef.current as { switchCamera: () => void } | null
-    if (!cam) return
-    try {
-      cam.switchCamera()
-    } catch {
-      // Only one camera available
-    }
-  }, [])
 
   // ── Camera capture: takePhoto() returns base64 directly ───────────────────
   const handleCapture = useCallback(() => {
@@ -251,7 +240,7 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
       ) : (
         /* ── Camera mode ── */
         <>
-          {/* Top bar with close, flash, flip */}
+          {/* Top bar — close (left) + flash toggle (right). Rear camera only — no flip. */}
           <div
             className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4"
             style={{ paddingTop: `max(16px, env(safe-area-inset-top))` }}
@@ -260,32 +249,23 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
               onClick={onClose}
               className="w-10 h-10 flex items-center justify-center rounded-full touch-manipulation"
               style={{ background: 'rgba(0,0,0,0.5)' }}
+              aria-label="Đóng"
             >
               <X className="w-5 h-5 text-white" />
             </button>
 
-            <div className="flex items-center gap-2">
-              {/* Flash toggle */}
-              <button
-                onClick={handleFlashToggle}
-                className="w-10 h-10 flex items-center justify-center rounded-full touch-manipulation transition-colors"
-                style={{
-                  background: flashOn ? 'var(--theme-brand-primary)' : 'rgba(255,255,255,0.15)',
-                  color: '#fff',
-                }}
-              >
-                <Zap className="w-5 h-5" fill={flashOn ? '#fff' : 'none'} />
-              </button>
-
-              {/* Flip camera */}
-              <button
-                onClick={handleFlipCamera}
-                className="w-10 h-10 flex items-center justify-center rounded-full touch-manipulation"
-                style={{ background: 'rgba(0,0,0,0.5)', color: '#fff' }}
-              >
-                <SwitchCamera className="w-5 h-5" />
-              </button>
-            </div>
+            {/* Flash toggle */}
+            <button
+              onClick={handleFlashToggle}
+              className="w-10 h-10 flex items-center justify-center rounded-full touch-manipulation transition-colors"
+              style={{
+                background: flashOn ? 'var(--theme-brand-primary)' : 'rgba(0,0,0,0.5)',
+                color: '#fff',
+              }}
+              aria-label={flashOn ? 'Tắt đèn flash' : 'Bật đèn flash'}
+            >
+              <Zap className="w-5 h-5" fill={flashOn ? '#fff' : 'none'} />
+            </button>
           </div>
 
           <div className="absolute inset-0 scanner-video">
@@ -319,41 +299,42 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
             </div>
           )}
 
-          {/* Bottom bar — 3 buttons: Gallery (left), Shutter (center), Flip is in top bar */}
+          {/* Bottom bar — Shutter dead-center, Gallery as small affordance bottom-left.
+              No flip/selfie — drivers only photograph containers via the rear camera. */}
           <div
-            className="absolute bottom-0 left-0 right-0 z-10 flex justify-around items-end px-6 pt-3"
+            className="absolute bottom-0 left-0 right-0 z-10 px-6 pt-3"
             style={{
               background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)',
               paddingBottom: `max(24px, env(safe-area-inset-bottom))`,
             }}
           >
-            {/* Gallery button (left) */}
-            <label
-              htmlFor="scanner-gallery-input"
-              className="w-12 h-12 flex items-center justify-center rounded-full touch-manipulation cursor-pointer"
-              style={{ background: 'rgba(0,0,0,0.5)', color: '#fff' }}
-            >
-              <Image className="w-5 h-5" />
-            </label>
+            <div className="relative flex items-center justify-center">
+              {/* Gallery button — anchored bottom-left, doesn't shift the shutter */}
+              <label
+                htmlFor="scanner-gallery-input"
+                className="absolute left-0 bottom-1 w-11 h-11 flex items-center justify-center rounded-full touch-manipulation cursor-pointer"
+                style={{ background: 'rgba(0,0,0,0.5)', color: '#fff' }}
+                aria-label="Chọn ảnh từ thư viện"
+              >
+                <Image className="w-5 h-5" />
+              </label>
 
-            {/* Shutter button (center) — 72×72 px with iOS style */}
-            <button
-              onClick={handleCapture}
-              className="w-[72px] h-[72px] rounded-full flex items-center justify-center touch-manipulation transition-transform active:scale-[0.92]"
-              style={{
-                border: '4px solid rgba(255,255,255,0.95)',
-                background: 'var(--theme-brand-primary)',
-              }}
-            >
-              {/* Inner solid circle */}
-              <div
-                className="w-14 h-14 rounded-full"
-                style={{ background: 'var(--theme-brand-primary)' }}
-              />
-            </button>
-
-            {/* Placeholder for balance (right, disabled) */}
-            <div className="w-12 h-12" />
+              {/* Shutter — dead-center, iOS-style ring */}
+              <button
+                onClick={handleCapture}
+                className="w-[72px] h-[72px] rounded-full flex items-center justify-center touch-manipulation transition-transform active:scale-[0.92]"
+                style={{
+                  border: '4px solid rgba(255,255,255,0.95)',
+                  background: 'var(--theme-brand-primary)',
+                }}
+                aria-label="Chụp ảnh"
+              >
+                <div
+                  className="w-14 h-14 rounded-full"
+                  style={{ background: 'var(--theme-brand-primary)' }}
+                />
+              </button>
+            </div>
           </div>
         </>
       )}
