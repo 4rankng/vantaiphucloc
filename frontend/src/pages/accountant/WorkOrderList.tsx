@@ -375,7 +375,7 @@ export function WorkOrderList() {
   if (isMobile) {
     return (
       <div className="space-y-3">
-        <PageHeader title="Đối soát" />
+        <PageHeader title="Đối soát" icon="package" />
 
         <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
 

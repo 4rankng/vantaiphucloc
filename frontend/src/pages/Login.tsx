@@ -18,19 +18,28 @@ export function Login() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const loggedInUser = await login(username, password)
-    setLoading(false)
-    if (!loggedInUser) {
-      setError('Thông tin đăng nhập không hợp lệ. Vui lòng thử lại.')
-    } else {
-      // Navigate to role-specific dashboard after successful login
-      const roleRoutes: Record<string, string> = {
-        driver: '/driver',
-        accountant: '/accountant',
-        director: '/director',
-        superadmin: '/superadmin',
+    try {
+      const loggedInUser = await login(username, password)
+      if (!loggedInUser) {
+        setError('Thông tin đăng nhập không hợp lệ. Vui lòng thử lại.')
+      } else {
+        const roleRoutes: Record<string, string> = {
+          driver: '/driver',
+          accountant: '/accountant',
+          director: '/director',
+          superadmin: '/superadmin',
+        }
+        navigate(roleRoutes[loggedInUser.role] ?? '/driver', { replace: true })
       }
-      navigate(roleRoutes[loggedInUser.role] ?? '/driver', { replace: true })
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status
+      if (status === 429) {
+        setError('Bạn đã thử đăng nhập quá nhiều lần. Vui lòng thử lại sau.')
+      } else {
+        setError('Thông tin đăng nhập không hợp lệ. Vui lòng thử lại.')
+      }
+    } finally {
+      setLoading(false)
     }
   }
 

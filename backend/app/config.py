@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     CACHE_SALARY_TTL: int = 180
 
     # Rate limiting
-    RATE_LIMIT_LOGIN_MAX: int = 5
+    RATE_LIMIT_LOGIN_MAX: int = 20
     RATE_LIMIT_LOGIN_WINDOW: int = 300
     RATE_LIMIT_API_MAX: int = 100
     RATE_LIMIT_API_WINDOW: int = 60

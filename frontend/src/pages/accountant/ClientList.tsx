@@ -85,6 +85,7 @@ export function ClientList() {
       {/* Page header */}
       <PageHeader
         title="Khách hàng"
+        icon="warehouse"
         onAdd={handleOpenCreate}
         addLabel="Thêm"
       />

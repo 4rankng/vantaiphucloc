@@ -27,25 +27,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   })
 
   const login = useCallback(async (username: string, password: string): Promise<UserInfo | null> => {
-    try {
-      const res = await api.post('/auth/login', { username, password })
-      const { access_token, refresh_token } = res.data
-      const { id, username: userUsername, full_name, role } = res.data.user
+    const res = await api.post('/auth/login', { username, password })
+    const { access_token, refresh_token } = res.data
+    const { id, username: userUsername, full_name, role } = res.data.user
 
-      setTokens(access_token, refresh_token)
+    setTokens(access_token, refresh_token)
 
-      const u: UserInfo = {
-        id: String(id),
-        name: full_name || userUsername,
-        role,
-      }
-      localStorage.setItem('ttransport_user', JSON.stringify(u))
-      setUser(u)
-      if (role === 'driver') startHealthMonitor()
-      return u
-    } catch {
-      return null
+    const u: UserInfo = {
+      id: String(id),
+      name: full_name || userUsername,
+      role,
     }
+    localStorage.setItem('ttransport_user', JSON.stringify(u))
+    setUser(u)
+    if (role === 'driver') startHealthMonitor()
+    return u
   }, [])
 
   const logout = useCallback(() => {
