@@ -3,27 +3,41 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response as StarletteResponse
 
 from app.config import settings
 from app.api.v1.router import router as api_v1_router
 from app.core.redis import init_redis, close_redis
 from app.core.worker import init_arq_pool, close_arq_pool
+from app.database import engine
 
 MAX_REQUEST_BODY_BYTES = 5_242_880  # 5 MB
 
 
-class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        if request.method in ("POST", "PUT", "PATCH"):
-            content_length = request.headers.get("content-length")
+class RequestSizeLimitMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        headers = dict(
+            (k.decode(), v.decode())
+            for k, v in scope.get("headers", [])
+        )
+        if scope["method"] in ("POST", "PUT", "PATCH"):
+            content_length = headers.get("content-length")
             if content_length and int(content_length) > MAX_REQUEST_BODY_BYTES:
-                return StarletteResponse(
+                response = StarletteResponse(
                     status_code=413,
                     content="Request body too large",
                 )
-        return await call_next(request)
+                await response(scope, receive, send)
+                return
+
+        await self.app(scope, receive, send)
 
 
 @asynccontextmanager
@@ -37,6 +51,7 @@ async def lifespan(_app: FastAPI):
     yield
     await close_arq_pool()
     await close_redis()
+    await engine.dispose()
 
 
 app = FastAPI(
