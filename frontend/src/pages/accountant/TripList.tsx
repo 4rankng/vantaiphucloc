@@ -8,7 +8,7 @@ import { DataTablePro, type Column } from '@/components/shared/DataTablePro'
 import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
 import { StatsGrid } from '@/components/shared/StatsGrid'
 import {
-  Plus, Upload, Download, FileSpreadsheet, Truck, Calendar,
+  Plus, Upload, Download, FileSpreadsheet, Calendar,
   DollarSign, Clock, CheckCircle2, XCircle, Hash,
 } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -76,9 +76,7 @@ export function TripList() {
       const q = search.toLowerCase()
       list = list.filter(t =>
         (t.clientName ?? '').toLowerCase().includes(q) ||
-        (t.tractorPlate ?? '').toLowerCase().includes(q) ||
         (t.route ?? '').toLowerCase().includes(q) ||
-        (t.driverName ?? '').toLowerCase().includes(q) ||
         (t.code ?? '').toLowerCase().includes(q) ||
         t.containers.some(c => (c.containerNumber ?? '').toLowerCase().includes(q))
       )
@@ -171,25 +169,7 @@ export function TripList() {
       sortKey: (row) => row.clientName ?? '',
     },
     {
-      key: 'vehicle',
-      header: 'Xe / Tài xế',
-      accessor: (row) => (
-        <div className="min-w-0">
-          <p className="flex items-center gap-1.5 text-sm font-medium whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
-            <Truck className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
-            {row.tractorPlate || '—'}
-          </p>
-          <p className="text-xs mt-0.5 whitespace-nowrap" style={{ color: 'var(--theme-text-muted)' }}>
-            {row.driverName || '—'}
-          </p>
-        </div>
-      ),
-      sortable: true,
-      sortKey: (row) => row.driverName ?? '',
-      width: '160px',
-      hideOnMobile: true,
-    },
-    {
+      key: 'containers',
       key: 'containers',
       header: 'Container',
       accessor: (row) => (
@@ -436,7 +416,7 @@ export function TripList() {
           <FilterToolbar
             search={search}
             onSearchChange={setSearch}
-            searchPlaceholder="Tìm mã lệnh, khách hàng, tài xế, container, biển số..."
+            searchPlaceholder="Tìm mã lệnh, khách hàng, container..."
             statusOptions={STATUS_FILTERS.map(s => ({ ...s, key: s.key }))}
             selectedStatus={statusFilter}
             onStatusChange={(s) => setStatusFilter(s as TripOrderStatus | 'ALL')}

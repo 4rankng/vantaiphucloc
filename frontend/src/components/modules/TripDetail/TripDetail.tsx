@@ -16,9 +16,6 @@ export function TripDetail({ data }: TripDetailProps) {
       <DetailRow label="Ngày"><span className="font-mono-num">{data.jobDate}</span></DetailRow>
       <DetailRow label="Tuyến">{data.route}</DetailRow>
       <DetailRow label="Container"><span className="font-mono-num">{data.containerNumber}</span></DetailRow>
-      <DetailRow label="Đầu kéo"><span className="font-mono-num">{data.tractorPlate}</span></DetailRow>
-      <DetailRow label="Rơ mooc"><span className="font-mono-num">{data.trailerPlate}</span></DetailRow>
-      <DetailRow label="Tài xế">{data.driverName}</DetailRow>
       <DetailRow label="Khách hàng">{data.clientName}</DetailRow>
       <DetailRow label="Khoảng cách">{data.distanceKm} km</DetailRow>
       <DetailRow label="Doanh thu"><span className="font-semibold font-mono-num">{formatCurrencyFull(data.revenue)}</span></DetailRow>

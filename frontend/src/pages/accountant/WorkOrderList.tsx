@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef, useCallback } from 'react'
-import { Upload, Eye, Truck, Calendar, FileSpreadsheet, X } from 'lucide-react'
+import { Upload, Truck, Calendar, FileSpreadsheet, X, Sparkles } from 'lucide-react'
 import {
   Button,
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -13,7 +13,7 @@ import { DataTablePro, type Column } from '@/components/shared/DataTablePro'
 import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { PageContainer } from '@/components/shared/PageContainer'
-import { useWorkOrders, useUploadCustomerExcel, useClients } from '@/hooks/use-queries'
+import { useWorkOrders, useUploadCustomerExcel, useClients, useTripOrders } from '@/hooks/use-queries'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '@/components/atoms/Toast'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -45,6 +45,28 @@ function getStatusLabel(status: string): string {
     case 'COMPLETED': return 'Hoàn thành'
     default: return status
   }
+}
+
+/** Client-side approximation: count draft trip orders that share ≥1 field with a work order */
+function usePotentialMatchCounts(workOrders: import('@/data/domain').WorkOrder[]) {
+  const { data: trips = [] } = useTripOrders()
+  return useMemo(() => {
+    const draftTrips = trips.filter(t => t.status === 'DRAFT' || t.status === 'PENDING')
+    const counts = new Map<number, number>()
+    for (const wo of workOrders) {
+      const woContNums = new Set(wo.containers.map(c => c.containerNumber.replace(/\s/g, '').toUpperCase()))
+      let count = 0
+      for (const trip of draftTrips) {
+        const tripContNums = (trip.containers?.length ? trip.containers : []).map(c => c.containerNumber.replace(/\s/g, '').toUpperCase())
+        const contMatch = tripContNums.some(n => woContNums.has(n))
+        const clientMatch = trip.clientId === wo.clientId
+        const routeMatch = trip.route === wo.route
+        if (contMatch || clientMatch || routeMatch) count++
+      }
+      counts.set(wo.id, count)
+    }
+    return counts
+  }, [workOrders, trips])
 }
 
 export function WorkOrderList() {
@@ -81,6 +103,8 @@ export function WorkOrderList() {
     }
     return result.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   }, [workOrders, statusFilter, search])
+
+  const matchCounts = usePotentialMatchCounts(workOrders)
 
   const handleClearFilters = useCallback(() => {
     setSearch('')
@@ -178,9 +202,9 @@ export function WorkOrderList() {
         return (
           <div className="flex flex-col gap-0.5">
             {row.containers.slice(0, 2).map((c, i) => (
-              <div key={i} className="flex items-center gap-1">
+              <div key={i} className="flex items-center gap-1 whitespace-nowrap">
                 <ContBadge type={c.workType} />
-                <span className="text-xs font-mono" style={{ color: 'var(--theme-text-primary)' }}>
+                <span className="text-xs font-mono whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
                   {c.containerNumber}
                 </span>
               </div>
@@ -188,7 +212,7 @@ export function WorkOrderList() {
           </div>
         )
       },
-      width: '200px',
+      width: '220px',
       hideOnMobile: true,
     },
     {
@@ -209,21 +233,29 @@ export function WorkOrderList() {
       key: 'status',
       header: 'Trạng thái',
       accessor: (row) => (
-        <StatusBadgePro
-          variant={getStatusVariant(row.status)}
-          label={getStatusLabel(row.status)}
-          size="sm"
-        />
+        <div className="flex items-center gap-2">
+          <StatusBadgePro
+            variant={getStatusVariant(row.status)}
+            label={getStatusLabel(row.status)}
+            size="sm"
+          />
+          {row.status === 'PENDING' && (() => {
+            const count = matchCounts.get(row.id) ?? 0
+            if (count === 0) return null
+            return (
+              <span
+                className="inline-flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded-full"
+                style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
+                title={`${count} đơn hàng tiềm năng`}
+              >
+                <Sparkles className="w-2.5 h-2.5" />
+                {count}
+              </span>
+            )
+          })()}
+        </div>
       ),
-      width: '120px',
-    },
-  ]
-
-  const rowActions = [
-    {
-      label: 'Ghép / Xem chi tiết',
-      icon: <Eye className="h-4 w-4" />,
-      onClick: (row: WorkOrder) => navigate(`/accountant/match/${row.id}`),
+      width: '160px',
     },
   ]
 
@@ -386,6 +418,7 @@ export function WorkOrderList() {
                 key={job.id}
                 job={job}
                 status={job.status === 'PENDING' ? 'unmatched' : 'completed'}
+                matchCount={matchCounts.get(job.id)}
                 onClick={() => navigate(`/accountant/match/${job.id}`)}
               />
             ))}
@@ -434,7 +467,6 @@ export function WorkOrderList() {
             columns={columns}
             rowKey={(row) => row.id}
             onRowClick={(row) => navigate(`/accountant/match/${row.id}`)}
-            rowActions={rowActions}
             loading={loading}
             stickyHeader
             striped
@@ -461,6 +493,7 @@ export function WorkOrderList() {
                 key={job.id}
                 job={job}
                 status={job.status === 'PENDING' ? 'unmatched' : 'completed'}
+                matchCount={matchCounts.get(job.id)}
                 onClick={() => navigate(`/accountant/match/${job.id}`)}
               />
             ))

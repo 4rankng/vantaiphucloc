@@ -158,9 +158,6 @@ export interface TripOrder {
   route: string
   pickupLocation?: string
   dropoffLocation?: string
-  tractorPlate: string
-  driverId: number
-  driverName: string
   containerNumber?: string
   containers: TripOrderContainerItem[]
   pricingId: number

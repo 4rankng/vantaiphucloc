@@ -156,14 +156,8 @@ function TripRow({ trip, onClick, isLast }: { trip: TripOrder; onClick: () => vo
       <p className="mt-0.5 text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
         {tripDate}{tripDate && ' | '}{resolveRoute(trip)}
       </p>
-      {(trip.tractorPlate || types) && (
+      {types && (
         <div className="mt-1.5 flex items-center gap-3">
-          {trip.tractorPlate && (
-            <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-              <Truck className="h-3 w-3" />
-              {trip.tractorPlate}
-            </span>
-          )}
           {types && (
             <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
               <Car className="h-3 w-3" />
@@ -392,12 +386,6 @@ function DonHangCard({
             {tripDate}
           </span>
         )}
-        {trip.tractorPlate && (
-          <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-            <Truck className="h-3 w-3 shrink-0" />
-            {trip.tractorPlate}
-          </span>
-        )}
         {types && (
           <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
             <Car className="h-3 w-3 shrink-0" />
@@ -450,7 +438,6 @@ function MatchSuggestionPanel({
   const [editTrip, setEditTrip] = useState<TripOrder | null>(null)
   const [tripClient, setTripClient] = useState('')
   const [tripRoute, setTripRoute] = useState('')
-  const [tripDriver, setTripDriver] = useState('')
 
   // Fetch TripOrder suggestions for the selected WorkOrder
   const { data: suggestData, isLoading: loadingSuggestions } = useSuggestMatches(selectedWoId)
@@ -485,11 +472,10 @@ function MatchSuggestionPanel({
 
     for (const trip of trips) {
       let matched = 0
-      const total = 4
+      const total = 3
 
       if (trip.clientName.toLowerCase() === woClientLower) matched++
       if (trip.route.toLowerCase() === woRouteLower) matched++
-      if (trip.driverId === wo.driverId) matched++
 
       const tripContainers = new Set(trip.containers.map(c => c.containerNumber?.toLowerCase()).filter(Boolean))
       const hasContainerMatch = [...woContainers].some(cn => tripContainers.has(cn))
@@ -537,13 +523,12 @@ function MatchSuggestionPanel({
     e.stopPropagation()
     setTripClient(trip.clientName)
     setTripRoute(trip.route)
-    setTripDriver(trip.driverName ?? '')
     setEditTrip(trip)
   }
 
   const saveTrip = () => {
     if (!editTrip) return
-    updateTrip.mutate({ id: editTrip.id, data: { clientName: tripClient, route: tripRoute, driverName: tripDriver } })
+    updateTrip.mutate({ id: editTrip.id, data: { clientName: tripClient, route: tripRoute } })
     setEditTrip(null)
   }
 
@@ -671,10 +656,6 @@ function MatchSuggestionPanel({
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</Label>
           <Input value={tripRoute} onChange={e => setTripRoute(e.target.value)} className="text-sm h-10" />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Tài xế</Label>
-          <Input value={tripDriver} onChange={e => setTripDriver(e.target.value)} className="text-sm h-10" />
         </div>
       </EditDialog>
     </>
