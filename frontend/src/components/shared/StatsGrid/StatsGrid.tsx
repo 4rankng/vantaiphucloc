@@ -97,7 +97,7 @@ function StatCard({
 
           {/* Value — using typo-display for lg screens */}
           <p
-            className="font-display text-2xl lg:text-3xl font-700 leading-tight break-all tabular-nums"
+            className="font-display text-lg lg:text-xl font-700 leading-tight whitespace-nowrap tabular-nums"
             style={{ color: valueColor ?? 'var(--theme-text-primary)' }}
           >
             {value}

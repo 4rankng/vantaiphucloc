@@ -289,7 +289,7 @@ function SalaryPeriodsList() {
                         </Button>
                         <Button onClick={() => handleMarkPaid(period.id)} disabled={updatePeriod.isPending}
                           className="flex-1 h-8 text-xs font-bold"
-                          style={{ background: 'var(--theme-status-success)', color: '#fff' }}>
+                          style={{ background: 'var(--theme-status-success)', color: 'white' }}>
                           Xác nhận đã trả
                         </Button>
                       </div>
