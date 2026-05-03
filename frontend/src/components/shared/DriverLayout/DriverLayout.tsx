@@ -1,5 +1,4 @@
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
 import { AppShell } from '@/components/shared/AppShell'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Role } from '@/data/domain'
@@ -29,9 +28,6 @@ function DriverShell() {
   const isHome = location.pathname === '/driver' || location.pathname === '/driver/work-orders/new' || !!location.pathname.match(/\/driver\/work-orders\/\d+\/edit/)
   const title = resolveTitle(location.pathname)
 
-  const isFormPage = location.pathname === '/driver/work-orders/new' || location.pathname.match(/\/driver\/work-orders\/\d+\/edit/)
-  const showBackFab = !isHome && !isFormPage
-
   return (
     <AppShell
       topbarProps={
@@ -41,22 +37,11 @@ function DriverShell() {
               name: user?.name ?? '',
               onNotifications: () => navigate('/driver/notifications'),
             }
-          : { variant: 'page' as const, title }
+          : { variant: 'page' as const, title, onBack: () => navigate(-1) }
       }
       contentClassName="px-4 py-4 space-y-4 md:px-6 md:py-6 md:max-w-4xl md:mx-auto"
     >
       <Outlet />
-
-      {showBackFab && (
-        <button
-          onClick={() => navigate(-1)}
-          className="fixed bottom-6 left-6 z-40 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-transform active:scale-95 touch-manipulation"
-          style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)', border: '1px solid var(--theme-border-default)' }}
-          aria-label="Quay lại"
-        >
-          <ArrowLeft className="w-6 h-6" />
-        </button>
-      )}
     </AppShell>
   )
 }
