@@ -10,4 +10,5 @@ ssh root@phucloc.tingting.vip "docker exec vantaiphucloc-postgres-1 psql -U post
 db is vantai-postgres
 sample command
  docker exec vantai-postgres ls
- docker exec vantai-postgres psql -U postgres -d vantaiphucloc -c \"SELECT 1=1\"
+ docker exec vantai-postgres
+ psql -U postgres -d vantaiphucloc -c \"SELECT 1=1\"
