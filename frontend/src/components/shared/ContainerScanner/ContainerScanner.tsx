@@ -137,8 +137,8 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: '#000' }}>
-      {/* Hidden file input (camera mode gallery button) */}
-      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+      {/* Hidden file input (camera mode gallery button) - capture="" forces gallery only on most devices */}
+      <input ref={fileInputRef} type="file" accept="image/*" capture="" className="hidden" onChange={handleFileChange} />
 
       {/* Close */}
       <button
@@ -232,7 +232,6 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
           <div className="scanner-video">
             <Camera
               ref={cameraRef}
-              aspectRatio="cover"
               facingMode="environment"
               errorMessages={{
                 noCameraAccessible: 'Không tìm thấy camera. Vui lòng kết nối camera hoặc thử trình duyệt khác.',
@@ -243,7 +242,7 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
             />
           </div>
 
-          <div className="absolute bottom-8 left-0 right-0 flex justify-center items-center gap-6">
+          <div className="absolute bottom-8 left-0 right-0 flex justify-center items-center gap-6 safe-area-bottom">
             <div className="flex flex-col items-center gap-1">
               <button
                 onClick={handleGallerySelect}
