@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Button, Input } from '@/components/ui'
+import { PageHeader } from '@/components/shared/PageHeader'
 import {
   useSalaryConfig, useUpdateSalaryConfig,
   useSalaryPeriods, useUpdateSalaryPeriod,
@@ -7,26 +8,25 @@ import {
 } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { formatCurrencyFull, type SalaryPeriodStatus } from '@/data/domain'
-import { Settings, Calculator, Download, CheckCircle2, Clock, Wallet, ChevronDown, ChevronUp } from 'lucide-react'
+import { Calculator, Download, CheckCircle2, Wallet } from 'lucide-react'
 
-// ─── Status badge ─────────────────────────────────────────────────────────────
+// ─── Status badge config ──────────────────────────────────────────────────────
 
-const STATUS_CONFIG: Record<SalaryPeriodStatus, { label: string; bg: string; color: string }> = {
-  OPEN:       { label: 'Chờ tính',  bg: 'var(--theme-status-warning-light)',  color: 'var(--theme-status-warning)'  },
-  CALCULATED: { label: 'Đã tính',   bg: 'var(--theme-status-info-light)',  color: 'var(--theme-status-info)'     },
-  PAID:       { label: 'Đã trả',    bg: 'var(--theme-status-success-light)',  color: 'var(--theme-status-success)'  },
+const STATUS_CONFIG: Record<SalaryPeriodStatus, { label: string; chip: string }> = {
+  OPEN:       { label: 'Chờ tính',  chip: 'chip chip-warning' },
+  CALCULATED: { label: 'Đã tính',   chip: 'chip chip-info'    },
+  PAID:       { label: 'Đã trả',    chip: 'chip chip-success' },
 }
 
-// ─── Period config section ────────────────────────────────────────────────────
+// ─── Period config card ───────────────────────────────────────────────────────
 
-function PeriodConfigSection() {
+function PeriodConfigCard() {
   const toast = useToast()
   const { data: config, isLoading: loading } = useSalaryConfig()
   const updateConfig = useUpdateSalaryConfig()
   const [fromDay, setFromDay] = useState('26')
   const [toDay, setToDay] = useState('25')
   const [synced, setSynced] = useState(false)
-  const [open, setOpen] = useState(false)
 
   if (config && !synced) {
     setFromDay(String(config.from_day ?? 26))
@@ -34,81 +34,79 @@ function PeriodConfigSection() {
     setSynced(true)
   }
 
-  const explanation = (() => {
+  const explanation = useMemo(() => {
     if (!fromDay || !toDay) return ''
-    const from = `ngày ${fromDay}`
-    const to = `ngày ${toDay}`
-    return `${from} tháng này → ${to} tháng sau`
-  })()
+    return `Ngày ${fromDay} tháng này → ngày ${toDay} tháng sau`
+  }, [fromDay, toDay])
 
   const handleSave = () => {
     updateConfig.mutate(
       { from_day: parseInt(fromDay) || 26, to_day: parseInt(toDay) || 25 },
       {
-        onSuccess: () => { toast.success('Đã lưu cấu hình kỳ lương'); setOpen(false) },
+        onSuccess: () => toast.success('Đã lưu cấu hình kỳ lương'),
         onError: () => toast.error('Lỗi', 'Không thể lưu cấu hình'),
       },
     )
   }
 
   return (
-    <div className="rounded-lg overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', boxShadow: 'var(--theme-shadow-card)' }}>
-      <button
-        onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 touch-manipulation"
-      >
-        <div className="flex items-center gap-2.5">
-          <Settings className="w-4 h-4" style={{ color: 'var(--theme-brand-primary)' }} />
-          <div className="text-left">
-            <p className="typo-h2">Cấu hình kỳ lương</p>
-            {config && !open && (
-              <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                Ngày {config.from_day} → ngày {config.to_day} tháng sau
-              </p>
-            )}
-          </div>
-        </div>
-        {open ? <ChevronUp className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} /> : <ChevronDown className="w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />}
-      </button>
+    <div className="card p-5 h-full flex flex-col">
+      <div className="flex items-baseline justify-between mb-4">
+        <h3 className="typo-h2">Cấu hình kỳ lương</h3>
+        <span className="typo-caption">Tháng dương lịch</span>
+      </div>
 
-      {open && (
-        <div className="px-4 pb-4 space-y-3" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
-          {/* Row 1 — inputs with inline labels */}
-          <div className="grid grid-cols-2 gap-3 pt-3">
-            <div className="relative">
-              <span className="absolute left-3 top-1.5 text-[10px] font-semibold leading-none pointer-events-none"
-                style={{ color: 'var(--theme-text-muted)' }}>Từ ngày</span>
-              <Input type="number" min={1} max={31} value={fromDay} onChange={e => setFromDay(e.target.value)}
-                placeholder="26" className="text-base font-mono text-center h-12 pt-4" />
-            </div>
-            <div className="relative">
-              <span className="absolute left-3 top-1.5 text-[10px] font-semibold leading-none pointer-events-none"
-                style={{ color: 'var(--theme-text-muted)' }}>Đến ngày</span>
-              <Input type="number" min={1} max={31} value={toDay} onChange={e => setToDay(e.target.value)}
-                placeholder="25" className="text-base font-mono text-center h-12 pt-4" />
-            </div>
-          </div>
-          {/* Row 2 — description */}
-          {fromDay && toDay && (
-            <div className="rounded-xl p-2.5" style={{ background: 'var(--theme-brand-primary-light)' }}>
-              <p className="text-xs font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>{explanation}</p>
-            </div>
-          )}
-          {/* Row 3 — save button */}
-          <Button onClick={handleSave} disabled={updateConfig.isPending || loading}
-            className="w-full h-10 font-bold rounded-xl"
-            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-            {updateConfig.isPending ? 'Đang lưu...' : 'Lưu cấu hình'}
-          </Button>
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        <div className="space-y-1.5">
+          <label className="typo-form-label" htmlFor="salary-from-day">Từ ngày</label>
+          <Input
+            id="salary-from-day"
+            type="number"
+            min={1}
+            max={31}
+            value={fromDay}
+            onChange={e => setFromDay(e.target.value)}
+            placeholder="26"
+            className="h-9 text-sm font-mono text-center"
+          />
         </div>
+        <div className="space-y-1.5">
+          <label className="typo-form-label" htmlFor="salary-to-day">Đến ngày</label>
+          <Input
+            id="salary-to-day"
+            type="number"
+            min={1}
+            max={31}
+            value={toDay}
+            onChange={e => setToDay(e.target.value)}
+            placeholder="25"
+            className="h-9 text-sm font-mono text-center"
+          />
+        </div>
+      </div>
+
+      {explanation && (
+        <p className="text-xs mb-4" style={{ color: 'var(--theme-text-secondary)' }}>
+          {explanation}
+        </p>
       )}
+
+      <div className="mt-auto">
+        <Button
+          onClick={handleSave}
+          disabled={updateConfig.isPending || loading}
+          className="btn-primary h-9 px-4 text-sm w-full"
+        >
+          {updateConfig.isPending ? 'Đang lưu...' : 'Lưu cấu hình'}
+        </Button>
+      </div>
     </div>
   )
 }
 
-// ─── Calculate salary section ─────────────────────────────────────────────────
+// ─── Calculate salary card ────────────────────────────────────────────────────
 
-function CalculateSection() {
+function CalculateCard() {
   const toast = useToast()
   const { data: config } = useSalaryConfig()
   const calculateSalary = useCalculateSalary()
@@ -137,7 +135,7 @@ function CalculateSection() {
     }
   }, [config])
 
-  const handleCalculate = async () => {
+  const handleCalculate = () => {
     setCalculating(true)
     calculateSalary.mutate(
       { startDate, endDate },
@@ -159,27 +157,34 @@ function CalculateSection() {
   }
 
   return (
-    <div className="rounded-lg p-4 space-y-3" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', boxShadow: 'var(--theme-shadow-card)' }}>
-      <div className="flex items-center gap-2">
-        <Calculator className="w-4 h-4" style={{ color: 'var(--theme-brand-primary)' }} />
-        <p className="typo-h2">Tính lương kỳ này</p>
+    <div className="card p-5 h-full flex flex-col">
+      <div className="flex items-baseline justify-between mb-4">
+        <h3 className="typo-h2">Tính lương kỳ này</h3>
+        <span className="typo-caption">Tự động theo cấu hình</span>
       </div>
-      <div className="rounded-xl px-3 py-2" style={{ background: 'var(--theme-bg-tertiary)' }}>
-        <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Kỳ hiện tại</p>
+
+      <div className="rounded-md px-3 py-2.5 mb-4" style={{ background: 'var(--theme-bg-tertiary)' }}>
+        <p className="typo-caption mb-0.5">Kỳ hiện tại</p>
         <p className="text-sm font-semibold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
           {startDate} → {endDate}
         </p>
       </div>
-      <div className="flex gap-2">
-        <Button onClick={handleCalculate} disabled={calculating}
-          className="flex-1 h-10 font-bold rounded-xl text-sm"
-          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-          <Calculator className="w-4 h-4 mr-1.5" />
+
+      <div className="mt-auto flex gap-2">
+        <Button
+          onClick={handleCalculate}
+          disabled={calculating}
+          className="btn-primary h-9 px-4 text-sm flex-1"
+        >
+          <Calculator className="w-3.5 h-3.5 mr-1.5" />
           {calculating ? 'Đang tính...' : 'Tính lương tất cả'}
         </Button>
-        <Button onClick={handleExport} disabled={exportSalary.isPending}
-          className="h-10 px-3 rounded-xl"
-          style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}>
+        <Button
+          onClick={handleExport}
+          disabled={exportSalary.isPending}
+          aria-label="Xuất Excel"
+          className="btn-secondary h-9 w-9 p-0 inline-flex items-center justify-center"
+        >
           <Download className="w-4 h-4" />
         </Button>
       </div>
@@ -216,88 +221,102 @@ function SalaryPeriodsList() {
   }
 
   if (isLoading) {
-    return <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-20 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}</div>
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="h-24 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+        ))}
+      </div>
+    )
   }
 
   if (periods.length === 0) {
     return (
-      <div className="rounded-lg p-8 text-center" style={{ background: 'var(--theme-bg-secondary)' }}>
-        <Wallet className="w-8 h-8 mx-auto mb-2" style={{ color: 'var(--theme-text-muted)', opacity: 0.5 }} />
-        <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Chưa có kỳ lương nào</p>
-        <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Nhấn "Tính lương" để tạo kỳ lương đầu tiên</p>
+      <div className="card p-10 text-center">
+        <Wallet className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--theme-text-muted)', opacity: 0.5 }} />
+        <p className="typo-h3 mb-1" style={{ color: 'var(--theme-text-primary)' }}>Chưa có kỳ lương nào</p>
+        <p className="typo-body-sm" style={{ color: 'var(--theme-text-muted)' }}>
+          Nhấn "Tính lương tất cả" để tạo kỳ lương đầu tiên.
+        </p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {byDriver.map(([driverName, driverPeriods]) => (
-        <div key={driverName}>
-          <p className="typo-label mb-2">
-            {driverName}
-          </p>
-          <div className="space-y-2">
+        <section key={driverName}>
+          <div className="flex items-baseline justify-between mb-2">
+            <h3 className="typo-h3">{driverName}</h3>
+            <span className="typo-caption">{driverPeriods.length} kỳ</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {driverPeriods.map(period => {
               const cfg = STATUS_CONFIG[period.status]
               const isPaid = period.status === 'PAID'
               const isConfirming = confirmPay === period.id
 
               return (
-                <div key={period.id} className="rounded-lg p-3 space-y-2"
-                  style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)', boxShadow: 'var(--theme-shadow-card)' }}>
+                <div key={period.id} className="card p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>
+                    <p className="text-xs font-mono tabular-nums" style={{ color: 'var(--theme-text-muted)' }}>
                       {period.startDate} → {period.endDate}
                     </p>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-full"
-                      style={{ background: cfg.bg, color: cfg.color }}>
-                      {cfg.label}
-                    </span>
+                    <span className={cfg.chip}>{cfg.label}</span>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Số cont</p>
-                      <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>{period.workOrderCount}</p>
+                      <p className="typo-caption">Số cont</p>
+                      <p className="typo-value-lg" style={{ color: 'var(--theme-text-primary)' }}>{period.workOrderCount}</p>
                     </div>
                     <div>
-                      <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Lương</p>
-                      <p className="typo-mono text-sm" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(period.totalSalary)}</p>
+                      <p className="typo-caption">Lương</p>
+                      <p className="typo-mono text-sm" style={{ color: 'var(--theme-text-primary)' }}>
+                        {formatCurrencyFull(period.totalSalary)}
+                      </p>
                     </div>
                     <div>
-                      <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Thực nhận</p>
-                      <p className="typo-mono text-sm" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyFull(period.netPay)}</p>
+                      <p className="typo-caption">Thực nhận</p>
+                      <p className="typo-mono text-sm font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>
+                        {formatCurrencyFull(period.netPay)}
+                      </p>
                     </div>
                   </div>
 
                   {isPaid ? (
-                    <div className="flex items-center gap-1.5 pt-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" style={{ color: 'var(--theme-status-success)' }} />
-                      <p className="text-xs font-semibold" style={{ color: 'var(--theme-status-success)' }}>
-                        Kỳ lương đã chốt — không thể thay đổi
-                      </p>
+                    <div className="flex items-center gap-1.5 pt-1" style={{ color: 'var(--theme-status-success)' }}>
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <p className="text-xs font-semibold">Kỳ lương đã chốt</p>
                     </div>
                   ) : isConfirming ? (
-                    <div className="space-y-2 pt-1">
-                      <p className="text-xs font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                        Xác nhận đã trả {formatCurrencyFull(period.netPay)} cho {driverName}?
+                    <div className="space-y-2">
+                      <p className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>
+                        Xác nhận đã trả <span className="font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(period.netPay)}</span> cho {driverName}?
                       </p>
                       <div className="flex gap-2">
-                        <Button onClick={() => setConfirmPay(null)}
-                          className="flex-1 h-8 text-xs font-semibold"
-                          style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}>
+                        <Button
+                          onClick={() => setConfirmPay(null)}
+                          className="btn-secondary h-8 px-3 text-xs flex-1"
+                        >
                           Huỷ
                         </Button>
-                        <Button onClick={() => handleMarkPaid(period.id)} disabled={updatePeriod.isPending}
-                          className="flex-1 h-8 text-xs font-bold"
-                          style={{ background: 'var(--theme-status-success)', color: '#fff' }}>
+                        <Button
+                          onClick={() => handleMarkPaid(period.id)}
+                          disabled={updatePeriod.isPending}
+                          className="h-8 px-3 text-xs font-bold flex-1 rounded-md"
+                          style={{ background: 'var(--theme-status-success)', color: '#fff' }}
+                        >
                           Xác nhận đã trả
                         </Button>
                       </div>
                     </div>
                   ) : (
-                    <Button onClick={() => setConfirmPay(period.id)}
-                      className="w-full h-8 text-xs font-bold rounded-xl"
-                      style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
+                    <Button
+                      onClick={() => setConfirmPay(period.id)}
+                      className="h-8 px-3 text-xs font-semibold w-full rounded-md"
+                      style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
+                    >
                       Đánh dấu đã trả
                     </Button>
                   )}
@@ -305,7 +324,7 @@ function SalaryPeriodsList() {
               )
             })}
           </div>
-        </div>
+        </section>
       ))}
     </div>
   )
@@ -315,33 +334,23 @@ function SalaryPeriodsList() {
 
 export function SalarySetup() {
   return (
-    <div className="page-container pb-6">
-      <div className="space-y-6">
-        {/* Page title */}
-        <div>
-          <h1 className="typo-h1">Cấu hình lương</h1>
-          <p className="typo-body-sm mt-1">Quản lý kỳ lương và tính toán lương tài xế</p>
-        </div>
+    <div className="page-container space-y-5">
+      <PageHeader
+        title="Cấu hình lương"
+        subtitle="Quản lý kỳ lương và tính toán lương tài xế"
+      />
 
-        {/* Period config + calculate (2 col layout on desktop) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div>
-            <PeriodConfigSection />
-          </div>
-          <div>
-            <CalculateSection />
-          </div>
-        </div>
-
-        {/* History section */}
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <Clock className="w-4 h-4" style={{ color: 'var(--theme-text-primary)' }} />
-            <h2 className="typo-h2">Lịch sử kỳ lương</h2>
-          </div>
-          <SalaryPeriodsList />
-        </div>
+      {/* Top: config + calculate, equal-height side-by-side on desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+        <PeriodConfigCard />
+        <CalculateCard />
       </div>
+
+      {/* History */}
+      <section className="space-y-3">
+        <h2 className="typo-h2">Lịch sử kỳ lương</h2>
+        <SalaryPeriodsList />
+      </section>
     </div>
   )
 }

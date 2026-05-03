@@ -30,7 +30,7 @@ export interface SidebarItem {
   badge?: number
 }
 
-const NAV_ITEMS: SidebarItem[] = [
+const ACCOUNTANT_NAV_ITEMS: SidebarItem[] = [
   { label: 'Tổng quan', href: '/accountant', icon: LayoutDashboard },
   { label: 'Đơn hàng', href: '/accountant/trips', icon: FileText },
   { label: 'Chuyến đã đi', href: '/accountant/driver-trips', icon: Truck },
@@ -49,6 +49,14 @@ export interface AccountantSidebarProps {
   onToggle?: () => void
   /** When true, removes the lg:flex guard so the sidebar renders on mobile (e.g. inside a drawer). */
   forceVisible?: boolean
+  /** Override the navigation items (defaults to accountant nav). */
+  items?: SidebarItem[]
+  /** Path used for the "active root" check — defaults to '/accountant'. */
+  rootPath?: string
+  /** Path for the Notifications dropdown item; if omitted, item is hidden. */
+  notificationsPath?: string
+  /** Path for the Profile dropdown item; if omitted, item is hidden. */
+  profilePath?: string
 }
 
 export function AccountantSidebar({
@@ -56,18 +64,24 @@ export function AccountantSidebar({
   badges = {},
   onToggle,
   forceVisible = false,
+  items,
+  rootPath = '/accountant',
+  notificationsPath = '/accountant/notifications',
+  profilePath = '/accountant/profile',
 }: AccountantSidebarProps) {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
   const unread = useUnreadCount()
 
+  const navItems = items ?? ACCOUNTANT_NAV_ITEMS
+
   const isActive = useCallback(
     (href: string) => {
-      if (href === '/accountant') return location.pathname === '/accountant'
+      if (href === rootPath) return location.pathname === rootPath
       return location.pathname.startsWith(href)
     },
-    [location.pathname],
+    [location.pathname, rootPath],
   )
 
   const handleLogout = useCallback(() => {
@@ -113,7 +127,7 @@ export function AccountantSidebar({
 
       {/* Navigation */}
       <nav className={`flex-1 px-2 ${collapsed ? 'pt-3' : 'pt-1'} overflow-y-auto sidebar-scroll space-y-0.5`}>
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const Icon = item.icon
           const active = isActive(item.href)
           const badge = badges[item.href]
@@ -228,14 +242,18 @@ export function AccountantSidebar({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56 z-[9999]" side="top" align="start" sideOffset={8}>
-                <DropdownMenuItem onClick={() => navigate('/accountant/notifications')}>
-                  <Bell className="mr-2 h-4 w-4" />
-                  Thông báo
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/accountant/profile')}>
-                  <UserCircle className="mr-2 h-4 w-4" />
-                  Thông tin cá nhân
-                </DropdownMenuItem>
+                {notificationsPath && (
+                  <DropdownMenuItem onClick={() => navigate(notificationsPath)}>
+                    <Bell className="mr-2 h-4 w-4" />
+                    Thông báo
+                  </DropdownMenuItem>
+                )}
+                {profilePath && (
+                  <DropdownMenuItem onClick={() => navigate(profilePath)}>
+                    <UserCircle className="mr-2 h-4 w-4" />
+                    Thông tin cá nhân
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
 

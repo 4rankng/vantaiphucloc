@@ -1,7 +1,4 @@
 import { useState, useCallback, useEffect } from 'react'
-import { Plus } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
-import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { UserDetailDialog } from '@/components/shared/UserDetailDialog'
 import { CreateUserDialog } from '@/components/shared/CreateUserDialog'
 import { useToast } from '@/components/atoms/Toast'
@@ -95,8 +92,8 @@ export function SuperAdminApp() {
         filterRole={filterRole}
         setFilterRole={setFilterRole}
         onViewUser={setSelectedUser}
+        onCreateUser={() => setCreateOpen(true)}
       />
-      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => setCreateOpen(true)} />
       <CreateUserDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreated={fetchUsers} roles={ALL_ROLES} />
       <UserDetailDialog
         user={selectedUser}

@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
-import { createPortal } from 'react-dom'
-import { Plus, Truck, CircleDollarSign, LayoutDashboard, Phone, Pencil, Trash2, ChevronRight } from 'lucide-react'
+import { Truck, CircleDollarSign, LayoutDashboard, Phone, Pencil, Trash2, ChevronRight } from 'lucide-react'
 import { Navigate } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
@@ -10,6 +9,7 @@ import { InlineSelect } from '@/components/shared/InlineSelect'
 import { CreateVendorDialog } from '@/components/shared/CreateVendorDialog'
 import { useToast } from '@/components/atoms/Toast'
 import { FilterPills } from '@/components/shared/FilterPills'
+import { PageHeader } from '@/components/shared/PageHeader'
 import { apiClient } from '@/services/api'
 import type { Role } from '@/data/domain'
 import { ROLE_LABELS } from '@/data/domain'
@@ -223,7 +223,14 @@ function UserManagementInner() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <PageHeader
+        title="Quản lý tài khoản"
+        subtitle={`${users.length} tài khoản đang hoạt động`}
+        onAdd={() => { setCreateForm(EMPTY_FORM); setCreateOpen(true) }}
+        addLabel="Tạo tài khoản"
+      />
+
       <FilterPills
         options={[
           { value: 'ALL', label: 'Tất cả', count: roleCounts.ALL },
@@ -234,17 +241,6 @@ function UserManagementInner() {
         value={filterRole}
         onChange={setFilterRole}
       />
-
-      {createPortal(
-        <button
-          onClick={() => { setCreateForm(EMPTY_FORM); setCreateOpen(true) }}
-          className="fixed bottom-6 right-5 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-90 touch-manipulation"
-          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-        >
-          <Plus className="w-6 h-6" />
-        </button>,
-        document.body,
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2 lg:gap-3">
         {filtered.map(u => {
