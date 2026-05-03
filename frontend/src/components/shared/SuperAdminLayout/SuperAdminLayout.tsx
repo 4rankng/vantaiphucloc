@@ -1,73 +1,58 @@
-import { useState } from 'react'
 import { Navigate, Outlet } from 'react-router-dom'
-import {
-  LayoutDashboard,
-  Users,
-  Bell,
-} from 'lucide-react'
+import { LayoutDashboard } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { SuperAdminSidebar } from '@/components/shared/SuperAdminSidebar'
+import { DesktopTopNav, type DesktopTopNavItem } from '@/components/shared/DesktopTopNav'
 import { BottomTabBar } from '@/components/shared/BottomTabBar/BottomTabBar'
-import { AppTopBar } from '@/components/shared/AppTopBar'
+import { useIsMobile } from '@/hooks/use-mobile'
 
-interface SuperAdminTabItem {
-  path: string
-  label: string
-  icon: React.ElementType
-}
+const DESKTOP_NAV: DesktopTopNavItem[] = [
+  { href: '/superadmin', label: 'Tổng quan', icon: LayoutDashboard, exact: true },
+]
 
-const NAV_ITEMS: SuperAdminTabItem[] = [
-  { path: '/superadmin', label: 'Tổng quan', icon: LayoutDashboard },
-  { path: '/superadmin/users', label: 'Người dùng', icon: Users },
-  { path: '/superadmin/notifications', label: 'Thông báo', icon: Bell },
+const MOBILE_TABS = [
+  { path: '/superadmin', label: 'Tổng quan', icon: LayoutDashboard, exact: true },
 ]
 
 export function SuperAdminLayout() {
   const { user } = useAuth()
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const isMobile = useIsMobile()
 
   if (!user || user.role !== 'superadmin') {
     return <Navigate to="/" replace />
   }
 
-  const tabItems = NAV_ITEMS.map(item => ({
-    path: item.path,
-    label: item.label,
-    icon: item.icon,
-    exact: item.path === '/superadmin',
-  }))
-
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row" style={{ background: 'var(--theme-bg-primary)' }}>
-      {/* Desktop sidebar (hidden on mobile) */}
-      <SuperAdminSidebar
-        collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+    <div className="flex h-[100dvh] flex-col" style={{ background: 'var(--theme-bg-primary)' }}>
+      <DesktopTopNav
+        brandLabel="Quản trị"
+        items={DESKTOP_NAV}
+        rootPath="/superadmin"
+        profilePath="/superadmin/profile"
       />
 
-      {/* Main content area */}
-      <div className="flex-1 flex flex-col min-h-screen lg:min-h-auto">
-        {/* Mobile topbar (hidden on lg+) */}
-        <header className="lg:hidden z-20 w-full shrink-0" style={{ background: 'var(--glass-bg)', backdropFilter: 'var(--glass-blur)', WebkitBackdropFilter: 'var(--glass-blur)', borderBottom: '1px solid var(--theme-header-border, rgba(0, 0, 0, 0.06))' }}>
-          <AppTopBar
-            variant="home"
-            name={user?.name ?? ''}
-            theme="light"
-          />
-        </header>
-
-        {/* Page content */}
-        <main className="flex-1 flex flex-col pb-14 lg:pb-0">
-          <div className="page-container flex-1">
-            <Outlet />
-          </div>
-        </main>
-
-        {/* Mobile bottom tab bar (hidden on lg+) */}
-        <div className="lg:hidden">
-          <BottomTabBar tabs={tabItems} />
+      {/* Mobile topbar */}
+      {isMobile && (
+        <div
+          className="h-14 flex items-center px-4 border-b shrink-0"
+          style={{
+            background: 'var(--theme-bg-secondary)',
+            borderColor: 'var(--theme-border-default)',
+          }}
+        >
+          <img src="/logo.avif" alt="" className="h-6 w-6 object-contain rounded-sm" />
         </div>
-      </div>
+      )}
+
+      <main
+        className="flex-1 overflow-y-auto"
+        style={{ paddingBottom: isMobile ? '56px' : '0' }}
+      >
+        <div className="page-container">
+          <Outlet />
+        </div>
+      </main>
+
+      <BottomTabBar tabs={MOBILE_TABS} />
     </div>
   )
 }
