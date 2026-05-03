@@ -3,8 +3,6 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   Users,
-  Handshake,
-  Receipt,
   Bell,
   LogOut,
   UserCircle,
@@ -26,29 +24,23 @@ export interface SidebarItem {
 }
 
 const NAV_ITEMS: SidebarItem[] = [
-  { label: 'Tổng quan', href: '/director', icon: LayoutDashboard },
-  { label: 'Đối tác', href: '/director/partners', icon: Handshake },
-  { label: 'Bảng giá', href: '/director/pricing', icon: Receipt },
-  { label: 'Quản lý tài khoản', href: '/director/users', icon: Users },
-  { label: 'Thông báo', href: '/director/notifications', icon: Bell },
+  { label: 'Tổng quan', href: '/superadmin', icon: LayoutDashboard },
+  { label: 'Người dùng', href: '/superadmin/users', icon: Users },
+  { label: 'Thông báo', href: '/superadmin/notifications', icon: Bell },
 ]
 
-export interface DirectorSidebarProps {
+export interface SuperAdminSidebarProps {
   collapsed?: boolean
   badges?: Record<string, number>
-  onNotificationsOpen?: () => void
-  /** Called when the user clicks the collapse/expand toggle (desktop only). */
   onToggle?: () => void
-  /** When true, removes the lg:flex guard so the sidebar renders on mobile (e.g. inside a drawer). */
   forceVisible?: boolean
 }
 
-export function DirectorSidebar({
+export function SuperAdminSidebar({
   collapsed = false,
   badges = {},
-  onToggle,
   forceVisible = false,
-}: DirectorSidebarProps) {
+}: SuperAdminSidebarProps) {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
@@ -56,7 +48,7 @@ export function DirectorSidebar({
 
   const isActive = useCallback(
     (href: string) => {
-      if (href === '/director') return location.pathname === '/director'
+      if (href === '/superadmin') return location.pathname === '/superadmin'
       return location.pathname.startsWith(href)
     },
     [location.pathname],
@@ -89,7 +81,7 @@ export function DirectorSidebar({
         {!collapsed && (
           <div className="flex flex-col min-w-0">
             <p className="text-[13px] font-semibold text-white leading-tight truncate tracking-tight">Phúc Lộc</p>
-            <p className="text-[10px] font-medium leading-tight truncate" style={{ color: 'var(--theme-sidebar-text-muted)' }}>Giám đốc</p>
+            <p className="text-[10px] font-medium leading-tight truncate" style={{ color: 'var(--theme-sidebar-text-muted)' }}>Quản trị</p>
           </div>
         )}
       </div>
@@ -98,7 +90,7 @@ export function DirectorSidebar({
       {!collapsed && (
         <div className="px-4 pt-4 pb-1.5">
           <p className="text-[10px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'var(--theme-sidebar-text-muted)' }}>
-            Quản lý
+            Quản trị hệ thống
           </p>
         </div>
       )}
@@ -135,7 +127,6 @@ export function DirectorSidebar({
               }}
               title={collapsed ? item.label : undefined}
             >
-              {/* Active accent — subtle 2px left bar */}
               {active && !collapsed && (
                 <span
                   aria-hidden
@@ -150,7 +141,7 @@ export function DirectorSidebar({
                   {badge && badge > 0 && (
                     <span
                       className="shrink-0 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-semibold"
-                      style={{ background: 'var(--theme-status-error)', color: '#fff' }}
+                      style={{ background: 'var(--theme-status-error)', color: 'var(--theme-text-on-brand)' }}
                     >
                       {badge > 99 ? '99+' : badge}
                     </span>
@@ -172,7 +163,7 @@ export function DirectorSidebar({
             style={{ color: 'var(--theme-sidebar-text-muted)' }}
             onMouseEnter={(e) => {
               ;(e.currentTarget as HTMLElement).style.background = 'var(--theme-sidebar-hover)'
-              ;(e.currentTarget as HTMLElement).style.color = '#fff'
+              ;(e.currentTarget as HTMLElement).style.color = 'var(--theme-sidebar-active-text)'
             }}
             onMouseLeave={(e) => {
               ;(e.currentTarget as HTMLElement).style.background = 'transparent'
@@ -196,12 +187,11 @@ export function DirectorSidebar({
                     ;(e.currentTarget as HTMLElement).style.background = 'transparent'
                   }}
                 >
-                  {/* Avatar circle */}
                   <div
                     className="h-7 w-7 shrink-0 flex items-center justify-center rounded-full text-[11px] font-semibold"
                     style={{
                       background: 'var(--theme-brand-primary)',
-                      color: '#fff',
+                      color: 'var(--theme-text-on-brand)',
                     }}
                   >
                     {(user?.name || user?.username || '?').charAt(0).toUpperCase()}
@@ -209,22 +199,22 @@ export function DirectorSidebar({
                   <div className="flex flex-col min-w-0 flex-1 text-left">
                     <span className="text-[12px] font-medium truncate leading-tight" style={{ color: 'var(--theme-sidebar-active-text)' }}>{user?.name || user?.username}</span>
                     <span className="text-[10px] truncate leading-tight" style={{ color: 'var(--theme-sidebar-text-muted)' }}>
-                      Giám đốc
+                      Quản trị
                     </span>
                   </div>
                   {unread > 0 && (
-                    <span className="absolute -top-1 -right-1 h-3.5 min-w-3.5 flex items-center justify-center px-1 text-[9px] font-semibold rounded-full" style={{ background: 'var(--theme-status-error)', color: '#fff' }}>
+                    <span className="absolute -top-1 -right-1 h-3.5 min-w-3.5 flex items-center justify-center px-1 text-[9px] font-semibold rounded-full" style={{ background: 'var(--theme-status-error)', color: 'var(--theme-text-on-brand)' }}>
                       {unread > 99 ? '99+' : unread}
                     </span>
                   )}
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56 z-[9999]" side="top" align="start" sideOffset={8}>
-                <DropdownMenuItem onClick={() => navigate('/director/notifications')}>
+                <DropdownMenuItem onClick={() => navigate('/superadmin/notifications')}>
                   <Bell className="mr-2 h-4 w-4" />
                   Thông báo
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/director/profile')}>
+                <DropdownMenuItem onClick={() => navigate('/superadmin/profile')}>
                   <UserCircle className="mr-2 h-4 w-4" />
                   Thông tin cá nhân
                 </DropdownMenuItem>
@@ -238,7 +228,7 @@ export function DirectorSidebar({
               style={{ color: 'var(--theme-sidebar-text-muted)' }}
               onMouseEnter={(e) => {
                 ;(e.currentTarget as HTMLElement).style.background = 'var(--theme-sidebar-hover)'
-                ;(e.currentTarget as HTMLElement).style.color = '#fff'
+                ;(e.currentTarget as HTMLElement).style.color = 'var(--theme-sidebar-active-text)'
               }}
               onMouseLeave={(e) => {
                 ;(e.currentTarget as HTMLElement).style.background = 'transparent'

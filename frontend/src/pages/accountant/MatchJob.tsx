@@ -2,20 +2,19 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useMatchJob } from '@/hooks/use-match-job'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { PickModal } from '@/components/shared/PickModal'
-import { CompareRow } from '@/components/shared/CompareRow'
-import { ContCompareRow } from '@/components/shared/ContCompareRow'
 import { ConfirmationCheckbox } from '@/components/shared/ConfirmationCheckbox'
 import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
 import type { MatchSuggestion } from '@/data/domain'
 import {
   Check, ChevronDown, X, Sparkles, Plus, ArrowLeft,
-  FileText, Truck, CheckCircle2, AlertCircle,
+  FileText, Truck, CheckCircle2, AlertCircle, Pencil,
 } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { useToggleTripConfirmation } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { useIsMobile } from '@/hooks/use-mobile'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { Dialog } from '@/components/ui/Dialog'
 
 function SuggestionCard({ suggestion, onSelect, index, isSelected }: {
   suggestion: MatchSuggestion; onSelect: () => void; index: number; isSelected?: boolean
@@ -110,6 +109,11 @@ export function MatchJob() {
   const toast = useToast()
   const isMobile = useIsMobile(1024)
   const { mutate: toggleConfirmation, isPending: toggling } = useToggleTripConfirmation()
+  const [editingTripId, setEditingTripId] = useState<number | null>(null)
+  const [editDialogClient, setEditDialogClient] = useState('')
+  const [editDialogRoute, setEditDialogRoute] = useState('')
+  const [editDialogContainers, setEditDialogContainers] = useState<{ type: string; number: string }[]>([])
+
   const {
     loading, loadingSuggestions, submitting, pickMode, setPickMode,
     clientOptions, routeOptions,
@@ -125,13 +129,38 @@ export function MatchJob() {
     handleMatch,
   } = useMatchJob(Number(jobIdStr))
 
-  // Memoize edit configs to prevent unnecessary re-renders
-  const clientEditLeft = useMemo(() => ({ options: clientOptions, onChange: setJobClient, placeholder: 'Chọn khách hàng...' }), [clientOptions, setJobClient])
-  const clientEditRight = useMemo(() => ({ options: clientOptions, onChange: setTripClient, placeholder: 'Chọn khách hàng...' }), [clientOptions, setTripClient])
-  const routeEditLeft = useMemo(() => ({ options: routeOptions, onChange: setJobRoute, placeholder: 'Chọn cung đường...' }), [routeOptions, setJobRoute])
-  const routeEditRight = useMemo(() => ({ options: routeOptions, onChange: setTripRoute, placeholder: 'Chọn cung đường...' }), [routeOptions, setTripRoute])
-  const contEditLeft = useMemo(() => ({ onChange: setJobContainers, accentColor: 'var(--theme-brand-primary)' }), [setJobContainers])
-  const contEditRight = useMemo(() => ({ onChange: setTripContainers, accentColor: 'var(--theme-status-warning)' }), [setTripContainers])
+  const editingTrip = useMemo(() => draftTrips.find(t => t.id === editingTripId), [draftTrips, editingTripId])
+
+  const handleOpenEditDialog = (tripId: number) => {
+    const trip = draftTrips.find(t => t.id === tripId)
+    if (trip) {
+      setEditDialogClient(trip.clientName)
+      setEditDialogRoute(trip.route)
+      setEditDialogContainers((trip.containers?.length ? trip.containers : (
+        trip.containerNumber ? [{ type: trip.workType ?? 'E20', number: trip.containerNumber }] : []
+      )).map(c => ({ type: c.workType, number: c.containerNumber })))
+    }
+  }
+
+  const handleEditDialogOpen = (tripId: number) => {
+    setEditingTripId(tripId)
+    handleOpenEditDialog(tripId)
+  }
+
+  const handleSaveEditDialog = () => {
+    if (!editingTrip) return
+    if (editingTripId === selectedTripId) {
+      setTripClient(editDialogClient)
+      setTripRoute(editDialogRoute)
+      setTripContainers(editDialogContainers)
+    }
+    setEditingTripId(null)
+    toast.success('Thành công', 'Đã cập nhật thông tin đơn hàng')
+  }
+
+  const handleCloseEditDialog = () => {
+    setEditingTripId(null)
+  }
 
   const handleToggleConfirmation = () => {
     if (!selectedTrip) return
@@ -316,153 +345,301 @@ export function MatchJob() {
           </div>
         </div>
 
-        {/* Right panel — trip list when no trip selected, comparison when selected */}
+        {/* Right panel — always show trip list only */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {selectedJob && selectedTrip ? (
-            <>
-              <div
-                className="flex items-center justify-between px-6 py-4 border-b shrink-0"
-                style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}
-              >
-                <h2 className="typo-h3">So sánh chi tiết</h2>
-                <p className="typo-meta">Nhấn vào từng mục để chỉnh sửa</p>
+          <div
+            className="flex items-center justify-between px-6 py-4 border-b shrink-0"
+            style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full" style={{ background: 'var(--theme-status-warning)' }} />
+              <h2 className="typo-h3">Chọn đơn hàng</h2>
+              <span className="typo-caption px-2 py-1 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}>
+                {draftTrips.length}
+              </span>
+              {suggestions.length > 0 && (
+                <span className="flex items-center gap-1 typo-caption px-2 py-1 rounded" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
+                  <Sparkles className="w-3 h-3" /> {suggestions.length} gợi ý
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {draftTrips.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+                <FileText className="w-10 h-10 mb-3" style={{ color: 'var(--theme-text-muted)' }} />
+                <p className="text-sm font-semibold mb-1" style={{ color: 'var(--theme-text-primary)' }}>Không có đơn hàng nào</p>
+                <p className="text-xs mb-4" style={{ color: 'var(--theme-text-muted)' }}>Tạo đơn hàng mới để bắt đầu đối soát</p>
+                <button
+                  onClick={() => navigate('/accountant/create-trip', { state: { fromWorkOrder: selectedJob } })}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
+                  style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+                >
+                  <Plus className="w-4 h-4" /> Tạo đơn mới
+                </button>
               </div>
-              <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-3">
-                <ContCompareRow left={jobConts} right={tripConts} matched={contMatched} leftLabel="Đã chạy" rightLabel="Yêu cầu" editLeft={contEditLeft} editRight={contEditRight} />
-                <CompareRow label="Khách hàng" left={jobClient} right={tripClient} matched={clientMatched} leftLabel="Đã chạy" rightLabel="Yêu cầu" editLeft={clientEditLeft} editRight={clientEditRight} />
-                <CompareRow label="Cung đường" left={jobRoute} right={tripRoute} matched={routeMatched} leftLabel="Đã chạy" rightLabel="Yêu cầu" editLeft={routeEditLeft} editRight={routeEditRight} />
-              </div>
-            </>
-          ) : (
-            <>
-              <div
-                className="flex items-center justify-between px-6 py-4 border-b shrink-0"
-                style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full" style={{ background: 'var(--theme-status-warning)' }} />
-                  <h2 className="typo-h3">Chọn đơn hàng</h2>
-                  <span className="typo-caption px-2 py-1 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}>
-                    {draftTrips.length}
-                  </span>
+            ) : (() => {
+              const suggestedIds = new Set(suggestions.map(s => s.tripOrder.id))
+              const unsuggestedTrips = draftTrips.filter(t => !suggestedIds.has(t.id))
+              return (
+                <div>
                   {suggestions.length > 0 && (
-                    <span className="flex items-center gap-1 typo-caption px-2 py-1 rounded" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
-                      <Sparkles className="w-3 h-3" /> {suggestions.length} gợi ý
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="flex-1 overflow-y-auto">
-                {draftTrips.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-                    <FileText className="w-10 h-10 mb-3" style={{ color: 'var(--theme-text-muted)' }} />
-                    <p className="text-sm font-semibold mb-1" style={{ color: 'var(--theme-text-primary)' }}>Không có đơn hàng nào</p>
-                    <p className="text-xs mb-4" style={{ color: 'var(--theme-text-muted)' }}>Tạo đơn hàng mới để bắt đầu đối soát</p>
-                    <button
-                      onClick={() => navigate('/accountant/create-trip', { state: { fromWorkOrder: selectedJob } })}
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-                      style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-                    >
-                      <Plus className="w-4 h-4" /> Tạo đơn mới
-                    </button>
-                  </div>
-                ) : (() => {
-                  const suggestedIds = new Set(suggestions.map(s => s.tripOrder.id))
-                  const unsuggestedTrips = draftTrips.filter(t => !suggestedIds.has(t.id))
-                  return (
-                    <div>
-                      {suggestions.length > 0 && (
-                        <>
-                          <div className="px-4 pt-3 pb-1">
-                            <p className="text-xs font-semibold uppercase tracking-wide flex items-center gap-1.5" style={{ color: 'var(--theme-brand-primary)' }}>
-                              <Sparkles className="w-3 h-3" /> Gợi ý khớp
-                            </p>
-                          </div>
-                          {suggestions.map((s, idx) => {
-                            const isFull = s.confidence === 'full'
-                            const isPartial = s.confidence === 'partial'
-                            const pct = Math.min(100, s.score)
-                            const color = isFull ? 'var(--theme-status-success)' : isPartial ? 'var(--theme-status-warning)' : 'var(--theme-text-muted)'
-                            return (
-                              <button
-                                key={s.tripOrder.id}
-                                onClick={() => setSelectedTripId(s.tripOrder.id)}
-                                className="w-full text-left px-4 py-3 flex items-start gap-3 touch-manipulation hover:opacity-80 transition-opacity"
-                                style={{ borderBottom: '1px solid var(--theme-border-light)', background: isFull ? 'var(--theme-status-success-light)' : isPartial ? 'var(--theme-status-warning-light)' : 'transparent' }}
-                              >
-                                <div className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 mt-0.5" style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-muted)' }}>{idx + 1}</div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
-                                    {(s.tripOrder.containers?.length ? s.tripOrder.containers : []).map((c, i) => (
-                                      <span key={i} className="flex items-center gap-1">
-                                        <ContBadge type={c.workType} />
-                                        <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
-                                      </span>
-                                    ))}
-                                  </div>
-                                  <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>{s.tripOrder.clientName} · {s.tripOrder.route}</p>
-                                  {s.matchedFields.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mt-1">
-                                      {s.matchedFields.map(f => (
-                                        <span key={f} className="text-[10px] px-1.5 py-0.5 rounded font-medium flex items-center gap-0.5" style={{ background: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' }}>
-                                          <Check className="w-2.5 h-2.5" />
-                                          {f === 'driver' ? 'Tài xế' : f === 'client' ? 'Khách hàng' : f === 'route' ? 'Cung đường' : 'Container'}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="flex flex-col items-end gap-1 shrink-0">
-                                  <div className="w-12 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--theme-bg-tertiary)' }}>
-                                    <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
-                                  </div>
-                                  <span className="text-[10px] font-bold tabular-nums" style={{ color }}>{pct}%</span>
-                                </div>
-                              </button>
-                            )
-                          })}
-                        </>
-                      )}
-                      {unsuggestedTrips.length > 0 && (
-                        <>
-                          {suggestions.length > 0 && (
-                            <div className="px-4 pt-3 pb-1">
-                              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>Tất cả đơn hàng</p>
-                            </div>
-                          )}
-                          {unsuggestedTrips.map(trip => (
+                    <>
+                      <div className="px-4 pt-3 pb-1">
+                        <p className="text-xs font-semibold uppercase tracking-wide flex items-center gap-1.5" style={{ color: 'var(--theme-brand-primary)' }}>
+                          <Sparkles className="w-3 h-3" /> Gợi ý khớp
+                        </p>
+                      </div>
+                      {suggestions.map((s, idx) => {
+                        const isFull = s.confidence === 'full'
+                        const isPartial = s.confidence === 'partial'
+                        const pct = Math.min(100, s.score)
+                        const color = isFull ? 'var(--theme-status-success)' : isPartial ? 'var(--theme-status-warning)' : 'var(--theme-text-muted)'
+                        return (
+                          <div
+                            key={s.tripOrder.id}
+                            className="w-full px-4 py-3 flex items-start gap-3 touch-manipulation group"
+                            style={{ borderBottom: '1px solid var(--theme-border-light)', background: isFull ? 'var(--theme-status-success-light)' : isPartial ? 'var(--theme-status-warning-light)' : 'transparent' }}
+                          >
                             <button
-                              key={trip.id}
-                              onClick={() => setSelectedTripId(trip.id)}
-                              className="w-full text-left px-4 py-3 flex items-start gap-3 touch-manipulation hover:opacity-80 transition-opacity"
-                              style={{ borderBottom: '1px solid var(--theme-border-light)' }}
+                              onClick={() => setSelectedTripId(s.tripOrder.id)}
+                              className="flex-1 flex items-start gap-3 text-left hover:opacity-80 transition-opacity"
                             >
-                              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--theme-status-warning-light)' }}>
-                                <FileText className="w-5 h-5" style={{ color: 'var(--theme-status-warning)' }} />
-                              </div>
+                              <div className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 mt-0.5" style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-muted)' }}>{idx + 1}</div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
-                                  {(trip.containers?.length ? trip.containers : []).map((c, i) => (
+                                  {(s.tripOrder.containers?.length ? s.tripOrder.containers : []).map((c, i) => (
                                     <span key={i} className="flex items-center gap-1">
                                       <ContBadge type={c.workType} />
                                       <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
                                     </span>
                                   ))}
                                 </div>
-                                <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>{trip.clientName} · {trip.route}</p>
+                                <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>{s.tripOrder.clientName} · {s.tripOrder.route}</p>
+                                {s.matchedFields.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {s.matchedFields.map(f => (
+                                      <span key={f} className="text-[10px] px-1.5 py-0.5 rounded font-medium flex items-center gap-0.5" style={{ background: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' }}>
+                                        <Check className="w-2.5 h-2.5" />
+                                        {f === 'driver' ? 'Tài xế' : f === 'client' ? 'Khách hàng' : f === 'route' ? 'Cung đường' : 'Container'}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             </button>
-                          ))}
-                        </>
+                            <div className="flex flex-col items-end gap-2 shrink-0">
+                              <div className="flex flex-col items-end gap-1">
+                                <div className="w-12 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--theme-bg-tertiary)' }}>
+                                  <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+                                </div>
+                                <span className="text-[10px] font-bold tabular-nums" style={{ color }}>{pct}%</span>
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleEditDialogOpen(s.tripOrder.id)
+                                }}
+                                className="p-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
+                                title="Chỉnh sửa"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </>
+                  )}
+                  {unsuggestedTrips.length > 0 && (
+                    <>
+                      {suggestions.length > 0 && (
+                        <div className="px-4 pt-3 pb-1">
+                          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>Tất cả đơn hàng</p>
+                        </div>
                       )}
-                    </div>
-                  )
-                })()}
-              </div>
-            </>
-          )}
+                      {unsuggestedTrips.map(trip => (
+                        <div
+                          key={trip.id}
+                          className="w-full px-4 py-3 flex items-start gap-3 touch-manipulation group"
+                          style={{ borderBottom: '1px solid var(--theme-border-light)' }}
+                        >
+                          <button
+                            onClick={() => setSelectedTripId(trip.id)}
+                            className="flex-1 flex items-start gap-3 text-left hover:opacity-80 transition-opacity"
+                          >
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--theme-status-warning-light)' }}>
+                              <FileText className="w-5 h-5" style={{ color: 'var(--theme-status-warning)' }} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+                                {(trip.containers?.length ? trip.containers : []).map((c, i) => (
+                                  <span key={i} className="flex items-center gap-1">
+                                    <ContBadge type={c.workType} />
+                                    <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
+                                  </span>
+                                ))}
+                              </div>
+                              <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>{trip.clientName} · {trip.route}</p>
+                            </div>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleEditDialogOpen(trip.id)
+                            }}
+                            className="p-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                            style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
+                            title="Chỉnh sửa"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )
+            })()}
+          </div>
         </div>
       </div>
+
+      {/* Edit Trip Dialog */}
+      <Dialog open={editingTripId !== null} onOpenChange={handleCloseEditDialog}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto" style={{ background: 'var(--theme-bg-primary)' }}>
+            <div className="sticky top-0 flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: 'var(--theme-border-light)', background: 'var(--theme-bg-secondary)' }}>
+              <h2 className="typo-h3" style={{ color: 'var(--theme-text-primary)' }}>Chỉnh sửa đơn hàng</h2>
+              <button
+                onClick={handleCloseEditDialog}
+                className="p-1 rounded-lg"
+                style={{ color: 'var(--theme-text-muted)' }}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Client Select */}
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--theme-text-primary)' }}>Khách hàng</label>
+                <select
+                  value={editDialogClient}
+                  onChange={(e) => setEditDialogClient(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border text-sm"
+                  style={{
+                    background: 'var(--theme-bg-secondary)',
+                    borderColor: 'var(--theme-border-default)',
+                    color: 'var(--theme-text-primary)',
+                  }}
+                >
+                  <option value="">Chọn khách hàng...</option>
+                  {clientOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Route Select */}
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--theme-text-primary)' }}>Cung đường</label>
+                <select
+                  value={editDialogRoute}
+                  onChange={(e) => setEditDialogRoute(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border text-sm"
+                  style={{
+                    background: 'var(--theme-bg-secondary)',
+                    borderColor: 'var(--theme-border-default)',
+                    color: 'var(--theme-text-primary)',
+                  }}
+                >
+                  <option value="">Chọn cung đường...</option>
+                  {routeOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Containers */}
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--theme-text-primary)' }}>Container</label>
+                <div className="space-y-2">
+                  {editDialogContainers.map((c, idx) => (
+                    <div key={idx} className="flex gap-2 items-end">
+                      <input
+                        type="text"
+                        value={c.type}
+                        onChange={(e) => {
+                          const updated = [...editDialogContainers]
+                          updated[idx].type = e.target.value
+                          setEditDialogContainers(updated)
+                        }}
+                        placeholder="Type (e.g. E20)"
+                        className="flex-1 px-3 py-2 rounded-lg border text-sm"
+                        style={{
+                          background: 'var(--theme-bg-secondary)',
+                          borderColor: 'var(--theme-border-default)',
+                          color: 'var(--theme-text-primary)',
+                        }}
+                      />
+                      <input
+                        type="text"
+                        value={c.number}
+                        onChange={(e) => {
+                          const updated = [...editDialogContainers]
+                          updated[idx].number = e.target.value
+                          setEditDialogContainers(updated)
+                        }}
+                        placeholder="Number"
+                        className="flex-1 px-3 py-2 rounded-lg border text-sm"
+                        style={{
+                          background: 'var(--theme-bg-secondary)',
+                          borderColor: 'var(--theme-border-default)',
+                          color: 'var(--theme-text-primary)',
+                        }}
+                      />
+                      <button
+                        onClick={() => setEditDialogContainers(editDialogContainers.filter((_, i) => i !== idx))}
+                        className="p-2 rounded-lg"
+                        style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-muted)' }}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => setEditDialogContainers([...editDialogContainers, { type: 'E20', number: '' }])}
+                    className="w-full px-3 py-2 rounded-lg text-sm font-medium"
+                    style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-brand-primary)' }}
+                  >
+                    <Plus className="w-4 h-4 inline mr-1" /> Thêm container
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Dialog Footer */}
+            <div className="flex gap-2 p-6 border-t" style={{ borderColor: 'var(--theme-border-light)' }}>
+              <button
+                onClick={handleCloseEditDialog}
+                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium"
+                style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)' }}
+              >
+                Hủy
+              </button>
+              <Button
+                onClick={handleSaveEditDialog}
+                className="flex-1 px-4 py-2 rounded-lg text-sm font-medium"
+                style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+              >
+                Lưu
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Dialog>
 
       {/* Picker modals */}
       <PickModal

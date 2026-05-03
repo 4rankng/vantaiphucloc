@@ -118,7 +118,7 @@ function StatusPill({ status, variant, compact = false }: { status: WorkOrder['s
  *
  *   ┌────────────────────────────────────────────────────────┐
  *   │ Hapag-Lloyd Việt Nam                  +450.000 đ       │  ← line 1
- *   │ Điểm đến:  Cát Lái                   09-05 · 08:30     │  ← line 2
+ *   │ Điểm lấy:  Cát Lái                   09-05 · 08:30     │  ← line 2
  *   │ Điểm trả:  Đồng Nai                       [Đã ghép]    │  ← line 3
  *   └────────────────────────────────────────────────────────┘
  *
@@ -164,10 +164,10 @@ function DriverCard({ wo, onClick }: { wo: WorkOrder; onClick: () => void }) {
         )}
       </div>
 
-      {/* Row 2 — Điểm đến (left) + timestamp (right) */}
+      {/* Row 2 — Điểm lấy (left) + timestamp (right) */}
       <div className="mt-1.5 flex items-baseline justify-between gap-3">
         <p className="text-[12px] truncate flex-1 min-w-0" style={{ color: 'var(--theme-text-secondary)' }}>
-          <span style={{ color: 'var(--theme-text-muted)' }}>Điểm đến:&nbsp;</span>
+          <span style={{ color: 'var(--theme-text-muted)' }}>Điểm lấy:&nbsp;</span>
           {pickup}
         </p>
         <span className="text-[11px] tabular-nums whitespace-nowrap shrink-0" style={{ color: 'var(--theme-text-muted)' }}>

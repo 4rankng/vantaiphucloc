@@ -56,3 +56,4 @@ dist/
 .DS_Store
 Thumbs.db
 .kiro
+.claude
