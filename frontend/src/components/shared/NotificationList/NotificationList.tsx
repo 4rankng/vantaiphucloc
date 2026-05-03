@@ -53,8 +53,18 @@ export function NotificationList({ notifications, typeConfig, emptyLabel = 'Khô
 
       {notifications.length === 0 ? (
         <div className="card p-8 text-center" style={{ background: 'var(--theme-bg-secondary)' }}>
-          <Bell className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--theme-text-muted)' }} />
-          <p className="typo-body-sm" style={{ color: 'var(--theme-text-muted)' }}>{emptyLabel}</p>
+          <div
+            className="flex items-center justify-center rounded-full mx-auto mb-3 h-14 w-14"
+            style={{ background: 'var(--theme-bg-tertiary)' }}
+          >
+            <Bell className="w-7 h-7" style={{ color: 'var(--theme-text-muted)' }} />
+          </div>
+          <p className="typo-body font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+            {emptyLabel}
+          </p>
+          <p className="typo-body-sm mt-1" style={{ color: 'var(--theme-text-muted)' }}>
+            Thông báo mới sẽ xuất hiện ở đây
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
