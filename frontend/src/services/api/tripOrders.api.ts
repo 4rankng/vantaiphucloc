@@ -11,7 +11,6 @@ import type {
 
 interface TripOrderFilters {
   clientId?: number
-  driverId?: number
   status?: TripOrder['status']
   dateFrom?: string
   dateTo?: string
@@ -21,7 +20,6 @@ export async function getTripOrders(filters?: TripOrderFilters): Promise<ApiResp
   try {
     const params: Record<string, string> = {}
     if (filters?.clientId) params.client_id = String(filters.clientId)
-    if (filters?.driverId) params.driver_id = String(filters.driverId)
     if (filters?.status) params.status = filters.status
     if (filters?.dateFrom) params.date_from = filters.dateFrom
     if (filters?.dateTo) params.date_to = filters.dateTo

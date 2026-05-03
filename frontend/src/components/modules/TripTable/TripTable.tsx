@@ -21,8 +21,6 @@ export function TripTable({ data, onRowClick, showActions }: TripTableProps) {
             <th className="px-4 py-2.5 font-semibold">Ngày</th>
             <th className="px-4 py-2.5 font-semibold">Tuyến</th>
             {showActions && <th className="px-4 py-2.5 font-semibold">Cont</th>}
-            {showActions && <th className="px-4 py-2.5 font-semibold">Đầu kéo</th>}
-            <th className="px-4 py-2.5 font-semibold">Tài xế</th>
             <th className="px-4 py-2.5 font-semibold">Trạng thái</th>
             <th className="px-4 py-2.5 font-semibold text-right">Cước</th>
             {showActions && <th className="px-4 py-2.5 font-semibold">Hành động</th>}
@@ -42,8 +40,6 @@ export function TripTable({ data, onRowClick, showActions }: TripTableProps) {
                 <td className="px-4 py-2.5 text-[var(--theme-text-muted)] font-mono-num">{j.jobDate}</td>
                 <td className="px-4 py-2.5 text-[var(--theme-text-primary)] max-w-[200px] truncate">{j.route}</td>
                 {showActions && <td className="px-4 py-2.5"><span className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded">{j.trailerType}</span></td>}
-                {showActions && <td className="px-4 py-2.5 text-[var(--theme-text-muted)] font-mono-num">{j.tractorPlate}</td>}
-                <td className="px-4 py-2.5 text-[var(--theme-text-muted)]">{j.driverName}</td>
                 <td className="px-4 py-2.5"><StatusBadge variant={tripStatusVariant(j.status)} label={s.label} /></td>
                 <td className="px-4 py-2.5 text-right font-semibold text-[var(--theme-text-primary)] font-mono-num">{formatCurrencyShort(j.revenue)}</td>
                 {showActions && (

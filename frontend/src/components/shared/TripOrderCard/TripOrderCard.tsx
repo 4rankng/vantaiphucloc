@@ -29,7 +29,7 @@ export function TripOrderCard({ trip, onClick }: TripOrderCardProps) {
             {trip.clientName}
           </p>
           <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-            {trip.driverName}{trip.tractorPlate ? ` · ${trip.tractorPlate}` : ''}
+            {trip.route}
           </p>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
