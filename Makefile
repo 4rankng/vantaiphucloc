@@ -34,17 +34,50 @@ migrate:
 
 ## dev: Start PostgreSQL, Redis, backend, frontend, worker, and adminer concurrently
 dev:
-	@echo "Killing stale dev processes..."
-	@lsof -ti :8000,:5173 2>/dev/null | xargs kill -9 2>/dev/null || true
+	@echo "→ Cleaning stale dev processes..."
+	@# Match by command pattern, not just port — a hung uvicorn that lost its port
+	@# binding still holds DB connections. pkill -f catches orphans whose parent died.
+	@pkill -TERM -f "uvicorn app.main:app" 2>/dev/null || true
+	@pkill -TERM -f "arq app.workers.worker"  2>/dev/null || true
+	@pkill -TERM -f "vite"                    2>/dev/null || true
+	@sleep 1
+	@# Anything still listening on our ports gets SIGKILL.
+	@lsof -ti :8000,:5173 2>/dev/null | xargs -r kill -9 2>/dev/null || true
+	@pkill -KILL -f "uvicorn app.main:app" 2>/dev/null || true
+	@pkill -KILL -f "arq app.workers.worker"  2>/dev/null || true
+	@# Verify the ports are actually free before going further.
+	@for port in 8000 5173; do \
+		if lsof -nP -iTCP:$$port -sTCP:LISTEN >/dev/null 2>&1; then \
+			echo "✗ port $$port still in use after cleanup — aborting"; exit 1; \
+		fi; \
+	done
 	@docker stop vantai-adminer 2>/dev/null || true
 	@docker start vantai-postgres 2>/dev/null || docker run -d --name vantai-postgres \
 		-e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=vantaihanghoa \
 		-p 5432:5432 postgres:16-alpine
 	@docker start vantai-redis 2>/dev/null || docker run -d --name vantai-redis \
 		-p 6379:6379 redis:7-alpine redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
-	@sleep 1
+	@# Wait until Postgres is ready to accept queries (start can take a few seconds
+	@# on cold container).
+	@for i in 1 2 3 4 5 6 7 8 9 10; do \
+		docker exec vantai-postgres pg_isready -U postgres -d vantaihanghoa >/dev/null 2>&1 && break; \
+		sleep 1; \
+	done
+	@# Server-side safety net: any transaction left idle for 60s gets terminated by
+	@# Postgres itself, so a crashed dev process can never permanently pin pool slots.
+	@docker exec vantai-postgres psql -U postgres -d vantaihanghoa -c \
+		"ALTER SYSTEM SET idle_in_transaction_session_timeout = '60s';" >/dev/null 2>&1 || true
+	@docker exec vantai-postgres psql -U postgres -d vantaihanghoa -c "SELECT pg_reload_conf();" >/dev/null 2>&1 || true
+	@# Reap any leaked "idle in transaction" backends from a previous crash so we
+	@# start with a clean DB pool. Connections orphaned by SIGKILL aren't reclaimed
+	@# by Postgres until TCP keepalive fires (~hours).
+	@docker exec vantai-postgres psql -U postgres -d vantaihanghoa -tc \
+		"SELECT pg_terminate_backend(pid) FROM pg_stat_activity \
+		 WHERE datname='vantaihanghoa' AND state='idle in transaction';" >/dev/null 2>&1 || true
 	cd backend && PYTHONPATH=. alembic upgrade head
-	@trap 'kill %1 %2 %3 %4 2>/dev/null' INT; \
+	@# SIGTERM (not -9) on Ctrl+C so uvicorn/arq can run lifespan handlers and
+	@# close DB connections cleanly.
+	@trap 'kill -TERM %1 %2 %3 %4 2>/dev/null' INT TERM; \
 	(cd backend && PYTHONPATH=. uvicorn app.main:app --reload --host 0.0.0.0 --port 8000) & \
 	(cd backend && PYTHONPATH=. arq app.workers.worker.WorkerSettings) & \
 	(cd frontend && pnpm dev) & \
