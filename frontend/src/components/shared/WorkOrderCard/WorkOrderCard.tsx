@@ -28,8 +28,16 @@ export function WorkOrderCard(props: WorkOrderCardProps) {
   return <AccountantCard wo={wo} />
 }
 
+/** Routes are stored as "Origin → Destination" with the arrow character.
+ *  Some legacy data may use " - " as a separator; handle both. */
+function splitRouteParts(route: string): string[] {
+  if (route.includes('→')) return route.split(/\s*→\s*/).map(s => s.trim()).filter(Boolean)
+  if (route.includes(' - ')) return route.split(' - ').map(s => s.trim()).filter(Boolean)
+  return [route]
+}
+
 function resolveRoute(wo: WorkOrder): string {
-  const parts = wo.route.split(' - ')
+  const parts = splitRouteParts(wo.route)
   const from = wo.pickupLocation || parts[0] || wo.route
   const to   = wo.dropoffLocation || parts[1] || null
   return to ? `${from} → ${to}` : from
@@ -69,17 +77,19 @@ function ContainerList({ wo }: { wo: WorkOrder }) {
   )
 }
 
-function StatusPill({ status, variant }: { status: WorkOrder['status']; variant: 'driver' | 'accountant' }) {
+function StatusPill({ status, variant, compact = false }: { status: WorkOrder['status']; variant: 'driver' | 'accountant'; compact?: boolean }) {
+  const padding = compact ? 'px-2 py-0.5' : 'px-2.5 py-1'
+  const iconSize = compact ? 'w-2.5 h-2.5' : 'w-3 h-3'
   if (status === 'PENDING') {
     return (
       <span
-        className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full shrink-0"
+        className={`flex items-center gap-1 text-[11px] font-semibold ${padding} rounded-full shrink-0`}
         style={{
           background: 'color-mix(in srgb, var(--theme-status-warning) 12%, transparent)',
           color: 'var(--theme-status-warning)',
         }}
       >
-        <Clock className="w-3 h-3" />
+        <Clock className={iconSize} />
         {variant === 'driver' ? 'Chờ ghép' : 'Chờ đối soát'}
       </span>
     )
@@ -87,15 +97,15 @@ function StatusPill({ status, variant }: { status: WorkOrder['status']; variant:
   if (status === 'MATCHED' || status === 'COMPLETED') {
     return (
       <span
-        className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full shrink-0"
+        className={`flex items-center gap-1 text-[11px] font-semibold ${padding} rounded-full shrink-0`}
         style={{
           background: 'color-mix(in srgb, var(--theme-status-success, #16a34a) 12%, transparent)',
           color: 'var(--theme-status-success, #16a34a)',
         }}
       >
         {variant === 'driver'
-          ? <><CheckCircle className="w-3 h-3" /> Đã ghép</>
-          : <><Lock className="w-3 h-3" /> Đã chốt</>
+          ? <CheckCircle className={iconSize} />
+          : <><Lock className={iconSize} /> Đã chốt</>
         }
       </span>
     )
@@ -103,42 +113,77 @@ function StatusPill({ status, variant }: { status: WorkOrder['status']; variant:
   return null
 }
 
+/**
+ * Driver work-order card — 3-row layout per spec.
+ *
+ *   ┌────────────────────────────────────────────────────────┐
+ *   │ Hapag-Lloyd Việt Nam                  +450.000 đ       │  ← line 1
+ *   │ Điểm đến:  Cát Lái                   09-05 · 08:30     │  ← line 2
+ *   │ Điểm trả:  Đồng Nai                       [Đã ghép]    │  ← line 3
+ *   └────────────────────────────────────────────────────────┘
+ *
+ * Container info is intentionally omitted — it only appears on the detail
+ * page when the user taps the card.
+ *
+ * Whole card is the tap target → opens detail page.
+ */
 function DriverCard({ wo, onClick }: { wo: WorkOrder; onClick: () => void }) {
+  const hasEarning = wo.earning > 0
+  const routeParts = splitRouteParts(wo.route)
+  const pickup = wo.pickupLocation || routeParts[0] || wo.route
+  const dropoff = wo.dropoffLocation || routeParts[1] || ''
+
   return (
     <button
       onClick={onClick}
-      className="w-full text-left rounded-lg border p-4 transition-all active:scale-[0.98] touch-manipulation"
+      className="w-full text-left rounded-lg border px-3 py-2.5 transition-all active:scale-[0.99] touch-manipulation"
       style={{
         background: 'var(--surface-bg)',
         borderColor: 'var(--surface-border)',
       }}
     >
-      <div className="flex items-start justify-between gap-3 mb-2">
-        <ContainerList wo={wo} />
-        <StatusPill status={wo.status} variant="driver" />
-      </div>
-
-      <p className="text-sm font-bold leading-snug" style={{ color: 'var(--theme-text-primary)' }}>
-        {wo.clientCode ? `${wo.clientCode} · ${wo.clientName}` : wo.clientName}
-      </p>
-
-      <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-        {resolveRoute(wo)}
-      </p>
-
-      <div className="mt-3 pt-2.5 flex items-center justify-between" style={{ borderTop: '1px solid var(--surface-border)' }}>
-        <span className="text-xs tabular-nums" style={{ color: 'var(--theme-text-muted)' }}>
-          {fmtDate(wo.createdAt)}
-        </span>
-        {wo.earning > 0 ? (
-          <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>
+      {/* Row 1 — company name (left) + earning (right) */}
+      <div className="flex items-baseline justify-between gap-3">
+        <p
+          className="text-[14px] font-semibold leading-snug truncate flex-1 min-w-0"
+          style={{ color: 'var(--theme-text-primary)' }}
+        >
+          {wo.clientCode ? `${wo.clientCode} · ${wo.clientName}` : wo.clientName}
+        </p>
+        {hasEarning ? (
+          <span
+            className="text-[14px] font-bold tabular-nums whitespace-nowrap shrink-0"
+            style={{ color: 'var(--theme-brand-primary)' }}
+          >
             +{formatCurrencyFull(wo.earning)}
           </span>
         ) : (
-          <span className="text-xs font-medium" style={{ color: 'var(--theme-text-muted)' }}>
-            Chưa ghép giá
+          <span className="text-[11px] font-medium whitespace-nowrap shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
+            — đ
           </span>
         )}
+      </div>
+
+      {/* Row 2 — Điểm đến (left) + timestamp (right) */}
+      <div className="mt-1.5 flex items-baseline justify-between gap-3">
+        <p className="text-[12px] truncate flex-1 min-w-0" style={{ color: 'var(--theme-text-secondary)' }}>
+          <span style={{ color: 'var(--theme-text-muted)' }}>Điểm đến:&nbsp;</span>
+          {pickup}
+        </p>
+        <span className="text-[11px] tabular-nums whitespace-nowrap shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
+          {fmtDate(wo.createdAt)}
+        </span>
+      </div>
+
+      {/* Row 3 — Điểm trả (left) + status chip (right) */}
+      <div className="mt-0.5 flex items-baseline justify-between gap-3">
+        <p className="text-[12px] truncate flex-1 min-w-0" style={{ color: 'var(--theme-text-secondary)' }}>
+          <span style={{ color: 'var(--theme-text-muted)' }}>Điểm trả:&nbsp;</span>
+          {dropoff || '—'}
+        </p>
+        <div className="shrink-0">
+          <StatusPill status={wo.status} variant="driver" compact />
+        </div>
       </div>
     </button>
   )

@@ -445,7 +445,7 @@ function StatCard({ label, value, icon, trend, color }: StatCardProps) {
           </div>
         )}
       </div>
-      <p className="text-2xl font-bold leading-none tracking-tight mb-1" style={{ color: 'var(--theme-text-primary)' }}>
+      <p className="text-lg lg:text-2xl font-bold leading-none tracking-tight mb-1 whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
         {value}
       </p>
       <p className="text-xs font-medium" style={{ color: 'var(--theme-text-muted)' }}>

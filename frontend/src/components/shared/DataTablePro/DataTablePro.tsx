@@ -209,7 +209,7 @@ export function DataTablePro<T>({
                     }}
                   >
                     {(allSelected || someSelected) && (
-                      <Check className="h-3 w-3" style={{ color: '#fff' }} />
+                      <Check className="h-3 w-3" style={{ color: 'white' }} />
                     )}
                   </button>
                 </th>
@@ -305,7 +305,7 @@ export function DataTablePro<T>({
                             borderColor: isSelected ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)',
                           }}
                         >
-                          {isSelected && <Check className="h-3 w-3" style={{ color: '#fff' }} />}
+                          {isSelected && <Check className="h-3 w-3" style={{ color: 'var(--theme-text-on-brand)' }} />}
                         </button>
                       </td>
                     )}

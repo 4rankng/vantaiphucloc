@@ -144,8 +144,8 @@ export function OfflineIndicator() {
       <div
         className="pointer-events-auto flex items-center gap-2.5 rounded-full px-4 py-2.5 shadow-lg ring-1 ring-black/5 animate-in slide-in-from-top-2 fade-in duration-300"
         style={{
-          background: '#78350f',
-          border: '1px solid #92400e',
+          background: 'var(--theme-status-warning)',
+          border: '1px solid var(--theme-status-warning-text)',
         }}
       >
         <WifiOff className="h-4 w-4 shrink-0 text-amber-300" />

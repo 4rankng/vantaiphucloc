@@ -242,9 +242,17 @@ function ChuyenCard({
     : ''
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
-      className="w-full text-left rounded-xl p-3 transition-all touch-manipulation"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onClick()
+        }
+      }}
+      className="w-full text-left rounded-lg p-3 transition-all touch-manipulation cursor-pointer"
       style={{
         background: isSelected
           ? 'color-mix(in srgb, var(--theme-brand-primary) 12%, var(--theme-bg-primary))'
@@ -257,7 +265,11 @@ function ChuyenCard({
           {wo.driverName}
         </p>
         <button
-          onClick={onEdit}
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onEdit(e)
+          }}
           className="shrink-0 flex items-center justify-center w-6 h-6 rounded-md transition hover:opacity-70"
           style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
           aria-label="Sửa phiếu"
@@ -292,7 +304,7 @@ function ChuyenCard({
           ✓ Đang xem gợi ý
         </p>
       )}
-    </button>
+    </div>
   )
 }
 
@@ -354,7 +366,7 @@ function DonHangCard({
               className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
               style={{
                 background: isFull ? 'var(--theme-status-success)' : 'var(--theme-status-warning)',
-                color: '#fff',
+                color: 'white',
               }}
             >
               {Math.round(matchScore)}%
@@ -400,7 +412,7 @@ function DonHangCard({
             className="text-[10px] font-bold px-2 py-1 rounded-lg transition hover:opacity-80 active:scale-[0.97]"
             style={{
               background: isFull ? 'var(--theme-status-success)' : 'var(--theme-status-warning)',
-              color: '#fff',
+              color: 'white',
             }}
           >
             Ghép ngay →
@@ -945,10 +957,10 @@ function MobileDashboard() {
             style={{
               background: a.primary ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
               borderColor: a.primary ? 'transparent' : 'var(--theme-border-default)',
-              color: a.primary ? '#fff' : 'var(--theme-text-primary)',
+              color: a.primary ? 'white' : 'var(--theme-text-primary)',
             }}
           >
-            <span style={{ color: a.primary ? '#fff' : 'var(--theme-brand-primary)' }}>{a.icon}</span>
+            <span style={{ color: a.primary ? 'white' : 'var(--theme-brand-primary)' }}>{a.icon}</span>
             {a.label}
           </button>
         ))}
