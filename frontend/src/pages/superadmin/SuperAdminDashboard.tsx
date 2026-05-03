@@ -18,11 +18,13 @@ export function SuperAdminDashboard({
   filterRole,
   setFilterRole,
   onViewUser,
+  onCreateUser,
 }: {
   users: UserAccount[]
   filterRole: Role | 'ALL'
   setFilterRole: (r: Role | 'ALL') => void
   onViewUser: (u: UserAccount) => void
+  onCreateUser?: () => void
 }) {
   const filtered = filterRole === 'ALL' ? users : users.filter(u => u.role === filterRole)
   const activeUsers = users.filter(u => u.isActive).length
@@ -34,6 +36,8 @@ export function SuperAdminDashboard({
       <PageHeader
         title="Tổng quan"
         subtitle="Quản lý tài khoản và hệ thống"
+        onAdd={onCreateUser}
+        addLabel="Tạo tài khoản"
       />
 
       {/* KPI cards grid */}

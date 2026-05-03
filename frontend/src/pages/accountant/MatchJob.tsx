@@ -189,100 +189,132 @@ export function MatchJob() {
       )}
 
       <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
-        {/* Left panel - Job selector */}
-        <div
-          className="lg:w-[380px] xl:w-[420px] shrink-0 p-4 lg:p-6 lg:border-r overflow-y-auto"
-          style={{ borderColor: 'var(--theme-border-light)' }}
-        >
-          <div className="space-y-4">
-            {/* Job selector */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <div
-                  className="w-2 h-2 rounded-full"
-                  style={{ background: 'var(--theme-brand-primary)' }}
-                />
-                <span className="typo-label" style={{ color: 'var(--theme-brand-primary)' }}>
-                  Chuyến đã chạy
-                </span>
+        {/* Left panel - Full job info card with match indicators */}
+        {selectedJob && (
+          <div
+            className="lg:w-[420px] xl:w-[480px] shrink-0 p-4 lg:p-6 lg:border-r overflow-y-auto"
+            style={{ borderColor: 'var(--theme-border-light)' }}
+          >
+            {/* Header with "Đổi chuyến" button */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full" style={{ background: 'var(--theme-brand-primary)' }} />
+                <span className="typo-label" style={{ color: 'var(--theme-brand-primary)' }}>Chuyến đã chạy</span>
               </div>
               <button
                 onClick={() => setPickMode('job')}
-                className="w-full flex items-center justify-between px-4 py-3.5 rounded-lg touch-manipulation transition-all hover:scale-[1.01]"
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
                 style={{
-                  background: 'var(--theme-bg-secondary)',
-                  boxShadow: 'var(--theme-shadow-card)',
-                  border: selectedJob ? '2px solid var(--theme-brand-primary)' : '1px solid var(--theme-border-default)',
+                  background: 'transparent',
+                  color: 'var(--theme-brand-primary)',
+                  border: '1px solid var(--theme-brand-primary)',
                 }}
               >
-                <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: 'var(--theme-brand-primary-light)' }}
-                  >
-                    <Truck className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
-                  </div>
-                  {selectedJob ? (
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        {selectedJob.containers.map(c => (
-                          <span key={c.containerNumber} className="flex items-center gap-1">
-                            <ContBadge type={c.workType} />
-                            <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                              {c.containerNumber}
-                            </span>
-                          </span>
-                        ))}
-                      </div>
-                      <p className="text-xs mt-1 truncate" style={{ color: 'var(--theme-text-muted)' }}>
-                        {selectedJob.driverName} · {selectedJob.clientName}
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chọn chuyến đã chạy</p>
-                  )}
-                </div>
-                <ChevronDown className="w-5 h-5 shrink-0 ml-2" style={{ color: 'var(--theme-text-muted)' }} />
+                Đổi chuyến
               </button>
             </div>
 
-            {/* Trip selector — shown when trip already selected */}
-            {selectedTrip && (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-2 h-2 rounded-full" style={{ background: 'var(--theme-status-warning)' }} />
-                  <span className="typo-label" style={{ color: 'var(--theme-status-warning)' }}>Đơn hàng đã chọn</span>
+            {/* Full job info card */}
+            <div
+              className="rounded-lg p-4 space-y-4"
+              style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
+            >
+              {/* Driver */}
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="typo-caption" style={{ color: 'var(--theme-text-muted)' }}>Tài xế</p>
+                  <p className="typo-h3" style={{ color: 'var(--theme-text-primary)' }}>{selectedJob.driverName}</p>
                 </div>
-                <button
-                  onClick={() => setSelectedTripId(0)}
-                  className="w-full flex items-center justify-between px-4 py-3.5 rounded-lg touch-manipulation transition-all hover:opacity-80"
-                  style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '2px solid var(--theme-status-warning)' }}
-                >
-                  <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--theme-status-warning-light)' }}>
-                      <FileText className="w-5 h-5" style={{ color: 'var(--theme-status-warning)' }} />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        {(selectedTrip.containers?.length ? selectedTrip.containers : []).map((c, i) => (
-                          <span key={i} className="flex items-center gap-1">
-                            <ContBadge type={c.workType} />
-                            <span className="text-sm font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
-                          </span>
-                        ))}
-                      </div>
-                      <p className="text-xs mt-1 truncate" style={{ color: 'var(--theme-text-muted)' }}>{selectedTrip.clientName} · {selectedTrip.route}</p>
-                    </div>
-                  </div>
-                  <X className="w-4 h-4 shrink-0 ml-2" style={{ color: 'var(--theme-text-muted)' }} />
-                </button>
+                {selectedTrip && clientMatched && (
+                  <span className="chip chip-success text-xs">✓ Khớp</span>
+                )}
+                {selectedTrip && !clientMatched && (
+                  <span className="chip chip-error text-xs">✗ Khác</span>
+                )}
               </div>
-            )}
 
-            {/* Action buttons when both selected */}
-            {selectedJob && selectedTrip && (
-              <div className="space-y-2 pt-2">
-                <div className="flex items-center gap-2 p-3 rounded-xl" style={{ background: 'var(--theme-bg-secondary)' }}>
+              <div style={{ borderTop: '1px solid var(--theme-border-light)' }} />
+
+              {/* Vehicle plate */}
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="typo-caption" style={{ color: 'var(--theme-text-muted)' }}>Biển số xe</p>
+                  <p className="typo-body font-mono" style={{ color: 'var(--theme-text-primary)' }}>{selectedJob.tractorPlate}</p>
+                </div>
+              </div>
+
+              <div style={{ borderTop: '1px solid var(--theme-border-light)' }} />
+
+              {/* Date */}
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="typo-caption" style={{ color: 'var(--theme-text-muted)' }}>Ngày/Giờ</p>
+                  <p className="typo-body" style={{ color: 'var(--theme-text-primary)' }}>
+                    {selectedJob.createdAt ? new Date(selectedJob.createdAt).toLocaleString('vi-VN') : '-'}
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ borderTop: '1px solid var(--theme-border-light)' }} />
+
+              {/* Route */}
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="typo-caption" style={{ color: 'var(--theme-text-muted)' }}>Cung đường</p>
+                  <p className="typo-body" style={{ color: 'var(--theme-text-primary)' }}>{selectedJob.route}</p>
+                </div>
+                {selectedTrip && routeMatched && (
+                  <span className="chip chip-success text-xs">✓ Khớp</span>
+                )}
+                {selectedTrip && !routeMatched && (
+                  <span className="chip chip-error text-xs">✗ Khác</span>
+                )}
+              </div>
+
+              <div style={{ borderTop: '1px solid var(--theme-border-light)' }} />
+
+              {/* Containers */}
+              <div>
+                <p className="typo-caption mb-2" style={{ color: 'var(--theme-text-muted)' }}>Container</p>
+                <div className="space-y-2">
+                  {selectedJob.containers.map(c => (
+                    <div key={c.containerNumber} className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <ContBadge type={c.workType} />
+                        <span className="text-sm font-mono" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
+                      </div>
+                      {selectedTrip && contMatched && (
+                        <span className="chip chip-success text-xs">✓ Khớp</span>
+                      )}
+                      {selectedTrip && !contMatched && (
+                        <span className="chip chip-error text-xs">✗ Khác</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ borderTop: '1px solid var(--theme-border-light)' }} />
+
+              {/* Client */}
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="typo-caption" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</p>
+                  <p className="typo-body font-medium" style={{ color: 'var(--theme-text-primary)' }}>{selectedJob.clientName}</p>
+                </div>
+                {selectedTrip && clientMatched && (
+                  <span className="chip chip-success text-xs">✓ Khớp</span>
+                )}
+                {selectedTrip && !clientMatched && (
+                  <span className="chip chip-error text-xs">✗ Khác</span>
+                )}
+              </div>
+            </div>
+
+            {/* Action buttons when trip selected */}
+            {selectedTrip && (
+              <div className="space-y-3 mt-4">
+                <div className="flex items-center gap-2 p-3 rounded-lg" style={{ background: 'var(--theme-bg-secondary)' }}>
                   {allMatched ? (
                     <><CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-status-success)' }} /><span className="text-xs font-medium" style={{ color: 'var(--theme-status-success)' }}>Tất cả thông tin khớp</span></>
                   ) : (
@@ -295,15 +327,15 @@ export function MatchJob() {
                 <Button
                   onClick={handleMatch}
                   disabled={submitting}
-                  className="w-full h-11 font-bold rounded-xl text-sm flex items-center justify-center gap-2"
+                  className="w-full h-10 font-semibold rounded-lg text-sm flex items-center justify-center gap-2"
                   style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
                 >
                   <Check className="w-4 h-4" />
-                  {submitting ? 'Đang khớp...' : 'Xác nhận khớp chuyến'}
+                  {submitting ? 'Đang khớp...' : 'Xác nhận khớp'}
                 </Button>
                 <button
                   onClick={() => navigate('/accountant/create-trip', { state: { fromWorkOrder: selectedJob } })}
-                  className="w-full h-10 rounded-xl text-sm font-medium flex items-center justify-center gap-2"
+                  className="w-full h-10 rounded-lg text-sm font-medium flex items-center justify-center gap-2"
                   style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-brand-primary)', border: '1px solid var(--theme-border-default)' }}
                 >
                   <Plus className="w-4 h-4" /> Tạo đơn mới
@@ -311,9 +343,38 @@ export function MatchJob() {
               </div>
             )}
           </div>
-        </div>
+        )}
 
-        {/* Right panel — trip list when no trip selected, comparison when selected */}
+        {/* Empty state - select a job first */}
+        {!selectedJob && (
+          <div
+            className="lg:w-[420px] xl:w-[480px] shrink-0 p-4 lg:p-6 lg:border-r overflow-y-auto flex flex-col items-center justify-center"
+            style={{ borderColor: 'var(--theme-border-light)' }}
+          >
+            <div className="text-center">
+              <div
+                className="w-16 h-16 rounded-lg flex items-center justify-center mx-auto mb-4"
+                style={{ background: 'var(--theme-bg-secondary)' }}
+              >
+                <Truck className="w-8 h-8" style={{ color: 'var(--theme-text-muted)' }} />
+              </div>
+              <p className="font-semibold mb-1" style={{ color: 'var(--theme-text-primary)' }}>Chọn chuyến đã chạy</p>
+              <p className="text-xs mb-4" style={{ color: 'var(--theme-text-muted)' }}>Từ danh sách bên phải</p>
+              <button
+                onClick={() => setPickMode('job')}
+                className="text-xs font-semibold px-4 py-2 rounded-lg transition-colors"
+                style={{
+                  background: 'var(--theme-brand-primary)',
+                  color: 'var(--theme-text-on-brand)',
+                }}
+              >
+                Chọn chuyến
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Right panel — candidate list / comparison view */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {selectedJob && selectedTrip ? (
             <>
@@ -340,7 +401,7 @@ export function MatchJob() {
                   <div className="w-2 h-2 rounded-full" style={{ background: 'var(--theme-status-warning)' }} />
                   <h2 className="typo-h3">Chọn đơn hàng</h2>
                   <span className="typo-caption px-2 py-1 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}>
-                    {draftTrips.length}
+                    {draftTrips.filter(t => t.status === 'PENDING').length}
                   </span>
                   {suggestions.length > 0 && (
                     <span className="flex items-center gap-1 typo-caption px-2 py-1 rounded" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
@@ -349,73 +410,132 @@ export function MatchJob() {
                   )}
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto">
-                {draftTrips.length === 0 ? (
+              <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-4">
+                {draftTrips.filter(t => t.status === 'PENDING').length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full p-8 text-center">
                     <FileText className="w-10 h-10 mb-3" style={{ color: 'var(--theme-text-muted)' }} />
                     <p className="text-sm font-semibold mb-1" style={{ color: 'var(--theme-text-primary)' }}>Không có đơn hàng nào</p>
                     <p className="text-xs mb-4" style={{ color: 'var(--theme-text-muted)' }}>Tạo đơn hàng mới để bắt đầu đối soát</p>
                     <button
                       onClick={() => navigate('/accountant/create-trip', { state: { fromWorkOrder: selectedJob } })}
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold"
                       style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
                     >
                       <Plus className="w-4 h-4" /> Tạo đơn mới
                     </button>
                   </div>
                 ) : (() => {
+                  const pendingTrips = draftTrips.filter(t => t.status === 'PENDING')
                   const suggestedIds = new Set(suggestions.map(s => s.tripOrder.id))
-                  const unsuggestedTrips = draftTrips.filter(t => !suggestedIds.has(t.id))
+                  const unsuggestedTrips = pendingTrips.filter(t => !suggestedIds.has(t.id))
+
+                  // Helper to check if trip matches selected job
+                  const getTripMatches = (trip: any) => {
+                    if (!selectedJob) return { clientMatches: false, routeMatches: false, contsMatch: false }
+                    const clientMatches = trip.clientName === selectedJob.clientName
+                    const routeMatches = trip.route === selectedJob.route
+                    const jobContNumbers = new Set(selectedJob.containers.map(c => c.containerNumber))
+                    const tripContNumbers = new Set((trip.containers ?? []).map(c => c.containerNumber))
+                    const contsMatch = jobContNumbers.size > 0 && tripContNumbers.size > 0 &&
+                      Array.from(jobContNumbers).every(num => tripContNumbers.has(num))
+                    return { clientMatches, routeMatches, contsMatch }
+                  }
+
                   return (
-                    <div>
+                    <div className="space-y-3">
                       {suggestions.length > 0 && (
                         <>
-                          <div className="px-4 pt-3 pb-1">
-                            <p className="text-xs font-semibold uppercase tracking-wide flex items-center gap-1.5" style={{ color: 'var(--theme-brand-primary)' }}>
-                              <Sparkles className="w-3 h-3" /> Gợi ý khớp
-                            </p>
-                          </div>
+                          <p className="text-xs font-semibold uppercase tracking-wide flex items-center gap-1.5 px-1" style={{ color: 'var(--theme-brand-primary)' }}>
+                            <Sparkles className="w-3 h-3" /> Gợi ý khớp
+                          </p>
                           {suggestions.map((s, idx) => {
                             const isFull = s.confidence === 'full'
                             const isPartial = s.confidence === 'partial'
                             const pct = Math.min(100, s.score)
                             const color = isFull ? 'var(--theme-status-success)' : isPartial ? 'var(--theme-status-warning)' : 'var(--theme-text-muted)'
+                            const isSelected = selectedTripId === s.tripOrder.id
+                            const isBestMatch = idx === 0
                             return (
-                              <button
-                                key={s.tripOrder.id}
-                                onClick={() => setSelectedTripId(s.tripOrder.id)}
-                                className="w-full text-left px-4 py-3 flex items-start gap-3 touch-manipulation hover:opacity-80 transition-opacity"
-                                style={{ borderBottom: '1px solid var(--theme-border-light)', background: isFull ? 'var(--theme-status-success-light)' : isPartial ? 'var(--theme-status-warning-light)' : 'transparent' }}
-                              >
-                                <div className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 mt-0.5" style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-muted)' }}>{idx + 1}</div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
-                                    {(s.tripOrder.containers?.length ? s.tripOrder.containers : []).map((c, i) => (
-                                      <span key={i} className="flex items-center gap-1">
-                                        <ContBadge type={c.workType} />
-                                        <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
-                                      </span>
-                                    ))}
+                              <div key={s.tripOrder.id}>
+                                <div className="relative">
+                                  {isBestMatch && (
+                                    <div
+                                      className="absolute -top-2 -left-2 px-2 py-1 rounded-md text-xs font-semibold flex items-center gap-1 z-10"
+                                      style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+                                    >
+                                      <Sparkles className="w-3 h-3" /> Đề xuất tốt nhất
+                                    </div>
+                                  )}
+                                  <button
+                                    onClick={() => setSelectedTripId(s.tripOrder.id)}
+                                    className="w-full text-left px-3 py-3 rounded-lg touch-manipulation transition-all"
+                                    style={{
+                                      background: isSelected ? 'var(--theme-brand-primary-light)' : isFull ? 'var(--theme-status-success-light)' : isPartial ? 'var(--theme-status-warning-light)' : 'var(--theme-bg-secondary)',
+                                      border: isSelected ? '2px solid var(--theme-brand-primary)' : isFull ? '1px solid var(--theme-status-success)' : isPartial ? '1px solid var(--theme-status-warning)' : '1px solid var(--theme-border-default)',
+                                    }}
+                                  >
+                                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                                      <div className="flex items-center gap-2">
+                                      <div className="w-6 h-6 rounded flex items-center justify-center text-xs font-bold shrink-0" style={{ background: isSelected ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)', color: isSelected ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)' }}>{idx + 1}</div>
+                                      <div className="flex flex-wrap items-center gap-1">
+                                        {(s.tripOrder.containers?.length ? s.tripOrder.containers : []).map((c, i) => (
+                                          <span key={i} className="flex items-center gap-0.5">
+                                            <ContBadge type={c.workType} />
+                                            <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-0.5 shrink-0">
+                                      <div className="w-10 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--theme-bg-tertiary)' }}>
+                                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+                                      </div>
+                                      <span className="text-[10px] font-bold tabular-nums" style={{ color }}>{pct}%</span>
+                                    </div>
                                   </div>
-                                  <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>{s.tripOrder.clientName} · {s.tripOrder.route}</p>
+                                  <p className="text-xs mb-1.5" style={{ color: 'var(--theme-text-secondary)' }}>{s.tripOrder.clientName} · {s.tripOrder.route}</p>
                                   {s.matchedFields.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mt-1">
+                                    <div className="flex flex-wrap gap-1">
                                       {s.matchedFields.map(f => (
-                                        <span key={f} className="text-[10px] px-1.5 py-0.5 rounded font-medium flex items-center gap-0.5" style={{ background: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' }}>
-                                          <Check className="w-2.5 h-2.5" />
+                                        <span key={f} className="text-[10px] px-1.5 py-0.5 rounded font-medium flex items-center gap-0.5 chip chip-success" style={{ background: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' }}>
+                                          <Check className="w-2 h-2" />
                                           {f === 'driver' ? 'Tài xế' : f === 'client' ? 'Khách hàng' : f === 'route' ? 'Cung đường' : 'Container'}
                                         </span>
                                       ))}
                                     </div>
                                   )}
-                                </div>
-                                <div className="flex flex-col items-end gap-1 shrink-0">
-                                  <div className="w-12 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--theme-bg-tertiary)' }}>
-                                    <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+                                </button>
+
+                                {/* Inline match details when selected */}
+                                {isSelected && (
+                                  <div className="mt-2 space-y-1 ml-1">
+                                    <p className="text-[10px] font-semibold uppercase" style={{ color: 'var(--theme-text-muted)' }}>Chi tiết khớp:</p>
+                                    <div className="text-xs space-y-0.5">
+                                      <div className="flex items-center gap-2">
+                                        {s.matchedFields.includes('client') ? (
+                                          <span className="chip chip-success">✓ Khách hàng</span>
+                                        ) : (
+                                          <span className="chip chip-error">✗ Khách hàng khác</span>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        {s.matchedFields.includes('route') ? (
+                                          <span className="chip chip-success">✓ Cung đường</span>
+                                        ) : (
+                                          <span className="chip chip-error">✗ Cung đường khác</span>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        {s.matchedFields.includes('container') ? (
+                                          <span className="chip chip-success">✓ Container</span>
+                                        ) : (
+                                          <span className="chip chip-error">✗ Container khác</span>
+                                        )}
+                                      </div>
+                                    </div>
                                   </div>
-                                  <span className="text-[10px] font-bold tabular-nums" style={{ color }}>{pct}%</span>
-                                </div>
-                              </button>
+                                )}
+                              </div>
                             )
                           })}
                         </>
@@ -423,33 +543,72 @@ export function MatchJob() {
                       {unsuggestedTrips.length > 0 && (
                         <>
                           {suggestions.length > 0 && (
-                            <div className="px-4 pt-3 pb-1">
-                              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>Tất cả đơn hàng</p>
-                            </div>
+                            <p className="text-xs font-semibold uppercase tracking-wide mt-4" style={{ color: 'var(--theme-text-muted)' }}>Tất cả đơn hàng</p>
                           )}
-                          {unsuggestedTrips.map(trip => (
-                            <button
-                              key={trip.id}
-                              onClick={() => setSelectedTripId(trip.id)}
-                              className="w-full text-left px-4 py-3 flex items-start gap-3 touch-manipulation hover:opacity-80 transition-opacity"
-                              style={{ borderBottom: '1px solid var(--theme-border-light)' }}
-                            >
-                              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'var(--theme-status-warning-light)' }}>
-                                <FileText className="w-5 h-5" style={{ color: 'var(--theme-status-warning)' }} />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
-                                  {(trip.containers?.length ? trip.containers : []).map((c, i) => (
-                                    <span key={i} className="flex items-center gap-1">
-                                      <ContBadge type={c.workType} />
-                                      <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
-                                    </span>
-                                  ))}
+                          {unsuggestedTrips.map(trip => {
+                            const { clientMatches, routeMatches, contsMatch } = getTripMatches(trip)
+                            const isSelected = selectedTripId === trip.id
+                            return (
+                              <div key={trip.id}>
+                                <button
+                                  onClick={() => setSelectedTripId(trip.id)}
+                                  className="w-full text-left px-3 py-3 rounded-lg touch-manipulation transition-all"
+                                  style={{
+                                    background: isSelected ? 'var(--theme-brand-primary-light)' : 'var(--theme-bg-secondary)',
+                                    border: isSelected ? '2px solid var(--theme-brand-primary)' : '1px solid var(--theme-border-default)',
+                                  }}
+                                >
+                                  <div className="flex items-start gap-2.5 mb-1">
+                                    <div className="w-8 h-8 rounded flex items-center justify-center shrink-0 mt-0.5" style={{ background: isSelected ? 'var(--theme-brand-primary)' : 'var(--theme-status-warning-light)' }}>
+                                      <FileText className="w-4 h-4" style={{ color: isSelected ? 'var(--theme-text-on-brand)' : 'var(--theme-status-warning)' }} />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex flex-wrap items-center gap-1 mb-0.5">
+                                        {(trip.containers?.length ? trip.containers : []).map((c, i) => (
+                                          <span key={i} className="flex items-center gap-0.5">
+                                            <ContBadge type={c.workType} />
+                                            <span className="text-xs font-mono" style={{ color: 'var(--theme-text-primary)' }}>{c.containerNumber}</span>
+                                          </span>
+                                        ))}
+                                      </div>
+                                      <p className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>{trip.clientName} · {trip.route}</p>
+                                    </div>
+                                  </div>
+                                  </button>
                                 </div>
-                                <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>{trip.clientName} · {trip.route}</p>
+
+                                {/* Inline match details when selected */}
+                                {isSelected && (
+                                  <div className="mt-2 space-y-1 ml-1">
+                                    <p className="text-[10px] font-semibold uppercase" style={{ color: 'var(--theme-text-muted)' }}>Chi tiết khớp:</p>
+                                    <div className="text-xs space-y-0.5">
+                                      <div className="flex items-center gap-2">
+                                        {clientMatches ? (
+                                          <span className="chip chip-success">✓ Khách hàng</span>
+                                        ) : (
+                                          <span className="chip chip-error">✗ {trip.clientName}</span>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        {routeMatches ? (
+                                          <span className="chip chip-success">✓ Cung đường</span>
+                                        ) : (
+                                          <span className="chip chip-error">✗ {trip.route}</span>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        {contsMatch ? (
+                                          <span className="chip chip-success">✓ Container</span>
+                                        ) : (
+                                          <span className="chip chip-error">✗ Khác</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-                            </button>
-                          ))}
+                            )
+                          })}
                         </>
                       )}
                     </div>
@@ -465,7 +624,7 @@ export function MatchJob() {
       <PickModal
         open={pickMode === 'job'}
         title="Chọn phiếu tài xế"
-        items={unmatchedJobs}
+        items={unmatchedJobs.filter(j => j.status === 'PENDING')}
         selectedId={selectedJobId}
         onSelect={setSelectedJobId}
         onClose={() => setPickMode(null)}
@@ -492,7 +651,7 @@ export function MatchJob() {
       <PickModal
         open={pickMode === 'trip'}
         title="Chọn đơn hàng"
-        items={draftTrips}
+        items={draftTrips.filter(t => t.status === 'PENDING')}
         selectedId={selectedTripId}
         onSelect={setSelectedTripId}
         onClose={() => setPickMode(null)}
