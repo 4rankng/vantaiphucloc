@@ -118,9 +118,6 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
     }
   }, [finalCropped, gpsCoords, onCapture])
 
-  const handleGallerySelect = useCallback(() => {
-    fileInputRef.current?.click()
-  }, [])
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -139,7 +136,15 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
   return createPortal(
     <div className="fixed inset-0 z-[100] flex flex-col" style={{ background: '#000' }}>
       {/* Hidden file input (camera mode gallery button) - capture="" forces gallery only on most devices */}
-      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+      {/* File input — use a <label> to trigger it so iOS Safari skips the action sheet */}
+      <input
+        ref={fileInputRef}
+        id="scanner-gallery-input"
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
 
       {/* Close */}
       <button
@@ -245,13 +250,13 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
 
           <div className="absolute bottom-0 left-0 right-0 z-10 flex justify-center items-center gap-6 pb-8 pt-3 safe-area-bottom" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)' }}>
             <div className="flex flex-col items-center gap-1">
-              <button
-                onClick={handleGallerySelect}
-                className="w-12 h-12 flex items-center justify-center rounded-full touch-manipulation"
+              <label
+                htmlFor="scanner-gallery-input"
+                className="w-12 h-12 flex items-center justify-center rounded-full touch-manipulation cursor-pointer"
                 style={{ background: 'rgba(0,0,0,0.5)', color: '#fff' }}
               >
                 <Image className="w-5 h-5" />
-              </button>
+              </label>
               <span className="text-[10px] font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>Thư viện</span>
             </div>
 
