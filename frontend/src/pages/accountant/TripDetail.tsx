@@ -147,7 +147,7 @@ export function TripDetail() {
     <div className="space-y-6">
       {/* Page header with title, breadcrumbs, and actions */}
       <PageHeader
-        title={`#${trip.id}`}
+        title={trip.code ?? `#${trip.id}`}
         subtitle={trip.clientName}
         breadcrumbs={
           <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm" style={{ color: 'var(--theme-text-muted)' }}>

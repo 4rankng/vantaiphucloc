@@ -123,6 +123,7 @@ async def _batch_load_trip_order_outs(
             trip_date=to.trip_date,
             client_id=to.client_id,
             client_name=to.client_name,
+            code=to.code,
             work_type=to.work_type,
             route=to.route,
             pickup_location=to.pickup_location,
