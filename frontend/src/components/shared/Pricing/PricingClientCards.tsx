@@ -2,9 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePricings, useClients, useCreatePricing, useCreateClient } from '@/hooks/use-queries'
 import type { Pricing } from '@/data/domain'
-import { Button } from '@/components/ui'
 import { CreateClientDialog } from '@/components/shared/CreateClientDialog'
-import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { PricingForm } from './PricingForm'
 import { Plus, ChevronRight, Tag } from 'lucide-react'
 
@@ -61,6 +59,19 @@ export function PricingClientCards({ basePath }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* Page header */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Bảng giá</p>
+        <button
+          onClick={() => setShowForm(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold touch-manipulation transition-colors"
+          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Thêm
+        </button>
+      </div>
+
       {showForm && (
         <PricingForm
           clients={clients}
@@ -108,23 +119,6 @@ export function PricingClientCards({ basePath }: Props) {
           ))}
         </div>
       )}
-
-      {/* Desktop add button */}
-      <div className="hidden lg:flex justify-end">
-        <Button
-          onClick={() => { setShowForm(true) }}
-          className="h-9 px-4 font-semibold rounded-xl text-sm"
-          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-        >
-          <Plus className="w-4 h-4 mr-1.5" /> Thêm bảng giá
-        </Button>
-      </div>
-
-      {/* Mobile FAB */}
-      <FloatingActionButton
-        icon={<Plus className="w-6 h-6" />}
-        onClick={() => setShowForm(true)}
-      />
 
       <CreateClientDialog
         open={createClientOpen}

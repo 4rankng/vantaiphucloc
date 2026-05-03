@@ -7,9 +7,11 @@ interface ContainerTypeGridProps {
   value: WorkType
   onChange: (type: WorkType) => void
   error?: boolean
+  /** 'row' = single row (default), 'grid2x2' = 2×2 grid */
+  layout?: 'row' | 'grid2x2'
 }
 
-export function ContainerTypeGrid({ value, onChange, error }: ContainerTypeGridProps) {
+export function ContainerTypeGrid({ value, onChange, error, layout = 'row' }: ContainerTypeGridProps) {
   const handleSelect = (wt: WorkType) => {
     if (wt === value) return
     hapticTap()
@@ -18,14 +20,14 @@ export function ContainerTypeGrid({ value, onChange, error }: ContainerTypeGridP
   }
 
   return (
-    <div className="flex gap-1.5">
+    <div className={layout === 'grid2x2' ? 'grid grid-cols-2 gap-1.5' : 'flex gap-1.5'}>
       {WORK_TYPES.map(wt => {
         const selected = value === wt
         return (
           <button
             key={wt}
             onClick={() => handleSelect(wt)}
-            className="flex-1 min-h-[38px] rounded-xl flex items-center justify-center gap-1 transition-all active:scale-95 touch-manipulation"
+            className="flex-1 min-h-[34px] rounded-xl flex items-center justify-center gap-1 transition-all active:scale-95 touch-manipulation"
             style={{
               background: selected ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
               color: selected ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
