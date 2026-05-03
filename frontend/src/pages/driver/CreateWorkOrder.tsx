@@ -38,18 +38,6 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
 
   return (
     <div className="space-y-6">
-      {/* Back button — inline in page body */}
-      <button
-        onClick={() => navigate(-1)}
-        className="inline-flex items-center gap-1.5 text-sm font-medium"
-        style={{ color: 'var(--theme-text-secondary)' }}
-      >
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-          <path d="M19 12H5M12 19l-7-7 7-7" />
-        </svg>
-        Quay lại
-      </button>
-
       {/* Scanner overlay */}
       {scannerOpen && (
         <ContainerScanner
@@ -244,15 +232,8 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
         </div>
       </div>
 
-      {/* Submit bar (sticky footer) */}
-      <div
-        className="sticky bottom-0 z-10 -mx-4 px-4 py-3 space-y-2"
-        style={{
-          background: 'var(--theme-bg-primary)',
-          borderTop: '1px solid var(--theme-border-default)',
-        }}
-      >
-        <div className="safe-area-bottom">
+      {/* Submit bar */}
+      <div className="py-3 space-y-2">
           {missingFields.length > 0 && !canSubmit && (
             <p className="text-xs font-medium text-center" style={{ color: 'var(--theme-status-warning)' }}>
               Còn thiếu: {missingFields.join(', ')}
@@ -263,31 +244,33 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
               Số container không hợp lệ — vui lòng kiểm tra
             </p>
           )}
-          <div className="flex gap-2 mt-2">
+          <div className="flex items-center gap-3 mt-2">
             <button
               onClick={() => navigate(-1)}
-              className="h-12 px-4 rounded-lg flex items-center justify-center gap-1 touch-manipulation transition-all active:scale-[0.98] shrink-0"
+              className="h-11 px-4 rounded-xl flex items-center justify-center gap-1.5 touch-manipulation transition-all active:scale-[0.97] shrink-0 text-sm font-semibold"
               style={{
                 background: 'transparent',
-                color: 'var(--theme-status-error)',
-                border: '1.5px solid var(--theme-status-error)',
+                color: 'var(--theme-brand-primary)',
+                border: '2px solid var(--theme-brand-primary)',
               }}
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="w-4 h-4" />
+              Quay lại
             </button>
             <button
               onClick={onRequestSubmit}
               disabled={!canSubmit || submitting}
-              className="flex-1 h-12 rounded-lg text-base font-bold touch-manipulation transition-all active:scale-[0.98]"
+              className="flex-1 h-11 rounded-xl text-sm font-bold touch-manipulation transition-all active:scale-[0.97] flex items-center justify-center gap-1.5"
               style={{
                 background: canSubmit ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
                 color: canSubmit ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)',
               }}
             >
-              {submitting ? 'Đang gửi...' : isEdit ? 'Cập nhật' : isOnline ? 'Xác nhận' : 'Lưu offline'}
+              {submitting ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Đang gửi...</>
+              ) : isEdit ? 'Cập nhật' : isOnline ? 'Xác nhận' : 'Lưu offline'}
             </button>
           </div>
-        </div>
       </div>
 
       {/* Summary dialog */}
