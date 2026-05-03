@@ -24,7 +24,7 @@ export function BottomTabBar({ tabs }: BottomTabBarProps) {
 
   return (
     <nav
-      className="fixed bottom-0 inset-x-0 z-40 flex items-stretch"
+      className="fixed bottom-0 inset-x-0 z-40 flex items-stretch lg:hidden"
       style={{
         background: 'var(--theme-bg-secondary)',
         borderTop: '1px solid var(--theme-border-default)',

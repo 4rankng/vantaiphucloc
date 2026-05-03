@@ -411,13 +411,6 @@ export function WorkOrderList() {
 
       <div className="card overflow-hidden">
         <div className="flex items-center gap-3 p-3 border-b" style={{ borderColor: 'var(--theme-border-default)' }}>
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Tìm mã phiếu, biển số, tài xế, khách hàng, container..."
-            className="search-pill flex-1 max-w-sm"
-          />
           <FilterToolbar
             search={search}
             onSearchChange={setSearch}

@@ -292,22 +292,25 @@ export function MatchJob() {
                     <ConfirmationCheckbox isConfirmed={selectedTrip.isConfirmed} onToggle={handleToggleConfirmation} disabled={toggling} label="Đã chốt" />
                   </div>
                 </div>
-                <Button
-                  onClick={handleMatch}
-                  disabled={submitting}
-                  className="w-full h-11 font-bold rounded-xl text-sm flex items-center justify-center gap-2"
-                  style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-                >
-                  <Check className="w-4 h-4" />
-                  {submitting ? 'Đang khớp...' : 'Xác nhận khớp chuyến'}
-                </Button>
-                <button
-                  onClick={() => navigate('/accountant/create-trip', { state: { fromWorkOrder: selectedJob } })}
-                  className="w-full h-10 rounded-xl text-sm font-medium flex items-center justify-center gap-2"
-                  style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-brand-primary)', border: '1px solid var(--theme-border-default)' }}
-                >
-                  <Plus className="w-4 h-4" /> Tạo đơn mới
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/accountant/create-trip', { state: { fromWorkOrder: selectedJob } })}
+                    className="h-10 px-3 rounded-lg text-sm font-medium inline-flex items-center justify-center gap-1.5 shrink-0"
+                    style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-brand-primary)', border: '1px solid var(--theme-border-default)' }}
+                  >
+                    <Plus className="w-4 h-4" /> Tạo đơn mới
+                  </button>
+                  <Button
+                    onClick={handleMatch}
+                    disabled={submitting}
+                    className="flex-1 h-10 font-bold rounded-lg text-sm flex items-center justify-center gap-2"
+                    style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+                  >
+                    <Check className="w-4 h-4" />
+                    {submitting ? 'Đang khớp...' : 'Xác nhận khớp chuyến'}
+                  </Button>
+                </div>
               </div>
             )}
           </div>

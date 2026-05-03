@@ -39,7 +39,7 @@ function DriverShell() {
             }
           : { variant: 'page' as const, title, onBack: () => navigate(-1) }
       }
-      contentClassName="px-4 py-4 space-y-4 md:px-6 md:py-6 md:max-w-4xl md:mx-auto"
+      contentClassName="px-4 py-4 space-y-4 md:px-6 md:py-6 md:max-w-md md:mx-auto"
     >
       <Outlet />
     </AppShell>

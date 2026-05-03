@@ -109,9 +109,10 @@ export function CreateTrip() {
     })
   }
 
+  const isValid = !!clientId && !!pickupLocation && !!dropoffLocation
+
   return (
-    <div className="page-container space-y-6">
-      {/* Page header */}
+    <div className="page-container space-y-5 max-w-3xl">
       <PageHeader
         title="Tạo chuyến"
         breadcrumbs={
@@ -119,170 +120,169 @@ export function CreateTrip() {
             <ChevronLeft size={14} /> Đơn hàng
           </button>
         }
+        actions={
+          <>
+            <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden" />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importing}
+              className="btn-ghost h-9 px-3 text-xs font-semibold"
+            >
+              <Upload className="w-3.5 h-3.5" /> {importing ? 'Đang nhập...' : 'Nhập Excel'}
+            </button>
+          </>
+        }
       />
 
-      {/* Main form card */}
-      <div className="card p-6">
-        <div className="space-y-6">
-          {/* Section 1: Thông tin chung */}
-          <div>
-            <h3 className="typo-h3 mb-4">Thông tin chung</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 gap-y-4">
-              <div className="space-y-2">
-                <Label className="typo-form-label">Khách hàng *</Label>
-                <InlineSelect
-                  options={clientOptions}
-                  value={clientId}
-                  onChange={setClientId}
-                  placeholder="Chọn khách hàng"
-                  onCreateNew={() => setCreateClientOpen(true)}
-                  createNewLabel="Tạo khách hàng mới"
-                />
-              </div>
-              <div />
+      {/* Form card */}
+      <div className="card divide-y" style={{ borderColor: 'var(--theme-border-light)' }}>
+        {/* Section 1: Khách hàng + tuyến */}
+        <section className="p-5 space-y-4">
+          <h3 className="typo-h3">Thông tin chung</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="space-y-1.5 lg:col-span-3">
+              <Label className="typo-form-label">Khách hàng *</Label>
+              <InlineSelect
+                options={clientOptions}
+                value={clientId}
+                onChange={setClientId}
+                placeholder="Chọn khách hàng"
+                onCreateNew={() => setCreateClientOpen(true)}
+                createNewLabel="Tạo khách hàng mới"
+              />
+            </div>
+            <div className="space-y-1.5 lg:col-span-1">
+              <Label className="typo-form-label">Điểm lấy *</Label>
+              <InlineSelect
+                options={pickupOptions}
+                value={pickupLocation}
+                onChange={(val: string) => { setPickupLocation(val); setDropoffLocation('') }}
+                placeholder="Chọn điểm lấy"
+              />
+            </div>
+            <div className="space-y-1.5 lg:col-span-2">
+              <Label className="typo-form-label">Điểm trả *</Label>
+              <InlineSelect
+                options={dropoffOptions}
+                value={dropoffLocation}
+                onChange={setDropoffLocation}
+                placeholder="Chọn điểm trả"
+              />
             </div>
           </div>
+        </section>
 
-          <div className="divider-h" />
-
-          {/* Section 2: Tuyến đường */}
-          <div>
-            <h3 className="typo-h3 mb-4">Tuyến đường</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 gap-y-4">
-              <div className="space-y-2">
-                <Label className="typo-form-label">Điểm lấy *</Label>
-                <InlineSelect
-                  options={pickupOptions}
-                  value={pickupLocation}
-                  onChange={(val: string) => { setPickupLocation(val); setDropoffLocation('') }}
-                  placeholder="Chọn điểm lấy"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="typo-form-label">Điểm trả *</Label>
-                <InlineSelect
-                  options={dropoffOptions}
-                  value={dropoffLocation}
-                  onChange={setDropoffLocation}
-                  placeholder="Chọn điểm trả"
-                />
-              </div>
-            </div>
+        {/* Section 2: Hàng hóa */}
+        <section className="p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="typo-h3">Hàng hóa</h3>
+            <button
+              onClick={addCong}
+              className="flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-semibold transition-colors"
+              style={{ color: 'var(--theme-brand-primary)', background: 'var(--theme-brand-primary-light)' }}
+            >
+              <Plus className="w-3.5 h-3.5" /> Thêm mục
+            </button>
           </div>
 
-          <div className="divider-h" />
-
-          {/* Section 3: Hàng hóa */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="typo-h3">Hàng hóa</h3>
-              <button onClick={addCong} className="flex items-center gap-1.5 text-xs font-medium touch-manipulation" style={{ color: 'var(--theme-brand-primary)' }}>
-                <Plus className="w-4 h-4" /> Thêm
-              </button>
-            </div>
-            <div className="space-y-3">
-              {congItems.map((item, i) => (
-                <div key={item.id} className="p-3 rounded-lg space-y-3" style={{ background: 'var(--theme-bg-tertiary)' }}>
-                  <div className="flex items-center justify-between">
-                    <span className="typo-label">Mục {i + 1}</span>
-                    {congItems.length > 1 && (
-                      <button onClick={() => removeCong(item.id)} className="touch-manipulation" style={{ color: 'var(--theme-status-error)' }}>
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex flex-wrap gap-1.5">
-                      {WORK_TYPES.map(w => (
-                        <button key={w} onClick={() => updateCong(item.id, 'workType', w)}
-                          className="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors touch-manipulation"
+          <div className="space-y-2">
+            {congItems.map((item, i) => (
+              <div
+                key={item.id}
+                className="rounded-lg p-3 grid grid-cols-1 lg:grid-cols-[auto_1fr_auto] items-center gap-3"
+                style={{ background: 'var(--theme-bg-tertiary)' }}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="typo-label" style={{ color: 'var(--theme-text-muted)' }}>#{i + 1}</span>
+                  <div className="flex flex-wrap gap-1">
+                    {WORK_TYPES.map(w => {
+                      const active = item.workType === w
+                      return (
+                        <button
+                          key={w}
+                          onClick={() => updateCong(item.id, 'workType', w)}
+                          className="h-8 px-2.5 rounded-md text-xs font-bold transition-colors"
                           style={{
-                            background: item.workType === w ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
-                            color: item.workType === w ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
-                          }}>
+                            background: active ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
+                            color: active ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
+                            border: active ? 'none' : '1px solid var(--theme-border-default)',
+                          }}
+                        >
                           {w}
                         </button>
-                      ))}
-                    </div>
-                    <Input
-                      value={item.containerNumber}
-                      onChange={e => updateCong(item.id, 'containerNumber', e.target.value)}
-                      placeholder="Số cont"
-                      className="text-sm font-mono min-w-0 flex-1"
-                    />
+                      )
+                    })}
                   </div>
                 </div>
-              ))}
+                <Input
+                  value={item.containerNumber}
+                  onChange={e => updateCong(item.id, 'containerNumber', e.target.value)}
+                  placeholder="Số container"
+                  className="text-sm font-mono h-9"
+                />
+                {congItems.length > 1 ? (
+                  <button
+                    onClick={() => removeCong(item.id)}
+                    aria-label="Xoá mục"
+                    className="h-9 w-9 inline-flex items-center justify-center rounded-md transition-colors"
+                    style={{ color: 'var(--theme-status-error)' }}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <div className="hidden lg:block w-9" />
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Section 3: Lương tài xế */}
+        <section className="p-5 space-y-4">
+          <h3 className="typo-h3">Lương tài xế</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="typo-form-label">Lương</Label>
+              <Input
+                type="number"
+                value={driverSalary || ''}
+                onChange={e => setDriverSalary(Number(e.target.value))}
+                placeholder="0"
+                className="text-sm font-mono h-9"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="typo-form-label">Phụ cấp</Label>
+              <Input
+                type="number"
+                value={allowance || ''}
+                onChange={e => setAllowance(Number(e.target.value))}
+                placeholder="0"
+                className="text-sm font-mono h-9"
+              />
             </div>
           </div>
+        </section>
 
-          <div className="divider-h" />
-
-          {/* Section 4: Lương tài xế */}
-          <div>
-            <h3 className="typo-h3 mb-4">Lương tài xế</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 gap-y-4">
-              <div className="space-y-2">
-                <Label className="typo-form-label">Lương</Label>
-                <Input
-                  type="number"
-                  value={driverSalary || ''}
-                  onChange={e => setDriverSalary(Number(e.target.value))}
-                  placeholder="0"
-                  className="text-sm"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="typo-form-label">Phụ cấp</Label>
-                <Input
-                  type="number"
-                  value={allowance || ''}
-                  onChange={e => setAllowance(Number(e.target.value))}
-                  placeholder="0"
-                  className="text-sm"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Import option card */}
-      <div className="card p-4 flex items-center justify-between">
-        <div>
-          <p className="typo-body-sm">Hoặc nhập từ tệp Excel</p>
-        </div>
-        <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden" />
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={importing}
-          className="btn-secondary text-xs"
-        >
-          <Upload className="w-4 h-4" /> {importing ? 'Đang nhập...' : 'Nhập'}
-        </button>
-      </div>
-
-      {/* Sticky footer */}
-      <div className="surface fixed bottom-0 left-0 right-0 p-4 border-t" style={{ borderColor: 'var(--theme-border-default)' }}>
-        <div className="max-w-full flex items-center gap-3 justify-end">
+        {/* Inline action footer (no sticky — keeps sidebar uncovered) */}
+        <div className="px-5 py-4 flex items-center justify-end gap-2" style={{ background: 'var(--theme-bg-tertiary)' }}>
           <button
+            type="button"
             onClick={() => navigate(-1)}
-            className="btn-secondary h-10"
+            className="btn-secondary h-9 px-4 text-sm"
           >
             Hủy
           </button>
           <Button
             onClick={handleSubmit}
-            disabled={!clientId || !pickupLocation || !dropoffLocation || submitting}
-            className="btn-primary h-10"
+            disabled={!isValid || submitting}
+            className="btn-primary h-9 px-4 text-sm"
           >
             {submitting ? 'Đang tạo...' : 'Tạo chuyến'}
           </Button>
         </div>
       </div>
-
-      {/* Padding for footer */}
-      <div className="h-20" />
 
       <CreateClientDialog
         open={createClientOpen}

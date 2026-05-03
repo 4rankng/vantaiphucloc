@@ -66,15 +66,15 @@ export function ErrorFallback({ variant = 'runtime', error, component, onRetry, 
             {message || 'Vui lòng thử lại hoặc quay về trang chủ'}
           </p>
           {(onRetry || onHome) && (
-            <div className="mt-6 flex flex-col gap-3">
-              {onRetry && (
-                <Button onClick={onRetry} className="w-full">
-                  <RefreshCw className="mr-2 h-4 w-4" /> Thử lại
+            <div className="mt-6 flex items-center gap-2">
+              {onHome && (
+                <Button onClick={onHome} variant="outline" className="flex-1">
+                  <Home className="mr-2 h-4 w-4" /> Về trang chủ
                 </Button>
               )}
-              {onHome && (
-                <Button onClick={onHome} variant="outline" className="w-full">
-                  <Home className="mr-2 h-4 w-4" /> Về trang chủ
+              {onRetry && (
+                <Button onClick={onRetry} className="flex-1">
+                  <RefreshCw className="mr-2 h-4 w-4" /> Thử lại
                 </Button>
               )}
             </div>
