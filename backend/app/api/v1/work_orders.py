@@ -243,7 +243,7 @@ async def list_work_orders(
     )
 
 
-@router.get("/work-orders/{work_order_id}", response_model=WorkOrderOut)
+@router.get("/work-orders/{work_order_id:int}", response_model=WorkOrderOut)
 async def get_work_order(
     work_order_id: int,
     current_user: User = Depends(get_current_user),
@@ -267,7 +267,7 @@ async def get_work_order(
     return wo_out
 
 
-@router.put("/work-orders/{work_order_id}", response_model=WorkOrderOut)
+@router.put("/work-orders/{work_order_id:int}", response_model=WorkOrderOut)
 async def update_work_order(
     work_order_id: int,
     body: WorkOrderUpdate,
@@ -328,7 +328,7 @@ async def update_work_order(
     return await _load_work_order_out(db, work_order)
 
 
-@router.put("/work-orders/{work_order_id}/cancel", response_model=WorkOrderOut)
+@router.put("/work-orders/{work_order_id:int}/cancel", response_model=WorkOrderOut)
 async def cancel_work_order(
     work_order_id: int,
     body: CancelRequest,

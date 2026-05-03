@@ -31,7 +31,7 @@ export default defineConfig({
       },
       manifest: {
         name: 'TTransport',
-        short_name: 'Vận tải',
+        short_name: 'TTransport',
         description: 'Hệ thống quản lý vận tải hàng hóa',
         theme_color: '#1e3a5f',
         background_color: '#0f172a',
