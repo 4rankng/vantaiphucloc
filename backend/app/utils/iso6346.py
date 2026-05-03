@@ -163,12 +163,7 @@ def validate_container_number(container_number: str) -> tuple[bool, str]:
 
     # Check check digit
     if not validate_check_digit(normalized):
-        provided = normalized[10]
-        try:
-            expected = calculate_check_digit(normalized[:10])
-        except ValueError:
-            return False, "Không thể tính số kiểm tra"
-        return False, f"Số kiểm tra sai. Nhập: {provided}, Đúng: {expected}"
+        return False, "Số container sai, xin kiểm tra lại"
 
     return True, ""
 

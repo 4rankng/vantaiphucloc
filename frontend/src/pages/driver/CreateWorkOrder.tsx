@@ -291,9 +291,9 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
             onClick={() => navigate(-1)}
             className="h-12 px-4 rounded-2xl flex items-center justify-center gap-1 touch-manipulation transition-all active:scale-[0.98] shrink-0"
             style={{
-              background: 'var(--theme-bg-secondary)',
-              color: 'var(--theme-text-secondary)',
-              border: '1.5px solid var(--theme-border-default)',
+              background: 'var(--theme-brand-primary)',
+              color: 'var(--theme-text-on-brand)',
+              border: 'none',
             }}
           >
             <ChevronLeft className="w-5 h-5" />
