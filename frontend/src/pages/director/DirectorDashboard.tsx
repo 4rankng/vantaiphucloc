@@ -141,7 +141,7 @@ export function DirectorDashboard() {
             Tổng quan
           </h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-            Theo dõi hoạt động vận tải
+            Dữ liệu tháng {MONTH_NAMES[month.month - 1]} {month.year}
           </p>
         </div>
         <div 
@@ -204,11 +204,16 @@ export function DirectorDashboard() {
         />
       </section>
 
-      {/* Quick actions - Redesigned */}
+      {/* Quick actions */}
       <section>
-        <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--theme-text-primary)' }}>
-          Truy cập nhanh
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+            Truy cập nhanh
+          </h2>
+          <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+            {MONTH_NAMES[month.month - 1]} {month.year}
+          </span>
+        </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
             { label: 'Quản lý nhân sự', desc: 'Tài khoản & tài xế', path: '/director/users', icon: Users },
@@ -219,11 +224,7 @@ export function DirectorDashboard() {
             <button
               key={a.label}
               onClick={() => navigate(a.path)}
-              className="group flex flex-col items-center gap-2 rounded-lg p-4 text-center transition-all active:scale-[0.98] hover:shadow-md"
-              style={{
-                background: 'var(--theme-bg-secondary)',
-                border: '1px solid var(--theme-border-default)',
-              }}
+              className="card-interactive group flex flex-col items-center gap-2 p-4 text-center"
             >
               <div
                 className="flex h-12 w-12 items-center justify-center rounded-xl transition-transform group-hover:scale-110"

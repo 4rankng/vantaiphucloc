@@ -213,24 +213,24 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
             />
           </div>
 
-          {/* Bottom controls — redesigned for clarity */}
+          {/* Bottom controls — side-by-side row */}
           <div
-            className="absolute bottom-0 left-0 right-0 px-6 pt-3 flex flex-col gap-3"
+            className="absolute bottom-0 left-0 right-0 px-6 pt-3 flex gap-3"
             style={{ background: 'rgba(0,0,0,0.7)', paddingBottom: `max(16px, env(safe-area-inset-bottom))` }}
           >
-            {/* Retake as small ghost link/button */}
+            {/* Retake — secondary */}
             <button
               onClick={handleRetake}
-              className="w-full py-2 text-center text-sm font-medium touch-manipulation"
-              style={{ color: 'rgba(255,255,255,0.6)' }}
+              className="flex-1 py-3 rounded-lg text-sm font-bold touch-manipulation flex items-center justify-center gap-1.5"
+              style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', height: '48px' }}
             >
-              Chụp lại
+              <RotateCcw className="w-4 h-4" /> Chụp lại
             </button>
 
-            {/* Primary confirm button — full width, h-12 */}
+            {/* Confirm — primary */}
             <button
               onClick={handleCropConfirm}
-              className="w-full py-3 rounded-lg text-sm font-bold touch-manipulation"
+              className="flex-1 py-3 rounded-lg text-sm font-bold touch-manipulation"
               style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)', height: '48px' }}
             >
               Xác nhận
