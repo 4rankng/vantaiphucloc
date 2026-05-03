@@ -1,4 +1,4 @@
-import { WORK_TYPES, type PricingLine, type WorkType } from '@/data/domain'
+import { type PricingLine } from '@/data/domain'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { Plus, X } from 'lucide-react'
@@ -8,30 +8,26 @@ export function LineEditor({ lines, onChange }: {
   onChange: (lines: PricingLine[]) => void
 }) {
   const addLine = () =>
-    onChange([...lines, { workType: 'E20', quantity: 1, unitPrice: 0, driverSalary: 0, allowance: 0 }])
+    onChange([...lines, { quantity: 1, unitPrice: 0, driverSalary: 0, allowance: 0 }])
 
   const removeLine = (idx: number) => onChange(lines.filter((_, i) => i !== idx))
 
-  const updateLine = (idx: number, field: keyof PricingLine, value: WorkType | number) => {
-    const updated = lines.map((l, i) => (i === idx ? { ...l, [field]: value } : l))
-    if (field === 'workType' && typeof value === 'string' && value.endsWith('40')) {
-      updated[idx] = { ...updated[idx], quantity: 1 }
-    }
-    onChange(updated)
+  const updateLine = (idx: number, field: keyof PricingLine, value: number) => {
+    onChange(lines.map((l, i) => (i === idx ? { ...l, [field]: value } : l)))
   }
-
-  const is40ft = (wt: WorkType) => wt === 'E40' || wt === 'F40'
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Công</Label>
+        <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
+          Mức giá theo số lượng
+        </Label>
         <button
           onClick={addLine}
           className="flex items-center gap-1 text-xs font-medium touch-manipulation"
           style={{ color: 'var(--theme-brand-primary)' }}
         >
-          <Plus className="w-3.5 h-3.5" /> Thêm loại
+          <Plus className="w-3.5 h-3.5" /> Thêm mức
         </button>
       </div>
 
@@ -42,53 +38,27 @@ export function LineEditor({ lines, onChange }: {
           style={{ background: 'var(--theme-bg-tertiary)', border: '1px solid var(--theme-border-default)' }}
         >
           <div className="flex items-center gap-2">
-            {/* Type selector */}
-            <div className="flex gap-0.5 shrink-0">
-              {WORK_TYPES.map(w => (
+            {/* Quantity selector */}
+            <div className="flex items-center gap-1">
+              {[1, 2].map(q => (
                 <button
-                  key={w}
-                  onClick={() => updateLine(i, 'workType', w)}
-                  className="px-1.5 py-1 rounded text-xs font-bold touch-manipulation"
+                  key={q}
+                  onClick={() => updateLine(i, 'quantity', q)}
+                  className="px-2 py-1 rounded text-xs font-bold touch-manipulation"
                   style={{
-                    background: line.workType === w ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
-                    color: line.workType === w ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
+                    background: line.quantity === q ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
+                    color: line.quantity === q ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
                   }}
                 >
-                  {w}
+                  ×{q}
                 </button>
               ))}
-            </div>
-
-            {/* Quantity */}
-            <div className="flex items-center gap-1">
-              {is40ft(line.workType) ? (
-                <button
-                  className="px-2 py-1 rounded text-xs font-bold"
-                  style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-                >
-                  ×1
-                </button>
-              ) : (
-                [1, 2].map(q => (
-                  <button
-                    key={q}
-                    onClick={() => updateLine(i, 'quantity', q)}
-                    className="px-2 py-1 rounded text-xs font-bold touch-manipulation"
-                    style={{
-                      background: line.quantity === q ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
-                      color: line.quantity === q ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
-                    }}
-                  >
-                    ×{q}
-                  </button>
-                ))
-              )}
             </div>
 
             {lines.length > 1 && (
               <button
                 onClick={() => removeLine(i)}
-                className="touch-manipulation shrink-0"
+                className="touch-manipulation shrink-0 ml-auto"
                 style={{ color: 'var(--theme-status-error)' }}
               >
                 <X className="w-3.5 h-3.5" />

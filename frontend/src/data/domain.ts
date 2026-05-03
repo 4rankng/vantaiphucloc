@@ -123,7 +123,7 @@ export interface WorkOrder {
 }
 
 export interface PricingLine {
-  workType: WorkType
+  id?: number
   quantity: number
   unitPrice: number
   driverSalary: number
@@ -139,9 +139,6 @@ export interface Pricing {
   pickupLocation?: string
   dropoffLocation?: string
   lines: PricingLine[]
-  unitPrice: number
-  driverSalary: number
-  allowance: number
   createdAt: string
   updatedAt: string
 }

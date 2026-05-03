@@ -47,7 +47,7 @@ export function useMatchTrip(initialTripId: number) {
 
   const matchedIds = useMemo(() => new Set(trips.flatMap(t => t.matchedWorkOrderIds)), [trips])
   const unmatchedJobs = useMemo(() => workOrders.filter(w => !matchedIds.has(w.id)), [workOrders, matchedIds])
-  const draftTrips = useMemo(() => trips.filter(t => t.status === 'DRAFT'), [trips])
+  const draftTrips = useMemo(() => trips.filter(t => t.status === 'DRAFT' || t.status === 'PENDING'), [trips])
 
   const selectedTrip = useMemo(() => trips.find(t => t.id === selectedTripId), [trips, selectedTripId])
   const selectedJob = useMemo(() => workOrders.find(w => w.id === selectedJobId), [workOrders, selectedJobId])

@@ -1,4 +1,4 @@
-import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom'
+import { Outlet, useLocation, Navigate } from 'react-router-dom'
 import { AppShell } from '@/components/shared/AppShell'
 import { AccountantSidebar } from '@/components/shared/AccountantSidebar'
 import { CommandPalette, useCommandPalette } from '@/components/shared/CommandPalette'
@@ -17,24 +17,40 @@ const FULLSCREEN_PREFIXES = [
 
 const SIDEBAR_WIDTH = 240
 
-// Desktop: ≥ 1024px — fixed sidebar, no toggle
+/** true when viewport is ≥ 1024px (laptop / desktop) */
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 1024 : false,
+  )
+  useEffect(() => {
+    const handler = () => setIsDesktop(window.innerWidth >= 1024)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
+  return isDesktop
+}
+
+// ─── Desktop shell (≥ 1024px) — fixed sidebar, no collapse toggle ─────────────
+
 function AccountantDesktopShell() {
   const location = useLocation()
   const [notifOpen, setNotifOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
   const isFullscreen = FULLSCREEN_PREFIXES.some(p => location.pathname.startsWith(p))
   const { open: cmdOpen, close: closeCmdPalette } = useCommandPalette()
 
   return (
     <div className="flex h-[100dvh] w-full overflow-hidden" style={{ background: 'var(--theme-bg-primary)' }}>
-      {/* Fixed sidebar — always visible, no collapse */}
+      {/* Sidebar with built-in toggle button */}
       {!isFullscreen && (
         <AccountantSidebar
-          collapsed={false}
+          collapsed={collapsed}
+          onToggle={() => setCollapsed(c => !c)}
           onNotificationsOpen={() => setNotifOpen(true)}
         />
       )}
 
-      {/* Main content area */}
+      {/* Main content */}
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
         <main className="flex-1 overflow-y-auto">
           <div className={isFullscreen ? 'h-full' : 'px-6 py-6 mx-auto max-w-7xl'}>
@@ -43,14 +59,13 @@ function AccountantDesktopShell() {
         </main>
       </div>
 
-      {/* Notification panel */}
       <NotificationPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
-
-      {/* Command palette */}
       <CommandPalette open={cmdOpen} onClose={closeCmdPalette} />
     </div>
   )
 }
+
+// ─── Mobile / tablet shell (< 1024px) — topbar + hamburger drawer ─────────────
 
 function AccountantMobileShell() {
   const { user } = useAuth()
@@ -59,18 +74,15 @@ function AccountantMobileShell() {
   const [drawerVisible, setDrawerVisible] = useState(false)
 
   const isHome = location.pathname === '/accountant'
-  const isSubPage = !isHome
   const isFullscreen = FULLSCREEN_PREFIXES.some(p => location.pathname.startsWith(p))
 
   const openSidebar = useCallback(() => {
     setDrawerVisible(true)
-    // Small delay so the element is in the DOM before we animate it in
     requestAnimationFrame(() => setSidebarOpen(true))
   }, [])
 
   const closeSidebar = useCallback(() => {
     setSidebarOpen(false)
-    // Wait for slide-out animation before unmounting
     setTimeout(() => setDrawerVisible(false), 280)
   }, [])
 
@@ -79,7 +91,7 @@ function AccountantMobileShell() {
     else openSidebar()
   }, [drawerVisible, openSidebar, closeSidebar])
 
-  // Auto-close sidebar on navigation
+  // Auto-close on navigation
   useEffect(() => { closeSidebar() }, [location.pathname]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const topbarProps = isHome
@@ -92,7 +104,6 @@ function AccountantMobileShell() {
         variant: 'page' as const,
         title: resolveMobileTitle(location.pathname),
         onMenu: toggleSidebar,
-        onBack: isSubPage ? () => navigate(-1) : undefined,
       }
 
   return (
@@ -100,19 +111,15 @@ function AccountantMobileShell() {
       <AppShell
         topbarProps={topbarProps}
         topbarTheme="dark"
-        contentClassName={
-          isFullscreen
-            ? undefined
-            : 'px-4 py-4 space-y-4'
-        }
+        contentClassName={isFullscreen ? undefined : 'px-4 py-4 space-y-4'}
       >
         <Outlet />
       </AppShell>
 
-      {/* Animated sidebar drawer */}
+      {/* Slide-in sidebar drawer */}
       {drawerVisible && (
         <div className="fixed inset-0 z-50 flex">
-          {/* Backdrop — fades in/out */}
+          {/* Backdrop */}
           <div
             className="absolute inset-0"
             style={{
@@ -123,17 +130,17 @@ function AccountantMobileShell() {
             onClick={closeSidebar}
           />
 
-          {/* Drawer panel — slides in from left */}
+          {/* Drawer panel */}
           <div
             className="relative z-10 h-full flex flex-col"
             style={{
-              width: SIDEBAR_EXPANDED,
+              width: SIDEBAR_WIDTH,
               transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
               transition: 'transform 280ms cubic-bezier(0.4, 0, 0.2, 1)',
               background: 'var(--theme-sidebar, #0a3520)',
             }}
           >
-            {/* Close button — overlaid on the sidebar header */}
+            {/* Close button */}
             <button
               onClick={closeSidebar}
               className="absolute top-3.5 right-3 z-10 w-7 h-7 flex items-center justify-center rounded-full shrink-0"
@@ -143,7 +150,6 @@ function AccountantMobileShell() {
               <X className="w-4 h-4" />
             </button>
 
-            {/* Full sidebar (logo + nav + user footer) */}
             <AccountantSidebar
               collapsed={false}
               forceVisible
@@ -176,9 +182,11 @@ function resolveMobileTitle(pathname: string): string {
   return ''
 }
 
+// ─── Root export ──────────────────────────────────────────────────────────────
+
 export function AccountantLayout() {
   const { user } = useAuth()
-  // Desktop = ≥ 1024px (laptop+), everything smaller gets the mobile/tablet shell
+  // ≥ 1024px → desktop sidebar layout; < 1024px → mobile/tablet topbar layout
   const isDesktop = useIsDesktop()
 
   if (!user || !ALLOWED_ROLES.includes(user.role)) {

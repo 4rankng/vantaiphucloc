@@ -135,7 +135,7 @@ function KeyboardShortcutsPanel({ onClose }: { onClose: () => void }) {
             { key: '1-9', action: 'Chọn gợi ý tương ứng' },
             { key: 'Enter', action: 'Xác nhận khớp chuyến' },
             { key: 'J', action: 'Chọn phiếu tài xế' },
-            { key: 'T', action: 'Chọn lệnh điều phối' },
+            { key: 'T', action: 'Chọn đơn hàng' },
             { key: 'Esc', action: 'Quay lại / Đóng' },
             { key: '?', action: 'Hiện/ẩn phím tắt' },
           ].map(({ key, action }) => (
@@ -170,7 +170,7 @@ export function MatchJob() {
   const { jobId: jobIdStr } = useParams<{ jobId: string }>()
   const navigate = useNavigate()
   const toast = useToast()
-  const isMobile = useIsMobile()
+  const isMobile = useIsMobile(1024)
   const { mutate: toggleConfirmation, isPending: toggling } = useToggleTripConfirmation()
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
   const {
@@ -269,7 +269,7 @@ export function MatchJob() {
     <>
       {showKeyboardHelp && <KeyboardShortcutsPanel onClose={() => setShowKeyboardHelp(false)} />}
 
-      <div className="flex flex-col h-[calc(100dvh-56px)] md:h-screen">
+      <div className="flex flex-col h-[calc(100dvh-56px)] lg:h-screen">
         {/* Desktop header */}
         {!isMobile && (
           <div
@@ -289,7 +289,7 @@ export function MatchJob() {
                   Đối soát phiếu
                 </h1>
                 <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>
-                  Ghép phiếu tài xế với lệnh điều phối
+                  Ghép phiếu tài xế với đơn hàng
                 </p>
               </div>
             </div>
@@ -634,6 +634,7 @@ export function MatchJob() {
         selectedId={selectedJobId}
         onSelect={setSelectedJobId}
         onClose={() => setPickMode(null)}
+        searchKeys={job => [job.driverName, job.clientName, job.route, ...job.containers.map(c => c.containerNumber)].join(' ')}
         renderLabel={job => (
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -655,11 +656,12 @@ export function MatchJob() {
       />
       <PickModal
         open={pickMode === 'trip'}
-        title="Chọn lệnh điều phối"
+        title="Chọn đơn hàng"
         items={draftTrips}
         selectedId={selectedTripId}
         onSelect={setSelectedTripId}
         onClose={() => setPickMode(null)}
+        searchKeys={trip => [trip.clientName, trip.route, ...(trip.containers ?? []).map(c => c.containerNumber)].join(' ')}
         renderLabel={trip => (
           <div>
             <div className="flex flex-wrap items-center gap-1.5">

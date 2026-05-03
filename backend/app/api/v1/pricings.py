@@ -22,7 +22,7 @@ router = APIRouter()
 async def _load_pricing_out(db: AsyncSession, pricing: Pricing) -> PricingOut:
     """Load a single Pricing with its PricingLine rows."""
     lines_result = await db.execute(
-        select(PricingLine).where(PricingLine.pricing_id == pricing.id)
+        select(PricingLine).where(PricingLine.pricing_id == pricing.id).order_by(PricingLine.id)
     )
     lines = lines_result.scalars().all()
     return PricingOut(
@@ -33,9 +33,7 @@ async def _load_pricing_out(db: AsyncSession, pricing: Pricing) -> PricingOut:
         route=pricing.route,
         pickup_location=pricing.pickup_location,
         dropoff_location=pricing.dropoff_location,
-        unit_price=pricing.unit_price,
-        driver_salary=pricing.driver_salary,
-        allowance=pricing.allowance,
+        is_active=pricing.is_active,
         created_at=pricing.created_at,
         updated_at=pricing.updated_at,
         lines=[PricingLineOut.model_validate(line) for line in lines],
@@ -51,11 +49,12 @@ async def _batch_load_pricing_outs(
 
     pricing_ids = [p.id for p in pricings]
     lines_result = await db.execute(
-        select(PricingLine).where(PricingLine.pricing_id.in_(pricing_ids))
+        select(PricingLine)
+        .where(PricingLine.pricing_id.in_(pricing_ids))
+        .order_by(PricingLine.pricing_id, PricingLine.id)
     )
     all_lines = lines_result.scalars().all()
 
-    # Group lines by pricing_id
     lines_by_pricing: dict[int, list[PricingLine]] = defaultdict(list)
     for line in all_lines:
         lines_by_pricing[line.pricing_id].append(line)
@@ -69,9 +68,7 @@ async def _batch_load_pricing_outs(
             route=p.route,
             pickup_location=p.pickup_location,
             dropoff_location=p.dropoff_location,
-            unit_price=p.unit_price,
-            driver_salary=p.driver_salary,
-            allowance=p.allowance,
+            is_active=p.is_active,
             created_at=p.created_at,
             updated_at=p.updated_at,
             lines=[PricingLineOut.model_validate(l) for l in lines_by_pricing.get(p.id, [])],
@@ -120,7 +117,6 @@ async def list_pricings(
     )
     pricings = result.scalars().all()
 
-    # Batch-load lines instead of per-row queries
     data = await _batch_load_pricing_outs(db, pricings)
 
     response = PaginatedResponse[PricingOut](
@@ -143,16 +139,20 @@ async def create_pricing(
     redis: Redis = Depends(get_redis),
 ):
     lines_data = body.lines
-    pricing_data = body.model_dump(exclude={"lines"})
-
-    pricing = Pricing(**pricing_data)
+    pricing = Pricing(
+        client_id=body.client_id,
+        client_name=body.client_name,
+        work_type=body.work_type,
+        route=body.route,
+        pickup_location=body.pickup_location,
+        dropoff_location=body.dropoff_location,
+    )
     db.add(pricing)
-    await db.flush()  # get pricing.id without committing
+    await db.flush()
 
     for line in lines_data:
         db.add(PricingLine(
             pricing_id=pricing.id,
-            work_type=line.work_type,
             quantity=line.quantity,
             unit_price=line.unit_price,
             driver_salary=line.driver_salary,
@@ -174,9 +174,7 @@ async def update_pricing(
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
-    result = await db.execute(
-        select(Pricing).where(Pricing.id == pricing_id)
-    )
+    result = await db.execute(select(Pricing).where(Pricing.id == pricing_id))
     pricing = result.scalar_one_or_none()
     if pricing is None:
         raise HTTPException(status_code=404, detail="Pricing not found")
@@ -188,13 +186,10 @@ async def update_pricing(
         setattr(pricing, field, value)
 
     if new_lines is not None:
-        await db.execute(
-            delete(PricingLine).where(PricingLine.pricing_id == pricing.id)
-        )
+        await db.execute(delete(PricingLine).where(PricingLine.pricing_id == pricing.id))
         for line in new_lines:
             db.add(PricingLine(
                 pricing_id=pricing.id,
-                work_type=line["work_type"],
                 quantity=line["quantity"],
                 unit_price=line.get("unit_price", 0),
                 driver_salary=line.get("driver_salary", 0),
@@ -215,9 +210,7 @@ async def delete_pricing(
     db: AsyncSession = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
-    result = await db.execute(
-        select(Pricing).where(Pricing.id == pricing_id)
-    )
+    result = await db.execute(select(Pricing).where(Pricing.id == pricing_id))
     pricing = result.scalar_one_or_none()
     if pricing is None:
         raise HTTPException(status_code=404, detail="Pricing not found")

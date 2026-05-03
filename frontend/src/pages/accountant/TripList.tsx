@@ -56,7 +56,7 @@ export function TripList() {
   const navigate = useNavigate()
   const location = useLocation()
   const toast = useToast()
-  const isMobile = useIsMobile()
+  const isMobile = useIsMobile(1024)
   const importMutation = useImportTripOrders()
   const exportMutation = useExportTripOrdersExcel()
   const fileInputRef = useRef<HTMLInputElement>(null)

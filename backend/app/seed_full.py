@@ -149,7 +149,7 @@ async def seed() -> None:
         pricing_count = result.scalar() or 0
 
         if pricing_count == 0:
-            pricing_ids: list[int] = []
+            pricing_ids: list[tuple[int, int, int, int]] = []  # (id, unit_price, driver_salary, allowance)
             for client_idx, client_id in enumerate(client_ids):
                 client_name = clients_data[client_idx][1]
                 for route in routes_data[:4]:
@@ -168,30 +168,29 @@ async def seed() -> None:
 
                         result = await db.execute(
                             text("""INSERT INTO pricings (client_id, client_name, work_type, route,
-                                pickup_location, dropoff_location, unit_price, driver_salary, allowance, is_active, created_at, updated_at)
-                                VALUES (:clid, :clname, :wt, :route, :pickup, :dropoff, :up, :ds, :alw, true, :now, :now)
+                                pickup_location, dropoff_location, is_active, created_at, updated_at)
+                                VALUES (:clid, :clname, :wt, :route, :pickup, :dropoff, true, :now, :now)
                                 RETURNING id"""),
                             {"clid": client_id, "clname": client_name, "wt": wt,
                              "route": route["route"], "pickup": route["pickup"], "dropoff": route["dropoff"],
-                             "up": unit_price, "ds": driver_salary, "alw": allowance, "now": now},
+                             "now": now},
                         )
-                        pricing_ids.append(result.scalar())
+                        pricing_ids.append((result.scalar(), unit_price, driver_salary, allowance))
             print(f"  Created {len(pricing_ids)} pricings")
 
-            # Seed pricing_lines for newly created pricings
-            for pid in pricing_ids:
+            for pid, up, ds, alw in pricing_ids:
                 await db.execute(
-                    text("""INSERT INTO pricing_lines (pricing_id, work_type, quantity, unit_price, driver_salary, allowance)
-                        SELECT id, work_type, 1, unit_price, driver_salary, allowance
-                        FROM pricings WHERE id = :pid"""),
-                    {"pid": pid},
+                    text("""INSERT INTO pricing_lines (pricing_id, quantity, unit_price, driver_salary, allowance)
+                        VALUES (:pid, 1, :up, :ds, :alw)"""),
+                    {"pid": pid, "up": up, "ds": ds, "alw": alw},
                 )
             print(f"  Created {len(pricing_ids)} pricing_lines")
         else:
-            # Backfill pricing_lines for existing pricings that have none
+            # Backfill pricing_lines for any pricings that have none
+            # (uses quantity=1 with zero financials as placeholder — edit via UI)
             result = await db.execute(text("""
-                INSERT INTO pricing_lines (pricing_id, work_type, quantity, unit_price, driver_salary, allowance)
-                SELECT id, work_type, 1, unit_price, driver_salary, allowance
+                INSERT INTO pricing_lines (pricing_id, quantity, unit_price, driver_salary, allowance)
+                SELECT id, 1, 0, 0, 0
                 FROM pricings
                 WHERE NOT EXISTS (SELECT 1 FROM pricing_lines WHERE pricing_lines.pricing_id = pricings.id)
                 RETURNING id
