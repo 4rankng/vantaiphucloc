@@ -178,7 +178,7 @@ export function MatchTrip() {
   const { tripId: tripIdStr } = useParams<{ tripId: string }>()
   const navigate = useNavigate()
   const toast = useToast()
-  const isMobile = useIsMobile()
+  const isMobile = useIsMobile(1024)
   const { mutate: toggleConfirmation, isPending: toggling } = useToggleTripConfirmation()
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState<number | null>(null)
@@ -309,7 +309,7 @@ export function MatchTrip() {
     <>
       {showKeyboardHelp && <KeyboardShortcutsPanel onClose={() => setShowKeyboardHelp(false)} />}
 
-      <div className="flex flex-col h-[calc(100dvh-56px)] md:h-screen">
+      <div className="flex flex-col h-[calc(100dvh-56px)] lg:h-screen">
         {/* Header - Desktop */}
         {!isMobile && (
         <div
@@ -677,11 +677,12 @@ export function MatchTrip() {
       {/* Picker modals */}
       <PickModal
         open={pickMode === 'trip'}
-        title="Chọn chuyến yêu cầu"
+        title="Chọn đơn hàng"
         items={draftTrips}
         selectedId={selectedTripId}
         onSelect={setSelectedTripId}
         onClose={() => setPickMode(null)}
+        searchKeys={trip => [trip.clientName, trip.route, ...(trip.containers ?? []).map(c => c.containerNumber)].join(' ')}
         renderLabel={trip => (
           <div>
             <div className="flex flex-wrap items-center gap-1.5">
@@ -706,6 +707,7 @@ export function MatchTrip() {
         selectedId={selectedJobId}
         onSelect={setSelectedJobId}
         onClose={() => setPickMode(null)}
+        searchKeys={job => [job.driverName, job.clientName, job.route, ...job.containers.map(c => c.containerNumber)].join(' ')}
         renderLabel={job => (
           <div>
             <div className="flex flex-wrap items-center gap-2">

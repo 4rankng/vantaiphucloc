@@ -105,9 +105,6 @@ class Pricing(AuditableMixin, Base):
     route = Column(String(500), nullable=False)
     pickup_location = Column(String(255), nullable=True)
     dropoff_location = Column(String(255), nullable=True)
-    unit_price = Column(Integer, nullable=False)       # VND
-    driver_salary = Column(Integer, nullable=False)    # VND
-    allowance = Column(Integer, nullable=False)        # VND
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(
@@ -129,7 +126,6 @@ class PricingLine(Base):
         nullable=False,
         index=True,
     )
-    work_type = Column(String(10), nullable=False)
     quantity = Column(Integer, nullable=False)
     unit_price = Column(Integer, nullable=False, default=0)
     driver_salary = Column(Integer, nullable=False, default=0)

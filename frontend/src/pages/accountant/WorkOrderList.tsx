@@ -46,7 +46,7 @@ function getStatusLabel(status: string): string {
 
 export function WorkOrderList() {
   const navigate = useNavigate()
-  const isMobile = useIsMobile()
+  const isMobile = useIsMobile(1024)
   const toast = useToast()
   const { data: workOrders = [], isLoading: loading } = useWorkOrders()
   const { data: clients = [] } = useClients()
