@@ -1,11 +1,12 @@
 import { useMemo, useState, useRef, useCallback } from 'react'
-import { Upload, Eye, Truck, Calendar, Package, FileSpreadsheet, X } from 'lucide-react'
+import { Upload, Eye, Truck, Calendar, FileSpreadsheet, X } from 'lucide-react'
 import {
   Button,
   Dialog, DialogContent, DialogHeader, DialogTitle,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from '@/components/ui'
 import { WorkOrderJobCard } from '@/components/shared/WorkOrderJobCard'
+import { ContBadge } from '@/components/shared/ContBadge'
 import { FilterToolbar } from '@/components/shared/FilterToolbar'
 import { DataTablePro, type Column } from '@/components/shared/DataTablePro'
 import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
@@ -168,23 +169,23 @@ export function WorkOrderList() {
       key: 'container',
       header: 'Container',
       accessor: (row) => {
-        const containerCount = row.containers.length
-        const firstContainer = row.containers[0]?.containerNumber
+        if (row.containers.length === 0) {
+          return <span style={{ color: 'var(--theme-text-muted)' }}>—</span>
+        }
         return (
-          <div className="flex items-center gap-1.5">
-            <Package className="h-3.5 w-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-            <span>
-              {firstContainer || '-'}
-              {containerCount > 1 && (
-                <span className="ml-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                  +{containerCount - 1}
+          <div className="flex flex-col gap-0.5">
+            {row.containers.slice(0, 2).map((c, i) => (
+              <div key={i} className="flex items-center gap-1">
+                <ContBadge type={c.workType} />
+                <span className="text-xs font-mono" style={{ color: 'var(--theme-text-primary)' }}>
+                  {c.containerNumber}
                 </span>
-              )}
-            </span>
+              </div>
+            ))}
           </div>
         )
       },
-      width: '150px',
+      width: '200px',
       hideOnMobile: true,
     },
     {

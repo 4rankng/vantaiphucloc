@@ -13,6 +13,7 @@ import {
 } from '@/hooks/use-queries'
 import type { Client, ClientType } from '@/data/domain'
 import type { Vendor, VendorType } from '@/services/api/vendors.api'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -307,6 +308,7 @@ export function ClientsAndVendors() {
   const [deleting, setDeleting] = useState<UnifiedPartner | null>(null)
 
   const loading = loadingClients || loadingVendors
+  const isMobile = useIsMobile(1024)
 
   const partners = useMemo(() => toUnified(clients, vendors), [clients, vendors])
 
@@ -344,6 +346,77 @@ export function ClientsAndVendors() {
     setFormOpen(false)
     setEditing(null)
   }, [])
+
+  // ─── Mobile cards ────────────────────────────────────────────────────────────
+
+  const renderMobile = () => {
+    if (filtered.length === 0) {
+      return (
+        <div className="rounded-2xl py-16 text-center" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
+          <Building2 className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--theme-text-muted)' }} />
+          <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Không có đối tác</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Nhấn "+ Thêm" để bắt đầu</p>
+        </div>
+      )
+    }
+
+    return (
+      <div className="space-y-2">
+        {filtered.map(row => (
+          <button
+            key={`${row.kind}-${row.id}`}
+            onClick={() => setSelected(row)}
+            className="w-full text-left rounded-2xl p-3 transition-all active:scale-[0.98] touch-manipulation"
+            style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div
+                  className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ background: row.kind === 'client' ? 'var(--theme-brand-primary-light)' : 'var(--theme-status-warning-light)' }}
+                >
+                  {row.kind === 'client'
+                    ? <Building2 className="h-4 w-4" style={{ color: 'var(--theme-brand-primary)' }} />
+                    : <Truck className="h-4 w-4" style={{ color: 'var(--theme-status-warning)' }} />}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{row.name}</p>
+                  {row.taxCode && (
+                    <p className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>MST: {row.taxCode}</p>
+                  )}
+                </div>
+              </div>
+              <StatusBadge
+                variant={row.kind === 'client' ? 'info' : 'warning'}
+                label={row.kind === 'client' ? 'Khách hàng' : 'Nhà thầu'}
+                size="sm"
+              />
+            </div>
+            <div className="mt-2 space-y-1">
+              {row.phone && (
+                <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--theme-text-secondary)' }}>
+                  <Phone size={12} className="shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
+                  {row.phone}
+                </div>
+              )}
+              {row.address && (
+                <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--theme-text-secondary)' }}>
+                  <MapPin size={12} className="shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
+                  <span className="truncate">{row.address}</span>
+                </div>
+              )}
+              {row.contactPerson && (
+                <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--theme-text-secondary)' }}>
+                  <User size={12} className="shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
+                  {row.contactPerson}
+                </div>
+              )}
+            </div>
+          </button>
+        ))}
+      </div>
+    )
+  }
 
   // ─── Desktop table ──────────────────────────────────────────────────────────
 
@@ -481,7 +554,7 @@ export function ClientsAndVendors() {
       )}
 
       {/* Content */}
-      {!loading && renderDesktop()}
+      {!loading && (isMobile ? renderMobile() : renderDesktop())}
 
       {/* Dialogs */}
       <DetailDialog
