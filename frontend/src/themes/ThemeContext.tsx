@@ -1,11 +1,8 @@
-/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
 import type { ThemeDefinition } from './types';
 import { grabTheme } from './grab';
 import { applyThemeToDOM } from './css';
-
-export const themes: ThemeDefinition[] = [grabTheme];
-const themeMap = new Map(themes.map(t => [t.name, t]));
+import { themes, themeMap } from './theme-registry';
 
 const STORAGE_KEY = 'ttransport-theme';
 

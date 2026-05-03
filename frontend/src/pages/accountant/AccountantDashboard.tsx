@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { BrandIcon } from '@/components/atoms/BrandIcon'
 import {
   useWorkOrders,
   useTripOrders,
@@ -36,7 +37,24 @@ function resolveRoute(wo: WorkOrder | TripOrder): string {
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
-function EmptyState({ icon: Icon, text }: { icon: React.ElementType; text: string }) {
+function EmptyState({
+  icon: Icon,
+  text,
+  illustrated = false,
+}: {
+  icon: React.ElementType
+  text: string
+  /** Use the branded calkey illustration instead of the icon chip. */
+  illustrated?: boolean
+}) {
+  if (illustrated) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10 gap-3">
+        <BrandIcon name="calkey" className="w-24 h-24 opacity-90" />
+        <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>{text}</p>
+      </div>
+    )
+  }
   return (
     <div className="flex flex-col items-center justify-center py-12 gap-3">
       <div
@@ -763,7 +781,7 @@ function DesktopDashboard() {
           </div>
           <div className="flex-1 overflow-y-auto min-h-0">
             {sortedTrips.length === 0 ? (
-              <EmptyState icon={FileText} text="Chưa có lệnh nào" />
+              <EmptyState icon={FileText} text="Chưa có lệnh nào" illustrated />
             ) : (
               sortedTrips.map((trip, i) => (
                 <TripRow
@@ -943,7 +961,7 @@ function MobileDashboard() {
         minHeight="200px"
       >
         {recentTrips.length === 0 ? (
-          <EmptyState icon={FileText} text="Chưa có lệnh nào" />
+          <EmptyState icon={FileText} text="Chưa có lệnh nào" illustrated />
         ) : (
           recentTrips.map((trip, i) => (
             <TripRow
