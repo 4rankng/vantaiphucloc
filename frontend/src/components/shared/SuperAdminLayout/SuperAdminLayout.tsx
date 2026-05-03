@@ -1,14 +1,12 @@
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { Navigate, Outlet } from 'react-router-dom'
 import {
   LayoutDashboard,
   Users,
   Bell,
-  LogOut,
-  UserCircle,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { AccountantSidebar } from '@/components/shared/AccountantSidebar/AccountantSidebar'
+import { SuperAdminSidebar } from '@/components/shared/SuperAdminSidebar'
 import { BottomTabBar } from '@/components/shared/BottomTabBar/BottomTabBar'
 import { AppTopBar } from '@/components/shared/AppTopBar'
 
@@ -25,12 +23,8 @@ const NAV_ITEMS: SuperAdminTabItem[] = [
 ]
 
 export function SuperAdminLayout() {
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-
-  const handleLogout = useCallback(() => {
-    logout()
-  }, [logout])
 
   if (!user || user.role !== 'superadmin') {
     return <Navigate to="/" replace />
@@ -46,7 +40,7 @@ export function SuperAdminLayout() {
   return (
     <div className="min-h-screen flex flex-col lg:flex-row" style={{ background: 'var(--theme-bg-primary)' }}>
       {/* Desktop sidebar (hidden on mobile) */}
-      <AccountantSidebar
+      <SuperAdminSidebar
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
@@ -69,8 +63,10 @@ export function SuperAdminLayout() {
           </div>
         </main>
 
-        {/* Mobile bottom tab bar */}
-        <BottomTabBar tabs={tabItems} />
+        {/* Mobile bottom tab bar (hidden on lg+) */}
+        <div className="lg:hidden">
+          <BottomTabBar tabs={tabItems} />
+        </div>
       </div>
     </div>
   )
