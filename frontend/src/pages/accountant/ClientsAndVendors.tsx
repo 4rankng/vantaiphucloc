@@ -50,13 +50,35 @@ const EMPTY_FORM: PartnerForm = {
 
 // ─── Filter config ──────────────────────────────────────────────────────────────
 
-const PARTNER_FILTERS: FilterOption[] = [
-  { key: 'ALL', label: 'Tất cả' },
-  { key: 'client', label: 'Khách hàng', color: 'var(--theme-brand-primary)' },
-  { key: 'vendor', label: 'Nhà thầu', color: 'var(--theme-status-warning)' },
-]
+function buildPartnerFilters(counts: { all: number; client: number; vendor: number }): FilterOption[] {
+  return [
+    { key: 'ALL', label: `Tất cả (${counts.all})` },
+    { key: 'client', label: `Khách hàng (${counts.client})`, color: 'var(--theme-brand-primary)' },
+    { key: 'vendor', label: `Nhà thầu (${counts.vendor})`, color: 'var(--theme-status-warning)' },
+  ]
+}
 
 // ─── Helpers ────────────────────────────────────────────────────────────────────
+
+const AVATAR_COLORS = [
+  'var(--theme-brand-primary)',
+  'var(--theme-status-success)',
+  'var(--theme-status-warning)',
+  'var(--theme-status-info)',
+  'var(--theme-status-error)',
+]
+
+function getInitials(name: string): string {
+  const words = name.trim().split(/\s+/)
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
+  return (words[0][0] + words[words.length - 1][0]).toUpperCase()
+}
+
+function pickAvatarColor(name: string): string {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
+}
 
 function toUnified(clients: Client[], vendors: Vendor[]): UnifiedPartner[] {
   const clientRows: UnifiedPartner[] = clients.map(c => ({
@@ -313,6 +335,14 @@ export function ClientsAndVendors() {
 
   const partners = useMemo(() => toUnified(clients, vendors), [clients, vendors])
 
+  const partnerCounts = useMemo(() => ({
+    all: partners.length,
+    client: partners.filter(p => p.kind === 'client').length,
+    vendor: partners.filter(p => p.kind === 'vendor').length,
+  }), [partners])
+
+  const partnerFilters = useMemo(() => buildPartnerFilters(partnerCounts), [partnerCounts])
+
   const filtered = useMemo(() => {
     let result = partners
     if (filter !== 'ALL') {
@@ -456,6 +486,12 @@ export function ClientsAndVendors() {
           >
             {/* Name */}
             <div className="flex items-center gap-3 min-w-0">
+              <div
+                className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 text-[11px] font-bold text-white"
+                style={{ background: pickAvatarColor(row.name) }}
+              >
+                {getInitials(row.name)}
+              </div>
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-[var(--theme-text-primary)] truncate">{row.name}</p>
                 {row.taxCode && (
@@ -532,7 +568,7 @@ export function ClientsAndVendors() {
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="Tìm tên, điện thoại, MST..."
-        statusOptions={PARTNER_FILTERS}
+        statusOptions={partnerFilters}
         selectedStatus={filter}
         onStatusChange={setFilter}
       />

@@ -62,6 +62,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
   const [clientId, setClientId] = useState(existingWorkOrder ? String(existingWorkOrder.clientId) : '')
   const [pickupLocation, setPickupLocation] = useState(existingWorkOrder?.pickupLocation ?? '')
   const [dropoffLocation, setDropoffLocation] = useState(existingWorkOrder?.dropoffLocation ?? '')
+  const [selectedTripId, setSelectedTripId] = useState<number | null>(null)
 
   // UI state
   const [submitting, setSubmitting] = useState(false)
@@ -218,17 +219,20 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
   }, [])
 
   // Recent trip selection (toggle: click again to deselect)
-  const handleRecentTripSelect = useCallback((trip: { clientId: string; clientName: string; pickupLocation: string; dropoffLocation: string }) => {
-    if (clientId === trip.clientId && pickupLocation === trip.pickupLocation && dropoffLocation === trip.dropoffLocation) {
+  const handleRecentTripSelect = useCallback((trip: { tripId: number; clientId: string; clientName: string; pickupLocation: string; dropoffLocation: string }) => {
+    if (selectedTripId === trip.tripId) {
+      // Deselect
+      setSelectedTripId(null)
       setClientId('')
       setPickupLocation('')
       setDropoffLocation('')
     } else {
+      setSelectedTripId(trip.tripId)
       setClientId(trip.clientId)
       setPickupLocation(trip.pickupLocation)
       setDropoffLocation(trip.dropoffLocation)
     }
-  }, [clientId, pickupLocation, dropoffLocation])
+  }, [selectedTripId])
 
   // Validation — for edit mode, existing photos are valid
   const canSubmit = useMemo(() => {
@@ -351,6 +355,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
 
     // Form state
     containers, clientId, pickupLocation, dropoffLocation,
+    selectedTripId,
 
     // UI state
     submitting, scannerOpen, galleryImage, isOnline, summaryOpen, showSuccess,
@@ -360,7 +365,9 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
     canSubmit, summaryContainers, summaryClientName,
 
     // Actions
-    setClientId, setPickupLocation, setDropoffLocation,
+    setClientId: (v: string) => { setSelectedTripId(null); setClientId(v) },
+    setPickupLocation: (v: string) => { setSelectedTripId(null); setPickupLocation(v) },
+    setDropoffLocation: (v: string) => { setSelectedTripId(null); setDropoffLocation(v) },
     openScanner, openGallery, handleScanComplete, setScannerOpen,
     updateContainer, addContainer, removeContainer,
     handleRecentTripSelect,

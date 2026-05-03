@@ -712,23 +712,27 @@ function DesktopDashboard() {
     {
       label: 'Doanh thu tháng',
       value: fmt(revenue),
+      icon: <DollarSign className="h-5 w-5" />,
       onClick: () => navigate('/accountant/trips'),
     },
     {
       label: 'Chi phí tài xế',
       value: fmt(totalDriverSalary),
+      icon: <Wallet className="h-5 w-5" />,
       onClick: () => navigate('/accountant/driver-trips'),
     },
     {
       label: 'Đơn chờ ghép',
       value: String(pendingTrips.length),
       valueColor: pendingTrips.length > 0 ? 'var(--theme-status-warning)' : undefined,
+      icon: <Clock className="h-5 w-5" />,
       onClick: () => navigate('/accountant/trips'),
     },
     {
       label: 'Phiếu chưa ghép',
       value: String(pendingWOs.length),
       valueColor: pendingWOs.length > 0 ? 'var(--theme-status-warning)' : undefined,
+      icon: <AlertTriangle className="h-5 w-5" />,
       onClick: () => navigate('/accountant/work-orders'),
     },
   ]
@@ -824,28 +828,12 @@ function DesktopDashboard() {
               </div>
             ) : (
               unmatchedWOs.map((wo, i) => (
-                <div
+                <UnmatchedRow
                   key={wo.id}
+                  wo={wo}
+                  isLast={i === unmatchedWOs.length - 1}
                   onClick={() => navigate(`/accountant/match/${wo.id}`)}
-                  className="p-3 rounded-lg cursor-pointer transition hover:bg-[color-mix(in_srgb,var(--theme-brand-primary)_4%,transparent)]"
-                  style={{
-                    background: 'var(--theme-bg-tertiary)',
-                    borderBottom: i === unmatchedWOs.length - 1 ? 'none' : `1px solid var(--theme-border-light)`,
-                  }}
-                >
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <p className="text-xs font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                      {wo.code}
-                    </p>
-                    <span
-                      className="chip chip-warning"
-                      style={{ fontSize: '10px', padding: '2px 6px' }}
-                    >
-                      Chờ ghép
-                    </span>
-                  </div>
-                  <p className="typo-body-sm truncate">{wo.driverName}</p>
-                </div>
+                />
               ))
             )}
           </div>
@@ -919,10 +907,10 @@ function MobileDashboard() {
   )
 
   const stats = [
-    { label: 'Doanh thu tháng', value: fmt(revenue) },
-    { label: 'Chi phí tài xế', value: fmt(totalDriverSalary) },
-    { label: 'Đơn chờ ghép', value: String(pendingTrips.length), valueColor: pendingTrips.length > 0 ? 'var(--theme-status-warning)' : undefined },
-    { label: 'Phiếu chưa ghép', value: String(pendingWOs.length), valueColor: pendingWOs.length > 0 ? 'var(--theme-status-warning)' : undefined },
+    { label: 'Doanh thu tháng', value: fmt(revenue), icon: <DollarSign className="h-5 w-5" /> },
+    { label: 'Chi phí tài xế', value: fmt(totalDriverSalary), icon: <Wallet className="h-5 w-5" /> },
+    { label: 'Đơn chờ ghép', value: String(pendingTrips.length), valueColor: pendingTrips.length > 0 ? 'var(--theme-status-warning)' : undefined, icon: <Clock className="h-5 w-5" /> },
+    { label: 'Phiếu chưa ghép', value: String(pendingWOs.length), valueColor: pendingWOs.length > 0 ? 'var(--theme-status-warning)' : undefined, icon: <AlertTriangle className="h-5 w-5" /> },
   ]
 
   const quickActions = [

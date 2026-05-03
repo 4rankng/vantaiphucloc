@@ -3,17 +3,14 @@ import type { WorkOrder } from '@/data/domain'
 
 interface RecentTripSuggestionsProps {
   trips: WorkOrder[]
-  selectedClientId?: string
-  selectedPickup?: string
-  selectedDropoff?: string
-  onSelect: (trip: { clientId: string; clientName: string; pickupLocation: string; dropoffLocation: string }) => void
+  /** ID of the selected work order (trip.id), used for unambiguous single-selection */
+  selectedTripId?: number | string
+  onSelect: (trip: { tripId: number; clientId: string; clientName: string; pickupLocation: string; dropoffLocation: string }) => void
 }
 
 export function RecentTripSuggestions({
   trips,
-  selectedClientId,
-  selectedPickup,
-  selectedDropoff,
+  selectedTripId,
   onSelect,
 }: RecentTripSuggestionsProps) {
   if (trips.length === 0) return null
@@ -31,14 +28,12 @@ export function RecentTripSuggestions({
         const pickup = trip.pickupLocation || routeParts[0] || ''
         const dropoff = trip.dropoffLocation || routeParts.slice(1).join(' - ') || ''
         const clientLabel = trip.clientCode || trip.clientName
-        const isSelected =
-          selectedClientId === String(trip.clientId) &&
-          selectedPickup === pickup &&
-          selectedDropoff === dropoff
+        const isSelected = selectedTripId !== undefined && String(selectedTripId) === String(trip.id)
         return (
           <button
             key={trip.id}
             onClick={() => onSelect({
+              tripId: trip.id,
               clientId: String(trip.clientId),
               clientName: trip.clientName,
               pickupLocation: pickup,
