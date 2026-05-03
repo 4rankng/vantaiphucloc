@@ -34,8 +34,18 @@ export function AppShell({ topbarProps, contentClassName, children, topbarTheme 
         }
       >
         <AppTopBar {...topbarProps} theme={topbarTheme} />
+        {/* Brand glow strip at header bottom */}
+        <div
+          aria-hidden="true"
+          style={{
+            height: '2px',
+            background: isDark
+              ? 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.12) 30%, rgba(255,255,255,0.12) 70%, transparent 100%)'
+              : 'linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--theme-brand-primary) 30%, transparent) 30%, color-mix(in srgb, var(--theme-brand-primary) 30%, transparent) 70%, transparent 100%)',
+          }}
+        />
       </header>
-      <main className={`flex-1 ${contentClassName ?? ''}`}>
+      <main className={`flex-1 bg-dot-grid ${contentClassName ?? ''}`}>
         {children}
       </main>
     </div>

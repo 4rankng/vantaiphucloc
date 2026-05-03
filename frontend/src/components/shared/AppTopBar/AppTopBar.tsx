@@ -76,9 +76,50 @@ export function AppTopBar(props: AppTopBarProps) {
 
   return (
     <>
-      <div className="px-4 py-2.5 flex items-center justify-between gap-2">
+      <div className="px-4 py-2.5 flex items-center justify-between gap-2 relative overflow-hidden">
+        {/* Home-variant horizon watermark (light theme only) */}
+        {props.variant === 'home' && props.theme !== 'dark' && (
+          <svg
+            viewBox="0 0 320 52"
+            preserveAspectRatio="xMidYMid meet"
+            fill="none"
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              right: 120,
+              bottom: 0,
+              top: 0,
+              height: '100%',
+              width: 'auto',
+              opacity: 0.065,
+              pointerEvents: 'none',
+              zIndex: 0,
+            }}
+          >
+            {/* Distant hills */}
+            <path d="M60 36 Q90 20 120 30 Q150 40 170 26 Q200 12 230 24 Q260 36 290 20 L320 18 L320 52 L0 52 Z"
+              fill="#059669"/>
+            {/* Road perspective lines */}
+            <path d="M160 52 L140 32" stroke="#059669" strokeWidth="1.5" strokeOpacity="0.6" strokeLinecap="round"/>
+            <path d="M160 52 L180 32" stroke="#059669" strokeWidth="1.5" strokeOpacity="0.6" strokeLinecap="round"/>
+            {/* Small truck silhouette */}
+            <g transform="translate(220 26)">
+              <rect x="0"  y="2" width="28" height="10" rx="1.5" fill="#059669"/>
+              <path d="M28 3 L38 3 Q40 3 40 5 L40 12 L28 12 Z" fill="#059669"/>
+              <circle cx="6"  cy="13" r="3" fill="#059669"/>
+              <circle cx="33" cy="13" r="3" fill="#059669"/>
+            </g>
+            {/* Crane silhouette */}
+            <line x1="60" y1="12" x2="60" y2="36" stroke="#059669" strokeWidth="2" strokeOpacity="0.8"/>
+            <line x1="42" y1="12" x2="72" y2="12" stroke="#059669" strokeWidth="2" strokeOpacity="0.8"/>
+            {/* Sun circle */}
+            <circle cx="155" cy="18" r="8" fill="#059669" fillOpacity="0.5"/>
+            {/* Dotted road centre */}
+            <line x1="152" y1="40" x2="152" y2="52" stroke="#059669" strokeWidth="1.5" strokeDasharray="4 3"/>
+          </svg>
+        )}
         {/* ── Left ── */}
-        <div className="flex items-center gap-1.5 min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0 relative z-10">
           {/* Hamburger — always shown when onMenu is provided */}
           {props.onMenu && (
             <button
@@ -126,7 +167,7 @@ export function AppTopBar(props: AppTopBarProps) {
         </div>
 
         {/* ── Right ── */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 relative z-10">
           {props.actions}
 
           {/* Offline icon */}
