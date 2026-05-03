@@ -56,15 +56,6 @@ const DEFAULT_COMMANDS: CommandItem[] = [
     category: 'Navigation',
   },
   {
-    id: 'driver-trips',
-    label: 'Chuyến đã đi',
-    description: 'Xem danh sách chuyến tài xế đã đi',
-    icon: <Truck className="h-4 w-4" />,
-    href: '/accountant/driver-trips',
-    keywords: ['chuyen', 'driver', 'tai xe'],
-    category: 'Navigation',
-  },
-  {
     id: 'partners',
     label: 'Đối tác',
     description: 'Quản lý đối tác vận tải',

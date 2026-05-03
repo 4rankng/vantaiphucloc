@@ -33,7 +33,6 @@ export interface SidebarItem {
 const ACCOUNTANT_NAV_ITEMS: SidebarItem[] = [
   { label: 'Tổng quan', href: '/accountant', icon: LayoutDashboard },
   { label: 'Đơn hàng', href: '/accountant/trips', icon: FileText },
-  { label: 'Chuyến đã đi', href: '/accountant/driver-trips', icon: Truck },
   { label: 'Đối soát', href: '/accountant/work-orders', icon: Briefcase },
   { label: 'Đối tác', href: '/accountant/partners', icon: Users },
   { label: 'Cung đường', href: '/accountant/routes', icon: MapPin },
