@@ -5,7 +5,6 @@ import {
   Users,
   Handshake,
   Receipt,
-  Briefcase,
   Bell,
   LogOut,
   UserCircle,
@@ -28,8 +27,6 @@ export interface SidebarItem {
 
 const NAV_ITEMS: SidebarItem[] = [
   { label: 'Tổng quan', href: '/director', icon: LayoutDashboard },
-  { label: 'Khách hàng / Công việc', href: '/director/client-jobs', icon: Briefcase },
-  { label: 'Tài xế / Công việc', href: '/director/driver-jobs', icon: Users },
   { label: 'Đối tác', href: '/director/partners', icon: Handshake },
   { label: 'Bảng giá', href: '/director/pricing', icon: Receipt },
   { label: 'Quản lý tài khoản', href: '/director/users', icon: Users },

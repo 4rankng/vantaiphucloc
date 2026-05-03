@@ -370,23 +370,24 @@ export function MatchTrip() {
                   />
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Button
-                    onClick={handleMatch}
-                    disabled={submitting}
-                    className="flex-1 h-12 font-bold rounded-xl text-sm gap-2"
-                    style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-                  >
-                    <Check className="w-5 h-5" />
-                    {submitting ? 'Đang khớp...' : 'Xác nhận khớp chuyến'}
-                  </Button>
+                <div className="flex items-center gap-2">
                   <button
+                    type="button"
                     onClick={() => navigate('/accountant/create-trip', { state: { fromTripOrder: selectedTrip } })}
-                    className="h-12 px-4 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-colors"
+                    className="h-10 px-3 rounded-lg text-sm font-medium inline-flex items-center justify-center gap-1.5 shrink-0 transition-colors"
                     style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-brand-primary)', border: '1px solid var(--theme-border-default)' }}
                   >
                     <Plus className="w-4 h-4" /> Tạo chuyến mới
                   </button>
+                  <Button
+                    onClick={handleMatch}
+                    disabled={submitting}
+                    className="flex-1 h-10 font-bold rounded-lg text-sm gap-2"
+                    style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+                  >
+                    <Check className="w-4 h-4" />
+                    {submitting ? 'Đang khớp...' : 'Xác nhận khớp chuyến'}
+                  </Button>
                 </div>
               </div>
             </>
