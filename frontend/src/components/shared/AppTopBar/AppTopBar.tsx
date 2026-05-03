@@ -5,18 +5,40 @@ import { UserDropdown } from '@/components/shared/ProfileDialog'
 import { OfflineTopBarIcon } from '@/components/shared/OfflineIndicator/OfflineIndicator'
 
 /**
- * AppTopBar — glass-effect top bar used across all app screens.
+ * AppTopBar — top bar used across all mobile app screens.
  *
- * The body gradient (brand green) shows through the glass backdrop.
- * Text and icons use dark green for contrast against the tinted glass.
+ * Two visual themes:
+ *  - "light"  (default): glass effect over the green body gradient — used by driver/other roles
+ *  - "dark":  solid dark-green bar matching the sidebar — used by accountant mobile shell
+ *
+ * Layout:
+ *  Left  → [hamburger?] [back arrow?] [logo | greeting | title]
+ *  Right → [actions] [offline] [bell] [profile]
+ *
+ * When both onMenu and onBack are provided (sub-pages with drawer nav),
+ * the hamburger and back arrow are both shown.
  */
 
-const DARK_GREEN = '#00632a'
-const MUTED_GREEN = 'rgba(0, 99, 42, 0.6)'
-const ICON_BG = 'rgba(0, 99, 42, 0.08)'
+// Light theme tokens (glass over green gradient)
+const LIGHT = {
+  iconBg: 'rgba(0, 99, 42, 0.08)',
+  iconColor: '#00632a',
+  titleColor: '#00632a',
+  subtitleColor: 'rgba(0, 99, 42, 0.6)',
+}
+
+// Dark theme tokens (solid dark-green bar)
+const DARK = {
+  iconBg: 'rgba(255,255,255,0.10)',
+  iconColor: 'rgba(255,255,255,0.90)',
+  titleColor: '#ffffff',
+  subtitleColor: 'rgba(255,255,255,0.55)',
+}
 
 interface AppTopBarBaseProps {
   actions?: ReactNode
+  /** Visual theme. Defaults to "light". */
+  theme?: 'light' | 'dark'
 }
 
 interface HomeVariantProps extends AppTopBarBaseProps {
@@ -41,67 +63,65 @@ export function AppTopBar(props: AppTopBarProps) {
   const profileBtnRef = useRef<HTMLDivElement>(null)
   const unread = useUnreadCount()
 
+  const t = props.theme === 'dark' ? DARK : LIGHT
+
   const handleBellClick = useCallback(() => {
     setNotifOpen(true)
   }, [])
 
   return (
     <>
-      <div>
-        <div className="px-4 py-2.5 flex items-center justify-between gap-3 md:max-w-4xl md:mx-auto">
+      <div className="px-4 py-2.5 flex items-center justify-between gap-2">
         {/* ── Left ── */}
-        <div className="flex items-center gap-2 min-w-0">
-          {props.onMenu ? (
+        <div className="flex items-center gap-1.5 min-w-0">
+          {/* Hamburger — always shown when onMenu is provided */}
+          {props.onMenu && (
             <button
               onClick={props.onMenu}
               className="w-8 h-8 flex items-center justify-center rounded-full shrink-0 touch-manipulation"
-              style={{ background: ICON_BG, color: DARK_GREEN }}
+              style={{ background: t.iconBg, color: t.iconColor }}
               aria-label="Menu"
             >
               <Menu className="w-[18px] h-[18px]" />
             </button>
-          ) : (
+          )}
+
+          {/* Logo — only when no onMenu */}
+          {!props.onMenu && (
             <img src="/logo.avif" alt="" className="w-8 h-8 shrink-0 object-contain rounded-md" />
           )}
+
+          {/* Back arrow — shown on page variant when onBack provided */}
+          {props.variant === 'page' && props.onBack && (
+            <button
+              onClick={props.onBack}
+              className="w-8 h-8 flex items-center justify-center rounded-full shrink-0 touch-manipulation"
+              style={{ background: t.iconBg, color: t.iconColor }}
+              aria-label="Quay lại"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          )}
+
+          {/* Title / greeting */}
           {props.variant === 'home' ? (
-            <div className="min-w-0">
-              <p
-                className="text-xs leading-tight"
-                style={{ color: MUTED_GREEN }}
-              >
+            <div className="min-w-0 ml-0.5">
+              <p className="text-[11px] leading-tight" style={{ color: t.subtitleColor }}>
                 Xin chào,
               </p>
-              <p
-                className="text-sm font-semibold leading-tight truncate"
-                style={{ color: DARK_GREEN }}
-              >
+              <p className="text-sm font-semibold leading-tight truncate" style={{ color: t.titleColor }}>
                 {props.name}
               </p>
             </div>
           ) : (
-            <>
-              {!props.onMenu && props.onBack && (
-                <button
-                  onClick={props.onBack}
-                  className="w-8 h-8 flex items-center justify-center rounded-full shrink-0 touch-manipulation"
-                  style={{ background: ICON_BG, color: DARK_GREEN }}
-                  aria-label="Quay lại"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                </button>
-              )}
-              <p
-                className="text-sm font-semibold truncate"
-                style={{ color: DARK_GREEN }}
-              >
-                {props.title}
-              </p>
-            </>
+            <p className="text-sm font-semibold truncate ml-0.5" style={{ color: t.titleColor }}>
+              {props.title}
+            </p>
           )}
         </div>
 
         {/* ── Right ── */}
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           {props.actions}
 
           {/* Offline icon */}
@@ -111,7 +131,7 @@ export function AppTopBar(props: AppTopBarProps) {
           <button
             onClick={handleBellClick}
             className="w-8 h-8 flex items-center justify-center rounded-full relative touch-manipulation"
-            style={{ background: ICON_BG, color: DARK_GREEN }}
+            style={{ background: t.iconBg, color: t.iconColor }}
             aria-label="Thông báo"
           >
             <Bell className="w-[17px] h-[17px]" />
@@ -130,7 +150,7 @@ export function AppTopBar(props: AppTopBarProps) {
             <button
               onClick={() => setProfileOpen(v => !v)}
               className="w-8 h-8 flex items-center justify-center rounded-full touch-manipulation"
-              style={{ background: ICON_BG, color: DARK_GREEN }}
+              style={{ background: t.iconBg, color: t.iconColor }}
               aria-label="Tài khoản"
             >
               <UserCircle className="w-[17px] h-[17px]" />
@@ -141,7 +161,6 @@ export function AppTopBar(props: AppTopBarProps) {
               anchorRef={profileBtnRef}
             />
           </div>
-        </div>
         </div>
       </div>
 

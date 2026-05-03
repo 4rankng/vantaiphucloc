@@ -411,7 +411,7 @@ function DonHangCard({
   )
 }
 
-// ─── Gợi ý ghép phiếu panel ───────────────────────────────────────────────────
+// ─── Gợi ý ghép chuyến panel ───────────────────────────────────────────────────
 
 function MatchSuggestionPanel({
   workOrders,
@@ -775,12 +775,12 @@ function DesktopDashboard() {
           )}
         </WorkbenchCard>
 
-        {/* Middle: Gợi ý ghép phiếu */}
+        {/* Middle: Gợi ý ghép chuyến */}
         <WorkbenchCard
           title={
             <span className="flex items-center gap-1.5">
               <Sparkles className="h-4 w-4" style={{ color: 'var(--theme-status-warning)' }} />
-              Gợi ý ghép phiếu
+              Gợi ý ghép chuyến
             </span>
           }
           footerLabel="Mở đối soát đầy đủ"
@@ -876,13 +876,13 @@ function MobileDashboard() {
       {/* KPI grid - 2x2 */}
       <StatsGrid stats={stats} columns={2} />
 
-      {/* Quick actions - scrollable row */}
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-none">
+      {/* Quick actions - wraps to two rows when needed */}
+      <div className="flex flex-wrap gap-2">
         {quickActions.map(a => (
           <button
             key={a.id}
             onClick={a.onClick}
-            className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition hover:opacity-80 active:scale-[0.97] touch-manipulation shrink-0"
+            className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition hover:opacity-80 active:scale-[0.97] touch-manipulation"
             style={{
               background: a.primary ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
               borderColor: a.primary ? 'transparent' : 'var(--theme-border-default)',
@@ -916,12 +916,12 @@ function MobileDashboard() {
         )}
       </WorkbenchCard>
 
-      {/* Gợi ý ghép phiếu */}
+      {/* Gợi ý ghép chuyến */}
       <WorkbenchCard
         title={
           <span className="flex items-center gap-1.5">
             <Sparkles className="h-4 w-4" style={{ color: 'var(--theme-status-warning)' }} />
-            Gợi ý ghép phiếu
+            Gợi ý ghép chuyến
           </span>
         }
         footerLabel="Mở đối soát đầy đủ"

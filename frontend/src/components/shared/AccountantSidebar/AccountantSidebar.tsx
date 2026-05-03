@@ -44,12 +44,15 @@ export interface AccountantSidebarProps {
   collapsed?: boolean
   badges?: Record<string, number>
   onNotificationsOpen?: () => void
+  /** When true, removes the lg:flex guard so the sidebar renders on mobile (e.g. inside a drawer). */
+  forceVisible?: boolean
 }
 
 export function AccountantSidebar({
   collapsed = false,
   badges = {},
   onNotificationsOpen,
+  forceVisible = false,
 }: AccountantSidebarProps) {
   const location = useLocation()
   const navigate = useNavigate()
@@ -73,7 +76,7 @@ export function AccountantSidebar({
 
   return (
     <aside
-      className={`hidden lg:flex flex-col shrink-0 transition-all duration-200 ${
+      className={`${forceVisible ? 'flex' : 'hidden lg:flex'} flex-col shrink-0 h-full transition-all duration-200 ${
         collapsed ? 'w-[72px]' : 'w-[240px]'
       }`}
       style={{

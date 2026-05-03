@@ -5,28 +5,37 @@ interface AppShellProps {
   topbarProps: AppTopBarProps
   contentClassName?: string
   children: ReactNode
+  /**
+   * "light" (default): glass topbar over the green body gradient.
+   * "dark": solid dark-green topbar — used by accountant mobile shell.
+   */
+  topbarTheme?: 'light' | 'dark'
 }
 
-/**
- * AppShell — mobile-first layout wrapper with glass topbar.
- * Body gradient: brand color bleeds from top 140px, then fades to page bg.
- * Topbar: static with backdrop blur (glass effect).
- */
-export function AppShell({ topbarProps, contentClassName, children }: AppShellProps) {
+export function AppShell({ topbarProps, contentClassName, children, topbarTheme = 'light' }: AppShellProps) {
+  const isDark = topbarTheme === 'dark'
+
   return (
-    <div className="min-h-[100dvh] w-full" style={{ background: 'var(--body-gradient)' }}>
+    <div
+      className="min-h-[100dvh] w-full flex flex-col"
+      style={{ background: isDark ? 'var(--theme-bg-primary)' : 'var(--body-gradient)' }}
+    >
       <header
-        className="z-20 w-full"
-        style={{
-          background: 'var(--glass-bg)',
-          backdropFilter: 'var(--glass-blur)',
-          WebkitBackdropFilter: 'var(--glass-blur)',
-          borderBottom: '1px solid var(--surface-border)',
-        }}
+        className="z-20 w-full shrink-0"
+        style={
+          isDark
+            ? { background: 'var(--theme-sidebar, #0a3520)' }
+            : {
+                background: 'var(--glass-bg)',
+                backdropFilter: 'var(--glass-blur)',
+                WebkitBackdropFilter: 'var(--glass-blur)',
+                borderBottom: '1px solid var(--surface-border)',
+              }
+        }
       >
-        <AppTopBar {...topbarProps} />
+        <AppTopBar {...topbarProps} theme={topbarTheme} />
       </header>
-      <main className={contentClassName}>
+      <main className={`flex-1 ${contentClassName ?? ''}`}>
         {children}
       </main>
     </div>

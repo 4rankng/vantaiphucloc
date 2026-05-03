@@ -3,9 +3,8 @@ import { AppShell } from '@/components/shared/AppShell'
 import { AccountantSidebar } from '@/components/shared/AccountantSidebar'
 import { CommandPalette, useCommandPalette } from '@/components/shared/CommandPalette'
 import { useAuth } from '@/contexts/AuthContext'
-import { useIsMobile } from '@/hooks/use-mobile'
 import { NotificationPanel } from '@/components/shared/NotificationPanel/NotificationPanel'
-import { ChevronRight, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import type { Role } from '@/data/domain'
 
@@ -16,44 +15,23 @@ const FULLSCREEN_PREFIXES = [
   '/accountant/match-trip/',
 ]
 
-const SIDEBAR_EXPANDED = 240
-const SIDEBAR_COLLAPSED = 72
+const SIDEBAR_WIDTH = 240
 
+// Desktop: ≥ 1024px — fixed sidebar, no toggle
 function AccountantDesktopShell() {
-  const { user } = useAuth()
   const location = useLocation()
   const [notifOpen, setNotifOpen] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const isFullscreen = FULLSCREEN_PREFIXES.some(p => location.pathname.startsWith(p))
   const { open: cmdOpen, close: closeCmdPalette } = useCommandPalette()
 
   return (
     <div className="flex h-[100dvh] w-full overflow-hidden" style={{ background: 'var(--theme-bg-primary)' }}>
-      {/* Sidebar */}
+      {/* Fixed sidebar — always visible, no collapse */}
       {!isFullscreen && (
         <AccountantSidebar
-          collapsed={sidebarCollapsed}
+          collapsed={false}
           onNotificationsOpen={() => setNotifOpen(true)}
         />
-      )}
-
-      {/* Sidebar toggle — fixed pill on sidebar edge (desktop only) */}
-      {!isFullscreen && (
-        <button
-          type="button"
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          aria-label={sidebarCollapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'}
-          className="hidden md:flex fixed z-50 top-4 items-center justify-center w-2.5 h-9 rounded-r-md shadow-sm text-neutral-300 transition-all duration-300 ease-in-out"
-          style={{
-            left: sidebarCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED,
-            background: 'var(--theme-sidebar, #0a3520)',
-            border: '1px solid rgba(255,255,255,0.12)',
-          }}
-        >
-          <ChevronRight
-            className={`w-3.5 h-3.5 transition-transform duration-200 ${!sidebarCollapsed ? 'rotate-180' : ''}`}
-          />
-        </button>
       )}
 
       {/* Main content area */}
@@ -77,66 +55,100 @@ function AccountantDesktopShell() {
 function AccountantMobileShell() {
   const { user } = useAuth()
   const location = useLocation()
-  const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [drawerVisible, setDrawerVisible] = useState(false)
 
   const isHome = location.pathname === '/accountant'
+  const isSubPage = !isHome
   const isFullscreen = FULLSCREEN_PREFIXES.some(p => location.pathname.startsWith(p))
 
-  const toggleSidebar = useCallback(() => setSidebarOpen(v => !v), [])
-  const closeSidebar = useCallback(() => setSidebarOpen(false), [])
+  const openSidebar = useCallback(() => {
+    setDrawerVisible(true)
+    // Small delay so the element is in the DOM before we animate it in
+    requestAnimationFrame(() => setSidebarOpen(true))
+  }, [])
+
+  const closeSidebar = useCallback(() => {
+    setSidebarOpen(false)
+    // Wait for slide-out animation before unmounting
+    setTimeout(() => setDrawerVisible(false), 280)
+  }, [])
+
+  const toggleSidebar = useCallback(() => {
+    if (drawerVisible) closeSidebar()
+    else openSidebar()
+  }, [drawerVisible, openSidebar, closeSidebar])
 
   // Auto-close sidebar on navigation
-  useEffect(() => { closeSidebar() }, [location.pathname, closeSidebar])
+  useEffect(() => { closeSidebar() }, [location.pathname]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const topbarProps = isHome
+    ? {
+        variant: 'home' as const,
+        name: user?.name ?? '',
+        onMenu: toggleSidebar,
+      }
+    : {
+        variant: 'page' as const,
+        title: resolveMobileTitle(location.pathname),
+        onMenu: toggleSidebar,
+        onBack: isSubPage ? () => navigate(-1) : undefined,
+      }
 
   return (
     <>
       <AppShell
-        topbarProps={
-          isHome
-            ? {
-                variant: 'home' as const,
-                name: user?.name ?? '',
-                onMenu: toggleSidebar,
-              }
-            : {
-                variant: 'page' as const,
-                title: resolveMobileTitle(location.pathname),
-                onMenu: toggleSidebar,
-              }
-        }
+        topbarProps={topbarProps}
+        topbarTheme="dark"
         contentClassName={
           isFullscreen
             ? undefined
-            : 'px-4 py-4 space-y-4 md:px-6 md:py-6 md:max-w-4xl md:mx-auto'
+            : 'px-4 py-4 space-y-4'
         }
       >
         <Outlet />
       </AppShell>
 
-      {/* Sidebar overlay drawer (mobile) */}
-      {sidebarOpen && (
+      {/* Animated sidebar drawer */}
+      {drawerVisible && (
         <div className="fixed inset-0 z-50 flex">
-          {/* Backdrop */}
+          {/* Backdrop — fades in/out */}
           <div
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0"
+            style={{
+              background: 'rgba(0,0,0,0.5)',
+              opacity: sidebarOpen ? 1 : 0,
+              transition: 'opacity 280ms ease',
+            }}
             onClick={closeSidebar}
           />
-          {/* Sidebar panel */}
-          <div className="relative z-10 h-full" style={{ width: SIDEBAR_EXPANDED }}>
-            <AccountantSidebar
-              collapsed={false}
-              onNotificationsOpen={closeSidebar}
-            />
-            {/* Close button */}
+
+          {/* Drawer panel — slides in from left */}
+          <div
+            className="relative z-10 h-full flex flex-col"
+            style={{
+              width: SIDEBAR_EXPANDED,
+              transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
+              transition: 'transform 280ms cubic-bezier(0.4, 0, 0.2, 1)',
+              background: 'var(--theme-sidebar, #0a3520)',
+            }}
+          >
+            {/* Close button — overlaid on the sidebar header */}
             <button
               onClick={closeSidebar}
-              className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full"
-              style={{ background: 'rgba(255,255,255,0.12)', color: '#fff' }}
+              className="absolute top-3.5 right-3 z-10 w-7 h-7 flex items-center justify-center rounded-full shrink-0"
+              style={{ background: 'rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.7)' }}
               aria-label="Đóng menu"
             >
               <X className="w-4 h-4" />
             </button>
+
+            {/* Full sidebar (logo + nav + user footer) */}
+            <AccountantSidebar
+              collapsed={false}
+              forceVisible
+              onNotificationsOpen={closeSidebar}
+            />
           </div>
         </div>
       )}
@@ -166,11 +178,12 @@ function resolveMobileTitle(pathname: string): string {
 
 export function AccountantLayout() {
   const { user } = useAuth()
-  const isMobile = useIsMobile()
+  // Desktop = ≥ 1024px (laptop+), everything smaller gets the mobile/tablet shell
+  const isDesktop = useIsDesktop()
 
   if (!user || !ALLOWED_ROLES.includes(user.role)) {
     return <Navigate to="/" replace />
   }
 
-  return isMobile ? <AccountantMobileShell /> : <AccountantDesktopShell />
+  return isDesktop ? <AccountantDesktopShell /> : <AccountantMobileShell />
 }
