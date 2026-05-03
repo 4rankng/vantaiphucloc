@@ -55,7 +55,7 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
         {containers.map((cont, idx) => (
           <div
             key={idx}
-            className="rounded-2xl p-3 flex gap-3"
+            className="rounded-lg p-3 flex gap-3"
             style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
           >
             {/* ── Left: square photo / capture placeholder ── */}
@@ -99,10 +99,10 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
                 {containers.length > 1 && (
                   <button
                     onClick={() => removeContainer(idx)}
-                    className="w-7 h-7 flex items-center justify-center rounded-full touch-manipulation"
+                    className="w-9 h-9 flex items-center justify-center rounded-full touch-manipulation"
                     style={{ background: 'var(--theme-status-error-light)' }}
                   >
-                    <Trash2 className="w-3.5 h-3.5" style={{ color: 'var(--theme-status-error)' }} />
+                    <Trash2 className="w-4 h-4" style={{ color: 'var(--theme-status-error)' }} />
                   </button>
                 )}
               </div>
@@ -112,18 +112,18 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
                 <input
                   value={cont.containerNumber}
                   onChange={e => updateContainer(idx, 'containerNumber', e.target.value)}
-                  className="w-full h-9 rounded-xl px-3 text-sm font-mono font-semibold [&::placeholder]:opacity-50"
+                  className="w-full h-11 rounded-xl px-3.5 text-sm font-mono font-semibold [&::placeholder]:opacity-50"
                   style={{
                     background: 'var(--theme-bg-tertiary)',
                     border: `1.5px solid ${containerErrors[idx] ? 'var(--theme-status-error)' : cont.ocrError ? 'var(--theme-status-warning)' : 'transparent'}`,
                     color: 'var(--theme-text-primary)',
-                    paddingRight: cont.ocrLoading ? '32px' : undefined,
+                    paddingRight: cont.ocrLoading ? '40px' : undefined,
                   }}
                   placeholder={cont.ocrLoading ? 'Nhận diện...' : 'MSKU1234567'}
                   readOnly={cont.ocrLoading}
                 />
                 {cont.ocrLoading && (
-                  <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin" style={{ color: 'var(--theme-brand-primary)' }} />
+                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin" style={{ color: 'var(--theme-brand-primary)' }} />
                 )}
               </div>
 
@@ -159,7 +159,7 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
       {/* Add more container */}
       <button
         onClick={addContainer}
-        className="w-full h-12 rounded-2xl text-sm font-bold flex items-center justify-center gap-2 touch-manipulation transition-colors active:scale-[0.98]"
+        className="w-full h-12 rounded-lg text-sm font-bold flex items-center justify-center gap-2 touch-manipulation transition-colors active:scale-[0.98]"
         style={{
           background: 'transparent',
           color: 'var(--theme-brand-primary)',
@@ -232,43 +232,49 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
         </div>
       </div>
 
-      {/* Submit bar */}
+      {/* Submit bar (sticky footer) */}
       <div
-        className="pt-4 pb-2 space-y-2"
+        className="sticky bottom-0 z-10 -mx-4 px-4 py-3 space-y-2"
+        style={{
+          background: 'var(--theme-bg-primary)',
+          borderTop: '1px solid var(--theme-border-default)',
+        }}
       >
-        {missingFields.length > 0 && !canSubmit && (
-          <p className="text-xs font-medium text-center" style={{ color: 'var(--theme-status-warning)' }}>
-            Còn thiếu: {missingFields.join(', ')}
-          </p>
-        )}
-        {missingFields.length === 0 && !canSubmit && Object.keys(containerErrors).length > 0 && (
-          <p className="text-xs font-medium text-center" style={{ color: 'var(--theme-status-error)' }}>
-            Số container không hợp lệ — vui lòng kiểm tra
-          </p>
-        )}
-        <div className="flex gap-2">
-          <button
-            onClick={() => navigate(-1)}
-            className="h-12 px-4 rounded-2xl flex items-center justify-center gap-1 touch-manipulation transition-all active:scale-[0.98] shrink-0"
-            style={{
-              background: 'transparent',
-              color: 'var(--theme-status-error)',
-              border: '1.5px solid var(--theme-status-error)',
-            }}
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <button
-            onClick={onRequestSubmit}
-            disabled={!canSubmit || submitting}
-            className="flex-1 h-12 rounded-2xl text-base font-bold touch-manipulation transition-all active:scale-[0.98]"
-            style={{
-              background: canSubmit ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
-              color: canSubmit ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)',
-            }}
-          >
-            {submitting ? 'Đang gửi...' : isEdit ? 'Cập nhật' : isOnline ? 'Xác nhận' : 'Lưu offline'}
-          </button>
+        <div className="safe-area-bottom">
+          {missingFields.length > 0 && !canSubmit && (
+            <p className="text-xs font-medium text-center" style={{ color: 'var(--theme-status-warning)' }}>
+              Còn thiếu: {missingFields.join(', ')}
+            </p>
+          )}
+          {missingFields.length === 0 && !canSubmit && Object.keys(containerErrors).length > 0 && (
+            <p className="text-xs font-medium text-center" style={{ color: 'var(--theme-status-error)' }}>
+              Số container không hợp lệ — vui lòng kiểm tra
+            </p>
+          )}
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={() => navigate(-1)}
+              className="h-12 px-4 rounded-lg flex items-center justify-center gap-1 touch-manipulation transition-all active:scale-[0.98] shrink-0"
+              style={{
+                background: 'transparent',
+                color: 'var(--theme-status-error)',
+                border: '1.5px solid var(--theme-status-error)',
+              }}
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={onRequestSubmit}
+              disabled={!canSubmit || submitting}
+              className="flex-1 h-12 rounded-lg text-base font-bold touch-manipulation transition-all active:scale-[0.98]"
+              style={{
+                background: canSubmit ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
+                color: canSubmit ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)',
+              }}
+            >
+              {submitting ? 'Đang gửi...' : isEdit ? 'Cập nhật' : isOnline ? 'Xác nhận' : 'Lưu offline'}
+            </button>
+          </div>
         </div>
       </div>
 

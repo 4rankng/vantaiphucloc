@@ -76,93 +76,113 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onCancel
 
   return (
     <div
-      className="rounded-2xl p-4 space-y-4"
+      className="card p-6 space-y-6"
       style={{
-        background: 'var(--theme-bg-secondary)',
-        boxShadow: 'var(--theme-shadow-card)',
-        border: '2px solid var(--theme-brand-primary)',
+        borderColor: 'var(--theme-brand-primary)',
+        borderWidth: '2px',
       }}
     >
       <div className="flex items-center justify-between">
-        <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
-          {initial ? 'Sửa bảng giá' : 'Thêm bảng giá'}
-        </p>
-        <button onClick={onCancel} className="touch-manipulation" style={{ color: 'var(--theme-text-muted)' }}>
-          <X className="w-4 h-4" />
+        <h2 className="typo-h2">
+          {initial ? 'Chỉnh sửa bảng giá' : 'Tạo bảng giá mới'}
+        </h2>
+        <button onClick={onCancel} className="p-1 rounded-md hover:bg-[var(--theme-bg-tertiary)]" style={{ color: 'var(--theme-text-muted)' }}>
+          <X size={20} />
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {/* Client selector — hidden when locked */}
-        {!lockedClientId && (
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
-              Khách hàng
-            </Label>
-            <InlineSelect
-              options={clientOptions}
-              value={clientId}
-              onChange={setClientId}
-              placeholder="Chọn khách hàng"
-              onCreateNew={onCreateClient}
-              createNewLabel="Tạo khách hàng mới"
-            />
-          </div>
-        )}
+      <div className="space-y-6">
+        {/* Client & Work Type Section */}
+        <div>
+          <div className="typo-label mb-4">THÔNG TIN CƠ BẢN</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Client selector — hidden when locked */}
+            {!lockedClientId && (
+              <div className="space-y-2">
+                <Label className="typo-form-label">Khách hàng</Label>
+                <InlineSelect
+                  options={clientOptions}
+                  value={clientId}
+                  onChange={setClientId}
+                  placeholder="Chọn khách hàng"
+                  onCreateNew={onCreateClient}
+                  createNewLabel="Tạo khách hàng mới"
+                />
+              </div>
+            )}
 
-        {/* Work type */}
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
-            Loại cont
-          </Label>
-          <div className="flex gap-1">
-            {workTypeOptions.map(opt => (
-              <button
-                key={opt.value}
-                onClick={() => setWorkType(opt.value)}
-                className="px-2 py-1.5 rounded-lg text-xs font-bold touch-manipulation"
-                style={{
-                  background: workType === opt.value ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
-                  color: workType === opt.value ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
-                }}
-              >
-                {opt.label}
-              </button>
-            ))}
+            {/* Work type */}
+            <div className="space-y-2">
+              <Label className="typo-form-label">Loại container</Label>
+              <div className="flex gap-2">
+                {workTypeOptions.map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setWorkType(opt.value)}
+                    className="px-3 py-2 rounded-md text-xs font-bold transition-colors"
+                    style={{
+                      background: workType === opt.value ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
+                      color: workType === opt.value ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
+                      border: '1px solid var(--theme-border-default)',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
-            Cung đường
-          </Label>
-          <div className="space-y-1.5">
-            <InlineSelect
-              options={pickupOptions}
-              value={pickupLocation}
-              onChange={v => { setPickupLocation(v); setDropoffLocation('') }}
-              placeholder="Điểm lấy"
-            />
-            <InlineSelect
-              options={dropoffOptions}
-              value={dropoffLocation}
-              onChange={setDropoffLocation}
-              placeholder="Điểm trả"
-            />
+        {/* Route Section */}
+        <div>
+          <div className="typo-label mb-4">CUNG ĐƯỜNG</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="typo-form-label">Điểm lấy hàng</Label>
+              <InlineSelect
+                options={pickupOptions}
+                value={pickupLocation}
+                onChange={v => { setPickupLocation(v); setDropoffLocation('') }}
+                placeholder="Chọn điểm lấy"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="typo-form-label">Điểm trả hàng</Label>
+              <InlineSelect
+                options={dropoffOptions}
+                value={dropoffLocation}
+                onChange={setDropoffLocation}
+                placeholder="Chọn điểm trả"
+              />
+            </div>
           </div>
+        </div>
+
+        {/* Line Editor Section */}
+        <div>
+          <div className="typo-label mb-4">BẢNG GIÁ</div>
+          <LineEditor lines={lines} onChange={setLines} />
         </div>
       </div>
 
-      <LineEditor lines={lines} onChange={setLines} />
-
-      <Button
-        onClick={handleSubmit}
-        disabled={!clientId || !route || lines.length === 0}
-        className="w-full h-10 font-bold rounded-xl text-sm"
-        style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-      >
-        <Check className="w-4 h-4 mr-1.5" /> {initial ? 'Lưu' : 'Thêm'}
-      </Button>
+      {/* Sticky Footer */}
+      <div className="flex gap-2 justify-end pt-4 border-t border-[var(--theme-border-default)]">
+        <button
+          onClick={onCancel}
+          className="btn-secondary"
+        >
+          Hủy
+        </button>
+        <button
+          onClick={handleSubmit}
+          disabled={!clientId || !route || lines.length === 0}
+          className="btn-primary"
+        >
+          <Check size={16} className="mr-1.5" />
+          {initial ? 'Lưu' : 'Tạo'}
+        </button>
+      </div>
     </div>
   )
 }

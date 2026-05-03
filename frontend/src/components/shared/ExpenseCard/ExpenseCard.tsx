@@ -13,7 +13,7 @@ export function ExpenseCard({ expense, onClick }: { expense: { status: string; c
   return (
     <button
       onClick={onClick}
-      className="w-full text-left rounded-2xl p-4 card-lift"
+      className="w-full text-left rounded-lg p-4 card-lift"
       style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}
     >
       <div className="flex justify-between items-start mb-2">

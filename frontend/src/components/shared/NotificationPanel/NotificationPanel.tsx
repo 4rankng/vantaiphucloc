@@ -162,7 +162,7 @@ export function NotificationPanel({ open, onClose }: NotificationPanelProps) {
           {isLoading ? (
             <div className="p-4 space-y-3">
               {[1, 2, 3, 4].map(i => (
-                <div key={i} className="flex items-start gap-3 p-3 rounded-2xl" style={{ background: 'var(--theme-bg-secondary)' }}>
+                <div key={i} className="flex items-start gap-3 p-3 rounded-lg" style={{ background: 'var(--theme-bg-secondary)' }}>
                   <div className="w-9 h-9 rounded-full animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
                   <div className="flex-1 space-y-2">
                     <div className="h-3 rounded animate-pulse w-3/4" style={{ background: 'var(--theme-bg-tertiary)' }} />

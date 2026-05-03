@@ -89,7 +89,7 @@ export function TripOrderCard({ trip, onClick }: TripOrderCardProps) {
     return (
       <button
         onClick={onClick}
-        className="w-full text-left rounded-2xl p-3.5 transition-all active:scale-[0.98] touch-manipulation"
+        className="w-full text-left rounded-lg p-3.5 transition-all active:scale-[0.98] touch-manipulation"
         style={cardStyle}
       >
         {inner}
@@ -98,7 +98,7 @@ export function TripOrderCard({ trip, onClick }: TripOrderCardProps) {
   }
 
   return (
-    <div className="w-full rounded-2xl p-3.5" style={cardStyle}>
+    <div className="w-full rounded-lg p-3.5" style={cardStyle}>
       {inner}
     </div>
   )

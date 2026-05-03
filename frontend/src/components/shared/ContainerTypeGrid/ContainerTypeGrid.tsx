@@ -20,14 +20,14 @@ export function ContainerTypeGrid({ value, onChange, error, layout = 'row' }: Co
   }
 
   return (
-    <div className={layout === 'grid2x2' ? 'grid grid-cols-2 gap-1.5' : 'flex gap-1.5'}>
+    <div className={layout === 'grid2x2' ? 'grid grid-cols-2 gap-2' : 'flex gap-2'}>
       {WORK_TYPES.map(wt => {
         const selected = value === wt
         return (
           <button
             key={wt}
             onClick={() => handleSelect(wt)}
-            className="flex-1 min-h-[34px] rounded-xl flex items-center justify-center gap-1 transition-all active:scale-95 touch-manipulation"
+            className="flex-1 min-h-[44px] rounded-xl flex items-center justify-center gap-1 transition-all active:translate-y-[1px] touch-manipulation"
             style={{
               background: selected ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
               color: selected ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',

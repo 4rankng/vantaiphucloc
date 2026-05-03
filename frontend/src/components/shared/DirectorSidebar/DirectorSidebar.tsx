@@ -2,17 +2,13 @@ import { useCallback } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
-  FileText,
-  Truck,
-  Briefcase,
   Users,
-  MapPin,
-  Tag,
-  Wallet,
-  LogOut,
+  Handshake,
+  Receipt,
+  Briefcase,
   Bell,
+  LogOut,
   UserCircle,
-  ChevronLeft,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUnreadCount } from '@/components/shared/NotificationPanel/NotificationPanel'
@@ -31,17 +27,16 @@ export interface SidebarItem {
 }
 
 const NAV_ITEMS: SidebarItem[] = [
-  { label: 'Tổng quan', href: '/accountant', icon: LayoutDashboard },
-  { label: 'Đơn hàng', href: '/accountant/trips', icon: FileText },
-  { label: 'Chuyến đã đi', href: '/accountant/driver-trips', icon: Truck },
-  { label: 'Đối soát', href: '/accountant/work-orders', icon: Briefcase },
-  { label: 'Đối tác', href: '/accountant/partners', icon: Users },
-  { label: 'Cung đường', href: '/accountant/routes', icon: MapPin },
-  { label: 'Bảng giá', href: '/accountant/pricing', icon: Tag },
-  { label: 'Kỳ lương', href: '/accountant/salary-setup', icon: Wallet },
+  { label: 'Tổng quan', href: '/director', icon: LayoutDashboard },
+  { label: 'Khách hàng / Công việc', href: '/director/client-jobs', icon: Briefcase },
+  { label: 'Tài xế / Công việc', href: '/director/driver-jobs', icon: Users },
+  { label: 'Đối tác', href: '/director/partners', icon: Handshake },
+  { label: 'Bảng giá', href: '/director/pricing', icon: Receipt },
+  { label: 'Quản lý tài khoản', href: '/director/users', icon: Users },
+  { label: 'Thông báo', href: '/director/notifications', icon: Bell },
 ]
 
-export interface AccountantSidebarProps {
+export interface DirectorSidebarProps {
   collapsed?: boolean
   badges?: Record<string, number>
   onNotificationsOpen?: () => void
@@ -51,12 +46,12 @@ export interface AccountantSidebarProps {
   forceVisible?: boolean
 }
 
-export function AccountantSidebar({
+export function DirectorSidebar({
   collapsed = false,
   badges = {},
   onToggle,
   forceVisible = false,
-}: AccountantSidebarProps) {
+}: DirectorSidebarProps) {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
@@ -64,7 +59,7 @@ export function AccountantSidebar({
 
   const isActive = useCallback(
     (href: string) => {
-      if (href === '/accountant') return location.pathname === '/accountant'
+      if (href === '/director') return location.pathname === '/director'
       return location.pathname.startsWith(href)
     },
     [location.pathname],
@@ -97,7 +92,7 @@ export function AccountantSidebar({
         {!collapsed && (
           <div className="flex flex-col min-w-0">
             <p className="text-[13px] font-semibold text-white leading-tight truncate tracking-tight">Phúc Lộc</p>
-            <p className="text-[10px] font-medium leading-tight truncate" style={{ color: 'var(--theme-sidebar-text-muted)' }}>Vận tải</p>
+            <p className="text-[10px] font-medium leading-tight truncate" style={{ color: 'var(--theme-sidebar-text-muted)' }}>Giám đốc</p>
           </div>
         )}
       </div>
@@ -217,7 +212,7 @@ export function AccountantSidebar({
                   <div className="flex flex-col min-w-0 flex-1 text-left">
                     <span className="text-[12px] font-medium truncate leading-tight" style={{ color: 'var(--theme-sidebar-active-text)' }}>{user?.name || user?.username}</span>
                     <span className="text-[10px] truncate leading-tight" style={{ color: 'var(--theme-sidebar-text-muted)' }}>
-                      {user?.role === 'accountant' ? 'Kế toán' : user?.role === 'director' ? 'Giám đốc' : user?.role === 'superadmin' ? 'Quản trị' : user?.role}
+                      Giám đốc
                     </span>
                   </div>
                   {unread > 0 && (
@@ -228,11 +223,11 @@ export function AccountantSidebar({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56 z-[9999]" side="top" align="start" sideOffset={8}>
-                <DropdownMenuItem onClick={() => navigate('/accountant/notifications')}>
+                <DropdownMenuItem onClick={() => navigate('/director/notifications')}>
                   <Bell className="mr-2 h-4 w-4" />
                   Thông báo
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/accountant/profile')}>
+                <DropdownMenuItem onClick={() => navigate('/director/profile')}>
                   <UserCircle className="mr-2 h-4 w-4" />
                   Thông tin cá nhân
                 </DropdownMenuItem>
@@ -259,25 +254,6 @@ export function AccountantSidebar({
           </div>
         )}
       </div>
-
-      {/* Collapse / expand toggle — on the right edge, desktop only */}
-      {onToggle && (
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-label={collapsed ? 'Mở rộng sidebar' : 'Thu gọn sidebar'}
-          className="absolute top-[44px] -right-3 z-10 w-6 h-6 flex items-center justify-center rounded-full transition-colors hover:brightness-110"
-          style={{
-            background: 'var(--theme-sidebar)',
-            border: '1px solid var(--theme-sidebar-border)',
-            color: 'var(--theme-sidebar-text-muted)',
-          }}
-        >
-          <ChevronLeft
-            className={`w-3 h-3 transition-transform duration-200 ${collapsed ? 'rotate-180' : ''}`}
-          />
-        </button>
-      )}
     </aside>
   )
 }

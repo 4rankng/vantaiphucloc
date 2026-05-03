@@ -1,29 +1,61 @@
 import { Plus } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 interface PageHeaderProps {
   title: string
   subtitle?: string
+  /** Optional Add/Create button shortcut (renders only on lg+ when used) */
   onAdd?: () => void
   addLabel?: string
-  breadcrumbs?: React.ReactNode
+  /** Arbitrary action area (rendered on the right, after the optional Add button) */
+  actions?: ReactNode
+  breadcrumbs?: ReactNode
+  /** Compact variant for embedded headers (no top spacing) */
+  compact?: boolean
 }
 
-export function PageHeader({ title, subtitle, onAdd, addLabel = 'Tạo mới', breadcrumbs }: PageHeaderProps) {
+/**
+ * Modern SaaS page header — Linear/Vercel inspired.
+ *
+ * Layout:
+ *   [breadcrumbs]
+ *   ┌──────────────────────────────────────────────────────┐
+ *   │ Title                                  [actions] [+] │
+ *   │ Subtitle                                              │
+ *   └──────────────────────────────────────────────────────┘
+ */
+export function PageHeader({
+  title,
+  subtitle,
+  onAdd,
+  addLabel = 'Tạo mới',
+  actions,
+  breadcrumbs,
+  compact = false,
+}: PageHeaderProps) {
   return (
-    <div>
-      {breadcrumbs && <div className="mb-2">{breadcrumbs}</div>}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-[var(--theme-text-primary)] font-display">{title}</h2>
-          {subtitle && <p className="text-sm text-[var(--theme-text-muted)] mt-0.5">{subtitle}</p>}
+    <div className={compact ? '' : 'mb-4 lg:mb-6'}>
+      {breadcrumbs && <div className="mb-3">{breadcrumbs}</div>}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h1 className="typo-h1 lg:typo-display truncate">{title}</h1>
+          {subtitle && (
+            <p className="typo-body-sm mt-1 line-clamp-2">{subtitle}</p>
+          )}
         </div>
-        {onAdd && (
-          <button
-            onClick={onAdd}
-            className="hidden lg:inline-flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all active:scale-[0.98] bg-[var(--theme-brand-secondary)] text-[var(--theme-text-inverse)] hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-brand-secondary)] focus-visible:ring-offset-2"
-          >
-            <Plus size={16} /> {addLabel}
-          </button>
+        {(actions || onAdd) && (
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {actions}
+            {onAdd && (
+              <button
+                onClick={onAdd}
+                className="btn-primary"
+              >
+                <Plus size={16} strokeWidth={2.25} />
+                <span className="hidden sm:inline">{addLabel}</span>
+              </button>
+            )}
+          </div>
         )}
       </div>
     </div>

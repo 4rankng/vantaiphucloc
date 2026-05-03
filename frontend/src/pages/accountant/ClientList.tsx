@@ -4,6 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
+import { PageHeader } from '@/components/shared/PageHeader'
+import { EmptyState } from '@/components/shared/EmptyState'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/use-queries'
 import type { Client, ClientType } from '@/data/domain'
@@ -72,7 +74,7 @@ export function ClientList() {
     return (
       <div className="space-y-2">
         {[1, 2, 3].map(i => (
-          <div key={i} className="h-16 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+          <div key={i} className="h-16 rounded-lg skeleton-shimmer" />
         ))}
       </div>
     )
@@ -80,48 +82,49 @@ export function ClientList() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>
-          {clients.length} khách hàng
-        </p>
-        <Button onClick={handleOpenCreate} className="h-9 px-3 shrink-0 gap-1.5 text-sm font-semibold"
-          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-          <Plus className="w-4 h-4" /> Thêm
-        </Button>
-      </div>
+      {/* Page header */}
+      <PageHeader
+        title="Khách hàng"
+        onAdd={handleOpenCreate}
+        addLabel="Thêm"
+      />
 
       {/* Client list — clean cards, tap to see detail */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2 lg:gap-3">
-        {clients.length === 0 ? (
-          <div className="rounded-2xl p-10 text-center" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
-            <Building2 className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--theme-text-muted)' }} />
-            <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Chưa có khách hàng</p>
-            <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Nhấn + để thêm khách hàng mới</p>
-          </div>
-        ) : clients.map(client => (
-          <button
-            key={client.id}
-            onClick={() => setSelectedClient(client)}
-            className="w-full text-left rounded-2xl p-3 transition-all active:scale-[0.98] touch-manipulation"
-            style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
-            <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: 'var(--theme-bg-tertiary)' }}>
-                {client.type === 'company'
-                  ? <Building2 className="h-4 w-4" style={{ color: 'var(--theme-text-muted)' }} />
-                  : <UserCircle className="h-4 w-4" style={{ color: 'var(--theme-text-muted)' }} />}
+      {clients.length === 0 ? (
+        <div className="card">
+          <EmptyState
+            icon={<Building2 className="h-6 w-6" />}
+            title="Chưa có khách hàng"
+            description="Nhấn + để thêm khách hàng mới"
+            compact
+          />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
+          {clients.map(client => (
+            <button
+              key={client.id}
+              onClick={() => setSelectedClient(client)}
+              className="card-interactive p-3"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ background: 'var(--theme-bg-tertiary)' }}>
+                  {client.type === 'company'
+                    ? <Building2 className="h-4 w-4" style={{ color: 'var(--theme-text-muted)' }} />
+                    : <UserCircle className="h-4 w-4" style={{ color: 'var(--theme-text-muted)' }} />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{client.name}</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+                    {client.phone}{client.taxCode ? ` · MST: ${client.taxCode}` : ''}
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{client.name}</p>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-                  {client.phone}{client.taxCode ? ` · MST: ${client.taxCode}` : ''}
-                </p>
-              </div>
-            </div>
-          </button>
-        ))}
-      </div>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Client Detail Dialog */}
       <Dialog open={!!selectedClient} onOpenChange={() => setSelectedClient(null)}>
@@ -142,7 +145,7 @@ export function ClientList() {
             <Button variant="outline" onClick={() => setDeleteConfirm(selectedClient!.id)} className="flex-1" style={{ color: 'var(--theme-status-error)' }}>
               <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Xoá
             </Button>
-            <Button onClick={() => handleOpenEdit(selectedClient!)} className="flex-1" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+            <Button onClick={() => handleOpenEdit(selectedClient!)} className="flex-1 btn-primary">
               <Pencil className="w-3.5 h-3.5 mr-1.5" /> Sửa
             </Button>
           </DialogFooter>
@@ -162,39 +165,36 @@ export function ClientList() {
             </div>
             <div className="space-y-2">
               <Label className="typo-form-label">Loại</Label>
-              <div className="flex gap-2">
-                {(['company', 'individual'] as ClientType[]).map(t => (
-                  <button key={t} onClick={() => updateField('type', t)}
-                    className="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors"
-                    style={{
-                      background: form.type === t ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
-                      color: form.type === t ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
-                    }}>
-                    {t === 'company' ? 'Công ty' : 'Cá nhân'}
-                  </button>
-                ))}
-              </div>
+              <select
+                value={form.type}
+                onChange={e => updateField('type', e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg text-sm"
+                style={{ borderColor: 'var(--theme-border-default)', background: 'var(--theme-bg-secondary)' }}
+              >
+                <option value="company">Công ty</option>
+                <option value="individual">Cá nhân</option>
+              </select>
             </div>
             <div className="space-y-2">
-              <Label className="typo-form-label">Mã số thuế</Label>
-              <Input value={form.taxCode} onChange={e => updateField('taxCode', e.target.value)} placeholder="0123456789" className="text-sm" />
+              <Label className="typo-form-label">Số điện thoại</Label>
+              <Input value={form.phone} onChange={e => updateField('phone', e.target.value)} placeholder="0123456789" className="text-sm" />
+            </div>
+            <div className="space-y-2">
+              <Label className="typo-form-label">Mã số thuế (MST)</Label>
+              <Input value={form.taxCode} onChange={e => updateField('taxCode', e.target.value)} placeholder="MST" className="text-sm" />
             </div>
             <div className="space-y-2">
               <Label className="typo-form-label">Địa chỉ</Label>
               <Input value={form.address} onChange={e => updateField('address', e.target.value)} placeholder="Địa chỉ" className="text-sm" />
             </div>
             <div className="space-y-2">
-              <Label className="typo-form-label">Điện thoại</Label>
-              <Input value={form.phone} onChange={e => updateField('phone', e.target.value)} placeholder="0225-123-456" className="text-sm" />
-            </div>
-            <div className="space-y-2">
               <Label className="typo-form-label">Người liên hệ</Label>
-              <Input value={form.contactPerson} onChange={e => updateField('contactPerson', e.target.value)} placeholder="Họ tên" className="text-sm" />
+              <Input value={form.contactPerson} onChange={e => updateField('contactPerson', e.target.value)} placeholder="Người liên hệ" className="text-sm" />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleSubmit} disabled={!form.name.trim()} className="flex-1" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+            <Button onClick={handleSubmit} disabled={!form.name.trim()} className="flex-1 btn-primary">
               {editing ? 'Cập nhật' : 'Xác nhận'}
             </Button>
           </DialogFooter>

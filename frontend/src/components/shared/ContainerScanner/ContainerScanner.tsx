@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Camera } from 'react-camera-pro'
 import Cropper from 'react-easy-crop'
 import type { Area } from 'react-easy-crop'
-import { X, RotateCcw, Image } from 'lucide-react'
+import { X, RotateCcw, Image, Zap, SwitchCamera } from 'lucide-react'
 
 export interface PhotoMeta {
   lat: number | null
@@ -51,6 +51,8 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
   const [finalCropped, setFinalCropped] = useState<string | null>(null)
   const [imageToCrop, setImageToCrop] = useState<string | null>(galleryImage ?? null)
   const [gpsCoords, setGpsCoords] = useState<{ lat: number | null; lng: number | null }>({ lat: null, lng: null })
+  const [flashOn, setFlashOn] = useState(false)
+  const [showCaptureToast, setShowCaptureToast] = useState(false)
 
   // react-easy-crop state
   const [crop, setCrop] = useState({ x: 0, y: 0 })
@@ -81,6 +83,32 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
     )
   }, [])
 
+  // ── Flash toggle via MediaStreamTrack ────────────────────────────────────
+  const handleFlashToggle = useCallback(() => {
+    const cam = cameraRef.current as any
+    if (!cam?.video?.srcObject) return
+    const track = (cam.video.srcObject as MediaStream).getVideoTracks()[0]
+    if (!track) return
+    try {
+      const constraints = { torch: !flashOn }
+      track.applyConstraints({ advanced: [constraints as any] })
+      setFlashOn(!flashOn)
+    } catch {
+      // Flash not supported on this device
+    }
+  }, [flashOn])
+
+  // ── Flip camera ─────────────────────────────────────────────────────────
+  const handleFlipCamera = useCallback(() => {
+    const cam = cameraRef.current as { switchCamera: () => void } | null
+    if (!cam) return
+    try {
+      cam.switchCamera()
+    } catch {
+      // Only one camera available
+    }
+  }, [])
+
   // ── Camera capture: takePhoto() returns base64 directly ───────────────────
   const handleCapture = useCallback(() => {
     const cam = cameraRef.current as { takePhoto: () => string } | null
@@ -90,6 +118,8 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
     setImageToCrop(photo)
     setCrop({ x: 0, y: 0 })
     setZoom(1)
+    setShowCaptureToast(true)
+    setTimeout(() => setShowCaptureToast(false), 1000)
   }, [])
 
   // ── Handle crop confirmation (from camera or gallery) ────────────────────────
@@ -146,33 +176,24 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
         onChange={handleFileChange}
       />
 
-      {/* Close */}
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center rounded-full touch-manipulation"
-        style={{ background: 'rgba(0,0,0,0.5)' }}
-      >
-        <X className="w-5 h-5 text-white" />
-      </button>
-
       {finalCropped ? (
         /* ── Preview (final cropped result) ── */
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6">
-          <div className="w-full rounded-xl overflow-hidden" style={{ border: '2px solid var(--theme-brand-primary)' }}>
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6 pb-6" style={{ paddingBottom: `calc(24px + max(16px, env(safe-area-inset-bottom)))` }}>
+          <div className="w-full rounded-lg overflow-hidden" style={{ border: '2px solid var(--theme-brand-primary)' }}>
             <img src={finalCropped} alt="Captured" className="w-full h-auto block" />
           </div>
           <p className="text-xs" style={{ color: 'rgba(255,255,255,0.7)' }}>Kiểm tra số cont trong ảnh</p>
           <div className="flex gap-4 w-full">
             <button
               onClick={handleRetake}
-              className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-bold touch-manipulation"
+              className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-lg text-sm font-bold touch-manipulation"
               style={{ background: 'rgba(255,255,255,0.15)', color: '#fff' }}
             >
               <RotateCcw className="w-4 h-4" /> Cắt lại
             </button>
             <button
               onClick={handleConfirm}
-              className="flex-1 py-3.5 rounded-2xl text-sm font-bold touch-manipulation"
+              className="flex-1 py-3.5 rounded-lg text-sm font-bold touch-manipulation"
               style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
             >
               Dùng ảnh này
@@ -184,7 +205,7 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
         /* ── Crop mode — react-easy-crop (square only) ── */
         <>
           {/* Crop area fills the screen */}
-          <div className="absolute inset-0" style={{ bottom: '100px' }}>
+          <div className="absolute inset-0" style={{ bottom: `calc(120px + env(safe-area-inset-bottom))` }}>
             <Cropper
               image={imageToCrop}
               crop={crop}
@@ -203,30 +224,25 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
             />
           </div>
 
-          {/* Bottom controls */}
+          {/* Bottom controls — redesigned for clarity */}
           <div
-            className="absolute bottom-0 left-0 right-0 px-6 pb-8 pt-3 flex items-center justify-center gap-5"
-            style={{ background: 'rgba(0,0,0,0.7)' }}
+            className="absolute bottom-0 left-0 right-0 px-6 pt-3 flex flex-col gap-3"
+            style={{ background: 'rgba(0,0,0,0.7)', paddingBottom: `max(16px, env(safe-area-inset-bottom))` }}
           >
-            {/* Retake (left) */}
-            <div className="flex flex-col items-center gap-1">
-              <button
-                onClick={handleRetake}
-                className="w-12 h-12 flex items-center justify-center rounded-full touch-manipulation"
-                style={{ background: 'rgba(255,255,255,0.15)', color: '#fff' }}
-              >
-                <RotateCcw className="w-5 h-5" />
-              </button>
-              <span className="text-[10px] font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>
-                Chụp lại
-              </span>
-            </div>
+            {/* Retake as small ghost link/button */}
+            <button
+              onClick={handleRetake}
+              className="w-full py-2 text-center text-sm font-medium touch-manipulation"
+              style={{ color: 'rgba(255,255,255,0.6)' }}
+            >
+              Chụp lại
+            </button>
 
-            {/* Confirm crop (center) */}
+            {/* Primary confirm button — full width, h-12 */}
             <button
               onClick={handleCropConfirm}
-              className="px-8 py-3 rounded-full text-sm font-bold touch-manipulation"
-              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+              className="w-full py-3 rounded-lg text-sm font-bold touch-manipulation"
+              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)', height: '48px' }}
             >
               Xác nhận
             </button>
@@ -235,6 +251,43 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
       ) : (
         /* ── Camera mode ── */
         <>
+          {/* Top bar with close, flash, flip */}
+          <div
+            className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4"
+            style={{ paddingTop: `max(16px, env(safe-area-inset-top))` }}
+          >
+            <button
+              onClick={onClose}
+              className="w-10 h-10 flex items-center justify-center rounded-full touch-manipulation"
+              style={{ background: 'rgba(0,0,0,0.5)' }}
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
+
+            <div className="flex items-center gap-2">
+              {/* Flash toggle */}
+              <button
+                onClick={handleFlashToggle}
+                className="w-10 h-10 flex items-center justify-center rounded-full touch-manipulation transition-colors"
+                style={{
+                  background: flashOn ? 'var(--theme-brand-primary)' : 'rgba(255,255,255,0.15)',
+                  color: '#fff',
+                }}
+              >
+                <Zap className="w-5 h-5" fill={flashOn ? '#fff' : 'none'} />
+              </button>
+
+              {/* Flip camera */}
+              <button
+                onClick={handleFlipCamera}
+                className="w-10 h-10 flex items-center justify-center rounded-full touch-manipulation"
+                style={{ background: 'rgba(0,0,0,0.5)', color: '#fff' }}
+              >
+                <SwitchCamera className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
           <div className="absolute inset-0 scanner-video">
             <Camera
               ref={cameraRef}
@@ -248,25 +301,59 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
             />
           </div>
 
-          <div className="absolute bottom-0 left-0 right-0 z-10 flex justify-center items-center gap-6 pb-8 pt-3 safe-area-bottom" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)' }}>
-            <div className="flex flex-col items-center gap-1">
-              <label
-                htmlFor="scanner-gallery-input"
-                className="w-12 h-12 flex items-center justify-center rounded-full touch-manipulation cursor-pointer"
-                style={{ background: 'rgba(0,0,0,0.5)', color: '#fff' }}
+          {/* Capture toast feedback */}
+          {showCaptureToast && (
+            <div
+              className="absolute top-8 left-0 right-0 z-20 flex justify-center items-center opacity-0 animate-fade-in"
+              style={{
+                paddingTop: `max(16px, env(safe-area-inset-top))`,
+                pointerEvents: 'none',
+              }}
+            >
+              <div
+                className="px-4 py-2 rounded-lg text-sm font-medium"
+                style={{ background: 'rgba(0,0,0,0.7)', color: '#fff' }}
               >
-                <Image className="w-5 h-5" />
-              </label>
-              <span className="text-[10px] font-medium" style={{ color: 'rgba(255,255,255,0.7)' }}>Thư viện</span>
+                Đã chụp
+              </div>
             </div>
+          )}
 
+          {/* Bottom bar — 3 buttons: Gallery (left), Shutter (center), Flip is in top bar */}
+          <div
+            className="absolute bottom-0 left-0 right-0 z-10 flex justify-around items-end px-6 pt-3"
+            style={{
+              background: 'linear-gradient(to top, rgba(0,0,0,0.8), transparent)',
+              paddingBottom: `max(24px, env(safe-area-inset-bottom))`,
+            }}
+          >
+            {/* Gallery button (left) */}
+            <label
+              htmlFor="scanner-gallery-input"
+              className="w-12 h-12 flex items-center justify-center rounded-full touch-manipulation cursor-pointer"
+              style={{ background: 'rgba(0,0,0,0.5)', color: '#fff' }}
+            >
+              <Image className="w-5 h-5" />
+            </label>
+
+            {/* Shutter button (center) — 72×72 px with iOS style */}
             <button
               onClick={handleCapture}
-              className="w-16 h-16 rounded-full flex items-center justify-center touch-manipulation transition-transform active:scale-90"
-              style={{ background: 'var(--theme-brand-primary)', border: '4px solid rgba(255,255,255,0.3)' }}
+              className="w-[72px] h-[72px] rounded-full flex items-center justify-center touch-manipulation transition-transform active:scale-[0.92]"
+              style={{
+                border: '4px solid rgba(255,255,255,0.95)',
+                background: 'var(--theme-brand-primary)',
+              }}
             >
-              <div className="w-12 h-12 rounded-full" style={{ background: '#fff', opacity: 0.9 }} />
+              {/* Inner solid circle */}
+              <div
+                className="w-14 h-14 rounded-full"
+                style={{ background: 'var(--theme-brand-primary)' }}
+              />
             </button>
+
+            {/* Placeholder for balance (right, disabled) */}
+            <div className="w-12 h-12" />
           </div>
         </>
       )}

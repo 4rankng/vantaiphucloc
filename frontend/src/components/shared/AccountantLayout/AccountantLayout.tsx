@@ -30,7 +30,7 @@ function useIsDesktop() {
   return isDesktop
 }
 
-// ─── Desktop shell (≥ 1024px) — fixed sidebar, no collapse toggle ─────────────
+// ─── Desktop shell (≥ 1024px) — fixed sidebar, topbar above content ─────────────
 
 function AccountantDesktopShell() {
   const location = useLocation()
@@ -41,7 +41,7 @@ function AccountantDesktopShell() {
 
   return (
     <div className="flex h-[100dvh] w-full overflow-hidden" style={{ background: 'var(--theme-bg-primary)' }}>
-      {/* Sidebar with built-in toggle button */}
+      {/* Dark slate sidebar */}
       {!isFullscreen && (
         <AccountantSidebar
           collapsed={collapsed}
@@ -50,14 +50,13 @@ function AccountantDesktopShell() {
         />
       )}
 
-      {/* Main content */}
-      <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
-        <main className="flex-1 overflow-y-auto">
-          <div className={isFullscreen ? 'h-full' : 'px-6 py-6 mx-auto max-w-7xl'}>
-            <Outlet />
-          </div>
-        </main>
-      </div>
+      {/* Main content area — sidebar + content, no top bar.
+          Page title / breadcrumbs / actions live inside each page's <PageHeader />. */}
+      <main className="flex-1 overflow-y-auto min-w-0">
+        <div className={isFullscreen ? 'h-full' : 'page-container'}>
+          <Outlet />
+        </div>
+      </main>
 
       <NotificationPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
       <CommandPalette open={cmdOpen} onClose={closeCmdPalette} />

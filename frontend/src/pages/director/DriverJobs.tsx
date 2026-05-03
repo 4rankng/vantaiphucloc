@@ -32,7 +32,7 @@ export function DriverJobs() {
       <BackButton />
       <div className="space-y-3">
         {/* Summary */}
-        <div className="rounded-2xl p-3 flex items-center justify-between" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
+        <div className="rounded-lg p-3 flex items-center justify-between" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
           <div>
             <p className="text-[10px] font-semibold uppercase" style={{ color: 'var(--theme-text-muted)' }}>Tổng thu nhập</p>
             <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(totalEarning)}</p>
@@ -46,7 +46,7 @@ export function DriverJobs() {
         {jobs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(job => (
           <div
             key={job.id}
-            className="rounded-2xl p-3 space-y-2"
+            className="rounded-lg p-3 space-y-2"
             style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
           >
             <div className="flex items-center justify-between">

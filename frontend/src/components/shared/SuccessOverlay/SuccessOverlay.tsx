@@ -29,7 +29,7 @@ export function SuccessOverlay({ visible, message = 'Đã gửi chuyến', onDon
     >
       <div className="animate-[scaleIn_0.3s_ease-out] flex flex-col items-center gap-4">
         <CheckCircle2 className="w-16 h-16" style={{ color: '#fff' }} strokeWidth={1.5} />
-        <p className="text-xl font-bold" style={{ color: '#fff' }}>
+        <p className="typo-h1" style={{ color: '#fff' }}>
           {message}
         </p>
       </div>

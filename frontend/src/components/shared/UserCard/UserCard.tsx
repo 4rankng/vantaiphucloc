@@ -19,7 +19,7 @@ export function UserCard({ user, onTap }: { user: UserAccount; onTap: () => void
   return (
     <button
       onClick={onTap}
-      className="group w-full text-left rounded-2xl p-4 transition-all active:scale-[0.98] hover:shadow-md touch-manipulation"
+      className="group w-full text-left rounded-lg p-4 transition-all active:scale-[0.98] hover:shadow-md touch-manipulation"
       style={{
         background: 'var(--theme-bg-secondary)',
         boxShadow: 'var(--theme-shadow-sm)',

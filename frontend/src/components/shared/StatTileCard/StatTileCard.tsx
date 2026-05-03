@@ -16,7 +16,7 @@ export function StatTileCard({ data, onClick }: { data: StatTile; onClick: (path
   return (
     <button
       onClick={() => onClick(data.path)}
-      className="w-full text-left rounded-2xl p-4 transition-all active:scale-[0.97] touch-manipulation"
+      className="w-full text-left rounded-lg p-4 transition-all active:scale-[0.97] touch-manipulation"
       style={{
         background: 'var(--theme-bg-secondary)',
         boxShadow: 'var(--theme-shadow-card)',

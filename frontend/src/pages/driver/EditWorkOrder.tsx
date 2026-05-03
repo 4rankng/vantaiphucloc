@@ -25,7 +25,7 @@ export function EditWorkOrder() {
   if (loading) {
     return (
       <div className="animate-pulse space-y-3 p-4">
-        <div className="h-40 rounded-2xl" style={{ background: 'var(--theme-bg-tertiary)' }} />
+        <div className="h-40 rounded-lg" style={{ background: 'var(--theme-bg-tertiary)' }} />
         <div className="h-6 rounded w-2/3" style={{ background: 'var(--theme-bg-tertiary)' }} />
       </div>
     )

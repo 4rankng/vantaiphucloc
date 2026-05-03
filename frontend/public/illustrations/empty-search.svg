@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 200" fill="none">
+  <!-- Soft background ellipse -->
+  <ellipse cx="120" cy="170" rx="70" ry="8" fill="#059669" fill-opacity="0.06"/>
+
+  <!-- Document stack behind -->
+  <rect x="68" y="60" width="80" height="100" rx="8" fill="#FAFAFA" stroke="#E4E4E7" stroke-width="2" transform="rotate(-6 108 110)"/>
+  <rect x="76" y="64" width="80" height="100" rx="8" fill="#FFFFFF" stroke="#E4E4E7" stroke-width="2"/>
+
+  <!-- Document content lines -->
+  <rect x="86" y="78" width="42" height="6" rx="2" fill="#E4E4E7"/>
+  <rect x="86" y="92" width="60" height="4" rx="1.5" fill="#F4F4F5"/>
+  <rect x="86" y="102" width="48" height="4" rx="1.5" fill="#F4F4F5"/>
+  <rect x="86" y="112" width="54" height="4" rx="1.5" fill="#F4F4F5"/>
+  <rect x="86" y="122" width="40" height="4" rx="1.5" fill="#F4F4F5"/>
+
+  <!-- Magnifying glass -->
+  <circle cx="156" cy="120" r="26" fill="#ECFDF5" stroke="#059669" stroke-width="3"/>
+  <circle cx="156" cy="120" r="26" fill="#FFFFFF" fill-opacity="0.5"/>
+  <line x1="174" y1="138" x2="190" y2="156" stroke="#059669" stroke-width="6" stroke-linecap="round"/>
+  <!-- Highlight on glass -->
+  <path d="M144 110 Q144 102 152 102" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-opacity="0.85"/>
+
+  <!-- Question mark inside glass -->
+  <text x="156" y="128" font-family="system-ui, sans-serif" font-size="22" font-weight="700"
+        fill="#059669" text-anchor="middle">?</text>
+</svg>

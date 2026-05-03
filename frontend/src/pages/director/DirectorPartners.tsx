@@ -195,7 +195,7 @@ export function DirectorPartners() {
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => setCreateType('client')}
-              className="flex flex-col items-center gap-2 p-4 rounded-2xl transition-all touch-manipulation"
+              className="flex flex-col items-center gap-2 p-4 rounded-lg transition-all touch-manipulation"
               style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
             >
               <Building2 className="w-6 h-6" style={{ color: 'var(--theme-status-info)' }} />
@@ -203,7 +203,7 @@ export function DirectorPartners() {
             </button>
             <button
               onClick={() => setCreateType('vendor')}
-              className="flex flex-col items-center gap-2 p-4 rounded-2xl transition-all touch-manipulation"
+              className="flex flex-col items-center gap-2 p-4 rounded-lg transition-all touch-manipulation"
               style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
             >
               <Truck className="w-6 h-6" style={{ color: 'var(--theme-status-warning)' }} />

@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 200" fill="none">
+  <!-- Soft background ellipse -->
+  <ellipse cx="120" cy="170" rx="70" ry="8" fill="#059669" fill-opacity="0.06"/>
+
+  <!-- Sparkles around bell -->
+  <g stroke="#059669" stroke-width="2" stroke-linecap="round" opacity="0.6">
+    <line x1="60" y1="60" x2="68" y2="68"/>
+    <line x1="68" y1="60" x2="60" y2="68"/>
+  </g>
+  <g stroke="#A1A1AA" stroke-width="1.6" stroke-linecap="round" opacity="0.7">
+    <line x1="180" y1="50" x2="186" y2="56"/>
+    <line x1="186" y1="50" x2="180" y2="56"/>
+  </g>
+  <circle cx="190" cy="100" r="2.5" fill="#059669" fill-opacity="0.4"/>
+  <circle cx="50" cy="110" r="2" fill="#059669" fill-opacity="0.5"/>
+  <circle cx="200" cy="130" r="1.5" fill="#A1A1AA" fill-opacity="0.6"/>
+
+  <!-- Bell base -->
+  <path d="M120 50 Q86 50 86 88 L86 116 Q86 124 78 130 L78 134 L162 134 L162 130 Q154 124 154 116 L154 88 Q154 50 120 50 Z"
+        fill="#ECFDF5" stroke="#059669" stroke-width="2.5" stroke-linejoin="round"/>
+
+  <!-- Bell highlight -->
+  <path d="M100 64 Q102 56 110 56" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-opacity="0.95"/>
+
+  <!-- Bell top knob -->
+  <rect x="116" y="42" width="8" height="10" rx="2" fill="#059669"/>
+  <circle cx="120" cy="42" r="3" fill="#047857"/>
+
+  <!-- Clapper -->
+  <path d="M114 138 Q114 148 120 148 Q126 148 126 138 Z" fill="#18181B"/>
+
+  <!-- Inbox tray (small accent below) -->
+  <g opacity="0.4">
+    <rect x="92" y="160" width="56" height="6" rx="2" fill="#A1A1AA"/>
+  </g>
+</svg>

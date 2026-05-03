@@ -88,9 +88,9 @@ export const grabTheme: ThemeDefinition = {
     badgeTo: '#047857',
   },
   typography: {
-    fontFamilyDisplay: '"Inter", "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif',
-    fontFamilyBody: '"Inter", "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif',
-    fontFamilyMono: '"JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace',
+    fontFamilyDisplay: '"Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif',
+    fontFamilyBody: '"Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif',
+    fontFamilyMono: '"JetBrains Mono", ui-monospace, monospace',
   },
   borderRadius: {
     sm: '6px',     // chips, small badges

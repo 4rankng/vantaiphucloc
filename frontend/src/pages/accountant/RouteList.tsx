@@ -1,9 +1,11 @@
 import { useCallback, useMemo, useState } from 'react'
-import { Plus, Pencil, Trash2, Route as RouteIcon, Search, Container } from 'lucide-react'
+import { Plus, Pencil, Trash2, Route as RouteIcon, Container } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
+import { PageHeader } from '@/components/shared/PageHeader'
+import { EmptyState } from '@/components/shared/EmptyState'
 import { useRoutes, useCreateRoute, useUpdateRoute, useDeleteRoute } from '@/hooks/use-queries'
 import { RouteDisplay } from '@/components/shared/RouteDisplay'
 import { formatCurrencyFull, type RoutePrice } from '@/data/domain'
@@ -93,7 +95,7 @@ export function RouteList() {
     return (
       <div className="space-y-2">
         {[1, 2, 3].map(i => (
-          <div key={i} className="h-16 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+          <div key={i} className="h-16 rounded-lg skeleton-shimmer" />
         ))}
       </div>
     )
@@ -101,28 +103,30 @@ export function RouteList() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="relative flex-1 mr-3">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-          <Input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Tìm cung đường..." className="text-sm pl-9 h-9" />
-        </div>
-        <Button onClick={handleOpenCreate} className="h-9 px-3 shrink-0 gap-1.5 text-sm font-semibold"
-          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-          <Plus className="w-4 h-4" /> Thêm
-        </Button>
-      </div>
+      {/* Page header */}
+      <PageHeader
+        title="Cung đường"
+        onAdd={handleOpenCreate}
+        addLabel="Thêm"
+        actions={
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Tìm cung đường..."
+            className="search-pill max-w-sm"
+          />
+        }
+      />
 
       {filtered.length === 0 ? (
-        <div className="rounded-2xl p-10 text-center" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
-          <RouteIcon className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--theme-text-muted)' }} />
-          <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
-            {search ? 'Không tìm thấy cung đường' : 'Chưa có cung đường'}
-          </p>
-          <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>
-            {search ? 'Thử từ khoá khác' : 'Nhấn + để thêm cung đường mới'}
-          </p>
+        <div className="card">
+          <EmptyState
+            icon={<RouteIcon className="h-6 w-6" />}
+            title={search ? 'Không tìm thấy cung đường' : 'Chưa có cung đường'}
+            description={search ? 'Thử từ khoá khác' : 'Nhấn + để thêm cung đường mới'}
+            compact
+          />
         </div>
       ) : (
         <>
@@ -132,10 +136,10 @@ export function RouteList() {
               <button
                 key={`${r.route}-${r.pickupLocation}-${r.dropoffLocation}`}
                 onClick={() => setSelected(r)}
-                className="w-full text-left rounded-2xl p-3 transition-all active:scale-[0.98] touch-manipulation hover:shadow-md"
-                style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
+                className="card-interactive p-3"
+              >
                 <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0"
+                  <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0"
                     style={{ background: 'var(--theme-brand-primary-light)' }}>
                     <RouteIcon className="h-4 w-4" style={{ color: 'var(--theme-brand-primary)' }} />
                   </div>
@@ -151,24 +155,23 @@ export function RouteList() {
           </div>
 
           {/* Desktop: table layout */}
-          <div className="hidden lg:block rounded-2xl overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
-            <table className="w-full text-sm">
+          <div className="hidden lg:block card overflow-hidden">
+            <table className="table-modern w-full">
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
-                  <th className="text-left px-4 py-3 font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Tuyến</th>
-                  <th className="text-left px-4 py-3 font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Điểm lấy</th>
-                  <th className="text-left px-4 py-3 font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Điểm trả</th>
-                  <th className="text-right px-4 py-3 font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Giá 20ft</th>
-                  <th className="text-right px-4 py-3 font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Giá 40ft</th>
-                  <th className="text-center px-4 py-3 font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Hai chiều</th>
+                <tr>
+                  <th className="text-left px-4 py-3" style={{ color: 'var(--theme-text-muted)' }}>Tuyến</th>
+                  <th className="text-left px-4 py-3" style={{ color: 'var(--theme-text-muted)' }}>Điểm lấy</th>
+                  <th className="text-left px-4 py-3" style={{ color: 'var(--theme-text-muted)' }}>Điểm trả</th>
+                  <th className="text-right px-4 py-3" style={{ color: 'var(--theme-text-muted)' }}>Giá 20ft</th>
+                  <th className="text-right px-4 py-3" style={{ color: 'var(--theme-text-muted)' }}>Giá 40ft</th>
+                  <th className="text-center px-4 py-3" style={{ color: 'var(--theme-text-muted)' }}>Hai chiều</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((r) => (
                   <tr
                     key={`${r.route}-${r.pickupLocation}-${r.dropoffLocation}`}
-                    className="transition-colors cursor-pointer hover:opacity-80"
-                    style={{ borderBottom: '1px solid var(--theme-border-default)' }}
+                    className="cursor-pointer"
                     onClick={() => setSelected(r)}
                   >
                     <td className="px-4 py-3">
@@ -252,12 +255,12 @@ export function RouteList() {
                       { label: 'Container 20ft', raw: selected.type20ft },
                       { label: 'Container 40ft', raw: selected.type40ft },
                     ].map(({ label, raw }) => {
-                      const full = formatCurrencyFull(raw) // e.g. "1.400.000 đ"
+                      const full = formatCurrencyFull(raw)
                       const match = full.match(/^([\d.]+)(.*)$/)
                       const main = match?.[1] ?? full
                       const suffix = match?.[2] ?? ''
                       return (
-                        <div key={label} className="rounded-xl px-4 py-3.5"
+                        <div key={label} className="rounded-lg px-4 py-3.5"
                           style={{ background: '#f8faf9', border: '1px solid #e5e7eb' }}>
                           <div className="flex items-center gap-1.5 mb-1.5">
                             <Container className="w-3.5 h-3.5" style={{ color: '#6b7280' }} />
@@ -274,14 +277,14 @@ export function RouteList() {
 
                 {/* Hai chiều row */}
                 <div className="px-6 pt-3.5">
-                  <div className="flex items-center justify-between rounded-xl px-4 py-3.5"
+                  <div className="flex items-center justify-between rounded-lg px-4 py-3.5"
                     style={{ background: '#f8faf9', border: '1px solid #e5e7eb' }}>
                     <span className="text-[13px] font-medium" style={{ color: '#374151' }}>Hai chiều</span>
                     {selected.isTwoWay ? (
-                      <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
+                      <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-sm"
                         style={{ background: '#dcfce7', color: '#16a34a' }}>Có</span>
                     ) : (
-                      <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
+                      <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-sm"
                         style={{ background: '#fee2e2', color: '#dc2626' }}>Không</span>
                     )}
                   </div>
@@ -291,7 +294,7 @@ export function RouteList() {
                 <div className="px-6 pt-5 pb-6 grid gap-2.5" style={{ gridTemplateColumns: '1fr 1.6fr' }}>
                   <button
                     onClick={() => setDeleteConfirm(true)}
-                    className="flex items-center justify-center gap-1.5 py-3 rounded-xl text-sm font-semibold transition-colors"
+                    className="flex items-center justify-center gap-1.5 py-3 rounded-lg text-sm font-semibold transition-colors"
                     style={{ border: '1.5px solid #fecaca', background: '#fff', color: '#dc2626' }}
                     onMouseOver={e => (e.currentTarget.style.background = '#fef2f2')}
                     onMouseOut={e => (e.currentTarget.style.background = '#fff')}>
@@ -299,7 +302,7 @@ export function RouteList() {
                   </button>
                   <button
                     onClick={() => handleOpenEdit(selected!)}
-                    className="flex items-center justify-center gap-1.5 py-3 rounded-xl text-sm font-semibold transition-colors"
+                    className="flex items-center justify-center gap-1.5 py-3 rounded-lg text-sm font-semibold transition-colors"
                     style={{ background: '#16a34a', color: '#fff', border: 'none' }}
                     onMouseOver={e => (e.currentTarget.style.background = '#15803d')}
                     onMouseOut={e => (e.currentTarget.style.background = '#16a34a')}>
@@ -350,7 +353,7 @@ export function RouteList() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleSubmit} disabled={!form.route.trim()} className="flex-1" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+            <Button onClick={handleSubmit} disabled={!form.route.trim()} className="flex-1 btn-primary">
               {editRoute ? 'Cập nhật' : 'Xác nhận'}
             </Button>
           </DialogFooter>

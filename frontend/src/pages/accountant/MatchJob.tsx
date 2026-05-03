@@ -153,7 +153,7 @@ export function MatchJob() {
         <div className="h-10 w-48 rounded-xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {[1, 2].map(i => (
-            <div key={i} className="h-64 rounded-2xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+            <div key={i} className="h-64 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
           ))}
         </div>
       </div>
@@ -165,22 +165,22 @@ export function MatchJob() {
       {/* Desktop header */}
       {!isMobile && (
         <div
-          className="flex items-center justify-between px-8 py-4 border-b shrink-0"
-          style={{ borderColor: 'var(--theme-border-light)' }}
+          className="flex items-center justify-between px-6 lg:px-8 py-4 border-b shrink-0"
+          style={{ borderColor: 'var(--theme-border-default)', background: 'var(--theme-bg-secondary)' }}
         >
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(-1)}
-              className="p-2 rounded-xl transition-colors hover:opacity-80"
-              style={{ background: 'var(--theme-bg-secondary)' }}
+              className="p-2 rounded-lg transition-colors"
+              style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
             >
-              <ArrowLeft className="w-5 h-5" style={{ color: 'var(--theme-text-secondary)' }} />
+              <ArrowLeft className="w-4 h-4" />
             </button>
             <div>
-              <h1 className="text-xl font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+              <h1 className="typo-h2" style={{ color: 'var(--theme-text-primary)' }}>
                 Đối soát phiếu
               </h1>
-              <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>
+              <p className="typo-meta" style={{ color: 'var(--theme-text-muted)' }}>
                 Ghép phiếu tài xế với đơn hàng
               </p>
             </div>
@@ -208,7 +208,7 @@ export function MatchJob() {
               </div>
               <button
                 onClick={() => setPickMode('job')}
-                className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl touch-manipulation transition-all hover:scale-[1.01]"
+                className="w-full flex items-center justify-between px-4 py-3.5 rounded-lg touch-manipulation transition-all hover:scale-[1.01]"
                 style={{
                   background: 'var(--theme-bg-secondary)',
                   boxShadow: 'var(--theme-shadow-card)',
@@ -255,7 +255,7 @@ export function MatchJob() {
                 </div>
                 <button
                   onClick={() => setSelectedTripId(0)}
-                  className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl touch-manipulation transition-all hover:opacity-80"
+                  className="w-full flex items-center justify-between px-4 py-3.5 rounded-lg touch-manipulation transition-all hover:opacity-80"
                   style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '2px solid var(--theme-status-warning)' }}
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
@@ -318,11 +318,11 @@ export function MatchJob() {
           {selectedJob && selectedTrip ? (
             <>
               <div
-                className="flex items-center justify-between px-6 py-3 border-b shrink-0"
-                style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-light)' }}
+                className="flex items-center justify-between px-6 py-4 border-b shrink-0"
+                style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}
               >
-                <h2 className="typo-h2">So sánh chi tiết</h2>
-                <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Nhấn vào từng mục để chỉnh sửa</p>
+                <h2 className="typo-h3">So sánh chi tiết</h2>
+                <p className="typo-meta">Nhấn vào từng mục để chỉnh sửa</p>
               </div>
               <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-3">
                 <ContCompareRow left={jobConts} right={tripConts} matched={contMatched} leftLabel="Đã chạy" rightLabel="Yêu cầu" editLeft={contEditLeft} editRight={contEditRight} />
@@ -333,17 +333,17 @@ export function MatchJob() {
           ) : (
             <>
               <div
-                className="flex items-center justify-between px-6 py-3 border-b shrink-0"
-                style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-light)' }}
+                className="flex items-center justify-between px-6 py-4 border-b shrink-0"
+                style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <div className="w-2 h-2 rounded-full" style={{ background: 'var(--theme-status-warning)' }} />
-                  <h2 className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>Chọn đơn hàng để khớp</h2>
-                  <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}>
+                  <h2 className="typo-h3">Chọn đơn hàng</h2>
+                  <span className="typo-caption px-2 py-1 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}>
                     {draftTrips.length}
                   </span>
                   {suggestions.length > 0 && (
-                    <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
+                    <span className="flex items-center gap-1 typo-caption px-2 py-1 rounded" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
                       <Sparkles className="w-3 h-3" /> {suggestions.length} gợi ý
                     </span>
                   )}
