@@ -1,9 +1,8 @@
-import { useEffect, useState, useMemo, useCallback, type ReactNode } from 'react'
+import { useState, useMemo, useCallback, type ReactNode } from 'react'
 import { Truck, AlertCircle, CheckCircle2, DollarSign, ChevronLeft, ChevronRight, TrendingUp, ArrowUpRight, Calendar } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { apiClient } from '@/services/api'
-import type { TripOrder } from '@/data/domain'
 import { getTripOrderStatusBadge } from '@/data/domain'
+import { useTripOrders } from '@/hooks/use-queries'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { BrandIcon, type BrandIconName } from '@/components/atoms/BrandIcon'
 import { BarChartWidget } from '@/components/shared/Charts'
@@ -27,25 +26,11 @@ const MONTH_NAMES = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5',
 
 export function DirectorDashboard() {
   const navigate = useNavigate()
-  const [trips, setTrips] = useState<TripOrder[]>([])
+  const { data: trips = [], isLoading: loading } = useTripOrders()
   const [month, setMonth] = useState(() => {
     const d = new Date()
     return { year: d.getFullYear(), month: d.getMonth() + 1 }
   })
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    let cancelled = false
-    apiClient.getTripOrders()
-      .then((res) => {
-        if (!cancelled) {
-          if (res.success) setTrips(res.data)
-          setLoading(false)
-        }
-      })
-      .catch(() => { if (!cancelled) setLoading(false) })
-    return () => { cancelled = true }
-  }, [])
 
   const monthlyTrips = useMemo(() => {
     return trips.filter(t => {

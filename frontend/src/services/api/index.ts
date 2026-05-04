@@ -23,6 +23,8 @@ import * as driversApi from './drivers.api'
 import * as dashboardApi from './dashboard.api'
 import * as vendorsApi from './vendors.api'
 import * as usersApi from './users.api'
+import * as reportsApi from './reports.api'
+import * as importsApi from './imports.api'
 
 export const apiClient = {
   // Clients
@@ -105,6 +107,15 @@ export const apiClient = {
   getProfile: usersApi.getProfile,
   updateProfile: usersApi.updateProfile,
   changePassword: usersApi.changePassword,
+
+  // Reports
+  exportCustomerSettlement: reportsApi.exportCustomerSettlement,
+
+  // Customer-Excel imports
+  getCanonicalSchema: importsApi.getCanonicalSchema,
+  previewCustomerExcel: importsApi.previewCustomerExcel,
+  commitCustomerExcel: importsApi.commitCustomerExcel,
+  listImportTemplates: importsApi.listImportTemplates,
 }
 
 // Re-export types from salary.api

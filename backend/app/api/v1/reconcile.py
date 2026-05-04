@@ -10,6 +10,7 @@ from sqlalchemy import select, delete, func
 
 from app.models.base import User
 from app.models.domain import WorkOrder, TripOrder, TripOrderWorkOrder, WorkOrderContainer
+from app.models.enums import WorkOrderStatus, TripOrderStatus
 from app.schemas.domain import (
     ReconcileRequest,
     UnmatchRequest,
@@ -59,7 +60,7 @@ async def reconcile(
 
     trip_order = await to_repo.get_by_id_or_404(body.trip_order_id)
 
-    if work_order.status in ("MATCHED", "COMPLETED", "CANCELLED"):
+    if work_order.status in (WorkOrderStatus.MATCHED, WorkOrderStatus.COMPLETED, WorkOrderStatus.CANCELLED):
         raise HTTPException(status_code=409, detail="Work order is already matched")
 
     existing_link = await db.execute(
@@ -70,7 +71,7 @@ async def reconcile(
     if existing_link.scalar_one_or_none() is not None:
         raise HTTPException(status_code=409, detail="Trip order is already matched")
 
-    if trip_order.status != "PENDING":
+    if trip_order.status != TripOrderStatus.PENDING:
         raise HTTPException(status_code=409, detail="Trip order must be in PENDING status to match")
 
     if trip_order.is_confirmed:
@@ -83,12 +84,12 @@ async def reconcile(
     work_order.earning = trip_order.driver_salary + trip_order.allowance
     work_order.pricing_id = trip_order.pricing_id
 
-    work_order.status = "MATCHED"
+    work_order.status = WorkOrderStatus.MATCHED
     work_order.is_locked = True
     work_order.locked_at = now
     work_order.locked_by = current_user.id
 
-    trip_order.status = "COMPLETED"
+    trip_order.status = TripOrderStatus.COMPLETED
     trip_order.is_locked = True
     trip_order.locked_at = now
     trip_order.locked_by = current_user.id
@@ -124,8 +125,8 @@ async def unmatch(
     to_repo: TripOrderRepository = Depends(get_trip_order_repo),
 ):
     db = wo_repo.session
-    wo_id = body.work_order_id if hasattr(body, 'work_order_id') else None
-    to_id = body.trip_order_id if hasattr(body, 'trip_order_id') else None
+    wo_id = body.work_order_id
+    to_id = body.trip_order_id
 
     if not wo_id and not to_id:
         raise HTTPException(status_code=400, detail="Must provide work_order_id or trip_order_id")
@@ -153,7 +154,7 @@ async def unmatch(
         )
     )
 
-    work_order.status = "PENDING"
+    work_order.status = WorkOrderStatus.PENDING
     work_order.is_locked = False
     work_order.locked_at = None
     work_order.locked_by = None
@@ -161,7 +162,7 @@ async def unmatch(
     work_order.allowance = 0
     work_order.earning = 0
 
-    trip_order.status = "PENDING"
+    trip_order.status = TripOrderStatus.PENDING
     trip_order.is_locked = False
     trip_order.locked_at = None
     trip_order.locked_by = None
@@ -229,32 +230,27 @@ async def upload_customer_excel(
             detail="Only Excel files (.xlsx, .xls) are supported"
         )
 
-    try:
-        file_content = await file.read()
-        excel_data = await parse_customer_excel(file_content, client_id)
+    file_content = await file.read()
+    excel_data = await parse_customer_excel(file_content, client_id)
 
-        if not excel_data:
-            raise HTTPException(status_code=400, detail="No data found in Excel file")
+    if not excel_data:
+        raise HTTPException(status_code=400, detail="No data found in Excel file")
 
-        results = await compare_with_system_records(
-            db=repo.session, client_id=client_id, excel_data=excel_data,
-            date_from=date_from, date_to=date_to,
-        )
+    results = await compare_with_system_records(
+        db=repo.session, client_id=client_id, excel_data=excel_data,
+        date_from=date_from, date_to=date_to,
+    )
 
-        return {
-            "success": True,
-            "data": {
-                "total_containers": len(results),
-                "duplicates_found": sum(1 for r in results if r.is_duplicate),
-                "confirmed": sum(1 for r in results if r.status == "confirmed"),
-                "pending": sum(1 for r in results if r.status == "pending"),
-                "results": [r.to_dict() for r in results],
-            }
+    return {
+        "success": True,
+        "data": {
+            "total_containers": len(results),
+            "duplicates_found": sum(1 for r in results if r.is_duplicate),
+            "confirmed": sum(1 for r in results if r.status == "confirmed"),
+            "pending": sum(1 for r in results if r.status == "pending"),
+            "results": [r.to_dict() for r in results],
         }
-
-    except Exception as e:
-        _logger.error(f"Error processing Excel upload: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Error processing Excel file: {str(e)}")
+    }
 
 
 @router.get("/export-excel")
@@ -265,24 +261,19 @@ async def export_reconciliation_excel(
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
     repo: WorkOrderRepository = Depends(get_work_order_repo),
 ):
-    try:
-        excel_content = await generate_reconciliation_excel(
-            db=repo.session, client_id=client_id, date_from=date_from, date_to=date_to,
-        )
+    excel_content = await generate_reconciliation_excel(
+        db=repo.session, client_id=client_id, date_from=date_from, date_to=date_to,
+    )
 
-        filename = f"reconciliation_client_{client_id}"
-        if date_from:
-            filename += f"_{date_from}"
-        if date_to:
-            filename += f"_{date_to}"
-        filename += ".xlsx"
+    filename = f"reconciliation_client_{client_id}"
+    if date_from:
+        filename += f"_{date_from}"
+    if date_to:
+        filename += f"_{date_to}"
+    filename += ".xlsx"
 
-        return Response(
-            content=excel_content,
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
-        )
-
-    except Exception as e:
-        _logger.error(f"Error generating Excel export: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Error generating Excel file: {str(e)}")
+    return Response(
+        content=excel_content,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )

@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { apiClient } from '@/services/api'
+import { useProfile, useUpdateProfile, useChangePassword } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { LogOut, KeyRound, Pencil, Check, X, Phone, AtSign } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
@@ -149,36 +149,27 @@ export function Profile() {
   const { user, logout, updateUser } = useAuth()
   const toast = useToast()
 
-  const [phone, setPhone] = useState('')
-  const [fullName, setFullName] = useState(user?.name ?? '')
-  const [username, setUsername] = useState('')
+  const { data: profile } = useProfile()
+  const { mutateAsync: updateProfileField } = useUpdateProfile()
+  const changePasswordMutation = useChangePassword()
 
-  useEffect(() => {
-    apiClient.getProfile().then(res => {
-      if (res.success && res.data) {
-        setPhone(res.data.phone ?? '')
-        setFullName(res.data.fullName ?? user?.name ?? '')
-        setUsername(res.data.username ?? '')
-      }
-    }).catch(() => {})
-  }, [user?.id])
+  const fullName = profile?.fullName ?? user?.name ?? ''
+  const phone = profile?.phone ?? ''
+  const username = profile?.username ?? ''
 
   const saveField = async (field: 'full_name' | 'phone' | 'username', value: string) => {
-    const res = await apiClient.updateProfile(field, value)
+    const res = await updateProfileField({ field, value })
     if (!res.success) {
       toast.error('Lỗi', res.message ?? 'Lỗi không xác định')
       throw new Error(res.message)
     }
     const updated = res.data?.value ?? value
     if (field === 'full_name') {
-      setFullName(updated)
       updateUser({ name: updated })
       toast.success('Đã cập nhật họ tên')
     } else if (field === 'phone') {
-      setPhone(updated)
       toast.success('Đã cập nhật số điện thoại')
     } else {
-      setUsername(updated)
       toast.success('Đã cập nhật tên đăng nhập')
     }
   }
@@ -187,13 +178,11 @@ export function Profile() {
   const [currentPw, setCurrentPw] = useState('')
   const [newPw, setNewPw] = useState('')
   const [confirmPw, setConfirmPw] = useState('')
-  const [savingPw, setSavingPw] = useState(false)
 
   const handleChangePw = async () => {
     if (newPw !== confirmPw) { toast.error('Lỗi', 'Mật khẩu xác nhận không khớp'); return }
-    setSavingPw(true)
     try {
-      const res = await apiClient.changePassword(currentPw, newPw)
+      const res = await changePasswordMutation.mutateAsync({ currentPassword: currentPw, newPassword: newPw })
       if (res.success) {
         toast.success('Đã đổi mật khẩu')
         setPwDialog(false)
@@ -204,8 +193,6 @@ export function Profile() {
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Lỗi không xác định'
       toast.error('Lỗi', detail)
-    } finally {
-      setSavingPw(false)
     }
   }
 
@@ -327,11 +314,11 @@ export function Profile() {
             <Button variant="outline" onClick={() => setPwDialog(false)} className="flex-1">Huỷ</Button>
             <Button
               onClick={handleChangePw}
-              disabled={!currentPw || !newPw || newPw !== confirmPw || savingPw}
+              disabled={!currentPw || !newPw || newPw !== confirmPw || changePasswordMutation.isPending}
               className="flex-1"
               style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
             >
-              {savingPw ? 'Đang lưu...' : 'Xác nhận'}
+              {changePasswordMutation.isPending ? 'Đang lưu...' : 'Xác nhận'}
             </Button>
           </DialogFooter>
         </DialogContent>

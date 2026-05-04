@@ -3,6 +3,9 @@ import { apiClient } from '@/services/api'
 import { api } from '@/services/api/client'
 import type { Pricing, WorkOrder, TripOrder, WorkType, Client, RoutePrice, SalaryPeriod, SuggestMatchesResponse, SuggestWosResponse, Location } from '@/data/domain'
 import type { Vendor, VendorFormData } from '@/services/api/vendors.api'
+import type { UserAccount, UserProfile } from '@/services/api/users.api'
+
+export type { UserAccount, UserProfile }
 
 // ─── Query key factories ─────────────────────────────────────────────────────
 
@@ -189,17 +192,18 @@ export function useUsers() {
   return useQuery({
     queryKey: queryKeys.users,
     queryFn: async () => {
-      const res = await api.get('/users')
-      return (res.data as Record<string, unknown>[]).map((obj: Record<string, unknown>) => ({
-        id: obj.id as number,
-        username: obj.username as string,
-        phone: obj.phone as string,
-        email: obj.email as string | undefined,
-        role: obj.role as string,
-        tractorPlate: obj.tractor_plate as string | undefined,
-        isActive: obj.is_active as boolean,
-        createdAt: obj.created_at as string,
-      }))
+      const res = await apiClient.getUsers()
+      return res.success ? res.data : []
+    },
+  })
+}
+
+export function useProfile() {
+  return useQuery({
+    queryKey: ['profile'] as const,
+    queryFn: async () => {
+      const res = await apiClient.getProfile()
+      return res.success ? res.data : null
     },
   })
 }
@@ -472,7 +476,7 @@ export function useCreateDriver() {
 export function useCreateUser() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: Record<string, unknown>) => api.post('/users', data),
+    mutationFn: (data: Parameters<typeof apiClient.createUser>[0]) => apiClient.createUser(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.users }) },
   })
 }
@@ -480,7 +484,7 @@ export function useCreateUser() {
 export function useUpdateUser() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Record<string, unknown> }) => api.put(`/users/${id}`, data),
+    mutationFn: ({ id, data }: { id: string | number; data: Record<string, unknown> }) => apiClient.updateUser(id, data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.users }) },
   })
 }
@@ -488,8 +492,35 @@ export function useUpdateUser() {
 export function useDeleteUser() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: number) => api.delete(`/users/${id}`),
+    mutationFn: (id: string | number) => apiClient.deleteUser(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.users }) },
+  })
+}
+
+export function useUpdateProfile() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ field, value }: { field: string; value: string }) => apiClient.updateProfile(field, value),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['profile'] }) },
+  })
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: ({ currentPassword, newPassword }: { currentPassword: string; newPassword: string }) =>
+      apiClient.changePassword(currentPassword, newPassword),
+  })
+}
+
+export function useUnmatch() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ tripOrderId, reason }: { tripOrderId: number; reason: string }) =>
+      apiClient.unmatch(tripOrderId, reason),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.tripOrders })
+      qc.invalidateQueries({ queryKey: queryKeys.workOrders })
+    },
   })
 }
 

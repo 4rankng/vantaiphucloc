@@ -9,6 +9,8 @@ import {
   MapPin,
   Tag,
   Wallet,
+  FileSpreadsheet,
+  Upload,
   LogOut,
   Bell,
   UserCircle,
@@ -33,11 +35,13 @@ export interface SidebarItem {
 const ACCOUNTANT_NAV_ITEMS: SidebarItem[] = [
   { label: 'Tổng quan', href: '/accountant', icon: LayoutDashboard },
   { label: 'Đơn hàng', href: '/accountant/trips', icon: FileText },
+  { label: 'Nhập từ Excel', href: '/accountant/import-orders', icon: Upload },
   { label: 'Đối soát', href: '/accountant/work-orders', icon: Briefcase },
   { label: 'Đối tác', href: '/accountant/partners', icon: Users },
   { label: 'Cung đường', href: '/accountant/routes', icon: MapPin },
   { label: 'Bảng giá', href: '/accountant/pricing', icon: Tag },
   { label: 'Kỳ lương', href: '/accountant/salary-setup', icon: Wallet },
+  { label: 'Báo cáo', href: '/accountant/reports/customer-settlement', icon: FileSpreadsheet },
 ]
 
 export interface AccountantSidebarProps {

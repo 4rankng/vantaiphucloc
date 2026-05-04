@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useTripOrders, useWorkOrders, useUpdateTripOrder, useReconcile, useToggleTripConfirmation } from '@/hooks/use-queries'
+import { useTripOrders, useWorkOrders, useUpdateTripOrder, useReconcile, useToggleTripConfirmation, useUnmatch } from '@/hooks/use-queries'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { ConfirmationCheckbox } from '@/components/shared/ConfirmationCheckbox'
@@ -26,7 +26,7 @@ export function TripDetail() {
   const [showMatchDialog, setShowMatchDialog] = useState(false)
   const [showUnmatchDialog, setShowUnmatchDialog] = useState(false)
   const [unmatchReason, setUnmatchReason] = useState('')
-  const [unmatching, setUnmatching] = useState(false)
+  const { mutateAsync: unmatch, isPending: unmatching } = useUnmatch()
   const toast = useToast()
   const updateTripOrder = useUpdateTripOrder()
   const reconcile = useReconcile()
@@ -120,14 +120,10 @@ export function TripDetail() {
 
   const handleUnmatch = async () => {
     if (!trip || !unmatchReason.trim()) return
-    setUnmatching(true)
     try {
-      const { apiClient } = await import('@/services/api')
-      const res = await apiClient.unmatch(trip.id, unmatchReason.trim())
+      const res = await unmatch({ tripOrderId: trip.id, reason: unmatchReason.trim() })
       if (res.success) {
         toast.success('Đã bỏ match')
-        qc.invalidateQueries({ queryKey: ['trip-orders'] })
-        qc.invalidateQueries({ queryKey: ['work-orders'] })
         setShowUnmatchDialog(false)
         setUnmatchReason('')
       } else {
@@ -135,8 +131,6 @@ export function TripDetail() {
       }
     } catch {
       toast.error('Lỗi', 'Không thể bỏ match')
-    } finally {
-      setUnmatching(false)
     }
   }
 

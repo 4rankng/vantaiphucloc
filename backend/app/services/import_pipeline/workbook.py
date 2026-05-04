@@ -1,0 +1,113 @@
+"""Format-agnostic workbook reader.
+
+Unifies `.xlsx` (openpyxl) and `.xls` (xlrd) behind a tiny interface so the
+rest of the pipeline doesn't care about the file format.
+
+Cells are returned as Python primitives (str | int | float | datetime |
+None). Empty cells become None.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime
+from io import BytesIO
+from typing import Any, Sequence
+
+
+@dataclass
+class SheetView:
+    name: str
+    state: str           # "visible" | "hidden" | "veryHidden"
+    n_rows: int
+    n_cols: int
+    rows: list[list[Any]]   # rows[r][c]; r,c are 0-indexed
+
+
+def load_workbook(content: bytes, filename: str) -> list[SheetView]:
+    """Return one `SheetView` per sheet, in workbook order."""
+    name = (filename or "").lower()
+    if name.endswith(".xls"):
+        return _load_xls(content)
+    return _load_xlsx(content)
+
+
+# ---------------------------------------------------------------------------
+# .xlsx via openpyxl
+# ---------------------------------------------------------------------------
+
+def _load_xlsx(content: bytes) -> list[SheetView]:
+    import openpyxl
+
+    wb = openpyxl.load_workbook(BytesIO(content), data_only=True, read_only=False)
+    out: list[SheetView] = []
+    try:
+        for sheet_name in wb.sheetnames:
+            ws = wb[sheet_name]
+            state = ws.sheet_state or "visible"
+            n_rows = ws.max_row or 0
+            n_cols = ws.max_column or 0
+            # Cap for very large sheets — we only need the first ~3000 data
+            # rows for layout detection. Layer 5 reads the rest if needed.
+            cap_rows = min(n_rows, 5000)
+            rows: list[list[Any]] = []
+            if cap_rows > 0 and n_cols > 0:
+                for row in ws.iter_rows(min_row=1, max_row=cap_rows, max_col=n_cols, values_only=True):
+                    rows.append(list(row))
+            out.append(SheetView(
+                name=sheet_name, state=state,
+                n_rows=cap_rows, n_cols=n_cols, rows=rows,
+            ))
+    finally:
+        wb.close()
+    return out
+
+
+# ---------------------------------------------------------------------------
+# .xls via xlrd
+# ---------------------------------------------------------------------------
+
+def _load_xls(content: bytes) -> list[SheetView]:
+    import xlrd
+
+    wb = xlrd.open_workbook(file_contents=content, formatting_info=False)
+    out: list[SheetView] = []
+    for idx in range(wb.nsheets):
+        ws = wb.sheet_by_index(idx)
+        n_rows = ws.nrows
+        n_cols = ws.ncols
+        cap_rows = min(n_rows, 5000)
+        rows: list[list[Any]] = []
+        for r in range(cap_rows):
+            row: list[Any] = []
+            for c in range(n_cols):
+                cell = ws.cell(r, c)
+                row.append(_xls_cell_value(cell, wb))
+            rows.append(row)
+        # xlrd doesn't expose hidden state on .xls reliably; treat all as visible
+        out.append(SheetView(
+            name=ws.name, state="visible",
+            n_rows=cap_rows, n_cols=n_cols, rows=rows,
+        ))
+    return out
+
+
+def _xls_cell_value(cell: Any, wb: Any) -> Any:
+    import xlrd
+
+    if cell.ctype == xlrd.XL_CELL_EMPTY or cell.ctype == xlrd.XL_CELL_BLANK:
+        return None
+    if cell.ctype == xlrd.XL_CELL_DATE:
+        try:
+            tup = xlrd.xldate_as_tuple(cell.value, wb.datemode)
+            return datetime(*tup) if tup[0] else None
+        except Exception:
+            return cell.value
+    if cell.ctype == xlrd.XL_CELL_BOOLEAN:
+        return bool(cell.value)
+    if cell.ctype == xlrd.XL_CELL_NUMBER:
+        f = float(cell.value)
+        if f.is_integer():
+            return int(f)
+        return f
+    return cell.value
