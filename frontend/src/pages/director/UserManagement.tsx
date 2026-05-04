@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { Truck, CircleDollarSign, LayoutDashboard, Phone, Pencil, Trash2, ChevronRight } from 'lucide-react'
 import { Navigate } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
@@ -10,11 +10,10 @@ import { CreateVendorDialog } from '@/components/shared/CreateVendorDialog'
 import { useToast } from '@/components/atoms/Toast'
 import { FilterPills } from '@/components/shared/FilterPills'
 import { PageHeader } from '@/components/shared/PageHeader'
-import { apiClient } from '@/services/api'
 import type { Role } from '@/data/domain'
 import { ROLE_LABELS } from '@/data/domain'
-import { useVendors, useCreateVendor } from '@/hooks/use-queries'
-import type { UserAccount } from '@/services/api/users.api'
+import { useVendors, useCreateVendor, useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '@/hooks/use-queries'
+import type { UserAccount } from '@/hooks/use-queries'
 import { useAuth } from '@/contexts/AuthContext'
 
 const ROLE_ICONS: Record<Role, typeof Truck> = {
@@ -58,8 +57,12 @@ const EMPTY_FORM: UserForm = { username: '', fullName: '', phone: '', cccd: '', 
 
 function UserManagementInner() {
   const toast = useToast()
-  const [users, setUsers] = useState<UserAccount[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: allUsers = [], isLoading: loading } = useUsers()
+  const users = useMemo(() => allUsers.filter(u => u.isActive), [allUsers])
+  const createUser = useCreateUser()
+  const updateUser = useUpdateUser()
+  const deleteUser = useDeleteUser()
+
   const [filterRole, setFilterRole] = useState<Role | 'ALL'>('ALL')
   const { data: vendors } = useVendors()
   const createVendor = useCreateVendor()
@@ -69,7 +72,6 @@ function UserManagementInner() {
 
   const [createOpen, setCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState<UserForm>(EMPTY_FORM)
-  const [saving, setSaving] = useState(false)
 
   const [detailUser, setDetailUser] = useState<UserAccount | null>(null)
   const [editForm, setEditForm] = useState<UserForm>(EMPTY_FORM)
@@ -82,23 +84,10 @@ function UserManagementInner() {
     }
   }, [vendors, createForm.vendor, createForm.role])
 
-  const fetchUsers = useCallback(async () => {
-    try {
-      const res = await apiClient.getUsers()
-      if (res.success) setUsers(res.data.filter(u => u.isActive))
-    } catch {
-      toast.error('Lỗi', 'Không thể tải danh sách tài khoản')
-    } finally {
-      setLoading(false)
-    }
-  }, [toast])
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchUsers()
-  }, [fetchUsers])
-
-  const filtered = filterRole === 'ALL' ? users : users.filter(u => u.role === filterRole)
+  const filtered = useMemo(
+    () => filterRole === 'ALL' ? users : users.filter(u => u.role === filterRole),
+    [filterRole, users],
+  )
 
   const updateCreateField = useCallback((field: keyof UserForm, value: string) => {
     setCreateForm(prev => ({ ...prev, [field]: value }))
@@ -110,10 +99,9 @@ function UserManagementInner() {
 
   const handleCreate = useCallback(async () => {
     if (!createForm.username.trim() || !createForm.password.trim()) return
-    setSaving(true)
     try {
       const vendorObj = vendors?.find(v => String(v.id) === createForm.vendor)
-      const res = await apiClient.createUser({
+      const res = await createUser.mutateAsync({
         username: createForm.username.trim(),
         fullName: createForm.fullName.trim() || undefined,
         phone: createForm.phone.trim() || undefined,
@@ -127,17 +115,14 @@ function UserManagementInner() {
         toast.success('Đã tạo tài khoản')
         setCreateOpen(false)
         setCreateForm(EMPTY_FORM)
-        fetchUsers()
       } else {
         toast.error('Lỗi', res.message ?? 'Lỗi không xác định')
       }
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Lỗi không xác định'
       toast.error('Lỗi', detail)
-    } finally {
-      setSaving(false)
     }
-  }, [createForm, toast, fetchUsers, vendors])
+  }, [createForm, toast, createUser, vendors])
 
   const openDetail = useCallback((user: UserAccount) => {
     setDetailUser(user)
@@ -155,7 +140,6 @@ function UserManagementInner() {
 
   const handleEdit = useCallback(async () => {
     if (!detailUser || !editForm.username.trim()) return
-    setSaving(true)
     try {
       const vendorObj = vendors?.find(v => String(v.id) === editForm.vendor)
       const payload: Record<string, unknown> = {
@@ -166,50 +150,37 @@ function UserManagementInner() {
         role: editForm.role,
       }
       if (editForm.role === 'driver') {
-        if (editForm.tractorPlate.trim()) {
-          payload.tractorPlate = editForm.tractorPlate.trim()
-        }
-        if (vendorObj) {
-          payload.vendor = vendorObj.name
-        }
+        if (editForm.tractorPlate.trim()) payload.tractorPlate = editForm.tractorPlate.trim()
+        if (vendorObj) payload.vendor = vendorObj.name
       }
-      if (editForm.password.trim()) {
-        payload.password = editForm.password.trim()
-      }
-      const res = await apiClient.updateUser(detailUser.id, payload)
+      if (editForm.password.trim()) payload.password = editForm.password.trim()
+      const res = await updateUser.mutateAsync({ id: detailUser.id, data: payload })
       if (res.success) {
         toast.success('Đã cập nhật')
         setDetailUser(null)
-        fetchUsers()
       } else {
         toast.error('Lỗi', res.message ?? 'Không thể cập nhật')
       }
     } catch {
       toast.error('Lỗi', 'Không thể cập nhật')
-    } finally {
-      setSaving(false)
     }
-  }, [detailUser, editForm, toast, fetchUsers, vendors])
+  }, [detailUser, editForm, toast, updateUser, vendors])
 
   const handleDelete = useCallback(async () => {
     if (!deleteId) return
-    setSaving(true)
     try {
-      const res = await apiClient.deleteUser(deleteId)
+      const res = await deleteUser.mutateAsync(deleteId)
       if (res.success) {
         toast.success('Đã xoá tài khoản')
         setDeleteId(null)
         setDetailUser(null)
-        fetchUsers()
       } else {
         toast.error('Lỗi', res.message ?? 'Không thể xoá tài khoản')
       }
     } catch {
       toast.error('Lỗi', 'Không thể xoá tài khoản')
-    } finally {
-      setSaving(false)
     }
-  }, [deleteId, toast, fetchUsers])
+  }, [deleteId, toast, deleteUser])
 
   const roleCounts = {
     ALL: users.length,
@@ -218,9 +189,7 @@ function UserManagementInner() {
     driver: users.filter(u => u.role === 'driver').length,
   }
 
-  if (loading) {
-    return <div className="p-4 text-center py-12" style={{ color: 'var(--theme-text-muted)' }}>Đang tải...</div>
-  }
+  if (loading) return <div className="p-4 text-center py-12" style={{ color: 'var(--theme-text-muted)' }}>Đang tải...</div>
 
   return (
     <div className="space-y-5">
@@ -364,7 +333,7 @@ function UserManagementInner() {
           </div>
           <DialogFooter className="flex-row gap-2">
             <Button variant="outline" onClick={() => setCreateOpen(false)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleCreate} disabled={!createForm.username.trim() || !createForm.password.trim() || saving} className="flex-1"
+            <Button onClick={handleCreate} disabled={!createForm.username.trim() || !createForm.password.trim() || createUser.isPending} className="flex-1"
               style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
             >
               Xác nhận
@@ -460,7 +429,7 @@ function UserManagementInner() {
             </button>
             <div className="flex-1" />
             <Button variant="outline" onClick={() => setDetailUser(null)}>Huỷ</Button>
-            <Button onClick={handleEdit} disabled={!editForm.username.trim() || saving} className="gap-1.5"
+            <Button onClick={handleEdit} disabled={!editForm.username.trim() || updateUser.isPending} className="gap-1.5"
               style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
             >
               <Pencil className="w-3.5 h-3.5" /> Lưu
@@ -478,7 +447,7 @@ function UserManagementInner() {
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteId(null)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleDelete} disabled={saving} className="flex-1" style={{ background: 'var(--theme-status-error)', color: '#fff' }}>
+            <Button onClick={handleDelete} disabled={deleteUser.isPending} className="flex-1" style={{ background: 'var(--theme-status-error)', color: '#fff' }}>
               Xoá
             </Button>
           </DialogFooter>

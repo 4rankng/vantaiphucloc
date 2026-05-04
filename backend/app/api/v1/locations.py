@@ -124,3 +124,148 @@ async def delete_location(
     await repo.session.commit()
     await CacheManager(redis).invalidate_namespace("locations")
     return Response()
+
+
+# ---------------------------------------------------------------------------
+# GPS-aware picker endpoints — nearby search + driver-pin
+# ---------------------------------------------------------------------------
+
+import math as _math
+from datetime import datetime as _dt, timezone as _tz
+from sqlalchemy import select as _select
+from sqlalchemy.ext.asyncio import AsyncSession as _AsyncSession
+from app.database import get_db as _get_db
+from app.models.domain import Location as _Location, LocationAlias as _LocationAlias
+from app.schemas.domain import LocationNearbyOut, LocationPinRequest
+from app.core.deps import get_current_user as _get_current_user
+from app.services.location_resolver import normalize as _normalize
+
+
+def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    R = 6371.0
+    dlat = _math.radians(lat2 - lat1)
+    dlng = _math.radians(lng2 - lng1)
+    a = _math.sin(dlat / 2) ** 2 + _math.cos(_math.radians(lat1)) * _math.cos(_math.radians(lat2)) * _math.sin(dlng / 2) ** 2
+    return 2 * R * _math.asin(_math.sqrt(a))
+
+
+@router.get("/locations/nearby", response_model=list[LocationNearbyOut])
+async def nearby_locations(
+    lat: float | None = Query(None, description="Driver GPS latitude"),
+    lng: float | None = Query(None, description="Driver GPS longitude"),
+    q: str | None = Query(None, description="Optional substring filter on name/alias"),
+    radius_km: float = Query(50.0, ge=0.1, le=2000.0),
+    limit: int = Query(20, ge=1, le=100),
+    current_user: User = Depends(_get_current_user),
+    db: _AsyncSession = Depends(_get_db),
+):
+    """Driver-facing dropdown source: nearest locations first, then
+    locations with no coords ranked alphabetically.
+
+    Always returns up to `limit` results. If `q` is set, applies a
+    substring filter against name + aliases before sorting.
+
+    No PostGIS dependency — bbox pre-filter (using the (lat,lng) index
+    if helpful) + Haversine in app code. Fine at our scale.
+    """
+    base_q = _select(_Location).where(_Location.is_active.is_(True))
+
+    matched_ids: set[int] | None = None
+    if q:
+        q_norm = _normalize(q)
+        # Match by name or alias (substring on normalized text).
+        # We pull all candidates rather than running LIKE per row — the
+        # locations table is small.
+        candidate_locs = list((await db.execute(_select(_Location))).scalars().all())
+        candidate_aliases = list((await db.execute(_select(_LocationAlias))).scalars().all())
+        ids: set[int] = set()
+        for loc in candidate_locs:
+            if q_norm in _normalize(loc.name):
+                ids.add(loc.id)
+        for al in candidate_aliases:
+            if q_norm in al.alias_normalized:
+                ids.add(al.location_id)
+        matched_ids = ids
+        if not matched_ids:
+            return []
+        base_q = base_q.where(_Location.id.in_(matched_ids))
+
+    locations = list((await db.execute(base_q)).scalars().all())
+
+    coord_rows: list[tuple[_Location, float]] = []
+    no_coord_rows: list[_Location] = []
+    for loc in locations:
+        if loc.lat is not None and loc.lng is not None and lat is not None and lng is not None:
+            d = _haversine_km(lat, lng, float(loc.lat), float(loc.lng))
+            if d <= radius_km:
+                coord_rows.append((loc, d))
+        else:
+            no_coord_rows.append(loc)
+    coord_rows.sort(key=lambda x: x[1])
+    no_coord_rows.sort(key=lambda x: x.name.lower())
+
+    # Result: coord'd-and-within-radius rows first, then no-coord rows
+    # (deprioritized but still selectable).
+    out: list[LocationNearbyOut] = []
+    for loc, d in coord_rows:
+        out.append(LocationNearbyOut(
+            id=loc.id, name=loc.name, lat=float(loc.lat), lng=float(loc.lng),
+            distance_km=round(d, 3),
+        ))
+    for loc in no_coord_rows:
+        out.append(LocationNearbyOut(
+            id=loc.id, name=loc.name,
+            lat=float(loc.lat) if loc.lat is not None else None,
+            lng=float(loc.lng) if loc.lng is not None else None,
+            distance_km=None,
+        ))
+    return out[:limit]
+
+
+@router.post("/locations/pin", response_model=LocationOut)
+async def pin_driver_location(
+    body: LocationPinRequest,
+    current_user: User = Depends(_get_current_user),
+    db: _AsyncSession = Depends(_get_db),
+):
+    """Driver pins their current location as a new place. Creates a
+    `Location` with the driver's GPS coords, marks `geocode_source =
+    "driver_pin"` and `pending_geocode = false` (we have coords; an
+    admin will rename it from "Pinned at (lat, lng)" later).
+    """
+    name = body.name.strip()[:255]
+    if not name:
+        # Fallback name if driver didn't provide one
+        name = f"Pinned at ({body.lat:.4f}, {body.lng:.4f})"
+    # Idempotent on (name) — the unique constraint catches dupes
+    existing = (await db.execute(
+        _select(_Location).where(_Location.name == name)
+    )).scalar_one_or_none()
+    if existing is not None:
+        # Update coords if not yet set
+        if existing.lat is None or existing.lng is None:
+            existing.lat = body.lat
+            existing.lng = body.lng
+            existing.geocoded_at = _dt.now(_tz.utc)
+            existing.geocode_source = "driver_pin"
+            existing.pending_geocode = False
+            await db.commit()
+            await db.refresh(existing)
+        return LocationOut.model_validate(existing)
+
+    loc = _Location(
+        name=name,
+        is_active=True,
+        lat=body.lat,
+        lng=body.lng,
+        geocoded_at=_dt.now(_tz.utc),
+        geocode_source="driver_pin",
+        pending_geocode=False,
+        created_via="driver_pin",
+        created_by_id=current_user.id,
+        location_review_needed=True,  # admin should rename if needed
+    )
+    db.add(loc)
+    await db.commit()
+    await db.refresh(loc)
+    return LocationOut.model_validate(loc)

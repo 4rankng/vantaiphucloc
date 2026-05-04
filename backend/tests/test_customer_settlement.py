@@ -1,0 +1,267 @@
+"""Tests for the customer settlement export pipeline.
+
+Covers:
+- Vietnamese number-to-words helper (a few representative bills)
+- Per-container price split (single, equal-N, mixed-type)
+- Period helper (PAN-style 26→25)
+- End-to-end: SettlementData assembly and Excel generation
+"""
+
+import io
+from datetime import date
+
+import openpyxl
+import pytest
+
+from app.models.domain import (
+    Client,
+    TripOrder,
+    TripOrderContainer,
+)
+from app.services.customer_settlement_service import (
+    SettlementData,
+    _split_unit_price_per_container,
+    load_settlement_data,
+    settlement_period_for,
+)
+from app.services.excel_pan_bk_sl import (
+    generate_pan_bk_sl_workbook,
+    settlement_filename,
+)
+from app.utils.number_to_words_vi import number_to_vietnamese_words
+
+
+# ---------------------------------------------------------------------------
+# number_to_vietnamese_words
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize(
+    "amount,expected_endswith",
+    [
+        (0, "Không đồng"),
+        (1, "Một đồng"),
+        (15, "Mười lăm đồng"),
+        (21, "Hai mươi mốt đồng"),
+        (105, "Một trăm linh năm đồng"),
+        (1_000, "Một nghìn đồng"),
+        (1_005_000, "Một triệu không trăm linh năm nghìn đồng"),
+    ],
+)
+def test_number_to_words_simple(amount: int, expected_endswith: str):
+    assert number_to_vietnamese_words(amount) == expected_endswith
+
+
+def test_number_to_words_billion_range():
+    # 1.234.567.890 → "Một tỷ hai trăm ba mươi tư triệu năm trăm sáu mươi
+    # bảy nghìn tám trăm chín mươi đồng" — accept either "tư" or "bốn"
+    text = number_to_vietnamese_words(1_234_567_890)
+    assert text.startswith("Một tỷ ")
+    assert text.endswith("đồng")
+    assert "triệu" in text and "nghìn" in text
+
+
+# ---------------------------------------------------------------------------
+# Per-container price split
+# ---------------------------------------------------------------------------
+
+def _fake_container(idx: int, work_type: str = "F20") -> TripOrderContainer:
+    c = TripOrderContainer(
+        trip_order_id=1,
+        container_number=f"TEST{idx:07d}",
+        work_type=work_type,
+    )
+    c.id = idx
+    return c
+
+
+def test_split_single_container_takes_full_price():
+    conts = [_fake_container(1)]
+    out = _split_unit_price_per_container(1_500_000, conts)
+    assert out == {1: 1_500_000}
+
+
+def test_split_two_containers_equal_with_remainder_on_last():
+    conts = [_fake_container(1), _fake_container(2)]
+    out = _split_unit_price_per_container(999_999, conts)
+    # 999999 / 2 = 499999.5 → base=499999, remainder=1 on last
+    assert out == {1: 499_999, 2: 500_000}
+    assert sum(out.values()) == 999_999
+
+
+def test_split_three_mixed_type_keeps_total_intact():
+    conts = [
+        _fake_container(1, "F20"),
+        _fake_container(2, "F40"),
+        _fake_container(3, "E20"),
+    ]
+    out = _split_unit_price_per_container(2_000_000, conts)
+    assert sum(out.values()) == 2_000_000
+
+
+# ---------------------------------------------------------------------------
+# Period helper
+# ---------------------------------------------------------------------------
+
+def test_settlement_period_april_2026():
+    start, end = settlement_period_for(2026, 4)
+    assert start == date(2026, 3, 26)
+    assert end == date(2026, 4, 25)
+
+
+def test_settlement_period_january_crosses_year():
+    start, end = settlement_period_for(2026, 1)
+    assert start == date(2025, 12, 26)
+    assert end == date(2026, 1, 25)
+
+
+# ---------------------------------------------------------------------------
+# End-to-end (DB → Excel) with the sqlite test fixture
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_load_settlement_data_aggregates_routes(db_session):
+    client = Client(
+        code="PAN",
+        name="CÔNG TY TNHH PAN HẢI AN",
+        type="company",
+        phone="0225",
+        tax_code="0201815115",
+        address="Lô KB5, KCN Nam Đình Vũ, Hải An, Hải Phòng",
+    )
+    db_session.add(client)
+    await db_session.flush()
+
+    # Two trips on same route: 1 F20 (split into 2 conts) + 1 F40
+    t1 = TripOrder(
+        trip_date=date(2026, 4, 1),
+        client_id=client.id,
+        client_name=client.name,
+        route="PAN HA - HẢI AN",
+        pickup_location="PAN HA",
+        dropoff_location="HẢI AN",
+        unit_price=1_309_742,  # 2 × ~654871
+        driver_salary=400_000,
+        allowance=0,
+        revenue=1_309_742,
+        status="PENDING",
+        is_confirmed=True,
+    )
+    db_session.add(t1)
+    await db_session.flush()
+    db_session.add_all([
+        TripOrderContainer(trip_order_id=t1.id, container_number="TEST0000001", work_type="F20"),
+        TripOrderContainer(trip_order_id=t1.id, container_number="TEST0000002", work_type="F20"),
+    ])
+
+    t2 = TripOrder(
+        trip_date=date(2026, 4, 2),
+        client_id=client.id,
+        client_name=client.name,
+        route="PAN HA - HẢI AN",
+        pickup_location="PAN HA",
+        dropoff_location="HẢI AN",
+        unit_price=681_050,
+        driver_salary=420_000,
+        allowance=0,
+        revenue=681_050,
+        status="PENDING",
+        is_confirmed=False,
+    )
+    db_session.add(t2)
+    await db_session.flush()
+    db_session.add(
+        TripOrderContainer(trip_order_id=t2.id, container_number="TEST0000003", work_type="F40")
+    )
+    await db_session.flush()
+
+    data = await load_settlement_data(
+        db_session, client.id, date(2026, 3, 26), date(2026, 4, 25)
+    )
+
+    assert len(data.trip_lines) == 3
+    assert len(data.route_summary) == 1
+    summary = data.route_summary[0]
+    assert summary.f20_count == 2
+    assert summary.f40_count == 1
+    assert summary.empty_count == 0
+    assert summary.total_amount == 1_309_742 + 681_050
+    assert data.total_pre_vat == 1_309_742 + 681_050
+
+
+@pytest.mark.asyncio
+async def test_generate_workbook_produces_two_sheets_with_data(db_session):
+    client = Client(
+        code="PAN",
+        name="CÔNG TY TNHH PAN HẢI AN",
+        type="company",
+        phone="0225",
+        tax_code="0201815115",
+        address="Hải Phòng",
+    )
+    db_session.add(client)
+    await db_session.flush()
+
+    trip = TripOrder(
+        trip_date=date(2026, 4, 10),
+        client_id=client.id,
+        client_name=client.name,
+        route="PAN HA - HẢI AN",
+        pickup_location="PAN HA",
+        dropoff_location="HẢI AN",
+        unit_price=654_871,
+        driver_salary=400_000,
+        allowance=0,
+        revenue=654_871,
+        status="COMPLETED",
+        is_confirmed=True,
+    )
+    db_session.add(trip)
+    await db_session.flush()
+    db_session.add(
+        TripOrderContainer(trip_order_id=trip.id, container_number="HACU1234567", work_type="F20")
+    )
+    await db_session.flush()
+
+    data = await load_settlement_data(
+        db_session, client.id, date(2026, 3, 26), date(2026, 4, 25)
+    )
+    blob = generate_pan_bk_sl_workbook(data)
+
+    wb = openpyxl.load_workbook(io.BytesIO(blob))
+    assert wb.sheetnames == ["BKTT T4.26", "SL T4.26"]
+
+    sl = wb["SL T4.26"]
+    # First data row should be at row 11 (header is row 10)
+    assert sl.cell(row=11, column=4).value == "HACU1234567"
+    # F20 marker in column E
+    assert sl.cell(row=11, column=5).value == 1
+    assert sl.cell(row=11, column=13).value == 654_871
+
+    bktt = wb["BKTT T4.26"]
+    assert bktt.cell(row=11, column=2).value == "PAN HA"
+    assert bktt.cell(row=11, column=3).value == "HẢI AN"
+    assert bktt.cell(row=11, column=11).value == 654_871
+
+    fname = settlement_filename(data)
+    assert fname == "PAN_BK_SL_T04.26_HD.xlsx"
+
+
+@pytest.mark.asyncio
+async def test_workbook_with_no_trips_is_still_valid(db_session):
+    client = Client(
+        code="PAN",
+        name="PAN HẢI AN",
+        type="company",
+        phone="0225",
+    )
+    db_session.add(client)
+    await db_session.flush()
+
+    data = await load_settlement_data(
+        db_session, client.id, date(2026, 3, 26), date(2026, 4, 25)
+    )
+    blob = generate_pan_bk_sl_workbook(data)
+
+    wb = openpyxl.load_workbook(io.BytesIO(blob))
+    assert "BKTT T4.26" in wb.sheetnames
+    assert "SL T4.26" in wb.sheetnames

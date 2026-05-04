@@ -1,18 +1,10 @@
-import { useState, useEffect } from 'react'
-import { apiClient } from '@/services/api'
 import { NotificationList, type AppNotification } from '@/components/shared/NotificationList'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { useNotifications } from '@/hooks/use-queries'
 
 export function DirectorNotifications() {
-  const [notifications, setNotifications] = useState<AppNotification[]>([])
-
-  useEffect(() => {
-    apiClient.getNotifications().then(res => {
-      if (res.success) setNotifications(res.data as AppNotification[])
-    }).catch((err) => { console.error('Failed to load notifications:', err) })
-  }, [])
-
-  const unreadCount = notifications.filter(n => !n.read).length
+  const { data: notifications = [] } = useNotifications()
+  const unreadCount = notifications.filter((n: AppNotification) => !n.read).length
   const subtitle = notifications.length === 0
     ? 'Cập nhật tự động'
     : unreadCount > 0
@@ -22,7 +14,7 @@ export function DirectorNotifications() {
   return (
     <div className="space-y-5">
       <PageHeader title="Thông báo" subtitle={subtitle} icon="schedule" />
-      <NotificationList notifications={notifications} />
+      <NotificationList notifications={notifications as AppNotification[]} />
     </div>
   )
 }

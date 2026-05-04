@@ -1,26 +1,11 @@
-import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { apiClient } from '@/services/api'
 import { CreateWorkOrder } from './CreateWorkOrder'
-import type { WorkOrder } from '@/data/domain'
+import { useWorkOrder } from '@/hooks/use-queries'
 
 export function EditWorkOrder() {
   const { jobId: jobIdStr } = useParams<{ jobId: string }>()
   const jobId = Number(jobIdStr)
-  const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (!jobIdStr) return
-    let cancelled = false
-    apiClient.getWorkOrder(jobId).then(res => {
-      if (!cancelled && res.success) setWorkOrder(res.data)
-      if (!cancelled) setLoading(false)
-    }).catch(() => {
-      if (!cancelled) setLoading(false)
-    })
-    return () => { cancelled = true }
-  }, [jobId])
+  const { data: workOrder = null, isLoading: loading } = useWorkOrder(jobId)
 
   if (loading) {
     return (
