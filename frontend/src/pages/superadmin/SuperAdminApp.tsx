@@ -1,10 +1,10 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { UserDetailDialog } from '@/components/shared/UserDetailDialog'
 import { CreateUserDialog } from '@/components/shared/CreateUserDialog'
 import { useToast } from '@/components/atoms/Toast'
-import { apiClient } from '@/services/api'
 import { ROLE_LABELS, type Role } from '@/data/domain'
-import { useVendors } from '@/hooks/use-queries'
+import { useVendors, useUsers, useUpdateUser, useDeleteUser, queryKeys } from '@/hooks/use-queries'
 import { SuperAdminDashboard } from './SuperAdminDashboard'
 import type { UserAccount } from '@/services/api/users.api'
 
@@ -17,65 +17,43 @@ const ALL_ROLES: { value: Role; label: string }[] = [
 
 export function SuperAdminApp() {
   const toast = useToast()
+  const qc = useQueryClient()
   const { data: vendors } = useVendors()
+  const { data: users = [], isLoading: loading } = useUsers()
+  const updateUser = useUpdateUser()
+  const deleteUser = useDeleteUser()
+
   const [createOpen, setCreateOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<UserAccount | null>(null)
   const [filterRole, setFilterRole] = useState<Role | 'ALL'>('ALL')
-  const [users, setUsers] = useState<UserAccount[]>([])
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-
-  const fetchUsers = useCallback(async () => {
-    try {
-      const res = await apiClient.getUsers()
-      if (res.success) setUsers(res.data)
-    } catch {
-      toast.error('Lỗi', 'Không thể tải danh sách tài khoản')
-    } finally {
-      setLoading(false)
-    }
-  }, [toast])
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchUsers()
-  }, [fetchUsers])
 
   const handleEditUser = useCallback(async (userId: string, data: Record<string, unknown>) => {
-    setSaving(true)
     try {
-      const res = await apiClient.updateUser(userId, data)
+      const res = await updateUser.mutateAsync({ id: userId, data })
       if (res.success) {
         toast.success('Đã cập nhật')
         setSelectedUser(null)
-        fetchUsers()
       } else {
         toast.error('Lỗi', res.message ?? 'Không thể cập nhật')
       }
     } catch {
       toast.error('Lỗi', 'Không thể cập nhật')
-    } finally {
-      setSaving(false)
     }
-  }, [toast, fetchUsers])
+  }, [toast, updateUser])
 
   const handleDeleteUser = useCallback(async (userId: string) => {
-    setSaving(true)
     try {
-      const res = await apiClient.deleteUser(userId)
+      const res = await deleteUser.mutateAsync(userId)
       if (res.success) {
         toast.success('Đã xoá tài khoản')
         setSelectedUser(null)
-        fetchUsers()
       } else {
         toast.error('Lỗi', res.message ?? 'Không thể xoá tài khoản')
       }
     } catch {
       toast.error('Lỗi', 'Không thể xoá tài khoản')
-    } finally {
-      setSaving(false)
     }
-  }, [toast, fetchUsers])
+  }, [toast, deleteUser])
 
   if (loading) {
     return (
@@ -94,7 +72,12 @@ export function SuperAdminApp() {
         onViewUser={setSelectedUser}
         onCreateUser={() => setCreateOpen(true)}
       />
-      <CreateUserDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreated={fetchUsers} roles={ALL_ROLES} />
+      <CreateUserDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={() => qc.invalidateQueries({ queryKey: queryKeys.users })}
+        roles={ALL_ROLES}
+      />
       <UserDetailDialog
         user={selectedUser}
         open={!!selectedUser}
@@ -103,7 +86,7 @@ export function SuperAdminApp() {
         onDelete={handleDeleteUser}
         editableRoles={ALL_ROLES}
         vendors={(vendors ?? []).map(v => ({ id: v.id, name: v.name }))}
-        saving={saving}
+        saving={updateUser.isPending || deleteUser.isPending}
       />
     </>
   )

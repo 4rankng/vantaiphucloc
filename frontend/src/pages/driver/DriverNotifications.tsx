@@ -1,21 +1,13 @@
-import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiClient } from '@/services/api'
 import { NotificationList, type AppNotification } from '@/components/shared/NotificationList'
+import { useNotifications } from '@/hooks/use-queries'
 
 export function DriverNotifications() {
   const navigate = useNavigate()
-  const [notifications, setNotifications] = useState<AppNotification[]>([])
-
-  useEffect(() => {
-    apiClient.getNotifications().then(res => {
-      if (res.success) setNotifications(res.data as AppNotification[])
-    }).catch((err) => { console.error('Failed to load notifications:', err) })
-  }, [])
+  const { data: notifications = [] } = useNotifications()
 
   return (
     <div className="space-y-3">
-      {/* Back button — inline in page body */}
       <button
         onClick={() => navigate(-1)}
         className="inline-flex items-center gap-1.5 text-sm font-medium mb-1 px-4"
@@ -26,7 +18,7 @@ export function DriverNotifications() {
         </svg>
         Quay lại
       </button>
-      <NotificationList notifications={notifications} />
+      <NotificationList notifications={notifications as AppNotification[]} />
     </div>
   )
 }

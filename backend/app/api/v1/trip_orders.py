@@ -8,7 +8,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import select, delete, func
 
 from app.models.base import User
-from app.models.domain import TripOrder, TripOrderContainer, TripOrderWorkOrder, WorkOrder
+from app.models.domain import TripOrder, TripOrderContainer, TripOrderWorkOrder
 from app.models.enums import TripOrderStatus, WorkOrderStatus
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import TripOrderCreate, TripOrderUpdate, TripOrderOut, TripContainerOut, CancelRequest
@@ -16,7 +16,7 @@ from app.core.deps import get_current_user, require_permission
 from app.services.salary_service import get_salary_period_dates
 from app.core.audit_context import set_audit_reason
 from app.workers import enqueue
-from app.validators.container import validate_container_quantity, validate_same_work_type
+from app.services.trip_order_service import create_trip_order as _create_trip_order
 from app.repositories.client_repo import ClientRepository
 from app.repositories.trip_order_repo import TripOrderRepository
 from app.repositories.work_order_repo import WorkOrderRepository
@@ -117,65 +117,9 @@ async def create_trip_order(
     request: Request,
     current_user: User = Depends(require_permission("read", "TripOrder")),
     repo: TripOrderRepository = Depends(get_trip_order_repo),
-    wo_repo: WorkOrderRepository = Depends(get_work_order_repo),
 ):
     db = repo.session
-    matched_ids = body.matched_work_order_ids
-    trip_data = body.model_dump(exclude={"matched_work_order_ids", "containers"})
-
-    if body.containers:
-        validate_same_work_type(body.containers)
-        work_type_val = body.containers[0].work_type
-        validate_container_quantity(work_type_val, len(body.containers))
-        trip_data["container_number"] = _norm(body.containers[0].container_number)
-        trip_data["work_type"] = work_type_val
-
-    work_type = trip_data.get("work_type")
-    if body.containers and work_type:
-        from app.services.pricing_service import find_tiered_pricing
-        container_count = sum(1 for c in body.containers if c.work_type == work_type) or 1
-        tiered = await find_tiered_pricing(
-            db,
-            client_id=body.client_id,
-            work_type=work_type,
-            quantity=container_count,
-            route=body.route,
-            pickup_location=body.pickup_location,
-            dropoff_location=body.dropoff_location,
-        )
-        if tiered:
-            trip_data["unit_price"] = tiered.unit_price
-            trip_data["driver_salary"] = tiered.driver_salary
-            trip_data["allowance"] = tiered.allowance
-            trip_data["pricing_id"] = tiered.pricing.id
-
-    if not trip_data.get("pricing_id"):
-        trip_data["pricing_id"] = None
-
-    has_containers = bool(body.containers)
-    has_pricing = trip_data.get("unit_price", 0) > 0 and trip_data.get("driver_salary", 0) > 0
-    trip_data["status"] = TripOrderStatus.PENDING if (has_containers and has_pricing) else TripOrderStatus.DRAFT
-
-    trip_order = TripOrder(**trip_data)
-    db.add(trip_order)
-    await db.flush()
-
-    from app.services.code_service import generate_trip_order_code
-    trip_order.code = await generate_trip_order_code(db, body.client_id)
-
-    for c in body.containers:
-        db.add(TripOrderContainer(
-            trip_order_id=trip_order.id,
-            container_number=_norm(c.container_number),
-            work_type=c.work_type,
-        ))
-
-    for wo_id in matched_ids:
-        db.add(TripOrderWorkOrder(trip_order_id=trip_order.id, work_order_id=wo_id))
-
-    if matched_ids:
-        await wo_repo.set_status_bulk(matched_ids, WorkOrderStatus.MATCHED)
-
+    trip_order = await _create_trip_order(body, db, user_id=current_user.id)
     await db.commit()
     await db.refresh(trip_order)
     return await _load_one(repo, trip_order)
@@ -263,6 +207,34 @@ async def update_trip_order(
     update_data = body.model_dump(exclude_unset=True)
     new_matched_ids = update_data.pop("matched_work_order_ids", None)
     new_containers = update_data.pop("containers", None)
+
+    # Resolve any updated pickup/dropoff strings through the
+    # LocationResolverService so the FK + alias system stay consistent
+    # whichever path created/updated the đơn hàng.
+    from app.services.location_resolver import LocationResolverService, ResolverSource
+    resolver = LocationResolverService(db)
+    if "pickup_location" in update_data and update_data["pickup_location"]:
+        raw = update_data["pickup_location"]
+        update_data["pickup_raw"] = raw
+        r = await resolver.resolve_or_create(
+            raw, source=ResolverSource.CUSTOMER_ORDER, user_id=current_user.id,
+        )
+        if r.location is not None:
+            update_data["pickup_location"] = r.location.name
+            update_data["pickup_location_id"] = r.location.id
+        if r.review_needed:
+            update_data["location_review_needed"] = True
+    if "dropoff_location" in update_data and update_data["dropoff_location"]:
+        raw = update_data["dropoff_location"]
+        update_data["dropoff_raw"] = raw
+        r = await resolver.resolve_or_create(
+            raw, source=ResolverSource.CUSTOMER_ORDER, user_id=current_user.id,
+        )
+        if r.location is not None:
+            update_data["dropoff_location"] = r.location.name
+            update_data["dropoff_location_id"] = r.location.id
+        if r.review_needed:
+            update_data["location_review_needed"] = True
 
     await repo.update(trip_order, **update_data)
 

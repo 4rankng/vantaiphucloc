@@ -90,10 +90,34 @@ class LocationOut(BaseModel):
     id: int
     name: str
     is_active: bool = True
+    lat: float | None = None
+    lng: float | None = None
+    geocoded_at: datetime | None = None
+    geocode_source: str | None = None
+    pending_geocode: bool = True
+    created_via: str | None = None
+    location_review_needed: bool = False
     created_at: datetime
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class LocationNearbyOut(BaseModel):
+    id: int
+    name: str
+    lat: float | None = None
+    lng: float | None = None
+    distance_km: float | None = None  # null when location has no coords
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class LocationPinRequest(BaseModel):
+    name: str
+    lat: float
+    lng: float
+    note: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -331,15 +355,41 @@ class WorkOrderOut(BaseModel):
 # TripOrder
 # ---------------------------------------------------------------------------
 
+class TripContainerPhotoOut(BaseModel):
+    id: int
+    kind: str
+    file_url: str
+    caption: str | None = None
+    uploaded_at: datetime
+    uploaded_by: int | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class TripContainerCreate(BaseModel):
     container_number: str
     work_type: str
+    container_size: str | None = None
+    container_type: str | None = None
+    freight_kind: str | None = None
+    gross_weight_kg: float | None = None
+    seal_no: str | None = None
+    commodity: str | None = None
+    container_metadata: dict | None = None
 
 
 class TripContainerOut(BaseModel):
     id: int
     container_number: str
     work_type: str
+    container_size: str | None = None
+    container_type: str | None = None
+    freight_kind: str | None = None
+    gross_weight_kg: float | None = None
+    seal_no: str | None = None
+    commodity: str | None = None
+    container_metadata: dict | None = None
+    photos: list[TripContainerPhotoOut] = []
 
     model_config = ConfigDict(from_attributes=True)
 
