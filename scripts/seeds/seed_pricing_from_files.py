@@ -224,7 +224,7 @@ def _split_route(route: str) -> tuple[str, str]:
 async def _upsert(db, rows: list[TariffRow], dry_run: bool, log) -> dict[str, int]:
     from sqlalchemy import select  # type: ignore
     from app.models.domain import Client, Pricing, PricingLine  # type: ignore
-    from app.services.location_resolver import (  # type: ignore
+    from app.contexts.customer_pricing.application.location_resolver import (  # type: ignore
         LocationResolverService, ResolverSource,
     )
 

@@ -110,8 +110,8 @@ async def run(args: argparse.Namespace) -> int:
 
     from sqlalchemy import select  # type: ignore
     from app.models.domain import Location, LocationAlias  # type: ignore
-    from app.services.import_pipeline.pipeline import run_preview  # type: ignore
-    from app.services.location_resolver import normalize  # type: ignore
+    from app.contexts.operations.infrastructure.import_pipeline.pipeline import run_preview  # type: ignore
+    from app.contexts.customer_pricing.application.location_resolver import normalize  # type: ignore
 
     started = time.monotonic()
 
