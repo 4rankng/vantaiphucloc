@@ -11,6 +11,42 @@ from app.main import app
 from app.database import Base, get_db
 from app.models.base import User
 from app.core.security import hash_password
+from app.core.redis import get_redis
+
+
+class _FakePipeline:
+    async def execute(self):
+        # RateLimiter reads results[2] as the count — return 0 so we never hit
+        # the limit in tests. Other indices are unused.
+        return [0, 0, 0, 0]
+
+    def __getattr__(self, _name):
+        # zadd / zremrangebyscore / zcard / expire / etc. all chain on the pipeline.
+        return lambda *args, **kwargs: self
+
+
+class _FakeRedis:
+    def pipeline(self):
+        return _FakePipeline()
+
+    async def get(self, _key):
+        return None
+
+    async def set(self, *args, **kwargs):
+        return True
+
+    async def delete(self, *args, **kwargs):
+        return 0
+
+    async def aclose(self):
+        return None
+
+
+_fake_redis = _FakeRedis()
+
+
+async def _override_get_redis():
+    return _fake_redis
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
@@ -37,9 +73,11 @@ async def test_app():
             pass
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_redis] = _override_get_redis
     yield app
 
     app.dependency_overrides.pop(get_db, None)
+    app.dependency_overrides.pop(get_redis, None)
     await test_session.close()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)

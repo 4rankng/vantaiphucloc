@@ -114,9 +114,20 @@ export interface CommitRequest {
 
 export interface CommitResponse {
   created: number
+  containers_created?: number
+  grouped_trips?: number
   skipped_duplicates: number
+  locations_created?: number
+  locations_review_flagged?: number
   errors: string[]
   template_id?: number | null
+  created_trip_ids?: number[]
+}
+
+export interface ApplyPricingByIdsResponse {
+  priced: number
+  unpriced: number
+  unpriced_trip_ids: number[]
 }
 
 export interface SavedTemplate {
@@ -161,6 +172,15 @@ export async function previewCustomerExcel(args: {
 export async function commitCustomerExcel(body: CommitRequest): Promise<CommitResponse> {
   const res = await api.post('/imports/customer-excel/commit', body)
   return res.data as CommitResponse
+}
+
+export async function applyPricingToTripIds(
+  tripIds: number[],
+): Promise<ApplyPricingByIdsResponse> {
+  const res = await api.post('/imports/customer-excel/apply-pricing', {
+    trip_ids: tripIds,
+  })
+  return res.data as ApplyPricingByIdsResponse
 }
 
 export async function listImportTemplates(clientId: number): Promise<SavedTemplate[]> {

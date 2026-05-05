@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Upload, FileText, AlertTriangle, CheckCircle2, XCircle, Save } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Upload, FileText, AlertTriangle, CheckCircle2, XCircle, Save, Tag } from 'lucide-react'
 import { Button, Input } from '@/components/ui'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { InlineSelect } from '@/components/shared/InlineSelect'
@@ -9,6 +10,7 @@ import { apiClient } from '@/services/api'
 import type {
   CanonicalSchema,
   ColumnMappingDto,
+  CommitResponse,
   CommitRow,
   LocationResolutionDto,
   ParsedRowDto,
@@ -30,6 +32,7 @@ function confidenceBadge(conf: number): { label: string; color: string } {
 
 export function ImportOrders() {
   const toast = useToast()
+  const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { data: clients = [] } = useClients()
 
@@ -38,12 +41,15 @@ export function ImportOrders() {
   const [file, setFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
   const [committing, setCommitting] = useState(false)
+  const [applyingPricing, setApplyingPricing] = useState(false)
   const [preview, setPreview] = useState<PreviewResultDto | null>(null)
   const [mapping, setMapping] = useState<ColumnMappingDto[]>([])
   const [editedRows, setEditedRows] = useState<ParsedRowDto[]>([])
   const [saveTemplateName, setSaveTemplateName] = useState('')
   const [overwriteDuplicates, setOverwriteDuplicates] = useState(false)
   const [schema, setSchema] = useState<CanonicalSchema | null>(null)
+  const [lastCommit, setLastCommit] = useState<CommitResponse | null>(null)
+  const [pricingResult, setPricingResult] = useState<{ priced: number; unpriced: number } | null>(null)
 
   useEffect(() => {
     apiClient.getCanonicalSchema().then(setSchema).catch(() => {/* non-fatal */})
@@ -111,6 +117,27 @@ export function ImportOrders() {
     setEditedRows(prev => prev.filter(r => r.source_row_index !== rowSourceIdx))
   }
 
+  const applyPricing = async () => {
+    if (!lastCommit?.created_trip_ids?.length) return
+    setApplyingPricing(true)
+    try {
+      const res = await apiClient.applyPricingToTripIds(lastCommit.created_trip_ids)
+      const total = res.priced + res.unpriced
+      const summary = `Đã áp giá ${res.priced}/${total} đơn`
+      if (res.unpriced > 0) {
+        toast.info(summary, `${res.unpriced} đơn chưa có bảng giá phù hợp.`)
+      } else {
+        toast.success(summary, 'Tất cả đơn vừa nhập đã có đơn giá.')
+      }
+      setPricingResult({ priced: res.priced, unpriced: res.unpriced })
+    } catch (err) {
+      const detail = (err as { message?: string })?.message ?? 'Không áp giá được.'
+      toast.error('Lỗi áp giá', detail)
+    } finally {
+      setApplyingPricing(false)
+    }
+  }
+
   const commit = async () => {
     if (!preview) return
     if (!clientId) {
@@ -160,7 +187,9 @@ export function ImportOrders() {
       if (res.errors.length) {
         toast.error(`${res.errors.length} dòng lỗi`, res.errors[0])
       }
-      // Reset
+      setLastCommit(res)
+      setPricingResult(null)
+      // Reset upload state but keep the result panel visible.
       setPreview(null)
       setMapping([])
       setEditedRows([])
@@ -196,6 +225,62 @@ export function ImportOrders() {
           </div>
         }
       />
+
+      {/* Results panel — appears after a successful commit */}
+      {lastCommit && (lastCommit.created_trip_ids?.length ?? 0) > 0 && (
+        <div
+          className="card p-5"
+          style={{
+            borderLeft: pricingResult
+              ? pricingResult.unpriced > 0
+                ? '4px solid var(--theme-status-warning)'
+                : '4px solid var(--theme-status-success)'
+              : '4px solid var(--theme-status-info)',
+          }}
+        >
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <h3 className="typo-h2">
+                Đã tạo {lastCommit.created} đơn hàng ({lastCommit.created_trip_ids?.length ?? 0} ID)
+              </h3>
+              <p className="typo-caption">
+                {pricingResult
+                  ? `Áp giá: ${pricingResult.priced}/${pricingResult.priced + pricingResult.unpriced} đơn`
+                  : 'Đơn đang ở trạng thái DRAFT, chưa có đơn giá. Bấm Áp giá để tự động lấy giá theo bảng giá.'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {!pricingResult && (
+                <Button
+                  onClick={applyPricing}
+                  disabled={applyingPricing}
+                  className="btn-primary h-9 px-4 text-sm"
+                >
+                  <Tag className="w-4 h-4 mr-1.5" />
+                  {applyingPricing ? 'Đang áp giá...' : 'Áp giá theo bảng giá'}
+                </Button>
+              )}
+              {pricingResult && pricingResult.unpriced > 0 && (
+                <Button
+                  onClick={() => navigate('/accountant/trips?unpriced=true')}
+                  className="btn-secondary h-9 px-4 text-sm"
+                >
+                  Xem {pricingResult.unpriced} đơn chưa có giá
+                </Button>
+              )}
+              <Button
+                onClick={() => {
+                  setLastCommit(null)
+                  setPricingResult(null)
+                }}
+                className="btn-ghost h-9 px-3 text-sm"
+              >
+                Đóng
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Pane 1 — file upload + period/client */}
       <div className="card p-5">
