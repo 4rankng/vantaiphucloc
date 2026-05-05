@@ -187,17 +187,8 @@ async def run(args: argparse.Namespace) -> int:
                 continue
             db.add(Route(
                 route=label,
-                pickup_location=p_loc.name,
-                dropoff_location=d_loc.name,
                 pickup_location_id=p_id,
                 dropoff_location_id=d_id,
-                # Schema requires these — kế toán fills via the Routes UI
-                # or by re-running after a pricing seed (which is a richer
-                # source). Default to 0 so this seeder doesn't pretend to
-                # know the rate.
-                type_20ft=0,
-                type_40ft=0,
-                is_two_way=False,
                 is_active=True,
             ))
             routes_added += 1
