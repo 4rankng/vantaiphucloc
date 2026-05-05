@@ -14,14 +14,14 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from app.services.import_pipeline.canonical import (
+from app.contexts.operations.infrastructure.import_pipeline.canonical import (
     EXACT_LOOKUP,
     SKIP_EXACT,
     is_skip_header,
     normalize_header_text,
     synonym_substring_match,
 )
-from app.services.import_pipeline.workbook import SheetView
+from app.contexts.operations.infrastructure.import_pipeline.workbook import SheetView
 
 
 CONTAINER_NO_RE = re.compile(r"^[A-Z]{4}\d{7}$")

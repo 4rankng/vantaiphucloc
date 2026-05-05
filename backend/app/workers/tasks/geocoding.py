@@ -4,7 +4,7 @@ from sqlalchemy import select
 
 from app.database import get_session
 from app.models.domain import WorkOrder, WorkOrderContainer
-from app.services.geocoding import reverse_geocode
+from app.contexts.operations.infrastructure.geocoding import reverse_geocode
 
 logger = logging.getLogger(__name__)
 

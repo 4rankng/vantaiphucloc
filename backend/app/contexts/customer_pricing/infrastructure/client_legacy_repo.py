@@ -2,7 +2,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import Client, WorkOrder, TripOrder
-from app.repositories.base import BaseRepository
+from app.core.base_repository import BaseRepository
 
 
 class ClientRepository(BaseRepository[Client]):

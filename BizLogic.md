@@ -309,20 +309,20 @@ The backend follows Domain-Driven Design with strict layer boundaries.
 
 ### 9.1 Bounded contexts
 
-Eight bounded contexts. Each owns its tables, its language, and a clear external contract.
+Seven bounded contexts plus a thin platform layer for cross-cutting reads.
+Each owns its tables, its language, and a clear external contract.
 
 | Context | Owns | One-line role |
 |---|---|---|
 | **Identity & Access** | `users`, `push_subscriptions` | auth, RBAC, sessions |
-| **Fleet** | drivers (User where role=driver), `vendors` | drivers, vendors, tractor plates |
-| **Catalog** | `clients`, `locations`, `location_aliases`, `routes` | master data shared by everyone |
-| **Pricing** | `pricings`, `pricing_lines` | tariff lookup |
-| **Operations** | `trip_orders`, `trip_order_containers`, `trip_container_photos`, `work_orders`, `work_order_containers`, `trip_order_work_orders` | đơn hàng + phiếu làm việc + đối soát |
-| **Imports** | `customer_import_templates` + the file-ingestion pipeline | ACL for customer Excel files; produces commands for Operations |
-| **Billing** | `payments`, generated BK SL settlement statements | money toward customers |
+| **Fleet** | drivers (User where role=driver) | driver master, tractor plates |
+| **Customer & Pricing** | `clients`, `locations`, `location_aliases`, `routes`, `pricings`, `pricing_lines`, `vendors` | merged Catalog + Pricing + Vendor (the import pipeline couples them) |
+| **Operations** | `trip_orders`, `trip_order_containers`, `trip_container_photos`, `work_orders`, `work_order_containers`, `trip_order_work_orders`, `customer_import_templates` (+ import_pipeline as infra) | đơn hàng + phiếu làm việc + đối soát + customer-Excel ingestion |
+| **Billing** | generated BK SL settlement statements (read aggregate composed from operations + customer master) | money toward customers |
 | **Payroll** | `salary_periods`, `salary_period_configs` | driver pay |
+| **Platform** | (presentation only) | dashboard summary + audit-log readout — read views that span multiple contexts |
 
-`audit_logs` is cross-cutting — every context emits to it.
+`audit_logs` is cross-cutting — every context emits to it via `app/core/audit.py`.
 
 ### 9.2 Layer rules
 
@@ -357,7 +357,17 @@ Per-aggregate-root, abstract in domain, concrete in infrastructure. The reposito
 
 CQRS read/write split, event sourcing, dedicated message bus, polyglot persistence, saga orchestrators, heavyweight DI container, cross-context choreography via events as primary integration. Single Postgres, in-process events, FastAPI `Depends` for wiring.
 
-### 9.7 Realized contexts
+### 9.7 Composition + cross-cutting
+
+- **Composition root**: `backend/app/main.py` builds the FastAPI app. `app/api/v1/router.py` is the API-version composition file — it imports each context's interface routers and assembles the `/api/v1` surface. No business logic lives there.
+- **Core / cross-cutting** (`backend/app/core/`):
+  - `audit.py` — auto-recording of `audit_logs` via SQLAlchemy session events; every context calls into this.
+  - `summaries.py` — batch loaders for nested `*SummaryOut` DTOs (Client / Location / Driver) consumed across contexts so list endpoints stay O(1) on round-trips. See §4.
+  - `base_repository.py` — generic CRUD base class still used by a couple of context legacy-style repos (`identity/infrastructure/user_legacy_repo.py`, `customer_pricing/infrastructure/client_legacy_repo.py`); each will dissolve as those contexts finish their domain APIs.
+  - `deps.py`, `security.py`, `redis.py`, `cache.py`, `worker.py`, `audit_context.py`, `oso.py`, `rate_limit.py`, `identifier.py` — request-scope auth + Redis + arq pool + rate-limiting + ID generation.
+- **C6 (Imports) decision** — *not* extracted as a standalone context. The customer-Excel ingestion pipeline (`backend/app/contexts/operations/infrastructure/import_pipeline/`) lives inside Operations because every consumer is an operations use case (trip-order import, customer-pricing import via the operations router). No other context calls it. If a settlement-import flow is ever added, that's the moment to promote it.
+
+### 9.8 Realized contexts
 
 - **Identity & Access** — extracted to `backend/app/contexts/identity/` (commit 2026-05-05). Pure-Python `User` and `PushSubscription` domain entities; `BcryptPasswordHasher` + `JwtTokenIssuer` adapters in `infrastructure/security.py`; routers under `interface/routers/`. `app/models/base.py` and `app/models/push.py` remain as one-line shims so the rest of the codebase (still using `from app.models.base import User`) keeps compiling until each consuming context is itself extracted.
 - **Customer & Pricing** — extracted to `backend/app/contexts/customer_pricing/` (initial commit 2026-05-05; finished 2026-05-05). Catalog (`Catalog` in §9.1) and `Pricing` were merged into a single bounded context because the import pipeline couples them tightly — every tariff row references customer + lane + container_type. State:
@@ -374,8 +384,23 @@ CQRS read/write split, event sourcing, dedicated message bus, polyglot persisten
   - **Interface layer**: routers under `interface/routers/{trip_orders,work_orders,reconcile,imports}.py` serve `/trip-orders`, `/work-orders`, `/reconcile`, `/suggest-matches`, `/suggest-wos`, `/upload-excel`, `/export-excel`, and `/imports/*` (customer-Excel preview/commit, apply-pricing, customer-pricing tariff import). Schemas reused from shared `app.schemas.domain` since they nest cross-context `*SummaryOut` shapes. Domain exceptions translated to HTTPException in `interface/error_translation.py`.
   - **Legacy code deleted**: `app/api/v1/{trip_orders,work_orders,reconcile,imports}.py`, `app/services/{trip_order_service,work_order_service,matching_service,state_machine}.py`, `app/repositories/{trip_order_repo,work_order_repo}.py`. The `state_machine` library decorator approach was wholly replaced by domain methods on the aggregates.
   - **Tests**: `backend/tests/contexts/operations/test_domain.py` covers domain invariants; `test_application.py` covers use-case integration (create/list/cancel/match/unmatch/confirm/update + container validation) against the in-memory SQLite test DB.
+- **Fleet** — extracted to `backend/app/contexts/fleet/` (commit 2026-05-06). Drivers in this codebase are `User` rows with `role='driver'`; Fleet provides the driver-scoped use cases and the public `/drivers` router on top of Identity's User aggregate. ORM is re-exported via `infrastructure/orm.py` as `DriverORM` so Fleet doesn't import Identity internals. Use cases: `ListDrivers`, `CreateDriver`. There is no separate `Vehicle` / `Trailer` aggregate yet — when one is added it will land here.
+- **Billing** — extracted to `backend/app/contexts/billing/` (commit 2026-05-06). Aggregate is `SettlementStatement` (read-side, computes VAT + totals from a `route_summary`) built from operations + customer-master tables by `SqlSettlementDataLoader`. Excel writer (BKTT + SL workbook) sits in `infrastructure/excel_writer.py`. Use case: `GenerateCustomerSettlement`. Endpoint: `/reports/customer-settlement/export`.
+- **Payroll** — extracted to `backend/app/contexts/payroll/` (commit 2026-05-06). Aggregates: `SalaryPeriod` (with `recalculate()` enforcing `net_pay = total_salary + total_allowance - total_deduction`) and the `SalaryPeriodConfig` singleton. Use cases: `CalculateSalary` (called from the arq worker), `ListSalaryPeriods`, `ListSalaryPeriodsForDateRange`, `UpdateSalaryPeriod`, `GetOrCreateSalaryConfig`, `UpdateSalaryConfig`. The legacy `salary_service.get_salary_period_dates` helper became `payroll.domain.entities.period_dates_for`.
+- **Platform (cross-cutting reads)** — `backend/app/contexts/platform/interface/routers/` hosts the dashboard summary and audit-log readout. No domain layer — these are pure presentation views over multiple bounded contexts.
 
-The remaining 4 contexts (Fleet, Billing/Settlement, an optional standalone Imports context, plus cross-cutting Core/Composition) still live in the legacy folder layout. The `app/services/import_pipeline/` module — sheet picker, header finder, column mapper, value parsers, LLM stub, customer templates — is currently called from Operations' interface layer and may be promoted into its own bounded context (C6) later.
+All legacy `app/services/`, `app/repositories/`, and `app/api/v1/{drivers,reports,salary,salary_config,audit,dashboard}.py` directories are gone (commit 2026-05-06). Files relocated:
+
+- `services/audit_service.py` → `core/audit.py`
+- `services/summary_loader.py` → `core/summaries.py`
+- `services/{code_service,photo_storage,ocr_service,ai_service,excel_service,geocoding}.py` → `contexts/operations/infrastructure/{codes,photo_storage,ocr,ai,excel,geocoding}.py`
+- `services/import_pipeline/` → `contexts/operations/infrastructure/import_pipeline/`
+- `services/pricing_import.py` → `contexts/customer_pricing/infrastructure/pricing_import.py`
+- `services/push_service.py` → `contexts/identity/infrastructure/push_notifications.py`
+- `repositories/base.py` → `core/base_repository.py`
+- `repositories/user_repo.py` → `contexts/identity/infrastructure/user_legacy_repo.py`
+- `repositories/client_repo.py` → `contexts/customer_pricing/infrastructure/client_legacy_repo.py`
+- `api/v1/audit.py`, `api/v1/dashboard.py` → `contexts/platform/interface/routers/`
 
 ---
 
@@ -396,22 +421,26 @@ The remaining 4 contexts (Fleet, Billing/Settlement, an optional standalone Impo
 
 | Concern | File |
 |---|---|
-| Models | `backend/app/models/domain.py`, `backend/app/models/audit_log.py`, `backend/app/models/base.py` |
+| Models (ORM tables) | `backend/app/models/domain.py`, `backend/app/models/audit_log.py`, `backend/app/models/base.py` |
 | Migrations | `backend/alembic/versions/*.py` |
 | Auth + RBAC | `backend/app/core/security.py`, `backend/app/core/deps.py`, `backend/app/policy.polar` |
-| Audit log auto-recording | `backend/app/services/audit_service.py` |
+| Audit log auto-recording | `backend/app/core/audit.py` |
+| Read-DTO summary loaders | `backend/app/core/summaries.py` |
+| Composition root | `backend/app/main.py`, `backend/app/api/v1/router.py` |
+| Identity (auth, users, push) | `backend/app/contexts/identity/` |
+| Fleet (drivers) | `backend/app/contexts/fleet/` |
+| Customer & Pricing (clients, vendors, locations, routes, pricings) | `backend/app/contexts/customer_pricing/` |
 | Pricing lookup | `backend/app/contexts/customer_pricing/application/pricing_lookup.py` |
-| Read-DTO summary loader | `backend/app/services/summary_loader.py` |
 | Location resolver (alias system) | `backend/app/contexts/customer_pricing/application/location_resolver.py` |
-| Import pipeline | `backend/app/services/import_pipeline/` (canonical schema, sheet picker, header finder, column mapper, value parsers, llm fallback, pipeline orchestrator) |
-| BK SL generation | `backend/app/services/customer_settlement_service.py`, `backend/app/services/excel_pan_bk_sl.py`, `backend/app/utils/number_to_words_vi.py` |
-| Trip-order use cases | `backend/app/services/trip_order_service.py`, `backend/app/api/v1/trip_orders.py` |
-| Reconciliation | `backend/app/services/matching_service.py`, `backend/app/api/v1/reconcile.py`, `backend/app/services/state_machine.py` |
-| Salary calculation | `backend/app/services/salary_service.py` |
-| Customer-Excel import API | `backend/app/api/v1/imports.py` |
-| Reports (BK SL export endpoint) | `backend/app/api/v1/reports.py` |
-| Driver mobile flow (work orders) | `backend/app/api/v1/work_orders.py`, `backend/app/services/work_order_service.py` |
-| Background jobs | `backend/app/workers/` |
+| Operations (đơn hàng, phiếu làm việc, đối soát, imports) | `backend/app/contexts/operations/` |
+| Import pipeline | `backend/app/contexts/operations/infrastructure/import_pipeline/` |
+| Trip-order Excel + work-order Excel + reconciliation Excel | `backend/app/contexts/operations/infrastructure/excel.py` |
+| Container OCR (Gemini-backed) | `backend/app/contexts/operations/infrastructure/ocr.py`, `ai.py` |
+| TO/WO code generation | `backend/app/contexts/operations/infrastructure/codes.py` |
+| Billing (BK SL settlement export) | `backend/app/contexts/billing/` |
+| Payroll (salary periods + config + worker calc) | `backend/app/contexts/payroll/` |
+| Platform (dashboard + audit readout) | `backend/app/contexts/platform/interface/routers/` |
+| Background jobs (arq) | `backend/app/workers/` |
 | CLI seeders | `scripts/seeds/` (customers, locations, pricing per format, routes) |
 | Frontend domain types | `frontend/src/data/domain.ts` |
 | Frontend API clients | `frontend/src/services/api/` |

@@ -13,14 +13,14 @@ from pathlib import Path
 import openpyxl
 import pytest
 
-from app.services.import_pipeline.canonical import (
+from app.contexts.operations.infrastructure.import_pipeline.canonical import (
     is_skip_header,
     normalize_header_text,
     synonym_substring_match,
     EXACT_LOOKUP,
 )
-from app.services.import_pipeline.pipeline import run_preview
-from app.services.import_pipeline.value_parsers import (
+from app.contexts.operations.infrastructure.import_pipeline.pipeline import run_preview
+from app.contexts.operations.infrastructure.import_pipeline.value_parsers import (
     parse_container_no,
     parse_container_size,
     parse_freight_kind,

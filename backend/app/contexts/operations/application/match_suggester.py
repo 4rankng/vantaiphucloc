@@ -44,7 +44,7 @@ from app.schemas.domain import (
     WOSuggestion,
     WorkOrderOut,
 )
-from app.services.summary_loader import (
+from app.core.summaries import (
     get_client_summary,
     get_driver_summary,
     get_location_summary,

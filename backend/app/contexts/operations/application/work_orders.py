@@ -48,7 +48,7 @@ def _validate_containers(containers: list[WorkOrderContainerInput]) -> None:
 async def _add_containers(
     w: WorkOrder, containers: list[WorkOrderContainerInput]
 ) -> None:
-    from app.services.photo_storage import save_base64_photo
+    from app.contexts.operations.infrastructure.photo_storage import save_base64_photo
 
     for c in containers:
         photo_url = c.photo_url
@@ -144,7 +144,7 @@ class CreateWorkOrder:
         from app.contexts.customer_pricing.application.pricing_lookup import (
             find_pricing,
         )
-        from app.services.code_service import generate_work_order_code
+        from app.contexts.operations.infrastructure.codes import generate_work_order_code
 
         _validate_containers(data.containers)
 
@@ -330,7 +330,7 @@ class BatchCreateWorkOrders:
         from app.contexts.customer_pricing.application.pricing_lookup import (
             find_pricing,
         )
-        from app.services.code_service import generate_work_order_code
+        from app.contexts.operations.infrastructure.codes import generate_work_order_code
 
         results: list[tuple[int, int | None, str | None]] = []
         async with self.session.begin():
