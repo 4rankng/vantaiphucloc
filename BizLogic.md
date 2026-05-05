@@ -360,8 +360,14 @@ CQRS read/write split, event sourcing, dedicated message bus, polyglot persisten
 ### 9.7 Realized contexts
 
 - **Identity & Access** — extracted to `backend/app/contexts/identity/` (commit 2026-05-05). Pure-Python `User` and `PushSubscription` domain entities; `BcryptPasswordHasher` + `JwtTokenIssuer` adapters in `infrastructure/security.py`; routers under `interface/routers/`. `app/models/base.py` and `app/models/push.py` remain as one-line shims so the rest of the codebase (still using `from app.models.base import User`) keeps compiling until each consuming context is itself extracted.
+- **Customer & Pricing** — extracted to `backend/app/contexts/customer_pricing/` (commit 2026-05-05). Catalog (`Catalog` in §9.1) and `Pricing` were merged into a single bounded context because the import pipeline couples them tightly — every tariff row references customer + lane + container_type. Realized in this commit:
+  - **Domain layer**: pure-Python aggregates `Customer`, `Location` (with aliases inside), `Pricing` (with `PricingLine` tiers inside, `line_for_quantity` business method), `Route`, `Vendor`. Repository ABCs in `domain/repositories.py`. No SQLAlchemy/Pydantic/FastAPI imports.
+  - **Infrastructure layer**: ORM tables still physically in `app/models/domain.py` for now, re-exported via `infrastructure/orm.py` under `XxxORM` aliases. Mappers in `infrastructure/mappers.py`; concrete `Sql*Repository` impls in `infrastructure/repositories.py` (Customer, Vendor, Location with aliases, Route, Pricing with lines).
+  - **Application layer**: full use cases for the **Customer** aggregate (`CreateCustomer`/`UpdateCustomer`/`ListCustomers`/`DeleteCustomer`/`GetCustomer`). Vendor, Location, Pricing, Route use cases will land in follow-ups — for now their endpoints still route through legacy `app/api/v1/{vendors,locations,routes,pricings}.py` + `app/repositories/*.py` + `app/services/{location_resolver,pricing_service,pricing_import}.py`.
+  - **Interface layer**: `/clients` endpoints now route through `app.contexts.customer_pricing.interface.routers.clients`. `app/api/v1/clients.py` is a one-line shim.
+  - **Cross-context guard** (Customer delete): the legacy SQL check for work_orders/trip_orders survives in the new router as a thin `text()` call. To be replaced by an `OperationsRefsPort` ABC once C3 lands.
 
-The remaining 7 contexts still live in the legacy folder layout (`app/models/`, `app/services/`, `app/repositories/`, `app/api/v1/`).
+The remaining 6 contexts (Fleet, Operations, Imports, Billing, Payroll, plus the cross-cutting AuditLog) still live in the legacy folder layout. Inside `customer_pricing` itself, Vendor/Location/Pricing/Route use cases + interface routers are also pending — domain + infrastructure are done so the migration is mechanical.
 
 ---
 
