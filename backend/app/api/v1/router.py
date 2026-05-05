@@ -7,11 +7,14 @@ from app.contexts.identity.interface import (
     push_router,
     users_router,
 )
-from app.contexts.customer_pricing.interface import clients_router
+from app.contexts.customer_pricing.interface import (
+    clients_router,
+    locations_router,
+    pricings_router,
+    routes_router,
+    vendors_router,
+)
 from app.database import engine
-from app.api.v1.locations import router as locations_router
-from app.api.v1.routes import router as routes_router
-from app.api.v1.pricings import router as pricings_router
 from app.api.v1.work_orders import router as work_orders_router
 from app.api.v1.trip_orders import router as trip_orders_router
 from app.api.v1.reconcile import router as reconcile_router
@@ -19,7 +22,6 @@ from app.api.v1.salary import router as salary_router
 from app.api.v1.salary_config import router as salary_config_router
 from app.api.v1.drivers import router as drivers_router
 from app.api.v1.dashboard import router as dashboard_router
-from app.api.v1.vendors import router as vendors_router
 from app.api.v1.audit import router as audit_router
 from app.api.v1.reports import router as reports_router
 from app.api.v1.imports import router as imports_router

@@ -26,14 +26,15 @@ import logging
 import re
 import unicodedata
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from enum import Enum
-from typing import Iterable
 
-from sqlalchemy import select, or_
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.domain import Location, LocationAlias
+from app.contexts.customer_pricing.infrastructure.orm import (
+    LocationAliasORM as LocationAlias,
+    LocationORM as Location,
+)
 
 
 _logger = logging.getLogger(__name__)

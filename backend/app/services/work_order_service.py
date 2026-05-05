@@ -13,7 +13,7 @@ from app.models.enums import WorkOrderStatus
 from app.schemas.domain import WorkOrderCreate
 from app.services.code_service import generate_work_order_code
 from app.services.photo_storage import save_base64_photo
-from app.services.pricing_service import find_pricing
+from app.contexts.customer_pricing.application.pricing_lookup import find_pricing
 from app.utils.iso6346 import normalize_container_number, validate_container_number
 
 _logger = logging.getLogger(__name__)

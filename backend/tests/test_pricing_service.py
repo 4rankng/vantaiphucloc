@@ -3,7 +3,11 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from app.services.pricing_service import find_pricing, find_tiered_pricing, _pricing_cache_key
+from app.contexts.customer_pricing.application.pricing_lookup import (
+    _pricing_cache_key,
+    find_pricing,
+    find_tiered_pricing,
+)
 
 
 @pytest.mark.asyncio

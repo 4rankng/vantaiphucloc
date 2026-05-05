@@ -28,7 +28,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import Client, Pricing, PricingLine
-from app.services.location_resolver import (
+from app.contexts.customer_pricing.application.location_resolver import (
     LocationResolverService,
     ResolverSource,
 )

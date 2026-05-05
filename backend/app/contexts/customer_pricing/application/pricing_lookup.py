@@ -1,21 +1,27 @@
-"""
-Pricing lookup service.
+"""Pricing lookup helpers — read-only.
 
-Used by work order and trip order creation to auto-fill unit_price, driver_salary,
-allowance, and earning from a matching Pricing record + PricingLine.
+Used by Operations (work-order / trip-order creation, bulk apply-pricing,
+imports) to auto-fill `unit_price`, `driver_salary`, `allowance`, and
+`earning` from the matching Pricing + PricingLine. Lookup is FK-only —
+callers can pass `pickup_location_id`/`dropoff_location_id` directly,
+or pass name strings and we resolve them via the `locations` table.
 
-Lookup is FK-only (after the schema overhaul that dropped denormalized
-string columns from `pricings`). Callers can pass either an explicit
-`pickup_location_id`/`dropoff_location_id` pair or a name+resolver to
-turn strings into IDs.
+Talks to ORM models directly — Operations consumers pass their existing
+`AsyncSession`. Migrating the consumers to a thin port lives in C3.
 """
+
+from __future__ import annotations
 
 import hashlib
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.domain import Pricing, PricingLine, Location
+from app.contexts.customer_pricing.infrastructure.orm import (
+    LocationORM,
+    PricingLineORM,
+    PricingORM,
+)
 from app.core.cache import CacheManager
 
 
@@ -31,7 +37,9 @@ async def _resolve_location_id(db: AsyncSession, name: str | None) -> int | None
     if not name:
         return None
     res = await db.execute(
-        select(Location.id).where(Location.name == name, Location.is_active == True)
+        select(LocationORM.id).where(
+            LocationORM.name == name, LocationORM.is_active == True  # noqa: E712
+        )
     )
     return res.scalar_one_or_none()
 
@@ -42,12 +50,11 @@ async def find_pricing(
     work_type: str,
     pickup_location_id: int | None = None,
     dropoff_location_id: int | None = None,
-    pickup_location: str | None = None,    # convenience: resolve name → id
-    dropoff_location: str | None = None,   # convenience: resolve name → id
+    pickup_location: str | None = None,
+    dropoff_location: str | None = None,
     cache: CacheManager | None = None,
-    # `route` kept for callers that still pass it; ignored.
     route: str | None = None,
-) -> Pricing | None:
+) -> PricingORM | None:
     """Find the Pricing row for `(client_id, work_type, pickup, dropoff)`.
 
     `pickup_location_id`/`dropoff_location_id` are preferred. If only
@@ -61,34 +68,38 @@ async def find_pricing(
     if pickup_location_id is None or dropoff_location_id is None:
         return None
 
-    cache_key = _pricing_cache_key(client_id, work_type, pickup_location_id, dropoff_location_id)
+    cache_key = _pricing_cache_key(
+        client_id, work_type, pickup_location_id, dropoff_location_id
+    )
     if cache:
         cached = await cache.get_json("pricing_lookup", cache_key)
         if cached is not None:
             res = await db.execute(
-                select(Pricing).where(Pricing.id == cached["id"]).limit(1)
+                select(PricingORM).where(PricingORM.id == cached["id"]).limit(1)
             )
             return res.scalar_one_or_none()
 
     res = await db.execute(
-        select(Pricing).where(
-            Pricing.client_id == client_id,
-            Pricing.work_type == work_type,
-            Pricing.pickup_location_id == pickup_location_id,
-            Pricing.dropoff_location_id == dropoff_location_id,
-            Pricing.is_active == True,
+        select(PricingORM).where(
+            PricingORM.client_id == client_id,
+            PricingORM.work_type == work_type,
+            PricingORM.pickup_location_id == pickup_location_id,
+            PricingORM.dropoff_location_id == dropoff_location_id,
+            PricingORM.is_active == True,  # noqa: E712
         ).limit(1)
     )
     pricing = res.scalar_one_or_none()
     if pricing and cache:
-        await cache.set_json("pricing_lookup", cache_key, {"id": pricing.id}, ttl=600)
+        await cache.set_json(
+            "pricing_lookup", cache_key, {"id": pricing.id}, ttl=600
+        )
     return pricing
 
 
 class TieredPricing:
     """Financial values resolved from a PricingLine for a given quantity."""
 
-    def __init__(self, pricing: Pricing, line: PricingLine):
+    def __init__(self, pricing: PricingORM, line: PricingLineORM):
         self.pricing = pricing
         self.unit_price = line.unit_price
         self.driver_salary = line.driver_salary
@@ -127,17 +138,17 @@ async def find_tiered_pricing(
         return None
 
     res = await db.execute(
-        select(PricingLine).where(
-            PricingLine.pricing_id == pricing.id,
-            PricingLine.quantity == quantity,
+        select(PricingLineORM).where(
+            PricingLineORM.pricing_id == pricing.id,
+            PricingLineORM.quantity == quantity,
         ).limit(1)
     )
     line = res.scalar_one_or_none()
     if line is None and quantity != 1:
         res = await db.execute(
-            select(PricingLine).where(
-                PricingLine.pricing_id == pricing.id,
-                PricingLine.quantity == 1,
+            select(PricingLineORM).where(
+                PricingLineORM.pricing_id == pricing.id,
+                PricingLineORM.quantity == 1,
             ).limit(1)
         )
         line = res.scalar_one_or_none()
