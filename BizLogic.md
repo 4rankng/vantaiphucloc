@@ -360,14 +360,15 @@ CQRS read/write split, event sourcing, dedicated message bus, polyglot persisten
 ### 9.7 Realized contexts
 
 - **Identity & Access** — extracted to `backend/app/contexts/identity/` (commit 2026-05-05). Pure-Python `User` and `PushSubscription` domain entities; `BcryptPasswordHasher` + `JwtTokenIssuer` adapters in `infrastructure/security.py`; routers under `interface/routers/`. `app/models/base.py` and `app/models/push.py` remain as one-line shims so the rest of the codebase (still using `from app.models.base import User`) keeps compiling until each consuming context is itself extracted.
-- **Customer & Pricing** — extracted to `backend/app/contexts/customer_pricing/` (commit 2026-05-05). Catalog (`Catalog` in §9.1) and `Pricing` were merged into a single bounded context because the import pipeline couples them tightly — every tariff row references customer + lane + container_type. Realized in this commit:
+- **Customer & Pricing** — extracted to `backend/app/contexts/customer_pricing/` (initial commit 2026-05-05; finished 2026-05-05). Catalog (`Catalog` in §9.1) and `Pricing` were merged into a single bounded context because the import pipeline couples them tightly — every tariff row references customer + lane + container_type. State:
   - **Domain layer**: pure-Python aggregates `Customer`, `Location` (with aliases inside), `Pricing` (with `PricingLine` tiers inside, `line_for_quantity` business method), `Route`, `Vendor`. Repository ABCs in `domain/repositories.py`. No SQLAlchemy/Pydantic/FastAPI imports.
-  - **Infrastructure layer**: ORM tables still physically in `app/models/domain.py` for now, re-exported via `infrastructure/orm.py` under `XxxORM` aliases. Mappers in `infrastructure/mappers.py`; concrete `Sql*Repository` impls in `infrastructure/repositories.py` (Customer, Vendor, Location with aliases, Route, Pricing with lines).
-  - **Application layer**: full use cases for the **Customer** aggregate (`CreateCustomer`/`UpdateCustomer`/`ListCustomers`/`DeleteCustomer`/`GetCustomer`). Vendor, Location, Pricing, Route use cases will land in follow-ups — for now their endpoints still route through legacy `app/api/v1/{vendors,locations,routes,pricings}.py` + `app/repositories/*.py` + `app/services/{location_resolver,pricing_service,pricing_import}.py`.
-  - **Interface layer**: `/clients` endpoints now route through `app.contexts.customer_pricing.interface.routers.clients`. `app/api/v1/clients.py` is a one-line shim.
+  - **Infrastructure layer**: ORM tables still physically in `app/models/domain.py` for now, re-exported via `infrastructure/orm.py` under `XxxORM` aliases. Mappers in `infrastructure/mappers.py`; concrete `Sql*Repository` impls in `infrastructure/repositories.py` (Customer, Vendor, Location with aliases, Route, Pricing with lines — `SqlPricingRepository.save` now reconciles tiers: update + insert + delete-orphan).
+  - **Application layer**: full CRUD use cases for **all five** aggregates (Customer, Vendor, Location, Pricing, Route), plus `PinDriverLocation` and `ListAllActiveLocations` for the driver picker. The two read-only helpers shared with Operations — `pricing_lookup.find_pricing` / `find_tiered_pricing` and the `LocationResolverService` (alias chain for import + trip-order creation) — now live under `application/pricing_lookup.py` and `application/location_resolver.py`. Operations callers import them from the context path; they still talk ORM directly so `AsyncSession` flows through unchanged. A real port + repository abstraction can replace the direct ORM access during C3.
+  - **Interface layer**: `/clients`, `/vendors`, `/locations` (incl. `/locations/all`, `/locations/nearby`, `/locations/pin`), `/routes`, `/pricings` all route through `app.contexts.customer_pricing.interface.routers.*`. Wired in `app/api/v1/router.py`. Pydantic schemas live in `interface/schemas.py`. Error translation maps `NotFound`/`AlreadyExists`/`LocationInUse`/`PricingNotMatched` to HTTPException in `interface/error_translation.py`.
   - **Cross-context guard** (Customer delete): the legacy SQL check for work_orders/trip_orders survives in the new router as a thin `text()` call. To be replaced by an `OperationsRefsPort` ABC once C3 lands.
+  - **Legacy code deleted**: `app/api/v1/{clients,vendors,locations,routes,pricings}.py`, `app/services/{location_resolver,pricing_service}.py`, `app/repositories/{vendor,location,pricing,route}_repo.py`. The `app/repositories/` folder still holds `client_repo.py` (used by Operations' trip_orders router) plus `trip_order_repo`, `work_order_repo`, `user_repo`, `salary_repo` — those will move when their owning context lands.
 
-The remaining 6 contexts (Fleet, Operations, Imports, Billing, Payroll, plus the cross-cutting AuditLog) still live in the legacy folder layout. Inside `customer_pricing` itself, Vendor/Location/Pricing/Route use cases + interface routers are also pending — domain + infrastructure are done so the migration is mechanical.
+The remaining 6 contexts (Fleet, Operations, Imports, Billing, Payroll, plus the cross-cutting AuditLog) still live in the legacy folder layout.
 
 ---
 
@@ -392,9 +393,9 @@ The remaining 6 contexts (Fleet, Operations, Imports, Billing, Payroll, plus the
 | Migrations | `backend/alembic/versions/*.py` |
 | Auth + RBAC | `backend/app/core/security.py`, `backend/app/core/deps.py`, `backend/app/policy.polar` |
 | Audit log auto-recording | `backend/app/services/audit_service.py` |
-| Pricing lookup | `backend/app/services/pricing_service.py` |
+| Pricing lookup | `backend/app/contexts/customer_pricing/application/pricing_lookup.py` |
 | Read-DTO summary loader | `backend/app/services/summary_loader.py` |
-| Location resolver (alias system) | `backend/app/services/location_resolver.py` |
+| Location resolver (alias system) | `backend/app/contexts/customer_pricing/application/location_resolver.py` |
 | Import pipeline | `backend/app/services/import_pipeline/` (canonical schema, sheet picker, header finder, column mapper, value parsers, llm fallback, pipeline orchestrator) |
 | BK SL generation | `backend/app/services/customer_settlement_service.py`, `backend/app/services/excel_pan_bk_sl.py`, `backend/app/utils/number_to_words_vi.py` |
 | Trip-order use cases | `backend/app/services/trip_order_service.py`, `backend/app/api/v1/trip_orders.py` |

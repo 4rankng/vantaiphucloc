@@ -30,7 +30,9 @@ async def create_trip_order(
         work_type_val = body.containers[0].work_type
         validate_container_quantity(work_type_val, len(body.containers))
 
-        from app.services.pricing_service import find_tiered_pricing
+        from app.contexts.customer_pricing.application.pricing_lookup import (
+            find_tiered_pricing,
+        )
         container_count = sum(
             1 for c in body.containers if c.work_type == work_type_val
         ) or 1

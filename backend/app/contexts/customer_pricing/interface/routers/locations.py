@@ -1,20 +1,71 @@
+"""Location HTTP endpoints — CRUD + GPS-aware nearby + driver-pin."""
+
+from __future__ import annotations
+
 import math
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from redis.asyncio import Redis
-from sqlalchemy import text
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.base import User
-from app.schemas.base import PaginatedResponse
-from app.schemas.domain import LocationCreate, LocationUpdate, LocationOut
-from app.core.deps import require_permission
-from app.core.redis import get_redis
-from app.core.cache import CacheManager
 from app.config import settings
-from app.repositories.location_repo import LocationRepository
-from app.repositories.deps import get_location_repo
+from app.contexts.customer_pricing.application import (
+    CreateLocation,
+    DeleteLocation,
+    ListAllActiveLocations,
+    ListLocations,
+    PinDriverLocation,
+    UpdateLocation,
+)
+from app.contexts.customer_pricing.application.dto import (
+    LocationCreateInput,
+    LocationPinInput,
+    LocationUpdateInput,
+)
+from app.contexts.customer_pricing.application.location_resolver import (
+    normalize as _normalize,
+)
+from app.contexts.customer_pricing.domain.exceptions import (
+    AlreadyExists,
+    LocationInUse,
+    NotFound,
+)
+from app.contexts.customer_pricing.domain.value_objects import LocationId
+from app.contexts.customer_pricing.infrastructure.orm import (
+    LocationAliasORM,
+    LocationORM,
+)
+from app.contexts.customer_pricing.interface.dependencies import (
+    get_create_location,
+    get_delete_location,
+    get_list_all_active_locations,
+    get_list_locations,
+    get_pin_driver_location,
+    get_update_location,
+)
+from app.contexts.customer_pricing.interface.error_translation import translate
+from app.contexts.customer_pricing.interface.schemas import (
+    LocationCreate,
+    LocationNearbyOut,
+    LocationOut,
+    LocationPinRequest,
+    LocationUpdate,
+    location_to_out,
+)
+from app.core.cache import CacheManager
+from app.core.deps import get_current_user, require_permission
+from app.core.redis import get_redis
+from app.database import get_db
+from app.models.base import User
+from app.models.domain import TripOrder
+from app.schemas.base import PaginatedResponse
+
 
 router = APIRouter()
+
+
+# ── CRUD ────────────────────────────────────────────────────────
 
 
 @router.get("/locations", response_model=PaginatedResponse[LocationOut])
@@ -22,7 +73,7 @@ async def list_locations(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     current_user: User = Depends(require_permission("read", "Location")),
-    repo: LocationRepository = Depends(get_location_repo),
+    use_case: ListLocations = Depends(get_list_locations),
     redis: Redis = Depends(get_redis),
 ):
     cache = CacheManager(redis)
@@ -31,46 +82,43 @@ async def list_locations(
     if cached is not None:
         return PaginatedResponse(**cached)
 
-    data, total = await repo.paginate(
-        page, page_size, active_only=True, order_by=repo.model.name.asc()
-    )
-
+    items, total = await use_case(page=page, page_size=page_size, active_only=True)
     response = PaginatedResponse[LocationOut](
-        items=[LocationOut.model_validate(loc) for loc in data],
+        items=[location_to_out(loc) for loc in items],
         total=total,
         page=page,
         page_size=page_size,
         total_pages=math.ceil(total / page_size) if total > 0 else 0,
     )
     serialized = response.model_dump(mode="json")
-    await cache.set_json("locations", cache_key, serialized, ttl=settings.CACHE_LOCATIONS_TTL)
+    await cache.set_json(
+        "locations", cache_key, serialized, ttl=settings.CACHE_LOCATIONS_TTL
+    )
     return response
 
 
 @router.get("/locations/all", response_model=list[LocationOut])
 async def list_all_locations(
     current_user: User = Depends(require_permission("read", "Location")),
-    repo: LocationRepository = Depends(get_location_repo),
+    use_case: ListAllActiveLocations = Depends(get_list_all_active_locations),
 ):
-    data = await repo.list_active(order_by=repo.model.name.asc(), limit=10000)
-    return [LocationOut.model_validate(loc) for loc in data]
+    items = await use_case(limit=10000)
+    return [location_to_out(loc) for loc in items]
 
 
 @router.post("/locations", response_model=LocationOut, status_code=201)
 async def create_location(
     body: LocationCreate,
     current_user: User = Depends(require_permission("update", "Location")),
-    repo: LocationRepository = Depends(get_location_repo),
+    use_case: CreateLocation = Depends(get_create_location),
     redis: Redis = Depends(get_redis),
 ):
-    if await repo.find_by_name(body.name):
-        raise HTTPException(status_code=409, detail="Location already exists")
-
-    location = await repo.create(name=body.name)
-    await repo.session.commit()
-    await repo.session.refresh(location)
+    try:
+        loc = await use_case(LocationCreateInput(name=body.name))
+    except AlreadyExists as e:
+        raise translate(e)
     await CacheManager(redis).invalidate_namespace("locations")
-    return location
+    return location_to_out(loc)
 
 
 @router.put("/locations/{location_id}", response_model=LocationOut)
@@ -78,79 +126,50 @@ async def update_location(
     location_id: int,
     body: LocationUpdate,
     current_user: User = Depends(require_permission("update", "Location")),
-    repo: LocationRepository = Depends(get_location_repo),
+    use_case: UpdateLocation = Depends(get_update_location),
     redis: Redis = Depends(get_redis),
 ):
-    location = await repo.get_by_id_or_404(location_id)
-    await repo.update(location, **body.model_dump(exclude_unset=True))
-    await repo.session.commit()
-    await repo.session.refresh(location)
+    try:
+        loc = await use_case(LocationId(location_id), LocationUpdateInput(name=body.name))
+    except NotFound as e:
+        raise translate(e)
     await CacheManager(redis).invalidate_namespace("locations")
-    return location
+    return location_to_out(loc)
 
 
 @router.delete("/locations/{location_id}", status_code=204)
 async def delete_location(
     location_id: int,
     current_user: User = Depends(require_permission("update", "Location")),
-    repo: LocationRepository = Depends(get_location_repo),
+    use_case: DeleteLocation = Depends(get_delete_location),
     redis: Redis = Depends(get_redis),
 ):
-    location = await repo.get_by_id_or_404(location_id)
-
-    # Guard: check for FK references
-    tables_cols = [
-        ("routes", "pickup_location_id"),
-        ("routes", "dropoff_location_id"),
-        ("work_orders", "pickup_location_id"),
-        ("work_orders", "dropoff_location_id"),
-        ("trip_orders", "pickup_location_id"),
-        ("trip_orders", "dropoff_location_id"),
-        ("pricings", "pickup_location_id"),
-        ("pricings", "dropoff_location_id"),
-    ]
-    for table, col in tables_cols:
-        r = await repo.session.execute(
-            text(f"SELECT 1 FROM {table} WHERE {col} = :lid LIMIT 1"),
-            {"lid": location_id},
+    try:
+        await use_case(LocationId(location_id))
+    except NotFound as e:
+        raise translate(e)
+    except LocationInUse as e:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot delete: location is referenced in {e.table}.{e.column}",
         )
-        if r.scalar():
-            raise HTTPException(
-                status_code=409,
-                detail=f"Cannot delete: location is referenced in {table}.{col}",
-            )
-
-    await repo.soft_delete(location)
-    await repo.session.commit()
     await CacheManager(redis).invalidate_namespace("locations")
     return Response()
 
 
-# ---------------------------------------------------------------------------
-# GPS-aware picker endpoints — nearby search + driver-pin
-# ---------------------------------------------------------------------------
-
-import math as _math
-from datetime import datetime as _dt, timezone as _tz
-from sqlalchemy import select as _select
-from sqlalchemy.ext.asyncio import AsyncSession as _AsyncSession
-from app.database import get_db as _get_db
-from app.models.domain import (
-    Location as _Location,
-    LocationAlias as _LocationAlias,
-    TripOrder as _TripOrder,
-)
-from app.schemas.domain import LocationNearbyOut, LocationPinRequest
-from app.core.deps import get_current_user as _get_current_user
-from app.services.location_resolver import normalize as _normalize
+# ── GPS-aware picker ────────────────────────────────────────────
 
 
 def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     R = 6371.0
-    dlat = _math.radians(lat2 - lat1)
-    dlng = _math.radians(lng2 - lng1)
-    a = _math.sin(dlat / 2) ** 2 + _math.cos(_math.radians(lat1)) * _math.cos(_math.radians(lat2)) * _math.sin(dlng / 2) ** 2
-    return 2 * R * _math.asin(_math.sqrt(a))
+    dlat = math.radians(lat2 - lat1)
+    dlng = math.radians(lng2 - lng1)
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2))
+        * math.sin(dlng / 2) ** 2
+    )
+    return 2 * R * math.asin(math.sqrt(a))
 
 
 @router.get("/locations/nearby", response_model=list[LocationNearbyOut])
@@ -164,8 +183,8 @@ async def nearby_locations(
     ),
     radius_km: float = Query(50.0, ge=0.1, le=2000.0),
     limit: int = Query(20, ge=1, le=100),
-    current_user: User = Depends(_get_current_user),
-    db: _AsyncSession = Depends(_get_db),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """Driver-facing dropdown source.
 
@@ -184,7 +203,7 @@ async def nearby_locations(
     pinned_ids: list[int] = []
     if trip_id is not None:
         trip = (await db.execute(
-            _select(_TripOrder).where(_TripOrder.id == trip_id)
+            select(TripOrder).where(TripOrder.id == trip_id)
         )).scalar_one_or_none()
         if trip is not None:
             if trip.pickup_location_id:
@@ -192,12 +211,14 @@ async def nearby_locations(
             if trip.dropoff_location_id and trip.dropoff_location_id not in pinned_ids:
                 pinned_ids.append(trip.dropoff_location_id)
 
-    base_q = _select(_Location).where(_Location.is_active.is_(True))
+    base_q = select(LocationORM).where(LocationORM.is_active.is_(True))
 
     if q:
         q_norm = _normalize(q)
-        candidate_locs = list((await db.execute(_select(_Location))).scalars().all())
-        candidate_aliases = list((await db.execute(_select(_LocationAlias))).scalars().all())
+        candidate_locs = list((await db.execute(select(LocationORM))).scalars().all())
+        candidate_aliases = list(
+            (await db.execute(select(LocationAliasORM))).scalars().all()
+        )
         ids: set[int] = set()
         for loc in candidate_locs:
             if q_norm in _normalize(loc.name):
@@ -207,18 +228,18 @@ async def nearby_locations(
                 ids.add(al.location_id)
         if not ids and not pinned_ids:
             return []
-        base_q = base_q.where(_Location.id.in_(ids | set(pinned_ids)))
+        base_q = base_q.where(LocationORM.id.in_(ids | set(pinned_ids)))
 
     locations = list((await db.execute(base_q)).scalars().all())
-    by_id: dict[int, _Location] = {loc.id: loc for loc in locations}
+    by_id: dict[int, LocationORM] = {loc.id: loc for loc in locations}
 
-    pinned_locs: list[_Location] = []
+    pinned_locs: list[LocationORM] = []
     for pid in pinned_ids:
         if pid in by_id:
             pinned_locs.append(by_id[pid])
 
-    coord_rows: list[tuple[_Location, float]] = []
-    no_coord_rows: list[_Location] = []
+    coord_rows: list[tuple[LocationORM, float]] = []
+    no_coord_rows: list[LocationORM] = []
     excluded = {loc.id for loc in pinned_locs}
     for loc in locations:
         if loc.id in excluded:
@@ -232,7 +253,7 @@ async def nearby_locations(
     coord_rows.sort(key=lambda x: x[1])
     no_coord_rows.sort(key=lambda x: x.name.lower())
 
-    def _to_out(loc: _Location, d: float | None) -> LocationNearbyOut:
+    def _to_out(loc: LocationORM, d: float | None) -> LocationNearbyOut:
         return LocationNearbyOut(
             id=loc.id,
             name=loc.name,
@@ -257,47 +278,17 @@ async def nearby_locations(
 @router.post("/locations/pin", response_model=LocationOut)
 async def pin_driver_location(
     body: LocationPinRequest,
-    current_user: User = Depends(_get_current_user),
-    db: _AsyncSession = Depends(_get_db),
+    current_user: User = Depends(get_current_user),
+    use_case: PinDriverLocation = Depends(get_pin_driver_location),
 ):
     """Driver pins their current location as a new place. Creates a
     `Location` with the driver's GPS coords, marks `geocode_source =
-    "driver_pin"` and `pending_geocode = false` (we have coords; an
-    admin will rename it from "Pinned at (lat, lng)" later).
+    "driver_pin"` and `pending_geocode = false`. Idempotent on `name`.
     """
-    name = body.name.strip()[:255]
-    if not name:
-        # Fallback name if driver didn't provide one
-        name = f"Pinned at ({body.lat:.4f}, {body.lng:.4f})"
-    # Idempotent on (name) — the unique constraint catches dupes
-    existing = (await db.execute(
-        _select(_Location).where(_Location.name == name)
-    )).scalar_one_or_none()
-    if existing is not None:
-        # Update coords if not yet set
-        if existing.lat is None or existing.lng is None:
-            existing.lat = body.lat
-            existing.lng = body.lng
-            existing.geocoded_at = _dt.now(_tz.utc)
-            existing.geocode_source = "driver_pin"
-            existing.pending_geocode = False
-            await db.commit()
-            await db.refresh(existing)
-        return LocationOut.model_validate(existing)
-
-    loc = _Location(
-        name=name,
-        is_active=True,
+    loc = await use_case(LocationPinInput(
+        name=body.name,
         lat=body.lat,
         lng=body.lng,
-        geocoded_at=_dt.now(_tz.utc),
-        geocode_source="driver_pin",
-        pending_geocode=False,
-        created_via="driver_pin",
-        created_by_id=current_user.id,
-        location_review_needed=True,  # admin should rename if needed
-    )
-    db.add(loc)
-    await db.commit()
-    await db.refresh(loc)
-    return LocationOut.model_validate(loc)
+        user_id=current_user.id,
+    ))
+    return location_to_out(loc)

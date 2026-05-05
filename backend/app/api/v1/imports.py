@@ -48,7 +48,7 @@ from app.services.import_pipeline.templates import (
     save_template,
 )
 from app.services.import_pipeline.workbook import load_workbook
-from app.services.location_resolver import (
+from app.contexts.customer_pricing.application.location_resolver import (
     LocationResolverService,
     MatchKind,
     ResolverSource,
@@ -472,7 +472,9 @@ async def _apply_pricing_to_trips(
     db: AsyncSession, trips: list[TripOrder], *, skip_already_priced: bool
 ) -> tuple[int, list[int]]:
     """Returns (priced_count, list_of_unpriced_trip_ids)."""
-    from app.services.pricing_service import find_tiered_pricing
+    from app.contexts.customer_pricing.application.pricing_lookup import (
+        find_tiered_pricing,
+    )
 
     priced = 0
     unpriced_ids: list[int] = []
