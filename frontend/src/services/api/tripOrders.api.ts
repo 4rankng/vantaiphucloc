@@ -14,6 +14,7 @@ interface TripOrderFilters {
   status?: TripOrder['status']
   dateFrom?: string
   dateTo?: string
+  unpriced?: boolean
 }
 
 export interface TripOrderCreatePayload {
@@ -55,6 +56,7 @@ export async function getTripOrders(filters?: TripOrderFilters): Promise<ApiResp
     if (filters?.status) params.status = filters.status
     if (filters?.dateFrom) params.date_from = filters.dateFrom
     if (filters?.dateTo) params.date_to = filters.dateTo
+    if (filters?.unpriced !== undefined) params.unpriced = String(filters.unpriced)
     const res = await api.get('/trip-orders', { params })
     return ok(toCamel<TripOrder[]>(unwrapList(res.data)))
   } catch (err) {

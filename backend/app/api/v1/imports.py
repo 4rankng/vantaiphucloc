@@ -105,6 +105,7 @@ class CommitResponse(BaseModel):
     locations_review_flagged: int = 0     # trips flagged for fuzzy-match review
     errors: list[str] = Field(default_factory=list)
     template_id: int | None = None
+    created_trip_ids: list[int] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -287,6 +288,7 @@ async def commit_customer_excel(
     locations_created = 0
     locations_review_flagged = 0
     errors: list[str] = []
+    created_trip_ids: list[int] = []
 
     resolver = LocationResolverService(db)
     locations_seen_before = await _count_locations(db)
@@ -369,6 +371,7 @@ async def commit_customer_excel(
                 locations_review_flagged += 1
             db.add(trip)
             await db.flush()
+            created_trip_ids.append(trip.id)
 
             for v in new_rows:
                 db.add(TripOrderContainer(
@@ -427,6 +430,7 @@ async def commit_customer_excel(
         locations_review_flagged=locations_review_flagged,
         errors=errors,
         template_id=template_id,
+        created_trip_ids=created_trip_ids,
     )
 
 
@@ -436,14 +440,16 @@ async def commit_customer_excel(
 
 # ---------------------------------------------------------------------------
 # Apply pricing — bulk action that runs `find_tiered_pricing` over a set of
-# already-imported TripOrders and fills `unit_price`/`driver_salary`/
-# `allowance` from the Pricing table. Status stays DRAFT (per
-# docs/PRICING_DATA_FLOW.md) but the price is now populated.
+# TripOrders, populating unit_price/driver_salary/allowance from Pricing.
+# Status stays DRAFT (kế toán transitions to PENDING separately). Idempotent:
+# trips that are already priced (unit_price > 0) are left alone, so re-running
+# the same call is a no-op.
 # ---------------------------------------------------------------------------
+
 
 class ApplyPricingRequest(BaseModel):
     client_id: int
-    trip_order_ids: list[int] | None = None  # if None, all DRAFT trips for client
+    trip_order_ids: list[int] | None = None  # legacy: if None, all DRAFT trips for client
 
 
 class ApplyPricingResponse(BaseModel):
@@ -452,13 +458,70 @@ class ApplyPricingResponse(BaseModel):
     not_found_trip_ids: list[int] = Field(default_factory=list)
 
 
+class ApplyPricingByIdsRequest(BaseModel):
+    trip_ids: list[int]
+
+
+class ApplyPricingByIdsResponse(BaseModel):
+    priced: int
+    unpriced: int
+    unpriced_trip_ids: list[int] = Field(default_factory=list)
+
+
+async def _apply_pricing_to_trips(
+    db: AsyncSession, trips: list[TripOrder], *, skip_already_priced: bool
+) -> tuple[int, list[int]]:
+    """Returns (priced_count, list_of_unpriced_trip_ids)."""
+    from app.services.pricing_service import find_tiered_pricing
+
+    priced = 0
+    unpriced_ids: list[int] = []
+    for trip in trips:
+        if skip_already_priced and trip.unit_price and trip.unit_price > 0:
+            priced += 1
+            continue
+        cont_count = await db.scalar(
+            select(func.count(TripOrderContainer.id)).where(
+                TripOrderContainer.trip_order_id == trip.id
+            )
+        ) or 1
+        first_c = await db.execute(
+            select(TripOrderContainer.work_type)
+            .where(TripOrderContainer.trip_order_id == trip.id)
+            .limit(1)
+        )
+        wt = first_c.scalar_one_or_none() or ""
+        if not wt:
+            unpriced_ids.append(trip.id)
+            continue
+        tiered = await find_tiered_pricing(
+            db,
+            client_id=trip.client_id,
+            work_type=wt,
+            quantity=int(cont_count),
+            pickup_location_id=trip.pickup_location_id,
+            dropoff_location_id=trip.dropoff_location_id,
+        )
+        if tiered is None:
+            unpriced_ids.append(trip.id)
+            continue
+        trip.unit_price = tiered.unit_price
+        trip.driver_salary = tiered.driver_salary
+        trip.allowance = tiered.allowance
+        trip.revenue = tiered.unit_price
+        trip.pricing_id = tiered.pricing.id
+        priced += 1
+    return priced, unpriced_ids
+
+
 @router.post("/apply-pricing", response_model=ApplyPricingResponse)
 async def apply_pricing(
     body: ApplyPricingRequest = Body(...),
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(require_roles("accountant", "superadmin")),
 ):
-    from app.services.pricing_service import find_tiered_pricing
+    """Legacy endpoint — kept for back-compat with older callers.
+    See /imports/customer-excel/apply-pricing for the trip-id-only shape."""
     from app.models.enums import TripOrderStatus
 
     q = select(TripOrder).where(
@@ -467,48 +530,49 @@ async def apply_pricing(
     )
     if body.trip_order_ids:
         q = q.where(TripOrder.id.in_(body.trip_order_ids))
-    rows: list[TripOrder] = list((await db.execute(q)).scalars().all())
-
-    priced = 0
-    not_found_ids: list[int] = []
-    for trip in rows:
-        # Need container count + work_type for tiered lookup
-        cont_count = await db.scalar(
-            select(func.count(TripOrderContainer.id))
-            .where(TripOrderContainer.trip_order_id == trip.id)
-        ) or 1
-        # work_type is now stored on each TripContainer (top-level
-        # column was dropped). Pull from the first container.
-        first_c_res = await db.execute(
-            select(TripOrderContainer.work_type)
-            .where(TripOrderContainer.trip_order_id == trip.id)
-            .limit(1)
-        )
-        wt = first_c_res.scalar_one_or_none() or ""
-        if not wt:
-            not_found_ids.append(trip.id)
-            continue
-        tiered = await find_tiered_pricing(
-            db, client_id=trip.client_id, work_type=wt,
-            quantity=int(cont_count),
-            pickup_location_id=trip.pickup_location_id,
-            dropoff_location_id=trip.dropoff_location_id,
-        )
-        if tiered is None:
-            not_found_ids.append(trip.id)
-            continue
-        trip.unit_price = tiered.unit_price
-        trip.driver_salary = tiered.driver_salary
-        trip.allowance = tiered.allowance
-        trip.revenue = tiered.unit_price
-        trip.pricing_id = tiered.pricing.id
-        priced += 1
-
+    rows = list((await db.execute(q)).scalars().all())
+    priced, unpriced_ids = await _apply_pricing_to_trips(
+        db, rows, skip_already_priced=False
+    )
     await db.commit()
     return ApplyPricingResponse(
         priced=priced,
-        not_found=len(not_found_ids),
-        not_found_trip_ids=not_found_ids[:50],
+        not_found=len(unpriced_ids),
+        not_found_trip_ids=unpriced_ids[:50],
+    )
+
+
+@router.post(
+    "/customer-excel/apply-pricing", response_model=ApplyPricingByIdsResponse
+)
+async def apply_pricing_to_trip_ids(
+    body: ApplyPricingByIdsRequest = Body(...),
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_roles("accountant", "superadmin")),
+):
+    """Bulk-apply pricing to a specific list of trip ids.
+
+    Idempotent — trips with unit_price > 0 are counted as already priced
+    and not re-touched, so re-running the same call is a no-op.
+    """
+    if not body.trip_ids:
+        return ApplyPricingByIdsResponse(priced=0, unpriced=0, unpriced_trip_ids=[])
+
+    rows = list(
+        (
+            await db.execute(
+                select(TripOrder).where(TripOrder.id.in_(body.trip_ids))
+            )
+        ).scalars().all()
+    )
+    priced, unpriced_ids = await _apply_pricing_to_trips(
+        db, rows, skip_already_priced=True
+    )
+    await db.commit()
+    return ApplyPricingByIdsResponse(
+        priced=priced,
+        unpriced=len(unpriced_ids),
+        unpriced_trip_ids=unpriced_ids[:200],
     )
 
 

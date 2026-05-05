@@ -116,6 +116,7 @@ export const apiClient = {
   previewCustomerExcel: importsApi.previewCustomerExcel,
   commitCustomerExcel: importsApi.commitCustomerExcel,
   listImportTemplates: importsApi.listImportTemplates,
+  applyPricingToTripIds: importsApi.applyPricingToTripIds,
 
   // Customer-Pricing imports
   previewCustomerPricing: importsApi.previewCustomerPricing,
