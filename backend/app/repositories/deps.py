@@ -4,21 +4,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.repositories.client_repo import ClientRepository
 from app.repositories.salary_repo import SalaryPeriodConfigRepository, SalaryPeriodRepository
-from app.repositories.trip_order_repo import TripOrderRepository
 from app.repositories.user_repo import UserRepository
-from app.repositories.work_order_repo import WorkOrderRepository
 
 
 def get_client_repo(db: AsyncSession = Depends(get_db)) -> ClientRepository:
     return ClientRepository(session=db)
-
-
-def get_work_order_repo(db: AsyncSession = Depends(get_db)) -> WorkOrderRepository:
-    return WorkOrderRepository(session=db)
-
-
-def get_trip_order_repo(db: AsyncSession = Depends(get_db)) -> TripOrderRepository:
-    return TripOrderRepository(session=db)
 
 
 def get_user_repo(db: AsyncSession = Depends(get_db)) -> UserRepository:

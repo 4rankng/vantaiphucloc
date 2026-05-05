@@ -1,6 +1,27 @@
-"""Operations interface layer (FastAPI routers + Pydantic schemas).
+"""Operations interface layer (FastAPI routers).
 
-Currently empty — landing in a follow-up commit alongside the
-application use cases. Until then routers live at
-`app/api/v1/{trip_orders,work_orders,reconcile,imports}.py`.
+Exposes the four routers that map use cases to HTTP endpoints. Schemas
+live in `app.schemas.domain` (shared across contexts) — this layer
+imports them rather than redefining them, since they nest cross-context
+`*SummaryOut` shapes.
 """
+
+from app.contexts.operations.interface.routers.imports import (
+    router as imports_router,
+)
+from app.contexts.operations.interface.routers.reconcile import (
+    router as reconcile_router,
+)
+from app.contexts.operations.interface.routers.trip_orders import (
+    router as trip_orders_router,
+)
+from app.contexts.operations.interface.routers.work_orders import (
+    router as work_orders_router,
+)
+
+__all__ = [
+    "imports_router",
+    "reconcile_router",
+    "trip_orders_router",
+    "work_orders_router",
+]
