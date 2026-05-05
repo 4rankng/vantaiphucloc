@@ -78,7 +78,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 
 async def _pairs_from_files(files: list[Path], log) -> set[tuple[str, str]]:
-    from app.services.import_pipeline.pipeline import run_preview  # type: ignore
+    from app.contexts.operations.infrastructure.import_pipeline.pipeline import run_preview  # type: ignore
     out: set[tuple[str, str]] = set()
     for fp in files:
         try:
@@ -121,7 +121,7 @@ async def run(args: argparse.Namespace) -> int:
 
     from sqlalchemy import select  # type: ignore
     from app.models.domain import Location, Route  # type: ignore
-    from app.services.location_resolver import (  # type: ignore
+    from app.contexts.customer_pricing.application.location_resolver import (  # type: ignore
         LocationResolverService, normalize,
     )
 
