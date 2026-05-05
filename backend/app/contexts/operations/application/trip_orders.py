@@ -120,7 +120,7 @@ class CreateTripOrder:
         from app.contexts.customer_pricing.application.pricing_lookup import (
             find_tiered_pricing,
         )
-        from app.services.code_service import generate_trip_order_code
+        from app.contexts.operations.infrastructure.codes import generate_trip_order_code
 
         unit_price = int(data.unit_price or 0)
         driver_salary = int(data.driver_salary or 0)
@@ -273,7 +273,7 @@ class UpdateTripOrder:
             # Cross-context: bump customer outstanding debt when first
             # match goes onto a priced trip. Mirrors legacy behaviour.
             if t.unit_price > 0 and added and not old_matched:
-                from app.repositories.client_repo import ClientRepository
+                from app.contexts.customer_pricing.infrastructure.client_legacy_repo import ClientRepository
                 client_repo = ClientRepository(session=self.session)
                 await client_repo.increment_debt(t.client_id, t.unit_price)
 
@@ -398,7 +398,7 @@ class CreateTripOrderFromImport:
         self.session = session
 
     async def __call__(self, data: ImportCommitInput) -> ImportCommitResult:
-        from app.services.import_pipeline.pipeline import group_rows_into_trips
+        from app.contexts.operations.infrastructure.import_pipeline.pipeline import group_rows_into_trips
         from app.contexts.customer_pricing.application.location_resolver import (
             LocationResolverService,
             ResolverSource,

@@ -32,7 +32,7 @@ async def send_notification_task(
     logger.info("Notification stored: user=%s channel=%s title=%s", user_id, channel, title)
 
     try:
-        from app.services.push_service import send_push_to_user
+        from app.contexts.identity.infrastructure.push_notifications import send_push_to_user
         push_count = await send_push_to_user(user_id, title, message)
         logger.info("Push sent to %d devices for user %s", push_count, user_id)
     except Exception as e:

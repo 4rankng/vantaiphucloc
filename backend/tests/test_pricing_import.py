@@ -16,7 +16,7 @@ import pytest
 from sqlalchemy import select
 
 from app.models.domain import Client, Pricing, PricingLine
-from app.services.pricing_import import (
+from app.contexts.customer_pricing.infrastructure.pricing_import import (
     PricingPreview,
     SUPPORTED_FORMATS,
     TariffRow,

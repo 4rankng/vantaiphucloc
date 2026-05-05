@@ -52,20 +52,20 @@ from app.core.deps import require_roles
 from app.database import get_db
 from app.models.base import User
 from app.models.domain import Client
-from app.services.import_pipeline.canonical import CANONICAL_FIELDS, SKIP_FIELD
-from app.services.import_pipeline.column_mapper import ColumnMapping
-from app.services.import_pipeline.llm import get_default_classifier
-from app.services.import_pipeline.pipeline import (
+from app.contexts.operations.infrastructure.import_pipeline.canonical import CANONICAL_FIELDS, SKIP_FIELD
+from app.contexts.operations.infrastructure.import_pipeline.column_mapper import ColumnMapping
+from app.contexts.operations.infrastructure.import_pipeline.llm import get_default_classifier
+from app.contexts.operations.infrastructure.import_pipeline.pipeline import (
     column_mappings_from_dicts,
     compute_structure_hash,
     run_preview,
 )
-from app.services.import_pipeline.templates import (
+from app.contexts.operations.infrastructure.import_pipeline.templates import (
     find_template,
     list_templates_for_client,
     save_template,
 )
-from app.services.import_pipeline.workbook import load_workbook
+from app.contexts.operations.infrastructure.import_pipeline.workbook import load_workbook
 
 _logger = logging.getLogger(__name__)
 
@@ -175,11 +175,11 @@ async def preview_customer_excel(
             raise HTTPException(
                 status_code=400, detail="Tệp Excel không có sheet nào."
             )
-        from app.services.import_pipeline.header_finder import (
+        from app.contexts.operations.infrastructure.import_pipeline.header_finder import (
             find_header_row,
             header_row_text,
         )
-        from app.services.import_pipeline.sheet_picker import score_sheets
+        from app.contexts.operations.infrastructure.import_pipeline.sheet_picker import score_sheets
 
         sheet = None
         if sheet_name:
@@ -475,7 +475,7 @@ async def preview_customer_pricing(
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(require_roles("accountant", "superadmin")),
 ):
-    from app.services.pricing_import import (
+    from app.contexts.customer_pricing.infrastructure.pricing_import import (
         SUPPORTED_FORMATS,
         detect_format,
         parse_tariff_bytes,
@@ -525,7 +525,7 @@ async def commit_customer_pricing(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_roles("accountant", "superadmin")),
 ):
-    from app.services.pricing_import import TariffRow, commit_tariff_rows
+    from app.contexts.customer_pricing.infrastructure.pricing_import import TariffRow, commit_tariff_rows
 
     if not body.rows:
         raise HTTPException(status_code=400, detail="Không có dòng nào để tạo.")

@@ -53,7 +53,7 @@ from app.schemas.domain import (
     WorkOrderOut,
     WorkOrderUpdate,
 )
-from app.services.summary_loader import (
+from app.core.summaries import (
     get_client_summary,
     get_driver_summary,
     get_location_summary,
@@ -269,7 +269,7 @@ async def export_work_orders_excel(
     current_user: User = Depends(require_permission("export", "WorkOrder")),
     use_case: GetWorkOrder = Depends(get_get_work_order),
 ):
-    from app.services.excel_service import generate_work_orders_excel
+    from app.contexts.operations.infrastructure.excel import generate_work_orders_excel
     session = use_case.repo.session  # type: ignore[attr-defined]
     content = await generate_work_orders_excel(
         session,
@@ -329,7 +329,7 @@ async def ocr_container_number(
     current_user: User = Depends(get_current_user),
     redis=Depends(get_redis),
 ):
-    from app.services.ocr_service import MAX_OCR_ATTEMPTS, extract_container_number
+    from app.contexts.operations.infrastructure.ocr import MAX_OCR_ATTEMPTS, extract_container_number
     user_id = current_user.id
     rkey = f"ocr_attempts:{user_id}:{body.container_index}"
 

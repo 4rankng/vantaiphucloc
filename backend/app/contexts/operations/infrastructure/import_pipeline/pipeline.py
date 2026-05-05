@@ -20,20 +20,20 @@ from dataclasses import asdict, dataclass, field
 from datetime import date
 from typing import Any
 
-from app.services.import_pipeline.canonical import (
+from app.contexts.operations.infrastructure.import_pipeline.canonical import (
     CANONICAL_FIELDS,
     SKIP_FIELD,
     normalize_header_text,
 )
-from app.services.import_pipeline.column_mapper import ColumnMapping, map_columns
-from app.services.import_pipeline.header_finder import (
+from app.contexts.operations.infrastructure.import_pipeline.column_mapper import ColumnMapping, map_columns
+from app.contexts.operations.infrastructure.import_pipeline.header_finder import (
     HeaderHit,
     find_header_row,
     header_row_text,
 )
-from app.services.import_pipeline.llm import HeaderClassifier
-from app.services.import_pipeline.sheet_picker import SheetScore, score_sheets
-from app.services.import_pipeline.value_parsers import (
+from app.contexts.operations.infrastructure.import_pipeline.llm import HeaderClassifier
+from app.contexts.operations.infrastructure.import_pipeline.sheet_picker import SheetScore, score_sheets
+from app.contexts.operations.infrastructure.import_pipeline.value_parsers import (
     parse_container_no,
     parse_container_size,
     parse_date,
@@ -42,7 +42,7 @@ from app.services.import_pipeline.value_parsers import (
     parse_string,
     parse_weight_kg,
 )
-from app.services.import_pipeline.workbook import SheetView, load_workbook
+from app.contexts.operations.infrastructure.import_pipeline.workbook import SheetView, load_workbook
 
 
 # ---------------------------------------------------------------------------

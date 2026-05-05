@@ -40,7 +40,7 @@ from app.core.redis import get_redis
 from app.database import get_db
 from app.models.base import User
 from app.schemas.base import PaginatedResponse
-from app.services.summary_loader import (
+from app.core.summaries import (
     get_location_summary,
     load_location_summaries,
 )

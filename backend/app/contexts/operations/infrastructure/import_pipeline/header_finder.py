@@ -11,13 +11,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from app.services.import_pipeline.canonical import (
+from app.contexts.operations.infrastructure.import_pipeline.canonical import (
     EXACT_LOOKUP,
     is_skip_header,
     normalize_header_text,
     synonym_substring_match,
 )
-from app.services.import_pipeline.workbook import SheetView
+from app.contexts.operations.infrastructure.import_pipeline.workbook import SheetView
 
 
 HEADER_SCAN_DEPTH = 25
