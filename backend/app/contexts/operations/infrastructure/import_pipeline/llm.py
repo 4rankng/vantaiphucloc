@@ -162,7 +162,7 @@ def _parse_llm_response(text: str, candidates: list[str]) -> tuple[str | None, f
         return None, 0.0
     word = text.strip().split()[0].lower().strip(".,;:'\"")
     if word == "skip":
-        from app.services.import_pipeline.canonical import SKIP_FIELD
+        from app.contexts.operations.infrastructure.import_pipeline.canonical import SKIP_FIELD
         return SKIP_FIELD, 0.7
     for c in candidates:
         if word == c.lower():

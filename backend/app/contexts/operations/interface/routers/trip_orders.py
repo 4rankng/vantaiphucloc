@@ -52,7 +52,7 @@ from app.schemas.domain import (
     TripOrderOut,
     TripOrderUpdate,
 )
-from app.services.summary_loader import (
+from app.core.summaries import (
     get_client_summary,
     get_location_summary,
     load_client_summaries,
@@ -241,7 +241,7 @@ async def list_trip_orders(
 async def download_trip_order_template(
     current_user: User = Depends(require_permission("create", "TripOrder")),
 ):
-    from app.services.excel_service import generate_trip_order_template
+    from app.contexts.operations.infrastructure.excel import generate_trip_order_template
     content = generate_trip_order_template()
     return StreamingResponse(
         io.BytesIO(content),
@@ -262,7 +262,7 @@ async def import_trip_orders_excel(
 ):
     """Legacy plain-Excel TripOrder import. Distinct from the customer-Excel
     import pipeline at `/imports/customer-excel/*`."""
-    from app.services.excel_service import import_trip_orders, parse_trip_order_excel
+    from app.contexts.operations.infrastructure.excel import import_trip_orders, parse_trip_order_excel
     content = await file.read()
     rows = await parse_trip_order_excel(content)
     if not rows:
@@ -281,7 +281,7 @@ async def export_trip_orders_excel(
     current_user: User = Depends(require_permission("create", "TripOrder")),
     use_case: GetTripOrder = Depends(get_get_trip_order),
 ):
-    from app.services.excel_service import generate_trip_orders_excel
+    from app.contexts.operations.infrastructure.excel import generate_trip_orders_excel
     session = use_case.repo.session  # type: ignore[attr-defined]
     content = await generate_trip_orders_excel(
         session,

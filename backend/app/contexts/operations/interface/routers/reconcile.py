@@ -52,7 +52,7 @@ from app.schemas.domain import (
     TripOrderOut,
     UnmatchRequest,
 )
-from app.services.audit_service import log_action
+from app.core.audit import log_action
 
 _logger = logging.getLogger(__name__)
 
@@ -198,7 +198,7 @@ async def upload_customer_excel(
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
     use_case: GetWorkOrder = Depends(get_get_work_order),
 ):
-    from app.services.excel_service import (
+    from app.contexts.operations.infrastructure.excel import (
         compare_with_system_records,
         parse_customer_excel,
     )
@@ -240,7 +240,7 @@ async def export_reconciliation_excel(
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
     use_case: GetWorkOrder = Depends(get_get_work_order),
 ):
-    from app.services.excel_service import generate_reconciliation_excel
+    from app.contexts.operations.infrastructure.excel import generate_reconciliation_excel
 
     db = use_case.repo.session  # type: ignore[attr-defined]
     excel_content = await generate_reconciliation_excel(

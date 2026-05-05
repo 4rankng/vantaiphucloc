@@ -10,7 +10,7 @@ Driver workflow:
 import logging
 import re
 
-from app.services.ai_service import analyze_image_with_fallback, preprocess_image
+from app.contexts.operations.infrastructure.ai import analyze_image_with_fallback, preprocess_image
 from app.utils.iso6346 import validate_container_number
 
 MAX_OCR_ATTEMPTS = 3

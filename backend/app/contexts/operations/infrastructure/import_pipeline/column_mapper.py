@@ -22,7 +22,7 @@ import re
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-from app.services.import_pipeline.canonical import (
+from app.contexts.operations.infrastructure.import_pipeline.canonical import (
     CANONICAL_FIELD_NAMES,
     EXACT_LOOKUP,
     SKIP_FIELD,
@@ -30,9 +30,9 @@ from app.services.import_pipeline.canonical import (
     normalize_header_text,
     synonym_substring_match,
 )
-from app.services.import_pipeline.llm import HeaderClassifier, NullHeaderClassifier
-from app.services.import_pipeline.workbook import SheetView
-from app.services.import_pipeline.value_parsers import parse_date
+from app.contexts.operations.infrastructure.import_pipeline.llm import HeaderClassifier, NullHeaderClassifier
+from app.contexts.operations.infrastructure.import_pipeline.workbook import SheetView
+from app.contexts.operations.infrastructure.import_pipeline.value_parsers import parse_date
 
 
 CONTAINER_RE = re.compile(r"^[A-Z]{4}\d{7}$")

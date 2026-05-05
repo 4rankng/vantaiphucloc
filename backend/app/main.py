@@ -52,7 +52,7 @@ async def lifespan(_app: FastAPI):
     await init_redis()
     await init_arq_pool()
     # Register auto-audit session events
-    from app.services.audit_service import register_audit_events
+    from app.core.audit import register_audit_events
     register_audit_events()
     yield
     await close_arq_pool()

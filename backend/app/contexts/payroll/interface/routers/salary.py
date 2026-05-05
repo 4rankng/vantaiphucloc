@@ -36,7 +36,7 @@ from app.schemas.domain import (
     SalaryPeriodOut,
     SalaryPeriodUpdate,
 )
-from app.services.summary_loader import get_driver_summary, load_driver_summaries
+from app.core.summaries import get_driver_summary, load_driver_summaries
 from app.workers import enqueue
 
 router = APIRouter()
@@ -218,7 +218,7 @@ async def export_salary_excel(
     _current_user: User = Depends(require_permission("calculate", "Salary")),
     db: AsyncSession = Depends(get_db),
 ):
-    from app.services.excel_service import generate_salary_excel
+    from app.contexts.operations.infrastructure.excel import generate_salary_excel
 
     content = await generate_salary_excel(
         db, start_date.isoformat(), end_date.isoformat()
