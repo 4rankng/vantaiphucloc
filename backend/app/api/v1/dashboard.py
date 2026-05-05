@@ -7,14 +7,14 @@ import logging
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select, func
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import TripOrder, WorkOrder, Client
 from app.models.base import User
 from app.core.deps import get_current_user
 from app.core.worker import get_arq_pool
+from app.database import get_db
 from app.schemas.domain import DashboardSummaryOut
-from app.repositories.user_repo import UserRepository
-from app.repositories.deps import get_user_repo
 
 logger = logging.getLogger(__name__)
 
@@ -24,10 +24,8 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 @router.get("/summary", response_model=DashboardSummaryOut)
 async def get_dashboard_summary(
     _current_user: User = Depends(get_current_user),
-    repo: UserRepository = Depends(get_user_repo),
+    db: AsyncSession = Depends(get_db),
 ):
-    db = repo.session
-
     revenue_q = await db.execute(
         select(func.coalesce(func.sum(TripOrder.revenue), 0))
     )
