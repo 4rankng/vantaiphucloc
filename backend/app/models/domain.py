@@ -62,6 +62,10 @@ class Location(AuditableMixin, Base):
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
     )
 
+    __table_args__ = (
+        Index("ix_locations_lat_lng", "lat", "lng"),
+    )
+
 
 class LocationAlias(Base):
     __tablename__ = "location_aliases"
