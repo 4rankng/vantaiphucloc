@@ -101,7 +101,7 @@ def _slugify_code(name: str) -> str:
 async def _scan_files_for_consignees(files: list[Path], log) -> list[dict[str, str]]:
     """Run the import pipeline preview on each file and collect distinct
     consignee/shipper values. Returns [{code, name}, ...]."""
-    from app.services.import_pipeline.pipeline import run_preview  # type: ignore
+    from app.contexts.operations.infrastructure.import_pipeline.pipeline import run_preview  # type: ignore
 
     seen: dict[str, str] = {}  # code -> name
     for fp in files:
