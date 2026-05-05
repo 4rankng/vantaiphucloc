@@ -146,6 +146,17 @@ async def load_settlement_data(
 
     trip_ids = [t.id for t in trips]
 
+    # Resolve location names via JOIN (pickup/dropoff string columns
+    # were dropped in the schema overhaul; FK is canonical).
+    from app.models.domain import Location  # local import to avoid cycle
+    loc_ids = {t.pickup_location_id for t in trips} | {t.dropoff_location_id for t in trips}
+    loc_ids.discard(None)
+    name_by_loc_id: dict[int, str] = {}
+    if loc_ids:
+        loc_res = await db.execute(select(Location).where(Location.id.in_(loc_ids)))
+        for loc in loc_res.scalars().all():
+            name_by_loc_id[loc.id] = loc.name
+
     # Containers
     cont_res = await db.execute(
         select(TripOrderContainer).where(TripOrderContainer.trip_order_id.in_(trip_ids))
@@ -189,8 +200,8 @@ async def load_settlement_data(
                     container_number=c.container_number,
                     work_type=(c.work_type or "").upper(),
                     tractor_plate=plate_str,
-                    pickup_location=trip.pickup_location or "",
-                    dropoff_location=trip.dropoff_location or "",
+                    pickup_location=name_by_loc_id.get(trip.pickup_location_id, ""),
+                    dropoff_location=name_by_loc_id.get(trip.dropoff_location_id, ""),
                     unit_price=int(prices.get(c.id, 0)),
                     is_confirmed=bool(trip.is_confirmed),
                 )

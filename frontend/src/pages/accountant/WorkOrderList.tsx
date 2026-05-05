@@ -65,7 +65,7 @@ function usePotentialMatchCounts(workOrders: import('@/data/domain').WorkOrder[]
           c => c.containerNumber.replace(/[\s-]/g, '').toUpperCase()
         )
         const contMatch = tripContNums.some(n => woContNums.has(n))
-        const clientMatch = trip.clientId === wo.clientId
+        const clientMatch = trip.client.id === wo.client.id
         const routeMatch = trip.route === wo.route
         const dateMatch = woDate !== null && trip.tripDate === woDate
         if (contMatch || clientMatch || routeMatch || dateMatch) count++
@@ -102,8 +102,8 @@ export function WorkOrderList() {
       const q = search.toLowerCase()
       result = result.filter(w =>
         (w.tractorPlate ?? '').toLowerCase().includes(q) ||
-        (w.driverName ?? '').toLowerCase().includes(q) ||
-        (w.clientName ?? '').toLowerCase().includes(q) ||
+        w.driver.name.toLowerCase().includes(q) ||
+        w.client.name.toLowerCase().includes(q) ||
         (w.code ?? '').toLowerCase().includes(q) ||
         w.containers.some(c => (c.containerNumber ?? '').toLowerCase().includes(q))
       )
@@ -169,7 +169,7 @@ export function WorkOrderList() {
       accessor: (row) => (
         <div className="min-w-0">
           <p className="font-medium truncate" style={{ color: 'var(--theme-text-primary)' }}>
-            {row.clientName}
+            {row.client.name}
           </p>
           <p className="text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>
             {row.route}
@@ -177,7 +177,7 @@ export function WorkOrderList() {
         </div>
       ),
       sortable: true,
-      sortKey: (row) => row.clientName ?? '',
+      sortKey: (row) => row.client.name,
     },
     {
       key: 'driver',
@@ -185,7 +185,7 @@ export function WorkOrderList() {
       accessor: (row) => (
         <div className="min-w-0">
           <p className="font-medium truncate" style={{ color: 'var(--theme-text-primary)' }}>
-            {row.driverName || '-'}
+            {row.driver.name || '-'}
           </p>
           {row.tractorPlate && (
             <p className="text-xs flex items-center gap-1" style={{ color: 'var(--theme-text-muted)' }}>
@@ -196,7 +196,7 @@ export function WorkOrderList() {
         </div>
       ),
       sortable: true,
-      sortKey: (row) => row.driverName ?? '',
+      sortKey: (row) => row.driver.name,
       hideOnMobile: true,
     },
     {

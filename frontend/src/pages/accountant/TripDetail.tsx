@@ -65,16 +65,16 @@ export function TripDetail() {
   }
 
   const handleOpenEdit = () => {
-    setEditClientName(trip.clientName)
+    setEditClientName(trip.client.name)
     setEditRoute(trip.route)
-    setEditWorkType(trip.workType)
+    setEditWorkType(trip.containers[0]?.workType ?? 'E20')
     setEditTrip(true)
   }
 
   const handleSaveEdit = () => {
     if (!trip) return
     updateTripOrder.mutate(
-      { id: trip.id, data: { clientName: editClientName, route: editRoute, workType: editWorkType } },
+      { id: trip.id, data: { route: editRoute } },
       {
         onSuccess: (res) => {
           if (res.success) toast.success('Đã lưu')
@@ -142,7 +142,7 @@ export function TripDetail() {
       {/* Page header with title, breadcrumbs, and actions */}
       <PageHeader
         title={trip.code ?? `#${trip.id}`}
-        subtitle={trip.clientName}
+        subtitle={trip.client.name}
         breadcrumbs={
           <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm" style={{ color: 'var(--theme-text-muted)' }}>
             <ChevronLeft size={14} /> Đơn hàng
@@ -200,7 +200,7 @@ export function TripDetail() {
             <dl className="space-y-3">
               <div className="flex items-start justify-between">
                 <dt className="typo-form-label flex items-center gap-2"><Building2 size={14} />Khách hàng</dt>
-                <dd className="typo-body text-right">{trip.clientName}</dd>
+                <dd className="typo-body text-right">{trip.client.name}</dd>
               </div>
               <div className="flex items-start justify-between">
                 <dt className="typo-form-label flex items-center gap-2"><Route size={14} />Cung đường</dt>
@@ -224,8 +224,7 @@ export function TripDetail() {
                 </div>
               )) : (
                 <div className="flex items-center gap-3">
-                  <ContBadge type={trip.workType ?? 'E20'} />
-                  <span className="typo-mono">{trip.containerNumber ?? '—'}</span>
+                  <span className="typo-meta" style={{ color: 'var(--theme-text-muted)' }}>—</span>
                 </div>
               )}
             </div>
@@ -258,7 +257,7 @@ export function TripDetail() {
                       </div>
                       <span className="typo-mono" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyFull(job.earning)}</span>
                     </div>
-                    <p className="typo-meta">{job.driverName} · {job.tractorPlate}</p>
+                    <p className="typo-meta">{job.driver.name} · {job.tractorPlate}</p>
                   </div>
                 ))}
               </div>
@@ -346,10 +345,10 @@ export function TripDetail() {
                     </span>
                   </div>
                   <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-                    {job.driverName} · {job.tractorPlate}
+                    {job.driver.name} · {job.tractorPlate}
                   </p>
                   <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                    {job.clientName} · {job.route}
+                    {job.client.name} · {job.route}
                   </p>
                 </button>
               ))}

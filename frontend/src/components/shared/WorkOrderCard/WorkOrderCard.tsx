@@ -38,8 +38,8 @@ function splitRouteParts(route: string): string[] {
 
 function resolveRoute(wo: WorkOrder): string {
   const parts = splitRouteParts(wo.route)
-  const from = wo.pickupLocation || parts[0] || wo.route
-  const to   = wo.dropoffLocation || parts[1] || null
+  const from = wo.pickupLocation?.name || parts[0] || wo.route
+  const to   = wo.dropoffLocation?.name || parts[1] || null
   return to ? `${from} → ${to}` : from
 }
 
@@ -130,8 +130,8 @@ function StatusPill({ status, variant, compact = false }: { status: WorkOrder['s
 function DriverCard({ wo, onClick }: { wo: WorkOrder; onClick: () => void }) {
   const hasEarning = wo.earning > 0
   const routeParts = splitRouteParts(wo.route)
-  const pickup = wo.pickupLocation || routeParts[0] || wo.route
-  const dropoff = wo.dropoffLocation || routeParts[1] || ''
+  const pickup = wo.pickupLocation?.name || routeParts[0] || wo.route
+  const dropoff = wo.dropoffLocation?.name || routeParts[1] || ''
 
   return (
     <button
@@ -148,7 +148,7 @@ function DriverCard({ wo, onClick }: { wo: WorkOrder; onClick: () => void }) {
           className="text-[14px] font-semibold leading-snug truncate flex-1 min-w-0"
           style={{ color: 'var(--theme-text-primary)' }}
         >
-          {wo.clientCode ? `${wo.clientCode} · ${wo.clientName}` : wo.clientName}
+          {wo.client.code ? `${wo.client.code} · ${wo.client.name}` : wo.client.name}
         </p>
         {hasEarning ? (
           <span
@@ -204,7 +204,7 @@ function AccountantCard({ wo }: { wo: WorkOrder }) {
       </div>
 
       <p className="text-sm font-bold leading-snug" style={{ color: 'var(--theme-text-primary)' }}>
-        {wo.clientCode ? `${wo.clientCode} · ${wo.clientName}` : wo.clientName}
+        {wo.client.code ? `${wo.client.code} · ${wo.client.name}` : wo.client.name}
       </p>
 
       <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
@@ -212,7 +212,7 @@ function AccountantCard({ wo }: { wo: WorkOrder }) {
       </p>
 
       <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>
-        {wo.driverName} · {wo.tractorPlate}
+        {wo.driver.name} · {wo.tractorPlate}
       </p>
 
       <div className="mt-3 pt-2.5 flex items-center justify-between" style={{ borderTop: '1px solid var(--surface-border)' }}>

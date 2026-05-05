@@ -25,17 +25,17 @@ export function RecentTripSuggestions({
           : routeStr.includes(' → ')
             ? routeStr.split(' → ')
             : [routeStr]
-        const pickup = trip.pickupLocation || routeParts[0] || ''
-        const dropoff = trip.dropoffLocation || routeParts.slice(1).join(' - ') || ''
-        const clientLabel = trip.clientCode || trip.clientName
+        const pickup = trip.pickupLocation?.name || routeParts[0] || ''
+        const dropoff = trip.dropoffLocation?.name || routeParts.slice(1).join(' - ') || ''
+        const clientLabel = trip.client.code || trip.client.name
         const isSelected = selectedTripId !== undefined && String(selectedTripId) === String(trip.id)
         return (
           <button
             key={trip.id}
             onClick={() => onSelect({
               tripId: trip.id,
-              clientId: String(trip.clientId),
-              clientName: trip.clientName,
+              clientId: String(trip.client.id),
+              clientName: trip.client.name,
               pickupLocation: pickup,
               dropoffLocation: dropoff,
             })}

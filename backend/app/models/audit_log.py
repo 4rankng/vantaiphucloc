@@ -22,6 +22,4 @@ class AuditLog(Base):
     old_value = Column(Text, nullable=True)   # JSON string
     new_value = Column(Text, nullable=True)   # JSON string
     reason = Column(Text, nullable=True)      # Required for CANCEL / UNMATCH
-    ip_address = Column(String(50), nullable=True)
-    user_agent = Column(String(500), nullable=True)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False, index=True)

@@ -21,6 +21,12 @@ from app.repositories.client_repo import ClientRepository
 from app.repositories.trip_order_repo import TripOrderRepository
 from app.repositories.work_order_repo import WorkOrderRepository
 from app.repositories.deps import get_trip_order_repo, get_client_repo, get_work_order_repo
+from app.services.summary_loader import (
+    load_client_summaries,
+    load_location_summaries,
+    get_client_summary,
+    get_location_summary,
+)
 from app.utils.iso6346 import normalize_container_number as _norm
 
 _logger = logging.getLogger(__name__)
@@ -36,18 +42,17 @@ def _to_schema(
     to: TripOrder,
     containers: list[TripOrderContainer],
     matched_ids: list[int],
+    clients,
+    locations,
 ) -> TripOrderOut:
     return TripOrderOut(
         id=to.id,
         trip_date=to.trip_date,
-        client_id=to.client_id,
-        client_name=to.client_name,
+        client=get_client_summary(clients, to.client_id),
         code=to.code,
-        work_type=to.work_type,
         route=to.route,
-        pickup_location=to.pickup_location,
-        dropoff_location=to.dropoff_location,
-        container_number=to.container_number,
+        pickup_location=get_location_summary(locations, to.pickup_location_id),
+        dropoff_location=get_location_summary(locations, to.dropoff_location_id),
         containers=[TripContainerOut.model_validate(c) for c in containers],
         pricing_id=to.pricing_id,
         unit_price=to.unit_price,
@@ -68,9 +73,7 @@ def _to_schema(
 
 
 async def _load_one(repo: TripOrderRepository, trip_order: TripOrder) -> TripOrderOut:
-    matched_ids = await repo.get_matched_work_order_ids(trip_order.id)
-    containers = await repo.get_containers(trip_order.id)
-    return _to_schema(trip_order, containers, matched_ids)
+    return (await _load_many(repo, [trip_order]))[0]
 
 
 async def _load_many(
@@ -81,8 +84,22 @@ async def _load_many(
     ids = [to.id for to in trip_orders]
     containers_by_id = await repo.batch_load_containers(ids)
     matched_by_id = await repo.batch_load_matched_ids(ids)
+    clients = await load_client_summaries(
+        repo.session, {to.client_id for to in trip_orders}
+    )
+    locations = await load_location_summaries(
+        repo.session,
+        {to.pickup_location_id for to in trip_orders}
+        | {to.dropoff_location_id for to in trip_orders},
+    )
     return [
-        _to_schema(to, containers_by_id.get(to.id, []), matched_by_id.get(to.id, []))
+        _to_schema(
+            to,
+            containers_by_id.get(to.id, []),
+            matched_by_id.get(to.id, []),
+            clients,
+            locations,
+        )
         for to in trip_orders
     ]
 
@@ -208,34 +225,6 @@ async def update_trip_order(
     new_matched_ids = update_data.pop("matched_work_order_ids", None)
     new_containers = update_data.pop("containers", None)
 
-    # Resolve any updated pickup/dropoff strings through the
-    # LocationResolverService so the FK + alias system stay consistent
-    # whichever path created/updated the đơn hàng.
-    from app.services.location_resolver import LocationResolverService, ResolverSource
-    resolver = LocationResolverService(db)
-    if "pickup_location" in update_data and update_data["pickup_location"]:
-        raw = update_data["pickup_location"]
-        update_data["pickup_raw"] = raw
-        r = await resolver.resolve_or_create(
-            raw, source=ResolverSource.CUSTOMER_ORDER, user_id=current_user.id,
-        )
-        if r.location is not None:
-            update_data["pickup_location"] = r.location.name
-            update_data["pickup_location_id"] = r.location.id
-        if r.review_needed:
-            update_data["location_review_needed"] = True
-    if "dropoff_location" in update_data and update_data["dropoff_location"]:
-        raw = update_data["dropoff_location"]
-        update_data["dropoff_raw"] = raw
-        r = await resolver.resolve_or_create(
-            raw, source=ResolverSource.CUSTOMER_ORDER, user_id=current_user.id,
-        )
-        if r.location is not None:
-            update_data["dropoff_location"] = r.location.name
-            update_data["dropoff_location_id"] = r.location.id
-        if r.review_needed:
-            update_data["location_review_needed"] = True
-
     await repo.update(trip_order, **update_data)
 
     if "driver_salary" in update_data or "allowance" in update_data:
@@ -251,9 +240,6 @@ async def update_trip_order(
                 container_number=_norm(c_data["container_number"]),
                 work_type=c_data["work_type"],
             ))
-        if new_containers:
-            trip_order.container_number = _norm(new_containers[0]["container_number"])
-            trip_order.work_type = new_containers[0]["work_type"]
 
     if new_matched_ids is not None:
         existing_ids = await repo.get_matched_work_order_ids(trip_order.id)

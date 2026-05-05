@@ -339,23 +339,25 @@ async def commit_customer_excel(
                 if d.review_needed:
                     review_needed = True
 
+            if not pickup_loc or not dropoff_loc:
+                # Without resolvable locations the trip can't satisfy
+                # the (now NOT NULL) FK. Skip with a clear log.
+                errors.append(
+                    f"Nhóm {idx}: pickup/dropoff không thể giải quyết "
+                    f"(pickup={pickup!r}, dropoff={dropoff!r})"
+                )
+                continue
             trip = TripOrder(
                 trip_date=trip_date,
                 client_id=client.id,
-                client_name=client.name,
-                work_type=work_type,
                 route=route_str,
                 pickup_raw=pickup or None,
                 dropoff_raw=dropoff or None,
-                pickup_location=(pickup_loc.name if pickup_loc else (pickup or None)),
-                dropoff_location=(dropoff_loc.name if dropoff_loc else (dropoff or None)),
-                pickup_location_id=(pickup_loc.id if pickup_loc else None),
-                dropoff_location_id=(dropoff_loc.id if dropoff_loc else None),
-                container_number=first.get("container_no") or None,
+                pickup_location_id=pickup_loc.id,
+                dropoff_location_id=dropoff_loc.id,
                 pricing_id=None,
-                # Pricing intentionally NOT applied here — see
-                # docs/PRICING_DATA_FLOW.md. The kế toán prices the
-                # trip later via find_tiered_pricing or manually.
+                # Pricing intentionally NOT applied here. The kế toán
+                # prices the trip later via Apply Pricing or manually.
                 unit_price=0,
                 driver_salary=0,
                 allowance=0,
@@ -475,16 +477,22 @@ async def apply_pricing(
             select(func.count(TripOrderContainer.id))
             .where(TripOrderContainer.trip_order_id == trip.id)
         ) or 1
-        wt = trip.work_type or ""
+        # work_type is now stored on each TripContainer (top-level
+        # column was dropped). Pull from the first container.
+        first_c_res = await db.execute(
+            select(TripOrderContainer.work_type)
+            .where(TripOrderContainer.trip_order_id == trip.id)
+            .limit(1)
+        )
+        wt = first_c_res.scalar_one_or_none() or ""
         if not wt:
             not_found_ids.append(trip.id)
             continue
         tiered = await find_tiered_pricing(
             db, client_id=trip.client_id, work_type=wt,
             quantity=int(cont_count),
-            route=trip.route,
-            pickup_location=trip.pickup_location,
-            dropoff_location=trip.dropoff_location,
+            pickup_location_id=trip.pickup_location_id,
+            dropoff_location_id=trip.dropoff_location_id,
         )
         if tiered is None:
             not_found_ids.append(trip.id)

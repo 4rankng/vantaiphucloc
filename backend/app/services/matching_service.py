@@ -28,7 +28,6 @@ from app.models.domain import (
     TripOrder,
     TripOrderContainer,
     TripOrderWorkOrder,
-    Route,
 )
 from app.schemas.domain import (
     MatchSuggestion,
@@ -37,6 +36,14 @@ from app.schemas.domain import (
     WorkOrderOut,
     TripContainerOut,
     ContainerOut,
+)
+from app.services.summary_loader import (
+    load_client_summaries,
+    load_driver_summaries,
+    load_location_summaries,
+    get_client_summary,
+    get_driver_summary,
+    get_location_summary,
 )
 from app.utils.iso6346 import normalize_container_number
 
@@ -122,11 +129,7 @@ async def suggest_trip_matches(
     if not candidates:
         return []
 
-    # Batch-load containers and routes for all candidates
     to_ids = [to.id for to in candidates]
-    route_ids = {to.route for to in candidates if to.route}
-
-    # Load TO containers
     cont_result = await db.execute(
         select(TripOrderContainer).where(TripOrderContainer.trip_order_id.in_(to_ids))
     )
@@ -134,11 +137,12 @@ async def suggest_trip_matches(
     for c in cont_result.scalars().all():
         to_containers[c.trip_order_id].append(c)
 
-    # Load routes for location matching
-    route_result = await db.execute(
-        select(Route).where(Route.route.in_(route_ids)) if route_ids else select(Route).where(False)
+    clients = await load_client_summaries(db, {to.client_id for to in candidates})
+    locations = await load_location_summaries(
+        db,
+        {to.pickup_location_id for to in candidates}
+        | {to.dropoff_location_id for to in candidates},
     )
-    routes: dict[str, Route] = {r.route: r for r in route_result.scalars().all()}
 
     suggestions: list[MatchSuggestion] = []
     for to in candidates:
@@ -151,7 +155,6 @@ async def suggest_trip_matches(
             matched_fields.append("container_number")
             score += WEIGHTS["container_number"]
         else:
-            # Partial match: digits only
             wo_digits = {re.sub(r'[^0-9]', '', cn) for cn in wo_container_numbers if cn}
             to_digits = {re.sub(r'[^0-9]', '', cn) for cn in to_cn_set if cn}
             if wo_digits & to_digits:
@@ -163,37 +166,15 @@ async def suggest_trip_matches(
             matched_fields.append("date")
             score += WEIGHTS["date"]
 
-        # 3. Pickup location match
-        if work_order.pickup_location_id and to.pickup_location_id:
-            if work_order.pickup_location_id == to.pickup_location_id:
-                matched_fields.append("pickup_location")
-                score += WEIGHTS["pickup_location"]
-        else:
-            wo_pickup = work_order.pickup_location
-            to_pickup = to.pickup_location
-            if not to_pickup and to.route and to.route in routes:
-                to_pickup = routes[to.route].pickup_location
-            if not wo_pickup and work_order.route and work_order.route in routes:
-                wo_pickup = routes[work_order.route].pickup_location
-            if wo_pickup and to_pickup and wo_pickup == to_pickup:
-                matched_fields.append("pickup_location")
-                score += WEIGHTS["pickup_location"]
+        # 3. Pickup location match (FK)
+        if work_order.pickup_location_id == to.pickup_location_id:
+            matched_fields.append("pickup_location")
+            score += WEIGHTS["pickup_location"]
 
-        # 4. Dropoff location match
-        if work_order.dropoff_location_id and to.dropoff_location_id:
-            if work_order.dropoff_location_id == to.dropoff_location_id:
-                matched_fields.append("dropoff_location")
-                score += WEIGHTS["dropoff_location"]
-        else:
-            wo_dropoff = work_order.dropoff_location
-            to_dropoff = to.dropoff_location
-            if not to_dropoff and to.route and to.route in routes:
-                to_dropoff = routes[to.route].dropoff_location
-            if not wo_dropoff and work_order.route and work_order.route in routes:
-                wo_dropoff = routes[work_order.route].dropoff_location
-            if wo_dropoff and to_dropoff and wo_dropoff == to_dropoff:
-                matched_fields.append("dropoff_location")
-                score += WEIGHTS["dropoff_location"]
+        # 4. Dropoff location match (FK)
+        if work_order.dropoff_location_id == to.dropoff_location_id:
+            matched_fields.append("dropoff_location")
+            score += WEIGHTS["dropoff_location"]
 
         # 5. Client match
         if to.client_id == work_order.client_id:
@@ -224,15 +205,10 @@ async def suggest_trip_matches(
             id=to.id,
             code=to.code,
             trip_date=to.trip_date,
-            client_id=to.client_id,
-            client_name=to.client_name,
-            work_type=to.work_type,
+            client=get_client_summary(clients, to.client_id),
             route=to.route,
-            pickup_location=to.pickup_location,
-            dropoff_location=to.dropoff_location,
-            pickup_location_id=to.pickup_location_id,
-            dropoff_location_id=to.dropoff_location_id,
-            container_number=to.container_number,
+            pickup_location=get_location_summary(locations, to.pickup_location_id),
+            dropoff_location=get_location_summary(locations, to.dropoff_location_id),
             containers=containers_out,
             pricing_id=to.pricing_id,
             unit_price=to.unit_price,
@@ -317,7 +293,6 @@ async def suggest_wo_matches(
     if not candidates:
         return []
 
-    # Batch-load containers for all candidates
     wo_ids = [wo.id for wo in candidates]
     cont_result = await db.execute(
         select(WorkOrderContainer).where(WorkOrderContainer.work_order_id.in_(wo_ids))
@@ -326,12 +301,13 @@ async def suggest_wo_matches(
     for c in cont_result.scalars().all():
         wo_containers[c.work_order_id].append(c)
 
-    # Load routes for location resolution
-    wo_route_names = {wo.route for wo in candidates if wo.route}
-    route_result = await db.execute(
-        select(Route).where(Route.route.in_(wo_route_names)) if wo_route_names else select(Route).where(False)
+    clients = await load_client_summaries(db, {wo.client_id for wo in candidates})
+    drivers = await load_driver_summaries(db, {wo.driver_id for wo in candidates})
+    locations = await load_location_summaries(
+        db,
+        {wo.pickup_location_id for wo in candidates}
+        | {wo.dropoff_location_id for wo in candidates},
     )
-    routes: dict[str, Route] = {r.route: r for r in route_result.scalars().all()}
 
     suggestions: list[WOSuggestion] = []
     for wo in candidates:
@@ -344,7 +320,6 @@ async def suggest_wo_matches(
             matched_fields.append("container_number")
             score += WEIGHTS["container_number"]
         else:
-            # Partial match: digits only
             to_digits = {re.sub(r'[^0-9]', '', cn) for cn in to_container_numbers if cn}
             wo_digits = {re.sub(r'[^0-9]', '', cn) for cn in wo_cn_set if cn}
             if to_digits & wo_digits:
@@ -357,37 +332,15 @@ async def suggest_wo_matches(
             matched_fields.append("date")
             score += WEIGHTS["date"]
 
-        # 3. Pickup location match
-        if wo.pickup_location_id and trip_order.pickup_location_id:
-            if wo.pickup_location_id == trip_order.pickup_location_id:
-                matched_fields.append("pickup_location")
-                score += WEIGHTS["pickup_location"]
-        else:
-            to_pickup = trip_order.pickup_location
-            wo_pickup = wo.pickup_location
-            if not wo_pickup and wo.route and wo.route in routes:
-                wo_pickup = routes[wo.route].pickup_location
-            if not to_pickup and trip_order.route and trip_order.route in routes:
-                to_pickup = routes[trip_order.route].pickup_location
-            if wo_pickup and to_pickup and wo_pickup == to_pickup:
-                matched_fields.append("pickup_location")
-                score += WEIGHTS["pickup_location"]
+        # 3. Pickup location match (FK)
+        if wo.pickup_location_id == trip_order.pickup_location_id:
+            matched_fields.append("pickup_location")
+            score += WEIGHTS["pickup_location"]
 
-        # 4. Dropoff location match
-        if wo.dropoff_location_id and trip_order.dropoff_location_id:
-            if wo.dropoff_location_id == trip_order.dropoff_location_id:
-                matched_fields.append("dropoff_location")
-                score += WEIGHTS["dropoff_location"]
-        else:
-            to_dropoff = trip_order.dropoff_location
-            wo_dropoff = wo.dropoff_location
-            if not wo_dropoff and wo.route and wo.route in routes:
-                wo_dropoff = routes[wo.route].dropoff_location
-            if not to_dropoff and trip_order.route and trip_order.route in routes:
-                to_dropoff = routes[trip_order.route].dropoff_location
-            if wo_dropoff and to_dropoff and wo_dropoff == to_dropoff:
-                matched_fields.append("dropoff_location")
-                score += WEIGHTS["dropoff_location"]
+        # 4. Dropoff location match (FK)
+        if wo.dropoff_location_id == trip_order.dropoff_location_id:
+            matched_fields.append("dropoff_location")
+            score += WEIGHTS["dropoff_location"]
 
         # 5. Client match
         if wo.client_id == trip_order.client_id:
@@ -415,16 +368,11 @@ async def suggest_wo_matches(
         ]
         wo_out = WorkOrderOut(
             id=wo.id,
-            client_id=wo.client_id,
-            client_name=wo.client_name,
-            client_code=wo.client_code,
+            client=get_client_summary(clients, wo.client_id),
             route=wo.route,
-            pickup_location=wo.pickup_location,
-            dropoff_location=wo.dropoff_location,
-            pickup_location_id=wo.pickup_location_id,
-            dropoff_location_id=wo.dropoff_location_id,
-            driver_id=wo.driver_id,
-            driver_name=wo.driver_name,
+            pickup_location=get_location_summary(locations, wo.pickup_location_id),
+            dropoff_location=get_location_summary(locations, wo.dropoff_location_id),
+            driver=get_driver_summary(drivers, wo.driver_id),
             tractor_plate=wo.tractor_plate,
             gps_lat=wo.gps_lat,
             gps_lng=wo.gps_lng,

@@ -248,7 +248,7 @@ function TripRow({
 
       {/* Client · Route */}
       <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
-        <span className="font-medium">{trip.clientName}</span>
+        <span className="font-medium">{trip.client.name}</span>
         {trip.route ? <span> · {trip.route}</span> : null}
       </p>
     </button>
@@ -272,7 +272,7 @@ export function MatchJob() {
 
   // Route lookup map: route string → { pickupLocation, dropoffLocation }
   const routeMap = useMemo(() =>
-    new Map(routes.map(r => [r.route, { pickup: r.pickupLocation ?? '', dropoff: r.dropoffLocation ?? '' }])),
+    new Map(routes.map(r => [r.route, { pickup: r.pickupLocation.name, dropoff: r.dropoffLocation.name }])),
     [routes]
   )
 
@@ -296,12 +296,11 @@ export function MatchJob() {
   // Initialize local state once work order loads
   useMemo(() => {
     if (workOrder && !woInitialized) {
-      setWoClient(workOrder.clientName)
+      setWoClient(workOrder.client.name)
       setWoRoute(workOrder.route)
-      // Resolve pickup/dropoff: prefer WO's own fields, fall back to route table
       const resolved = routeMap.get(workOrder.route)
-      setWoPickup(workOrder.pickupLocation || resolved?.pickup || '')
-      setWoDropoff(workOrder.dropoffLocation || resolved?.dropoff || '')
+      setWoPickup(workOrder.pickupLocation.name || resolved?.pickup || '')
+      setWoDropoff(workOrder.dropoffLocation.name || resolved?.dropoff || '')
       setWoContainers(workOrder.containers.map(c => ({ workType: c.workType, containerNumber: c.containerNumber })))
       setWoInitialized(true)
     }
@@ -340,19 +339,13 @@ export function MatchJob() {
 
   useMemo(() => {
     if (selectedTrip && selectedTrip.id !== tripInitKey) {
-      setTripClient(selectedTrip.clientName)
+      setTripClient(selectedTrip.client.name)
       setTripRoute(selectedTrip.route)
-      // Resolve pickup/dropoff from route table when trip fields are empty
       const resolved = routeMap.get(selectedTrip.route)
-      setTripPickup(selectedTrip.pickupLocation || resolved?.pickup || '')
-      setTripDropoff(selectedTrip.dropoffLocation || resolved?.dropoff || '')
+      setTripPickup(selectedTrip.pickupLocation.name || resolved?.pickup || '')
+      setTripDropoff(selectedTrip.dropoffLocation.name || resolved?.dropoff || '')
       setTripContainers(
-        (selectedTrip.containers?.length
-          ? selectedTrip.containers
-          : selectedTrip.containerNumber
-          ? [{ workType: selectedTrip.workType ?? 'E20', containerNumber: selectedTrip.containerNumber }]
-          : []
-        ).map(c => ({ workType: c.workType, containerNumber: c.containerNumber }))
+        (selectedTrip.containers ?? []).map(c => ({ workType: c.workType, containerNumber: c.containerNumber }))
       )
       setTripInitKey(selectedTrip.id)
     }
@@ -420,10 +413,7 @@ export function MatchJob() {
     const woResult = await updateWorkOrder.mutateAsync({
       id: workOrder.id,
       data: {
-        clientName: woClient,
         route: woRoute,
-        pickupLocation: woPickup,
-        dropoffLocation: woDropoff,
         containers: woContainers.map(c => ({ containerNumber: c.containerNumber, workType: c.workType as WorkType, photoUrl: '' })),
       },
     })
@@ -437,10 +427,7 @@ export function MatchJob() {
     const toResult = await updateTripOrder.mutateAsync({
       id: selectedTrip.id,
       data: {
-        clientName: tripClient,
         route: tripRoute,
-        pickupLocation: tripPickup,
-        dropoffLocation: tripDropoff,
         containers: tripContainers.map(c => ({ containerNumber: c.containerNumber, workType: c.workType as WorkType })),
       },
     })
@@ -507,7 +494,7 @@ export function MatchJob() {
         <div className="flex-1 min-w-0">
           <h1 className="typo-h2 truncate" style={{ color: 'var(--theme-text-primary)' }}>Đối soát phiếu</h1>
           <p className="typo-meta" style={{ color: 'var(--theme-text-muted)' }}>
-            {workOrder.driverName} · {workOrder.containers.map(c => c.containerNumber).join(', ')}
+            {workOrder.driver.name} · {workOrder.containers.map(c => c.containerNumber).join(', ')}
           </p>
         </div>
         {/* Confirm button — top bar on desktop */}
@@ -543,7 +530,7 @@ export function MatchJob() {
             <span className="typo-label" style={{ color: 'var(--theme-brand-primary)' }}>Chuyến đã đi</span>
             <div className="ml-auto flex items-center gap-1.5">
               <Truck className="w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{workOrder.driverName}</span>
+              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{workOrder.driver.name}</span>
             </div>
           </div>
 
@@ -653,11 +640,7 @@ export function MatchJob() {
               <>
                 {suggestions.map(s => {
                   // Compute X: how many WO criteria this đơn hàng matches, per-container
-                  const sTripContainers = s.tripOrder.containers?.length
-                    ? s.tripOrder.containers
-                    : s.tripOrder.containerNumber
-                      ? [{ workType: s.tripOrder.workType ?? 'E20', containerNumber: s.tripOrder.containerNumber }]
-                      : []
+                  const sTripContainers = s.tripOrder.containers ?? []
                   const sTripContainerSet = new Set(sTripContainers.map(c => `${c.workType}|${c.containerNumber}`))
                   const matchedContainersCount = woContainers.filter(
                     c => c.containerNumber && sTripContainerSet.has(`${c.workType}|${c.containerNumber}`)

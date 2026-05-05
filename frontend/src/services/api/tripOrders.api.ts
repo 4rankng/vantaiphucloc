@@ -2,11 +2,11 @@ import { api } from './client'
 import { toCamel, toSnake, ok, fail, unwrapList } from './utils'
 import type {
   TripOrder,
+  TripOrderContainerItem,
   ApiResponse,
   SuggestMatchesResponse,
   SuggestWosResponse,
   ReconciliationUploadResponse,
-  ReconciliationResult,
 } from '@/data/domain'
 
 interface TripOrderFilters {
@@ -14,6 +14,38 @@ interface TripOrderFilters {
   status?: TripOrder['status']
   dateFrom?: string
   dateTo?: string
+}
+
+export interface TripOrderCreatePayload {
+  tripDate: string
+  clientId: number
+  route: string
+  pickupLocationId: number
+  dropoffLocationId: number
+  containers: TripOrderContainerItem[]
+  pricingId?: number | null
+  unitPrice: number
+  driverSalary: number
+  allowance: number
+  revenue: number
+  matchedWorkOrderIds?: number[]
+}
+
+export interface TripOrderUpdatePayload {
+  tripDate?: string
+  clientId?: number
+  route?: string
+  pickupLocationId?: number
+  dropoffLocationId?: number
+  containers?: TripOrderContainerItem[]
+  pricingId?: number | null
+  unitPrice?: number
+  driverSalary?: number
+  allowance?: number
+  revenue?: number
+  status?: TripOrder['status']
+  isConfirmed?: boolean
+  matchedWorkOrderIds?: number[]
 }
 
 export async function getTripOrders(filters?: TripOrderFilters): Promise<ApiResponse<TripOrder[]>> {
@@ -31,7 +63,7 @@ export async function getTripOrders(filters?: TripOrderFilters): Promise<ApiResp
 }
 
 export async function createTripOrder(
-  data: Omit<TripOrder, 'id' | 'createdAt' | 'status'>,
+  data: TripOrderCreatePayload,
 ): Promise<ApiResponse<TripOrder>> {
   try {
     const res = await api.post('/trip-orders', toSnake(data))
@@ -41,7 +73,7 @@ export async function createTripOrder(
   }
 }
 
-export async function updateTripOrder(id: number, data: Partial<TripOrder>): Promise<ApiResponse<TripOrder>> {
+export async function updateTripOrder(id: number, data: TripOrderUpdatePayload): Promise<ApiResponse<TripOrder>> {
   try {
     const res = await api.put(`/trip-orders/${id}`, toSnake(data))
     return ok(toCamel<TripOrder>(res.data))

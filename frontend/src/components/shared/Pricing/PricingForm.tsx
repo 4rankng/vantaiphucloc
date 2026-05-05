@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
-import { type Pricing, type PricingLine } from '@/data/domain'
-import { Button } from '@/components/ui'
+import { type Pricing, type PricingLine, type WorkType } from '@/data/domain'
+import { useLocations, type PricingCreatePayload } from '@/hooks/use-queries'
 import { Label } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
@@ -12,18 +12,19 @@ interface Props {
   clients: { id: number; name: string }[]
   /** If provided, locks the form to this client (used from detail page) */
   lockedClientId?: number
-  onSave: (data: Omit<Pricing, 'id' | 'createdAt' | 'updatedAt'>) => void
+  onSave: (data: PricingCreatePayload) => void
   onCancel: () => void
   onCreateClient: () => void
 }
 
 export function PricingForm({ initial, clients, lockedClientId, onSave, onCancel, onCreateClient }: Props) {
+  const { data: locations = [] } = useLocations()
   const [clientId, setClientId] = useState(
-    String(lockedClientId ?? initial?.clientId ?? ''),
+    String(lockedClientId ?? initial?.client.id ?? ''),
   )
-  const [workType, setWorkType] = useState(initial?.workType ?? 'E20')
-  const [pickupLocation, setPickupLocation] = useState(initial?.pickupLocation ?? '')
-  const [dropoffLocation, setDropoffLocation] = useState(initial?.dropoffLocation ?? '')
+  const [workType, setWorkType] = useState<WorkType>(initial?.workType ?? 'E20')
+  const [pickupLocationName, setPickupLocationName] = useState(initial?.pickupLocation.name ?? '')
+  const [dropoffLocationName, setDropoffLocationName] = useState(initial?.dropoffLocation.name ?? '')
   const [lines, setLines] = useState<PricingLine[]>(
     initial?.lines?.length
       ? initial.lines
@@ -34,28 +35,26 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onCancel
     () => clients.map(c => ({ value: String(c.id), label: c.name })),
     [clients],
   )
-  const workTypeOptions = [
+  const workTypeOptions: { value: WorkType; label: string }[] = [
     { value: 'E20', label: 'E20' },
     { value: 'E40', label: 'E40' },
     { value: 'F20', label: 'F20' },
     { value: 'F40', label: 'F40' },
   ]
 
-  const clientName = clients.find(c => String(c.id) === clientId)?.name ?? ''
-  const route = pickupLocation && dropoffLocation ? `${pickupLocation} - ${dropoffLocation}` : ''
-
   const handleSubmit = () => {
-    if (!clientId || !route || lines.length === 0) return
+    const pickupId = locations.find(l => l.name === pickupLocationName)?.id
+    const dropoffId = locations.find(l => l.name === dropoffLocationName)?.id
+    if (!clientId || !pickupId || !dropoffId || lines.length === 0) return
     onSave({
       clientId: Number(clientId),
-      clientName,
-      workType: workType as Pricing['workType'],
-      route,
-      pickupLocation,
-      dropoffLocation,
+      workType,
+      pickupLocationId: pickupId,
+      dropoffLocationId: dropoffId,
       lines,
     })
   }
+  const canSubmit = !!clientId && !!pickupLocationName && !!dropoffLocationName && lines.length > 0
 
   return (
     <div
@@ -124,16 +123,16 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onCancel
             <div className="space-y-2">
               <Label className="typo-form-label">Điểm lấy hàng</Label>
               <LocationSelect
-                value={pickupLocation}
-                onChange={v => { setPickupLocation(v); setDropoffLocation('') }}
+                value={pickupLocationName}
+                onChange={v => { setPickupLocationName(v); setDropoffLocationName('') }}
                 placeholder="Chọn điểm lấy"
               />
             </div>
             <div className="space-y-2">
               <Label className="typo-form-label">Điểm trả hàng</Label>
               <LocationSelect
-                value={dropoffLocation}
-                onChange={setDropoffLocation}
+                value={dropoffLocationName}
+                onChange={setDropoffLocationName}
                 placeholder="Chọn điểm trả"
               />
             </div>
@@ -157,7 +156,7 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onCancel
         </button>
         <button
           onClick={handleSubmit}
-          disabled={!clientId || !route || lines.length === 0}
+          disabled={!canSubmit}
           className="btn-primary"
         >
           <Check size={16} className="mr-1.5" />

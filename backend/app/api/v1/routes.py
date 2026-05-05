@@ -1,11 +1,11 @@
 import math
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, Query, Response
 from redis.asyncio import Redis
 from sqlalchemy import select
 
 from app.models.base import User
-from app.models.domain import Route, Location
+from app.models.domain import Route
 from app.schemas.base import PaginatedResponse
 from app.schemas.domain import RouteCreate, RouteUpdate, RouteOut
 from app.core.deps import require_permission
@@ -14,26 +14,33 @@ from app.core.cache import CacheManager
 from app.config import settings
 from app.repositories.route_repo import RouteRepository
 from app.repositories.deps import get_route_repo
+from app.services.summary_loader import (
+    load_location_summaries,
+    get_location_summary,
+)
 
 router = APIRouter()
 
 
-async def _resolve_location_fk(session, route: Route) -> None:
-    """Resolve pickup/dropoff location strings to FK IDs."""
-    if route.pickup_location:
-        loc_result = await session.execute(
-            select(Location).where(Location.name == route.pickup_location, Location.is_active == True)  # noqa: E712
+async def _to_out(repo: RouteRepository, routes: list[Route]) -> list[RouteOut]:
+    if not routes:
+        return []
+    locations = await load_location_summaries(
+        repo.session,
+        {r.pickup_location_id for r in routes} | {r.dropoff_location_id for r in routes},
+    )
+    return [
+        RouteOut(
+            id=r.id,
+            route=r.route,
+            pickup_location=get_location_summary(locations, r.pickup_location_id),
+            dropoff_location=get_location_summary(locations, r.dropoff_location_id),
+            is_active=r.is_active,
+            created_at=r.created_at,
+            updated_at=r.updated_at,
         )
-        loc = loc_result.scalar_one_or_none()
-        if loc:
-            route.pickup_location_id = loc.id
-    if route.dropoff_location:
-        loc_result = await session.execute(
-            select(Location).where(Location.name == route.dropoff_location, Location.is_active == True)  # noqa: E712
-        )
-        loc = loc_result.scalar_one_or_none()
-        if loc:
-            route.dropoff_location_id = loc.id
+        for r in routes
+    ]
 
 
 @router.get("/routes", response_model=PaginatedResponse[RouteOut])
@@ -54,8 +61,9 @@ async def list_routes(
         page, page_size, active_only=True, order_by=repo.model.route.asc()
     )
 
+    items = await _to_out(repo, list(data))
     response = PaginatedResponse[RouteOut](
-        items=[RouteOut.model_validate(r) for r in data],
+        items=items,
         total=total,
         page=page,
         page_size=page_size,
@@ -74,11 +82,10 @@ async def create_route(
     redis: Redis = Depends(get_redis),
 ):
     route = await repo.create(**body.model_dump())
-    await _resolve_location_fk(repo.session, route)
     await repo.session.commit()
     await repo.session.refresh(route)
     await CacheManager(redis).invalidate_namespace("routes")
-    return route
+    return (await _to_out(repo, [route]))[0]
 
 
 @router.put("/routes/{route_id}", response_model=RouteOut)
@@ -91,11 +98,10 @@ async def update_route(
 ):
     route = await repo.get_by_id_or_404(route_id)
     await repo.update(route, **body.model_dump(exclude_unset=True))
-    await _resolve_location_fk(repo.session, route)
     await repo.session.commit()
     await repo.session.refresh(route)
     await CacheManager(redis).invalidate_namespace("routes")
-    return route
+    return (await _to_out(repo, [route]))[0]
 
 
 @router.delete("/routes/{route_id}", status_code=204)

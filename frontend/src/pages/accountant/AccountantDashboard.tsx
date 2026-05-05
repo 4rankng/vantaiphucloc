@@ -30,8 +30,8 @@ import {
 
 function resolveRoute(wo: WorkOrder | TripOrder): string {
   const parts = wo.route.split(' - ')
-  const from = wo.pickupLocation || parts[0] || wo.route
-  const to = wo.dropoffLocation || parts[1] || null
+  const from = wo.pickupLocation?.name || parts[0] || wo.route
+  const to = wo.dropoffLocation?.name || parts[1] || null
   return to ? `${from} → ${to}` : from
 }
 
@@ -133,7 +133,7 @@ function TripRow({ trip, onClick, isLast }: { trip: TripOrder; onClick: () => vo
         trip.containers.forEach(c => { map[c.workType] = (map[c.workType] ?? 0) + 1 })
         return Object.entries(map).map(([t, n]) => n > 1 ? `${t} × ${n}` : t).join(' ')
       })()
-    : trip.workType ?? ''
+    : ''
 
   const tripDate = trip.tripDate
     ? new Date(trip.tripDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -167,7 +167,7 @@ function TripRow({ trip, onClick, isLast }: { trip: TripOrder; onClick: () => vo
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
-          {trip.code ? `${trip.code} · ` : ''}{trip.clientName}
+          {trip.code ? `${trip.code} · ` : ''}{trip.client.name}
         </span>
         <StatusBadgePro variant={statusVariant} label={statusLabel} size="sm" />
       </div>
@@ -201,12 +201,12 @@ function UnmatchedRow({ wo, onClick, isLast }: { wo: WorkOrder; onClick: () => v
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
-          {wo.code} · {wo.driverName}
+          {wo.code} · {wo.driver.name}
         </span>
         <StatusBadgePro variant="warning" label="Chờ ghép" size="sm" />
       </div>
       <p className="mt-0.5 text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
-        {wo.clientName} | {resolveRoute(wo)}
+        {wo.client.name} | {resolveRoute(wo)}
       </p>
       <div className="mt-1.5 flex items-center gap-3">
         {wo.tractorPlate && (
@@ -274,7 +274,7 @@ function ChuyenCard({
     >
       <div className="flex items-start justify-between gap-1 mb-1">
         <p className="text-sm font-semibold leading-tight truncate" style={{ color: 'var(--theme-text-primary)' }}>
-          {wo.driverName}
+          {wo.driver.name}
         </p>
         <button
           type="button"
@@ -290,7 +290,7 @@ function ChuyenCard({
         </button>
       </div>
       <p className="text-xs truncate mb-1.5" style={{ color: 'var(--theme-text-secondary)' }}>
-        {wo.clientName} · {resolveRoute(wo)}
+        {wo.client.name} · {resolveRoute(wo)}
       </p>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
         {wo.tractorPlate && (
@@ -344,7 +344,7 @@ function DonHangCard({
         trip.containers.forEach(c => { map[c.workType] = (map[c.workType] ?? 0) + 1 })
         return Object.entries(map).map(([t, n]) => n > 1 ? `${t}×${n}` : t).join(' ')
       })()
-    : trip.workType ?? ''
+    : ''
 
   const isFull = matchConfidence === 'full'
   const isPartial = matchConfidence === 'partial'
@@ -370,7 +370,7 @@ function DonHangCard({
     >
       <div className="flex items-start justify-between gap-1 mb-1">
         <p className="text-sm font-semibold leading-tight truncate" style={{ color: 'var(--theme-text-primary)' }}>
-          {trip.code ? `${trip.code} · ` : ''}{trip.clientName}
+          {trip.code ? `${trip.code} · ` : ''}{trip.client.name}
         </p>
         <div className="flex items-center gap-1 shrink-0">
           {isHighlighted && matchScore !== undefined && (
@@ -484,7 +484,7 @@ function MatchSuggestionPanel({
 
     const map = new Map<number, { score: number; confidence: 'full' | 'partial' | 'none' }>()
     const woRouteLower = wo.route.toLowerCase()
-    const woClientLower = wo.clientName.toLowerCase()
+    const woClientLower = wo.client.name.toLowerCase()
     const woContainers = new Set(wo.containers.map(c => c.containerNumber?.toLowerCase()).filter(Boolean))
     const woTypes = new Set(wo.containers.map(c => c.workType))
 
@@ -492,7 +492,7 @@ function MatchSuggestionPanel({
       let matched = 0
       const total = 3
 
-      if (trip.clientName.toLowerCase() === woClientLower) matched++
+      if (trip.client.name.toLowerCase() === woClientLower) matched++
       if (trip.route.toLowerCase() === woRouteLower) matched++
 
       const tripContainers = new Set(trip.containers.map(c => c.containerNumber?.toLowerCase()).filter(Boolean))
@@ -525,28 +525,28 @@ function MatchSuggestionPanel({
 
   const openEditWO = (e: React.MouseEvent, wo: WorkOrder) => {
     e.stopPropagation()
-    setWoClient(wo.clientName)
+    setWoClient(wo.client.name)
     setWoRoute(wo.route)
-    setWoDriver(wo.driverName)
+    setWoDriver(wo.driver.name)
     setEditWO(wo)
   }
 
   const saveWO = () => {
     if (!editWO) return
-    updateWO.mutate({ id: editWO.id, data: { clientName: woClient, route: woRoute, driverName: woDriver } })
+    updateWO.mutate({ id: editWO.id, data: { route: woRoute } })
     setEditWO(null)
   }
 
   const openEditTrip = (e: React.MouseEvent, trip: TripOrder) => {
     e.stopPropagation()
-    setTripClient(trip.clientName)
+    setTripClient(trip.client.name)
     setTripRoute(trip.route)
     setEditTrip(trip)
   }
 
   const saveTrip = () => {
     if (!editTrip) return
-    updateTrip.mutate({ id: editTrip.id, data: { clientName: tripClient, route: tripRoute } })
+    updateTrip.mutate({ id: editTrip.id, data: { route: tripRoute } })
     setEditTrip(null)
   }
 

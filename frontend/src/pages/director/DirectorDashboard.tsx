@@ -279,7 +279,8 @@ export function DirectorDashboard() {
                 const badge = getTripOrderStatusBadge(t.status)
                 const date = new Date(t.createdAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
                 const tripCode = `T${String(t.id).padStart(4, '0')}`
-                const route = [t.pickupLocation, t.dropoffLocation].filter(Boolean).join(' → ') || t.route
+                const route = [t.pickupLocation?.name, t.dropoffLocation?.name].filter(Boolean).join(' → ') || t.route
+                const tripWorkType = t.containers[0]?.workType
 
                 return (
                   <button
@@ -303,19 +304,19 @@ export function DirectorDashboard() {
                           <StatusBadge variant={badge.variant} label={badge.label} />
                         </div>
                         <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
-                          {t.clientName} <span style={{ color: 'var(--theme-text-muted)' }}>•</span> {route}
+                          {t.client.name} <span style={{ color: 'var(--theme-text-muted)' }}>•</span> {route}
                         </p>
                       </div>
                       
                       {/* Right side */}
                       <div className="shrink-0 text-right">
                         <div className="text-xs font-medium" style={{ color: 'var(--theme-text-muted)' }}>{date}</div>
-                        {t.workType && (
-                          <span 
+                        {tripWorkType && (
+                          <span
                             className="mt-1 inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded-full"
                             style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
                           >
-                            {t.workType}
+                            {tripWorkType}
                           </span>
                         )}
                       </div>

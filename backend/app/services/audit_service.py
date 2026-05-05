@@ -133,8 +133,6 @@ def register_audit_events() -> None:
                 old_value=_json(old_value),
                 new_value=_json(new_value),
                 reason=reason,
-                ip_address=req.client.host if req and req.client else None,
-                user_agent=req.headers.get('user-agent') if req else None,
             )
             session.add(entry)
 
@@ -157,12 +155,6 @@ async def log_action(
     if reason:
         set_audit_reason(reason)
 
-    ip_address = None
-    user_agent = None
-    if request:
-        ip_address = request.client.host if request.client else None
-        user_agent = request.headers.get('user-agent')
-
     entry = AuditLog(
         user_id=user_id,
         action=action,
@@ -171,8 +163,6 @@ async def log_action(
         old_value=_json(old_value),
         new_value=_json(new_value),
         reason=reason,
-        ip_address=ip_address,
-        user_agent=user_agent,
     )
     db.add(entry)
     await db.flush()

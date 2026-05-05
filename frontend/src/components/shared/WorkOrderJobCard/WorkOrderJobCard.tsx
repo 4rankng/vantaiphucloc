@@ -59,10 +59,10 @@ export function WorkOrderJobCard({ job, status = 'unmatched', matchCount, onClic
         </div>
       </div>
       <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>
-        {job.driverName} · {job.tractorPlate}
+        {job.driver.name} · {job.tractorPlate}
       </p>
       <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-        {job.clientName} · {job.route}
+        {job.client.name} · {job.route}
       </p>
     </>
   )
