@@ -103,10 +103,10 @@ export function CreateUserDialog({
             <>
               <div className="space-y-2">
                 <RequiredLabel>Vai trò</RequiredLabel>
-                <div className="grid gap-2 grid-cols-4">
+                <div className="grid gap-2 grid-cols-2 sm:grid-cols-4">
                   {effectiveRoles.map(r => (
                     <button key={r.value} onClick={() => setForm(f => ({ ...f, role: r.value as Role, vendor: (r.value === 'director' || r.value === 'accountant') ? '' : f.vendor }))}
-                      className="py-2.5 px-3 rounded-xl text-sm font-medium transition-colors touch-manipulation"
+                      className="py-2.5 px-3 rounded-xl text-sm font-medium transition-colors touch-manipulation whitespace-nowrap"
                       style={{ background: form.role === r.value ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)', color: form.role === r.value ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)' }}>
                       {r.label}
                     </button>
@@ -121,30 +121,30 @@ export function CreateUserDialog({
               )}
             </>
           ) : (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <RequiredLabel>Vai trò</RequiredLabel>
                 <div className="grid gap-2 grid-cols-3">
                   {effectiveRoles.map(r => (
                     <button key={r.value} onClick={() => setForm(f => ({ ...f, role: r.value as Role, vendor: (r.value === 'director' || r.value === 'accountant') ? '' : f.vendor }))}
-                      className="py-2.5 px-3 rounded-xl text-sm font-medium transition-colors touch-manipulation"
+                      className="py-2.5 px-3 rounded-xl text-sm font-medium transition-colors touch-manipulation whitespace-nowrap"
                       style={{ background: form.role === r.value ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)', color: form.role === r.value ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)' }}>
                       {r.label}
                     </button>
                   ))}
                 </div>
               </div>
-              {form.role === 'driver' ? (
+              {form.role === 'driver' && (
                 <div className="space-y-2">
                   <RequiredLabel>Nhà thầu</RequiredLabel>
                   <InlineSelect options={(vendors ?? []).map(v => ({ value: String(v.id), label: v.name }))} value={form.vendor} onChange={v => setForm(f => ({ ...f, vendor: v }))} placeholder="Chọn nhà thầu" onCreateNew={() => setCreateVendorOpen(true)} createNewLabel="Tạo nhà thầu mới" />
                 </div>
-              ) : <div />}
+              )}
             </div>
           )}
 
           {/* Row 2: Username + Full name */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <RequiredLabel>Tên đăng nhập</RequiredLabel>
               <Input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} placeholder="nguyenvana" className="text-sm" />
@@ -156,7 +156,7 @@ export function CreateUserDialog({
           </div>
 
           {/* Row 3: Phone + CCCD */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số điện thoại</Label>
               <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="0901 234 567" className="text-sm" />
@@ -169,7 +169,7 @@ export function CreateUserDialog({
 
           {/* Row 4: Tractor plate + Password (driver) or Password full-width (others) */}
           {form.role === 'driver' ? (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Biển số đầu kéo</Label>
                 <Input value={form.tractorPlate} onChange={e => setForm(f => ({ ...f, tractorPlate: e.target.value }))} placeholder="15C-123.45" className="text-sm font-mono" />
