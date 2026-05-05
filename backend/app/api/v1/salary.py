@@ -19,8 +19,36 @@ from app.core.deps import require_permission, get_current_user
 from app.workers import enqueue
 from app.repositories.salary_repo import SalaryPeriodRepository
 from app.repositories.deps import get_salary_repo
+from app.services.summary_loader import load_driver_summaries, get_driver_summary
 
 router = APIRouter()
+
+
+def _to_out(period: SalaryPeriod, drivers) -> SalaryPeriodOut:
+    return SalaryPeriodOut(
+        id=period.id,
+        driver=get_driver_summary(drivers, period.driver_id),
+        start_date=period.start_date,
+        end_date=period.end_date,
+        work_order_count=period.work_order_count,
+        price_per_order=period.price_per_order,
+        total_salary=period.total_salary,
+        total_allowance=period.total_allowance,
+        total_deduction=period.total_deduction,
+        net_pay=period.net_pay,
+        status=period.status,
+        created_at=period.created_at,
+        updated_at=period.updated_at,
+    )
+
+
+async def _to_out_many(repo: SalaryPeriodRepository, periods) -> list[SalaryPeriodOut]:
+    if not periods:
+        return []
+    drivers = await load_driver_summaries(
+        repo.session, {p.driver_id for p in periods}
+    )
+    return [_to_out(p, drivers) for p in periods]
 
 
 @router.post("/salary/calculate", response_model=list[SalaryCalculateAsyncResponse], status_code=202)
@@ -82,7 +110,7 @@ async def list_salary_periods(
     data = result.scalars().all()
 
     return PaginatedResponse[SalaryPeriodOut](
-        items=[SalaryPeriodOut.model_validate(s) for s in data],
+        items=await _to_out_many(repo, data),
         total=total,
         page=page,
         page_size=page_size,
@@ -111,7 +139,7 @@ async def list_my_salary_periods(
     data = result.scalars().all()
 
     return PaginatedResponse[SalaryPeriodOut](
-        items=[SalaryPeriodOut.model_validate(s) for s in data],
+        items=await _to_out_many(repo, data),
         total=total,
         page=page,
         page_size=page_size,
@@ -126,20 +154,27 @@ async def salary_dashboard(
     current_user: User = Depends(require_permission("read", "Salary")),
     repo: SalaryPeriodRepository = Depends(get_salary_repo),
 ):
+    from app.models.base import User as _User
     result = await repo.session.execute(
         select(SalaryPeriod).where(
             SalaryPeriod.start_date == period_start,
             SalaryPeriod.end_date == period_end,
             SalaryPeriod.work_order_count > 0,
-        ).order_by(SalaryPeriod.driver_name)
+        ).order_by(SalaryPeriod.driver_id)
     )
     periods = result.scalars().all()
+    driver_ids = {p.driver_id for p in periods}
+    name_by_id: dict[int, str] = {}
+    if driver_ids:
+        u_res = await repo.session.execute(select(_User).where(_User.id.in_(driver_ids)))
+        for u in u_res.scalars().all():
+            name_by_id[u.id] = u.full_name or u.username
 
     return [
         {
             "id": p.id,
             "driver_id": p.driver_id,
-            "driver_name": p.driver_name,
+            "driver_name": name_by_id.get(p.driver_id, ""),
             "work_order_count": p.work_order_count,
             "total_salary": p.total_salary,
             "total_allowance": p.total_allowance,
@@ -161,7 +196,7 @@ async def update_salary_period(
     await repo.update(salary_period, **body.model_dump(exclude_unset=True))
     await repo.session.commit()
     await repo.session.refresh(salary_period)
-    return salary_period
+    return (await _to_out_many(repo, [salary_period]))[0]
 
 
 @router.get("/salary/export")

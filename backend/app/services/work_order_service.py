@@ -37,36 +37,23 @@ async def create_work_order(
     work_type = first_container.work_type if first_container else ""
 
     driver_id = current_user.id if current_user.role == "driver" else body.driver_id
-    driver_name = current_user.username if current_user.role == "driver" else body.driver_name
 
     pricing = await find_pricing(
         db,
         client_id=body.client_id,
         work_type=work_type,
-        route=body.route,
-        pickup_location=body.pickup_location,
-        dropoff_location=body.dropoff_location,
+        pickup_location_id=body.pickup_location_id,
+        dropoff_location_id=body.dropoff_location_id,
     )
-
-    client_result = await db.execute(select(Client.code).where(Client.id == body.client_id))
-    client_code = client_result.scalar_one_or_none()
 
     gps_address = None if (body.gps_lat and body.gps_lng) else "Không xác định"
 
-    pickup_location_id = await _resolve_location_id(db, body.pickup_location)
-    dropoff_location_id = await _resolve_location_id(db, body.dropoff_location)
-
     work_order = WorkOrder(
         client_id=body.client_id,
-        client_name=body.client_name,
-        client_code=client_code,
         route=body.route,
-        pickup_location=body.pickup_location,
-        dropoff_location=body.dropoff_location,
-        pickup_location_id=pickup_location_id,
-        dropoff_location_id=dropoff_location_id,
+        pickup_location_id=body.pickup_location_id,
+        dropoff_location_id=body.dropoff_location_id,
         driver_id=driver_id,
-        driver_name=driver_name,
         tractor_plate=body.tractor_plate,
         gps_lat=body.gps_lat,
         gps_lng=body.gps_lng,

@@ -14,7 +14,7 @@ export function ClientJobs() {
   const { data: pricings = [] } = usePricings({ clientId })
 
   const jobs = useMemo(
-    () => allWorkOrders.filter(j => j.clientId === clientId),
+    () => allWorkOrders.filter(j => j.client.id === clientId),
     [allWorkOrders, clientId],
   )
 
@@ -70,7 +70,9 @@ export function ClientJobs() {
       {showPricing && pricings.length > 0 && (
         <div className="space-y-2">
           {pricings.map(p => {
-            const jobCount = pricingJobCounts.get(`${p.workType}|${p.route}`) ?? 0
+            const route = `${p.pickupLocation.name} - ${p.dropoffLocation.name}`
+            const jobCount = pricingJobCounts.get(`${p.workType}|${route}`) ?? 0
+            const firstLine = p.lines[0]
             return (
               <div
                 key={p.id}
@@ -79,20 +81,20 @@ export function ClientJobs() {
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold px-2 py-0.5 rounded-lg" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>{p.workType}</span>
-                  <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(p.unitPrice)}</span>
+                  <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(firstLine?.unitPrice ?? 0)}</span>
                 </div>
                 <div className="flex items-start gap-1.5">
                   <span className="text-[10px] font-bold uppercase shrink-0" style={{ color: 'var(--theme-text-muted)' }}>Tuyến</span>
-                  <span className="text-xs leading-relaxed" style={{ color: 'var(--theme-text-primary)' }}>{p.route}</span>
+                  <span className="text-xs leading-relaxed" style={{ color: 'var(--theme-text-primary)' }}>{route}</span>
                 </div>
                 <div className="flex gap-4">
                   <div>
                     <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>Lương tài xế</span>
-                    <p className="text-xs font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(p.driverSalary)}</p>
+                    <p className="text-xs font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(firstLine?.driverSalary ?? 0)}</p>
                   </div>
                   <div>
                     <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>Phụ cấp</span>
-                    <p className="text-xs font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(p.allowance)}</p>
+                    <p className="text-xs font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(firstLine?.allowance ?? 0)}</p>
                   </div>
                   <div>
                     <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>Số lượng</span>
@@ -129,7 +131,7 @@ export function ClientJobs() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium" style={{ color: 'var(--theme-text-primary)' }}>{job.driverName}</span>
+            <span className="text-xs font-medium" style={{ color: 'var(--theme-text-primary)' }}>{job.driver.name}</span>
             <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>• {job.tractorPlate}</span>
           </div>
           <div className="flex flex-wrap gap-1">

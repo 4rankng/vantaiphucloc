@@ -68,6 +68,9 @@ Authentication: JWT bearer. Authorization: Oso policy at `app/policy.polar`. Log
 
 ## 4. Domain entities
 
+> **Read-DTO shape.** Domain DB stores only FKs — there are NO denormalized display strings (`client_name`, `driver_name`, `pickup_location` text, etc.) at any layer. Read APIs compose nested `*SummaryOut` objects (`ClientSummaryOut`, `LocationSummaryOut`, `DriverSummaryOut`) into responses via batch JOIN at the application layer. Frontend types match the nested shape: `trip.client.name`, `trip.pickupLocation.name`, `wo.driver.name`, `salaryPeriod.driver.name`, etc. Create/Update payloads keep flat FK ids (`client_id`, `pickup_location_id`, `driver_id`, …) since IN schemas don't need nested objects. See `backend/app/services/summary_loader.py` for the batch loader and `backend/app/schemas/domain.py` for the summary types.
+
+
 ### 4.1 Customer (`Client` table `clients`)
 
 Master record. Created by kế toán or auto-seeded from import-file metadata.
@@ -353,7 +356,7 @@ CQRS read/write split, event sourcing, dedicated message bus, polyglot persisten
 - [Open question: TÁC NGHIỆP / Ghi chú on BK SL] the customer's PAN BK SL file has a column "TÁC NGHIỆP" with values `XUAT TAU`/`NHAP TAU`/`CHUYEN BAI`. We don't store an `operation_type` on `TripOrder` — the export leaves the column blank. Should we add `operation_type` to `TripOrder` (and derive from pickup/dropoff direction), or keep blank?
 - [Open question: per-container pricing in BK SL] the customer file prices per-container; our schema prices per-trip. Current heuristic: split trip price evenly across containers in the export. Confirm whether equal-split is acceptable, or if we should add `unit_price` to `TripOrderContainer`.
 - [Open question: customer_ref / Booking No] the import pipeline extracts Booking No / B/L into `customer_ref`, but `TripOrder` has no field for it — the value is dropped on commit. Add a column?
-- [Open question: 22-column drop] the prior schema audit identified 22 dead/denormalized columns. Drop is approved in principle (forward-only migration) but not yet executed. Decide which round is next.
+- ~~[Open question: 22-column drop] the prior schema audit identified 22 dead/denormalized columns.~~ **RESOLVED 2026-05-05** — executed in commit `refactor: schema overhaul + clean DDD OUT schemas with nested summaries`. Dropped: `routes.{type_20ft, type_40ft, is_two_way, pickup_location, dropoff_location}`, `trip_orders.{work_type, container_number, client_name, pickup_location, dropoff_location}`, `pricings.{client_name, route, pickup_location, dropoff_location}`, `work_orders.{client_name, client_code, driver_name, pickup_location, dropoff_location}`, `salary_periods.driver_name`, `audit_logs.{ip_address, user_agent}`. OUT schemas now compose nested `*SummaryOut` objects (see §4 read-DTO note).
 
 ---
 
@@ -366,6 +369,7 @@ CQRS read/write split, event sourcing, dedicated message bus, polyglot persisten
 | Auth + RBAC | `backend/app/core/security.py`, `backend/app/core/deps.py`, `backend/app/policy.polar` |
 | Audit log auto-recording | `backend/app/services/audit_service.py` |
 | Pricing lookup | `backend/app/services/pricing_service.py` |
+| Read-DTO summary loader | `backend/app/services/summary_loader.py` |
 | Location resolver (alias system) | `backend/app/services/location_resolver.py` |
 | Import pipeline | `backend/app/services/import_pipeline/` (canonical schema, sheet picker, header finder, column mapper, value parsers, llm fallback, pipeline orchestrator) |
 | BK SL generation | `backend/app/services/customer_settlement_service.py`, `backend/app/services/excel_pan_bk_sl.py`, `backend/app/utils/number_to_words_vi.py` |

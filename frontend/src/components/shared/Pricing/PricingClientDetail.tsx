@@ -7,6 +7,7 @@ import {
   useUpdatePricing,
   useDeletePricing,
   useCreateClient,
+  type PricingCreatePayload,
 } from '@/hooks/use-queries'
 import {
   formatCurrencyFull,
@@ -42,14 +43,15 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
   const [createClientOpen, setCreateClientOpen] = useState(false)
   const [routeSearch, setRouteSearch] = useState('')
 
-  const clientName = clients.find(c => c.id === clientId)?.name ?? pricings[0]?.clientName ?? ''
+  const clientName = clients.find(c => c.id === clientId)?.name ?? pricings[0]?.client.name ?? ''
 
   const grouped = useMemo(() => {
     const map = new Map<string, Pricing[]>()
     pricings.forEach(p => {
-      const list = map.get(p.route) ?? []
+      const routeKey = `${p.pickupLocation.name} - ${p.dropoffLocation.name}`
+      const list = map.get(routeKey) ?? []
       list.push(p)
-      map.set(p.route, list)
+      map.set(routeKey, list)
     })
     return Array.from(map.entries())
   }, [pricings])
@@ -76,12 +78,10 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
       {
         id: pricing.id,
         data: {
-          clientId: pricing.clientId,
-          clientName: pricing.clientName,
+          clientId: pricing.client.id,
           workType: pricing.workType,
-          route: pricing.route,
-          pickupLocation: pricing.pickupLocation,
-          dropoffLocation: pricing.dropoffLocation,
+          pickupLocationId: pricing.pickupLocation.id,
+          dropoffLocationId: pricing.dropoffLocation.id,
           lines: cleanLines,
         },
       },
@@ -101,7 +101,7 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
     setDraftLines(prev => prev.filter((_, i) => i !== idx))
   }, [])
 
-  const handleCreateSave = (data: Omit<Pricing, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const handleCreateSave = (data: PricingCreatePayload) => {
     createPricing.mutate(data, { onSuccess: () => setShowForm(false) })
   }
 

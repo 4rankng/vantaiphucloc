@@ -1,15 +1,32 @@
 import { api } from './client'
 import { toCamel, toSnake, ok, fail, unwrapList } from './utils'
-import type { Pricing, ApiResponse, WorkType } from '@/data/domain'
+import type { Pricing, PricingLine, ApiResponse, WorkType } from '@/data/domain'
+
+export interface PricingCreatePayload {
+  clientId: number
+  workType: WorkType
+  pickupLocationId: number
+  dropoffLocationId: number
+  lines: PricingLine[]
+}
+
+export interface PricingUpdatePayload {
+  clientId?: number
+  workType?: WorkType
+  pickupLocationId?: number
+  dropoffLocationId?: number
+  lines?: PricingLine[]
+}
 
 export async function getPricings(
-  filters?: { clientId?: number; workType?: WorkType; route?: string },
+  filters?: { clientId?: number; workType?: WorkType; pickupLocationId?: number; dropoffLocationId?: number },
 ): Promise<ApiResponse<Pricing[]>> {
   try {
     const params: Record<string, string> = {}
     if (filters?.clientId) params.client_id = String(filters.clientId)
     if (filters?.workType) params.work_type = filters.workType
-    if (filters?.route) params.route = filters.route
+    if (filters?.pickupLocationId) params.pickup_location_id = String(filters.pickupLocationId)
+    if (filters?.dropoffLocationId) params.dropoff_location_id = String(filters.dropoffLocationId)
     const res = await api.get('/pricings', { params: { ...params, page_size: 200 } })
     return ok(toCamel<Pricing[]>(unwrapList(res.data)))
   } catch (err) {
@@ -18,7 +35,7 @@ export async function getPricings(
 }
 
 export async function createPricing(
-  data: Omit<Pricing, 'id' | 'createdAt' | 'updatedAt'>,
+  data: PricingCreatePayload,
 ): Promise<ApiResponse<Pricing>> {
   try {
     const res = await api.post('/pricings', toSnake(data))
@@ -28,7 +45,7 @@ export async function createPricing(
   }
 }
 
-export async function updatePricing(id: number, data: Partial<Pricing>): Promise<ApiResponse<Pricing>> {
+export async function updatePricing(id: number, data: PricingUpdatePayload): Promise<ApiResponse<Pricing>> {
   try {
     const res = await api.put(`/pricings/${id}`, toSnake(data))
     return ok(toCamel<Pricing>(res.data))

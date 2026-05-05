@@ -2,13 +2,42 @@ import { api } from './client'
 import { toCamel, toSnake, ok, fail, isNetworkError, unwrapList } from './utils'
 import { setCache, getCache } from '@/lib/offline-db'
 import { offlineQueue } from '@/lib/offline-queue'
-import type { WorkOrder, ApiResponse } from '@/data/domain'
+import type { WorkOrder, ContainerItem, ApiResponse } from '@/data/domain'
 
 interface WorkOrderFilters {
   driverId?: number
   tractorPlate?: string
   dateFrom?: string
   dateTo?: string
+  status?: WorkOrder['status']
+}
+
+export interface WorkOrderCreatePayload {
+  containers: ContainerItem[]
+  clientId: number
+  route: string
+  pickupLocationId: number
+  dropoffLocationId: number
+  driverId: number
+  tractorPlate: string
+  gpsLat?: number | null
+  gpsLng?: number | null
+}
+
+export interface WorkOrderUpdatePayload {
+  containers?: ContainerItem[]
+  clientId?: number
+  route?: string
+  pickupLocationId?: number
+  dropoffLocationId?: number
+  driverId?: number
+  tractorPlate?: string
+  gpsLat?: number | null
+  gpsLng?: number | null
+  unitPrice?: number
+  driverSalary?: number
+  allowance?: number
+  earning?: number
   status?: WorkOrder['status']
 }
 
@@ -42,13 +71,12 @@ export async function getWorkOrders(filters?: WorkOrderFilters): Promise<ApiResp
 }
 
 export async function createWorkOrder(
-  data: Omit<WorkOrder, 'id' | 'createdAt' | 'status' | 'unitPrice' | 'driverSalary' | 'allowance' | 'earning' | 'pricingId' | 'gpsAddress'>,
+  data: WorkOrderCreatePayload,
 ): Promise<ApiResponse<WorkOrder>> {
   const snakeBody = toSnake(data)
   try {
     const res = await api.post('/work-orders', snakeBody)
     const wo = toCamel<WorkOrder>(res.data)
-    // Update cache with new work order
     const cacheKey = `work-orders:${data.driverId || ''}:`
     const cached = await getCache<WorkOrder[]>(cacheKey)
     if (cached) {
@@ -62,20 +90,20 @@ export async function createWorkOrder(
         method: 'POST',
         body: snakeBody,
       })
-      // Optimistic payload matching the WorkOrder interface exactly
-      const optimistic: WorkOrder = {
-        id: -Date.now(), // negative to distinguish from server IDs
+      // Offline path: enqueue and return a placeholder; server will fill in
+      // the canonical (nested) shape when it syncs back. We don't fabricate
+      // ClientSummary/DriverSummary/LocationSummary here.
+      return ok({
+        id: -Date.now(),
         containers: data.containers,
-        clientId: data.clientId,
-        clientName: data.clientName,
+        client: { id: data.clientId, name: '', code: null },
         route: data.route,
-        pickupLocation: data.pickupLocation,
-        dropoffLocation: data.dropoffLocation,
-        driverId: data.driverId,
-        driverName: data.driverName,
+        pickupLocation: { id: data.pickupLocationId, name: '' },
+        dropoffLocation: { id: data.dropoffLocationId, name: '' },
+        driver: { id: data.driverId, name: '', tractorPlate: data.tractorPlate },
         tractorPlate: data.tractorPlate,
-        gpsLat: data.gpsLat,
-        gpsLng: data.gpsLng,
+        gpsLat: data.gpsLat ?? 0,
+        gpsLng: data.gpsLng ?? 0,
         gpsAddress: undefined,
         unitPrice: 0,
         driverSalary: 0,
@@ -85,14 +113,7 @@ export async function createWorkOrder(
         createdAt: new Date().toISOString(),
         status: 'PENDING',
         pendingSync: true,
-      }
-      // Write to cache so it appears in lists immediately
-      const cacheKey = `work-orders:${data.driverId || ''}:`
-      const cached = await getCache<WorkOrder[]>(cacheKey)
-      if (cached) {
-        await setCache(cacheKey, [optimistic, ...cached])
-      }
-      return ok(optimistic)
+      } satisfies WorkOrder)
     }
     return fail(err)
   }
@@ -121,7 +142,7 @@ export async function ocrContainer(imageDataUrl: string, containerIndex: number)
   }
 }
 
-export async function updateWorkOrder(id: number, data: Partial<WorkOrder>): Promise<ApiResponse<WorkOrder>> {
+export async function updateWorkOrder(id: number, data: WorkOrderUpdatePayload): Promise<ApiResponse<WorkOrder>> {
   try {
     const res = await api.put(`/work-orders/${id}`, toSnake(data))
     return ok(toCamel<WorkOrder>(res.data))

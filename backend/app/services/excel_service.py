@@ -538,11 +538,27 @@ async def import_trip_orders(
         allowance = int(first_row.get("allowance") or 0)
         pricing_id = None
 
+        # Resolve pickup/dropoff strings to Location FKs via the alias
+        # resolver. Auto-creates if missing.
+        from app.services.location_resolver import LocationResolverService, ResolverSource
+        resolver = LocationResolverService(db)
+        pickup_id = None
+        dropoff_id = None
+        if pickup:
+            r = await resolver.resolve_or_create(pickup, source=ResolverSource.MANUAL, user_id=user_id)
+            pickup_id = r.location.id if r.location else None
+        if dropoff:
+            r = await resolver.resolve_or_create(dropoff, source=ResolverSource.MANUAL, user_id=user_id)
+            dropoff_id = r.location.id if r.location else None
+        if not pickup_id or not dropoff_id:
+            errors.append(f"Nhóm {key}: pickup/dropoff không có")
+            continue
+
         if not unit_price:
             tiered = await find_tiered_pricing(
                 db, client_id=client.id, work_type=work_type,
-                quantity=container_count, route=route,
-                pickup_location=pickup, dropoff_location=dropoff,
+                quantity=container_count,
+                pickup_location_id=pickup_id, dropoff_location_id=dropoff_id,
             )
             if tiered:
                 unit_price = tiered.unit_price
@@ -555,12 +571,9 @@ async def import_trip_orders(
         trip_order = TripOrder(
             trip_date=trip_date_val,
             client_id=client.id,
-            client_name=client.name,
-            work_type=work_type,
             route=route,
-            pickup_location=pickup,
-            dropoff_location=dropoff,
-            container_number=containers_data[0]["container_number"],
+            pickup_location_id=pickup_id,
+            dropoff_location_id=dropoff_id,
             pricing_id=pricing_id,
             unit_price=unit_price,
             driver_salary=driver_salary,
@@ -646,6 +659,17 @@ async def generate_work_orders_excel(
         for c in cont_result.scalars().all():
             containers_map.setdefault(c.work_order_id, []).append(c)
 
+    # Resolve display names via JOIN (denormalized cols dropped).
+    from app.models.domain import Client, Location
+    from app.models.base import User as _User
+    client_ids = {wo.client_id for wo in work_orders}
+    driver_ids = {wo.driver_id for wo in work_orders}
+    loc_ids = {wo.pickup_location_id for wo in work_orders} | {wo.dropoff_location_id for wo in work_orders}
+    loc_ids.discard(None)
+    client_name_by_id = {c.id: c.name for c in (await db.execute(select(Client).where(Client.id.in_(client_ids)))).scalars().all()} if client_ids else {}
+    driver_name_by_id = {u.id: (u.full_name or u.username) for u in (await db.execute(select(_User).where(_User.id.in_(driver_ids)))).scalars().all()} if driver_ids else {}
+    loc_name_by_id = {l.id: l.name for l in (await db.execute(select(Location).where(Location.id.in_(loc_ids)))).scalars().all()} if loc_ids else {}
+
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Phiếu làm việc"
@@ -666,9 +690,10 @@ async def generate_work_orders_excel(
         containers = containers_map.get(wo.id, [])
         for c in containers:
             ws.append([
-                f"WO#{wo.id}", wo.client_name,
-                wo.pickup_location or "", wo.dropoff_location or "",
-                wo.driver_name, wo.tractor_plate,
+                f"WO#{wo.id}", client_name_by_id.get(wo.client_id, ""),
+                loc_name_by_id.get(wo.pickup_location_id, ""),
+                loc_name_by_id.get(wo.dropoff_location_id, ""),
+                driver_name_by_id.get(wo.driver_id, ""), wo.tractor_plate,
                 c.container_number, c.work_type,
                 wo.driver_salary, wo.allowance, wo.earning,
                 status_labels.get(wo.status, wo.status),
@@ -716,6 +741,14 @@ async def generate_trip_orders_excel(
         for c in cont_result.scalars().all():
             containers_map.setdefault(c.trip_order_id, []).append(c)
 
+    # Resolve display names via JOIN.
+    from app.models.domain import Client, Location
+    client_ids = {to.client_id for to in trip_orders}
+    loc_ids = {to.pickup_location_id for to in trip_orders} | {to.dropoff_location_id for to in trip_orders}
+    loc_ids.discard(None)
+    client_name_by_id = {c.id: c.name for c in (await db.execute(select(Client).where(Client.id.in_(client_ids)))).scalars().all()} if client_ids else {}
+    loc_name_by_id = {l.id: l.name for l in (await db.execute(select(Location).where(Location.id.in_(loc_ids)))).scalars().all()} if loc_ids else {}
+
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Đơn hàng"
@@ -737,8 +770,9 @@ async def generate_trip_orders_excel(
         for c in containers:
             ws.append([
                 f"TO#{to.id}", to.trip_date,
-                to.client_name,
-                to.pickup_location or "", to.dropoff_location or "",
+                client_name_by_id.get(to.client_id, ""),
+                loc_name_by_id.get(to.pickup_location_id, ""),
+                loc_name_by_id.get(to.dropoff_location_id, ""),
                 c.container_number, c.work_type,
                 to.unit_price, to.driver_salary, to.allowance, to.revenue,
                 status_labels.get(to.status, to.status),
@@ -766,13 +800,20 @@ async def generate_salary_excel(
     from openpyxl.styles import Font, PatternFill, Alignment
     from app.models.domain import SalaryPeriod
 
+    from app.models.base import User as _User
     result = await db.execute(
         select(SalaryPeriod).where(
             SalaryPeriod.start_date == start_date,
             SalaryPeriod.end_date == end_date,
-        ).order_by(SalaryPeriod.driver_name)
+        ).order_by(SalaryPeriod.driver_id)
     )
     periods = result.scalars().all()
+    driver_ids = {p.driver_id for p in periods}
+    driver_name_by_id = (
+        {u.id: (u.full_name or u.username) for u in
+         (await db.execute(select(_User).where(_User.id.in_(driver_ids)))).scalars().all()}
+        if driver_ids else {}
+    )
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -792,7 +833,7 @@ async def generate_salary_excel(
     status_labels = {"OPEN": "Chờ tính", "CALCULATED": "Đã tính", "PAID": "Đã trả"}
     for p in periods:
         ws.append([
-            p.driver_name,
+            driver_name_by_id.get(p.driver_id, ""),
             f"{p.start_date} → {p.end_date}",
             p.work_order_count,
             p.price_per_order,
