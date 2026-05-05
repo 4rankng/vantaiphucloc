@@ -36,6 +36,7 @@ const ACCOUNTANT_NAV_ITEMS: SidebarItem[] = [
   { label: 'Tổng quan', href: '/accountant', icon: LayoutDashboard },
   { label: 'Đơn hàng', href: '/accountant/trips', icon: FileText },
   { label: 'Nhập từ Excel', href: '/accountant/import-orders', icon: Upload },
+  { label: 'Nhập bảng giá', href: '/accountant/import-pricing', icon: Tag },
   { label: 'Đối soát', href: '/accountant/work-orders', icon: Briefcase },
   { label: 'Đối tác', href: '/accountant/partners', icon: Users },
   { label: 'Cung đường', href: '/accountant/routes', icon: MapPin },

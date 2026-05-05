@@ -116,6 +116,10 @@ export const apiClient = {
   previewCustomerExcel: importsApi.previewCustomerExcel,
   commitCustomerExcel: importsApi.commitCustomerExcel,
   listImportTemplates: importsApi.listImportTemplates,
+
+  // Customer-Pricing imports
+  previewCustomerPricing: importsApi.previewCustomerPricing,
+  commitCustomerPricing: importsApi.commitCustomerPricing,
 }
 
 // Re-export types from salary.api
