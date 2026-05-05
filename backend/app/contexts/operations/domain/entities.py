@@ -1,0 +1,470 @@
+"""Domain aggregates for the Operations context.
+
+Pure Python — no SQLAlchemy / Pydantic / FastAPI imports. Two aggregate
+roots:
+
+  - **TripOrder** — đơn hàng. Owns containers (with photos inside) and
+    tracks reconciliation state (matched WorkOrder ids, confirmation,
+    lock).
+
+  - **WorkOrder** — phiếu làm việc. Owns containers and GPS metadata,
+    tracks driver assignment, lock state, and pricing snapshot.
+
+The TripOrder ↔ WorkOrder match is a separate domain object —
+`MatchedWorkOrders`. Reconciliation use cases create / break those
+links and flip statuses on both sides accordingly.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+
+from app.contexts.operations.domain.exceptions import (
+    ContainerCountInvalid,
+    InvalidStateTransition,
+    TripOrderLocked,
+    WorkOrderLocked,
+)
+from app.contexts.operations.domain.value_objects import (
+    Money,
+    PhotoKind,
+    TripContainerPhotoId,
+    TripOrderContainerId,
+    TripOrderId,
+    TripOrderStatus,
+    WorkOrderContainerId,
+    WorkOrderId,
+    WorkOrderStatus,
+    WorkType,
+    normalize_work_type,
+)
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _validate_container_count(work_type: str, count: int) -> None:
+    """Vietnamese tractor-trailer constraints:
+
+      - 40ft (E40/F40) ⇒ exactly 1 container
+      - 20ft (E20/F20) ⇒ 1 or 2 containers (twin lift)
+    """
+    if count < 1:
+        raise ContainerCountInvalid(work_type, count)
+    wt = (work_type or "").strip().upper()
+    if wt.endswith("40") and count > 1:
+        raise ContainerCountInvalid(wt, count)
+    if wt.endswith("20") and count > 2:
+        raise ContainerCountInvalid(wt, count)
+
+
+# ── TripOrder aggregate ─────────────────────────────────────────
+
+
+@dataclass
+class TripContainerPhoto:
+    """Photo attached to a TripOrderContainer (inside the TripOrder aggregate).
+
+    `kind` is open: pickup / dropoff / seal / eir / other …
+    """
+
+    id: TripContainerPhotoId | None
+    trip_container_id: TripOrderContainerId
+    kind: PhotoKind
+    file_url: str
+    caption: str | None = None
+    uploaded_at: datetime = field(default_factory=_utcnow)
+    uploaded_by: int | None = None
+    created_at: datetime = field(default_factory=_utcnow)
+
+
+@dataclass
+class TripOrderContainer:
+    """Container line inside a TripOrder aggregate. Holds photos."""
+
+    id: TripOrderContainerId | None
+    trip_order_id: TripOrderId | None  # None until parent is saved
+    container_number: str
+    work_type: str
+    container_size: str | None = None       # "20" | "40"
+    container_type: str | None = None       # ISO code: 22G0, 45G1, …
+    freight_kind: str | None = None         # "F" | "E"
+    gross_weight_kg: float | None = None
+    seal_no: str | None = None
+    commodity: str | None = None
+    container_metadata: dict | None = None
+    photos: list[TripContainerPhoto] = field(default_factory=list)
+
+    def attach_photo(
+        self,
+        *,
+        kind: PhotoKind,
+        file_url: str,
+        caption: str | None = None,
+        uploaded_by: int | None = None,
+    ) -> TripContainerPhoto:
+        if self.id is None:
+            raise ValueError("cannot attach photo to an unsaved container")
+        photo = TripContainerPhoto(
+            id=None,
+            trip_container_id=self.id,
+            kind=kind,
+            file_url=file_url,
+            caption=caption,
+            uploaded_by=uploaded_by,
+        )
+        self.photos.append(photo)
+        return photo
+
+
+@dataclass
+class TripOrder:
+    """TripOrder (đơn hàng) aggregate root.
+
+    Owns containers (`TripOrderContainer`) and, transitively, container
+    photos. Many-to-many with WorkOrder lives outside the aggregate as
+    `matched_work_order_ids`; reconciliation use cases keep the join
+    in sync.
+    """
+
+    id: TripOrderId | None
+    trip_date: object                       # `datetime.date` — kept loose to avoid imports
+    client_id: int
+    route: str
+    pickup_location_id: int
+    dropoff_location_id: int
+    unit_price: Money = 0
+    driver_salary: Money = 0
+    allowance: Money = 0
+    revenue: Money = 0
+    status: str = TripOrderStatus.DRAFT
+    code: str | None = None
+    pricing_id: int | None = None
+    is_confirmed: bool = False
+    confirmed_by: int | None = None
+    confirmed_at: datetime | None = None
+    is_locked: bool = False
+    locked_at: datetime | None = None
+    locked_by: int | None = None
+    pickup_raw: str | None = None
+    dropoff_raw: str | None = None
+    location_review_needed: bool = False
+    created_at: datetime = field(default_factory=_utcnow)
+    updated_at: datetime = field(default_factory=_utcnow)
+    containers: list[TripOrderContainer] = field(default_factory=list)
+    matched_work_order_ids: list[int] = field(default_factory=list)
+
+    # ── invariants ───────────────────────────────────────────
+
+    def _ensure_unlocked(self) -> None:
+        if self.is_locked:
+            raise TripOrderLocked(int(self.id) if self.id is not None else 0)
+
+    # ── behaviour ────────────────────────────────────────────
+
+    def add_container(
+        self,
+        *,
+        container_number: str,
+        work_type: str,
+        container_size: str | None = None,
+        container_type: str | None = None,
+        freight_kind: str | None = None,
+        gross_weight_kg: float | None = None,
+        seal_no: str | None = None,
+        commodity: str | None = None,
+        container_metadata: dict | None = None,
+    ) -> TripOrderContainer:
+        self._ensure_unlocked()
+        wt = normalize_work_type(work_type)
+        # All containers in a trip must share work_type — twin lift rule.
+        if self.containers:
+            existing_wt = self.containers[0].work_type
+            if wt != existing_wt:
+                raise ValueError(
+                    f"mixed work types not allowed: trip has {existing_wt!s}, "
+                    f"new container is {wt!s}"
+                )
+        _validate_container_count(wt, len(self.containers) + 1)
+        c = TripOrderContainer(
+            id=None,
+            trip_order_id=self.id,
+            container_number=container_number,
+            work_type=wt,
+            container_size=container_size,
+            container_type=container_type,
+            freight_kind=freight_kind,
+            gross_weight_kg=gross_weight_kg,
+            seal_no=seal_no,
+            commodity=commodity,
+            container_metadata=container_metadata,
+        )
+        self.containers.append(c)
+        self.updated_at = _utcnow()
+        return c
+
+    def apply_pricing_snapshot(
+        self,
+        *,
+        unit_price: Money,
+        driver_salary: Money,
+        allowance: Money,
+        pricing_id: int | None,
+    ) -> None:
+        self._ensure_unlocked()
+        self.unit_price = int(unit_price)
+        self.driver_salary = int(driver_salary)
+        self.allowance = int(allowance)
+        self.revenue = int(unit_price)
+        self.pricing_id = pricing_id
+        self.updated_at = _utcnow()
+
+    def fill_info(self) -> None:
+        """DRAFT → PENDING. Used after the import + pricing has filled the trip."""
+        self._ensure_unlocked()
+        if self.status != TripOrderStatus.DRAFT:
+            raise InvalidStateTransition(
+                kind="TripOrder",
+                current=self.status,
+                attempted=TripOrderStatus.PENDING,
+            )
+        self.status = TripOrderStatus.PENDING
+        self.updated_at = _utcnow()
+
+    def complete(self) -> None:
+        """PENDING → COMPLETED."""
+        self._ensure_unlocked()
+        if self.status != TripOrderStatus.PENDING:
+            raise InvalidStateTransition(
+                kind="TripOrder",
+                current=self.status,
+                attempted=TripOrderStatus.COMPLETED,
+            )
+        self.status = TripOrderStatus.COMPLETED
+        self.updated_at = _utcnow()
+
+    def reopen(self) -> None:
+        """COMPLETED → PENDING (used when reconciliation is undone)."""
+        self._ensure_unlocked()
+        if self.status != TripOrderStatus.COMPLETED:
+            raise InvalidStateTransition(
+                kind="TripOrder",
+                current=self.status,
+                attempted=TripOrderStatus.PENDING,
+            )
+        self.status = TripOrderStatus.PENDING
+        self.updated_at = _utcnow()
+
+    def cancel(self) -> None:
+        """DRAFT or PENDING → CANCELLED."""
+        self._ensure_unlocked()
+        if self.status not in (TripOrderStatus.DRAFT, TripOrderStatus.PENDING):
+            raise InvalidStateTransition(
+                kind="TripOrder",
+                current=self.status,
+                attempted=TripOrderStatus.CANCELLED,
+            )
+        self.status = TripOrderStatus.CANCELLED
+        self.updated_at = _utcnow()
+
+    def confirm_reconciliation(self, *, user_id: int) -> None:
+        """Accountant confirms the trip after reviewing matched WOs."""
+        self.is_confirmed = True
+        self.confirmed_by = user_id
+        self.confirmed_at = _utcnow()
+        self.updated_at = _utcnow()
+
+    def lock(self, *, user_id: int) -> None:
+        """Lock the trip — prevents further mutation."""
+        self.is_locked = True
+        self.locked_at = _utcnow()
+        self.locked_by = user_id
+        self.updated_at = _utcnow()
+
+    def unlock(self) -> None:
+        self.is_locked = False
+        self.locked_at = None
+        self.locked_by = None
+        self.updated_at = _utcnow()
+
+    def link_work_order(self, work_order_id: int) -> None:
+        if work_order_id not in self.matched_work_order_ids:
+            self.matched_work_order_ids.append(int(work_order_id))
+            self.updated_at = _utcnow()
+
+    def unlink_work_order(self, work_order_id: int) -> None:
+        if work_order_id in self.matched_work_order_ids:
+            self.matched_work_order_ids.remove(int(work_order_id))
+            self.updated_at = _utcnow()
+
+
+# ── WorkOrder aggregate ─────────────────────────────────────────
+
+
+@dataclass
+class WorkOrderContainer:
+    """Container line inside a WorkOrder aggregate. Carries the photo
+    that the driver took at pickup."""
+
+    id: WorkOrderContainerId | None
+    work_order_id: WorkOrderId | None
+    container_number: str
+    work_type: str
+    photo_url: str | None = None
+    photo_lat: float | None = None
+    photo_lng: float | None = None
+    photo_timestamp: datetime | None = None
+    photo_address: str | None = None
+
+
+@dataclass
+class WorkOrder:
+    """WorkOrder (phiếu làm việc) aggregate root.
+
+    A driver creates one per delivery. Status transitions:
+    PENDING → MATCHED (by accountant during reconciliation), MATCHED →
+    COMPLETED (after settlement), or PENDING/MATCHED → COMPLETED
+    directly. CANCELLED is a terminal escape hatch.
+    """
+
+    id: WorkOrderId | None
+    client_id: int
+    route: str
+    pickup_location_id: int
+    dropoff_location_id: int
+    driver_id: int
+    tractor_plate: str
+    unit_price: Money = 0
+    driver_salary: Money = 0
+    allowance: Money = 0
+    earning: Money = 0
+    code: str | None = None
+    gps_lat: float | None = None
+    gps_lng: float | None = None
+    gps_address: str | None = None
+    pricing_id: int | None = None
+    status: str = WorkOrderStatus.PENDING
+    is_locked: bool = False
+    locked_at: datetime | None = None
+    locked_by: int | None = None
+    created_at: datetime = field(default_factory=_utcnow)
+    updated_at: datetime = field(default_factory=_utcnow)
+    containers: list[WorkOrderContainer] = field(default_factory=list)
+
+    def _ensure_unlocked(self) -> None:
+        if self.is_locked:
+            raise WorkOrderLocked(int(self.id) if self.id is not None else 0)
+
+    def add_container(
+        self,
+        *,
+        container_number: str,
+        work_type: str,
+        photo_url: str | None = None,
+        photo_lat: float | None = None,
+        photo_lng: float | None = None,
+        photo_timestamp: datetime | None = None,
+        photo_address: str | None = None,
+    ) -> WorkOrderContainer:
+        self._ensure_unlocked()
+        wt = normalize_work_type(work_type)
+        if self.containers:
+            existing_wt = self.containers[0].work_type
+            if wt != existing_wt:
+                raise ValueError(
+                    f"mixed work types not allowed: WO has {existing_wt!s}, "
+                    f"new container is {wt!s}"
+                )
+        _validate_container_count(wt, len(self.containers) + 1)
+        c = WorkOrderContainer(
+            id=None,
+            work_order_id=self.id,
+            container_number=container_number,
+            work_type=wt,
+            photo_url=photo_url,
+            photo_lat=photo_lat,
+            photo_lng=photo_lng,
+            photo_timestamp=photo_timestamp,
+            photo_address=photo_address,
+        )
+        self.containers.append(c)
+        self.updated_at = _utcnow()
+        return c
+
+    def apply_pricing_snapshot(
+        self,
+        *,
+        unit_price: Money,
+        driver_salary: Money,
+        allowance: Money,
+        pricing_id: int | None,
+    ) -> None:
+        self._ensure_unlocked()
+        self.unit_price = int(unit_price)
+        self.driver_salary = int(driver_salary)
+        self.allowance = int(allowance)
+        self.earning = int(driver_salary) + int(allowance)
+        self.pricing_id = pricing_id
+        self.updated_at = _utcnow()
+
+    def match(self) -> None:
+        """PENDING → MATCHED."""
+        self._ensure_unlocked()
+        if self.status != WorkOrderStatus.PENDING:
+            raise InvalidStateTransition(
+                kind="WorkOrder",
+                current=self.status,
+                attempted=WorkOrderStatus.MATCHED,
+            )
+        self.status = WorkOrderStatus.MATCHED
+        self.updated_at = _utcnow()
+
+    def unmatch(self) -> None:
+        """MATCHED → PENDING."""
+        self._ensure_unlocked()
+        if self.status != WorkOrderStatus.MATCHED:
+            raise InvalidStateTransition(
+                kind="WorkOrder",
+                current=self.status,
+                attempted=WorkOrderStatus.PENDING,
+            )
+        self.status = WorkOrderStatus.PENDING
+        self.updated_at = _utcnow()
+
+    def complete(self) -> None:
+        """PENDING or MATCHED → COMPLETED."""
+        self._ensure_unlocked()
+        if self.status not in (WorkOrderStatus.PENDING, WorkOrderStatus.MATCHED):
+            raise InvalidStateTransition(
+                kind="WorkOrder",
+                current=self.status,
+                attempted=WorkOrderStatus.COMPLETED,
+            )
+        self.status = WorkOrderStatus.COMPLETED
+        self.updated_at = _utcnow()
+
+    def cancel(self) -> None:
+        """PENDING → CANCELLED. Matched/completed orders cannot cancel directly."""
+        self._ensure_unlocked()
+        if self.status != WorkOrderStatus.PENDING:
+            raise InvalidStateTransition(
+                kind="WorkOrder",
+                current=self.status,
+                attempted=WorkOrderStatus.CANCELLED,
+            )
+        self.status = WorkOrderStatus.CANCELLED
+        self.updated_at = _utcnow()
+
+    def lock(self, *, user_id: int) -> None:
+        self.is_locked = True
+        self.locked_at = _utcnow()
+        self.locked_by = user_id
+        self.updated_at = _utcnow()
+
+    def unlock(self) -> None:
+        self.is_locked = False
+        self.locked_at = None
+        self.locked_by = None
+        self.updated_at = _utcnow()
