@@ -2,7 +2,11 @@ from fastapi import APIRouter, Depends
 from arq import ArqRedis
 from arq.jobs import Job, JobStatus
 
-from app.api.v1.auth import router as auth_router
+from app.contexts.identity.interface import (
+    auth_router,
+    push_router,
+    users_router,
+)
 from app.database import engine
 from app.api.v1.clients import router as clients_router
 from app.api.v1.locations import router as locations_router
@@ -14,8 +18,6 @@ from app.api.v1.reconcile import router as reconcile_router
 from app.api.v1.salary import router as salary_router
 from app.api.v1.salary_config import router as salary_config_router
 from app.api.v1.drivers import router as drivers_router
-from app.api.v1.push import router as push_router
-from app.api.v1.users import router as users_router
 from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.vendors import router as vendors_router
 from app.api.v1.audit import router as audit_router

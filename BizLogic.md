@@ -346,6 +346,12 @@ Per-aggregate-root, abstract in domain, concrete in infrastructure. The reposito
 
 CQRS read/write split, event sourcing, dedicated message bus, polyglot persistence, saga orchestrators, heavyweight DI container, cross-context choreography via events as primary integration. Single Postgres, in-process events, FastAPI `Depends` for wiring.
 
+### 9.7 Realized contexts
+
+- **Identity & Access** — extracted to `backend/app/contexts/identity/` (commit 2026-05-05). Pure-Python `User` and `PushSubscription` domain entities; `BcryptPasswordHasher` + `JwtTokenIssuer` adapters in `infrastructure/security.py`; routers under `interface/routers/`. `app/models/base.py` and `app/models/push.py` remain as one-line shims so the rest of the codebase (still using `from app.models.base import User`) keeps compiling until each consuming context is itself extracted.
+
+The remaining 7 contexts still live in the legacy folder layout (`app/models/`, `app/services/`, `app/repositories/`, `app/api/v1/`).
+
 ---
 
 ## 10. Open questions / things still to confirm
