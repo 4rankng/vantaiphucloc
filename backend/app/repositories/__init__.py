@@ -1,3 +1,1 @@
-from app.repositories.base import BaseRepository
-
-__all__ = ["BaseRepository"]
+"""Legacy repository shims kept until the last consumer moves into a context."""
