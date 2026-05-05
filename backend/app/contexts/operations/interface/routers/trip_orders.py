@@ -142,9 +142,13 @@ async def _load_many(session, trips: list[TripOrder]) -> list[TripOrderOut]:
 
 async def _enqueue_salary_recalc(session, driver_id: int, ref_date: date) -> None:
     try:
-        from app.services.salary_service import get_salary_period_dates
+        from app.contexts.payroll.domain.entities import period_dates_for
+        from app.contexts.payroll.infrastructure.repositories import (
+            SqlSalaryPeriodConfigRepository,
+        )
         from app.workers import enqueue, salary_recalc_job_id
-        start, end = await get_salary_period_dates(session, ref_date)
+        config = await SqlSalaryPeriodConfigRepository(session).get_current()
+        start, end = period_dates_for(config, ref_date)
         job_id = salary_recalc_job_id(driver_id, start.isoformat(), end.isoformat())
         await enqueue(
             "calculate_salary_task",
