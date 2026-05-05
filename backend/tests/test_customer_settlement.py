@@ -13,22 +13,38 @@ from datetime import date
 import openpyxl
 import pytest
 
+from app.contexts.billing.domain.value_objects import (
+    SettlementPeriod,
+    settlement_period_for as _settlement_period,
+)
+from app.contexts.billing.infrastructure.excel_writer import (
+    generate_pan_bk_sl_workbook,
+    settlement_filename,
+)
+from app.contexts.billing.infrastructure.settlement_loader import (
+    SqlSettlementDataLoader,
+    _split_unit_price_per_container,
+)
 from app.models.domain import (
     Client,
     TripOrder,
     TripOrderContainer,
 )
-from app.services.customer_settlement_service import (
-    SettlementData,
-    _split_unit_price_per_container,
-    load_settlement_data,
-    settlement_period_for,
-)
-from app.services.excel_pan_bk_sl import (
-    generate_pan_bk_sl_workbook,
-    settlement_filename,
-)
 from app.utils.number_to_words_vi import number_to_vietnamese_words
+
+
+def settlement_period_for(year: int, month: int):
+    """Test shim — keeps the (start, end) tuple shape the legacy tests use."""
+    p = _settlement_period(year, month)
+    return p.start, p.end
+
+
+async def load_settlement_data(db_session, client_id, period_start, period_end):
+    loader = SqlSettlementDataLoader(db_session)
+    return await loader.load(
+        client_id=client_id,
+        period=SettlementPeriod(start=period_start, end=period_end),
+    )
 
 
 # ---------------------------------------------------------------------------

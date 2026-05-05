@@ -1,8 +1,4 @@
-"""Customer-facing reports for the kế toán role.
-
-Currently exposes the PAN-style monthly settlement workbook
-(`Bảng kê thanh toán` + `Sản lượng`).
-"""
+"""Customer-facing reporting endpoints (BK SL export)."""
 
 from __future__ import annotations
 
@@ -12,19 +8,17 @@ from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user, require_roles
-from app.database import get_db
-from app.models.base import User
-from app.services.customer_settlement_service import (
-    load_settlement_data,
+from app.contexts.billing.application import GenerateCustomerSettlement
+from app.contexts.billing.domain.exceptions import SettlementClientNotFound
+from app.contexts.billing.domain.value_objects import (
+    SettlementPeriod,
     settlement_period_for,
 )
-from app.services.excel_pan_bk_sl import (
-    generate_pan_bk_sl_workbook,
-    settlement_filename,
-)
+from app.contexts.billing.interface.dependencies import get_generate_settlement
+from app.contexts.billing.interface.error_translation import to_http
+from app.core.deps import require_roles
+from app.models.base import User
 
 _logger = logging.getLogger(__name__)
 
@@ -44,15 +38,9 @@ async def export_customer_settlement(
         None,
         description="Ngày kết thúc (override kỳ); mặc định 25 của year/month.",
     ),
-    db: AsyncSession = Depends(get_db),
+    use_case: GenerateCustomerSettlement = Depends(get_generate_settlement),
     _user: User = Depends(require_roles("accountant", "superadmin")),
 ):
-    """Export `BKTT + SL` workbook for a single customer + period.
-
-    The default period mirrors the customer convention: 26th of the previous
-    month → 25th of the selected month. Pass `start_date`/`end_date` to
-    override.
-    """
     if (start_date is None) != (end_date is None):
         raise HTTPException(
             status_code=400,
@@ -65,31 +53,24 @@ async def export_customer_settlement(
                 status_code=400,
                 detail="start_date phải nhỏ hơn hoặc bằng end_date.",
             )
-        period_start, period_end = start_date, end_date
+        period = SettlementPeriod(start=start_date, end=end_date)
     else:
         if year is None or month is None:
             raise HTTPException(
                 status_code=400,
                 detail="Cần truyền year và month, hoặc start_date và end_date.",
             )
-        period_start, period_end = settlement_period_for(year, month)
+        period = settlement_period_for(year, month)
 
     try:
-        data = await load_settlement_data(db, client_id, period_start, period_end)
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-
-    workbook_bytes = generate_pan_bk_sl_workbook(data)
-    filename = settlement_filename(data)
-
-    _logger.info(
-        "Customer settlement exported: client_id=%s period=%s→%s lines=%d total=%s",
-        client_id, period_start, period_end,
-        len(data.trip_lines), data.total_with_vat,
-    )
+        result = await use_case(client_id=client_id, period=period)
+    except SettlementClientNotFound as exc:
+        raise to_http(exc) from exc
 
     return StreamingResponse(
-        io.BytesIO(workbook_bytes),
+        io.BytesIO(result.workbook_bytes),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="{result.filename}"'
+        },
     )

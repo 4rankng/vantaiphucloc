@@ -12,19 +12,14 @@ import openpyxl
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-from app.services.customer_settlement_service import SettlementData
+from app.contexts.billing.domain.entities import SettlementStatement
 from app.utils.number_to_words_vi import number_to_vietnamese_words
 
 
-# Phúc Lộc company info (stays in code — this is *our* letterhead, not data).
 COMPANY_NAME = "CÔNG TY TNHH AMT PHÚC LỘC"
 COMPANY_ADDRESS = "Số 56B/97 đường Đoàn Kết, Phường Hải An, TP Hải Phòng"
 COMPANY_TAX_CODE = "0201965047"
 
-
-# ---------------------------------------------------------------------------
-# Style helpers
-# ---------------------------------------------------------------------------
 
 _THIN = Side(style="thin", color="000000")
 _BORDER_ALL = Border(left=_THIN, right=_THIN, top=_THIN, bottom=_THIN)
@@ -53,18 +48,13 @@ def _apply_border(ws, row_start: int, row_end: int, col_start: int, col_end: int
             ws.cell(row=r, column=c).border = _BORDER_ALL
 
 
-# ---------------------------------------------------------------------------
-# SL sheet
-# ---------------------------------------------------------------------------
-
-def _write_sl_sheet(wb: openpyxl.Workbook, data: SettlementData, sheet_name: str) -> None:
+def _write_sl_sheet(wb: openpyxl.Workbook, data: SettlementStatement, sheet_name: str) -> None:
     ws = wb.create_sheet(sheet_name)
-    p_start = data.period_start
-    p_end = data.period_end
+    p_start = data.period.start
+    p_end = data.period.end
     period_month = p_end.month
     period_year = p_end.year
 
-    # Letterhead block (rows 1–8)
     ws.cell(row=1, column=1, value=COMPANY_NAME).font = _BOLD
     ws.cell(row=2, column=1, value=COMPANY_ADDRESS)
     ws.cell(row=3, column=1, value=f"MST: {COMPANY_TAX_CODE}")
@@ -88,7 +78,6 @@ def _write_sl_sheet(wb: openpyxl.Workbook, data: SettlementData, sheet_name: str
         value="Công ty TNHH AMT Phúc Lộc xin gửi tới Quý Công ty bảng kê khối lượng vận chuyển trong kỳ.",
     )
 
-    # Column header (row 10)
     headers = [
         ("STT", 6),
         ("NGÀY ĐI", 12),
@@ -115,15 +104,12 @@ def _write_sl_sheet(wb: openpyxl.Workbook, data: SettlementData, sheet_name: str
         cell.fill = _HEADER_FILL
         ws.column_dimensions[get_column_letter(col_idx)].width = width
 
-    # Data rows
     first_data_row = header_row + 1
     row = first_data_row
     for stt, line in enumerate(data.trip_lines, start=1):
         ws.cell(row=row, column=1, value=stt).alignment = _CENTER
-
         d = ws.cell(row=row, column=2, value=line.trip_date)
         _date_fmt(d)
-
         ws.cell(row=row, column=3, value=line.client_code).alignment = _CENTER
         ws.cell(row=row, column=4, value=line.container_number).alignment = _CENTER
 
@@ -136,21 +122,12 @@ def _write_sl_sheet(wb: openpyxl.Workbook, data: SettlementData, sheet_name: str
         ws.cell(row=row, column=9, value=line.tractor_plate).alignment = _CENTER
         ws.cell(row=row, column=10, value=line.pickup_location).alignment = _LEFT
         ws.cell(row=row, column=11, value=line.dropoff_location).alignment = _LEFT
-
-        # SỐ CHUYẾN = E+F+G+H
         ws.cell(row=row, column=12, value=f"=E{row}+F{row}+G{row}+H{row}").alignment = _CENTER
-
-        # CƯỚC CHUYẾN
         cuoc = ws.cell(row=row, column=13, value=line.unit_price)
         _money_fmt(cuoc)
-
-        # TỔNG TT = SỐ CHUYẾN * CƯỚC CHUYẾN
         tt = ws.cell(row=row, column=14, value=f"=L{row}*M{row}")
         _money_fmt(tt)
-
-        # TÁC NGHIỆP — left blank: not yet stored in the system
         ws.cell(row=row, column=15, value="")
-
         ws.cell(row=row, column=16, value="oke" if line.is_confirmed else "").alignment = _CENTER
         row += 1
 
@@ -158,8 +135,6 @@ def _write_sl_sheet(wb: openpyxl.Workbook, data: SettlementData, sheet_name: str
 
     if data.trip_lines:
         _apply_border(ws, header_row, last_data_row, 1, 16)
-
-        # Footer totals (rows after data)
         total_row = last_data_row + 1
         ws.cell(row=total_row, column=4, value="TỔNG CỘNG").font = _BOLD
         ws.cell(row=total_row, column=4).alignment = _RIGHT
@@ -182,21 +157,15 @@ def _write_sl_sheet(wb: openpyxl.Workbook, data: SettlementData, sheet_name: str
         grand_cell.font = _BOLD
         grand_cell.fill = _TOTAL_FILL
 
-    # Freeze the header
     ws.freeze_panes = ws.cell(row=header_row + 1, column=1)
 
 
-# ---------------------------------------------------------------------------
-# BKTT sheet
-# ---------------------------------------------------------------------------
-
-def _write_bktt_sheet(wb: openpyxl.Workbook, data: SettlementData, sheet_name: str) -> None:
+def _write_bktt_sheet(wb: openpyxl.Workbook, data: SettlementStatement, sheet_name: str) -> None:
     ws = wb.create_sheet(sheet_name)
-    p_end = data.period_end
+    p_end = data.period.end
     period_month = p_end.month
     period_year = p_end.year
 
-    # Letterhead
     ws.cell(row=1, column=1, value=COMPANY_NAME).font = _BOLD
     ws.cell(row=2, column=1, value=f"Địa chỉ: {COMPANY_ADDRESS}")
     title = ws.cell(
@@ -213,13 +182,9 @@ def _write_bktt_sheet(wb: openpyxl.Workbook, data: SettlementData, sheet_name: s
     ws.cell(row=7, column=2, value="MST :")
     ws.cell(row=7, column=3, value=data.client.tax_code or "")
 
-    # Column header — three logical rows merged into a tight 9–10 block
-    # We use a simpler 2-row header that's still faithful to the original
-    # layout: row 9 spans the cont-type group, row 10 has subheaders.
     header_top = 9
     header_bottom = 10
 
-    # Row 9 — top headers
     headers_top = [
         (1, "STT"),
         (2, "Tuyến vận tải"),
@@ -236,14 +201,11 @@ def _write_bktt_sheet(wb: openpyxl.Workbook, data: SettlementData, sheet_name: s
         c.alignment = _CENTER
         c.fill = _HEADER_FILL
 
-    # Merges for the multi-column groups
-    ws.merge_cells(start_row=header_top, start_column=2, end_row=header_top, end_column=3)  # Tuyến
-    ws.merge_cells(start_row=header_top, start_column=5, end_row=header_top, end_column=8)  # Loại cont
-    # Single-column headers span both header rows so the table stays tidy
+    ws.merge_cells(start_row=header_top, start_column=2, end_row=header_top, end_column=3)
+    ws.merge_cells(start_row=header_top, start_column=5, end_row=header_top, end_column=8)
     for col in (1, 4, 9, 10, 11, 12):
         ws.merge_cells(start_row=header_top, start_column=col, end_row=header_bottom, end_column=col)
 
-    # Row 10 — sub-headers under "Tuyến vận tải" and "Loại cont"
     subheaders = [
         (2, "Điểm đi"),
         (3, "Điểm đến"),
@@ -262,7 +224,6 @@ def _write_bktt_sheet(wb: openpyxl.Workbook, data: SettlementData, sheet_name: s
     for col, width in column_widths.items():
         ws.column_dimensions[get_column_letter(col)].width = width
 
-    # Data rows
     first_data_row = header_bottom + 1
     row = first_data_row
     for stt, summary in enumerate(data.route_summary, start=1):
@@ -279,19 +240,16 @@ def _write_bktt_sheet(wb: openpyxl.Workbook, data: SettlementData, sheet_name: s
         _money_fmt(unit_cell)
         amount_cell = ws.cell(row=row, column=11, value=summary.total_amount)
         _money_fmt(amount_cell)
-        ws.cell(row=row, column=12, value="")  # Ghi chú — left blank
+        ws.cell(row=row, column=12, value="")
         row += 1
 
     last_data_row = row - 1 if data.route_summary else first_data_row - 1
 
     if data.route_summary:
         _apply_border(ws, header_top, last_data_row, 1, 12)
-
-        # Totals
         total_row = last_data_row + 2
         ws.cell(row=total_row, column=1, value="TỔNG CƯỚC CHƯA VAT").font = _BOLD
         ws.merge_cells(start_row=total_row, start_column=1, end_row=total_row, end_column=4)
-        # Sum count cells (E..H) and amount column (K)
         for col in (5, 6, 7, 8):
             cell = ws.cell(
                 row=total_row,
@@ -351,21 +309,13 @@ def _write_bktt_sheet(wb: openpyxl.Workbook, data: SettlementData, sheet_name: s
     ws.freeze_panes = ws.cell(row=header_bottom + 1, column=1)
 
 
-# ---------------------------------------------------------------------------
-# Public entry-point
-# ---------------------------------------------------------------------------
-
-def generate_pan_bk_sl_workbook(data: SettlementData) -> bytes:
-    """Render the workbook to bytes. Sheets order matches the customer file:
-    BKTT first, then SL.
-    """
+def generate_pan_bk_sl_workbook(data: SettlementStatement) -> bytes:
+    """Render the workbook to bytes. Sheets: BKTT first, then SL."""
     wb = openpyxl.Workbook()
-    # Drop the default empty sheet
-    default = wb.active
-    wb.remove(default)
+    wb.remove(wb.active)
 
-    mm = data.period_end.month
-    yy = data.period_end.year % 100
+    mm = data.period.end.month
+    yy = data.period.end.year % 100
     bktt_name = f"BKTT T{mm}.{yy:02d}"
     sl_name = f"SL T{mm}.{yy:02d}"
 
@@ -379,11 +329,8 @@ def generate_pan_bk_sl_workbook(data: SettlementData) -> bytes:
     return buf.getvalue()
 
 
-def settlement_filename(data: SettlementData) -> str:
-    """Filename mirroring the customer's convention:
-    `{CODE}_BK_SL_T{MM}.{YY}_HD.xlsx`.
-    """
+def settlement_filename(data: SettlementStatement) -> str:
     code = (data.client.code or data.client.name or "KH").strip().upper().replace(" ", "_")
-    mm = data.period_end.month
-    yy = data.period_end.year % 100
+    mm = data.period.end.month
+    yy = data.period.end.year % 100
     return f"{code}_BK_SL_T{mm:02d}.{yy:02d}_HD.xlsx"
