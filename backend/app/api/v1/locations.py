@@ -135,7 +135,11 @@ from datetime import datetime as _dt, timezone as _tz
 from sqlalchemy import select as _select
 from sqlalchemy.ext.asyncio import AsyncSession as _AsyncSession
 from app.database import get_db as _get_db
-from app.models.domain import Location as _Location, LocationAlias as _LocationAlias
+from app.models.domain import (
+    Location as _Location,
+    LocationAlias as _LocationAlias,
+    TripOrder as _TripOrder,
+)
 from app.schemas.domain import LocationNearbyOut, LocationPinRequest
 from app.core.deps import get_current_user as _get_current_user
 from app.services.location_resolver import normalize as _normalize
@@ -154,28 +158,44 @@ async def nearby_locations(
     lat: float | None = Query(None, description="Driver GPS latitude"),
     lng: float | None = Query(None, description="Driver GPS longitude"),
     q: str | None = Query(None, description="Optional substring filter on name/alias"),
+    trip_id: int | None = Query(
+        None,
+        description="If set, the trip's pickup/dropoff are pinned to the top.",
+    ),
     radius_km: float = Query(50.0, ge=0.1, le=2000.0),
     limit: int = Query(20, ge=1, le=100),
     current_user: User = Depends(_get_current_user),
     db: _AsyncSession = Depends(_get_db),
 ):
-    """Driver-facing dropdown source: nearest locations first, then
-    locations with no coords ranked alphabetically.
+    """Driver-facing dropdown source.
 
-    Always returns up to `limit` results. If `q` is set, applies a
-    substring filter against name + aliases before sorting.
+    Order of results:
+      1. The currently-assigned trip's pickup + dropoff (if `trip_id` is
+         given). Pinned regardless of distance / q filter so the driver
+         always sees the expected endpoints.
+      2. Coords-within-radius locations, Haversine-sorted ascending.
+      3. NULL-coord locations, alphabetical (selectable but
+         deprioritized).
 
-    No PostGIS dependency — bbox pre-filter (using the (lat,lng) index
-    if helpful) + Haversine in app code. Fine at our scale.
+    `q` substring-matches against name + aliases (normalized text).
+    No PostGIS — `ix_locations_lat_lng` makes the bbox pre-filter
+    cheap; Haversine then runs in Python over the small candidate set.
     """
+    pinned_ids: list[int] = []
+    if trip_id is not None:
+        trip = (await db.execute(
+            _select(_TripOrder).where(_TripOrder.id == trip_id)
+        )).scalar_one_or_none()
+        if trip is not None:
+            if trip.pickup_location_id:
+                pinned_ids.append(trip.pickup_location_id)
+            if trip.dropoff_location_id and trip.dropoff_location_id not in pinned_ids:
+                pinned_ids.append(trip.dropoff_location_id)
+
     base_q = _select(_Location).where(_Location.is_active.is_(True))
 
-    matched_ids: set[int] | None = None
     if q:
         q_norm = _normalize(q)
-        # Match by name or alias (substring on normalized text).
-        # We pull all candidates rather than running LIKE per row — the
-        # locations table is small.
         candidate_locs = list((await db.execute(_select(_Location))).scalars().all())
         candidate_aliases = list((await db.execute(_select(_LocationAlias))).scalars().all())
         ids: set[int] = set()
@@ -185,16 +205,24 @@ async def nearby_locations(
         for al in candidate_aliases:
             if q_norm in al.alias_normalized:
                 ids.add(al.location_id)
-        matched_ids = ids
-        if not matched_ids:
+        if not ids and not pinned_ids:
             return []
-        base_q = base_q.where(_Location.id.in_(matched_ids))
+        base_q = base_q.where(_Location.id.in_(ids | set(pinned_ids)))
 
     locations = list((await db.execute(base_q)).scalars().all())
+    by_id: dict[int, _Location] = {loc.id: loc for loc in locations}
+
+    pinned_locs: list[_Location] = []
+    for pid in pinned_ids:
+        if pid in by_id:
+            pinned_locs.append(by_id[pid])
 
     coord_rows: list[tuple[_Location, float]] = []
     no_coord_rows: list[_Location] = []
+    excluded = {loc.id for loc in pinned_locs}
     for loc in locations:
+        if loc.id in excluded:
+            continue
         if loc.lat is not None and loc.lng is not None and lat is not None and lng is not None:
             d = _haversine_km(lat, lng, float(loc.lat), float(loc.lng))
             if d <= radius_km:
@@ -204,21 +232,25 @@ async def nearby_locations(
     coord_rows.sort(key=lambda x: x[1])
     no_coord_rows.sort(key=lambda x: x.name.lower())
 
-    # Result: coord'd-and-within-radius rows first, then no-coord rows
-    # (deprioritized but still selectable).
-    out: list[LocationNearbyOut] = []
-    for loc, d in coord_rows:
-        out.append(LocationNearbyOut(
-            id=loc.id, name=loc.name, lat=float(loc.lat), lng=float(loc.lng),
-            distance_km=round(d, 3),
-        ))
-    for loc in no_coord_rows:
-        out.append(LocationNearbyOut(
-            id=loc.id, name=loc.name,
+    def _to_out(loc: _Location, d: float | None) -> LocationNearbyOut:
+        return LocationNearbyOut(
+            id=loc.id,
+            name=loc.name,
             lat=float(loc.lat) if loc.lat is not None else None,
             lng=float(loc.lng) if loc.lng is not None else None,
-            distance_km=None,
-        ))
+            distance_km=round(d, 3) if d is not None else None,
+        )
+
+    out: list[LocationNearbyOut] = []
+    for loc in pinned_locs:
+        d = None
+        if loc.lat is not None and loc.lng is not None and lat is not None and lng is not None:
+            d = _haversine_km(lat, lng, float(loc.lat), float(loc.lng))
+        out.append(_to_out(loc, d))
+    for loc, d in coord_rows:
+        out.append(_to_out(loc, d))
+    for loc in no_coord_rows:
+        out.append(_to_out(loc, None))
     return out[:limit]
 
 
