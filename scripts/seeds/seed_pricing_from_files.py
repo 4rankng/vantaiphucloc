@@ -278,11 +278,10 @@ async def _upsert(db, rows: list[TariffRow], dry_run: bool, log) -> dict[str, in
                          pickup_loc.name, dropoff_loc.name, row.unit_price)
                 continue
             pricing = Pricing(
-                client_id=client.id, client_name=client.name,
+                client_id=client.id,
                 work_type=row.work_type,
-                route=f"{pickup_loc.name} - {dropoff_loc.name}",
-                pickup_location=pickup_loc.name, dropoff_location=dropoff_loc.name,
-                pickup_location_id=pickup_loc.id, dropoff_location_id=dropoff_loc.id,
+                pickup_location_id=pickup_loc.id,
+                dropoff_location_id=dropoff_loc.id,
                 is_active=True,
             )
             db.add(pricing); await db.flush()
