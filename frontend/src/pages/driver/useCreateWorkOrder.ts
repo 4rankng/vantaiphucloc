@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useOffline } from '@/contexts/OfflineContext'
 import { apiClient } from '@/services/api'
+import { useLocations } from '@/hooks/use-queries'
 import type { PhotoMeta } from '@/components/shared/ContainerScanner'
 import type { Client, WorkType, WorkOrder } from '@/data/domain'
 
@@ -53,14 +54,15 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
   const [clients, setClients] = useState<Client[]>([])
   const [driverPlate, setDriverPlate] = useState('')
   const [recentOrders, setRecentOrders] = useState<WorkOrder[]>([])
+  const { data: locations = [] } = useLocations()
 
   // Form state — pre-populate from existing WO when editing
   const [containers, setContainers] = useState<ContainerForm[]>(
     existingWorkOrder ? woToContainers(existingWorkOrder) : [{ ...EMPTY_CONT }],
   )
-  const [clientId, setClientId] = useState(existingWorkOrder ? String(existingWorkOrder.clientId) : '')
-  const [pickupLocation, setPickupLocation] = useState(existingWorkOrder?.pickupLocation ?? '')
-  const [dropoffLocation, setDropoffLocation] = useState(existingWorkOrder?.dropoffLocation ?? '')
+  const [clientId, setClientId] = useState(existingWorkOrder ? String(existingWorkOrder.client.id) : '')
+  const [pickupLocation, setPickupLocation] = useState(existingWorkOrder?.pickupLocation.name ?? '')
+  const [dropoffLocation, setDropoffLocation] = useState(existingWorkOrder?.dropoffLocation.name ?? '')
   const [selectedTripId, setSelectedTripId] = useState<number | null>(null)
 
   // UI state
@@ -115,7 +117,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
           const seen = new Set<string>()
           const unique: WorkOrder[] = []
           for (const wo of sorted) {
-            const key = `${wo.clientId}-${wo.pickupLocation}-${wo.dropoffLocation}`
+            const key = `${wo.client.id}-${wo.pickupLocation.id}-${wo.dropoffLocation.id}`
             if (!seen.has(key)) {
               seen.add(key)
               unique.push(wo)
@@ -279,7 +281,6 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
     setSubmitting(true)
 
     try {
-      const client = clients.find(c => String(c.id) === clientId)
       const containerItems = containers.map(c => ({
         containerNumber: c.containerNumber.trim(),
         workType: c.workType,
@@ -290,15 +291,20 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
       }))
 
       const route = `${pickupLocation} - ${dropoffLocation}`
+      const pickupId = locations.find(l => l.name === pickupLocation)?.id
+      const dropoffId = locations.find(l => l.name === dropoffLocation)?.id
+      if (!pickupId || !dropoffId) {
+        setSubmitting(false)
+        return
+      }
 
       if (isEdit && existingWorkOrder) {
         await apiClient.updateWorkOrder(existingWorkOrder.id, {
           containers: containerItems,
           clientId: Number(clientId),
-          clientName: client?.name ?? '',
           route,
-          pickupLocation,
-          dropoffLocation,
+          pickupLocationId: pickupId,
+          dropoffLocationId: dropoffId,
         })
       } else {
         const gps = await new Promise<{ lat: number; lng: number }>((resolve) => {
@@ -313,12 +319,10 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
         await apiClient.createWorkOrder({
           containers: containerItems,
           clientId: Number(clientId),
-          clientName: client?.name ?? '',
           route,
-          pickupLocation,
-          dropoffLocation,
+          pickupLocationId: pickupId,
+          dropoffLocationId: dropoffId,
           driverId: Number(user!.id),
-          driverName: user!.name,
           tractorPlate: driverPlate,
           gpsLat: gps.lat,
           gpsLng: gps.lng,
@@ -334,7 +338,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
       console.error('Submit failed:', err)
       setSubmitting(false)
     }
-  }, [containers, clientId, pickupLocation, dropoffLocation, clients, user, driverPlate, navigate, isOnline, isEdit, existingWorkOrder])
+  }, [containers, clientId, pickupLocation, dropoffLocation, locations, user, driverPlate, navigate, isEdit, existingWorkOrder])
 
   // Summary data for dialog
   const summaryContainers = useMemo(() =>

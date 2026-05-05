@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { usePricings, useClients, useCreatePricing, useCreateClient } from '@/hooks/use-queries'
+import { usePricings, useClients, useCreatePricing, useCreateClient, type PricingCreatePayload } from '@/hooks/use-queries'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import type { Pricing } from '@/data/domain'
@@ -27,23 +27,24 @@ export function PricingClientCards({ basePath }: Props) {
   const clientSummaries = useMemo(() => {
     const map = new Map<number, { clientId: number; clientName: string; pricingCount: number; routeSet: Set<string> }>()
     pricings.forEach((p: Pricing) => {
-      const existing = map.get(p.clientId)
+      const routeKey = `${p.pickupLocation.id}-${p.dropoffLocation.id}`
+      const existing = map.get(p.client.id)
       if (existing) {
         existing.pricingCount++
-        existing.routeSet.add(p.route)
+        existing.routeSet.add(routeKey)
       } else {
-        map.set(p.clientId, {
-          clientId: p.clientId,
-          clientName: p.clientName,
+        map.set(p.client.id, {
+          clientId: p.client.id,
+          clientName: p.client.name,
           pricingCount: 1,
-          routeSet: new Set([p.route]),
+          routeSet: new Set([routeKey]),
         })
       }
     })
     return Array.from(map.values()).sort((a, b) => a.clientName.localeCompare(b.clientName, 'vi'))
   }, [pricings])
 
-  const handleSave = (data: Omit<Pricing, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const handleSave = (data: PricingCreatePayload) => {
     createPricing.mutate(data, {
       onSuccess: () => setShowForm(false),
     })

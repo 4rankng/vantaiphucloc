@@ -3,6 +3,11 @@ Pricing lookup service.
 
 Used by work order and trip order creation to auto-fill unit_price, driver_salary,
 allowance, and earning from a matching Pricing record + PricingLine.
+
+Lookup is FK-only (after the schema overhaul that dropped denormalized
+string columns from `pricings`). Callers can pass either an explicit
+`pickup_location_id`/`dropoff_location_id` pair or a name+resolver to
+turn strings into IDs.
 """
 
 import hashlib
@@ -15,112 +20,69 @@ from app.core.cache import CacheManager
 
 
 def _pricing_cache_key(
-    client_id: int, work_type: str, route: str | None = None,
-    pickup_location: str | None = None, dropoff_location: str | None = None,
+    client_id: int, work_type: str,
+    pickup_location_id: int, dropoff_location_id: int,
 ) -> str:
-    raw = f"{client_id}:{work_type}:{route}:{pickup_location}:{dropoff_location}"
+    raw = f"{client_id}:{work_type}:{pickup_location_id}:{dropoff_location_id}"
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
+
+
+async def _resolve_location_id(db: AsyncSession, name: str | None) -> int | None:
+    if not name:
+        return None
+    res = await db.execute(
+        select(Location.id).where(Location.name == name, Location.is_active == True)
+    )
+    return res.scalar_one_or_none()
 
 
 async def find_pricing(
     db: AsyncSession,
     client_id: int,
     work_type: str,
-    route: str | None = None,
-    pickup_location: str | None = None,
-    dropoff_location: str | None = None,
+    pickup_location_id: int | None = None,
+    dropoff_location_id: int | None = None,
+    pickup_location: str | None = None,    # convenience: resolve name → id
+    dropoff_location: str | None = None,   # convenience: resolve name → id
     cache: CacheManager | None = None,
+    # `route` kept for callers that still pass it; ignored.
+    route: str | None = None,
 ) -> Pricing | None:
-    # Resolve location FKs for FK-based lookup
-    pickup_loc_id = None
-    dropoff_loc_id = None
-    if pickup_location:
-        loc_result = await db.execute(
-            select(Location).where(Location.name == pickup_location, Location.is_active == True)
-        )
-        loc = loc_result.scalar_one_or_none()
-        if loc:
-            pickup_loc_id = loc.id
-    if dropoff_location:
-        loc_result = await db.execute(
-            select(Location).where(Location.name == dropoff_location, Location.is_active == True)
-        )
-        loc = loc_result.scalar_one_or_none()
-        if loc:
-            dropoff_loc_id = loc.id
+    """Find the Pricing row for `(client_id, work_type, pickup, dropoff)`.
 
-    # Try FK-based pickup/dropoff match first
-    if pickup_loc_id and dropoff_loc_id:
-        result = await db.execute(
-            select(Pricing).where(
-                Pricing.client_id == client_id,
-                Pricing.work_type == work_type,
-                Pricing.pickup_location_id == pickup_loc_id,
-                Pricing.dropoff_location_id == dropoff_loc_id,
-                Pricing.is_active == True,
-            ).limit(1)
-        )
-        pricing = result.scalar_one_or_none()
-        if pricing:
-            return pricing
+    `pickup_location_id`/`dropoff_location_id` are preferred. If only
+    name strings are passed, this resolves them to IDs via the
+    `locations` table (active rows only).
+    """
+    if pickup_location_id is None:
+        pickup_location_id = await _resolve_location_id(db, pickup_location)
+    if dropoff_location_id is None:
+        dropoff_location_id = await _resolve_location_id(db, dropoff_location)
+    if pickup_location_id is None or dropoff_location_id is None:
+        return None
 
-    # Try string-based pickup/dropoff match
-    if pickup_location and dropoff_location:
-        cache_key = _pricing_cache_key(client_id, work_type, pickup_location=pickup_location, dropoff_location=dropoff_location)
+    cache_key = _pricing_cache_key(client_id, work_type, pickup_location_id, dropoff_location_id)
+    if cache:
+        cached = await cache.get_json("pricing_lookup", cache_key)
+        if cached is not None:
+            res = await db.execute(
+                select(Pricing).where(Pricing.id == cached["id"]).limit(1)
+            )
+            return res.scalar_one_or_none()
 
-        if cache:
-            cached = await cache.get_json("pricing_lookup", cache_key)
-            if cached is not None:
-                result = await db.execute(
-                    select(Pricing).where(Pricing.id == cached["id"]).limit(1)
-                )
-                return result.scalar_one_or_none()
-
-        result = await db.execute(
-            select(Pricing).where(
-                Pricing.client_id == client_id,
-                Pricing.work_type == work_type,
-                Pricing.pickup_location == pickup_location,
-                Pricing.dropoff_location == dropoff_location,
-                Pricing.is_active == True,
-            ).limit(1)
-        )
-        pricing = result.scalar_one_or_none()
-
-        if pricing and cache:
-            await cache.set_json("pricing_lookup", cache_key, {"id": pricing.id}, ttl=600)
-
-        if pricing is not None:
-            return pricing
-
-    # Fallback to route match
-    if route:
-        cache_key = _pricing_cache_key(client_id, work_type, route=route)
-
-        if cache:
-            cached = await cache.get_json("pricing_lookup", cache_key)
-            if cached is not None:
-                result = await db.execute(
-                    select(Pricing).where(Pricing.id == cached["id"]).limit(1)
-                )
-                return result.scalar_one_or_none()
-
-        result = await db.execute(
-            select(Pricing).where(
-                Pricing.client_id == client_id,
-                Pricing.work_type == work_type,
-                Pricing.route == route,
-                Pricing.is_active == True,
-            ).limit(1)
-        )
-        pricing = result.scalar_one_or_none()
-
-        if pricing and cache:
-            await cache.set_json("pricing_lookup", cache_key, {"id": pricing.id}, ttl=600)
-
-        return pricing
-
-    return None
+    res = await db.execute(
+        select(Pricing).where(
+            Pricing.client_id == client_id,
+            Pricing.work_type == work_type,
+            Pricing.pickup_location_id == pickup_location_id,
+            Pricing.dropoff_location_id == dropoff_location_id,
+            Pricing.is_active == True,
+        ).limit(1)
+    )
+    pricing = res.scalar_one_or_none()
+    if pricing and cache:
+        await cache.set_json("pricing_lookup", cache_key, {"id": pricing.id}, ttl=600)
+    return pricing
 
 
 class TieredPricing:
@@ -142,42 +104,43 @@ async def find_tiered_pricing(
     client_id: int,
     work_type: str,
     quantity: int = 1,
-    route: str | None = None,
+    pickup_location_id: int | None = None,
+    dropoff_location_id: int | None = None,
     pickup_location: str | None = None,
     dropoff_location: str | None = None,
     cache: CacheManager | None = None,
+    route: str | None = None,
 ) -> TieredPricing | None:
-    """Find pricing with tiered quantity-based rates.
+    """Find pricing + the matching PricingLine for the requested quantity.
 
-    Looks up the Pricing header, then finds the PricingLine matching the
-    requested quantity. Returns None if no pricing or no matching line exists.
+    Falls back to `quantity=1` when the exact tier isn't defined.
     """
     pricing = await find_pricing(
-        db, client_id, work_type, route=route,
-        pickup_location=pickup_location, dropoff_location=dropoff_location,
+        db, client_id, work_type,
+        pickup_location_id=pickup_location_id,
+        dropoff_location_id=dropoff_location_id,
+        pickup_location=pickup_location,
+        dropoff_location=dropoff_location,
         cache=cache,
     )
     if pricing is None:
         return None
 
-    # Exact quantity match first, then fall back to quantity=1
-    result = await db.execute(
+    res = await db.execute(
         select(PricingLine).where(
             PricingLine.pricing_id == pricing.id,
             PricingLine.quantity == quantity,
         ).limit(1)
     )
-    line = result.scalar_one_or_none()
-
+    line = res.scalar_one_or_none()
     if line is None and quantity != 1:
-        result = await db.execute(
+        res = await db.execute(
             select(PricingLine).where(
                 PricingLine.pricing_id == pricing.id,
                 PricingLine.quantity == 1,
             ).limit(1)
         )
-        line = result.scalar_one_or_none()
-
+        line = res.scalar_one_or_none()
     if line is None:
         return None
 

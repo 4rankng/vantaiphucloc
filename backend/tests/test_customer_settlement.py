@@ -131,14 +131,20 @@ async def test_load_settlement_data_aggregates_routes(db_session):
     db_session.add(client)
     await db_session.flush()
 
+    # Locations (FK targets after schema overhaul)
+    from app.models.domain import Location
+    pickup = Location(name="PAN HA", is_active=True)
+    dropoff = Location(name="HẢI AN", is_active=True)
+    db_session.add_all([pickup, dropoff])
+    await db_session.flush()
+
     # Two trips on same route: 1 F20 (split into 2 conts) + 1 F40
     t1 = TripOrder(
         trip_date=date(2026, 4, 1),
         client_id=client.id,
-        client_name=client.name,
         route="PAN HA - HẢI AN",
-        pickup_location="PAN HA",
-        dropoff_location="HẢI AN",
+        pickup_location_id=pickup.id,
+        dropoff_location_id=dropoff.id,
         unit_price=1_309_742,  # 2 × ~654871
         driver_salary=400_000,
         allowance=0,
@@ -156,10 +162,9 @@ async def test_load_settlement_data_aggregates_routes(db_session):
     t2 = TripOrder(
         trip_date=date(2026, 4, 2),
         client_id=client.id,
-        client_name=client.name,
         route="PAN HA - HẢI AN",
-        pickup_location="PAN HA",
-        dropoff_location="HẢI AN",
+        pickup_location_id=pickup.id,
+        dropoff_location_id=dropoff.id,
         unit_price=681_050,
         driver_salary=420_000,
         allowance=0,
@@ -201,13 +206,18 @@ async def test_generate_workbook_produces_two_sheets_with_data(db_session):
     db_session.add(client)
     await db_session.flush()
 
+    from app.models.domain import Location
+    pickup = Location(name="PAN HA", is_active=True)
+    dropoff = Location(name="HẢI AN", is_active=True)
+    db_session.add_all([pickup, dropoff])
+    await db_session.flush()
+
     trip = TripOrder(
         trip_date=date(2026, 4, 10),
         client_id=client.id,
-        client_name=client.name,
         route="PAN HA - HẢI AN",
-        pickup_location="PAN HA",
-        dropoff_location="HẢI AN",
+        pickup_location_id=pickup.id,
+        dropoff_location_id=dropoff.id,
         unit_price=654_871,
         driver_salary=400_000,
         allowance=0,

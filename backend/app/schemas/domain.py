@@ -86,6 +86,37 @@ class LocationUpdate(BaseModel):
     name: str | None = None
 
 
+# ---------------------------------------------------------------------------
+# Read-DTO summary schemas — nested in OUT responses
+#
+# Domain DB stores only FKs; the application layer composes these on read
+# so frontends get the human-readable label without storing a denormalized
+# duplicate column. See BizLogic.md §4.
+# ---------------------------------------------------------------------------
+
+class ClientSummaryOut(BaseModel):
+    id: int
+    code: str | None = None
+    name: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class LocationSummaryOut(BaseModel):
+    id: int
+    name: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DriverSummaryOut(BaseModel):
+    id: int
+    name: str
+    tractor_plate: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class LocationOut(BaseModel):
     id: int
     name: str
@@ -167,32 +198,21 @@ class ClientOut(BaseModel):
 
 class RouteCreate(BaseModel):
     route: str
-    pickup_location: str
-    dropoff_location: str
-    type_20ft: int
-    type_40ft: int
-    is_two_way: bool
+    pickup_location_id: int
+    dropoff_location_id: int
 
 
 class RouteUpdate(BaseModel):
     route: str | None = None
-    pickup_location: str | None = None
-    dropoff_location: str | None = None
-    type_20ft: int | None = None
-    type_40ft: int | None = None
-    is_two_way: bool | None = None
+    pickup_location_id: int | None = None
+    dropoff_location_id: int | None = None
 
 
 class RouteOut(BaseModel):
     id: int
     route: str
-    pickup_location: str
-    dropoff_location: str
-    pickup_location_id: int | None = None
-    dropoff_location_id: int | None = None
-    type_20ft: int
-    type_40ft: int
-    is_two_way: bool
+    pickup_location: LocationSummaryOut
+    dropoff_location: LocationSummaryOut
     is_active: bool = True
     created_at: datetime
     updated_at: datetime
@@ -223,34 +243,26 @@ class PricingLineOut(BaseModel):
 
 class PricingCreate(BaseModel):
     client_id: int
-    client_name: str
     work_type: str
-    route: str
-    pickup_location: str | None = None
-    dropoff_location: str | None = None
+    pickup_location_id: int
+    dropoff_location_id: int
     lines: list[PricingLineCreate]
 
 
 class PricingUpdate(BaseModel):
     client_id: int | None = None
-    client_name: str | None = None
     work_type: str | None = None
-    route: str | None = None
-    pickup_location: str | None = None
-    dropoff_location: str | None = None
+    pickup_location_id: int | None = None
+    dropoff_location_id: int | None = None
     lines: list[PricingLineCreate] | None = None
 
 
 class PricingOut(BaseModel):
     id: int
-    client_id: int
-    client_name: str
+    client: ClientSummaryOut
     work_type: str
-    route: str
-    pickup_location: str | None = None
-    dropoff_location: str | None = None
-    pickup_location_id: int | None = None
-    dropoff_location_id: int | None = None
+    pickup_location: LocationSummaryOut
+    dropoff_location: LocationSummaryOut
     lines: list[PricingLineOut] = []
     is_active: bool = True
     created_at: datetime
@@ -288,12 +300,10 @@ class ContainerOut(BaseModel):
 class WorkOrderCreate(BaseModel):
     containers: list[ContainerCreate]
     client_id: int
-    client_name: str
     route: str
-    pickup_location: str | None = None
-    dropoff_location: str | None = None
+    pickup_location_id: int
+    dropoff_location_id: int
     driver_id: int
-    driver_name: str
     tractor_plate: str
     gps_lat: float | None = None
     gps_lng: float | None = None
@@ -302,12 +312,10 @@ class WorkOrderCreate(BaseModel):
 class WorkOrderUpdate(BaseModel):
     containers: list[ContainerCreate] | None = None
     client_id: int | None = None
-    client_name: str | None = None
     route: str | None = None
-    pickup_location: str | None = None
-    dropoff_location: str | None = None
+    pickup_location_id: int | None = None
+    dropoff_location_id: int | None = None
     driver_id: int | None = None
-    driver_name: str | None = None
     tractor_plate: str | None = None
     gps_lat: float | None = None
     gps_lng: float | None = None
@@ -320,17 +328,12 @@ class WorkOrderUpdate(BaseModel):
 
 class WorkOrderOut(BaseModel):
     id: int
-    client_id: int
-    client_name: str
-    client_code: str | None = None
+    client: ClientSummaryOut
     code: str | None = None
     route: str
-    pickup_location: str | None = None
-    dropoff_location: str | None = None
-    pickup_location_id: int | None = None
-    dropoff_location_id: int | None = None
-    driver_id: int
-    driver_name: str
+    pickup_location: LocationSummaryOut
+    dropoff_location: LocationSummaryOut
+    driver: DriverSummaryOut
     tractor_plate: str
     gps_lat: float | None
     gps_lng: float | None
@@ -397,13 +400,10 @@ class TripContainerOut(BaseModel):
 class TripOrderCreate(BaseModel):
     trip_date: date
     client_id: int
-    client_name: str
-    work_type: str | None = None  # legacy — derived from first container
     route: str
-    pickup_location: str | None = None
-    dropoff_location: str | None = None
+    pickup_location_id: int
+    dropoff_location_id: int
     containers: list[TripContainerCreate] = []
-    container_number: str | None = None  # legacy
     pricing_id: int | None = None
     unit_price: int = Field(ge=0)
     driver_salary: int = Field(ge=0)
@@ -415,12 +415,9 @@ class TripOrderCreate(BaseModel):
 class TripOrderUpdate(BaseModel):
     trip_date: date | None = None
     client_id: int | None = None
-    client_name: str | None = None
-    work_type: str | None = None
     route: str | None = None
-    pickup_location: str | None = None
-    dropoff_location: str | None = None
-    container_number: str | None = None
+    pickup_location_id: int | None = None
+    dropoff_location_id: int | None = None
     containers: list[TripContainerCreate] | None = None
     pricing_id: int | None = None
     unit_price: int | None = None
@@ -437,16 +434,11 @@ class TripOrderUpdate(BaseModel):
 class TripOrderOut(BaseModel):
     id: int
     trip_date: date
-    client_id: int
-    client_name: str
+    client: ClientSummaryOut
     code: str | None = None
-    work_type: str | None
     route: str
-    pickup_location: str | None = None
-    dropoff_location: str | None = None
-    pickup_location_id: int | None = None
-    dropoff_location_id: int | None = None
-    container_number: str | None
+    pickup_location: LocationSummaryOut
+    dropoff_location: LocationSummaryOut
     containers: list[TripContainerOut] = []
     pricing_id: int | None
     unit_price: int
@@ -512,8 +504,7 @@ class SalaryCalculateRequest(BaseModel):
 
 class SalaryPeriodOut(BaseModel):
     id: int
-    driver_id: int
-    driver_name: str
+    driver: DriverSummaryOut
     start_date: date
     end_date: date
     work_order_count: int

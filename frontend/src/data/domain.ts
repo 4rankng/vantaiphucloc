@@ -79,16 +79,35 @@ export interface Client {
 // TODO: Add when ledger feature is implemented
 // export interface LedgerEntry { ... }
 
-export interface RoutePrice {
-  id?: number
+// ─── Read-DTO summaries (nested in API responses) ──────────────────────────
+// Domain DB stores only FKs; backend composes these via batch JOIN. See
+// BizLogic.md §4 for the rationale.
+
+export interface ClientSummary {
+  id: number
+  code?: string | null
+  name: string
+}
+
+export interface LocationSummary {
+  id: number
+  name: string
+}
+
+export interface DriverSummary {
+  id: number
+  name: string
+  tractorPlate?: string | null
+}
+
+export interface Route {
+  id: number
   route: string
-  pickupLocation?: string
-  dropoffLocation?: string
-  pickupLocationId?: number | null
-  dropoffLocationId?: number | null
-  type20ft: number
-  type40ft: number
-  isTwoWay?: boolean
+  pickupLocation: LocationSummary
+  dropoffLocation: LocationSummary
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 // TODO: Add when reporting feature is implemented
@@ -101,16 +120,11 @@ export interface WorkOrder {
   id: number
   code?: string
   containers: ContainerItem[]
-  clientId: number
-  clientName: string
-  clientCode?: string
+  client: ClientSummary
   route: string
-  pickupLocation?: string
-  dropoffLocation?: string
-  pickupLocationId?: number | null
-  dropoffLocationId?: number | null
-  driverId: number
-  driverName: string
+  pickupLocation: LocationSummary
+  dropoffLocation: LocationSummary
+  driver: DriverSummary
   tractorPlate: string
   gpsLat: number
   gpsLng: number
@@ -136,14 +150,10 @@ export interface PricingLine {
 
 export interface Pricing {
   id: number
-  clientId: number
-  clientName: string
+  client: ClientSummary
   workType: WorkType
-  route: string
-  pickupLocation?: string
-  dropoffLocation?: string
-  pickupLocationId?: number | null
-  dropoffLocationId?: number | null
+  pickupLocation: LocationSummary
+  dropoffLocation: LocationSummary
   lines: PricingLine[]
   createdAt: string
   updatedAt: string
@@ -158,15 +168,10 @@ export interface TripOrder {
   id: number
   code?: string
   tripDate: string
-  clientId: number
-  clientName: string
-  workType?: WorkType
+  client: ClientSummary
   route: string
-  pickupLocation?: string
-  dropoffLocation?: string
-  pickupLocationId?: number | null
-  dropoffLocationId?: number | null
-  containerNumber?: string
+  pickupLocation: LocationSummary
+  dropoffLocation: LocationSummary
   containers: TripOrderContainerItem[]
   pricingId: number
   unitPrice: number
@@ -183,8 +188,7 @@ export interface TripOrder {
 
 export interface SalaryPeriod {
   id: number
-  driverId: number
-  driverName: string
+  driver: DriverSummary
   startDate: string
   endDate: string
   workOrderCount: number

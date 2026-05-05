@@ -52,11 +52,6 @@ class TestMonetaryFieldsAreInteger:
         col = _col(Client, field)
         assert isinstance(col.type, Integer)
 
-    @pytest.mark.parametrize("field", ["type_20ft", "type_40ft"])
-    def test_route_monetary_fields(self, field):
-        col = _col(Route, field)
-        assert isinstance(col.type, Integer)
-
     @pytest.mark.parametrize("field", ["unit_price", "driver_salary", "allowance"])
     def test_pricing_line_monetary_fields(self, field):
         col = _col(PricingLine, field)
@@ -151,9 +146,3 @@ class TestColumnNullability:
 
     def test_trip_order_revenue_not_nullable(self):
         assert _col(TripOrder, "revenue").nullable is False
-
-    def test_route_type_20ft_not_nullable(self):
-        assert _col(Route, "type_20ft").nullable is False
-
-    def test_route_type_40ft_not_nullable(self):
-        assert _col(Route, "type_40ft").nullable is False

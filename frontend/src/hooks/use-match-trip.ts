@@ -45,15 +45,13 @@ export function useMatchTrip(initialTripId: number) {
   const suggestions = suggestionsData?.suggestions ?? []
 
   const baseTrip = useMemo(() => selectedTrip ? {
-    clientName: selectedTrip.clientName,
+    clientName: selectedTrip.client.name,
     route: selectedTrip.route,
-    containers: (selectedTrip.containers?.length ? selectedTrip.containers : (
-      selectedTrip.containerNumber ? [{ workType: selectedTrip.workType ?? 'E20', containerNumber: selectedTrip.containerNumber }] : []
-    )).map(c => ({ type: c.workType, number: c.containerNumber })),
+    containers: (selectedTrip.containers ?? []).map(c => ({ type: c.workType, number: c.containerNumber })),
   } : null, [selectedTrip])
 
   const baseJob = useMemo(() => selectedJob ? {
-    clientName: selectedJob.clientName,
+    clientName: selectedJob.client.name,
     route: selectedJob.route,
     containers: selectedJob.containers.map(c => ({ type: c.workType, number: c.containerNumber })),
   } : null, [selectedJob])
@@ -116,23 +114,19 @@ export function useMatchTrip(initialTripId: number) {
     setSubmitting(true)
     try {
       await updateTripOrder.mutateAsync({ id: selectedTripId, data: {
-        clientName: editedTrip.clientName,
         route: editedTrip.route,
         containers: editedTrip.containers.map(c => ({ containerNumber: c.number, workType: c.type as WorkType })),
       }})
       await updateWorkOrder.mutateAsync({ id: selectedJobId, data: {
-        clientName: editedJob.clientName,
         route: editedJob.route,
         containers: editedJob.containers.map(c => ({ containerNumber: c.number, workType: c.type as WorkType, photoUrl: '' })),
       }})
       await createTripOrder.mutateAsync({
         tripDate: selectedTrip.tripDate,
-        clientId: selectedTrip.clientId,
-        clientName: editedTrip.clientName,
+        clientId: selectedTrip.client.id,
         route: editedTrip.route,
-        tractorPlate: selectedJob.tractorPlate,
-        driverId: selectedJob.driverId,
-        driverName: selectedJob.driverName,
+        pickupLocationId: selectedTrip.pickupLocation.id,
+        dropoffLocationId: selectedTrip.dropoffLocation.id,
         containers: editedTrip.containers.map(c => ({ containerNumber: c.number, workType: c.type as WorkType })),
         pricingId: selectedTrip.pricingId,
         unitPrice: selectedTrip.unitPrice,

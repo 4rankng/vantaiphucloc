@@ -75,7 +75,7 @@ export function TripList() {
     if (search.trim()) {
       const q = search.toLowerCase()
       list = list.filter(t =>
-        (t.clientName ?? '').toLowerCase().includes(q) ||
+        t.client.name.toLowerCase().includes(q) ||
         (t.route ?? '').toLowerCase().includes(q) ||
         (t.code ?? '').toLowerCase().includes(q) ||
         t.containers.some(c => (c.containerNumber ?? '').toLowerCase().includes(q))
@@ -158,7 +158,7 @@ export function TripList() {
       accessor: (row) => (
         <div className="min-w-0">
           <p className="font-semibold text-sm whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
-            {row.clientName}
+            {row.client.name}
           </p>
           <p className="text-xs whitespace-nowrap mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
             {row.route}
@@ -166,7 +166,7 @@ export function TripList() {
         </div>
       ),
       sortable: true,
-      sortKey: (row) => row.clientName ?? '',
+      sortKey: (row) => row.client.name,
     },
     {
       key: 'containers',

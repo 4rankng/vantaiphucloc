@@ -122,7 +122,7 @@ export function JobDetail() {
 
       {/* Trip info */}
       <div className="rounded-lg overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
-        <InfoRow icon={Building2} label="Khách hàng" value={job.clientName} />
+        <InfoRow icon={Building2} label="Khách hàng" value={job.client.name} />
         <InfoRow icon={RouteIcon} label="Cung đường" value={job.route} />
         <InfoRow icon={Truck} label="Biển số" value={job.tractorPlate} />
         {(() => {

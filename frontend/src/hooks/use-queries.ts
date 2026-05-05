@@ -1,7 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
 import { api } from '@/services/api/client'
-import type { Pricing, WorkOrder, TripOrder, WorkType, Client, RoutePrice, SalaryPeriod, SuggestMatchesResponse, SuggestWosResponse, Location } from '@/data/domain'
+import type { Pricing, WorkOrder, TripOrder, WorkType, Client, Route, SalaryPeriod, SuggestMatchesResponse, SuggestWosResponse, Location } from '@/data/domain'
+import type { RouteCreatePayload, RouteUpdatePayload } from '@/services/api/routes.api'
+import type { PricingCreatePayload, PricingUpdatePayload } from '@/services/api/pricings.api'
+import type { WorkOrderCreatePayload, WorkOrderUpdatePayload } from '@/services/api/workOrders.api'
+import type { TripOrderCreatePayload, TripOrderUpdatePayload } from '@/services/api/tripOrders.api'
+
+export type {
+  PricingCreatePayload,
+  PricingUpdatePayload,
+  RouteCreatePayload,
+  RouteUpdatePayload,
+  WorkOrderCreatePayload,
+  WorkOrderUpdatePayload,
+  TripOrderCreatePayload,
+  TripOrderUpdatePayload,
+}
 import type { Vendor, VendorFormData } from '@/services/api/vendors.api'
 import type { UserAccount, UserProfile } from '@/services/api/users.api'
 
@@ -279,7 +294,7 @@ export function useDeleteClient() {
 export function useCreateRoute() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: Omit<RoutePrice, never>) => apiClient.createRoute(data),
+    mutationFn: (data: RouteCreatePayload) => apiClient.createRoute(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.routes }) },
   })
 }
@@ -287,7 +302,7 @@ export function useCreateRoute() {
 export function useUpdateRoute() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: number | string; data: Partial<RoutePrice> }) => apiClient.updateRoute(id, data),
+    mutationFn: ({ id, data }: { id: number | string; data: RouteUpdatePayload }) => apiClient.updateRoute(id, data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.routes }) },
   })
 }
@@ -303,7 +318,7 @@ export function useDeleteRoute() {
 export function useCreatePricing() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: Omit<Pricing, 'id' | 'createdAt' | 'updatedAt'>) => apiClient.createPricing(data),
+    mutationFn: (data: PricingCreatePayload) => apiClient.createPricing(data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['pricings'] }) },
   })
 }
@@ -311,7 +326,7 @@ export function useCreatePricing() {
 export function useUpdatePricing() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<Pricing> }) => apiClient.updatePricing(id, data),
+    mutationFn: ({ id, data }: { id: number; data: PricingUpdatePayload }) => apiClient.updatePricing(id, data),
     onMutate: async ({ id, data }) => {
       await qc.cancelQueries({ queryKey: ['pricings'] })
       const previous = qc.getQueriesData<Pricing[]>({ queryKey: ['pricings'] })
@@ -350,7 +365,7 @@ export function useCreateWorkOrder() {
 export function useUpdateWorkOrder() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<WorkOrder> }) => apiClient.updateWorkOrder(id, data),
+    mutationFn: ({ id, data }: { id: number; data: WorkOrderUpdatePayload }) => apiClient.updateWorkOrder(id, data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['work-orders'] }) },
   })
 }
@@ -358,7 +373,7 @@ export function useUpdateWorkOrder() {
 export function useCreateTripOrder() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: Omit<TripOrder, 'id' | 'createdAt' | 'status'>) => apiClient.createTripOrder(data),
+    mutationFn: (data: TripOrderCreatePayload) => apiClient.createTripOrder(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['trip-orders'] })
       qc.invalidateQueries({ queryKey: ['work-orders'] })
@@ -369,7 +384,7 @@ export function useCreateTripOrder() {
 export function useUpdateTripOrder() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<TripOrder> }) => apiClient.updateTripOrder(id, data),
+    mutationFn: ({ id, data }: { id: number; data: TripOrderUpdatePayload }) => apiClient.updateTripOrder(id, data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['trip-orders'] }) },
   })
 }

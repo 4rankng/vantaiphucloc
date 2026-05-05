@@ -32,6 +32,14 @@ from app.core.audit_context import set_audit_reason
 from app.core.redis import get_redis
 from app.repositories.work_order_repo import WorkOrderRepository
 from app.repositories.deps import get_work_order_repo
+from app.services.summary_loader import (
+    load_client_summaries,
+    load_driver_summaries,
+    load_location_summaries,
+    get_client_summary,
+    get_driver_summary,
+    get_location_summary,
+)
 from app.utils.iso6346 import normalize_container_number as _norm
 
 _logger = logging.getLogger(__name__)
@@ -45,20 +53,21 @@ _OCR_ATTEMPT_TTL = 600
 # Schema mapping helpers
 # ---------------------------------------------------------------------------
 
-def _to_schema(wo: WorkOrder, containers: list[WorkOrderContainer]) -> WorkOrderOut:
+def _to_schema(
+    wo: WorkOrder,
+    containers: list[WorkOrderContainer],
+    clients,
+    drivers,
+    locations,
+) -> WorkOrderOut:
     return WorkOrderOut(
         id=wo.id,
-        client_id=wo.client_id,
-        client_name=wo.client_name,
-        client_code=wo.client_code,
+        client=get_client_summary(clients, wo.client_id),
         code=wo.code,
         route=wo.route,
-        pickup_location=wo.pickup_location,
-        dropoff_location=wo.dropoff_location,
-        pickup_location_id=wo.pickup_location_id,
-        dropoff_location_id=wo.dropoff_location_id,
-        driver_id=wo.driver_id,
-        driver_name=wo.driver_name,
+        pickup_location=get_location_summary(locations, wo.pickup_location_id),
+        dropoff_location=get_location_summary(locations, wo.dropoff_location_id),
+        driver=get_driver_summary(drivers, wo.driver_id),
         tractor_plate=wo.tractor_plate,
         gps_lat=wo.gps_lat,
         gps_lng=wo.gps_lng,
@@ -79,8 +88,7 @@ def _to_schema(wo: WorkOrder, containers: list[WorkOrderContainer]) -> WorkOrder
 
 
 async def _load_one(repo: WorkOrderRepository, wo: WorkOrder) -> WorkOrderOut:
-    containers = await repo.get_containers(wo.id)
-    return _to_schema(wo, containers)
+    return (await _load_many(repo, [wo]))[0]
 
 
 async def _load_many(
@@ -89,7 +97,21 @@ async def _load_many(
     if not work_orders:
         return []
     containers_by_id = await repo.batch_load_containers([wo.id for wo in work_orders])
-    return [_to_schema(wo, containers_by_id.get(wo.id, [])) for wo in work_orders]
+    clients = await load_client_summaries(
+        repo.session, {wo.client_id for wo in work_orders}
+    )
+    drivers = await load_driver_summaries(
+        repo.session, {wo.driver_id for wo in work_orders}
+    )
+    locations = await load_location_summaries(
+        repo.session,
+        {wo.pickup_location_id for wo in work_orders}
+        | {wo.dropoff_location_id for wo in work_orders},
+    )
+    return [
+        _to_schema(wo, containers_by_id.get(wo.id, []), clients, drivers, locations)
+        for wo in work_orders
+    ]
 
 
 def _hide_salary_fields(wo_out: WorkOrderOut) -> None:
@@ -105,7 +127,7 @@ async def _enqueue_notification(work_order: WorkOrder) -> None:
             "send_notification_task",
             user_id=None,
             title="Phiếu làm việc mới",
-            message=f"{work_order.code or work_order.id} đã được tạo bởi tài xế {work_order.driver_name}",
+            message=f"{work_order.code or work_order.id} đã được tạo (driver_id={work_order.driver_id})",
             channel="in_app",
         )
     except Exception:

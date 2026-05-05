@@ -92,7 +92,7 @@ function WOSuggestionCard({
           ))}
         </div>
         <p className="text-sm mb-1.5" style={{ color: 'var(--theme-text-secondary)' }}>
-          <span className="font-medium">{workOrder.driverName}</span> · {workOrder.clientName} · {workOrder.route}
+          <span className="font-medium">{workOrder.driver.name}</span> · {workOrder.client.name} · {workOrder.route}
         </p>
         <div className="flex flex-wrap gap-1.5">
           {matchedFields.map(f => (
@@ -142,7 +142,7 @@ export function MatchTrip() {
   const handleOpenEditDialog = (jobId: number) => {
     const job = unmatchedJobs.find(j => j.id === jobId)
     if (job) {
-      setEditDialogClient(job.clientName)
+      setEditDialogClient(job.client.name)
       setEditDialogRoute(job.route)
       setEditDialogContainers(job.containers.map(c => ({ type: c.workType, number: c.containerNumber })))
     }
@@ -260,7 +260,7 @@ export function MatchTrip() {
                           </span>
                         ))}
                       </div>
-                      <p className="text-xs mt-1 truncate" style={{ color: 'var(--theme-text-muted)' }}>{selectedTrip.clientName} · {selectedTrip.route}</p>
+                      <p className="text-xs mt-1 truncate" style={{ color: 'var(--theme-text-muted)' }}>{selectedTrip.client.name} · {selectedTrip.route}</p>
                     </div>
                   ) : (
                     <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chọn chuyến yêu cầu</p>
@@ -306,7 +306,7 @@ export function MatchTrip() {
                           </span>
                         ))}
                       </div>
-                      <p className="text-xs mt-1 truncate" style={{ color: 'var(--theme-text-muted)' }}>{selectedJob.driverName} · {selectedJob.clientName}</p>
+                      <p className="text-xs mt-1 truncate" style={{ color: 'var(--theme-text-muted)' }}>{selectedJob.driver.name} · {selectedJob.client.name}</p>
                     </div>
                   ) : (
                     <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chọn chuyến đã chạy</p>
@@ -412,7 +412,7 @@ export function MatchTrip() {
                                     </span>
                                   ))}
                                 </div>
-                                <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>{s.workOrder.driverName} · {s.workOrder.clientName} · {s.workOrder.route}</p>
+                                <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>{s.workOrder.driver.name} · {s.workOrder.client.name} · {s.workOrder.route}</p>
                                 {s.matchedFields.length > 0 && (
                                   <div className="flex flex-wrap gap-1 mt-1">
                                     {s.matchedFields.map(f => (
@@ -478,7 +478,7 @@ export function MatchTrip() {
                                   </span>
                                 ))}
                               </div>
-                              <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>{job.driverName} · {job.clientName} · {job.route}</p>
+                              <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>{job.driver.name} · {job.client.name} · {job.route}</p>
                             </div>
                           </button>
                           <button
@@ -691,7 +691,7 @@ export function MatchTrip() {
         selectedId={selectedTripId}
         onSelect={setSelectedTripId}
         onClose={() => setPickMode(null)}
-        searchKeys={trip => [trip.clientName, trip.route, ...(trip.containers ?? []).map(c => c.containerNumber)].join(' ')}
+        searchKeys={trip => [trip.client.name, trip.route, ...(trip.containers ?? []).map(c => c.containerNumber)].join(' ')}
         renderLabel={trip => (
           <div>
             <div className="flex flex-wrap items-center gap-1.5">
@@ -702,7 +702,7 @@ export function MatchTrip() {
                 </span>
               ))}
             </div>
-            <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>{trip.clientName}</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>{trip.client.name}</p>
             <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{trip.route}</p>
           </div>
         )}
@@ -714,7 +714,7 @@ export function MatchTrip() {
         selectedId={selectedJobId}
         onSelect={setSelectedJobId}
         onClose={() => setPickMode(null)}
-        searchKeys={job => [job.driverName, job.clientName, job.route, ...job.containers.map(c => c.containerNumber)].join(' ')}
+        searchKeys={job => [job.driver.name, job.client.name, job.route, ...job.containers.map(c => c.containerNumber)].join(' ')}
         renderLabel={job => (
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -725,7 +725,7 @@ export function MatchTrip() {
                 </span>
               ))}
             </div>
-            <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>{job.driverName} · {job.clientName}</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>{job.driver.name} · {job.client.name}</p>
             <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{job.route}</p>
           </div>
         )}

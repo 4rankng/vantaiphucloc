@@ -7,30 +7,28 @@ import { Label } from '@/components/ui'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { BrandIcon } from '@/components/atoms/BrandIcon'
-import { useRoutes, useCreateRoute, useUpdateRoute, useDeleteRoute } from '@/hooks/use-queries'
+import { useRoutes, useCreateRoute, useUpdateRoute, useDeleteRoute, useLocations } from '@/hooks/use-queries'
 import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
 import { RouteDisplay } from '@/components/shared/RouteDisplay'
-import { formatCurrencyFull, type RoutePrice } from '@/data/domain'
+import type { Route } from '@/data/domain'
 
 interface RouteForm {
   route: string
   pickupLocation: string
   dropoffLocation: string
-  type20ft: number
-  type40ft: number
-  isTwoWay: boolean
 }
 
-const EMPTY_FORM: RouteForm = { route: '', pickupLocation: '', dropoffLocation: '', type20ft: 0, type40ft: 0, isTwoWay: false }
+const EMPTY_FORM: RouteForm = { route: '', pickupLocation: '', dropoffLocation: '' }
 
 export function RouteList() {
   const { data: routes = [], isLoading: loading } = useRoutes()
+  const { data: locations = [] } = useLocations()
 
-  const [selected, setSelected] = useState<RoutePrice | null>(null)
+  const [selected, setSelected] = useState<Route | null>(null)
 
   // Create/Edit dialog
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [editRoute, setEditRoute] = useState<RoutePrice | null>(null)
+  const [editRoute, setEditRoute] = useState<Route | null>(null)
   const [form, setForm] = useState<RouteForm>(EMPTY_FORM)
   const [search, setSearch] = useState('')
 
@@ -42,8 +40,8 @@ export function RouteList() {
     const q = search.toLowerCase()
     return routes.filter(r =>
       (r.route ?? '').toLowerCase().includes(q) ||
-      (r.pickupLocation ?? '').toLowerCase().includes(q) ||
-      (r.dropoffLocation ?? '').toLowerCase().includes(q)
+      r.pickupLocation.name.toLowerCase().includes(q) ||
+      r.dropoffLocation.name.toLowerCase().includes(q)
     )
   }, [routes, search])
 
@@ -57,27 +55,28 @@ export function RouteList() {
     setDialogOpen(true)
   }, [])
 
-  const handleOpenEdit = useCallback((r: RoutePrice) => {
+  const handleOpenEdit = useCallback((r: Route) => {
     setEditRoute(r)
     setForm({
       route: r.route,
-      pickupLocation: r.pickupLocation ?? '',
-      dropoffLocation: r.dropoffLocation ?? '',
-      type20ft: r.type20ft,
-      type40ft: r.type40ft,
-      isTwoWay: r.isTwoWay ?? false,
+      pickupLocation: r.pickupLocation.name,
+      dropoffLocation: r.dropoffLocation.name,
     })
     setSelected(null)
     setDialogOpen(true)
   }, [])
 
   const handleSubmit = useCallback(() => {
+    const pickupId = locations.find(l => l.name === form.pickupLocation)?.id
+    const dropoffId = locations.find(l => l.name === form.dropoffLocation)?.id
+    if (!pickupId || !dropoffId) return
+    const payload = { route: form.route, pickupLocationId: pickupId, dropoffLocationId: dropoffId }
     if (editRoute) {
-      updateRoute.mutate({ id: editRoute.id!, data: form }, { onSuccess: () => setDialogOpen(false) })
+      updateRoute.mutate({ id: editRoute.id, data: payload }, { onSuccess: () => setDialogOpen(false) })
     } else {
-      createRoute.mutate(form, { onSuccess: () => setDialogOpen(false) })
+      createRoute.mutate(payload, { onSuccess: () => setDialogOpen(false) })
     }
-  }, [editRoute, form, createRoute, updateRoute])
+  }, [editRoute, form, locations, createRoute, updateRoute])
 
   const handleDelete = useCallback(() => {
     if (!selected?.id) return
@@ -89,7 +88,7 @@ export function RouteList() {
     })
   }, [selected, deleteRoute])
 
-  const updateField = useCallback((field: keyof RouteForm, value: string | number | boolean) => {
+  const updateField = useCallback((field: keyof RouteForm, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }))
   }, [])
 
@@ -140,7 +139,7 @@ export function RouteList() {
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
             {filtered.map((r) => (
               <button
-                key={`${r.route}-${r.pickupLocation}-${r.dropoffLocation}`}
+                key={r.id}
                 onClick={() => setSelected(r)}
                 className="card-interactive p-4 text-left"
               >
@@ -151,13 +150,7 @@ export function RouteList() {
                     <RouteIcon className="h-4 w-4" style={{ color: 'var(--theme-brand-primary)' }} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <RouteDisplay route={r.route} pickupLocation={r.pickupLocation} dropoffLocation={r.dropoffLocation} />
-                    {r.isTwoWay && (
-                      <span className="inline-block mt-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-sm"
-                        style={{ background: 'color-mix(in srgb, var(--theme-status-success) 18%, transparent)', color: 'var(--theme-status-success)' }}>
-                        Hai chiều
-                      </span>
-                    )}
+                    <RouteDisplay route={r.route} pickupLocation={r.pickupLocation.name} dropoffLocation={r.dropoffLocation.name} />
                   </div>
                 </div>
 
@@ -170,35 +163,16 @@ export function RouteList() {
                     <p className="text-[10px] font-medium uppercase tracking-wide mb-0.5"
                       style={{ color: 'var(--theme-text-muted)' }}>Điểm lấy</p>
                     <p className="text-xs font-semibold truncate" style={{ color: 'var(--theme-text-secondary)' }}>
-                      {r.pickupLocation || '—'}
+                      {r.pickupLocation.name || '—'}
                     </p>
                   </div>
                   <div>
                     <p className="text-[10px] font-medium uppercase tracking-wide mb-0.5"
                       style={{ color: 'var(--theme-text-muted)' }}>Điểm trả</p>
                     <p className="text-xs font-semibold truncate" style={{ color: 'var(--theme-text-secondary)' }}>
-                      {r.dropoffLocation || '—'}
+                      {r.dropoffLocation.name || '—'}
                     </p>
                   </div>
-                </div>
-
-                {/* Prices */}
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { label: '20ft', value: r.type20ft },
-                    { label: '40ft', value: r.type40ft },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="rounded-md px-3 py-2"
-                      style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
-                      <div className="flex items-center gap-1 mb-0.5">
-                        <Container className="w-3 h-3" style={{ color: 'var(--theme-text-muted)' }} />
-                        <span className="text-[10px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>{label}</span>
-                      </div>
-                      <p className="text-sm font-semibold leading-none" style={{ color: 'var(--theme-text-primary)' }}>
-                        {formatCurrencyFull(value)}
-                      </p>
-                    </div>
-                  ))}
                 </div>
               </button>
             ))}
@@ -245,7 +219,7 @@ export function RouteList() {
                           style={{ color: 'rgba(255,255,255,0.6)' }}>Điểm lấy</span>
                       </div>
                       <p className="text-[13px] font-semibold pl-[15px]" style={{ color: 'var(--theme-text-on-brand)' }}>
-                        {selected.pickupLocation || '—'}
+                        {selected.pickupLocation.name || '—'}
                       </p>
                     </div>
                     <div className="w-px mx-4 self-stretch" style={{ background: 'rgba(255,255,255,0.12)' }} />
@@ -256,53 +230,9 @@ export function RouteList() {
                           style={{ color: 'rgba(255,255,255,0.6)' }}>Điểm trả</span>
                       </div>
                       <p className="text-[13px] font-semibold pl-[15px]" style={{ color: 'var(--theme-text-on-brand)' }}>
-                        {selected.dropoffLocation || '—'}
+                        {selected.dropoffLocation.name || '—'}
                       </p>
                     </div>
-                  </div>
-                </div>
-
-                {/* Price cards */}
-                <div className="px-6 pt-5">
-                  <p className="text-[10px] font-medium uppercase tracking-[0.09em] mb-3"
-                    style={{ color: 'var(--theme-text-muted)' }}>Giá cước</p>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    {[
-                      { label: 'Container 20ft', raw: selected.type20ft },
-                      { label: 'Container 40ft', raw: selected.type40ft },
-                    ].map(({ label, raw }) => {
-                      const full = formatCurrencyFull(raw)
-                      const match = full.match(/^([\d.]+)(.*)$/)
-                      const main = match?.[1] ?? full
-                      const suffix = match?.[2] ?? ''
-                      return (
-                        <div key={label} className="rounded-lg px-4 py-3.5"
-                          style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
-                          <div className="flex items-center gap-1.5 mb-1.5">
-                            <Container className="w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-                            <span className="text-[11px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>{label}</span>
-                          </div>
-                          <p className="m-0 text-[20px] font-semibold leading-none" style={{ color: 'var(--theme-text-primary)' }}>
-                            {main}<span className="text-[13px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>{suffix}</span>
-                          </p>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                {/* Hai chiều row */}
-                <div className="px-6 pt-3.5">
-                  <div className="flex items-center justify-between rounded-lg px-4 py-3.5"
-                    style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
-                    <span className="text-[13px] font-medium" style={{ color: 'var(--theme-text-primary)' }}>Hai chiều</span>
-                    {selected.isTwoWay ? (
-                      <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-sm"
-                        style={{ background: 'color-mix(in srgb, var(--theme-status-success) 20%, transparent)', color: 'var(--theme-status-success)' }}>Có</span>
-                    ) : (
-                      <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-sm"
-                        style={{ background: 'color-mix(in srgb, var(--theme-status-error) 20%, transparent)', color: 'var(--theme-status-error)' }}>Không</span>
-                    )}
                   </div>
                 </div>
 
@@ -352,20 +282,6 @@ export function RouteList() {
                 <LocationSelect value={form.dropoffLocation} onChange={v => updateField('dropoffLocation', v)} placeholder="Chọn điểm trả" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label className="typo-form-label">Giá 20ft</Label>
-                <Input type="number" value={form.type20ft || ''} onChange={e => updateField('type20ft', Number(e.target.value))} placeholder="0" className="text-sm" />
-              </div>
-              <div className="space-y-2">
-                <Label className="typo-form-label">Giá 40ft</Label>
-                <Input type="number" value={form.type40ft || ''} onChange={e => updateField('type40ft', Number(e.target.value))} placeholder="0" className="text-sm" />
-              </div>
-            </div>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={form.isTwoWay} onChange={e => updateField('isTwoWay', e.target.checked)} className="rounded" />
-              <span className="text-sm" style={{ color: 'var(--theme-text-primary)' }}>Hai chiều</span>
-            </label>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} className="flex-1">Huỷ</Button>

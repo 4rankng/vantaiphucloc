@@ -15,25 +15,18 @@ from app.core.cache import CacheManager
 from app.config import settings
 from app.repositories.pricing_repo import PricingRepository
 from app.repositories.deps import get_pricing_repo
+from app.services.summary_loader import (
+    load_client_summaries,
+    load_location_summaries,
+    get_client_summary,
+    get_location_summary,
+)
 
 router = APIRouter()
 
 
 async def _load_pricing_out(repo: PricingRepository, pricing: Pricing) -> PricingOut:
-    lines = await repo.get_lines(pricing.id)
-    return PricingOut(
-        id=pricing.id,
-        client_id=pricing.client_id,
-        client_name=pricing.client_name,
-        work_type=pricing.work_type,
-        route=pricing.route,
-        pickup_location=pricing.pickup_location,
-        dropoff_location=pricing.dropoff_location,
-        is_active=pricing.is_active,
-        created_at=pricing.created_at,
-        updated_at=pricing.updated_at,
-        lines=[PricingLineOut.model_validate(line) for line in lines],
-    )
+    return (await _batch_load_pricing_outs(repo, [pricing]))[0]
 
 
 async def _batch_load_pricing_outs(
@@ -54,15 +47,21 @@ async def _batch_load_pricing_outs(
     for line in all_lines:
         lines_by_pricing[line.pricing_id].append(line)
 
+    clients = await load_client_summaries(
+        repo.session, {p.client_id for p in pricings}
+    )
+    locations = await load_location_summaries(
+        repo.session,
+        {p.pickup_location_id for p in pricings} | {p.dropoff_location_id for p in pricings},
+    )
+
     return [
         PricingOut(
             id=p.id,
-            client_id=p.client_id,
-            client_name=p.client_name,
+            client=get_client_summary(clients, p.client_id),
             work_type=p.work_type,
-            route=p.route,
-            pickup_location=p.pickup_location,
-            dropoff_location=p.dropoff_location,
+            pickup_location=get_location_summary(locations, p.pickup_location_id),
+            dropoff_location=get_location_summary(locations, p.dropoff_location_id),
             is_active=p.is_active,
             created_at=p.created_at,
             updated_at=p.updated_at,
@@ -76,7 +75,8 @@ async def _batch_load_pricing_outs(
 async def list_pricings(
     client_id: int | None = None,
     work_type: str | None = None,
-    route: str | None = None,
+    pickup_location_id: int | None = None,
+    dropoff_location_id: int | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     current_user: User = Depends(require_permission("read", "Pricing")),
@@ -84,7 +84,7 @@ async def list_pricings(
     redis: Redis = Depends(get_redis),
 ):
     cache = CacheManager(redis)
-    cache_id = f"list:{client_id}:{work_type}:{route}:{page}:{page_size}"
+    cache_id = f"list:{client_id}:{work_type}:{pickup_location_id}:{dropoff_location_id}:{page}:{page_size}"
     cached = await cache.get_json("pricings", cache_id)
     if cached is not None:
         return PaginatedResponse(**cached)
@@ -98,9 +98,12 @@ async def list_pricings(
     if work_type is not None:
         query = query.where(Pricing.work_type == work_type)
         count_query = count_query.where(Pricing.work_type == work_type)
-    if route is not None:
-        query = query.where(Pricing.route == route)
-        count_query = count_query.where(Pricing.route == route)
+    if pickup_location_id is not None:
+        query = query.where(Pricing.pickup_location_id == pickup_location_id)
+        count_query = count_query.where(Pricing.pickup_location_id == pickup_location_id)
+    if dropoff_location_id is not None:
+        query = query.where(Pricing.dropoff_location_id == dropoff_location_id)
+        count_query = count_query.where(Pricing.dropoff_location_id == dropoff_location_id)
 
     total_q = await repo.session.execute(count_query)
     total = total_q.scalar() or 0
@@ -136,11 +139,9 @@ async def create_pricing(
     lines_data = body.lines
     pricing = await repo.create(
         client_id=body.client_id,
-        client_name=body.client_name,
         work_type=body.work_type,
-        route=body.route,
-        pickup_location=body.pickup_location,
-        dropoff_location=body.dropoff_location,
+        pickup_location_id=body.pickup_location_id,
+        dropoff_location_id=body.dropoff_location_id,
     )
 
     for line in lines_data:

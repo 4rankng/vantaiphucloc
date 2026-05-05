@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
-import { useClients, useCreateTripOrder, useCreateClient, useImportTripOrders } from '@/hooks/use-queries'
+import { useClients, useCreateTripOrder, useCreateClient, useImportTripOrders, useLocations } from '@/hooks/use-queries'
 import { WORK_TYPES, type WorkType } from '@/data/domain'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { InlineSelect } from '@/components/shared/InlineSelect'
@@ -23,6 +23,7 @@ export function CreateTrip() {
   const navigate = useNavigate()
   const toast = useToast()
   const { data: clients = [] } = useClients()
+  const { data: locations = [] } = useLocations()
   const createTripOrder = useCreateTripOrder()
   const createClient = useCreateClient()
   const importMutation = useImportTripOrders()
@@ -81,21 +82,22 @@ export function CreateTrip() {
 
   const handleSubmit = () => {
     if (!clientId || !pickupLocation || !dropoffLocation || submitting) return
+    const pickupId = locations.find(l => l.name === pickupLocation)?.id
+    const dropoffId = locations.find(l => l.name === dropoffLocation)?.id
+    if (!pickupId || !dropoffId) {
+      toast.error('Vui lòng chọn điểm lấy/trả từ danh sách')
+      return
+    }
     setSubmitting(true)
-    const firstCong = congItems[0]
-    const clientName = clientMap.get(Number(clientId)) ?? ''
     const route = `${pickupLocation} - ${dropoffLocation}`
     createTripOrder.mutate({
       tripDate: new Date().toISOString().slice(0, 10),
       clientId: Number(clientId),
-      clientName,
-      workType: firstCong.workType,
       route,
-      pickupLocation,
-      dropoffLocation,
-      containerNumber: firstCong.containerNumber,
+      pickupLocationId: pickupId,
+      dropoffLocationId: dropoffId,
       containers: congItems.map(item => ({ containerNumber: item.containerNumber, workType: item.workType })),
-      pricingId: null as unknown as number,
+      pricingId: null,
       unitPrice: 0,
       driverSalary,
       allowance,

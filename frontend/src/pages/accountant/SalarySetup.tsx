@@ -203,9 +203,9 @@ function SalaryPeriodsList() {
   const byDriver = useMemo(() => {
     const map = new Map<string, typeof periods>()
     periods.forEach(p => {
-      const list = map.get(p.driverName) ?? []
+      const list = map.get(p.driver.name) ?? []
       list.push(p)
-      map.set(p.driverName, list)
+      map.set(p.driver.name, list)
     })
     return Array.from(map.entries())
   }, [periods])
