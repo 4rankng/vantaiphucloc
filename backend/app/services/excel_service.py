@@ -470,7 +470,9 @@ async def import_trip_orders(
     Groups rows by (trip_date, client_code) to form trip orders.
     Returns { created: int, errors: list[str] }.
     """
-    from app.services.pricing_service import find_tiered_pricing
+    from app.contexts.customer_pricing.application.pricing_lookup import (
+        find_tiered_pricing,
+    )
 
     created = 0
     errors: list[str] = []
@@ -540,7 +542,10 @@ async def import_trip_orders(
 
         # Resolve pickup/dropoff strings to Location FKs via the alias
         # resolver. Auto-creates if missing.
-        from app.services.location_resolver import LocationResolverService, ResolverSource
+        from app.contexts.customer_pricing.application.location_resolver import (
+            LocationResolverService,
+            ResolverSource,
+        )
         resolver = LocationResolverService(db)
         pickup_id = None
         dropoff_id = None

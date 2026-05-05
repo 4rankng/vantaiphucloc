@@ -415,18 +415,23 @@ class SqlPricingRepository(PricingRepository):
             select(PricingORM).where(PricingORM.id == int(p.id))
         )).scalar_one()
         pricing_to_orm(p, existing)
-        # Upsert lines by quantity (the natural key inside the aggregate)
+        # Reconcile lines by quantity (the natural key inside the aggregate):
+        # update matches, add new, delete orphans not present in p.lines.
         existing_lines = await self._lines_for(existing.id)
-        by_qty = {ln.quantity: ln for ln in existing_lines}
+        existing_by_qty = {ln.quantity: ln for ln in existing_lines}
+        new_quantities = {int(ln.quantity) for ln in p.lines}
         for ln in p.lines:
-            if ln.quantity in by_qty:
-                row = by_qty[ln.quantity]
+            if ln.quantity in existing_by_qty:
+                row = existing_by_qty[ln.quantity]
                 row.unit_price = int(ln.unit_price)
                 row.driver_salary = int(ln.driver_salary)
                 row.allowance = int(ln.allowance)
             else:
                 ln.pricing_id = PricingId(existing.id)
                 self.session.add(pricing_line_to_orm(ln))
+        for qty, row in existing_by_qty.items():
+            if qty not in new_quantities:
+                await self.session.delete(row)
         await self.session.flush()
         refreshed = await self._lines_for(existing.id)
         return pricing_to_domain(existing, refreshed)

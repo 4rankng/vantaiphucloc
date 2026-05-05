@@ -14,7 +14,7 @@ import pytest
 from datetime import datetime, timezone
 
 from app.models.domain import Location, LocationAlias
-from app.services.location_resolver import (
+from app.contexts.customer_pricing.application.location_resolver import (
     FUZZY_AUTO_THRESHOLD,
     FUZZY_SUGGEST_THRESHOLD,
     LocationResolverService,
@@ -114,12 +114,12 @@ async def test_resolver_records_alias_for_non_canonical_input(db_session):
 # ---------------------------------------------------------------------------
 
 def test_haversine_km_zero_distance():
-    from app.api.v1.locations import _haversine_km
+    from app.contexts.customer_pricing.interface.routers.locations import _haversine_km
     assert _haversine_km(20.86, 106.69, 20.86, 106.69) < 0.001
 
 
 def test_haversine_km_realistic_distance():
-    from app.api.v1.locations import _haversine_km
+    from app.contexts.customer_pricing.interface.routers.locations import _haversine_km
     # Hải Phòng → Đình Vũ ≈ 9 km (we used 0.04° east + 0.03° south)
     d = _haversine_km(20.86, 106.69, 20.83, 106.77)
     assert 5 < d < 15
@@ -139,7 +139,7 @@ async def test_nearby_orders_by_distance_then_no_coords(db_session):
     await db_session.flush()
 
     # Replicate the ranking logic directly (the endpoint requires auth + db deps)
-    from app.api.v1.locations import _haversine_km
+    from app.contexts.customer_pricing.interface.routers.locations import _haversine_km
     from sqlalchemy import select
     rows = list((await db_session.execute(select(Location))).scalars().all())
     DRIVER = (20.86, 106.69)
