@@ -7,8 +7,8 @@ from app.contexts.identity.interface import (
     push_router,
     users_router,
 )
+from app.contexts.customer_pricing.interface import clients_router
 from app.database import engine
-from app.api.v1.clients import router as clients_router
 from app.api.v1.locations import router as locations_router
 from app.api.v1.routes import router as routes_router
 from app.api.v1.pricings import router as pricings_router
