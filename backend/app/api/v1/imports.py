@@ -535,6 +535,138 @@ async def list_templates(
 
 
 # ---------------------------------------------------------------------------
+# Customer pricing (bảng giá) import — preview + commit
+# ---------------------------------------------------------------------------
+
+
+class PricingPreviewRowDto(BaseModel):
+    pickup_location: str
+    dropoff_location: str
+    work_type: str
+    unit_price: int
+    quantity: int = 1
+    driver_salary: int = 0
+    allowance: int = 0
+    note: str = ""
+
+
+class PricingCommitRequest(BaseModel):
+    client_id: int
+    rows: list[PricingPreviewRowDto]
+    update_existing_lines: bool = False
+
+
+class PricingCommitResponse(BaseModel):
+    pricings_created: int
+    pricings_existing: int
+    lines_created: int
+    lines_updated: int
+    lines_existing: int
+    skipped_no_locations: int
+    locations_created: int
+
+
+@router.post("/customer-pricing/preview")
+async def preview_customer_pricing(
+    file: UploadFile = File(...),
+    format: str | None = Form(None),
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_roles("accountant", "superadmin")),
+):
+    """Parse an uploaded tariff file. `format` is one of pan|hap|newway, or
+    omit to auto-detect from the filename."""
+    from app.services.pricing_import import (
+        SUPPORTED_FORMATS,
+        detect_format,
+        parse_tariff_bytes,
+        resolve_preview_locations,
+    )
+
+    if file.filename is None:
+        raise HTTPException(status_code=400, detail="Tệp tải lên không có tên.")
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Tệp tải lên rỗng.")
+
+    fmt = (format or "").lower().strip() or detect_format(file.filename or "")
+    if not fmt:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Không nhận diện được định dạng tệp bảng giá. "
+                "Hãy chọn pan, hap hoặc newway."
+            ),
+        )
+    if fmt not in SUPPORTED_FORMATS:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Định dạng không hợp lệ: {fmt!r}. "
+                f"Các định dạng được hỗ trợ: {', '.join(SUPPORTED_FORMATS)}."
+            ),
+        )
+
+    try:
+        preview = parse_tariff_bytes(content, fmt)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    location_resolutions = await resolve_preview_locations(db, preview.rows)
+    payload = preview.to_dict()
+    payload["filename"] = file.filename
+    payload["location_resolutions"] = location_resolutions
+    payload["supported_formats"] = list(SUPPORTED_FORMATS)
+    return payload
+
+
+@router.post("/customer-pricing/commit", response_model=PricingCommitResponse)
+async def commit_customer_pricing(
+    body: PricingCommitRequest = Body(...),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_roles("accountant", "superadmin")),
+):
+    from app.services.pricing_import import TariffRow, commit_tariff_rows
+
+    if not body.rows:
+        raise HTTPException(status_code=400, detail="Không có dòng nào để tạo.")
+    client = (
+        await db.execute(select(Client).where(Client.id == body.client_id))
+    ).scalar_one_or_none()
+    if client is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy khách hàng.")
+
+    tariff_rows = [
+        TariffRow(
+            pickup_raw=r.pickup_location,
+            dropoff_raw=r.dropoff_location,
+            work_type=r.work_type,
+            unit_price=r.unit_price,
+            quantity=r.quantity,
+            driver_salary=r.driver_salary,
+            allowance=r.allowance,
+            note=r.note,
+        )
+        for r in body.rows
+    ]
+    result = await commit_tariff_rows(
+        db,
+        client=client,
+        rows=tariff_rows,
+        user_id=user.id,
+        update_existing_lines=body.update_existing_lines,
+    )
+    return PricingCommitResponse(
+        pricings_created=result.pricings_created,
+        pricings_existing=result.pricings_existing,
+        lines_created=result.lines_created,
+        lines_updated=result.lines_updated,
+        lines_existing=result.lines_existing,
+        skipped_no_locations=result.skipped_no_locations,
+        locations_created=result.locations_created,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 

@@ -211,6 +211,17 @@ Either:
 - Kế toán hits **Áp giá theo bảng giá** on the import-results screen → `POST /imports/apply-pricing` runs `find_tiered_pricing(...)` per draft TripOrder. Hits fill `unit_price` / `driver_salary` / `allowance` / `pricing_id` and transition `DRAFT → PENDING`. Misses are listed for manual handling.
 - OR kế toán fills the price manually via the trip detail UI.
 
+### 5.2a Bảng giá imported from a customer tariff Excel
+
+Kế toán uploads a customer tariff file via `Nhập bảng giá` (`/accountant/import-pricing`):
+
+1. Pick customer + (optional) format (PAN/HAP/NEWWAY) — auto-detected from filename if omitted.
+2. `POST /imports/customer-pricing/preview` parses the format-specific layout (PAN's `Trucking (HD)`, HAP's `CUOC`, NEWWAY best-effort) and returns a list of `(pickup, dropoff, work_type, unit_price, qty, driver_salary, allowance)` rows plus per-route location resolutions (same shape as orders import).
+3. Kế toán reviews, edits, deletes rows in the 3-pane UI.
+4. `POST /imports/customer-pricing/commit` upserts `Pricing` headers (idempotent on `(client_id, work_type, pickup_location_id, dropoff_location_id)`) and `PricingLine` rows (idempotent on `(pricing_id, quantity)`). Existing lines are left alone unless `update_existing_lines=true`.
+
+Driver_salary + allowance default to 0 — customer tariffs only carry `unit_price`; the internal cost split stays manual via PricingDetail.
+
 ### 5.3 Driver completes the trip (mobile app)
 
 1. Driver opens the mobile app, picks a TripOrder for them (by truck plate + route).
