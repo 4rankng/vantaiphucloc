@@ -21,12 +21,12 @@ from app.contexts.operations.interface import (
     work_orders_router,
 )
 from app.contexts.fleet.interface import drivers_router
+from app.contexts.billing.interface import reports_router
 from app.database import engine
 from app.api.v1.salary import router as salary_router
 from app.api.v1.salary_config import router as salary_config_router
 from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.audit import router as audit_router
-from app.api.v1.reports import router as reports_router
 from app.core.deps import get_current_user, get_worker_pool
 from app.models.base import User
 from app.schemas.domain import JobStatusResponse
