@@ -20,10 +20,10 @@ from app.contexts.operations.interface import (
     trip_orders_router,
     work_orders_router,
 )
+from app.contexts.fleet.interface import drivers_router
 from app.database import engine
 from app.api.v1.salary import router as salary_router
 from app.api.v1.salary_config import router as salary_config_router
-from app.api.v1.drivers import router as drivers_router
 from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.audit import router as audit_router
 from app.api.v1.reports import router as reports_router
