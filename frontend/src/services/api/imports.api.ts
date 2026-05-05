@@ -167,3 +167,67 @@ export async function listImportTemplates(clientId: number): Promise<SavedTempla
   const res = await api.get('/imports/customer-excel/templates', { params: { client_id: clientId } })
   return res.data as SavedTemplate[]
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// Customer pricing (bảng giá) import
+// ──────────────────────────────────────────────────────────────────────────
+
+export type PricingFormat = 'pan' | 'hap' | 'newway'
+
+export interface PricingPreviewRow {
+  pickup_location: string
+  dropoff_location: string
+  work_type: string
+  unit_price: number
+  quantity: number
+  driver_salary: number
+  allowance: number
+  note: string
+}
+
+export interface PricingPreviewResponse {
+  filename: string
+  format: PricingFormat
+  sheet_name: string
+  rows: PricingPreviewRow[]
+  warnings: string[]
+  stats: { row_count: number; unique_routes: number }
+  location_resolutions: Record<string, LocationResolutionDto>
+  supported_formats: PricingFormat[]
+}
+
+export interface PricingCommitRequest {
+  client_id: number
+  rows: PricingPreviewRow[]
+  update_existing_lines?: boolean
+}
+
+export interface PricingCommitResponse {
+  pricings_created: number
+  pricings_existing: number
+  lines_created: number
+  lines_updated: number
+  lines_existing: number
+  skipped_no_locations: number
+  locations_created: number
+}
+
+export async function previewCustomerPricing(args: {
+  file: File
+  format?: PricingFormat
+}): Promise<PricingPreviewResponse> {
+  const fd = new FormData()
+  fd.append('file', args.file)
+  if (args.format) fd.append('format', args.format)
+  const res = await api.post('/imports/customer-pricing/preview', fd, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return res.data as PricingPreviewResponse
+}
+
+export async function commitCustomerPricing(
+  body: PricingCommitRequest,
+): Promise<PricingCommitResponse> {
+  const res = await api.post('/imports/customer-pricing/commit', body)
+  return res.data as PricingCommitResponse
+}
