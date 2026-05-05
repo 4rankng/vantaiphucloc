@@ -148,6 +148,7 @@ async def list_trip_orders(
     status: str | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
+    unpriced: bool | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     current_user: User = Depends(require_permission("read", "TripOrder")),
@@ -166,6 +167,10 @@ async def list_trip_orders(
         filters.append(TripOrder.trip_date >= date_from)
     if date_to is not None:
         filters.append(TripOrder.trip_date <= date_to)
+    if unpriced is True:
+        filters.append(TripOrder.unit_price == 0)
+    elif unpriced is False:
+        filters.append(TripOrder.unit_price > 0)
 
     for f in filters:
         query = query.where(f)
