@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends
+from fastapi.responses import Response
 from arq import ArqRedis
 from arq.jobs import Job, JobStatus
 
@@ -55,6 +56,14 @@ router.include_router(imports_router)
 @router.get("/health")
 async def health_check():
     return {"status": "ok", "service": "vantaihanghoa"}
+
+
+# Stub for clients running stale bundles that still poll the long-removed
+# SSE notification stream. Returns 204 to silence 404 log noise. Do NOT
+# build new clients against this — notifications now ride on push + arq.
+@router.get("/sse/notifications", include_in_schema=False)
+async def _sse_notifications_stub() -> Response:
+    return Response(status_code=204)
 
 
 @router.get("/health/worker")
