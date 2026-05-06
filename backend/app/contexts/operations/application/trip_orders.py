@@ -9,8 +9,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession  # transaction control only
 
 from app.contexts.operations.application.dto import (
     ImportCommitInput,
@@ -403,19 +402,17 @@ class CreateTripOrderFromImport:
             LocationResolverService,
             ResolverSource,
         )
+        from app.contexts.operations.infrastructure.import_queries import (
+            count_locations,
+            fetch_client,
+            find_duplicate_trip,
+        )
         from app.models.domain import (
-            Client,
-            Location,
             TripOrder as TripOrderORM,
             TripOrderContainer as TripOrderContainerORM,
         )
-        from sqlalchemy import and_, func
 
-        client = (
-            await self.session.execute(
-                select(Client).where(Client.id == data.client_id)
-            )
-        ).scalar_one_or_none()
+        client = await fetch_client(self.session, data.client_id)
         if client is None:
             raise NotFound("Client", data.client_id)
 
@@ -451,13 +448,7 @@ class CreateTripOrderFromImport:
 
         resolver = LocationResolverService(self.session)
 
-        async def _count_locations() -> int:
-            res = await self.session.execute(
-                select(func.count()).select_from(Location)
-            )
-            return int(res.scalar_one())
-
-        locations_seen_before = await _count_locations()
+        locations_seen_before = await count_locations(self.session)
 
         for idx, grp in enumerate(groups, start=1):
             try:
@@ -467,8 +458,11 @@ class CreateTripOrderFromImport:
                     td = _parse_iso_date(v.get("trip_date"))
                     if td is None:
                         continue
-                    existing = await _find_duplicate(
-                        self.session, data.client_id, td, cn,
+                    existing = await find_duplicate_trip(
+                        self.session,
+                        client_id=data.client_id,
+                        trip_date=td,
+                        container_no=cn,
                     )
                     if existing:
                         if data.overwrite_duplicates:
@@ -563,7 +557,9 @@ class CreateTripOrderFromImport:
             except Exception as exc:
                 errors.append(f"Nhóm {idx}: {exc}")
 
-        locations_created = max(0, await _count_locations() - locations_seen_before)
+        locations_created = max(
+            0, await count_locations(self.session) - locations_seen_before
+        )
         await self.session.commit()
 
         return ImportCommitResult(
@@ -598,22 +594,18 @@ class ApplyPricingToTrips:
         from app.contexts.customer_pricing.infrastructure.pricing_lookup import (
             find_tiered_pricing,
         )
-        from app.models.domain import (
-            TripOrder as TripOrderORM,
-            TripOrderContainer as TripOrderContainerORM,
+        from app.contexts.operations.infrastructure.import_queries import (
+            count_containers_for_trip,
+            first_container_work_type,
+            list_drafts_for_pricing,
         )
-        from sqlalchemy import func
 
-        q = select(TripOrderORM)
-        if client_id is not None:
-            q = q.where(
-                TripOrderORM.client_id == client_id,
-                TripOrderORM.status == TripOrderStatus.DRAFT.value,
-            )
-        if trip_ids:
-            q = q.where(TripOrderORM.id.in_(trip_ids))
-
-        rows = list((await self.session.execute(q)).scalars().all())
+        rows = await list_drafts_for_pricing(
+            self.session,
+            client_id=client_id,
+            trip_ids=trip_ids,
+            draft_status=TripOrderStatus.DRAFT.value,
+        )
 
         priced = 0
         unpriced_ids: list[int] = []
@@ -622,19 +614,11 @@ class ApplyPricingToTrips:
                 priced += 1
                 continue
             cont_count = (
-                await self.session.scalar(
-                    select(func.count(TripOrderContainerORM.id)).where(
-                        TripOrderContainerORM.trip_order_id == trip.id
-                    )
-                )
-                or 1
+                await count_containers_for_trip(self.session, trip.id) or 1
             )
-            first_c = await self.session.execute(
-                select(TripOrderContainerORM.work_type)
-                .where(TripOrderContainerORM.trip_order_id == trip.id)
-                .limit(1)
+            wt = (
+                await first_container_work_type(self.session, trip.id) or ""
             )
-            wt = first_c.scalar_one_or_none() or ""
             if not wt:
                 unpriced_ids.append(trip.id)
                 continue
@@ -699,36 +683,6 @@ def _extract_metadata(row: dict[str, object]) -> dict[str, object] | None:
         and v not in (None, "", [], {})
     }
     return extras or None
-
-
-async def _find_duplicate(
-    session: AsyncSession,
-    client_id: int,
-    trip_date: date,
-    container_no: str,
-):
-    from app.models.domain import (
-        TripOrder as TripOrderORM,
-        TripOrderContainer as TripOrderContainerORM,
-    )
-    from sqlalchemy import and_
-
-    res = await session.execute(
-        select(TripOrderORM)
-        .join(
-            TripOrderContainerORM,
-            TripOrderContainerORM.trip_order_id == TripOrderORM.id,
-        )
-        .where(
-            and_(
-                TripOrderORM.client_id == client_id,
-                TripOrderORM.trip_date == trip_date,
-                TripOrderContainerORM.container_number == container_no,
-            )
-        )
-        .limit(1)
-    )
-    return res.scalar_one_or_none()
 
 
 def trip_row_from_dict(d: dict) -> ImportTripRow:

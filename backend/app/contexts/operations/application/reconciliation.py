@@ -14,8 +14,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession  # transaction control only
 
 from app.contexts.operations.application.dto import (
     ReconcileInput,
@@ -69,11 +68,9 @@ class MatchTripToWorkOrder:
         self.session = session
 
     async def __call__(self, data: ReconcileInput) -> TripOrder:
-        from app.contexts.operations.infrastructure.orm import (
-            TripOrderWorkOrderORM,
-            WorkOrderContainerORM,
+        from app.contexts.operations.infrastructure.link_queries import (
+            trip_order_has_link,
         )
-        from sqlalchemy import func
 
         wo = await self.wo_repo.get_by_id(WorkOrderId(data.work_order_id))
         if wo is None:
@@ -96,12 +93,7 @@ class MatchTripToWorkOrder:
         ):
             raise ReconciliationConflict("Work order is already matched")
 
-        existing_link = await self.session.execute(
-            select(TripOrderWorkOrderORM).where(
-                TripOrderWorkOrderORM.trip_order_id == int(to.id)  # type: ignore[arg-type]
-            )
-        )
-        if existing_link.scalar_one_or_none() is not None:
+        if await trip_order_has_link(self.session, int(to.id)):  # type: ignore[arg-type]
             raise ReconciliationConflict("Trip order is already matched")
 
         if to.status != TripOrderStatus.PENDING:
@@ -148,8 +140,8 @@ class UnmatchTripFromWorkOrder:
         self.session = session
 
     async def __call__(self, data: UnmatchInput) -> tuple[TripOrder, WorkOrder]:
-        from app.contexts.operations.infrastructure.orm import (
-            TripOrderWorkOrderORM,
+        from app.contexts.operations.infrastructure.link_queries import (
+            find_link,
         )
 
         if not data.work_order_id and not data.trip_order_id:
@@ -157,12 +149,11 @@ class UnmatchTripFromWorkOrder:
                 "Must provide work_order_id or trip_order_id"
             )
 
-        q = select(TripOrderWorkOrderORM)
-        if data.work_order_id:
-            q = q.where(TripOrderWorkOrderORM.work_order_id == data.work_order_id)
-        if data.trip_order_id:
-            q = q.where(TripOrderWorkOrderORM.trip_order_id == data.trip_order_id)
-        link = (await self.session.execute(q)).scalar_one_or_none()
+        link = await find_link(
+            self.session,
+            work_order_id=data.work_order_id,
+            trip_order_id=data.trip_order_id,
+        )
         if link is None:
             raise NotFound("TripOrderWorkOrder", (
                 data.trip_order_id or data.work_order_id
