@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from 'react'
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { Plus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
