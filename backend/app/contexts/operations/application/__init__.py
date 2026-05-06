@@ -3,7 +3,7 @@
 Use cases that orchestrate trip-order / work-order aggregates and the
 TO↔WO reconciliation flow. They depend on the domain repositories and
 the AsyncSession for transaction control. Cross-context calls go to
-the customer_pricing application layer (pricing lookup, location
+the customer_pricing infrastructure layer (pricing lookup, location
 resolver) — kept narrow and documented.
 """
 

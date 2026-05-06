@@ -14,7 +14,7 @@ import pytest
 from datetime import datetime, timezone
 
 from app.models.domain import Location, LocationAlias
-from app.contexts.customer_pricing.application.location_resolver import (
+from app.contexts.customer_pricing.infrastructure.location_resolver import (
     FUZZY_AUTO_THRESHOLD,
     FUZZY_SUGGEST_THRESHOLD,
     LocationResolverService,
