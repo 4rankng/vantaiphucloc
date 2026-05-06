@@ -76,6 +76,9 @@ class WorkOrderRepository(ABC):
         limit: int,
         client_id: int | None = None,
         driver_id: int | None = None,
+        tractor_plate: str | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
         status: WorkOrderStatus | None = None,
     ) -> tuple[Sequence[WorkOrder], int]: ...
 
