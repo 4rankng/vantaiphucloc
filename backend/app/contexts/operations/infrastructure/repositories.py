@@ -272,6 +272,9 @@ class SqlWorkOrderRepository(WorkOrderRepository):
         limit: int,
         client_id: int | None = None,
         driver_id: int | None = None,
+        tractor_plate: str | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
         status: WorkOrderStatus | None = None,
     ) -> tuple[Sequence[WorkOrder], int]:
         q = select(WorkOrderORM)
@@ -279,6 +282,12 @@ class SqlWorkOrderRepository(WorkOrderRepository):
             q = q.where(WorkOrderORM.client_id == client_id)
         if driver_id is not None:
             q = q.where(WorkOrderORM.driver_id == driver_id)
+        if tractor_plate is not None:
+            q = q.where(WorkOrderORM.tractor_plate == tractor_plate)
+        if date_from is not None:
+            q = q.where(WorkOrderORM.created_at >= date_from)
+        if date_to is not None:
+            q = q.where(WorkOrderORM.created_at <= date_to)
         if status is not None:
             q = q.where(WorkOrderORM.status == str(status))
         total = await self.session.scalar(
