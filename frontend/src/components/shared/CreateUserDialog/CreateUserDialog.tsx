@@ -121,7 +121,7 @@ export function CreateUserDialog({
               )}
             </>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <>
               <div className="space-y-2">
                 <RequiredLabel>Vai trò</RequiredLabel>
                 <div className="grid gap-2 grid-cols-3">
@@ -140,7 +140,7 @@ export function CreateUserDialog({
                   <InlineSelect options={(vendors ?? []).map(v => ({ value: String(v.id), label: v.name }))} value={form.vendor} onChange={v => setForm(f => ({ ...f, vendor: v }))} placeholder="Chọn nhà thầu" onCreateNew={() => setCreateVendorOpen(true)} createNewLabel="Tạo nhà thầu mới" />
                 </div>
               )}
-            </div>
+            </>
           )}
 
           {/* Row 2: Username + Full name */}
