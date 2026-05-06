@@ -92,7 +92,7 @@ write_files:
       ALGORITHM=HS256
       ACCESS_TOKEN_EXPIRE_MINUTES=1440
       REFRESH_TOKEN_EXPIRE_DAYS=7
-      CORS_ORIGINS=https://phucloc.tingting.vip
+      CORS_ORIGINS=
       ENVIRONMENT=production
       REDIS_URL=redis://redis:6379/0
 
