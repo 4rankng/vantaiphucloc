@@ -117,7 +117,7 @@ class CreateTripOrder:
         self.session = session
 
     async def __call__(self, data: TripOrderCreateInput) -> TripOrder:
-        from app.contexts.customer_pricing.application.pricing_lookup import (
+        from app.contexts.customer_pricing.infrastructure.pricing_lookup import (
             find_tiered_pricing,
         )
         from app.contexts.operations.infrastructure.codes import generate_trip_order_code
@@ -399,7 +399,7 @@ class CreateTripOrderFromImport:
 
     async def __call__(self, data: ImportCommitInput) -> ImportCommitResult:
         from app.contexts.operations.infrastructure.import_pipeline.pipeline import group_rows_into_trips
-        from app.contexts.customer_pricing.application.location_resolver import (
+        from app.contexts.customer_pricing.infrastructure.location_resolver import (
             LocationResolverService,
             ResolverSource,
         )
@@ -595,7 +595,7 @@ class ApplyPricingToTrips:
         trip_ids: list[int] | None,
         skip_already_priced: bool,
     ) -> tuple[int, list[int]]:
-        from app.contexts.customer_pricing.application.pricing_lookup import (
+        from app.contexts.customer_pricing.infrastructure.pricing_lookup import (
             find_tiered_pricing,
         )
         from app.models.domain import (

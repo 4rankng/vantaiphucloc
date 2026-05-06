@@ -5,10 +5,9 @@ about transactions but contain no business rules — those live on
 aggregates in the domain layer.
 
 CRUD use cases for all five aggregates (Customer, Vendor, Location,
-Pricing, Route) live here. Two read-only helpers used by Operations
-(C3) — `pricing_lookup` and `location_resolver` — also live in this
-context since they are domain-specific knowledge of how lanes and
-location strings resolve.
+Pricing, Route) live here. The two read-only query helpers used by
+Operations — `pricing_lookup` and `location_resolver` — live under
+`infrastructure/` since they talk to the ORM directly.
 """
 
 from app.contexts.customer_pricing.application.customers import (
