@@ -243,6 +243,9 @@ async def list_work_orders(
     current_user: User = Depends(get_current_user),
     use_case: ListWorkOrders = Depends(get_list_work_orders),
 ):
+    if current_user.role == "driver":
+        driver_id = current_user.id
+
     items, total = await use_case(WorkOrderListFilters(
         page=page, page_size=page_size,
         driver_id=driver_id, tractor_plate=tractor_plate,
@@ -378,6 +381,11 @@ async def get_work_order(
         w = await use_case(work_order_id)
     except Exception as exc:
         raise translate(exc)
+    # Drivers can only access their own work orders; mask others as 404
+    # to avoid leaking existence to a horizontally-scoped caller.
+    if current_user.role == "driver" and w.driver_id != current_user.id:
+        from app.contexts.operations.domain.exceptions import NotFound
+        raise translate(NotFound("WorkOrder", work_order_id))
     out = await _load_one(use_case.repo.session, w)  # type: ignore[attr-defined]
     if current_user.role == "driver" and w.status == WorkOrderStatus.PENDING:
         _hide_salary_fields(out)
