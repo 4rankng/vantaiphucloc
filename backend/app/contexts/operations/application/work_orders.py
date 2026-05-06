@@ -85,37 +85,19 @@ class ListWorkOrders:
     async def __call__(
         self, filters: WorkOrderListFilters
     ) -> tuple[list[WorkOrder], int]:
-        from app.contexts.operations.infrastructure.orm import WorkOrderORM
-        from sqlalchemy import select, func
-
         offset = (filters.page - 1) * filters.page_size
-
-        # The base repo doesn't expose tractor_plate / created_at filters,
-        # so build the query directly here. Mirrors legacy behaviour 1:1.
-        session = self.repo.session  # type: ignore[attr-defined]
-        q = select(WorkOrderORM)
-        if filters.driver_id is not None:
-            q = q.where(WorkOrderORM.driver_id == filters.driver_id)
-        if filters.tractor_plate is not None:
-            q = q.where(WorkOrderORM.tractor_plate == filters.tractor_plate)
-        if filters.date_from is not None:
-            q = q.where(WorkOrderORM.created_at >= filters.date_from)
-        if filters.date_to is not None:
-            q = q.where(WorkOrderORM.created_at <= filters.date_to)
-        if filters.status is not None:
-            q = q.where(WorkOrderORM.status == filters.status)
-        total = await session.scalar(
-            select(func.count()).select_from(q.subquery())
-        ) or 0
-        q = q.order_by(WorkOrderORM.id.desc()).offset(offset).limit(
-            filters.page_size
+        items, total = await self.repo.list(
+            offset=offset,
+            limit=filters.page_size,
+            driver_id=filters.driver_id,
+            tractor_plate=filters.tractor_plate,
+            date_from=filters.date_from,
+            date_to=filters.date_to,
+            status=(
+                WorkOrderStatus(filters.status) if filters.status else None
+            ),
         )
-        rows = list((await session.execute(q)).scalars().all())
-        items = [
-            await self.repo._hydrate(r)  # type: ignore[attr-defined]
-            for r in rows
-        ]
-        return items, int(total)
+        return list(items), total
 
 
 # ── Writes ───────────────────────────────────────────────────────
