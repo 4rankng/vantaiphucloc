@@ -26,7 +26,7 @@ from app.contexts.operations.application.dto import (
     ReconcileInput,
     UnmatchInput,
 )
-from app.contexts.operations.application.match_suggester import (
+from app.contexts.operations.infrastructure.match_suggester import (
     suggest_trip_matches,
     suggest_wo_matches,
 )

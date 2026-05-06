@@ -23,7 +23,7 @@ from app.contexts.customer_pricing.application.dto import (
     LocationPinInput,
     LocationUpdateInput,
 )
-from app.contexts.customer_pricing.application.location_resolver import (
+from app.contexts.customer_pricing.infrastructure.location_resolver import (
     normalize as _normalize,
 )
 from app.contexts.customer_pricing.domain.exceptions import (

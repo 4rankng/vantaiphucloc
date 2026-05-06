@@ -141,7 +141,7 @@ class CreateWorkOrder:
     async def __call__(
         self, data: WorkOrderCreateInput, user: CurrentUserContext
     ) -> WorkOrder:
-        from app.contexts.customer_pricing.application.pricing_lookup import (
+        from app.contexts.customer_pricing.infrastructure.pricing_lookup import (
             find_pricing,
         )
         from app.contexts.operations.infrastructure.codes import generate_work_order_code
@@ -327,7 +327,7 @@ class BatchCreateWorkOrders:
         user: CurrentUserContext,
     ) -> list[tuple[int, int | None, str | None]]:
         """Returns [(index, created_id_or_None, error_or_None)] for each item."""
-        from app.contexts.customer_pricing.application.pricing_lookup import (
+        from app.contexts.customer_pricing.infrastructure.pricing_lookup import (
             find_pricing,
         )
         from app.contexts.operations.infrastructure.codes import generate_work_order_code
