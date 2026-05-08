@@ -197,10 +197,12 @@ class UpdateTripOrder:
         repo: TripOrderRepository,
         wo_repo: WorkOrderRepository,
         session: AsyncSession,
+        client_repo: "ClientRepository | None" = None,
     ) -> None:
         self.repo = repo
         self.wo_repo = wo_repo
         self.session = session
+        self.client_repo = client_repo
 
     async def __call__(
         self, tid: int, data: TripOrderUpdateInput

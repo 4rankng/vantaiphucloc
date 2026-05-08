@@ -111,6 +111,16 @@ class SqlClientRepository(ClientRepository):
         await self.session.flush()
         return customer_to_domain(existing)
 
+    async def increment_debt(self, cid: ClientId, amount: int) -> None:
+        if amount <= 0:
+            return
+        existing = (await self.session.execute(
+            select(ClientORM).where(ClientORM.id == int(cid))
+        )).scalar_one_or_none()
+        if existing is not None:
+            existing.outstanding_debt = (existing.outstanding_debt or 0) + amount
+            await self.session.flush()
+
 
 # ── Vendor ───────────────────────────────────────────────────────
 
