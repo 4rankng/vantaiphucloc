@@ -47,6 +47,14 @@ class ClientRepository(ABC):
     @abstractmethod
     async def save(self, c: Customer) -> Customer: ...
 
+    @abstractmethod
+    async def increment_debt(self, cid: ClientId, amount: int) -> None:
+        """Bump outstanding_debt on the Client. No-op if amount ≤ 0.
+
+        Cross-context callers (e.g. operations) depend on this method
+        instead of touching the Client aggregate directly.
+        """
+
 
 class VendorRepository(ABC):
     @abstractmethod

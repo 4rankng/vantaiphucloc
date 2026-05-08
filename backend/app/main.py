@@ -9,6 +9,9 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import Response as StarletteResponse
 
+from app.core.logging import configure_logging, RequestIDMiddleware
+
+configure_logging()
 _logger = logging.getLogger(__name__)
 
 from app.config import settings
@@ -16,6 +19,36 @@ from app.api.v1.router import router as api_v1_router
 from app.core.redis import init_redis, close_redis
 from app.core.worker import init_arq_pool, close_arq_pool
 from app.database import engine
+
+
+def _init_sentry() -> None:
+    """Initialise Sentry only when a DSN is configured.
+
+    Without a DSN the SDK is a no-op, which is what we want for dev / CI
+    so we never accidentally ship events from a developer machine.
+    """
+    if not settings.SENTRY_DSN_BACKEND:
+        return
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.fastapi import FastApiIntegration
+        from sentry_sdk.integrations.starlette import StarletteIntegration
+    except ImportError:
+        _logger.warning("sentry-sdk not installed; skipping Sentry init")
+        return
+
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN_BACKEND,
+        environment=settings.ENVIRONMENT,
+        traces_sample_rate=settings.SENTRY_TRACES_SAMPLE_RATE,
+        send_default_pii=False,
+        integrations=[StarletteIntegration(), FastApiIntegration()],
+        release=settings.SENTRY_RELEASE or None,
+    )
+    _logger.info("Sentry initialised (env=%s)", settings.ENVIRONMENT)
+
+
+_init_sentry()
 
 MAX_REQUEST_BODY_BYTES = 5_242_880  # 5 MB
 
@@ -71,6 +104,7 @@ app = FastAPI(
 )
 
 app.add_middleware(RequestSizeLimitMiddleware)
+app.add_middleware(RequestIDMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

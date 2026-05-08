@@ -51,6 +51,11 @@ class Settings(BaseSettings):
     VAPID_PRIVATE_KEY: str = ""
     VAPID_CLAIMS_EMAIL: str = ""
 
+    # Observability
+    SENTRY_DSN_BACKEND: str = ""
+    SENTRY_TRACES_SAMPLE_RATE: float = 0.1
+    SENTRY_RELEASE: str = ""
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]

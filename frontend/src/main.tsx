@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App'
 import { ErrorFallback } from '@/components/shared/ErrorFallback/ErrorFallback'
+import { initSentry, captureException } from '@/lib/sentry'
+
+initSentry()
 
 interface EBState { error: Error | null }
 
@@ -10,8 +13,9 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, EBState> {
   state: EBState = { error: null }
   static getDerivedStateFromError(error: Error) { return { error } }
 
-  componentDidCatch(error: Error) {
+  componentDidCatch(error: Error, info: { componentStack?: string | null }) {
     console.error('[ErrorBoundary:root]', error)
+    captureException(error, info?.componentStack ? { componentStack: info.componentStack } : undefined)
   }
 
   render() {
