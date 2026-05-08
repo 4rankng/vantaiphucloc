@@ -63,7 +63,7 @@ export function BottomTabBar({ tabs }: BottomTabBarProps) {
               )}
             </div>
             {showLabel && (
-              <span className={cn('text-[10px] leading-none max-w-[52px] text-center truncate', isActive ? 'font-semibold' : 'font-normal')}>
+              <span className={cn('text-[10px] leading-none text-center whitespace-nowrap', isActive ? 'font-semibold' : 'font-normal')}>
                 {label}
               </span>
             )}
