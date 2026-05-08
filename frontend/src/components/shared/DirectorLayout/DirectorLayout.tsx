@@ -63,10 +63,17 @@ function DirectorShell() {
         </div>
       )}
 
-      {/* Page content */}
+      {/* Page content. On mobile, reserve room for the 56px bottom tab bar
+          PLUS a small breathing-gap and the device safe-area, otherwise long
+          forms (e.g. /director/create-trip) push their primary submit button
+          right under the tab bar and the bottom edge gets clipped. */}
       <main
         className="flex-1 overflow-y-auto"
-        style={{ paddingBottom: isMobile ? '56px' : '0' }}
+        style={{
+          paddingBottom: isMobile
+            ? 'calc(56px + 24px + env(safe-area-inset-bottom, 0px))'
+            : '0',
+        }}
       >
         <div className="page-container">
           <Outlet />

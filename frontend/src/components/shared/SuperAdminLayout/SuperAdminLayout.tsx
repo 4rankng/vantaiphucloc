@@ -97,11 +97,11 @@ export function SuperAdminLayout() {
                 className="text-[10px] font-normal truncate"
                 style={{ color: 'var(--theme-text-muted)' }}
               >
-                @{user.username} · {ROLE_LABELS.superadmin}
+                {user.username ? `@${user.username} · ` : ''}{ROLE_LABELS.superadmin}
               </span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem disabled>
+            <DropdownMenuItem onClick={() => navigate('/superadmin/profile')}>
               <UserCircle className="mr-2 h-4 w-4" />
               Thông tin cá nhân
             </DropdownMenuItem>

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, type ReactNode } from 'react'
 import { Truck, CircleDollarSign, LayoutDashboard, Phone, Pencil, Trash2, ChevronRight } from 'lucide-react'
 import { Navigate } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
@@ -231,26 +231,41 @@ function UserManagementInner() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{u.fullName || u.username}</p>
-                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                  {u.phone && (
-                    <>
-                      <Phone className="w-3 h-3" style={{ color: 'var(--theme-text-muted)' }} />
-                      <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{u.phone}</span>
-                    </>
-                  )}
-                  {u.tractorPlate && (
-                    <>
-                      <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>·</span>
-                      <span className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>{u.tractorPlate}</span>
-                    </>
-                  )}
-                  {u.cccd && (
-                    <>
-                      <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>·</span>
-                      <span className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>CCCD: {u.cccd}</span>
-                    </>
-                  )}
-                </div>
+                {(() => {
+                  // Track whether we've rendered any prior chip on this row so the
+                  // `·` separator only appears between actual values, never leading.
+                  let renderedAny = false
+                  const sep = (
+                    <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>·</span>
+                  )
+                  const items: ReactNode[] = []
+                  if (u.phone) {
+                    items.push(
+                      <span key="phone" className="inline-flex items-center gap-1">
+                        <Phone className="w-3 h-3" style={{ color: 'var(--theme-text-muted)' }} />
+                        <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{u.phone}</span>
+                      </span>,
+                    )
+                    renderedAny = true
+                  }
+                  if (u.tractorPlate) {
+                    if (renderedAny) items.push(<span key="sep-plate">{sep}</span>)
+                    items.push(
+                      <span key="plate" className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>{u.tractorPlate}</span>,
+                    )
+                    renderedAny = true
+                  }
+                  if (u.cccd) {
+                    if (renderedAny) items.push(<span key="sep-cccd">{sep}</span>)
+                    items.push(
+                      <span key="cccd" className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>CCCD: {u.cccd}</span>,
+                    )
+                    renderedAny = true
+                  }
+                  return (
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">{items}</div>
+                  )
+                })()}
               </div>
               <ChevronRight className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
             </button>
