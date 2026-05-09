@@ -15,6 +15,8 @@ interface PageHeaderProps {
   compact?: boolean
   /** Branded PNG icon shown to the left of the title for visual identity. */
   icon?: BrandIconName
+  /** Lucide icon component — preferred over `icon` (no PNG dependency). */
+  lucideIcon?: React.ElementType
 }
 
 /**
@@ -36,7 +38,9 @@ export function PageHeader({
   breadcrumbs,
   compact = false,
   icon,
+  lucideIcon: LucideIcon,
 }: PageHeaderProps) {
+  const hasIcon = !!(icon || LucideIcon)
   return (
     <div
       className={`page-header-band rounded-xl ${compact ? 'px-4 py-3' : 'px-5 py-4 mb-4 lg:mb-6'}`}
@@ -44,8 +48,8 @@ export function PageHeader({
       {breadcrumbs && <div className="mb-3">{breadcrumbs}</div>}
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          {/* Brand accent bar */}
-          {!icon && (
+          {/* Brand accent bar — shown when no icon */}
+          {!hasIcon && (
             <span
               aria-hidden="true"
               className="hidden lg:block shrink-0 self-stretch rounded-full"
@@ -57,6 +61,19 @@ export function PageHeader({
               }}
             />
           )}
+          {/* Lucide icon — crisp, no PNG dependency */}
+          {LucideIcon && !icon && (
+            <div
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl lg:h-12 lg:w-12"
+              style={{
+                background: 'var(--theme-brand-primary-light)',
+                boxShadow: '0 0 0 1px color-mix(in srgb, var(--theme-brand-primary) 18%, transparent)',
+              }}
+            >
+              <LucideIcon className="h-6 w-6" style={{ color: 'var(--theme-brand-primary)' }} />
+            </div>
+          )}
+          {/* Brand PNG icon */}
           {icon && (
             <div
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl lg:h-12 lg:w-12"
