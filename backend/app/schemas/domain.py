@@ -493,6 +493,29 @@ class SuggestWosResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Auto-match
+# ---------------------------------------------------------------------------
+
+class AutoMatchRequest(BaseModel):
+    date_from: str | None = None
+    date_to: str | None = None
+
+
+class AutoMatchResult(BaseModel):
+    work_order_id: int
+    trip_order_id: int
+    score: float
+    matched_fields: list[str]
+
+
+class AutoMatchResponse(BaseModel):
+    auto_matched: list[AutoMatchResult]
+    partial_matches: list[AutoMatchResult]
+    skipped_already_matched: int
+    errors: list[str]
+
+
+# ---------------------------------------------------------------------------
 # Salary
 # ---------------------------------------------------------------------------
 

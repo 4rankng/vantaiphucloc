@@ -46,6 +46,9 @@ from app.core.deps import require_permission
 from app.models.base import User
 from app.models.domain import TripOrder as TripOrderORM, WorkOrder as WorkOrderORM
 from app.schemas.domain import (
+    AutoMatchRequest,
+    AutoMatchResponse,
+    AutoMatchResult,
     ReconcileRequest,
     SuggestMatchesResponse,
     SuggestWosResponse,
@@ -230,6 +233,116 @@ async def upload_customer_excel(
             "results": [r.to_dict() for r in results],
         },
     }
+
+
+@router.post("/reconcile/auto-match", response_model=AutoMatchResponse)
+async def auto_match(
+    body: AutoMatchRequest,
+    request: Request,
+    current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
+    match_use_case: MatchTripToWorkOrder = Depends(get_match_trip_to_work_order),
+    wo_use_case: GetWorkOrder = Depends(get_get_work_order),
+):
+    """Auto-match PENDING work orders with trip orders.
+
+    score == 1.0 (all 6 criteria) → auto-confirmed immediately.
+    score >= 0.5 → returned as partial_matches for manual review.
+    """
+    from datetime import date as date_type
+
+    db = match_use_case.session
+
+    date_from = date_type.fromisoformat(body.date_from) if body.date_from else None
+    date_to = date_type.fromisoformat(body.date_to) if body.date_to else None
+
+    # Fetch all PENDING work orders in date range
+    from sqlalchemy import select as sa_select
+    from app.models.domain import WorkOrder as WO, TripOrderWorkOrder
+
+    wo_query = sa_select(WO).where(WO.status == "PENDING")
+    if date_from:
+        wo_query = wo_query.where(WO.created_at >= date_from)
+    if date_to:
+        wo_query = wo_query.where(WO.created_at < date_to)
+
+    work_orders = list((await db.execute(wo_query)).scalars().all())
+
+    # Track which trip orders are already matched to avoid double-matching
+    matched_to_ids = set(
+        r[0] for r in (await db.execute(
+            sa_select(TripOrderWorkOrder.trip_order_id)
+        )).all()
+    )
+
+    auto_matched: list[AutoMatchResult] = []
+    partial_matches: list[AutoMatchResult] = []
+    skipped = 0
+    errors: list[str] = []
+
+    for wo in work_orders:
+        try:
+            suggestions = await suggest_trip_matches(db, wo)
+            # Filter out already-matched trip orders
+            suggestions = [s for s in suggestions if s.trip_order.id not in matched_to_ids]
+            if not suggestions:
+                continue
+
+            best = suggestions[0]  # sorted by score desc
+
+            if best.score >= 1.0:
+                # Auto-confirm
+                try:
+                    to = await match_use_case(ReconcileInput(
+                        work_order_id=wo.id,
+                        trip_order_id=best.trip_order.id,
+                        user_id=current_user.id,
+                    ))
+                    await log_action(
+                        db, user_id=current_user.id, action="AUTO_MATCH",
+                        table_name="trip_order_work_orders",
+                        record_id=int(to.id),  # type: ignore[arg-type]
+                        new_value={
+                            "work_order_id": wo.id,
+                            "trip_order_id": best.trip_order.id,
+                            "score": best.score,
+                            "matched_fields": best.matched_fields,
+                        },
+                        request=request,
+                    )
+                    await db.commit()
+                    matched_to_ids.add(best.trip_order.id)
+
+                    # Salary recalc
+                    if wo.driver_id:
+                        ref_date = wo.created_at.date() if wo.created_at else to.trip_date
+                        await _enqueue_salary_recalc(db, wo.driver_id, ref_date)
+
+                    auto_matched.append(AutoMatchResult(
+                        work_order_id=wo.id,
+                        trip_order_id=best.trip_order.id,
+                        score=best.score,
+                        matched_fields=best.matched_fields,
+                    ))
+                except Exception as exc:
+                    errors.append(f"WO#{wo.id} → TO#{best.trip_order.id}: {exc}")
+            elif best.score >= 0.5:
+                partial_matches.append(AutoMatchResult(
+                    work_order_id=wo.id,
+                    trip_order_id=best.trip_order.id,
+                    score=best.score,
+                    matched_fields=best.matched_fields,
+                ))
+            else:
+                skipped += 1
+        except Exception as exc:
+            errors.append(f"WO#{wo.id}: {exc}")
+
+    return AutoMatchResponse(
+        auto_matched=auto_matched,
+        partial_matches=partial_matches,
+        skipped_already_matched=skipped,
+        errors=errors,
+    )
 
 
 @router.get("/export-excel")
