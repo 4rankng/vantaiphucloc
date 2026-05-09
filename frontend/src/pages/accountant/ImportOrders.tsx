@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Upload, FileText, AlertTriangle, CheckCircle2, XCircle, Save, Tag } from 'lucide-react'
+import { Upload, FileText, AlertTriangle, CheckCircle2, XCircle, Save, Tag, FileSpreadsheet } from 'lucide-react'
 import { Button, Input, Dialog, DialogContent } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { useClients } from '@/hooks/use-queries'
@@ -204,27 +204,32 @@ export function ImportOrders() {
     }
   }
 
+  // Drag & drop handlers
+  const [dragging, setDragging] = useState(false)
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setDragging(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setDragging(false)
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setDragging(false)
+    const f = e.dataTransfer.files?.[0]
+    if (f && (f.name.endsWith('.xlsx') || f.name.endsWith('.xls'))) {
+      setFile(f)
+    } else if (f) {
+      toast.error('Định dạng không hỗ trợ', 'Chỉ chấp nhận file .xlsx hoặc .xls')
+    }
+  }, [toast])
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-          Tải tệp khách hàng (loading list, discharging list, BDST, log bãi…) — hệ thống tự nhận dạng và đề xuất ánh xạ cột.
-        </p>
-        <div className="flex items-center gap-2">
-          <Button onClick={runPreview} disabled={!file || busy} className="btn-secondary h-9 px-4 text-sm">
-            {busy ? 'Đang phân tích...' : 'Phân tích tệp'}
-          </Button>
-          <Button
-            onClick={commit}
-            disabled={!preview || !clientId || !editedRows.length || committing}
-            className="btn-primary h-9 px-4 text-sm"
-          >
-            <CheckCircle2 className="w-4 h-4 mr-1.5" />
-            {committing ? 'Đang tạo...' : `Tạo ${editedRows.length} đơn hàng`}
-          </Button>
-        </div>
-      </div>
-
       {/* Results panel — appears after a successful commit */}
       {lastCommit && (lastCommit.created_trip_ids?.length ?? 0) > 0 && (
         <div
@@ -281,9 +286,10 @@ export function ImportOrders() {
         </div>
       )}
 
-      {/* Pane 1 — file upload + period/client */}
-      <div className="card p-5">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      {/* Step 1 — Client, Date, Dropzone */}
+      <div className="card p-5 space-y-4">
+        {/* Client + Date row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="typo-form-label">Khách hàng</label>
             <InlineSelect
@@ -300,23 +306,78 @@ export function ImportOrders() {
               type="date"
               value={defaultTripDate}
               onChange={e => setDefaultTripDate(e.target.value)}
-              className="h-9 text-sm"
+              className="h-11 text-sm"
             />
           </div>
-          <div className="space-y-1.5">
-            <label className="typo-form-label">Tệp Excel</label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-            <Button onClick={handlePickFile} className="btn-secondary h-9 px-4 text-sm w-full">
-              <Upload className="w-4 h-4 mr-1.5" />
-              {file ? file.name : 'Chọn tệp...'}
+        </div>
+
+        {/* Dropzone */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx,.xls"
+          onChange={handleFileChange}
+          className="hidden"
+        />
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={file ? undefined : handlePickFile}
+          className={`relative rounded-xl border-2 border-dashed p-8 text-center transition-colors cursor-pointer ${
+            dragging ? 'border-[var(--theme-brand-primary)] bg-[var(--theme-brand-primary-light)]' : 'border-[var(--theme-border-default)]'
+          }`}
+          style={{ background: dragging ? undefined : 'var(--theme-bg-tertiary)' }}
+        >
+          {file ? (
+            <div className="flex items-center justify-center gap-3">
+              <FileSpreadsheet className="w-8 h-8 shrink-0" style={{ color: 'var(--theme-brand-primary)' }} />
+              <div className="text-left min-w-0">
+                <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{file.name}</p>
+                <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{(file.size / 1024).toFixed(0)} KB</p>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setFile(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
+                className="ml-2 w-7 h-7 flex items-center justify-center rounded-full shrink-0 transition-colors hover:bg-[var(--theme-bg-secondary)]"
+                style={{ color: 'var(--theme-text-muted)' }}
+                aria-label="Xoá tệp"
+              >
+                <XCircle className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto" style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)' }}>
+                <Upload className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+                  Kéo thả tệp Excel vào đây
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+                  hoặc bấm để chọn tệp · Hỗ trợ .xlsx, .xls
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center justify-end gap-2">
+          <Button onClick={runPreview} disabled={!file || busy} className="btn-primary h-10 px-5 text-sm">
+            {busy ? 'Đang phân tích...' : 'Phân tích tệp'}
+          </Button>
+          {preview && (
+            <Button
+              onClick={commit}
+              disabled={!clientId || !editedRows.length || committing}
+              className="btn-primary h-10 px-5 text-sm"
+            >
+              <CheckCircle2 className="w-4 h-4 mr-1.5" />
+              {committing ? 'Đang tạo...' : `Tạo ${editedRows.length} đơn hàng`}
             </Button>
-          </div>
+          )}
         </div>
       </div>
 
