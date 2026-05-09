@@ -13,7 +13,9 @@ import { DataTablePro, type Column } from '@/components/shared/DataTablePro'
 import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { PageContainer } from '@/components/shared/PageContainer'
-import { useWorkOrders, useUploadCustomerExcel, useClients, useTripOrders } from '@/hooks/use-queries'
+import { useWorkOrders, useUploadCustomerExcel, useClients, useTripOrders, useAutoMatch } from '@/hooks/use-queries'
+import { AutoMatchDialog } from '@/components/shared/AutoMatchDialog'
+import type { AutoMatchResponse } from '@/services/api/tripOrders.api'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '@/components/atoms/Toast'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -84,9 +86,11 @@ export function WorkOrderList() {
   const { data: workOrders = [], isLoading: loading } = useWorkOrders({ dateFrom, dateTo })
   const { data: clients = [] } = useClients()
   const { mutate: uploadExcel, isPending: uploading } = useUploadCustomerExcel()
+  const { mutate: runAutoMatch, isPending: autoMatching } = useAutoMatch()
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('PENDING')
+  const [autoMatchResult, setAutoMatchResult] = useState<AutoMatchResponse | null>(null)
 
   // Import Excel dialog state
   const [importOpen, setImportOpen] = useState(false)
@@ -136,6 +140,23 @@ export function WorkOrderList() {
       }
     )
   }
+
+  const handleAutoMatch = useCallback(() => {
+    runAutoMatch(
+      { dateFrom, dateTo },
+      {
+        onSuccess: (res) => {
+          if (res.data) {
+            setAutoMatchResult(res.data)
+            if (res.data.autoMatched.length > 0) {
+              toast.success('Tự động ghép', `Đã ghép ${res.data.autoMatched.length} cặp`)
+            }
+          }
+        },
+        onError: () => toast.error('Lỗi', 'Không thể tự động ghép'),
+      },
+    )
+  }, [runAutoMatch, dateFrom, dateTo, toast])
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -384,6 +405,26 @@ export function WorkOrderList() {
       <div className="space-y-3">
         <PageHeader title="Ghép chuyến" lucideIcon={Briefcase} />
 
+        <div className="flex gap-2">
+          <Button
+            onClick={handleAutoMatch}
+            disabled={autoMatching}
+            className="h-8 gap-1.5 text-xs font-semibold rounded-lg flex-1"
+            style={{ background: 'var(--theme-status-success)', color: '#fff' }}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            {autoMatching ? 'Đang ghép...' : 'Tự động ghép'}
+          </Button>
+          <Button
+            onClick={() => setImportOpen(true)}
+            className="h-8 gap-1.5 text-xs font-semibold rounded-lg"
+            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5" />
+            Nhập chuyến
+          </Button>
+        </div>
+
         <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
 
         <FilterToolbar
@@ -394,16 +435,6 @@ export function WorkOrderList() {
           selectedStatus={statusFilter}
           onStatusChange={(s) => setStatusFilter(s as StatusFilter)}
           onClearFilters={handleClearFilters}
-          extraAction={
-            <Button
-              onClick={() => setImportOpen(true)}
-              className="h-8 gap-1.5 text-xs font-semibold rounded-lg"
-              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-            >
-              <FileSpreadsheet className="h-3.5 w-3.5" />
-              Nhập chuyến
-            </Button>
-          }
         />
 
         <p className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
@@ -433,6 +464,7 @@ export function WorkOrderList() {
         )}
 
         {importDialogJsx}
+        <AutoMatchDialog open={!!autoMatchResult} onClose={() => setAutoMatchResult(null)} result={autoMatchResult} />
       </div>
     )
   }
@@ -443,13 +475,24 @@ export function WorkOrderList() {
         title="Ghép chuyến"
         lucideIcon={Briefcase}
         actions={
-          <Button
-            onClick={() => setImportOpen(true)}
-            className="btn-primary h-9 gap-1.5 text-xs font-semibold"
-          >
-            <FileSpreadsheet className="h-3.5 w-3.5" />
-            Nhập chuyến
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleAutoMatch}
+              disabled={autoMatching}
+              className="h-9 gap-1.5 text-xs font-semibold rounded-lg"
+              style={{ background: 'var(--theme-status-success)', color: '#fff' }}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              {autoMatching ? 'Đang ghép...' : 'Tự động ghép'}
+            </Button>
+            <Button
+              onClick={() => setImportOpen(true)}
+              className="btn-primary h-9 gap-1.5 text-xs font-semibold"
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              Nhập chuyến
+            </Button>
+          </div>
         }
       />
 
@@ -510,6 +553,7 @@ export function WorkOrderList() {
       </div>
 
       {importDialogJsx}
+      <AutoMatchDialog open={!!autoMatchResult} onClose={() => setAutoMatchResult(null)} result={autoMatchResult} />
     </div>
   )
 }

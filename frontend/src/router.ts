@@ -74,7 +74,13 @@ export function createAppRouter() {
             { path: 'reports/customer-settlement', element: ebc('CustomerSettlement', h(Lazy, { component: R.CustomerSettlementReport })) },
             { path: 'import-orders',             element: ebc('ImportOrders', h(Lazy, { component: R.ImportOrders })) },
             { path: 'import-pricing',            element: ebc('ImportPricing', h(Lazy, { component: R.ImportPricing })) },
-            { path: 'settings',                  element: ebc('AccountantSettings', h(Lazy, { component: R.AccountantSettings })) },
+            { path: 'settings',                  element: h(Lazy, { component: R.AccountantSettings }), children: [
+              { path: 'salary',                  element: h(Lazy, { component: R.SalarySetup }) },
+              { path: 'pricing',                 element: h(Lazy, { component: R.PricingList }) },
+              { path: 'clients',                 element: h(Lazy, { component: R.ClientList }) },
+              { path: 'vendors',                 element: h(Lazy, { component: R.VendorList }) },
+              { path: 'users',                   element: h(Lazy, { component: R.UserManagement }) },
+            ]},
 
             { path: 'match/:jobId',          element: h(Lazy, { component: R.MatchJob }) },
             { path: 'match-trip/:tripId',    element: h(Lazy, { component: R.MatchTrip }) },

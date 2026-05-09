@@ -164,11 +164,14 @@ function AccountantMobileShell() {
 function resolveMobileTitle(pathname: string): string {
   const TITLES: Record<string, string> = {
     '/accountant/trips': 'Đơn hàng',
-    '/accountant/work-orders': 'Đối soát',
-    '/accountant/partners': 'Đối tác',
+    '/accountant/work-orders': 'Ghép chuyến',
+    '/accountant/settings': 'Cài đặt',
+    '/accountant/settings/salary': 'Kỳ lương',
+    '/accountant/settings/pricing': 'Bảng giá',
+    '/accountant/settings/clients': 'Khách hàng',
+    '/accountant/settings/vendors': 'Nhà thầu',
+    '/accountant/settings/users': 'Người dùng',
     '/accountant/routes': 'Cung đường',
-    '/accountant/pricing': 'Bảng giá',
-    '/accountant/salary-setup': 'Kỳ lương',
     '/accountant/notifications': 'Thông báo',
     '/accountant/profile': 'Thông tin cá nhân',
   }

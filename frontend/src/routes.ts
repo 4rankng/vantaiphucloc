@@ -37,6 +37,7 @@ export const AccountantNotifications = lazy(() => import('@/pages/accountant/Acc
 export const CustomerSettlementReport = lazy(() => import('@/pages/accountant/CustomerSettlementReport').then(m => ({ default: m.CustomerSettlementReport })))
 export const ImportOrders            = lazy(() => import('@/pages/accountant/ImportOrders').then(m => ({ default: m.ImportOrders })))
 export const ImportPricing           = lazy(() => import('@/pages/accountant/ImportPricing').then(m => ({ default: m.ImportPricing })))
+export const VendorList             = lazy(() => import('@/pages/accountant/VendorList').then(m => ({ default: m.VendorList })))
 export const AccountantSettings      = lazy(() => import('@/pages/accountant/AccountantSettings').then(m => ({ default: m.AccountantSettings })))
 
 

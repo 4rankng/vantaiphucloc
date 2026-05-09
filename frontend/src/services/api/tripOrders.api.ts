@@ -220,3 +220,34 @@ export async function downloadTripOrderTemplate(): Promise<Blob> {
   const res = await api.get('/trip-orders/template', { responseType: 'blob' })
   return res.data
 }
+
+// ── Auto-match ────────────────────────────────────────────────────────
+
+export interface AutoMatchResult {
+  workOrderId: number
+  tripOrderId: number
+  score: number
+  matchedFields: string[]
+}
+
+export interface AutoMatchResponse {
+  autoMatched: AutoMatchResult[]
+  partialMatches: AutoMatchResult[]
+  skippedAlreadyMatched: number
+  errors: string[]
+}
+
+export async function autoMatch(
+  dateFrom?: string,
+  dateTo?: string,
+): Promise<ApiResponse<AutoMatchResponse>> {
+  try {
+    const res = await api.post('/reconcile/auto-match', {
+      date_from: dateFrom ?? null,
+      date_to: dateTo ?? null,
+    })
+    return ok(toCamel<AutoMatchResponse>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
