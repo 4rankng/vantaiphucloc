@@ -496,8 +496,8 @@ function UserManagementInner() {
 export function UserManagement() {
   const { user } = useAuth()
 
-  // Guard: only director and superadmin may access this page
-  if (!user || !['director', 'superadmin'].includes(user.role)) {
+  // Guard: director, superadmin, and accountant (needs to create driver accounts)
+  if (!user || !['director', 'superadmin', 'accountant'].includes(user.role)) {
     return <Navigate to="/" replace />
   }
 

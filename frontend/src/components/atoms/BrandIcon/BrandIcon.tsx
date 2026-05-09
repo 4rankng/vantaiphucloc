@@ -77,6 +77,10 @@ export function BrandIcon({
           ? style
           : { width: size, height: size, ...style }
       }
+      onError={(e) => {
+        // Hide broken images rather than showing the browser's broken-image icon
+        ;(e.currentTarget as HTMLImageElement).style.display = 'none'
+      }}
     />
   )
 }
