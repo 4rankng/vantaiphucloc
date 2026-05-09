@@ -149,7 +149,7 @@ export function TripList() {
 
   const detailDialog = selectedTripId !== null ? (
     <Dialog open={selectedTripId !== null} onOpenChange={(open) => { if (!open) setSelectedTripId(null) }}>
-      <DialogContent className="max-w-3xl max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90dvh] overflow-y-auto" hideCloseButton>
         <TripDetailContent tripId={selectedTripId} onClose={() => setSelectedTripId(null)} />
       </DialogContent>
     </Dialog>
@@ -264,7 +264,7 @@ export function TripList() {
                 style={{ background: 'var(--theme-bg-tertiary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
               />
             </div>
-            <div className="w-44 shrink-0">
+            <div className="min-w-[180px] max-w-[280px] shrink-0">
               <InlineSelect
                 value={clientFilter}
                 options={clientOptions}
