@@ -4,7 +4,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
-import { PageHeader } from '@/components/shared/PageHeader'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { FilterToolbar, type FilterOption } from '@/components/shared/FilterToolbar'
 import { StatusBadge } from '@/components/shared/StatusBadge'
@@ -556,13 +555,13 @@ export function ClientsAndVendors() {
 
   return (
     <div className="space-y-5">
-      {/* Page header */}
-      <PageHeader
-        title="Đối tác"
-        icon="warehouse"
-        onAdd={handleOpenCreate}
-        addLabel="Thêm"
-      />
+      {/* Add button */}
+      <div className="flex justify-end mb-4">
+        <button onClick={handleOpenCreate} className="btn-primary">
+          <Plus size={16} strokeWidth={2.25} />
+          <span>Thêm</span>
+        </button>
+      </div>
 
       {/* Filters */}
       <FilterToolbar

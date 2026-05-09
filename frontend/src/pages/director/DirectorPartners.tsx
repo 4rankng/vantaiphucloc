@@ -6,7 +6,6 @@ import { Button } from '@/components/ui'
 import { SearchBar } from '@/components/shared/SearchBar'
 import { FilterPills } from '@/components/shared/FilterPills'
 import { InfoRow } from '@/components/shared/InfoRow'
-import { PageHeader } from '@/components/shared/PageHeader'
 import { PartnersTable, type PartnerRow } from '@/components/shared/PartnersTable'
 import { CreateClientDialog } from '@/components/shared/CreateClientDialog'
 import { CreateVendorDialog } from '@/components/shared/CreateVendorDialog'
@@ -107,13 +106,18 @@ export function DirectorPartners() {
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="Đối tác"
-        icon="warehouse"
-        subtitle={`${counts.ALL} đối tác`}
-        onAdd={() => setCreateType('client')}
-        addLabel="Thêm đối tác"
-      />
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+          {counts.ALL} đối tác
+        </span>
+        <button
+          onClick={() => setCreateType('client')}
+          className="btn-primary"
+        >
+          <Plus size={16} strokeWidth={2.25} />
+          <span>Thêm đối tác</span>
+        </button>
+      </div>
 
       <SearchBar
         placeholder="Tìm kiếm đối tác..."

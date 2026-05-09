@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
-import { PageHeader } from '@/components/shared/PageHeader'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { useVendors, useCreateVendor, useUpdateVendor, useDeleteVendor } from '@/hooks/use-queries'
@@ -16,6 +16,7 @@ const EMPTY_FORM: VendorFormData = {
 }
 
 export function VendorList() {
+  const isMobile = useIsMobile(768)
   const { data: vendors = [], isLoading: loading } = useVendors()
 
   const [selected, setSelected] = useState<Vendor | null>(null)
@@ -75,7 +76,12 @@ export function VendorList() {
 
   return (
     <div>
-      <PageHeader title="Nhà thầu" lucideIcon={Truck} onAdd={handleOpenCreate} addLabel="Thêm" />
+      <div className="flex justify-end mb-4">
+        <button onClick={handleOpenCreate} className="btn-primary">
+          <Plus size={16} strokeWidth={2.25} />
+          {!isMobile && <span>Thêm</span>}
+        </button>
+      </div>
 
       {vendors.length === 0 ? (
         <div className="card">

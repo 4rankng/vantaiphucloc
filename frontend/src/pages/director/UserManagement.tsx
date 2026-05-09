@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, type ReactNode } from 'react'
-import { Truck, CircleDollarSign, LayoutDashboard, Phone, Pencil, Trash2, ChevronRight } from 'lucide-react'
+import { Truck, CircleDollarSign, LayoutDashboard, Phone, Pencil, Trash2, ChevronRight, Plus } from 'lucide-react'
 import { Navigate } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
@@ -9,7 +9,6 @@ import { InlineSelect } from '@/components/shared/InlineSelect'
 import { CreateVendorDialog } from '@/components/shared/CreateVendorDialog'
 import { useToast } from '@/components/atoms/Toast'
 import { FilterPills } from '@/components/shared/FilterPills'
-import { PageHeader } from '@/components/shared/PageHeader'
 import type { Role } from '@/data/domain'
 import { ROLE_LABELS } from '@/data/domain'
 import { useVendors, useCreateVendor, useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '@/hooks/use-queries'
@@ -193,13 +192,18 @@ function UserManagementInner() {
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        title="Quản lý tài khoản"
-        icon="team"
-        subtitle={`${users.length} tài khoản đang hoạt động`}
-        onAdd={() => { setCreateForm(EMPTY_FORM); setCreateOpen(true) }}
-        addLabel="Tạo tài khoản"
-      />
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+          {users.length} tài khoản đang hoạt động
+        </span>
+        <button
+          onClick={() => { setCreateForm(EMPTY_FORM); setCreateOpen(true) }}
+          className="btn-primary"
+        >
+          <Plus size={16} strokeWidth={2.25} />
+          <span>Tạo tài khoản</span>
+        </button>
+      </div>
 
       <FilterPills
         options={[
