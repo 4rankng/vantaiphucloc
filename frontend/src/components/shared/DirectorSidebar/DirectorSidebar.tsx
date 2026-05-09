@@ -2,9 +2,6 @@ import { useCallback } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
-  Users,
-  Handshake,
-  Receipt,
   Bell,
   LogOut,
   UserCircle,
@@ -27,9 +24,6 @@ export interface SidebarItem {
 
 const NAV_ITEMS: SidebarItem[] = [
   { label: 'Tổng quan', href: '/director', icon: LayoutDashboard },
-  { label: 'Đối tác', href: '/director/partners', icon: Handshake },
-  { label: 'Bảng giá', href: '/director/pricing', icon: Receipt },
-  { label: 'Quản lý tài khoản', href: '/director/users', icon: Users },
   { label: 'Thông báo', href: '/director/notifications', icon: Bell },
 ]
 
