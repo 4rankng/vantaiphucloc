@@ -1,6 +1,9 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useMemo, useCallback } from 'react'
-import { ArrowLeft, Check, CheckCircle2, Pencil, X, Plus, Truck, FileText, Sparkles } from 'lucide-react'
+import {
+  ArrowLeft, Check, CheckCircle2, Pencil, X, Plus, Truck, FileText,
+  Sparkles, ChevronRight, ChevronDown,
+} from 'lucide-react'
 import {
   useWorkOrders, useTripOrders, useSuggestMatches, useRoutes,
   useUpdateWorkOrder, useUpdateTripOrder, useReconcile,
@@ -96,7 +99,7 @@ function InlineField({
   )
 }
 
-// ─── Container row with match tick ───────────────────────────────────────────
+// ─── Container row (editable) ─────────────────────────────────────────────────
 
 function ContainerRow({
   workType, containerNumber, matched, onEditType, onEditNumber,
@@ -120,7 +123,6 @@ function ContainerRow({
         border: `1px solid ${matched ? 'var(--theme-status-success)' : 'var(--theme-border-default)'}`,
       }}
     >
-      {/* Type badge — click to edit */}
       {editingType ? (
         <input
           autoFocus
@@ -137,7 +139,6 @@ function ContainerRow({
         </button>
       )}
 
-      {/* Container number — click to edit */}
       <div className="flex-1 min-w-0">
         {editingNumber ? (
           <input
@@ -162,7 +163,6 @@ function ContainerRow({
         )}
       </div>
 
-      {/* Match indicator */}
       <div className="shrink-0 w-5 h-5 flex items-center justify-center">
         {matched ? (
           <CheckCircle2 className="w-5 h-5" style={{ color: 'var(--theme-status-success)' }} />
@@ -174,23 +174,164 @@ function ContainerRow({
   )
 }
 
-// ─── Trip order row in right panel ───────────────────────────────────────────
-// X/Y badge: X = criteria from this đơn hàng that match the chuyến đã đi;
-//            Y = total criteria count in the chuyến đã đi (per-container)
+// ─── Work order top card ──────────────────────────────────────────────────────
 
-function TripRow({
-  trip, isSelected, matchedCount, totalCriteria, onClick,
+function WorkOrderCard({
+  driverName, woContainers, woClient, woPickup, woDropoff,
+  setWoClient, setWoPickup, setWoDropoff, setWoContainers, updateWoContainer,
+  clientMatch, pickupMatch, dropoffMatch, matchedWoIndices,
+}: {
+  driverName: string
+  woContainers: { workType: string; containerNumber: string }[]
+  woClient: string
+  woPickup: string
+  woDropoff: string
+  setWoClient: (v: string) => void
+  setWoPickup: (v: string) => void
+  setWoDropoff: (v: string) => void
+  setWoContainers: React.Dispatch<React.SetStateAction<{ workType: string; containerNumber: string }[]>>
+  updateWoContainer: (idx: number, field: 'workType' | 'containerNumber', value: string) => void
+  clientMatch: boolean
+  pickupMatch: boolean
+  dropoffMatch: boolean
+  matchedWoIndices: Set<number>
+}) {
+  const [editMode, setEditMode] = useState(false)
+
+  return (
+    <div
+      className="rounded-xl p-4"
+      style={{
+        background: 'var(--theme-bg-secondary)',
+        border: '1px solid var(--theme-border-default)',
+      }}
+    >
+      {/* Section header */}
+      <div className="flex items-center gap-2 mb-3">
+        <div
+          className="flex items-center justify-center w-6 h-6 rounded-full shrink-0"
+          style={{ background: 'var(--theme-brand-primary-light)' }}
+        >
+          <Truck className="w-3.5 h-3.5" style={{ color: 'var(--theme-brand-primary)' }} />
+        </div>
+        <span className="text-sm font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>Chuyến đã đi</span>
+        <span className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>· {driverName}</span>
+        <button
+          onClick={() => setEditMode(v => !v)}
+          className="ml-auto flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors"
+          style={{
+            background: editMode ? 'var(--theme-brand-primary-light)' : 'var(--theme-bg-tertiary)',
+            color: editMode ? 'var(--theme-brand-primary)' : 'var(--theme-text-muted)',
+          }}
+        >
+          <Pencil className="w-3 h-3" />
+          {editMode ? 'Xong' : 'Sửa'}
+        </button>
+      </div>
+
+      {/* Containers (compact when not editing) */}
+      {!editMode ? (
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          {woContainers.map((c, i) => (
+            <span key={i} className="flex items-center gap-1">
+              <ContBadge type={c.workType} />
+              <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+                {c.containerNumber || '—'}
+              </span>
+              {matchedWoIndices.has(i) && <CheckCircle2 className="w-3.5 h-3.5" style={{ color: 'var(--theme-status-success)' }} />}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-2 mb-3">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
+              Container ({woContainers.length})
+            </span>
+            <button
+              onClick={() => setWoContainers(prev => [...prev, { workType: 'E20', containerNumber: '' }])}
+              className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded"
+              style={{ color: 'var(--theme-brand-primary)', background: 'var(--theme-brand-primary-light)' }}
+            >
+              <Plus className="w-3 h-3" /> Thêm
+            </button>
+          </div>
+          {woContainers.map((c, idx) => (
+            <ContainerRow
+              key={idx}
+              workType={c.workType}
+              containerNumber={c.containerNumber}
+              matched={matchedWoIndices.has(idx)}
+              onEditType={v => updateWoContainer(idx, 'workType', v)}
+              onEditNumber={v => updateWoContainer(idx, 'containerNumber', v)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Info fields */}
+      {!editMode ? (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {[
+            { label: 'Khách hàng', val: woClient, matched: clientMatch },
+            { label: 'Điểm lấy', val: woPickup, matched: pickupMatch },
+            { label: 'Điểm trả', val: woDropoff, matched: dropoffMatch },
+          ].map(({ label, val, matched }) => (
+            <div key={label} className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-wide shrink-0" style={{ color: 'var(--theme-text-muted)' }}>{label}:</span>
+              <span className="text-xs font-medium truncate" style={{ color: val ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}>
+                {val || '—'}
+              </span>
+              {matched && <CheckCircle2 className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--theme-status-success)' }} />}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <InlineField label="Khách hàng" value={woClient} onChange={setWoClient} placeholder="Chưa có" matched={clientMatch} />
+          <InlineField label="Điểm lấy" value={woPickup} onChange={setWoPickup} placeholder="—" matched={pickupMatch} />
+          <InlineField label="Điểm trả" value={woDropoff} onChange={setWoDropoff} placeholder="—" matched={dropoffMatch} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Suggestion card ──────────────────────────────────────────────────────────
+
+function SuggestionCard({
+  trip, isSelected, matchedCount, totalCriteria,
+  tripContainers, tripClient, tripPickup, tripDropoff,
+  matchedTripContainerIndices, clientMatch, pickupMatch, dropoffMatch,
+  updateTripContainer, setTripContainers,
+  onChangeTripClient, onChangeTripPickup, onChangeTripDropoff,
+  onSelect, onConfirm, submitting,
 }: {
   trip: TripOrder
   isSelected: boolean
   matchedCount: number
   totalCriteria: number
-  onClick: () => void
+  tripContainers: { workType: string; containerNumber: string }[]
+  tripClient: string
+  tripPickup: string
+  tripDropoff: string
+  matchedTripContainerIndices: Set<number>
+  clientMatch: boolean
+  pickupMatch: boolean
+  dropoffMatch: boolean
+  updateTripContainer: (idx: number, field: 'workType' | 'containerNumber', value: string) => void
+  setTripContainers: React.Dispatch<React.SetStateAction<{ workType: string; containerNumber: string }[]>>
+  onChangeTripClient: (v: string) => void
+  onChangeTripPickup: (v: string) => void
+  onChangeTripDropoff: (v: string) => void
+  onSelect: () => void
+  onConfirm: () => void
+  submitting: boolean
 }) {
   const isFullMatch = totalCriteria > 0 && matchedCount === totalCriteria
   const isPartialMatch = matchedCount > 0 && matchedCount < totalCriteria
 
-  const badgeColor = isFullMatch
+  const scoreColor = isFullMatch
     ? 'var(--theme-status-success)'
     : isPartialMatch
     ? 'var(--theme-status-warning)'
@@ -198,60 +339,198 @@ function TripRow({
 
   const tripDateShort = trip.tripDate ? fmtDate(trip.tripDate) : null
 
+  // Collapsed card
+  if (!isSelected) {
+    return (
+      <button
+        onClick={onSelect}
+        className="w-full text-left rounded-xl p-4 transition-all flex items-start gap-3"
+        style={{
+          background: 'var(--theme-bg-secondary)',
+          border: '1px solid var(--theme-border-light)',
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--theme-brand-primary)' }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--theme-border-light)' }}
+      >
+        {/* Match score badge */}
+        <div
+          className="shrink-0 flex flex-col items-center justify-center w-10 h-10 rounded-lg mt-0.5"
+          style={{ background: `color-mix(in srgb, ${scoreColor} 12%, transparent)` }}
+        >
+          <span className="text-[13px] font-bold tabular-nums leading-none" style={{ color: scoreColor }}>
+            {matchedCount}/{totalCriteria}
+          </span>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1.5">
+            {trip.code && (
+              <span
+                className="text-[11px] font-mono font-semibold px-1.5 py-0.5 rounded"
+                style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
+              >
+                {trip.code}
+              </span>
+            )}
+            {tripDateShort && (
+              <span className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>{tripDateShort}</span>
+            )}
+          </div>
+
+          {/* Containers */}
+          <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
+            {(trip.containers?.length ? trip.containers : []).map((c, i) => (
+              <span key={i} className="flex items-center gap-1">
+                <ContBadge type={c.workType} />
+                <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+                  {c.containerNumber}
+                </span>
+              </span>
+            ))}
+          </div>
+
+          <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
+            <span className="font-medium">{trip.client.name}</span>
+            {trip.route ? <span> · {trip.route}</span> : null}
+          </p>
+        </div>
+
+        <ChevronRight className="w-4 h-4 shrink-0 mt-3" style={{ color: 'var(--theme-text-muted)' }} />
+      </button>
+    )
+  }
+
+  // Expanded card (selected)
   return (
-    <button
-      onClick={onClick}
-      className="w-full text-left p-3 rounded-xl transition-colors relative"
+    <div
+      className="rounded-xl overflow-hidden"
       style={{
-        background: isSelected
-          ? 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)'
-          : 'var(--theme-bg-secondary)',
-        border: isSelected ? '2px solid var(--theme-brand-primary)' : '1px solid var(--theme-border-light)',
+        border: '2px solid var(--theme-brand-primary)',
+        background: 'var(--theme-bg-primary)',
       }}
     >
-      {/* X/Y badge — top right: X matched criteria / Y total WO criteria */}
-      <span
-        className="absolute top-2 right-2.5 text-[11px] font-bold tabular-nums"
-        style={{ color: badgeColor }}
+      {/* Expanded header */}
+      <div
+        className="flex items-center gap-3 px-4 py-3"
+        style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 6%, transparent)' }}
       >
-        {matchedCount}/{totalCriteria}
-      </span>
+        <div
+          className="shrink-0 flex flex-col items-center justify-center w-10 h-10 rounded-lg"
+          style={{ background: `color-mix(in srgb, ${scoreColor} 12%, transparent)` }}
+        >
+          <span className="text-[13px] font-bold tabular-nums leading-none" style={{ color: scoreColor }}>
+            {matchedCount}/{totalCriteria}
+          </span>
+        </div>
 
-      {/* Code + Date row */}
-      <div className="flex items-center gap-1.5 mb-1.5 pr-10">
-        {trip.code && (
-          <span
-            className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded"
-            style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
-          >
-            {trip.code}
-          </span>
-        )}
-        {tripDateShort && (
-          <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>
-            {tripDateShort}
-          </span>
-        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            {trip.code && (
+              <span className="text-[11px] font-mono font-semibold px-1.5 py-0.5 rounded"
+                style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}>
+                {trip.code}
+              </span>
+            )}
+            {tripDateShort && (
+              <span className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>{tripDateShort}</span>
+            )}
+          </div>
+          <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
+            <span className="font-medium">{trip.client.name}</span>
+            {trip.route ? <span> · {trip.route}</span> : null}
+          </p>
+        </div>
+
+        <button
+          onClick={onSelect}
+          className="p-1.5 rounded-lg transition-colors"
+          style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
+        >
+          <ChevronDown className="w-4 h-4" />
+        </button>
       </div>
 
-      {/* Containers */}
-      <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-        {(trip.containers?.length ? trip.containers : []).map((c, i) => (
-          <span key={i} className="flex items-center gap-1">
-            <ContBadge type={c.workType} />
-            <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-              {c.containerNumber}
+      {/* Expanded content */}
+      <div className="p-4 space-y-4">
+
+        {/* Containers section */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
+              Container đơn hàng
             </span>
-          </span>
-        ))}
-      </div>
+            <button
+              onClick={() => setTripContainers(prev => [...prev, { workType: 'E20', containerNumber: '' }])}
+              className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded"
+              style={{ color: 'var(--theme-brand-primary)', background: 'var(--theme-brand-primary-light)' }}
+            >
+              <Plus className="w-3 h-3" /> Thêm
+            </button>
+          </div>
+          <div className="space-y-1.5">
+            {tripContainers.map((c, idx) => {
+              const isContainerMatched = matchedTripContainerIndices.has(idx)
+              return (
+                <div
+                  key={idx}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg"
+                  style={{
+                    background: isContainerMatched
+                      ? 'color-mix(in srgb, var(--theme-status-success) 8%, transparent)'
+                      : 'var(--theme-bg-secondary)',
+                    border: `1px solid ${isContainerMatched ? 'var(--theme-status-success)' : 'var(--theme-border-default)'}`,
+                  }}
+                >
+                  {isContainerMatched ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--theme-status-success)' }} />
+                  ) : (
+                    <div className="w-3.5 h-3.5 rounded-full border-2 shrink-0" style={{ borderColor: 'var(--theme-border-default)' }} />
+                  )}
+                  <input
+                    value={c.workType}
+                    onChange={e => updateTripContainer(idx, 'workType', e.target.value.toUpperCase())}
+                    className="w-14 px-2 py-1 rounded text-xs font-bold text-center border"
+                    style={{ borderColor: 'var(--theme-border-default)', background: 'var(--theme-bg-primary)', color: 'var(--theme-brand-primary)' }}
+                  />
+                  <input
+                    value={c.containerNumber}
+                    onChange={e => updateTripContainer(idx, 'containerNumber', e.target.value.toUpperCase())}
+                    className="flex-1 px-2 py-1 rounded text-xs font-mono border"
+                    style={{ borderColor: 'var(--theme-border-default)', background: 'var(--theme-bg-primary)', color: 'var(--theme-text-primary)' }}
+                  />
+                  <button
+                    onClick={() => setTripContainers(prev => prev.filter((_, i) => i !== idx))}
+                    className="p-1 rounded"
+                    style={{ color: 'var(--theme-text-muted)' }}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        </div>
 
-      {/* Client · Route */}
-      <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
-        <span className="font-medium">{trip.client.name}</span>
-        {trip.route ? <span> · {trip.route}</span> : null}
-      </p>
-    </button>
+        {/* Info fields */}
+        <div className="space-y-2">
+          <InlineField label="Khách hàng" value={tripClient} onChange={onChangeTripClient} matched={clientMatch} />
+          <InlineField label="Điểm lấy" value={tripPickup} onChange={onChangeTripPickup} matched={pickupMatch} />
+          <InlineField label="Điểm trả" value={tripDropoff} onChange={onChangeTripDropoff} matched={dropoffMatch} />
+        </div>
+
+        {/* Confirm button */}
+        <button
+          onClick={onConfirm}
+          disabled={submitting}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-opacity disabled:opacity-60"
+          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+        >
+          <Check className="w-4 h-4" />
+          {submitting ? 'Đang ghép...' : 'Xác nhận ghép chuyến'}
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -262,7 +541,7 @@ export function MatchJob() {
   const jobId = Number(jobIdStr)
   const navigate = useNavigate()
   const toast = useToast()
-  const isMobile = useIsMobile(1024)
+  useIsMobile(1024)
 
   // ── Data ──────────────────────────────────────────────────────────────────
   const { data: workOrders = [], isLoading: loadingWO } = useWorkOrders()
@@ -270,7 +549,6 @@ export function MatchJob() {
   const { data: suggestionsData, isLoading: loadingSuggestions } = useSuggestMatches(jobId)
   const { data: routes = [] } = useRoutes()
 
-  // Route lookup map: route string → { pickupLocation, dropoffLocation }
   const routeMap = useMemo(() =>
     new Map(routes.map(r => [r.route, { pickup: r.pickupLocation.name, dropoff: r.dropoffLocation.name }])),
     [routes]
@@ -282,10 +560,9 @@ export function MatchJob() {
 
   const loading = loadingWO || loadingTrips
 
-  // ── Work order (left panel) ───────────────────────────────────────────────
+  // ── Work order ────────────────────────────────────────────────────────────
   const workOrder = useMemo(() => workOrders.find(w => w.id === jobId), [workOrders, jobId])
 
-  // Local editable state for the work order
   const [woClient, setWoClient] = useState('')
   const [woRoute, setWoRoute] = useState('')
   const [woPickup, setWoPickup] = useState('')
@@ -293,7 +570,6 @@ export function MatchJob() {
   const [woContainers, setWoContainers] = useState<{ workType: string; containerNumber: string }[]>([])
   const [woInitialized, setWoInitialized] = useState(false)
 
-  // Initialize local state once work order loads
   useMemo(() => {
     if (workOrder && !woInitialized) {
       setWoClient(workOrder.client.name)
@@ -310,14 +586,12 @@ export function MatchJob() {
     setWoContainers(prev => prev.map((c, i) => i === idx ? { ...c, [field]: value } : c))
   }, [])
 
-  // ── Trip orders (right panel) ─────────────────────────────────────────────
-  // Use suggestions from the API — already ranked by match score, includes any 1-field match
+  // ── Suggestions ───────────────────────────────────────────────────────────
   const suggestions = suggestionsData?.suggestions ?? []
 
-  // ── Selected trip (right panel click) ────────────────────────────────────
+  // ── Selected trip ─────────────────────────────────────────────────────────
   const [selectedTripId, setSelectedTripId] = useState<number | null>(null)
 
-  // Auto-select best suggestion on load
   useMemo(() => {
     if (selectedTripId === null && suggestions.length > 0) {
       setSelectedTripId(suggestions[0].tripOrder.id)
@@ -356,7 +630,6 @@ export function MatchJob() {
   }, [])
 
   // ── Match computation ─────────────────────────────────────────────────────
-  // Get matched_fields from the selected suggestion (backend already resolved route→pickup/dropoff)
   const selectedSuggestion = useMemo(
     () => suggestions.find(s => s.tripOrder.id === selectedTripId) ?? null,
     [suggestions, selectedTripId]
@@ -366,7 +639,6 @@ export function MatchJob() {
     [selectedSuggestion]
   )
 
-  // Container match: check locally (user may have edited values)
   const matchedWoIndices = useMemo(() => {
     if (!selectedTrip) return new Set<number>()
     const tripSet = new Set(tripContainers.map(c => `${c.workType}|${c.containerNumber}`))
@@ -377,7 +649,6 @@ export function MatchJob() {
     )
   }, [woContainers, tripContainers, selectedTrip])
 
-  // Which trip containers match a WO container (used in edit panel)
   const matchedTripContainerIndices = useMemo(() => {
     const woSet = new Set(woContainers.map(c => `${c.workType}|${c.containerNumber}`))
     return new Set(
@@ -387,13 +658,10 @@ export function MatchJob() {
     )
   }, [woContainers, tripContainers])
 
-  // For non-container fields, trust backend matched_fields (they resolve route→pickup/dropoff)
-  // but also check locally in case user edited values
   const clientMatch = backendMatchedFields.has('client') || (woClient !== '' && woClient === tripClient)
   const pickupMatch = backendMatchedFields.has('pickup_location') || (woPickup !== '' && woPickup === tripPickup)
   const dropoffMatch = backendMatchedFields.has('dropoff_location') || (woDropoff !== '' && woDropoff === tripDropoff)
 
-  // Total criteria count in the work order (Y in X/Y badge) — each container counts separately
   const totalCriteria = useMemo(() =>
     woContainers.length
     + (woClient !== '' ? 1 : 0)
@@ -409,7 +677,6 @@ export function MatchJob() {
     if (!workOrder || !selectedTrip || submitting) return
     setSubmitting(true)
 
-    // Save any edits to the work order
     const woResult = await updateWorkOrder.mutateAsync({
       id: workOrder.id,
       data: {
@@ -423,7 +690,6 @@ export function MatchJob() {
       return
     }
 
-    // Save any edits to the selected trip order
     const toResult = await updateTripOrder.mutateAsync({
       id: selectedTrip.id,
       data: {
@@ -437,7 +703,6 @@ export function MatchJob() {
       return
     }
 
-    // Reconcile: link work order to trip order
     const recResult = await reconcile.mutateAsync({ workOrderId: workOrder.id, tripOrderId: selectedTrip.id })
     if (!recResult.success) {
       const detail = (recResult.error as { response?: { data?: { detail?: string } } })?.response?.data?.detail
@@ -446,7 +711,7 @@ export function MatchJob() {
       return
     }
 
-    toast.success('Thành công', 'Đã khớp chuyến thành công')
+    toast.success('Thành công', 'Đã ghép chuyến thành công')
     navigate(-1)
   }
 
@@ -455,9 +720,10 @@ export function MatchJob() {
     return (
       <div className="p-6 space-y-4">
         <div className="h-8 w-40 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {[1, 2].map(i => (
-            <div key={i} className="h-64 rounded-xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+        <div className="h-40 rounded-xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+        <div className="space-y-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-24 rounded-xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
           ))}
         </div>
       </div>
@@ -477,11 +743,11 @@ export function MatchJob() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col" style={{ height: isMobile ? 'calc(100dvh - 56px)' : '100vh' }}>
+    <div className="min-h-screen" style={{ background: 'var(--theme-bg-primary)' }}>
 
       {/* ── Top bar ── */}
       <div
-        className="flex items-center gap-3 px-4 lg:px-6 py-3 shrink-0 border-b"
+        className="flex items-center gap-3 px-4 lg:px-6 py-3 border-b sticky top-0 z-10"
         style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}
       >
         <button
@@ -492,288 +758,119 @@ export function MatchJob() {
           <ArrowLeft className="w-4 h-4" />
         </button>
         <div className="flex-1 min-w-0">
-          <h1 className="typo-h2 truncate" style={{ color: 'var(--theme-text-primary)' }}>Đối soát phiếu</h1>
+          <h1 className="typo-h2 truncate" style={{ color: 'var(--theme-text-primary)' }}>Ghép chuyến</h1>
           <p className="typo-meta" style={{ color: 'var(--theme-text-muted)' }}>
             {workOrder.driver.name} · {workOrder.containers.map(c => c.containerNumber).join(', ')}
           </p>
         </div>
-        {/* Confirm button — top bar on desktop */}
-        {!isMobile && selectedTrip && (
-          <button
-            onClick={handleMatch}
-            disabled={submitting}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-opacity disabled:opacity-60"
-            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-          >
-            <Check className="w-4 h-4" />
-            {submitting ? 'Đang khớp...' : 'Xác nhận khớp'}
-          </button>
-        )}
       </div>
 
-      {/* ── Two-panel body ── */}
-      <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
+      {/* ── Content ── */}
+      <div className="p-4 lg:p-6 max-w-2xl mx-auto space-y-6">
 
-        {/* ════════════════════════════════════════════════════════════════
-            LEFT PANEL — Chuyến đã đi (work order detail)
-        ════════════════════════════════════════════════════════════════ */}
-        <div
-          className="lg:w-[400px] xl:w-[440px] shrink-0 flex flex-col overflow-hidden border-b lg:border-b-0 lg:border-r"
-          style={{ borderColor: 'var(--theme-border-light)' }}
-        >
-          {/* Panel header */}
-          <div
-            className="px-4 lg:px-5 py-3 shrink-0 flex items-center gap-2 border-b"
-            style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-light)' }}
-          >
-            <div className="w-2 h-2 rounded-full" style={{ background: 'var(--theme-brand-primary)' }} />
-            <span className="typo-label" style={{ color: 'var(--theme-brand-primary)' }}>Chuyến đã đi</span>
-            <div className="ml-auto flex items-center gap-1.5">
-              <Truck className="w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{workOrder.driver.name}</span>
-            </div>
-          </div>
+        {/* Work order card */}
+        <WorkOrderCard
+          driverName={workOrder.driver.name}
+          woContainers={woContainers}
+          woClient={woClient}
+          woPickup={woPickup}
+          woDropoff={woDropoff}
+          setWoClient={setWoClient}
+          setWoPickup={setWoPickup}
+          setWoDropoff={setWoDropoff}
+          setWoContainers={setWoContainers}
+          updateWoContainer={updateWoContainer}
+          clientMatch={clientMatch}
+          pickupMatch={pickupMatch}
+          dropoffMatch={dropoffMatch}
+          matchedWoIndices={matchedWoIndices}
+        />
 
-          {/* Scrollable content */}
-          <div className="flex-1 overflow-y-auto p-4 lg:p-5 space-y-4">
-
-            {/* Containers section */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
-                  Container ({woContainers.length})
-                </span>
-                <button
-                  onClick={() => setWoContainers(prev => [...prev, { workType: 'E20', containerNumber: '' }])}
-                  className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded"
-                  style={{ color: 'var(--theme-brand-primary)', background: 'var(--theme-brand-primary-light)' }}
-                >
-                  <Plus className="w-3 h-3" /> Thêm
-                </button>
-              </div>
-              <div className="space-y-2">
-                {woContainers.map((c, idx) => (
-                  <ContainerRow
-                    key={idx}
-                    workType={c.workType}
-                    containerNumber={c.containerNumber}
-                    matched={matchedWoIndices.has(idx)}
-                    onEditType={v => updateWoContainer(idx, 'workType', v)}
-                    onEditNumber={v => updateWoContainer(idx, 'containerNumber', v)}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Info fields */}
-            <div className="space-y-2">
-              <InlineField
-                label="Khách hàng"
-                value={woClient}
-                onChange={setWoClient}
-                placeholder="Chưa có"
-                matched={selectedTrip ? clientMatch : undefined}
-              />
-              <InlineField
-                label="Điểm lấy"
-                value={woPickup}
-                onChange={setWoPickup}
-                placeholder="—"
-                matched={selectedTrip ? pickupMatch : undefined}
-              />
-              <InlineField
-                label="Điểm trả"
-                value={woDropoff}
-                onChange={setWoDropoff}
-                placeholder="—"
-                matched={selectedTrip ? dropoffMatch : undefined}
-              />
-            </div>
-
-          </div>
-        </div>
-
-        {/* ════════════════════════════════════════════════════════════════
-            RIGHT PANEL — Đơn hàng (trip orders)
-        ════════════════════════════════════════════════════════════════ */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-
-          {/* Panel header */}
-          <div
-            className="px-4 lg:px-5 py-3 shrink-0 flex items-center gap-2 border-b"
-            style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}
-          >
-            <div className="w-2 h-2 rounded-full" style={{ background: 'var(--theme-status-warning)' }} />
-            <span className="typo-label" style={{ color: 'var(--theme-status-warning)' }}>Đơn hàng</span>
-            <span
-              className="typo-caption px-2 py-0.5 rounded"
-              style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
-            >
-              {suggestions.length}
-            </span>
-            {loadingSuggestions && (
-              <span className="flex items-center gap-1 typo-caption" style={{ color: 'var(--theme-text-muted)' }}>
-                <Sparkles className="w-3 h-3 animate-pulse" /> Đang phân tích...
+        {/* Suggestions section */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+              Đơn hàng có thể ghép
+            </h2>
+            {loadingSuggestions ? (
+              <span className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
+                <Sparkles className="w-3 h-3 animate-pulse" /> Đang tìm...
+              </span>
+            ) : (
+              <span
+                className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
+              >
+                {suggestions.length}
               </span>
             )}
           </div>
 
-          {/* Trip list */}
-          <div className="flex-1 overflow-y-auto p-3">
-            <div className="grid grid-cols-2 gap-2">
-            {suggestions.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full p-8 text-center gap-3">
-                <FileText className="w-10 h-10" style={{ color: 'var(--theme-text-muted)' }} />
-                <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                  {loadingSuggestions ? 'Đang tìm đơn hàng phù hợp...' : 'Không tìm thấy đơn hàng phù hợp'}
-                </p>
-                <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Tạo đơn hàng mới để bắt đầu đối soát</p>
-                <button
-                  onClick={() => navigate('/accountant/create-trip', { state: { fromWorkOrder: workOrder } })}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-                  style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-                >
-                  <Plus className="w-4 h-4" /> Tạo đơn mới
-                </button>
-              </div>
-            ) : (
-              <>
-                {suggestions.map(s => {
-                  // Compute X: how many WO criteria this đơn hàng matches, per-container
-                  const sTripContainers = s.tripOrder.containers ?? []
-                  const sTripContainerSet = new Set(sTripContainers.map(c => `${c.workType}|${c.containerNumber}`))
-                  const matchedContainersCount = woContainers.filter(
-                    c => c.containerNumber && sTripContainerSet.has(`${c.workType}|${c.containerNumber}`)
-                  ).length
-                  const matchedCount = matchedContainersCount
-                    + (s.matchedFields.includes('client') ? 1 : 0)
-                    + (s.matchedFields.includes('pickup_location') ? 1 : 0)
-                    + (s.matchedFields.includes('dropoff_location') ? 1 : 0)
-
-                  return (
-                    <TripRow
-                      key={s.tripOrder.id}
-                      trip={s.tripOrder}
-                      isSelected={selectedTripId === s.tripOrder.id}
-                      matchedCount={matchedCount}
-                      totalCriteria={totalCriteria}
-                      onClick={() => setSelectedTripId(s.tripOrder.id)}
-                    />
-                  )
-                })}
-              </>
-            )}
-            </div>
-          </div>
-
-          {/* Selected trip detail / edit panel */}
-          {selectedTrip && (
+          {suggestions.length === 0 && !loadingSuggestions ? (
             <div
-              className="shrink-0 border-t p-4 lg:p-5 space-y-3"
-              style={{ borderColor: 'var(--theme-border-default)', background: 'var(--theme-bg-secondary)' }}
+              className="rounded-xl p-10 text-center flex flex-col items-center gap-3"
+              style={{ background: 'var(--theme-bg-secondary)', border: '1px dashed var(--theme-border-default)' }}
             >
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
-                  Chỉnh sửa đơn đã chọn
-                </span>
-                <button
-                  onClick={() => setSelectedTripId(null)}
-                  className="p-1 rounded"
-                  style={{ color: 'var(--theme-text-muted)' }}
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
+              <FileText className="w-10 h-10" style={{ color: 'var(--theme-text-muted)' }} />
+              <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+                Không tìm thấy đơn hàng phù hợp
+              </p>
+              <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                Tạo đơn hàng mới để bắt đầu ghép chuyến
+              </p>
+              <button
+                onClick={() => navigate('/accountant/create-trip', { state: { fromWorkOrder: workOrder } })}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
+                style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+              >
+                <Plus className="w-4 h-4" /> Tạo đơn mới
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {suggestions.map(s => {
+                const sTripContainers = s.tripOrder.containers ?? []
+                const sTripContainerSet = new Set(sTripContainers.map(c => `${c.workType}|${c.containerNumber}`))
+                const matchedContainersCount = woContainers.filter(
+                  c => c.containerNumber && sTripContainerSet.has(`${c.workType}|${c.containerNumber}`)
+                ).length
+                const matchedCount = matchedContainersCount
+                  + (s.matchedFields.includes('client') ? 1 : 0)
+                  + (s.matchedFields.includes('pickup_location') ? 1 : 0)
+                  + (s.matchedFields.includes('dropoff_location') ? 1 : 0)
 
-              {/* Trip containers — with match indicators */}
-              <div className="space-y-1.5">
-                {tripContainers.map((c, idx) => {
-                  const isContainerMatched = matchedTripContainerIndices.has(idx)
-                  return (
-                    <div
-                      key={idx}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-lg"
-                      style={{
-                        background: isContainerMatched
-                          ? 'color-mix(in srgb, var(--theme-status-success) 8%, transparent)'
-                          : 'var(--theme-bg-primary)',
-                        border: `1px solid ${isContainerMatched ? 'var(--theme-status-success)' : 'var(--theme-border-default)'}`,
-                      }}
-                    >
-                      {isContainerMatched ? (
-                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--theme-status-success)' }} />
-                      ) : (
-                        <div className="w-3.5 h-3.5 rounded-full border-2 shrink-0" style={{ borderColor: 'var(--theme-border-default)' }} />
-                      )}
-                      <input
-                        value={c.workType}
-                        onChange={e => updateTripContainer(idx, 'workType', e.target.value.toUpperCase())}
-                        className="w-14 px-2 py-1 rounded text-xs font-bold text-center border"
-                        style={{ borderColor: 'var(--theme-border-default)', background: 'var(--theme-bg-secondary)', color: 'var(--theme-brand-primary)' }}
-                      />
-                      <input
-                        value={c.containerNumber}
-                        onChange={e => updateTripContainer(idx, 'containerNumber', e.target.value.toUpperCase())}
-                        className="flex-1 px-2 py-1 rounded text-xs font-mono border"
-                        style={{ borderColor: 'var(--theme-border-default)', background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)' }}
-                      />
-                      <button
-                        onClick={() => setTripContainers(prev => prev.filter((_, i) => i !== idx))}
-                        className="p-1 rounded"
-                        style={{ color: 'var(--theme-text-muted)' }}
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )
-                })}
-                <button
-                  onClick={() => setTripContainers(prev => [...prev, { workType: 'E20', containerNumber: '' }])}
-                  className="text-xs font-medium flex items-center gap-1 px-2 py-1 rounded"
-                  style={{ color: 'var(--theme-brand-primary)', background: 'var(--theme-brand-primary-light)' }}
-                >
-                  <Plus className="w-3 h-3" /> Thêm container
-                </button>
-              </div>
+                const isSelected = selectedTripId === s.tripOrder.id
 
-              {/* Trip info fields — with match indicators */}
-              <div className="grid grid-cols-2 gap-3">
-                <InlineField
-                  label="Khách hàng"
-                  value={tripClient}
-                  onChange={setTripClient}
-                  matched={clientMatch}
-                />
-                <InlineField
-                  label="Điểm lấy"
-                  value={tripPickup}
-                  onChange={setTripPickup}
-                  matched={pickupMatch}
-                />
-                <InlineField
-                  label="Điểm trả"
-                  value={tripDropoff}
-                  onChange={setTripDropoff}
-                  matched={dropoffMatch}
-                />
-              </div>
-
-              {/* Confirm button — bottom on mobile */}
-              {isMobile && (
-                <button
-                  onClick={handleMatch}
-                  disabled={submitting}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-opacity disabled:opacity-60"
-                  style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-                >
-                  <Check className="w-4 h-4" />
-                  {submitting ? 'Đang khớp...' : 'Xác nhận khớp chuyến'}
-                </button>
-              )}
+                return (
+                  <SuggestionCard
+                    key={s.tripOrder.id}
+                    trip={s.tripOrder}
+                    isSelected={isSelected}
+                    matchedCount={matchedCount}
+                    totalCriteria={totalCriteria}
+                    tripContainers={isSelected ? tripContainers : (s.tripOrder.containers ?? []).map(c => ({ workType: c.workType, containerNumber: c.containerNumber }))}
+                    tripClient={isSelected ? tripClient : s.tripOrder.client.name}
+                    tripPickup={isSelected ? tripPickup : ''}
+                    tripDropoff={isSelected ? tripDropoff : ''}
+                    matchedTripContainerIndices={isSelected ? matchedTripContainerIndices : new Set()}
+                    clientMatch={isSelected ? clientMatch : false}
+                    pickupMatch={isSelected ? pickupMatch : false}
+                    dropoffMatch={isSelected ? dropoffMatch : false}
+                    updateTripContainer={updateTripContainer}
+                    setTripContainers={setTripContainers}
+                    onChangeTripClient={setTripClient}
+                    onChangeTripPickup={setTripPickup}
+                    onChangeTripDropoff={setTripDropoff}
+                    onSelect={() => setSelectedTripId(isSelected ? null : s.tripOrder.id)}
+                    onConfirm={handleMatch}
+                    submitting={submitting}
+                  />
+                )
+              })}
             </div>
           )}
-
         </div>
+
       </div>
     </div>
   )
