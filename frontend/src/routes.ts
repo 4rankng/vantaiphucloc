@@ -29,7 +29,6 @@ export const TripList             = lazy(() => import('@/pages/accountant/TripLi
 export const TripDetail           = lazy(() => import('@/pages/accountant/TripDetail').then(m => ({ default: m.TripDetail })))
 export const CreateTrip           = lazy(() => import('@/pages/accountant/CreateTrip').then(m => ({ default: m.CreateTrip })))
 export const SalarySetup          = lazy(() => import('@/pages/accountant/SalarySetup').then(m => ({ default: m.SalarySetup })))
-export const MatchJob             = lazy(() => import('@/pages/accountant/MatchJob').then(m => ({ default: m.MatchJob })))
 export const MatchTrip            = lazy(() => import('@/pages/accountant/MatchTrip').then(m => ({ default: m.MatchTrip })))
 export const PricingList          = lazy(() => import('@/pages/accountant/PricingList').then(m => ({ default: m.PricingList })))
 export const PricingDetail        = lazy(() => import('@/pages/accountant/PricingDetail').then(m => ({ default: m.PricingDetail })))

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef, useEffect, type ReactNode } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect, Fragment, type ReactNode } from 'react'
 import { ChevronUp, ChevronDown, ChevronsUpDown, MoreHorizontal, Check } from 'lucide-react'
 
 export interface Column<T> {
@@ -69,6 +69,10 @@ export interface DataTableProProps<T> {
   defaultSortDir?: 'asc' | 'desc'
   /** Remove outer border/rounded wrapper — use when embedding inside a card */
   noBorder?: boolean
+  /** Key of the currently expanded row */
+  expandedRowKey?: string | number
+  /** Render function for expanded row content */
+  renderExpandedRow?: (row: T) => ReactNode
 }
 
 function SkeletonRow({ colCount }: { colCount: number }) {
@@ -102,6 +106,8 @@ export function DataTablePro<T>({
   rowClassName,
   defaultSortKey,
   defaultSortDir = 'asc',
+  expandedRowKey,
+  renderExpandedRow,
 }: DataTableProProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(defaultSortKey ?? null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>(defaultSortDir)
@@ -278,10 +284,12 @@ export function DataTablePro<T>({
                 const key = rowKey(row)
                 const isSelected = selectedKeys.has(key)
                 const isClickable = !!onRowClick
+                const isExpanded = expandedRowKey === key
 
                 return (
+                  <Fragment key={key}
+                  >
                   <tr
-                    key={key}
                     onClick={() => onRowClick?.(row)}
                     className={`
                       transition-colors
@@ -291,7 +299,8 @@ export function DataTablePro<T>({
                       ${rowClassName?.(row) ?? ''}
                     `}
                     style={{
-                      borderBottom: idx < sortedData.length - 1 ? '1px solid var(--theme-border-light)' : 'none',
+                      borderBottom: '1px solid var(--theme-border-light)',
+                      borderLeft: isExpanded ? '3px solid var(--theme-brand-primary)' : undefined,
                     }}
                   >
                     {/* Selection checkbox */}
@@ -371,6 +380,18 @@ export function DataTablePro<T>({
                       </td>
                     )}
                   </tr>
+                  {isExpanded && renderExpandedRow && (
+                    <tr key={`expanded-${key}`}>
+                      <td
+                        colSpan={visibleColumns.length + (selectable ? 1 : 0) + (rowActions && rowActions.length > 0 ? 1 : 0)}
+                        className="p-0"
+                        style={{ background: 'var(--theme-bg-primary)' }}
+                      >
+                        {renderExpandedRow(row)}
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 )
               })
             )}
