@@ -743,10 +743,6 @@ function DesktopDashboard() {
         </div>
         <div className="flex items-center gap-3">
           <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
-          <button onClick={() => navigate('/accountant/import-orders')} className="btn-primary">
-            <Plus size={16} strokeWidth={2.25} />
-            <span>Nhập Excel</span>
-          </button>
         </div>
       </div>
 
@@ -837,7 +833,7 @@ function MobileDashboard() {
   ]
 
   const quickActions = [
-    { id: 'import', label: 'Nhập Excel', icon: <Plus className="h-4 w-4" />, onClick: () => navigate('/accountant/import-orders'), primary: true },
+    { id: 'import', label: 'Nhập đơn', icon: <Plus className="h-4 w-4" />, onClick: () => navigate('/accountant/import-orders'), primary: true },
     { id: 'reconcile', label: 'Ghép chuyến', icon: <Briefcase className="h-4 w-4" />, onClick: () => navigate('/accountant/work-orders') },
     { id: 'partners', label: 'Nhà thầu', icon: <Users className="h-4 w-4" />, onClick: () => navigate('/accountant/partners') },
     { id: 'pricing', label: 'Bảng giá', icon: <Tag className="h-4 w-4" />, onClick: () => navigate('/accountant/pricing') },

@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef, useCallback } from 'react'
-import { Upload, Truck, Calendar, FileSpreadsheet, X, Sparkles } from 'lucide-react'
+import { Upload, Truck, Calendar, FileSpreadsheet, X, Sparkles, Briefcase } from 'lucide-react'
 import {
   Button,
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -273,7 +273,7 @@ export function WorkOrderList() {
     }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Nhập Excel đối soát</DialogTitle>
+          <DialogTitle>Nhập chuyến đối soát</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
@@ -401,7 +401,7 @@ export function WorkOrderList() {
               style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
             >
               <FileSpreadsheet className="h-3.5 w-3.5" />
-              Nhập Excel
+              Nhập chuyến
             </Button>
           }
         />
@@ -448,7 +448,7 @@ export function WorkOrderList() {
             className="btn-primary h-9 gap-1.5 text-xs font-semibold"
           >
             <FileSpreadsheet className="h-3.5 w-3.5" />
-            Nhập Excel
+            Nhập chuyến
           </Button>
         }
       />
