@@ -38,6 +38,7 @@ from app.models.domain import (
 )
 from app.schemas.domain import (
     ContainerOut,
+    CriterionBreakdown,
     MatchSuggestion,
     TripContainerOut,
     TripOrderOut,
@@ -74,6 +75,78 @@ def _confidence(score: float) -> str:
     if score >= POTENTIAL_MATCH_THRESHOLD:
         return "partial"
     return "none"
+
+
+CRITERIA_ORDER = [
+    ("date", "Ngày đi"),
+    ("route", "Tuyến đường"),
+    ("client", "Khách hàng"),
+    ("pickup_location", "Điểm lấy"),
+    ("dropoff_location", "Điểm trả"),
+    ("container_number", "Container"),
+]
+
+
+def _build_criteria(
+    *,
+    matched_fields: list[str],
+    wo_date_str: str | None,
+    to_date_str: str | None,
+    wo_route: str | None,
+    to_route: str | None,
+    wo_client: str | None,
+    to_client: str | None,
+    wo_pickup: str | None,
+    to_pickup: str | None,
+    wo_dropoff: str | None,
+    to_dropoff: str | None,
+    wo_containers: str | None,
+    to_containers: str | None,
+) -> list[CriterionBreakdown]:
+    """Build the canonical 6-criteria breakdown for UI rendering.
+
+    `matched_fields` is the existing list returned by `_score_*_against_*`. We
+    treat `container_number` and `container_number_partial` as the same row
+    (a partial container match still counts as a green check for the row but
+    surfaces as `match=True` since the user has at least some signal).
+    """
+    matched = set(matched_fields)
+    container_match = (
+        "container_number" in matched
+        or "container_number_partial" in matched
+    )
+
+    values: dict[str, tuple[str | None, str | None]] = {
+        "date": (wo_date_str, to_date_str),
+        "route": (wo_route, to_route),
+        "client": (wo_client, to_client),
+        "pickup_location": (wo_pickup, to_pickup),
+        "dropoff_location": (wo_dropoff, to_dropoff),
+        "container_number": (wo_containers, to_containers),
+    }
+    out: list[CriterionBreakdown] = []
+    for name, label in CRITERIA_ORDER:
+        wo_v, to_v = values[name]
+        if name == "container_number":
+            is_match = container_match
+        else:
+            is_match = name in matched
+        out.append(CriterionBreakdown(
+            name=name, label=label, match=is_match,
+            wo_value=wo_v, to_value=to_v,
+        ))
+    return out
+
+
+def _format_containers(items) -> str | None:
+    """Render a container list as a compact string for the breakdown."""
+    parts: list[str] = []
+    for c in items:
+        cn = getattr(c, "container_number", None) or ""
+        wt = getattr(c, "work_type", None) or ""
+        if cn:
+            parts.append(f"{wt} {cn}".strip())
+    return " · ".join(parts) if parts else None
 
 
 async def suggest_trip_matches(
@@ -120,12 +193,31 @@ async def suggest_trip_matches(
     for c in cont_result.scalars().all():
         to_containers[c.trip_order_id].append(c)
 
-    clients = await load_client_summaries(db, {to.client_id for to in candidates})
-    locations = await load_location_summaries(
-        db,
+    client_ids = {to.client_id for to in candidates} | {work_order.client_id}
+    location_ids = (
         {to.pickup_location_id for to in candidates}
-        | {to.dropoff_location_id for to in candidates},
+        | {to.dropoff_location_id for to in candidates}
+        | {work_order.pickup_location_id, work_order.dropoff_location_id}
     )
+    clients = await load_client_summaries(db, client_ids)
+    locations = await load_location_summaries(db, location_ids)
+
+    wo_client_name = get_client_summary(clients, work_order.client_id).name
+    wo_pickup_name = get_location_summary(
+        locations, work_order.pickup_location_id,
+    ).name
+    wo_dropoff_name = get_location_summary(
+        locations, work_order.dropoff_location_id,
+    ).name
+    # WorkOrder containers come back from the join above as raw rows of
+    # `container_number` only — re-load with full ORM objects for the
+    # criteria breakdown so we can show work_type alongside the number.
+    wo_full_containers = (await db.execute(
+        select(WorkOrderContainer)
+        .where(WorkOrderContainer.work_order_id == work_order.id)
+    )).scalars().all()
+    wo_containers_str = _format_containers(wo_full_containers)
+    wo_date_str = wo_date.isoformat() if wo_date else None
 
     suggestions: list[MatchSuggestion] = []
     for to in candidates:
@@ -157,11 +249,34 @@ async def suggest_trip_matches(
             created_at=to.created_at,
             updated_at=to.updated_at,
         )
+        criteria = _build_criteria(
+            matched_fields=matched_fields,
+            wo_date_str=wo_date_str,
+            to_date_str=to.trip_date.isoformat() if to.trip_date else None,
+            wo_route=work_order.route,
+            to_route=to.route,
+            wo_client=wo_client_name,
+            to_client=get_client_summary(clients, to.client_id).name,
+            wo_pickup=wo_pickup_name,
+            to_pickup=get_location_summary(
+                locations, to.pickup_location_id,
+            ).name,
+            wo_dropoff=wo_dropoff_name,
+            to_dropoff=get_location_summary(
+                locations, to.dropoff_location_id,
+            ).name,
+            wo_containers=wo_containers_str,
+            to_containers=_format_containers(to_containers.get(to.id, [])),
+        )
+        match_score = sum(1 for c in criteria if c.match)
         suggestions.append(MatchSuggestion(
             trip_order=to_out,
             confidence=_confidence(score),
             matched_fields=matched_fields,
             score=score,
+            criteria=criteria,
+            match_score=match_score,
+            max_score=len(criteria),
         ))
 
     suggestions.sort(key=lambda s: s.score, reverse=True)
@@ -210,13 +325,29 @@ async def suggest_wo_matches(
     for c in cont_result.scalars().all():
         wo_containers[c.work_order_id].append(c)
 
-    clients = await load_client_summaries(db, {wo.client_id for wo in candidates})
+    client_ids = {wo.client_id for wo in candidates} | {trip_order.client_id}
     drivers = await load_driver_summaries(db, {wo.driver_id for wo in candidates})
-    locations = await load_location_summaries(
-        db,
+    location_ids = (
         {wo.pickup_location_id for wo in candidates}
-        | {wo.dropoff_location_id for wo in candidates},
+        | {wo.dropoff_location_id for wo in candidates}
+        | {trip_order.pickup_location_id, trip_order.dropoff_location_id}
     )
+    clients = await load_client_summaries(db, client_ids)
+    locations = await load_location_summaries(db, location_ids)
+
+    to_client_name = get_client_summary(clients, trip_order.client_id).name
+    to_pickup_name = get_location_summary(
+        locations, trip_order.pickup_location_id,
+    ).name
+    to_dropoff_name = get_location_summary(
+        locations, trip_order.dropoff_location_id,
+    ).name
+    to_full_containers = (await db.execute(
+        select(TripOrderContainer)
+        .where(TripOrderContainer.trip_order_id == trip_order.id)
+    )).scalars().all()
+    to_containers_str = _format_containers(to_full_containers)
+    to_date_str = trip_order.trip_date.isoformat() if trip_order.trip_date else None
 
     suggestions: list[WOSuggestion] = []
     for wo in candidates:
@@ -250,11 +381,37 @@ async def suggest_wo_matches(
             created_at=wo.created_at,
             updated_at=wo.updated_at,
         )
+        wo_date_str = (
+            wo.created_at.date().isoformat() if wo.created_at else None
+        )
+        criteria = _build_criteria(
+            matched_fields=matched_fields,
+            wo_date_str=wo_date_str,
+            to_date_str=to_date_str,
+            wo_route=wo.route,
+            to_route=trip_order.route,
+            wo_client=get_client_summary(clients, wo.client_id).name,
+            to_client=to_client_name,
+            wo_pickup=get_location_summary(
+                locations, wo.pickup_location_id,
+            ).name,
+            to_pickup=to_pickup_name,
+            wo_dropoff=get_location_summary(
+                locations, wo.dropoff_location_id,
+            ).name,
+            to_dropoff=to_dropoff_name,
+            wo_containers=_format_containers(wo_containers.get(wo.id, [])),
+            to_containers=to_containers_str,
+        )
+        match_score = sum(1 for c in criteria if c.match)
         suggestions.append(WOSuggestion(
             work_order=wo_out,
             confidence=_confidence(score),
             matched_fields=matched_fields,
             score=score,
+            criteria=criteria,
+            match_score=match_score,
+            max_score=len(criteria),
         ))
 
     suggestions.sort(key=lambda s: s.score, reverse=True)

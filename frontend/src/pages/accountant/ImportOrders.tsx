@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Upload, FileText, AlertTriangle, CheckCircle2, XCircle, Save, Tag } from 'lucide-react'
 import { Button, Input, Dialog, DialogContent } from '@/components/ui'
-import { PageHeader } from '@/components/shared/PageHeader'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { useClients } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
@@ -20,7 +19,8 @@ import type {
 const SKIP_FIELD = '__skip__'
 
 function todayIso(): string {
-  return new Date().toISOString().slice(0, 10)
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 function confidenceBadge(conf: number): { label: string; color: string } {
@@ -206,25 +206,24 @@ export function ImportOrders() {
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="Nhập đơn hàng từ Excel"
-        subtitle="Tải tệp khách hàng (loading list, discharging list, BDST, log bãi…) — hệ thống tự nhận dạng và đề xuất ánh xạ cột."
-        actions={
-          <div className="flex items-center gap-2">
-            <Button onClick={runPreview} disabled={!file || busy} className="btn-secondary h-9 px-4 text-sm">
-              {busy ? 'Đang phân tích...' : 'Phân tích tệp'}
-            </Button>
-            <Button
-              onClick={commit}
-              disabled={!preview || !clientId || !editedRows.length || committing}
-              className="btn-primary h-9 px-4 text-sm"
-            >
-              <CheckCircle2 className="w-4 h-4 mr-1.5" />
-              {committing ? 'Đang tạo...' : `Tạo ${editedRows.length} đơn hàng`}
-            </Button>
-          </div>
-        }
-      />
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+          Tải tệp khách hàng (loading list, discharging list, BDST, log bãi…) — hệ thống tự nhận dạng và đề xuất ánh xạ cột.
+        </p>
+        <div className="flex items-center gap-2">
+          <Button onClick={runPreview} disabled={!file || busy} className="btn-secondary h-9 px-4 text-sm">
+            {busy ? 'Đang phân tích...' : 'Phân tích tệp'}
+          </Button>
+          <Button
+            onClick={commit}
+            disabled={!preview || !clientId || !editedRows.length || committing}
+            className="btn-primary h-9 px-4 text-sm"
+          >
+            <CheckCircle2 className="w-4 h-4 mr-1.5" />
+            {committing ? 'Đang tạo...' : `Tạo ${editedRows.length} đơn hàng`}
+          </Button>
+        </div>
+      </div>
 
       {/* Results panel — appears after a successful commit */}
       {lastCommit && (lastCommit.created_trip_ids?.length ?? 0) > 0 && (

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
 import { api } from '@/services/api/client'
-import type { Pricing, WorkOrder, TripOrder, WorkType, Client, Route, SalaryPeriod, SuggestMatchesResponse, SuggestWosResponse, Location } from '@/data/domain'
+import type { Pricing, WorkOrder, TripOrder, WorkType, Client, Route, SalaryPeriod, SuggestMatchesResponse, SuggestWosResponse, Location, MatchScoresResponse, BulkMatchPair, BulkMatchResponse } from '@/data/domain'
 import type { RouteCreatePayload, RouteUpdatePayload } from '@/services/api/routes.api'
 import type { PricingCreatePayload, PricingUpdatePayload } from '@/services/api/pricings.api'
 import type { WorkOrderCreatePayload, WorkOrderUpdatePayload } from '@/services/api/workOrders.api'
@@ -50,6 +50,7 @@ export const queryKeys = {
   vendors: ['vendors'] as const,
   suggestMatches: (woId: number) => ['suggest-matches', woId] as const,
   suggestWos: (toId: number) => ['suggest-wos', toId] as const,
+  matchScores: (dateFrom?: string, dateTo?: string) => ['match-scores', dateFrom, dateTo] as const,
 }
 
 // ─── Query hooks (GET) ───────────────────────────────────────────────────────
@@ -596,6 +597,28 @@ export function useAutoMatch() {
   return useMutation({
     mutationFn: ({ dateFrom, dateTo }: { dateFrom?: string; dateTo?: string }) =>
       apiClient.autoMatch(dateFrom, dateTo),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.workOrders })
+      qc.invalidateQueries({ queryKey: queryKeys.tripOrders })
+    },
+  })
+}
+
+export function useMatchScores(dateFrom?: string, dateTo?: string) {
+  return useQuery({
+    queryKey: queryKeys.matchScores(dateFrom, dateTo),
+    queryFn: async () => {
+      const res = await apiClient.getMatchScores(dateFrom, dateTo)
+      return res.success ? res.data : null
+    },
+    enabled: !!dateFrom || !!dateTo,
+  })
+}
+
+export function useBulkMatch() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (pairs: BulkMatchPair[]) => apiClient.bulkMatch(pairs),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.workOrders })
       qc.invalidateQueries({ queryKey: queryKeys.tripOrders })
