@@ -10,14 +10,15 @@ import {
   Clock, CheckCircle2, Hash, Search, X,
   FileBarChart2,
 } from 'lucide-react'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { Button } from '@/components/ui'
+import { useLocation } from 'react-router-dom'
+import { Button, Dialog, DialogContent } from '@/components/ui'
 import { useMonthParams } from './use-month-params'
 import { useIsMobile } from '@/hooks/use-mobile'
 import type { TripOrder } from '@/data/domain'
 import { formatCurrencyFull as fmt } from '@/data/domain'
 import { ImportOrdersDialog } from './ImportOrders'
 import { CustomerSettlementReport } from './CustomerSettlementReport'
+import { TripDetailContent } from './TripDetail'
 
 // ─── Status config ─────────────────────────────────────────────────────────────
 
@@ -88,7 +89,6 @@ export function TripList() {
   const { data: trips = [], isLoading: loading } = useTripOrders({ dateFrom, dateTo })
   const { data: clients = [] } = useClients()
   const exportMutation = useExportTripOrdersExcel()
-  const navigate = useNavigate()
   const location = useLocation()
   const isMobile = useIsMobile(1024)
 
@@ -97,10 +97,9 @@ export function TripList() {
   const [clientFilter, setClientFilter] = useState<string>('ALL')
   const [search, setSearch] = useState('')
   const [showImport, setShowImport] = useState(false)
+  const [selectedTripId, setSelectedTripId] = useState<number | null>(null)
 
   const isDirector = location.pathname.startsWith('/director')
-  const basePath = isDirector ? '/director' : '/accountant'
-  const tripDetailPath = (id: number) => `${basePath}/trip/${id}`
 
   const clientOptions = useMemo(() => [
     { value: 'ALL', label: 'Tất cả khách hàng' },
@@ -148,20 +147,33 @@ export function TripList() {
 
   const hasFilters = !!(search || statusFilter !== 'ALL' || clientFilter !== 'ALL')
 
+  const detailDialog = selectedTripId !== null ? (
+    <Dialog open={selectedTripId !== null} onOpenChange={(open) => { if (!open) setSelectedTripId(null) }}>
+      <DialogContent className="max-w-3xl max-h-[90dvh] overflow-y-auto">
+        <TripDetailContent tripId={selectedTripId} onClose={() => setSelectedTripId(null)} />
+      </DialogContent>
+    </Dialog>
+  ) : null
+
   // Director uses direct navigation (no view toggle, no import dialog)
   if (isDirector) {
-    return <DirectorTripView
-      year={year} month={month} onPrev={onPrev} onNext={onNext}
-      trips={trips} loading={loading} filtered={filtered}
-      stats={stats} clientOptions={clientOptions}
-      statusFilter={statusFilter} setStatusFilter={setStatusFilter}
-      clientFilter={clientFilter} setClientFilter={setClientFilter}
-      search={search} setSearch={setSearch}
-      hasFilters={hasFilters} clearFilters={clearFilters}
-      handleExport={handleExport}
-      navigate={navigate} isMobile={isMobile} tripDetailPath={tripDetailPath}
-      columns={buildColumns(navigate, tripDetailPath)}
-    />
+    return (
+      <>
+        <DirectorTripView
+          year={year} month={month} onPrev={onPrev} onNext={onNext}
+          trips={trips} loading={loading} filtered={filtered}
+          stats={stats} clientOptions={clientOptions}
+          statusFilter={statusFilter} setStatusFilter={setStatusFilter}
+          clientFilter={clientFilter} setClientFilter={setClientFilter}
+          search={search} setSearch={setSearch}
+          hasFilters={hasFilters} clearFilters={clearFilters}
+          handleExport={handleExport}
+          isMobile={isMobile}
+          onSelectTrip={setSelectedTripId}
+        />
+        {detailDialog}
+      </>
+    )
   }
 
   // ─── Reports view (shared for desktop + mobile) ─────────────────────────────
@@ -285,9 +297,9 @@ export function TripList() {
           </div>
           <DataTablePro
             data={filtered}
-            columns={buildColumns(navigate, tripDetailPath)}
+            columns={buildColumns()}
             rowKey={(row) => row.id}
-            onRowClick={(row) => navigate(tripDetailPath(row.id))}
+            onRowClick={(row) => setSelectedTripId(row.id)}
             loading={loading}
             stickyHeader
             striped
@@ -314,6 +326,7 @@ export function TripList() {
         </div>
 
         <ImportOrdersDialog open={showImport} onClose={() => setShowImport(false)} />
+        {detailDialog}
       </div>
     )
   }
@@ -370,7 +383,7 @@ export function TripList() {
       <p className="typo-caption">{filtered.length} lệnh</p>
       <div className="space-y-2">
         {filtered.map(trip => (
-          <TripOrderCard key={trip.id} trip={trip} onClick={() => navigate(tripDetailPath(trip.id))} />
+          <TripOrderCard key={trip.id} trip={trip} onClick={() => setSelectedTripId(trip.id)} />
         ))}
         {filtered.length === 0 && (
           <p className="text-center text-sm py-12" style={{ color: 'var(--theme-text-muted)' }}>
@@ -380,6 +393,7 @@ export function TripList() {
       </div>
 
       <ImportOrdersDialog open={showImport} onClose={() => setShowImport(false)} />
+      {detailDialog}
     </div>
   )
 }
@@ -391,7 +405,7 @@ function DirectorTripView({
   trips, loading, filtered, stats, clientOptions,
   statusFilter, setStatusFilter, clientFilter, setClientFilter,
   search, setSearch, hasFilters, clearFilters, handleExport,
-  navigate, isMobile, tripDetailPath, columns,
+  isMobile, onSelectTrip,
 }: {
   year: number; month: number; onPrev: () => void; onNext: () => void
   trips: TripOrder[]; loading: boolean; filtered: TripOrder[]
@@ -401,9 +415,8 @@ function DirectorTripView({
   clientFilter: string; setClientFilter: (s: string) => void
   search: string; setSearch: (s: string) => void
   hasFilters: boolean; clearFilters: () => void; handleExport: () => void
-  navigate: ReturnType<typeof useNavigate>; isMobile: boolean
-  tripDetailPath: (id: number) => string
-  columns: Column<TripOrder>[]
+  isMobile: boolean
+  onSelectTrip: (id: number) => void
 }) {
   if (isMobile) {
     return (
@@ -428,7 +441,7 @@ function DirectorTripView({
         </div>
         <div className="space-y-2">
           {filtered.map(trip => (
-            <TripOrderCard key={trip.id} trip={trip} onClick={() => navigate(tripDetailPath(trip.id))} />
+            <TripOrderCard key={trip.id} trip={trip} onClick={() => onSelectTrip(trip.id)} />
           ))}
         </div>
       </div>
@@ -486,9 +499,9 @@ function DirectorTripView({
         </div>
         <DataTablePro
           data={filtered}
-          columns={columns}
+          columns={buildColumns()}
           rowKey={(row) => row.id}
-          onRowClick={(row) => navigate(tripDetailPath(row.id))}
+          onRowClick={(row) => onSelectTrip(row.id)}
           loading={loading}
           stickyHeader
           striped
@@ -505,10 +518,7 @@ function DirectorTripView({
 
 // ─── Shared desktop table columns ─────────────────────────────────────────────
 
-function buildColumns(
-  navigate: ReturnType<typeof useNavigate>,
-  tripDetailPath: (id: number) => string,
-): Column<TripOrder>[] {
+function buildColumns(): Column<TripOrder>[] {
   return [
     {
       key: 'date',
