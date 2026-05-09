@@ -2,13 +2,8 @@ import { useState, useCallback } from 'react'
 import { Check, X, Pencil, ChevronRight, ChevronDown, CheckCircle2, XCircle } from 'lucide-react'
 import { useUpdateWorkOrder, useUpdateTripOrder, useReconcile } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
+import { fmtDate } from '@/lib/date-utils'
 import type { CriterionBreakdown, WorkOrder, TripOrder, WorkType } from '@/data/domain'
-
-function fmtDate(dateStr: string | null): string {
-  if (!dateStr) return '—'
-  const d = new Date(dateStr)
-  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`
-}
 
 function scoreColor(matchScore: number, maxScore: number): string {
   const ratio = maxScore > 0 ? matchScore / maxScore : 0

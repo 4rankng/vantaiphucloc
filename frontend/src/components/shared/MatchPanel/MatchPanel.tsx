@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
+import { fmtDate } from '@/lib/date-utils'
 import {
   Check, CheckCircle2, Pencil, X, Plus, Truck, FileText,
   Sparkles, ChevronRight, ChevronDown, XCircle,
@@ -13,10 +14,6 @@ import type { TripOrder, WorkOrder, WorkType } from '@/data/domain'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function fmtDate(dateStr: string): string {
-  const d = new Date(dateStr)
-  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`
-}
 
 // ─── Inline editable field ────────────────────────────────────────────────────
 

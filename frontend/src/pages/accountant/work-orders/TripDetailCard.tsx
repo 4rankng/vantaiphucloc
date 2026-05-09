@@ -1,11 +1,7 @@
 import { Truck, Calendar, MapPin } from 'lucide-react'
 import { ContBadge } from '@/components/shared/ContBadge'
+import { fmtDate } from '@/lib/date-utils'
 import type { WorkOrder } from '@/data/domain'
-
-function fmtDate(dateStr: string): string {
-  const d = new Date(dateStr)
-  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`
-}
 
 interface TripDetailCardProps {
   workOrder: WorkOrder
