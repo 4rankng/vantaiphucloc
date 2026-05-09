@@ -129,7 +129,7 @@ export function CreateTrip() {
               disabled={importing}
               className="btn-ghost h-9 px-3 text-xs font-semibold"
             >
-              <Upload className="w-3.5 h-3.5" /> {importing ? 'Đang nhập...' : 'Nhập Excel'}
+              <Upload className="w-3.5 h-3.5" /> {importing ? 'Đang nhập...' : 'Nhập đơn'}
             </button>
           </>
         }
