@@ -16,7 +16,7 @@ const ALLOWED_ROLES: Role[] = ['director', 'superadmin']
 
 const DESKTOP_NAV: DesktopTopNavItem[] = [
   { href: '/director', label: 'Tổng quan', icon: LayoutDashboard, exact: true },
-  { href: '/director/partners', label: 'Đối tác', icon: Handshake },
+  { href: '/director/partners', label: 'Nhà thầu', icon: Handshake },
   { href: '/director/pricing', label: 'Bảng giá', icon: Receipt },
   { href: '/director/users', label: 'Tài khoản', icon: Users },
   { href: '/director/notifications', label: 'Thông báo', icon: Bell },
@@ -24,7 +24,7 @@ const DESKTOP_NAV: DesktopTopNavItem[] = [
 
 const MOBILE_TABS: TabItem[] = [
   { path: '/director', label: 'Tổng quan', icon: LayoutDashboard, exact: true },
-  { path: '/director/partners', label: 'Đối tác', icon: Handshake },
+  { path: '/director/partners', label: 'Nhà thầu', icon: Handshake },
   { path: '/director/pricing', label: 'Bảng giá', icon: Receipt },
   { path: '/director/users', label: 'Tài khoản', icon: Users },
   { path: '/director/notifications', label: 'Thông báo', icon: Bell, badge: 'notifications' },
