@@ -53,7 +53,7 @@ export function InlineSelect({ placeholder, value, options, onChange, onCreateNe
             color: selected || value ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)',
           }}
         >
-          <span className={`truncate ${selected || value ? 'font-medium' : ''}`}>
+          <span className={`${selected || value ? 'font-medium' : ''}`}>
             {selected?.label ?? (value || placeholder)}
           </span>
           <ChevronDown className="w-4 h-4 shrink-0 ml-2" style={{ color: 'var(--theme-text-muted)' }} />
