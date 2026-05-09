@@ -1,77 +1,78 @@
-import { useRef, useState, useMemo, useCallback } from 'react'
-import { useTripOrders, useImportTripOrders, useExportTripOrdersExcel } from '@/hooks/use-queries'
+import { useState, useMemo, useCallback } from 'react'
+import { useTripOrders, useExportTripOrdersExcel, useClients } from '@/hooks/use-queries'
 import { TripOrderCard } from '@/components/shared/TripOrderCard'
-import { ImportResultDialog } from '@/components/shared/ImportResultDialog'
-import { PageHeader } from '@/components/shared/PageHeader'
-import { FilterToolbar } from '@/components/shared/FilterToolbar'
 import { DataTablePro, type Column } from '@/components/shared/DataTablePro'
 import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
-import { StatsGrid } from '@/components/shared/StatsGrid'
+import { MonthNavigator } from '@/components/shared/MonthNavigator'
+import { InlineSelect } from '@/components/shared/InlineSelect'
 import {
-  Plus, Upload, Download, FileSpreadsheet, Calendar,
-  DollarSign, Clock, CheckCircle2, XCircle, Hash,
+  Upload, Download, Calendar,
+  Clock, CheckCircle2, Hash, Search, X,
 } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui'
-import { useToast } from '@/components/atoms/Toast'
-import { downloadTripOrderTemplate } from '@/services/api/tripOrders.api'
 import { useMonthParams } from './use-month-params'
 import { useIsMobile } from '@/hooks/use-mobile'
 import type { TripOrder, TripOrderStatus } from '@/data/domain'
 import { formatCurrencyFull as fmt } from '@/data/domain'
 
-const STATUS_FILTERS = [
+// ─── Status config: only 2 states that matter ─────────────────────────────────
+
+type SimpleStatus = 'ALL' | 'PENDING' | 'MATCHED'
+
+const STATUS_OPTIONS: { key: SimpleStatus; label: string; color?: string }[] = [
   { key: 'ALL', label: 'Tất cả' },
-  { key: 'DRAFT', label: 'Nháp', color: 'var(--theme-text-muted)' },
   { key: 'PENDING', label: 'Chờ đối soát', color: 'var(--theme-status-warning)' },
-  { key: 'COMPLETED', label: 'Hoàn thành', color: 'var(--theme-status-success)' },
-  { key: 'CANCELLED', label: 'Đã huỷ', color: 'var(--theme-status-error)' },
+  { key: 'MATCHED', label: 'Đã khớp', color: 'var(--theme-status-success)' },
 ]
 
-function getStatusVariant(status: TripOrderStatus, isConfirmed?: boolean): 'draft' | 'pending' | 'completed' | 'cancelled' | 'success' {
-  if (isConfirmed) return 'success'
-  switch (status) {
-    case 'DRAFT': return 'draft'
-    case 'PENDING': return 'pending'
-    case 'COMPLETED': return 'completed'
-    case 'CANCELLED': return 'cancelled'
-    default: return 'pending'
-  }
+function isPending(t: TripOrder) {
+  return t.status === 'PENDING' || t.status === 'DRAFT'
+}
+function isMatched(t: TripOrder) {
+  return t.status === 'COMPLETED' || t.isConfirmed
 }
 
-function getStatusLabel(status: TripOrderStatus, isConfirmed?: boolean): string {
-  if (isConfirmed) return 'Đã xác nhận'
-  switch (status) {
-    case 'DRAFT': return 'Nháp'
-    case 'PENDING': return 'Chờ đối soát'
-    case 'COMPLETED': return 'Hoàn thành'
-    case 'CANCELLED': return 'Đã huỷ'
-    default: return status
-  }
+function getStatusVariant(t: TripOrder): 'pending' | 'success' | 'neutral' {
+  if (isMatched(t)) return 'success'
+  if (isPending(t)) return 'pending'
+  return 'neutral'
 }
+function getStatusLabel(t: TripOrder): string {
+  if (isMatched(t)) return 'Đã khớp'
+  if (isPending(t)) return 'Chờ đối soát'
+  return t.status
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function TripList() {
   const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
   const { data: trips = [], isLoading: loading } = useTripOrders({ dateFrom, dateTo })
+  const { data: clients = [] } = useClients()
+  const exportMutation = useExportTripOrdersExcel()
   const navigate = useNavigate()
   const location = useLocation()
-  const toast = useToast()
   const isMobile = useIsMobile(1024)
-  const importMutation = useImportTripOrders()
-  const exportMutation = useExportTripOrdersExcel()
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [importing, setImporting] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<TripOrderStatus | 'ALL'>('ALL')
-  const [search, setSearch] = useState('')
-  const [importResult, setImportResult] = useState<{ created: number; errors: string[] } | null>(null)
 
-  const basePath = location.pathname.startsWith('/director') ? '/director' : '/accountant'
-  const createTripPath = `${basePath}/create-trip`
+  const [statusFilter, setStatusFilter] = useState<SimpleStatus>('ALL')
+  const [clientFilter, setClientFilter] = useState<string>('ALL')
+  const [search, setSearch] = useState('')
+
+  const isDirector = location.pathname.startsWith('/director')
+  const basePath = isDirector ? '/director' : '/accountant'
   const tripDetailPath = (id: number) => `${basePath}/trip/${id}`
+
+  const clientOptions = useMemo(() => [
+    { value: 'ALL', label: 'Tất cả khách hàng' },
+    ...clients.map(c => ({ value: String(c.id), label: c.name })),
+  ], [clients])
 
   const filtered = useMemo(() => {
     let list = trips
-    if (statusFilter !== 'ALL') list = list.filter(t => t.status === statusFilter)
+    if (statusFilter === 'PENDING') list = list.filter(isPending)
+    else if (statusFilter === 'MATCHED') list = list.filter(isMatched)
+    if (clientFilter !== 'ALL') list = list.filter(t => String(t.client.id) === clientFilter)
     if (search.trim()) {
       const q = search.toLowerCase()
       list = list.filter(t =>
@@ -82,65 +83,37 @@ export function TripList() {
       )
     }
     return list.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-  }, [trips, statusFilter, search])
+  }, [trips, statusFilter, clientFilter, search])
 
-  // KPI stats derived from the full (unfiltered) trip list
-  const stats = useMemo(() => {
-    const totalRevenue = trips.reduce((s, t) => s + (t.revenue ?? 0), 0)
-    const pending = trips.filter(t => t.status === 'PENDING' || t.status === 'DRAFT').length
-    const completed = trips.filter(t => t.status === 'COMPLETED').length
-    const cancelled = trips.filter(t => t.status === 'CANCELLED').length
-    return { totalRevenue, pending, completed, cancelled }
-  }, [trips])
-
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setImporting(true)
-    const res = await importMutation.mutateAsync(file)
-    if (res.success) {
-      if (res.data.errors.length > 0) {
-        setImportResult(res.data)
-      } else {
-        toast.success(`Nhập thành công ${res.data.created} lệnh`)
-      }
-    } else {
-      toast.error('Nhập thất bại')
-    }
-    setImporting(false)
-    if (fileInputRef.current) fileInputRef.current.value = ''
-  }
-
-  const handleDownloadTemplate = useCallback(async () => {
-    const blob = await downloadTripOrderTemplate()
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'mau_nhap_lenh.xlsx'
-    a.click()
-    URL.revokeObjectURL(url)
-  }, [])
+  const stats = useMemo(() => ({
+    pending: trips.filter(isPending).length,
+    matched: trips.filter(isMatched).length,
+    total: trips.length,
+  }), [trips])
 
   const handleExport = async () => {
     const blob = await exportMutation.mutateAsync()
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'lenh_dieu_hanh.xlsx'
+    a.download = 'don_hang.xlsx'
     a.click()
     URL.revokeObjectURL(url)
   }
 
-  const handleClearFilters = useCallback(() => {
+  const clearFilters = useCallback(() => {
     setSearch('')
     setStatusFilter('ALL')
+    setClientFilter('ALL')
   }, [])
 
-  // ─── Desktop table columns ────────────────────────────────────────────────
+  const hasFilters = !!(search || statusFilter !== 'ALL' || clientFilter !== 'ALL')
+
+  // ─── Desktop table columns ──────────────────────────────────────────────────
 
   const columns: Column<TripOrder>[] = [
     {
-      key: 'trip',
+      key: 'date',
       header: 'Ngày',
       accessor: (row) => (
         <p className="flex items-center gap-1 text-xs whitespace-nowrap" style={{ color: 'var(--theme-text-secondary)' }}>
@@ -170,7 +143,6 @@ export function TripList() {
     },
     {
       key: 'containers',
-      key: 'containers',
       header: 'Container',
       accessor: (row) => (
         <div className="flex gap-1 flex-nowrap">
@@ -195,8 +167,7 @@ export function TripList() {
           )}
         </div>
       ),
-      width: '200px',
-      hideOnMobile: true,
+      width: '220px',
     },
     {
       key: 'revenue',
@@ -209,283 +180,236 @@ export function TripList() {
       sortable: true,
       sortKey: (row) => row.revenue ?? 0,
       align: 'right',
-      width: '140px',
-      hideOnMobile: true,
+      width: '130px',
     },
     {
       key: 'status',
       header: 'Trạng thái',
       accessor: (row) => (
         <StatusBadgePro
-          variant={getStatusVariant(row.status, row.isConfirmed)}
-          label={getStatusLabel(row.status, row.isConfirmed)}
+          variant={getStatusVariant(row)}
+          label={getStatusLabel(row)}
           size="sm"
           showIcon
         />
       ),
-      width: '150px',
+      width: '140px',
     },
   ]
 
-  // ─── Loading skeleton ─────────────────────────────────────────────────────
-
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="h-20 rounded-lg skeleton-shimmer" />
-          ))}
-        </div>
-        <div className="space-y-2">
-          {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="h-16 rounded-lg skeleton-shimmer" />
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  // ─── Mobile view ──────────────────────────────────────────────────────────
+  // ─── Mobile ────────────────────────────────────────────────────────────────
 
   if (isMobile) {
     return (
-      <div className="space-y-3">
-        <PageHeader
-          title="Đơn hàng"
-          icon="document"
-          onAdd={() => navigate(createTripPath)}
-          addLabel="Tạo"
-        />
-
-        {/* KPI strip */}
+      <div className="space-y-3 pb-8">
+        <div className="flex items-center justify-between">
+          <h1 className="typo-h1">Đơn hàng</h1>
+          {!isDirector && (
+            <button
+              onClick={() => navigate('/accountant/import-orders')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold"
+              style={{ background: 'var(--theme-brand-primary)', color: '#fff' }}
+            >
+              <Upload className="w-4 h-4" />
+              Nhập Excel
+            </button>
+          )}
+        </div>
+        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
         <div className="grid grid-cols-2 gap-2">
-          <div className="card p-3 flex flex-col gap-0.5">
-            <p className="typo-label">
-              Doanh thu
-            </p>
-            <p className="font-mono text-sm" style={{ color: 'var(--theme-text-primary)' }}>
-              {fmt(stats.totalRevenue)}
-            </p>
-          </div>
-          <div className="card p-3 flex flex-col gap-0.5">
-            <p className="typo-label">
-              Tổng lệnh
-            </p>
-            <p className="font-mono text-sm" style={{ color: 'var(--theme-text-primary)' }}>
-              {trips.length} lệnh
-            </p>
-          </div>
-        </div>
-
-        {/* Action row */}
-        <div className="flex items-center gap-2">
-          <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden" />
-          <Button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={importing}
-            className="flex items-center gap-1.5 h-9 px-3 text-xs font-semibold rounded-lg flex-1"
-            style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)', border: '1px solid var(--theme-border-default)' }}
+          <button
+            onClick={() => setStatusFilter(statusFilter === 'PENDING' ? 'ALL' : 'PENDING')}
+            className="card p-3 flex flex-col gap-0.5 text-left transition active:scale-[0.98]"
+            style={{ borderColor: statusFilter === 'PENDING' ? 'var(--theme-status-warning)' : undefined, borderWidth: statusFilter === 'PENDING' ? 2 : 1 }}
           >
-            <Upload className="w-3.5 h-3.5" />
-          </Button>
+            <p className="typo-label flex items-center gap-1"><Clock className="h-3 w-3" style={{ color: 'var(--theme-status-warning)' }} />Chờ đối soát</p>
+            <p className="text-lg font-bold" style={{ color: 'var(--theme-status-warning)' }}>{stats.pending}</p>
+          </button>
+          <button
+            onClick={() => setStatusFilter(statusFilter === 'MATCHED' ? 'ALL' : 'MATCHED')}
+            className="card p-3 flex flex-col gap-0.5 text-left transition active:scale-[0.98]"
+            style={{ borderColor: statusFilter === 'MATCHED' ? 'var(--theme-status-success)' : undefined, borderWidth: statusFilter === 'MATCHED' ? 2 : 1 }}
+          >
+            <p className="typo-label flex items-center gap-1"><CheckCircle2 className="h-3 w-3" style={{ color: 'var(--theme-status-success)' }} />Đã khớp</p>
+            <p className="text-lg font-bold" style={{ color: 'var(--theme-status-success)' }}>{stats.matched}</p>
+          </button>
         </div>
-
-        <FilterToolbar
-          search={search}
-          onSearchChange={setSearch}
-          searchPlaceholder="Tìm mã lệnh, khách hàng, container..."
-          statusOptions={STATUS_FILTERS.map(s => ({ ...s, key: s.key }))}
-          selectedStatus={statusFilter}
-          onStatusChange={(s) => setStatusFilter(s as TripOrderStatus | 'ALL')}
-          onClearFilters={handleClearFilters}
-        />
-
-        <p className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
-          {filtered.length} lệnh
-        </p>
-
-        {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-            <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-              {search || statusFilter !== 'ALL' ? 'Không tìm thấy lệnh nào' : 'Chưa có đơn hàng'}
+        <div className="flex gap-1">
+          {STATUS_OPTIONS.map(s => (
+            <button key={s.key} onClick={() => setStatusFilter(s.key)}
+              className="px-3 py-1 rounded-full text-xs font-semibold border transition"
+              style={{
+                background: statusFilter === s.key ? (s.color ?? 'var(--theme-brand-primary)') : 'var(--theme-bg-secondary)',
+                borderColor: statusFilter === s.key ? (s.color ?? 'var(--theme-brand-primary)') : 'var(--theme-border-default)',
+                color: statusFilter === s.key ? '#fff' : 'var(--theme-text-secondary)',
+              }}
+            >{s.label}</button>
+          ))}
+        </div>
+        <p className="typo-caption">{filtered.length} lệnh</p>
+        <div className="space-y-2">
+          {filtered.map(trip => (
+            <TripOrderCard key={trip.id} trip={trip} onClick={() => navigate(tripDetailPath(trip.id))} />
+          ))}
+          {filtered.length === 0 && (
+            <p className="text-center text-sm py-12" style={{ color: 'var(--theme-text-muted)' }}>
+              {hasFilters ? 'Không tìm thấy lệnh nào' : 'Chưa có đơn hàng'}
             </p>
-            {!search && statusFilter === 'ALL' && (
-              <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Nhấn "Tạo" để bắt đầu</p>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {filtered.map(trip => (
-              <TripOrderCard
-                key={trip.id}
-                trip={trip}
-                onClick={() => navigate(tripDetailPath(trip.id))}
-              />
-            ))}
-          </div>
-        )}
-
-        {importResult && (
-          <ImportResultDialog
-            open={!!importResult}
-            onClose={() => setImportResult(null)}
-            result={importResult}
-            onCreateManual={() => navigate(createTripPath)}
-          />
-        )}
+          )}
+        </div>
       </div>
     )
   }
 
-  // ─── Desktop view ─────────────────────────────────────────────────────────
-
-  // Action buttons
-  const actionButtons = (
-    <div className="flex items-center gap-2 shrink-0">
-      <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden" />
-      <Button
-        onClick={handleDownloadTemplate}
-        className="btn-ghost h-9 px-3 text-xs font-semibold"
-      >
-        <FileSpreadsheet className="w-3.5 h-3.5" /> Tải mẫu
-      </Button>
-      <Button
-        onClick={() => fileInputRef.current?.click()}
-        disabled={importing}
-        className="btn-ghost h-9 px-3 text-xs font-semibold"
-      >
-        <Upload className="w-3.5 h-3.5" /> {importing ? 'Đang nhập...' : 'Nhập'}
-      </Button>
-      <Button
-        onClick={handleExport}
-        className="btn-ghost h-9 px-3 text-xs font-semibold"
-      >
-        <Download className="w-3.5 h-3.5" /> Xuất
-      </Button>
-    </div>
-  )
+  // ─── Desktop ───────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-5">
-      {/* Page header with actions */}
-      <PageHeader
-        title="Đơn hàng"
-        icon="document"
-        onAdd={() => navigate(createTripPath)}
-        addLabel="Tạo đơn"
-        actions={actionButtons}
-      />
 
-      {/* KPI stats */}
-      <StatsGrid
-        columns={4}
-        stats={[
-          {
-            label: 'Doanh thu tháng',
-            value: fmt(stats.totalRevenue),
-            icon: <DollarSign className="h-5 w-5" />,
-            onClick: () => setStatusFilter('ALL'),
-          },
-          {
-            label: 'Chờ đối soát',
-            value: String(stats.pending),
-            valueColor: stats.pending > 0 ? 'var(--theme-status-warning)' : undefined,
-            icon: <Clock className="h-5 w-5" />,
-            onClick: () => setStatusFilter('PENDING'),
-          },
-          {
-            label: 'Hoàn thành',
-            value: String(stats.completed),
-            valueColor: stats.completed > 0 ? 'var(--theme-status-success)' : undefined,
-            icon: <CheckCircle2 className="h-5 w-5" />,
-            onClick: () => setStatusFilter('COMPLETED'),
-          },
-          {
-            label: 'Đã huỷ',
-            value: String(stats.cancelled),
-            valueColor: stats.cancelled > 0 ? 'var(--theme-status-error)' : undefined,
-            icon: <XCircle className="h-5 w-5" />,
-            onClick: () => setStatusFilter('CANCELLED'),
-          },
-        ]}
-      />
-
-      {/* Table card */}
-      <div className="card overflow-hidden">
-        {/* Table toolbar */}
-        <div className="flex items-center gap-3 p-3 border-b" style={{ borderColor: 'var(--theme-border-default)' }}>
-          <FilterToolbar
-            search={search}
-            onSearchChange={setSearch}
-            searchPlaceholder="Tìm mã lệnh, khách hàng, container..."
-            statusOptions={STATUS_FILTERS.map(s => ({ ...s, key: s.key }))}
-            selectedStatus={statusFilter}
-            onStatusChange={(s) => setStatusFilter(s as TripOrderStatus | 'ALL')}
-            onClearFilters={handleClearFilters}
-            compact
-          />
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="typo-display">Đơn hàng</h1>
+          <p className="typo-body-sm mt-0.5">Tháng {month}/{year} · {stats.total} lệnh</p>
         </div>
-
-        {/* Data table — no outer border since we're already inside the card */}
-        <div className="hidden lg:block overflow-x-auto">
-          <DataTablePro
-            data={filtered}
-            columns={columns}
-            rowKey={(row) => row.id}
-            onRowClick={(row) => navigate(tripDetailPath(row.id))}
-            loading={loading}
-            stickyHeader
-            striped
-            emptyState={
-              <div className="py-12 text-center">
-                <div
-                  className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3"
-                  style={{ background: 'var(--theme-bg-tertiary)' }}
-                >
-                  <Hash className="h-6 w-6" style={{ color: 'var(--theme-text-muted)' }} />
-                </div>
-                <p className="text-sm font-semibold mb-1" style={{ color: 'var(--theme-text-primary)' }}>
-                  {search || statusFilter !== 'ALL' ? 'Không tìm thấy lệnh nào' : 'Chưa có đơn hàng'}
-                </p>
-                {!search && statusFilter === 'ALL' && (
-                  <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                    Nhấn "Tạo đơn" để bắt đầu
-                  </p>
-                )}
-              </div>
-            }
-          />
-        </div>
-
-        {/* Mobile: card list */}
-        <div className="lg:hidden divide-y" style={{ borderColor: 'var(--theme-border-light)' }}>
-          {filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-              <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                {search || statusFilter !== 'ALL' ? 'Không tìm thấy lệnh nào' : 'Chưa có đơn hàng'}
-              </p>
-            </div>
-          ) : (
-            filtered.map(trip => (
-              <TripOrderCard
-                key={trip.id}
-                trip={trip}
-                onClick={() => navigate(tripDetailPath(trip.id))}
-              />
-            ))
+        <div className="flex items-center gap-2">
+          <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
+          <Button onClick={handleExport} className="btn-ghost h-9 px-3 text-xs font-semibold">
+            <Download className="w-3.5 h-3.5 mr-1" /> Xuất
+          </Button>
+          {!isDirector && (
+            <button
+              onClick={() => navigate('/accountant/import-orders')}
+              className="flex items-center gap-1.5 h-9 px-4 rounded-lg text-sm font-semibold transition hover:opacity-90 active:scale-[0.98]"
+              style={{ background: 'var(--theme-brand-primary)', color: '#fff' }}
+            >
+              <Upload className="w-4 h-4" />
+              Nhập Excel
+            </button>
           )}
         </div>
       </div>
 
-      {importResult && (
-        <ImportResultDialog
-          open={!!importResult}
-          onClose={() => setImportResult(null)}
-          result={importResult}
-          onCreateManual={() => navigate(createTripPath)}
+      {/* 2-stat KPI cards */}
+      <div className="grid grid-cols-2 gap-3 max-w-sm">
+        <button
+          onClick={() => setStatusFilter(statusFilter === 'PENDING' ? 'ALL' : 'PENDING')}
+          className="card p-4 flex items-center gap-3 text-left transition hover:shadow-md active:scale-[0.98]"
+          style={{
+            borderWidth: statusFilter === 'PENDING' ? 2 : 1,
+            borderColor: statusFilter === 'PENDING' ? 'var(--theme-status-warning)' : 'var(--theme-border-default)',
+          }}
+        >
+          <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'color-mix(in srgb, var(--theme-status-warning) 12%, transparent)' }}>
+            <Clock className="h-5 w-5" style={{ color: 'var(--theme-status-warning)' }} />
+          </div>
+          <div>
+            <p className="text-xl font-bold leading-none" style={{ color: 'var(--theme-status-warning)' }}>{stats.pending}</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Chờ đối soát</p>
+          </div>
+        </button>
+        <button
+          onClick={() => setStatusFilter(statusFilter === 'MATCHED' ? 'ALL' : 'MATCHED')}
+          className="card p-4 flex items-center gap-3 text-left transition hover:shadow-md active:scale-[0.98]"
+          style={{
+            borderWidth: statusFilter === 'MATCHED' ? 2 : 1,
+            borderColor: statusFilter === 'MATCHED' ? 'var(--theme-status-success)' : 'var(--theme-border-default)',
+          }}
+        >
+          <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'color-mix(in srgb, var(--theme-status-success) 12%, transparent)' }}>
+            <CheckCircle2 className="h-5 w-5" style={{ color: 'var(--theme-status-success)' }} />
+          </div>
+          <div>
+            <p className="text-xl font-bold leading-none" style={{ color: 'var(--theme-status-success)' }}>{stats.matched}</p>
+            <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Đã khớp</p>
+          </div>
+        </button>
+      </div>
+
+      {/* Table card */}
+      <div className="card overflow-hidden">
+        {/* Toolbar */}
+        <div className="flex items-center gap-3 p-3 flex-wrap" style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
+          {/* Search */}
+          <div className="relative min-w-[200px] flex-1 max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5" style={{ color: 'var(--theme-text-muted)' }} />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Tìm khách hàng, container..."
+              className="w-full h-8 pl-8 pr-3 text-xs rounded-lg border"
+              style={{ background: 'var(--theme-bg-tertiary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
+            />
+          </div>
+
+          {/* Customer filter */}
+          <div className="w-44 shrink-0">
+            <InlineSelect
+              value={clientFilter}
+              options={clientOptions}
+              onChange={setClientFilter}
+              placeholder="Tất cả khách hàng"
+            />
+          </div>
+
+          {/* Status pills */}
+          <div className="flex gap-1">
+            {STATUS_OPTIONS.map(s => (
+              <button
+                key={s.key}
+                onClick={() => setStatusFilter(s.key)}
+                className="px-3 py-1 rounded-full text-xs font-semibold border transition"
+                style={{
+                  background: statusFilter === s.key ? (s.color ?? 'var(--theme-brand-primary)') : 'transparent',
+                  borderColor: statusFilter === s.key ? (s.color ?? 'var(--theme-brand-primary)') : 'var(--theme-border-default)',
+                  color: statusFilter === s.key ? '#fff' : 'var(--theme-text-secondary)',
+                }}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+
+          {hasFilters && (
+            <button onClick={clearFilters} className="flex items-center gap-1 text-xs font-medium transition hover:opacity-70" style={{ color: 'var(--theme-text-muted)' }}>
+              <X className="h-3 w-3" /> Xoá lọc
+            </button>
+          )}
+
+          <p className="ml-auto text-xs" style={{ color: 'var(--theme-text-muted)' }}>{filtered.length} lệnh</p>
+        </div>
+
+        {/* Data table */}
+        <DataTablePro
+          data={filtered}
+          columns={columns}
+          rowKey={(row) => row.id}
+          onRowClick={(row) => navigate(tripDetailPath(row.id))}
+          loading={loading}
+          stickyHeader
+          striped
+          emptyState={
+            <div className="py-16 text-center">
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-3" style={{ background: 'var(--theme-bg-tertiary)' }}>
+                <Hash className="h-6 w-6" style={{ color: 'var(--theme-text-muted)' }} />
+              </div>
+              <p className="text-sm font-semibold mb-1" style={{ color: 'var(--theme-text-primary)' }}>
+                {hasFilters ? 'Không tìm thấy lệnh nào' : 'Chưa có đơn hàng'}
+              </p>
+              {!hasFilters && !isDirector && (
+                <button
+                  onClick={() => navigate('/accountant/import-orders')}
+                  className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90"
+                  style={{ background: 'var(--theme-brand-primary)', color: '#fff' }}
+                >
+                  <Upload className="w-4 h-4" /> Nhập Excel từ khách hàng
+                </button>
+              )}
+            </div>
+          }
         />
-      )}
+      </div>
     </div>
   )
 }
