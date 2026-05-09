@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Download, FileSpreadsheet } from 'lucide-react'
 import { Button, Input } from '@/components/ui'
-import { PageHeader } from '@/components/shared/PageHeader'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { useClients } from '@/hooks/use-queries'
 import { apiClient } from '@/services/api'
@@ -90,20 +89,19 @@ export function CustomerSettlementReport() {
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="Báo cáo khách hàng"
-        subtitle="Xuất bảng kê thanh toán + sản lượng theo kỳ (kỳ 26 tháng trước → 25 tháng này)."
-        actions={
-          <Button
-            onClick={handleExport}
-            disabled={!canExport}
-            className="btn-primary h-9 px-4 text-sm"
-          >
-            <Download className="w-4 h-4 mr-1.5" />
-            {downloading ? 'Đang xuất...' : 'Xuất Excel'}
-          </Button>
-        }
-      />
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+          Xuất bảng kê thanh toán + sản lượng theo kỳ (kỳ 26 tháng trước → 25 tháng này).
+        </p>
+        <Button
+          onClick={handleExport}
+          disabled={!canExport}
+          className="btn-primary h-9 px-4 text-sm"
+        >
+          <Download className="w-4 h-4 mr-1.5" />
+          {downloading ? 'Đang xuất...' : 'Xuất Excel'}
+        </Button>
+      </div>
 
       <div className="card p-5 max-w-3xl">
         <div className="flex items-center gap-2 mb-5">

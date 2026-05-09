@@ -1,6 +1,11 @@
 import { useState, useCallback, useMemo, useRef, useEffect, type ReactNode } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { LogOut, ChevronDown, ChevronUp, Bell } from 'lucide-react'
+import {
+  LogOut, ChevronDown, ChevronUp,
+  Home, Handshake, Route, Plus, Receipt, Settings, Wallet,
+  Users, Truck, TrendingUp, ClipboardList, Clock, FileText,
+  UserCog, History, Bell as BellIcon,
+} from 'lucide-react'
 import { useSidebar } from '@/components/ui/sidebar'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
@@ -192,11 +197,6 @@ const NavGroup = ({ label, groupKey, items, isCollapsed, isExpanded, onToggle, o
 
 // ─── Menu Definitions per Role ──────────────────────────────────────
 
-import {
-  Home, Handshake, Route, Plus, Receipt, Settings, Wallet,
-  Users, Truck, TrendingUp, ClipboardList, Clock, FileText,
-  UserCog, History, Bell as BellIcon,
-} from 'lucide-react'
 
 const ACCOUNTANT_MENU: MenuItem[] = [
   { title: 'Tổng quan', icon: Home, path: '/accountant', end: true, group: 'top' },

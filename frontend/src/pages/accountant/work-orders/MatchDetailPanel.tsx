@@ -20,11 +20,10 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
   const suggestions = suggestionsData?.suggestions ?? []
 
   const [submittingId, setSubmittingId] = useState<number | null>(null)
-  const [dismissedIds, setDismissedIds] = useState<Set<number>>(new Set())
 
   const visibleSuggestions = useMemo(
-    () => suggestions.filter(s => !dismissedIds.has(s.tripOrder.id)),
-    [suggestions, dismissedIds]
+    () => suggestions,
+    [suggestions]
   )
 
   const perfectMatches = useMemo(
@@ -72,10 +71,6 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
       toast.error('Lỗi', 'Không thể ghép hàng loạt')
     }
   }, [workOrder, perfectMatches, bulkMatch, toast, onMatchSuccess])
-
-  const handleDismiss = useCallback((tripOrderId: number) => {
-    setDismissedIds(prev => new Set(prev).add(tripOrderId))
-  }, [])
 
   const invalidateSuggestions = useCallback(() => {
     // Force refetch by relying on react-query invalidation from the reconcile mutation
@@ -167,7 +162,6 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
             tripOrder={s.tripOrder}
             workOrder={workOrder}
             onConfirm={() => handleMatch(s.tripOrder.id)}
-            onDismiss={() => handleDismiss(s.tripOrder.id)}
             submitting={submittingId === s.tripOrder.id}
             onEdited={invalidateSuggestions}
           />

@@ -1,6 +1,5 @@
 import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { Settings, Wallet, Tag, Users, UserCog, Truck, ArrowLeft } from 'lucide-react'
-import { PageHeader } from '@/components/shared/PageHeader'
 
 type SettingSection = {
   key: string

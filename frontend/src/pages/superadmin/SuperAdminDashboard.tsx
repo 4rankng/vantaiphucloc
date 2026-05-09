@@ -1,5 +1,4 @@
-import { Users, Phone, CreditCard, Truck } from 'lucide-react'
-import { PageHeader } from '@/components/shared/PageHeader/PageHeader'
+import { Users, Phone, CreditCard, Truck, Plus } from 'lucide-react'
 import { EmptyState } from '@/components/shared/EmptyState/EmptyState'
 import { BrandIcon } from '@/components/atoms/BrandIcon'
 import { FilterPills } from '@/components/shared/FilterPills'
@@ -33,14 +32,15 @@ export function SuperAdminDashboard({
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
-      <PageHeader
-        title="Tổng quan"
-        icon="analytics"
-        subtitle="Quản lý tài khoản và hệ thống"
-        onAdd={onCreateUser}
-        addLabel="Tạo tài khoản"
-      />
+      {/* Actions */}
+      {onCreateUser && (
+        <div className="flex justify-end">
+          <button onClick={onCreateUser} className="btn-primary">
+            <Plus size={16} strokeWidth={2.25} />
+            <span>Tạo tài khoản</span>
+          </button>
+        </div>
+      )}
 
       {/* KPI cards grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

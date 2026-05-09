@@ -1,10 +1,9 @@
 import { useCallback, useMemo, useState } from 'react'
-import { Pencil, Trash2, Route as RouteIcon, Container } from 'lucide-react'
+import { Pencil, Trash2, Route as RouteIcon, Container, Plus } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
-import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { BrandIcon } from '@/components/atoms/BrandIcon'
 import { useRoutes, useCreateRoute, useUpdateRoute, useDeleteRoute, useLocations } from '@/hooks/use-queries'
@@ -104,22 +103,20 @@ export function RouteList() {
 
   return (
     <div>
-      {/* Page header */}
-      <PageHeader
-        title="Cung đường"
-        icon="route"
-        onAdd={handleOpenCreate}
-        addLabel="Thêm"
-        actions={
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Tìm cung đường..."
-            className="search-pill max-w-sm"
-          />
-        }
-      />
+      {/* Actions toolbar */}
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Tìm cung đường..."
+          className="search-pill max-w-sm"
+        />
+        <button onClick={handleOpenCreate} className="btn-primary">
+          <Plus size={16} strokeWidth={2.25} />
+          <span>Thêm</span>
+        </button>
+      </div>
 
       {filtered.length === 0 ? (
         <div className="card">
