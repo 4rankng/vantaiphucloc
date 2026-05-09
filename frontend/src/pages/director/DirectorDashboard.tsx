@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { getTripOrderStatusBadge } from '@/data/domain'
 import { useTripOrders } from '@/hooks/use-queries'
 import { StatusBadge } from '@/components/shared/StatusBadge'
-import { BrandIcon, type BrandIconName } from '@/components/atoms/BrandIcon'
+import { BrandIcon } from '@/components/atoms/BrandIcon'
 import { BarChartWidget } from '@/components/shared/Charts'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -187,47 +187,6 @@ export function DirectorDashboard() {
           trend={revenueThisMonth > 0 ? '+15%' : undefined}
           color="info"
         />
-      </section>
-
-      {/* Quick actions */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-            Truy cập nhanh
-          </h2>
-          <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-            {MONTH_NAMES[month.month - 1]} {month.year}
-          </span>
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {([
-            { label: 'Quản lý nhân sự', desc: 'Tài khoản & tài xế', path: '/director/users', icon: 'team' },
-            { label: 'Đối tác', desc: 'Khách hàng, nhà thầu', path: '/director/partners', icon: 'warehouse' },
-            { label: 'Lệnh vận chuyển', desc: 'Tạo & theo dõi lệnh', path: '/director/trips', icon: 'truck' },
-            { label: 'Bảng giá', desc: 'Giá theo tuyến', path: '/director/pricing', icon: 'invoice' },
-          ] as { label: string; desc: string; path: string; icon: BrandIconName }[]).map(a => (
-            <button
-              key={a.label}
-              onClick={() => navigate(a.path)}
-              className="card-interactive group flex flex-col items-center gap-2 p-4 text-center"
-            >
-              <div
-                className="flex h-14 w-14 items-center justify-center rounded-2xl transition-transform group-hover:scale-110"
-                style={{ background: 'var(--theme-brand-primary-light)' }}
-              >
-                <BrandIcon name={a.icon} size={36} />
-              </div>
-              <div className="min-w-0">
-                <div className="text-sm font-semibold leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{a.label}</div>
-                <div className="mt-0.5 text-xs" style={{ color: 'var(--theme-text-muted)' }}>{a.desc}</div>
-              </div>
-              <ArrowUpRight
-                className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
-                style={{ color: 'var(--theme-brand-primary)' }}
-              />
-            </button>
-          ))}
-        </div>
       </section>
 
       {/* Main content: recent trips + weekly chart */}

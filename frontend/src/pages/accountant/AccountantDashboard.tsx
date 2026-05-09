@@ -12,7 +12,6 @@ import {
 import { useIsMobile } from '@/hooks/use-mobile'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { StatsGrid } from '@/components/shared/StatsGrid'
-import { QuickActionsBar } from '@/components/shared/QuickActionsBar'
 import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
 import { EditDialog } from '@/components/shared/EditDialog'
 import { Input } from '@/components/ui'
@@ -20,8 +19,8 @@ import { Label } from '@/components/ui'
 import { useMonthParams } from './use-month-params'
 import { formatCurrencyFull as fmt, type WorkOrder, type TripOrder } from '@/data/domain'
 import {
-  Sparkles, ArrowRight,
-  CheckCircle2, Plus, Wallet, Tag, Users, MapPin,
+  ArrowRight,
+  CheckCircle2, Plus, Wallet, Tag, Users,
   FileText, Truck, Car, Briefcase, DollarSign, Clock, AlertTriangle,
   Calendar, User, Pencil,
 } from 'lucide-react'
@@ -704,179 +703,104 @@ function DesktopDashboard() {
     () => workOrders.filter(w => w.status !== 'MATCHED' && w.status !== 'COMPLETED').slice(0, 10),
     [workOrders],
   )
-  const matchCandidates = useMemo(() => pendingWOs.slice(0, 5), [pendingWOs])
-
-  // KPI cards — 4-up grid with delta
+  // KPI cards — prioritise what kế toán acts on first
   const stats = [
     {
-      label: 'Doanh thu tháng',
-      value: fmt(revenue),
-      icon: <DollarSign className="h-5 w-5" />,
-      onClick: () => navigate('/accountant/trips'),
-    },
-    {
-      label: 'Chi phí tài xế',
-      value: fmt(totalDriverSalary),
-      icon: <Wallet className="h-5 w-5" />,
+      label: 'Phiếu TX chưa ghép',
+      value: String(pendingWOs.length),
+      valueColor: pendingWOs.length > 0 ? 'var(--theme-status-warning)' : undefined,
+      icon: <AlertTriangle className="h-5 w-5" />,
       onClick: () => navigate('/accountant/work-orders'),
     },
     {
-      label: 'Đơn chờ ghép',
+      label: 'Đơn chờ đối soát',
       value: String(pendingTrips.length),
       valueColor: pendingTrips.length > 0 ? 'var(--theme-status-warning)' : undefined,
       icon: <Clock className="h-5 w-5" />,
       onClick: () => navigate('/accountant/trips'),
     },
     {
-      label: 'Phiếu chưa ghép',
-      value: String(pendingWOs.length),
-      valueColor: pendingWOs.length > 0 ? 'var(--theme-status-warning)' : undefined,
-      icon: <AlertTriangle className="h-5 w-5" />,
-      onClick: () => navigate('/accountant/work-orders'),
+      label: 'Lương sản lượng TX',
+      value: fmt(totalDriverSalary),
+      icon: <Wallet className="h-5 w-5" />,
+      onClick: () => navigate('/accountant/salary-setup'),
+    },
+    {
+      label: 'Doanh thu tháng',
+      value: fmt(revenue),
+      icon: <DollarSign className="h-5 w-5" />,
+      onClick: () => navigate('/accountant/trips'),
     },
   ]
 
   return (
     <div className="space-y-6">
-      {/* Page header with title + month selector + primary action */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="typo-display">Tổng quan</h1>
           <p className="typo-body-sm mt-1">Tháng {month}/{year}</p>
         </div>
         <div className="flex items-center gap-3">
-          <MonthNavigator
-            year={year}
-            month={month}
-            onPrev={onPrev}
-            onNext={onNext}
-          />
-          <button
-            onClick={() => navigate('/accountant/create-trip')}
-            className="btn-primary"
-          >
+          <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
+          <button onClick={() => navigate('/accountant/import-orders')} className="btn-primary">
             <Plus size={16} strokeWidth={2.25} />
-            <span>Tạo chuyến</span>
+            <span>Nhập Excel</span>
           </button>
         </div>
       </div>
 
-      {/* 4-up KPI grid — responsive: 2-col mobile, 4-col lg+ */}
+      {/* KPI grid */}
       <StatsGrid stats={stats} columns={4} />
 
-      {/* 2-column workbench (lg+) with recent trips + activity feed */}
+      {/* 2-column: unmatched drivers (left, primary) + recent orders (right) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Left: Recent trips table */}
-        <div
-          className="card p-4 flex flex-col"
-          style={{
-            background: 'var(--theme-bg-secondary)',
-            borderColor: 'var(--theme-border-default)',
-          }}
-        >
-          <div className="mb-4">
-            <h2 className="typo-h2" style={{ color: 'var(--theme-text-primary)' }}>
-              Đơn hàng gần đây
-            </h2>
+        {/* Left: Phiếu TX chưa ghép — kế toán's primary daily task */}
+        <div className="card p-4 flex flex-col" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}>
+          <div className="flex items-center gap-2 mb-4">
+            <AlertTriangle className="h-4 w-4 shrink-0" style={{ color: 'var(--theme-status-warning)' }} />
+            <h2 className="typo-h2" style={{ color: 'var(--theme-text-primary)' }}>Phiếu TX chưa ghép</h2>
+            {pendingWOs.length > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold" style={{ background: 'var(--theme-status-warning)', color: '#fff' }}>
+                {pendingWOs.length}
+              </span>
+            )}
           </div>
-          <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="flex-1 overflow-y-auto min-h-0" style={{ maxHeight: '320px' }}>
+            {unmatchedWOs.length === 0 ? (
+              <EmptyState icon={CheckCircle2} text="Tất cả phiếu đã ghép xong" />
+            ) : (
+              unmatchedWOs.map((wo, i) => (
+                <UnmatchedRow key={wo.id} wo={wo} isLast={i === unmatchedWOs.length - 1} onClick={() => navigate(`/accountant/match/${wo.id}`)} />
+              ))
+            )}
+          </div>
+          <div style={{ borderTop: '1px solid var(--theme-border-default)', paddingTop: 12, marginTop: 12 }}>
+            <button onClick={() => navigate('/accountant/work-orders')} className="flex items-center justify-center gap-1.5 w-full text-xs font-semibold transition hover:opacity-70" style={{ color: 'var(--theme-brand-primary)' }}>
+              Mở trang Ghép chuyến <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Right: Đơn hàng gần đây */}
+        <div className="card p-4 flex flex-col" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}>
+          <div className="mb-4">
+            <h2 className="typo-h2" style={{ color: 'var(--theme-text-primary)' }}>Đơn hàng gần đây</h2>
+          </div>
+          <div className="flex-1 overflow-y-auto min-h-0" style={{ maxHeight: '320px' }}>
             {sortedTrips.length === 0 ? (
               <EmptyState icon={FileText} text="Chưa có lệnh nào" illustrated />
             ) : (
               sortedTrips.map((trip, i) => (
-                <TripRow
-                  key={trip.id}
-                  trip={trip}
-                  isLast={i === sortedTrips.length - 1}
-                  onClick={() => navigate(`/accountant/trip/${trip.id}`)}
-                />
+                <TripRow key={trip.id} trip={trip} isLast={i === sortedTrips.length - 1} onClick={() => navigate(`/accountant/trip/${trip.id}`)} />
               ))
             )}
           </div>
           <div style={{ borderTop: '1px solid var(--theme-border-default)', paddingTop: 12, marginTop: 12 }}>
-            <button
-              onClick={() => navigate('/accountant/trips')}
-              className="text-xs font-semibold transition hover:opacity-70 w-full text-center"
-              style={{ color: 'var(--theme-brand-primary)' }}
-            >
-              Xem tất cả lệnh
+            <button onClick={() => navigate('/accountant/trips')} className="flex items-center justify-center gap-1.5 w-full text-xs font-semibold transition hover:opacity-70" style={{ color: 'var(--theme-brand-primary)' }}>
+              Xem tất cả đơn hàng <ArrowRight className="h-3.5 w-3.5" />
             </button>
           </div>
-        </div>
-
-        {/* Right: Notifications / Activity feed */}
-        <div
-          className="card p-4 flex flex-col"
-          style={{
-            background: 'var(--theme-bg-secondary)',
-            borderColor: 'var(--theme-border-default)',
-          }}
-        >
-          <div className="mb-4">
-            <h2 className="typo-h2" style={{ color: 'var(--theme-text-primary)' }}>
-              Hoạt động
-            </h2>
-          </div>
-          <div className="flex-1 overflow-y-auto min-h-0 space-y-2">
-            {unmatchedWOs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8">
-                <CheckCircle2 className="h-6 w-6 mb-2" style={{ color: 'var(--theme-text-muted)' }} />
-                <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                  Tất cả phiếu đã được xử lý
-                </p>
-              </div>
-            ) : (
-              unmatchedWOs.map((wo, i) => (
-                <UnmatchedRow
-                  key={wo.id}
-                  wo={wo}
-                  isLast={i === unmatchedWOs.length - 1}
-                  onClick={() => navigate(`/accountant/match/${wo.id}`)}
-                />
-              ))
-            )}
-          </div>
-          <div style={{ borderTop: '1px solid var(--theme-border-default)', paddingTop: 12, marginTop: 12 }}>
-            <button
-              onClick={() => navigate('/accountant/work-orders')}
-              className="text-xs font-semibold transition hover:opacity-70 w-full text-center"
-              style={{ color: 'var(--theme-brand-primary)' }}
-            >
-              Xem tất cả hoạt động
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Match suggestions panel (optional, full-width on lg) */}
-      <div
-        className="card p-4"
-        style={{
-          background: 'var(--theme-bg-secondary)',
-          borderColor: 'var(--theme-border-default)',
-        }}
-      >
-        <div className="mb-4">
-          <h2 className="typo-h2 flex items-center gap-1.5">
-            <Sparkles className="h-4 w-4" style={{ color: 'var(--theme-status-warning)' }} />
-            <span style={{ color: 'var(--theme-text-primary)' }}>Gợi ý ghép chuyến</span>
-          </h2>
-        </div>
-        <div style={{ minHeight: '320px' }}>
-          <MatchSuggestionPanel
-            workOrders={matchCandidates}
-            trips={pendingTrips.slice(0, 8)}
-            onNavigate={id => navigate(`/accountant/match/${id}`)}
-          />
-        </div>
-        <div style={{ borderTop: '1px solid var(--theme-border-default)', paddingTop: 12, marginTop: 12 }}>
-          <button
-            onClick={() => navigate('/accountant/work-orders')}
-            className="text-xs font-semibold transition hover:opacity-70 w-full text-center"
-            style={{ color: 'var(--theme-brand-primary)' }}
-          >
-            Mở đối soát đầy đủ
-          </button>
         </div>
       </div>
     </div>
@@ -906,17 +830,16 @@ function MobileDashboard() {
   )
 
   const stats = [
-    { label: 'Doanh thu tháng', value: fmt(revenue), icon: <DollarSign className="h-5 w-5" /> },
-    { label: 'Chi phí tài xế', value: fmt(totalDriverSalary), icon: <Wallet className="h-5 w-5" /> },
-    { label: 'Đơn chờ ghép', value: String(pendingTrips.length), valueColor: pendingTrips.length > 0 ? 'var(--theme-status-warning)' : undefined, icon: <Clock className="h-5 w-5" /> },
-    { label: 'Phiếu chưa ghép', value: String(pendingWOs.length), valueColor: pendingWOs.length > 0 ? 'var(--theme-status-warning)' : undefined, icon: <AlertTriangle className="h-5 w-5" /> },
+    { label: 'Phiếu TX chưa ghép', value: String(pendingWOs.length), valueColor: pendingWOs.length > 0 ? 'var(--theme-status-warning)' : undefined, icon: <AlertTriangle className="h-5 w-5" />, onClick: () => navigate('/accountant/work-orders') },
+    { label: 'Đơn chờ đối soát', value: String(pendingTrips.length), valueColor: pendingTrips.length > 0 ? 'var(--theme-status-warning)' : undefined, icon: <Clock className="h-5 w-5" />, onClick: () => navigate('/accountant/trips') },
+    { label: 'Lương sản lượng TX', value: fmt(totalDriverSalary), icon: <Wallet className="h-5 w-5" />, onClick: () => navigate('/accountant/salary-setup') },
+    { label: 'Doanh thu tháng', value: fmt(revenue), icon: <DollarSign className="h-5 w-5" />, onClick: () => navigate('/accountant/trips') },
   ]
 
   const quickActions = [
-    { id: 'create', label: 'Tạo đơn', icon: <Plus className="h-4 w-4" />, onClick: () => navigate('/accountant/create-trip'), primary: true },
-    { id: 'reconcile', label: 'Đối soát', icon: <Briefcase className="h-4 w-4" />, onClick: () => navigate('/accountant/work-orders') },
-    { id: 'partners', label: 'Đối tác', icon: <Users className="h-4 w-4" />, onClick: () => navigate('/accountant/partners') },
-    { id: 'routes', label: 'Cung đường', icon: <MapPin className="h-4 w-4" />, onClick: () => navigate('/accountant/routes') },
+    { id: 'import', label: 'Nhập Excel', icon: <Plus className="h-4 w-4" />, onClick: () => navigate('/accountant/import-orders'), primary: true },
+    { id: 'reconcile', label: 'Ghép chuyến', icon: <Briefcase className="h-4 w-4" />, onClick: () => navigate('/accountant/work-orders') },
+    { id: 'partners', label: 'Nhà thầu', icon: <Users className="h-4 w-4" />, onClick: () => navigate('/accountant/partners') },
     { id: 'pricing', label: 'Bảng giá', icon: <Tag className="h-4 w-4" />, onClick: () => navigate('/accountant/pricing') },
     { id: 'salary', label: 'Kỳ lương', icon: <Wallet className="h-4 w-4" />, onClick: () => navigate('/accountant/salary-setup') },
   ]
@@ -974,37 +897,11 @@ function MobileDashboard() {
         )}
       </WorkbenchCard>
 
-      {/* Gợi ý ghép chuyến */}
-      <WorkbenchCard
-        title={
-          <span className="flex items-center gap-1.5">
-            <Sparkles className="h-4 w-4" style={{ color: 'var(--theme-status-warning)' }} />
-            Gợi ý ghép chuyến
-          </span>
-        }
-        footerLabel="Mở đối soát đầy đủ"
-        onFooter={() => navigate('/accountant/work-orders')}
-        minHeight="320px"
-      >
-        <MatchSuggestionPanel
-          workOrders={pendingWOs.slice(0, 6)}
-          trips={pendingTrips.slice(0, 6)}
-          onNavigate={id => navigate(`/accountant/match/${id}`)}
-        />
-      </WorkbenchCard>
-
       {/* Phiếu tài xế chưa ghép */}
       <WorkbenchCard
-        title="Phiếu tài xế chưa ghép"
-        titleExtra={
-          <button
-            onClick={() => navigate('/accountant/work-orders')}
-            className="text-xs font-semibold"
-            style={{ color: 'var(--theme-brand-primary)' }}
-          >
-            Lọc
-          </button>
-        }
+        title="Phiếu TX chưa ghép"
+        footerLabel="Mở trang Ghép chuyến"
+        onFooter={() => navigate('/accountant/work-orders')}
         minHeight="200px"
       >
         {unmatchedWOs.length === 0 ? (
