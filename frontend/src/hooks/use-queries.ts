@@ -588,3 +588,17 @@ export function useDeleteVendor() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.vendors }) },
   })
 }
+
+// ── Auto-match ────────────────────────────────────────────────────────
+
+export function useAutoMatch() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ dateFrom, dateTo }: { dateFrom?: string; dateTo?: string }) =>
+      apiClient.autoMatch(dateFrom, dateTo),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.workOrders })
+      qc.invalidateQueries({ queryKey: queryKeys.tripOrders })
+    },
+  })
+}

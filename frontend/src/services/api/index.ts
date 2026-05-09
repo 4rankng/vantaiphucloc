@@ -72,6 +72,7 @@ export const apiClient = {
   exportReconciliationExcel: tripOrdersApi.exportReconciliationExcel,
   importTripOrders: tripOrdersApi.importTripOrders,
   exportTripOrdersExcel: tripOrdersApi.exportTripOrdersExcel,
+  autoMatch: tripOrdersApi.autoMatch,
 
   // Salary
   calculateSalary: salaryApi.calculateSalary,
