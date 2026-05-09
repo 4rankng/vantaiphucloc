@@ -11,7 +11,6 @@ import type { Role } from '@/data/domain'
 const ALLOWED_ROLES: Role[] = ['accountant']
 
 const FULLSCREEN_PREFIXES = [
-  '/accountant/match/',
   '/accountant/match-trip/',
 ]
 
@@ -177,7 +176,6 @@ function resolveMobileTitle(pathname: string): string {
   }
   if (TITLES[pathname]) return TITLES[pathname]
   if (pathname.startsWith('/accountant/trip/')) return 'Chi tiết lệnh'
-  if (pathname.startsWith('/accountant/match/')) return 'Đối soát'
   if (pathname.startsWith('/accountant/match-trip/')) return 'Đối soát'
   if (pathname.startsWith('/accountant/pricing/')) return 'Bảng giá'
   return ''

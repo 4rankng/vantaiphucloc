@@ -15,8 +15,8 @@ import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { PageContainer } from '@/components/shared/PageContainer'
 import { useWorkOrders, useUploadCustomerExcel, useClients, useTripOrders, useAutoMatch } from '@/hooks/use-queries'
 import { AutoMatchDialog } from '@/components/shared/AutoMatchDialog'
+import { MatchPanel } from '@/components/shared/MatchPanel'
 import type { AutoMatchResponse } from '@/services/api/tripOrders.api'
-import { useNavigate } from 'react-router-dom'
 import { useToast } from '@/components/atoms/Toast'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useMonthParams } from './use-month-params'
@@ -49,8 +49,8 @@ function getStatusLabel(status: string): string {
   }
 }
 
-/** Client-side approximation: count draft trip orders that share ≥1 field with a work order.
- *  Mirrors the backend MIN_MATCH_THRESHOLD logic (any single field match counts). */
+/** Client-side approximation: count draft trip orders that share ≥2 fields with a work order.
+ *  Mirrors the backend MIN_MATCH_THRESHOLD logic (≥2 field matches). */
 function usePotentialMatchCounts(workOrders: import('@/data/domain').WorkOrder[]) {
   const { data: trips = [] } = useTripOrders()
   return useMemo(() => {
@@ -70,7 +70,8 @@ function usePotentialMatchCounts(workOrders: import('@/data/domain').WorkOrder[]
         const clientMatch = trip.client.id === wo.client.id
         const routeMatch = trip.route === wo.route
         const dateMatch = woDate !== null && trip.tripDate === woDate
-        if (contMatch || clientMatch || routeMatch || dateMatch) count++
+        const matchCount = [contMatch, clientMatch, routeMatch, dateMatch].filter(Boolean).length
+        if (matchCount >= 2) count++
       }
       counts.set(wo.id, count)
     }
@@ -79,7 +80,6 @@ function usePotentialMatchCounts(workOrders: import('@/data/domain').WorkOrder[]
 }
 
 export function WorkOrderList() {
-  const navigate = useNavigate()
   const isMobile = useIsMobile(1024)
   const toast = useToast()
   const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
@@ -91,6 +91,7 @@ export function WorkOrderList() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('PENDING')
   const [autoMatchResult, setAutoMatchResult] = useState<AutoMatchResponse | null>(null)
+  const [expandedJobId, setExpandedJobId] = useState<number | null>(null)
 
   // Import Excel dialog state
   const [importOpen, setImportOpen] = useState(false)
@@ -294,7 +295,7 @@ export function WorkOrderList() {
     }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Nhập chuyến đối soát</DialogTitle>
+          <DialogTitle>Nhập đơn đối soát</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
@@ -421,7 +422,7 @@ export function WorkOrderList() {
             style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
           >
             <FileSpreadsheet className="h-3.5 w-3.5" />
-            Nhập chuyến
+            Nhập đơn
           </Button>
         </div>
 
@@ -452,13 +453,23 @@ export function WorkOrderList() {
         ) : (
           <div className="space-y-2">
             {filtered.map(job => (
-              <WorkOrderJobCard
-                key={job.id}
-                job={job}
-                status={job.status === 'PENDING' ? 'unmatched' : 'completed'}
-                matchCount={matchCounts.get(job.id)}
-                onClick={() => navigate(`/accountant/match/${job.id}`)}
-              />
+              <div key={job.id}>
+                <WorkOrderJobCard
+                  job={job}
+                  status={job.status === 'PENDING' ? 'unmatched' : 'completed'}
+                  matchCount={matchCounts.get(job.id)}
+                  onClick={() => setExpandedJobId(prev => prev === job.id ? null : job.id)}
+                />
+                {expandedJobId === job.id && (
+                  <div className="mt-2">
+                    <MatchPanel
+                      workOrder={job}
+                      onClose={() => setExpandedJobId(null)}
+                      onMatchSuccess={() => setExpandedJobId(null)}
+                    />
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         )}
@@ -490,7 +501,7 @@ export function WorkOrderList() {
               className="btn-primary h-9 gap-1.5 text-xs font-semibold"
             >
               <FileSpreadsheet className="h-3.5 w-3.5" />
-              Nhập chuyến
+              Nhập đơn
             </Button>
           </div>
         }
@@ -517,7 +528,15 @@ export function WorkOrderList() {
             data={filtered}
             columns={columns}
             rowKey={(row) => row.id}
-            onRowClick={(row) => navigate(`/accountant/match/${row.id}`)}
+            onRowClick={(row) => setExpandedJobId(prev => prev === row.id ? null : row.id)}
+            expandedRowKey={expandedJobId}
+            renderExpandedRow={(row) => (
+              <MatchPanel
+                workOrder={row}
+                onClose={() => setExpandedJobId(null)}
+                onMatchSuccess={() => setExpandedJobId(null)}
+              />
+            )}
             loading={loading}
             stickyHeader
             striped
@@ -540,13 +559,21 @@ export function WorkOrderList() {
             </div>
           ) : (
             filtered.map(job => (
-              <WorkOrderJobCard
-                key={job.id}
-                job={job}
-                status={job.status === 'PENDING' ? 'unmatched' : 'completed'}
-                matchCount={matchCounts.get(job.id)}
-                onClick={() => navigate(`/accountant/match/${job.id}`)}
-              />
+              <div key={job.id}>
+                <WorkOrderJobCard
+                  job={job}
+                  status={job.status === 'PENDING' ? 'unmatched' : 'completed'}
+                  matchCount={matchCounts.get(job.id)}
+                  onClick={() => setExpandedJobId(prev => prev === job.id ? null : job.id)}
+                />
+                {expandedJobId === job.id && (
+                  <MatchPanel
+                    workOrder={job}
+                    onClose={() => setExpandedJobId(null)}
+                    onMatchSuccess={() => setExpandedJobId(null)}
+                  />
+                )}
+              </div>
             ))
           )}
         </div>

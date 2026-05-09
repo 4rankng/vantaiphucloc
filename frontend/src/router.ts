@@ -82,7 +82,6 @@ export function createAppRouter() {
               { path: 'users',                   element: h(Lazy, { component: R.UserManagement }) },
             ]},
 
-            { path: 'match/:jobId',          element: h(Lazy, { component: R.MatchJob }) },
             { path: 'match-trip/:tripId',    element: h(Lazy, { component: R.MatchTrip }) },
             { path: 'notifications',         element: ebc('Notifications', h(Lazy, { component: R.AccountantNotifications })) },
             { path: 'profile',               element: ebc('Profile', h(Lazy, { component: R.Profile })) },

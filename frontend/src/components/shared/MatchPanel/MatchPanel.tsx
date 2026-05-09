@@ -1,8 +1,7 @@
-import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useMemo, useCallback } from 'react'
 import {
-  ArrowLeft, Check, CheckCircle2, Pencil, X, Plus, Truck, FileText,
-  Sparkles, ChevronRight, ChevronDown,
+  Check, CheckCircle2, Pencil, X, Plus, Truck, FileText,
+  Sparkles, ChevronRight, ChevronDown, XCircle,
 } from 'lucide-react'
 import {
   useWorkOrders, useTripOrders, useSuggestMatches, useRoutes,
@@ -10,8 +9,7 @@ import {
 } from '@/hooks/use-queries'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { useToast } from '@/components/atoms/Toast'
-import { useIsMobile } from '@/hooks/use-mobile'
-import type { TripOrder, WorkType } from '@/data/domain'
+import type { TripOrder, WorkOrder, WorkType } from '@/data/domain'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -534,19 +532,21 @@ function SuggestionCard({
   )
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
+// ─── Main panel ────────────────────────────────────────────────────────────────
 
-export function MatchJob() {
-  const { jobId: jobIdStr } = useParams<{ jobId: string }>()
-  const jobId = Number(jobIdStr)
-  const navigate = useNavigate()
+interface MatchPanelProps {
+  workOrder: WorkOrder
+  onClose: () => void
+  onMatchSuccess: () => void
+}
+
+export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelProps) {
   const toast = useToast()
-  useIsMobile(1024)
 
   // ── Data ──────────────────────────────────────────────────────────────────
   const { data: workOrders = [], isLoading: loadingWO } = useWorkOrders()
   const { data: allTrips = [], isLoading: loadingTrips } = useTripOrders()
-  const { data: suggestionsData, isLoading: loadingSuggestions } = useSuggestMatches(jobId)
+  const { data: suggestionsData, isLoading: loadingSuggestions } = useSuggestMatches(workOrder.id)
   const { data: routes = [] } = useRoutes()
 
   const routeMap = useMemo(() =>
@@ -561,8 +561,6 @@ export function MatchJob() {
   const loading = loadingWO || loadingTrips
 
   // ── Work order ────────────────────────────────────────────────────────────
-  const workOrder = useMemo(() => workOrders.find(w => w.id === jobId), [workOrders, jobId])
-
   const [woClient, setWoClient] = useState('')
   const [woRoute, setWoRoute] = useState('')
   const [woPickup, setWoPickup] = useState('')
@@ -712,14 +710,13 @@ export function MatchJob() {
     }
 
     toast.success('Thành công', 'Đã ghép chuyến thành công')
-    navigate(-1)
+    onMatchSuccess()
   }
 
   // ── Loading ───────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="p-6 space-y-4">
-        <div className="h-8 w-40 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
         <div className="h-40 rounded-xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
         <div className="space-y-3">
           {[1, 2, 3].map(i => (
@@ -730,148 +727,118 @@ export function MatchJob() {
     )
   }
 
-  if (!workOrder) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 gap-3">
-        <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không tìm thấy chuyến</p>
-        <button onClick={() => navigate(-1)} className="text-sm font-medium" style={{ color: 'var(--theme-brand-primary)' }}>
-          Quay lại
-        </button>
-      </div>
-    )
-  }
-
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen" style={{ background: 'var(--theme-bg-primary)' }}>
+    <div className="p-4 lg:p-6 max-w-2xl mx-auto space-y-5">
 
-      {/* ── Top bar ── */}
-      <div
-        className="flex items-center gap-3 px-4 lg:px-6 py-3 border-b sticky top-0 z-10"
-        style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}
-      >
+      {/* Close button */}
+      <div className="flex justify-end">
         <button
-          onClick={() => navigate(-1)}
-          className="p-2 rounded-lg transition-colors"
-          style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
+          onClick={onClose}
+          className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+          style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
         >
-          <ArrowLeft className="w-4 h-4" />
+          <XCircle className="w-3.5 h-3.5" />
+          Thu gọn
         </button>
-        <div className="flex-1 min-w-0">
-          <h1 className="typo-h2 truncate" style={{ color: 'var(--theme-text-primary)' }}>Ghép chuyến</h1>
-          <p className="typo-meta" style={{ color: 'var(--theme-text-muted)' }}>
-            {workOrder.driver.name} · {workOrder.containers.map(c => c.containerNumber).join(', ')}
-          </p>
-        </div>
       </div>
 
-      {/* ── Content ── */}
-      <div className="p-4 lg:p-6 max-w-2xl mx-auto space-y-6">
+      {/* Work order card */}
+      <WorkOrderCard
+        driverName={workOrder.driver.name}
+        woContainers={woContainers}
+        woClient={woClient}
+        woPickup={woPickup}
+        woDropoff={woDropoff}
+        setWoClient={setWoClient}
+        setWoPickup={setWoPickup}
+        setWoDropoff={setWoDropoff}
+        setWoContainers={setWoContainers}
+        updateWoContainer={updateWoContainer}
+        clientMatch={clientMatch}
+        pickupMatch={pickupMatch}
+        dropoffMatch={dropoffMatch}
+        matchedWoIndices={matchedWoIndices}
+      />
 
-        {/* Work order card */}
-        <WorkOrderCard
-          driverName={workOrder.driver.name}
-          woContainers={woContainers}
-          woClient={woClient}
-          woPickup={woPickup}
-          woDropoff={woDropoff}
-          setWoClient={setWoClient}
-          setWoPickup={setWoPickup}
-          setWoDropoff={setWoDropoff}
-          setWoContainers={setWoContainers}
-          updateWoContainer={updateWoContainer}
-          clientMatch={clientMatch}
-          pickupMatch={pickupMatch}
-          dropoffMatch={dropoffMatch}
-          matchedWoIndices={matchedWoIndices}
-        />
-
-        {/* Suggestions section */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-              Đơn hàng có thể ghép
-            </h2>
-            {loadingSuggestions ? (
-              <span className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
-                <Sparkles className="w-3 h-3 animate-pulse" /> Đang tìm...
-              </span>
-            ) : (
-              <span
-                className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
-                style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
-              >
-                {suggestions.length}
-              </span>
-            )}
-          </div>
-
-          {suggestions.length === 0 && !loadingSuggestions ? (
-            <div
-              className="rounded-xl p-10 text-center flex flex-col items-center gap-3"
-              style={{ background: 'var(--theme-bg-secondary)', border: '1px dashed var(--theme-border-default)' }}
-            >
-              <FileText className="w-10 h-10" style={{ color: 'var(--theme-text-muted)' }} />
-              <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                Không tìm thấy đơn hàng phù hợp
-              </p>
-              <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                Tạo đơn hàng mới để bắt đầu ghép chuyến
-              </p>
-              <button
-                onClick={() => navigate('/accountant/create-trip', { state: { fromWorkOrder: workOrder } })}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-                style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-              >
-                <Plus className="w-4 h-4" /> Tạo đơn mới
-              </button>
-            </div>
+      {/* Suggestions section */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+            Đơn hàng có thể ghép
+          </h2>
+          {loadingSuggestions ? (
+            <span className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
+              <Sparkles className="w-3 h-3 animate-pulse" /> Đang tìm...
+            </span>
           ) : (
-            <div className="space-y-3">
-              {suggestions.map(s => {
-                const sTripContainers = s.tripOrder.containers ?? []
-                const sTripContainerSet = new Set(sTripContainers.map(c => `${c.workType}|${c.containerNumber}`))
-                const matchedContainersCount = woContainers.filter(
-                  c => c.containerNumber && sTripContainerSet.has(`${c.workType}|${c.containerNumber}`)
-                ).length
-                const matchedCount = matchedContainersCount
-                  + (s.matchedFields.includes('client') ? 1 : 0)
-                  + (s.matchedFields.includes('pickup_location') ? 1 : 0)
-                  + (s.matchedFields.includes('dropoff_location') ? 1 : 0)
-
-                const isSelected = selectedTripId === s.tripOrder.id
-
-                return (
-                  <SuggestionCard
-                    key={s.tripOrder.id}
-                    trip={s.tripOrder}
-                    isSelected={isSelected}
-                    matchedCount={matchedCount}
-                    totalCriteria={totalCriteria}
-                    tripContainers={isSelected ? tripContainers : (s.tripOrder.containers ?? []).map(c => ({ workType: c.workType, containerNumber: c.containerNumber }))}
-                    tripClient={isSelected ? tripClient : s.tripOrder.client.name}
-                    tripPickup={isSelected ? tripPickup : ''}
-                    tripDropoff={isSelected ? tripDropoff : ''}
-                    matchedTripContainerIndices={isSelected ? matchedTripContainerIndices : new Set()}
-                    clientMatch={isSelected ? clientMatch : false}
-                    pickupMatch={isSelected ? pickupMatch : false}
-                    dropoffMatch={isSelected ? dropoffMatch : false}
-                    updateTripContainer={updateTripContainer}
-                    setTripContainers={setTripContainers}
-                    onChangeTripClient={setTripClient}
-                    onChangeTripPickup={setTripPickup}
-                    onChangeTripDropoff={setTripDropoff}
-                    onSelect={() => setSelectedTripId(isSelected ? null : s.tripOrder.id)}
-                    onConfirm={handleMatch}
-                    submitting={submitting}
-                  />
-                )
-              })}
-            </div>
+            <span
+              className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+              style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
+            >
+              {suggestions.length}
+            </span>
           )}
         </div>
 
+        {suggestions.length === 0 && !loadingSuggestions ? (
+          <div
+            className="rounded-xl p-10 text-center flex flex-col items-center gap-3"
+            style={{ background: 'var(--theme-bg-secondary)', border: '1px dashed var(--theme-border-default)' }}
+          >
+            <FileText className="w-10 h-10" style={{ color: 'var(--theme-text-muted)' }} />
+            <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+              Không tìm thấy đơn hàng phù hợp
+            </p>
+            <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+              Tạo đơn hàng mới để bắt đầu ghép chuyến
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {suggestions.map(s => {
+              const sTripContainers = s.tripOrder.containers ?? []
+              const sTripContainerSet = new Set(sTripContainers.map(c => `${c.workType}|${c.containerNumber}`))
+              const matchedContainersCount = woContainers.filter(
+                c => c.containerNumber && sTripContainerSet.has(`${c.workType}|${c.containerNumber}`)
+              ).length
+              const matchedCount = matchedContainersCount
+                + (s.matchedFields.includes('client') ? 1 : 0)
+                + (s.matchedFields.includes('pickup_location') ? 1 : 0)
+                + (s.matchedFields.includes('dropoff_location') ? 1 : 0)
+
+              const isSelected = selectedTripId === s.tripOrder.id
+
+              return (
+                <SuggestionCard
+                  key={s.tripOrder.id}
+                  trip={s.tripOrder}
+                  isSelected={isSelected}
+                  matchedCount={matchedCount}
+                  totalCriteria={totalCriteria}
+                  tripContainers={isSelected ? tripContainers : (s.tripOrder.containers ?? []).map(c => ({ workType: c.workType, containerNumber: c.containerNumber }))}
+                  tripClient={isSelected ? tripClient : s.tripOrder.client.name}
+                  tripPickup={isSelected ? tripPickup : ''}
+                  tripDropoff={isSelected ? tripDropoff : ''}
+                  matchedTripContainerIndices={isSelected ? matchedTripContainerIndices : new Set()}
+                  clientMatch={isSelected ? clientMatch : false}
+                  pickupMatch={isSelected ? pickupMatch : false}
+                  dropoffMatch={isSelected ? dropoffMatch : false}
+                  updateTripContainer={updateTripContainer}
+                  setTripContainers={setTripContainers}
+                  onChangeTripClient={setTripClient}
+                  onChangeTripPickup={setTripPickup}
+                  onChangeTripDropoff={setTripDropoff}
+                  onSelect={() => setSelectedTripId(isSelected ? null : s.tripOrder.id)}
+                  onConfirm={handleMatch}
+                  submitting={submitting}
+                />
+              )
+            })}
+          </div>
+        )}
       </div>
+
     </div>
   )
 }

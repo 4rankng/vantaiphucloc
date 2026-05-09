@@ -65,7 +65,7 @@ WEIGHTS = {
 }
 FULL_MATCH_THRESHOLD = 1.0
 POTENTIAL_MATCH_THRESHOLD = 3.0 / 6.0
-MIN_MATCH_THRESHOLD = 1.0 / 6.0
+MIN_MATCH_THRESHOLD = 2.0 / 6.0
 
 
 def _confidence(score: float) -> str:
