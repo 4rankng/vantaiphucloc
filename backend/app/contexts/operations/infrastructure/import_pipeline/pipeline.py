@@ -32,6 +32,8 @@ from app.contexts.operations.infrastructure.import_pipeline.header_finder import
     header_row_text,
 )
 from app.contexts.operations.infrastructure.import_pipeline.llm import HeaderClassifier
+from app.contexts.operations.infrastructure.import_pipeline.pattern_detector import DetectedPattern, detect_pattern
+from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors import ExtractedRow, extract_bay_plan, extract_invoice, extract_loading_list
 from app.contexts.operations.infrastructure.import_pipeline.sheet_picker import SheetScore, score_sheets
 from app.contexts.operations.infrastructure.import_pipeline.value_parsers import (
     parse_container_no,
@@ -95,72 +97,25 @@ async def run_preview(
     if not sheets:
         raise ValueError("Tệp Excel không có sheet nào.")
 
-    scored = score_sheets(sheets)
-    if not scored or scored[0].score <= 0:
-        raise ValueError("Không tìm thấy sheet nào trông giống danh sách container.")
+    # Step 1: Pattern detection (data-shape based)
+    pattern = detect_pattern(sheets, filename)
+    if pattern is not None:
+        return _run_pattern_preview(pattern, sheets, filename, default_trip_date)
 
-    chosen = scored[0]
-    alternatives = [
-        {
-            "sheet_name": s.sheet.name,
-            "score": round(s.score, 2),
-            "container_hits": s.container_hits,
-            "header_synonym_hits": s.header_synonym_hits,
-        }
-        for s in scored[1:5]
-        if s.score > 0
-    ]
+    # Step 2: Existing generic pipeline
+    try:
+        return await _run_generic_preview(sheets, filename, default_trip_date, classifier, cached_mapping)
+    except ValueError:
+        pass
 
-    hit = find_header_row(chosen.sheet)
-    if hit is None:
-        raise ValueError(
-            f"Không nhận diện được dòng tiêu đề trong sheet '{chosen.sheet.name}'."
-        )
+    # Step 3: AI fallback
+    from app.contexts.operations.infrastructure.import_pipeline.ai_extractor import extract_with_ai
+    ai_rows = await extract_with_ai(sheets, filename)
+    if ai_rows:
+        return _build_preview_from_extracted(ai_rows, [], filename, sheets[0].name if sheets else "", "ai_fallback", default_trip_date)
 
-    structure_hash = compute_structure_hash(chosen.sheet.name, header_row_text(chosen.sheet, hit.row_index))
-
-    if cached_mapping is not None:
-        mappings = cached_mapping
-    else:
-        mappings = await map_columns(chosen.sheet, hit.row_index, classifier=classifier)
-
-    accepted, rejected = apply_mapping(
-        chosen.sheet, hit.row_index, mappings, default_trip_date,
-    )
-
-    warnings: list[str] = []
-    needs_review = [m for m in mappings if (m.canonical_field is None) or (m.confidence < 0.5 and m.canonical_field != SKIP_FIELD)]
-    if needs_review:
-        warnings.append(f"{len(needs_review)} cột chưa được mapping tự động — vui lòng kiểm tra.")
-
-    required_fields = {f.name for f in CANONICAL_FIELDS if f.required}
-    mapped_fields = {m.canonical_field for m in mappings if m.canonical_field and m.canonical_field != SKIP_FIELD}
-    missing = required_fields - mapped_fields
-    if missing:
-        warnings.append("Thiếu cột bắt buộc: " + ", ".join(sorted(missing)))
-
-    stats = {
-        "total_rows_in_sheet": chosen.sheet.n_rows,
-        "data_rows_scanned": max(0, chosen.sheet.n_rows - hit.row_index - 1),
-        "accepted_count": len(accepted),
-        "rejected_count": len(rejected),
-        "header_score": round(hit.score, 2),
-        "header_synonym_hits": hit.synonym_hits,
-        "sheet_score": round(chosen.score, 2),
-    }
-
-    return PreviewResult(
-        filename=filename,
-        sheet_name=chosen.sheet.name,
-        sheet_alternatives=alternatives,
-        header_row_index=hit.row_index,
-        structure_hash=structure_hash,
-        column_mappings=[m.to_dict() for m in mappings],
-        accepted=[_parsed_to_dict(p) for p in accepted],
-        rejected=[_rejected_to_dict(r) for r in rejected],
-        stats=stats,
-        warnings=warnings,
-    )
+    # Step 4: Complete failure
+    raise ValueError("Không thể đọc tệp. Vui lòng nhập thủ công.")
 
 
 def apply_mapping(
@@ -373,6 +328,190 @@ def column_mappings_from_dicts(items: list[dict[str, Any]]) -> list[ColumnMappin
             sample_values=list(it.get("sample_values", [])),
         ))
     return out
+
+
+# ---------------------------------------------------------------------------
+# Generic pipeline (extracted from original run_preview)
+# ---------------------------------------------------------------------------
+
+async def _run_generic_preview(
+    sheets: list[SheetView],
+    filename: str,
+    default_trip_date: date,
+    classifier: HeaderClassifier | None,
+    cached_mapping: list[ColumnMapping] | None,
+) -> PreviewResult:
+    """The original header-finding + column-mapping pipeline."""
+    scored = score_sheets(sheets)
+    if not scored or scored[0].score <= 0:
+        raise ValueError("Không tìm thấy sheet nào trông giống danh sách container.")
+
+    chosen = scored[0]
+    alternatives = [
+        {
+            "sheet_name": s.sheet.name,
+            "score": round(s.score, 2),
+            "container_hits": s.container_hits,
+            "header_synonym_hits": s.header_synonym_hits,
+        }
+        for s in scored[1:5]
+        if s.score > 0
+    ]
+
+    hit = find_header_row(chosen.sheet)
+    if hit is None:
+        raise ValueError(
+            f"Không nhận diện được dòng tiêu đề trong sheet '{chosen.sheet.name}'."
+        )
+
+    structure_hash = compute_structure_hash(chosen.sheet.name, header_row_text(chosen.sheet, hit.row_index))
+
+    if cached_mapping is not None:
+        mappings = cached_mapping
+    else:
+        mappings = await map_columns(chosen.sheet, hit.row_index, classifier=classifier)
+
+    accepted, rejected = apply_mapping(
+        chosen.sheet, hit.row_index, mappings, default_trip_date,
+    )
+
+    warnings: list[str] = []
+    needs_review = [m for m in mappings if (m.canonical_field is None) or (m.confidence < 0.5 and m.canonical_field != SKIP_FIELD)]
+    if needs_review:
+        warnings.append(f"{len(needs_review)} cột chưa được mapping tự động — vui lòng kiểm tra.")
+
+    required_fields = {f.name for f in CANONICAL_FIELDS if f.required}
+    mapped_fields = {m.canonical_field for m in mappings if m.canonical_field and m.canonical_field != SKIP_FIELD}
+    missing = required_fields - mapped_fields
+    if missing:
+        warnings.append("Thiếu cột bắt buộc: " + ", ".join(sorted(missing)))
+
+    stats = {
+        "total_rows_in_sheet": chosen.sheet.n_rows,
+        "data_rows_scanned": max(0, chosen.sheet.n_rows - hit.row_index - 1),
+        "accepted_count": len(accepted),
+        "rejected_count": len(rejected),
+        "header_score": round(hit.score, 2),
+        "header_synonym_hits": hit.synonym_hits,
+        "sheet_score": round(chosen.score, 2),
+    }
+
+    return PreviewResult(
+        filename=filename,
+        sheet_name=chosen.sheet.name,
+        sheet_alternatives=alternatives,
+        header_row_index=hit.row_index,
+        structure_hash=structure_hash,
+        column_mappings=[m.to_dict() for m in mappings],
+        accepted=[_parsed_to_dict(p) for p in accepted],
+        rejected=[_rejected_to_dict(r) for r in rejected],
+        stats=stats,
+        warnings=warnings,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Pattern-based + AI-based preview
+# ---------------------------------------------------------------------------
+
+def _run_pattern_preview(
+    pattern: DetectedPattern,
+    sheets: list[SheetView],
+    filename: str,
+    default_trip_date: date,
+) -> PreviewResult:
+    """Run the matched pattern extractor and build a PreviewResult."""
+    extractors = {
+        "bay_plan": extract_bay_plan,
+        "loading_list": extract_loading_list,
+        "invoice": extract_invoice,
+    }
+    extractor = extractors.get(pattern.pattern_name)
+    if extractor is None:
+        raise ValueError(f"Unknown pattern: {pattern.pattern_name}")
+
+    accepted_rows, rejected_rows = extractor(sheets, filename)
+    sheet_name = sheets[pattern.sheet_index].name if pattern.sheet_index < len(sheets) else ""
+
+    return _build_preview_from_extracted(
+        accepted_rows, rejected_rows, filename, sheet_name,
+        pattern.pattern_name, default_trip_date,
+    )
+
+
+def _build_preview_from_extracted(
+    accepted_rows: list[ExtractedRow],
+    rejected_rows: list[dict],
+    filename: str,
+    sheet_name: str,
+    source: str,
+    default_trip_date: date,
+) -> PreviewResult:
+    """Convert extracted rows into a PreviewResult."""
+    accepted: list[dict[str, Any]] = []
+    for row in accepted_rows:
+        # Deduplicate by container number
+        accepted.append({
+            "source_row_index": row.source_row_index,
+            "values": {
+                "container_no": row.container_number,
+                "container_size": row.work_type[1:],  # "20" or "40"
+                "freight_kind": row.work_type[0],      # "E" or "F"
+                "work_type": row.work_type,
+                "pickup_location": row.pickup,
+                "dropoff_location": row.dropoff,
+                "vessel_name": row.vessel_name,
+                "trip_date": default_trip_date.isoformat(),
+                "container_type_iso": "",
+                "gross_weight_kg": None,
+                "seal_no": "",
+                "pickup_date": None,
+                "dropoff_date": None,
+                "customer_ref": "",
+                "consignee": "",
+                "commodity": "",
+                "driver_name": "",
+                "tractor_plate": "",
+                "remarks": "",
+            },
+        })
+
+    # Deduplicate
+    seen: set[str] = set()
+    deduped: list[dict[str, Any]] = []
+    deduped_rejected: list[dict[str, Any]] = list(rejected_rows)
+    for item in accepted:
+        cont = item["values"]["container_no"]
+        if cont in seen:
+            deduped_rejected.append({
+                "source_row_index": item["source_row_index"],
+                "reasons": ["duplicate_in_file"],
+                "raw": item["values"],
+            })
+            continue
+        seen.add(cont)
+        deduped.append(item)
+
+    stats = {
+        "total_rows_in_sheet": 0,
+        "data_rows_scanned": len(accepted_rows) + len(rejected_rows),
+        "accepted_count": len(deduped),
+        "rejected_count": len(deduped_rejected),
+        "pattern": source,
+    }
+
+    return PreviewResult(
+        filename=filename,
+        sheet_name=sheet_name,
+        sheet_alternatives=[],
+        header_row_index=0,
+        structure_hash="",
+        column_mappings=[],
+        accepted=deduped,
+        rejected=deduped_rejected,
+        stats=stats,
+        warnings=[],
+    )
 
 
 # ---------------------------------------------------------------------------
