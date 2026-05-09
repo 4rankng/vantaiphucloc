@@ -382,7 +382,7 @@ export function WorkOrderList() {
   if (isMobile) {
     return (
       <div className="space-y-3">
-        <PageHeader title="Đối soát" icon="package" />
+        <PageHeader title="Ghép chuyến" lucideIcon={Briefcase} />
 
         <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
 
@@ -440,8 +440,8 @@ export function WorkOrderList() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Đối soát"
-        icon="package"
+        title="Ghép chuyến"
+        lucideIcon={Briefcase}
         actions={
           <Button
             onClick={() => setImportOpen(true)}

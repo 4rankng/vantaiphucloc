@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Upload, FileText, AlertTriangle, CheckCircle2, XCircle, Save, Tag } from 'lucide-react'
-import { Button, Input } from '@/components/ui'
+import { Button, Input, Dialog, DialogContent } from '@/components/ui'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { useClients } from '@/hooks/use-queries'
@@ -601,5 +601,23 @@ function Stat({ label, value, ok, warn }: { label: string; value: string; ok?: b
         {value}
       </p>
     </div>
+  )
+}
+
+// ─── Dialog wrapper ──────────────────────────────────────────────────────────
+
+/** Opens the full import flow inside a large modal — no page navigation needed. */
+export function ImportOrdersDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
+      <DialogContent
+        className="max-w-5xl w-[95vw] max-h-[90vh] overflow-y-auto p-0"
+        style={{ background: 'var(--theme-bg-primary)' }}
+      >
+        <div className="p-5 pb-8">
+          <ImportOrders />
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -4,10 +4,7 @@ import {
   LayoutDashboard,
   FileText,
   Briefcase,
-  Users,
-  Tag,
-  Wallet,
-  FileSpreadsheet,
+  Settings,
   LogOut,
   Bell,
   UserCircle,
@@ -33,10 +30,7 @@ const ACCOUNTANT_NAV_ITEMS: SidebarItem[] = [
   { label: 'Tổng quan', href: '/accountant', icon: LayoutDashboard },
   { label: 'Đơn hàng', href: '/accountant/trips', icon: FileText },
   { label: 'Ghép chuyến', href: '/accountant/work-orders', icon: Briefcase },
-  { label: 'Nhà thầu', href: '/accountant/partners', icon: Users },
-  { label: 'Bảng giá', href: '/accountant/pricing', icon: Tag },
-  { label: 'Kỳ lương', href: '/accountant/salary-setup', icon: Wallet },
-  { label: 'Báo cáo', href: '/accountant/reports/customer-settlement', icon: FileSpreadsheet },
+  { label: 'Cài đặt', href: '/accountant/settings', icon: Settings },
 ]
 
 export interface AccountantSidebarProps {

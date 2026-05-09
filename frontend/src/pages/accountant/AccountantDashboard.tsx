@@ -706,7 +706,7 @@ function DesktopDashboard() {
   // KPI cards — prioritise what kế toán acts on first
   const stats = [
     {
-      label: 'Phiếu TX chưa ghép',
+      label: 'Chuyến chưa ghép',
       value: String(pendingWOs.length),
       valueColor: pendingWOs.length > 0 ? 'var(--theme-status-warning)' : undefined,
       icon: <AlertTriangle className="h-5 w-5" />,
@@ -755,11 +755,11 @@ function DesktopDashboard() {
 
       {/* 2-column: unmatched drivers (left, primary) + recent orders (right) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Left: Phiếu TX chưa ghép — kế toán's primary daily task */}
+        {/* Left: Chuyến chưa ghép — kế toán's primary daily task */}
         <div className="card p-4 flex flex-col" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}>
           <div className="flex items-center gap-2 mb-4">
             <AlertTriangle className="h-4 w-4 shrink-0" style={{ color: 'var(--theme-status-warning)' }} />
-            <h2 className="typo-h2" style={{ color: 'var(--theme-text-primary)' }}>Phiếu TX chưa ghép</h2>
+            <h2 className="typo-h2" style={{ color: 'var(--theme-text-primary)' }}>Chuyến chưa ghép</h2>
             {pendingWOs.length > 0 && (
               <span className="flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold" style={{ background: 'var(--theme-status-warning)', color: '#fff' }}>
                 {pendingWOs.length}
@@ -830,7 +830,7 @@ function MobileDashboard() {
   )
 
   const stats = [
-    { label: 'Phiếu TX chưa ghép', value: String(pendingWOs.length), valueColor: pendingWOs.length > 0 ? 'var(--theme-status-warning)' : undefined, icon: <AlertTriangle className="h-5 w-5" />, onClick: () => navigate('/accountant/work-orders') },
+    { label: 'Chuyến chưa ghép', value: String(pendingWOs.length), valueColor: pendingWOs.length > 0 ? 'var(--theme-status-warning)' : undefined, icon: <AlertTriangle className="h-5 w-5" />, onClick: () => navigate('/accountant/work-orders') },
     { label: 'Đơn chờ đối soát', value: String(pendingTrips.length), valueColor: pendingTrips.length > 0 ? 'var(--theme-status-warning)' : undefined, icon: <Clock className="h-5 w-5" />, onClick: () => navigate('/accountant/trips') },
     { label: 'Lương sản lượng TX', value: fmt(totalDriverSalary), icon: <Wallet className="h-5 w-5" />, onClick: () => navigate('/accountant/salary-setup') },
     { label: 'Doanh thu tháng', value: fmt(revenue), icon: <DollarSign className="h-5 w-5" />, onClick: () => navigate('/accountant/trips') },
@@ -899,7 +899,7 @@ function MobileDashboard() {
 
       {/* Phiếu tài xế chưa ghép */}
       <WorkbenchCard
-        title="Phiếu TX chưa ghép"
+        title="Chuyến chưa ghép"
         footerLabel="Mở trang Ghép chuyến"
         onFooter={() => navigate('/accountant/work-orders')}
         minHeight="200px"
