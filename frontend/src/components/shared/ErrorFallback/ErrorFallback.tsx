@@ -56,13 +56,16 @@ export function ErrorFallback({ variant = 'runtime', error, component, onRetry, 
   return (
     <div className={cn('flex min-h-[400px] items-center justify-center p-4', className)}>
       <div className="w-full max-w-md">
-        <div className="rounded-xl border border-[var(--theme-border-default)] bg-white p-6 shadow-md text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
-            <AlertCircle className="h-8 w-8 text-red-600 dark:text-red-400" />
+        <div
+          className="rounded-xl border p-6 shadow-md text-center"
+          style={{ borderColor: 'var(--theme-border-default)', background: 'var(--theme-bg-secondary)' }}
+        >
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full" style={{ background: 'var(--theme-status-error-light)' }}>
+            <AlertCircle className="h-8 w-8" style={{ color: 'var(--theme-status-error)' }} />
           </div>
-          <h2 className="text-lg font-semibold text-gray-900">{TITLES[variant]}</h2>
-          <p className="mt-2 text-sm text-gray-500">
-            {component && <span className="block mb-1 font-medium text-gray-700">{component}</span>}
+          <h2 className="text-lg font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{TITLES[variant]}</h2>
+          <p className="mt-2 text-sm" style={{ color: 'var(--theme-text-muted)' }}>
+            {component && <span className="block mb-1 font-medium" style={{ color: 'var(--theme-text-secondary)' }}>{component}</span>}
             {message || 'Vui lòng thử lại hoặc quay về trang chủ'}
           </p>
           {(onRetry || onHome) && (
@@ -80,9 +83,9 @@ export function ErrorFallback({ variant = 'runtime', error, component, onRetry, 
             </div>
           )}
           <div className="mt-4">
-            <button onClick={handleCopy} className="text-xs text-gray-400 hover:text-gray-700 flex items-center justify-center gap-1.5 mx-auto transition-colors">
+            <button onClick={handleCopy} className="text-xs flex items-center justify-center gap-1.5 mx-auto transition-colors" style={{ color: copied ? 'var(--theme-status-success)' : 'var(--theme-text-muted)' }}>
               {copied
-                ? <><Check className="h-3.5 w-3.5 text-green-500" /> <span className="text-green-500">Đã sao chép</span></>
+                ? <><Check className="h-3.5 w-3.5" /> <span>Đã sao chép</span></>
                 : <><Copy className="h-3.5 w-3.5" /> Sao chép chi tiết lỗi</>
               }
             </button>

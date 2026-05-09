@@ -1,1 +1,0 @@
-export { KPIBadge } from './KPIBadge'
