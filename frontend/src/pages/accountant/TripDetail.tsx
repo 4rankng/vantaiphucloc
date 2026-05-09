@@ -12,10 +12,16 @@ import { Label } from '@/components/ui'
 import { useToast } from '@/components/atoms/Toast'
 import { useParams, useNavigate } from 'react-router-dom'
 
-export function TripDetail() {
-  const { tripId: tripIdStr } = useParams<{ tripId: string }>()
+// ─── Shared content — works both as page and inside a dialog ──────────────
+
+interface TripDetailContentProps {
+  tripId: number
+  /** When provided, hides the back breadcrumb and shows as dialog-friendly layout */
+  onClose?: () => void
+}
+
+export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
   const navigate = useNavigate()
-  const tripId = Number(tripIdStr)
   const { data: trips = [], isLoading: loadingTrips } = useTripOrders()
   const { data: jobs = [], isLoading: loadingJobs } = useWorkOrders()
   const [editTrip, setEditTrip] = useState(false)
@@ -51,9 +57,13 @@ export function TripDetail() {
   if (!trip) {
     return (
       <div className="space-y-4">
-        <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm" style={{ color: 'var(--theme-text-muted)' }}>
-          <ChevronLeft size={14} /> Quay lại
-        </button>
+        {onClose ? (
+          <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không tìm thấy chuyến</p>
+        ) : (
+          <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm" style={{ color: 'var(--theme-text-muted)' }}>
+            <ChevronLeft size={14} /> Quay lại
+          </button>
+        )}
         <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không tìm thấy chuyến</p>
       </div>
     )
@@ -134,13 +144,17 @@ export function TripDetail() {
 
   return (
     <div className="space-y-6">
-      {/* Page header with title, breadcrumbs, and actions */}
-      <div className="flex items-center justify-between gap-3 mb-4">
+      {/* Header — title and actions */}
+      <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm" style={{ color: 'var(--theme-text-muted)' }}>
-            <ChevronLeft size={14} /> Đơn hàng
-          </button>
-          <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>·</span>
+          {!onClose && (
+            <>
+              <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm" style={{ color: 'var(--theme-text-muted)' }}>
+                <ChevronLeft size={14} /> Đơn hàng
+              </button>
+              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>·</span>
+            </>
+          )}
           <span className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
             {trip.code ?? `#${trip.id}`}
           </span>
@@ -155,126 +169,105 @@ export function TripDetail() {
           {trip.status !== 'COMPLETED' && (
             <button onClick={() => setShowMatchDialog(true)} className="btn-primary">
               <Link2 size={16} />
-              <span className="hidden sm:inline">Khớp cont</span>
+              <span className="hidden sm:inline">Khớp chuyến</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Main content — two column on desktop */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left column — trip info (2/3 width) */}
-        <div className="lg:col-span-2 space-y-4">
-          {/* Header card with status and confirmation */}
-          <div className="card p-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <span className={`chip chip-${statusVariant}`}>{statusLabel}</span>
-                {trip.isConfirmed && (
-                  <span className="chip chip-success">
-                    <Lock size={12} />
-                    Đã chốt
-                  </span>
-                )}
-              </div>
-              <ConfirmationCheckbox
-                isConfirmed={trip.isConfirmed}
-                onToggle={handleToggleConfirmation}
-                disabled={toggling || trip.status === 'CANCELLED'}
-                label="Chốt chuyến"
-              />
-            </div>
-            {trip.isConfirmed && (
-              <div className="rounded-lg p-3 flex items-start gap-2 mb-4" style={{ background: 'var(--theme-status-success-light)' }}>
-                <Lock size={14} style={{ color: 'var(--theme-status-success)' }} className="mt-0.5 shrink-0" />
-                <p className="typo-meta" style={{ color: 'var(--theme-status-success-text)' }}>
-                  Lệnh đã chốt với khách — không thể thay đổi
-                </p>
-              </div>
-            )}
-            <div className="divider-h mb-4" />
-            <dl className="space-y-3">
-              <div className="flex items-start justify-between">
-                <dt className="typo-form-label flex items-center gap-2"><Building2 size={14} />Khách hàng</dt>
-                <dd className="typo-body text-right">{trip.client.name}</dd>
-              </div>
-              <div className="flex items-start justify-between">
-                <dt className="typo-form-label flex items-center gap-2"><Route size={14} />Cung đường</dt>
-                <dd className="typo-body text-right">{trip.route}</dd>
-              </div>
-              <div className="flex items-start justify-between">
-                <dt className="typo-form-label flex items-center gap-2"><Wallet size={14} />Lương + Phụ cấp</dt>
-                <dd className="typo-mono text-right">{formatCurrencyFull(trip.driverSalary)} + {formatCurrencyFull(trip.allowance)}</dd>
-              </div>
-            </dl>
-          </div>
-
-          {/* Container info */}
-          <div className="card p-4">
-            <h3 className="typo-h3 mb-3">Container</h3>
-            <div className="space-y-2">
-              {trip.containers.length > 0 ? trip.containers.map((c, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <ContBadge type={c.workType} />
-                  <span className="typo-mono">{c.containerNumber}</span>
-                </div>
-              )) : (
-                <div className="flex items-center gap-3">
-                  <span className="typo-meta" style={{ color: 'var(--theme-text-muted)' }}>—</span>
-                </div>
+      {/* Trip info */}
+      <div className="space-y-4">
+        <div className="card p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <span className={`chip chip-${statusVariant}`}>{statusLabel}</span>
+              {trip.isConfirmed && (
+                <span className="chip chip-success">
+                  <Lock size={12} />
+                  Đã chốt
+                </span>
               )}
             </div>
+            <ConfirmationCheckbox
+              isConfirmed={trip.isConfirmed}
+              onToggle={handleToggleConfirmation}
+              disabled={toggling || trip.status === 'CANCELLED'}
+              label="Chốt chuyến"
+            />
           </div>
+          {trip.isConfirmed && (
+            <div className="rounded-lg p-3 flex items-start gap-2 mb-4" style={{ background: 'var(--theme-status-success-light)' }}>
+              <Lock size={14} style={{ color: 'var(--theme-status-success)' }} className="mt-0.5 shrink-0" />
+              <p className="typo-meta" style={{ color: 'var(--theme-status-success-text)' }}>
+                Lệnh đã chốt với khách — không thể thay đổi
+              </p>
+            </div>
+          )}
+          <div className="divider-h mb-4" />
+          <dl className="space-y-3">
+            <div className="flex items-start justify-between">
+              <dt className="typo-form-label flex items-center gap-2"><Building2 size={14} />Khách hàng</dt>
+              <dd className="typo-body text-right">{trip.client.name}</dd>
+            </div>
+            <div className="flex items-start justify-between">
+              <dt className="typo-form-label flex items-center gap-2"><Route size={14} />Cung đường</dt>
+              <dd className="typo-body text-right">{trip.route}</dd>
+            </div>
+            <div className="flex items-start justify-between">
+              <dt className="typo-form-label flex items-center gap-2"><Wallet size={14} />Lương + Phụ cấp</dt>
+              <dd className="typo-mono text-right">{formatCurrencyFull(trip.driverSalary)} + {formatCurrencyFull(trip.allowance)}</dd>
+            </div>
+          </dl>
+        </div>
 
-          {/* Matched jobs */}
-          {matchedJobs.length > 0 && (
-            <div className="card p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="typo-h3">Đã khớp ({matchedJobs.length})</h3>
-                {!trip.isConfirmed && (
-                  <button
-                    onClick={() => setShowUnmatchDialog(true)}
-                    className="btn-ghost text-xs"
-                    style={{ color: 'var(--theme-status-error)' }}
-                  >
-                    <Unlink size={14} />
-                    Bỏ match
-                  </button>
-                )}
+        <div className="card p-4">
+          <h3 className="typo-h3 mb-3">Container</h3>
+          <div className="space-y-2">
+            {trip.containers.length > 0 ? trip.containers.map((c, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <ContBadge type={c.workType} />
+                <span className="typo-mono">{c.containerNumber}</span>
               </div>
-              <div className="divider-h mb-4" />
-              <div className="space-y-3">
-                {matchedJobs.map(job => (
-                  <div key={job.id} className="p-3 rounded-lg" style={{ background: 'var(--theme-bg-tertiary)', borderLeft: '2px solid var(--theme-status-success)' }}>
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <ContBadge type={job.containers[0]?.workType ?? 'E20'} />
-                        <span className="typo-mono font-semibold">{job.code}</span>
-                      </div>
-                      <span className="typo-mono" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyFull(job.earning)}</span>
+            )) : (
+              <div className="flex items-center gap-3">
+                <span className="typo-meta" style={{ color: 'var(--theme-text-muted)' }}>—</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {matchedJobs.length > 0 && (
+          <div className="card p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="typo-h3">Đã khớp ({matchedJobs.length})</h3>
+              {!trip.isConfirmed && (
+                <button
+                  onClick={() => setShowUnmatchDialog(true)}
+                  className="btn-ghost text-xs"
+                  style={{ color: 'var(--theme-status-error)' }}
+                >
+                  <Unlink size={14} />
+                  Bỏ match
+                </button>
+              )}
+            </div>
+            <div className="divider-h mb-4" />
+            <div className="space-y-3">
+              {matchedJobs.map(job => (
+                <div key={job.id} className="p-3 rounded-lg" style={{ background: 'var(--theme-bg-tertiary)', borderLeft: '2px solid var(--theme-status-success)' }}>
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <ContBadge type={job.containers[0]?.workType ?? 'E20'} />
+                      <span className="typo-mono font-semibold">{job.code}</span>
                     </div>
-                    <p className="typo-meta">{job.driver.name} · {job.tractorPlate}</p>
+                    <span className="typo-mono" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyFull(job.earning)}</span>
                   </div>
-                ))}
-              </div>
+                  <p className="typo-meta">{job.driver.name} · {job.tractorPlate}</p>
+                </div>
+              ))}
             </div>
-          )}
-        </div>
-
-        {/* Right column — secondary info (1/3 width) */}
-        <div className="space-y-4">
-          {/* Match suggestions card */}
-          {(trip.status === 'DRAFT' || trip.status === 'PENDING') && (
-            <div className="card p-4">
-              <h3 className="typo-h3 mb-3">Khớp hàng</h3>
-              <p className="typo-body-sm mb-4">Chọn số cont từ danh sách để khớp với đơn hàng này</p>
-              <button onClick={() => setShowMatchDialog(true)} className="btn-primary w-full">
-                <Link2 size={16} />
-                Khớp cont
-              </button>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Edit Trip Dialog */}
@@ -321,11 +314,11 @@ export function TripDetail() {
       <Dialog open={showMatchDialog} onOpenChange={setShowMatchDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Chọn số cont để khớp</DialogTitle>
+            <DialogTitle>Chọn chuyến để khớp</DialogTitle>
           </DialogHeader>
           {unmatchedJobs.length === 0 ? (
             <div className="py-6 text-center">
-              <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không có số cont nào chưa khớp</p>
+              <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không có chuyến nào chưa khớp</p>
             </div>
           ) : (
             <div className="space-y-2 max-h-[50dvh] overflow-y-auto">
@@ -389,4 +382,13 @@ export function TripDetail() {
       </Dialog>
     </div>
   )
+}
+
+// ─── Page wrapper — for deep-linked route /accountant/trip/:tripId ──────────
+
+export function TripDetail() {
+  const { tripId: tripIdStr } = useParams<{ tripId: string }>()
+  const tripId = Number(tripIdStr)
+
+  return <TripDetailContent tripId={tripId} />
 }
