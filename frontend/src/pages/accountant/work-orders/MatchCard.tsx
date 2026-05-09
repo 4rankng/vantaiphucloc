@@ -161,14 +161,13 @@ interface MatchCardProps {
   tripOrder: TripOrder
   workOrder: WorkOrder
   onConfirm: () => void
-  onDismiss: () => void
   submitting: boolean
   onEdited: () => void
 }
 
 export function MatchCard({
   matchScore, maxScore, criteria, tripOrder, workOrder,
-  onConfirm, onDismiss, submitting, onEdited,
+  onConfirm, submitting, onEdited,
 }: MatchCardProps) {
   const color = scoreColor(matchScore, maxScore)
 
@@ -226,18 +225,11 @@ export function MatchCard({
         <button
           onClick={onConfirm}
           disabled={submitting || matchScore < 2}
-          className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-opacity disabled:opacity-40"
+          className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-opacity disabled:opacity-40"
           style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
         >
           <Check className="w-3.5 h-3.5" />
-          {submitting ? 'Đang ghép...' : 'Ghép cặp này'}
-        </button>
-        <button
-          onClick={onDismiss}
-          className="px-3 py-2 rounded-lg text-xs font-medium"
-          style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
-        >
-          Bỏ qua
+          {submitting ? 'Đang ghép...' : 'Ghép'}
         </button>
       </div>
     </div>

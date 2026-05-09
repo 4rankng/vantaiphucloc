@@ -1,10 +1,10 @@
 import { useCallback, useState } from 'react'
 import { Plus, Pencil, Trash2, Building2, UserCircle } from 'lucide-react'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
-import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { BrandIcon } from '@/components/atoms/BrandIcon'
@@ -17,6 +17,7 @@ const EMPTY_CLIENT = {
 
 export function ClientList() {
   const { data: clients = [], isLoading: loading } = useClients()
+  const isMobile = useIsMobile(768)
 
   // Detail dialog
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
@@ -83,13 +84,13 @@ export function ClientList() {
 
   return (
     <div>
-      {/* Page header */}
-      <PageHeader
-        title="Khách hàng"
-        icon="warehouse"
-        onAdd={handleOpenCreate}
-        addLabel="Thêm"
-      />
+      {/* Add button */}
+      <div className="flex justify-end mb-4">
+        <button onClick={handleOpenCreate} className="btn-primary">
+          <Plus size={16} strokeWidth={2.25} />
+          {!isMobile && <span>Thêm</span>}
+        </button>
+      </div>
 
       {/* Client list — clean cards, tap to see detail */}
       {clients.length === 0 ? (
@@ -111,12 +112,6 @@ export function ClientList() {
               className="card-interactive p-3"
             >
               <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ background: 'var(--theme-bg-tertiary)' }}>
-                  {client.type === 'company'
-                    ? <Building2 className="h-4 w-4" style={{ color: 'var(--theme-text-muted)' }} />
-                    : <UserCircle className="h-4 w-4" style={{ color: 'var(--theme-text-muted)' }} />}
-                </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{client.name}</p>
                   <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>

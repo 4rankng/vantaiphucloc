@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { Upload, AlertTriangle, CheckCircle2, Trash2 } from 'lucide-react'
 import { Button, Input } from '@/components/ui'
-import { PageHeader } from '@/components/shared/PageHeader'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { useClients } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
@@ -128,25 +127,24 @@ export function ImportPricing() {
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="Nhập bảng giá từ Excel"
-        subtitle="Tải tệp tariff khách hàng (PAN, HAP, NEWWAY) — hệ thống nhận dạng định dạng và đề xuất các dòng giá."
-        actions={
-          <div className="flex items-center gap-2">
-            <Button onClick={runPreview} disabled={!file || busy} className="btn-secondary h-9 px-4 text-sm">
-              {busy ? 'Đang phân tích...' : 'Phân tích tệp'}
-            </Button>
-            <Button
-              onClick={commit}
-              disabled={!preview || !clientId || !editedRows.length || committing}
-              className="btn-primary h-9 px-4 text-sm"
-            >
-              <CheckCircle2 className="w-4 h-4 mr-1.5" />
-              {committing ? 'Đang tạo...' : `Tạo bảng giá (${editedRows.length})`}
-            </Button>
-          </div>
-        }
-      />
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+          Tải tệp tariff khách hàng (PAN, HAP, NEWWAY) — hệ thống nhận dạng định dạng và đề xuất các dòng giá.
+        </p>
+        <div className="flex items-center gap-2">
+          <Button onClick={runPreview} disabled={!file || busy} className="btn-secondary h-9 px-4 text-sm">
+            {busy ? 'Đang phân tích...' : 'Phân tích tệp'}
+          </Button>
+          <Button
+            onClick={commit}
+            disabled={!preview || !clientId || !editedRows.length || committing}
+            className="btn-primary h-9 px-4 text-sm"
+          >
+            <CheckCircle2 className="w-4 h-4 mr-1.5" />
+            {committing ? 'Đang tạo...' : `Tạo bảng giá (${editedRows.length})`}
+          </Button>
+        </div>
+      </div>
 
       {/* Pane 1 — file upload + client + format */}
       <div className="card p-5">

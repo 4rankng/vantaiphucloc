@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTripOrders, useWorkOrders, useUpdateTripOrder, useReconcile, useToggleTripConfirmation, useUnmatch } from '@/hooks/use-queries'
-import { PageHeader } from '@/components/shared/PageHeader'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { ConfirmationCheckbox } from '@/components/shared/ConfirmationCheckbox'
 import { formatCurrencyFull, WORK_TYPES, type WorkType } from '@/data/domain'
@@ -52,14 +51,10 @@ export function TripDetail() {
   if (!trip) {
     return (
       <div className="space-y-4">
-        <PageHeader
-          title="Không tìm thấy chuyến"
-          breadcrumbs={
-            <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm" style={{ color: 'var(--theme-text-muted)' }}>
-              <ChevronLeft size={14} /> Quay lại
-            </button>
-          }
-        />
+        <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm" style={{ color: 'var(--theme-text-muted)' }}>
+          <ChevronLeft size={14} /> Quay lại
+        </button>
+        <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Không tìm thấy chuyến</p>
       </div>
     )
   }
@@ -140,30 +135,31 @@ export function TripDetail() {
   return (
     <div className="space-y-6">
       {/* Page header with title, breadcrumbs, and actions */}
-      <PageHeader
-        title={trip.code ?? `#${trip.id}`}
-        subtitle={trip.client.name}
-        breadcrumbs={
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2">
           <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm" style={{ color: 'var(--theme-text-muted)' }}>
             <ChevronLeft size={14} /> Đơn hàng
           </button>
-        }
-        actions={
-          <div className="flex items-center gap-2">
-            {!trip.isConfirmed && (
-              <button onClick={handleOpenEdit} className="btn-secondary" aria-label="Sửa">
-                <Pencil size={16} />
-              </button>
-            )}
-            {trip.status !== 'COMPLETED' && (
-              <button onClick={() => setShowMatchDialog(true)} className="btn-primary">
-                <Link2 size={16} />
-                <span className="hidden sm:inline">Khớp cont</span>
-              </button>
-            )}
-          </div>
-        }
-      />
+          <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>·</span>
+          <span className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+            {trip.code ?? `#${trip.id}`}
+          </span>
+          <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{trip.client.name}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {!trip.isConfirmed && (
+            <button onClick={handleOpenEdit} className="btn-secondary" aria-label="Sửa">
+              <Pencil size={16} />
+            </button>
+          )}
+          {trip.status !== 'COMPLETED' && (
+            <button onClick={() => setShowMatchDialog(true)} className="btn-primary">
+              <Link2 size={16} />
+              <span className="hidden sm:inline">Khớp cont</span>
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Main content — two column on desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
