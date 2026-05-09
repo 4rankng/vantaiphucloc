@@ -7,6 +7,9 @@ import type {
   SuggestMatchesResponse,
   SuggestWosResponse,
   ReconciliationUploadResponse,
+  MatchScoresResponse,
+  BulkMatchResponse,
+  BulkMatchPair,
 } from '@/data/domain'
 
 interface TripOrderFilters {
@@ -233,6 +236,7 @@ export interface AutoMatchResult {
 export interface AutoMatchResponse {
   autoMatched: AutoMatchResult[]
   partialMatches: AutoMatchResult[]
+  unmatchedWorkOrderIds: number[]
   skippedAlreadyMatched: number
   errors: string[]
 }
@@ -247,6 +251,38 @@ export async function autoMatch(
       date_to: dateTo ?? null,
     })
     return ok(toCamel<AutoMatchResponse>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+// ── Match Scores (lightweight for master list) ───────────────────────
+
+export async function getMatchScores(
+  dateFrom?: string,
+  dateTo?: string,
+): Promise<ApiResponse<MatchScoresResponse>> {
+  try {
+    const params = new URLSearchParams()
+    if (dateFrom) params.append('date_from', dateFrom)
+    if (dateTo) params.append('date_to', dateTo)
+    const res = await api.get(`/match-scores?${params.toString()}`)
+    return ok(toCamel<MatchScoresResponse>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+// ── Bulk Match ──────────────────────────────────────────────────────
+
+export async function bulkMatch(
+  pairs: BulkMatchPair[],
+): Promise<ApiResponse<BulkMatchResponse>> {
+  try {
+    const res = await api.post('/reconcile/bulk-match', {
+      pairs: pairs.map(p => ({ work_order_id: p.workOrderId, trip_order_id: p.tripOrderId })),
+    })
+    return ok(toCamel<BulkMatchResponse>(res.data))
   } catch (err) {
     return fail(err)
   }

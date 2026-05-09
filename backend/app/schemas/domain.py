@@ -468,11 +468,37 @@ class ReconcileRequest(BaseModel):
     trip_order_id: int
 
 
+class CriterionBreakdown(BaseModel):
+    """Per-criterion comparison between WorkOrder and TripOrder, for UI display.
+
+    `name`  : machine key (one of: container_number, date, route, client,
+              pickup_location, dropoff_location)
+    `label` : user-facing Vietnamese label
+    `match` : True if the two sides matched on this criterion
+    `wo_value` / `to_value` : human-readable values from each side, so the UI
+              can render `WO ↔ TO` and a pencil to fix typos. May be None if
+              the side has no value.
+    """
+    name: str
+    label: str
+    match: bool
+    wo_value: str | None = None
+    to_value: str | None = None
+
+
 class MatchSuggestion(BaseModel):
     trip_order: TripOrderOut
     confidence: Literal["full", "partial", "none"]
     matched_fields: list[str]
     score: float
+    # Per-criterion comparison rows for the new "Ghép chuyến" UI. Always 6
+    # entries in the canonical order: container_number, date, route, client,
+    # pickup_location, dropoff_location.
+    criteria: list[CriterionBreakdown] = Field(default_factory=list)
+    # Convenience: integer match count out of len(criteria) — saves the
+    # frontend having to recompute.
+    match_score: int = 0
+    max_score: int = 6
 
 
 class SuggestMatchesResponse(BaseModel):
@@ -485,11 +511,55 @@ class WOSuggestion(BaseModel):
     confidence: Literal["full", "partial", "none"]
     matched_fields: list[str]
     score: float
+    criteria: list[CriterionBreakdown] = Field(default_factory=list)
+    match_score: int = 0
+    max_score: int = 6
 
 
 class SuggestWosResponse(BaseModel):
     trip_order_id: int
     suggestions: list[WOSuggestion]
+
+
+# ---------------------------------------------------------------------------
+# Match scores (lightweight — for master list)
+# ---------------------------------------------------------------------------
+
+class WorkOrderMatchScore(BaseModel):
+    work_order_id: int
+    best_score: float
+    best_match_score: int
+    max_score: int = 6
+    suggestion_count: int = 0
+
+
+class MatchScoresResponse(BaseModel):
+    scores: list[WorkOrderMatchScore]
+
+
+# ---------------------------------------------------------------------------
+# Bulk match
+# ---------------------------------------------------------------------------
+
+class BulkMatchPair(BaseModel):
+    work_order_id: int
+    trip_order_id: int
+
+
+class BulkMatchRequest(BaseModel):
+    pairs: list[BulkMatchPair]
+
+
+class BulkMatchResult(BaseModel):
+    work_order_id: int
+    trip_order_id: int
+    success: bool
+    error: str | None = None
+
+
+class BulkMatchResponse(BaseModel):
+    matched: list[BulkMatchResult]
+    errors: list[str]
 
 
 # ---------------------------------------------------------------------------
@@ -511,6 +581,7 @@ class AutoMatchResult(BaseModel):
 class AutoMatchResponse(BaseModel):
     auto_matched: list[AutoMatchResult]
     partial_matches: list[AutoMatchResult]
+    unmatched_work_order_ids: list[int] = []
     skipped_already_matched: int
     errors: list[str]
 

@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react'
 import { Button, Input } from '@/components/ui'
-import { PageHeader } from '@/components/shared/PageHeader'
 import {
   useSalaryConfig, useUpdateSalaryConfig,
   useSalaryPeriods, useUpdateSalaryPeriod,
@@ -129,9 +128,10 @@ function CalculateCard() {
       start = new Date(year, month - 1, fromDay)
       end = new Date(year, month, toDay)
     }
+    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     return {
-      startDate: start.toISOString().slice(0, 10),
-      endDate: end.toISOString().slice(0, 10),
+      startDate: fmt(start),
+      endDate: fmt(end),
     }
   }, [config])
 
@@ -335,12 +335,6 @@ function SalaryPeriodsList() {
 export function SalarySetup() {
   return (
     <div className="page-container space-y-5">
-      <PageHeader
-        title="Cấu hình lương"
-        subtitle="Quản lý kỳ lương và tính toán lương tài xế"
-        icon="money"
-      />
-
       {/* Top: config + calculate, equal-height side-by-side on desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
         <PeriodConfigCard />

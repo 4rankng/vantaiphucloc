@@ -210,11 +210,22 @@ export interface ApiResponse<T> {
 
 export type MatchConfidence = 'full' | 'partial' | 'none'
 
+export interface CriterionBreakdown {
+  name: string
+  label: string
+  match: boolean
+  woValue: string | null
+  toValue: string | null
+}
+
 export interface MatchSuggestion {
   tripOrder: TripOrder
   confidence: MatchConfidence
   matchedFields: string[]
   score: number
+  criteria: CriterionBreakdown[]
+  matchScore: number
+  maxScore: number
 }
 
 export interface SuggestMatchesResponse {
@@ -227,11 +238,47 @@ export interface WOSuggestion {
   confidence: MatchConfidence
   matchedFields: string[]
   score: number
+  criteria: CriterionBreakdown[]
+  matchScore: number
+  maxScore: number
 }
 
 export interface SuggestWosResponse {
   tripOrderId: number
   suggestions: WOSuggestion[]
+}
+
+// ─── Match Scores (lightweight for master list) ────────────────────────────────
+
+export interface WorkOrderMatchScore {
+  workOrderId: number
+  bestScore: number
+  bestMatchScore: number
+  maxScore: number
+  suggestionCount: number
+}
+
+export interface MatchScoresResponse {
+  scores: WorkOrderMatchScore[]
+}
+
+// ─── Bulk Match ────────────────────────────────────────────────────────────────
+
+export interface BulkMatchPair {
+  workOrderId: number
+  tripOrderId: number
+}
+
+export interface BulkMatchResult {
+  workOrderId: number
+  tripOrderId: number
+  success: boolean
+  error: string | null
+}
+
+export interface BulkMatchResponse {
+  matched: BulkMatchResult[]
+  errors: string[]
 }
 
 // ─── Reconciliation ────────────────────────────────────────────────────────────

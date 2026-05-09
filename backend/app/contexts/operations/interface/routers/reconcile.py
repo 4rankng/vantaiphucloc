@@ -49,11 +49,16 @@ from app.schemas.domain import (
     AutoMatchRequest,
     AutoMatchResponse,
     AutoMatchResult,
+    BulkMatchRequest,
+    BulkMatchResponse,
+    BulkMatchResult,
+    MatchScoresResponse,
     ReconcileRequest,
     SuggestMatchesResponse,
     SuggestWosResponse,
     TripOrderOut,
     UnmatchRequest,
+    WorkOrderMatchScore,
 )
 from app.core.audit import log_action
 
@@ -276,6 +281,7 @@ async def auto_match(
 
     auto_matched: list[AutoMatchResult] = []
     partial_matches: list[AutoMatchResult] = []
+    unmatched_work_order_ids: list[int] = []
     skipped = 0
     errors: list[str] = []
 
@@ -285,6 +291,7 @@ async def auto_match(
             # Filter out already-matched trip orders
             suggestions = [s for s in suggestions if s.trip_order.id not in matched_to_ids]
             if not suggestions:
+                unmatched_work_order_ids.append(wo.id)
                 continue
 
             best = suggestions[0]  # sorted by score desc
@@ -333,6 +340,7 @@ async def auto_match(
                     matched_fields=best.matched_fields,
                 ))
             else:
+                unmatched_work_order_ids.append(wo.id)
                 skipped += 1
         except Exception as exc:
             errors.append(f"WO#{wo.id}: {exc}")
@@ -340,9 +348,135 @@ async def auto_match(
     return AutoMatchResponse(
         auto_matched=auto_matched,
         partial_matches=partial_matches,
+        unmatched_work_order_ids=unmatched_work_order_ids,
         skipped_already_matched=skipped,
         errors=errors,
     )
+
+
+@router.get("/match-scores", response_model=MatchScoresResponse)
+async def match_scores(
+    date_from: str | None = Query(None),
+    date_to: str | None = Query(None),
+    current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
+    use_case: GetWorkOrder = Depends(get_get_work_order),
+):
+    """Return the best match score for each PENDING work order.
+
+    Lightweight endpoint so the master list can show color-coded score
+    chips without fetching full suggestions for every row.
+    """
+    from datetime import date as date_type
+    from sqlalchemy import select as sa_select
+    from app.models.domain import WorkOrder as WO, TripOrderWorkOrder
+
+    db = use_case.repo.session  # type: ignore[attr-defined]
+
+    df = date_type.fromisoformat(date_from) if date_from else None
+    dt = date_type.fromisoformat(date_to) if date_to else None
+
+    wo_query = sa_select(WO).where(WO.status == "PENDING")
+    if df:
+        wo_query = wo_query.where(WO.created_at >= df)
+    if dt:
+        wo_query = wo_query.where(WO.created_at < dt)
+
+    work_orders = list((await db.execute(wo_query)).scalars().all())
+    scores: list[WorkOrderMatchScore] = []
+
+    for wo in work_orders:
+        suggestions = await suggest_trip_matches(db, wo)
+        if suggestions:
+            best = suggestions[0]
+            scores.append(WorkOrderMatchScore(
+                work_order_id=wo.id,
+                best_score=best.score,
+                best_match_score=best.match_score,
+                max_score=best.max_score,
+                suggestion_count=len(suggestions),
+            ))
+        else:
+            scores.append(WorkOrderMatchScore(
+                work_order_id=wo.id,
+                best_score=0.0,
+                best_match_score=0,
+            ))
+
+    return MatchScoresResponse(scores=scores)
+
+
+@router.post("/reconcile/bulk-match", response_model=BulkMatchResponse)
+async def bulk_match(
+    body: BulkMatchRequest,
+    request: Request,
+    current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
+    match_use_case: MatchTripToWorkOrder = Depends(get_match_trip_to_work_order),
+):
+    """Bulk-match pairs of work orders with trip orders.
+
+    Only accepts pairs where the suggestion has score == 1.0 (6/6 full match).
+    """
+    db = match_use_case.session
+    matched: list[BulkMatchResult] = []
+    errors: list[str] = []
+
+    for pair in body.pairs:
+        try:
+            # Verify full match score
+            from sqlalchemy import select as sa_select
+            wo = (await db.execute(
+                sa_select(WorkOrderORM).where(WorkOrderORM.id == pair.work_order_id)
+            )).scalar_one_or_none()
+            if wo is None:
+                errors.append(f"WorkOrder #{pair.work_order_id} not found")
+                continue
+
+            suggestions = await suggest_trip_matches(db, wo)
+            matching = [s for s in suggestions if s.trip_order.id == pair.trip_order_id]
+            if not matching:
+                errors.append(
+                    f"TO #{pair.trip_order_id} not a suggestion for WO #{pair.work_order_id}"
+                )
+                continue
+            if matching[0].score < 1.0:
+                errors.append(
+                    f"WO #{pair.work_order_id} → TO #{pair.trip_order_id}: "
+                    f"score {matching[0].match_score}/{matching[0].max_score}, "
+                    f"only full matches (6/6) allowed"
+                )
+                continue
+
+            to = await match_use_case(ReconcileInput(
+                work_order_id=pair.work_order_id,
+                trip_order_id=pair.trip_order_id,
+                user_id=current_user.id,
+            ))
+            await log_action(
+                db, user_id=current_user.id, action="BULK_MATCH",
+                table_name="trip_order_work_orders",
+                record_id=int(to.id),  # type: ignore[arg-type]
+                new_value={
+                    "work_order_id": pair.work_order_id,
+                    "trip_order_id": pair.trip_order_id,
+                },
+                request=request,
+            )
+            await db.commit()
+
+            # Salary recalc
+            if wo.driver_id:
+                ref_date = wo.created_at.date() if wo.created_at else to.trip_date
+                await _enqueue_salary_recalc(db, wo.driver_id, ref_date)
+
+            matched.append(BulkMatchResult(
+                work_order_id=pair.work_order_id,
+                trip_order_id=pair.trip_order_id,
+                success=True,
+            ))
+        except Exception as exc:
+            errors.append(f"WO #{pair.work_order_id} → TO #{pair.trip_order_id}: {exc}")
+
+    return BulkMatchResponse(matched=matched, errors=errors)
 
 
 @router.get("/export-excel")

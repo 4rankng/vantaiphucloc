@@ -1,27 +1,22 @@
 import { useMemo, useState, useRef, useCallback } from 'react'
-import { Upload, Truck, Calendar, FileSpreadsheet, X, Sparkles, Briefcase } from 'lucide-react'
+import { Upload, FileSpreadsheet, X, Sparkles, ArrowLeft } from 'lucide-react'
 import {
   Button,
   Dialog, DialogContent, DialogHeader, DialogTitle,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from '@/components/ui'
-import { PageHeader } from '@/components/shared/PageHeader'
-import { WorkOrderJobCard } from '@/components/shared/WorkOrderJobCard'
-import { ContBadge } from '@/components/shared/ContBadge'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/Sheet'
 import { FilterToolbar } from '@/components/shared/FilterToolbar'
-import { DataTablePro, type Column } from '@/components/shared/DataTablePro'
-import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
-import { PageContainer } from '@/components/shared/PageContainer'
-import { useWorkOrders, useUploadCustomerExcel, useClients, useTripOrders, useAutoMatch } from '@/hooks/use-queries'
 import { AutoMatchDialog } from '@/components/shared/AutoMatchDialog'
-import { MatchPanel } from '@/components/shared/MatchPanel'
+import { useWorkOrders, useUploadCustomerExcel, useClients, useAutoMatch, useMatchScores } from '@/hooks/use-queries'
+import { WorkOrderMasterList } from './work-orders/WorkOrderMasterList'
+import { MatchDetailPanel } from './work-orders/MatchDetailPanel'
 import type { AutoMatchResponse } from '@/services/api/tripOrders.api'
 import { useToast } from '@/components/atoms/Toast'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useMonthParams } from './use-month-params'
-import type { WorkOrder } from '@/data/domain'
-import { formatCurrencyFull as fmt } from '@/data/domain'
+import type { WorkOrder, WorkOrderMatchScore } from '@/data/domain'
 
 type StatusFilter = 'all' | 'PENDING' | 'COMPLETED'
 
@@ -31,74 +26,38 @@ const STATUS_OPTIONS = [
   { key: 'COMPLETED', label: 'Hoàn thành', color: 'var(--theme-status-success)' },
 ]
 
-function getStatusVariant(status: string): 'pending' | 'completed' | 'neutral' {
-  switch (status) {
-    case 'PENDING': return 'pending'
-    case 'MATCHED': return 'completed'
-    case 'COMPLETED': return 'completed'
-    default: return 'neutral'
-  }
-}
-
-function getStatusLabel(status: string): string {
-  switch (status) {
-    case 'PENDING': return 'Chờ khớp'
-    case 'MATCHED': return 'Hoàn thành'
-    case 'COMPLETED': return 'Hoàn thành'
-    default: return status
-  }
-}
-
-/** Client-side approximation: count draft trip orders that share ≥2 fields with a work order.
- *  Mirrors the backend MIN_MATCH_THRESHOLD logic (≥2 field matches). */
-function usePotentialMatchCounts(workOrders: import('@/data/domain').WorkOrder[]) {
-  const { data: trips = [] } = useTripOrders()
-  return useMemo(() => {
-    const draftTrips = trips.filter(t => t.status === 'DRAFT' || t.status === 'PENDING')
-    const counts = new Map<number, number>()
-    for (const wo of workOrders) {
-      const woContNums = new Set(
-        wo.containers.map(c => c.containerNumber.replace(/[\s-]/g, '').toUpperCase())
-      )
-      const woDate = wo.createdAt ? new Date(wo.createdAt).toISOString().slice(0, 10) : null
-      let count = 0
-      for (const trip of draftTrips) {
-        const tripContNums = (trip.containers?.length ? trip.containers : []).map(
-          c => c.containerNumber.replace(/[\s-]/g, '').toUpperCase()
-        )
-        const contMatch = tripContNums.some(n => woContNums.has(n))
-        const clientMatch = trip.client.id === wo.client.id
-        const routeMatch = trip.route === wo.route
-        const dateMatch = woDate !== null && trip.tripDate === woDate
-        const matchCount = [contMatch, clientMatch, routeMatch, dateMatch].filter(Boolean).length
-        if (matchCount >= 2) count++
-      }
-      counts.set(wo.id, count)
-    }
-    return counts
-  }, [workOrders, trips])
-}
-
 export function WorkOrderList() {
   const isMobile = useIsMobile(1024)
   const toast = useToast()
   const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
   const { data: workOrders = [], isLoading: loading } = useWorkOrders({ dateFrom, dateTo })
   const { data: clients = [] } = useClients()
+  const { data: matchScoresData } = useMatchScores(dateFrom, dateTo)
   const { mutate: uploadExcel, isPending: uploading } = useUploadCustomerExcel()
   const { mutate: runAutoMatch, isPending: autoMatching } = useAutoMatch()
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('PENDING')
   const [autoMatchResult, setAutoMatchResult] = useState<AutoMatchResponse | null>(null)
-  const [expandedJobId, setExpandedJobId] = useState<number | null>(null)
+  const [selectedWoId, setSelectedWoId] = useState<number | null>(null)
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
 
-  // Import Excel dialog state
+  // Import dialog
   const [importOpen, setImportOpen] = useState(false)
   const [selectedClient, setSelectedClient] = useState<string>('')
   const [file, setFile] = useState<File | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  const matchScores = useMemo(() => {
+    const map = new Map<number, WorkOrderMatchScore>()
+    if (matchScoresData?.scores) {
+      for (const s of matchScoresData.scores) {
+        map.set(s.workOrderId, s)
+      }
+    }
+    return map
+  }, [matchScoresData])
 
   const filtered = useMemo(() => {
     let result = workOrders
@@ -113,10 +72,30 @@ export function WorkOrderList() {
         w.containers.some(c => (c.containerNumber ?? '').toLowerCase().includes(q))
       )
     }
-    return result.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    return result
   }, [workOrders, statusFilter, search])
 
-  const matchCounts = usePotentialMatchCounts(workOrders)
+  const selectedWo = useMemo(
+    () => workOrders.find(w => w.id === selectedWoId) ?? null,
+    [workOrders, selectedWoId]
+  )
+
+  const pendingCount = useMemo(
+    () => filtered.filter(w => w.status === 'PENDING').length,
+    [filtered]
+  )
+
+  const handleSelectWo = useCallback((id: number) => {
+    setSelectedWoId(prev => prev === id ? null : id)
+    if (isMobile) {
+      setMobileSheetOpen(true)
+    }
+  }, [isMobile])
+
+  const handleMatchSuccess = useCallback(() => {
+    setSelectedWoId(null)
+    if (isMobile) setMobileSheetOpen(false)
+  }, [isMobile])
 
   const handleClearFilters = useCallback(() => {
     setSearch('')
@@ -170,124 +149,7 @@ export function WorkOrderList() {
     }
   }, [toast])
 
-  // Table columns for desktop
-  const columns: Column<WorkOrder>[] = [
-    {
-      key: 'date',
-      header: 'Ngày',
-      accessor: (row) => (
-        <span className="flex items-center gap-1.5 text-sm">
-          <Calendar className="h-3.5 w-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-          {row.createdAt ? new Date(row.createdAt).toLocaleDateString('vi-VN') : '-'}
-        </span>
-      ),
-      sortable: true,
-      sortKey: (row) => row.createdAt ?? '',
-      width: '110px',
-    },
-    {
-      key: 'client',
-      header: 'Khách hàng',
-      accessor: (row) => (
-        <div className="min-w-0">
-          <p className="font-medium truncate" style={{ color: 'var(--theme-text-primary)' }}>
-            {row.client.name}
-          </p>
-          <p className="text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>
-            {row.route}
-          </p>
-        </div>
-      ),
-      sortable: true,
-      sortKey: (row) => row.client.name,
-    },
-    {
-      key: 'driver',
-      header: 'Tài xế',
-      accessor: (row) => (
-        <div className="min-w-0">
-          <p className="font-medium truncate" style={{ color: 'var(--theme-text-primary)' }}>
-            {row.driver.name || '-'}
-          </p>
-          {row.tractorPlate && (
-            <p className="text-xs flex items-center gap-1" style={{ color: 'var(--theme-text-muted)' }}>
-              <Truck className="h-3 w-3" />
-              {row.tractorPlate}
-            </p>
-          )}
-        </div>
-      ),
-      sortable: true,
-      sortKey: (row) => row.driver.name,
-      hideOnMobile: true,
-    },
-    {
-      key: 'container',
-      header: 'Container',
-      accessor: (row) => {
-        if (row.containers.length === 0) {
-          return <span style={{ color: 'var(--theme-text-muted)' }}>—</span>
-        }
-        return (
-          <div className="flex flex-col gap-0.5">
-            {row.containers.slice(0, 2).map((c, i) => (
-              <div key={i} className="flex items-center gap-1 flex-nowrap">
-                <ContBadge type={c.workType} />
-                <span className="text-xs font-mono whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
-                  {c.containerNumber}
-                </span>
-              </div>
-            ))}
-          </div>
-        )
-      },
-      width: '220px',
-      hideOnMobile: true,
-    },
-    {
-      key: 'earning',
-      header: 'Thu nhập TX',
-      accessor: (row) => (
-        <span className="typo-mono text-sm">
-          {fmt(row.earning ?? 0)}
-        </span>
-      ),
-      sortable: true,
-      sortKey: (row) => row.earning ?? 0,
-      align: 'right',
-      width: '120px',
-      hideOnMobile: true,
-    },
-    {
-      key: 'status',
-      header: 'Trạng thái',
-      accessor: (row) => (
-        <div className="flex items-center gap-2">
-          <StatusBadgePro
-            variant={getStatusVariant(row.status)}
-            label={getStatusLabel(row.status)}
-            size="sm"
-          />
-          {row.status === 'PENDING' && (() => {
-            const count = matchCounts.get(row.id) ?? 0
-            if (count === 0) return null
-            return (
-              <span
-                className="inline-flex items-center gap-1 text-[11px] font-semibold px-1.5 py-0.5 rounded-full"
-                style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
-                title={`${count} đơn hàng tiềm năng`}
-              >
-                <Sparkles className="w-2.5 h-2.5" />
-                {count}
-              </span>
-            )
-          })()}
-        </div>
-      ),
-      width: '160px',
-    },
-  ]
-
+  // ── Import dialog ──
   const importDialogJsx = (
     <Dialog open={importOpen} onOpenChange={(open) => {
       setImportOpen(open)
@@ -299,7 +161,6 @@ export function WorkOrderList() {
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
-          {/* Client select */}
           <Select value={selectedClient} onValueChange={setSelectedClient}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Chọn khách hàng" />
@@ -313,14 +174,7 @@ export function WorkOrderList() {
             </SelectContent>
           </Select>
 
-          {/* File dropzone */}
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".xlsx,.xls"
-            onChange={e => setFile(e.target.files?.[0] ?? null)}
-            className="hidden"
-          />
+          <input ref={fileRef} type="file" accept=".xlsx,.xls" onChange={e => setFile(e.target.files?.[0] ?? null)} className="hidden" />
           <div
             onClick={() => fileRef.current?.click()}
             onDragOver={e => { e.preventDefault(); setDragOver(true) }}
@@ -328,61 +182,32 @@ export function WorkOrderList() {
             onDrop={handleDrop}
             className="w-full rounded-xl border-2 border-dashed cursor-pointer transition-colors flex flex-col items-center justify-center gap-2 py-8 px-4 text-center"
             style={{
-              borderColor: dragOver
-                ? 'var(--theme-brand-primary)'
-                : file
-                  ? 'var(--theme-brand-primary)'
-                  : 'var(--theme-border-default)',
+              borderColor: dragOver ? 'var(--theme-brand-primary)' : file ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)',
               background: dragOver ? 'var(--theme-bg-tertiary)' : 'transparent',
             }}
           >
             {file ? (
               <>
                 <FileSpreadsheet className="h-8 w-8" style={{ color: 'var(--theme-brand-primary)' }} />
-                <p className="text-sm font-medium" style={{ color: 'var(--theme-brand-primary)' }}>
-                  {file.name}
-                </p>
-                <button
-                  onClick={e => { e.stopPropagation(); setFile(null) }}
-                  className="flex items-center gap-1 text-xs"
-                  style={{ color: 'var(--theme-text-muted)' }}
-                >
+                <p className="text-sm font-medium" style={{ color: 'var(--theme-brand-primary)' }}>{file.name}</p>
+                <button onClick={e => { e.stopPropagation(); setFile(null) }} className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
                   <X className="h-3 w-3" /> Xoá file
                 </button>
               </>
             ) : (
               <>
                 <Upload className="h-8 w-8" style={{ color: 'var(--theme-text-muted)' }} />
-                <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
-                  Kéo thả file vào đây
-                </p>
-                <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                  hoặc click để chọn file .xlsx / .xls
-                </p>
+                <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Kéo thả file vào đây</p>
+                <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>hoặc click để chọn file .xlsx / .xls</p>
               </>
             )}
           </div>
 
-          {/* Actions */}
           <div className="flex gap-3 pt-1">
-            <Button
-              onClick={() => { setImportOpen(false); setFile(null); setSelectedClient('') }}
-              disabled={uploading}
-              className="flex-1 h-10 text-sm font-semibold rounded-xl"
-              style={{
-                background: 'var(--theme-bg-secondary)',
-                color: 'var(--theme-text-primary)',
-                border: '1px solid var(--theme-border-default)',
-              }}
-            >
+            <Button onClick={() => { setImportOpen(false); setFile(null); setSelectedClient('') }} disabled={uploading} className="flex-1 h-10 text-sm font-semibold rounded-xl" style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)', border: '1px solid var(--theme-border-default)' }}>
               Huỷ
             </Button>
-            <Button
-              onClick={handleUpload}
-              disabled={uploading || !file || !selectedClient}
-              className="flex-1 h-10 text-sm font-semibold rounded-xl"
-              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-            >
+            <Button onClick={handleUpload} disabled={uploading || !file || !selectedClient} className="flex-1 h-10 text-sm font-semibold rounded-xl" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
               {uploading ? 'Đang tải...' : 'Tải lên'}
             </Button>
           </div>
@@ -391,88 +216,91 @@ export function WorkOrderList() {
     </Dialog>
   )
 
-  if (loading) {
-    return (
-      <div className="space-y-2">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="h-20 rounded-lg skeleton-shimmer" />
-        ))}
-      </div>
-    )
-  }
+  // ── Filter bar (shared between mobile and desktop) ──
+  const filterBar = (
+    <div
+      className="flex items-center gap-3 px-3 py-2 border-b"
+      style={{ borderColor: 'var(--theme-border-default)' }}
+    >
+      <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
+      <div className="flex-1" />
+      <FilterToolbar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Tìm mã, biển số, container..."
+        statusOptions={STATUS_OPTIONS}
+        selectedStatus={statusFilter}
+        onStatusChange={(s) => setStatusFilter(s as StatusFilter)}
+        onClearFilters={handleClearFilters}
+        compact
+      />
+      {pendingCount > 0 && (
+        <span
+          className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0"
+          style={{ background: 'color-mix(in srgb, var(--theme-status-warning) 12%, transparent)', color: 'var(--theme-status-warning)' }}
+        >
+          {pendingCount} chờ khớp
+        </span>
+      )}
+    </div>
+  )
 
+  // ── Header actions ──
+  const headerActions = (
+    <div className="flex items-center gap-2">
+      <Button
+        onClick={handleAutoMatch}
+        disabled={autoMatching}
+        className="h-9 gap-1.5 text-xs font-semibold rounded-lg"
+        style={{ background: 'var(--theme-status-success)', color: '#fff' }}
+      >
+        <Sparkles className="h-3.5 w-3.5" />
+        {autoMatching ? 'Đang ghép...' : 'Tự động ghép'}
+      </Button>
+      <Button
+        onClick={() => setImportOpen(true)}
+        className="h-9 gap-1.5 text-xs font-semibold rounded-lg"
+        style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+      >
+        <FileSpreadsheet className="h-3.5 w-3.5" />
+        Nhập đơn
+      </Button>
+    </div>
+  )
+
+  // ── Mobile ──
   if (isMobile) {
     return (
       <div className="space-y-3">
-        <PageHeader title="Ghép chuyến" lucideIcon={Briefcase} />
+        <div className="flex justify-end">{headerActions}</div>
+        {filterBar}
 
-        <div className="flex gap-2">
-          <Button
-            onClick={handleAutoMatch}
-            disabled={autoMatching}
-            className="h-8 gap-1.5 text-xs font-semibold rounded-lg flex-1"
-            style={{ background: 'var(--theme-status-success)', color: '#fff' }}
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            {autoMatching ? 'Đang ghép...' : 'Tự động ghép'}
-          </Button>
-          <Button
-            onClick={() => setImportOpen(true)}
-            className="h-8 gap-1.5 text-xs font-semibold rounded-lg"
-            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-          >
-            <FileSpreadsheet className="h-3.5 w-3.5" />
-            Nhập đơn
-          </Button>
+        <div className="card overflow-hidden">
+          <WorkOrderMasterList
+            workOrders={filtered}
+            matchScores={matchScores}
+            selectedId={selectedWoId}
+            onSelect={handleSelectWo}
+            loading={loading}
+          />
         </div>
 
-        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
-
-        <FilterToolbar
-          search={search}
-          onSearchChange={setSearch}
-          searchPlaceholder="Tìm biển số, tài xế, container..."
-          statusOptions={STATUS_OPTIONS}
-          selectedStatus={statusFilter}
-          onStatusChange={(s) => setStatusFilter(s as StatusFilter)}
-          onClearFilters={handleClearFilters}
-        />
-
-        <p className="text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>
-          {filtered.length} phiếu
-        </p>
-
-        {filtered.length === 0 ? (
-          <div
-            className="rounded-lg p-10 text-center card"
-          >
-            <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-              {search || statusFilter !== 'all' ? 'Không tìm thấy phiếu nào' : 'Chưa có phiếu nào'}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {filtered.map(job => (
-              <div key={job.id}>
-                <WorkOrderJobCard
-                  job={job}
-                  status={job.status === 'PENDING' ? 'unmatched' : 'completed'}
-                  matchCount={matchCounts.get(job.id)}
-                  onClick={() => setExpandedJobId(prev => prev === job.id ? null : job.id)}
-                />
-                {expandedJobId === job.id && (
-                  <div className="mt-2">
-                    <MatchPanel
-                      workOrder={job}
-                      onClose={() => setExpandedJobId(null)}
-                      onMatchSuccess={() => setExpandedJobId(null)}
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Mobile: Sheet drawer for detail panel */}
+        <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
+          <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl p-0 overflow-hidden">
+            <SheetHeader className="px-4 pt-4 pb-2 flex flex-row items-center gap-2">
+              <button
+                onClick={() => setMobileSheetOpen(false)}
+                className="p-1.5 rounded-lg"
+                style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+              <SheetTitle className="text-sm font-semibold">Chi tiết ghép chuyến</SheetTitle>
+            </SheetHeader>
+            <MatchDetailPanel workOrder={selectedWo} onMatchSuccess={handleMatchSuccess} />
+          </SheetContent>
+        </Sheet>
 
         {importDialogJsx}
         <AutoMatchDialog open={!!autoMatchResult} onClose={() => setAutoMatchResult(null)} result={autoMatchResult} />
@@ -480,102 +308,33 @@ export function WorkOrderList() {
     )
   }
 
+  // ── Desktop: master-detail 2-column ──
   return (
-    <div className="space-y-5">
-      <PageHeader
-        title="Ghép chuyến"
-        lucideIcon={Briefcase}
-        actions={
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={handleAutoMatch}
-              disabled={autoMatching}
-              className="h-9 gap-1.5 text-xs font-semibold rounded-lg"
-              style={{ background: 'var(--theme-status-success)', color: '#fff' }}
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              {autoMatching ? 'Đang ghép...' : 'Tự động ghép'}
-            </Button>
-            <Button
-              onClick={() => setImportOpen(true)}
-              className="btn-primary h-9 gap-1.5 text-xs font-semibold"
-            >
-              <FileSpreadsheet className="h-3.5 w-3.5" />
-              Nhập đơn
-            </Button>
-          </div>
-        }
-      />
+    <div className="space-y-4">
+      <div className="flex justify-end">{headerActions}</div>
 
       <div className="card overflow-hidden">
-        <div className="flex items-center gap-3 p-3 border-b" style={{ borderColor: 'var(--theme-border-default)' }}>
-          <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
-          <div className="flex-1" />
-          <FilterToolbar
-            search={search}
-            onSearchChange={setSearch}
-            searchPlaceholder="Tìm mã phiếu, biển số, tài xế, khách hàng, container..."
-            statusOptions={STATUS_OPTIONS}
-            selectedStatus={statusFilter}
-            onStatusChange={(s) => setStatusFilter(s as StatusFilter)}
-            onClearFilters={handleClearFilters}
-            compact
-          />
-        </div>
+        {filterBar}
 
-        <div className="hidden lg:block overflow-x-auto">
-          <DataTablePro
-            data={filtered}
-            columns={columns}
-            rowKey={(row) => row.id}
-            onRowClick={(row) => setExpandedJobId(prev => prev === row.id ? null : row.id)}
-            expandedRowKey={expandedJobId}
-            renderExpandedRow={(row) => (
-              <MatchPanel
-                workOrder={row}
-                onClose={() => setExpandedJobId(null)}
-                onMatchSuccess={() => setExpandedJobId(null)}
-              />
-            )}
-            loading={loading}
-            stickyHeader
-            striped
-            emptyState={
-              <div className="py-8 text-center">
-                <p className="text-sm font-semibold mb-1" style={{ color: 'var(--theme-text-primary)' }}>
-                  {search || statusFilter !== 'all' ? 'Không tìm thấy phiếu nào' : 'Chưa có phiếu nào'}
-                </p>
-              </div>
-            }
-          />
-        </div>
+        <div className="flex" style={{ height: 'calc(100vh - 200px)' }}>
+          {/* Left: master list */}
+          <div
+            className="overflow-y-auto border-r"
+            style={{ width: '40%', borderColor: 'var(--theme-border-default)' }}
+          >
+            <WorkOrderMasterList
+              workOrders={filtered}
+              matchScores={matchScores}
+              selectedId={selectedWoId}
+              onSelect={handleSelectWo}
+              loading={loading}
+            />
+          </div>
 
-        <div className="lg:hidden divide-y" style={{ borderColor: 'var(--theme-border-light)' }}>
-          {filtered.length === 0 ? (
-            <div className="py-8 text-center">
-              <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                {search || statusFilter !== 'all' ? 'Không tìm thấy phiếu nào' : 'Chưa có phiếu nào'}
-              </p>
-            </div>
-          ) : (
-            filtered.map(job => (
-              <div key={job.id}>
-                <WorkOrderJobCard
-                  job={job}
-                  status={job.status === 'PENDING' ? 'unmatched' : 'completed'}
-                  matchCount={matchCounts.get(job.id)}
-                  onClick={() => setExpandedJobId(prev => prev === job.id ? null : job.id)}
-                />
-                {expandedJobId === job.id && (
-                  <MatchPanel
-                    workOrder={job}
-                    onClose={() => setExpandedJobId(null)}
-                    onMatchSuccess={() => setExpandedJobId(null)}
-                  />
-                )}
-              </div>
-            ))
-          )}
+          {/* Right: detail panel */}
+          <div className="flex-1 overflow-hidden">
+            <MatchDetailPanel workOrder={selectedWo} onMatchSuccess={handleMatchSuccess} />
+          </div>
         </div>
       </div>
 
