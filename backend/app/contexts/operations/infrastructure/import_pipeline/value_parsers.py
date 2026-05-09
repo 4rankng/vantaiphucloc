@@ -196,3 +196,50 @@ def parse_string(raw: Any, max_len: int = 500) -> str:
 def parse_plate(raw: Any) -> str:
     s = parse_string(raw, max_len=20).upper().replace(" ", "")
     return s
+
+
+# ---------------------------------------------------------------------------
+# Combined size+type parsing (e.g. "40HC", "20DC", "20RF")
+# ---------------------------------------------------------------------------
+
+_SIZE_TYPE_RE = re.compile(r"^(\d{2})\s*(.*)$")
+
+
+def parse_size_type(raw: Any) -> tuple[str | None, str | None]:
+    """Parse combined size+type like '40HC', '20DC'.
+
+    Returns (size, type_code). Either may be None.
+    """
+    if raw is None:
+        return None, None
+    s = str(raw).strip()
+    if not s or s.lower() == "nan":
+        return None, None
+    m = _SIZE_TYPE_RE.match(s)
+    if m:
+        return m.group(1), m.group(2) or None
+    if s.isdigit():
+        return s, None
+    return None, s
+
+
+def build_cont_type(freight_kind: Any, size: Any, type_code: str | None = None) -> str:
+    """Build work_type string: E20, E40, F20, F40.
+
+    Normalizes freight_kind and size, returns the combined code.
+    """
+    # Normalize F/E
+    fe = "E"
+    if freight_kind is not None:
+        fk = str(freight_kind).strip().upper()
+        if fk in ("F", "FULL", "H", "HÀNG", "HANG", "1", "Y"):
+            fe = "F"
+        elif fk in ("E", "EMPTY", "R", "RỖNG", "RONG", "VỎ", "VO", "0", "N"):
+            fe = "E"
+
+    # Normalize size
+    sz = str(size).strip() if size else "20"
+    m = re.match(r"^(\d+)", sz)
+    sz = m.group(1) if m else "20"
+
+    return f"{fe}{sz}"

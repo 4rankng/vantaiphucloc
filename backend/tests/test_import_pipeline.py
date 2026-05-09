@@ -19,14 +19,24 @@ from app.contexts.operations.infrastructure.import_pipeline.canonical import (
     synonym_substring_match,
     EXACT_LOOKUP,
 )
+from app.contexts.operations.infrastructure.import_pipeline.pattern_detector import detect_pattern
+from app.contexts.operations.infrastructure.import_pipeline.pattern_extractors import (
+    ExtractedRow,
+    extract_bay_plan,
+    extract_invoice,
+    extract_loading_list,
+)
 from app.contexts.operations.infrastructure.import_pipeline.pipeline import run_preview
 from app.contexts.operations.infrastructure.import_pipeline.value_parsers import (
+    build_cont_type,
     parse_container_no,
     parse_container_size,
-    parse_freight_kind,
     parse_date as parse_date_val,
+    parse_freight_kind,
+    parse_size_type,
     parse_weight_kg,
 )
+from app.contexts.operations.infrastructure.import_pipeline.workbook import load_workbook
 
 
 DOCS = Path(__file__).resolve().parents[2] / "docs"
@@ -34,6 +44,12 @@ LOADING = DOCS / "LOADING LIST HAIAN DELL 037S 19.4.xlsx"
 DISCHARGING = DOCS / "DISCHARGING LIST HAIAN TIME 454W 6.4.xlsx"
 GLORY = DOCS / "2.GLORY SHANGHAI- 2612N.xlsx"
 BDST = DOCS / "BDST 11.4.xls"
+
+# New sample files (pattern-based)
+GLORY_NEW = DOCS / "2.GLORY SHANGHAI- 2612N.xlsx"
+CONSCIENCE = DOCS / "8.CONSCIENCE 2615N.xlsx"
+HAIAN_BETA = DOCS / "Loading list of HAIAN BETA 062S.xls"
+PHUC_LOC = DOCS / "Phúc Lộc - Shipside T4.26 HAP.xlsx"
 
 
 # ---------------------------------------------------------------------------
@@ -257,3 +273,193 @@ async def test_glory_picks_correct_sheet_with_stowage_present(files_present):
     res = await run_preview(GLORY.read_bytes(), GLORY.name, default_trip_date=date(2026, 3, 31))
     assert res.sheet_name == "Sheet1"
     assert "CONSCIENCE 2612N" in [s["sheet_name"] for s in res.sheet_alternatives] + [res.sheet_name]
+
+
+# ---------------------------------------------------------------------------
+# Value parsers — parse_size_type / build_cont_type
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize(
+    "raw,expected_size,expected_type",
+    [
+        ("40HC", "40", "HC"),
+        ("20DC", "20", "DC"),
+        ("20RF", "20", "RF"),
+        ("45HC", "45", "HC"),
+        ("20", "20", None),
+        ("40", "40", None),
+        (None, None, None),
+        ("", None, None),
+    ],
+)
+def test_parse_size_type(raw, expected_size, expected_type):
+    size, typ = parse_size_type(raw)
+    assert size == expected_size
+    assert typ == expected_type
+
+
+@pytest.mark.parametrize(
+    "fe,size,expected",
+    [
+        ("E", "20", "E20"),
+        ("E", "40", "E40"),
+        ("F", "20", "F20"),
+        ("F", "40", "F40"),
+        ("H", "20", "F20"),    # H → F (hàng)
+        ("R", "40", "E40"),    # R → E (rỗng)
+        ("FULL", "20", "F20"),
+        ("EMPTY", "40", "E40"),
+    ],
+)
+def test_build_cont_type(fe, size, expected):
+    assert build_cont_type(fe, size) == expected
+
+
+# ---------------------------------------------------------------------------
+# Pattern detection
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def glory_sheets():
+    if not GLORY_NEW.exists():
+        pytest.skip("GLORY SHANGHAI sample missing")
+    sheets = load_workbook(GLORY_NEW.read_bytes(), GLORY_NEW.name)
+    return sheets
+
+
+@pytest.fixture
+def conscience_sheets():
+    if not CONSCIENCE.exists():
+        pytest.skip("CONSCIENCE sample missing")
+    sheets = load_workbook(CONSCIENCE.read_bytes(), CONSCIENCE.name)
+    return sheets
+
+
+@pytest.fixture
+def haian_sheets():
+    if not HAIAN_BETA.exists():
+        pytest.skip("HAIAN BETA sample missing")
+    sheets = load_workbook(HAIAN_BETA.read_bytes(), HAIAN_BETA.name)
+    return sheets
+
+
+@pytest.fixture
+def phucloc_sheets():
+    if not PHUC_LOC.exists():
+        pytest.skip("Phúc Lộc sample missing")
+    sheets = load_workbook(PHUC_LOC.read_bytes(), PHUC_LOC.name)
+    return sheets
+
+
+def test_detect_bay_plan_glory(glory_sheets):
+    pattern = detect_pattern(glory_sheets, "2.GLORY SHANGHAI- 2612N.xlsx")
+    assert pattern is not None
+    assert pattern.pattern_name == "bay_plan"
+    assert pattern.confidence >= 0.6
+
+
+def test_detect_bay_plan_conscience(conscience_sheets):
+    pattern = detect_pattern(conscience_sheets, "8.CONSCIENCE 2615N.xlsx")
+    assert pattern is not None
+    assert pattern.pattern_name == "bay_plan"
+
+
+def test_detect_loading_list(haian_sheets):
+    pattern = detect_pattern(haian_sheets, "Loading list of HAIAN BETA 062S.xls")
+    assert pattern is not None
+    assert pattern.pattern_name == "loading_list"
+
+
+def test_detect_invoice(phucloc_sheets):
+    pattern = detect_pattern(phucloc_sheets, "Phúc Lộc - Shipside T4.26 HAP.xlsx")
+    assert pattern is not None
+    assert pattern.pattern_name == "invoice"
+
+
+# ---------------------------------------------------------------------------
+# Pattern extractors — unit tests
+# ---------------------------------------------------------------------------
+
+def test_extract_bay_plan_glory(glory_sheets):
+    accepted, rejected = extract_bay_plan(glory_sheets, "2.GLORY SHANGHAI- 2612N.xlsx")
+    assert len(accepted) > 0
+    for row in accepted:
+        assert len(row.container_number) == 11  # 4 letters + 7 digits
+        assert row.work_type in ("E20", "E40", "F20", "F40")
+        assert row.pickup != ""
+        assert row.dropoff != ""
+    # GLORY has containers across multiple port sections
+    ports = {r.dropoff for r in accepted}
+    assert len(ports) >= 2
+
+
+def test_extract_bay_plan_conscience(conscience_sheets):
+    accepted, rejected = extract_bay_plan(conscience_sheets, "8.CONSCIENCE 2615N.xlsx")
+    assert len(accepted) > 0
+    for row in accepted:
+        assert row.work_type in ("E20", "E40", "F20", "F40")
+
+
+def test_extract_loading_list(haian_sheets):
+    accepted, rejected = extract_loading_list(haian_sheets, "Loading list of HAIAN BETA 062S.xls")
+    assert len(accepted) > 0
+    for row in accepted:
+        assert len(row.container_number) == 11
+        assert row.work_type in ("E20", "E40", "F20", "F40", "E45", "F45")
+    # Should have vessel name
+    vessel_names = {r.vessel_name for r in accepted if r.vessel_name}
+    assert len(vessel_names) >= 1
+
+
+def test_extract_invoice(phucloc_sheets):
+    accepted, rejected = extract_invoice(phucloc_sheets, "Phúc Lộc - Shipside T4.26 HAP.xlsx")
+    assert len(accepted) > 0
+    for row in accepted:
+        assert len(row.container_number) == 11
+        assert row.work_type in ("E20", "E40", "F20", "F40")
+        assert row.pickup != ""
+        assert row.dropoff != ""
+
+
+# ---------------------------------------------------------------------------
+# End-to-end preview via pipeline — pattern-detected files
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def pattern_files_present():
+    missing = [p for p in [GLORY_NEW, CONSCIENCE, HAIAN_BETA, PHUC_LOC] if not p.exists()]
+    if missing:
+        pytest.skip(f"sample files missing: {missing}")
+
+
+@pytest.mark.asyncio
+async def test_glory_pattern_preview(pattern_files_present):
+    res = await run_preview(GLORY_NEW.read_bytes(), GLORY_NEW.name, default_trip_date=date(2026, 3, 31))
+    assert res.stats["accepted_count"] > 0
+    first = res.accepted[0]["values"]
+    assert "container_no" in first
+    assert first["work_type"] in ("E20", "E40", "F20", "F40")
+    assert first["pickup_location"] != ""
+
+
+@pytest.mark.asyncio
+async def test_conscience_pattern_preview(pattern_files_present):
+    res = await run_preview(CONSCIENCE.read_bytes(), CONSCIENCE.name, default_trip_date=date(2026, 3, 31))
+    assert res.stats["accepted_count"] > 0
+
+
+@pytest.mark.asyncio
+async def test_haian_pattern_preview(pattern_files_present):
+    res = await run_preview(HAIAN_BETA.read_bytes(), HAIAN_BETA.name, default_trip_date=date(2026, 4, 19))
+    assert res.stats["accepted_count"] > 0
+    first = res.accepted[0]["values"]
+    assert first["pickup_location"] != ""
+
+
+@pytest.mark.asyncio
+async def test_phucloc_pattern_preview(pattern_files_present):
+    res = await run_preview(PHUC_LOC.read_bytes(), PHUC_LOC.name, default_trip_date=date(2026, 4, 26))
+    assert res.stats["accepted_count"] > 0
+    first = res.accepted[0]["values"]
+    assert first["pickup_location"] != ""
+    assert first["dropoff_location"] != ""
