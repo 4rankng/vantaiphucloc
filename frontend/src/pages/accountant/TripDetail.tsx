@@ -188,12 +188,14 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
                 </span>
               )}
             </div>
-            <ConfirmationCheckbox
-              isConfirmed={trip.isConfirmed}
-              onToggle={handleToggleConfirmation}
-              disabled={toggling || trip.status === 'CANCELLED'}
-              label="Chốt chuyến"
-            />
+            {!onClose && (
+              <ConfirmationCheckbox
+                isConfirmed={trip.isConfirmed}
+                onToggle={handleToggleConfirmation}
+                disabled={toggling || trip.status === 'CANCELLED'}
+                label="Chốt chuyến"
+              />
+            )}
           </div>
           {trip.isConfirmed && (
             <div className="rounded-lg p-3 flex items-start gap-2 mb-4" style={{ background: 'var(--theme-status-success-light)' }}>
@@ -380,6 +382,15 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Đóng button — dialog mode only */}
+      {onClose && (
+        <div className="flex justify-end pt-2">
+          <button onClick={onClose} className="btn-secondary">
+            Đóng
+          </button>
+        </div>
+      )}
     </div>
   )
 }
