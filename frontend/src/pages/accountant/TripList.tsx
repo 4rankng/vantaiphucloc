@@ -8,7 +8,6 @@ import { InlineSelect } from '@/components/shared/InlineSelect'
 import {
   Upload, Download, Calendar,
   Clock, CheckCircle2, Hash, Search, X,
-  FileBarChart2,
 } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { Button, Dialog, DialogContent } from '@/components/ui'
@@ -17,23 +16,16 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import type { TripOrder } from '@/data/domain'
 import { formatCurrencyFull as fmt } from '@/data/domain'
 import { ImportOrdersDialog } from './ImportOrders'
-import { CustomerSettlementReport } from './CustomerSettlementReport'
 import { TripDetailContent } from './TripDetail'
 
 // ─── Status config ─────────────────────────────────────────────────────────────
 
 type SimpleStatus = 'ALL' | 'PENDING' | 'MATCHED'
-type ViewMode = 'orders' | 'reports'
 
 const STATUS_OPTIONS: { key: SimpleStatus; label: string; color?: string }[] = [
   { key: 'ALL', label: 'Tất cả' },
   { key: 'PENDING', label: 'Chờ đối soát', color: 'var(--theme-status-warning)' },
   { key: 'MATCHED', label: 'Đã khớp', color: 'var(--theme-status-success)' },
-]
-
-const VIEW_OPTIONS: { key: ViewMode; label: string; icon: React.ElementType }[] = [
-  { key: 'orders', label: 'Đơn hàng', icon: Hash },
-  { key: 'reports', label: 'Báo cáo', icon: FileBarChart2 },
 ]
 
 function isPending(t: TripOrder) {
@@ -52,34 +44,6 @@ function getStatusLabel(t: TripOrder): string {
   if (isMatched(t)) return 'Đã khớp'
   if (isPending(t)) return 'Chờ đối soát'
   return t.status
-}
-
-// ─── View toggle (filter toggle, not tab) ─────────────────────────────────────
-
-function ViewToggle({ active, onChange }: { active: ViewMode; onChange: (v: ViewMode) => void }) {
-  return (
-    <div className="flex gap-1 rounded-lg p-0.5" style={{ background: 'var(--theme-bg-tertiary)' }}>
-      {VIEW_OPTIONS.map(opt => {
-        const Icon = opt.icon
-        const isActive = active === opt.key
-        return (
-          <button
-            key={opt.key}
-            onClick={() => onChange(opt.key)}
-            className="flex items-center gap-1.5 py-1.5 px-3 rounded-md text-sm font-semibold transition-all"
-            style={{
-              background: isActive ? 'var(--theme-bg-primary)' : 'transparent',
-              color: isActive ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)',
-              boxShadow: isActive ? 'var(--theme-shadow-sm)' : 'none',
-            }}
-          >
-            <Icon className="h-3.5 w-3.5 shrink-0" />
-            {opt.label}
-          </button>
-        )
-      })}
-    </div>
-  )
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -176,12 +140,6 @@ export function TripList() {
     )
   }
 
-  // ─── Reports view (shared for desktop + mobile) ─────────────────────────────
-
-  if (viewMode === 'reports') {
-    return <CustomerSettlementReport />
-  }
-
   // ─── Desktop ───────────────────────────────────────────────────────────────
 
   if (!isMobile) {
@@ -194,7 +152,6 @@ export function TripList() {
             <p className="typo-body-sm mt-0.5">Tháng {month}/{year}</p>
           </div>
           <div className="flex items-center gap-3">
-            <ViewToggle active={viewMode} onChange={setViewMode} />
             <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
           </div>
         </div>
@@ -346,8 +303,6 @@ export function TripList() {
           Nhập đơn
         </button>
       </div>
-
-      <ViewToggle active={viewMode} onChange={setViewMode} />
 
       <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
       <div className="grid grid-cols-2 gap-2">
