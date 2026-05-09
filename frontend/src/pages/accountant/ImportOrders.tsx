@@ -593,7 +593,7 @@ export function ImportOrders() {
                 {preview.rejected.slice(0, 100).map(r => (
                   <tr key={r.source_row_index} className="border-t" style={{ borderColor: 'var(--theme-border-subtle)' }}>
                     <td className="py-1 px-2 text-muted-foreground">{r.source_row_index + 1}</td>
-                    <td className="py-1 px-2">{r.reasons.join(', ')}</td>
+                    <td className="py-1 px-2">{(r.reasons ?? []).join(', ')}</td>
                     <td className="py-1 px-2 font-mono">{String((r.raw as Record<string, unknown>).container_no ?? '')}</td>
                   </tr>
                 ))}

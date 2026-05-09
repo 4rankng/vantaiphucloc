@@ -2,12 +2,8 @@ import { useMemo } from 'react'
 import { Calendar, Truck } from 'lucide-react'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
+import { fmtDate } from '@/lib/date-utils'
 import type { WorkOrder, WorkOrderMatchScore } from '@/data/domain'
-
-function fmtDate(dateStr: string): string {
-  const d = new Date(dateStr)
-  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`
-}
 
 function scoreChipColor(matchScore: number, maxScore: number): string {
   const ratio = maxScore > 0 ? matchScore / maxScore : 0

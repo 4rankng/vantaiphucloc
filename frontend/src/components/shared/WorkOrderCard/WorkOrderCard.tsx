@@ -1,5 +1,6 @@
 import { Clock, CheckCircle, Lock } from 'lucide-react'
 import { formatCurrencyFull, type WorkOrder } from '@/data/domain'
+import { resolveRoute } from '@/lib/route-utils'
 
 type CardVariant = 'driver' | 'accountant'
 
@@ -26,21 +27,6 @@ export function WorkOrderCard(props: WorkOrderCardProps) {
     return <DriverCard wo={wo} onClick={(props as DriverVariantProps).onClick} />
   }
   return <AccountantCard wo={wo} />
-}
-
-/** Routes are stored as "Origin → Destination" with the arrow character.
- *  Some legacy data may use " - " as a separator; handle both. */
-function splitRouteParts(route: string): string[] {
-  if (route.includes('→')) return route.split(/\s*→\s*/).map(s => s.trim()).filter(Boolean)
-  if (route.includes(' - ')) return route.split(' - ').map(s => s.trim()).filter(Boolean)
-  return [route]
-}
-
-function resolveRoute(wo: WorkOrder): string {
-  const parts = splitRouteParts(wo.route)
-  const from = wo.pickupLocation?.name || parts[0] || wo.route
-  const to   = wo.dropoffLocation?.name || parts[1] || null
-  return to ? `${from} → ${to}` : from
 }
 
 function fmtDate(iso: string): string {
