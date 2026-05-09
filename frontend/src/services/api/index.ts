@@ -73,6 +73,8 @@ export const apiClient = {
   importTripOrders: tripOrdersApi.importTripOrders,
   exportTripOrdersExcel: tripOrdersApi.exportTripOrdersExcel,
   autoMatch: tripOrdersApi.autoMatch,
+  getMatchScores: tripOrdersApi.getMatchScores,
+  bulkMatch: tripOrdersApi.bulkMatch,
 
   // Salary
   calculateSalary: salaryApi.calculateSalary,

@@ -5,10 +5,10 @@ import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { useClients, useCreateTripOrder, useCreateClient, useImportTripOrders, useLocations } from '@/hooks/use-queries'
 import { WORK_TYPES, type WorkType } from '@/data/domain'
-import { PageHeader } from '@/components/shared/PageHeader'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
 import { CreateClientDialog } from '@/components/shared/CreateClientDialog'
+import { Plus, Upload } from 'lucide-react'
 import { ImportResultDialog } from '@/components/shared/ImportResultDialog'
 import { Plus, Trash2, Upload, ChevronLeft } from 'lucide-react'
 import { useToast } from '@/components/atoms/Toast'
@@ -91,7 +91,7 @@ export function CreateTrip() {
     setSubmitting(true)
     const route = `${pickupLocation} - ${dropoffLocation}`
     createTripOrder.mutate({
-      tripDate: new Date().toISOString().slice(0, 10),
+      tripDate: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })(),
       clientId: Number(clientId),
       route,
       pickupLocationId: pickupId,
@@ -113,27 +113,22 @@ export function CreateTrip() {
 
   return (
     <div className="page-container space-y-5 max-w-3xl">
-      <PageHeader
-        title="Tạo chuyến"
-        breadcrumbs={
-          <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm" style={{ color: 'var(--theme-text-muted)' }}>
-            <ChevronLeft size={14} /> Đơn hàng
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm" style={{ color: 'var(--theme-text-muted)' }}>
+          <ChevronLeft size={14} /> Đơn hàng
+        </button>
+        <>
+          <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden" />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+            className="btn-ghost h-9 px-3 text-xs font-semibold"
+          >
+            <Upload className="w-3.5 h-3.5" /> {importing ? 'Đang nhập...' : 'Nhập đơn'}
           </button>
-        }
-        actions={
-          <>
-            <input ref={fileInputRef} type="file" accept=".xlsx,.xls" onChange={handleImport} className="hidden" />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={importing}
-              className="btn-ghost h-9 px-3 text-xs font-semibold"
-            >
-              <Upload className="w-3.5 h-3.5" /> {importing ? 'Đang nhập...' : 'Nhập đơn'}
-            </button>
-          </>
-        }
-      />
+        </>
+      </div>
 
       {/* Form card */}
       <div className="card divide-y" style={{ borderColor: 'var(--theme-border-light)' }}>
