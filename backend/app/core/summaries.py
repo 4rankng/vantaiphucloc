@@ -10,25 +10,29 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from sqlalchemy import select as sa_select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.base import User
-from app.models.domain import Client, Location
+from app.models.domain import Location, Partner, Vehicle
 from app.schemas.domain import (
-    ClientSummaryOut,
     DriverSummaryOut,
     LocationSummaryOut,
+    PartnerSummaryOut,
+    VehicleSummaryOut,
 )
 
 
-async def load_client_summaries(
-    db: AsyncSession, client_ids: set[int] | list[int]
-) -> dict[int, ClientSummaryOut]:
-    ids = {i for i in client_ids if i is not None}
+async def load_partner_summaries(
+    db: AsyncSession, partner_ids: set[int] | list[int]
+) -> dict[int, PartnerSummaryOut]:
+    ids = {i for i in partner_ids if i is not None}
     if not ids:
         return {}
-    res = await db.execute(select(Client).where(Client.id.in_(ids)))
+    res = await db.execute(sa_select(Partner).where(Partner.id.in_(ids)))
     return {
-        c.id: ClientSummaryOut(id=c.id, code=c.code, name=c.name)
-        for c in res.scalars().all()
+        p.id: PartnerSummaryOut(id=p.id, code=p.code, name=p.name)
+        for p in res.scalars().all()
     }
 
 
@@ -51,24 +55,31 @@ async def load_driver_summaries(
     ids = {i for i in driver_ids if i is not None}
     if not ids:
         return {}
-    res = await db.execute(select(User).where(User.id.in_(ids)))
+    res = await db.execute(sa_select(User).where(User.id.in_(ids)))
+    users = {u.id: u for u in res.scalars().all()}
+    vehicle_res = await db.execute(
+        sa_select(Vehicle).where(Vehicle.driver_id.in_(ids))
+    )
+    vehicle_by_driver: dict[int, Vehicle] = {}
+    for v in vehicle_res.scalars().all():
+        vehicle_by_driver[v.driver_id] = v
     return {
-        u.id: DriverSummaryOut(
-            id=u.id,
+        uid: DriverSummaryOut(
+            id=uid,
             name=(u.full_name or u.username),
             phone=u.phone,
-            tractor_plate=u.tractor_plate,
+            vehicle=VehicleSummaryOut(id=v.id, plate=v.plate) if (v := vehicle_by_driver.get(uid)) else None,
         )
-        for u in res.scalars().all()
+        for uid, u in users.items()
     }
 
 
-def get_client_summary(
-    summaries: dict[int, ClientSummaryOut], client_id: int
-) -> ClientSummaryOut:
+def get_partner_summary(
+    summaries: dict[int, PartnerSummaryOut], partner_id: int
+) -> PartnerSummaryOut:
     """Return the summary or a placeholder if missing (e.g. soft-deleted)."""
     return summaries.get(
-        client_id, ClientSummaryOut(id=client_id, code=None, name="(không rõ)")
+        partner_id, PartnerSummaryOut(id=partner_id, code=None, name="(không rõ)")
     )
 
 
@@ -84,5 +95,5 @@ def get_driver_summary(
     summaries: dict[int, DriverSummaryOut], driver_id: int
 ) -> DriverSummaryOut:
     return summaries.get(
-        driver_id, DriverSummaryOut(id=driver_id, name="(không rõ)", phone=None, tractor_plate=None)
+        driver_id, DriverSummaryOut(id=driver_id, name="(không rõ)", phone=None, vehicle=None)
     )

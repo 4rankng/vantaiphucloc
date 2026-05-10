@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.domain import TripOrder, WorkOrder, Client
+from app.models.domain import Partner, Reconciliation, TripOrder, Vehicle, WorkOrder
 from app.models.base import User
 from app.core.deps import get_current_user
 from app.core.worker import get_arq_pool
@@ -43,7 +43,8 @@ async def get_dashboard_summary(
         except ValueError:
             pass
 
-    revenue_query = select(func.coalesce(func.sum(TripOrder.revenue), 0))
+    # Revenue: sum of unit_price per trip (no stored revenue column)
+    revenue_query = select(func.coalesce(func.sum(TripOrder.unit_price), 0))
     if parsed_from:
         revenue_query = revenue_query.where(TripOrder.created_at >= parsed_from)
     if parsed_to:
@@ -51,7 +52,8 @@ async def get_dashboard_summary(
     revenue_q = await db.execute(revenue_query)
     total_revenue = revenue_q.scalar() or 0
 
-    expense_query = select(func.coalesce(func.sum(WorkOrder.earning), 0))
+    # Expense: sum of (driver_salary + allowance) per work order
+    expense_query = select(func.coalesce(func.sum(WorkOrder.driver_salary + WorkOrder.allowance), 0))
     if parsed_from:
         expense_query = expense_query.where(WorkOrder.created_at >= parsed_from)
     if parsed_to:
@@ -77,22 +79,22 @@ async def get_dashboard_summary(
     active_q = await db.execute(active_query)
     active_trips = active_q.scalar() or 0
 
-    debt_q = await db.execute(
-        select(func.coalesce(func.sum(Client.outstanding_debt), 0))
-    )
-    outstanding_debt = debt_q.scalar() or 0
+    # outstanding_debt: compute from order totals at read time (TODO)
+
+    outstanding_debt = 0
 
     driver_salary_q = await db.execute(
         select(
             User.id.label("driver_id"),
             User.username.label("driver_name"),
-            User.tractor_plate.label("tractor_plate"),
+            Vehicle.plate.label("tractor_plate"),
             func.count(WorkOrder.id).label("total_jobs"),
-            func.coalesce(func.sum(WorkOrder.earning), 0).label("total_salary"),
+            func.coalesce(func.sum(WorkOrder.driver_salary + WorkOrder.allowance), 0).label("total_salary"),
         )
+        .join(Vehicle, Vehicle.driver_id == User.id, isouter=True)
         .join(WorkOrder, WorkOrder.driver_id == User.id)
         .where(WorkOrder.status.in_(["MATCHED", "COMPLETED"]))
-        .group_by(User.id, User.username, User.tractor_plate)
+        .group_by(User.id, User.username, Vehicle.plate)
     )
     driver_salary_summary = [
         {
@@ -105,12 +107,12 @@ async def get_dashboard_summary(
         for row in driver_salary_q.all()
     ]
 
-    from app.models.domain import TripOrderWorkOrder
-
     unmatched_q = await db.execute(
         select(func.count(WorkOrder.id)).where(
             ~WorkOrder.id.in_(
-                select(TripOrderWorkOrder.work_order_id)
+                select(Reconciliation.work_order_id).where(
+                    Reconciliation.is_active == True  # noqa: E712
+                )
             )
         )
     )
