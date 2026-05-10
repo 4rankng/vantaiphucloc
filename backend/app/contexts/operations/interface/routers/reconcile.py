@@ -81,6 +81,10 @@ async def reconcile(
             user_id=current_user.id,
         ))
     except Exception as exc:
+        _logger.exception(
+            "Reconcile failed: WO#%s ↔ TO#%s",
+            body.work_order_id, body.trip_order_id,
+        )
         raise translate(exc)
 
     db = use_case.session
@@ -108,7 +112,14 @@ async def reconcile(
         )
         await _enqueue_salary_recalc(db, wo.driver_id, ref_date)
 
-    return await _load_trip_one(db, to)
+    try:
+        return await _load_trip_one(db, to)
+    except Exception as exc:
+        _logger.exception(
+            "Failed to load TO#%s after reconcile with WO#%s",
+            body.trip_order_id, body.work_order_id,
+        )
+        raise translate(exc)
 
 
 @router.post("/reconcile/unmatch")
