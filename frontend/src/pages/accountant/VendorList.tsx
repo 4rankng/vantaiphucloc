@@ -8,8 +8,12 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { useVendors, useCreateVendor, useUpdateVendor, useDeleteVendor } from '@/hooks/use-queries'
+import { useToast } from '@/components/atoms/Toast'
 import type { VendorFormData } from '@/services/api/vendors.api'
 import type { Vendor } from '@/services/api/vendors.api'
+
+const VN_PHONE_RE = /^(0|\+?84)[35789]\d{8}$/
+const VN_TAX_RE = /^\d{10}(\d{3})?$/
 
 const EMPTY_FORM: VendorFormData = {
   name: '', type: 'company', taxCode: '', address: '', phone: '', contactPerson: '',
@@ -18,11 +22,13 @@ const EMPTY_FORM: VendorFormData = {
 export function VendorList() {
   const isMobile = useIsMobile(768)
   const { data: vendors = [], isLoading: loading } = useVendors()
+  const toast = useToast()
 
   const [selected, setSelected] = useState<Vendor | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Vendor | null>(null)
   const [form, setForm] = useState<VendorFormData>(EMPTY_FORM)
+  const [formErrors, setFormErrors] = useState<{ phone?: string; taxCode?: string }>({})
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
 
   const createVendor = useCreateVendor()
@@ -32,6 +38,7 @@ export function VendorList() {
   const handleOpenCreate = useCallback(() => {
     setEditing(null)
     setForm(EMPTY_FORM)
+    setFormErrors({})
     setDialogOpen(true)
   }, [])
 
@@ -42,26 +49,60 @@ export function VendorList() {
       address: v.address ?? '', phone: v.phone ?? '',
       contactPerson: v.contactPerson ?? '',
     })
+    setFormErrors({})
     setSelected(null)
     setDialogOpen(true)
   }, [])
 
-  const handleSubmit = useCallback(() => {
-    if (editing) {
-      updateVendor.mutate({ id: editing.id, data: form }, { onSuccess: () => setDialogOpen(false) })
-    } else {
-      createVendor.mutate(form, { onSuccess: () => setDialogOpen(false) })
+  const validateForm = useCallback((): boolean => {
+    const errors: { phone?: string; taxCode?: string } = {}
+    if (form.phone && !VN_PHONE_RE.test(form.phone.replace(/[\s-]/g, ''))) {
+      errors.phone = 'SĐT không hợp lệ (VD: 0912345678)'
     }
-  }, [editing, form, createVendor, updateVendor])
+    if (form.taxCode && !VN_TAX_RE.test(form.taxCode)) {
+      errors.taxCode = 'MST phải 10 hoặc 13 chữ số'
+    }
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
+  }, [form.phone, form.taxCode])
+
+  const handleSubmit = useCallback(() => {
+    if (!validateForm()) return
+    if (editing) {
+      updateVendor.mutate({ id: editing.id, data: form }, {
+        onSuccess: () => { toast.success('Đã cập nhật', editing.name); setDialogOpen(false) },
+        onError: (err: unknown) => {
+          const msg = (err as { message?: string })?.message ?? 'Không thể cập nhật'
+          toast.error('Lỗi', msg)
+        },
+      })
+    } else {
+      createVendor.mutate(form, {
+        onSuccess: () => { toast.success('Đã tạo', form.name); setDialogOpen(false) },
+        onError: (err: unknown) => {
+          const msg = (err as { message?: string })?.message ?? 'Không thể tạo'
+          toast.error('Lỗi', msg)
+        },
+      })
+    }
+  }, [editing, form, createVendor, updateVendor, validateForm, toast])
 
   const handleDelete = useCallback((id: number) => {
     deleteVendor.mutate(id, {
-      onSuccess: () => { setDeleteConfirm(null); setSelected(null) },
+      onSuccess: () => { toast.success('Đã xoá'); setDeleteConfirm(null); setSelected(null) },
+      onError: (err: unknown) => {
+        const msg = (err as { message?: string })?.message ?? 'Không thể xoá'
+        toast.error('Không thể xoá', msg)
+        setDeleteConfirm(null)
+      },
     })
-  }, [deleteVendor])
+  }, [deleteVendor, toast])
 
   const updateField = useCallback((field: string, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }))
+    if (field === 'phone' || field === 'taxCode') {
+      setFormErrors(prev => ({ ...prev, [field]: undefined }))
+    }
   }, [])
 
   if (loading) {
@@ -175,11 +216,15 @@ export function VendorList() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="typo-form-label">Số điện thoại</Label>
-                <Input value={form.phone ?? ''} onChange={e => updateField('phone', e.target.value)} placeholder="0123456789" className="text-sm" />
+                <Input value={form.phone ?? ''} onChange={e => updateField('phone', e.target.value)} placeholder="0912345678" className="text-sm" />
+                {formErrors.phone && <p className="text-xs" style={{ color: 'var(--theme-status-error)' }}>{formErrors.phone}</p>}
+                {!formErrors.phone && <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>10 chữ số bắt đầu bằng 0</p>}
               </div>
               <div className="space-y-2">
                 <Label className="typo-form-label">Mã số thuế</Label>
-                <Input value={form.taxCode ?? ''} onChange={e => updateField('taxCode', e.target.value)} placeholder="MST" className="text-sm" />
+                <Input value={form.taxCode ?? ''} onChange={e => updateField('taxCode', e.target.value)} placeholder="0123456789" className="text-sm" />
+                {formErrors.taxCode && <p className="text-xs" style={{ color: 'var(--theme-status-error)' }}>{formErrors.taxCode}</p>}
+                {!formErrors.taxCode && <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>10 hoặc 13 chữ số (không dấu cách)</p>}
               </div>
             </div>
             <div className="space-y-2">

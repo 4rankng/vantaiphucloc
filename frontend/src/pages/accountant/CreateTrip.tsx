@@ -3,13 +3,13 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
-import { useClients, useCreateTripOrder, useCreateClient, useImportTripOrders, useLocations } from '@/hooks/use-queries'
+import { useClients, useCreateTripOrder, useCreateClient, useImportTripOrders, useLocations, usePricings } from '@/hooks/use-queries'
 import { WORK_TYPES, type WorkType } from '@/data/domain'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
 import { CreateClientDialog } from '@/components/shared/CreateClientDialog'
 import { ImportResultDialog } from '@/components/shared/ImportResultDialog'
-import { Plus, Trash2, Upload, ChevronLeft } from 'lucide-react'
+import { Plus, Trash2, Upload, ChevronLeft, Info } from 'lucide-react'
 import { useToast } from '@/components/atoms/Toast'
 
 interface CongItem {
@@ -71,6 +71,33 @@ export function CreateTrip() {
 
     setPrefilled(true)
   }, [matchContext, clients.length, locations.length, prefilled])
+
+  // Pricing lookup for auto-populating salary
+  const pickupLoc = locations.find(l => l.name === pickupLocation)
+  const dropoffLoc = locations.find(l => l.name === dropoffLocation)
+  const firstWorkType = congItems[0]?.workType
+
+  const { data: pricingMatches = [] } = usePricings(
+    clientId && pickupLoc && dropoffLoc && firstWorkType
+      ? { clientId: Number(clientId), workType: firstWorkType, pickupLocationId: pickupLoc.id, dropoffLocationId: dropoffLoc.id }
+      : undefined,
+  )
+
+  const matchedPricing = pricingMatches.length > 0 ? pricingMatches[0] : null
+  const matchedLine = matchedPricing?.lines[0]
+
+  const [salaryAutoFilled, setSalaryAutoFilled] = useState(false)
+  useEffect(() => {
+    if (!matchedLine || salaryAutoFilled) return
+    setDriverSalary(matchedLine.driverSalary ?? 0)
+    setAllowance(matchedLine.allowance ?? 0)
+    setSalaryAutoFilled(true)
+  }, [matchedLine, salaryAutoFilled])
+
+  // Reset auto-fill flag when key fields change
+  useEffect(() => {
+    setSalaryAutoFilled(false)
+  }, [clientId, pickupLocation, dropoffLocation, firstWorkType])
 
   const addCong = () => {
     setCongItems(prev => [...prev, { id: String(prev.length + 1), workType: 'E20', containerNumber: '' }])
@@ -260,6 +287,12 @@ export function CreateTrip() {
         {/* Section 3: Lương tài xế */}
         <section className="p-5 space-y-4">
           <h3 className="typo-h3">Lương tài xế</h3>
+          {matchedLine && (
+            <div className="flex items-start gap-2 text-xs px-3 py-2 rounded-lg" style={{ background: 'color-mix(in_srgb, var(--theme-brand-primary) 8%, transparent)', color: 'var(--theme-brand-primary)' }}>
+              <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              <span>Mặc định theo bảng giá: Lương {matchedLine.driverSalary?.toLocaleString('vi-VN')}đ · Phụ cấp {matchedLine.allowance?.toLocaleString('vi-VN')}đ</span>
+            </div>
+          )}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label className="typo-form-label">Lương</Label>

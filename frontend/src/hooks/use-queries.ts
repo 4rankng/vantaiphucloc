@@ -1,7 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
 import { api } from '@/services/api/client'
-import type { Pricing, WorkOrder, TripOrder, WorkType, Client, Route, SalaryPeriod, SuggestMatchesResponse, SuggestWosResponse, Location, MatchScoresResponse, BulkMatchPair, BulkMatchResponse } from '@/data/domain'
+import type { ApiResponse, Pricing, WorkOrder, TripOrder, WorkType, Client, Route, SalaryPeriod, SuggestMatchesResponse, SuggestWosResponse, Location, MatchScoresResponse, BulkMatchPair, BulkMatchResponse } from '@/data/domain'
+
+/** Reject on failed ApiResponse so React Query onError fires. */
+function unwrap<T>(res: ApiResponse<T>): T {
+  if (res.success) return res.data
+  throw new Error(res.message ?? 'Lỗi hệ thống')
+}
 import type { RouteCreatePayload, RouteUpdatePayload } from '@/services/api/routes.api'
 import type { PricingCreatePayload, PricingUpdatePayload } from '@/services/api/pricings.api'
 import type { WorkOrderCreatePayload, WorkOrderUpdatePayload } from '@/services/api/workOrders.api'
@@ -88,7 +94,7 @@ export function useLocations() {
 export function useCreateLocation() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { name: string }) => apiClient.createLocation(data),
+    mutationFn: (data: { name: string }) => apiClient.createLocation(data).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.locations }) },
   })
 }
@@ -96,7 +102,7 @@ export function useCreateLocation() {
 export function useUpdateLocation() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: { name?: string } }) => apiClient.updateLocation(id, data),
+    mutationFn: ({ id, data }: { id: number; data: { name?: string } }) => apiClient.updateLocation(id, data).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.locations }) },
   })
 }
@@ -104,12 +110,12 @@ export function useUpdateLocation() {
 export function useDeleteLocation() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: number) => apiClient.deleteLocation(id),
+    mutationFn: (id: number) => apiClient.deleteLocation(id).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.locations }) },
   })
 }
 
-export function usePricings(filters?: { clientId?: number; workType?: WorkType; route?: string }) {
+export function usePricings(filters?: { clientId?: number; workType?: WorkType; route?: string; pickupLocationId?: number; dropoffLocationId?: number }) {
   return useQuery({
     queryKey: queryKeys.pricingsFiltered(filters),
     queryFn: async () => {
@@ -194,11 +200,11 @@ export function useDrivers() {
   })
 }
 
-export function useDashboardSummary() {
+export function useDashboardSummary(dateFrom?: string, dateTo?: string) {
   return useQuery({
-    queryKey: queryKeys.dashboard,
+    queryKey: ['dashboard-summary', dateFrom, dateTo],
     queryFn: async () => {
-      const res = await apiClient.getDashboardSummary()
+      const res = await apiClient.getDashboardSummary(dateFrom, dateTo)
       return res.success ? res.data : null
     },
   })
@@ -271,7 +277,7 @@ export function useSuggestWosForTrip(tripOrderId: number | null) {
 export function useCreateClient() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: Omit<Client, 'id'>) => apiClient.createClient(data),
+    mutationFn: (data: Omit<Client, 'id'>) => apiClient.createClient(data).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.clients }) },
   })
 }
@@ -279,7 +285,7 @@ export function useCreateClient() {
 export function useUpdateClient() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<Client> }) => apiClient.updateClient(id, data),
+    mutationFn: ({ id, data }: { id: number; data: Partial<Client> }) => apiClient.updateClient(id, data).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.clients }) },
   })
 }
@@ -287,7 +293,7 @@ export function useUpdateClient() {
 export function useDeleteClient() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: number) => apiClient.deleteClient(id),
+    mutationFn: (id: number) => apiClient.deleteClient(id).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.clients }) },
   })
 }
@@ -295,7 +301,7 @@ export function useDeleteClient() {
 export function useCreateRoute() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: RouteCreatePayload) => apiClient.createRoute(data),
+    mutationFn: (data: RouteCreatePayload) => apiClient.createRoute(data).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.routes }) },
   })
 }
@@ -303,7 +309,7 @@ export function useCreateRoute() {
 export function useUpdateRoute() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: number | string; data: RouteUpdatePayload }) => apiClient.updateRoute(id, data),
+    mutationFn: ({ id, data }: { id: number | string; data: RouteUpdatePayload }) => apiClient.updateRoute(id, data).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.routes }) },
   })
 }
@@ -311,7 +317,7 @@ export function useUpdateRoute() {
 export function useDeleteRoute() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: number | string) => apiClient.deleteRoute(id),
+    mutationFn: (id: number | string) => apiClient.deleteRoute(id).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.routes }) },
   })
 }
@@ -319,7 +325,7 @@ export function useDeleteRoute() {
 export function useCreatePricing() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: PricingCreatePayload) => apiClient.createPricing(data),
+    mutationFn: (data: PricingCreatePayload) => apiClient.createPricing(data).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['pricings'] }) },
   })
 }
@@ -327,7 +333,7 @@ export function useCreatePricing() {
 export function useUpdatePricing() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: PricingUpdatePayload }) => apiClient.updatePricing(id, data),
+    mutationFn: ({ id, data }: { id: number; data: PricingUpdatePayload }) => apiClient.updatePricing(id, data).then(unwrap),
     onMutate: async ({ id, data }) => {
       await qc.cancelQueries({ queryKey: ['pricings'] })
       const previous = qc.getQueriesData<Pricing[]>({ queryKey: ['pricings'] })
@@ -350,7 +356,7 @@ export function useUpdatePricing() {
 export function useDeletePricing() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: number) => apiClient.deletePricing(id),
+    mutationFn: (id: number) => apiClient.deletePricing(id).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['pricings'] }) },
   })
 }
@@ -358,7 +364,7 @@ export function useDeletePricing() {
 export function useCreateWorkOrder() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: Parameters<typeof apiClient.createWorkOrder>[0]) => apiClient.createWorkOrder(data),
+    mutationFn: (data: Parameters<typeof apiClient.createWorkOrder>[0]) => apiClient.createWorkOrder(data).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['work-orders'] }) },
   })
 }
@@ -366,7 +372,7 @@ export function useCreateWorkOrder() {
 export function useUpdateWorkOrder() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: WorkOrderUpdatePayload }) => apiClient.updateWorkOrder(id, data),
+    mutationFn: ({ id, data }: { id: number; data: WorkOrderUpdatePayload }) => apiClient.updateWorkOrder(id, data).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['work-orders'] }) },
   })
 }
@@ -374,7 +380,7 @@ export function useUpdateWorkOrder() {
 export function useCreateTripOrder() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: TripOrderCreatePayload) => apiClient.createTripOrder(data),
+    mutationFn: (data: TripOrderCreatePayload) => apiClient.createTripOrder(data).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['trip-orders'] })
       qc.invalidateQueries({ queryKey: ['work-orders'] })
@@ -385,7 +391,7 @@ export function useCreateTripOrder() {
 export function useUpdateTripOrder() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: TripOrderUpdatePayload }) => apiClient.updateTripOrder(id, data),
+    mutationFn: ({ id, data }: { id: number; data: TripOrderUpdatePayload }) => apiClient.updateTripOrder(id, data).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['trip-orders'] }) },
   })
 }
@@ -394,7 +400,7 @@ export function useReconcile() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ workOrderId, tripOrderId }: { workOrderId: number; tripOrderId: number }) =>
-      apiClient.reconcile(workOrderId, tripOrderId),
+      apiClient.reconcile(workOrderId, tripOrderId).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['trip-orders'] })
       qc.invalidateQueries({ queryKey: ['work-orders'] })
@@ -405,7 +411,7 @@ export function useReconcile() {
 export function useToggleTripConfirmation() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (tripOrderId: number) => apiClient.toggleTripConfirmation(tripOrderId),
+    mutationFn: (tripOrderId: number) => apiClient.toggleTripConfirmation(tripOrderId).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['trip-orders'] }) },
   })
 }
@@ -475,7 +481,7 @@ export function useCalculateSalary() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ driverId, startDate, endDate }: { driverId?: number; startDate: string; endDate: string }) =>
-      apiClient.calculateSalary(driverId, startDate, endDate),
+      apiClient.calculateSalary(driverId, startDate, endDate).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['salary-periods'] }) },
   })
 }
@@ -484,7 +490,7 @@ export function useCreateDriver() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: { username: string; phone: string; tractorPlate?: string; vendor?: string }) =>
-      apiClient.createDriver(data),
+      apiClient.createDriver(data).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.drivers }) },
   })
 }
@@ -492,7 +498,7 @@ export function useCreateDriver() {
 export function useCreateUser() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: Parameters<typeof apiClient.createUser>[0]) => apiClient.createUser(data),
+    mutationFn: (data: Parameters<typeof apiClient.createUser>[0]) => apiClient.createUser(data).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.users }) },
   })
 }
@@ -500,7 +506,7 @@ export function useCreateUser() {
 export function useUpdateUser() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: string | number; data: Record<string, unknown> }) => apiClient.updateUser(id, data),
+    mutationFn: ({ id, data }: { id: string | number; data: Record<string, unknown> }) => apiClient.updateUser(id, data).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.users }) },
   })
 }
@@ -508,7 +514,7 @@ export function useUpdateUser() {
 export function useDeleteUser() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: string | number) => apiClient.deleteUser(id),
+    mutationFn: (id: string | number) => apiClient.deleteUser(id).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.users }) },
   })
 }
@@ -516,7 +522,7 @@ export function useDeleteUser() {
 export function useUpdateProfile() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ field, value }: { field: string; value: string }) => apiClient.updateProfile(field, value),
+    mutationFn: ({ field, value }: { field: string; value: string }) => apiClient.updateProfile(field, value).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['profile'] }) },
   })
 }
@@ -532,7 +538,7 @@ export function useUnmatch() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ tripOrderId, reason }: { tripOrderId: number; reason: string }) =>
-      apiClient.unmatch(tripOrderId, reason),
+      apiClient.unmatch(tripOrderId, reason).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.tripOrders })
       qc.invalidateQueries({ queryKey: queryKeys.workOrders })
@@ -551,7 +557,7 @@ export function useUpdateSalaryConfig() {
 export function useUpdateSalaryPeriod() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<SalaryPeriod> }) => apiClient.updateSalaryPeriod(id, data),
+    mutationFn: ({ id, data }: { id: number; data: Partial<SalaryPeriod> }) => apiClient.updateSalaryPeriod(id, data).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['salary-periods'] }) },
   })
 }
@@ -569,7 +575,7 @@ export function useVendors() {
 export function useCreateVendor() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: VendorFormData) => apiClient.createVendor(data),
+    mutationFn: (data: VendorFormData) => apiClient.createVendor(data).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.vendors }) },
   })
 }
@@ -577,7 +583,7 @@ export function useCreateVendor() {
 export function useUpdateVendor() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: VendorFormData }) => apiClient.updateVendor(id, data),
+    mutationFn: ({ id, data }: { id: number; data: VendorFormData }) => apiClient.updateVendor(id, data).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.vendors }) },
   })
 }
@@ -585,7 +591,7 @@ export function useUpdateVendor() {
 export function useDeleteVendor() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: number) => apiClient.deleteVendor(id),
+    mutationFn: (id: number) => apiClient.deleteVendor(id).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.vendors }) },
   })
 }
@@ -596,7 +602,7 @@ export function useAutoMatch() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ dateFrom, dateTo }: { dateFrom?: string; dateTo?: string }) =>
-      apiClient.autoMatch(dateFrom, dateTo),
+      apiClient.autoMatch(dateFrom, dateTo).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.workOrders })
       qc.invalidateQueries({ queryKey: queryKeys.tripOrders })
@@ -618,7 +624,7 @@ export function useMatchScores(dateFrom?: string, dateTo?: string) {
 export function useBulkMatch() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (pairs: BulkMatchPair[]) => apiClient.bulkMatch(pairs),
+    mutationFn: (pairs: BulkMatchPair[]) => apiClient.bulkMatch(pairs).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.workOrders })
       qc.invalidateQueries({ queryKey: queryKeys.tripOrders })

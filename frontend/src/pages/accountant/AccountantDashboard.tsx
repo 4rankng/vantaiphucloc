@@ -216,7 +216,7 @@ function DesktopDashboard() {
 
   const { data: workOrders = [] } = useWorkOrders({ dateFrom, dateTo })
   const { data: trips = [] } = useTripOrders({ dateFrom, dateTo })
-  const { data: summary } = useDashboardSummary()
+  const { data: summary } = useDashboardSummary(dateFrom, dateTo)
 
   const pendingWOs = useMemo(() => workOrders.filter(w => w.status === 'PENDING'), [workOrders])
   const totalDriverSalary = useMemo(() => workOrders.reduce((s, w) => s + (w.earning ?? 0), 0), [workOrders])
@@ -335,7 +335,7 @@ function MobileDashboard() {
   const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
   const { data: workOrders = [] } = useWorkOrders({ dateFrom, dateTo })
   const { data: trips = [] } = useTripOrders({ dateFrom, dateTo })
-  const { data: summary } = useDashboardSummary()
+  const { data: summary } = useDashboardSummary(dateFrom, dateTo)
 
   const pendingWOs = useMemo(() => workOrders.filter(w => w.status === 'PENDING'), [workOrders])
   const totalDriverSalary = useMemo(() => workOrders.reduce((s, w) => s + (w.earning ?? 0), 0), [workOrders])

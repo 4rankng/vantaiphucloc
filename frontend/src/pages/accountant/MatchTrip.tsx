@@ -95,16 +95,21 @@ function WOSuggestionCard({
           <span className="font-medium">{workOrder.driver.name}</span> · {workOrder.client.name} · {workOrder.route}
         </p>
         <div className="flex flex-wrap gap-1.5">
-          {matchedFields.map(f => (
-            <span
-              key={f}
-              className="text-xs px-2 py-0.5 rounded-md font-medium flex items-center gap-1"
-              style={{ background: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' }}
-            >
-              <Check className="w-3 h-3" />
-              {f === 'driver' ? 'Tài xế' : f === 'client' ? 'Khách hàng' : f === 'route' ? 'Cung đường' : 'Container'}
-            </span>
-          ))}
+          {(['driver', 'client', 'route', 'container'] as const).map(f => {
+            const matched = matchedFields.includes(f)
+            return (
+              <span
+                key={f}
+                className="text-xs px-2 py-0.5 rounded-md font-medium flex items-center gap-1"
+                style={matched
+                  ? { background: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' }
+                  : { background: 'var(--theme-status-error-light)', color: 'var(--theme-status-error)' }}
+              >
+                {matched ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                {f === 'driver' ? 'Tài xế' : f === 'client' ? 'Khách hàng' : f === 'route' ? 'Cung đường' : 'Container'}
+              </span>
+            )
+          })}
         </div>
       </div>
     </button>
@@ -121,6 +126,7 @@ export function MatchTrip() {
   const [editDialogClient, setEditDialogClient] = useState('')
   const [editDialogRoute, setEditDialogRoute] = useState('')
   const [editDialogContainers, setEditDialogContainers] = useState<{ type: string; number: string }[]>([])
+  const [lowConfConfirm, setLowConfConfirm] = useState(false)
 
   const {
     loading, loadingSuggestions, submitting, pickMode, setPickMode,
@@ -185,10 +191,19 @@ export function MatchTrip() {
   const handleMatchWithToast = async () => {
     try {
       await handleMatch()
+      setLowConfConfirm(false)
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
       toast.error('Không thể khớp chuyến', detail ?? 'Lỗi hệ thống. Thử lại sau.')
     }
+  }
+
+  const handleMatchClick = () => {
+    if (!allMatched && !lowConfConfirm) {
+      setLowConfConfirm(true)
+      return
+    }
+    handleMatchWithToast()
   }
 
   if (loading) {
@@ -422,12 +437,12 @@ export function MatchTrip() {
                                   ))}
                                 </div>
                                 <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>{s.workOrder.driver.name} · {s.workOrder.client.name} · {s.workOrder.route}</p>
-                                {s.matchedFields.length > 0 && (
+                                {s.criteria.length > 0 && (
                                   <div className="flex flex-wrap gap-1 mt-1">
-                                    {s.matchedFields.map(f => (
-                                      <span key={f} className="text-[10px] px-1.5 py-0.5 rounded font-medium flex items-center gap-0.5" style={{ background: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' }}>
-                                        <Check className="w-2.5 h-2.5" />
-                                        {f === 'driver' ? 'Tài xế' : f === 'client' ? 'Khách hàng' : f === 'route' ? 'Cung đường' : 'Container'}
+                                    {s.criteria.map(c => (
+                                      <span key={c.name} className="text-[10px] px-1.5 py-0.5 rounded font-medium flex items-center gap-0.5" style={{ background: c.match ? 'var(--theme-status-success-light)' : 'color-mix(in_srgb, var(--theme-status-error) 10%, transparent)', color: c.match ? 'var(--theme-status-success)' : 'var(--theme-status-error)' }}>
+                                        {c.match ? <Check className="w-2.5 h-2.5" /> : <X className="w-2.5 h-2.5" />}
+                                        {c.label}
                                       </span>
                                     ))}
                                   </div>
@@ -540,18 +555,30 @@ export function MatchTrip() {
                   className="h-10 px-3 rounded-lg text-sm font-medium inline-flex items-center justify-center gap-1.5 shrink-0 transition-colors"
                   style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-brand-primary)', border: '1px solid var(--theme-border-default)' }}
                 >
-                  <Plus className="w-4 h-4" /> Tạo chuyến mới
+                  <Plus className="w-4 h-4" /> Tạo đơn hàng mới
                 </button>
                 <Button
-                  onClick={handleMatchWithToast}
+                  onClick={handleMatchClick}
                   disabled={submitting}
                   className="flex-1 h-10 font-bold rounded-lg text-sm gap-2"
                   style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
                 >
                   <Check className="w-4 h-4" />
-                  {submitting ? 'Đang khớp...' : 'Xác nhận khớp chuyến'}
+                  {submitting ? 'Đang khớp...' : lowConfConfirm ? 'Xác nhận bất chấp chưa khớp' : 'Xác nhận khớp chuyến'}
                 </Button>
               </div>
+
+              {lowConfConfirm && !allMatched && (
+                <div
+                  className="mt-2 rounded-lg p-3 flex items-start gap-2"
+                  style={{ background: 'color-mix(in_srgb, var(--theme-status-warning) 10%, transparent)', borderLeft: '3px solid var(--theme-status-warning)' }}
+                >
+                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--theme-status-warning)' }} />
+                  <div className="text-sm" style={{ color: 'var(--theme-text-primary)' }}>
+                    Một số thông tin chưa khớp (container, khách hàng hoặc tuyến). Nhấn <strong>Xác nhận bất chấp chưa khớp</strong> để tiếp tục.
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -549,7 +549,7 @@ function buildColumns(): Column<TripOrder>[] {
       sortable: true,
       sortKey: (row) => row.revenue ?? 0,
       align: 'right',
-      width: '130px',
+      width: '160px',
     },
     {
       key: 'status',

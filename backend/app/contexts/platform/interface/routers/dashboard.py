@@ -4,8 +4,10 @@ Dashboard API — aggregated summary using SQL, not client-side computation.
 
 import json
 import logging
+from datetime import datetime, timedelta
+from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,27 +27,54 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 async def get_dashboard_summary(
     _current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    date_from: Optional[str] = Query(None, description="YYYY-MM-DD"),
+    date_to: Optional[str] = Query(None, description="YYYY-MM-DD"),
 ):
-    revenue_q = await db.execute(
-        select(func.coalesce(func.sum(TripOrder.revenue), 0))
-    )
+    parsed_from = None
+    parsed_to = None
+    if date_from:
+        try:
+            parsed_from = datetime.strptime(date_from, "%Y-%m-%d").date()
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            parsed_to = datetime.strptime(date_to, "%Y-%m-%d").date()
+        except ValueError:
+            pass
+
+    revenue_query = select(func.coalesce(func.sum(TripOrder.revenue), 0))
+    if parsed_from:
+        revenue_query = revenue_query.where(TripOrder.created_at >= parsed_from)
+    if parsed_to:
+        revenue_query = revenue_query.where(TripOrder.created_at < parsed_to + timedelta(days=1))
+    revenue_q = await db.execute(revenue_query)
     total_revenue = revenue_q.scalar() or 0
 
-    expense_q = await db.execute(
-        select(func.coalesce(func.sum(WorkOrder.earning), 0))
-    )
+    expense_query = select(func.coalesce(func.sum(WorkOrder.earning), 0))
+    if parsed_from:
+        expense_query = expense_query.where(WorkOrder.created_at >= parsed_from)
+    if parsed_to:
+        expense_query = expense_query.where(WorkOrder.created_at < parsed_to + timedelta(days=1))
+    expense_q = await db.execute(expense_query)
     total_expense = expense_q.scalar() or 0
 
-    trip_count_q = await db.execute(
-        select(func.count(TripOrder.id))
-    )
+    trip_count_query = select(func.count(TripOrder.id))
+    if parsed_from:
+        trip_count_query = trip_count_query.where(TripOrder.created_at >= parsed_from)
+    if parsed_to:
+        trip_count_query = trip_count_query.where(TripOrder.created_at < parsed_to + timedelta(days=1))
+    trip_count_q = await db.execute(trip_count_query)
     trip_count = trip_count_q.scalar() or 0
 
-    active_q = await db.execute(
-        select(func.count(TripOrder.id)).where(
-            TripOrder.status.in_(["DRAFT", "PENDING"])
-        )
+    active_query = select(func.count(TripOrder.id)).where(
+        TripOrder.status.in_(["DRAFT", "PENDING"])
     )
+    if parsed_from:
+        active_query = active_query.where(TripOrder.created_at >= parsed_from)
+    if parsed_to:
+        active_query = active_query.where(TripOrder.created_at < parsed_to + timedelta(days=1))
+    active_q = await db.execute(active_query)
     active_trips = active_q.scalar() or 0
 
     debt_q = await db.execute(
