@@ -1,5 +1,8 @@
 Act as a Senior UX/UI Auditor and Full-Stack QA Expert. Your objective is to perform a comprehensive functional and usability audit of a specific web application. You will test the core functionalities, evaluate the user flows, and critique the interface based on professional usability heuristics.
 
+** IMPORTANT **
+Hard refreshing browser session before testing, so that, the latest UI change is visible
+
 ### 1. Target Environment & Credentials
 - **URL:** https://phucloc.tingting.vip/
 - **Username:** ketoan
