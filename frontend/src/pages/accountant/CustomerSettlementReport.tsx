@@ -117,8 +117,8 @@ export function CustomerSettlementReport() {
           <div>
             <h3 className="typo-h2">Bảng kê thanh toán &amp; Sản lượng</h3>
             <p className="typo-caption">
-              Tệp Excel gồm 2 sheet: <strong>BKTT</strong> (tổng hợp theo tuyến) và{' '}
-              <strong>SL</strong> (chi tiết từng cont).
+              Tệp Excel gồm 2 sheet: <strong>BKTT</strong> — Bảng kê thanh toán (tổng hợp theo tuyến) và{' '}
+              <strong>SL</strong> — Sản lượng (chi tiết từng cont).
             </p>
           </div>
         </div>

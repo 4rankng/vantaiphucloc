@@ -180,7 +180,7 @@ export function Login() {
                   type="text"
                   placeholder="SĐT, email hoặc tên đăng nhập"
                   value={username}
-                  onChange={e => { setUsername(e.target.value); setError('') }}
+                  onChange={e => setUsername(e.target.value)}
                   className="login-input"
                   autoComplete="username"
                   autoCapitalize="none"
@@ -197,7 +197,7 @@ export function Login() {
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Nhập mật khẩu"
                   value={password}
-                  onChange={e => { setPassword(e.target.value); setError('') }}
+                  onChange={e => setPassword(e.target.value)}
                   className="login-input"
                   style={{ paddingRight: '3rem' }}
                   autoComplete="current-password"
@@ -222,7 +222,7 @@ export function Login() {
                 background: 'var(--theme-brand-primary)',
                 color: 'var(--theme-text-on-brand)',
               }}
-              disabled={loading}
+              disabled={loading || !username.trim() || !password.trim()}
             >
               {loading ? (
                 <span className="login-loading">
