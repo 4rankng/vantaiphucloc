@@ -19,7 +19,7 @@
 What genuinely shipped (verified in prod):
 
 - **NX1 ✅** — Reconcile success now shows green `Thành công · Đã ghép chuyến` toast on `POST /reconcile → 200`. Verified end-to-end: clicked Ghép on W001011 → 200 → list count 12 → 11 → success toast. The `.success` check on unwrapped `ApiResponse<T>` was the bug; v4.1 fix log is accurate.
-- **NX4 ✅** — Tổng quan's "Đơn hàng gần đây" panel and Đơn hàng list now both emit only `Chờ đối soát` / `Đã khớp`. T002028 reads `Đã khớp` (was `Hoàn thành` in v4). Vocabulary unified across these surfaces. (See NX15 for the one remaining drift.)
+- **NX4 ✅** — Tổng quan's "Đơn hàng gần đây" panel and Đơn hàng list now both emit only `Chờ ghép` / `Đã khớp`. T002028 reads `Đã khớp` (was `Hoàn thành` in v4). Vocabulary unified across these surfaces. (See NX15 for the one remaining drift.)
 - **NX9 ✅** — Logout now lands on `/` (login form), not `/login` (404). Verified via the bottom-left logout icon: URL becomes `https://phucloc.tingting.vip/` and login form renders, no 404.
 - **NX10 ✅** — Right pane clears on successful match. Verified post-Ghép: empty state `Chọn một phiếu để xem các đơn hàng có thể ghép` appears immediately, no stale W001011 selection.
 - **NX11 ✅** — `POST /api/v1/push/subscriptions` no longer fires. Across 38 `/api/v1/` requests captured during full session (login → dashboard → all settings subpages → Ghép chuyến → Đơn hàng → logout → re-login), zero push-subscription requests were made. The call has been removed or feature-flagged; backend log noise from push 500s should now be gone.
@@ -53,7 +53,7 @@ What is **still broken** in production:
 
 What is **new this round** (NX15, NX16):
 
-- **🆕 NX15 (LOW)** — Filter chip vocabulary drift on Ghép chuyến vs Đơn hàng. The Ghép chuyến filter pills read `Tất cả / Chờ khớp / Hoàn thành`. The Đơn hàng filter pills read `Tất cả / Chờ đối soát / Đã khớp`. Same product concept, four labels. NX4 was about list **status pills**; the v4.1 fix migrated those. The filter **chips** on Ghép chuyến were not migrated.
+- **🆕 NX15 (LOW)** — Filter chip vocabulary drift on Ghép chuyến vs Đơn hàng. The Ghép chuyến filter pills read `Tất cả / Chờ khớp / Hoàn thành`. The Đơn hàng filter pills read `Tất cả / Chờ ghép / Đã khớp`. Same product concept, four labels. NX4 was about list **status pills**; the v4.1 fix migrated those. The filter **chips** on Ghép chuyến were not migrated.
 - **🆕 NX16 (MED)** — 403 on `/api/v1/users` is masked as an empty-state. ketoan sees `Chưa có tài khoản / Tạo tài khoản đầu tiên cho team` instead of `Bạn không có quyền xem danh sách người dùng`. False semantics (permissions ≠ emptiness) and an unactionable CTA: clicking `Tạo tài khoản` will likely also 403. The `<EmptyState>` component (TASK-005) is the right primitive but is being rendered for the wrong reason. Frontend should branch on the response status: 403 → permissions banner, [] → real empty state.
 
 **Heuristics compliance score:**
@@ -70,7 +70,7 @@ The v4.1 deploy materially closed the gap between the fix log and production. Re
 1. NX14 — actually deploy the `DetailValue` rewrite for `ClientDetail.tsx` (claimed in v4.1, not in prod).
 2. NX16 — branch on 403 vs [] on `Người dùng`.
 3. NX13 — backfill SĐT/MST/Địa chỉ for the 17 customers + 1 vendor.
-4. NX15 — migrate Ghép chuyến filter chips to `Chờ đối soát / Đã khớp` for vocabulary parity.
+4. NX15 — migrate Ghép chuyến filter chips to `Chờ ghép / Đã khớp` for vocabulary parity.
 5. TASK-004 — backend DriverSummary expansion to include fullName/phone.
 
 ---
@@ -90,7 +90,7 @@ The v4.1 deploy materially closed the gap between the fix log and production. Re
 | **NX1** | Ghép chuyến desync toast | 🔴 STILL | **✅ FIXED** | `POST /api/v1/reconcile → 200` now produces green `Thành công · Đã ghép chuyến` toast. List count 12→11. |
 | NX2 | Khách hàng regression | ✅ FIXED | ✅ FIXED | Search + 5-col DataTablePro (data quality still NX13). |
 | **NX3** | Người dùng count 0 | 🔴 STILL | **🔴 STILL BROKEN (backend)** | Root cause now visible: `GET /api/v1/users → 403`. Frontend handles empty correctly via TASK-005, but masks the 403 — see NX16. |
-| **NX4** | Status vocabulary drift | 🟡 PARTIAL | **✅ FIXED** | Tổng quan + Đơn hàng list both emit only `Chờ đối soát` / `Đã khớp`. T002028 was `Hoàn thành` in v4, now `Đã khớp`. (NX15 is a sister drift on Ghép chuyến filter chips.) |
+| **NX4** | Status vocabulary drift | 🟡 PARTIAL | **✅ FIXED** | Tổng quan + Đơn hàng list both emit only `Chờ ghép` / `Đã khớp`. T002028 was `Hoàn thành` in v4, now `Đã khớp`. (NX15 is a sister drift on Ghép chuyến filter chips.) |
 | NX5 | Login alert opacity | ✅ FIXED | ✅ FIXED | Verified: wrong-creds POST/login → 401, full-opacity error rendered. |
 | NX6 | 404 missing sidebar | ⚠️ MOOT | ⚠️ MOOT | Authenticated 404 in layout, login 404 unauthenticated (correct). No change. |
 | NX7 | Driver vendor brand | ✅ FIXED | ✅ FIXED | All three drivers `Vận Tải Phúc Lộc`. |
@@ -144,11 +144,11 @@ The v4.1 deploy materially closed the gap between the fix log and production. Re
 
 ### NX15 — Ghép chuyến filter chips drift from Đơn hàng vocabulary
 
-**Observation:** On `/accountant/work-orders`, the filter chip row reads `Tất cả | Chờ khớp | Hoàn thành | 12 chờ khớp` (right of the search input). On `/accountant/trips`, the filter chip row reads `Tất cả | Chờ đối soát | Đã khớp | 11 đơn hàng`. Same product concept (status filters), four different labels.
+**Observation:** On `/accountant/work-orders`, the filter chip row reads `Tất cả | Chờ khớp | Hoàn thành | 12 chờ khớp` (right of the search input). On `/accountant/trips`, the filter chip row reads `Tất cả | Chờ ghép | Đã khớp | 11 đơn hàng`. Same product concept (status filters), four different labels.
 
 **Impact:** ketoan re-learns vocabulary on every page. Mental model: "đơn hàng đã khớp" on Đơn hàng = "phiếu hoàn thành" on Ghép chuyến? They're the same database transition, different UI label. Cognitive cost compounded over an 8-hour workday.
 
-**Recommendation:** Migrate Ghép chuyến filter chips to `Tất cả / Chờ đối soát / Đã khớp`. The `12 chờ khớp` count chip can stay as a row-count indicator. File: likely `WorkOrderList.tsx` or similar; the same migration pattern as v4.1's NX4 fix on `AccountantDashboard.tsx`.
+**Recommendation:** Migrate Ghép chuyến filter chips to `Tất cả / Chờ ghép / Đã khớp`. The `12 chờ khớp` count chip can stay as a row-count indicator. File: likely `WorkOrderList.tsx` or similar; the same migration pattern as v4.1's NX4 fix on `AccountantDashboard.tsx`.
 
 **Severity:** LOW
 
@@ -160,7 +160,7 @@ The v4.1 deploy materially closed the gap between the fix log and production. Re
 1. Login → Ghép chuyến.
 2. Note filter chips "Tất cả / Chờ khớp / Hoàn thành" right of the search input.
 3. Switch to `/accountant/trips`.
-4. Note filter chips "Tất cả / Chờ đối soát / Đã khớp".
+4. Note filter chips "Tất cả / Chờ ghép / Đã khớp".
 
 **Screenshot:** `ss_4267zognv` (Ghép chuyến) vs `ss_7405eh1hi` (Đơn hàng)
 
@@ -216,7 +216,7 @@ Backend RBAC: separately, decide whether ketoan SHOULD be able to list users. If
 - Two-pane layout intact. 12 chờ khớp on enter (was 13 in v4 — lower because v4 audit consumed one match).
 - Per-criterion ✓/✗ panel intact.
 - Click `Ghép` on W001011's 4/6 candidate (T002033): `POST /api/v1/reconcile → 200`. Toast = `Thành công · Đã ghép chuyến` (green check). Left list 12 → 11 (W001011 removed). Right pane clears to `Chọn một phiếu để xem các đơn hàng có thể ghép`. ✅ **NX1, NX10 both verified end-to-end.**
-- Filter chips: 🔴 NX15 — `Tất cả / Chờ khớp / Hoàn thành` does not match Đơn hàng's `Chờ đối soát / Đã khớp`.
+- Filter chips: 🔴 NX15 — `Tất cả / Chờ khớp / Hoàn thành` does not match Đơn hàng's `Chờ ghép / Đã khớp`.
 
 ### Khách hàng (`/accountant/settings/clients`)
 - Single h1 `Khách hàng`. ✅
@@ -265,14 +265,14 @@ Backend RBAC: separately, decide whether ketoan SHOULD be able to list users. If
 
 ### Đơn hàng (`/accountant/trips`)
 - Single h1 `Đơn hàng`. ✅
-- KPIs: 5 Chờ đối soát, 4 Đã khớp.
-- Filter pills `Tất cả / Chờ đối soát / Đã khớp`. ✅ Internal vocabulary consistent.
+- KPIs: 5 Chờ ghép, 4 Đã khớp.
+- Filter pills `Tất cả / Chờ ghép / Đã khớp`. ✅ Internal vocabulary consistent.
 - 11 row-count chip visible. ✅
-- Status pills in list: only `Chờ đối soát` / `Đã khớp`. No `Hoàn thành`. ✅ NX4 fixed.
+- Status pills in list: only `Chờ ghép` / `Đã khớp`. No `Hoàn thành`. ✅ NX4 fixed.
 
 ### Tổng quan (`/accountant`)
 - 4 KPI cards (CHUYẾN CHƯA GHÉP / ĐƠN CHỜ ĐỐI SOÁT / LƯƠNG SẢN LƯỢNG TX / DOANH THU (ĐƠN HÀNG THÁNG)). ✅
-- "Đơn hàng gần đây" status pills: only `Chờ đối soát` / `Đã khớp`. T002028 = `Đã khớp` (was `Hoàn thành` in v4). ✅ NX4 fixed.
+- "Đơn hàng gần đây" status pills: only `Chờ ghép` / `Đã khớp`. T002028 = `Đã khớp` (was `Hoàn thành` in v4). ✅ NX4 fixed.
 - Month picker `Tháng 05/2026 / 01/05 → 31/05` with chevrons. ✅
 
 ### Người dùng (`/accountant/settings/users`)
@@ -340,7 +340,7 @@ Host browser cannot resize below ~1568px. Reported `winSize: [1516, 808]` after 
 
 1. **NX14 — actually ship the `DetailValue` rewrite for `ClientDetail.tsx`.** v4.1 fix log claimed it. Verify the file is in the build, or re-merge. ~30 min once root cause is found.
 2. **NX16 — branch on 403 in `UserManagement.tsx`.** Replace empty-state with permissions banner when status === 403. Hide `Tạo tài khoản` button. ~30 min.
-3. **NX15 — migrate Ghép chuyến filter chips.** `Chờ khớp / Hoàn thành` → `Chờ đối soát / Đã khớp`. ~10 min.
+3. **NX15 — migrate Ghép chuyến filter chips.** `Chờ khớp / Hoàn thành` → `Chờ ghép / Đã khớp`. ~10 min.
 4. **TASK-018 outlier — change `Tạo tài khoản` to `Thêm người dùng`** if the team wants pure verb consistency. Or accept as intentional. Product call. ~5 min.
 
 That entire batch is roughly 75 minutes and would fully close the v4 audit cycle.
@@ -399,7 +399,7 @@ That entire batch is roughly 75 minutes and would fully close the v4 audit cycle
 | **NX12** | **global** | **LOW** | **✅ FIXED** | **`TTransport` everywhere** | **—** |
 | **NX13** | **Khách hàng / Nhà thầu** | **MED** | **🔴 STILL BROKEN (data)** | **All SĐT/MST/Địa chỉ `—`** | **Operations data backfill** |
 | **NX14** | **Khách hàng detail** | **LOW** | **🔴 STILL BROKEN (deploy)** | **Dialog still hides MST/Địa chỉ** | **Verify `ClientDetail.tsx` rewrite is in prod bundle; re-merge if not** |
-| **NX15** | **Ghép chuyến** | **LOW** | **🆕 NEW** | **Filter chips `Chờ khớp / Hoàn thành` drift from Đơn hàng's `Chờ đối soát / Đã khớp`** | **Migrate filter chip labels to match Đơn hàng** |
+| **NX15** | **Ghép chuyến** | **LOW** | **🆕 NEW** | **Filter chips `Chờ khớp / Hoàn thành` drift from Đơn hàng's `Chờ ghép / Đã khớp`** | **Migrate filter chip labels to match Đơn hàng** |
 | **NX16** | **Người dùng** | **MED** | **🆕 NEW** | **403 rendered as `Chưa có tài khoản` empty state** | **Branch on 403 → permissions banner; hide Tạo tài khoản CTA** |
 | TASK-001 | Bảng giá | P0 | ✅ FIXED | Single `Bảng giá` header | — |
 | TASK-002 | Tài xế | P0 | ✅ FIXED | Single h1 | — |

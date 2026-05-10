@@ -37,7 +37,7 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 4. ~~⚠️ **NX1 — Ghép chuyến error toast can fire on a request the server actually accepted.**~~ ✅ FIXED — added success toast, improved error extraction.
 5. ~~⚠️ **NX2 — Khách hàng list lost its data columns.**~~ ✅ FIXED — search + DataTablePro with 5 columns restored.
 6. ~~⚠️ **NX3 — Người dùng count is wrong.**~~ ✅ FIXED — filter changed to `isActive !== false`.
-7. ~~⚠️ **NX4 — Tổng quan "Đơn hàng gần đây" status vocabulary drift.**~~ ✅ FIXED — aligned to "Chờ đối soát" / "Đã khớp" / "Đã huỷ".
+7. ~~⚠️ **NX4 — Tổng quan "Đơn hàng gần đây" status vocabulary drift.**~~ ✅ FIXED — aligned to "Chờ ghép" / "Đã khớp" / "Đã huỷ".
 8. ~~⚠️ **NX7 — Driver vendor brand inconsistency.**~~ ✅ FIXED — Alembic migration + DEFAULT_VENDOR updated.
 9. ~~⚠️ **NX8 — Test KH Audit bad data in prod.**~~ ✅ FIXED — migration deletes test records.
 
@@ -155,17 +155,17 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 
 ### NX4 — Đơn hàng status vocabulary mismatch between Tổng quan and Đơn hàng list → ✅ FIXED
 
-**Observation:** Tổng quan's "Đơn hàng gần đây" panel labels rows with `Chờ xử lý` / `Hoàn thành`. The Đơn hàng list page uses the new `Chờ đối soát` / `Đã khớp` / `Đã huỷ` set. Same orders, two vocabularies, two adjacent surfaces.
+**Observation:** Tổng quan's "Đơn hàng gần đây" panel labels rows with `Chờ xử lý` / `Hoàn thành`. The Đơn hàng list page uses the new `Chờ ghép` / `Đã khớp` / `Đã huỷ` set. Same orders, two vocabularies, two adjacent surfaces.
 
 **Impact:** ketoan cannot map between the two screens by status. Onboarding noise.
 
-**Recommendation:** Migrate the dashboard panel to the new `Chờ đối soát` / `Đã khớp` set. If `Chờ xử lý` is meaningful (= draft), expose it on both screens with the same label.
+**Recommendation:** Migrate the dashboard panel to the new `Chờ ghép` / `Đã khớp` set. If `Chờ xử lý` is meaningful (= draft), expose it on both screens with the same label.
 
 **Severity:** MED
 
 **Page:** `/accountant`, `/accountant/trips`
 
-**Status vs prior:** ~~NEW~~ → ✅ FIXED in post-v3. Changed "Chờ xử lý" → "Chờ đối soát", "Đã xác nhận" → "Đã khớp", added "Đã huỷ" for CANCELLED status.
+**Status vs prior:** ~~NEW~~ → ✅ FIXED in post-v3. Changed "Chờ xử lý" → "Chờ ghép", "Đã xác nhận" → "Đã khớp", added "Đã huỷ" for CANCELLED status.
 
 **Reproduce:** open Tổng quan → note status pills on the right column → click any row → status reads differently.
 
@@ -255,8 +255,8 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 |---|---------|----------|----------|
 | R1 | Khách hàng search | Working `Tìm tên, điện thoại, MST...` | ✅ RESTORED — search input with fuzzyMatch (NX2 fixed). |
 | R2 | Khách hàng table columns | Mã đối tác, Nhóm, SĐT, Địa chỉ, Người liên hệ | ✅ RESTORED — DataTablePro with 5 columns on desktop, cards on mobile (NX2 fixed). |
-| R3 | Đơn hàng status pills | Tất cả / Nháp / Chờ đối soát / Hoàn thành / Đã huỷ | Reduced to Tất cả / Chờ đối soát / Đã khớp. Nháp and Đã huỷ no longer filterable from the UI. |
-| R4 | Đơn hàng KPI | Doanh thu tháng card | **Removed**, replaced by Chờ đối soát + Đã khớp counts (related to N9). |
+| R3 | Đơn hàng status pills | Tất cả / Nháp / Chờ ghép / Hoàn thành / Đã huỷ | Reduced to Tất cả / Chờ ghép / Đã khớp. Nháp and Đã huỷ no longer filterable from the UI. |
+| R4 | Đơn hàng KPI | Doanh thu tháng card | **Removed**, replaced by Chờ ghép + Đã khớp counts (related to N9). |
 | R5 | Kế toán sidebar | 11 entries | 4 entries; Báo cáo, Nhập từ Excel, Nhập bảng giá, Cung đường are not surfaced (intentional consolidation, but if Báo cáo is still active under another path it needs a link). |
 
 ---
@@ -319,7 +319,7 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 
 - 4 KPI cards (CHUYẾN CHƯA GHÉP, ĐƠN CHỜ ĐỐI SOÁT, LƯƠNG SẢN LƯỢNG TX, DOANH THU (ĐƠN HÀNG THÁNG)).
 - "Chuyến chưa ghép" panel with 14 entries and "Mở trang Ghép chuyến →" link.
-- "Đơn hàng gần đây" panel with status pills using **aligned vocabulary** (NX4 fixed): Chờ đối soát / Đã khớp / Đã huỷ.
+- "Đơn hàng gần đây" panel with status pills using **aligned vocabulary** (NX4 fixed): Chờ ghép / Đã khớp / Đã huỷ.
 - Month picker top right `Tháng 05/2026 / 01/05 → 31/05` with chevrons — net-new and clean.
 
 ### Người dùng (NEW for ketoan)
@@ -460,7 +460,7 @@ All must-fix blockers have been resolved in post-v3 patches (2026-05-10):
 | **NX1** | Ghép chuyến | HIGH | ✅ FIXED | Added success toast; improved error extraction | — |
 | **NX2** | Khách hàng | HIGH | ✅ FIXED | Search + DataTablePro columns restored on desktop | — |
 | **NX3** | Người dùng | MED | ✅ FIXED | Filter changed to `isActive !== false` | — |
-| **NX4** | Tổng quan ↔ Đơn hàng | MED | ✅ FIXED | Status labels aligned: "Chờ đối soát" / "Đã khớp" / "Đã huỷ" | — |
+| **NX4** | Tổng quan ↔ Đơn hàng | MED | ✅ FIXED | Status labels aligned: "Chờ ghép" / "Đã khớp" / "Đã huỷ" | — |
 | **NX5** | login | MED | ✅ FIXED | Animation removed from error div | — |
 | **NX6** | 404 | LOW | ✅ FIXED | Catch-all route inside each layout; sidebar visible | — |
 | **NX7** | Tài xế | LOW | ✅ FIXED | Alembic migration + DEFAULT_VENDOR constant updated | — |
@@ -475,7 +475,7 @@ All must-fix blockers have been resolved in post-v3 patches (2026-05-10):
 | # | Issue | Fix | File(s) |
 |---|-------|-----|---------|
 | N3 | Login button enabled with empty fields | **Already fixed in code.** `disabled={loading \|\| !username.trim() \|\| !password.trim()}` was present. Audit may have been against older bundle. | `Login.tsx:225` |
-| NX4 | Dashboard status vocabulary drift | Changed "Chờ xử lý" → "Chờ đối soát", "Đã xác nhận" → "Đã khớp", added "Đã huỷ" for CANCELLED status | `AccountantDashboard.tsx:124-140` |
+| NX4 | Dashboard status vocabulary drift | Changed "Chờ xử lý" → "Chờ ghép", "Đã xác nhận" → "Đã khớp", added "Đã huỷ" for CANCELLED status | `AccountantDashboard.tsx:124-140` |
 | NX5 | Login error renders at low opacity | Removed `animate-fade-slide-up` from error div so it appears at full opacity immediately | `Login.tsx:166` |
 | NX1 | Match toast fires error on success | Added success toast after `handleMatch()` resolves. Improved error message extraction from `unwrap` Error objects | `MatchTrip.tsx:191-200` |
 | NX2 | Khách hàng lost search input + columns | Restored search input with fuzzyMatch. Added DataTablePro with columns (Tên, SĐT, MST, Loại, Địa chỉ) on desktop. Kept card layout on mobile | `ClientList.tsx` (full rewrite) |
