@@ -274,7 +274,7 @@ export function DirectorDashboard() {
                           <StatusBadge variant={badge.variant} label={badge.label} />
                         </div>
                         <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
-                          {t.client.name} <span style={{ color: 'var(--theme-text-muted)' }}>•</span> {route}
+                          {t.partner.name} <span style={{ color: 'var(--theme-text-muted)' }}>•</span> {route}
                         </p>
                       </div>
                       

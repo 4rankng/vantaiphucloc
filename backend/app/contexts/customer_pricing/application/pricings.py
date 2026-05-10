@@ -13,8 +13,8 @@ from app.contexts.customer_pricing.domain.entities import Pricing, PricingLine
 from app.contexts.customer_pricing.domain.exceptions import NotFound
 from app.contexts.customer_pricing.domain.repositories import PricingRepository
 from app.contexts.customer_pricing.domain.value_objects import (
-    ClientId,
     LocationId,
+    PartnerId,
     PricingId,
 )
 
@@ -53,14 +53,14 @@ class ListPricings:
         *,
         page: int,
         page_size: int,
-        client_id: int | None = None,
+        partner_id: int | None = None,
         active_only: bool = True,
     ) -> tuple[list[Pricing], int]:
         offset = (page - 1) * page_size
         items, total = await self.repo.list(
             offset=offset,
             limit=page_size,
-            client_id=ClientId(client_id) if client_id is not None else None,
+            partner_id=PartnerId(partner_id) if partner_id is not None else None,
             active_only=active_only,
         )
         return list(items), total
@@ -74,7 +74,7 @@ class CreatePricing:
     async def __call__(self, data: PricingCreateInput) -> Pricing:
         p = Pricing(
             id=None,
-            client_id=ClientId(data.client_id),
+            partner_id=PartnerId(data.partner_id),
             work_type=data.work_type,
             pickup_location_id=LocationId(data.pickup_location_id),
             dropoff_location_id=LocationId(data.dropoff_location_id),
@@ -90,7 +90,7 @@ class UpdatePricing:
 
     When `data.lines` is None, lines are untouched. When provided, the
     repo reconciles: existing tiers update, new tiers insert, missing
-    tiers delete — matching the legacy "delete-and-replace" behavior.
+    tiers delete -- matching the legacy "delete-and-replace" behavior.
     """
 
     def __init__(self, repo: PricingRepository, session: AsyncSession) -> None:
@@ -103,8 +103,8 @@ class UpdatePricing:
         p = await self.repo.get_by_id(pid)
         if p is None:
             raise NotFound("Pricing", int(pid))
-        if data.client_id is not None:
-            p.client_id = ClientId(data.client_id)
+        if data.partner_id is not None:
+            p.partner_id = PartnerId(data.partner_id)
         if data.work_type is not None:
             from app.contexts.customer_pricing.domain.value_objects import (
                 normalize_work_type,

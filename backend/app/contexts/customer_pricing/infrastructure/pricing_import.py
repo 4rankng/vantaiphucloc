@@ -27,7 +27,7 @@ import openpyxl
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.domain import Client, Pricing, PricingLine
+from app.models.domain import Partner, Pricing, PricingLine
 from app.contexts.customer_pricing.infrastructure.location_resolver import (
     LocationResolverService,
     ResolverSource,
@@ -285,19 +285,24 @@ class CommitResult:
 async def commit_tariff_rows(
     db: AsyncSession,
     *,
-    client: Client,
-    rows: Sequence[TariffRow],
-    user_id: int | None,
+    partner: Partner | None = None,
+    client: Partner | None = None,
+    rows: Sequence[TariffRow] = (),
+    user_id: int | None = None,
     update_existing_lines: bool = False,
 ) -> CommitResult:
     """Upsert pricing + lines, idempotent on
-    (client_id, work_type, pickup_location_id, dropoff_location_id) for the
+    (partner_id, work_type, pickup_location_id, dropoff_location_id) for the
     header and (pricing_id, quantity) for the line.
 
     If `update_existing_lines` is False (default), an existing line is left
     alone — common case for "import a fresh tariff but keep manually-tuned
     splits". When True, the line's `unit_price` is overwritten.
     """
+    # Backward compat: callers may still pass client= instead of partner=
+    _partner = partner or client
+    if _partner is None:
+        raise ValueError("commit_tariff_rows requires partner= (or client=)")
     resolver = LocationResolverService(db)
     locations_before = await _location_count(db)
     result = CommitResult()
@@ -320,7 +325,7 @@ async def commit_tariff_rows(
 
         existing_pricing = (await db.execute(
             select(Pricing).where(
-                Pricing.client_id == client.id,
+                Pricing.partner_id == _partner.id,
                 Pricing.work_type == row.work_type,
                 Pricing.pickup_location_id == pickup_loc.id,
                 Pricing.dropoff_location_id == dropoff_loc.id,
@@ -328,7 +333,7 @@ async def commit_tariff_rows(
         )).scalar_one_or_none()
         if existing_pricing is None:
             pricing = Pricing(
-                client_id=client.id,
+                partner_id=_partner.id,
                 work_type=row.work_type,
                 pickup_location_id=pickup_loc.id,
                 dropoff_location_id=dropoff_loc.id,

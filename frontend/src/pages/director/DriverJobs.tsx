@@ -9,7 +9,7 @@ export function DriverJobs() {
   const driverId = Number(driverIdStr)
   const { data: jobs = [] } = useWorkOrders({ driverId })
 
-  const totalEarning = useMemo(() => jobs.reduce((s, j) => s + j.earning, 0), [jobs])
+  const totalEarning = useMemo(() => jobs.reduce((s, j) => s + j.driverSalary, 0), [jobs])
 
   const sortedJobs = useMemo(
     () => [...jobs].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
@@ -58,7 +58,7 @@ export function DriverJobs() {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{job.route}</span>
-              <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(job.earning)}</span>
+              <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(job.driverSalary)}</span>
             </div>
             <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>{new Date(job.createdAt).toLocaleDateString('vi-VN')}</p>
           </div>

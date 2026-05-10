@@ -20,7 +20,7 @@ interface Props {
 export function PricingForm({ initial, clients, lockedClientId, onSave, onCancel, onCreateClient }: Props) {
   const { data: locations = [] } = useLocations()
   const [clientId, setClientId] = useState(
-    String(lockedClientId ?? initial?.client.id ?? ''),
+    String(lockedClientId ?? initial?.partner.id ?? ''),
   )
   const [workType, setWorkType] = useState<WorkType>(initial?.workType ?? 'E20')
   const [pickupLocationName, setPickupLocationName] = useState(initial?.pickupLocation.name ?? '')

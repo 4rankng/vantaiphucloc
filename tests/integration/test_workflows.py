@@ -268,13 +268,13 @@ class TestSalaryLifecycle:
 
     def test_salary_lifecycle(self, api_client, admin_headers):
         # Read current config
-        config_resp = api_client.get("/salary-config", headers=admin_headers)
+        config_resp = api_client.get("/salary/config", headers=admin_headers)
         assert config_resp.status_code == 200
         original_config = config_resp.json()
 
         # Set known config
         api_client.put(
-            "/salary-config",
+            "/salary/config",
             headers=admin_headers,
             json={"from_day": 1, "to_day": 25},
         )
@@ -298,7 +298,7 @@ class TestSalaryLifecycle:
 
         # Restore config
         api_client.put(
-            "/salary-config",
+            "/salary/config",
             headers=admin_headers,
             json={"from_day": original_config["from_day"], "to_day": original_config["to_day"]},
         )

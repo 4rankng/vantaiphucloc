@@ -45,13 +45,13 @@ export function useMatchTrip(initialTripId: number) {
   const suggestions = suggestionsData?.suggestions ?? []
 
   const baseTrip = useMemo(() => selectedTrip ? {
-    clientName: selectedTrip.client.name,
+    clientName: selectedTrip.partner.name,
     route: selectedTrip.route,
     containers: (selectedTrip.containers ?? []).map(c => ({ type: c.workType, number: c.containerNumber })),
   } : null, [selectedTrip])
 
   const baseJob = useMemo(() => selectedJob ? {
-    clientName: selectedJob.client.name,
+    clientName: selectedJob.partner.name,
     route: selectedJob.route,
     containers: selectedJob.containers.map(c => ({ type: c.workType, number: c.containerNumber })),
   } : null, [selectedJob])

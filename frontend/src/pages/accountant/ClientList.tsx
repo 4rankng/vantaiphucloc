@@ -10,42 +10,42 @@ import { InfoRow } from '@/components/shared/InfoRow'
 import { BrandIcon } from '@/components/atoms/BrandIcon'
 import { DataTablePro, type Column } from '@/components/shared/DataTablePro/DataTablePro'
 import { SettingsPageLayout } from '@/components/shared/SettingsPageLayout'
-import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/use-queries'
+import { usePartners, useCreatePartner, useUpdatePartner, useDeletePartner } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { fuzzyMatch } from '@/lib/search-utils'
-import type { Client, ClientType } from '@/data/domain'
+import type { Partner } from '@/data/domain'
 
 const VN_PHONE_RE = /^(0|\+?84)[35789]\d{8}$/
 const VN_TAX_RE = /^\d{10}(\d{3})?$/
 
 const EMPTY_CLIENT = {
-  name: '', type: 'company' as ClientType, taxCode: '', address: '', phone: '', contactPerson: '',
+  name: '', type: 'company' as const, taxCode: '', address: '', phone: '', contactPerson: '',
 }
 
 export function ClientList() {
-  const { data: clients = [], isLoading: loading } = useClients()
+  const { data: clients = [], isLoading: loading } = usePartners()
   const isMobile = useIsMobile(768)
   const toast = useToast()
 
   const [search, setSearch] = useState('')
 
   // Detail dialog
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
+  const [selectedClient, setSelectedClient] = useState<Partner | null>(null)
 
   // Create/Edit dialog
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [editing, setEditing] = useState<Client | null>(null)
+  const [editing, setEditing] = useState<Partner | null>(null)
   const [form, setForm] = useState(EMPTY_CLIENT)
   const [formErrors, setFormErrors] = useState<{ phone?: string; taxCode?: string }>({})
 
   // Delete confirm
-  const [deleteConfirm, setDeleteConfirm] = useState<Client | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<Partner | null>(null)
   const [showOverflow, setShowOverflow] = useState(false)
 
-  const createClient = useCreateClient()
-  const updateClient = useUpdateClient()
-  const deleteClient = useDeleteClient()
+  const createClient = useCreatePartner()
+  const updateClient = useUpdatePartner()
+  const deleteClient = useDeletePartner()
 
   const filtered = useMemo(
     () => clients.filter(c => !search || fuzzyMatch(search, `${c.name} ${c.phone} ${c.taxCode ?? ''} ${c.address ?? ''}`)),
@@ -59,7 +59,7 @@ export function ClientList() {
     setDialogOpen(true)
   }, [])
 
-  const handleOpenEdit = useCallback((client: Client) => {
+  const handleOpenEdit = useCallback((client: Partner) => {
     setEditing(client)
     setForm({
       name: client.name, type: client.type, taxCode: client.taxCode ?? '',
@@ -104,7 +104,7 @@ export function ClientList() {
     }
   }, [editing, form, createClient, updateClient, validateForm, toast])
 
-  const handleDelete = useCallback((client: Client) => {
+  const handleDelete = useCallback((client: Partner) => {
     deleteClient.mutate(String(client.id), {
       onSuccess: () => {
         toast.success('Đã xoá', client.name)
@@ -124,7 +124,7 @@ export function ClientList() {
     setForm(prev => ({ ...prev, [field]: value }))
   }, [])
 
-  const columns: Column<Client>[] = useMemo(() => [
+  const columns: Column<Partner>[] = useMemo(() => [
     { key: 'name', header: 'Tên', accessor: c => <span className="font-medium">{c.name}</span>, sortable: true, sortKey: c => c.name },
     { key: 'phone', header: 'SĐT', accessor: c => c.phone || <span style={{ color: 'var(--theme-text-muted)' }}>—</span>, sortable: true },
     { key: 'taxCode', header: 'MST', accessor: c => c.taxCode || <span style={{ color: 'var(--theme-text-muted)' }}>—</span>, sortable: true },

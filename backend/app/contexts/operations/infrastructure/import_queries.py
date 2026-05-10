@@ -1,13 +1,13 @@
-"""Read-side query helpers for the customer-Excel import + apply-pricing
+"""Read-side query helpers for the partner-Excel import + apply-pricing
 flows in operations.application.trip_orders.
 
 Both flows still drive the legacy ORM rows directly (predates DDD), so
 the use cases need raw lookups against TripOrderORM / TripOrderContainerORM
-/ ClientORM / LocationORM. Keeping the SQL here means the use case body
+/ PartnerORM / LocationORM. Keeping the SQL here means the use case body
 stays free of select/and_/func calls.
 
 Mutations (price assignment, status flip) still happen on the ORM rows
-themselves inside the use case — this module only reads.
+themselves inside the use case -- this module only reads.
 """
 
 from __future__ import annotations
@@ -19,16 +19,16 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import (
-    Client,
     Location,
+    Partner,
     TripOrder as TripOrderORM,
     TripOrderContainer as TripOrderContainerORM,
 )
 
 
-async def fetch_client(session: AsyncSession, client_id: int) -> Client | None:
+async def fetch_partner(session: AsyncSession, partner_id: int) -> Partner | None:
     res = await session.execute(
-        select(Client).where(Client.id == client_id)
+        select(Partner).where(Partner.id == partner_id)
     )
     return res.scalar_one_or_none()
 
@@ -41,7 +41,7 @@ async def count_locations(session: AsyncSession) -> int:
 async def find_duplicate_trip(
     session: AsyncSession,
     *,
-    client_id: int,
+    partner_id: int,
     trip_date: date,
     container_no: str,
 ) -> TripOrderORM | None:
@@ -53,7 +53,7 @@ async def find_duplicate_trip(
         )
         .where(
             and_(
-                TripOrderORM.client_id == client_id,
+                TripOrderORM.partner_id == partner_id,
                 TripOrderORM.trip_date == trip_date,
                 TripOrderContainerORM.container_number == container_no,
             )
@@ -63,23 +63,22 @@ async def find_duplicate_trip(
     return res.scalar_one_or_none()
 
 
-async def list_drafts_for_pricing(
+async def list_unpriced_trips(
     session: AsyncSession,
     *,
-    client_id: int | None,
+    partner_id: int | None,
     trip_ids: list[int] | None,
-    draft_status: str,
 ) -> Sequence[TripOrderORM]:
     """Trips eligible for bulk apply-pricing.
 
-    When `client_id` is set we restrict to that client's DRAFT trips;
+    When `partner_id` is set we restrict to that partner's unpriced trips;
     when `trip_ids` is set we narrow further to the explicit ids.
     """
     q = select(TripOrderORM)
-    if client_id is not None:
+    if partner_id is not None:
         q = q.where(
-            TripOrderORM.client_id == client_id,
-            TripOrderORM.status == draft_status,
+            TripOrderORM.partner_id == partner_id,
+            (TripOrderORM.unit_price == 0) | (TripOrderORM.unit_price.is_(None)),
         )
     if trip_ids:
         q = q.where(TripOrderORM.id.in_(trip_ids))

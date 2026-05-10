@@ -1,6 +1,6 @@
 import { Clock, CheckCircle, Lock } from 'lucide-react'
 import { formatCurrencyFull, type WorkOrder } from '@/data/domain'
-import { splitRouteParts, resolveRoute } from '@/lib/route-utils'
+import { resolveRoute } from '@/lib/route-utils'
 
 type CardVariant = 'driver' | 'accountant'
 
@@ -114,10 +114,9 @@ function StatusPill({ status, variant, compact = false }: { status: WorkOrder['s
  * Whole card is the tap target → opens detail page.
  */
 function DriverCard({ wo, onClick }: { wo: WorkOrder; onClick: () => void }) {
-  const hasEarning = wo.earning > 0
-  const routeParts = splitRouteParts(wo.route)
-  const pickup = wo.pickupLocation?.name || routeParts[0] || wo.route
-  const dropoff = wo.dropoffLocation?.name || routeParts[1] || ''
+  const hasEarning = wo.driverSalary > 0
+  const pickup = wo.pickupLocation?.name || ''
+  const dropoff = wo.dropoffLocation?.name || ''
 
   return (
     <button
@@ -134,14 +133,14 @@ function DriverCard({ wo, onClick }: { wo: WorkOrder; onClick: () => void }) {
           className="text-[14px] font-semibold leading-snug truncate flex-1 min-w-0"
           style={{ color: 'var(--theme-text-primary)' }}
         >
-          {wo.client.code ? `${wo.client.code} · ${wo.client.name}` : wo.client.name}
+          {wo.partner.code ? `${wo.partner.code} · ${wo.partner.name}` : wo.partner.name}
         </p>
         {hasEarning ? (
           <span
             className="text-[14px] font-bold tabular-nums whitespace-nowrap shrink-0"
             style={{ color: 'var(--theme-brand-primary)' }}
           >
-            +{formatCurrencyFull(wo.earning)}
+            +{formatCurrencyFull(wo.driverSalary)}
           </span>
         ) : (
           <span className="text-[11px] font-medium whitespace-nowrap shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
@@ -190,7 +189,7 @@ function AccountantCard({ wo }: { wo: WorkOrder }) {
       </div>
 
       <p className="text-sm font-bold leading-snug" style={{ color: 'var(--theme-text-primary)' }}>
-        {wo.client.code ? `${wo.client.code} · ${wo.client.name}` : wo.client.name}
+        {wo.partner.code ? `${wo.partner.code} · ${wo.partner.name}` : wo.partner.name}
       </p>
 
       <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
@@ -198,16 +197,16 @@ function AccountantCard({ wo }: { wo: WorkOrder }) {
       </p>
 
       <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>
-        {wo.driver.name} · {wo.tractorPlate}
+        {wo.driver.name}
       </p>
 
       <div className="mt-3 pt-2.5 flex items-center justify-between" style={{ borderTop: '1px solid var(--surface-border)' }}>
         <span className="text-xs tabular-nums" style={{ color: 'var(--theme-text-muted)' }}>
           {fmtDate(wo.createdAt)}
         </span>
-        {wo.earning > 0 ? (
+        {wo.driverSalary > 0 ? (
           <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>
-            +{formatCurrencyFull(wo.earning)}
+            +{formatCurrencyFull(wo.driverSalary)}
           </span>
         ) : (
           <span className="text-xs font-medium" style={{ color: 'var(--theme-text-muted)' }}>

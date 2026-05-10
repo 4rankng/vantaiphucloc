@@ -9,39 +9,15 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 
-# ── Customer ─────────────────────────────────────────────────────
+# -- Partner ---------------------------------------------------------
 
 
 @dataclass
-class CustomerCreateInput:
+class PartnerCreateInput:
     name: str
-    type: str
-    phone: str
+    partner_type: str  # "client" | "vendor" | "both"
+    partner_role: str | None = None
     code: str | None = None
-    tax_code: str | None = None
-    address: str | None = None
-    contact_person: str | None = None
-
-
-@dataclass
-class CustomerUpdateInput:
-    name: str | None = None
-    type: str | None = None
-    phone: str | None = None
-    code: str | None = None
-    tax_code: str | None = None
-    address: str | None = None
-    contact_person: str | None = None
-    is_active: bool | None = None
-
-
-# ── Vendor ───────────────────────────────────────────────────────
-
-
-@dataclass
-class VendorCreateInput:
-    name: str
-    type: str | None = None
     phone: str | None = None
     tax_code: str | None = None
     address: str | None = None
@@ -49,9 +25,11 @@ class VendorCreateInput:
 
 
 @dataclass
-class VendorUpdateInput:
+class PartnerUpdateInput:
     name: str | None = None
-    type: str | None = None
+    partner_type: str | None = None
+    partner_role: str | None = None
+    code: str | None = None
     phone: str | None = None
     tax_code: str | None = None
     address: str | None = None
@@ -59,7 +37,7 @@ class VendorUpdateInput:
     is_active: bool | None = None
 
 
-# ── Location ─────────────────────────────────────────────────────
+# -- Location --------------------------------------------------------
 
 
 @dataclass
@@ -81,24 +59,7 @@ class LocationPinInput:
     user_id: int | None = None
 
 
-# ── Route ────────────────────────────────────────────────────────
-
-
-@dataclass
-class RouteCreateInput:
-    route: str
-    pickup_location_id: int
-    dropoff_location_id: int
-
-
-@dataclass
-class RouteUpdateInput:
-    route: str | None = None
-    pickup_location_id: int | None = None
-    dropoff_location_id: int | None = None
-
-
-# ── Pricing ──────────────────────────────────────────────────────
+# -- Pricing ---------------------------------------------------------
 
 
 @dataclass
@@ -111,7 +72,7 @@ class PricingLineInput:
 
 @dataclass
 class PricingCreateInput:
-    client_id: int
+    partner_id: int
     work_type: str
     pickup_location_id: int
     dropoff_location_id: int
@@ -120,7 +81,7 @@ class PricingCreateInput:
 
 @dataclass
 class PricingUpdateInput:
-    client_id: int | None = None
+    partner_id: int | None = None
     work_type: str | None = None
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None

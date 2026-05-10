@@ -6,7 +6,6 @@ import type { WorkOrder, ContainerItem, ApiResponse } from '@/data/domain'
 
 interface WorkOrderFilters {
   driverId?: number
-  tractorPlate?: string
   dateFrom?: string
   dateTo?: string
   status?: WorkOrder['status']
@@ -14,24 +13,22 @@ interface WorkOrderFilters {
 
 export interface WorkOrderCreatePayload {
   containers: ContainerItem[]
-  clientId: number
+  partnerId: number
   route: string
   pickupLocationId: number
   dropoffLocationId: number
   driverId: number
-  tractorPlate: string
   gpsLat?: number | null
   gpsLng?: number | null
 }
 
 export interface WorkOrderUpdatePayload {
   containers?: ContainerItem[]
-  clientId?: number
+  partnerId?: number
   route?: string
   pickupLocationId?: number
   dropoffLocationId?: number
   driverId?: number
-  tractorPlate?: string
   gpsLat?: number | null
   gpsLng?: number | null
   unitPrice?: number
@@ -55,7 +52,6 @@ export async function getWorkOrders(filters?: WorkOrderFilters): Promise<ApiResp
   try {
     const params: Record<string, string> = {}
     if (filters?.driverId) params.driver_id = String(filters.driverId)
-    if (filters?.tractorPlate) params.tractor_plate = filters.tractorPlate
     if (filters?.dateFrom) params.date_from = filters.dateFrom
     if (filters?.dateTo) params.date_to = filters.dateTo
     if (filters?.status) params.status = filters.status
@@ -77,7 +73,7 @@ export async function createWorkOrder(
   try {
     const res = await api.post('/work-orders', snakeBody)
     const wo = toCamel<WorkOrder>(res.data)
-    const cacheKey = `work-orders:${data.driverId || ''}:`
+    const cacheKey = `work-orders:${data.driverId || ''}:${data.partnerId || ''}`
     const cached = await getCache<WorkOrder[]>(cacheKey)
     if (cached) {
       await setCache(cacheKey, [wo, ...cached])
@@ -96,19 +92,17 @@ export async function createWorkOrder(
       return ok({
         id: -Date.now(),
         containers: data.containers,
-        client: { id: data.clientId, name: '', code: null },
+        partner: { id: data.partnerId, name: '', code: null },
         route: data.route,
         pickupLocation: { id: data.pickupLocationId, name: '' },
         dropoffLocation: { id: data.dropoffLocationId, name: '' },
-        driver: { id: data.driverId, name: '', tractorPlate: data.tractorPlate },
-        tractorPlate: data.tractorPlate,
+        driver: { id: data.driverId, name: '' },
         gpsLat: data.gpsLat ?? 0,
         gpsLng: data.gpsLng ?? 0,
         gpsAddress: undefined,
         unitPrice: 0,
         driverSalary: 0,
         allowance: 0,
-        earning: 0,
         pricingId: undefined,
         createdAt: new Date().toISOString(),
         status: 'PENDING',

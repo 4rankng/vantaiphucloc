@@ -168,11 +168,10 @@ export function ImportOrders() {
         consignee: r.values.consignee || '',
         commodity: r.values.commodity || '',
         driver_name: r.values.driver_name || '',
-        tractor_plate: r.values.tractor_plate || '',
         remarks: r.values.remarks || '',
       }))
       const res = await apiClient.commitCustomerExcel({
-        client_id: Number(clientId),
+        partner_id: Number(clientId),
         rows,
         overwrite_duplicates: overwriteDuplicates,
         save_template_as: saveTemplateName || undefined,

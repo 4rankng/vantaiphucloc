@@ -57,7 +57,7 @@ export const queryKeys = {
   dashboard: ['dashboard'] as const,
   users: ['users'] as const,
   notifications: ['notifications'] as const,
-  salaryConfig: ['salary-config'] as const,
+  salaryConfig: ['salary/config'] as const,
   vendors: ['partners'] as const,
   suggestMatches: (woId: number) => ['suggest-matches', woId] as const,
   suggestWos: (toId: number) => ['suggest-wos', toId] as const,
@@ -153,10 +153,9 @@ export function usePricings(filters?: { clientId?: number; workType?: WorkType; 
   })
 }
 
-export function useWorkOrders(filters?: { driverId?: number; tractorPlate?: string; dateFrom?: string; dateTo?: string; status?: WorkOrder['status'] }) {
+export function useWorkOrders(filters?: { driverId?: number; dateFrom?: string; dateTo?: string; status?: WorkOrder['status'] }) {
   const flatFilters: Record<string, string> = {}
   if (filters?.driverId) flatFilters.driverId = String(filters.driverId)
-  if (filters?.tractorPlate) flatFilters.tractorPlate = filters.tractorPlate
   if (filters?.dateFrom) flatFilters.dateFrom = filters.dateFrom
   if (filters?.dateTo) flatFilters.dateTo = filters.dateTo
   if (filters?.status) flatFilters.status = filters.status
@@ -575,7 +574,7 @@ export function useCalculateSalary() {
 export function useCreateDriver() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { username: string; phone: string; tractorPlate?: string; vendor?: string }) =>
+    mutationFn: (data: { username: string; fullName?: string; phone: string }) =>
       apiClient.createDriver(data).then(unwrap),
     onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.drivers }) },
   })

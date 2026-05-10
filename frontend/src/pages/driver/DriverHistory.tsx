@@ -31,7 +31,7 @@ export function DriverHistory() {
   }), [workOrders])
 
   const totalEarnings = useMemo(() =>
-    filtered.reduce((sum, w) => sum + w.earning, 0),
+    filtered.reduce((sum, w) => sum + w.driverSalary, 0),
     [filtered],
   )
 

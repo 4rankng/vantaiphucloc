@@ -290,6 +290,25 @@ class TripContainerPhoto(Base):
 
 
 # ---------------------------------------------------------------------------
+# TripOrder <-> WorkOrder join table (many-to-many)
+# ---------------------------------------------------------------------------
+
+class TripOrderWorkOrder(Base):
+    __tablename__ = "trip_order_work_orders"
+
+    trip_order_id = Column(
+        Integer,
+        ForeignKey("trip_orders.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    work_order_id = Column(
+        Integer,
+        ForeignKey("work_orders.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Reconciliation (enriched join table)
 # ---------------------------------------------------------------------------
 

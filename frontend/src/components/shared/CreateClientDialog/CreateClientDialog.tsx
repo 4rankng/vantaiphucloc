@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button, Input, Label } from '@/components/ui'
-import type { Client, ClientType } from '@/data/domain'
+import type { Partner } from '@/data/domain'
 
-type ClientFormData = Omit<Client, 'id' | 'outstandingDebt'>
+type ClientFormData = Omit<Partner, 'id' | 'createdAt' | 'updatedAt'>
 
 interface CreateClientDialogProps {
   open: boolean
@@ -87,7 +87,7 @@ export function CreateClientDialog({ open, onClose, onConfirm }: CreateClientDia
           <div className="space-y-2">
             <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Loại</Label>
             <div className="flex gap-2">
-              {(['company', 'individual'] as ClientType[]).map(t => (
+              {(['company', 'individual'] as const).map(t => (
                 <button
                   key={t}
                   type="button"

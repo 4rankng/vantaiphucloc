@@ -27,14 +27,14 @@ export function PricingClientCards({ basePath }: Props) {
     const map = new Map<number, { clientId: number; clientName: string; pricingCount: number; routeSet: Set<string> }>()
     pricings.forEach((p: Pricing) => {
       const routeKey = `${p.pickupLocation.id}-${p.dropoffLocation.id}`
-      const existing = map.get(p.client.id)
+      const existing = map.get(p.partner.id)
       if (existing) {
         existing.pricingCount++
         existing.routeSet.add(routeKey)
       } else {
-        map.set(p.client.id, {
-          clientId: p.client.id,
-          clientName: p.client.name,
+        map.set(p.partner.id, {
+          clientId: p.partner.id,
+          clientName: p.partner.name,
           pricingCount: 1,
           routeSet: new Set([routeKey]),
         })

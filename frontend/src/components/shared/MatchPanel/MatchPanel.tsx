@@ -386,7 +386,7 @@ function SuggestionCard({
           </div>
 
           <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
-            <span className="font-medium">{trip.client.name}</span>
+            <span className="font-medium">{trip.partner.name}</span>
             {trip.route ? <span> · {trip.route}</span> : null}
           </p>
         </div>
@@ -432,7 +432,7 @@ function SuggestionCard({
             )}
           </div>
           <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
-            <span className="font-medium">{trip.client.name}</span>
+            <span className="font-medium">{trip.partner.name}</span>
             {trip.route ? <span> · {trip.route}</span> : null}
           </p>
         </div>
@@ -567,7 +567,7 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
 
   useMemo(() => {
     if (workOrder && !woInitialized) {
-      setWoClient(workOrder.client.name)
+      setWoClient(workOrder.partner.name)
       setWoRoute(workOrder.route)
       const resolved = routeMap.get(workOrder.route)
       setWoPickup(workOrder.pickupLocation.name || resolved?.pickup || '')
@@ -608,7 +608,7 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
 
   useMemo(() => {
     if (selectedTrip && selectedTrip.id !== tripInitKey) {
-      setTripClient(selectedTrip.client.name)
+      setTripClient(selectedTrip.partner.name)
       setTripRoute(selectedTrip.route)
       const resolved = routeMap.get(selectedTrip.route)
       setTripPickup(selectedTrip.pickupLocation.name || resolved?.pickup || '')
@@ -808,7 +808,7 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
                   matchedCount={matchedCount}
                   totalCriteria={totalCriteria}
                   tripContainers={isSelected ? tripContainers : (s.tripOrder.containers ?? []).map(c => ({ workType: c.workType, containerNumber: c.containerNumber }))}
-                  tripClient={isSelected ? tripClient : s.tripOrder.client.name}
+                  tripClient={isSelected ? tripClient : s.tripOrder.partner.name}
                   tripPickup={isSelected ? tripPickup : ''}
                   tripDropoff={isSelected ? tripDropoff : ''}
                   matchedTripContainerIndices={isSelected ? matchedTripContainerIndices : new Set()}

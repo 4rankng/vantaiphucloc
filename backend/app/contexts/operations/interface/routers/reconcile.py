@@ -38,7 +38,6 @@ from app.contexts.operations.interface.dependencies import (
 )
 from app.contexts.operations.interface.error_translation import translate
 from app.contexts.operations.interface.routers.trip_orders import (
-    _enqueue_salary_recalc,
     _load_one as _load_trip_one,
 )
 from app.core.audit_context import set_audit_reason
@@ -110,7 +109,7 @@ async def reconcile(
         ref_date = (
             wo.created_at.date() if wo.created_at else to.trip_date
         )
-        await _enqueue_salary_recalc(db, wo.driver_id, ref_date)
+        pass  # salary calculated on-the-fly
 
     try:
         return await _load_trip_one(db, to)
@@ -162,7 +161,7 @@ async def unmatch(
 
     if wo.driver_id:
         ref_date = wo.created_at.date() if wo.created_at else to.trip_date
-        await _enqueue_salary_recalc(db, wo.driver_id, ref_date)
+        pass  # salary calculated on-the-fly
 
     return {"success": True, "message": "Unmatched successfully"}
 
@@ -333,7 +332,7 @@ async def auto_match(
                     # Salary recalc
                     if wo.driver_id:
                         ref_date = wo.created_at.date() if wo.created_at else to.trip_date
-                        await _enqueue_salary_recalc(db, wo.driver_id, ref_date)
+                        pass  # salary calculated on-the-fly
 
                     auto_matched.append(AutoMatchResult(
                         work_order_id=wo.id,
@@ -477,7 +476,7 @@ async def bulk_match(
             # Salary recalc
             if wo.driver_id:
                 ref_date = wo.created_at.date() if wo.created_at else to.trip_date
-                await _enqueue_salary_recalc(db, wo.driver_id, ref_date)
+                pass  # salary calculated on-the-fly
 
             matched.append(BulkMatchResult(
                 work_order_id=pair.work_order_id,

@@ -45,7 +45,6 @@ export interface ParsedRowDto {
     consignee?: string
     commodity?: string
     driver_name?: string
-    tractor_plate?: string
     remarks?: string
   }
 }
@@ -97,12 +96,11 @@ export interface CommitRow {
   consignee?: string
   commodity?: string
   driver_name?: string
-  tractor_plate?: string
   remarks?: string
 }
 
 export interface CommitRequest {
-  client_id: number
+  partner_id: number
   rows: CommitRow[]
   overwrite_duplicates?: boolean
   save_template_as?: string

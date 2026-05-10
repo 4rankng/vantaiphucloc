@@ -36,7 +36,7 @@ function isPending(t: TripOrder) {
   return t.status === 'PENDING' || t.status === 'DRAFT'
 }
 function isMatched(t: TripOrder) {
-  return t.status === 'COMPLETED' || t.isConfirmed
+  return t.status === 'COMPLETED' || t.status === 'MATCHED'
 }
 
 function getStatusVariant(t: TripOrder): 'pending' | 'success' | 'neutral' {
@@ -78,11 +78,11 @@ export function TripList() {
     let list = trips
     if (statusFilter === 'PENDING') list = list.filter(isPending)
     else if (statusFilter === 'MATCHED') list = list.filter(isMatched)
-    if (clientFilter !== 'ALL') list = list.filter(t => String(t.client.id) === clientFilter)
+    if (clientFilter !== 'ALL') list = list.filter(t => String(t.partner.id) === clientFilter)
     if (search.trim()) {
       const q = search
       list = list.filter(t =>
-        fuzzyMatch(t.client.name, q) ||
+        fuzzyMatch(t.partner.name, q) ||
         fuzzyMatch(t.route ?? '', q) ||
         fuzzyMatch(t.code ?? '', q) ||
         t.containers.some(c => fuzzyMatch(c.containerNumber ?? '', q))
@@ -503,7 +503,7 @@ function buildColumns(): Column<TripOrder>[] {
       accessor: (row) => (
         <div className="min-w-0">
           <p className="font-semibold text-sm whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
-            {row.client.name}
+            {row.partner.name}
           </p>
           <RouteDisplay
             route={row.route}
@@ -514,7 +514,7 @@ function buildColumns(): Column<TripOrder>[] {
         </div>
       ),
       sortable: true,
-      sortKey: (row) => row.client.name,
+      sortKey: (row) => row.partner.name,
     },
     {
       key: 'containers',

@@ -5,7 +5,7 @@ import { useOffline } from '@/contexts/OfflineContext'
 import { apiClient } from '@/services/api'
 import { useLocations } from '@/hooks/use-queries'
 import type { PhotoMeta } from '@/components/shared/ContainerScanner'
-import type { Client, WorkType, WorkOrder } from '@/data/domain'
+import type { Partner, WorkType, WorkOrder } from '@/data/domain'
 
 export interface ContainerForm {
   containerNumber: string
@@ -51,8 +51,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
   const isEdit = !!existingWorkOrder
 
   // Reference data
-  const [clients, setClients] = useState<Client[]>([])
-  const [driverPlate, setDriverPlate] = useState('')
+  const [clients, setClients] = useState<Partner[]>([])
   const [recentOrders, setRecentOrders] = useState<WorkOrder[]>([])
   const { data: locations = [] } = useLocations()
 
@@ -60,7 +59,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
   const [containers, setContainers] = useState<ContainerForm[]>(
     existingWorkOrder ? woToContainers(existingWorkOrder) : [{ ...EMPTY_CONT }],
   )
-  const [clientId, setClientId] = useState(existingWorkOrder ? String(existingWorkOrder.client.id) : '')
+  const [clientId, setClientId] = useState(existingWorkOrder ? String(existingWorkOrder.partner.id) : '')
   const [pickupLocation, setPickupLocation] = useState(existingWorkOrder?.pickupLocation.name ?? '')
   const [dropoffLocation, setDropoffLocation] = useState(existingWorkOrder?.dropoffLocation.name ?? '')
   const [selectedTripId, setSelectedTripId] = useState<number | null>(null)
@@ -91,21 +90,6 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
     return () => { cancelled = true }
   }, [])
 
-  // Load driver plate
-  useEffect(() => {
-    if (!user) return
-    let cancelled = false
-    apiClient.getDrivers()
-      .then(res => {
-        if (!cancelled && res.success) {
-          const d = res.data.find((d: { id: number; tractorPlate?: string }) => d.id === Number(user.id))
-          if (d) setDriverPlate(d.tractorPlate ?? '')
-        }
-      })
-      .catch((err) => { console.error('Failed to load driver info:', err) })
-    return () => { cancelled = true }
-  }, [user])
-
   // Load recent orders for suggestions
   useEffect(() => {
     if (!user) return
@@ -117,7 +101,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
           const seen = new Set<string>()
           const unique: WorkOrder[] = []
           for (const wo of sorted) {
-            const key = `${wo.client.id}-${wo.pickupLocation.id}-${wo.dropoffLocation.id}`
+            const key = `${wo.partner.id}-${wo.pickupLocation.id}-${wo.dropoffLocation.id}`
             if (!seen.has(key)) {
               seen.add(key)
               unique.push(wo)
@@ -301,7 +285,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
       if (isEdit && existingWorkOrder) {
         await apiClient.updateWorkOrder(existingWorkOrder.id, {
           containers: containerItems,
-          clientId: Number(clientId),
+          partnerId: Number(clientId),
           route,
           pickupLocationId: pickupId,
           dropoffLocationId: dropoffId,
@@ -318,12 +302,11 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
 
         await apiClient.createWorkOrder({
           containers: containerItems,
-          clientId: Number(clientId),
+          partnerId: Number(clientId),
           route,
           pickupLocationId: pickupId,
           dropoffLocationId: dropoffId,
           driverId: Number(user!.id),
-          tractorPlate: driverPlate,
           gpsLat: gps.lat,
           gpsLng: gps.lng,
         })
@@ -338,7 +321,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
       console.error('Submit failed:', err)
       setSubmitting(false)
     }
-  }, [containers, clientId, pickupLocation, dropoffLocation, locations, user, driverPlate, navigate, isEdit, existingWorkOrder])
+  }, [containers, clientId, pickupLocation, dropoffLocation, locations, user, navigate, isEdit, existingWorkOrder])
 
   // Summary data for dialog
   const summaryContainers = useMemo(() =>

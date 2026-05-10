@@ -9,12 +9,10 @@ from app.contexts.identity.interface import (
     users_router,
 )
 from app.contexts.customer_pricing.interface import (
-    clients_router,
     location_aliases_router,
     locations_router,
+    partners_router,
     pricings_router,
-    routes_router,
-    vendors_router,
 )
 from app.contexts.operations.interface import (
     imports_router,
@@ -35,10 +33,9 @@ from app.schemas.domain import JobStatusResponse
 router = APIRouter()
 
 router.include_router(auth_router)
-router.include_router(clients_router)
+router.include_router(partners_router)
 router.include_router(locations_router)
 router.include_router(location_aliases_router)
-router.include_router(routes_router)
 router.include_router(pricings_router)
 router.include_router(work_orders_router)
 router.include_router(trip_orders_router)
@@ -49,7 +46,6 @@ router.include_router(drivers_router)
 router.include_router(push_router)
 router.include_router(users_router)
 router.include_router(dashboard_router)
-router.include_router(vendors_router)
 router.include_router(audit_router)
 router.include_router(reports_router)
 router.include_router(imports_router)
@@ -62,7 +58,7 @@ async def health_check():
 
 # Stub for clients running stale bundles that still poll the long-removed
 # SSE notification stream. Returns 204 to silence 404 log noise. Do NOT
-# build new clients against this — notifications now ride on push + arq.
+# build new clients against this -- notifications now ride on push + arq.
 @router.get("/sse/notifications", include_in_schema=False)
 async def _sse_notifications_stub() -> Response:
     return Response(status_code=204)

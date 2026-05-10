@@ -99,24 +99,21 @@ class SqlTripOrderRepository(TripOrderRepository):
         *,
         offset: int,
         limit: int,
-        client_id: int | None = None,
+        partner_id: int | None = None,
         status: TripOrderStatus | None = None,
         trip_date_from: date | None = None,
         trip_date_to: date | None = None,
-        is_confirmed: bool | None = None,
         unpriced_only: bool = False,
     ) -> tuple[Sequence[TripOrder], int]:
         q = select(TripOrderORM)
-        if client_id is not None:
-            q = q.where(TripOrderORM.client_id == client_id)
+        if partner_id is not None:
+            q = q.where(TripOrderORM.partner_id == partner_id)
         if status is not None:
             q = q.where(TripOrderORM.status == str(status))
         if trip_date_from is not None:
             q = q.where(TripOrderORM.trip_date >= trip_date_from)
         if trip_date_to is not None:
             q = q.where(TripOrderORM.trip_date <= trip_date_to)
-        if is_confirmed is not None:
-            q = q.where(TripOrderORM.is_confirmed.is_(is_confirmed))
         if unpriced_only:
             q = q.where((TripOrderORM.unit_price == 0) | (TripOrderORM.unit_price.is_(None)))
         total = await self.session.scalar(
@@ -130,7 +127,7 @@ class SqlTripOrderRepository(TripOrderRepository):
     async def find_duplicate(
         self,
         *,
-        client_id: int,
+        partner_id: int,
         trip_date: date,
         container_number: str,
     ) -> TripOrder | None:
@@ -141,7 +138,7 @@ class SqlTripOrderRepository(TripOrderRepository):
                 TripOrderContainerORM.trip_order_id == TripOrderORM.id,
             )
             .where(
-                TripOrderORM.client_id == client_id,
+                TripOrderORM.partner_id == partner_id,
                 TripOrderORM.trip_date == trip_date,
                 TripOrderContainerORM.container_number == container_number,
             )
@@ -270,20 +267,17 @@ class SqlWorkOrderRepository(WorkOrderRepository):
         *,
         offset: int,
         limit: int,
-        client_id: int | None = None,
+        partner_id: int | None = None,
         driver_id: int | None = None,
-        tractor_plate: str | None = None,
         date_from: date | None = None,
         date_to: date | None = None,
         status: WorkOrderStatus | None = None,
     ) -> tuple[Sequence[WorkOrder], int]:
         q = select(WorkOrderORM)
-        if client_id is not None:
-            q = q.where(WorkOrderORM.client_id == client_id)
+        if partner_id is not None:
+            q = q.where(WorkOrderORM.partner_id == partner_id)
         if driver_id is not None:
             q = q.where(WorkOrderORM.driver_id == driver_id)
-        if tractor_plate is not None:
-            q = q.where(WorkOrderORM.tractor_plate == tractor_plate)
         if date_from is not None:
             q = q.where(WorkOrderORM.created_at >= date_from)
         if date_to is not None:

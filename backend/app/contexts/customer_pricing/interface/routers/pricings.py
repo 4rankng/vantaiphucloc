@@ -44,10 +44,10 @@ from app.database import get_db
 from app.models.base import User
 from app.schemas.base import PaginatedResponse
 from app.core.summaries import (
-    get_client_summary,
     get_location_summary,
-    load_client_summaries,
+    get_partner_summary,
     load_location_summaries,
+    load_partner_summaries,
 )
 
 
@@ -57,8 +57,8 @@ router = APIRouter()
 async def _to_out(db: AsyncSession, pricings: list[Pricing]) -> list[PricingOut]:
     if not pricings:
         return []
-    clients = await load_client_summaries(
-        db, {int(p.client_id) for p in pricings}
+    partners = await load_partner_summaries(
+        db, {int(p.partner_id) for p in pricings}
     )
     locations = await load_location_summaries(
         db,
@@ -68,7 +68,7 @@ async def _to_out(db: AsyncSession, pricings: list[Pricing]) -> list[PricingOut]
     return [
         PricingOut(
             id=int(p.id),
-            client=get_client_summary(clients, int(p.client_id)),
+            partner=get_partner_summary(partners, int(p.partner_id)),
             work_type=p.work_type,
             pickup_location=get_location_summary(
                 locations, int(p.pickup_location_id)
@@ -99,7 +99,7 @@ def _line_inputs(items) -> list[PricingLineInput]:
 
 @router.get("/pricings", response_model=PaginatedResponse[PricingOut])
 async def list_pricings(
-    client_id: int | None = None,
+    partner_id: int | None = None,
     work_type: str | None = None,
     pickup_location_id: int | None = None,
     dropoff_location_id: int | None = None,
@@ -111,13 +111,13 @@ async def list_pricings(
     redis: Redis = Depends(get_redis),
 ):
     cache = CacheManager(redis)
-    cache_id = f"list:{client_id}:{work_type}:{pickup_location_id}:{dropoff_location_id}:{page}:{page_size}"
+    cache_id = f"list:{partner_id}:{work_type}:{pickup_location_id}:{dropoff_location_id}:{page}:{page_size}"
     cached = await cache.get_json("pricings", cache_id)
     if cached is not None:
         return PaginatedResponse(**cached)
 
     items, total = await use_case(
-        page=page, page_size=page_size, client_id=client_id, active_only=True,
+        page=page, page_size=page_size, partner_id=partner_id, active_only=True,
     )
     # Optional in-memory filters that the use case doesn't expose directly.
     if work_type is not None:
@@ -152,7 +152,7 @@ async def create_pricing(
 ):
     try:
         p = await use_case(PricingCreateInput(
-            client_id=body.client_id,
+            partner_id=body.partner_id,
             work_type=body.work_type,
             pickup_location_id=body.pickup_location_id,
             dropoff_location_id=body.dropoff_location_id,
@@ -176,7 +176,7 @@ async def update_pricing(
     try:
         lines = _line_inputs(body.lines) if body.lines is not None else None
         p = await use_case(PricingId(pricing_id), PricingUpdateInput(
-            client_id=body.client_id,
+            partner_id=body.partner_id,
             work_type=body.work_type,
             pickup_location_id=body.pickup_location_id,
             dropoff_location_id=body.dropoff_location_id,

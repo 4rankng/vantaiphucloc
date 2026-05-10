@@ -12,8 +12,6 @@ from app.contexts.operations.domain.exceptions import (
     ContainerCountInvalid,
     InvalidStateTransition,
     NotFound,
-    TripOrderLocked,
-    WorkOrderLocked,
 )
 
 
@@ -22,8 +20,6 @@ def translate(exc: Exception) -> HTTPException:
         return HTTPException(status_code=404, detail=str(exc))
     if isinstance(exc, AlreadyExists):
         return HTTPException(status_code=409, detail=str(exc))
-    if isinstance(exc, (TripOrderLocked, WorkOrderLocked)):
-        return HTTPException(status_code=403, detail=str(exc))
     if isinstance(exc, InvalidStateTransition):
         return HTTPException(status_code=400, detail=str(exc))
     if isinstance(exc, ContainerCountInvalid):

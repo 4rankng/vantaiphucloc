@@ -147,7 +147,7 @@ export function WorkOrderMasterList({
 
               {/* Line 2: client + route */}
               <p className="text-xs font-medium truncate" style={{ color: 'var(--theme-text-primary)' }}>
-                {wo.client.name} · {wo.route || '—'}
+                {wo.partner.name} · {wo.route || '—'}
               </p>
 
               {/* Line 3: driver + plate + containers — single row, overflow hidden */}
@@ -156,9 +156,9 @@ export function WorkOrderMasterList({
                   <Truck className="w-2.5 h-2.5" />
                   <span className="truncate max-w-[80px]">{wo.driver.name || '—'}</span>
                 </span>
-                {wo.tractorPlate && (
+                {wo.vehicleId && (
                   <span className="text-[10px] font-mono shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
-                    {wo.tractorPlate}
+                    V{wo.vehicleId}
                   </span>
                 )}
                 {wo.containers.slice(0, 2).map((c, i) => (

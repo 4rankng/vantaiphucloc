@@ -1,7 +1,7 @@
 /**
- * Salary period date calculation — mirrors backend's `salary_service.get_salary_period_dates()`.
+ * Salary period date calculation — mirrors backend's `period_dates_for()`.
  *
- * Salary periods are defined by SalaryPeriodConfig: from_day (1–28) and to_day (1–31).
+ * Salary periods are defined by settings: salary_from_day (1–31) and salary_to_day (1–31).
  * Periods are always ~full month: either same-month (from_day <= to_day, e.g. 1→31)
  * or cross-month (from_day > to_day, e.g. 26→25th next month).
  */

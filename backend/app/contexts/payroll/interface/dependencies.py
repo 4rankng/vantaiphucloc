@@ -6,60 +6,34 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contexts.payroll.application import (
-    GetOrCreateSalaryConfig,
-    ListSalaryPeriods,
-    ListSalaryPeriodsForDateRange,
+    GetDriverEarnings,
+    GetSalaryConfig,
     UpdateSalaryConfig,
-    UpdateSalaryPeriod,
 )
-from app.contexts.payroll.domain.repositories import (
-    SalaryPeriodConfigRepository,
-    SalaryPeriodRepository,
-)
-from app.contexts.payroll.infrastructure.repositories import (
-    SqlSalaryPeriodConfigRepository,
-    SqlSalaryPeriodRepository,
-)
+from app.contexts.payroll.domain.repositories import SettingsRepository
+from app.contexts.payroll.infrastructure.repositories import SqlSettingsRepository
 from app.database import get_db
 
 
-def get_salary_period_repository(
+def get_settings_repository(
     db: AsyncSession = Depends(get_db),
-) -> SalaryPeriodRepository:
-    return SqlSalaryPeriodRepository(db)
+) -> SettingsRepository:
+    return SqlSettingsRepository(db)
 
 
-def get_salary_config_repository(
-    db: AsyncSession = Depends(get_db),
-) -> SalaryPeriodConfigRepository:
-    return SqlSalaryPeriodConfigRepository(db)
-
-
-def get_list_salary_periods(
-    repo: SalaryPeriodRepository = Depends(get_salary_period_repository),
-) -> ListSalaryPeriods:
-    return ListSalaryPeriods(repo)
-
-
-def get_list_salary_periods_for_range(
-    repo: SalaryPeriodRepository = Depends(get_salary_period_repository),
-) -> ListSalaryPeriodsForDateRange:
-    return ListSalaryPeriodsForDateRange(repo)
-
-
-def get_update_salary_period(
-    repo: SalaryPeriodRepository = Depends(get_salary_period_repository),
-) -> UpdateSalaryPeriod:
-    return UpdateSalaryPeriod(repo)
-
-
-def get_or_create_salary_config(
-    repo: SalaryPeriodConfigRepository = Depends(get_salary_config_repository),
-) -> GetOrCreateSalaryConfig:
-    return GetOrCreateSalaryConfig(repo)
+def get_get_salary_config(
+    repo: SettingsRepository = Depends(get_settings_repository),
+) -> GetSalaryConfig:
+    return GetSalaryConfig(repo)
 
 
 def get_update_salary_config(
-    repo: SalaryPeriodConfigRepository = Depends(get_salary_config_repository),
+    repo: SettingsRepository = Depends(get_settings_repository),
 ) -> UpdateSalaryConfig:
     return UpdateSalaryConfig(repo)
+
+
+def get_driver_earnings(
+    db: AsyncSession = Depends(get_db),
+) -> GetDriverEarnings:
+    return GetDriverEarnings(db)

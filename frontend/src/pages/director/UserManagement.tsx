@@ -1,20 +1,18 @@
-import { useState, useCallback, useEffect, useMemo, type ReactNode } from 'react'
+import { useState, useCallback, useMemo, type ReactNode } from 'react'
 import { Truck, CircleDollarSign, LayoutDashboard, Phone, Pencil, Trash2, ChevronRight, Plus, UserCog } from 'lucide-react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
-import { InlineSelect } from '@/components/shared/InlineSelect'
 import { DataTablePro, type Column } from '@/components/shared/DataTablePro/DataTablePro'
-import { CreateVendorDialog } from '@/components/shared/CreateVendorDialog'
 import { useToast } from '@/components/atoms/Toast'
 import { FilterPills } from '@/components/shared/FilterPills'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { SettingsPageLayout } from '@/components/shared/SettingsPageLayout'
 import type { Role } from '@/data/domain'
 import { ROLE_LABELS } from '@/data/domain'
-import { useVendors, useCreateVendor, useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '@/hooks/use-queries'
+import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '@/hooks/use-queries'
 import type { UserAccount } from '@/hooks/use-queries'
 import { useAuth } from '@/contexts/AuthContext'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -49,12 +47,10 @@ interface UserForm {
   phone: string
   cccd: string
   role: Role
-  tractorPlate: string
   password: string
-  vendor: string
 }
 
-const EMPTY_FORM: UserForm = { username: '', fullName: '', phone: '', cccd: '', role: 'driver', tractorPlate: '', password: '', vendor: '' }
+const EMPTY_FORM: UserForm = { username: '', fullName: '', phone: '', cccd: '', role: 'driver', password: '' }
 
 // ─── User management ──────────────────────────────────────────────────────────
 
@@ -67,11 +63,6 @@ function UserManagementInner() {
   const deleteUser = useDeleteUser()
 
   const [filterRole, setFilterRole] = useState<Role | 'ALL'>('ALL')
-  const { data: vendors } = useVendors()
-  const createVendor = useCreateVendor()
-
-  const [createVendorOpen, setCreateVendorOpen] = useState(false)
-  const [vendorOpenedFrom, setVendorOpenedFrom] = useState<'create' | 'edit' | null>(null)
 
   const [createOpen, setCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState<UserForm>(EMPTY_FORM)
@@ -82,12 +73,6 @@ function UserManagementInner() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
   const isMobile = useIsMobile(768)
-
-  useEffect(() => {
-    if (createForm.vendor === '' && vendors && vendors.length > 0 && createForm.role === 'driver') {
-      setCreateForm(prev => ({ ...prev, vendor: String(vendors[0].id) }))
-    }
-  }, [vendors, createForm.vendor, createForm.role])
 
   const filtered = useMemo(
     () => filterRole === 'ALL' ? users : users.filter(u => u.role === filterRole),
@@ -115,7 +100,6 @@ function UserManagementInner() {
     },
     { key: 'role', header: 'Vai trò', accessor: u => ROLE_LABELS[u.role] },
     { key: 'phone', header: 'SĐT', accessor: u => u.phone ?? '—' },
-    { key: 'tractorPlate', header: 'Biển số', accessor: u => u.tractorPlate ?? '—' },
   ], [])
 
   const updateCreateField = useCallback((field: keyof UserForm, value: string) => {
@@ -129,16 +113,13 @@ function UserManagementInner() {
   const handleCreate = useCallback(async () => {
     if (!createForm.username.trim() || !createForm.password.trim()) return
     try {
-      const vendorObj = vendors?.find(v => String(v.id) === createForm.vendor)
-      const res = await createUser.mutateAsync({
+      await createUser.mutateAsync({
         username: createForm.username.trim(),
         fullName: createForm.fullName.trim() || undefined,
         phone: createForm.phone.trim() || undefined,
         cccd: createForm.cccd.trim() || undefined,
         role: createForm.role,
         password: createForm.password,
-        vendor: createForm.role === 'driver' ? (vendorObj?.name ?? 'Vận Tải Phúc Lộc') : undefined,
-        tractorPlate: createForm.role === 'driver' ? createForm.tractorPlate.trim() : undefined,
       })
       toast.success('Đã tạo tài khoản')
       setCreateOpen(false)
@@ -147,7 +128,7 @@ function UserManagementInner() {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Lỗi không xác định'
       toast.error('Lỗi', detail)
     }
-  }, [createForm, toast, createUser, vendors])
+  }, [createForm, toast, createUser])
 
   const openDetail = useCallback((user: UserAccount) => {
     setDetailUser(user)
@@ -157,26 +138,19 @@ function UserManagementInner() {
       phone: user.phone ?? '',
       cccd: user.cccd ?? '',
       role: user.role,
-      tractorPlate: user.tractorPlate ?? '',
       password: '',
-      vendor: '',
     })
   }, [])
 
   const handleEdit = useCallback(async () => {
     if (!detailUser || !editForm.username.trim()) return
     try {
-      const vendorObj = vendors?.find(v => String(v.id) === editForm.vendor)
       const payload: Record<string, unknown> = {
         username: editForm.username.trim(),
         fullName: editForm.fullName.trim() || undefined,
         phone: editForm.phone.trim() || undefined,
         cccd: editForm.cccd.trim() || undefined,
         role: editForm.role,
-      }
-      if (editForm.role === 'driver') {
-        if (editForm.tractorPlate.trim()) payload.tractorPlate = editForm.tractorPlate.trim()
-        if (vendorObj) payload.vendor = vendorObj.name
       }
       if (editForm.password.trim()) payload.password = editForm.password.trim()
       await updateUser.mutateAsync({ id: detailUser.id, data: payload })
@@ -185,7 +159,7 @@ function UserManagementInner() {
     } catch {
       toast.error('Lỗi', 'Không thể cập nhật')
     }
-  }, [detailUser, editForm, toast, updateUser, vendors])
+  }, [detailUser, editForm, toast, updateUser])
 
   const handleDelete = useCallback(async () => {
     if (!deleteId) return
@@ -282,13 +256,6 @@ function UserManagementInner() {
                       )
                       renderedAny = true
                     }
-                    if (u.tractorPlate) {
-                      if (renderedAny) items.push(<span key="sep-plate">{sep}</span>)
-                      items.push(
-                        <span key="plate" className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>{u.tractorPlate}</span>,
-                      )
-                      renderedAny = true
-                    }
                     if (u.cccd) {
                       if (renderedAny) items.push(<span key="sep-cccd">{sep}</span>)
                       items.push(
@@ -318,7 +285,7 @@ function UserManagementInner() {
       )}
 
       {/* Create dialog */}
-      <Dialog open={createOpen} onOpenChange={(open) => { if (!open && !createVendorOpen) setCreateOpen(false) }}>
+      <Dialog open={createOpen} onOpenChange={(open) => { if (!open) setCreateOpen(false) }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Thêm tài khoản</DialogTitle></DialogHeader>
           <div className="space-y-3">
@@ -362,32 +329,10 @@ function UserManagementInner() {
                 <Input value={createForm.cccd} onChange={e => updateCreateField('cccd', e.target.value)} placeholder="001234567890" className="text-sm font-mono" />
               </div>
             </div>
-            {/* Driver-only: vendor full-width */}
-            {createForm.role === 'driver' && (
-              <div className="space-y-1.5">
-                <RequiredLabel>Nhà thầu</RequiredLabel>
-                <InlineSelect
-                  options={(vendors ?? []).map(v => ({ value: String(v.id), label: v.name }))}
-                  value={createForm.vendor}
-                  onChange={v => updateCreateField('vendor', v)}
-                  placeholder="Chọn nhà thầu"
-                  onCreateNew={() => { setVendorOpenedFrom('create'); setCreateVendorOpen(true) }}
-                  createNewLabel="Tạo nhà thầu mới"
-                />
-              </div>
-            )}
-            {/* Row 3: tractor plate (driver) + password */}
-            <div className="grid grid-cols-2 gap-3">
-              {createForm.role === 'driver' && (
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Biển số đầu kéo</Label>
-                  <Input value={createForm.tractorPlate} onChange={e => updateCreateField('tractorPlate', e.target.value)} placeholder="15C-136.31" className="text-sm font-mono" />
-                </div>
-              )}
-              <div className={`space-y-1.5 ${createForm.role !== 'driver' ? 'col-span-2' : ''}`}>
-                <RequiredLabel>Mật khẩu mặc định</RequiredLabel>
-                <Input type="password" value={createForm.password} onChange={e => updateCreateField('password', e.target.value)} placeholder="••••••••" className="text-sm" />
-              </div>
+            {/* Password */}
+            <div className="space-y-1.5">
+              <RequiredLabel>Mật khẩu mặc định</RequiredLabel>
+              <Input type="password" value={createForm.password} onChange={e => updateCreateField('password', e.target.value)} placeholder="••••••••" className="text-sm" />
             </div>
           </div>
           <DialogFooter className="flex-row gap-2">
@@ -402,7 +347,7 @@ function UserManagementInner() {
       </Dialog>
 
       {/* Detail/Edit dialog */}
-      <Dialog open={!!detailUser} onOpenChange={(open) => { if (!open && !createVendorOpen) setDetailUser(null) }}>
+      <Dialog open={!!detailUser} onOpenChange={(open) => { if (!open) setDetailUser(null) }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Thông tin tài khoản</DialogTitle>
@@ -449,32 +394,10 @@ function UserManagementInner() {
                   <Input value={editForm.cccd} onChange={e => updateEditField('cccd', e.target.value)} className="text-sm font-mono" placeholder="001234567890" />
                 </div>
               </div>
-              {/* Driver-only: vendor full-width */}
-              {editForm.role === 'driver' && (
-                <div className="space-y-1.5">
-                  <RequiredLabel>Nhà thầu</RequiredLabel>
-                  <InlineSelect
-                    options={(vendors ?? []).map(v => ({ value: String(v.id), label: v.name }))}
-                    value={editForm.vendor}
-                    onChange={v => updateEditField('vendor', v)}
-                    placeholder="Chọn nhà thầu"
-                    onCreateNew={() => { setVendorOpenedFrom('edit'); setCreateVendorOpen(true) }}
-                    createNewLabel="Tạo nhà thầu mới"
-                  />
-                </div>
-              )}
-              {/* Row 3: tractor plate (driver) + password */}
-              <div className="grid grid-cols-2 gap-3">
-                {editForm.role === 'driver' && (
-                  <div className="space-y-1.5">
-                    <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Biển số đầu kéo</Label>
-                    <Input value={editForm.tractorPlate} onChange={e => updateEditField('tractorPlate', e.target.value)} className="text-sm font-mono" />
-                  </div>
-                )}
-                <div className={`space-y-1.5 ${editForm.role !== 'driver' ? 'col-span-2' : ''}`}>
-                  <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mật khẩu mới</Label>
-                  <Input type="password" value={editForm.password} onChange={e => updateEditField('password', e.target.value)} placeholder="••••••••" className="text-sm" />
-                </div>
+              {/* Password */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mật khẩu mới</Label>
+                <Input type="password" value={editForm.password} onChange={e => updateEditField('password', e.target.value)} placeholder="••••••••" className="text-sm" />
               </div>
             </div>
           )}
@@ -512,27 +435,6 @@ function UserManagementInner() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <CreateVendorDialog
-        open={createVendorOpen}
-        onClose={() => setCreateVendorOpen(false)}
-        onConfirm={(data) => {
-          createVendor.mutate(data, {
-            onSuccess: (res) => {
-              setCreateVendorOpen(false)
-              if (res?.id) {
-                const newId = String(res.id)
-                if (vendorOpenedFrom === 'create') {
-                  setCreateForm(prev => ({ ...prev, vendor: newId }))
-                } else if (vendorOpenedFrom === 'edit') {
-                  setEditForm(prev => ({ ...prev, vendor: newId }))
-                }
-              }
-              setVendorOpenedFrom(null)
-            },
-          })
-        }}
-      />
     </div>
   )
 }
