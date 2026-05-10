@@ -6,6 +6,7 @@ import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { BrandIcon } from '@/components/atoms/BrandIcon'
+import { fuzzyMatch } from '@/lib/search-utils'
 import { useRoutes, useCreateRoute, useUpdateRoute, useDeleteRoute, useLocations } from '@/hooks/use-queries'
 import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
 import { RouteDisplay } from '@/components/shared/RouteDisplay'
@@ -36,11 +37,11 @@ export function RouteList() {
 
   const filtered = useMemo(() => {
     if (!search.trim()) return routes
-    const q = search.toLowerCase()
+    const q = search
     return routes.filter(r =>
-      (r.route ?? '').toLowerCase().includes(q) ||
-      r.pickupLocation.name.toLowerCase().includes(q) ||
-      r.dropoffLocation.name.toLowerCase().includes(q)
+      fuzzyMatch(r.route ?? '', q) ||
+      fuzzyMatch(r.pickupLocation.name, q) ||
+      fuzzyMatch(r.dropoffLocation.name, q)
     )
   }, [routes, search])
 

@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/Sh
 import { FilterToolbar } from '@/components/shared/FilterToolbar'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { AutoMatchDialog } from '@/components/shared/AutoMatchDialog'
+import { fuzzyMatch } from '@/lib/search-utils'
 import { useWorkOrders, useUploadCustomerExcel, useClients, useAutoMatch, useMatchScores } from '@/hooks/use-queries'
 import { WorkOrderMasterList } from './work-orders/WorkOrderMasterList'
 import { MatchDetailPanel } from './work-orders/MatchDetailPanel'
@@ -63,13 +64,13 @@ export function WorkOrderList() {
     let result = workOrders
     if (statusFilter !== 'all') result = result.filter(w => w.status === statusFilter)
     if (search.trim()) {
-      const q = search.toLowerCase()
+      const q = search
       result = result.filter(w =>
-        (w.tractorPlate ?? '').toLowerCase().includes(q) ||
-        w.driver.name.toLowerCase().includes(q) ||
-        w.client.name.toLowerCase().includes(q) ||
-        (w.code ?? '').toLowerCase().includes(q) ||
-        w.containers.some(c => (c.containerNumber ?? '').toLowerCase().includes(q))
+        fuzzyMatch(w.tractorPlate ?? '', q) ||
+        fuzzyMatch(w.driver.name, q) ||
+        fuzzyMatch(w.client.name, q) ||
+        fuzzyMatch(w.code ?? '', q) ||
+        w.containers.some(c => fuzzyMatch(c.containerNumber ?? '', q))
       )
     }
     return result

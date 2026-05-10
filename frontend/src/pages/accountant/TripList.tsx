@@ -5,6 +5,9 @@ import { DataTablePro, type Column } from '@/components/shared/DataTablePro'
 import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { InlineSelect } from '@/components/shared/InlineSelect'
+import { fuzzyMatch } from '@/lib/search-utils'
+import { RouteDisplay } from '@/components/shared/RouteDisplay'
+import { formatDate } from '@/lib/format'
 import {
   Upload, Download, Calendar,
   Clock, CheckCircle2, Hash, Search, X,
@@ -76,12 +79,12 @@ export function TripList() {
     else if (statusFilter === 'MATCHED') list = list.filter(isMatched)
     if (clientFilter !== 'ALL') list = list.filter(t => String(t.client.id) === clientFilter)
     if (search.trim()) {
-      const q = search.toLowerCase()
+      const q = search
       list = list.filter(t =>
-        t.client.name.toLowerCase().includes(q) ||
-        (t.route ?? '').toLowerCase().includes(q) ||
-        (t.code ?? '').toLowerCase().includes(q) ||
-        t.containers.some(c => (c.containerNumber ?? '').toLowerCase().includes(q))
+        fuzzyMatch(t.client.name, q) ||
+        fuzzyMatch(t.route ?? '', q) ||
+        fuzzyMatch(t.code ?? '', q) ||
+        t.containers.some(c => fuzzyMatch(c.containerNumber ?? '', q))
       )
     }
     return list.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
@@ -250,7 +253,7 @@ export function TripList() {
                 <X className="h-3 w-3" /> Xoá lọc
               </button>
             )}
-            <p className="ml-auto text-xs" style={{ color: 'var(--theme-text-muted)' }}>{filtered.length} lệnh</p>
+            <p className="ml-auto text-xs" style={{ color: 'var(--theme-text-muted)' }}>{filtered.length} đơn hàng</p>
           </div>
           <DataTablePro
             data={filtered}
@@ -266,7 +269,7 @@ export function TripList() {
                   <Hash className="h-6 w-6" style={{ color: 'var(--theme-text-muted)' }} />
                 </div>
                 <p className="text-sm font-semibold mb-1" style={{ color: 'var(--theme-text-primary)' }}>
-                  {hasFilters ? 'Không tìm thấy lệnh nào' : 'Chưa có đơn hàng'}
+                  {hasFilters ? 'Không tìm thấy đơn hàng nào' : 'Chưa có đơn hàng'}
                 </p>
                 {!hasFilters && (
                   <button
@@ -335,14 +338,14 @@ export function TripList() {
           >{s.label}</button>
         ))}
       </div>
-      <p className="typo-caption">{filtered.length} lệnh</p>
+      <p className="typo-caption">{filtered.length} đơn hàng</p>
       <div className="space-y-2">
         {filtered.map(trip => (
           <TripOrderCard key={trip.id} trip={trip} onClick={() => setSelectedTripId(trip.id)} />
         ))}
         {filtered.length === 0 && (
           <p className="text-center text-sm py-12" style={{ color: 'var(--theme-text-muted)' }}>
-            {hasFilters ? 'Không tìm thấy lệnh nào' : 'Chưa có đơn hàng'}
+            {hasFilters ? 'Không tìm thấy đơn hàng nào' : 'Chưa có đơn hàng'}
           </p>
         )}
       </div>
@@ -408,7 +411,7 @@ function DirectorTripView({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="typo-display">Đơn hàng</h1>
-          <p className="typo-body-sm mt-0.5">Tháng {month}/{year} · {stats.total} lệnh</p>
+          <p className="typo-body-sm mt-0.5">Tháng {month}/{year} · {stats.total} đơn hàng</p>
         </div>
         <div className="flex items-center gap-2">
           <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
@@ -450,7 +453,7 @@ function DirectorTripView({
               <X className="h-3 w-3" /> Xoá lọc
             </button>
           )}
-          <p className="ml-auto text-xs" style={{ color: 'var(--theme-text-muted)' }}>{filtered.length} lệnh</p>
+          <p className="ml-auto text-xs" style={{ color: 'var(--theme-text-muted)' }}>{filtered.length} đơn hàng</p>
         </div>
         <DataTablePro
           data={filtered}
@@ -481,7 +484,7 @@ function buildColumns(): Column<TripOrder>[] {
       accessor: (row) => (
         <p className="flex items-center gap-1 text-xs whitespace-nowrap" style={{ color: 'var(--theme-text-secondary)' }}>
           <Calendar className="h-3 w-3 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
-          {row.tripDate ? new Date(row.tripDate).toLocaleDateString('vi-VN') : '—'}
+          {formatDate(row.tripDate, 'short')}
         </p>
       ),
       sortable: true,
@@ -496,9 +499,12 @@ function buildColumns(): Column<TripOrder>[] {
           <p className="font-semibold text-sm whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
             {row.client.name}
           </p>
-          <p className="text-xs whitespace-nowrap mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-            {row.route}
-          </p>
+          <RouteDisplay
+            route={row.route}
+            pickupLocation={row.pickupLocation?.name}
+            dropoffLocation={row.dropoffLocation?.name}
+            className="mt-0.5"
+          />
         </div>
       ),
       sortable: true,
