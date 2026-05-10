@@ -5,16 +5,14 @@ from __future__ import annotations
 from typing import NewType
 
 
-ClientId = NewType("ClientId", int)
+PartnerId = NewType("PartnerId", int)
 LocationId = NewType("LocationId", int)
 PricingId = NewType("PricingId", int)
-RouteId = NewType("RouteId", int)
-VendorId = NewType("VendorId", int)
 LocationAliasId = NewType("LocationAliasId", int)
 PricingLineId = NewType("PricingLineId", int)
 
 
-# Container work types — see BizLogic.md §2.
+# Container work types -- see BizLogic.md S2.
 # E20/E40 = empty 20/40-foot, F20/F40 = full 20/40-foot.
 WorkType = str  # constrained to {"E20", "E40", "F20", "F40"} at use sites.
 
@@ -22,7 +20,7 @@ WorkType = str  # constrained to {"E20", "E40", "F20", "F40"} at use sites.
 # Known values: "manual", "driver_pin", "geocoder", "alias_match".
 GeocodeSource = str
 
-# VND amounts. We carry plain ints — the schema uses Integer columns.
+# VND amounts. We carry plain ints -- the schema uses Integer columns.
 Money = int
 
 
@@ -37,15 +35,5 @@ def normalize_work_type(value: str | None) -> str:
     if norm not in _VALID_WORK_TYPES:
         raise ValueError(
             f"unknown work_type {value!r} (expected one of {sorted(_VALID_WORK_TYPES)})"
-        )
-    return norm
-
-
-def normalize_client_type(value: str) -> str:
-    """clients.type ∈ {company, individual}."""
-    norm = (value or "").strip().lower()
-    if norm not in {"company", "individual"}:
-        raise ValueError(
-            f"invalid client type {value!r} (expected 'company' or 'individual')"
         )
     return norm

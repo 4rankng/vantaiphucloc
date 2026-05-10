@@ -581,17 +581,15 @@ class DriverEarningsOut(BaseModel):
 # ---------------------------------------------------------------------------
 
 class SalaryConfigOut(BaseModel):
-    id: int
     from_day: int
     to_day: int
-    updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class SalaryConfigUpdate(BaseModel):
-    from_day: int | None = Field(default=None, ge=1, le=28)
-    to_day: int | None = Field(default=None, ge=1, le=28)
+    from_day: int | None = Field(default=None, ge=1, le=31)
+    to_day: int | None = Field(default=None, ge=1, le=31)
 
 
 # ---------------------------------------------------------------------------

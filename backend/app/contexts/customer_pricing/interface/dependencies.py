@@ -6,64 +6,44 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contexts.customer_pricing.application import (
-    CreateCustomer,
     CreateLocation,
+    CreatePartner,
     CreatePricing,
-    CreateRoute,
-    CreateVendor,
-    DeleteCustomer,
     DeleteLocation,
+    DeletePartner,
     DeletePricing,
-    DeleteRoute,
-    DeleteVendor,
-    GetCustomer,
     GetLocation,
+    GetPartner,
     GetPricing,
-    GetRoute,
-    GetVendor,
     ListAllActiveLocations,
-    ListCustomers,
     ListLocations,
+    ListPartners,
     ListPricings,
-    ListRoutes,
-    ListVendors,
     PinDriverLocation,
-    UpdateCustomer,
     UpdateLocation,
+    UpdatePartner,
     UpdatePricing,
-    UpdateRoute,
-    UpdateVendor,
 )
 from app.contexts.customer_pricing.domain.repositories import (
-    ClientRepository,
     LocationRepository,
+    PartnerRepository,
     PricingRepository,
-    RouteRepository,
-    VendorRepository,
 )
 from app.contexts.customer_pricing.infrastructure.repositories import (
-    SqlClientRepository,
     SqlLocationRepository,
+    SqlPartnerRepository,
     SqlPricingRepository,
-    SqlRouteRepository,
-    SqlVendorRepository,
 )
 from app.database import get_db
 
 
-# ── repositories ────────────────────────────────────────────────
+# -- repositories ---------------------------------------------------
 
 
-def get_client_repository(
+def get_partner_repository(
     db: AsyncSession = Depends(get_db),
-) -> ClientRepository:
-    return SqlClientRepository(db)
-
-
-def get_vendor_repository(
-    db: AsyncSession = Depends(get_db),
-) -> VendorRepository:
-    return SqlVendorRepository(db)
+) -> PartnerRepository:
+    return SqlPartnerRepository(db)
 
 
 def get_location_repository(
@@ -72,91 +52,49 @@ def get_location_repository(
     return SqlLocationRepository(db)
 
 
-def get_route_repository(
-    db: AsyncSession = Depends(get_db),
-) -> RouteRepository:
-    return SqlRouteRepository(db)
-
-
 def get_pricing_repository(
     db: AsyncSession = Depends(get_db),
 ) -> PricingRepository:
     return SqlPricingRepository(db)
 
 
-# ── customer use cases ──────────────────────────────────────────
+# -- partner use cases -----------------------------------------------
 
 
-def get_list_customers(
-    repo: ClientRepository = Depends(get_client_repository),
-) -> ListCustomers:
-    return ListCustomers(repo)
+def get_list_partners(
+    repo: PartnerRepository = Depends(get_partner_repository),
+) -> ListPartners:
+    return ListPartners(repo)
 
 
-def get_create_customer(
-    repo: ClientRepository = Depends(get_client_repository),
+def get_create_partner(
+    repo: PartnerRepository = Depends(get_partner_repository),
     db: AsyncSession = Depends(get_db),
-) -> CreateCustomer:
-    return CreateCustomer(repo, db)
+) -> CreatePartner:
+    return CreatePartner(repo, db)
 
 
-def get_update_customer(
-    repo: ClientRepository = Depends(get_client_repository),
+def get_update_partner(
+    repo: PartnerRepository = Depends(get_partner_repository),
     db: AsyncSession = Depends(get_db),
-) -> UpdateCustomer:
-    return UpdateCustomer(repo, db)
+) -> UpdatePartner:
+    return UpdatePartner(repo, db)
 
 
-def get_delete_customer(
-    repo: ClientRepository = Depends(get_client_repository),
+def get_delete_partner(
+    repo: PartnerRepository = Depends(get_partner_repository),
     db: AsyncSession = Depends(get_db),
-) -> DeleteCustomer:
-    return DeleteCustomer(repo, db)
+) -> DeletePartner:
+    return DeletePartner(repo, db)
 
 
-def get_get_customer(
-    repo: ClientRepository = Depends(get_client_repository),
-) -> GetCustomer:
-    return GetCustomer(repo)
+def get_get_partner(
+    repo: PartnerRepository = Depends(get_partner_repository),
+) -> GetPartner:
+    return GetPartner(repo)
 
 
-# ── vendor use cases ────────────────────────────────────────────
-
-
-def get_list_vendors(
-    repo: VendorRepository = Depends(get_vendor_repository),
-) -> ListVendors:
-    return ListVendors(repo)
-
-
-def get_create_vendor(
-    repo: VendorRepository = Depends(get_vendor_repository),
-    db: AsyncSession = Depends(get_db),
-) -> CreateVendor:
-    return CreateVendor(repo, db)
-
-
-def get_update_vendor(
-    repo: VendorRepository = Depends(get_vendor_repository),
-    db: AsyncSession = Depends(get_db),
-) -> UpdateVendor:
-    return UpdateVendor(repo, db)
-
-
-def get_delete_vendor(
-    repo: VendorRepository = Depends(get_vendor_repository),
-    db: AsyncSession = Depends(get_db),
-) -> DeleteVendor:
-    return DeleteVendor(repo, db)
-
-
-def get_get_vendor(
-    repo: VendorRepository = Depends(get_vendor_repository),
-) -> GetVendor:
-    return GetVendor(repo)
-
-
-# ── location use cases ──────────────────────────────────────────
+# -- location use cases ----------------------------------------------
 
 
 def get_list_locations(
@@ -205,43 +143,7 @@ def get_get_location(
     return GetLocation(repo)
 
 
-# ── route use cases ─────────────────────────────────────────────
-
-
-def get_list_routes(
-    repo: RouteRepository = Depends(get_route_repository),
-) -> ListRoutes:
-    return ListRoutes(repo)
-
-
-def get_create_route(
-    repo: RouteRepository = Depends(get_route_repository),
-    db: AsyncSession = Depends(get_db),
-) -> CreateRoute:
-    return CreateRoute(repo, db)
-
-
-def get_update_route(
-    repo: RouteRepository = Depends(get_route_repository),
-    db: AsyncSession = Depends(get_db),
-) -> UpdateRoute:
-    return UpdateRoute(repo, db)
-
-
-def get_delete_route(
-    repo: RouteRepository = Depends(get_route_repository),
-    db: AsyncSession = Depends(get_db),
-) -> DeleteRoute:
-    return DeleteRoute(repo, db)
-
-
-def get_get_route(
-    repo: RouteRepository = Depends(get_route_repository),
-) -> GetRoute:
-    return GetRoute(repo)
-
-
-# ── pricing use cases ───────────────────────────────────────────
+# -- pricing use cases -----------------------------------------------
 
 
 def get_list_pricings(

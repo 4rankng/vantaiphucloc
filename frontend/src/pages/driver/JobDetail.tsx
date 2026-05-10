@@ -122,9 +122,8 @@ export function JobDetail() {
 
       {/* Trip info */}
       <div className="rounded-lg overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
-        <InfoRow icon={Building2} label="Khách hàng" value={job.client.name} />
+        <InfoRow icon={Building2} label="Khách hàng" value={job.partner.name} />
         <InfoRow icon={RouteIcon} label="Cung đường" value={job.route} />
-        <InfoRow icon={Truck} label="Biển số" value={job.tractorPlate} />
         {(() => {
           const loc = job.gpsAddress ?? (job.gpsLat && job.gpsLng ? `${job.gpsLat}, ${job.gpsLng}` : null)
           return loc ? <InfoRow icon={MapPin} label="Vị trí" value={loc} /> : null
@@ -136,22 +135,22 @@ export function JobDetail() {
       <div
         className="rounded-lg p-4 flex items-center justify-between"
         style={{
-          background: job.earning > 0
+          background: job.driverSalary > 0
             ? 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)'
             : 'var(--theme-status-warning-light)',
-          border: `1px solid ${job.earning > 0
+          border: `1px solid ${job.driverSalary > 0
             ? 'color-mix(in srgb, var(--theme-brand-primary) 20%, transparent)'
             : 'color-mix(in srgb, var(--theme-status-warning) 20%, transparent)'}`,
         }}
       >
         <p className="text-sm font-semibold" style={{
-          color: job.earning > 0 ? 'var(--theme-brand-primary)' : 'var(--theme-status-warning)',
+          color: job.driverSalary > 0 ? 'var(--theme-brand-primary)' : 'var(--theme-status-warning)',
         }}>
           Thu nhập
         </p>
-        {job.earning > 0 ? (
+        {job.driverSalary > 0 ? (
           <p className="text-xl font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>
-            {formatCurrencyFull(job.earning)}
+            {formatCurrencyFull(job.driverSalary)}
           </p>
         ) : (
           <span className="text-xs font-semibold" style={{ color: 'var(--theme-status-warning)' }}>

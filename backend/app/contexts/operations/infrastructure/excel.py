@@ -49,7 +49,7 @@ class ReconciliationResult:
 
 async def parse_customer_excel(
     file_content: bytes,
-    client_id: int | None = None,
+    partner_id: int | None = None,
 ) -> list[dict[str, Any]]:
     """
     Parse Excel file uploaded by customer.
@@ -90,7 +90,7 @@ async def parse_customer_excel(
 
 async def compare_with_system_records(
     db: AsyncSession,
-    client_id: int,
+    partner_id: int,
     excel_data: list[dict[str, Any]],
     date_from: str | None = None,
     date_to: str | None = None,
@@ -114,8 +114,8 @@ async def compare_with_system_records(
                 "row_data": row,
             })
 
-    # Query work orders for this client
-    wo_query = select(WorkOrder).where(WorkOrder.client_id == client_id)
+    # Query work orders for this partner
+    wo_query = select(WorkOrder).where(WorkOrder.partner_id == partner_id)
     if date_from:
         wo_query = wo_query.where(WorkOrder.created_at >= date_from)
     if date_to:
@@ -124,8 +124,8 @@ async def compare_with_system_records(
     wo_result = await db.execute(wo_query)
     work_orders = wo_result.scalars().all()
 
-    # Query trip orders for this client
-    to_query = select(TripOrder).where(TripOrder.client_id == client_id)
+    # Query trip orders for this partner
+    to_query = select(TripOrder).where(TripOrder.partner_id == partner_id)
     if date_from:
         to_query = to_query.where(TripOrder.trip_date >= date_from)
     if date_to:
@@ -233,7 +233,7 @@ async def compare_with_system_records(
 
 async def generate_reconciliation_excel(
     db: AsyncSession,
-    client_id: int,
+    partner_id: int,
     date_from: str | None = None,
     date_to: str | None = None,
 ) -> bytes:
@@ -279,7 +279,7 @@ async def generate_reconciliation_excel(
         cell.alignment = header_alignment
 
     # Query data
-    wo_query = select(WorkOrder).where(WorkOrder.client_id == client_id)
+    wo_query = select(WorkOrder).where(WorkOrder.partner_id == partner_id)
     if date_from:
         wo_query = wo_query.where(WorkOrder.created_at >= date_from)
     if date_to:
@@ -306,17 +306,18 @@ async def generate_reconciliation_excel(
 
         # Check for matched trip orders
         to_result = await db.execute(
-            select(TripOrder).where(TripOrder.client_id == client_id)
+            select(TripOrder).where(TripOrder.partner_id == partner_id)
         )
         trip_orders = to_result.scalars().all()
 
         to_map: dict[int, TripOrder] = {to.id: to for to in trip_orders}
 
-        # Query join table for matches
-        from app.models.domain import TripOrderWorkOrder
+        # Query Reconciliation table for matches
+        from app.models.domain import Reconciliation as ReconciliationModel
         join_result = await db.execute(
-            select(TripOrderWorkOrder).where(
-                TripOrderWorkOrder.work_order_id.in_(wo_ids)
+            select(ReconciliationModel).where(
+                ReconciliationModel.work_order_id.in_(wo_ids),
+                ReconciliationModel.is_active == True,  # noqa: E712
             )
         )
         joins = join_result.scalars().all()
@@ -341,7 +342,7 @@ async def generate_reconciliation_excel(
                     f"WO#{wo.id}",
                     f"TO#{to_id}" if to_id else "",
                     status,
-                    "✓" if to and to.is_confirmed else "",
+                    "✓" if to else "",
                     wo.created_at.date() if wo.created_at else "",
                 ])
 
@@ -506,13 +507,13 @@ async def import_trip_orders(
     for key, group_rows in groups.items():
         trip_date, client_code_str = key
 
-        # Look up client by code
-        client_result = await db.execute(
+        # Look up partner by code
+        partner_result = await db.execute(
             select(Partner).where(Partner.code == client_code_str)
         )
-        client = client_result.scalar_one_or_none()
-        if not client:
-            errors.append(f"Nhóm {key}: không tìm thấy khách hàng mã '{client_code_str}'")
+        partner = partner_result.scalar_one_or_none()
+        if not partner:
+            errors.append(f"Nhóm {key}: không tìm thấy đối tác mã '{client_code_str}'")
             continue
 
         first_row = group_rows[0]
@@ -565,7 +566,7 @@ async def import_trip_orders(
 
         if not unit_price:
             tiered = await find_tiered_pricing(
-                db, client_id=client.id, work_type=work_type,
+                db, partner_id=partner.id, work_type=work_type,
                 quantity=container_count,
                 pickup_location_id=pickup_id, dropoff_location_id=dropoff_id,
             )
@@ -579,16 +580,14 @@ async def import_trip_orders(
 
         trip_order = TripOrder(
             trip_date=trip_date_val,
-            client_id=client.id,
-            route=route,
+            partner_id=partner.id,
             pickup_location_id=pickup_id,
             dropoff_location_id=dropoff_id,
             pricing_id=pricing_id,
             unit_price=unit_price,
             driver_salary=driver_salary,
             allowance=allowance,
-            revenue=unit_price,
-            status="PENDING" if unit_price > 0 else "DRAFT",
+            status="PENDING",
         )
         db.add(trip_order)
         await db.flush()
@@ -754,18 +753,18 @@ async def generate_trip_orders_excel(
             containers_map.setdefault(c.trip_order_id, []).append(c)
 
     # Resolve display names via JOIN.
-    from app.models.domain import Client, Location
-    client_ids = {to.client_id for to in trip_orders}
+    from app.models.domain import Partner, Location
+    partner_ids = {to.partner_id for to in trip_orders}
     loc_ids = {to.pickup_location_id for to in trip_orders} | {to.dropoff_location_id for to in trip_orders}
     loc_ids.discard(None)
-    client_name_by_id = {c.id: c.name for c in (await db.execute(select(Client).where(Client.id.in_(client_ids)))).scalars().all()} if client_ids else {}
+    partner_name_by_id = {c.id: c.name for c in (await db.execute(select(Partner).where(Partner.id.in_(partner_ids)))).scalars().all()} if partner_ids else {}
     loc_name_by_id = {l.id: l.name for l in (await db.execute(select(Location).where(Location.id.in_(loc_ids)))).scalars().all()} if loc_ids else {}
 
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Đơn hàng"
 
-    headers = ["Mã TO", "Ngày chạy", "Khách hàng", "Điểm lấy", "Điểm trả", "Số cont", "Loại", "Đơn giá", "Lương TX", "Phụ cấp", "Doanh thu", "Trạng thái", "Đã chốt"]
+    headers = ["Mã TO", "Ngày chạy", "Khách hàng", "Điểm lấy", "Điểm trả", "Số cont", "Loại", "Đơn giá", "Lương TX", "Phụ cấp", "Trạng thái"]
     ws.append(headers)
 
     header_font = Font(bold=True, color="FFFFFF")
@@ -776,19 +775,18 @@ async def generate_trip_orders_excel(
         cell.fill = header_fill
         cell.alignment = Alignment(horizontal="center")
 
-    status_labels = {"DRAFT": "Nháp", "PENDING": "Chờ ghép", "COMPLETED": "Hoàn thành", "CANCELLED": "Đã huỷ"}
+    status_labels = {"PENDING": "Chờ ghép", "MATCHED": "Đã đối soát"}
     for to in trip_orders:
         containers = containers_map.get(to.id, [])
         for c in containers:
             ws.append([
                 f"TO#{to.id}", to.trip_date,
-                client_name_by_id.get(to.client_id, ""),
+                partner_name_by_id.get(to.partner_id, ""),
                 loc_name_by_id.get(to.pickup_location_id, ""),
                 loc_name_by_id.get(to.dropoff_location_id, ""),
                 c.container_number, c.work_type,
-                to.unit_price, to.driver_salary, to.allowance, to.revenue,
+                to.unit_price, to.driver_salary, to.allowance,
                 status_labels.get(to.status, to.status),
-                "✓" if to.is_confirmed else "",
             ])
 
     for col in ws.columns:
@@ -807,20 +805,56 @@ async def generate_salary_excel(
     start_date: str,
     end_date: str,
 ) -> bytes:
-    """Export salary breakdown per driver to Excel."""
+    """Export driver earnings breakdown to Excel, computed on-the-fly from matched work orders."""
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment
-    from app.models.domain import SalaryPeriod
+    from app.models.domain import Reconciliation
+    from datetime import date as _date
 
     from app.models.base import User as _User
+
+    start_dt = _date.fromisoformat(start_date)
+    end_dt = _date.fromisoformat(end_date)
+
+    # Find matched work orders in the date range
     result = await db.execute(
-        select(SalaryPeriod).where(
-            SalaryPeriod.start_date == start_date,
-            SalaryPeriod.end_date == end_date,
-        ).order_by(SalaryPeriod.driver_id)
+        select(WorkOrder).where(
+            WorkOrder.status == "MATCHED",
+        ).order_by(WorkOrder.driver_id)
     )
-    periods = result.scalars().all()
-    driver_ids = {p.driver_id for p in periods}
+    all_matched = result.scalars().all()
+
+    # Filter by reconciliations and trip order date range
+    # Get work order IDs that have active reconciliations with trip_orders in the date range
+    matched_wo_ids = {wo.id for wo in all_matched}
+    driver_earnings: dict[int, dict] = {}
+
+    if matched_wo_ids:
+        recon_result = await db.execute(
+            select(Reconciliation, TripOrder).join(
+                TripOrder, TripOrder.id == Reconciliation.trip_order_id
+            ).where(
+                Reconciliation.work_order_id.in_(matched_wo_ids),
+                Reconciliation.is_active == True,  # noqa: E712
+                TripOrder.trip_date >= start_dt,
+                TripOrder.trip_date <= end_dt,
+            )
+        )
+        for recon, trip in recon_result.all():
+            wo = next((w for w in all_matched if w.id == recon.work_order_id), None)
+            if wo is None:
+                continue
+            if wo.driver_id not in driver_earnings:
+                driver_earnings[wo.driver_id] = {
+                    "order_count": 0,
+                    "total_salary": 0,
+                    "total_allowance": 0,
+                }
+            driver_earnings[wo.driver_id]["order_count"] += 1
+            driver_earnings[wo.driver_id]["total_salary"] += wo.driver_salary
+            driver_earnings[wo.driver_id]["total_allowance"] += wo.allowance
+
+    driver_ids = set(driver_earnings.keys())
     driver_name_by_id = (
         {u.id: (u.full_name or u.username) for u in
          (await db.execute(select(_User).where(_User.id.in_(driver_ids)))).scalars().all()}
@@ -831,7 +865,7 @@ async def generate_salary_excel(
     ws = wb.active
     ws.title = "Bảng lương"
 
-    headers = ["Tài xế", "Kỳ lương", "Số chuyến", "Giá/chuyến", "Tổng lương", "Phụ cấp", "Khấu trừ", "Thực nhận", "Trạng thái"]
+    headers = ["Tài xế", "Kỳ lương", "Số chuyến", "Tổng lương", "Phụ cấp", "Tổng thu nhập"]
     ws.append(headers)
 
     header_font = Font(bold=True, color="FFFFFF")
@@ -842,18 +876,14 @@ async def generate_salary_excel(
         cell.fill = header_fill
         cell.alignment = Alignment(horizontal="center")
 
-    status_labels = {"OPEN": "Chờ tính", "CALCULATED": "Đã tính", "PAID": "Đã trả"}
-    for p in periods:
+    for driver_id, data in sorted(driver_earnings.items()):
         ws.append([
-            driver_name_by_id.get(p.driver_id, ""),
-            f"{p.start_date} → {p.end_date}",
-            p.work_order_count,
-            p.price_per_order,
-            p.total_salary,
-            p.total_allowance,
-            p.total_deduction,
-            p.net_pay,
-            status_labels.get(p.status, p.status),
+            driver_name_by_id.get(driver_id, ""),
+            f"{start_date} → {end_date}",
+            data["order_count"],
+            data["total_salary"],
+            data["total_allowance"],
+            data["total_salary"] + data["total_allowance"],
         ])
 
     for col in ws.columns:

@@ -103,7 +103,7 @@ function WorkbenchCard({
 
 function TripRow({ trip, onClick, isLast }: { trip: TripOrder; onClick: () => void; isLast?: boolean }) {
   const isPending = trip.status === 'PENDING' || trip.status === 'DRAFT'
-  const isConfirmed = trip.isConfirmed
+  const isConfirmed = trip.status === 'MATCHED'
   const isDraft = trip.status === 'DRAFT'
 
   const types = trip.containers.length > 0
@@ -149,7 +149,7 @@ function TripRow({ trip, onClick, isLast }: { trip: TripOrder; onClick: () => vo
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
-          {trip.code ? `${trip.code} · ` : ''}{trip.client.name}
+          {trip.code ? `${trip.code} · ` : ''}{trip.partner.name}
         </span>
         <StatusBadgePro variant={statusVariant} label={statusLabel} size="sm" />
       </div>
@@ -186,13 +186,13 @@ function UnmatchedRow({ wo, onClick, isLast }: { wo: WorkOrder; onClick: () => v
         <StatusBadgePro variant="warning" label="Chờ khớp" size="sm" />
       </div>
       <p className="mt-0.5 text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
-        {wo.client.name} | {resolveRoute(wo)}
+        {wo.partner.name} | {resolveRoute(wo)}
       </p>
       <div className="mt-1.5 flex items-center gap-3">
-        {wo.tractorPlate && (
+        {wo.vehicleId && (
           <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
             <Truck className="h-3 w-3" />
-            {wo.tractorPlate}
+            V{wo.vehicleId}
           </span>
         )}
         {wo.containers[0]?.workType && (
@@ -222,7 +222,7 @@ function DesktopDashboard() {
   const { data: summary } = useDashboardSummary(dateFrom, dateTo)
 
   const pendingWOs = useMemo(() => workOrders.filter(w => w.status === 'PENDING'), [workOrders])
-  const totalDriverSalary = useMemo(() => workOrders.reduce((s, w) => s + (w.earning ?? 0), 0), [workOrders])
+  const totalDriverSalary = useMemo(() => workOrders.reduce((s, w) => s + (w.driverSalary ?? 0), 0), [workOrders])
   const revenue = summary?.totalRevenue ?? trips.reduce((s, t) => s + (t.revenue ?? 0), 0)
   const pendingTrips = trips.filter(t => t.status === 'PENDING' || t.status === 'DRAFT')
 
@@ -341,7 +341,7 @@ function MobileDashboard() {
   const { data: summary } = useDashboardSummary(dateFrom, dateTo)
 
   const pendingWOs = useMemo(() => workOrders.filter(w => w.status === 'PENDING'), [workOrders])
-  const totalDriverSalary = useMemo(() => workOrders.reduce((s, w) => s + (w.earning ?? 0), 0), [workOrders])
+  const totalDriverSalary = useMemo(() => workOrders.reduce((s, w) => s + (w.driverSalary ?? 0), 0), [workOrders])
   const revenue = summary?.totalRevenue ?? trips.reduce((s, t) => s + (t.revenue ?? 0), 0)
   const pendingTrips = trips.filter(t => t.status === 'PENDING' || t.status === 'DRAFT')
   const recentTrips = useMemo(

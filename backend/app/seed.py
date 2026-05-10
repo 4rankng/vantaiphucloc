@@ -18,6 +18,7 @@ from sqlalchemy import select
 
 from app.database import async_session
 from app.models.base import User
+from app.models.domain import Setting
 from app.core.security import hash_password
 
 SEED_USERS = [
@@ -66,5 +67,21 @@ async def seed_users() -> None:
         await db.commit()
 
 
+async def seed_settings() -> None:
+    """Seed default salary settings if not present."""
+    async with async_session() as db:
+        defaults = {
+            "salary_from_day": "26",
+            "salary_to_day": "25",
+        }
+        for key, value in defaults.items():
+            existing = await db.get(Setting, key)
+            if existing is None:
+                db.add(Setting(key=key, value=value))
+                print(f"Created setting {key}={value}")
+        await db.commit()
+
+
 if __name__ == "__main__":
     asyncio.run(seed_users())
+    asyncio.run(seed_settings())

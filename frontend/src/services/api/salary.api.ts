@@ -55,7 +55,7 @@ export async function getMyEarnings(
 
 export async function getSalaryConfig(): Promise<ApiResponse<{ fromDay: number; toDay: number }>> {
   try {
-    const res = await api.get('/salary-config')
+    const res = await api.get('/salary/config')
     return ok(toCamel<{ fromDay: number; toDay: number }>(res.data))
   } catch (err) {
     return fail(err)
@@ -66,7 +66,7 @@ export async function updateSalaryConfig(
   data: { from_day: number; to_day: number },
 ): Promise<ApiResponse<{ fromDay: number; toDay: number }>> {
   try {
-    const res = await api.put('/salary-config', data)
+    const res = await api.put('/salary/config', data)
     return ok(toCamel<{ fromDay: number; toDay: number }>(res.data))
   } catch (err) {
     return fail(err)

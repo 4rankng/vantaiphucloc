@@ -97,3 +97,10 @@ def get_driver_summary(
     return summaries.get(
         driver_id, DriverSummaryOut(id=driver_id, name="(không rõ)", phone=None, vehicle=None)
     )
+
+
+# ── Backward-compatible aliases (consumers still referencing old names) ──
+
+# Some modules still import these names; they delegate to the partner versions.
+get_client_summary = get_partner_summary
+load_client_summaries = load_partner_summaries

@@ -15,8 +15,6 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Upl
 from fastapi.responses import StreamingResponse
 
 from app.contexts.operations.application import (
-    CancelTripOrder,
-    ConfirmTripOrder,
     CreateTripOrder,
     DeleteTripOrder,
     GetTripOrder,
@@ -31,8 +29,6 @@ from app.contexts.operations.application.dto import (
 )
 from app.contexts.operations.domain.entities import TripOrder
 from app.contexts.operations.interface.dependencies import (
-    get_cancel_trip_order,
-    get_confirm_trip_order,
     get_create_trip_order,
     get_delete_trip_order,
     get_get_trip_order,
@@ -53,9 +49,9 @@ from app.schemas.domain import (
     TripOrderUpdate,
 )
 from app.core.summaries import (
-    get_client_summary,
+    get_partner_summary,
     get_location_summary,
-    load_client_summaries,
+    load_partner_summaries,
     load_location_summaries,
 )
 
@@ -69,13 +65,12 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
-def _trip_to_out(t: TripOrder, clients, locations) -> TripOrderOut:
+def _trip_to_out(t: TripOrder, partners, locations) -> TripOrderOut:
     return TripOrderOut(
         id=int(t.id),  # type: ignore[arg-type]
         trip_date=t.trip_date,
-        client=get_client_summary(clients, t.client_id),
+        partner=get_partner_summary(partners, t.partner_id),
         code=t.code,
-        route=t.route,
         pickup_location=get_location_summary(locations, t.pickup_location_id),
         dropoff_location=get_location_summary(locations, t.dropoff_location_id),
         containers=[
@@ -108,14 +103,7 @@ def _trip_to_out(t: TripOrder, clients, locations) -> TripOrderOut:
         unit_price=t.unit_price,
         driver_salary=t.driver_salary,
         allowance=t.allowance,
-        revenue=t.revenue,
         status=t.status,
-        is_confirmed=t.is_confirmed,
-        confirmed_by=t.confirmed_by,
-        confirmed_at=t.confirmed_at,
-        is_locked=t.is_locked,
-        locked_at=t.locked_at,
-        locked_by=t.locked_by,
         matched_work_order_ids=list(t.matched_work_order_ids),
         created_at=t.created_at,
         updated_at=t.updated_at,
@@ -129,38 +117,15 @@ async def _load_one(session, t: TripOrder) -> TripOrderOut:
 async def _load_many(session, trips: list[TripOrder]) -> list[TripOrderOut]:
     if not trips:
         return []
-    clients = await load_client_summaries(
-        session, {t.client_id for t in trips}
+    partners = await load_partner_summaries(
+        session, {t.partner_id for t in trips}
     )
     locations = await load_location_summaries(
         session,
         {t.pickup_location_id for t in trips}
         | {t.dropoff_location_id for t in trips},
     )
-    return [_trip_to_out(t, clients, locations) for t in trips]
-
-
-async def _enqueue_salary_recalc(session, driver_id: int, ref_date: date) -> None:
-    try:
-        from app.contexts.payroll.domain.entities import period_dates_for
-        from app.contexts.payroll.infrastructure.repositories import (
-            SqlSalaryPeriodConfigRepository,
-        )
-        from app.workers import enqueue, salary_recalc_job_id
-        config = await SqlSalaryPeriodConfigRepository(session).get_current()
-        start, end = period_dates_for(config, ref_date)
-        job_id = salary_recalc_job_id(driver_id, start.isoformat(), end.isoformat())
-        await enqueue(
-            "calculate_salary_task",
-            _job_id=job_id,
-            driver_id=driver_id,
-            start_date=start.isoformat(),
-            end_date=end.isoformat(),
-        )
-    except Exception:
-        _logger.warning(
-            "Failed to enqueue salary recalculation for driver %s", driver_id
-        )
+    return [_trip_to_out(t, partners, locations) for t in trips]
 
 
 def _container_inputs(items) -> list[TripContainerInput]:
@@ -195,8 +160,7 @@ async def create_trip_order(
     try:
         t = await use_case(TripOrderCreateInput(
             trip_date=body.trip_date,
-            client_id=body.client_id,
-            route=body.route,
+            partner_id=body.partner_id,
             pickup_location_id=body.pickup_location_id,
             dropoff_location_id=body.dropoff_location_id,
             containers=_container_inputs(body.containers),
@@ -204,7 +168,6 @@ async def create_trip_order(
             unit_price=body.unit_price,
             driver_salary=body.driver_salary,
             allowance=body.allowance,
-            revenue=body.revenue,
             matched_work_order_ids=body.matched_work_order_ids,
         ))
     except Exception as exc:
@@ -214,7 +177,7 @@ async def create_trip_order(
 
 @router.get("/trip-orders", response_model=PaginatedResponse[TripOrderOut])
 async def list_trip_orders(
-    client_id: int | None = None,
+    partner_id: int | None = None,
     status: str | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
@@ -226,7 +189,7 @@ async def list_trip_orders(
 ):
     items, total = await use_case(TripOrderListFilters(
         page=page, page_size=page_size,
-        client_id=client_id, status=status,
+        partner_id=partner_id, status=status,
         date_from=date_from, date_to=date_to,
         unpriced=unpriced,
     ))
@@ -260,14 +223,14 @@ async def import_trip_orders_excel(
     current_user: User = Depends(require_permission("create", "TripOrder")),
     use_case: GetTripOrder = Depends(get_get_trip_order),
 ):
-    """Legacy plain-Excel TripOrder import. Distinct from the customer-Excel
-    import pipeline at `/imports/customer-excel/*`."""
+    """Legacy plain-Excel TripOrder import. Distinct from the partner-Excel
+    import pipeline at `/imports/partner-excel/*`."""
     from app.contexts.operations.infrastructure.excel import import_trip_orders, parse_trip_order_excel
     content = await file.read()
     rows = await parse_trip_order_excel(content)
     if not rows:
         raise HTTPException(
-            status_code=400, detail="File Excel trống hoặc không đúng định dạng"
+            status_code=400, detail="File Excel trong hoac khong dung dinh dang"
         )
     session = use_case.repo.session  # type: ignore[attr-defined]
     return await import_trip_orders(session, rows, current_user.id)
@@ -319,8 +282,6 @@ async def update_trip_order(
     current_user: User = Depends(require_permission("read", "TripOrder")),
     use_case: UpdateTripOrder = Depends(get_update_trip_order),
 ):
-    set_fields = body.model_fields_set
-
     containers_input = (
         _container_inputs(body.containers) if body.containers is not None
         else None
@@ -329,8 +290,7 @@ async def update_trip_order(
     try:
         t = await use_case(trip_order_id, TripOrderUpdateInput(
             trip_date=body.trip_date,
-            client_id=body.client_id,
-            route=body.route,
+            partner_id=body.partner_id,
             pickup_location_id=body.pickup_location_id,
             dropoff_location_id=body.dropoff_location_id,
             containers=containers_input,
@@ -338,53 +298,12 @@ async def update_trip_order(
             unit_price=body.unit_price,
             driver_salary=body.driver_salary,
             allowance=body.allowance,
-            revenue=body.revenue,
             status=body.status,
-            is_confirmed=body.is_confirmed,
-            confirmed_by=body.confirmed_by,
-            confirmed_at=body.confirmed_at,
             matched_work_order_ids=body.matched_work_order_ids,
         ))
     except Exception as exc:
         raise translate(exc)
 
-    if "driver_salary" in set_fields or "allowance" in set_fields:
-        try:
-            from app.workers import enqueue
-            await enqueue("sync_wo_earning_on_to_update", trip_order_id=trip_order_id)
-        except Exception:
-            _logger.warning("Failed to enqueue WO earning sync for TO#%s", trip_order_id)
-
-    return await _load_one(use_case.session, t)
-
-
-@router.put("/trip-orders/{trip_order_id}/cancel", response_model=TripOrderOut)
-async def cancel_trip_order(
-    trip_order_id: int,
-    body: CancelRequest,
-    request: Request,
-    current_user: User = Depends(require_permission("read", "TripOrder")),
-    use_case: CancelTripOrder = Depends(get_cancel_trip_order),
-):
-    set_audit_reason(body.reason)
-    try:
-        t = await use_case(trip_order_id)
-    except Exception as exc:
-        raise translate(exc)
-    return await _load_one(use_case.session, t)
-
-
-@router.put("/trip-orders/{trip_order_id}/confirm", response_model=TripOrderOut)
-async def toggle_trip_order_confirmation(
-    trip_order_id: int,
-    request: Request,
-    current_user: User = Depends(require_permission("read", "TripOrder")),
-    use_case: ConfirmTripOrder = Depends(get_confirm_trip_order),
-):
-    try:
-        t = await use_case(trip_order_id, user_id=current_user.id)
-    except Exception as exc:
-        raise translate(exc)
     return await _load_one(use_case.session, t)
 
 

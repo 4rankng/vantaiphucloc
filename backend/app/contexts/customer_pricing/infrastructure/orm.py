@@ -1,7 +1,4 @@
-"""SQLAlchemy ORM for the Customer & Pricing context.
-
-Re-exports the existing Base-mapped classes under XxxORM aliases.
-"""
+"""SQLAlchemy ORM re-exports for the Customer & Pricing context."""
 
 from __future__ import annotations
 

@@ -10,69 +10,43 @@ from abc import ABC, abstractmethod
 from typing import Sequence
 
 from app.contexts.customer_pricing.domain.entities import (
-    Customer,
     Location,
+    Partner,
     Pricing,
-    Route,
-    Vendor,
 )
 from app.contexts.customer_pricing.domain.value_objects import (
-    ClientId,
     LocationId,
+    PartnerId,
     PricingId,
-    RouteId,
-    VendorId,
     WorkType,
 )
 
 
-class ClientRepository(ABC):
+class PartnerRepository(ABC):
     @abstractmethod
-    async def get_by_id(self, cid: ClientId) -> Customer | None: ...
-
-    @abstractmethod
-    async def find_by_code(self, code: str) -> Customer | None: ...
+    async def get_by_id(self, pid: PartnerId) -> Partner | None: ...
 
     @abstractmethod
-    async def find_by_name(self, name: str) -> Customer | None: ...
+    async def find_by_code(self, code: str) -> Partner | None: ...
 
     @abstractmethod
-    async def list(
-        self, *, offset: int, limit: int, active_only: bool = True
-    ) -> tuple[Sequence[Customer], int]: ...
-
-    @abstractmethod
-    async def add(self, c: Customer) -> Customer: ...
-
-    @abstractmethod
-    async def save(self, c: Customer) -> Customer: ...
-
-    @abstractmethod
-    async def increment_debt(self, cid: ClientId, amount: int) -> None:
-        """Bump outstanding_debt on the Client. No-op if amount ≤ 0.
-
-        Cross-context callers (e.g. operations) depend on this method
-        instead of touching the Client aggregate directly.
-        """
-
-
-class VendorRepository(ABC):
-    @abstractmethod
-    async def get_by_id(self, vid: VendorId) -> Vendor | None: ...
-
-    @abstractmethod
-    async def find_by_name(self, name: str) -> Vendor | None: ...
+    async def find_by_name(self, name: str) -> Partner | None: ...
 
     @abstractmethod
     async def list(
-        self, *, offset: int, limit: int, active_only: bool = True
-    ) -> tuple[Sequence[Vendor], int]: ...
+        self,
+        *,
+        offset: int,
+        limit: int,
+        partner_type: str | None = None,
+        active_only: bool = True,
+    ) -> tuple[Sequence[Partner], int]: ...
 
     @abstractmethod
-    async def add(self, v: Vendor) -> Vendor: ...
+    async def add(self, p: Partner) -> Partner: ...
 
     @abstractmethod
-    async def save(self, v: Vendor) -> Vendor: ...
+    async def save(self, p: Partner) -> Partner: ...
 
 
 class LocationRepository(ABC):
@@ -109,20 +83,20 @@ class PricingRepository(ABC):
     async def find_by_lane(
         self,
         *,
-        client_id: ClientId,
+        partner_id: PartnerId,
         work_type: WorkType,
         pickup_location_id: LocationId,
         dropoff_location_id: LocationId,
     ) -> Pricing | None: ...
 
     @abstractmethod
-    async def list_for_client(
-        self, client_id: ClientId, *, active_only: bool = True
+    async def list_for_partner(
+        self, partner_id: PartnerId, *, active_only: bool = True
     ) -> Sequence[Pricing]: ...
 
     @abstractmethod
     async def list(
-        self, *, offset: int, limit: int, client_id: ClientId | None = None,
+        self, *, offset: int, limit: int, partner_id: PartnerId | None = None,
         active_only: bool = True,
     ) -> tuple[Sequence[Pricing], int]: ...
 
@@ -131,24 +105,3 @@ class PricingRepository(ABC):
 
     @abstractmethod
     async def save(self, p: Pricing) -> Pricing: ...
-
-
-class RouteRepository(ABC):
-    @abstractmethod
-    async def get_by_id(self, rid: RouteId) -> Route | None: ...
-
-    @abstractmethod
-    async def find_by_lane(
-        self, pickup_id: LocationId, dropoff_id: LocationId
-    ) -> Route | None: ...
-
-    @abstractmethod
-    async def list(
-        self, *, offset: int, limit: int, active_only: bool = True
-    ) -> tuple[Sequence[Route], int]: ...
-
-    @abstractmethod
-    async def add(self, r: Route) -> Route: ...
-
-    @abstractmethod
-    async def save(self, r: Route) -> Route: ...

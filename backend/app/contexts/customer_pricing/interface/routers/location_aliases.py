@@ -26,7 +26,6 @@ from app.database import get_db
 from app.models.base import User
 from app.models.domain import (
     Pricing,
-    Route,
     TripOrder,
     WorkOrder,
 )
@@ -232,8 +231,6 @@ async def merge_locations(
         (TripOrder, "dropoff_location_id"),
         (Pricing, "pickup_location_id"),
         (Pricing, "dropoff_location_id"),
-        (Route, "pickup_location_id"),
-        (Route, "dropoff_location_id"),
     ]:
         count = (await db.execute(
             update(table)

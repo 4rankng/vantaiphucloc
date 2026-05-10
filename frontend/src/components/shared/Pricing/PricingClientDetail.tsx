@@ -46,7 +46,7 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
   const [routeSearch, setRouteSearch] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; desc: string } | null>(null)
 
-  const clientName = clients.find(c => c.id === clientId)?.name ?? pricings[0]?.client.name ?? ''
+  const clientName = clients.find(c => c.id === clientId)?.name ?? pricings[0]?.partner.name ?? ''
 
   const grouped = useMemo(() => {
     const map = new Map<string, Pricing[]>()
@@ -81,7 +81,7 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
       {
         id: pricing.id,
         data: {
-          clientId: pricing.client.id,
+          clientId: pricing.partner.id,
           workType: pricing.workType,
           pickupLocationId: pricing.pickupLocation.id,
           dropoffLocationId: pricing.dropoffLocation.id,

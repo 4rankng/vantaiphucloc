@@ -5,7 +5,6 @@ in `trip_order_work_orders`. Domain rules:
 
   - Work order must have at least one container.
   - Both must currently be in PENDING status.
-  - Trip order cannot be already confirmed (locked by accountant).
   - Pricing snapshots flow from TripOrder onto WorkOrder at match time;
     they're cleared on unmatch.
 """
@@ -44,7 +43,7 @@ def _utcnow() -> datetime:
 
 class ReconciliationConflict(OperationsError):
     """Pre-conditions for reconcile/unmatch fail (e.g. WO has no containers,
-    TO is already confirmed). Translated to HTTP 409."""
+    TO is already matched). Translated to HTTP 409."""
 
     def __init__(self, msg: str) -> None:
         super().__init__(msg)
@@ -53,8 +52,8 @@ class ReconciliationConflict(OperationsError):
 
 class MatchTripToWorkOrder:
     """Bind a WorkOrder to a TripOrder. After:
-      - WO.status = MATCHED, locked
-      - TO.status = COMPLETED, locked, pricing snapshot copied to WO
+      - WO.status = MATCHED
+      - TO.status = MATCHED, pricing snapshot copied to WO
     """
 
     def __init__(
@@ -76,7 +75,7 @@ class MatchTripToWorkOrder:
         if wo is None:
             raise NotFound("WorkOrder", data.work_order_id)
 
-        # Container check uses ORM directly — domain aggregate already
+        # Container check uses ORM directly -- domain aggregate already
         # carries the count via `wo.containers`.
         if not wo.containers:
             raise ReconciliationConflict(
@@ -87,10 +86,7 @@ class MatchTripToWorkOrder:
         if to is None:
             raise NotFound("TripOrder", data.trip_order_id)
 
-        if wo.status in (
-            WorkOrderStatus.MATCHED, WorkOrderStatus.COMPLETED,
-            WorkOrderStatus.CANCELLED,
-        ):
+        if wo.status == WorkOrderStatus.MATCHED:
             raise ReconciliationConflict("Work order is already matched")
 
         if await trip_order_has_link(self.session, int(to.id)):  # type: ignore[arg-type]
@@ -99,10 +95,6 @@ class MatchTripToWorkOrder:
         if to.status != TripOrderStatus.PENDING:
             raise ReconciliationConflict(
                 "Trip order must be in PENDING status to match"
-            )
-        if to.is_confirmed:
-            raise ReconciliationConflict(
-                "Cannot match a confirmed trip order"
             )
 
         # Mutate via domain methods.
@@ -113,10 +105,8 @@ class MatchTripToWorkOrder:
             allowance=to.allowance,
             pricing_id=to.pricing_id,
         )
-        wo.lock(user_id=data.user_id)
 
-        to.complete()
-        to.lock(user_id=data.user_id)
+        to.match()
         to.link_work_order(int(wo.id))  # type: ignore[arg-type]
 
         await self.wo_repo.save(wo)
@@ -126,8 +116,8 @@ class MatchTripToWorkOrder:
 
 
 class UnmatchTripFromWorkOrder:
-    """Break a TO↔WO link. Both go back to PENDING, WO pricing snapshot
-    is cleared. Confirmed trip orders cannot be unmatched."""
+    """Break a TO<->WO link. Both go back to PENDING, WO pricing snapshot
+    is cleared."""
 
     def __init__(
         self,
@@ -167,28 +157,17 @@ class UnmatchTripFromWorkOrder:
                 (link.trip_order_id, link.work_order_id),
             )
 
-        if to.is_confirmed:
-            raise ReconciliationConflict(
-                "Cannot unmatch a confirmed trip order"
-            )
-
-        # Force-unlock to allow the state transitions; the explicit
-        # business call here already knows we want to break the lock.
-        wo.unlock()
-        to.unlock()
-
-        # Reset WO: MATCHED→PENDING, clear pricing snapshot.
+        # Reset WO: MATCHED->PENDING, clear pricing snapshot.
         if wo.status == WorkOrderStatus.MATCHED:
             wo.unmatch()
         else:
             wo.status = WorkOrderStatus.PENDING
         wo.driver_salary = 0
         wo.allowance = 0
-        wo.earning = 0
 
-        # Reset TO: COMPLETED→PENDING via reopen() if applicable.
-        if to.status == TripOrderStatus.COMPLETED:
-            to.reopen()
+        # Reset TO: MATCHED->PENDING.
+        if to.status == TripOrderStatus.MATCHED:
+            to.unmatch()
         else:
             to.status = TripOrderStatus.PENDING
 

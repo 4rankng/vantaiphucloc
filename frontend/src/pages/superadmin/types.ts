@@ -12,7 +12,6 @@ export interface UserAccount {
   email?: string
   role: Role
   vendor: string
-  tractorPlate?: string
   active: boolean
   createdAt: string
 }
@@ -34,7 +33,6 @@ export function toUserAccount(obj: Record<string, unknown>): UserAccount {
     email: obj.email as string | undefined,
     role: obj.role as Role,
     vendor: (obj.vendor as string) || PHUC_LOC,
-    tractorPlate: obj.tractor_plate as string | undefined,
     active: obj.is_active as boolean,
     createdAt: obj.created_at as string,
   }

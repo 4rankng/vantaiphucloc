@@ -8,9 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.contexts.operations.application import (
     ApplyPricingToTrips,
     BatchCreateWorkOrders,
-    CancelTripOrder,
-    CancelWorkOrder,
-    ConfirmTripOrder,
     CreateTripOrder,
     CreateTripOrderFromImport,
     CreateWorkOrder,
@@ -81,21 +78,6 @@ def get_update_trip_order(
     return UpdateTripOrder(repo, wo_repo, db)
 
 
-def get_cancel_trip_order(
-    repo: TripOrderRepository = Depends(get_trip_order_repository),
-    db: AsyncSession = Depends(get_db),
-) -> CancelTripOrder:
-    return CancelTripOrder(repo, db)
-
-
-def get_confirm_trip_order(
-    repo: TripOrderRepository = Depends(get_trip_order_repository),
-    wo_repo: WorkOrderRepository = Depends(get_work_order_repository),
-    db: AsyncSession = Depends(get_db),
-) -> ConfirmTripOrder:
-    return ConfirmTripOrder(repo, wo_repo, db)
-
-
 def get_delete_trip_order(
     repo: TripOrderRepository = Depends(get_trip_order_repository),
     db: AsyncSession = Depends(get_db),
@@ -143,13 +125,6 @@ def get_update_work_order(
     db: AsyncSession = Depends(get_db),
 ) -> UpdateWorkOrder:
     return UpdateWorkOrder(repo, db)
-
-
-def get_cancel_work_order(
-    repo: WorkOrderRepository = Depends(get_work_order_repository),
-    db: AsyncSession = Depends(get_db),
-) -> CancelWorkOrder:
-    return CancelWorkOrder(repo, db)
 
 
 def get_batch_create_work_orders(

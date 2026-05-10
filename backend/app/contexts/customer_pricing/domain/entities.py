@@ -1,6 +1,6 @@
 """Domain aggregates for the Customer & Pricing context.
 
-Pure Python — no SQLAlchemy / Pydantic. Business rules live as methods
+Pure Python -- no SQLAlchemy / Pydantic. Business rules live as methods
 on the aggregates; mappers translate to/from ORM rows.
 """
 
@@ -14,17 +14,14 @@ from app.contexts.customer_pricing.domain.exceptions import (
     PricingNotMatched,
 )
 from app.contexts.customer_pricing.domain.value_objects import (
-    ClientId,
     GeocodeSource,
     LocationAliasId,
     LocationId,
     Money,
+    PartnerId,
     PricingId,
     PricingLineId,
-    RouteId,
-    VendorId,
     WorkType,
-    normalize_client_type,
     normalize_work_type,
 )
 
@@ -33,32 +30,30 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-# ── Customer (Client) aggregate ──────────────────────────────────
+# -- Partner (unified client + vendor) aggregate --------------------
 
 
 @dataclass
-class Customer:
-    """Customer aggregate root.
+class Partner:
+    """Partner aggregate root.
 
-    Phúc Lộc bills customers per-trip. `outstanding_debt` aggregates all
-    unsettled trip revenue and is updated via Billing-context events.
+    Replaces the former Client and Vendor entities. A single partner can
+    act as client, vendor, or both. `partner_type` discriminates:
+    ``client`` | ``vendor`` | ``both``.
     """
 
-    id: ClientId | None
+    id: PartnerId | None
     name: str
-    type: str           # "company" | "individual"
-    phone: str
+    partner_type: str          # "client" | "vendor" | "both"
+    partner_role: str | None = None   # "shipping_line" | "factory" | "transport" | "other"
     code: str | None = None
+    phone: str | None = None
     tax_code: str | None = None
     address: str | None = None
     contact_person: str | None = None
-    outstanding_debt: Money = 0
     is_active: bool = True
     created_at: datetime = field(default_factory=_utcnow)
     updated_at: datetime = field(default_factory=_utcnow)
-
-    def __post_init__(self) -> None:
-        self.type = normalize_client_type(self.type)
 
     def deactivate(self) -> None:
         self.is_active = False
@@ -68,34 +63,13 @@ class Customer:
         self.is_active = True
         self.updated_at = _utcnow()
 
-    def add_to_outstanding(self, amount: Money) -> None:
-        self.outstanding_debt += int(amount)
-        self.updated_at = _utcnow()
 
-
-# ── Vendor (subcontractor) ───────────────────────────────────────
-
-
-@dataclass
-class Vendor:
-    id: VendorId | None
-    name: str
-    type: str | None = None        # "company" | "individual" | None
-    phone: str | None = None
-    tax_code: str | None = None
-    address: str | None = None
-    contact_person: str | None = None
-    is_active: bool = True
-    created_at: datetime = field(default_factory=_utcnow)
-    updated_at: datetime = field(default_factory=_utcnow)
-
-
-# ── Location aggregate (with aliases) ───────────────────────────
+# -- Location aggregate (with aliases) ------------------------------
 
 
 @dataclass
 class LocationAlias:
-    """Inside the Location aggregate. FSM: PENDING → CONFIRMED | REJECTED | MERGED."""
+    """Inside the Location aggregate. FSM: PENDING -> CONFIRMED | REJECTED | MERGED."""
 
     id: LocationAliasId | None
     location_id: LocationId
@@ -112,7 +86,7 @@ class LocationAlias:
     created_at: datetime = field(default_factory=_utcnow)
     created_by_id: int | None = None
 
-    # ── FSM transitions ───────────────────────────────────
+    # -- FSM transitions ----------------
 
     def confirm(self, *, user_id: int) -> None:
         if self.status != "PENDING":
@@ -170,12 +144,12 @@ class Location:
     updated_at: datetime = field(default_factory=_utcnow)
     aliases: list[LocationAlias] = field(default_factory=list)
 
-    # ── invariants ───────────────────────────────────────────
+    # -- invariants --------------------
 
     def has_coords(self) -> bool:
         return self.lat is not None and self.lng is not None
 
-    # ── behaviour ────────────────────────────────────────────
+    # -- behaviour ---------------------
 
     def record_gps_pin(
         self,
@@ -233,21 +207,7 @@ class Location:
             )
 
 
-# ── Route ────────────────────────────────────────────────────────
-
-
-@dataclass
-class Route:
-    id: RouteId | None
-    route: str
-    pickup_location_id: LocationId
-    dropoff_location_id: LocationId
-    is_active: bool = True
-    created_at: datetime = field(default_factory=_utcnow)
-    updated_at: datetime = field(default_factory=_utcnow)
-
-
-# ── Pricing aggregate (with PricingLines) ───────────────────────
+# -- Pricing aggregate (with PricingLines) -------------------------
 
 
 @dataclass
@@ -255,7 +215,7 @@ class PricingLine:
     """Quantity-tier inside a Pricing aggregate.
 
     The accountant defines tiers like "1 cont = 2,000,000 / 2 conts =
-    3,500,000 / ≥3 = 4,800,000". We store each tier as its own row keyed
+    3,500,000 / >=3 = 4,800,000". We store each tier as its own row keyed
     by the integer `quantity`.
     """
 
@@ -271,12 +231,12 @@ class PricingLine:
 class Pricing:
     """Pricing aggregate root.
 
-    One row per (client, work_type, lane). Quantity tiers are inside
+    One row per (partner, work_type, lane). Quantity tiers are inside
     the aggregate and modified together with the parent.
     """
 
     id: PricingId | None
-    client_id: ClientId
+    partner_id: PartnerId
     work_type: WorkType
     pickup_location_id: LocationId
     dropoff_location_id: LocationId
@@ -288,20 +248,20 @@ class Pricing:
     def __post_init__(self) -> None:
         self.work_type = normalize_work_type(self.work_type)
 
-    # ── tier lookup ──────────────────────────────────────────
+    # -- tier lookup -------------------
 
     def line_for_quantity(self, quantity: int) -> PricingLine:
         """Find the matching tier for `quantity` containers.
 
-        Matching: the highest tier whose `quantity` is ≤ the requested
-        count (e.g. 3 conts → tier 3 if exists, else tier 2, else tier 1).
+        Matching: the highest tier whose `quantity` is <= the requested
+        count (e.g. 3 conts -> tier 3 if exists, else tier 2, else tier 1).
         Raises PricingNotMatched if no tier matches (i.e. requested qty
         is below the smallest defined tier).
         """
         candidates = [ln for ln in self.lines if ln.quantity <= quantity]
         if not candidates:
             raise PricingNotMatched(
-                f"no pricing tier ≤ {quantity} on pricing {self.id!r}"
+                f"no pricing tier <= {quantity} on pricing {self.id!r}"
             )
         return max(candidates, key=lambda ln: ln.quantity)
 

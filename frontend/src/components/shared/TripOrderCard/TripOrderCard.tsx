@@ -19,7 +19,7 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }
 
 export function TripOrderCard({ trip, onClick }: TripOrderCardProps) {
   const statusCfg = STATUS_CONFIG[trip.status] ?? STATUS_CONFIG.DRAFT
-  const isLocked = trip.isConfirmed || trip.status === 'CANCELLED'
+  const isLocked = trip.status === 'MATCHED'
 
   const inner = (
     <>
@@ -27,21 +27,21 @@ export function TripOrderCard({ trip, onClick }: TripOrderCardProps) {
       <div className="flex items-start justify-between gap-2 mb-1.5">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold truncate" style={{ color: 'var(--theme-text-primary)' }}>
-            {trip.client.name}
+            {trip.partner.name}
           </p>
           <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
             {trip.route}
           </p>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          {trip.isConfirmed && (
+          {trip.status === 'MATCHED' && (
             <CheckCircle2 className="w-3.5 h-3.5" style={{ color: 'var(--theme-status-success)' }} />
           )}
           <span
             className="text-xs font-semibold px-2 py-0.5 rounded-full"
             style={{ background: statusCfg.bg, color: statusCfg.color }}
           >
-            {trip.isConfirmed ? 'Đã khớp' : statusCfg.label}
+            {trip.status === 'MATCHED' ? 'Đã khớp' : statusCfg.label}
           </span>
         </div>
       </div>
@@ -83,7 +83,7 @@ export function TripOrderCard({ trip, onClick }: TripOrderCardProps) {
   const cardStyle = {
     background: 'var(--theme-bg-secondary)',
     boxShadow: 'var(--theme-shadow-card)',
-    border: `1px solid ${trip.isConfirmed ? 'var(--theme-status-success)' : 'var(--theme-border-default)'}`,
+    border: `1px solid ${trip.status === 'MATCHED' ? 'var(--theme-status-success)' : 'var(--theme-border-default)'}`,
   }
 
   if (onClick) {

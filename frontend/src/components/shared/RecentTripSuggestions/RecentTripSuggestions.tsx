@@ -5,7 +5,7 @@ interface RecentTripSuggestionsProps {
   trips: WorkOrder[]
   /** ID of the selected work order (trip.id), used for unambiguous single-selection */
   selectedTripId?: number | string
-  onSelect: (trip: { tripId: number; clientId: string; clientName: string; pickupLocation: string; dropoffLocation: string }) => void
+  onSelect: (trip: { tripId: number; partnerId: string; partnerName: string; pickupLocation: string; dropoffLocation: string }) => void
 }
 
 export function RecentTripSuggestions({
@@ -27,15 +27,15 @@ export function RecentTripSuggestions({
             : [routeStr]
         const pickup = trip.pickupLocation?.name || routeParts[0] || ''
         const dropoff = trip.dropoffLocation?.name || routeParts.slice(1).join(' - ') || ''
-        const clientLabel = trip.client.code || trip.client.name
+        const clientLabel = trip.partner.code || trip.partner.name
         const isSelected = selectedTripId !== undefined && String(selectedTripId) === String(trip.id)
         return (
           <button
             key={trip.id}
             onClick={() => onSelect({
               tripId: trip.id,
-              clientId: String(trip.client.id),
-              clientName: trip.client.name,
+              partnerId: String(trip.partner.id),
+              partnerName: trip.partner.name,
               pickupLocation: pickup,
               dropoffLocation: dropoff,
             })}

@@ -170,10 +170,10 @@ export function SuperAdminDashboard({
                       <span className="truncate">{u.cccd}</span>
                     </div>
                   )}
-                  {u.tractorPlate && (
+                  {u.vendor && (
                     <div className="flex items-center gap-1 min-w-0" style={{ color: 'var(--theme-text-secondary)' }}>
                       <Truck className="w-3 h-3 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
-                      <span className="font-mono text-[10px] truncate">{u.tractorPlate}</span>
+                      <span className="text-[10px] truncate">{u.vendor}</span>
                     </div>
                   )}
                 </div>

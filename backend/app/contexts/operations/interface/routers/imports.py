@@ -51,7 +51,7 @@ from app.contexts.operations.interface.error_translation import translate
 from app.core.deps import require_roles
 from app.database import get_db
 from app.models.base import User
-from app.models.domain import Client
+from app.models.domain import Partner
 from app.contexts.operations.infrastructure.import_pipeline.canonical import CANONICAL_FIELDS, SKIP_FIELD
 from app.contexts.operations.infrastructure.import_pipeline.column_mapper import ColumnMapping
 from app.contexts.operations.infrastructure.import_pipeline.llm import get_default_classifier
@@ -94,12 +94,11 @@ class CommitRow(BaseModel):
     consignee: str = ""
     commodity: str = ""
     driver_name: str = ""
-    tractor_plate: str = ""
     remarks: str = ""
 
 
 class CommitRequest(BaseModel):
-    client_id: int
+    partner_id: int
     rows: list[CommitRow]
     overwrite_duplicates: bool = False
     save_template_as: str | None = None
@@ -152,7 +151,7 @@ async def get_canonical_schema(
 @router.post("/customer-excel/preview")
 async def preview_customer_excel(
     file: UploadFile = File(...),
-    client_id: int | None = Form(None),
+    partner_id: int | None = Form(None),
     default_trip_date: date | None = Form(None),
     sheet_name: str | None = Form(None),
     header_row_index: int | None = Form(None),
@@ -169,7 +168,7 @@ async def preview_customer_excel(
     classifier = get_default_classifier()
 
     cached_mapping: list[ColumnMapping] | None = None
-    if client_id is not None:
+    if partner_id is not None:
         sheets = load_workbook(content, file.filename)
         if not sheets:
             raise HTTPException(
@@ -199,7 +198,7 @@ async def preview_customer_excel(
             if row_idx is not None:
                 hdr_cells = header_row_text(sheet, row_idx)
                 structure_hash = compute_structure_hash(sheet.name, hdr_cells)
-                tpl = await find_template(db, client_id, structure_hash)
+                tpl = await find_template(db, partner_id, structure_hash)
                 if tpl is not None:
                     cached_mapping = column_mappings_from_dicts(
                         list(tpl.column_mapping)
@@ -271,7 +270,7 @@ async def commit_customer_excel(
         raise HTTPException(status_code=400, detail="Không có dòng nào để tạo.")
 
     client = (await db.execute(
-        select(Client).where(Client.id == body.client_id)
+        select(Partner).where(Partner.id == body.partner_id)
     )).scalar_one_or_none()
     if client is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy khách hàng.")
@@ -300,7 +299,7 @@ async def commit_customer_excel(
 
     try:
         result = await use_case(ImportCommitInput(
-            client_id=body.client_id,
+            partner_id=body.partner_id,
             rows=rows,
             overwrite_duplicates=body.overwrite_duplicates,
             user_id=user.id,
@@ -318,7 +317,7 @@ async def commit_customer_excel(
     ):
         tpl = await save_template(
             db,
-            client_id=body.client_id,
+            partner_id=body.partner_id,
             structure_hash=body.structure_hash,
             template_name=body.save_template_as,
             sheet_name=body.sheet_name,
@@ -377,7 +376,7 @@ async def apply_pricing(
     """Legacy endpoint — kept for back-compat. See
     /imports/customer-excel/apply-pricing for the trip-id-only shape."""
     priced, unpriced_ids = await use_case(
-        client_id=body.client_id,
+        partner_id=body.partner_id,
         trip_ids=body.trip_order_ids,
         skip_already_priced=False,
     )
@@ -530,7 +529,7 @@ async def commit_customer_pricing(
     if not body.rows:
         raise HTTPException(status_code=400, detail="Không có dòng nào để tạo.")
     client = (
-        await db.execute(select(Client).where(Client.id == body.client_id))
+        await db.execute(select(Partner).where(Partner.id == body.partner_id))
     ).scalar_one_or_none()
     if client is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy khách hàng.")

@@ -18,7 +18,6 @@ from app.contexts.operations.domain.entities import WorkOrder
 from app.contexts.operations.domain.exceptions import (
     InvalidStateTransition,
     NotFound,
-    WorkOrderLocked,
 )
 from app.contexts.operations.domain.repositories import WorkOrderRepository
 from app.contexts.operations.domain.value_objects import (
@@ -41,7 +40,7 @@ def _validate_containers(containers: list[WorkOrderContainerInput]) -> None:
         valid, error = validate_container_number(c.container_number)
         if not valid:
             raise ValueError(
-                f"Số container không hợp lệ: {c.container_number} — {error}"
+                f"So container khong hop le: {c.container_number} -- {error}"
             )
 
 
@@ -90,7 +89,6 @@ class ListWorkOrders:
             offset=offset,
             limit=filters.page_size,
             driver_id=filters.driver_id,
-            tractor_plate=filters.tractor_plate,
             date_from=filters.date_from,
             date_to=filters.date_to,
             status=(
@@ -137,28 +135,26 @@ class CreateWorkOrder:
 
         pricing = await find_pricing(
             self.session,
-            client_id=data.client_id,
+            partner_id=data.partner_id,
             work_type=work_type,
             pickup_location_id=data.pickup_location_id,
             dropoff_location_id=data.dropoff_location_id,
         )
 
         gps_address = (
-            None if (data.gps_lat and data.gps_lng) else "Không xác định"
+            None if (data.gps_lat and data.gps_lng) else "Khong xac dinh"
         )
 
         w = WorkOrder(
             id=None,
-            client_id=data.client_id,
-            route=data.route,
+            partner_id=data.partner_id,
             pickup_location_id=data.pickup_location_id,
             dropoff_location_id=data.dropoff_location_id,
             driver_id=driver_id,
-            tractor_plate=data.tractor_plate,
+            vehicle_id=data.vehicle_id,
             unit_price=0,
             driver_salary=0,
             allowance=0,
-            earning=0,
             gps_lat=data.gps_lat,
             gps_lng=data.gps_lng,
             gps_address=gps_address,
@@ -168,7 +164,7 @@ class CreateWorkOrder:
         await _add_containers(w, data.containers)
 
         saved = await self.repo.add(w)
-        saved.code = await generate_work_order_code(self.session, data.client_id)
+        saved.code = await generate_work_order_code(self.session, data.partner_id)
         saved = await self.repo.save(saved)
 
         await self.session.commit()
@@ -206,31 +202,25 @@ class UpdateWorkOrder:
                     attempted="update",
                 )
         elif user.role not in ("accountant", "director", "superadmin"):
-            raise PermissionError("Bạn không có quyền thực hiện thao tác này")
-
-        if w.is_locked:
-            raise WorkOrderLocked(int(w.id) if w.id is not None else 0)
+            raise PermissionError("Ban khong co quyen thuc hien thao tac nay")
 
         # Strip salary fields for drivers
         if user.role == "driver":
             data.unit_price = None
             data.driver_salary = None
             data.allowance = None
-            data.earning = None
             data.status = None
 
-        if data.client_id is not None:
-            w.client_id = data.client_id
-        if data.route is not None:
-            w.route = data.route
+        if data.partner_id is not None:
+            w.partner_id = data.partner_id
         if data.pickup_location_id is not None:
             w.pickup_location_id = data.pickup_location_id
         if data.dropoff_location_id is not None:
             w.dropoff_location_id = data.dropoff_location_id
         if data.driver_id is not None:
             w.driver_id = data.driver_id
-        if data.tractor_plate is not None:
-            w.tractor_plate = data.tractor_plate
+        if data.vehicle_id is not None:
+            w.vehicle_id = data.vehicle_id
         if data.gps_lat is not None:
             w.gps_lat = data.gps_lat
         if data.gps_lng is not None:
@@ -241,8 +231,6 @@ class UpdateWorkOrder:
             w.driver_salary = int(data.driver_salary)
         if data.allowance is not None:
             w.allowance = int(data.allowance)
-        if data.earning is not None:
-            w.earning = int(data.earning)
         if data.status is not None:
             w.status = data.status
         w.updated_at = _utcnow()
@@ -254,41 +242,6 @@ class UpdateWorkOrder:
         await self.repo.save(w)
         await self.session.commit()
         return await self.repo.get_by_id(WorkOrderId(wid))
-
-
-class CancelWorkOrder:
-    def __init__(
-        self,
-        repo: WorkOrderRepository,
-        session: AsyncSession,
-    ) -> None:
-        self.repo = repo
-        self.session = session
-
-    async def __call__(
-        self, wid: int, *, user: CurrentUserContext
-    ) -> WorkOrder:
-        w = await self.repo.get_by_id(WorkOrderId(wid))
-        if w is None:
-            raise NotFound("WorkOrder", wid)
-
-        if user.role == "driver" and w.driver_id != user.id:
-            raise PermissionError(
-                "You can only cancel your own work orders"
-            )
-        if w.status != WorkOrderStatus.PENDING:
-            raise InvalidStateTransition(
-                kind="WorkOrder",
-                current=w.status,
-                attempted=WorkOrderStatus.CANCELLED,
-            )
-        if w.is_locked:
-            raise WorkOrderLocked(int(w.id) if w.id is not None else 0)
-
-        w.cancel()
-        await self.repo.save(w)
-        await self.session.commit()
-        return w
 
 
 class BatchCreateWorkOrders:
@@ -327,25 +280,24 @@ class BatchCreateWorkOrders:
                         )
                         pricing = await find_pricing(
                             self.session,
-                            client_id=item.client_id,
+                            partner_id=item.partner_id,
                             work_type=work_type,
                             pickup_location_id=item.pickup_location_id,
                             dropoff_location_id=item.dropoff_location_id,
                         )
                         gps_address = (
                             None if (item.gps_lat and item.gps_lng)
-                            else "Không xác định"
+                            else "Khong xac dinh"
                         )
                         w = WorkOrder(
                             id=None,
-                            client_id=item.client_id,
-                            route=item.route,
+                            partner_id=item.partner_id,
                             pickup_location_id=item.pickup_location_id,
                             dropoff_location_id=item.dropoff_location_id,
                             driver_id=driver_id,
-                            tractor_plate=item.tractor_plate,
+                            vehicle_id=item.vehicle_id,
                             unit_price=0, driver_salary=0,
-                            allowance=0, earning=0,
+                            allowance=0,
                             gps_lat=item.gps_lat,
                             gps_lng=item.gps_lng,
                             gps_address=gps_address,
@@ -355,7 +307,7 @@ class BatchCreateWorkOrders:
                         await _add_containers(w, item.containers)
                         saved = await self.repo.add(w)
                         saved.code = await generate_work_order_code(
-                            self.session, item.client_id
+                            self.session, item.partner_id
                         )
                         saved = await self.repo.save(saved)
                         results.append((i, int(saved.id) if saved.id else None, None))
