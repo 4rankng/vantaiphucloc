@@ -1,5 +1,5 @@
-import { useRef, useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useRef, useState, useMemo, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
@@ -20,6 +20,7 @@ interface CongItem {
 
 export function CreateTrip() {
   const navigate = useNavigate()
+  const routerLocation = useLocation()
   const toast = useToast()
   const { data: clients = [] } = useClients()
   const { data: locations = [] } = useLocations()
@@ -34,6 +35,9 @@ export function CreateTrip() {
   const clientOptions = useMemo(() => clients.map(x => ({ value: String(x.id), label: x.name })), [clients])
   const clientMap = useMemo(() => new Map(clients.map(x => [x.id, x.name])), [clients])
 
+  // Pre-fill from match context (navigated from MatchTrip "Tạo chuyến mới")
+  const matchContext = (routerLocation.state as { fromTripOrder?: { clientId?: number; client?: { id: number; name: string }; pickupLocation?: { id: number; name: string }; dropoffLocation?: { id: number; name: string }; containers?: { workType: string; containerNumber: string }[] } } | null)?.fromTripOrder
+
   const [clientId, setClientId] = useState('')
   const [pickupLocation, setPickupLocation] = useState('')
   const [dropoffLocation, setDropoffLocation] = useState('')
@@ -44,6 +48,29 @@ export function CreateTrip() {
   const [allowance, setAllowance] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [createClientOpen, setCreateClientOpen] = useState(false)
+
+  // Pre-fill from match context when clients/locations are loaded
+  const [prefilled, setPrefilled] = useState(false)
+  useEffect(() => {
+    if (prefilled || !matchContext) return
+    if (clients.length === 0 || locations.length === 0) return
+
+    const cId = matchContext.clientId ?? matchContext.client?.id
+    if (cId) setClientId(String(cId))
+
+    if (matchContext.pickupLocation?.name) setPickupLocation(matchContext.pickupLocation.name)
+    if (matchContext.dropoffLocation?.name) setDropoffLocation(matchContext.dropoffLocation.name)
+
+    if (matchContext.containers?.length) {
+      setCongItems(matchContext.containers.map((c, i) => ({
+        id: String(i + 1),
+        workType: (c.workType || 'E20') as WorkType,
+        containerNumber: c.containerNumber || '',
+      })))
+    }
+
+    setPrefilled(true)
+  }, [matchContext, clients.length, locations.length, prefilled])
 
   const addCong = () => {
     setCongItems(prev => [...prev, { id: String(prev.length + 1), workType: 'E20', containerNumber: '' }])

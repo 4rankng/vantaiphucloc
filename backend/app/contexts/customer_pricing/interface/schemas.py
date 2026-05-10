@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.schemas.domain import (
     ClientSummaryOut,
@@ -47,6 +47,24 @@ class CustomerCreate(BaseModel):
     tax_code: str | None = None
     address: str | None = None
     contact_person: str | None = None
+
+    @field_validator("tax_code")
+    @classmethod
+    def validate_tax_code(cls, v: str | None) -> str | None:
+        if v and not v.isdigit():
+            raise ValueError("Mã số thuế chỉ chứa chữ số")
+        if v and len(v) not in (10, 13):
+            raise ValueError("Mã số thuế phải 10 hoặc 13 chữ số")
+        return v
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: str) -> str:
+        import re
+        cleaned = re.sub(r"[\s\-]", "", v)
+        if cleaned and not re.match(r"^(0|\+?84)[35789]\d{8}$", cleaned):
+            raise ValueError("Số điện thoại không hợp lệ (VD: 0912345678)")
+        return v
 
 
 class CustomerUpdate(BaseModel):
@@ -104,6 +122,26 @@ class VendorCreate(BaseModel):
     address: str | None = None
     contact_person: str | None = None
 
+    @field_validator("tax_code")
+    @classmethod
+    def validate_tax_code(cls, v: str | None) -> str | None:
+        if v and not v.isdigit():
+            raise ValueError("Mã số thuế chỉ chứa chữ số")
+        if v and len(v) not in (10, 13):
+            raise ValueError("Mã số thuế phải 10 hoặc 13 chữ số")
+        return v
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: str | None) -> str | None:
+        if not v:
+            return v
+        import re
+        cleaned = re.sub(r"[\s\-]", "", v)
+        if cleaned and not re.match(r"^(0|\+?84)[35789]\d{8}$", cleaned):
+            raise ValueError("Số điện thoại không hợp lệ (VD: 0912345678)")
+        return v
+
 
 class VendorUpdate(BaseModel):
     name: str | None = None
@@ -112,6 +150,26 @@ class VendorUpdate(BaseModel):
     tax_code: str | None = None
     address: str | None = None
     contact_person: str | None = None
+
+    @field_validator("tax_code")
+    @classmethod
+    def validate_tax_code(cls, v: str | None) -> str | None:
+        if v and not v.isdigit():
+            raise ValueError("Mã số thuế chỉ chứa chữ số")
+        if v and len(v) not in (10, 13):
+            raise ValueError("Mã số thuế phải 10 hoặc 13 chữ số")
+        return v
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: str | None) -> str | None:
+        if not v:
+            return v
+        import re
+        cleaned = re.sub(r"[\s\-]", "", v)
+        if cleaned and not re.match(r"^(0|\+?84)[35789]\d{8}$", cleaned):
+            raise ValueError("Số điện thoại không hợp lệ (VD: 0912345678)")
+        return v
 
 
 def vendor_to_out(v) -> VendorOut:

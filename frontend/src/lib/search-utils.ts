@@ -14,6 +14,7 @@
  */
 export function normalizeVietnamese(str: string): string {
   return str
+    .replace(/[đĐ]/g, c => c === 'đ' ? 'd' : 'D')
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()

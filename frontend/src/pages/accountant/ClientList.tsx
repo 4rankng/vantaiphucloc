@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { Plus, Pencil, Trash2, Building2, UserCircle } from 'lucide-react'
+import { Plus, Pencil, Trash2, Building2, UserCircle, MoreVertical } from 'lucide-react'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
@@ -9,7 +9,12 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { BrandIcon } from '@/components/atoms/BrandIcon'
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/use-queries'
+import { useToast } from '@/components/atoms/Toast'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import type { Client, ClientType } from '@/data/domain'
+
+const VN_PHONE_RE = /^(0|\+?84)[35789]\d{8}$/
+const VN_TAX_RE = /^\d{10}(\d{3})?$/
 
 const EMPTY_CLIENT = {
   name: '', type: 'company' as ClientType, taxCode: '', address: '', phone: '', contactPerson: '',
@@ -18,6 +23,7 @@ const EMPTY_CLIENT = {
 export function ClientList() {
   const { data: clients = [], isLoading: loading } = useClients()
   const isMobile = useIsMobile(768)
+  const toast = useToast()
 
   // Detail dialog
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
@@ -26,9 +32,11 @@ export function ClientList() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Client | null>(null)
   const [form, setForm] = useState(EMPTY_CLIENT)
+  const [formErrors, setFormErrors] = useState<{ phone?: string; taxCode?: string }>({})
 
   // Delete confirm
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<Client | null>(null)
+  const [showOverflow, setShowOverflow] = useState(false)
 
   const createClient = useCreateClient()
   const updateClient = useUpdateClient()
@@ -37,6 +45,7 @@ export function ClientList() {
   const handleOpenCreate = useCallback(() => {
     setEditing(null)
     setForm(EMPTY_CLIENT)
+    setFormErrors({})
     setDialogOpen(true)
   }, [])
 
@@ -47,26 +56,59 @@ export function ClientList() {
       address: client.address ?? '', phone: client.phone,
       contactPerson: client.contactPerson ?? '',
     })
+    setFormErrors({})
     setSelectedClient(null)
     setDialogOpen(true)
   }, [])
 
-  const handleSubmit = useCallback(() => {
-    if (editing) {
-      updateClient.mutate({ id: editing.id, data: form }, { onSuccess: () => setDialogOpen(false) })
-    } else {
-      createClient.mutate(form, { onSuccess: () => setDialogOpen(false) })
+  const validateForm = useCallback((): boolean => {
+    const errors: { phone?: string; taxCode?: string } = {}
+    if (form.phone && !VN_PHONE_RE.test(form.phone.replace(/[\s-]/g, ''))) {
+      errors.phone = 'SĐT không hợp lệ (VD: 0912345678)'
     }
-  }, [editing, form, createClient, updateClient])
+    if (form.taxCode && !VN_TAX_RE.test(form.taxCode)) {
+      errors.taxCode = 'MST phải 10 hoặc 13 chữ số'
+    }
+    setFormErrors(errors)
+    return Object.keys(errors).length === 0
+  }, [form.phone, form.taxCode])
 
-  const handleDelete = useCallback((id: string) => {
-    deleteClient.mutate(id, {
+  const handleSubmit = useCallback(() => {
+    if (!validateForm()) return
+    if (editing) {
+      updateClient.mutate({ id: editing.id, data: form }, {
+        onSuccess: () => { toast.success('Đã cập nhật', editing.name); setDialogOpen(false) },
+        onError: (err: unknown) => {
+          const msg = (err as { message?: string })?.message ?? 'Không thể cập nhật'
+          toast.error('Lỗi', msg)
+        },
+      })
+    } else {
+      createClient.mutate(form, {
+        onSuccess: () => { toast.success('Đã tạo', form.name); setDialogOpen(false) },
+        onError: (err: unknown) => {
+          const msg = (err as { message?: string })?.message ?? 'Không thể tạo'
+          toast.error('Lỗi', msg)
+        },
+      })
+    }
+  }, [editing, form, createClient, updateClient, validateForm, toast])
+
+  const handleDelete = useCallback((client: Client) => {
+    deleteClient.mutate(String(client.id), {
       onSuccess: () => {
+        toast.success('Đã xoá', client.name)
         setDeleteConfirm(null)
         setSelectedClient(null)
+        setShowOverflow(false)
+      },
+      onError: (err: unknown) => {
+        const msg = (err as { message?: string })?.message
+        toast.error('Không thể xoá', msg ?? `Không thể xoá ${client.name}`)
+        setDeleteConfirm(null)
       },
     })
-  }, [deleteClient])
+  }, [deleteClient, toast])
 
   const updateField = useCallback((field: string, value: string | number) => {
     setForm(prev => ({ ...prev, [field]: value }))
@@ -125,10 +167,32 @@ export function ClientList() {
       )}
 
       {/* Client Detail Dialog */}
-      <Dialog open={!!selectedClient} onOpenChange={() => setSelectedClient(null)}>
+      <Dialog open={!!selectedClient} onOpenChange={() => { setSelectedClient(null); setShowOverflow(false) }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{selectedClient?.name}</DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle>{selectedClient?.name}</DialogTitle>
+              <div className="relative">
+                <button
+                  onClick={() => setShowOverflow(v => !v)}
+                  className="p-1.5 rounded-md hover:bg-[var(--theme-bg-tertiary)]"
+                  style={{ color: 'var(--theme-text-muted)' }}
+                >
+                  <MoreVertical size={16} />
+                </button>
+                {showOverflow && selectedClient && (
+                  <div className="absolute right-0 top-full mt-1 rounded-lg shadow-lg z-10 py-1 min-w-[140px]" style={{ background: 'var(--theme-bg-primary)', border: '1px solid var(--theme-border-default)' }}>
+                    <button
+                      onClick={() => { setShowOverflow(false); setDeleteConfirm(selectedClient) }}
+                      className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-[var(--theme-bg-tertiary)]"
+                      style={{ color: 'var(--theme-status-error)' }}
+                    >
+                      <Trash2 size={14} /> Xoá
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           </DialogHeader>
           {selectedClient && (
             <div className="space-y-1">
@@ -140,10 +204,8 @@ export function ClientList() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirm(selectedClient!.id)} className="flex-1" style={{ color: 'var(--theme-status-error)' }}>
-              <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Xoá
-            </Button>
-            <Button onClick={() => handleOpenEdit(selectedClient!)} className="flex-1 btn-primary">
+            <Button variant="outline" onClick={() => { setSelectedClient(null); setShowOverflow(false) }} className="flex-1">Đóng</Button>
+            <Button onClick={() => selectedClient && handleOpenEdit(selectedClient)} className="flex-1 btn-primary">
               <Pencil className="w-3.5 h-3.5 mr-1.5" /> Sửa
             </Button>
           </DialogFooter>
@@ -158,7 +220,7 @@ export function ClientList() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label className="typo-form-label">Tên</Label>
+              <Label className="typo-form-label">Tên <span style={{ color: 'var(--theme-error, #ef4444)' }}>*</span></Label>
               <Input value={form.name} onChange={e => updateField('name', e.target.value)} placeholder="Tên khách hàng" className="text-sm" />
             </div>
             <div className="space-y-2">
@@ -175,11 +237,13 @@ export function ClientList() {
             </div>
             <div className="space-y-2">
               <Label className="typo-form-label">Số điện thoại</Label>
-              <Input value={form.phone} onChange={e => updateField('phone', e.target.value)} placeholder="0123456789" className="text-sm" />
+              <Input value={form.phone} onChange={e => { updateField('phone', e.target.value); setFormErrors(p => ({ ...p, phone: undefined })) }} placeholder="0912345678" className="text-sm" />
+              {formErrors.phone && <p className="text-xs" style={{ color: 'var(--theme-status-error)' }}>{formErrors.phone}</p>}
             </div>
             <div className="space-y-2">
               <Label className="typo-form-label">Mã số thuế (MST)</Label>
-              <Input value={form.taxCode} onChange={e => updateField('taxCode', e.target.value)} placeholder="MST" className="text-sm" />
+              <Input value={form.taxCode} onChange={e => { updateField('taxCode', e.target.value); setFormErrors(p => ({ ...p, taxCode: undefined })) }} placeholder="0123456789" className="text-sm" />
+              {formErrors.taxCode && <p className="text-xs" style={{ color: 'var(--theme-status-error)' }}>{formErrors.taxCode}</p>}
             </div>
             <div className="space-y-2">
               <Label className="typo-form-label">Địa chỉ</Label>
@@ -200,18 +264,14 @@ export function ClientList() {
       </Dialog>
 
       {/* Delete Confirmation */}
-      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Xoá khách hàng?</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Hành động này không thể hoàn tác.</p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="flex-1">Huỷ</Button>
-            <Button variant="destructive" className="flex-1" onClick={() => deleteConfirm && handleDelete(deleteConfirm)}>Xác nhận</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={() => deleteConfirm && handleDelete(deleteConfirm)}
+        title="Xoá khách hàng?"
+        description={deleteConfirm ? `Bạn có chắc muốn xoá "${deleteConfirm.name}"? Hành động này không thể hoàn tác.` : ''}
+        confirmLabel="Xoá"
+      />
     </div>
   )
 }

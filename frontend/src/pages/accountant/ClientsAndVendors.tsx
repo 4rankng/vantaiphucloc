@@ -123,7 +123,19 @@ function DetailDialog({ partner, onClose, onEdit, onDelete }: DetailDialogProps)
     <Dialog open={!!partner} onOpenChange={() => onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{partner?.name}</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>{partner?.name}</DialogTitle>
+            {partner && (
+              <button
+                onClick={() => { onDelete(partner) }}
+                className="p-1.5 rounded-md hover:bg-[var(--theme-bg-tertiary)]"
+                style={{ color: 'var(--theme-status-error)' }}
+                title="Xoá"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
+          </div>
         </DialogHeader>
         {partner && (
           <div className="space-y-1">
@@ -141,11 +153,9 @@ function DetailDialog({ partner, onClose, onEdit, onDelete }: DetailDialogProps)
           </div>
         )}
         <DialogFooter>
+          <Button variant="outline" onClick={() => onClose()} className="flex-1">Đóng</Button>
           <Button onClick={() => partner && onEdit(partner)} className="flex-1" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
             <Pencil className="w-3.5 h-3.5 mr-1.5" /> Sửa
-          </Button>
-          <Button variant="outline" onClick={() => partner && onDelete(partner)} className="flex-1" style={{ color: 'var(--theme-status-error)' }}>
-            <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Xoá
           </Button>
         </DialogFooter>
       </DialogContent>
