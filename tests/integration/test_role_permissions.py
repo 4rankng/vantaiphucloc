@@ -1,7 +1,16 @@
 """Cross-cutting tests for role-based access control per policy.polar."""
 
+import random
+import string
 from datetime import date
 from uuid import uuid4
+
+
+def _container_number():
+    prefix = ''.join(random.choices(string.ascii_uppercase, k=4))
+    digits = ''.join(random.choices(string.digits, k=7))
+    return f"{prefix}{digits}"
+from conftest import _container_number
 
 
 class TestDriverPermissions:
@@ -22,7 +31,7 @@ class TestDriverPermissions:
                 "dropoff_location_id": dropoff["id"],
                 "driver_id": 4,
                 "tractor_plate": "29C-12345",
-                "containers": [{"container_number": f"ITRB{uid}", "work_type": "E20"}],
+                "containers": [{"container_number": _container_number(), "work_type": "E20"}],
             },
         )
         assert resp.status_code in (200, 201)

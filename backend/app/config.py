@@ -30,9 +30,9 @@ class Settings(BaseSettings):
     CACHE_LOCATIONS_TTL: int = 300
 
     # Rate limiting
-    RATE_LIMIT_LOGIN_MAX: int = 20
+    RATE_LIMIT_LOGIN_MAX: int = 100
     RATE_LIMIT_LOGIN_WINDOW: int = 300
-    RATE_LIMIT_API_MAX: int = 100
+    RATE_LIMIT_API_MAX: int = 500
     RATE_LIMIT_API_WINDOW: int = 60
 
     # Photo storage
