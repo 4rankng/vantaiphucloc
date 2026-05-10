@@ -52,22 +52,6 @@ class InvalidStateTransition(OperationsError):
         self.attempted = attempted
 
 
-class TripOrderLocked(OperationsError):
-    """Tried to mutate a TripOrder that has been locked by an accountant."""
-
-    def __init__(self, trip_order_id: int) -> None:
-        super().__init__(f"TripOrder {trip_order_id} is locked")
-        self.trip_order_id = trip_order_id
-
-
-class WorkOrderLocked(OperationsError):
-    """Tried to mutate a WorkOrder that has been locked by an accountant."""
-
-    def __init__(self, work_order_id: int) -> None:
-        super().__init__(f"WorkOrder {work_order_id} is locked")
-        self.work_order_id = work_order_id
-
-
 class ContainerCountInvalid(OperationsError):
     """Container count violates work-type rules (e.g., F40 must be 1, F20 ≤ 2)."""
 
