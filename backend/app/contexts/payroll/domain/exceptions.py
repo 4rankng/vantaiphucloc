@@ -7,9 +7,5 @@ class PayrollDomainError(Exception):
     pass
 
 
-class SalaryPeriodNotFound(PayrollDomainError):
-    pass
-
-
 class InvalidSalaryConfig(PayrollDomainError):
     pass
