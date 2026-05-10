@@ -77,7 +77,8 @@ export function createAppRouter() {
             { path: 'import-pricing',            element: ebc('ImportPricing', h(Lazy, { component: R.ImportPricing })) },
             { path: 'settings',                  element: h(Lazy, { component: R.AccountantSettings }), children: [
               { path: 'salary',                  element: ebc('SalarySetup', h(Lazy, { component: R.SalarySetup })) },
-              { path: 'pricing',                 element: ebc('PricingList', h(Lazy, { component: R.PricingList })) },
+              { path: 'pricing',                 element: ebc('SettingsPricingList', h(Lazy, { component: R.SettingsPricingList })) },
+              { path: 'pricing/:clientId',       element: ebc('SettingsPricingDetail', h(Lazy, { component: R.SettingsPricingDetail })) },
               { path: 'clients',                 element: ebc('ClientList', h(Lazy, { component: R.ClientList })) },
               { path: 'vendors',                 element: ebc('VendorList', h(Lazy, { component: R.VendorList })) },
               { path: 'users',                   element: ebc('UserManagement', h(Lazy, { component: R.UserManagement })) },

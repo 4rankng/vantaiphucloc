@@ -39,3 +39,15 @@ class LocationInUse(CustomerPricingError):
 
 class PricingNotMatched(CustomerPricingError):
     """No pricing rule matches the (client, work_type, lane, qty) tuple."""
+
+
+class InvalidAliasTransition(CustomerPricingError):
+    """Invalid FSM transition on a LocationAlias."""
+
+    def __init__(self, alias_id: object, current: str, attempted: str) -> None:
+        super().__init__(
+            f"LocationAlias {alias_id}: cannot transition {current} → {attempted}"
+        )
+        self.alias_id = alias_id
+        self.current = current
+        self.attempted = attempted

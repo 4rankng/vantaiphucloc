@@ -1,5 +1,5 @@
-import { useNavigate, useLocation, Outlet } from 'react-router-dom'
-import { Settings, Wallet, Tag, Users, UserCog, Truck, ArrowLeft, Car } from 'lucide-react'
+import { useLocation, useNavigate, Outlet } from 'react-router-dom'
+import { Settings, Wallet, Tag, Users, UserCog, Truck, Car } from 'lucide-react'
 
 type SettingSection = {
   key: string
@@ -10,13 +10,28 @@ type SettingSection = {
   color: string
 }
 
-const SECTIONS: SettingSection[] = [
-  { key: 'salary', label: 'Kỳ lương', desc: 'Cấu hình kỳ tính lương tài xế', icon: Wallet, path: '/accountant/settings/salary', color: 'var(--theme-status-success)' },
-  { key: 'pricing', label: 'Bảng giá', desc: 'Giá vận chuyển theo tuyến & khách hàng', icon: Tag, path: '/accountant/settings/pricing', color: 'var(--theme-brand-primary)' },
-  { key: 'clients', label: 'Khách hàng', desc: 'Quản lý thông tin khách hàng', icon: Users, path: '/accountant/settings/clients', color: 'var(--theme-status-info)' },
-  { key: 'vendors', label: 'Nhà thầu', desc: 'Quản lý đơn vị vận chuyển', icon: Truck, path: '/accountant/settings/vendors', color: 'var(--theme-status-warning)' },
-  { key: 'drivers', label: 'Tài xế', desc: 'Danh sách tài xế và xe đầu kéo', icon: Car, path: '/accountant/settings/drivers', color: 'var(--theme-status-info)' },
-  { key: 'users', label: 'Người dùng', desc: 'Tạo & quản lý tài khoản', icon: UserCog, path: '/accountant/settings/users', color: 'var(--theme-text-secondary)' },
+const SECTION_GROUPS = [
+  {
+    title: 'Tài chính',
+    items: [
+      { key: 'salary', label: 'Kỳ lương', desc: 'Cấu hình kỳ tính lương tài xế', icon: Wallet, path: '/accountant/settings/salary', color: 'var(--theme-status-success)' },
+      { key: 'pricing', label: 'Bảng giá', desc: 'Giá vận chuyển theo tuyến & khách hàng', icon: Tag, path: '/accountant/settings/pricing', color: 'var(--theme-brand-primary)' },
+    ],
+  },
+  {
+    title: 'Đối tác',
+    items: [
+      { key: 'clients', label: 'Khách hàng', desc: 'Quản lý thông tin khách hàng', icon: Users, path: '/accountant/settings/clients', color: 'var(--theme-status-info)' },
+      { key: 'vendors', label: 'Nhà thầu', desc: 'Quản lý đơn vị vận chuyển', icon: Truck, path: '/accountant/settings/vendors', color: 'var(--theme-status-warning)' },
+      { key: 'drivers', label: 'Tài xế', desc: 'Danh sách tài xế và xe đầu kéo', icon: Car, path: '/accountant/settings/drivers', color: 'var(--theme-status-info)' },
+    ],
+  },
+  {
+    title: 'Hệ thống',
+    items: [
+      { key: 'users', label: 'Người dùng', desc: 'Tạo & quản lý tài khoản', icon: UserCog, path: '/accountant/settings/users', color: 'var(--theme-text-secondary)' },
+    ],
+  },
 ]
 
 function SettingCard({ section }: { section: SettingSection }) {
@@ -41,49 +56,16 @@ function SettingCard({ section }: { section: SettingSection }) {
   )
 }
 
-function SectionHeader({ section }: { section: SettingSection | undefined }) {
-  const navigate = useNavigate()
-  if (!section) return null
-  const Icon = section.icon
-  return (
-    <div className="flex items-center gap-3">
-      <button
-        onClick={() => navigate('/accountant/settings')}
-        className="h-8 w-8 rounded-lg flex items-center justify-center transition hover:opacity-70"
-        style={{ background: 'var(--theme-bg-tertiary)' }}
-      >
-        <ArrowLeft className="h-4 w-4" style={{ color: 'var(--theme-text-muted)' }} />
-      </button>
-      <div
-        className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0"
-        style={{ background: `color-mix(in srgb, ${section.color} 12%, transparent)` }}
-      >
-        <Icon className="h-4 w-4" style={{ color: section.color }} />
-      </div>
-      <div>
-        <h1 className="typo-h1">{section.label}</h1>
-        <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{section.desc}</p>
-      </div>
-    </div>
-  )
-}
-
 export function AccountantSettings() {
   const location = useLocation()
   const isHome = location.pathname === '/accountant/settings'
-  const activeSection = SECTIONS.find(s => location.pathname.startsWith(s.path))
 
-  if (!isHome && activeSection) {
-    return (
-      <div className="space-y-5">
-        <SectionHeader section={activeSection} />
-        <Outlet />
-      </div>
-    )
+  if (!isHome) {
+    return <Outlet />
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="flex items-center gap-3">
         <div
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
@@ -93,15 +75,20 @@ export function AccountantSettings() {
         </div>
         <div>
           <h1 className="typo-display">Cài đặt</h1>
-          <p className="typo-body-sm mt-0.5">Cấu hình hệ thống và dữ liệu nền</p>
+          <p className="typo-body-sm mt-0.5">Quản lý kỳ lương, bảng giá, đối tác và tài khoản</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {SECTIONS.map(section => (
-          <SettingCard key={section.key} section={section} />
-        ))}
-      </div>
+      {SECTION_GROUPS.map(group => (
+        <section key={group.title}>
+          <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--theme-text-muted)' }}>{group.title}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {group.items.map(section => (
+              <SettingCard key={section.key} section={section} />
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   )
 }

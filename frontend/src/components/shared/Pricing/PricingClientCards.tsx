@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePricings, useClients, useCreatePricing, useCreateClient, type PricingCreatePayload } from '@/hooks/use-queries'
-import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import type { Pricing } from '@/data/domain'
 import { CreateClientDialog } from '@/components/shared/CreateClientDialog'
@@ -53,11 +52,11 @@ export function PricingClientCards({ basePath }: Props) {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <PageHeader
-          title="Bảng giá"
-          onAdd={() => setShowForm(true)}
-          addLabel="Thêm bảng giá"
-        />
+        <div className="flex justify-end">
+          <button onClick={() => setShowForm(true)} className="btn-primary" disabled>
+            <Plus size={16} /> <span className="hidden sm:inline">Thêm bảng giá</span>
+          </button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4].map(i => (
             <div key={i} className="h-20 rounded-lg animate-pulse skeleton-shimmer" />
@@ -69,11 +68,11 @@ export function PricingClientCards({ basePath }: Props) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Bảng giá"
-        onAdd={() => setShowForm(true)}
-        addLabel="Thêm bảng giá"
-      />
+      <div className="flex justify-end">
+        <button onClick={() => setShowForm(true)} className="btn-primary">
+          <Plus size={16} strokeWidth={2.25} /> <span className="hidden sm:inline">Thêm bảng giá</span>
+        </button>
+      </div>
 
       {showForm && (
         <PricingForm

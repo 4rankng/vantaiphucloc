@@ -125,6 +125,7 @@ export function AccountantSidebar({
             <NavLink
               key={item.href}
               to={item.href}
+              aria-current={active ? 'page' : undefined}
               className={`group relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-colors duration-120 ${
                 collapsed ? 'justify-center' : ''
               }`}

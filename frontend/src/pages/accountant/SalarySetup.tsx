@@ -8,7 +8,8 @@ import {
 import { useToast } from '@/components/atoms/Toast'
 import { formatCurrencyFull, type SalaryPeriodStatus } from '@/data/domain'
 import { formatDate, formatDateRange } from '@/lib/format'
-import { Calculator, Download, CheckCircle2, Wallet, AlertCircle } from 'lucide-react'
+import { Calculator, Download, CheckCircle2, Wallet, AlertCircle, Wallet as WalletIcon } from 'lucide-react'
+import { SettingsPageLayout } from '@/components/shared/SettingsPageLayout'
 
 // ─── Status badge config ──────────────────────────────────────────────────────
 
@@ -77,6 +78,7 @@ function PeriodConfigCard() {
             placeholder="26"
             className="h-9 text-sm font-mono text-center"
           />
+          <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Ngày 1–31</p>
         </div>
         <div className="space-y-1.5">
           <label className="typo-form-label" htmlFor="salary-to-day">Đến ngày</label>
@@ -90,6 +92,7 @@ function PeriodConfigCard() {
             placeholder="25"
             className="h-9 text-sm font-mono text-center"
           />
+          <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Ngày 1–31</p>
         </div>
       </div>
 
@@ -196,9 +199,10 @@ function CalculateCard() {
           onClick={handleExport}
           disabled={exportSalary.isPending}
           aria-label="Xuất Excel"
-          className="btn-secondary h-9 w-9 p-0 inline-flex items-center justify-center"
+          className="btn-secondary h-9 px-3 text-sm inline-flex items-center gap-1.5"
         >
-          <Download className="w-4 h-4" />
+          <Download className="w-3.5 h-3.5" />
+          <span>Tải Excel</span>
         </Button>
       </div>
     </div>
@@ -214,13 +218,16 @@ function SalaryPeriodsList() {
   const [confirmPay, setConfirmPay] = useState<number | null>(null)
 
   const byDriver = useMemo(() => {
-    const map = new Map<string, typeof periods>()
+    const map = new Map<number, { driverId: number; driverName: string; driverPlate: string | null; periods: typeof periods }>()
     periods.forEach(p => {
-      const list = map.get(p.driver.name) ?? []
-      list.push(p)
-      map.set(p.driver.name, list)
+      const existing = map.get(p.driver.id)
+      if (existing) {
+        existing.periods.push(p)
+      } else {
+        map.set(p.driver.id, { driverId: p.driver.id, driverName: p.driver.name, driverPlate: p.driver.tractorPlate ?? null, periods: [p] })
+      }
     })
-    return Array.from(map.entries())
+    return Array.from(map.values())
   }, [periods])
 
   const handleMarkPaid = (id: number) => {
@@ -257,10 +264,15 @@ function SalaryPeriodsList() {
 
   return (
     <div className="space-y-6">
-      {byDriver.map(([driverName, driverPeriods]) => (
-        <section key={driverName}>
+      {byDriver.map(({ driverId, driverName, driverPlate, periods: driverPeriods }) => (
+        <section key={driverId}>
           <div className="flex items-baseline justify-between mb-2">
-            <h3 className="typo-h3">{driverName}</h3>
+            <div>
+              <h3 className="typo-h3">{driverName}</h3>
+              {driverPlate && (
+                <p className="text-xs font-mono mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{driverPlate}</p>
+              )}
+            </div>
             <span className="typo-caption">{driverPeriods.length} kỳ</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -275,7 +287,9 @@ function SalaryPeriodsList() {
                     <p className="text-xs font-mono tabular-nums" style={{ color: 'var(--theme-text-muted)' }}>
                       {formatDateRange(period.startDate, period.endDate, 'short')}
                     </p>
-                    <span className={cfg.chip}>{cfg.label}</span>
+                    {!(period.totalSalary === 0 && period.status === 'CALCULATED') && (
+                      <span className={cfg.chip}>{cfg.label}</span>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-3 gap-3">
@@ -352,7 +366,7 @@ function SalaryPeriodsList() {
 
 export function SalarySetup() {
   return (
-    <div className="page-container space-y-5">
+    <SettingsPageLayout title="Kỳ lương" subtitle="Cấu hình kỳ tính lương tài xế" icon={WalletIcon}>
       {/* Top: config + calculate, equal-height side-by-side on desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
         <PeriodConfigCard />
@@ -364,6 +378,6 @@ export function SalarySetup() {
         <h2 className="typo-h2">Lịch sử kỳ lương</h2>
         <SalaryPeriodsList />
       </section>
-    </div>
+    </SettingsPageLayout>
   )
 }
