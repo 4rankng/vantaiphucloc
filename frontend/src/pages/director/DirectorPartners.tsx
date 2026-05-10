@@ -100,6 +100,10 @@ export function DirectorPartners() {
         setDeleteConfirm(null)
         setSelected(null)
       },
+      onError: (err: unknown) => {
+        const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+        toast.error('Không thể xoá', detail ?? `${deleteConfirm.name} có dữ liệu liên quan, không thể xoá.`)
+      },
     })
   }, [deleteConfirm, deleteClient, deleteVendor, toast])
 
