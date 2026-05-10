@@ -9,6 +9,7 @@ import { InfoRow } from '@/components/shared/InfoRow'
 import { PartnersTable, type PartnerRow } from '@/components/shared/PartnersTable'
 import { CreateClientDialog } from '@/components/shared/CreateClientDialog'
 import { CreateVendorDialog } from '@/components/shared/CreateVendorDialog'
+import { fuzzyMatch } from '@/lib/search-utils'
 import {
   useClients, useCreateClient, useDeleteClient,
   useVendors, useCreateVendor, useDeleteVendor,
@@ -72,13 +73,13 @@ export function DirectorPartners() {
     if (filter === 'client') list = list.filter(p => p.partnerType === 'client')
     if (filter === 'vendor') list = list.filter(p => p.partnerType === 'vendor')
     if (search.trim()) {
-      const q = search.toLowerCase()
+      const q = search
       list = list.filter(p =>
-        p.name.toLowerCase().includes(q) ||
-        p.phone.toLowerCase().includes(q) ||
-        p.taxCode.toLowerCase().includes(q) ||
-        p.address.toLowerCase().includes(q) ||
-        p.contactPerson.toLowerCase().includes(q)
+        fuzzyMatch(p.name, q) ||
+        fuzzyMatch(p.phone, q) ||
+        fuzzyMatch(p.taxCode, q) ||
+        fuzzyMatch(p.address, q) ||
+        fuzzyMatch(p.contactPerson, q)
       )
     }
     return list

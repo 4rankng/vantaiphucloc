@@ -1,5 +1,6 @@
 import { RouteDisplay } from '@/components/shared/RouteDisplay'
 import { ContBadge } from '@/components/shared/ContBadge'
+import { formatDate } from '@/lib/format'
 import { CheckCircle2, Lock } from 'lucide-react'
 import type { TripOrder } from '@/data/domain'
 
@@ -67,7 +68,7 @@ export function TripOrderCard({ trip, onClick }: TripOrderCardProps) {
       {/* Footer */}
       <div className="flex items-center justify-between mt-1.5">
         <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-          {new Date(trip.tripDate || trip.createdAt).toLocaleDateString('vi-VN')}
+          {formatDate(trip.tripDate || trip.createdAt, 'short')}
         </p>
         {isLocked && (
           <div className="flex items-center gap-1">

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useUpdateWorkOrder, useUpdateTripOrder, useSuggestMatches } from '@/hooks/use-queries'
 import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
 import { EditDialog } from '@/components/shared/EditDialog'
+import { formatDate } from '@/lib/format'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { resolveRoute } from '@/lib/route-utils'
@@ -103,7 +104,7 @@ function DonHangCard({
   onNavigate?: () => void
 }) {
   const tripDate = trip.tripDate
-    ? new Date(trip.tripDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
+    ? formatDate(trip.tripDate, 'short')
     : null
   const types = trip.containers.length > 0
     ? (() => {

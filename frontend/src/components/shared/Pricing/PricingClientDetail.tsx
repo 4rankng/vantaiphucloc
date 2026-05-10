@@ -18,6 +18,8 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { InlineCell } from '@/components/shared/InlineCell'
 import { CreateClientDialog } from '@/components/shared/CreateClientDialog'
+import { fuzzyMatch } from '@/lib/search-utils'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { PricingForm } from './PricingForm'
 import { Plus, Pencil, Trash2, ChevronLeft, MapPin } from 'lucide-react'
 
@@ -42,6 +44,7 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
   const [draftLines, setDraftLines] = useState<DraftLine[]>([])
   const [createClientOpen, setCreateClientOpen] = useState(false)
   const [routeSearch, setRouteSearch] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; desc: string } | null>(null)
 
   const clientName = clients.find(c => c.id === clientId)?.name ?? pricings[0]?.client.name ?? ''
 
@@ -58,8 +61,8 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
 
   const filteredGroups = useMemo(() => {
     if (!routeSearch.trim()) return grouped
-    const q = routeSearch.toLowerCase()
-    return grouped.filter(([route]) => route.toLowerCase().includes(q))
+    const q = routeSearch
+    return grouped.filter(([route]) => fuzzyMatch(route, q))
   }, [grouped, routeSearch])
 
   const startEdit = useCallback((pricing: Pricing) => {
@@ -133,6 +136,18 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
         }
         onAdd={() => setShowForm(true)}
         addLabel="Thêm mức giá"
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (deleteTarget) deletePricing.mutate(deleteTarget.id)
+          setDeleteTarget(null)
+        }}
+        title="Xoá mức giá?"
+        description={deleteTarget ? `Sẽ xoá: ${deleteTarget.desc}. Hành động này không thể hoàn tác.` : ''}
+        confirmLabel="Xoá"
       />
 
       {showForm && (
@@ -306,7 +321,7 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
                                           <Pencil size={16} />
                                         </button>
                                         <button
-                                          onClick={() => deletePricing.mutate(pricing.id)}
+                                          onClick={() => setDeleteTarget({ id: pricing.id, desc: `${pricing.workType} · SL=${pricing.lines[0]?.quantity ?? 1} · ${formatCurrencyFull(pricing.lines[0]?.unitPrice ?? 0)}` })}
                                           className="p-1 rounded-md hover:bg-[var(--theme-bg-tertiary)]"
                                           style={{ color: 'var(--theme-status-error)' }}
                                           title="Xoá"

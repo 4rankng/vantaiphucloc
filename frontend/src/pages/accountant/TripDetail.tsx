@@ -4,6 +4,7 @@ import { useTripOrders, useWorkOrders, useUpdateTripOrder, useReconcile, useTogg
 import { ContBadge } from '@/components/shared/ContBadge'
 import { ConfirmationCheckbox } from '@/components/shared/ConfirmationCheckbox'
 import { formatCurrencyFull, WORK_TYPES, type WorkType } from '@/data/domain'
+import { RouteDisplay } from '@/components/shared/RouteDisplay'
 import { Building2, Route, UserCircle, Wallet, Link2, Pencil, Lock, Unlink, Trash2, ChevronLeft } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
@@ -201,7 +202,7 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
             <div className="rounded-lg p-3 flex items-start gap-2 mb-4" style={{ background: 'var(--theme-status-success-light)' }}>
               <Lock size={14} style={{ color: 'var(--theme-status-success)' }} className="mt-0.5 shrink-0" />
               <p className="typo-meta" style={{ color: 'var(--theme-status-success-text)' }}>
-                Lệnh đã chốt với khách — không thể thay đổi
+                Đơn hàng đã chốt với khách — không thể thay đổi
               </p>
             </div>
           )}
@@ -213,7 +214,13 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
             </div>
             <div className="flex items-start justify-between">
               <dt className="typo-form-label flex items-center gap-2"><Route size={14} />Cung đường</dt>
-              <dd className="typo-body text-right">{trip.route}</dd>
+              <dd className="typo-body text-right">
+                <RouteDisplay
+                  route={trip.route}
+                  pickupLocation={trip.pickupLocation?.name}
+                  dropoffLocation={trip.dropoffLocation?.name}
+                />
+              </dd>
             </div>
             <div className="flex items-start justify-between">
               <dt className="typo-form-label flex items-center gap-2"><Wallet size={14} />Lương + Phụ cấp</dt>
@@ -339,7 +346,7 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
                     {job.driver.name} · {job.tractorPlate}
                   </p>
                   <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                    {job.client.name} · {job.route}
+                    {job.client.name} · {job.pickupLocation?.name ?? ''} → {job.dropoffLocation?.name ?? ''}
                   </p>
                 </button>
               ))}
