@@ -15,8 +15,7 @@ from .domain import (  # noqa: F401
     TripOrderContainer,
     TripContainerPhoto,
     Reconciliation,
-    SalaryPeriod,
-    SalaryPeriodConfig,
+    Setting,
     CustomerImportTemplate,
 )
 from .audit_log import AuditLog  # noqa: F401
@@ -35,8 +34,7 @@ __all__ = [
     "TripOrderContainer",
     "TripContainerPhoto",
     "Reconciliation",
-    "SalaryPeriod",
-    "SalaryPeriodConfig",
+    "Setting",
     "CustomerImportTemplate",
     "AuditLog",
 ]

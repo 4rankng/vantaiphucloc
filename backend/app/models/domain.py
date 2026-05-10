@@ -185,7 +185,7 @@ class WorkOrder(AuditableMixin, Base):
     driver_salary = Column(Integer, nullable=False, default=0)    # VND
     allowance = Column(Integer, nullable=False, default=0)        # VND
     pricing_id = Column(Integer, ForeignKey("pricings.id"), nullable=True)
-    status = Column(String(20), nullable=False, default="PENDING")  # PENDING | MATCHED | COMPLETED | CANCELLED
+    status = Column(String(20), nullable=False, default="PENDING")  # PENDING | MATCHED
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
@@ -234,7 +234,7 @@ class TripOrder(AuditableMixin, Base):
     unit_price = Column(Integer, nullable=False, default=0)       # VND
     driver_salary = Column(Integer, nullable=False, default=0)    # VND
     allowance = Column(Integer, nullable=False, default=0)        # VND
-    status = Column(String(20), nullable=False, default="DRAFT")  # DRAFT | PENDING | CONFIRMED | COMPLETED | CANCELLED
+    status = Column(String(20), nullable=False, default="PENDING")  # PENDING | MATCHED
     pickup_raw = Column(String(500), nullable=True)
     dropoff_raw = Column(String(500), nullable=True)
     location_review_needed = Column(Boolean, nullable=False, default=False)
@@ -325,35 +325,14 @@ class Reconciliation(AuditableMixin, Base):
 
 
 # ---------------------------------------------------------------------------
-# SalaryPeriod
+# Settings (key-value store for app-wide configuration)
 # ---------------------------------------------------------------------------
 
-class SalaryPeriod(Base):
-    __tablename__ = "salary_periods"
+class Setting(Base):
+    __tablename__ = "settings"
 
-    id = Column(Integer, primary_key=True, index=True)
-    driver_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    start_date = Column(Date, nullable=False)
-    end_date = Column(Date, nullable=False)
-    work_order_count = Column(Integer, nullable=False, default=0)
-    price_per_order = Column(Integer, nullable=False, default=0)  # VND
-    total_salary = Column(Integer, nullable=False, default=0)     # VND
-    total_allowance = Column(Integer, nullable=False, default=0)  # VND
-    total_deduction = Column(Integer, nullable=False, default=0)  # VND
-    net_pay = Column(Integer, nullable=False, default=0)          # VND
-    status = Column(String(20), nullable=False, default="OPEN")   # OPEN | CALCULATED | PAID
-    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
-    updated_at = Column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
-    )
-
-
-class SalaryPeriodConfig(Base):
-    __tablename__ = "salary_period_configs"
-
-    id = Column(Integer, primary_key=True, index=True)
-    from_day = Column(Integer, nullable=False)   # 1–28
-    to_day = Column(Integer, nullable=False)     # 1–28
+    key = Column(String(100), primary_key=True)
+    value = Column(String(500), nullable=False)
     updated_at = Column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
     )
