@@ -150,21 +150,21 @@ export function WorkOrderMasterList({
                 {wo.client.name} · {wo.route || '—'}
               </p>
 
-              {/* Line 3: driver + plate + containers */}
-              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                <span className="flex items-center gap-0.5 text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
+              {/* Line 3: driver + plate + containers — single row, overflow hidden */}
+              <div className="flex items-center gap-1.5 mt-0.5 min-w-0 overflow-hidden whitespace-nowrap">
+                <span className="flex items-center gap-0.5 text-[11px] shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
                   <Truck className="w-2.5 h-2.5" />
-                  {wo.driver.name || '—'}
+                  <span className="truncate max-w-[80px]">{wo.driver.name || '—'}</span>
                 </span>
                 {wo.tractorPlate && (
-                  <span className="text-[10px] font-mono" style={{ color: 'var(--theme-text-muted)' }}>
+                  <span className="text-[10px] font-mono shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
                     {wo.tractorPlate}
                   </span>
                 )}
                 {wo.containers.slice(0, 2).map((c, i) => (
-                  <span key={i} className="flex items-center gap-0.5">
+                  <span key={i} className="flex items-center gap-0.5 shrink-0 min-w-0">
                     <ContBadge type={c.workType} />
-                    <span className="text-[10px] font-mono" style={{ color: 'var(--theme-text-secondary)' }}>
+                    <span className="text-[10px] font-mono truncate max-w-[80px]" style={{ color: 'var(--theme-text-secondary)' }}>
                       {c.containerNumber}
                     </span>
                   </span>
