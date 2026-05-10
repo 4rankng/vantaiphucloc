@@ -22,11 +22,12 @@ from app.contexts.billing.domain.value_objects import (
     TripLine,
 )
 from app.models.domain import (
-    Client,
     Location,
+    Partner,
+    Reconciliation,
     TripOrder,
     TripOrderContainer,
-    TripOrderWorkOrder,
+    Vehicle,
     WorkOrder,
 )
 
@@ -35,13 +36,6 @@ def _split_unit_price_per_container(
     trip_unit_price: int,
     containers: list[TripOrderContainer],
 ) -> dict[int, int]:
-    """Allocate a trip's `unit_price` across its containers.
-
-    Strategy (preserve trip-level total):
-    - 1 container → full price.
-    - N same-type → equal split, last absorbs the rounding remainder.
-    - N mixed-type → equal split (no per-line pricing on TripOrder).
-    """
     n = len(containers)
     if n == 0:
         return {}
@@ -84,28 +78,28 @@ class SqlSettlementDataLoader(SettlementDataLoader):
         self.session = session
 
     async def load(
-        self, *, client_id: int, period: SettlementPeriod
+        self, *, partner_id: int, period: SettlementPeriod
     ) -> SettlementStatement:
-        client_res = await self.session.execute(
-            select(Client).where(Client.id == client_id)
+        partner_res = await self.session.execute(
+            select(Partner).where(Partner.id == partner_id)
         )
-        client = client_res.scalar_one_or_none()
-        if client is None:
+        partner = partner_res.scalar_one_or_none()
+        if partner is None:
             raise SettlementClientNotFound(
-                f"Khách hàng id={client_id} không tồn tại"
+                f"Khách hàng id={partner_id} không tồn tại"
             )
 
         client_ref = SettlementClientRef(
-            id=client.id,
-            name=client.name,
-            code=client.code,
-            address=client.address,
-            tax_code=client.tax_code,
+            id=partner.id,
+            name=partner.name,
+            code=partner.code,
+            address=partner.address,
+            tax_code=partner.tax_code,
         )
 
         trip_query = (
             select(TripOrder)
-            .where(TripOrder.client_id == client_id)
+            .where(TripOrder.partner_id == partner_id)
             .where(TripOrder.trip_date >= period.start)
             .where(TripOrder.trip_date <= period.end)
             .where(TripOrder.status != "CANCELLED")
@@ -140,27 +134,42 @@ class SqlSettlementDataLoader(SettlementDataLoader):
         for c in cont_res.scalars().all():
             containers_by_trip.setdefault(c.trip_order_id, []).append(c)
 
+        # Active reconciliations for these trips
         join_res = await self.session.execute(
-            select(TripOrderWorkOrder).where(
-                TripOrderWorkOrder.trip_order_id.in_(trip_ids)
+            select(Reconciliation).where(
+                Reconciliation.trip_order_id.in_(trip_ids),
+                Reconciliation.is_active == True,  # noqa: E712
             )
         )
         join_rows = list(join_res.scalars().all())
         wo_ids = list({r.work_order_id for r in join_rows})
+
+        # Get plates via Vehicle table
         plate_by_wo: dict[int, str] = {}
         if wo_ids:
             wo_res = await self.session.execute(
                 select(WorkOrder).where(WorkOrder.id.in_(wo_ids))
             )
-            for wo in wo_res.scalars().all():
-                plate_by_wo[wo.id] = wo.tractor_plate or ""
+            work_orders = {wo.id: wo for wo in wo_res.scalars().all()}
+            vehicle_ids = list({wo.vehicle_id for wo in work_orders.values() if wo.vehicle_id})
+            vehicle_plate_map: dict[int, str] = {}
+            if vehicle_ids:
+                v_res = await self.session.execute(
+                    select(Vehicle).where(Vehicle.id.in_(vehicle_ids))
+                )
+                for v in v_res.scalars().all():
+                    vehicle_plate_map[v.id] = v.plate
+            for wo_id, wo in work_orders.items():
+                plate = vehicle_plate_map.get(wo.vehicle_id, "") if wo.vehicle_id else ""
+                plate_by_wo[wo_id] = plate
+
         plates_by_trip: dict[int, list[str]] = {}
         for r in join_rows:
             plate = plate_by_wo.get(r.work_order_id, "")
             if plate:
                 plates_by_trip.setdefault(r.trip_order_id, []).append(plate)
 
-        client_code = (client.code or "").strip() or client.name
+        client_code = (partner.code or "").strip() or partner.name
 
         trip_lines: list[TripLine] = []
         for trip in trips:
@@ -185,7 +194,6 @@ class SqlSettlementDataLoader(SettlementDataLoader):
                             trip.dropoff_location_id, ""
                         ),
                         unit_price=int(prices.get(c.id, 0)),
-                        is_confirmed=bool(trip.is_confirmed),
                     )
                 )
 
