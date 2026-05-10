@@ -54,6 +54,7 @@ export function createAppRouter() {
             { path: 'notifications',     element: ebc('Notifications', h(Lazy, { component: R.DriverNotifications })) },
             { path: 'job/:jobId',        element: ebc('JobDetail', h(Lazy, { component: R.JobDetail })) },
             { path: 'profile',           element: ebc('Profile', h(Lazy, { component: R.Profile })) },
+            { path: '*',                 element: ebc('NotFound', h(Lazy, { component: R.NotFound })) },
           ],
         },
         // ─── Accountant ────────────────────────────────────────
@@ -86,6 +87,7 @@ export function createAppRouter() {
             { path: 'match-trip/:tripId',    element: ebc('MatchTrip', h(Lazy, { component: R.MatchTrip })) },
             { path: 'notifications',         element: ebc('Notifications', h(Lazy, { component: R.AccountantNotifications })) },
             { path: 'profile',               element: ebc('Profile', h(Lazy, { component: R.Profile })) },
+            { path: '*',                     element: ebc('NotFound', h(Lazy, { component: R.NotFound })) },
 
           ],
         },
@@ -107,6 +109,7 @@ export function createAppRouter() {
             { path: 'driver-jobs/:driverId',     element: ebc('DriverJobs', h(Lazy, { component: R.DriverJobs })) },
             { path: 'client-jobs/:clientId',     element: ebc('ClientJobs', h(Lazy, { component: R.ClientJobs })) },
             { path: 'profile',                   element: ebc('Profile', h(Lazy, { component: R.Profile })) },
+            { path: '*',                         element: ebc('NotFound', h(Lazy, { component: R.NotFound })) },
           ],
         },
         // ─── SuperAdmin ────────────────────────────────────────
@@ -116,6 +119,7 @@ export function createAppRouter() {
           children: [
             { index: true, element: ebc('SuperAdminDashboard', h(Lazy, { component: R.SuperAdminApp })) },
             { path: 'profile', element: ebc('Profile', h(Lazy, { component: R.Profile })) },
+            { path: '*',       element: ebc('NotFound', h(Lazy, { component: R.NotFound })) },
           ],
         },
       ],

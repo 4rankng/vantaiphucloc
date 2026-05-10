@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react'
-import { Plus, Pencil, Trash2, Building2, UserCircle, MoreVertical } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+import { Plus, Pencil, Trash2, Building2, UserCircle, MoreVertical, Search } from 'lucide-react'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
@@ -8,9 +8,11 @@ import { Label } from '@/components/ui'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { BrandIcon } from '@/components/atoms/BrandIcon'
+import { DataTablePro, type Column } from '@/components/shared/DataTablePro/DataTablePro'
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
+import { fuzzyMatch } from '@/lib/search-utils'
 import type { Client, ClientType } from '@/data/domain'
 
 const VN_PHONE_RE = /^(0|\+?84)[35789]\d{8}$/
@@ -24,6 +26,8 @@ export function ClientList() {
   const { data: clients = [], isLoading: loading } = useClients()
   const isMobile = useIsMobile(768)
   const toast = useToast()
+
+  const [search, setSearch] = useState('')
 
   // Detail dialog
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
@@ -41,6 +45,11 @@ export function ClientList() {
   const createClient = useCreateClient()
   const updateClient = useUpdateClient()
   const deleteClient = useDeleteClient()
+
+  const filtered = useMemo(
+    () => clients.filter(c => !search || fuzzyMatch(search, `${c.name} ${c.phone} ${c.taxCode ?? ''} ${c.address ?? ''}`)),
+    [clients, search],
+  )
 
   const handleOpenCreate = useCallback(() => {
     setEditing(null)
@@ -114,6 +123,14 @@ export function ClientList() {
     setForm(prev => ({ ...prev, [field]: value }))
   }, [])
 
+  const columns: Column<Client>[] = useMemo(() => [
+    { key: 'name', header: 'Tên', accessor: c => <span className="font-medium">{c.name}</span>, sortable: true, sortKey: c => c.name },
+    { key: 'phone', header: 'SĐT', accessor: c => c.phone || <span style={{ color: 'var(--theme-text-muted)' }}>—</span>, sortable: true },
+    { key: 'taxCode', header: 'MST', accessor: c => c.taxCode || <span style={{ color: 'var(--theme-text-muted)' }}>—</span>, sortable: true },
+    { key: 'type', header: 'Loại', accessor: c => c.type === 'company' ? 'Công ty' : 'Cá nhân' },
+    { key: 'address', header: 'Địa chỉ', accessor: c => c.address ? <span className="truncate block max-w-[200px]">{c.address}</span> : <span style={{ color: 'var(--theme-text-muted)' }}>—</span> },
+  ], [])
+
   if (loading) {
     return (
       <div className="space-y-2">
@@ -126,15 +143,26 @@ export function ClientList() {
 
   return (
     <div>
-      {/* Add button */}
-      <div className="flex justify-end mb-4">
+      {/* Search + Add button */}
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
+          <input
+            type="text"
+            placeholder="Tìm tên, SĐT, MST..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full h-9 pl-9 pr-3 rounded-lg text-sm border"
+            style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
+          />
+        </div>
         <button onClick={handleOpenCreate} className="btn-primary">
           <Plus size={16} strokeWidth={2.25} />
           {!isMobile && <span>Thêm</span>}
         </button>
       </div>
 
-      {/* Client list — clean cards, tap to see detail */}
+      {/* Desktop: Table / Mobile: Cards */}
       {clients.length === 0 ? (
         <div className="card">
           <EmptyState
@@ -145,9 +173,9 @@ export function ClientList() {
             illustration
           />
         </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
-          {clients.map(client => (
+      ) : isMobile ? (
+        <div className="grid grid-cols-1 gap-3">
+          {filtered.map(client => (
             <button
               key={client.id}
               onClick={() => setSelectedClient(client)}
@@ -164,6 +192,16 @@ export function ClientList() {
             </button>
           ))}
         </div>
+      ) : (
+        <DataTablePro
+          data={filtered}
+          columns={columns}
+          rowKey={c => c.id}
+          loading={loading}
+          defaultSortKey="name"
+          onRowClick={c => setSelectedClient(c)}
+          emptyState={<p className="text-sm py-6 text-center" style={{ color: 'var(--theme-text-muted)' }}>{search ? 'Không tìm thấy khách hàng' : 'Chưa có khách hàng'}</p>}
+        />
       )}
 
       {/* Client Detail Dialog */}
@@ -238,11 +276,13 @@ export function ClientList() {
             <div className="space-y-2">
               <Label className="typo-form-label">Số điện thoại</Label>
               <Input value={form.phone} onChange={e => { updateField('phone', e.target.value); setFormErrors(p => ({ ...p, phone: undefined })) }} placeholder="0912345678" className="text-sm" />
+              {!formErrors.phone && <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>10 chữ số, bắt đầu bằng 0</p>}
               {formErrors.phone && <p className="text-xs" style={{ color: 'var(--theme-status-error)' }}>{formErrors.phone}</p>}
             </div>
             <div className="space-y-2">
               <Label className="typo-form-label">Mã số thuế (MST)</Label>
               <Input value={form.taxCode} onChange={e => { updateField('taxCode', e.target.value); setFormErrors(p => ({ ...p, taxCode: undefined })) }} placeholder="0123456789" className="text-sm" />
+              {!formErrors.taxCode && <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>10 hoặc 13 chữ số (không dấu cách)</p>}
               {formErrors.taxCode && <p className="text-xs" style={{ color: 'var(--theme-status-error)' }}>{formErrors.taxCode}</p>}
             </div>
             <div className="space-y-2">

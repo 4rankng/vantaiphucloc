@@ -123,7 +123,7 @@ function TripRow({ trip, onClick, isLast }: { trip: TripOrder; onClick: () => vo
 
   if (isConfirmed) {
     statusVariant = 'success'
-    statusLabel = 'Đã xác nhận'
+    statusLabel = 'Đã khớp'
   } else if (isDraft) {
     statusVariant = 'draft'
     statusLabel = 'Nháp'
@@ -132,10 +132,13 @@ function TripRow({ trip, onClick, isLast }: { trip: TripOrder; onClick: () => vo
     statusLabel = 'Hoàn thành'
   } else if (isPending) {
     statusVariant = 'pending'
-    statusLabel = 'Chờ xử lý'
+    statusLabel = 'Chờ đối soát'
+  } else if (trip.status === 'CANCELLED') {
+    statusVariant = 'neutral'
+    statusLabel = 'Đã huỷ'
   } else {
     statusVariant = 'matched'
-    statusLabel = 'Đã ghép'
+    statusLabel = 'Đã khớp'
   }
 
   return (
@@ -254,7 +257,7 @@ function DesktopDashboard() {
       onClick: () => navigate('/accountant/salary-setup'),
     },
     {
-      label: 'Doanh thu tháng',
+      label: 'Doanh thu (đơn hàng tháng)',
       value: fmt(revenue),
       icon: <DollarSign className="h-5 w-5" />,
       onClick: () => navigate('/accountant/trips'),

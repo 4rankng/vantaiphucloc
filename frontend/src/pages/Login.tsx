@@ -163,7 +163,7 @@ export function Login() {
           </div>
 
           {error && (
-            <div className="login-error animate-fade-slide-up">
+            <div className="login-error">
               <AlertCircle className="h-4 w-4 shrink-0" />
               <span>{error}</span>
             </div>

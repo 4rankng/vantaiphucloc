@@ -57,7 +57,7 @@ const EMPTY_FORM: UserForm = { username: '', fullName: '', phone: '', cccd: '', 
 function UserManagementInner() {
   const toast = useToast()
   const { data: allUsers = [], isLoading: loading } = useUsers()
-  const users = useMemo(() => allUsers.filter(u => u.isActive), [allUsers])
+  const users = useMemo(() => allUsers.filter(u => u.isActive !== false), [allUsers])
   const createUser = useCreateUser()
   const updateUser = useUpdateUser()
   const deleteUser = useDeleteUser()
@@ -107,7 +107,7 @@ function UserManagementInner() {
         cccd: createForm.cccd.trim() || undefined,
         role: createForm.role,
         password: createForm.password,
-        vendor: createForm.role === 'driver' ? (vendorObj?.name ?? 'Phúc Lộc') : undefined,
+        vendor: createForm.role === 'driver' ? (vendorObj?.name ?? 'Vận Tải Phúc Lộc') : undefined,
         tractorPlate: createForm.role === 'driver' ? createForm.tractorPlate.trim() : undefined,
       })
       if (res.success) {

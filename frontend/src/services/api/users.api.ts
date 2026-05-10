@@ -17,7 +17,7 @@ export interface UserAccount {
   createdAt: string
 }
 
-const DEFAULT_VENDOR = 'Phúc Lộc'
+const DEFAULT_VENDOR = 'Vận Tải Phúc Lộc'
 
 export function toUserAccount(raw: Record<string, unknown>): UserAccount {
   const camel = toCamel<Record<string, unknown>>(raw)
