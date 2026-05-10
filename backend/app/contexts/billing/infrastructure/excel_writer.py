@@ -128,7 +128,7 @@ def _write_sl_sheet(wb: openpyxl.Workbook, data: SettlementStatement, sheet_name
         tt = ws.cell(row=row, column=14, value=f"=L{row}*M{row}")
         _money_fmt(tt)
         ws.cell(row=row, column=15, value="")
-        ws.cell(row=row, column=16, value="oke" if line.is_confirmed else "").alignment = _CENTER
+        ws.cell(row=row, column=16, value="").alignment = _CENTER
         row += 1
 
     last_data_row = row - 1 if data.trip_lines else first_data_row - 1
