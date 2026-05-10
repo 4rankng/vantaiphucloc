@@ -19,14 +19,15 @@ function pad(n: number): string {
   return String(n).padStart(2, '0')
 }
 
-export type DateFormat = 'full' | 'short' | 'month'
+export type DateFormat = 'full' | 'short' | 'compact' | 'month'
 
 /**
  * Format a date string for display.
  *
- * - `'full'`  → `DD/MM/YYYY`  e.g. "15/03/2026"
- * - `'short'` → `DD/MM`       e.g. "15/03"
- * - `'month'` → `MM/YYYY`     e.g. "03/2026"
+ * - `'full'`    → `DD/MM/YYYY`  e.g. "15/03/2026"
+ * - `'short'`   → `DD/MM`       e.g. "15/03"
+ * - `'compact'` → `DD/MM` if current year, `DD/MM/YYYY` otherwise
+ * - `'month'`   → `MM/YYYY`     e.g. "03/2026"
  *
  * Returns `'—'` for null/undefined/invalid input.
  */
@@ -46,6 +47,8 @@ export function formatDate(
       return `${dd}/${mm}/${yyyy}`
     case 'short':
       return `${dd}/${mm}`
+    case 'compact':
+      return yyyy === new Date().getFullYear() ? `${dd}/${mm}` : `${dd}/${mm}/${yyyy}`
     case 'month':
       return `${mm}/${yyyy}`
   }

@@ -484,7 +484,7 @@ function buildColumns(): Column<TripOrder>[] {
       accessor: (row) => (
         <p className="flex items-center gap-1 text-xs whitespace-nowrap" style={{ color: 'var(--theme-text-secondary)' }}>
           <Calendar className="h-3 w-3 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
-          {formatDate(row.tripDate, 'short')}
+          {formatDate(row.tripDate, 'compact')}
         </p>
       ),
       sortable: true,

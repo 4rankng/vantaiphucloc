@@ -21,16 +21,18 @@ export function normalizeVietnamese(str: string): string {
 }
 
 /**
- * Check if `haystack` contains `needle`, ignoring Vietnamese diacritics and case.
+ * Check if `haystack` contains `needle`, ignoring Vietnamese diacritics, case, and spaces.
  */
 export function fuzzyMatch(haystack: string, needle: string): boolean {
-  return normalizeVietnamese(haystack).includes(normalizeVietnamese(needle))
+  const h = normalizeVietnamese(haystack).replace(/\s+/g, '')
+  const n = normalizeVietnamese(needle).replace(/\s+/g, '')
+  return h.includes(n)
 }
 
 /**
- * Check if any item in an array contains the needle (diacritics-insensitive).
+ * Check if any item in an array contains the needle (diacritics-insensitive, space-tolerant).
  */
 export function fuzzyMatchAny(haystacks: string[], needle: string): boolean {
-  const normalized = normalizeVietnamese(needle)
-  return haystacks.some(h => normalizeVietnamese(h).includes(normalized))
+  const n = normalizeVietnamese(needle).replace(/\s+/g, '')
+  return haystacks.some(h => normalizeVietnamese(h).replace(/\s+/g, '').includes(n))
 }

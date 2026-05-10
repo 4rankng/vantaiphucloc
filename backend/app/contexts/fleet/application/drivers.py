@@ -8,7 +8,7 @@ from app.contexts.fleet.application.dto import DriverDTO, DriverListDTO
 from app.contexts.fleet.domain.entities import Driver
 from app.contexts.fleet.domain.repositories import DriverRepository
 
-PHUC_LOC = "Phúc Lộc"
+PHUC_LOC = "Vận Tải Phúc Lộc"
 
 
 def _to_dto(d: Driver) -> DriverDTO:

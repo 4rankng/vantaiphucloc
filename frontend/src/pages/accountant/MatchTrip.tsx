@@ -191,9 +191,11 @@ export function MatchTrip() {
   const handleMatchWithToast = async () => {
     try {
       await handleMatch()
+      toast.success('Thành công', 'Đã ghép chuyến thành công')
       setLowConfConfirm(false)
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+        ?? (err instanceof Error ? err.message : undefined)
       toast.error('Không thể khớp chuyến', detail ?? 'Lỗi hệ thống. Thử lại sau.')
     }
   }

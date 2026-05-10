@@ -158,7 +158,7 @@ export function WorkOrderList() {
     }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Nhập đơn đối soát</DialogTitle>
+          <DialogTitle>Nhập đơn hàng</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
