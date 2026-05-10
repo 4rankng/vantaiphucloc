@@ -7,6 +7,7 @@ import { Label } from '@/components/ui'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { FilterToolbar, type FilterOption } from '@/components/shared/FilterToolbar'
 import { StatusBadge } from '@/components/shared/StatusBadge'
+import { fuzzyMatch } from '@/lib/search-utils'
 import {
   useClients, useCreateClient, useUpdateClient, useDeleteClient,
   useVendors, useCreateVendor, useUpdateVendor, useDeleteVendor,
@@ -347,13 +348,13 @@ export function ClientsAndVendors() {
     if (filter !== 'ALL') {
       result = result.filter(p => p.kind === filter)
     }
-    const q = search.trim().toLowerCase()
+    const q = search.trim()
     if (q) {
       result = result.filter(p =>
-        p.name.toLowerCase().includes(q) ||
-        p.phone.includes(q) ||
-        p.taxCode.includes(q) ||
-        p.contactPerson.toLowerCase().includes(q)
+        fuzzyMatch(p.name, q) ||
+        fuzzyMatch(p.phone, q) ||
+        fuzzyMatch(p.taxCode, q) ||
+        fuzzyMatch(p.contactPerson, q)
       )
     }
     return result

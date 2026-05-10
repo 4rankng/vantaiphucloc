@@ -13,6 +13,7 @@ import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
 import { useMonthParams } from './use-month-params'
 import { formatCurrencyFull as fmt, type WorkOrder, type TripOrder } from '@/data/domain'
 import { resolveRoute } from '@/lib/route-utils'
+import { formatDate } from '@/lib/format'
 import {
   ArrowRight,
   CheckCircle2, Plus, Wallet, Tag, Users,
@@ -114,7 +115,7 @@ function TripRow({ trip, onClick, isLast }: { trip: TripOrder; onClick: () => vo
     : ''
 
   const tripDate = trip.tripDate
-    ? new Date(trip.tripDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    ? formatDate(trip.tripDate, 'full')
     : ''
 
   let statusVariant: 'success' | 'warning' | 'neutral' | 'completed' | 'draft' | 'pending' | 'matched' = 'neutral'
@@ -309,7 +310,7 @@ function DesktopDashboard() {
           </div>
           <div className="flex-1 overflow-y-auto min-h-0" style={{ maxHeight: '320px' }}>
             {sortedTrips.length === 0 ? (
-              <EmptyState icon={FileText} text="Chưa có lệnh nào" illustrated />
+              <EmptyState icon={FileText} text="Chưa có đơn hàng nào" illustrated />
             ) : (
               sortedTrips.map((trip, i) => (
                 <TripRow key={trip.id} trip={trip} isLast={i === sortedTrips.length - 1} onClick={() => navigate(`/accountant/trip/${trip.id}`)} />
@@ -390,12 +391,12 @@ function MobileDashboard() {
 
       <WorkbenchCard
         title="Đơn hàng"
-        footerLabel="Xem tất cả lệnh"
+        footerLabel="Xem tất cả đơn hàng"
         onFooter={() => navigate('/accountant/trips')}
         minHeight="200px"
       >
         {recentTrips.length === 0 ? (
-          <EmptyState icon={FileText} text="Chưa có lệnh nào" illustrated />
+          <EmptyState icon={FileText} text="Chưa có đơn hàng nào" illustrated />
         ) : (
           recentTrips.map((trip, i) => (
             <TripRow key={trip.id} trip={trip} isLast={i === recentTrips.length - 1} onClick={() => navigate(`/accountant/trip/${trip.id}`)} />

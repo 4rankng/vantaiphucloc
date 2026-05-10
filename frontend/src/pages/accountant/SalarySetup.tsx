@@ -7,6 +7,7 @@ import {
 } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { formatCurrencyFull, type SalaryPeriodStatus } from '@/data/domain'
+import { formatDate, formatDateRange } from '@/lib/format'
 import { Calculator, Download, CheckCircle2, Wallet } from 'lucide-react'
 
 // ─── Status badge config ──────────────────────────────────────────────────────
@@ -140,7 +141,7 @@ function CalculateCard() {
     calculateSalary.mutate(
       { startDate, endDate },
       {
-        onSuccess: () => { toast.success('Đã tính lương', `Kỳ ${startDate} → ${endDate}`); setCalculating(false) },
+        onSuccess: () => { toast.success('Đã tính lương', `Kỳ ${formatDateRange(startDate, endDate, 'short')}`); setCalculating(false) },
         onError: () => { toast.error('Lỗi', 'Không thể tính lương'); setCalculating(false) },
       }
     )
@@ -166,7 +167,7 @@ function CalculateCard() {
       <div className="rounded-md px-3 py-2.5 mb-4" style={{ background: 'var(--theme-bg-tertiary)' }}>
         <p className="typo-caption mb-0.5">Kỳ hiện tại</p>
         <p className="text-sm font-semibold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
-          {startDate} → {endDate}
+          {formatDateRange(startDate, endDate, 'short')}
         </p>
       </div>
 
@@ -260,7 +261,7 @@ function SalaryPeriodsList() {
                 <div key={period.id} className="card p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-mono tabular-nums" style={{ color: 'var(--theme-text-muted)' }}>
-                      {period.startDate} → {period.endDate}
+                      {formatDateRange(period.startDate, period.endDate, 'short')}
                     </p>
                     <span className={cfg.chip}>{cfg.label}</span>
                   </div>

@@ -69,7 +69,7 @@ export function CreateTrip() {
       if (res.data.errors.length > 0) {
         setImportResult(res.data)
       } else {
-        toast.success(`Nhập thành công ${res.data.created} lệnh`)
+        toast.success(`Nhập thành công ${res.data.created} đơn hàng`)
         navigate(-1)
       }
     } else {

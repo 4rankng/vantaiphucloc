@@ -10,10 +10,10 @@ export function RouteDisplay({ route, pickupLocation, dropoffLocation, className
   if (pickupLocation || dropoffLocation) {
     return (
       <div className={`flex flex-col gap-0.5 ${className}`}>
-        <p className="text-sm font-semibold leading-tight truncate" style={{ color: 'var(--theme-text-primary)' }}>
+        <p className="text-sm font-semibold leading-tight break-words line-clamp-2" style={{ color: 'var(--theme-text-primary)' }}>
           {pickupLocation || route.split(' - ')[0] || route}
         </p>
-        <div className="text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>
+        <div className="text-xs break-words line-clamp-1" style={{ color: 'var(--theme-text-muted)' }}>
           → {dropoffLocation || route.split(' - ')[1] || route}
         </div>
       </div>
@@ -25,10 +25,10 @@ export function RouteDisplay({ route, pickupLocation, dropoffLocation, className
   if (parts.length >= 2) {
     return (
       <div className={`flex flex-col gap-0.5 ${className}`}>
-        <p className="text-sm font-semibold leading-tight truncate" style={{ color: 'var(--theme-text-primary)' }}>
+        <p className="text-sm font-semibold leading-tight break-words line-clamp-2" style={{ color: 'var(--theme-text-primary)' }}>
           {parts[0]}
         </p>
-        <div className="text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>
+        <div className="text-xs break-words line-clamp-1" style={{ color: 'var(--theme-text-muted)' }}>
           → {parts[1]}
         </div>
       </div>
