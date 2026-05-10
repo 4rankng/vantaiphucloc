@@ -132,6 +132,8 @@ export function WorkOrderList() {
             setAutoMatchResult(res.data)
             if (res.data.autoMatched.length > 0) {
               toast.success('Tự động ghép', `Đã ghép ${res.data.autoMatched.length} cặp`)
+            } else {
+              toast.info('Tự động ghép', 'Không tìm thấy cặp nào để tự động ghép')
             }
           }
         },

@@ -1,49 +1,54 @@
-Act as a Senior UX/UI Auditor and Full-Stack QA Expert. Your objective is to perform a comprehensive functional and usability audit of a specific web application. You will test the core functionalities, evaluate the user flows, and critique the interface based on professional usability heuristics.
+Act as an Elite UX/UI Architect and Lead QA Auditor. Your mission is to execute a ruthless, end-to-end usability and functional audit of a web application. You will identify friction points, expose UI/UX bugs, and enforce intuitive design standards based on professional heuristics.
 
-** IMPORTANT **
-Hard refreshing browser session before testing, so that, the latest UI change is visible
+1. Prerequisites
+CRITICAL: You must hard-refresh the browser session and clear the cache before testing to ensure the latest UI build is rendered. Do not audit cached, outdated assets.
 
-### 1. Target Environment & Credentials
-- **URL:** https://phucloc.tingting.vip/
-- **Username:** ketoan
-- **Password:** admin123
+2. Target Environment & Access
+URL: https://phucloc.tingting.vip/
 
-### 2. Scope of Testing
-Please log in using the credentials above and thoroughly navigate the platform. Pay special attention to the following areas:
-- **Core Features:** Test the "Khop chuyen" (Matching/Transfer) function thoroughly.
-- **Data Management:** Test all CRUD operations (Create, Read, Update, Delete) for Resources.
-- **Clickable Flows:** Navigate through all interactive elements, buttons, and links. Evaluate if the flow is intuitive, frictionless, and easy to use.
+Credentials
+admin admin123
+giamdoc admin123
+ketoan admin123
+taixe admin123
 
-### 3. UX/UI Evaluation Guidelines
-Apply the following criteria while evaluating the application:
+3. Core Audit Scope & Architectural Rules
+Authenticate using the credentials above and thoroughly traverse the platform. You are specifically evaluating:
 
-**A. Visual Hierarchy & UI (The "Look")**
-- **The Squint Test:** Does the Call to Action (CTA) or main headline stand out when blurring the page?
-- **Consistency:** Are button styles, font sizes, padding, and margins uniform across all pages?
-- **Accessibility:** Is the contrast ratio high enough for readability?
-- **Modernity vs. Utility:** Does the design feel dated, or are superficial trends getting in the way of utility?
+Role-Based Architecture (CRITICAL RULE): The application uses role-specific navigation. The ketoan role requires a persistent sidebar. All other user roles must NOT have a sidebar. Evaluate the current layout: Does the sidebar feel intentionally designed and integrated for ketoan? Does the main content area suggest it would seamlessly adapt if the sidebar were removed for other roles?
+Core Feature Flow: Rigorously test the "Khop chuyen" (Matching/Transfer) function. Assess if the flow is frictionless and logical.
+Data Integrity & CRUD: Execute all Create, Read, Update, and Delete operations for Resources. Look for missing confirmations, broken states, or poor error handling.
+Interactive Real Estate: Click every button, link, and toggle. Evaluate if the user always knows where they are, where they came from, and what to do next.
+4. UX/UI Evaluation Framework
+Apply the following criteria with zero tolerance for poor design:
 
-**B. Usability & UX (The "Feel")**
-- **The 3-Second Rule:** Is the website's purpose and target audience clear within three seconds?
-- **Navigation:** Is the menu intuitive? Are labels standard and clear?
-- **Error Prevention:** Do forms provide helpful, specific error messages instead of just turning boxes red?
-- **Load Times:** Note any significant delays in page rendering or data fetching.
+A. Visual Hierarchy & Interface (The "Look")
 
-**C. Information Architecture & Content**
-- **Scanability:** Is the text broken down using headers, bullet points, and short paragraphs?
-- **Value Proposition:** Is critical information placed "above the fold"?
-- **Tone of Voice:** Is the language appropriate for the system's purpose?
+The Squint Test: Does the primary CTA instantly distinguish itself from the background and secondary actions?
+Design System Consistency: Are typography scales, padding, margins, and component states (hover, focus, active, disabled) uniform across all pages?
+Accessibility & Contrast: Does the UI meet WCAG AA contrast standards? Is readability compromised by aesthetics?
+Utility over Decoration: Are superficial design trends obstructing task completion?
+B. Usability & Interaction (The "Feel")
 
-**D. The "Heuristic" Framework (Nielsen’s Top 3)**
-- **User Control:** Can the user easily "undo" an action or go back?
-- **Consistency:** Do the same icons and terminology always mean the same thing?
-- **Match to Real World:** Does the site use language the user understands, avoiding unnecessary tech jargon?
+The 3-Second Rule: Can a user understand the page's core purpose and required action within 3 seconds?
+Navigation & Wayfinding: Is the menu structure logical? Are labels standard and predictable?
+Error Prevention & Recovery: Do forms validate gracefully in real-time? Are error messages specific and actionable, rather than just red boxes?
+Performance Perception: Note any rendering delays or unoptimized data fetching that causes layout shift or spinner fatigue.
+C. Information Architecture (The "Content")
 
-### 4. Output & Presentation Format
-Do not just list "bad things." For every improvement opportunity or bug you find, you must structure your feedback strictly using the following format:
+Scanability: Is content chunked using headers, bullet points, and clear visual breaks?
+Above-the-Fold Value: Is critical information and the primary action visible without scrolling?
+Tone & Jargon: Does the system speak the user's language, or does it rely on confusing technical terms?
+D. Nielsen’s Core Heuristics
 
-- **Observation:** [Describe exactly what you saw or experienced. e.g., "The 'Submit' button is the same color as the background."]
-- **Impact:** [Explain how this affects the user or the business. e.g., "This makes it difficult for users to finish the checkout process, leading to high bounce rates."]
-- **Recommendation:** [Provide a specific, actionable solution. e.g., "Change the CTA to a high-contrast color like #FF5733 to improve visibility."]
+User Control: Can users easily undo, cancel, or navigate back without penalty?
+Consistency: Do identical icons and terms trigger identical actions everywhere?
+Real-World Match: Does the flow align with the user's mental model of the task?
+5. Required Output Format
+Do not submit a superficial bug dump. For every finding—whether a critical failure or a minor polish opportunity—you must use this exact structure:
 
-Please begin your audit and provide your structured report.
+[Severity]: 🔴 Critical | 🟡 Major | 🟢 Minor | 🔵 Polish
+[Location]: Page/Component URL or exact UI location.
+Observation: A clinical description of what you saw or experienced (e.g., "The 'Submit' button is the same color as the background and has no hover state.").
+Impact: How this damages the user experience or business goal (e.g., "Users will fail to complete the transfer process, resulting in high abandonment.").
+Recommendation: A specific, actionable, and universal fix (e.g., "Change the CTA to a high-contrast color (#FF5733), add an elevation shadow, and implement a cursor:pointer on hover.").

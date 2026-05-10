@@ -1,11 +1,13 @@
-import { useState, useMemo, useCallback, type ReactNode } from 'react'
-import { Truck, AlertCircle, CheckCircle2, DollarSign, ChevronLeft, ChevronRight, TrendingUp, ArrowUpRight, Calendar } from 'lucide-react'
+import { useState, useMemo, useCallback, type ReactNode, useEffect } from 'react'
+import { Truck, AlertCircle, CheckCircle2, DollarSign, ChevronLeft, ChevronRight, TrendingUp, ArrowUpRight, Calendar, Activity, User } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { getTripOrderStatusBadge } from '@/data/domain'
 import { useTripOrders } from '@/hooks/use-queries'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { BrandIcon } from '@/components/atoms/BrandIcon'
 import { BarChartWidget } from '@/components/shared/Charts'
+import type { AuditLogEntry } from '@/services/api/audit.api'
+import { getAuditLogs } from '@/services/api/audit.api'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -27,6 +29,15 @@ const MONTH_NAMES = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5',
 export function DirectorDashboard() {
   const navigate = useNavigate()
   const { data: trips = [], isLoading: loading } = useTripOrders()
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    getAuditLogs({ pageSize: 8 }).then(data => {
+      if (!cancelled) setAuditLogs(data.items)
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [])
   const [month, setMonth] = useState(() => {
     const d = new Date()
     return { year: d.getFullYear(), month: d.getMonth() + 1 }
@@ -316,8 +327,88 @@ export function DirectorDashboard() {
           <BarChartWidget data={barData} height={240} options={barOptions} />
         </div>
       </div>
+
+      {/* Activity Feed */}
+      <div
+        className="rounded-lg overflow-hidden"
+        style={{
+          background: 'var(--theme-bg-secondary)',
+          border: '1px solid var(--theme-border-default)',
+          boxShadow: 'var(--theme-shadow-card)',
+        }}
+      >
+        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
+          <div className="flex items-center gap-2">
+            <Activity className="h-4 w-4" style={{ color: 'var(--theme-brand-primary)' }} />
+            <h2 className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+              Hoạt động gần đây
+            </h2>
+          </div>
+        </div>
+        {auditLogs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8">
+            <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có hoạt động nào</p>
+          </div>
+        ) : (
+          <div className="divide-y" style={{ borderColor: 'var(--theme-border-light)' }}>
+            {auditLogs.map(log => {
+              const time = new Date(log.createdAt)
+              const timeStr = time.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+              const dateStr = time.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
+              const actionLabel = ACTION_LABELS[log.action] ?? log.action
+              const tableLabel = TABLE_LABELS[log.tableName] ?? log.tableName
+              return (
+                <div key={log.id} className="px-5 py-3 flex items-start gap-3">
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                    style={{ background: 'var(--theme-bg-tertiary)' }}
+                  >
+                    <User className="h-4 w-4" style={{ color: 'var(--theme-text-muted)' }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm" style={{ color: 'var(--theme-text-primary)' }}>
+                      <span className="font-medium">{actionLabel}</span>{' '}
+                      <span style={{ color: 'var(--theme-text-muted)' }}>{tableLabel}</span>
+                      {log.recordId ? <span className="font-mono text-xs" style={{ color: 'var(--theme-text-muted)' }}> #{log.recordId}</span> : null}
+                    </p>
+                    {log.reason && (
+                      <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--theme-text-muted)' }}>{log.reason}</p>
+                    )}
+                  </div>
+                  <span className="text-[11px] tabular-nums whitespace-nowrap shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
+                    {dateStr} · {timeStr}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
+}
+
+// ─── Lookup tables ──────────────────────────────────────────────────────────────
+
+const ACTION_LABELS: Record<string, string> = {
+  CREATE: 'Tạo',
+  UPDATE: 'Cập nhật',
+  DELETE: 'Xoá',
+  MATCH: 'Ghép',
+  UNMATCH: 'Bỏ ghép',
+  CANCEL: 'Huỷ',
+  CONFIRM: 'Xác nhận',
+}
+
+const TABLE_LABELS: Record<string, string> = {
+  work_orders: 'đơn hàng',
+  trip_orders: 'chuyến',
+  clients: 'khách hàng',
+  locations: 'địa điểm',
+  routes: 'cung đường',
+  pricings: 'bảng giá',
+  users: 'tài khoản',
+  trip_order_work_orders: 'ghép chuyến',
 }
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────

@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import WorkOrder, WorkOrderContainer, TripOrder, TripOrderContainer, Client, PricingLine
-from app.utils.iso6346 import normalize_container_number
+from app.utils.iso6346 import normalize_container_number, validate_container_number
 
 _logger = logging.getLogger(__name__)
 
@@ -476,6 +476,7 @@ async def import_trip_orders(
 
     created = 0
     errors: list[str] = []
+    warnings: list[str] = []
 
     # Group rows by trip key
     groups: dict[tuple, list[dict]] = {}
@@ -525,6 +526,9 @@ async def import_trip_orders(
             cn = normalize_container_number(str(row.get("container_number", "")).strip())
             wt = str(row.get("work_type", "")).strip().upper()
             if cn:
+                valid, err = validate_container_number(cn)
+                if not valid:
+                    warnings.append(f"Container {cn}: {err}")
                 containers_data.append({"container_number": cn, "work_type": wt or "E20"})
 
         if not containers_data:
@@ -599,7 +603,7 @@ async def import_trip_orders(
         created += 1
 
     await db.commit()
-    return {"created": created, "errors": errors}
+    return {"created": created, "errors": errors, "warnings": warnings}
 
 
 def generate_trip_order_template() -> bytes:

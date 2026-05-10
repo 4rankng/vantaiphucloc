@@ -163,7 +163,7 @@ def validate_container_number(container_number: str) -> tuple[bool, str]:
 
     # Check check digit
     if not validate_check_digit(normalized):
-        return False, "Số container sai, xin kiểm tra lại"
+        return False, "Sai số kiểm tra — định dạng đúng nhưng mã kiểm tra không khớp"
 
     return True, ""
 
