@@ -190,7 +190,7 @@ Reasoning:
 - [ ] ~~**TASK-026** [P1] Status enum single source of truth (NX4 carry-over)~~
   — **WILL NOT IMPLEMENT:** out of scope for settings overhaul; cross-cutting refactor touching Trip + Salary + Order pages
   - File: `frontend/src/data/domain/status.ts` (new)
-  - Change: extract `Chờ đối soát / Đã khớp / Đã huỷ / Đã trả / Đã tính / Chờ tính` into a TS enum + i18n key map. Replace inline strings on Trip + Salary + Order pages.
+  - Change: extract `Chờ ghép / Đã khớp / Đã huỷ / Đã trả / Đã tính / Chờ tính` into a TS enum + i18n key map. Replace inline strings on Trip + Salary + Order pages.
   - Verify: grep `Chờ xử lý` returns zero hits in `frontend/src`.
 
 - [x] **TASK-027** [P1] Move `+ Thêm` button into `<SettingsPageLayout actions>` slot — all subpages use `actions` prop
