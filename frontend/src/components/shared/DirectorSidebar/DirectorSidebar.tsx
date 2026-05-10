@@ -58,7 +58,7 @@ export function DirectorSidebar({
 
   const handleLogout = useCallback(() => {
     logout()
-    navigate('/login')
+    navigate('/')
   }, [logout, navigate])
 
   return (
@@ -82,7 +82,7 @@ export function DirectorSidebar({
         <img src="/logo.avif" alt="" className="h-7 w-7 object-contain rounded-md shrink-0" />
         {!collapsed && (
           <div className="flex flex-col min-w-0">
-            <p className="text-[13px] font-semibold text-white leading-tight truncate tracking-tight">Phúc Lộc</p>
+            <p className="text-[13px] font-semibold text-white leading-tight truncate tracking-tight">TTransport</p>
             <p className="text-[10px] font-medium leading-tight truncate" style={{ color: 'var(--theme-sidebar-text-muted)' }}>Giám đốc</p>
           </div>
         )}

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect'
+import { DataTablePro, type Column } from '@/components/shared/DataTablePro/DataTablePro'
 import { CreateVendorDialog } from '@/components/shared/CreateVendorDialog'
 import { useToast } from '@/components/atoms/Toast'
 import { FilterPills } from '@/components/shared/FilterPills'
@@ -79,6 +80,8 @@ function UserManagementInner() {
 
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
+  const isMobile = useIsMobile(768)
+
   useEffect(() => {
     if (createForm.vendor === '' && vendors && vendors.length > 0 && createForm.role === 'driver') {
       setCreateForm(prev => ({ ...prev, vendor: String(vendors[0].id) }))
@@ -89,6 +92,30 @@ function UserManagementInner() {
     () => filterRole === 'ALL' ? users : users.filter(u => u.role === filterRole),
     [filterRole, users],
   )
+
+  const columns: Column<UserAccount>[] = useMemo(() => [
+    {
+      key: 'fullName',
+      header: 'Tên',
+      accessor: u => {
+        const RoleIcon = ROLE_ICONS[u.role]
+        const rc = ROLE_COLORS[u.role]
+        return (
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+              style={{ background: rc.bg }}>
+              <RoleIcon className="w-3.5 h-3.5" style={{ color: rc.color }} />
+            </div>
+            <span className="font-medium truncate">{u.fullName || u.username}</span>
+          </div>
+        )
+      },
+      sortable: true,
+    },
+    { key: 'role', header: 'Vai trò', accessor: u => ROLE_LABELS[u.role] },
+    { key: 'phone', header: 'SĐT', accessor: u => u.phone ?? '—' },
+    { key: 'tractorPlate', header: 'Biển số', accessor: u => u.tractorPlate ?? '—' },
+  ], [])
 
   const updateCreateField = useCallback((field: keyof UserForm, value: string) => {
     setCreateForm(prev => ({ ...prev, [field]: value }))
@@ -112,13 +139,9 @@ function UserManagementInner() {
         vendor: createForm.role === 'driver' ? (vendorObj?.name ?? 'Vận Tải Phúc Lộc') : undefined,
         tractorPlate: createForm.role === 'driver' ? createForm.tractorPlate.trim() : undefined,
       })
-      if (res.success) {
-        toast.success('Đã tạo tài khoản')
-        setCreateOpen(false)
-        setCreateForm(EMPTY_FORM)
-      } else {
-        toast.error('Lỗi', res.message ?? 'Lỗi không xác định')
-      }
+      toast.success('Đã tạo tài khoản')
+      setCreateOpen(false)
+      setCreateForm(EMPTY_FORM)
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Lỗi không xác định'
       toast.error('Lỗi', detail)
@@ -155,13 +178,9 @@ function UserManagementInner() {
         if (vendorObj) payload.vendor = vendorObj.name
       }
       if (editForm.password.trim()) payload.password = editForm.password.trim()
-      const res = await updateUser.mutateAsync({ id: detailUser.id, data: payload })
-      if (res.success) {
-        toast.success('Đã cập nhật')
-        setDetailUser(null)
-      } else {
-        toast.error('Lỗi', res.message ?? 'Không thể cập nhật')
-      }
+      await updateUser.mutateAsync({ id: detailUser.id, data: payload })
+      toast.success('Đã cập nhật')
+      setDetailUser(null)
     } catch {
       toast.error('Lỗi', 'Không thể cập nhật')
     }
@@ -170,14 +189,10 @@ function UserManagementInner() {
   const handleDelete = useCallback(async () => {
     if (!deleteId) return
     try {
-      const res = await deleteUser.mutateAsync(deleteId)
-      if (res.success) {
-        toast.success('Đã xoá tài khoản')
-        setDeleteId(null)
-        setDetailUser(null)
-      } else {
-        toast.error('Lỗi', res.message ?? 'Không thể xoá tài khoản')
-      }
+      await deleteUser.mutateAsync(deleteId)
+      toast.success('Đã xoá tài khoản')
+      setDeleteId(null)
+      setDetailUser(null)
     } catch {
       toast.error('Lỗi', 'Không thể xoá tài khoản')
     }
@@ -231,66 +246,75 @@ function UserManagementInner() {
         />
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2 lg:gap-3">
-        {filtered.map(u => {
-          const RoleIcon = ROLE_ICONS[u.role]
-          const roleColor = ROLE_COLORS[u.role]
-          return (
-            <button
-              key={u.id}
-              onClick={() => openDetail(u)}
-              className="w-full flex items-center gap-3 p-3.5 rounded-lg text-left card-lift touch-manipulation"
-              style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}
-            >
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-                style={{ background: roleColor.bg }}
+      {isMobile ? (
+        <div className="grid grid-cols-1 gap-3">
+          {filtered.map(u => {
+            const RoleIcon = ROLE_ICONS[u.role]
+            const roleColor = ROLE_COLORS[u.role]
+            return (
+              <button
+                key={u.id}
+                onClick={() => openDetail(u)}
+                className="w-full flex items-center gap-3 p-3.5 rounded-lg text-left card-lift touch-manipulation"
+                style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}
               >
-                <RoleIcon className="w-4.5 h-4.5" style={{ color: roleColor.color }} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{u.fullName || u.username}</p>
-                {(() => {
-                  // Track whether we've rendered any prior chip on this row so the
-                  // `·` separator only appears between actual values, never leading.
-                  let renderedAny = false
-                  const sep = (
-                    <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>·</span>
-                  )
-                  const items: ReactNode[] = []
-                  if (u.phone) {
-                    items.push(
-                      <span key="phone" className="inline-flex items-center gap-1">
-                        <Phone className="w-3 h-3" style={{ color: 'var(--theme-text-muted)' }} />
-                        <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{u.phone}</span>
-                      </span>,
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: roleColor.bg }}
+                >
+                  <RoleIcon className="w-4.5 h-4.5" style={{ color: roleColor.color }} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{u.fullName || u.username}</p>
+                  {(() => {
+                    let renderedAny = false
+                    const sep = (
+                      <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>·</span>
                     )
-                    renderedAny = true
-                  }
-                  if (u.tractorPlate) {
-                    if (renderedAny) items.push(<span key="sep-plate">{sep}</span>)
-                    items.push(
-                      <span key="plate" className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>{u.tractorPlate}</span>,
+                    const items: ReactNode[] = []
+                    if (u.phone) {
+                      items.push(
+                        <span key="phone" className="inline-flex items-center gap-1">
+                          <Phone className="w-3 h-3" style={{ color: 'var(--theme-text-muted)' }} />
+                          <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{u.phone}</span>
+                        </span>,
+                      )
+                      renderedAny = true
+                    }
+                    if (u.tractorPlate) {
+                      if (renderedAny) items.push(<span key="sep-plate">{sep}</span>)
+                      items.push(
+                        <span key="plate" className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>{u.tractorPlate}</span>,
+                      )
+                      renderedAny = true
+                    }
+                    if (u.cccd) {
+                      if (renderedAny) items.push(<span key="sep-cccd">{sep}</span>)
+                      items.push(
+                        <span key="cccd" className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>CCCD: {u.cccd}</span>,
+                      )
+                      renderedAny = true
+                    }
+                    return (
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">{items}</div>
                     )
-                    renderedAny = true
-                  }
-                  if (u.cccd) {
-                    if (renderedAny) items.push(<span key="sep-cccd">{sep}</span>)
-                    items.push(
-                      <span key="cccd" className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>CCCD: {u.cccd}</span>,
-                    )
-                    renderedAny = true
-                  }
-                  return (
-                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">{items}</div>
-                  )
-                })()}
-              </div>
-              <ChevronRight className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
-            </button>
-          )
-        })}
-      </div>
+                  })()}
+                </div>
+                <ChevronRight className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
+              </button>
+            )
+          })}
+        </div>
+      ) : (
+        <DataTablePro
+          data={filtered}
+          columns={columns}
+          rowKey={u => u.id}
+          onRowClick={u => openDetail(u)}
+          defaultSortKey="fullName"
+          emptyState={<p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có tài khoản</p>}
+        />
+      )}
 
       {/* Create dialog */}
       <Dialog open={createOpen} onOpenChange={(open) => { if (!open && !createVendorOpen) setCreateOpen(false) }}>
@@ -495,8 +519,8 @@ function UserManagementInner() {
           createVendor.mutate(data, {
             onSuccess: (res) => {
               setCreateVendorOpen(false)
-              if (res.success && res.data?.id) {
-                const newId = String(res.data.id)
+              if (res?.id) {
+                const newId = String(res.id)
                 if (vendorOpenedFrom === 'create') {
                   setCreateForm(prev => ({ ...prev, vendor: newId }))
                 } else if (vendorOpenedFrom === 'edit') {

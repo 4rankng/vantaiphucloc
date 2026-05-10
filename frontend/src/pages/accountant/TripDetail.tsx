@@ -117,11 +117,11 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
         },
       },
       {
-        onSuccess: (res) => {
-          if (res.success) toast.success('Đã lưu')
-          else toast.error('Lỗi', 'Không thể cập nhật')
+        onSuccess: () => {
+          toast.success('Đã lưu')
           setEditTrip(false)
         },
+        onError: () => toast.error('Lỗi', 'Không thể cập nhật'),
       },
     )
   }
@@ -131,14 +131,10 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
     reconcile.mutate(
       { workOrderId: jobId, tripOrderId: trip.id },
       {
-        onSuccess: (res) => {
-          if (res.success) {
-            qc.invalidateQueries({ queryKey: ['trip-orders'] })
-            qc.invalidateQueries({ queryKey: ['work-orders'] })
-            toast.success('Đã khớp')
-          } else {
-            toast.error('Lỗi', res.message ?? 'Không thể khớp')
-          }
+        onSuccess: () => {
+          qc.invalidateQueries({ queryKey: ['trip-orders'] })
+          qc.invalidateQueries({ queryKey: ['work-orders'] })
+          toast.success('Đã khớp')
         },
         onError: () => { toast.error('Lỗi', 'Không thể khớp') },
       },
@@ -170,14 +166,10 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
   const handleUnmatch = async () => {
     if (!trip || !unmatchReason.trim()) return
     try {
-      const res = await unmatch({ tripOrderId: trip.id, reason: unmatchReason.trim() })
-      if (res.success) {
-        toast.success('Đã bỏ match')
-        setShowUnmatchDialog(false)
-        setUnmatchReason('')
-      } else {
-        toast.error('Lỗi', res.message ?? 'Không thể bỏ match')
-      }
+      await unmatch({ tripOrderId: trip.id, reason: unmatchReason.trim() })
+      toast.success('Đã bỏ match')
+      setShowUnmatchDialog(false)
+      setUnmatchReason('')
     } catch {
       toast.error('Lỗi', 'Không thể bỏ match')
     }

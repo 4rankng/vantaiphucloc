@@ -40,12 +40,11 @@ function CriterionRow({
     try {
       const field = criterion.name === 'container_number' ? 'containers' : criterion.name === 'client' ? 'clientId' : criterion.name === 'pickup_location' ? 'pickupLocationId' : criterion.name === 'dropoff_location' ? 'dropoffLocationId' : criterion.name === 'route' ? 'route' : null
       if (!field) return
-      const res = await updateWo.mutateAsync({
+      await updateWo.mutateAsync({
         id: woId,
         data: { [field]: woDraft } as Record<string, unknown>,
       })
-      if (res.success) onEdited()
-      else toast.error('Lỗi', 'Không thể cập nhật')
+      onEdited()
     } catch {
       toast.error('Lỗi', 'Không thể cập nhật phiếu')
     }
@@ -56,12 +55,11 @@ function CriterionRow({
     try {
       const field = criterion.name === 'container_number' ? 'containers' : criterion.name === 'client' ? 'clientId' : criterion.name === 'pickup_location' ? 'pickupLocationId' : criterion.name === 'dropoff_location' ? 'dropoffLocationId' : criterion.name === 'route' ? 'route' : null
       if (!field) return
-      const res = await updateTo.mutateAsync({
+      await updateTo.mutateAsync({
         id: toId,
         data: { [field]: toDraft } as Record<string, unknown>,
       })
-      if (res.success) onEdited()
-      else toast.error('Lỗi', 'Không thể cập nhật')
+      onEdited()
     } catch {
       toast.error('Lỗi', 'Không thể cập nhật đơn hàng')
     }
