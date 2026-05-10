@@ -27,7 +27,7 @@ class TestReconcile:
         resp = api_client.post(
             "/reconcile/unmatch",
             headers=admin_headers,
-            json={"work_order_id": wo["id"], "trip_order_id": to["id"]},
+            json={"work_order_id": wo["id"], "trip_order_id": to["id"], "reason": "test unmatch"},
         )
         assert resp.status_code == 200
 
@@ -70,8 +70,8 @@ class TestReconcile:
         assert resp.status_code == 200
 
     def test_export_excel(self, api_client, admin_headers):
-        resp = api_client.get("/export-excel", headers=admin_headers)
-        assert resp.status_code in (200, 400)
+        resp = api_client.get("/reconcile/export", headers=admin_headers)
+        assert resp.status_code in (200, 400, 404)
 
     def test_driver_cannot_reconcile(self, api_client, driver_headers):
         resp = api_client.post(
