@@ -67,9 +67,8 @@ export function WorkOrderList() {
     if (search.trim()) {
       const q = search
       result = result.filter(w =>
-        fuzzyMatch(w.tractorPlate ?? '', q) ||
         fuzzyMatch(w.driver.name, q) ||
-        fuzzyMatch(w.client.name, q) ||
+        fuzzyMatch(w.partner.name, q) ||
         fuzzyMatch(w.code ?? '', q) ||
         w.containers.some(c => fuzzyMatch(c.containerNumber ?? '', q))
       )

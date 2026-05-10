@@ -249,78 +249,6 @@ class UpdateTripOrder:
         return await self.repo.get_by_id(TripOrderId(tid))
 
 
-class CancelTripOrder:
-    def __init__(
-        self,
-        repo: TripOrderRepository,
-        session: AsyncSession,
-    ) -> None:
-        self.repo = repo
-        self.session = session
-
-    async def __call__(self, tid: int) -> TripOrder:
-        t = await self.repo.get_by_id(TripOrderId(tid))
-        if t is None:
-            raise NotFound("TripOrder", tid)
-        if t.is_locked:
-            raise TripOrderLocked(int(t.id) if t.id is not None else 0)
-        t.cancel()
-        await self.repo.save(t)
-        await self.session.commit()
-        return t
-
-
-class ConfirmTripOrder:
-    """Toggle TripOrder confirmation. When confirming, marks all matched
-    WorkOrders as COMPLETED."""
-
-    def __init__(
-        self,
-        repo: TripOrderRepository,
-        wo_repo: WorkOrderRepository,
-        session: AsyncSession,
-    ) -> None:
-        self.repo = repo
-        self.wo_repo = wo_repo
-        self.session = session
-
-    async def __call__(self, tid: int, *, user_id: int) -> TripOrder:
-        t = await self.repo.get_by_id(TripOrderId(tid))
-        if t is None:
-            raise NotFound("TripOrder", tid)
-
-        if not t.is_confirmed:
-            t.confirm_reconciliation(user_id=user_id)
-            for wo_id in t.matched_work_order_ids:
-                wo = await self.wo_repo.get_by_id(wo_id)  # type: ignore[arg-type]
-                if wo is None or wo.status not in (
-                    WorkOrderStatus.PENDING, WorkOrderStatus.MATCHED,
-                ):
-                    continue
-                # Matched WOs are locked at reconcile time; transition
-                # them to COMPLETED while preserving the lock.
-                was_locked = wo.is_locked
-                locked_at = wo.locked_at
-                locked_by = wo.locked_by
-                if was_locked:
-                    wo.unlock()
-                wo.complete()
-                if was_locked:
-                    wo.is_locked = True
-                    wo.locked_at = locked_at
-                    wo.locked_by = locked_by
-                await self.wo_repo.save(wo)
-        else:
-            t.is_confirmed = False
-            t.confirmed_by = None
-            t.confirmed_at = None
-            t.updated_at = _utcnow()
-
-        await self.repo.save(t)
-        await self.session.commit()
-        return t
-
-
 class DeleteTripOrder:
     def __init__(
         self,
@@ -334,8 +262,6 @@ class DeleteTripOrder:
         t = await self.repo.get_by_id(TripOrderId(tid))
         if t is None:
             raise NotFound("TripOrder", tid)
-        if t.is_locked:
-            raise TripOrderLocked(int(t.id) if t.id is not None else 0)
         await self.repo.delete(TripOrderId(tid))
         await self.session.commit()
 

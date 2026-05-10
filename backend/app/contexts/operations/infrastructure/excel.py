@@ -696,17 +696,18 @@ async def generate_work_orders_excel(
         cell.fill = header_fill
         cell.alignment = Alignment(horizontal="center")
 
-    status_labels = {"PENDING": "Chờ ghép", "MATCHED": "Đã đối soát", "COMPLETED": "Hoàn thành"}
+    status_labels = {"PENDING": "Chờ ghép", "MATCHED": "Đã đối soát"}
     for wo in work_orders:
         containers = containers_map.get(wo.id, [])
+        plate = vehicle_by_id.get(wo.vehicle_id).plate if wo.vehicle_id and wo.vehicle_id in vehicle_by_id else ""
         for c in containers:
             ws.append([
-                f"WO#{wo.id}", client_name_by_id.get(wo.client_id, ""),
+                f"WO#{wo.id}", partner_name_by_id.get(wo.partner_id, ""),
                 loc_name_by_id.get(wo.pickup_location_id, ""),
                 loc_name_by_id.get(wo.dropoff_location_id, ""),
-                driver_name_by_id.get(wo.driver_id, ""), wo.tractor_plate,
+                driver_name_by_id.get(wo.driver_id, ""), plate,
                 c.container_number, c.work_type,
-                wo.driver_salary, wo.allowance, wo.earning,
+                wo.driver_salary, wo.allowance, wo.driver_salary + wo.allowance,
                 status_labels.get(wo.status, wo.status),
                 wo.created_at.date() if wo.created_at else "",
             ])
