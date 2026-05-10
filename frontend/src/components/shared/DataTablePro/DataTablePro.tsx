@@ -236,17 +236,17 @@ export function DataTablePro<T>({
                     <button
                       onClick={() => handleSort(col.key)}
                       className="flex items-center gap-1 transition-colors hover:opacity-80"
-                      style={sortKey === col.key ? { color: 'var(--theme-text-primary)', fontWeight: 600 } : undefined}
+                      style={sortKey === col.key ? { color: 'var(--theme-text-primary)', fontWeight: 600 } : { color: 'var(--theme-text-secondary)' }}
                     >
                       {col.header}
                       {sortKey === col.key ? (
                         sortDir === 'asc' ? (
-                          <ChevronUp className="h-3.5 w-3.5" style={{ color: 'var(--theme-brand-primary)' }} />
+                          <ChevronUp className="h-4 w-4" style={{ color: 'var(--theme-brand-primary)' }} />
                         ) : (
-                          <ChevronDown className="h-3.5 w-3.5" style={{ color: 'var(--theme-brand-primary)' }} />
+                          <ChevronDown className="h-4 w-4" style={{ color: 'var(--theme-brand-primary)' }} />
                         )
                       ) : (
-                        <ChevronsUpDown className="h-3.5 w-3.5 opacity-40" />
+                        <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
                       )}
                     </button>
                   ) : (
