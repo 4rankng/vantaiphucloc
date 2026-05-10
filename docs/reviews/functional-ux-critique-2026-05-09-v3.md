@@ -1,6 +1,6 @@
 # Functional + UX Audit v3 — phucloc.tingting.vip
 
-**Date:** 2026-05-09 (3rd pass after additional fixes; executed 2026-05-10)
+**Date:** 2026-05-09 (3rd pass after additional fixes; executed 2026-05-10, fixes applied 2026-05-10)
 **Auditor:** Senior UX/UI Auditor + Full-Stack QA
 **References:** `docs/reviews/functional-ux-critique-2026-05-09-v2.md` (only v2 file present on disk; v1 file referenced in the prompt is not in the repo)
 **Account under test:** `ketoan / admin123` (Nguyễn Mai Phương · Kế toán)
@@ -13,7 +13,7 @@
 
 ## Executive Summary
 
-**Net status vs v2: 4 of 5 v1 critical bugs FIXED, 1 partial. 11 of 20 v2 new findings FIXED, 5 partial, 4 still broken or removed-from-scope. 8 fresh findings (mostly redesign-introduced).**
+**Net status vs v2: 4 of 5 v1 critical bugs FIXED, 1 partial. 11 of 20 v2 new findings FIXED, 5 partial, 4 still broken or removed-from-scope. 8 fresh findings (mostly redesign-introduced). Post-v3 fixes applied — see Fix Log at bottom.**
 
 This is the **largest delta we have observed between audit passes**. The v2 silent-failure pattern (POST/DELETE 4xx with no UI feedback) has been substantially eliminated:
 - **C2** delete partner now produces `DELETE 200` and a green toast `Đã xoá 7S`.
@@ -460,6 +460,31 @@ That's ~2 dev-days of focused work + a re-audit. After that I would sign release
 | **NX6** | 404 | LOW | NEW | No sidebar on 404 | Render inside app shell. |
 | **NX7** | Tài xế | LOW | NEW | "Phúc Lộc" vs "Vận Tải Phúc Lộc" | One-shot SQL migration. |
 | **NX8** | Khách hàng | LOW | NEW | "Test KH Audit · notaphone · MST: abc123" lingering | Delete or repair. |
+
+---
+
+## Post-v3 Fix Log (2026-05-10)
+
+| # | Issue | Fix | File(s) |
+|---|-------|-----|---------|
+| N3 | Login button enabled with empty fields | **Already fixed in code.** `disabled={loading \|\| !username.trim() \|\| !password.trim()}` was present. Audit may have been against older bundle. | `Login.tsx:225` |
+| NX4 | Dashboard status vocabulary drift | Changed "Chờ xử lý" → "Chờ đối soát", "Đã xác nhận" → "Đã khớp", added "Đã huỷ" for CANCELLED status | `AccountantDashboard.tsx:124-140` |
+| NX5 | Login error renders at low opacity | Removed `animate-fade-slide-up` from error div so it appears at full opacity immediately | `Login.tsx:166` |
+| NX1 | Match toast fires error on success | Added success toast after `handleMatch()` resolves. Improved error message extraction from `unwrap` Error objects | `MatchTrip.tsx:191-200` |
+| NX2 | Khách hàng lost search input + columns | Restored search input with fuzzyMatch. Added DataTablePro with columns (Tên, SĐT, MST, Loại, Địa chỉ) on desktop. Kept card layout on mobile | `ClientList.tsx` (full rewrite) |
+| N5 | No helper text under MST/SĐT | Added `"10 chữ số, bắt đầu bằng 0"` under phone field and `"10 hoặc 13 chữ số (không dấu cách)"` under MST field | `ClientList.tsx:243-247,252-256` |
+| NX3 | Users count shows 0 | Changed filter from `u.isActive` to `u.isActive !== false` to handle undefined values from API | `UserManagement.tsx:60` |
+| N9 | Revenue label ambiguous | Changed "Doanh thu tháng" → "Doanh thu (đơn hàng tháng)" on both desktop and mobile dashboards | `AccountantDashboard.tsx` (replace_all) |
+| — | "Nhập đơn đối soát" label | Renamed dialog title to "Nhập đơn hàng" | `WorkOrderList.tsx:161` |
+
+### Items NOT fixed (require backend or larger scope)
+
+| # | Issue | Reason |
+|---|-------|--------|
+| NX6 | 404 page missing sidebar | Requires router restructuring to render NotFound inside layout routes. LOW severity. |
+| NX7 | Driver brand inconsistency | Data migration: `UPDATE drivers SET vendor = 'Vận Tải Phúc Lộc' WHERE vendor = 'Phúc Lộc'` |
+| NX8 | Test KH Audit bad data in prod | One-off DB cleanup needed |
+| N14 | Date format missing year | Minor cosmetic; needs design decision on year display strategy |
 
 ---
 
