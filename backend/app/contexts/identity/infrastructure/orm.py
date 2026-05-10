@@ -38,9 +38,7 @@ class UserORM(Base):
     cccd = Column(String(12), unique=True, nullable=True, index=True)
     hashed_password = Column(String(255), nullable=False)
     role = Column(String(20), default="driver", nullable=False)
-    vendor = Column(String(255), nullable=True, index=True)
     is_active = Column(Boolean, default=True, nullable=False)
-    tractor_plate = Column(String(20), nullable=True)
     created_at = Column(
         DateTime(timezone=True), default=_utcnow, nullable=False
     )

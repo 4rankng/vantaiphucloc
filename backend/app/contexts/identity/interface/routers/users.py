@@ -122,8 +122,6 @@ async def create_user(
         email=body.email,
         full_name=body.full_name,
         cccd=body.cccd,
-        vendor=body.vendor,
-        tractor_plate=body.tractor_plate,
     )
     try:
         user = await use_case.execute(cmd, actor_role=_actor_role(current_user))
@@ -148,8 +146,6 @@ async def update_user(
         email=payload.get("email"),
         full_name=payload.get("full_name"),
         cccd=payload.get("cccd"),
-        vendor=payload.get("vendor"),
-        tractor_plate=payload.get("tractor_plate"),
         role=UserRole.from_str(new_role) if new_role else None,
         is_active=payload.get("is_active"),
         new_password=payload.get("password"),
