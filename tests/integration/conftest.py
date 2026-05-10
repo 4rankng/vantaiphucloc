@@ -3,6 +3,7 @@ Integration test fixtures for the running TTransport backend.
 All tests call the real API at http://localhost:8100/api/v1.
 """
 
+import time
 import pytest
 import httpx
 from datetime import date
@@ -17,54 +18,80 @@ SEED_USERS = {
     "driver": {"username": "taixe1", "password": "admin123"},
 }
 
+_cached_tokens: dict[str, str] = {}
+
 
 def _uid() -> str:
     return uuid4().hex[:8]
 
 
+def _container_number() -> str:
+    """Generate a valid ISO 6346 container number: 4 letters + 7 digits."""
+    import random
+    import string
+    prefix = ''.join(random.choices(string.ascii_uppercase, k=4))
+    digits = ''.join(random.choices(string.digits, k=7))
+    return f"{prefix}{digits}"
+
+
+def _get_token(client: httpx.Client, role: str) -> str:
+    if role in _cached_tokens:
+        return _cached_tokens[role]
+    creds = SEED_USERS[role]
+    # Retry with backoff to handle rate limiting
+    for attempt in range(5):
+        resp = client.post("/auth/login", json=creds)
+        if resp.status_code == 200:
+            token = resp.json()["access_token"]
+            _cached_tokens[role] = token
+            return token
+        if resp.status_code == 429:
+            time.sleep(2 ** attempt)
+            continue
+        raise AssertionError(f"Login failed for {role}: {resp.text}")
+    raise AssertionError(f"Login failed for {role} after retries: rate limited")
+
+
 # ── HTTP client fixture ──────────────────────────────────────────────
 
+# Shared client at module scope to avoid rate limiting
+_shared_client: httpx.Client | None = None
 
-@pytest.fixture
+
+@pytest.fixture(scope="session")
 def api_client():
-    """Synchronous httpx client for integration tests."""
-    with httpx.Client(base_url=BASE_URL, timeout=30.0) as client:
-        yield client
+    global _shared_client
+    _shared_client = httpx.Client(base_url=BASE_URL, timeout=30.0)
+    yield _shared_client
+    _shared_client.close()
+    _shared_client = None
 
 
 # ── Auth header fixtures ─────────────────────────────────────────────
 
 
-def _login_sync(client: httpx.Client, role: str) -> str:
-    creds = SEED_USERS[role]
-    resp = client.post("/auth/login", json=creds)
-    assert resp.status_code == 200, f"Login failed for {role}: {resp.text}"
-    return resp.json()["access_token"]
-
-
-@pytest.fixture
+@pytest.fixture(scope="session")
 def admin_headers(api_client):
-    token = _login_sync(api_client, "superadmin")
+    token = _get_token(api_client, "superadmin")
     return {"Authorization": f"Bearer {token}"}
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def accountant_headers(api_client):
-    token = _login_sync(api_client, "accountant")
+    token = _get_token(api_client, "accountant")
     return {"Authorization": f"Bearer {token}"}
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def director_headers(api_client):
-    token = _login_sync(api_client, "director")
+    token = _get_token(api_client, "director")
     return {"Authorization": f"Bearer {token}"}
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def driver_headers(api_client):
-    token = _login_sync(api_client, "driver")
+    token = _get_token(api_client, "driver")
     return {"Authorization": f"Bearer {token}"}
-
 
 
 # ── Entity factory fixtures ──────────────────────────────────────────
@@ -221,7 +248,7 @@ def create_work_order(api_client, admin_headers, create_client, create_location)
             "dropoff_location_id": dropoff["id"],
             "driver_id": driver_id or 4,
             "tractor_plate": "29C-12345",
-            "containers": [{"container_number": f"ITCU{uid.upper()}", "work_type": "E20"}],
+            "containers": [{"container_number": _container_number(), "work_type": "E20"}],
         }
         payload.update(overrides)
         resp = api_client.post("/work-orders", json=payload, headers=admin_headers)
@@ -262,7 +289,7 @@ def create_trip_order(api_client, admin_headers, create_client, create_location)
             "driver_salary": 300000,
             "allowance": 50000,
             "revenue": 1000000,
-            "containers": [{"container_number": f"ITCU{uid.upper()}", "work_type": "E20"}],
+            "containers": [{"container_number": _container_number(), "work_type": "E20"}],
         }
         payload.update(overrides)
         resp = api_client.post("/trip-orders", json=payload, headers=admin_headers)
