@@ -43,7 +43,6 @@ class TripLine:
     pickup_location: str
     dropoff_location: str
     unit_price: int
-    is_confirmed: bool
 
 
 @dataclass
