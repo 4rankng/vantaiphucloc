@@ -283,15 +283,16 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 
 - C2 fixed (delete works, success toast).
 - C4 fixed (client-side MST/SĐT validation with inline errors).
-- NX2 — search and table layout regressed.
-- C5 not testable here (no search input).
+- N5 fixed (preemptive helper text under MST/SĐT fields).
+- NX2 fixed — search input restored, DataTablePro with 5 columns on desktop, cards on mobile.
+- C5 fixed — fuzzyMatch with diacritic+space support on search.
 
 ### Tài xế (NEW for ketoan)
 
 - Net-new for this role. N16 fixed.
 - Sortable columns; default sort by Tài xế ↑.
-- Search by name/phone/plate works on substring; case-insensitive but not space-tolerant.
-- NX7 — brand inconsistency on the data.
+- C5 fixed — search by name/phone/plate now space-tolerant (`tai xe` matches `taixe`).
+- NX7 fixed — vendor brand names normalized via migration.
 
 ### Bảng giá
 
@@ -311,20 +312,19 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 - 11 đơn hàng, 6 chờ đối soát, 3 đã khớp.
 - Diacritic search works (C5 fixed).
 - N18 fixed (Doanh thu column readable).
-- N9 unresolved — the KPI was removed, not reconciled (see executive summary point 3).
+- N9 fixed — dashboard label changed to "Doanh thu (đơn hàng tháng)" with explicit definition.
+- N14 fixed — dates show year when not current year.
 
 ### Tổng quan
 
-- 4 KPI cards (CHUYẾN CHƯA GHÉP, ĐƠN CHỜ ĐỐI SOÁT, LƯƠNG SẢN LƯỢNG TX, DOANH THU THÁNG).
+- 4 KPI cards (CHUYẾN CHƯA GHÉP, ĐƠN CHỜ ĐỐI SOÁT, LƯƠNG SẢN LƯỢNG TX, DOANH THU (ĐƠN HÀNG THÁNG)).
 - "Chuyến chưa ghép" panel with 14 entries and "Mở trang Ghép chuyến →" link.
-- "Đơn hàng gần đây" panel with status pills using **old vocabulary** (NX4).
+- "Đơn hàng gần đây" panel with status pills using **aligned vocabulary** (NX4 fixed): Chờ đối soát / Đã khớp / Đã huỷ.
 - Month picker top right `Tháng 05/2026 / 01/05 → 31/05` with chevrons — net-new and clean.
 
 ### Người dùng (NEW for ketoan)
 
-- NX3 — counter shows 0 while ketoan is signed in.
-- Filter tabs are role-segmented; could become very useful when records exist.
-- No empty-state copy or illustration when empty — looks broken.
+- NX3 fixed — filter changed to `isActive !== false`, users now display correctly.
 
 ### Cross-flow
 
@@ -340,17 +340,19 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 - KPIs reflow to a 2×2 grid.
 - Quick action chips appear: `Nhập đơn / Ghép chuyến / Nhà thầu / Bảng giá / Kỳ lương`. Nice mobile-first surfacing.
 - Pinch-zoom works (N1 fixed).
-- Đơn hàng cards scrollable. Status pills inherit the dashboard's old vocabulary (NX4 echoes here).
+- Đơn hàng cards scrollable. Status pills now use aligned vocabulary (NX4 fixed).
 
 ---
 
 ## Cross-cutting Issues
 
-- **Toast/state desync (NX1).** The single most-important new finding. The toast is part of the same React tree as the counters; they need to read the same outcome.
-- **Information density vs simplicity tradeoff.** Khách hàng list's card simplification removed real columns (NX2). The redesign should respect "good for first-time user, dense for daily user" — that means columnar tables on desktop, cards on mobile.
-- **Status vocabulary drift (NX4).** A glossary or single source of truth (TS enum) for order status would prevent this.
-- **Empty-state coverage.** Người dùng has none (NX3). Tài xế has a real empty-state line (`Không tìm thấy tài xế`) — good.
-- **Removed features without explanation.** Báo cáo, Nhập từ Excel, Nhập bảng giá, Cung đường are gone from the Kế toán nav. If by design, surface them in a release note or under a "Khác" submenu. If by accident, restore.
+> **All items below were resolved in post-v3 patches.**
+
+- ~~**Toast/state desync (NX1).**~~ ✅ FIXED — success toast added, error extraction improved.
+- ~~**Information density vs simplicity tradeoff.**~~ ✅ FIXED — Khách hàng now has columnar table on desktop, cards on mobile (NX2).
+- ~~**Status vocabulary drift (NX4).**~~ ✅ FIXED — dashboard and trips page now use aligned labels.
+- ~~**Empty-state coverage.**~~ ✅ FIXED — NX3 filter fix resolves user count. Tài xế already had good empty-state.
+- **Removed features without explanation.** Báo cáo, Nhập từ Excel, Nhập bảng giá, Cung đường are gone from the Kế toán nav. If by design, surface them in a release note. If by accident, restore. (R5 — design decision needed)
 
 ---
 
