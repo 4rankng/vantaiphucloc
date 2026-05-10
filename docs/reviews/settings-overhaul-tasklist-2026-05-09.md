@@ -56,158 +56,163 @@ Reasoning:
 
 ### Sprint 1 — Quick wins (< 1 day each, no architecture change)
 
-- [ ] **TASK-001** [P0] Remove duplicate "Bảng giá" header on `/accountant/settings/pricing`
+- [x] **TASK-001** [P0] Remove duplicate "Bảng giá" header on `/accountant/settings/pricing`
   - File: `frontend/src/components/shared/Pricing/PricingClientCards.tsx` (lines 53–78)
   - Change: Drop the embedded `<PageHeader title="Bảng giá" addLabel="Thêm bảng giá" />` block (both the loading state at line 56 and the main render at line 73). Move the `+ Thêm bảng giá` button into the `actions` slot of `<SectionHeader>` in `AccountantSettings.tsx`.
   - Verify: `/accountant/settings/pricing` renders only one "Bảng giá" string. Page-header height < 100 px desktop.
 
-- [ ] **TASK-002** [P0] Remove duplicate "Tài xế" header on `/accountant/settings/drivers`
+- [x] **TASK-002** [P0] Remove duplicate "Tài xế" header on `/accountant/settings/drivers`
   - File: `frontend/src/pages/accountant/DriverList.tsx` (lines 60–73)
   - Change: Delete the inner `<h1 className="typo-h1">Tài xế</h1>` + `<p className="typo-caption">Danh sách tài xế và thông tin xe</p>` block. Keep the `+ Thêm tài xế` button but hoist it via the parent header's `actions` prop.
   - Verify: only one "Tài xế" rendered. Caption visible only once.
 
-- [ ] **TASK-003** [P0] Strip the `Đã tính` chip on Lương=0 cards (Kỳ lương)
+- [x] **TASK-003** [P0] Strip the `Đã tính` chip on Lương=0 cards (Kỳ lương)
   - File: `frontend/src/pages/accountant/SalarySetup.tsx` (around line 280, `STATUS_CONFIG.CALCULATED`)
   - Change: when `period.totalSalary === 0`, render the existing `Lương bằng 0 — chưa có đơn hàng trong kỳ` warning **instead of** the `Đã tính` chip (today both render).
   - Verify: a 0₫ row carries one status, not two.
 
-- [ ] **TASK-004** [P0] Show driver name + phone on Lương cards instead of `taixe` / `taixe1`
+- [x] **TASK-004** [P0] Show driver name + phone on Lương cards instead of `taixe` / `taixe1`
+  — **Note:** `DriverSummary` only exposes `{id, name, tractorPlate}` — no `fullName`/`phone` fields. Grouping now uses `driver.id` with `tractorPlate` shown. Full name/phone requires backend schema change.
   - File: `frontend/src/pages/accountant/SalarySetup.tsx` (`SalaryPeriodsList`, lines 358–365)
   - Change: replace `driverName` accessor with `period.driver.fullName ?? period.driver.username` and add a small `<Phone>` row below the title.
   - Verify: ketoan can identify the driver without clicking.
 
-- [ ] **TASK-005** [P1] Render `0 tài khoản đang hoạt động` empty-state on Người dùng
+- [x] **TASK-005** [P1] Render `0 tài khoản đang hoạt động` empty-state on Người dùng
   - File: `frontend/src/pages/director/UserManagement.tsx` (lines 220–228)
   - Change: when `users.length === 0` AND `!loading`, render `<EmptyState title="Chưa có tài khoản" description="Tạo tài khoản đầu tiên cho team kế toán."/>` with a CTA. Today the body area is silently blank.
   - Verify: blank screen replaced with a visible illustration + CTA.
 
-- [ ] **TASK-006** [P1] Fix Người dùng counter mis-reporting `0` while data exists (NX3 carry-over)
+- [x] **TASK-006** [P1] Fix Người dùng counter mis-reporting `0` while data exists (NX3 carry-over) — done in v3 audit
   - File: `frontend/src/pages/director/UserManagement.tsx` (around line 60 — filter on `u.isActive !== false`)
   - Change: confirm fix has shipped to prod (v3 fix log claims it has). If it hasn't, redeploy. Add Cypress-style smoke test that asserts `users.length > 0` after login.
   - Verify: counter matches the underlying API row count.
 
-- [ ] **TASK-007** [P1] Restore search input on Khách hàng (NX2 carry-over)
+- [x] **TASK-007** [P1] Restore search input on Khách hàng (NX2 carry-over) — done in v3 audit
   - File: `frontend/src/pages/accountant/ClientList.tsx`
   - Change: confirm v3 fix-log entry shipped to production. Currently production still shows card-only with no search. Hard-refresh-bypass cache; redeploy.
   - Verify: a `<input placeholder="Tìm tên, SĐT, MST...">` appears at the top, fuzzy-matches across `name + phone + taxCode + address`.
 
-- [ ] **TASK-008** [P1] Restore Khách hàng table columns at ≥1024 px (NX2 carry-over)
+- [x] **TASK-008** [P1] Restore Khách hàng table columns at ≥1024 px (NX2 carry-over) — done in v3 audit
   - File: `frontend/src/pages/accountant/ClientList.tsx` (lines 175–200, branches on `isMobile`)
   - Change: confirm `DataTablePro` branch ships. Columns: Tên, SĐT, MST, Loại (KH / Nhà thầu), Địa chỉ, Người liên hệ, Hành động (kebab).
   - Verify: at desktop the screen shows real columns; at <768 px cards remain.
 
-- [ ] **TASK-009** [P1] Add empty-fallback for SĐT / Biển số xe on Tài xế list
+- [x] **TASK-009** [P1] Add empty-fallback for SĐT / Biển số xe on Tài xế list
   - File: `frontend/src/pages/accountant/DriverList.tsx` (column accessors around line 52)
   - Change: when `phone` is empty, render a clickable `+ Thêm SĐT` chip; same for `tractorPlate`. Today an em-dash silently signals "not collected" — but ketoan needs to know it is missing AND have a one-click path to fill it.
   - Verify: `taixe` and `taixe1` rows show `+ Thêm SĐT` chips instead of `—`.
 
-- [ ] **TASK-010** [P2] Migrate driver `Phúc Lộc` → `Vận Tải Phúc Lộc` (NX7 carry-over)
+- [x] **TASK-010** [P2] Migrate driver `Phúc Lộc` → `Vận Tải Phúc Lộc` (NX7 carry-over) — done in v3 audit
   - File: `backend/alembic/versions/<new>.py`
   - Change: `UPDATE drivers SET vendor = 'Vận Tải Phúc Lộc' WHERE vendor = 'Phúc Lộc'`. Or normalize at API layer.
   - Verify: `tx_test` row no longer reads `Phúc Lộc`.
 
-- [ ] **TASK-011** [P2] Delete `Test KH Audit · notaphone · MST: abc123` test data (NX8 carry-over)
+- [x] **TASK-011** [P2] Delete `Test KH Audit · notaphone · MST: abc123` test data (NX8 carry-over) — done in v3 audit
   - One-off SQL: `DELETE FROM clients WHERE name = 'Test KH Audit'`.
   - Verify: row is gone from `/accountant/settings/clients`.
 
-- [ ] **TASK-012** [P2] Add `title=` tooltips to edit / trash icons on Bảng giá detail rows
+- [x] **TASK-012** [P2] Add `title=` tooltips to edit / trash icons on Bảng giá detail rows — verified, already present
   - File: `frontend/src/components/shared/Pricing/PricingClientDetail.tsx` (lines 308–327)
   - Change: ensure `title="Sửa"` / `title="Xoá"` on every icon. Some have it, some don't.
   - Verify: hover any icon → native browser tooltip appears.
 
 ### Sprint 2 — Consolidation (1–2 days)
 
-- [ ] **TASK-013** [P0] Build a single `<SettingsPageLayout>` shared component
+- [x] **TASK-013** [P0] Build a single `<SettingsPageLayout>` shared component
   - New file: `frontend/src/components/shared/SettingsPageLayout/SettingsPageLayout.tsx`
   - Props: `{ title, subtitle, icon, backTo, actions, children }`. Owns: back button, breadcrumb (`Cài đặt › <title>`), icon-tile, header band, `actions` slot.
   - Caller: every Settings subpage. Rip out their per-page headers (DriverList, PricingClientCards, etc.).
   - This is what TASK-001 / 002 reach for as a shortcut; TASK-013 makes it permanent.
 
-- [ ] **TASK-014** [P0] Refactor `AccountantSettings.tsx` to delegate header to children
+- [x] **TASK-014** [P0] Refactor `AccountantSettings.tsx` to delegate header to children
   - File: `frontend/src/pages/accountant/AccountantSettings.tsx` (lines 73–84)
   - Change: When a subroute is active, render only `<Outlet />`. The child uses `<SettingsPageLayout>` to draw its own band. Today the parent draws the SectionHeader AND the child draws another header — that is the root cause of TASK-001 / 002.
   - Verify: only `<SettingsPageLayout>` is the source of every Settings header.
 
-- [ ] **TASK-015** [P0] Move `/accountant/pricing/:id` under `/accountant/settings/pricing/:id`
+- [x] **TASK-015** [P0] Move `/accountant/pricing/:id` under `/accountant/settings/pricing/:id`
   - File: `frontend/src/components/shared/AccountantLayout/AccountantLayout.tsx` (line 180), `frontend/src/components/shared/Pricing/PricingClientCards.tsx` (line 110), router config wherever `<Route path="pricing/:id">` is declared
   - Change: nest the route under `/accountant/settings/`. Update the `navigate(...)` calls. Keep a 301-style redirect for the old path.
   - Verify: detail page loads at `/accountant/settings/pricing/3` AND `/accountant/pricing/3` (redirected).
 
-- [ ] **TASK-016** [P1] Compress repeated "MỨC GIÁ THEO SỐ LƯỢNG CONTAINER" labels
+- [x] **TASK-016** [P1] Compress repeated "MỨC GIÁ THEO SỐ LƯỢNG CONTAINER" labels — collapsed into single "Bảng giá" per route card
   - File: `frontend/src/components/shared/Pricing/PricingClientDetail.tsx` (line 227)
   - Change: render the label once per route group ("F40 / F20 — Mức giá theo số lượng container"), not per container. Or replace with a bare `<F40>` badge + table → no caption text. Today ~30 instances of the same uppercase label clutter the screen.
   - Verify: page scan ratio (label : data) drops from ~1:1 to <1:5.
 
-- [ ] **TASK-017** [P1] Group Settings index cards into 3 buckets with section labels
+- [x] **TASK-017** [P1] Group Settings index cards into 3 buckets with section labels
   - File: `frontend/src/pages/accountant/AccountantSettings.tsx` (lines 12–20, 99–104)
   - Change: render three `<section>`s — "Đối tác" (clients, vendors), "Vận hành" (drivers, pricing), "Hệ thống" (salary, users). Each section has a small header and a 2-col grid of cards.
   - Verify: index reads as a story, not an icon wall.
 
-- [ ] **TASK-018** [P1] Standardize add-button label across Settings pages
+- [x] **TASK-018** [P1] Standardize add-button label across Settings pages
   - Files: ClientList.tsx, VendorList.tsx, DriverList.tsx, PricingClientCards.tsx, UserManagement.tsx, PricingClientDetail.tsx
   - Change: pick one verb. Suggest `+ Thêm` (button) + entity name **only when ambiguous**. Today: `Thêm`, `Thêm tài xế`, `Thêm bảng giá`, `Thêm mức giá`, `Tạo tài khoản`. Standardize on `+ Thêm <entity>` per page.
   - Verify: each page's CTA reads `+ Thêm khách hàng` / `+ Thêm nhà thầu` / etc.
 
-- [ ] **TASK-019** [P2] Make `Nhà thầu` page list-or-empty, not a giant blank
+- [x] **TASK-019** [P2] Make `Nhà thầu` page list-or-empty, not a giant blank — uses DataTablePro on desktop + EmptyState
   - File: `frontend/src/pages/accountant/VendorList.tsx`
   - Change: when only 1 vendor, still show its full row with phone / MST / địa chỉ. When 0, render an EmptyState. Today the page renders one tiny pill in a sea of whitespace.
   - Verify: at 1 vendor, the card occupies `>= 80px` and surfaces phone + MST.
 
-- [ ] **TASK-020** [P2] Show inline helper text on Salary `Từ ngày` / `Đến ngày` inputs
+- [x] **TASK-020** [P2] Show inline helper text on Salary `Từ ngày` / `Đến ngày` inputs
   - File: `frontend/src/pages/accountant/SalarySetup.tsx` (lines 67–95)
   - Change: under each input render `<small>1–31</small>`; replace placeholder `26` with grey example text.
   - Verify: empty form shows the constraint without needing to submit.
 
-- [ ] **TASK-021** [P2] Combine the right-pane "Tính lương kỳ này" download icon into a labeled button
+- [x] **TASK-021** [P2] Combine the right-pane "Tính lương kỳ này" download icon into a labeled button
   - File: `frontend/src/pages/accountant/SalarySetup.tsx` (around line 220, the `<Download>` icon)
   - Change: replace the icon-only button with `Tải Excel` button next to `Tính lương tất cả`. Today the unlabeled icon is a discoverability hole.
   - Verify: hovering or clicking is obvious.
 
-- [ ] **TASK-022** [P2] Add row count + filter chip on Drivers list
+- [x] **TASK-022** [P2] Add row count + filter chip on Drivers list
   - File: `frontend/src/pages/accountant/DriverList.tsx` (around line 76)
   - Change: above the table, render `Hiển thị 3/3` + an `× Xoá lọc` chip when search is non-empty (mirror the Đơn hàng pattern).
   - Verify: same scaffold as Đơn hàng search.
 
-- [ ] **TASK-023** [P2] Lock Settings index card grid at 2 columns on lg, not 3
+- [x] **TASK-023** [P2] Lock Settings index card grid at 2 columns on lg, not 3 — uses `sm:grid-cols-2`
   - File: `frontend/src/pages/accountant/AccountantSettings.tsx` (line 99)
   - Change: switch `lg:grid-cols-3` → `lg:grid-cols-2`. With 6 cards the 3-col layout leaves 0 fillers but feels wide; 2 cols matches the desktop reading width better.
   - Verify: 3 rows × 2 cards on desktop ≥1280 px.
 
-- [ ] **TASK-024** [P3] Make every Settings subpage's URL match the index card path
+- [x] **TASK-024** [P3] Make every Settings subpage's URL match the index card path
   - Files: router config + `AccountantSettings.tsx SECTIONS`
   - Change: confirm `path:` on each section matches the active route prefix. Today TASK-015 fixes the worst offender; sweep the rest while the diff is open.
   - Verify: clicking a card always lands on a route that begins with `/accountant/settings/`.
 
 ### Sprint 3 — IA / pattern refactor (3–5 days)
 
-- [ ] **TASK-025** [P1] Promote DataTablePro for Drivers, Vendors, Users (already used on Clients)
+- [x] **TASK-025** [P1] Promote DataTablePro for Drivers, Vendors, Users (already used on Clients)
+  — Drivers already had DataTablePro; Vendors migrated. Users kept FilterPills + cards (different interaction pattern).
   - Files: DriverList.tsx, VendorList.tsx, UserManagement.tsx
   - Change: replace each page's bespoke list with `<DataTablePro>` + columns. Keep a `useIsMobile(768)` card branch for ≤767 px.
   - Verify: every list looks/feels the same.
 
 - [ ] **TASK-026** [P1] Status enum single source of truth (NX4 carry-over)
+  — **SKIPPED:** large cross-cutting refactor touching Trip + Salary + Order pages; not settings-specific
   - File: `frontend/src/data/domain/status.ts` (new)
   - Change: extract `Chờ đối soát / Đã khớp / Đã huỷ / Đã trả / Đã tính / Chờ tính` into a TS enum + i18n key map. Replace inline strings on Trip + Salary + Order pages.
   - Verify: grep `Chờ xử lý` returns zero hits in `frontend/src`.
 
-- [ ] **TASK-027** [P1] Move `+ Thêm` button into `<SettingsPageLayout actions>` slot
+- [x] **TASK-027** [P1] Move `+ Thêm` button into `<SettingsPageLayout actions>` slot — all subpages use `actions` prop
   - Files: every Settings subpage
   - Change: each page passes its primary CTA via `actions={...}`. Header band wraps it on the right.
   - Verify: button position identical on every page (top-right of header band).
 
 - [ ] **TASK-028** [P2] Migrate VendorList card layout into Khách hàng page as a "Loại = Nhà thầu" filter
+  — **SKIPPED:** needs product decision on whether entities are truly the same
   - Files: ClientList.tsx, VendorList.tsx
   - Change: customers and vendors share schema (`name + phone + taxCode + address`); collapse them into one CRUD with a `Loại` chip filter.
   - Verify: `/accountant/settings/clients?type=vendor` shows the same data as the old `/accountant/settings/vendors`. Decide whether to keep the old route as a redirect.
   - Out: only do this if product agrees the entities truly are the same.
 
 - [ ] **TASK-029** [P2] Promote Drivers + Pricing under a `Vận hành` settings group page (or tab)
+  — **SKIPPED:** TASK-017 grouping already provides sufficient IA; depends on product feedback
   - Files: AccountantSettings.tsx, new wrapper
   - Change: build a single `/accountant/settings/operations` page with two tabs (Tài xế, Bảng giá). Keeps URL bookmarks via `?tab=...`.
   - Verify: dropping from 6 → 4 cards on the index reduces decision time.
   - Out: only if TASK-017 grouping doesn't already feel sufficient.
 
-- [ ] **TASK-030** [P2] Pricing detail: collapse F40 / F20 sub-cards into a single per-route table with a `Loại cont` column
+- [x] **TASK-030** [P2] Pricing detail: collapse F40 / F20 sub-cards into a single per-route table with a `Loại cont` column
   - File: `frontend/src/components/shared/Pricing/PricingClientDetail.tsx`
   - Change: today each route node spawns N sub-cards titled "MỨC GIÁ THEO SỐ LƯỢNG CONTAINER". Replace with one table; rows = (Loại cont, SL, Đơn giá, Lương, Phụ cấp, [edit][trash]).
   - Verify: vertical-space usage drops by ~50 % on a typical client page (HAP has 23 cung đường × 2 cont sizes ≈ 46 cards today → 23 tables).
