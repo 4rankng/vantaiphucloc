@@ -22,16 +22,11 @@ WorkOrderContainerId = NewType("WorkOrderContainerId", int)
 class WorkOrderStatus(StrEnum):
     PENDING = "PENDING"
     MATCHED = "MATCHED"
-    COMPLETED = "COMPLETED"
-    CANCELLED = "CANCELLED"
 
 
 class TripOrderStatus(StrEnum):
-    DRAFT = "DRAFT"
     PENDING = "PENDING"
-    CONFIRMED = "CONFIRMED"
-    COMPLETED = "COMPLETED"
-    CANCELLED = "CANCELLED"
+    MATCHED = "MATCHED"
 
 
 class WorkType(StrEnum):

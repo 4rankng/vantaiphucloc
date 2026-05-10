@@ -135,7 +135,7 @@ class TripOrder:
     unit_price: Money = 0
     driver_salary: Money = 0
     allowance: Money = 0
-    status: str = TripOrderStatus.DRAFT
+    status: str = TripOrderStatus.PENDING
     code: str | None = None
     pricing_id: int | None = None
     pickup_raw: str | None = None
@@ -202,59 +202,26 @@ class TripOrder:
         self.pricing_id = pricing_id
         self.updated_at = _utcnow()
 
-    def fill_info(self) -> None:
-        """DRAFT → PENDING. Used after the import + pricing has filled the trip."""
-        if self.status != TripOrderStatus.DRAFT:
-            raise InvalidStateTransition(
-                kind="TripOrder",
-                current=self.status,
-                attempted=TripOrderStatus.PENDING,
-            )
-        self.status = TripOrderStatus.PENDING
-        self.updated_at = _utcnow()
-
-    def confirm(self) -> None:
-        """PENDING → CONFIRMED. Accountant confirms after reviewing matched WOs."""
+    def match(self) -> None:
+        """PENDING → MATCHED."""
         if self.status != TripOrderStatus.PENDING:
             raise InvalidStateTransition(
                 kind="TripOrder",
                 current=self.status,
-                attempted=TripOrderStatus.CONFIRMED,
+                attempted=TripOrderStatus.MATCHED,
             )
-        self.status = TripOrderStatus.CONFIRMED
+        self.status = TripOrderStatus.MATCHED
         self.updated_at = _utcnow()
 
-    def complete(self) -> None:
-        """CONFIRMED → COMPLETED."""
-        if self.status != TripOrderStatus.CONFIRMED:
-            raise InvalidStateTransition(
-                kind="TripOrder",
-                current=self.status,
-                attempted=TripOrderStatus.COMPLETED,
-            )
-        self.status = TripOrderStatus.COMPLETED
-        self.updated_at = _utcnow()
-
-    def reopen(self) -> None:
-        """COMPLETED → PENDING (used when reconciliation is undone)."""
-        if self.status != TripOrderStatus.COMPLETED:
+    def unmatch(self) -> None:
+        """MATCHED → PENDING."""
+        if self.status != TripOrderStatus.MATCHED:
             raise InvalidStateTransition(
                 kind="TripOrder",
                 current=self.status,
                 attempted=TripOrderStatus.PENDING,
             )
         self.status = TripOrderStatus.PENDING
-        self.updated_at = _utcnow()
-
-    def cancel(self) -> None:
-        """DRAFT or PENDING → CANCELLED."""
-        if self.status not in (TripOrderStatus.DRAFT, TripOrderStatus.PENDING):
-            raise InvalidStateTransition(
-                kind="TripOrder",
-                current=self.status,
-                attempted=TripOrderStatus.CANCELLED,
-            )
-        self.status = TripOrderStatus.CANCELLED
         self.updated_at = _utcnow()
 
     def link_work_order(self, work_order_id: int) -> None:
@@ -387,24 +354,5 @@ class WorkOrder:
         self.status = WorkOrderStatus.PENDING
         self.updated_at = _utcnow()
 
-    def complete(self) -> None:
-        """PENDING or MATCHED → COMPLETED."""
-        if self.status not in (WorkOrderStatus.PENDING, WorkOrderStatus.MATCHED):
-            raise InvalidStateTransition(
-                kind="WorkOrder",
-                current=self.status,
-                attempted=WorkOrderStatus.COMPLETED,
-            )
-        self.status = WorkOrderStatus.COMPLETED
-        self.updated_at = _utcnow()
 
-    def cancel(self) -> None:
-        """PENDING → CANCELLED. Matched/completed orders cannot cancel directly."""
-        if self.status != WorkOrderStatus.PENDING:
-            raise InvalidStateTransition(
-                kind="WorkOrder",
-                current=self.status,
-                attempted=WorkOrderStatus.CANCELLED,
-            )
-        self.status = WorkOrderStatus.CANCELLED
-        self.updated_at = _utcnow()
+
