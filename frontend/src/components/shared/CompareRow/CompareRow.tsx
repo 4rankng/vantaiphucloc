@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CheckCircle2, ArrowLeftRight, Pencil } from 'lucide-react'
+import { CheckCircle2, ArrowLeftRight, Pencil, Link2 } from 'lucide-react'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import type { InlineSelectOption } from '@/components/shared/InlineSelect'
 
@@ -9,12 +9,14 @@ interface EditConfig {
   placeholder: string
 }
 
-export function CompareRow({ label, left, right, leftLabel, rightLabel, matched, onTapLeft, onTapRight, editLeft, editRight }: {
+export function CompareRow({ label, left, right, leftLabel, rightLabel, matched, onTapLeft, onTapRight, editLeft, editRight, onConfirmSame, confirmSameLoading }: {
   label: string; left: string; right: string; matched?: boolean
   leftLabel?: string; rightLabel?: string
   onTapLeft?: () => void; onTapRight?: () => void
   editLeft?: EditConfig
   editRight?: EditConfig
+  onConfirmSame?: () => void
+  confirmSameLoading?: boolean
 }) {
   const [editingSide, setEditingSide] = useState<'left' | 'right' | null>(null)
 
@@ -50,6 +52,8 @@ export function CompareRow({ label, left, right, leftLabel, rightLabel, matched,
     )
   }
 
+  const showConfirmSame = !matched && left && right && onConfirmSame
+
   return (
     <div className="rounded-xl p-3" style={{
       background: matched ? 'var(--theme-status-success-light)' : 'var(--theme-bg-secondary)',
@@ -66,6 +70,17 @@ export function CompareRow({ label, left, right, leftLabel, rightLabel, matched,
         <ArrowLeftRight className="w-3.5 h-3.5 shrink-0" style={{ color: matched ? 'var(--theme-status-success)' : 'var(--theme-text-muted)' }} />
         {renderCell('right', right, rightLabel, onTapRight, editRight)}
       </div>
+      {showConfirmSame && (
+        <button
+          onClick={onConfirmSame}
+          disabled={confirmSameLoading}
+          className="mt-2 flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-lg transition-colors active:opacity-70 touch-manipulation"
+          style={{ color: 'var(--theme-brand-primary)', background: 'var(--theme-brand-primary-light, rgba(59,130,246,0.08))' }}
+        >
+          <Link2 className="w-3 h-3" />
+          {confirmSameLoading ? 'Đang xác nhận...' : 'Cùng địa điểm'}
+        </button>
+      )}
     </div>
   )
 }
