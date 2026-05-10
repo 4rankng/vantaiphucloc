@@ -205,8 +205,8 @@ export function CreateUserDialog({
         createVendor.mutate(data, {
           onSuccess: (res) => {
             setCreateVendorOpen(false)
-            if (res.success && res.data?.id) {
-              setForm(f => ({ ...f, vendor: String(res.data.id) }))
+            if (res?.id) {
+              setForm(f => ({ ...f, vendor: String(res.id) }))
             }
           },
         })

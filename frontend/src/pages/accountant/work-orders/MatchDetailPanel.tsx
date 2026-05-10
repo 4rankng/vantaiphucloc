@@ -35,13 +35,9 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
     if (!workOrder || submittingId) return
     setSubmittingId(tripOrderId)
     try {
-      const res = await reconcile.mutateAsync({ workOrderId: workOrder.id, tripOrderId })
-      if (res.success) {
-        toast.success('Thành công', 'Đã ghép chuyến')
-        onMatchSuccess()
-      } else {
-        toast.error('Lỗi', 'Không thể ghép chuyến')
-      }
+      await reconcile.mutateAsync({ workOrderId: workOrder.id, tripOrderId })
+      toast.success('Thành công', 'Đã ghép chuyến')
+      onMatchSuccess()
     } catch {
       toast.error('Lỗi', 'Không thể ghép chuyến')
     } finally {
@@ -57,15 +53,13 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
     }))
     try {
       const res = await bulkMatch.mutateAsync(pairs)
-      if (res.success && res.data) {
-        const matched = res.data.matched.filter(r => r.success).length
-        if (matched > 0) {
-          toast.success('Thành công', `Đã ghép ${matched} cặp`)
-          onMatchSuccess()
-        }
-        if (res.data.errors.length > 0) {
-          toast.error('Lỗi', `${res.data.errors.length} cặp không thể ghép`)
-        }
+      const matched = res.matched.filter(r => r.success).length
+      if (matched > 0) {
+        toast.success('Thành công', `Đã ghép ${matched} cặp`)
+        onMatchSuccess()
+      }
+      if (res.errors.length > 0) {
+        toast.error('Lỗi', `${res.errors.length} cặp không thể ghép`)
       }
     } catch {
       toast.error('Lỗi', 'Không thể ghép hàng loạt')

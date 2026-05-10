@@ -129,7 +129,7 @@ function TripRow({ trip, onClick, isLast }: { trip: TripOrder; onClick: () => vo
     statusLabel = 'Nháp'
   } else if (trip.status === 'COMPLETED') {
     statusVariant = 'completed'
-    statusLabel = 'Hoàn thành'
+    statusLabel = 'Đã khớp'
   } else if (isPending) {
     statusVariant = 'pending'
     statusLabel = 'Chờ đối soát'

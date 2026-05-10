@@ -187,8 +187,8 @@ Reasoning:
   - Change: replace each page's bespoke list with `<DataTablePro>` + columns. Keep a `useIsMobile(768)` card branch for ≤767 px.
   - Verify: every list looks/feels the same.
 
-- [ ] **TASK-026** [P1] Status enum single source of truth (NX4 carry-over)
-  — **SKIPPED:** large cross-cutting refactor touching Trip + Salary + Order pages; not settings-specific
+- [ ] ~~**TASK-026** [P1] Status enum single source of truth (NX4 carry-over)~~
+  — **WILL NOT IMPLEMENT:** out of scope for settings overhaul; cross-cutting refactor touching Trip + Salary + Order pages
   - File: `frontend/src/data/domain/status.ts` (new)
   - Change: extract `Chờ đối soát / Đã khớp / Đã huỷ / Đã trả / Đã tính / Chờ tính` into a TS enum + i18n key map. Replace inline strings on Trip + Salary + Order pages.
   - Verify: grep `Chờ xử lý` returns zero hits in `frontend/src`.
@@ -198,15 +198,15 @@ Reasoning:
   - Change: each page passes its primary CTA via `actions={...}`. Header band wraps it on the right.
   - Verify: button position identical on every page (top-right of header band).
 
-- [ ] **TASK-028** [P2] Migrate VendorList card layout into Khách hàng page as a "Loại = Nhà thầu" filter
-  — **SKIPPED:** needs product decision on whether entities are truly the same
+- [ ] ~~**TASK-028** [P2] Migrate VendorList card layout into Khách hàng page as a "Loại = Nhà thầu" filter~~
+  — **WILL NOT IMPLEMENT:** vendors and clients are separate entities; product decision is to keep them separate
   - Files: ClientList.tsx, VendorList.tsx
   - Change: customers and vendors share schema (`name + phone + taxCode + address`); collapse them into one CRUD with a `Loại` chip filter.
   - Verify: `/accountant/settings/clients?type=vendor` shows the same data as the old `/accountant/settings/vendors`. Decide whether to keep the old route as a redirect.
   - Out: only do this if product agrees the entities truly are the same.
 
-- [ ] **TASK-029** [P2] Promote Drivers + Pricing under a `Vận hành` settings group page (or tab)
-  — **SKIPPED:** TASK-017 grouping already provides sufficient IA; depends on product feedback
+- [ ] ~~**TASK-029** [P2] Promote Drivers + Pricing under a `Vận hành` settings group page (or tab)~~
+  — **WILL NOT IMPLEMENT:** TASK-017 3-bucket grouping already provides sufficient IA; adding a tab layer would slow down access to frequently-used pages
   - Files: AccountantSettings.tsx, new wrapper
   - Change: build a single `/accountant/settings/operations` page with two tabs (Tài xế, Bảng giá). Keeps URL bookmarks via `?tab=...`.
   - Verify: dropping from 6 → 4 cards on the index reduces decision time.
