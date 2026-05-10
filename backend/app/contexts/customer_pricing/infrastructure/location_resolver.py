@@ -242,11 +242,13 @@ class LocationResolverService:
             already = await self._alias_by_normalized(norm)
             if already is None:
                 alias_source = self._alias_source_for(source, result.match_kind, confirmed_alias)
+                alias_status = "CONFIRMED" if confirmed_alias else "PENDING"
                 self.db.add(LocationAlias(
                     location_id=result.location.id,
                     alias=raw_name.strip()[:255],
                     alias_normalized=norm,
                     source=alias_source,
+                    status=alias_status,
                     created_by_id=user_id,
                 ))
                 await self.db.flush()

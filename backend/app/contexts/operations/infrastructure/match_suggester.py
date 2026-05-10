@@ -30,6 +30,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import (
+    LocationAlias,
     TripOrder,
     TripOrderContainer,
     TripOrderWorkOrder,
@@ -67,6 +68,54 @@ WEIGHTS = {
 FULL_MATCH_THRESHOLD = 1.0
 POTENTIAL_MATCH_THRESHOLD = 3.0 / 6.0
 MIN_MATCH_THRESHOLD = 2.0 / 6.0
+
+
+# ---------------------------------------------------------------------------
+# Alias-aware location matching
+# ---------------------------------------------------------------------------
+
+
+async def _load_alias_groups(db: AsyncSession) -> dict[int, set[int]]:
+    """Build equivalence sets from CONFIRMED aliases.
+
+    Returns: {location_id: {itself + equivalent location_ids}}
+    Two locations are equivalent if they share a confirmed alias.
+    """
+    rows = (await db.execute(
+        select(LocationAlias.location_id, LocationAlias.alias_normalized)
+        .where(LocationAlias.status == "CONFIRMED")
+    )).all()
+
+    # Build alias_text → {location_ids} reverse index
+    alias_to_locs: dict[str, set[int]] = {}
+    for loc_id, alias_norm in rows:
+        alias_to_locs.setdefault(alias_norm, set()).add(loc_id)
+
+    # Union-find: for each alias with multiple locations, merge groups
+    groups: dict[int, set[int]] = {}
+    for loc_ids in alias_to_locs.values():
+        if len(loc_ids) < 2:
+            continue
+        merged = set(loc_ids)
+        for lid in loc_ids:
+            if lid in groups:
+                merged |= groups[lid]
+        for lid in merged:
+            groups[lid] = merged
+    return groups
+
+
+def _locations_match(
+    id_a: int | None,
+    id_b: int | None,
+    alias_groups: dict[int, set[int]],
+) -> bool:
+    if id_a is None or id_b is None:
+        return False
+    if id_a == id_b:
+        return True
+    group = alias_groups.get(id_a)
+    return group is not None and id_b in group
 
 
 def _confidence(score: float) -> str:
@@ -201,6 +250,7 @@ async def suggest_trip_matches(
     )
     clients = await load_client_summaries(db, client_ids)
     locations = await load_location_summaries(db, location_ids)
+    alias_groups = await _load_alias_groups(db)
 
     wo_client_name = get_client_summary(clients, work_order.client_id).name
     wo_pickup_name = get_location_summary(
@@ -224,6 +274,7 @@ async def suggest_trip_matches(
         matched_fields, score = _score_to_against_wo(
             to, to_containers.get(to.id, []),
             wo_container_numbers, wo_date, work_order,
+            alias_groups,
         )
         to_out = TripOrderOut(
             id=to.id, code=to.code, trip_date=to.trip_date,
@@ -334,6 +385,7 @@ async def suggest_wo_matches(
     )
     clients = await load_client_summaries(db, client_ids)
     locations = await load_location_summaries(db, location_ids)
+    alias_groups = await _load_alias_groups(db)
 
     to_client_name = get_client_summary(clients, trip_order.client_id).name
     to_pickup_name = get_location_summary(
@@ -354,6 +406,7 @@ async def suggest_wo_matches(
         matched_fields, score = _score_wo_against_to(
             wo, wo_containers.get(wo.id, []),
             to_container_numbers, trip_order,
+            alias_groups,
         )
         wo_out = WorkOrderOut(
             id=wo.id,
@@ -424,6 +477,7 @@ def _score_to_against_wo(
     wo_container_numbers: set[str],
     wo_date,
     work_order: WorkOrder,
+    alias_groups: dict[int, set[int]] | None = None,
 ) -> tuple[list[str], float]:
     matched_fields: list[str] = []
     score = 0.0
@@ -445,10 +499,11 @@ def _score_to_against_wo(
     if wo_date and to.trip_date == wo_date:
         matched_fields.append("date")
         score += WEIGHTS["date"]
-    if work_order.pickup_location_id == to.pickup_location_id:
+    ag = alias_groups or {}
+    if _locations_match(work_order.pickup_location_id, to.pickup_location_id, ag):
         matched_fields.append("pickup_location")
         score += WEIGHTS["pickup_location"]
-    if work_order.dropoff_location_id == to.dropoff_location_id:
+    if _locations_match(work_order.dropoff_location_id, to.dropoff_location_id, ag):
         matched_fields.append("dropoff_location")
         score += WEIGHTS["dropoff_location"]
     if to.client_id == work_order.client_id:
@@ -466,6 +521,7 @@ def _score_wo_against_to(
     wo_containers: Sequence[WorkOrderContainer],
     to_container_numbers: set[str],
     trip_order: TripOrder,
+    alias_groups: dict[int, set[int]] | None = None,
 ) -> tuple[list[str], float]:
     matched_fields: list[str] = []
     score = 0.0
@@ -488,10 +544,11 @@ def _score_wo_against_to(
     if wo_date and trip_order.trip_date == wo_date:
         matched_fields.append("date")
         score += WEIGHTS["date"]
-    if wo.pickup_location_id == trip_order.pickup_location_id:
+    ag = alias_groups or {}
+    if _locations_match(wo.pickup_location_id, trip_order.pickup_location_id, ag):
         matched_fields.append("pickup_location")
         score += WEIGHTS["pickup_location"]
-    if wo.dropoff_location_id == trip_order.dropoff_location_id:
+    if _locations_match(wo.dropoff_location_id, trip_order.dropoff_location_id, ag):
         matched_fields.append("dropoff_location")
         score += WEIGHTS["dropoff_location"]
     if wo.client_id == trip_order.client_id:

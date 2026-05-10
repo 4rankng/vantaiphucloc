@@ -111,6 +111,13 @@ def alias_to_domain(orm: LocationAliasORM) -> LocationAlias:
         alias=orm.alias,
         alias_normalized=orm.alias_normalized,
         source=orm.source,
+        status=orm.status or "PENDING",
+        confirmed_by_id=orm.confirmed_by_id,
+        confirmed_at=orm.confirmed_at,
+        rejected_by_id=orm.rejected_by_id,
+        rejected_at=orm.rejected_at,
+        merge_target_location_id=orm.merge_target_location_id,
+        note=orm.note,
         created_at=orm.created_at,
         created_by_id=orm.created_by_id,
     )
@@ -125,6 +132,13 @@ def alias_to_orm(a: LocationAlias, orm: LocationAliasORM | None = None) -> Locat
     orm.alias = a.alias
     orm.alias_normalized = a.alias_normalized
     orm.source = a.source
+    orm.status = a.status
+    orm.confirmed_by_id = a.confirmed_by_id
+    orm.confirmed_at = a.confirmed_at
+    orm.rejected_by_id = a.rejected_by_id
+    orm.rejected_at = a.rejected_at
+    orm.merge_target_location_id = a.merge_target_location_id
+    orm.note = a.note
     orm.created_by_id = a.created_by_id
     return orm
 
