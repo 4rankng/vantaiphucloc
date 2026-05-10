@@ -690,7 +690,7 @@ async def generate_work_orders_excel(
         cell.fill = header_fill
         cell.alignment = Alignment(horizontal="center")
 
-    status_labels = {"PENDING": "Chờ đối soát", "MATCHED": "Đã đối soát", "COMPLETED": "Hoàn thành"}
+    status_labels = {"PENDING": "Chờ ghép", "MATCHED": "Đã đối soát", "COMPLETED": "Hoàn thành"}
     for wo in work_orders:
         containers = containers_map.get(wo.id, [])
         for c in containers:
@@ -769,7 +769,7 @@ async def generate_trip_orders_excel(
         cell.fill = header_fill
         cell.alignment = Alignment(horizontal="center")
 
-    status_labels = {"DRAFT": "Nháp", "PENDING": "Chờ đối soát", "COMPLETED": "Hoàn thành", "CANCELLED": "Đã huỷ"}
+    status_labels = {"DRAFT": "Nháp", "PENDING": "Chờ ghép", "COMPLETED": "Hoàn thành", "CANCELLED": "Đã huỷ"}
     for to in trip_orders:
         containers = containers_map.get(to.id, [])
         for c in containers:

@@ -376,7 +376,7 @@ N4 echo (good empty-state copy here, unlike Đối tác). Diacritic still broken
 
 ### Đơn hàng
 
-N9 (revenue mismatch), N18 (column clipping), N19 (sort indicator). C5 echo. The status-tab filters work; the four numeric stats above are a useful KPI pane. Filter "Nháp" / "Chờ đối soát" / "Hoàn thành" / "Đã huỷ" is clear.
+N9 (revenue mismatch), N18 (column clipping), N19 (sort indicator). C5 echo. The status-tab filters work; the four numeric stats above are a useful KPI pane. Filter "Nháp" / "Chờ ghép" / "Hoàn thành" / "Đã huỷ" is clear.
 
 ### Đối soát
 

@@ -28,7 +28,7 @@ What did genuinely ship:
 What is **still broken or only partially fixed**, despite v3 fix-log claims:
 - **🔴 NX1 (HIGH)** — Ghép chuyến error toast still fires on a server-accepted match. `POST /api/v1/reconcile → 200`, list count drops 13 → 12, work order is removed — but UI shows red `Lỗi · Không thể ghép chuyến` toast. The desync v3 flagged is intact.
 - **🔴 NX3 (MED)** — Người dùng still shows `0 tài khoản đang hoạt động`, all four role tabs read `0`, body is blank with no empty-state. Same symptom v3 flagged.
-- **🟡 NX4 (MED)** — partially fixed: Đơn hàng list uses `Chờ đối soát` / `Đã khớp`. But Tổng quan's `Đơn hàng gần đây` panel still emits `Hoàn thành` for some rows (e.g. T002028). Two surfaces, two vocabularies.
+- **🟡 NX4 (MED)** — partially fixed: Đơn hàng list uses `Chờ ghép` / `Đã khớp`. But Tổng quan's `Đơn hàng gần đây` panel still emits `Hoàn thành` for some rows (e.g. T002028). Two surfaces, two vocabularies.
 - **🔴 TASK-001 (P0)** — Duplicate `Bảng giá` header still on `/accountant/settings/pricing` (h1 in page band + green-bar section header).
 - **🔴 TASK-002 (P0)** — Duplicate `Tài xế` h1 on `/accountant/settings/drivers` (`document.querySelectorAll('h1').length === 2`, both read `Tài xế`).
 - **🔴 TASK-003 (P0)** — Lương=0 cards still carry both `Đã tính` chip AND `Lương bằng 0 — chưa có đơn hàng trong kỳ` warning. Two of each in production.
@@ -334,14 +334,14 @@ Total: roughly 1 dev-day. The other settings items can ship in a follow-up sprin
 
 ### Đơn hàng (`/accountant/trips`)
 - Single h1 `Đơn hàng`. ✅
-- KPIs: 6 Chờ đối soát, 3 Đã khớp. Filter pills `Tất cả` / `Chờ đối soát` / `Đã khớp`.
-- Status pill values in list: only `Chờ đối soát` and `Đã khớp`. ✅ Internal vocabulary consistent.
+- KPIs: 6 Chờ ghép, 3 Đã khớp. Filter pills `Tất cả` / `Chờ ghép` / `Đã khớp`.
+- Status pill values in list: only `Chờ ghép` and `Đã khớp`. ✅ Internal vocabulary consistent.
 - 🟡 But Tổng quan's `Đơn hàng gần đây` panel emits `Hoàn thành` for some rows (e.g. T002028) — third vocabulary that doesn't appear here. NX4 PARTIAL.
 
 ### Tổng quan (`/accountant`)
 - 4 KPI cards (CHUYẾN CHƯA GHÉP / ĐƠN CHỜ ĐỐI SOÁT / LƯƠNG SẢN LƯỢNG TX / DOANH THU (ĐƠN HÀNG THÁNG)). ✅ N9 label fix holds.
 - "Chuyến chưa ghép" panel (13 rows visible after NX1's destructive test) and "Đơn hàng gần đây" panel.
-- 🟡 Status pills in "Đơn hàng gần đây": mostly `Chờ đối soát`, but T002028 reads `Hoàn thành`. NX4 PARTIAL.
+- 🟡 Status pills in "Đơn hàng gần đây": mostly `Chờ ghép`, but T002028 reads `Hoàn thành`. NX4 PARTIAL.
 - Month picker `Tháng 05/2026 / 01/05 → 31/05` with chevrons.
 
 ### Người dùng (`/accountant/settings/users`)
