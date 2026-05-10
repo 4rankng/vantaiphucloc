@@ -333,7 +333,7 @@ export function AppSidebar({ role }: AppSidebarProps) {
             ) : (
               <div className="flex items-center gap-2 px-4">
                 <img src="/logo.avif" alt="Logo" className="h-7 w-7 object-contain rounded-md" />
-                <span className="text-sm font-semibold text-white/90">Phúc Lộc</span>
+                <span className="text-sm font-semibold text-white/90">TTransport</span>
               </div>
             )}
           </div>

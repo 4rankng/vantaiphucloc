@@ -12,7 +12,7 @@ export async function getDrivers(): Promise<ApiResponse<Driver[]>> {
 }
 
 export async function createDriver(
-  data: { username: string; phone: string; tractorPlate?: string; vendor?: string },
+  data: { username: string; fullName?: string; phone: string; tractorPlate?: string; vendor?: string },
 ): Promise<ApiResponse<Driver>> {
   try {
     const res = await api.post('/drivers', toSnake(data))

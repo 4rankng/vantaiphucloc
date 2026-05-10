@@ -10,13 +10,15 @@ from pydantic import BaseModel, ConfigDict
 class DriverCreateIn(BaseModel):
     username: str
     phone: str
+    full_name: str | None = None
     tractor_plate: str | None = None
-    vendor: str | None = None  # defaults to "Phúc Lộc" if omitted
+    vendor: str | None = None  # defaults to "TTransport" if omitted
 
 
 class DriverOut(BaseModel):
     id: int
     username: str
+    full_name: str | None = None
     phone: str | None = None
     tractor_plate: str | None = None
     vendor: str | None = None

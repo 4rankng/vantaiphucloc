@@ -218,13 +218,13 @@ function SalaryPeriodsList() {
   const [confirmPay, setConfirmPay] = useState<number | null>(null)
 
   const byDriver = useMemo(() => {
-    const map = new Map<number, { driverId: number; driverName: string; driverPlate: string | null; periods: typeof periods }>()
+    const map = new Map<number, { driverId: number; driverName: string; driverPhone: string | null; driverPlate: string | null; periods: typeof periods }>()
     periods.forEach(p => {
       const existing = map.get(p.driver.id)
       if (existing) {
         existing.periods.push(p)
       } else {
-        map.set(p.driver.id, { driverId: p.driver.id, driverName: p.driver.name, driverPlate: p.driver.tractorPlate ?? null, periods: [p] })
+        map.set(p.driver.id, { driverId: p.driver.id, driverName: p.driver.name, driverPhone: p.driver.phone ?? null, driverPlate: p.driver.tractorPlate ?? null, periods: [p] })
       }
     })
     return Array.from(map.values())
@@ -264,14 +264,19 @@ function SalaryPeriodsList() {
 
   return (
     <div className="space-y-6">
-      {byDriver.map(({ driverId, driverName, driverPlate, periods: driverPeriods }) => (
+      {byDriver.map(({ driverId, driverName, driverPhone, driverPlate, periods: driverPeriods }) => (
         <section key={driverId}>
           <div className="flex items-baseline justify-between mb-2">
             <div>
               <h3 className="typo-h3">{driverName}</h3>
-              {driverPlate && (
-                <p className="text-xs font-mono mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{driverPlate}</p>
-              )}
+              <div className="flex items-center gap-2 mt-0.5">
+                {driverPhone && (
+                  <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{driverPhone}</span>
+                )}
+                {driverPlate && (
+                  <span className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>{driverPlate}</span>
+                )}
+              </div>
             </div>
             <span className="typo-caption">{driverPeriods.length} kỳ</span>
           </div>

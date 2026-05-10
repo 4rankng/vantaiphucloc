@@ -40,6 +40,7 @@ export const ROLE_LABELS: Record<Role, string> = {
 export interface Driver {
   id: number
   username: string
+  fullName: string | null
   phone: string
   tractorPlate: string | null
   vendor: string | null
@@ -97,6 +98,7 @@ export interface LocationSummary {
 export interface DriverSummary {
   id: number
   name: string
+  phone?: string | null
   tractorPlate?: string | null
 }
 
@@ -369,7 +371,7 @@ export function getJobStatusBadge(status: JobStatus): { variant: 'default'|'succ
 
 export function getWorkOrderStatusBadge(status: WorkOrderStatus): { variant: 'default'|'success'|'warning'|'danger'|'info'|'neutral'; label: string } {
   switch (status) {
-    case 'PENDING': return { variant: 'warning', label: 'Chờ đối soát' }
+    case 'PENDING': return { variant: 'warning', label: 'Chờ khớp' }
     case 'MATCHED': return { variant: 'info', label: 'Đã đối soát (chờ giá)' }
     case 'COMPLETED': return { variant: 'success', label: 'Hoàn thành' }
   }
@@ -378,7 +380,7 @@ export function getWorkOrderStatusBadge(status: WorkOrderStatus): { variant: 'de
 export function getTripOrderStatusBadge(status: TripOrderStatus): { variant: 'default'|'success'|'warning'|'danger'|'info'|'neutral'; label: string } {
   switch (status) {
     case 'DRAFT': return { variant: 'neutral', label: 'Nháp' }
-    case 'PENDING': return { variant: 'warning', label: 'Chờ đối soát' }
+    case 'PENDING': return { variant: 'warning', label: 'Chờ khớp' }
     case 'COMPLETED': return { variant: 'success', label: 'Hoàn thành' }
     case 'CANCELLED': return { variant: 'danger', label: 'Đã huỷ' }
   }

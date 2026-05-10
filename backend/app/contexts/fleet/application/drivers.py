@@ -28,6 +28,7 @@ def _to_dto(d: Driver) -> DriverDTO:
 class CreateDriverInput:
     username: str
     phone: str
+    full_name: str | None = None
     vendor: str | None = None
     tractor_plate: str | None = None
 
@@ -64,6 +65,7 @@ class CreateDriver:
             username=payload.username,
             phone=payload.phone,
             hashed_password=hashed,
+            full_name=payload.full_name,
             vendor=payload.vendor or PHUC_LOC,
             tractor_plate=payload.tractor_plate,
         )

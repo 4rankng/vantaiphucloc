@@ -46,6 +46,7 @@ class SqlDriverRepository(DriverRepository):
         username: str,
         phone: str,
         hashed_password: str,
+        full_name: str | None = None,
         vendor: str | None,
         tractor_plate: str | None,
     ) -> Driver:
@@ -54,6 +55,7 @@ class SqlDriverRepository(DriverRepository):
             phone=phone,
             hashed_password=hashed_password,
             role="driver",
+            full_name=full_name,
             vendor=vendor,
             tractor_plate=tractor_plate,
             is_active=True,
