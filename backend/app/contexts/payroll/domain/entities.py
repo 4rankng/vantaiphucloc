@@ -1,78 +1,9 @@
-"""Payroll aggregates."""
+"""Payroll domain helpers."""
 
 from __future__ import annotations
 
 import calendar
-from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
-
-from app.contexts.payroll.domain.exceptions import InvalidSalaryConfig
-from app.contexts.payroll.domain.value_objects import (
-    DriverId,
-    SalaryPeriodId,
-    SalaryStatus,
-)
-
-
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
-
-
-@dataclass
-class SalaryPeriod:
-    """One driver's pay window plus its calculated totals.
-
-    Mutations go through `recalculate()` so the invariant
-    `net_pay == total_salary + total_allowance - total_deduction` is
-    enforced in one place.
-    """
-
-    id: SalaryPeriodId | None
-    driver_id: DriverId
-    start_date: date
-    end_date: date
-    work_order_count: int = 0
-    price_per_order: int = 0
-    total_salary: int = 0
-    total_allowance: int = 0
-    total_deduction: int = 0
-    net_pay: int = 0
-    status: SalaryStatus = SalaryStatus.OPEN
-    created_at: datetime = field(default_factory=_utcnow)
-    updated_at: datetime = field(default_factory=_utcnow)
-
-    def recalculate(
-        self,
-        *,
-        work_order_count: int,
-        total_salary: int,
-        total_allowance: int,
-        total_deduction: int,
-    ) -> None:
-        self.work_order_count = work_order_count
-        self.total_salary = total_salary
-        self.total_allowance = total_allowance
-        self.total_deduction = total_deduction
-        self.price_per_order = (
-            total_salary // work_order_count if work_order_count > 0 else 0
-        )
-        self.net_pay = total_salary + total_allowance - total_deduction
-        self.status = SalaryStatus.CALCULATED
-        self.updated_at = _utcnow()
-
-
-@dataclass
-class SalaryPeriodConfig:
-    """Singleton — one row for the whole app. Defines the from_day/to_day window."""
-
-    id: int | None
-    from_day: int = 1
-    to_day: int = 28
-    updated_at: datetime = field(default_factory=_utcnow)
-
-    def __post_init__(self) -> None:
-        if not (1 <= self.from_day <= 31) or not (1 <= self.to_day <= 31):
-            raise InvalidSalaryConfig("from_day/to_day must be in 1..31")
+from datetime import date
 
 
 def _safe_date(year: int, month: int, day: int) -> date:
@@ -82,11 +13,15 @@ def _safe_date(year: int, month: int, day: int) -> date:
 
 
 def period_dates_for(
-    config: SalaryPeriodConfig | None, reference_date: date
+    settings: dict[str, str] | None, reference_date: date
 ) -> tuple[date, date]:
-    """Return (start, end) of the salary period that contains *reference_date*."""
-    from_day = config.from_day if config else 1
-    to_day = config.to_day if config else 28
+    """Return (start, end) of the salary period that contains *reference_date*.
+
+    *settings* is a dict like ``{"salary_from_day": "26", "salary_to_day": "25"}``.
+    Falls back to 1..28 when the dict or keys are missing.
+    """
+    from_day = int(settings.get("salary_from_day", "1")) if settings else 1
+    to_day = int(settings.get("salary_to_day", "28")) if settings else 28
 
     year = reference_date.year
     month = reference_date.month
