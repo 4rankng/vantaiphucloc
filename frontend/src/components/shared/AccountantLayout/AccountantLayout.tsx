@@ -4,8 +4,9 @@ import { AccountantSidebar } from '@/components/shared/AccountantSidebar'
 import { CommandPalette, useCommandPalette } from '@/components/shared/CommandPalette'
 import { useAuth } from '@/contexts/AuthContext'
 import { NotificationPanel } from '@/components/shared/NotificationPanel/NotificationPanel'
+import { Sheet, SheetContent } from '@/components/ui/Sheet'
 import { X } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Role } from '@/data/domain'
 
 const ALLOWED_ROLES: Role[] = ['accountant']
@@ -69,28 +70,21 @@ function AccountantMobileShell() {
   const { user } = useAuth()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [drawerVisible, setDrawerVisible] = useState(false)
 
   const isHome = location.pathname === '/accountant'
   const isFullscreen = FULLSCREEN_PREFIXES.some(p => location.pathname.startsWith(p))
 
-  const openSidebar = useCallback(() => {
-    setDrawerVisible(true)
-    requestAnimationFrame(() => setSidebarOpen(true))
-  }, [])
+  const closeSidebar = useCallback(() => setSidebarOpen(false), [])
+  const toggleSidebar = useCallback(() => setSidebarOpen(o => !o), [])
 
-  const closeSidebar = useCallback(() => {
-    setSidebarOpen(false)
-    setTimeout(() => setDrawerVisible(false), 280)
-  }, [])
-
-  const toggleSidebar = useCallback(() => {
-    if (drawerVisible) closeSidebar()
-    else openSidebar()
-  }, [drawerVisible, openSidebar, closeSidebar])
-
-  // Auto-close on navigation
-  useEffect(() => { closeSidebar() }, [location.pathname]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Auto-close on navigation — only when pathname actually changes after mount.
+  const prevPathRef = useRef(location.pathname)
+  useEffect(() => {
+    if (prevPathRef.current !== location.pathname) {
+      prevPathRef.current = location.pathname
+      setSidebarOpen(false)
+    }
+  }, [location.pathname])
 
   const topbarProps = isHome
     ? {
@@ -114,48 +108,34 @@ function AccountantMobileShell() {
         <Outlet />
       </AppShell>
 
-      {/* Slide-in sidebar drawer */}
-      {drawerVisible && (
-        <div className="fixed inset-0 z-50 flex">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0"
-            style={{
-              background: 'rgba(0,0,0,0.5)',
-              opacity: sidebarOpen ? 1 : 0,
-              transition: 'opacity 280ms ease',
-            }}
+      {/* Slide-in sidebar drawer — uses Radix Sheet for clean controlled state + transitions */}
+      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+        <SheetContent
+          side="left"
+          className="p-0 border-0 flex flex-col"
+          style={{
+            width: SIDEBAR_WIDTH,
+            maxWidth: '85vw',
+            background: 'var(--theme-sidebar, #0a3520)',
+          }}
+        >
+          {/* Close button */}
+          <button
             onClick={closeSidebar}
-          />
-
-          {/* Drawer panel */}
-          <div
-            className="relative z-10 h-full flex flex-col"
-            style={{
-              width: SIDEBAR_WIDTH,
-              transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
-              transition: 'transform 280ms cubic-bezier(0.4, 0, 0.2, 1)',
-              background: 'var(--theme-sidebar, #0a3520)',
-            }}
+            className="absolute top-3.5 right-3 z-10 w-7 h-7 flex items-center justify-center rounded-full shrink-0"
+            style={{ background: 'rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.7)' }}
+            aria-label="Đóng menu"
           >
-            {/* Close button */}
-            <button
-              onClick={closeSidebar}
-              className="absolute top-3.5 right-3 z-10 w-7 h-7 flex items-center justify-center rounded-full shrink-0"
-              style={{ background: 'rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.7)' }}
-              aria-label="Đóng menu"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <X className="w-4 h-4" />
+          </button>
 
-            <AccountantSidebar
-              collapsed={false}
-              forceVisible
-              onNotificationsOpen={closeSidebar}
-            />
-          </div>
-        </div>
-      )}
+          <AccountantSidebar
+            collapsed={false}
+            forceVisible
+            onNotificationsOpen={closeSidebar}
+          />
+        </SheetContent>
+      </Sheet>
     </>
   )
 }
