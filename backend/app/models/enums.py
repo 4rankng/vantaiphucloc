@@ -24,6 +24,13 @@ class WorkType(StrEnum):
     F40 = "F40"
 
 
+class LocationAliasStatus(StrEnum):
+    PENDING = "PENDING"
+    CONFIRMED = "CONFIRMED"
+    REJECTED = "REJECTED"
+    MERGED = "MERGED"
+
+
 class SalaryStatus(StrEnum):
     OPEN = "OPEN"
     CALCULATED = "CALCULATED"

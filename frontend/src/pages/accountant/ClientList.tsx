@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { Plus, Pencil, Trash2, Building2, UserCircle, MoreVertical, Search } from 'lucide-react'
+import { Plus, Pencil, Trash2, Building2, UserCircle, MoreVertical, Search, Users } from 'lucide-react'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { BrandIcon } from '@/components/atoms/BrandIcon'
 import { DataTablePro, type Column } from '@/components/shared/DataTablePro/DataTablePro'
+import { SettingsPageLayout } from '@/components/shared/SettingsPageLayout'
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
@@ -133,18 +134,31 @@ export function ClientList() {
 
   if (loading) {
     return (
-      <div className="space-y-2">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="h-16 rounded-lg skeleton-shimmer" />
-        ))}
-      </div>
+      <SettingsPageLayout title="Khách hàng" subtitle="Quản lý thông tin khách hàng" icon={Users} iconColor="var(--theme-status-info)">
+        <div className="space-y-2">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-16 rounded-lg skeleton-shimmer" />
+          ))}
+        </div>
+      </SettingsPageLayout>
     )
   }
 
   return (
-    <div>
-      {/* Search + Add button */}
-      <div className="flex items-center justify-between gap-3 mb-4">
+    <SettingsPageLayout
+      title="Khách hàng"
+      subtitle="Quản lý thông tin khách hàng"
+      icon={Users}
+      iconColor="var(--theme-status-info)"
+      actions={
+        <button onClick={handleOpenCreate} className="btn-primary">
+          <Plus size={16} strokeWidth={2.25} />
+          {!isMobile && <span>Thêm khách hàng</span>}
+        </button>
+      }
+    >
+      {/* Search */}
+      <div className="flex items-center gap-3 mb-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--theme-text-muted)' }} />
           <input
@@ -156,10 +170,6 @@ export function ClientList() {
             style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
           />
         </div>
-        <button onClick={handleOpenCreate} className="btn-primary">
-          <Plus size={16} strokeWidth={2.25} />
-          {!isMobile && <span>Thêm</span>}
-        </button>
       </div>
 
       {/* Desktop: Table / Mobile: Cards */}
@@ -312,6 +322,6 @@ export function ClientList() {
         description={deleteConfirm ? `Bạn có chắc muốn xoá "${deleteConfirm.name}"? Hành động này không thể hoàn tác.` : ''}
         confirmLabel="Xoá"
       />
-    </div>
+    </SettingsPageLayout>
   )
 }

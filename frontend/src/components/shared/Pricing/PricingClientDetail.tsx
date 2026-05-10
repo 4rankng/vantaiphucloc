@@ -203,9 +203,11 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
                   </div>
                 </div>
 
-                {/* Pricing tables for this route — one per work_type */}
-                <div className="space-y-3">
-                  {items.map(pricing => {
+                {/* Single card per route, with sub-sections per work type */}
+                <div
+                  className="card overflow-hidden"
+                >
+                {items.map((pricing, pIdx) => {
                     const isEditing = editingPricingId === pricing.id
                     const lines = isEditing ? draftLines : pricing.lines
 
@@ -215,16 +217,14 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
                     return (
                       <div
                         key={pricing.id}
-                        className="card overflow-hidden"
+                        className="p-4"
                         style={{
-                          borderColor: isEditing ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)',
-                          borderWidth: isEditing ? '2px' : '1px',
+                          background: isEditing ? 'color-mix(in srgb, var(--theme-brand-primary) 5%, transparent)' : undefined,
+                          borderTop: pIdx > 0 ? '1px solid var(--theme-border-light)' : undefined,
                         }}
                       >
-                        <div className="p-4">
-                          <div className="flex items-center gap-2 mb-4 pb-4 border-b border-[var(--theme-border-light)]">
+                          <div className="flex items-center gap-2 mb-3">
                             <ContBadge type={pricing.workType} />
-                            <span className="typo-label flex-1">Mức giá theo số lượng container</span>
                           </div>
                           <table className="w-full text-xs">
                             <thead>
@@ -381,7 +381,6 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
                             </tbody>
                           </table>
                         </div>
-                      </div>
                     )
                   })}
                 </div>

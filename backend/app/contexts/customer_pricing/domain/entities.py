@@ -9,7 +9,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-from app.contexts.customer_pricing.domain.exceptions import PricingNotMatched
+from app.contexts.customer_pricing.domain.exceptions import (
+    InvalidAliasTransition,
+    PricingNotMatched,
+)
 from app.contexts.customer_pricing.domain.value_objects import (
     ClientId,
     GeocodeSource,
@@ -92,15 +95,55 @@ class Vendor:
 
 @dataclass
 class LocationAlias:
-    """Inside the Location aggregate. Always created with a parent location_id."""
+    """Inside the Location aggregate. FSM: PENDING → CONFIRMED | REJECTED | MERGED."""
 
     id: LocationAliasId | None
     location_id: LocationId
     alias: str
     alias_normalized: str
     source: str                # "import" | "manual" | "fuzzy_match"
+    status: str = "PENDING"
+    confirmed_by_id: int | None = None
+    confirmed_at: datetime | None = None
+    rejected_by_id: int | None = None
+    rejected_at: datetime | None = None
+    merge_target_location_id: int | None = None
+    note: str | None = None
     created_at: datetime = field(default_factory=_utcnow)
     created_by_id: int | None = None
+
+    # ── FSM transitions ───────────────────────────────────
+
+    def confirm(self, *, user_id: int) -> None:
+        if self.status != "PENDING":
+            raise InvalidAliasTransition(self.id, self.status, "CONFIRMED")
+        self.status = "CONFIRMED"
+        self.confirmed_by_id = user_id
+        self.confirmed_at = _utcnow()
+
+    def reject(self, *, user_id: int, note: str | None = None) -> None:
+        if self.status not in ("PENDING", "CONFIRMED"):
+            raise InvalidAliasTransition(self.id, self.status, "REJECTED")
+        self.status = "REJECTED"
+        self.rejected_by_id = user_id
+        self.rejected_at = _utcnow()
+        self.note = note
+
+    def reopen(self, *, user_id: int) -> None:
+        if self.status != "REJECTED":
+            raise InvalidAliasTransition(self.id, self.status, "PENDING")
+        self.status = "PENDING"
+        self.rejected_by_id = None
+        self.rejected_at = None
+        self.note = None
+
+    def mark_merged(self, *, target_location_id: int, user_id: int) -> None:
+        if self.status != "PENDING":
+            raise InvalidAliasTransition(self.id, self.status, "MERGED")
+        self.status = "MERGED"
+        self.merge_target_location_id = target_location_id
+        self.confirmed_by_id = user_id
+        self.confirmed_at = _utcnow()
 
 
 @dataclass

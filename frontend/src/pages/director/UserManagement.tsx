@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, type ReactNode } from 'react'
-import { Truck, CircleDollarSign, LayoutDashboard, Phone, Pencil, Trash2, ChevronRight, Plus } from 'lucide-react'
-import { Navigate } from 'react-router-dom'
+import { Truck, CircleDollarSign, LayoutDashboard, Phone, Pencil, Trash2, ChevronRight, Plus, UserCog } from 'lucide-react'
+import { Navigate, useLocation } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
@@ -9,6 +9,8 @@ import { InlineSelect } from '@/components/shared/InlineSelect'
 import { CreateVendorDialog } from '@/components/shared/CreateVendorDialog'
 import { useToast } from '@/components/atoms/Toast'
 import { FilterPills } from '@/components/shared/FilterPills'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { SettingsPageLayout } from '@/components/shared/SettingsPageLayout'
 import type { Role } from '@/data/domain'
 import { ROLE_LABELS } from '@/data/domain'
 import { useVendors, useCreateVendor, useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '@/hooks/use-queries'
@@ -190,19 +192,23 @@ function UserManagementInner() {
 
   if (loading) return <div className="p-4 text-center py-12" style={{ color: 'var(--theme-text-muted)' }}>Đang tải...</div>
 
+  const addButton = (
+    <button
+      onClick={() => { setCreateForm(EMPTY_FORM); setCreateOpen(true) }}
+      className="btn-primary"
+    >
+      <Plus size={16} strokeWidth={2.25} />
+      <span>Tạo tài khoản</span>
+    </button>
+  )
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">
         <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
           {users.length} tài khoản đang hoạt động
         </span>
-        <button
-          onClick={() => { setCreateForm(EMPTY_FORM); setCreateOpen(true) }}
-          className="btn-primary"
-        >
-          <Plus size={16} strokeWidth={2.25} />
-          <span>Tạo tài khoản</span>
-        </button>
+        {addButton}
       </div>
 
       <FilterPills
@@ -215,6 +221,15 @@ function UserManagementInner() {
         value={filterRole}
         onChange={setFilterRole}
       />
+
+      {filtered.length === 0 && !loading && (
+        <EmptyState
+          icon={<UserCog className="w-10 h-10" />}
+          title="Chưa có tài khoản"
+          description={filterRole !== 'ALL' ? `Không có tài khoản với vai trò ${ROLE_LABELS[filterRole]}` : 'Tạo tài khoản đầu tiên cho team'}
+          compact
+        />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2 lg:gap-3">
         {filtered.map(u => {
@@ -499,10 +514,26 @@ function UserManagementInner() {
 
 export function UserManagement() {
   const { user } = useAuth()
+  const location = useLocation()
+  const inSettings = location.pathname.startsWith('/accountant/settings')
 
   // Guard: director, superadmin, and accountant (needs to create driver accounts)
   if (!user || !['director', 'superadmin', 'accountant'].includes(user.role)) {
     return <Navigate to="/" replace />
+  }
+
+  if (inSettings) {
+    return (
+      <SettingsPageLayout
+        title="Người dùng"
+        subtitle="Tạo & quản lý tài khoản"
+        icon={UserCog}
+        iconColor="var(--theme-text-secondary)"
+        actions={undefined}
+      >
+        <UserManagementInner />
+      </SettingsPageLayout>
+    )
   }
 
   return <UserManagementInner />
