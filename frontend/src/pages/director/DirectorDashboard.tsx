@@ -168,7 +168,7 @@ export function DirectorDashboard() {
           color="primary"
         />
         <StatCard
-          label="Hoàn thành"
+          label="Đã khớp"
           value={loading ? '—' : String(completedThisMonth)}
           icon={<CheckCircle2 className="h-5 w-5" />}
           trend={completedThisMonth > 0 ? '+8%' : undefined}

@@ -25,8 +25,8 @@ function getStatusVariant(status: string): 'pending' | 'completed' | 'neutral' {
 function getStatusLabel(status: string): string {
   switch (status) {
     case 'PENDING': return 'Chờ khớp'
-    case 'MATCHED': return 'Hoàn thành'
-    case 'COMPLETED': return 'Hoàn thành'
+    case 'MATCHED': return 'Đã khớp'
+    case 'COMPLETED': return 'Đã khớp'
     default: return status
   }
 }

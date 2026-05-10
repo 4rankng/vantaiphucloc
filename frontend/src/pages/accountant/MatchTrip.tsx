@@ -178,7 +178,7 @@ export function MatchTrip() {
     if (!selectedTrip) return
     toggleConfirmation(selectedTrip.id, {
       onSuccess: () => {
-        toast.success('Thành công', selectedTrip.isConfirmed ? 'Đã bỏ chốt chuyến' : 'Đã chốt chuyến')
+        toast.success('Thành công', selectedTrip.isConfirmed ? 'Đã bỏ chốt chuyến' : 'Đã khớp chuyến')
       },
       onError: () => {
         toast.error('Lỗi', 'Không thể thay đổi trạng thái chốt')
@@ -546,7 +546,7 @@ export function MatchTrip() {
                   isConfirmed={selectedTrip.isConfirmed}
                   onToggle={handleToggleConfirmation}
                   disabled={toggling}
-                  label="Đã chốt"
+                  label="Đã khớp"
                 />
               </div>
 

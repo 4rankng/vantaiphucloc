@@ -155,7 +155,7 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
     if (!trip) return
     toggleConfirmation(trip.id, {
       onSuccess: () => {
-        toast.success('Thành công', trip.isConfirmed ? 'Đã bỏ chốt chuyến' : 'Đã chốt chuyến')
+        toast.success('Thành công', trip.isConfirmed ? 'Đã bỏ chốt chuyến' : 'Đã khớp chuyến')
       },
       onError: () => {
         toast.error('Lỗi', 'Không thể thay đổi trạng thái chốt')
@@ -176,7 +176,7 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
   }
 
   const statusVariant = trip.status === 'DRAFT' ? 'draft' : trip.status === 'PENDING' ? 'warning' : trip.status === 'COMPLETED' ? 'success' : 'error'
-  const statusLabel = trip.status === 'DRAFT' ? 'Nháp' : trip.status === 'PENDING' ? 'Chờ đối soát' : trip.status === 'COMPLETED' ? 'Đã khớp' : 'Đã huỷ'
+  const statusLabel = trip.status === 'DRAFT' ? 'Nháp' : trip.status === 'PENDING' ? 'Chờ khớp' : trip.status === 'COMPLETED' ? 'Đã khớp' : 'Đã huỷ'
 
   return (
     <div className="space-y-6">
@@ -220,7 +220,7 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
               {trip.isConfirmed && (
                 <span className="chip chip-success">
                   <Lock size={12} />
-                  Đã chốt
+                  Đã khớp
                 </span>
               )}
             </div>

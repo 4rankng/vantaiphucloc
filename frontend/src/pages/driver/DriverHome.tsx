@@ -194,7 +194,7 @@ export function DriverHome() {
                     : { background: 'transparent', color: 'var(--theme-text-muted)' }
                 }
               >
-                {tab === 'all' ? 'Tất cả' : 'Chờ đối soát'}
+                {tab === 'all' ? 'Tất cả' : 'Chờ khớp'}
               </button>
             ))}
           </div>

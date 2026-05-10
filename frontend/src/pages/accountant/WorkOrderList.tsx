@@ -19,12 +19,12 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import { useMonthParams } from './use-month-params'
 import type { WorkOrderMatchScore } from '@/data/domain'
 
-type StatusFilter = 'all' | 'PENDING' | 'COMPLETED'
+type StatusFilter = 'all' | 'PENDING' | 'MATCHED'
 
 const STATUS_OPTIONS = [
   { key: 'all', label: 'Tất cả' },
   { key: 'PENDING', label: 'Chờ khớp', color: 'var(--theme-status-warning)' },
-  { key: 'COMPLETED', label: 'Hoàn thành', color: 'var(--theme-status-success)' },
+  { key: 'MATCHED', label: 'Đã khớp', color: 'var(--theme-status-success)' },
 ]
 
 export function WorkOrderList() {
@@ -62,7 +62,8 @@ export function WorkOrderList() {
 
   const filtered = useMemo(() => {
     let result = workOrders
-    if (statusFilter !== 'all') result = result.filter(w => w.status === statusFilter)
+    if (statusFilter === 'PENDING') result = result.filter(w => w.status === 'PENDING')
+    else if (statusFilter === 'MATCHED') result = result.filter(w => w.status === 'MATCHED' || w.status === 'COMPLETED')
     if (search.trim()) {
       const q = search
       result = result.filter(w =>

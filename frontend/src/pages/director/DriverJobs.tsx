@@ -45,7 +45,7 @@ export function DriverJobs() {
                   background: 'var(--theme-status-warning-light)',
                   color: 'var(--theme-status-warning)',
                 }}>
-                  Chờ đối soát
+                  Chờ khớp
                 </span>
               )}
             </div>
