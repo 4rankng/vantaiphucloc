@@ -34,8 +34,8 @@ def user_orm_to_entity(orm: UserORM) -> User:
         email=orm.email,
         full_name=orm.full_name,
         cccd=orm.cccd,
-        vendor=orm.vendor,
-        tractor_plate=orm.tractor_plate,
+        vendor=None,
+        tractor_plate=None,
         created_at=orm.created_at,
         updated_at=orm.updated_at,
     )
@@ -51,8 +51,6 @@ def user_entity_to_orm(entity: User) -> UserORM:
         email=entity.email,
         full_name=entity.full_name,
         cccd=entity.cccd,
-        vendor=entity.vendor,
-        tractor_plate=entity.tractor_plate,
     )
 
 
@@ -66,8 +64,6 @@ def apply_entity_to_orm(entity: User, orm: UserORM) -> None:
     orm.email = entity.email
     orm.full_name = entity.full_name
     orm.cccd = entity.cccd
-    orm.vendor = entity.vendor
-    orm.tractor_plate = entity.tractor_plate
 
 
 # ── PushSubscription ────────────────────────────────────────────────

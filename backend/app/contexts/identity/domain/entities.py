@@ -33,9 +33,7 @@ class User:
     """User aggregate root.
 
     Login by phone, email, or username — any of them are unique when set.
-    Drivers may have a tractor_plate and a vendor (vendor='Phúc Lộc' for
-    internal). Per BizLogic.md §4.2, driver salary visibility is gated on
-    reconciliation; that rule lives in the Operations context.
+    Vehicle assignment is handled through the Vehicle ORM model.
     """
 
     id: UserId | None
@@ -47,8 +45,6 @@ class User:
     email: str | None = None
     full_name: str | None = None
     cccd: str | None = None
-    vendor: str | None = None
-    tractor_plate: str | None = None
     created_at: datetime = field(default_factory=_utcnow)
     updated_at: datetime = field(default_factory=_utcnow)
 
@@ -87,8 +83,6 @@ class User:
         username: str | None = None,
         email: str | None = None,
         cccd: str | None = None,
-        vendor: str | None = None,
-        tractor_plate: str | None = None,
     ) -> None:
         if full_name is not None:
             self.full_name = full_name
@@ -100,10 +94,6 @@ class User:
             self.email = email
         if cccd is not None:
             self.cccd = validate_cccd(cccd)
-        if vendor is not None:
-            self.vendor = vendor
-        if tractor_plate is not None:
-            self.tractor_plate = tractor_plate
         self.updated_at = _utcnow()
 
     def deactivate(self) -> None:
