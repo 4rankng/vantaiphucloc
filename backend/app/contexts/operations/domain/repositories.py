@@ -32,11 +32,10 @@ class TripOrderRepository(ABC):
         *,
         offset: int,
         limit: int,
-        client_id: int | None = None,
+        partner_id: int | None = None,
         status: TripOrderStatus | None = None,
         trip_date_from: date | None = None,
         trip_date_to: date | None = None,
-        is_confirmed: bool | None = None,
         unpriced_only: bool = False,
     ) -> tuple[Sequence[TripOrder], int]: ...
 
@@ -44,12 +43,12 @@ class TripOrderRepository(ABC):
     async def find_duplicate(
         self,
         *,
-        client_id: int,
+        partner_id: int,
         trip_date: date,
         container_number: str,
     ) -> TripOrder | None:
         """Idempotency check used by the customer-Excel import:
-        `(client_id, trip_date, container_number)`."""
+        `(partner_id, trip_date, container_number)`."""
 
     @abstractmethod
     async def add(self, t: TripOrder) -> TripOrder: ...
@@ -74,9 +73,8 @@ class WorkOrderRepository(ABC):
         *,
         offset: int,
         limit: int,
-        client_id: int | None = None,
+        partner_id: int | None = None,
         driver_id: int | None = None,
-        tractor_plate: str | None = None,
         date_from: date | None = None,
         date_to: date | None = None,
         status: WorkOrderStatus | None = None,
