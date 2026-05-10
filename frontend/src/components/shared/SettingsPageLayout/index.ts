@@ -1,0 +1,1 @@
+export { SettingsPageLayout } from './SettingsPageLayout'

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
-import { Plus, Phone, Truck, X } from 'lucide-react'
+import { Plus, Phone, Truck, X, Car } from 'lucide-react'
 import { DataTablePro, type Column } from '@/components/shared/DataTablePro/DataTablePro'
+import { SettingsPageLayout } from '@/components/shared/SettingsPageLayout'
 import { useDrivers, useCreateDriver } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { fuzzyMatch } from '@/lib/search-utils'
@@ -50,35 +51,51 @@ export function DriverList() {
 
   const columns: Column<Driver>[] = [
     { key: 'name', header: 'Tài xế', accessor: d => <span className="font-medium">{d.username}</span>, sortable: true, sortKey: d => d.username },
-    { key: 'phone', header: 'SĐT', accessor: d => d.phone, sortable: true },
-    { key: 'plate', header: 'Biển số xe', accessor: d => d.tractorPlate ?? <span style={{ color: 'var(--theme-text-muted)' }}>—</span>, sortable: true, sortKey: d => d.tractorPlate ?? '' },
+    { key: 'phone', header: 'SĐT', accessor: d => d.phone
+      ? <span>{d.phone}</span>
+      : <span className="text-xs font-medium px-2 py-0.5 rounded-md" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-brand-primary)' }}>+ Thêm SĐT</span>,
+      sortable: true },
+    { key: 'plate', header: 'Biển số xe', accessor: d => d.tractorPlate
+      ? <span className="font-mono">{d.tractorPlate}</span>
+      : <span className="text-xs font-medium px-2 py-0.5 rounded-md" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-brand-primary)' }}>+ Thêm biển số</span>,
+      sortable: true, sortKey: d => d.tractorPlate ?? '' },
     { key: 'vendor', header: 'Nhà xe', accessor: d => d.vendor ?? <span style={{ color: 'var(--theme-text-muted)' }}>—</span> },
   ]
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3 mb-2">
-        <div>
-          <h1 className="typo-h1">Tài xế</h1>
-          <p className="typo-caption">Danh sách tài xế và thông tin xe</p>
-        </div>
-        <button
-          onClick={() => setDialogOpen(true)}
-          className="h-9 px-4 rounded-lg text-sm font-medium inline-flex items-center gap-1.5 shrink-0"
-          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-        >
+    <SettingsPageLayout
+      title="Tài xế"
+      subtitle="Danh sách tài xế và thông tin xe"
+      icon={Car}
+      iconColor="var(--theme-status-info)"
+      actions={
+        <button onClick={() => setDialogOpen(true)} className="btn-primary">
           <Plus className="w-4 h-4" /> Thêm tài xế
         </button>
+      }
+    >
+      <div className="flex items-center gap-3">
+        <input
+          type="text"
+          placeholder="Tìm tài xế, SĐT, biển số..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="w-full max-w-md h-9 px-3 rounded-lg text-sm border"
+          style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
+        />
+        <span className="text-xs shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
+          {search ? `${filtered.length}/${drivers.length}` : `${drivers.length}`} tài xế
+        </span>
+        {search && (
+          <button
+            onClick={() => setSearch('')}
+            className="text-xs font-medium px-2 py-1 rounded-md shrink-0 inline-flex items-center gap-1"
+            style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
+          >
+            × Xoá lọc
+          </button>
+        )}
       </div>
-
-      <input
-        type="text"
-        placeholder="Tìm tài xế, SĐT, biển số..."
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        className="w-full max-w-md h-9 px-3 rounded-lg text-sm border"
-        style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
-      />
 
       <DataTablePro
         data={filtered}
@@ -133,6 +150,6 @@ export function DriverList() {
           </div>
         </div>
       )}
-    </div>
+    </SettingsPageLayout>
   )
 }

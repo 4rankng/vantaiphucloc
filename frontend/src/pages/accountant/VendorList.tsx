@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Plus, Pencil, Trash2, Truck } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
@@ -7,6 +7,8 @@ import { Label } from '@/components/ui'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { InfoRow } from '@/components/shared/InfoRow'
+import { SettingsPageLayout } from '@/components/shared/SettingsPageLayout'
+import { DataTablePro, type Column } from '@/components/shared/DataTablePro/DataTablePro'
 import { useVendors, useCreateVendor, useUpdateVendor, useDeleteVendor } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import type { VendorFormData } from '@/services/api/vendors.api'
@@ -105,25 +107,44 @@ export function VendorList() {
     }
   }, [])
 
+  const columns: Column<Vendor>[] = useMemo(() => [
+    { key: 'name', header: 'Tên', accessor: v => <span className="font-medium">{v.name}</span>, sortable: true },
+    { key: 'phone', header: 'SĐT', accessor: v => v.phone ?? '—' },
+    { key: 'taxCode', header: 'MST', accessor: v => v.taxCode ?? '—' },
+    { key: 'type', header: 'Loại', accessor: v => v.type === 'company' ? 'Công ty' : 'Cá nhân' },
+    { key: 'address', header: 'Địa chỉ', accessor: v => v.address ?? '—', hideOnMobile: true },
+  ], [])
+
   if (loading) {
     return (
-      <div className="space-y-2">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="h-16 rounded-lg skeleton-shimmer" />
-        ))}
-      </div>
+      <SettingsPageLayout
+        title="Nhà thầu"
+        subtitle="Quản lý đơn vị vận chuyển"
+        icon={Truck}
+        iconColor="var(--theme-status-warning)"
+      >
+        <div className="space-y-2">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-16 rounded-lg skeleton-shimmer" />
+          ))}
+        </div>
+      </SettingsPageLayout>
     )
   }
 
   return (
-    <div>
-      <div className="flex justify-end mb-4">
+    <SettingsPageLayout
+      title="Nhà thầu"
+      subtitle="Quản lý đơn vị vận chuyển"
+      icon={Truck}
+      iconColor="var(--theme-status-warning)"
+      actions={
         <button onClick={handleOpenCreate} className="btn-primary">
           <Plus size={16} strokeWidth={2.25} />
-          {!isMobile && <span>Thêm</span>}
+          {!isMobile && <span>Thêm nhà thầu</span>}
         </button>
-      </div>
-
+      }
+    >
       {vendors.length === 0 ? (
         <div className="card">
           <EmptyState
@@ -133,8 +154,8 @@ export function VendorList() {
             compact
           />
         </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
+      ) : isMobile ? (
+        <div className="grid grid-cols-1 gap-3">
           {vendors.map(v => (
             <button
               key={v.id}
@@ -151,11 +172,23 @@ export function VendorList() {
                   <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
                     {v.phone ?? '—'}{v.taxCode ? ` · MST: ${v.taxCode}` : ''}
                   </p>
+                  {v.address && (
+                    <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--theme-text-muted)' }}>{v.address}</p>
+                  )}
                 </div>
               </div>
             </button>
           ))}
         </div>
+      ) : (
+        <DataTablePro
+          data={vendors}
+          columns={columns}
+          rowKey={v => v.id}
+          onRowClick={v => setSelected(v)}
+          defaultSortKey="name"
+          emptyState={<p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có nhà thầu</p>}
+        />
       )}
 
       {/* Detail Dialog */}
@@ -258,6 +291,6 @@ export function VendorList() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </SettingsPageLayout>
   )
 }

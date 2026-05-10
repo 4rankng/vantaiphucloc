@@ -177,6 +177,7 @@ function resolveMobileTitle(pathname: string): string {
   if (TITLES[pathname]) return TITLES[pathname]
   if (pathname.startsWith('/accountant/trip/')) return 'Chi tiết lệnh'
   if (pathname.startsWith('/accountant/match-trip/')) return 'Đối soát'
+  if (pathname.startsWith('/accountant/settings/pricing/')) return 'Chi tiết bảng giá'
   if (pathname.startsWith('/accountant/pricing/')) return 'Bảng giá'
   return ''
 }
