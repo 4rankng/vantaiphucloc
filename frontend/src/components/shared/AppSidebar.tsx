@@ -237,7 +237,7 @@ const ACCOUNTANT_GROUPS: MenuGroup[] = [
 
 const DIRECTOR_GROUPS: MenuGroup[] = [
   { key: 'top', label: null },
-  { key: 'quan-ly', label: 'Quản lý' },
+  { key: 'quan-ly', label: null },
 ]
 
 const DRIVER_GROUPS: MenuGroup[] = [

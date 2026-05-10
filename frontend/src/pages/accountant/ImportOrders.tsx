@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Upload, FileText, AlertTriangle, CheckCircle2, XCircle, Save, Tag, FileSpreadsheet } from 'lucide-react'
-import { Button, Input, Dialog, DialogContent } from '@/components/ui'
+import { Button, Input, Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui'
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { useClients } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
@@ -674,6 +675,11 @@ export function ImportOrdersDialog({ open, onClose }: { open: boolean; onClose: 
         className="max-w-5xl w-[95vw] max-h-[90vh] overflow-y-auto p-0"
         style={{ background: 'var(--theme-bg-primary)' }}
       >
+        <DialogHeader className="sr-only">
+          <VisuallyHidden>
+            <DialogTitle>Nhập đơn hàng</DialogTitle>
+          </VisuallyHidden>
+        </DialogHeader>
         <div className="p-5 pb-8">
           <ImportOrders />
         </div>
