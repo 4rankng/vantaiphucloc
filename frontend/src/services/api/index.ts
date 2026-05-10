@@ -26,6 +26,7 @@ import * as vendorsApi from './vendors.api'
 import * as usersApi from './users.api'
 import * as reportsApi from './reports.api'
 import * as importsApi from './imports.api'
+import * as auditApi from './audit.api'
 
 export const apiClient = {
   // Clients
@@ -134,6 +135,9 @@ export const apiClient = {
   // Customer-Pricing imports
   previewCustomerPricing: importsApi.previewCustomerPricing,
   commitCustomerPricing: importsApi.commitCustomerPricing,
+
+  // Audit Logs
+  getAuditLogs: auditApi.getAuditLogs,
 }
 
 // Re-export types from salary.api

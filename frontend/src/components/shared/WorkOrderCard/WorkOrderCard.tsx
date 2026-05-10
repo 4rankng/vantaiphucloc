@@ -1,6 +1,6 @@
 import { Clock, CheckCircle, Lock } from 'lucide-react'
 import { formatCurrencyFull, type WorkOrder } from '@/data/domain'
-import { resolveRoute } from '@/lib/route-utils'
+import { splitRouteParts, resolveRoute } from '@/lib/route-utils'
 
 type CardVariant = 'driver' | 'accountant'
 
@@ -122,7 +122,7 @@ function DriverCard({ wo, onClick }: { wo: WorkOrder; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="w-full text-left rounded-lg border px-3 py-2.5 transition-all active:scale-[0.99] touch-manipulation"
+      className="w-full text-left rounded-lg border px-3 py-2.5 transition-all active:scale-[0.99] touch-manipulation overflow-visible"
       style={{
         background: 'var(--surface-bg)',
         borderColor: 'var(--surface-border)',
@@ -167,7 +167,7 @@ function DriverCard({ wo, onClick }: { wo: WorkOrder; onClick: () => void }) {
           <span style={{ color: 'var(--theme-text-muted)' }}>Điểm trả:&nbsp;</span>
           {dropoff || '—'}
         </p>
-        <div className="shrink-0">
+        <div className="shrink-0 relative z-10">
           <StatusPill status={wo.status} variant="driver" compact />
         </div>
       </div>

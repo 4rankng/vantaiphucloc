@@ -1,6 +1,6 @@
 import type { WorkOrder, TripOrder } from '@/data/domain'
 
-function splitRouteParts(route: string): string[] {
+export function splitRouteParts(route: string): string[] {
   if (route.includes('→')) return route.split(/\s*→\s*/).map(s => s.trim()).filter(Boolean)
   if (route.includes(' - ')) return route.split(' - ').map(s => s.trim()).filter(Boolean)
   return [route]
