@@ -279,7 +279,7 @@ class UpdateTripOrder:
                 await client_repo.increment_debt(t.client_id, t.unit_price)
 
         await self.session.commit()
-        return t
+        return await self.repo.get_by_id(TripOrderId(tid))
 
 
 class CancelTripOrder:
