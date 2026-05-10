@@ -219,24 +219,24 @@ Reasoning:
 
 ### Sprint 4 — Polish (1–2 days)
 
-- [ ] **TASK-031** [P3] Render 404 inside the AccountantLayout (NX6 carry-over)
+- [x] **TASK-031** [P3] Render 404 inside the AccountantLayout (NX6 carry-over) — done in v3 audit
   - File: app router
   - Change: 404 component is rendered inside the `<AccountantLayout>` so the sidebar persists. Today the 404 is full-bleed.
 
-- [ ] **TASK-032** [P3] Add breadcrumb `Cài đặt › <subpage>` on every Settings subpage
+- [x] **TASK-032** [P3] Add breadcrumb `Cài đặt › <subpage>` on every Settings subpage — built into SettingsPageLayout
   - File: `<SettingsPageLayout>` (TASK-013)
   - Change: render a one-line breadcrumb above the title, clickable.
   - Verify: every Settings subpage shows `Cài đặt › Tài xế` etc.
 
-- [ ] **TASK-033** [P3] Add an `aria-current="page"` indicator on the active sidebar Cài đặt entry
+- [x] **TASK-033** [P3] Add an `aria-current="page"` indicator on the active sidebar Cài đặt entry
   - File: `frontend/src/components/shared/AccountantSidebar/AccountantSidebar.tsx`
   - Change: while on any `/accountant/settings/*` route, the Cài đặt sidebar item is highlighted (already true based on screenshots). Confirm test for accessibility.
 
-- [ ] **TASK-034** [P3] Pad Settings index "Cấu hình hệ thống và dữ liệu nền" subtitle
+- [x] **TASK-034** [P3] Pad Settings index "Cấu hình hệ thống và dữ liệu nền" subtitle — changed to "Quản lý kỳ lương, bảng giá, đối tác và tài khoản"
   - File: AccountantSettings.tsx (lines 92–96)
   - Change: subtitle is acceptable but feels generic. Replace with an informative sentence: "Quản lý dữ liệu nền dùng trên toàn hệ thống — bảng giá, đối tác, tài xế, kỳ lương."
 
-- [ ] **TASK-035** [P3] Standardize section card titles to h2 only (no h1 inside Outlet)
+- [x] **TASK-035** [P3] Standardize section card titles to h2 only (no h1 inside Outlet) — SettingsPageLayout renders the only h1
   - Files: SalarySetup.tsx (h3 today), ClientList.tsx, etc.
   - Change: per the new `<SettingsPageLayout>` (TASK-013), the page-band is the only h1. Sub-sections (Cấu hình kỳ lương, Tính lương kỳ này, Lịch sử kỳ lương) are h2.
   - Verify: a quick `grep "typo-h1"` in `src/pages/accountant/` returns only `AccountantSettings.tsx` and the layout.
