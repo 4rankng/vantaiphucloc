@@ -29,6 +29,5 @@ class DriverRepository(ABC):
         username: str,
         phone: str,
         hashed_password: str,
-        vendor: str | None,
-        tractor_plate: str | None,
+        full_name: str | None = None,
     ) -> Driver: ...

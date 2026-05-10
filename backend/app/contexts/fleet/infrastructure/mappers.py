@@ -12,8 +12,6 @@ def to_domain(row: DriverORM) -> Driver:
         username=row.username,
         phone=row.phone,
         full_name=row.full_name,
-        vendor=row.vendor,
-        tractor_plate=row.tractor_plate,
         is_active=row.is_active,
         created_at=row.created_at,
         updated_at=row.updated_at,

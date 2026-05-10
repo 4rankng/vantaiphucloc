@@ -8,8 +8,6 @@ from app.contexts.fleet.application.dto import DriverDTO, DriverListDTO
 from app.contexts.fleet.domain.entities import Driver
 from app.contexts.fleet.domain.repositories import DriverRepository
 
-PHUC_LOC = "Vận Tải Phúc Lộc"
-
 
 def _to_dto(d: Driver) -> DriverDTO:
     return DriverDTO(
@@ -17,8 +15,6 @@ def _to_dto(d: Driver) -> DriverDTO:
         username=d.username,
         phone=d.phone,
         full_name=d.full_name,
-        vendor=d.vendor or PHUC_LOC,
-        tractor_plate=d.tractor_plate,
         created_at=d.created_at,
         updated_at=d.updated_at,
     )
@@ -27,10 +23,8 @@ def _to_dto(d: Driver) -> DriverDTO:
 @dataclass
 class CreateDriverInput:
     username: str
-    phone: str
+    phone: str | None = None
     full_name: str | None = None
-    vendor: str | None = None
-    tractor_plate: str | None = None
 
 
 class ListDrivers:
@@ -58,15 +52,11 @@ class CreateDriver:
         self.hasher = password_hasher
 
     async def __call__(self, payload: CreateDriverInput) -> DriverDTO:
-        # Password defaults to phone (existing convention from legacy
-        # `app/api/v1/drivers.py`); keeps drivers self-onboarding.
         hashed = self.hasher.hash(payload.phone)
         driver = await self.repo.create(
             username=payload.username,
             phone=payload.phone,
             hashed_password=hashed,
             full_name=payload.full_name,
-            vendor=payload.vendor or PHUC_LOC,
-            tractor_plate=payload.tractor_plate,
         )
         return _to_dto(driver)

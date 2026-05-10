@@ -9,10 +9,8 @@ from pydantic import BaseModel, ConfigDict
 
 class DriverCreateIn(BaseModel):
     username: str
-    phone: str
+    phone: str | None = None
     full_name: str | None = None
-    tractor_plate: str | None = None
-    vendor: str | None = None  # defaults to "TTransport" if omitted
 
 
 class DriverOut(BaseModel):
@@ -20,8 +18,6 @@ class DriverOut(BaseModel):
     username: str
     full_name: str | None = None
     phone: str | None = None
-    tractor_plate: str | None = None
-    vendor: str | None = None
     created_at: datetime
     updated_at: datetime
 
