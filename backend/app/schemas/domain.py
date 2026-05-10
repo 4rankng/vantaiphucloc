@@ -152,6 +152,50 @@ class LocationPinRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# LocationAlias (confirmation FSM)
+# ---------------------------------------------------------------------------
+
+class LocationAliasOut(BaseModel):
+    id: int
+    location_id: int
+    alias: str
+    alias_normalized: str
+    source: str
+    status: str
+    confirmed_by_id: int | None = None
+    confirmed_at: datetime | None = None
+    rejected_by_id: int | None = None
+    rejected_at: datetime | None = None
+    merge_target_location_id: int | None = None
+    note: str | None = None
+    created_at: datetime
+    created_by_id: int | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CreateAliasRequest(BaseModel):
+    location_id: int
+    alias: str
+
+
+class RejectAliasRequest(BaseModel):
+    note: str | None = None
+
+
+class MergeLocationsRequest(BaseModel):
+    source_location_id: int
+    target_location_id: int
+
+
+class MergeLocationsResponse(BaseModel):
+    source_location_id: int
+    target_location_id: int
+    aliases_moved: int
+    fk_updates: dict[str, int]
+
+
+# ---------------------------------------------------------------------------
 # Client
 # ---------------------------------------------------------------------------
 

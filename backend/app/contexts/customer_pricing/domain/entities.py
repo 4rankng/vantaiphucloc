@@ -217,6 +217,21 @@ class Location:
         self.is_active = False
         self.updated_at = _utcnow()
 
+    def merge_into(self, *, target: "Location", user_id: int) -> None:
+        if self.id is None or target.id is None:
+            raise ValueError("cannot merge unsaved locations")
+        if self.id == target.id:
+            raise ValueError("cannot merge a location into itself")
+        self.is_active = False
+        self.updated_at = _utcnow()
+        for alias in self.aliases:
+            if alias.status == "MERGED":
+                continue
+            alias.mark_merged(
+                target_location_id=int(target.id),
+                user_id=user_id,
+            )
+
 
 # ── Route ────────────────────────────────────────────────────────
 
