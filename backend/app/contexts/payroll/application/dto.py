@@ -3,29 +3,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date
 
 
 @dataclass
-class SalaryPeriodDTO:
-    id: int
+class DriverEarningsDTO:
     driver_id: int
+    driver_name: str | None
     start_date: date
     end_date: date
-    work_order_count: int
-    price_per_order: int
-    total_salary: int
-    total_allowance: int
-    total_deduction: int
-    net_pay: int
-    status: str
-    created_at: datetime
-    updated_at: datetime
-
-
-@dataclass
-class SalaryPeriodPageDTO:
-    items: list[SalaryPeriodDTO]
-    total: int
-    page: int
-    page_size: int
+    matched_order_count: int
+    total_salary: int      # sum of driver_salary
+    total_allowance: int   # sum of allowance
+    total_earnings: int    # total_salary + total_allowance

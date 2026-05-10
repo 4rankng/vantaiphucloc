@@ -24,7 +24,6 @@ from app.contexts.operations.domain.entities import TripOrder
 from app.contexts.operations.domain.exceptions import (
     InvalidStateTransition,
     NotFound,
-    TripOrderLocked,
 )
 from app.contexts.operations.domain.repositories import (
     TripOrderRepository,
@@ -84,7 +83,7 @@ class ListTripOrders:
         items, total = await self.repo.list(
             offset=offset,
             limit=filters.page_size,
-            client_id=filters.client_id,
+            partner_id=filters.partner_id,
             status=TripOrderStatus(filters.status) if filters.status else None,
             trip_date_from=filters.date_from,
             trip_date_to=filters.date_to,
@@ -102,8 +101,7 @@ class ListTripOrders:
 
 class CreateTripOrder:
     """Create a TripOrder from API input. Applies tiered pricing if the
-    customer has a matching pricing rule for the route + work_type +
-    quantity."""
+    partner has a matching pricing rule for the work_type + quantity."""
 
     def __init__(
         self,
@@ -124,7 +122,6 @@ class CreateTripOrder:
         unit_price = int(data.unit_price or 0)
         driver_salary = int(data.driver_salary or 0)
         allowance = int(data.allowance or 0)
-        revenue = int(data.revenue or unit_price)
         pricing_id = data.pricing_id
 
         if data.containers:
@@ -135,7 +132,7 @@ class CreateTripOrder:
             ) or 1
             tiered = await find_tiered_pricing(
                 self.session,
-                client_id=data.client_id,
+                partner_id=data.partner_id,
                 work_type=wt,
                 quantity=count,
                 pickup_location_id=data.pickup_location_id,
@@ -146,28 +143,18 @@ class CreateTripOrder:
                 driver_salary = tiered.driver_salary
                 allowance = tiered.allowance
                 pricing_id = tiered.pricing.id
-                revenue = tiered.unit_price
-
-        has_containers = bool(data.containers)
-        has_pricing = unit_price > 0 and driver_salary > 0
-        status = (
-            TripOrderStatus.PENDING if (has_containers and has_pricing)
-            else TripOrderStatus.DRAFT
-        )
 
         t = TripOrder(
             id=None,
             trip_date=data.trip_date,
-            client_id=data.client_id,
-            route=data.route,
+            partner_id=data.partner_id,
             pickup_location_id=data.pickup_location_id,
             dropoff_location_id=data.dropoff_location_id,
             unit_price=unit_price,
             driver_salary=driver_salary,
             allowance=allowance,
-            revenue=revenue,
             pricing_id=pricing_id,
-            status=status,
+            status=TripOrderStatus.PENDING,
             matched_work_order_ids=list(data.matched_work_order_ids or []),
         )
         _add_containers(t, data.containers)
@@ -175,7 +162,7 @@ class CreateTripOrder:
         saved = await self.repo.add(t)
 
         # Generate code now that the row is flushed.
-        saved.code = await generate_trip_order_code(self.session, data.client_id)
+        saved.code = await generate_trip_order_code(self.session, data.partner_id)
         saved = await self.repo.save(saved)
 
         # Mark linked WOs as MATCHED — separate aggregate.
@@ -197,12 +184,10 @@ class UpdateTripOrder:
         repo: TripOrderRepository,
         wo_repo: WorkOrderRepository,
         session: AsyncSession,
-        client_repo: "ClientRepository | None" = None,
     ) -> None:
         self.repo = repo
         self.wo_repo = wo_repo
         self.session = session
-        self.client_repo = client_repo
 
     async def __call__(
         self, tid: int, data: TripOrderUpdateInput
@@ -211,20 +196,11 @@ class UpdateTripOrder:
         if t is None:
             raise NotFound("TripOrder", tid)
 
-        if t.is_locked:
-            raise TripOrderLocked(int(t.id) if t.id is not None else 0)
-        if t.is_confirmed:
-            raise InvalidStateTransition(
-                kind="TripOrder", current="confirmed", attempted="update",
-            )
-
         # Scalar fields
         if data.trip_date is not None:
             t.trip_date = data.trip_date
-        if data.client_id is not None:
-            t.client_id = data.client_id
-        if data.route is not None:
-            t.route = data.route
+        if data.partner_id is not None:
+            t.partner_id = data.partner_id
         if data.pickup_location_id is not None:
             t.pickup_location_id = data.pickup_location_id
         if data.dropoff_location_id is not None:
@@ -237,8 +213,6 @@ class UpdateTripOrder:
             t.driver_salary = int(data.driver_salary)
         if data.allowance is not None:
             t.allowance = int(data.allowance)
-        if data.revenue is not None:
-            t.revenue = int(data.revenue)
         if data.status is not None:
             t.status = data.status
         t.updated_at = _utcnow()
@@ -270,13 +244,6 @@ class UpdateTripOrder:
                 if wo is not None and wo.status == WorkOrderStatus.PENDING:
                     wo.match()
                     await self.wo_repo.save(wo)
-
-            # Cross-context: bump customer outstanding debt when first
-            # match goes onto a priced trip. Mirrors legacy behaviour.
-            if t.unit_price > 0 and added and not old_matched:
-                from app.contexts.customer_pricing.infrastructure.client_legacy_repo import ClientRepository
-                client_repo = ClientRepository(session=self.session)
-                await client_repo.increment_debt(t.client_id, t.unit_price)
 
         await self.session.commit()
         return await self.repo.get_by_id(TripOrderId(tid))

@@ -10,7 +10,7 @@ import { FilterToolbar } from '@/components/shared/FilterToolbar'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { AutoMatchDialog } from '@/components/shared/AutoMatchDialog'
 import { fuzzyMatch } from '@/lib/search-utils'
-import { useWorkOrders, useUploadCustomerExcel, useClients, useAutoMatch, useMatchScores } from '@/hooks/use-queries'
+import { useWorkOrders, useUploadCustomerExcel, usePartners, useAutoMatch, useMatchScores } from '@/hooks/use-queries'
 import { WorkOrderMasterList } from './work-orders/WorkOrderMasterList'
 import { MatchDetailPanel } from './work-orders/MatchDetailPanel'
 import type { AutoMatchResponse } from '@/services/api/tripOrders.api'
@@ -32,7 +32,7 @@ export function WorkOrderList() {
   const toast = useToast()
   const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
   const { data: workOrders = [], isLoading: loading } = useWorkOrders({ dateFrom, dateTo })
-  const { data: clients = [] } = useClients()
+  const { data: clients = [] } = usePartners()
   const { data: matchScoresData } = useMatchScores(dateFrom, dateTo)
   const { mutate: uploadExcel, isPending: uploading } = useUploadCustomerExcel()
   const { mutate: runAutoMatch, isPending: autoMatching } = useAutoMatch()

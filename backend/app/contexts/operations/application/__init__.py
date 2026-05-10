@@ -14,8 +14,6 @@ from app.contexts.operations.application.reconciliation import (
 )
 from app.contexts.operations.application.trip_orders import (
     ApplyPricingToTrips,
-    CancelTripOrder,
-    ConfirmTripOrder,
     CreateTripOrder,
     CreateTripOrderFromImport,
     DeleteTripOrder,
@@ -25,7 +23,6 @@ from app.contexts.operations.application.trip_orders import (
 )
 from app.contexts.operations.application.work_orders import (
     BatchCreateWorkOrders,
-    CancelWorkOrder,
     CreateWorkOrder,
     CurrentUserContext,
     GetWorkOrder,
@@ -36,8 +33,6 @@ from app.contexts.operations.application.work_orders import (
 __all__ = [
     # TripOrder
     "ApplyPricingToTrips",
-    "CancelTripOrder",
-    "ConfirmTripOrder",
     "CreateTripOrder",
     "CreateTripOrderFromImport",
     "DeleteTripOrder",
@@ -46,7 +41,6 @@ __all__ = [
     "UpdateTripOrder",
     # WorkOrder
     "BatchCreateWorkOrders",
-    "CancelWorkOrder",
     "CreateWorkOrder",
     "CurrentUserContext",
     "GetWorkOrder",

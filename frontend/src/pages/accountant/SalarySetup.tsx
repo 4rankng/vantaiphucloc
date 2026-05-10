@@ -2,22 +2,18 @@ import { useState, useMemo } from 'react'
 import { Button, Input } from '@/components/ui'
 import {
   useSalaryConfig, useUpdateSalaryConfig,
-  useSalaryPeriods, useUpdateSalaryPeriod,
   useCalculateSalary, useExportSalaryExcel,
+  useDriverEarnings, useDrivers,
 } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
-import { formatCurrencyFull, type SalaryPeriodStatus } from '@/data/domain'
-import { formatDate, formatDateRange } from '@/lib/format'
-import { Calculator, Download, CheckCircle2, Wallet, AlertCircle, Wallet as WalletIcon } from 'lucide-react'
+import { formatCurrencyFull } from '@/data/domain'
+import { formatDateRange } from '@/lib/format'
+import { Calculator, Download, Wallet } from 'lucide-react'
 import { SettingsPageLayout } from '@/components/shared/SettingsPageLayout'
-
-// ─── Status badge config ──────────────────────────────────────────────────────
-
-const STATUS_CONFIG: Record<SalaryPeriodStatus, { label: string; chip: string }> = {
-  OPEN:       { label: 'Chờ tính',  chip: 'chip chip-warning' },
-  CALCULATED: { label: 'Đã tính',   chip: 'chip chip-info'    },
-  PAID:       { label: 'Đã trả',    chip: 'chip chip-success' },
-}
+import {
+  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+} from '@/components/ui'
+import { getSalaryPeriodDates, toISODate } from '@/utils/salaryPeriod'
 
 // ─── Period config card ───────────────────────────────────────────────────────
 
@@ -31,8 +27,8 @@ function PeriodConfigCard() {
   const [dayError, setDayError] = useState('')
 
   if (config && !synced) {
-    setFromDay(String(config.from_day ?? 26))
-    setToDay(String(config.to_day ?? 25))
+    setFromDay(String(config.fromDay ?? 26))
+    setToDay(String(config.toDay ?? 25))
     setSynced(true)
   }
 
@@ -131,23 +127,12 @@ function CalculateCard() {
 
   const { startDate, endDate } = useMemo(() => {
     const now = new Date()
-    const fromDay = config?.from_day ?? 26
-    const toDay = config?.to_day ?? 25
-    const year = now.getFullYear()
-    const month = now.getMonth()
-
-    let start: Date, end: Date
-    if (now.getDate() >= fromDay) {
-      start = new Date(year, month, fromDay)
-      end = new Date(year, month + 1, toDay)
-    } else {
-      start = new Date(year, month - 1, fromDay)
-      end = new Date(year, month, toDay)
-    }
-    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const fromDay = config?.fromDay ?? 26
+    const toDay = config?.toDay ?? 25
+    const period = getSalaryPeriodDates(now, { fromDay, toDay })
     return {
-      startDate: fmt(start),
-      endDate: fmt(end),
+      startDate: toISODate(period.startDate),
+      endDate: toISODate(period.endDate),
     }
   }, [config])
 
@@ -209,160 +194,116 @@ function CalculateCard() {
   )
 }
 
-// ─── Salary periods list ──────────────────────────────────────────────────────
+// ─── Driver Earnings Viewer ──────────────────────────────────────────────────
 
-function SalaryPeriodsList() {
-  const toast = useToast()
-  const { data: periods = [], isLoading } = useSalaryPeriods()
-  const updatePeriod = useUpdateSalaryPeriod()
-  const [confirmPay, setConfirmPay] = useState<number | null>(null)
+function DriverEarningsViewer() {
+  const { data: config } = useSalaryConfig()
+  const { data: drivers = [], isLoading: loadingDrivers } = useDrivers()
 
-  const byDriver = useMemo(() => {
-    const map = new Map<number, { driverId: number; driverName: string; driverPhone: string | null; driverPlate: string | null; periods: typeof periods }>()
-    periods.forEach(p => {
-      const existing = map.get(p.driver.id)
-      if (existing) {
-        existing.periods.push(p)
-      } else {
-        map.set(p.driver.id, { driverId: p.driver.id, driverName: p.driver.name, driverPhone: p.driver.phone ?? null, driverPlate: p.driver.tractorPlate ?? null, periods: [p] })
-      }
-    })
-    return Array.from(map.values())
-  }, [periods])
+  // Compute current period dates from config
+  const { startDate, endDate } = useMemo(() => {
+    const now = new Date()
+    const fromDay = config?.fromDay ?? 26
+    const toDay = config?.toDay ?? 25
+    const period = getSalaryPeriodDates(now, { fromDay, toDay })
+    return {
+      startDate: toISODate(period.startDate),
+      endDate: toISODate(period.endDate),
+    }
+  }, [config])
 
-  const handleMarkPaid = (id: number) => {
-    updatePeriod.mutate(
-      { id, data: { status: 'PAID' } },
-      {
-        onSuccess: () => { toast.success('Đã đánh dấu đã trả lương'); setConfirmPay(null) },
-        onError: () => toast.error('Lỗi', 'Không thể cập nhật'),
-      }
-    )
-  }
+  const [selectedDriverId, setSelectedDriverId] = useState<string>('')
 
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {[1, 2, 3, 4].map(i => (
-          <div key={i} className="h-24 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
-        ))}
-      </div>
-    )
-  }
+  const { data: earnings, isLoading: loadingEarnings } = useDriverEarnings(
+    Number(selectedDriverId),
+    startDate,
+    endDate,
+  )
 
-  if (periods.length === 0) {
+  if (!config) {
     return (
       <div className="card p-10 text-center">
         <Wallet className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--theme-text-muted)', opacity: 0.5 }} />
-        <p className="typo-h3 mb-1" style={{ color: 'var(--theme-text-primary)' }}>Chưa có kỳ lương nào</p>
+        <p className="typo-h3 mb-1" style={{ color: 'var(--theme-text-primary)' }}>Chưa có cấu hình kỳ lương</p>
         <p className="typo-body-sm" style={{ color: 'var(--theme-text-muted)' }}>
-          Nhấn "Tính lương tất cả" để tạo kỳ lương đầu tiên.
+          Lưu cấu hình kỳ lương trước khi xem thu nhập.
         </p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {byDriver.map(({ driverId, driverName, driverPhone, driverPlate, periods: driverPeriods }) => (
-        <section key={driverId}>
-          <div className="flex items-baseline justify-between mb-2">
-            <div>
-              <h3 className="typo-h3">{driverName}</h3>
-              <div className="flex items-center gap-2 mt-0.5">
-                {driverPhone && (
-                  <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{driverPhone}</span>
-                )}
-                {driverPlate && (
-                  <span className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>{driverPlate}</span>
-                )}
-              </div>
-            </div>
-            <span className="typo-caption">{driverPeriods.length} kỳ</span>
+    <div className="space-y-4">
+      {/* Driver selector */}
+      <div className="flex items-end gap-3">
+        <div className="flex-1 max-w-xs">
+          <label className="typo-form-label mb-1.5 block">Chọn tài xế</label>
+          <Select value={selectedDriverId} onValueChange={setSelectedDriverId}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Chọn tài xế" />
+            </SelectTrigger>
+            <SelectContent>
+              {drivers.map(d => (
+                <SelectItem key={d.id} value={String(d.id)}>
+                  {d.fullName ?? d.username} — {d.phone}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Earnings display */}
+      {!selectedDriverId ? (
+        <div className="card p-10 text-center">
+          <Wallet className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--theme-text-muted)', opacity: 0.5 }} />
+          <p className="typo-h3 mb-1" style={{ color: 'var(--theme-text-primary)' }}>Chọn tài xế để xem thu nhập</p>
+          <p className="typo-body-sm" style={{ color: 'var(--theme-text-muted)' }}>
+            Kỳ hiện tại: {formatDateRange(startDate, endDate, 'short')}
+          </p>
+        </div>
+      ) : loadingEarnings || loadingDrivers ? (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="h-24 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+          ))}
+        </div>
+      ) : !earnings ? (
+        <div className="card p-10 text-center">
+          <Wallet className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--theme-text-muted)', opacity: 0.5 }} />
+          <p className="typo-h3 mb-1" style={{ color: 'var(--theme-text-primary)' }}>Không có dữ liệu</p>
+          <p className="typo-body-sm" style={{ color: 'var(--theme-text-muted)' }}>
+            Chưa có đơn hàng khớp trong kỳ {formatDateRange(startDate, endDate, 'short')}.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="card p-4">
+            <p className="typo-caption">Đơn đã khớp</p>
+            <p className="typo-value-lg" style={{ color: 'var(--theme-text-primary)' }}>
+              {earnings.matchedOrderCount}
+            </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {driverPeriods.map(period => {
-              const cfg = STATUS_CONFIG[period.status]
-              const isPaid = period.status === 'PAID'
-              const isConfirming = confirmPay === period.id
-
-              return (
-                <div key={period.id} className="card p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-mono tabular-nums" style={{ color: 'var(--theme-text-muted)' }}>
-                      {formatDateRange(period.startDate, period.endDate, 'short')}
-                    </p>
-                    {!(period.totalSalary === 0 && period.status === 'CALCULATED') && (
-                      <span className={cfg.chip}>{cfg.label}</span>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <p className="typo-caption">Số cont</p>
-                      <p className="typo-value-lg" style={{ color: 'var(--theme-text-primary)' }}>{period.workOrderCount}</p>
-                    </div>
-                    <div>
-                      <p className="typo-caption">Lương</p>
-                      <p className="typo-mono text-sm" style={{ color: 'var(--theme-text-primary)' }}>
-                        {formatCurrencyFull(period.totalSalary)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="typo-caption">Thực nhận</p>
-                      <p className="typo-mono text-sm font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>
-                        {formatCurrencyFull(period.netPay)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {isPaid ? (
-                    <div className="flex items-center gap-1.5 pt-1" style={{ color: 'var(--theme-status-success)' }}>
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <p className="text-xs font-semibold">Kỳ lương đã chốt</p>
-                    </div>
-                  ) : period.totalSalary === 0 ? (
-                    <div className="flex items-center gap-1.5 pt-1" style={{ color: 'var(--theme-status-warning)' }}>
-                      <AlertCircle className="w-3.5 h-3.5" />
-                      <p className="text-xs font-semibold">Lương bằng 0 — chưa có đơn hàng trong kỳ</p>
-                    </div>
-                  ) : isConfirming ? (
-                    <div className="space-y-2">
-                      <p className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>
-                        Xác nhận đã trả <span className="font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(period.netPay)}</span> cho {driverName}?
-                      </p>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={() => setConfirmPay(null)}
-                          className="btn-secondary h-8 px-3 text-xs flex-1"
-                        >
-                          Huỷ
-                        </Button>
-                        <Button
-                          onClick={() => handleMarkPaid(period.id)}
-                          disabled={updatePeriod.isPending}
-                          className="h-8 px-3 text-xs font-bold flex-1 rounded-md"
-                          style={{ background: 'var(--theme-status-success)', color: 'white' }}
-                        >
-                          Xác nhận đã trả
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <Button
-                      onClick={() => setConfirmPay(period.id)}
-                      className="h-8 px-3 text-xs font-semibold w-full rounded-md"
-                      style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
-                    >
-                      Đánh dấu đã trả
-                    </Button>
-                  )}
-                </div>
-              )
-            })}
+          <div className="card p-4">
+            <p className="typo-caption">Lương tài xế</p>
+            <p className="typo-mono text-sm" style={{ color: 'var(--theme-text-primary)' }}>
+              {formatCurrencyFull(earnings.totalSalary)}
+            </p>
           </div>
-        </section>
-      ))}
+          <div className="card p-4">
+            <p className="typo-caption">Phụ cấp</p>
+            <p className="typo-mono text-sm" style={{ color: 'var(--theme-text-primary)' }}>
+              {formatCurrencyFull(earnings.totalAllowance)}
+            </p>
+          </div>
+          <div className="card p-4">
+            <p className="typo-caption">Tổng thu nhập</p>
+            <p className="typo-mono text-sm font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>
+              {formatCurrencyFull(earnings.totalEarnings)}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -371,17 +312,17 @@ function SalaryPeriodsList() {
 
 export function SalarySetup() {
   return (
-    <SettingsPageLayout title="Kỳ lương" subtitle="Cấu hình kỳ tính lương tài xế" icon={WalletIcon}>
+    <SettingsPageLayout title="Kỳ lương" subtitle="Cấu hình kỳ tính lương tài xế" icon={Wallet}>
       {/* Top: config + calculate, equal-height side-by-side on desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
         <PeriodConfigCard />
         <CalculateCard />
       </div>
 
-      {/* History */}
+      {/* Driver Earnings Viewer */}
       <section className="space-y-3">
-        <h2 className="typo-h2">Lịch sử kỳ lương</h2>
-        <SalaryPeriodsList />
+        <h2 className="typo-h2">Xem thu nhập tài xế</h2>
+        <DriverEarningsViewer />
       </section>
     </SettingsPageLayout>
   )

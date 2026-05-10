@@ -5,7 +5,7 @@ import logging
 from sqlalchemy import select
 
 from app.database import get_session
-from app.models.domain import TripOrder, WorkOrder, TripOrderWorkOrder
+from app.models.domain import TripOrder, WorkOrder, Reconciliation
 
 logger = logging.getLogger(__name__)
 
@@ -21,13 +21,14 @@ async def sync_wo_earning_on_to_update(ctx: dict, *, trip_order_id: int) -> None
             logger.warning("sync_wo_earning: TripOrder %d not found", trip_order_id)
             return
 
-        # Find linked work orders via join table
-        join_result = await db.execute(
-            select(TripOrderWorkOrder.work_order_id).where(
-                TripOrderWorkOrder.trip_order_id == trip_order_id
+        # Find linked work orders via Reconciliation table
+        recon_result = await db.execute(
+            select(Reconciliation.work_order_id).where(
+                Reconciliation.trip_order_id == trip_order_id,
+                Reconciliation.is_active == True,  # noqa: E712
             )
         )
-        wo_ids = [row[0] for row in join_result.all()]
+        wo_ids = [row[0] for row in recon_result.all()]
         if not wo_ids:
             return
 
@@ -42,7 +43,6 @@ async def sync_wo_earning_on_to_update(ctx: dict, *, trip_order_id: int) -> None
         for wo in wo_result.scalars().all():
             wo.driver_salary = trip_order.driver_salary
             wo.allowance = trip_order.allowance
-            wo.earning = trip_order.driver_salary + trip_order.allowance
             updated += 1
 
         if updated:
@@ -51,20 +51,3 @@ async def sync_wo_earning_on_to_update(ctx: dict, *, trip_order_id: int) -> None
                 "sync_wo_earning: updated %d WOs for TO#%d (salary=%d, allowance=%d)",
                 updated, trip_order_id, trip_order.driver_salary, trip_order.allowance,
             )
-
-            # Enqueue salary recalc for drivers of matched work orders
-            driver_ids_result = await db.execute(
-                select(WorkOrder.driver_id).where(
-                    WorkOrder.id.in_(wo_ids),
-                    WorkOrder.driver_id.isnot(None),
-                ).distinct()
-            )
-            for (driver_id,) in driver_ids_result.all():
-                from app.workers import enqueue
-                ref_date = trip_order.trip_date
-                await enqueue(
-                    "calculate_salary_task",
-                    _job_id=f"salary-recalc-{driver_id}-{ref_date}",
-                    driver_id=driver_id,
-                    period_date=ref_date.isoformat() if ref_date else None,
-                )

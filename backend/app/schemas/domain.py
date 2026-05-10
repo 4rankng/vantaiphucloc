@@ -26,16 +26,11 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 class WorkOrderStatus(str, Enum):
     PENDING = "PENDING"
     MATCHED = "MATCHED"
-    COMPLETED = "COMPLETED"
-    CANCELLED = "CANCELLED"
 
 
 class TripOrderStatus(str, Enum):
-    DRAFT = "DRAFT"
     PENDING = "PENDING"
-    CONFIRMED = "CONFIRMED"
-    COMPLETED = "COMPLETED"
-    CANCELLED = "CANCELLED"
+    MATCHED = "MATCHED"
 
 
 # ---------------------------------------------------------------------------
@@ -329,19 +324,16 @@ class WorkOrderOut(BaseModel):
     id: int
     partner: PartnerSummaryOut
     code: str | None = None
-    route: str  # computed from pickup/dropoff location names
     pickup_location: LocationSummaryOut
     dropoff_location: LocationSummaryOut
     driver: DriverSummaryOut
     vehicle: VehicleSummaryOut | None = None
-    tractor_plate: str | None = None  # convenience alias from vehicle
     gps_lat: float | None
     gps_lng: float | None
     gps_address: str | None
     unit_price: int
     driver_salary: int
     allowance: int
-    earning: int  # computed: driver_salary + allowance
     pricing_id: int | None
     status: str
     containers: list[ContainerOut] = []
@@ -426,7 +418,6 @@ class TripOrderOut(BaseModel):
     trip_date: date
     partner: PartnerSummaryOut
     code: str | None = None
-    route: str  # computed from pickup/dropoff location names
     pickup_location: LocationSummaryOut
     dropoff_location: LocationSummaryOut
     containers: list[TripContainerOut] = []
@@ -434,7 +425,6 @@ class TripOrderOut(BaseModel):
     unit_price: int
     driver_salary: int
     allowance: int
-    revenue: int  # computed: unit_price × container count
     status: str
     matched_work_order_ids: list[int] = []
     created_at: datetime
@@ -572,35 +562,18 @@ class AutoMatchResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Salary
+# Salary / Driver Earnings (calculated on-the-fly from matched work_orders)
 # ---------------------------------------------------------------------------
 
-class SalaryCalculateRequest(BaseModel):
-    driver_id: int | None = None
+class DriverEarningsOut(BaseModel):
+    driver_id: int
+    driver_name: str | None = None
     start_date: date
     end_date: date
-
-
-class SalaryPeriodOut(BaseModel):
-    id: int
-    driver: DriverSummaryOut
-    start_date: date
-    end_date: date
-    work_order_count: int
-    price_per_order: int
+    matched_order_count: int
     total_salary: int
     total_allowance: int
-    total_deduction: int
-    net_pay: int
-    status: str
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class SalaryPeriodUpdate(BaseModel):
-    status: str | None = None
+    total_earnings: int
 
 
 # ---------------------------------------------------------------------------
@@ -655,7 +628,7 @@ class JobStatusResponse(BaseModel):
 
 class SalaryCalculateAsyncResponse(BaseModel):
     job_id: str
-    message: str = "Salary calculation enqueued"
+    message: str = "Calculation enqueued"
 
 
 # ---------------------------------------------------------------------------
