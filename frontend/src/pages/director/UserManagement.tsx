@@ -17,6 +17,7 @@ import { ROLE_LABELS } from '@/data/domain'
 import { useVendors, useCreateVendor, useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '@/hooks/use-queries'
 import type { UserAccount } from '@/hooks/use-queries'
 import { useAuth } from '@/contexts/AuthContext'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 const ROLE_ICONS: Record<Role, typeof Truck> = {
   superadmin: LayoutDashboard,

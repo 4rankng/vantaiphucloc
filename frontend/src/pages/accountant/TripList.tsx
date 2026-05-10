@@ -13,7 +13,8 @@ import {
   Clock, CheckCircle2, Hash, Search, X,
 } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
-import { Button, Dialog, DialogContent } from '@/components/ui'
+import { Button, Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui'
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { useMonthParams } from './use-month-params'
 import { useIsMobile } from '@/hooks/use-mobile'
 import type { TripOrder } from '@/data/domain'
@@ -117,6 +118,11 @@ export function TripList() {
   const detailDialog = selectedTripId !== null ? (
     <Dialog open={selectedTripId !== null} onOpenChange={(open) => { if (!open) setSelectedTripId(null) }}>
       <DialogContent className="max-w-3xl max-h-[90dvh] overflow-y-auto" hideCloseButton>
+        <DialogHeader>
+          <VisuallyHidden>
+            <DialogTitle>Chi tiết chuyến</DialogTitle>
+          </VisuallyHidden>
+        </DialogHeader>
         <TripDetailContent tripId={selectedTripId} onClose={() => setSelectedTripId(null)} />
       </DialogContent>
     </Dialog>
