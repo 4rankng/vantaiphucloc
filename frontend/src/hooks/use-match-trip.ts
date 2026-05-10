@@ -136,7 +136,7 @@ export function useMatchTrip(initialTripId: number) {
         matchedWorkOrderIds: [selectedJobId],
       })
       navigate(-1)
-    } catch { setSubmitting(false) }
+    } catch (err) { setSubmitting(false); throw err }
   }
 
   return {

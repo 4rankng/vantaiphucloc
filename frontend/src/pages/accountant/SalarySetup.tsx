@@ -27,6 +27,7 @@ function PeriodConfigCard() {
   const [fromDay, setFromDay] = useState('26')
   const [toDay, setToDay] = useState('25')
   const [synced, setSynced] = useState(false)
+  const [dayError, setDayError] = useState('')
 
   if (config && !synced) {
     setFromDay(String(config.from_day ?? 26))
@@ -40,8 +41,15 @@ function PeriodConfigCard() {
   }, [fromDay, toDay])
 
   const handleSave = () => {
+    const from = parseInt(fromDay)
+    const to = parseInt(toDay)
+    if (from < 1 || from > 31 || to < 1 || to > 31) {
+      setDayError('Ngày phải từ 1 đến 31')
+      return
+    }
+    setDayError('')
     updateConfig.mutate(
-      { from_day: parseInt(fromDay) || 26, to_day: parseInt(toDay) || 25 },
+      { from_day: from, to_day: to },
       {
         onSuccess: () => toast.success('Đã lưu cấu hình kỳ lương'),
         onError: () => toast.error('Lỗi', 'Không thể lưu cấu hình'),
@@ -65,7 +73,7 @@ function PeriodConfigCard() {
             min={1}
             max={31}
             value={fromDay}
-            onChange={e => setFromDay(e.target.value)}
+            onChange={e => { setFromDay(e.target.value); setDayError('') }}
             placeholder="26"
             className="h-9 text-sm font-mono text-center"
           />
@@ -78,12 +86,16 @@ function PeriodConfigCard() {
             min={1}
             max={31}
             value={toDay}
-            onChange={e => setToDay(e.target.value)}
+            onChange={e => { setToDay(e.target.value); setDayError('') }}
             placeholder="25"
             className="h-9 text-sm font-mono text-center"
           />
         </div>
       </div>
+
+      {dayError && (
+        <p className="text-xs mb-3" style={{ color: 'var(--theme-status-error)' }}>{dayError}</p>
+      )}
 
       {explanation && (
         <p className="text-xs mb-4" style={{ color: 'var(--theme-text-secondary)' }}>

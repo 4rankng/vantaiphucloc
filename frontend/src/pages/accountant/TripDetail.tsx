@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useTripOrders, useWorkOrders, useUpdateTripOrder, useReconcile, useToggleTripConfirmation, useUnmatch } from '@/hooks/use-queries'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { ConfirmationCheckbox } from '@/components/shared/ConfirmationCheckbox'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { formatCurrencyFull, WORK_TYPES, type WorkType } from '@/data/domain'
 import { RouteDisplay } from '@/components/shared/RouteDisplay'
 import { Building2, Route, UserCircle, Wallet, Link2, Pencil, Lock, Unlink, Trash2, ChevronLeft } from 'lucide-react'
@@ -31,6 +32,7 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
   const [editWorkType, setEditWorkType] = useState<WorkType>('E20')
   const [showMatchDialog, setShowMatchDialog] = useState(false)
   const [showUnmatchDialog, setShowUnmatchDialog] = useState(false)
+  const [showConfirmChot, setShowConfirmChot] = useState(false)
   const [unmatchReason, setUnmatchReason] = useState('')
   const { mutateAsync: unmatch, isPending: unmatching } = useUnmatch()
   const toast = useToast()
@@ -113,7 +115,15 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
 
   const handleToggleConfirmation = () => {
     if (!trip) return
+    if (!trip.isConfirmed) {
+      setShowConfirmChot(true)
+      return
+    }
+    doToggleConfirmation()
+  }
 
+  const doToggleConfirmation = () => {
+    if (!trip) return
     toggleConfirmation(trip.id, {
       onSuccess: () => {
         toast.success('Thành công', trip.isConfirmed ? 'Đã bỏ chốt chuyến' : 'Đã chốt chuyến')
@@ -202,7 +212,7 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
             <div className="rounded-lg p-3 flex items-start gap-2 mb-4" style={{ background: 'var(--theme-status-success-light)' }}>
               <Lock size={14} style={{ color: 'var(--theme-status-success)' }} className="mt-0.5 shrink-0" />
               <p className="typo-meta" style={{ color: 'var(--theme-status-success-text)' }}>
-                Đơn hàng đã chốt với khách — không thể thay đổi
+                Đơn hàng đã chốt với khách — nhấn lại để bỏ chốt nếu cần điều chỉnh
               </p>
             </div>
           )}
@@ -389,6 +399,16 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Confirm chốt chuyến */}
+      <ConfirmDialog
+        open={showConfirmChot}
+        onClose={() => setShowConfirmChot(false)}
+        onConfirm={() => { setShowConfirmChot(false); doToggleConfirmation() }}
+        title="Chốt chuyến?"
+        description={`Xác nhận chốt đơn hàng với ${trip?.client.name ?? 'khách hàng'}? Đơn đã chốt sẽ khoá chỉnh sửa.`}
+        confirmLabel="Chốt chuyến"
+      />
 
       {/* Đóng button — dialog mode only */}
       {onClose && (
