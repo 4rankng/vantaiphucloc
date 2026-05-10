@@ -60,6 +60,8 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
     return jobs.filter(j => j.status === 'PENDING' && !trip?.matchedWorkOrderIds.includes(j.id))
   }, [jobs, trip])
 
+  const clientOptions = useMemo(() => clients.map(x => ({ value: String(x.id), label: x.name })), [clients])
+
   if (loading) {
     return <div className="space-y-4">{[1, 2].map(i => <div key={i} className="h-24 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}</div>
   }
@@ -78,8 +80,6 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
       </div>
     )
   }
-
-  const clientOptions = useMemo(() => clients.map(x => ({ value: String(x.id), label: x.name })), [clients])
 
   const handleOpenEdit = () => {
     setEditClientId(String(trip.client.id))

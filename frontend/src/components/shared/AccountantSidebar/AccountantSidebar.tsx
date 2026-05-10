@@ -105,15 +105,6 @@ export function AccountantSidebar({
         )}
       </div>
 
-      {/* Section label */}
-      {!collapsed && (
-        <div className="px-4 pt-4 pb-1.5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.06em]" style={{ color: 'var(--theme-sidebar-text-muted)' }}>
-            Quản lý
-          </p>
-        </div>
-      )}
-
       {/* Navigation */}
       <nav className={`flex-1 px-2 ${collapsed ? 'pt-3' : 'pt-1'} overflow-y-auto sidebar-scroll space-y-0.5`}>
         {navItems.map((item) => {
