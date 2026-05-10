@@ -320,6 +320,23 @@ export interface MergeLocationsResponse {
   fkUpdates: Record<string, number>
 }
 
+export interface Setting {
+  key: string
+  value: string
+  updatedAt: string
+}
+
+export interface DriverEarnings {
+  driverId: number
+  driverName: string | null
+  startDate: string
+  endDate: string
+  matchedOrderCount: number
+  totalSalary: number
+  totalAllowance: number
+  totalEarnings: number
+}
+
 export function formatCurrency(amount: number | undefined | null): string {
   if (amount == null) return '—'
   return amount.toLocaleString('vi-VN') + ' ₫'

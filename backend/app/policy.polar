@@ -46,21 +46,13 @@ allow(user, "suggest", "Reconciliation") if role_allow(user, "accountant");
 allow(user, "upload", "Reconciliation") if role_allow(user, "accountant");
 allow(user, "export", "Reconciliation") if role_allow(user, "accountant");
 
-# ── Clients ───────────────────────────────────────────────────────
+# ── Partners (unified clients + vendors) ──────────────────────────
 
-allow(user, "read", "Client") if role_allow(user, "driver");
-allow(user, "read_list", "Client") if role_allow(user, "driver");
-allow(user, "create", "Client") if role_allow(user, "accountant");
-allow(user, "update", "Client") if role_allow(user, "accountant");
-allow(user, "delete", "Client") if role_allow(user, "accountant");
-
-# ── Routes ────────────────────────────────────────────────────────
-
-allow(user, "read", "Route") if role_allow(user, "driver");
-allow(user, "read_list", "Route") if role_allow(user, "driver");
-allow(user, "create", "Route") if role_allow(user, "accountant");
-allow(user, "update", "Route") if role_allow(user, "accountant");
-allow(user, "delete", "Route") if role_allow(user, "accountant");
+allow(user, "read", "Partner") if role_allow(user, "driver");
+allow(user, "read_list", "Partner") if role_allow(user, "driver");
+allow(user, "create", "Partner") if role_allow(user, "accountant");
+allow(user, "update", "Partner") if role_allow(user, "accountant");
+allow(user, "delete", "Partner") if role_allow(user, "accountant");
 
 # ── Locations ─────────────────────────────────────────────────────
 
@@ -100,14 +92,6 @@ allow(user, "list", "User") if role_allow(user, "accountant");
 allow(user, "create", "User") if role_allow(user, "accountant");
 allow(user, "update", "User") if role_allow(user, "accountant");
 allow(user, "delete", "User") if role_allow(user, "director");
-
-# ── Vendors ───────────────────────────────────────────────────────
-
-allow(user, "read", "Vendor") if role_allow(user, "driver");
-allow(user, "read_list", "Vendor") if role_allow(user, "driver");
-allow(user, "create", "Vendor") if role_allow(user, "accountant");
-allow(user, "update", "Vendor") if role_allow(user, "accountant");
-allow(user, "delete", "Vendor") if role_allow(user, "accountant");
 
 # ── Audit ─────────────────────────────────────────────────────────
 

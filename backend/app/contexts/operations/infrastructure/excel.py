@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.domain import WorkOrder, WorkOrderContainer, TripOrder, TripOrderContainer, Client, PricingLine
+from app.models.domain import WorkOrder, WorkOrderContainer, TripOrder, TripOrderContainer, Partner, PricingLine
 from app.utils.iso6346 import normalize_container_number, validate_container_number
 
 _logger = logging.getLogger(__name__)
@@ -508,7 +508,7 @@ async def import_trip_orders(
 
         # Look up client by code
         client_result = await db.execute(
-            select(Client).where(Client.code == client_code_str)
+            select(Partner).where(Partner.code == client_code_str)
         )
         client = client_result.scalar_one_or_none()
         if not client:
@@ -669,15 +669,17 @@ async def generate_work_orders_excel(
             containers_map.setdefault(c.work_order_id, []).append(c)
 
     # Resolve display names via JOIN (denormalized cols dropped).
-    from app.models.domain import Client, Location
+    from app.models.domain import Partner, Location, Vehicle
     from app.models.base import User as _User
-    client_ids = {wo.client_id for wo in work_orders}
+    partner_ids = {wo.partner_id for wo in work_orders}
     driver_ids = {wo.driver_id for wo in work_orders}
     loc_ids = {wo.pickup_location_id for wo in work_orders} | {wo.dropoff_location_id for wo in work_orders}
     loc_ids.discard(None)
-    client_name_by_id = {c.id: c.name for c in (await db.execute(select(Client).where(Client.id.in_(client_ids)))).scalars().all()} if client_ids else {}
+    partner_name_by_id = {c.id: c.name for c in (await db.execute(select(Partner).where(Partner.id.in_(partner_ids)))).scalars().all()} if partner_ids else {}
     driver_name_by_id = {u.id: (u.full_name or u.username) for u in (await db.execute(select(_User).where(_User.id.in_(driver_ids)))).scalars().all()} if driver_ids else {}
     loc_name_by_id = {l.id: l.name for l in (await db.execute(select(Location).where(Location.id.in_(loc_ids)))).scalars().all()} if loc_ids else {}
+    vehicle_ids = {wo.vehicle_id for wo in work_orders if wo.vehicle_id}
+    vehicle_by_id = {v.id: v for v in (await db.execute(select(Vehicle).where(Vehicle.id.in_(vehicle_ids)))).scalars().all()} if vehicle_ids else {}
 
     wb = openpyxl.Workbook()
     ws = wb.active

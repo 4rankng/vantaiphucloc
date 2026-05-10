@@ -1,6 +1,6 @@
-"""Backfill client records with realistic SĐT, MST, Địa chỉ, Người liên hệ.
+"""Backfill partner records with realistic SDT, MST, Dia chi, Nguoi lien he.
 
-All existing clients with empty/null phone, tax_code, or address get updated.
+All existing partners with empty/null phone, tax_code, or address get updated.
 
 Usage:
     python -m app.seed_client_data
@@ -11,7 +11,7 @@ import asyncio
 from sqlalchemy import select, update
 
 from app.database import async_session
-from app.models.domain import Client
+from app.models.domain import Partner
 
 CLIENT_DATA: list[dict] = [
     {
@@ -97,42 +97,42 @@ DEFAULT_DATA = {
 async def seed_client_data() -> None:
     async with async_session() as db:
         result = await db.execute(
-            select(Client).where(Client.is_active == True)  # noqa: E712
+            select(Partner).where(Partner.is_active == True)  # noqa: E712
         )
-        clients = result.scalars().all()
+        partners = result.scalars().all()
 
-        if not clients:
-            print("No active clients found.")
+        if not partners:
+            print("No active partners found.")
             return
 
         updated = 0
-        for client in clients:
+        for partner in partners:
             match = next(
-                (d for d in CLIENT_DATA if d["name_contains"].upper() in client.name.upper()),
+                (d for d in CLIENT_DATA if d["name_contains"].upper() in partner.name.upper()),
                 None,
             )
             data = match or DEFAULT_DATA
 
             changes: dict = {}
-            if not client.phone or client.phone.strip() in ("", "—", "-"):
+            if not partner.phone or partner.phone.strip() in ("", "—", "-"):
                 changes["phone"] = data["phone"]
-            if not client.tax_code or client.tax_code.strip() in ("", "—", "-"):
+            if not partner.tax_code or partner.tax_code.strip() in ("", "—", "-"):
                 changes["tax_code"] = data["tax_code"]
-            if not client.address or client.address.strip() in ("", "—", "-"):
+            if not partner.address or partner.address.strip() in ("", "—", "-"):
                 changes["address"] = data["address"]
-            if not client.contact_person or client.contact_person.strip() in ("", "—", "-"):
+            if not partner.contact_person or partner.contact_person.strip() in ("", "—", "-"):
                 changes["contact_person"] = data["contact_person"]
 
             if changes:
                 for k, v in changes.items():
-                    setattr(client, k, v)
+                    setattr(partner, k, v)
                 updated += 1
-                print(f"  Updated {client.name}: {list(changes.keys())}")
+                print(f"  Updated {partner.name}: {list(changes.keys())}")
             else:
-                print(f"  OK {client.name}")
+                print(f"  OK {partner.name}")
 
         await db.commit()
-        print(f"\nUpdated {updated}/{len(clients)} clients.")
+        print(f"\nUpdated {updated}/{len(partners)} partners.")
 
 
 if __name__ == "__main__":
