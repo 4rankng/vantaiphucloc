@@ -21,7 +21,7 @@ export function DesktopSidebar({
       {/* Brand */}
       <div className="h-16 flex items-center px-6 shrink-0" style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
         <span className="text-lg font-bold" style={{ color: 'var(--theme-brand-primary)' }}>
-          Phúc Lộc
+          TTransport
         </span>
         <span className="ml-2 text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
           {label}
@@ -90,7 +90,7 @@ export function DesktopSidebar({
       </div>
       <div className="px-3 py-3 shrink-0" style={{ borderTop: '1px solid var(--theme-border-default)' }}>
         <p className="text-xs text-center" style={{ color: 'var(--theme-text-muted)' }}>
-          Vận tải Phúc Lộc
+          Vận tải TTransport
         </p>
       </div>
     </aside>

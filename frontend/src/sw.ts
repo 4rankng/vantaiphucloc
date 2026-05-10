@@ -45,7 +45,7 @@ self.addEventListener('push', (event) => {
     }
   }
 
-  const title = data.title || 'Vận tải Phúc Lộc'
+  const title = data.title || 'TTransport'
   const options: NotificationOptions = {
     body: data.body || 'Bạn có thông báo mới',
     icon: '/pwa-192x192.png',

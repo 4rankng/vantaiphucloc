@@ -56,6 +56,7 @@ async def load_driver_summaries(
         u.id: DriverSummaryOut(
             id=u.id,
             name=(u.full_name or u.username),
+            phone=u.phone,
             tractor_plate=u.tractor_plate,
         )
         for u in res.scalars().all()
@@ -83,5 +84,5 @@ def get_driver_summary(
     summaries: dict[int, DriverSummaryOut], driver_id: int
 ) -> DriverSummaryOut:
     return summaries.get(
-        driver_id, DriverSummaryOut(id=driver_id, name="(không rõ)", tractor_plate=None)
+        driver_id, DriverSummaryOut(id=driver_id, name="(không rõ)", phone=None, tractor_plate=None)
     )

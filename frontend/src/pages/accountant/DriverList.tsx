@@ -13,17 +13,17 @@ export function DriverList() {
   const createDriver = useCreateDriver()
   const [search, setSearch] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [form, setForm] = useState({ username: '', phone: '', tractorPlate: '', vendor: '' })
+  const [form, setForm] = useState({ fullName: '', phone: '', tractorPlate: '', vendor: 'Vận Tải Phúc Lộc' })
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
   const filtered = useMemo(
-    () => drivers.filter(d => !search || fuzzyMatch(search, `${d.username} ${d.phone} ${d.tractorPlate ?? ''}`)),
+    () => drivers.filter(d => !search || fuzzyMatch(search, `${d.fullName ?? ''} ${d.username} ${d.phone} ${d.tractorPlate ?? ''}`)),
     [drivers, search],
   )
 
   const validateForm = () => {
     const errors: Record<string, string> = {}
-    if (!form.username.trim()) errors.username = 'Bắt buộc'
+    if (!form.fullName.trim()) errors.fullName = 'Bắt buộc'
     if (!form.phone.trim()) errors.phone = 'Bắt buộc'
     else if (!/^(0|\+?84)[35789]\d{8}$/.test(form.phone)) errors.phone = '10 chữ số bắt đầu bằng 0'
     setFormErrors(errors)
@@ -32,13 +32,15 @@ export function DriverList() {
 
   const handleSubmit = () => {
     if (!validateForm()) return
+    const fullName = form.fullName.trim()
+    const username = fullName.toLowerCase().replace(/\s+/g, '').replace(/đ/g, 'd').normalize('NFD').replace(/[̀-ͯ]/g, '')
     createDriver.mutate(
-      { username: form.username.trim(), phone: form.phone.trim(), tractorPlate: form.tractorPlate.trim() || undefined, vendor: form.vendor.trim() || undefined },
+      { username, fullName, phone: form.phone.trim(), tractorPlate: form.tractorPlate.trim() || undefined, vendor: form.vendor.trim() || undefined },
       {
         onSuccess: () => {
-          toast.success('Đã thêm tài xế', form.username)
+          toast.success('Đã thêm tài xế', form.fullName)
           setDialogOpen(false)
-          setForm({ username: '', phone: '', tractorPlate: '', vendor: '' })
+          setForm({ fullName: '', phone: '', tractorPlate: '', vendor: 'Vận Tải Phúc Lộc' })
           setFormErrors({})
         },
         onError: (err: unknown) => {
@@ -50,7 +52,7 @@ export function DriverList() {
   }
 
   const columns: Column<Driver>[] = [
-    { key: 'name', header: 'Tài xế', accessor: d => <span className="font-medium">{d.username}</span>, sortable: true, sortKey: d => d.username },
+    { key: 'name', header: 'Tài xế', accessor: d => <span className="font-medium">{d.fullName || d.username}</span>, sortable: true, sortKey: d => d.fullName ?? d.username },
     { key: 'phone', header: 'SĐT', accessor: d => d.phone
       ? <span>{d.phone}</span>
       : <span className="text-xs font-medium px-2 py-0.5 rounded-md" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-brand-primary)' }}>+ Thêm SĐT</span>,
@@ -117,14 +119,14 @@ export function DriverList() {
             <div className="space-y-3">
               <div className="space-y-1">
                 <label className="typo-form-label">Tên tài xế *</label>
-                <input value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} className="w-full h-9 px-3 rounded-lg text-sm border" style={{ background: 'var(--theme-bg-secondary)', borderColor: formErrors.username ? 'var(--theme-status-error)' : 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }} />
-                {formErrors.username && <p className="text-xs" style={{ color: 'var(--theme-status-error)' }}>{formErrors.username}</p>}
+                <input value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} placeholder="VD: Nguyễn Văn A" className="w-full h-9 px-3 rounded-lg text-sm border" style={{ background: 'var(--theme-bg-secondary)', borderColor: formErrors.fullName ? 'var(--theme-status-error)' : 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }} />
+                {formErrors.fullName && <p className="text-xs" style={{ color: 'var(--theme-status-error)' }}>{formErrors.fullName}</p>}
               </div>
               <div className="space-y-1">
                 <label className="typo-form-label">SĐT *</label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-                  <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className="w-full h-9 pl-9 pr-3 rounded-lg text-sm border" style={{ background: 'var(--theme-bg-secondary)', borderColor: formErrors.phone ? 'var(--theme-status-error)' : 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }} />
+                  <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="0912345678" className="w-full h-9 pl-9 pr-3 rounded-lg text-sm border" style={{ background: 'var(--theme-bg-secondary)', borderColor: formErrors.phone ? 'var(--theme-status-error)' : 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }} />
                 </div>
                 {formErrors.phone && <p className="text-xs" style={{ color: 'var(--theme-status-error)' }}>{formErrors.phone}</p>}
               </div>

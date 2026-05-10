@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.config import settings
@@ -23,6 +25,8 @@ from app.models.base import User as UserORM
 
 router = APIRouter(prefix="/push", tags=["push"])
 
+logger = logging.getLogger(__name__)
+
 
 @router.post("/subscriptions", response_model=PushSubscriptionOut, status_code=201)
 async def register_subscription(
@@ -30,21 +34,25 @@ async def register_subscription(
     current_user: UserORM = Depends(get_current_user),
     use_case: RegisterPushSubscription = Depends(get_register_push),
 ):
-    sub = await use_case.execute(
-        PushRegisterInput(
-            user_id=current_user.id,
-            endpoint=body.endpoint,
-            p256dh=body.p256dh,
-            auth=body.auth,
-            user_agent=body.user_agent,
+    try:
+        sub = await use_case.execute(
+            PushRegisterInput(
+                user_id=current_user.id,
+                endpoint=body.endpoint,
+                p256dh=body.p256dh,
+                auth=body.auth,
+                user_agent=body.user_agent,
+            )
         )
-    )
-    assert sub.id is not None
-    return PushSubscriptionOut(
-        id=int(sub.id),
-        endpoint=str(sub.endpoint),
-        created_at=str(sub.created_at),
-    )
+        assert sub.id is not None
+        return PushSubscriptionOut(
+            id=int(sub.id),
+            endpoint=str(sub.endpoint),
+            created_at=str(sub.created_at),
+        )
+    except Exception:
+        logger.warning("Push subscription registration failed", exc_info=True)
+        raise HTTPException(status_code=503, detail="Push notifications temporarily unavailable")
 
 
 @router.delete("/subscriptions", status_code=200)
@@ -53,7 +61,10 @@ async def unregister_subscription(
     current_user: UserORM = Depends(get_current_user),
     use_case: UnregisterPushSubscription = Depends(get_unregister_push),
 ):
-    await use_case.execute(user_id=current_user.id, endpoint=body.endpoint)
+    try:
+        await use_case.execute(user_id=current_user.id, endpoint=body.endpoint)
+    except Exception:
+        logger.warning("Push subscription removal failed", exc_info=True)
     return {"message": "Subscription removed"}
 
 
