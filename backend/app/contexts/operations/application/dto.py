@@ -29,8 +29,7 @@ class TripContainerInput:
 @dataclass
 class TripOrderCreateInput:
     trip_date: date
-    client_id: int
-    route: str
+    partner_id: int
     pickup_location_id: int
     dropoff_location_id: int
     containers: list[TripContainerInput] = field(default_factory=list)
@@ -38,15 +37,13 @@ class TripOrderCreateInput:
     unit_price: int = 0
     driver_salary: int = 0
     allowance: int = 0
-    revenue: int = 0
     matched_work_order_ids: list[int] = field(default_factory=list)
 
 
 @dataclass
 class TripOrderUpdateInput:
     trip_date: date | None = None
-    client_id: int | None = None
-    route: str | None = None
+    partner_id: int | None = None
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
     containers: list[TripContainerInput] | None = None
@@ -54,11 +51,7 @@ class TripOrderUpdateInput:
     unit_price: int | None = None
     driver_salary: int | None = None
     allowance: int | None = None
-    revenue: int | None = None
     status: str | None = None
-    is_confirmed: bool | None = None
-    confirmed_by: int | None = None
-    confirmed_at: datetime | None = None
     matched_work_order_ids: list[int] | None = None
 
 
@@ -66,7 +59,7 @@ class TripOrderUpdateInput:
 class TripOrderListFilters:
     page: int = 1
     page_size: int = 50
-    client_id: int | None = None
+    partner_id: int | None = None
     status: str | None = None
     date_from: date | None = None
     date_to: date | None = None
@@ -96,7 +89,7 @@ class ImportTripRow:
 
 @dataclass
 class ImportCommitInput:
-    client_id: int
+    partner_id: int
     rows: list[ImportTripRow]
     overwrite_duplicates: bool = False
     user_id: int | None = None
@@ -129,12 +122,11 @@ class WorkOrderContainerInput:
 
 @dataclass
 class WorkOrderCreateInput:
-    client_id: int
-    route: str
+    partner_id: int
     pickup_location_id: int
     dropoff_location_id: int
     driver_id: int
-    tractor_plate: str
+    vehicle_id: int | None = None
     containers: list[WorkOrderContainerInput] = field(default_factory=list)
     gps_lat: float | None = None
     gps_lng: float | None = None
@@ -142,19 +134,17 @@ class WorkOrderCreateInput:
 
 @dataclass
 class WorkOrderUpdateInput:
-    client_id: int | None = None
-    route: str | None = None
+    partner_id: int | None = None
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
     driver_id: int | None = None
-    tractor_plate: str | None = None
+    vehicle_id: int | None = None
     containers: list[WorkOrderContainerInput] | None = None
     gps_lat: float | None = None
     gps_lng: float | None = None
     unit_price: int | None = None
     driver_salary: int | None = None
     allowance: int | None = None
-    earning: int | None = None
     status: str | None = None
 
 
@@ -163,7 +153,6 @@ class WorkOrderListFilters:
     page: int = 1
     page_size: int = 50
     driver_id: int | None = None
-    tractor_plate: str | None = None
     date_from: date | None = None
     date_to: date | None = None
     status: str | None = None

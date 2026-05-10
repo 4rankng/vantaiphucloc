@@ -1,6 +1,3 @@
-from app.contexts.payroll.infrastructure.repositories import (
-    SqlSalaryPeriodConfigRepository,
-    SqlSalaryPeriodRepository,
-)
+from app.contexts.payroll.infrastructure.repositories import SqlSettingsRepository
 
-__all__ = ["SqlSalaryPeriodConfigRepository", "SqlSalaryPeriodRepository"]
+__all__ = ["SqlSettingsRepository"]

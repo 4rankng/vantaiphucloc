@@ -2,7 +2,7 @@
  * API client barrel — re-exports from per-domain modules.
  *
  * Usage:  import { apiClient } from '@/services/api'
- *         apiClient.getClients()
+ *         apiClient.getPartners()
  *
  * The `apiClient` object gathers all methods so existing call-sites
  * (apiClient.getXxx / apiClient.createXxx) keep working unchanged.
@@ -12,7 +12,7 @@
 export { toCamel, toSnake, ok, fail, isNetworkError } from './utils'
 
 // Domain modules
-import * as clientsApi from './clients.api'
+import * as partnersApi from './partners.api'
 import * as routesApi from './routes.api'
 import * as locationsApi from './locations.api'
 import * as locationAliasesApi from './locationAliases.api'
@@ -22,20 +22,31 @@ import * as tripOrdersApi from './tripOrders.api'
 import * as salaryApi from './salary.api'
 import * as driversApi from './drivers.api'
 import * as dashboardApi from './dashboard.api'
-import * as vendorsApi from './vendors.api'
 import * as usersApi from './users.api'
 import * as reportsApi from './reports.api'
 import * as importsApi from './imports.api'
 import * as auditApi from './audit.api'
 
 export const apiClient = {
-  // Clients
-  getClients: clientsApi.getClients,
-  createClient: clientsApi.createClient,
-  updateClient: clientsApi.updateClient,
-  deleteClient: clientsApi.deleteClient,
+  // Partners (replaces Clients + Vendors)
+  getPartners: partnersApi.getPartners,
+  createPartner: partnersApi.createPartner,
+  updatePartner: partnersApi.updatePartner,
+  deletePartner: partnersApi.deletePartner,
 
-  // Routes
+  // Clients (backward compat — delegates to partners)
+  getClients: partnersApi.getPartners,
+  createClient: partnersApi.createPartner,
+  updateClient: partnersApi.updatePartner,
+  deleteClient: partnersApi.deletePartner,
+
+  // Vendors (backward compat — delegates to partners)
+  getVendors: partnersApi.getPartners,
+  createVendor: partnersApi.createPartner,
+  updateVendor: partnersApi.updatePartner,
+  deleteVendor: partnersApi.deletePartner,
+
+  // Routes (DEPRECATED — returns empty)
   getRoutes: routesApi.getRoutes,
   createRoute: routesApi.createRoute,
   updateRoute: routesApi.updateRoute,
@@ -90,9 +101,10 @@ export const apiClient = {
   // Salary
   calculateSalary: salaryApi.calculateSalary,
   getJobStatus: salaryApi.getJobStatus,
-  getSalaryPeriods: salaryApi.getSalaryPeriods,
-  getMySalaryPeriods: salaryApi.getMySalaryPeriods,
-  updateSalaryPeriod: salaryApi.updateSalaryPeriod,
+  getDriverEarnings: salaryApi.getDriverEarnings,
+  getMyEarnings: salaryApi.getMyEarnings,
+  getSalaryConfig: salaryApi.getSalaryConfig,
+  updateSalaryConfig: salaryApi.updateSalaryConfig,
   getSalaryDashboard: salaryApi.getSalaryDashboard,
   exportSalaryExcel: salaryApi.exportSalaryExcel,
 
@@ -102,12 +114,6 @@ export const apiClient = {
   // Drivers
   getDrivers: driversApi.getDrivers,
   createDriver: driversApi.createDriver,
-
-  // Vendors
-  getVendors: vendorsApi.getVendors,
-  createVendor: vendorsApi.createVendor,
-  updateVendor: vendorsApi.updateVendor,
-  deleteVendor: vendorsApi.deleteVendor,
 
   // Dashboard & Notifications
   getDashboardSummary: dashboardApi.getDashboardSummary,
@@ -141,4 +147,4 @@ export const apiClient = {
 }
 
 // Re-export types from salary.api
-export type { AsyncJobResult, JobStatus } from './salary.api'
+export type { AsyncJobResult, JobStatus, DriverEarnings } from './salary.api'

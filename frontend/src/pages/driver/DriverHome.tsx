@@ -6,8 +6,8 @@ import { formatCurrencyFull } from '@/data/domain'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { WorkOrderCard } from '@/components/shared/WorkOrderCard'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
-import { useMySalaryPeriods, useSalaryConfig, useWorkOrders } from '@/hooks/use-queries'
-import { getSalaryPeriodDates, dayBefore, dayAfter } from '@/utils/salaryPeriod'
+import { useMyEarnings, useSalaryConfig, useWorkOrders } from '@/hooks/use-queries'
+import { getSalaryPeriodDates, dayBefore, dayAfter, toISODate } from '@/utils/salaryPeriod'
 
 const PAGE_SIZE = 10
 
@@ -38,7 +38,10 @@ export function DriverHome() {
     [periodStart, config?.from_day, config?.to_day],
   )
 
-  const { data: salaryPeriods = [] } = useMySalaryPeriods()
+  // Fetch driver earnings for current period
+  const startISO = toISODate(currentPeriod.startDate)
+  const endISO = toISODate(currentPeriod.endDate)
+  const { data: myEarnings } = useMyEarnings(startISO, endISO)
 
   // Reset visible count when period or filter changes
   useEffect(() => { setVisibleCount(PAGE_SIZE) }, [periodStart, filter])
@@ -98,18 +101,12 @@ export function DriverHome() {
   )
 
   const totalEarnings = useMemo(() =>
-    periodJobs.reduce((sum, w) => sum + w.earning, 0),
+    periodJobs.reduce((sum, w) => sum + w.driverSalary, 0),
     [periodJobs],
   )
 
-  // Match salary period for current date range
-  const matchedSalaryPeriod = useMemo(() => {
-    const startStr = currentPeriod.startDate.toISOString().split('T')[0]
-    const endStr = currentPeriod.endDate.toISOString().split('T')[0]
-    return salaryPeriods.find(p => p.startDate === startStr && p.endDate === endStr) ?? null
-  }, [salaryPeriods, currentPeriod])
-
-  const earningsValue = matchedSalaryPeriod ? matchedSalaryPeriod.netPay : totalEarnings
+  // Use on-the-fly earnings from backend if available, otherwise fallback to local calc
+  const earningsValue = myEarnings?.totalEarnings ?? totalEarnings
   const displayMonth = currentPeriod.startDate.getMonth() + 1
   const displayYear = currentPeriod.startDate.getFullYear()
 

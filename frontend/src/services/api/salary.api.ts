@@ -1,6 +1,6 @@
 import { api } from './client'
-import { toCamel, toSnake, ok, fail, unwrapList } from './utils'
-import type { SalaryPeriod, ApiResponse } from '@/data/domain'
+import { toCamel, ok, fail } from './utils'
+import type { ApiResponse } from '@/data/domain'
 
 export interface AsyncJobResult {
   jobId: string
@@ -11,6 +11,66 @@ export interface JobStatus {
   jobId: string
   status: 'queued' | 'in_progress' | 'complete' | 'not_found'
   result: Record<string, unknown> | null
+}
+
+export interface DriverEarnings {
+  driverId: number
+  driverName: string
+  startDate: string
+  endDate: string
+  matchedOrderCount: number
+  totalSalary: number
+  totalAllowance: number
+  totalEarnings: number
+}
+
+export async function getDriverEarnings(
+  driverId: number,
+  startDate: string,
+  endDate: string,
+): Promise<ApiResponse<DriverEarnings>> {
+  try {
+    const res = await api.get(`/salary/earnings/${driverId}`, {
+      params: { start_date: startDate, end_date: endDate },
+    })
+    return ok(toCamel<DriverEarnings>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export async function getMyEarnings(
+  startDate: string,
+  endDate: string,
+): Promise<ApiResponse<DriverEarnings>> {
+  try {
+    const res = await api.get('/driver/earnings', {
+      params: { start_date: startDate, end_date: endDate },
+    })
+    return ok(toCamel<DriverEarnings>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export async function getSalaryConfig(): Promise<ApiResponse<{ fromDay: number; toDay: number }>> {
+  try {
+    const res = await api.get('/salary-config')
+    return ok(toCamel<{ fromDay: number; toDay: number }>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export async function updateSalaryConfig(
+  data: { from_day: number; to_day: number },
+): Promise<ApiResponse<{ fromDay: number; toDay: number }>> {
+  try {
+    const res = await api.put('/salary-config', data)
+    return ok(toCamel<{ fromDay: number; toDay: number }>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
 }
 
 export async function calculateSalary(
@@ -35,38 +95,6 @@ export async function getJobStatus(jobId: string): Promise<ApiResponse<JobStatus
   try {
     const res = await api.get(`/jobs/${jobId}`)
     return ok(toCamel<JobStatus>(res.data))
-  } catch (err) {
-    return fail(err)
-  }
-}
-
-export async function getSalaryPeriods(driverId?: number): Promise<ApiResponse<SalaryPeriod[]>> {
-  try {
-    const params: Record<string, string> = {}
-    if (driverId) params.driver_id = String(driverId)
-    const res = await api.get('/salary', { params })
-    return ok(toCamel<SalaryPeriod[]>(unwrapList(res.data)))
-  } catch (err) {
-    return fail(err)
-  }
-}
-
-export async function getMySalaryPeriods(): Promise<ApiResponse<SalaryPeriod[]>> {
-  try {
-    const res = await api.get('/driver/salary')
-    return ok(toCamel<SalaryPeriod[]>(unwrapList(res.data)))
-  } catch (err) {
-    return fail(err)
-  }
-}
-
-export async function updateSalaryPeriod(
-  id: number,
-  data: Partial<SalaryPeriod>,
-): Promise<ApiResponse<SalaryPeriod>> {
-  try {
-    const res = await api.put(`/salary/${id}`, toSnake(data))
-    return ok(toCamel<SalaryPeriod>(res.data))
   } catch (err) {
     return fail(err)
   }

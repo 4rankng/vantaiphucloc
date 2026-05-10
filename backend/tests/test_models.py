@@ -9,15 +9,13 @@ import pytest
 from sqlalchemy import Integer
 
 from app.models.domain import (
-    Client,
-    Route,
+    Partner,
     Pricing,
     PricingLine,
     WorkOrder,
     WorkOrderContainer,
     TripOrder,
-    TripOrderWorkOrder,
-    SalaryPeriod,
+    Reconciliation,
 )
 
 
@@ -47,11 +45,6 @@ def _fk_ondelete(col):
 
 class TestMonetaryFieldsAreInteger:
 
-    @pytest.mark.parametrize("field", ["outstanding_debt"])
-    def test_client_monetary_fields(self, field):
-        col = _col(Client, field)
-        assert isinstance(col.type, Integer)
-
     @pytest.mark.parametrize("field", ["unit_price", "driver_salary", "allowance"])
     def test_pricing_line_monetary_fields(self, field):
         col = _col(PricingLine, field)
@@ -59,21 +52,14 @@ class TestMonetaryFieldsAreInteger:
             f"PricingLine.{field} should be Integer, got {type(col.type).__name__}"
         )
 
-    @pytest.mark.parametrize("field", ["unit_price", "driver_salary", "allowance", "earning"])
+    @pytest.mark.parametrize("field", ["unit_price", "driver_salary", "allowance"])
     def test_work_order_monetary_fields(self, field):
         col = _col(WorkOrder, field)
         assert isinstance(col.type, Integer)
 
-    @pytest.mark.parametrize("field", ["unit_price", "driver_salary", "allowance", "revenue"])
+    @pytest.mark.parametrize("field", ["unit_price", "driver_salary", "allowance"])
     def test_trip_order_monetary_fields(self, field):
         col = _col(TripOrder, field)
-        assert isinstance(col.type, Integer)
-
-    @pytest.mark.parametrize("field", [
-        "price_per_order", "total_salary", "total_allowance", "total_deduction", "net_pay",
-    ])
-    def test_salary_period_monetary_fields(self, field):
-        col = _col(SalaryPeriod, field)
         assert isinstance(col.type, Integer)
 
 
@@ -122,13 +108,13 @@ class TestCascadeDeleteConstraints:
         col = _col(WorkOrderContainer, "work_order_id")
         assert _fk_target(col) == "work_orders.id"
 
-    def test_trip_order_work_order_trip_order_id_cascade(self):
-        col = _col(TripOrderWorkOrder, "trip_order_id")
+    def test_reconciliation_trip_order_id_cascade(self):
+        col = _col(Reconciliation, "trip_order_id")
         ondelete = _fk_ondelete(col)
         assert ondelete is not None and ondelete.upper() == "CASCADE"
 
-    def test_trip_order_work_order_references_trip_orders(self):
-        col = _col(TripOrderWorkOrder, "trip_order_id")
+    def test_reconciliation_references_trip_orders(self):
+        col = _col(Reconciliation, "trip_order_id")
         assert _fk_target(col) == "trip_orders.id"
 
 
@@ -141,8 +127,11 @@ class TestColumnNullability:
     def test_work_order_unit_price_not_nullable(self):
         assert _col(WorkOrder, "unit_price").nullable is False
 
-    def test_work_order_earning_not_nullable(self):
-        assert _col(WorkOrder, "earning").nullable is False
+    def test_trip_order_unit_price_not_nullable(self):
+        assert _col(TripOrder, "unit_price").nullable is False
 
-    def test_trip_order_revenue_not_nullable(self):
-        assert _col(TripOrder, "revenue").nullable is False
+    def test_partner_name_not_nullable(self):
+        assert _col(Partner, "name").nullable is False
+
+    def test_partner_partner_type_not_nullable(self):
+        assert _col(Partner, "partner_type").nullable is False

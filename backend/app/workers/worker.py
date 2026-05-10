@@ -6,7 +6,6 @@ from arq.connections import RedisSettings
 from app.config import settings
 
 from app.workers.tasks.cleanup import cleanup_expired_sessions, cleanup_old_audit_logs
-from app.workers.tasks.reports import remind_salary_period_end, recalculate_open_periods
 from app.workers.tasks.salary import calculate_salary_task
 from app.workers.tasks.notifications import send_notification_task
 from app.workers.tasks.geocoding import geocode_container_task, geocode_work_order_task
@@ -28,8 +27,6 @@ class WorkerSettings:
     cron_jobs = [
         cron(cleanup_expired_sessions, hour=3, minute=0),
         cron(cleanup_old_audit_logs, hour=3, minute=30),
-        cron(remind_salary_period_end, hour=8, minute=0),
-        cron(recalculate_open_periods, hour=1, minute=0),
     ]
     redis_settings = RedisSettings.from_dsn(settings.REDIS_URL)
     max_tries = settings.WORKER_MAX_TRIES
