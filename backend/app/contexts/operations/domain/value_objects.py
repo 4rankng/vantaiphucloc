@@ -29,6 +29,7 @@ class WorkOrderStatus(StrEnum):
 class TripOrderStatus(StrEnum):
     DRAFT = "DRAFT"
     PENDING = "PENDING"
+    CONFIRMED = "CONFIRMED"
     COMPLETED = "COMPLETED"
     CANCELLED = "CANCELLED"
 
