@@ -78,10 +78,10 @@ class TestTripOrders:
 
     def test_delete_trip_order(self, api_client, admin_headers, create_trip_order):
         to = create_trip_order()
-        resp = api_client.delete(
-            f"/trip-orders/{to['id']}",
+        resp = api_client.request(
+            "DELETE", f"/trip-orders/{to['id']}",
             headers=admin_headers,
-            params={"reason": "integration test"},
+            json={"reason": "integration test"},
         )
         assert resp.status_code in (200, 204)
 
