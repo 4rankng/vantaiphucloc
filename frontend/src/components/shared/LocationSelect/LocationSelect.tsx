@@ -29,13 +29,9 @@ export function LocationSelect({ value, onChange, placeholder = 'Chọn địa �
     const trimmed = newName.trim()
     if (!trimmed) return
     const res = await createLocation.mutateAsync({ name: trimmed })
-    if (res.success) {
-      onChange(res.data.name)
-      setCreateOpen(false)
-      setNewName('')
-    } else {
-      toast({ title: 'Lỗi', description: 'Không thể tạo địa điểm mới', variant: 'destructive' })
-    }
+    onChange(res.name)
+    setCreateOpen(false)
+    setNewName('')
   }, [newName, createLocation, onChange, toast])
 
   const handleCreateNew = useCallback(() => {

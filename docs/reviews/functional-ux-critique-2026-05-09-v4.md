@@ -500,4 +500,55 @@ NX11 (push 500), NX12 (brand drift), NX13 (data quality), and the rest of the se
 
 ---
 
+## v4.1 Post-Fix Update (2026-05-10)
+
+All fixes below are committed to `main` (branch clean, `pnpm build` passes). They await the next production deployment — the live bundle (`index-BhGDPZWb.js`) does NOT yet include these changes.
+
+### Fixes applied
+
+| # | Fix | Files changed | Root cause |
+|---|-----|---------------|------------|
+| NX1 | Reconcile toast now shows success on 200 | `MatchDetailPanel.tsx`, `MatchPanel.tsx`, `MatchCard.tsx`, `TripDetail.tsx`, `UserManagement.tsx`, `CreateUserDialog.tsx`, `Profile.tsx`, `SuperAdminApp.tsx`, `LocationSelect.tsx` | `.then(unwrap)` strips `ApiResponse<T>` to raw `T`. Code checked `res.success` on unwrapped object — always `undefined`. Removed all `.success` checks; unwrap throws on failure so try/catch handles errors. |
+| NX4 | Dashboard "Hoàn thành" → "Đã khớp" for COMPLETED trips | `AccountantDashboard.tsx` | Status label mapping used legacy vocabulary. Fixed to match "Đã khớp" used everywhere else. |
+| NX9 | Logout redirects to `/` instead of `/login` (404) | `AccountantSidebar.tsx`, `DirectorSidebar.tsx` | `navigate('/login')` → `navigate('/')`. Login form lives at `/`, not `/login`. |
+| NX10 | Right pane clears after successful match | `MatchDetailPanel.tsx`, `MatchPanel.tsx` | Consequence of NX1 — `onMatchSuccess()` never fired because success branch was unreachable. Fixed automatically with NX1 fix. |
+| NX12 | Brand unified to "TTransport" everywhere | `AccountantSidebar.tsx`, `DirectorSidebar.tsx`, `Login.tsx`, `index.html` | All surfaces now read "TTransport". Login wordmark, sidebar, document title all consistent. |
+| NX14 | Client detail dialog shows all fields (MST, Địa chỉ, Người liên hệ) with "Chưa có" for empty | `ClientDetail.tsx` | Added `DetailValue` component that renders field value or italic "Chưa có" placeholder. |
+| TASK-003 | "Đã tính" chip hidden when lương=0 | `SalarySetup.tsx` | Conditional render: chip only shown when `totalSalary > 0`. |
+| TASK-005 | Empty state on Người dùng page | `UserManagement.tsx` | Added `<EmptyState>` component when `filtered.length === 0`. |
+| TASK-009 | "+ Thêm SĐT" / "+ Thêm biển số" chips for empty fields | `DriverList.tsx` | Column accessors render styled chip instead of `—`. |
+| TASK-013 | `SettingsPageLayout` component built and wired | New: `SettingsPageLayout.tsx` + index.ts | Thin wrapper around `PageHeader` with breadcrumb "← Cài đặt". |
+| TASK-014 | `AccountantSettings` delegates headers to children | `AccountantSettings.tsx` | Removes `SectionHeader` when on subroute; returns `<Outlet />`. |
+| TASK-016 + TASK-030 | F40/F20 collapsed into single per-route table | `PricingClientDetail.tsx` (full rewrite) | One `<table>` per route with "Loại cont" column + ContBadge. Eliminates 65 repeated labels. |
+| TASK-017 | Settings index grouped into 3 buckets (Tài chính / Đối tác / Hệ thống) | `AccountantSettings.tsx` | Section headers + 2-col card grid per group. |
+| TASK-018 | Add-button labels standardized | `ClientList.tsx`, `VendorList.tsx` | "Thêm" → "Thêm khách hàng" / "Thêm nhà thầu". |
+| TASK-019 | Nhà thầu uses DataTablePro with full columns | `VendorList.tsx` | Replaced single pill with DataTablePro showing Tên / SĐT / MST / Loại / Địa chỉ. |
+| TASK-022 | Row count + "Xoá lọc" chip on Drivers | `DriverList.tsx` | `{filtered.length}/{drivers.length} tài xế` + clear filter chip. |
+| TASK-023 | Settings grid locked to 2 cols on lg | `AccountantSettings.tsx` | `lg:grid-cols-3` → `sm:grid-cols-2` only. |
+| TASK-027 | CTAs hoisted to SettingsPageLayout actions slot | All settings subpages | Each subpage passes primary CTA to `SettingsPageLayout actions` prop. |
+| TASK-032 | Breadcrumb on all Settings subpages | `SettingsPageLayout.tsx` | "← Cài đặt" breadcrumb rendered via PageHeader. |
+| TASK-034 | Settings subtitle updated | `AccountantSettings.tsx` | "Quản lý kỳ lương, bảng giá, đối tác và tài khoản". |
+| TASK-035 | Single h1 per settings subpage | All settings subpages | Only SettingsPageLayout renders `<h1>` via PageHeader. |
+| TASK-015 | Pricing detail route under `/accountant/settings/pricing/:id` | `router.ts`, `PricingClientCards.tsx`, new `SettingsPricingDetail.tsx` | New route + navigation detects settings context. |
+| TASK-025 | Users page uses DataTablePro on desktop | `UserManagement.tsx` | Card grid replaced with DataTablePro columns (Tên, Vai trò, SĐT, Biển số) on desktop. Cards preserved on mobile via `useIsMobile(768)`. |
+
+### Items NOT fixed (require backend changes or product decisions)
+
+| # | Reason |
+|---|--------|
+| NX3 | Backend issue — `useUsers` API returns 0 results for ketoan. Not a frontend bug. |
+| NX11 | Backend issue — `/push/subscriptions` returns 500. Frontend cannot fix this. |
+| NX13 | Data quality — production has no SĐT/MST/Địa chỉ for any customer. Needs data backfill. |
+| TASK-004 | `DriverSummary` type has `{id, name, tractorPlate}` only — no `fullName`/`phone` fields. Backend schema change needed. |
+| TASK-020 | Helper text "Ngày 1–31" added under Salary day inputs in code (awaiting deploy). Not a backend issue — listed here for tracking. |
+
+### Build verification
+
+```
+pnpm tsc --noEmit  → 0 errors
+pnpm build         → clean
+```
+
+---
+
 **End of v4 audit.**

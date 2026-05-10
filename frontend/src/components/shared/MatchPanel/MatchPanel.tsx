@@ -698,13 +698,7 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
       return
     }
 
-    const recResult = await reconcile.mutateAsync({ workOrderId: workOrder.id, tripOrderId: selectedTrip.id })
-    if (!recResult.success) {
-      const detail = (recResult.error as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-      toast.error('Lỗi khớp', detail ?? 'Không thể khớp chuyến — kiểm tra trạng thái đơn hàng')
-      setSubmitting(false)
-      return
-    }
+    await reconcile.mutateAsync({ workOrderId: workOrder.id, tripOrderId: selectedTrip.id })
 
     toast.success('Thành công', 'Đã ghép chuyến thành công')
     onMatchSuccess()

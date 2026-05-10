@@ -78,7 +78,7 @@ export function AccountantSidebar({
 
   const handleLogout = useCallback(() => {
     logout()
-    navigate('/login')
+    navigate('/')
   }, [logout, navigate])
 
   return (
@@ -101,7 +101,7 @@ export function AccountantSidebar({
       >
         <img src="/logo.avif" alt="" className="h-7 w-7 object-contain rounded-md shrink-0" />
         {!collapsed && (
-          <p className="text-[13px] font-semibold text-white leading-tight truncate tracking-tight">Vận Tải Phúc Lộc</p>
+          <p className="text-[13px] font-semibold text-white leading-tight truncate tracking-tight">TTransport</p>
         )}
       </div>
 

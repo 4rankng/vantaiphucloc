@@ -29,13 +29,9 @@ export function SuperAdminApp() {
 
   const handleEditUser = useCallback(async (userId: string, data: Record<string, unknown>) => {
     try {
-      const res = await updateUser.mutateAsync({ id: userId, data })
-      if (res.success) {
-        toast.success('Đã cập nhật')
-        setSelectedUser(null)
-      } else {
-        toast.error('Lỗi', res.message ?? 'Không thể cập nhật')
-      }
+      await updateUser.mutateAsync({ id: userId, data })
+      toast.success('Đã cập nhật')
+      setSelectedUser(null)
     } catch {
       toast.error('Lỗi', 'Không thể cập nhật')
     }
@@ -43,13 +39,9 @@ export function SuperAdminApp() {
 
   const handleDeleteUser = useCallback(async (userId: string) => {
     try {
-      const res = await deleteUser.mutateAsync(userId)
-      if (res.success) {
-        toast.success('Đã xoá tài khoản')
-        setSelectedUser(null)
-      } else {
-        toast.error('Lỗi', res.message ?? 'Không thể xoá tài khoản')
-      }
+      await deleteUser.mutateAsync(userId)
+      toast.success('Đã xoá tài khoản')
+      setSelectedUser(null)
     } catch {
       toast.error('Lỗi', 'Không thể xoá tài khoản')
     }

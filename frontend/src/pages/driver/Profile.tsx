@@ -159,11 +159,7 @@ export function Profile() {
 
   const saveField = async (field: 'full_name' | 'phone' | 'username', value: string) => {
     const res = await updateProfileField({ field, value })
-    if (!res.success) {
-      toast.error('Lỗi', res.message ?? 'Lỗi không xác định')
-      throw new Error(res.message)
-    }
-    const updated = res.data?.value ?? value
+    const updated = res.value ?? value
     if (field === 'full_name') {
       updateUser({ name: updated })
       toast.success('Đã cập nhật họ tên')

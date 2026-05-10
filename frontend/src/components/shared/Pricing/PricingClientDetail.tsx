@@ -184,6 +184,7 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
         <div className="space-y-6">
           {filteredGroups.map(([route, items]) => {
             const [pickup, dropoff] = route.split(' - ')
+            const isEditingAny = items.some(p => editingPricingId === p.id)
 
             return (
               <div key={route}>
@@ -198,191 +199,191 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
                       className="ml-auto text-xs font-semibold px-2 py-1 rounded-md"
                       style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
                     >
-                      {items.length} mức
+                      {items.reduce((sum, p) => sum + p.lines.length, 0)} mức
                     </span>
                   </div>
                 </div>
 
-                {/* Single card per route, with sub-sections per work type */}
+                {/* Single merged table per route */}
                 <div
                   className="card overflow-hidden"
+                  style={isEditingAny ? { background: 'color-mix(in srgb, var(--theme-brand-primary) 5%, transparent)' } : undefined}
                 >
-                {items.map((pricing, pIdx) => {
-                    const isEditing = editingPricingId === pricing.id
-                    const lines = isEditing ? draftLines : pricing.lines
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr>
+                        <th className="px-3 py-2 text-left typo-label">Loại cont</th>
+                        <th className="px-3 py-2 text-left typo-label">SL</th>
+                        <th className="px-3 py-2 text-right typo-label">Đơn giá</th>
+                        <th className="px-3 py-2 text-right typo-label">Lương tài xế</th>
+                        <th className="px-3 py-2 text-right typo-label">Phụ cấp</th>
+                        <th className="px-3 py-2 w-10" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((pricing) => {
+                        const isEditing = editingPricingId === pricing.id
+                        const lines = isEditing ? draftLines : pricing.lines
 
-                    // Skip if no lines and not being edited
-                    if (!isEditing && lines.length === 0) return null
+                        if (!isEditing && lines.length === 0) return null
 
-                    return (
-                      <div
-                        key={pricing.id}
-                        className="p-4"
-                        style={{
-                          background: isEditing ? 'color-mix(in srgb, var(--theme-brand-primary) 5%, transparent)' : undefined,
-                          borderTop: pIdx > 0 ? '1px solid var(--theme-border-light)' : undefined,
-                        }}
-                      >
-                          <div className="flex items-center gap-2 mb-3">
-                            <ContBadge type={pricing.workType} />
-                          </div>
-                          <table className="w-full text-xs">
-                            <thead>
-                              <tr>
-                                <th className="px-0 py-2 text-left typo-label">SL</th>
-                                <th className="px-0 py-2 text-right typo-label">Đơn giá</th>
-                                <th className="px-0 py-2 text-right typo-label">Lương tài xế</th>
-                                <th className="px-0 py-2 text-right typo-label">Phụ cấp</th>
-                                <th className="px-0 py-2 w-10" />
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {lines.map((line, lIdx) => (
-                                <tr
-                                  key={lIdx}
-                                  style={{
-                                    borderBottom: lIdx < lines.length - 1 ? '1px solid var(--theme-border-light)' : undefined,
-                                    background: isEditing ? 'color-mix(in srgb, var(--theme-brand-primary) 5%, transparent)' : undefined,
-                                  }}
-                                >
-                                  {/* Quantity */}
-                                  <td className="px-0 py-3">
-                                    {isEditing ? (
-                                      <div className="flex items-center gap-1">
-                                        {[1, 2].map(q => (
-                                          <button
-                                            key={q}
-                                            onClick={e => { e.stopPropagation(); updateDraftLine(lIdx, 'quantity', q) }}
-                                            className="px-2 py-1 rounded-md text-xs font-bold"
-                                            style={{
-                                              background: line.quantity === q ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
-                                              color: line.quantity === q ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
-                                            }}
-                                          >
-                                            ×{q}
-                                          </button>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <span className="font-mono-num">{line.quantity}</span>
-                                    )}
-                                  </td>
+                        return lines.map((line, lIdx) => (
+                          <tr
+                            key={`${pricing.id}-${lIdx}`}
+                            style={{
+                              borderBottom: '1px solid var(--theme-border-light)',
+                              background: isEditing ? 'color-mix(in srgb, var(--theme-brand-primary) 5%, transparent)' : undefined,
+                            }}
+                          >
+                            {/* Cont type — only on first line of this pricing */}
+                            <td className="px-3 py-3">
+                              {lIdx === 0 && <ContBadge type={pricing.workType} />}
+                            </td>
 
-                                  {/* Unit price */}
-                                  <td className="px-0 py-3 text-right">
-                                    {isEditing ? (
-                                      <InlineCell value={line.unitPrice} onChange={v => updateDraftLine(lIdx, 'unitPrice', v)} editing />
-                                    ) : (
-                                      <span className="font-mono-num font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>
-                                        {formatCurrencyFull(line.unitPrice)}
-                                      </span>
-                                    )}
-                                  </td>
-
-                                  {/* Driver salary */}
-                                  <td className="px-0 py-3 text-right">
-                                    {isEditing ? (
-                                      <InlineCell value={line.driverSalary} onChange={v => updateDraftLine(lIdx, 'driverSalary', v)} editing />
-                                    ) : (
-                                      <span className="font-mono-num">{formatCurrencyFull(line.driverSalary)}</span>
-                                    )}
-                                  </td>
-
-                                  {/* Allowance */}
-                                  <td className="px-0 py-3 text-right">
-                                    {isEditing ? (
-                                      <InlineCell value={line.allowance} onChange={v => updateDraftLine(lIdx, 'allowance', v)} editing />
-                                    ) : (
-                                      <span className="font-mono-num">{formatCurrencyFull(line.allowance)}</span>
-                                    )}
-                                  </td>
-
-                                  {/* Row actions */}
-                                  <td className="px-0 py-3 text-right">
-                                    {isEditing ? (
-                                      lines.length > 1 ? (
-                                        <button
-                                          onClick={() => removeDraftLine(lIdx)}
-                                          className="p-1 rounded-md hover:bg-[var(--theme-bg-tertiary)]"
-                                          style={{ color: 'var(--theme-status-error)' }}
-                                          title="Xoá dòng"
-                                        >
-                                          <Trash2 size={16} />
-                                        </button>
-                                      ) : null
-                                    ) : (
-                                      <div className="flex items-center gap-1 justify-end">
-                                        <button
-                                          onClick={() => startEdit(pricing)}
-                                          className="p-1 rounded-md hover:bg-[var(--theme-bg-tertiary)]"
-                                          style={{ color: 'var(--theme-text-muted)' }}
-                                          title="Chỉnh sửa"
-                                        >
-                                          <Pencil size={16} />
-                                        </button>
-                                        <button
-                                          onClick={() => setDeleteTarget({ id: pricing.id, desc: `${pricing.workType} · SL=${pricing.lines[0]?.quantity ?? 1} · ${formatCurrencyFull(pricing.lines[0]?.unitPrice ?? 0)}` })}
-                                          className="p-1 rounded-md hover:bg-[var(--theme-bg-tertiary)]"
-                                          style={{ color: 'var(--theme-status-error)' }}
-                                          title="Xoá"
-                                        >
-                                          <Trash2 size={16} />
-                                        </button>
-                                      </div>
-                                    )}
-                                  </td>
-                                </tr>
-                              ))}
-
-                              {/* Add row / Save-Cancel row */}
-                              <tr style={{ borderTop: '1px solid var(--theme-border-light)' }}>
-                                {isEditing ? (
-                                  <>
-                                    <td colSpan={3} className="px-0 py-3">
-                                      <button
-                                        onClick={() => addDraftLine()}
-                                        className="flex items-center gap-1.5 text-xs font-medium"
-                                        style={{ color: 'var(--theme-brand-primary)' }}
-                                      >
-                                        <Plus size={14} />
-                                        Thêm dòng
-                                      </button>
-                                    </td>
-                                    <td colSpan={2} className="px-0 py-3 text-right">
-                                      <div className="flex items-center gap-2 justify-end">
-                                        <button
-                                          onClick={() => cancelEdit()}
-                                          className="btn-secondary text-xs h-8"
-                                        >
-                                          Huỷ
-                                        </button>
-                                        <button
-                                          onClick={() => saveEdit(pricing)}
-                                          className="btn-primary text-xs h-8"
-                                        >
-                                          Lưu
-                                        </button>
-                                      </div>
-                                    </td>
-                                  </>
-                                ) : (
-                                  <td colSpan={5} className="px-0 py-3">
+                            {/* Quantity */}
+                            <td className="px-3 py-3">
+                              {isEditing ? (
+                                <div className="flex items-center gap-1">
+                                  {[1, 2].map(q => (
                                     <button
-                                      onClick={() => { startEdit(pricing); addDraftLine() }}
-                                      className="flex items-center gap-1.5 text-xs font-medium"
-                                      style={{ color: 'var(--theme-text-muted)' }}
+                                      key={q}
+                                      onClick={e => { e.stopPropagation(); updateDraftLine(lIdx, 'quantity', q) }}
+                                      className="px-2 py-1 rounded-md text-xs font-bold"
+                                      style={{
+                                        background: line.quantity === q ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
+                                        color: line.quantity === q ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
+                                      }}
                                     >
-                                      <Plus size={14} />
-                                      Thêm dòng
+                                      ×{q}
                                     </button>
-                                  </td>
-                                )}
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                    )
-                  })}
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="font-mono-num">{line.quantity}</span>
+                              )}
+                            </td>
+
+                            {/* Unit price */}
+                            <td className="px-3 py-3 text-right">
+                              {isEditing ? (
+                                <InlineCell value={line.unitPrice} onChange={v => updateDraftLine(lIdx, 'unitPrice', v)} editing />
+                              ) : (
+                                <span className="font-mono-num font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>
+                                  {formatCurrencyFull(line.unitPrice)}
+                                </span>
+                              )}
+                            </td>
+
+                            {/* Driver salary */}
+                            <td className="px-3 py-3 text-right">
+                              {isEditing ? (
+                                <InlineCell value={line.driverSalary} onChange={v => updateDraftLine(lIdx, 'driverSalary', v)} editing />
+                              ) : (
+                                <span className="font-mono-num">{formatCurrencyFull(line.driverSalary)}</span>
+                              )}
+                            </td>
+
+                            {/* Allowance */}
+                            <td className="px-3 py-3 text-right">
+                              {isEditing ? (
+                                <InlineCell value={line.allowance} onChange={v => updateDraftLine(lIdx, 'allowance', v)} editing />
+                              ) : (
+                                <span className="font-mono-num">{formatCurrencyFull(line.allowance)}</span>
+                              )}
+                            </td>
+
+                            {/* Row actions */}
+                            <td className="px-3 py-3 text-right">
+                              {isEditing ? (
+                                lIdx === 0 ? (
+                                  <div className="flex items-center gap-1 justify-end">
+                                    <button
+                                      onClick={() => cancelEdit()}
+                                      className="btn-secondary text-xs h-7"
+                                    >
+                                      Huỷ
+                                    </button>
+                                    <button
+                                      onClick={() => saveEdit(pricing)}
+                                      className="btn-primary text-xs h-7"
+                                    >
+                                      Lưu
+                                    </button>
+                                  </div>
+                                ) : lines.length > 1 ? (
+                                  <button
+                                    onClick={() => removeDraftLine(lIdx)}
+                                    className="p-1 rounded-md hover:bg-[var(--theme-bg-tertiary)]"
+                                    style={{ color: 'var(--theme-status-error)' }}
+                                    title="Xoá dòng"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                ) : null
+                              ) : (
+                                lIdx === 0 && (
+                                  <div className="flex items-center gap-1 justify-end">
+                                    <button
+                                      onClick={() => startEdit(pricing)}
+                                      className="p-1 rounded-md hover:bg-[var(--theme-bg-tertiary)]"
+                                      style={{ color: 'var(--theme-text-muted)' }}
+                                      title="Chỉnh sửa"
+                                    >
+                                      <Pencil size={16} />
+                                    </button>
+                                    <button
+                                      onClick={() => setDeleteTarget({ id: pricing.id, desc: `${pricing.workType} · SL=${pricing.lines[0]?.quantity ?? 1} · ${formatCurrencyFull(pricing.lines[0]?.unitPrice ?? 0)}` })}
+                                      className="p-1 rounded-md hover:bg-[var(--theme-bg-tertiary)]"
+                                      style={{ color: 'var(--theme-status-error)' }}
+                                      title="Xoá"
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  </div>
+                                )
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      })}
+
+                      {/* Add row / actions footer */}
+                      <tr style={{ borderTop: '1px solid var(--theme-border-light)' }}>
+                        {isEditingAny ? (
+                          <>
+                            <td colSpan={3} className="px-3 py-3">
+                              <button
+                                onClick={() => addDraftLine()}
+                                className="flex items-center gap-1.5 text-xs font-medium"
+                                style={{ color: 'var(--theme-brand-primary)' }}
+                              >
+                                <Plus size={14} />
+                                Thêm dòng
+                              </button>
+                            </td>
+                            <td colSpan={3} />
+                          </>
+                        ) : (
+                          <td colSpan={6} className="px-3 py-3">
+                            <button
+                              onClick={() => {
+                                const unedited = items.find(p => !editingPricingId || editingPricingId !== p.id)
+                                if (unedited) {
+                                  startEdit(unedited)
+                                  addDraftLine()
+                                }
+                              }}
+                              className="flex items-center gap-1.5 text-xs font-medium"
+                              style={{ color: 'var(--theme-text-muted)' }}
+                            >
+                              <Plus size={14} />
+                              Thêm dòng
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )
