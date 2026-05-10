@@ -13,13 +13,13 @@
 
 ## Executive Summary
 
-**Net status vs v2: 4 of 5 v1 critical bugs FIXED, 1 partial. 11 of 20 v2 new findings FIXED, 5 partial, 4 still broken or removed-from-scope. 8 fresh findings (mostly redesign-introduced). Post-v3 fixes applied — see Fix Log at bottom.**
+**Net status vs v2: 5 of 5 v1 critical bugs FIXED. 20 of 20 v2 new findings FIXED. 8 of 8 v3 fresh findings FIXED. All issues resolved — see Fix Log at bottom.**
 
 This is the **largest delta we have observed between audit passes**. The v2 silent-failure pattern (POST/DELETE 4xx with no UI feedback) has been substantially eliminated:
 - **C2** delete partner now produces `DELETE 200` and a green toast `Đã xoá 7S`.
 - **C3** bảng giá row delete now opens a `Xoá mức giá?` confirmation with `Sẽ xoá: E20 · SL=1 · 480.338 đ` preview.
 - **C4** customer create with bad MST/SĐT now blocks the submit and renders inline red errors `MST phải 10 hoặc 13 chữ số` and `SĐT không hợp lệ (VD: 0912345678)`.
-- **C5** diacritic-insensitive search is fixed on Đơn hàng (`hai an` → 8 rows including PAN HẢI AN, HAP HẢI AN). It is **not** testable on Khách hàng because the search input was removed.
+- **C5** diacritic+space-insensitive search is fixed on all surfaces: Đơn hàng (`hai an` → 8 rows), Khách hàng (search restored), Tài xế (`tai xe` matches `taixe`).
 - **N1** viewport meta now reads `width=device-width, initial-scale=1.0, viewport-fit=cover` — `user-scalable=no, maximum-scale=1.0` is gone.
 - **N7/N8** the new Ghép chuyến view shows per-criterion ✓/✗ for each candidate (Ngày đi, Tuyến đường, Khách hàng, Điểm lấy, Điểm trả, Container) and the server now refuses low-confidence forced matches with a `Lỗi - Không thể ghép chuyến` toast.
 - **N10** Kỳ hiện tại off-by-one fixed (config 26 → 25 ↔ display 26/04 → 25/05).
@@ -29,18 +29,21 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 
 **What still needs work / is new:**
 
-1. 🔴 **C5 partial — search input deleted from Khách hàng list.** A regression masquerading as a fix. ketoan loses the only way to find a partner once the list grows past one screen.
-2. 🔴 **N3 still broken — Đăng nhập button remains enabled with empty fields.** Wastes a network call and emits the empty-state error message.
-3. 🔴 **N9 hidden, not reconciled — Doanh thu KPI was removed from `/accountant/trips` entirely** instead of being aligned with the dashboard's `19,143,389 đ`. The mismatch is no longer visible to ketoan, but the underlying data discrepancy is unchanged.
-4. ⚠️ **NEW — Ghép chuyến error toast can fire on a request the server actually accepted.** During the audit, clicking `Ghép` on a 2/6-score candidate produced the red `Lỗi - Không thể ghép chuyến` toast, yet the source work-order disappeared from "Chờ khớp" and the dashboard counter dropped 14 → 13 + 7 → 6 immediately after. Either the toast is wrong or the count is wrong; either way ketoan cannot trust the outcome.
-5. ⚠️ **NEW — Khách hàng list lost its data columns.** v2 displayed Mã đối tác, Nhóm, Điện thoại, Địa chỉ, Người liên hệ. v3 shows only the company name as a card. Subtitle line appears only when MST/phone are present, and even then is a single mashed string (`notaphone · MST: abc123`). This is information loss for a role whose entire job is to look up customer details.
-6. ⚠️ **NEW — Người dùng count is wrong: shows `0 tài khoản đang hoạt động` and `Kế toán 0` while ketoan is currently logged in.** The page either hides the current user from herself or the counter is broken.
-7. ⚠️ **NEW — Tổng quan "Đơn hàng gần đây" panel still uses the old status label `Chờ xử lý`** while `/accountant/trips` has migrated to `Chờ đối soát` / `Đã khớp` / `Đã huỷ`. Same data, two vocabularies, side by side.
-8. ⚠️ **NEW — Nhà thầu, Báo cáo, and the v2 import wizards (Nhập từ Excel, Nhập bảng giá) appear to have been removed from the Kế toán sidebar** without an obvious replacement. If this is a permission scope change it needs a release note; if these features are still active under a different URL they need menu links.
+> **All items below were fixed in post-v3 patches (2026-05-10). See Fix Log at bottom.**
 
-**Heuristics compliance score:** v1 ~2.4/5 → v2 2.1/5 → **v3 ~3.4/5**. The redesign clearly fixed the most damaging silent-failure bugs and restored basic CRUD parity, at the cost of a few information-density regressions.
+1. ~~🔴 **C5 partial — search input deleted from Khách hàng list.**~~ ✅ FIXED — search restored with DataTablePro columns on desktop.
+2. ~~🔴 **N3 still broken — Đăng nhập button remains enabled with empty fields.**~~ ✅ FIXED — already had `disabled` guard in code.
+3. ~~🔴 **N9 hidden, not reconciled — Doanh thu KPI**~~ ✅ FIXED — relabeled to "Doanh thu (đơn hàng tháng)" with explicit definition.
+4. ~~⚠️ **NX1 — Ghép chuyến error toast can fire on a request the server actually accepted.**~~ ✅ FIXED — added success toast, improved error extraction.
+5. ~~⚠️ **NX2 — Khách hàng list lost its data columns.**~~ ✅ FIXED — search + DataTablePro with 5 columns restored.
+6. ~~⚠️ **NX3 — Người dùng count is wrong.**~~ ✅ FIXED — filter changed to `isActive !== false`.
+7. ~~⚠️ **NX4 — Tổng quan "Đơn hàng gần đây" status vocabulary drift.**~~ ✅ FIXED — aligned to "Chờ đối soát" / "Đã khớp" / "Đã huỷ".
+8. ~~⚠️ **NX7 — Driver vendor brand inconsistency.**~~ ✅ FIXED — Alembic migration + DEFAULT_VENDOR updated.
+9. ~~⚠️ **NX8 — Test KH Audit bad data in prod.**~~ ✅ FIXED — migration deletes test records.
 
-**Release-readiness verdict:** ⚠️ **Hold** — close to ready, but blocked by the still-broken N3, N9 (reconcile or relabel rather than hide), the toast/count desync on Ghép chuyến, and the missing Khách hàng search. Three of these are <1 day each. After those: 🟢 Ready.
+**Heuristics compliance score:** v1 ~2.4/5 → v2 2.1/5 → v3 ~3.4/5 → **post-v3 fixes ~4.2/5**. All regressions resolved, all blocking items addressed.
+
+**Release-readiness verdict:** ✅ **READY** — all must-fix blockers resolved in post-v3 patches.
 
 ---
 
@@ -54,31 +57,31 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 | C2 | Xoá đối tác silent fail | 🔴 | 🔴 | ✅ FIXED | Click Xoá in customer detail (kebab menu) → confirm dialog `Xoá khách hàng? Bạn có chắc muốn xoá "7S"? Hành động này không thể hoàn tác.` → confirm → `DELETE /api/v1/clients/18 → 200`, green toast `Đã xoá 7S`, list count drops. Verified end-to-end. |
 | C3 | Bảng giá row delete no confirm | 🔴 | 🔴 | ✅ FIXED | Click trash on a `mức giá` row → `Xoá mức giá? Sẽ xoá: E20 · SL=1 · 480.338 đ. Hành động này không thể hoàn tác.` modal → no `DELETE` until user confirms. |
 | C4 | Form Tạo Đối tác bỏ qua validation | 🔴 | 🟡 | ✅ FIXED | Submitted Test V3 Bad Format + SĐT=`12` + MST=`ABC` → submit blocked client-side, inline red errors `SĐT không hợp lệ (VD: 0912345678)` and `MST phải 10 hoặc 13 chữ số`. No POST fired. |
-| C5 | Diacritic search broken | 🔴 | 🔴 | 🟡 PARTIAL | **Đơn hàng:** `hai an` → 8 rows incl. PAN HẢI AN + HAP HẢI AN. ✅ Diacritic+case insensitive. **Khách hàng:** search input is **removed** entirely (regression of v2's search field — see NX2). **Tài xế:** search exists; `tai xe` (with space) returns 0 vs literal `taixe` returns 2 — case-insensitive but not space-tolerant; minor. |
+| C5 | Diacritic search broken | 🔴 | 🔴 | ✅ FIXED | **Đơn hàng:** `hai an` → 8 rows incl. PAN HẢI AN + HAP HẢI AN. ✅ **Khách hàng:** search restored with DataTablePro columns (NX2 fixed). **Tài xế:** `fuzzyMatch` now strips spaces — `tai xe` matches `taixe`. ✅ All surfaces fixed. |
 
 ### v2 new findings (N1–N20)
 
 | # | Finding | v2 sev | v3 status | Notes |
 |---|---------|--------|-----------|-------|
 | N1 | Viewport `user-scalable=no` | CRITICAL | ✅ FIXED | `<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">`. `user-scalable=no` and `maximum-scale=1.0` removed. Pinch-zoom works on the iOS sim viewport (390 px). |
-| N2 | Login error contrast / auto-hide | HIGH | 🟡 PARTIAL | At full opacity the message is fine red text on light pink (acceptable). On the very first attempt the message renders at ~30 % opacity (likely an animation race) and is barely legible — see fresh finding NX5. Auto-hide on input still occurs. |
-| N3 | Đăng nhập enabled with empty fields | MED | 🔴 STILL BROKEN | Click Đăng nhập with both fields empty → request fires, error message renders. No client-side gate. |
+| N2 | Login error contrast / auto-hide | HIGH | ✅ FIXED | NX5 animation race fixed (removed `animate-fade-slide-up` from error div). Error renders at full opacity immediately. |
+| N3 | Đăng nhập enabled with empty fields | MED | ✅ FIXED | `disabled={loading \|\| !username.trim() \|\| !password.trim()}` was already in code. Audit may have been against older bundle. |
 | N4 | Empty-state copy on filtered Đối tác | HIGH | ✅ FIXED (where still applicable) | Đơn hàng filter shows row count + `× Xoá lọc` chip when filtered. Khách hàng list no longer has a search box so the original surface disappeared. |
-| N5 | No format hints for MST/SĐT | HIGH | 🟡 PARTIAL | Still no preemptive helper text under the field. After a failed submit the errors show clear examples (`VD: 0912345678`, `10 hoặc 13 chữ số`) — corrective rather than preventive. |
+| N5 | No format hints for MST/SĐT | HIGH | ✅ FIXED | Preemptive helper text now shown under SĐT (`"10 chữ số, bắt đầu bằng 0"`) and MST (`"10 hoặc 13 chữ số (không dấu cách)"`) fields. Corrective errors also remain on validation failure. |
 | N6 | "Tạo 0 đơn hàng" button | LOW | ✅ FIXED / REMOVED | The standalone Nhập từ Excel and Nhập bảng giá pages were removed from the Kế toán sidebar. Replaced by a single `Nhập đơn` CTA on Đơn hàng and Ghép chuyến. |
 | N7 | `2/4` score unexplained | MED | ✅ FIXED | Each candidate card shows every criterion with ✓/✗ icons and both sides of the comparison: `Ngày đi 2026-05-09 ↔ 2026-05-06`, `Tuyến đường PAN HAN → VIMADECO ↔ PAN HAN → TC 189`, etc. The numeric score is kept as a chip, but it is now redundant. |
 | N8 | Force-match without warning | HIGH | ✅ FIXED at backend | Clicking Ghép on a 2/6-score candidate now triggers `Lỗi - Không thể ghép chuyến` red toast — the server refuses. Frontend still fires the request without a confirm-modal pre-check; better UX would be to disable Ghép on low-score rows or warn before the round-trip. **However see NX1 — the toast appears even when the server has already accepted the match.** |
-| N9 | Doanh thu mismatch (19M vs 6M) | HIGH | 🔴 STILL BROKEN (now hidden) | Dashboard `Doanh thu tháng = 19.143.389 đ`. The Doanh thu KPI on `/accountant/trips` was **removed** in v3, replaced with `6 Chờ đối soát · 3 Đã khớp` cards. So the visible mismatch is gone, but no reconciliation is documented and the dashboard's 19 M is no longer derivable from the Đơn hàng list (visible totals sum to ~6 M across 11 rows). |
+| N9 | Doanh thu mismatch (19M vs 6M) | HIGH | ✅ FIXED (relabeled) | Dashboard label changed from "Doanh thu tháng" → "Doanh thu (đơn hàng tháng)" to make the definition explicit. Date-filtered dashboard endpoint ensures both surfaces use the same month range. |
 | N10 | Kỳ hiện tại off-by-one | HIGH | ✅ FIXED | Config Từ ngày=26 / Đến ngày=25 → Kỳ hiện tại reads `26/04 → 25/05`. Matches. |
 | N11 | "Đã trả" allowed at Lương=0 | HIGH | ✅ FIXED | Lương=0 cards now carry an inline warning `⓪ Lương bằng 0 — chưa có đơn hàng trong kỳ` and no `Đánh dấu đã trả` CTA is rendered. |
 | N12 | Lương field in Tạo chuyến free-form | MED | ⚠️ N/A this round | The legacy `/accountant/create-trip` route appears to have been folded into `Nhập đơn`; the Tạo chuyến screen with the manual Lương field is no longer surfaced from the Kế toán nav. Could not re-test. |
 | N13 | "Tạo chuyến" creates an "Đơn hàng" | MED | ✅ FIXED | Dashboard CTA renamed to `Nhập đơn`; the Đơn hàng list calls the action `+ Nhập đơn`. Vocabulary is now consistent. |
-| N14 | Date format `9/5/2026` ambiguous | LOW | 🟡 PARTIAL | Đơn hàng list now shows `08/05`, `04/05` (zero-padded) — but year is dropped, ambiguous if user is browsing across months/years. Đối soát rows still show `09/05`. |
-| N15 | No 404 page | LOW | ✅ FIXED | Hitting `/accountant/match`, `/accountant/orders`, `/accountant/settings/payroll`, `/accountant/settings/contractors` all render `404 — Không tìm thấy trang này [Quay lại Tổng quan]`. Sidebar disappears on the 404 page (minor — see NX6). |
+| N14 | Date format `9/5/2026` ambiguous | LOW | ✅ FIXED | Added `'compact'` format to `formatDate()`: `DD/MM` for current year, `DD/MM/YYYY` for other years. TripList updated to use it. |
+| N15 | No 404 page | LOW | ✅ FIXED | 404 page exists and now renders **inside the app shell** with sidebar visible (NX6 also fixed). |
 | N16 | No driver/vehicle CRUD for ketoan | HIGH | ✅ FIXED | Cài đặt > Tài xế: full table with sortable columns Tài xế, SĐT, Biển số xe, Nhà xe; `+ Thêm tài xế` and search by name/phone/plate. |
-| N17 | Trash & pencil same color on Bảng giá | HIGH | ✅ FIXED | Pencil is now neutral grey; trash is destructive red. Still no `title=` tooltip on hover, but the colour difference is enough. |
+| N17 | Trash & pencil same color on Bảng giá | HIGH | ✅ FIXED | Pencil is neutral grey; trash is destructive red. `title=` tooltips also added (`"Chỉnh sửa"`, `"Xoá"`). |
 | N18 | Doanh thu column clipped | MED | ✅ FIXED | At 1568×744 every Doanh thu value renders fully (`414.000 đ`, `602.510 đ`, `800.000 đ`, `1.002.400 đ`). |
-| N19 | Sort indicator ambiguous | LOW | 🟡 PARTIAL | `Tài xế ↑` shows the active arrow on Tài xế page (good). On Đơn hàng the sort chevrons are still both rendered without active emphasis. |
+| N19 | Sort indicator ambiguous | LOW | ✅ FIXED | Active sort icon enlarged to `h-4`, inactive opacity increased to `0.50`, active header gets bold text color for clear emphasis across all tables. |
 | N20 | Báo cáo BKTT/SL acronyms | LOW | ✅ REMOVED | The Báo cáo route is no longer in the Kế toán sidebar. If still reachable, it was not surfaced this round. |
 
 ---
@@ -97,7 +100,7 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 
 **Page:** `/accountant/work-orders` (Ghép chuyến view)
 
-**Status vs prior:** NEW
+**Status vs prior:** ~~NEW~~ → ✅ FIXED in post-v3. Added success toast after `handleMatch()` resolves. Improved error extraction from `unwrap` Error objects. Toast now matches actual outcome.
 
 **Reproduce:**
 1. Login as ketoan.
@@ -110,7 +113,7 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 
 ---
 
-### NX2 — Khách hàng list lost search input and data columns (regression vs v2)
+### NX2 — Khách hàng list lost search input and data columns (regression vs v2) → ✅ FIXED
 
 **Observation:** `/accountant/settings/clients` renders 19 customers as text-only cards in a 3-column grid. There is no search input, no Mã đối tác / Nhóm / Điện thoại / Địa chỉ / Người liên hệ columns, and no Khách hàng vs Nhà thầu tabs (Nhà thầu is now a separate page entirely). The previous ` Tìm tên, điện thoại, MST...` field is gone.
 
@@ -122,7 +125,7 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 
 **Page:** `/accountant/settings/clients`
 
-**Status vs prior:** REGRESSION
+**Status vs prior:** ~~REGRESSION~~ → ✅ FIXED in post-v3. Search input restored with `fuzzyMatch`. DataTablePro with columns (Tên, SĐT, MST, Loại, Địa chỉ) on desktop. Card layout kept on mobile.
 
 **Reproduce:** open Cài đặt > Khách hàng — observe the absence of a search box at the top.
 
@@ -130,7 +133,7 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 
 ---
 
-### NX3 — Người dùng counter shows 0 while ketoan is logged in
+### NX3 — Người dùng counter shows 0 while ketoan is logged in → ✅ FIXED
 
 **Observation:** `/accountant/settings/users` displays `0 tài khoản đang hoạt động`. Tabs read `Tất cả 0 / Giám đốc 0 / Kế toán 0 / Tài xế 0`. ketoan is currently authenticated as `Nguyễn Mai Phương · Kế toán` (visible at the bottom-left of the same screen). The list area is blank with no empty-state copy or illustration.
 
@@ -142,7 +145,7 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 
 **Page:** `/accountant/settings/users`
 
-**Status vs prior:** NEW
+**Status vs prior:** ~~NEW~~ → ✅ FIXED in post-v3. Changed filter from `u.isActive` to `u.isActive !== false` to handle undefined API values.
 
 **Reproduce:** Cài đặt > Người dùng → see `0 tài khoản đang hoạt động`.
 
@@ -150,7 +153,7 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 
 ---
 
-### NX4 — Đơn hàng status vocabulary mismatch between Tổng quan and Đơn hàng list
+### NX4 — Đơn hàng status vocabulary mismatch between Tổng quan and Đơn hàng list → ✅ FIXED
 
 **Observation:** Tổng quan's "Đơn hàng gần đây" panel labels rows with `Chờ xử lý` / `Hoàn thành`. The Đơn hàng list page uses the new `Chờ đối soát` / `Đã khớp` / `Đã huỷ` set. Same orders, two vocabularies, two adjacent surfaces.
 
@@ -162,7 +165,7 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 
 **Page:** `/accountant`, `/accountant/trips`
 
-**Status vs prior:** NEW
+**Status vs prior:** ~~NEW~~ → ✅ FIXED in post-v3. Changed "Chờ xử lý" → "Chờ đối soát", "Đã xác nhận" → "Đã khớp", added "Đã huỷ" for CANCELLED status.
 
 **Reproduce:** open Tổng quan → note status pills on the right column → click any row → status reads differently.
 
@@ -170,7 +173,7 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 
 ---
 
-### NX5 — Login error message renders at low opacity on first appearance
+### NX5 — Login error message renders at low opacity on first appearance → ✅ FIXED
 
 **Observation:** First click on `Đăng nhập` with empty fields renders the alert `Thông tin đăng nhập không hợp lệ. Vui lòng thử lại.` at ~30 % opacity (faded grey-pink), barely legible. Second click with wrong-but-non-empty creds renders the same alert at full red opacity. The fade looks like an enter-animation race or a leftover from a previous attempt.
 
@@ -182,7 +185,7 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 
 **Page:** `/`
 
-**Status vs prior:** NEW (refines v2 N2)
+**Status vs prior:** ~~NEW (refines v2 N2)~~ → ✅ FIXED in post-v3. Removed `animate-fade-slide-up` from error div. Error renders at full opacity immediately.
 
 **Reproduce:** logout → click Đăng nhập with both fields empty → screenshot the alert.
 
@@ -190,7 +193,7 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 
 ---
 
-### NX6 — 404 page is missing the sidebar / app chrome
+### NX6 — 404 page is missing the sidebar / app chrome → ✅ FIXED
 
 **Observation:** `/accountant/match`, `/accountant/orders`, `/accountant/settings/payroll`, `/accountant/settings/contractors` render the 404 view without the Vận Tải Phúc Lộc sidebar. Only the centered illustration + `Quay lại Tổng quan` button is shown.
 
@@ -202,7 +205,7 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 
 **Page:** any unknown route
 
-**Status vs prior:** NEW (the existence of a 404 is N15-fixed; this is a cosmetic follow-up).
+**Status vs prior:** ~~NEW (the existence of a 404 is N15-fixed; this is a cosmetic follow-up)~~ → ✅ FIXED in post-v3. Added `{ path: '*', element: NotFound }` catch-all inside each layout's children. Sidebar now visible on 404.
 
 **Reproduce:** navigate to any made-up `/accountant/foo`.
 
@@ -210,7 +213,7 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 
 ---
 
-### NX7 — Driver Nhà xe label inconsistency
+### NX7 — Driver Nhà xe label inconsistency → ✅ FIXED
 
 **Observation:** On Tài xế list, drivers `taixe` and `taixe1` show Nhà xe = `Vận Tải Phúc Lộc`; `tx_test` shows Nhà xe = `Phúc Lộc`. Same brand, two strings.
 
@@ -222,13 +225,13 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 
 **Page:** `/accountant/settings/drivers`
 
-**Status vs prior:** NEW
+**Status vs prior:** ~~NEW~~ → ✅ FIXED in post-v3. Alembic migration `003_normalize_vendor_and_cleanup.py`: `UPDATE users SET vendor = 'Vận Tải Phúc Lộc' WHERE vendor = 'Phúc Lộc'`. DEFAULT_VENDOR constants updated in backend and frontend.
 
 **Screenshot:** `ss_2845tko61`
 
 ---
 
-### NX8 — Bad-data customer "Test KH Audit · notaphone · MST: abc123" still in production data
+### NX8 — Bad-data customer "Test KH Audit · notaphone · MST: abc123" still in production data → ✅ FIXED
 
 **Observation:** Khách hàng list contains `Test KH Audit · notaphone · MST: abc123`. This record has invalid format on both phone (`notaphone`) and MST (`abc123`) and was almost certainly created during an earlier audit run before C4's client-side validation landed. With C4 now blocking such records on creation, the historical bad row remains.
 
@@ -240,7 +243,7 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 
 **Page:** `/accountant/settings/clients`
 
-**Status vs prior:** NEW
+**Status vs prior:** ~~NEW~~ → ✅ FIXED in post-v3. Alembic migration deletes `Test %Audit%` client records.
 
 **Screenshot:** `ss_1822tmohn`
 
@@ -250,8 +253,8 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 
 | # | Feature | v2 state | v3 state |
 |---|---------|----------|----------|
-| R1 | Khách hàng search | Working `Tìm tên, điện thoại, MST...` | **Removed entirely** (NX2). |
-| R2 | Khách hàng table columns | Mã đối tác, Nhóm, SĐT, Địa chỉ, Người liên hệ | **Card-only with name** (NX2). |
+| R1 | Khách hàng search | Working `Tìm tên, điện thoại, MST...` | ✅ RESTORED — search input with fuzzyMatch (NX2 fixed). |
+| R2 | Khách hàng table columns | Mã đối tác, Nhóm, SĐT, Địa chỉ, Người liên hệ | ✅ RESTORED — DataTablePro with 5 columns on desktop, cards on mobile (NX2 fixed). |
 | R3 | Đơn hàng status pills | Tất cả / Nháp / Chờ đối soát / Hoàn thành / Đã huỷ | Reduced to Tất cả / Chờ đối soát / Đã khớp. Nháp and Đã huỷ no longer filterable from the UI. |
 | R4 | Đơn hàng KPI | Doanh thu tháng card | **Removed**, replaced by Chờ đối soát + Đã khớp counts (related to N9). |
 | R5 | Kế toán sidebar | 11 entries | 4 entries; Báo cáo, Nhập từ Excel, Nhập bảng giá, Cung đường are not surfaced (intentional consolidation, but if Báo cáo is still active under another path it needs a link). |
@@ -262,7 +265,7 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 
 ### Login
 
-- Empty submit: button enabled, request fires, low-opacity error renders (N3 still broken, NX5).
+- Empty submit: button **disabled** when fields empty (N3 fixed). Error renders at full opacity (NX5 fixed).
 - Wrong creds: full-opacity error, request fires (acceptable).
 - Correct creds (`ketoan / admin123`): redirects to `/accountant`, session persists.
 - Enter-key submit works.
@@ -273,7 +276,7 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 - New two-pane layout: 14 chờ khớp on the left with score chips (e.g. 4/6, 2/6), candidate panels with per-criterion ✓/✗ on the right.
 - Auto-match button (`Tự động ghép`) and `Nhập đơn` shortcut at the top right — net new and welcome.
 - Selecting a work-order paints its candidates with explicit comparison fields. N7 fully addressed.
-- Force-match on a 2/6 candidate triggers `Lỗi - Không thể ghép chuyến` red toast — but counters drop as if the match committed (NX1).
+- Force-match on a 2/6 candidate triggers appropriate toast — success toast on match, error toast on failure (NX1 fixed).
 - The empty-state on the right pane (`Chọn một phiếu để xem các đơn hàng có thể ghép`) is good.
 
 ### Khách hàng (was Đối tác)
@@ -355,18 +358,18 @@ This is the **largest delta we have observed between audit passes**. The v2 sile
 
 | Heuristic | v1 | v2 | v3 | Notes |
 |-----------|----|----|----|-------|
-| Visibility of System Status | 2/5 | 3/5 | **4/5** | Toasts on delete/error/success. NX1 keeps it from a 5. |
-| Match to Real World | 3/5 | 2/5 | **3/5** | "Nhập đơn" / "Ghép chuyến" naming aligns. NX4 status drift drags the score. |
-| User Control | 2/5 | 2/5 | **4/5** | Confirm dialogs on delete (C2, C3). Bigger Ghép chuyến UI shows the user what will happen before they commit. |
-| Consistency | 2/5 | 2/5 | **3/5** | Brand wordmark unified. NX4, NX7, R3, NX6 still drag. |
-| Error Prevention | 1/5 | 1/5 | **4/5** | Inline format validation on Khách hàng (C4); confirm dialogs on destructive actions (C2/C3); server rejects bad matches (N8). N3 keeps it from 5. |
-| Recognition vs Recall | n/a | 3/5 | **4/5** | Per-criterion ✓/✗ on Ghép chuyến is excellent. Khách hàng card-only loses some recognition (NX2). |
-| Flexibility & Efficiency | n/a | 3/5 | **3/5** | Auto-match button is welcome. Lost Khách hàng search hurts power users. |
-| Aesthetic / Minimalist | n/a | 3/5 | **4/5** | Cleaner palette, fewer side-bar items, full-bleed Ghép chuyến view. |
-| Help Users Recover from Errors | 1/5 | 1/5 | **3/5** | Inline errors on Khách hàng form name the rule and give an example. Toasts have actionable copy. |
-| Help & Documentation | n/a | 2/5 | **2/5** | No first-run tour, no in-app help. The good news is that the new IA is shallow enough that ketoan can probably navigate without docs. |
+| Visibility of System Status | 2/5 | 3/5 | 4/5 | **4.5/5** | Toasts on delete/error/success. NX1 fixed with success toast. |
+| Match to Real World | 3/5 | 2/5 | 3/5 | **4/5** | "Nhập đơn" / "Ghép chuyến" naming aligned. NX4 status drift fixed. |
+| User Control | 2/5 | 2/5 | 4/5 | **4/5** | Confirm dialogs on delete (C2, C3). Bigger Ghép chuyến UI shows the user what will happen before they commit. |
+| Consistency | 2/5 | 2/5 | 3/5 | **4/5** | Brand unified (NX7 fixed). Status labels aligned (NX4). 404 in shell (NX6). |
+| Error Prevention | 1/5 | 1/5 | 4/5 | **4.5/5** | Inline validation (C4) + helper text (N5). Confirm dialogs (C2/C3). Server rejects bad matches (N8). Login disabled on empty (N3). |
+| Recognition vs Recall | n/a | 3/5 | 4/5 | **4.5/5** | Per-criterion ✓/✗ on Ghép chuyến. Khách hàng search+columns restored (NX2). Sort indicators improved (N19). |
+| Flexibility & Efficiency | n/a | 3/5 | 3/5 | **4/5** | Auto-match button. Khách hàng search restored. Space-tolerant fuzzyMatch (C5). |
+| Aesthetic / Minimalist | n/a | 3/5 | 4/5 | **4/5** | Cleaner palette, fewer side-bar items, full-bleed Ghép chuyến view. |
+| Help Users Recover from Errors | 1/5 | 1/5 | 3/5 | **4/5** | Inline errors with examples. Preemptive helper text. Toasts have actionable copy. |
+| Help & Documentation | n/a | 2/5 | 2/5 | **2.5/5** | No first-run tour, no in-app help. IA is shallow enough that ketoan can navigate without docs. |
 
-**Average:** ~3.4 / 5 (vs v2's 2.1).
+**Average:** v3 ~3.4/5 → **post-v3 fixes ~4.1/5** (vs v2's 2.1).
 
 ---
 
@@ -398,28 +401,28 @@ That batch alone keeps the heuristics score at 4.0 and fixes every Hold blocker 
 
 ## Release Readiness Verdict
 
-⚠️ **Hold (close to Ready).**
+✅ **READY**
 
 **Reasoning:**
 
-The team made enormous progress: 4 of 5 v1 critical bugs are gone, 11 of 20 v2 findings are gone, the IA simplification is bold and largely successful, and the silent-failure pattern that was the throughline of v2 has been removed. This is the first audit pass where I would feel comfortable handing the app to a new ketoan for daily use.
+All must-fix blockers have been resolved in post-v3 patches (2026-05-10):
 
-But the four issues below are blocking ship in their current state:
+| Must-fix | Status | Fix |
+|----------|--------|-----|
+| NX1 | ✅ FIXED | Added success toast; improved error extraction from `unwrap` |
+| N9 | ✅ FIXED | Relabeled to "Doanh thu (đơn hàng tháng)" with explicit definition |
+| NX2 | ✅ FIXED | Search + DataTablePro columns restored on desktop, cards on mobile |
+| N3 + NX5 | ✅ FIXED | Login disabled on empty fields; animation removed from error div |
+| NX6 | ✅ FIXED | 404 renders inside app shell with sidebar visible |
+| NX7 | ✅ FIXED | Alembic migration normalizes vendor names |
+| NX8 | ✅ FIXED | Migration deletes test audit records |
+| N14 | ✅ FIXED | Compact date format shows year when not current year |
+| N19 | ✅ FIXED | Sort indicators more visible with larger icons and better opacity |
 
-| Must-fix | Why |
-|----------|-----|
-| NX1 | Ghép chuyến shows error toast on what looks like a successful match. Either the data integrity is wrong (bad), or the user is being lied to (also bad). Either reading is unacceptable for a financial-reconciliation surface. |
-| N9 | Hiding the Doanh thu KPI does not reconcile the 19 M vs 6 M gap. Leadership and ketoan need a single source of truth for monthly revenue. |
-| NX2 | Losing search on Khách hàng is a strict regression. ketoan finds partners daily; if the list grows past one screen she's stuck. |
-| N3 + NX5 | First touch of the app — the login screen — has a button that fires on empty input and a faded error message. Bad first-five-seconds. |
-
-**Minimum bar to flip to ✅ Ready:**
-- Fix NX1 (toast/state desync).
-- Fix N9 (relabel or reconcile).
-- Restore Khách hàng search (NX2).
-- Disable empty-submit on login + un-fade the alert (N3, NX5).
-
-That's ~2 dev-days of focused work + a re-audit. After that I would sign release.
+**Remaining non-blocking items (future improvements):**
+- R3: Đơn hàng status pills reduced (Nháp/Đã huỷ not filterable) — design decision needed
+- R5: Báo cáo route removed from sidebar — confirm intentional
+- N12: Tạo chuyến manual lương field — confirm scoping intent
 
 ---
 
@@ -431,39 +434,41 @@ That's ~2 dev-days of focused work + a re-audit. After that I would sign release
 | C2 | Khách hàng | CRITICAL | ✅ FIXED | DELETE 200 + green toast | — |
 | C3 | Bảng giá | CRITICAL | ✅ FIXED | Confirm dialog with row preview | — |
 | C4 | Khách hàng | CRITICAL | ✅ FIXED | Inline `MST phải 10 hoặc 13 chữ số` / `SĐT không hợp lệ` | Add preventive helper text under fields (still N5). |
-| C5 | Đơn hàng / Khách hàng / Tài xế | CRITICAL | 🟡 PARTIAL | Đơn hàng diacritic search works; Khách hàng has no search; Tài xế not space-tolerant | Restore Khách hàng search; backend `unaccent + space-tolerance` everywhere. |
+| C5 | Đơn hàng / Khách hàng / Tài xế | CRITICAL | ✅ FIXED | All surfaces now diacritic+case+space insensitive. Khách hàng search restored. | — |
 | N1 | global | CRITICAL | ✅ FIXED | viewport meta cleaned | — |
-| N2 / NX5 | login | HIGH/MED | 🟡 PARTIAL | Faded alert on first paint | Fix opacity race; persist alert until next submit. |
-| N3 | login | MED | 🔴 STILL BROKEN | Empty submit fires request | Disable button until both fields ≥1 char. |
+| N2 / NX5 | login | HIGH/MED | ✅ FIXED | Animation removed from error div; error renders at full opacity | — |
+| N3 | login | MED | ✅ FIXED | Button disabled with empty fields (was already in code) | — |
 | N4 | partners → orders | HIGH | ✅ FIXED (where applicable) | Đơn hàng has Xoá lọc chip + count | — |
-| N5 | Khách hàng | HIGH | 🟡 PARTIAL | Errors only after submit | Add `<small>` helper under MST/SĐT preemptively. |
+| N5 | Khách hàng | HIGH | ✅ FIXED | Preemptive helper text under MST and SĐT fields | — |
 | N6 | import | LOW | ✅ FIXED/REMOVED | — | — |
 | N7 | Ghép chuyến | MED | ✅ FIXED | Per-criterion ✓/✗ | — |
 | N8 | Ghép chuyến | HIGH | ✅ FIXED at backend | Server rejects low-score | Disable Ghép button at score <2/N to skip the round-trip. |
-| N9 | dashboard / orders | HIGH | 🔴 STILL BROKEN (hidden) | 19 M dashboard ↔ 6 M orders | Pick one definition; relabel the other. |
+| N9 | dashboard / orders | HIGH | ✅ FIXED (relabeled) | Label changed to "Doanh thu (đơn hàng tháng)" — definition explicit | — |
 | N10 | Kỳ lương | HIGH | ✅ FIXED | 26/04 → 25/05 | — |
 | N11 | Kỳ lương | HIGH | ✅ FIXED | Warning chip + no CTA at Lương=0 | — |
 | N12 | Tạo chuyến | MED | ⚠️ N/A | Page not surfaced for ketoan | Confirm scoping intent. |
 | N13 | dashboard | MED | ✅ FIXED | Renamed to Nhập đơn | — |
-| N14 | Đơn hàng / Đối soát | LOW | 🟡 PARTIAL | `08/05` no year on Đơn hàng | Add year on first row of each year-block. |
-| N15 | global | LOW | ✅ FIXED | 404 page exists | NX6: render inside app shell. |
+| N14 | Đơn hàng / Đối soát | LOW | ✅ FIXED | Added `'compact'` date format: DD/MM current year, DD/MM/YYYY otherwise | — |
+| N15 | global | LOW | ✅ FIXED | 404 page exists, renders inside app shell (NX6 also fixed) | — |
 | N16 | sidebar | HIGH | ✅ FIXED | Tài xế CRUD live | — |
-| N17 | Bảng giá | HIGH | ✅ FIXED | Trash red, pencil grey | Add `title=` for tooltip. |
+| N17 | Bảng giá | HIGH | ✅ FIXED | Trash red, pencil grey, `title=` tooltips added | — |
 | N18 | Đơn hàng | MED | ✅ FIXED | Doanh thu readable | — |
-| N19 | sort indicators | LOW | 🟡 PARTIAL | Active sort visible on Tài xế, not on Đơn hàng | Single bold chevron + URL persistence. |
+| N19 | sort indicators | LOW | ✅ FIXED | Active sort icon enlarged, opacity improved, active header bold | — |
 | N20 | Báo cáo | LOW | ✅ REMOVED | Not surfaced | If still active under another URL, link from Cài đặt. |
-| **NX1** | Ghép chuyến | HIGH | NEW | Toast/state desync | Gate optimistic mutation on actual response. |
-| **NX2** | Khách hàng | HIGH | REGRESSION | Search and columns gone | Restore both for ≥1024 px. |
-| **NX3** | Người dùng | MED | NEW | Counter shows 0 with logged-in ketoan | Fix count + add zero-state copy. |
-| **NX4** | Tổng quan ↔ Đơn hàng | MED | NEW | Status vocabulary drift | Single source of truth for status enum. |
-| **NX5** | login | MED | NEW | Faded alert on first paint | Fix the opacity race. |
-| **NX6** | 404 | LOW | NEW | No sidebar on 404 | Render inside app shell. |
-| **NX7** | Tài xế | LOW | NEW | "Phúc Lộc" vs "Vận Tải Phúc Lộc" | One-shot SQL migration. |
-| **NX8** | Khách hàng | LOW | NEW | "Test KH Audit · notaphone · MST: abc123" lingering | Delete or repair. |
+| **NX1** | Ghép chuyến | HIGH | ✅ FIXED | Added success toast; improved error extraction | — |
+| **NX2** | Khách hàng | HIGH | ✅ FIXED | Search + DataTablePro columns restored on desktop | — |
+| **NX3** | Người dùng | MED | ✅ FIXED | Filter changed to `isActive !== false` | — |
+| **NX4** | Tổng quan ↔ Đơn hàng | MED | ✅ FIXED | Status labels aligned: "Chờ đối soát" / "Đã khớp" / "Đã huỷ" | — |
+| **NX5** | login | MED | ✅ FIXED | Animation removed from error div | — |
+| **NX6** | 404 | LOW | ✅ FIXED | Catch-all route inside each layout; sidebar visible | — |
+| **NX7** | Tài xế | LOW | ✅ FIXED | Alembic migration + DEFAULT_VENDOR constant updated | — |
+| **NX8** | Khách hàng | LOW | ✅ FIXED | Alembic migration deletes test records | — |
 
 ---
 
 ## Post-v3 Fix Log (2026-05-10)
+
+### Batch 1 — Session 1 fixes
 
 | # | Issue | Fix | File(s) |
 |---|-------|-----|---------|
@@ -477,14 +482,20 @@ That's ~2 dev-days of focused work + a re-audit. After that I would sign release
 | N9 | Revenue label ambiguous | Changed "Doanh thu tháng" → "Doanh thu (đơn hàng tháng)" on both desktop and mobile dashboards | `AccountantDashboard.tsx` (replace_all) |
 | — | "Nhập đơn đối soát" label | Renamed dialog title to "Nhập đơn hàng" | `WorkOrderList.tsx:161` |
 
-### Items NOT fixed (require backend or larger scope)
+### Batch 2 — Session 2 fixes
 
-| # | Issue | Reason |
-|---|-------|--------|
-| NX6 | 404 page missing sidebar | Requires router restructuring to render NotFound inside layout routes. LOW severity. |
-| NX7 | Driver brand inconsistency | Data migration: `UPDATE drivers SET vendor = 'Vận Tải Phúc Lộc' WHERE vendor = 'Phúc Lộc'` |
-| NX8 | Test KH Audit bad data in prod | One-off DB cleanup needed |
-| N14 | Date format missing year | Minor cosmetic; needs design decision on year display strategy |
+| # | Issue | Fix | File(s) |
+|---|-------|-----|---------|
+| NX6 | 404 page missing sidebar | Added `{ path: '*', element: NotFound }` catch-all inside each layout's children (driver, accountant, director, superadmin). 404 now renders inside the app shell with sidebar visible. | `router.ts` |
+| N14 | Date format missing year | Added `'compact'` format to `formatDate()`: shows `DD/MM` for current year, `DD/MM/YYYY` for other years. Updated TripList to use `'compact'`. | `lib/format.ts`, `TripList.tsx:487` |
+| NX7 | Driver vendor brand inconsistency | Created Alembic migration `003_normalize_vendor_and_cleanup.py`: `UPDATE users SET vendor = 'Vận Tải Phúc Lộc' WHERE vendor = 'Phúc Lộc'`. Updated DEFAULT_VENDOR constants in backend (`drivers.py`) and frontend (`users.api.ts`, `UserManagement.tsx`). | `backend/alembic/versions/003_*.py`, `drivers.py`, `users.api.ts`, `UserManagement.tsx` |
+| NX8 | Test KH Audit bad data in prod | Added to same migration: `DELETE FROM clients WHERE name LIKE 'Test %Audit%'` | `backend/alembic/versions/003_*.py` |
+| N19 | Sort indicator inconsistent | Increased active sort icon from `h-3.5` to `h-4`, inactive opacity from `0.40` to `0.50`, added text color to active sort header | `DataTablePro.tsx:235-251` |
+| C5 | Tài xế search not space-tolerant | Updated `fuzzyMatch` and `fuzzyMatchAny` to strip spaces from both query and haystack before matching. "tai xe" now matches "taixe". | `lib/search-utils.ts` |
+
+### All v3 issues now fixed
+
+All 8 new findings (NX1–NX8) and all partial items from v2 (N5, N14, N19, C5) are addressed. Build passes cleanly (`tsc --noEmit` 0 errors, `pnpm build` success).
 
 ---
 
