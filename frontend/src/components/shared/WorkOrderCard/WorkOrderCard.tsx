@@ -76,7 +76,7 @@ function StatusPill({ status, variant, compact = false }: { status: WorkOrder['s
         }}
       >
         <Clock className={iconSize} />
-        {variant === 'driver' ? 'Chờ ghép' : 'Chờ đối soát'}
+        {variant === 'driver' ? 'Chờ khớp' : 'Chờ khớp'}
       </span>
     )
   }
@@ -91,7 +91,7 @@ function StatusPill({ status, variant, compact = false }: { status: WorkOrder['s
       >
         {variant === 'driver'
           ? <CheckCircle className={iconSize} />
-          : <><Lock className={iconSize} /> Đã chốt</>
+          : <><Lock className={iconSize} /> Đã khớp</>
         }
       </span>
     )
@@ -211,7 +211,7 @@ function AccountantCard({ wo }: { wo: WorkOrder }) {
           </span>
         ) : (
           <span className="text-xs font-medium" style={{ color: 'var(--theme-text-muted)' }}>
-            Chờ đối soát
+            Chờ khớp
           </span>
         )}
       </div>

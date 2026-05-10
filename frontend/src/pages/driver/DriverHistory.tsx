@@ -11,7 +11,7 @@ type FilterValue = 'ALL' | 'PENDING'
 
 const FILTER_OPTIONS: { value: FilterValue; label: string }[] = [
   { value: 'ALL', label: 'Tất cả' },
-  { value: 'PENDING', label: 'Chờ đối soát' },
+  { value: 'PENDING', label: 'Chờ khớp' },
 ]
 
 export function DriverHistory() {

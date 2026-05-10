@@ -155,7 +155,7 @@ export function JobDetail() {
           </p>
         ) : (
           <span className="text-xs font-semibold" style={{ color: 'var(--theme-status-warning)' }}>
-            Chờ đối soát
+            Chờ khớp
           </span>
         )}
       </div>
