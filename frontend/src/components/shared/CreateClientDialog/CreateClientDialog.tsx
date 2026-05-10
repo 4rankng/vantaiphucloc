@@ -11,6 +11,9 @@ interface CreateClientDialogProps {
   onConfirm: (data: ClientFormData) => Promise<void> | void
 }
 
+const VN_PHONE_RE = /^(0|\+?84)[35789]\d{8}$/
+const VN_TAX_RE = /^\d{10}(\d{3})?$/
+
 const EMPTY_FORM: ClientFormData = {
   name: '',
   type: 'company',
@@ -23,22 +26,36 @@ const EMPTY_FORM: ClientFormData = {
 export function CreateClientDialog({ open, onClose, onConfirm }: CreateClientDialogProps) {
   const [form, setForm] = useState<ClientFormData>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
+  const [errors, setErrors] = useState<{ phone?: string; taxCode?: string }>({})
 
   const updateField = <K extends keyof ClientFormData>(key: K, value: ClientFormData[K]) => {
     setForm(prev => ({ ...prev, [key]: value }))
+    if (key === 'phone' || key === 'taxCode') {
+      setErrors(prev => ({ ...prev, [key]: undefined }))
+    }
   }
 
   const handleClose = () => {
     setForm(EMPTY_FORM)
+    setErrors({})
     onClose()
   }
 
   const handleConfirm = async () => {
+    const errs: typeof errors = {}
+    if (form.phone && !VN_PHONE_RE.test(form.phone.replace(/[\s-]/g, ''))) {
+      errs.phone = 'SĐT không hợp lệ (VD: 0912345678)'
+    }
+    if (form.taxCode && !VN_TAX_RE.test(form.taxCode)) {
+      errs.taxCode = 'MST phải 10 hoặc 13 chữ số'
+    }
+    if (Object.keys(errs).length > 0) { setErrors(errs); return }
     if (!form.name.trim()) return
     setSaving(true)
     try {
       await onConfirm({ ...form, name: form.name.trim() })
       setForm(EMPTY_FORM)
+      setErrors({})
     } finally {
       setSaving(false)
     }
@@ -94,9 +111,10 @@ export function CreateClientDialog({ open, onClose, onConfirm }: CreateClientDia
               <Input
                 value={form.phone}
                 onChange={e => updateField('phone', e.target.value)}
-                placeholder="0225-123-456"
+                placeholder="0912345678"
                 className="text-sm"
               />
+              {errors.phone && <p className="text-xs" style={{ color: 'var(--theme-status-error)' }}>{errors.phone}</p>}
             </div>
             <div className="space-y-2">
               <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mã số thuế</Label>
@@ -106,6 +124,7 @@ export function CreateClientDialog({ open, onClose, onConfirm }: CreateClientDia
                 placeholder="0123456789"
                 className="text-sm"
               />
+              {errors.taxCode && <p className="text-xs" style={{ color: 'var(--theme-status-error)' }}>{errors.taxCode}</p>}
             </div>
           </div>
 

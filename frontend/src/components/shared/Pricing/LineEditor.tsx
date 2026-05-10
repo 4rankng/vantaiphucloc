@@ -1,16 +1,23 @@
+import { useState } from 'react'
 import { type PricingLine } from '@/data/domain'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { Plus, X } from 'lucide-react'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 
 export function LineEditor({ lines, onChange }: {
   lines: PricingLine[]
   onChange: (lines: PricingLine[]) => void
 }) {
+  const [pendingRemove, setPendingRemove] = useState<number | null>(null)
+
   const addLine = () =>
     onChange([...lines, { quantity: 1, unitPrice: 0, driverSalary: 0, allowance: 0 }])
 
-  const removeLine = (idx: number) => onChange(lines.filter((_, i) => i !== idx))
+  const removeLine = (idx: number) => {
+    onChange(lines.filter((_, i) => i !== idx))
+    setPendingRemove(null)
+  }
 
   const updateLine = (idx: number, field: keyof PricingLine, value: number) => {
     onChange(lines.map((l, i) => (i === idx ? { ...l, [field]: value } : l)))
@@ -44,7 +51,7 @@ export function LineEditor({ lines, onChange }: {
 
             {lines.length > 1 && (
               <button
-                onClick={() => removeLine(i)}
+                onClick={() => setPendingRemove(i)}
                 className="ml-auto p-1 rounded-md hover:bg-[var(--theme-bg-tertiary)] transition-colors"
                 style={{ color: 'var(--theme-status-error)' }}
                 title="Xoá mức giá này"
@@ -105,6 +112,17 @@ export function LineEditor({ lines, onChange }: {
         <Plus size={16} />
         Thêm mức giá
       </button>
+
+      <ConfirmDialog
+        open={pendingRemove !== null}
+        onClose={() => setPendingRemove(null)}
+        onConfirm={() => pendingRemove !== null && removeLine(pendingRemove)}
+        title="Xoá mức giá?"
+        description={pendingRemove !== null
+          ? `Xoá mức giá ×${lines[pendingRemove]?.quantity ?? 1} (${lines[pendingRemove]?.unitPrice ?? 0}đ)? Hành động này không thể hoàn tác.`
+          : ''}
+        confirmLabel="Xoá"
+      />
     </div>
   )
 }

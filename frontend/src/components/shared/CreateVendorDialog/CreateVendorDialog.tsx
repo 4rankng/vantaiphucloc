@@ -3,6 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button, Input, Label } from '@/components/ui'
 import type { VendorFormData, VendorType } from '@/services/api/vendors.api'
 
+const VN_PHONE_RE = /^(0|\+?84)[35789]\d{8}$/
+const VN_TAX_RE = /^\d{10}(\d{3})?$/
+
 interface CreateVendorDialogProps {
   open: boolean
   onClose: () => void
@@ -20,23 +23,35 @@ const EMPTY_FORM: VendorFormData = {
 
 export function CreateVendorDialog({ open, onClose, onConfirm }: CreateVendorDialogProps) {
   const [form, setForm] = useState<VendorFormData>(EMPTY_FORM)
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
 
   const updateField = <K extends keyof VendorFormData>(key: K, value: VendorFormData[K]) => {
     setForm(prev => ({ ...prev, [key]: value }))
+    setErrors(prev => { const next = { ...prev }; delete next[key]; return next })
   }
 
   const handleClose = () => {
     setForm(EMPTY_FORM)
+    setErrors({})
     onClose()
   }
 
   const handleConfirm = async () => {
     if (!form.name.trim()) return
+    const errs: Record<string, string> = {}
+    if (form.phone && !VN_PHONE_RE.test(form.phone.replace(/[\s-]/g, ''))) {
+      errs.phone = 'SĐT không hợp lệ (VD: 0912345678)'
+    }
+    if (form.taxCode && !VN_TAX_RE.test(form.taxCode)) {
+      errs.taxCode = 'MST phải 10 hoặc 13 chữ số'
+    }
+    if (Object.keys(errs).length > 0) { setErrors(errs); return }
     setSaving(true)
     try {
       await onConfirm({ ...form, name: form.name.trim() })
       setForm(EMPTY_FORM)
+      setErrors({})
     } finally {
       setSaving(false)
     }
@@ -92,9 +107,10 @@ export function CreateVendorDialog({ open, onClose, onConfirm }: CreateVendorDia
               <Input
                 value={form.phone ?? ''}
                 onChange={e => updateField('phone', e.target.value)}
-                placeholder="0225-123-456"
+                placeholder="0901234567"
                 className="text-sm"
               />
+              {errors.phone && <p className="text-xs" style={{ color: 'var(--theme-status-error)' }}>{errors.phone}</p>}
             </div>
             <div className="space-y-2">
               <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mã số thuế</Label>
@@ -104,6 +120,7 @@ export function CreateVendorDialog({ open, onClose, onConfirm }: CreateVendorDia
                 placeholder="0123456789"
                 className="text-sm"
               />
+              {errors.taxCode && <p className="text-xs" style={{ color: 'var(--theme-status-error)' }}>{errors.taxCode}</p>}
             </div>
           </div>
 

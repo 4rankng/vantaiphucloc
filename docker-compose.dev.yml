@@ -1,0 +1,72 @@
+# ── TTransport Dev Infra ───────────────────────────────────────────────────────
+# PostgreSQL · Redis · Adminer  (only — backend/frontend run locally with hot-reload)
+#
+# Usage:
+#   make dev-infra        # start infra only
+#   make dev              # start infra + backend + frontend + worker
+#   make stop             # stop infra
+
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: vantai_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: vantaihanghoa
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - vantai_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d vantaihanghoa"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Redis ───────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: vantai_redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru --appendonly yes
+    ports:
+      - "${REDIS_PORT:-6381}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - vantai_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Adminer (DB UI) ─────────────────────────────────────────────────────────
+  adminer:
+    image: adminer:latest
+    container_name: vantai_adminer
+    restart: unless-stopped
+    ports:
+      - "${ADMINER_PORT:-8083}:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DESIGN: pepa-linha
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - vantai_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  vantai_network:
+    driver: bridge
