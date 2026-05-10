@@ -15,6 +15,7 @@ export { toCamel, toSnake, ok, fail, isNetworkError } from './utils'
 import * as clientsApi from './clients.api'
 import * as routesApi from './routes.api'
 import * as locationsApi from './locations.api'
+import * as locationAliasesApi from './locationAliases.api'
 import * as pricingsApi from './pricings.api'
 import * as workOrdersApi from './workOrders.api'
 import * as tripOrdersApi from './tripOrders.api'
@@ -44,6 +45,15 @@ export const apiClient = {
   createLocation: locationsApi.createLocation,
   updateLocation: locationsApi.updateLocation,
   deleteLocation: locationsApi.deleteLocation,
+
+  // Location Aliases
+  listAliases: locationAliasesApi.listAliases,
+  createAlias: locationAliasesApi.createAlias,
+  confirmAlias: locationAliasesApi.confirmAlias,
+  rejectAlias: locationAliasesApi.rejectAlias,
+  reopenAlias: locationAliasesApi.reopenAlias,
+  mergeLocations: locationAliasesApi.mergeLocations,
+  getPendingReviewLocations: locationAliasesApi.getPendingReviewLocations,
 
   // Pricings
   getPricings: pricingsApi.getPricings,
