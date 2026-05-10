@@ -5,15 +5,13 @@ Usage:
 
 Creates:
   - Users (superadmin, director, accountant, drivers)
+  - Vehicles (tractor plates linked to drivers)
   - Locations (common VN ports & industrial zones)
-  - Clients (HAIAN, PAN, HAP, NEWWAY)
-  - Vendor (Vận Tải Phúc Lộc)
-  - Routes (pickup → dropoff pairs)
+  - Partners (HAIAN, PAN, HAP, NEWWAY as clients; Phuc Loc as vendor)
   - Pricings + PricingLines (realistic VND rates)
-  - Work orders (40, varied statuses)
-  - Trip orders (35, varied statuses)
+  - Work orders (40, PENDING or MATCHED)
+  - Trip orders (35, PENDING or MATCHED)
   - Containers for each order
-  - Trip ↔ Work order links
 
 Idempotent: clears operational data on re-run, keeps reference data.
 """
@@ -22,21 +20,19 @@ import asyncio
 import random
 from datetime import date, timedelta
 
-from sqlalchemy import select, text, delete
+from sqlalchemy import select, text
 
 from app.database import async_session
 from app.models.base import User
 from app.models.domain import (
-    Client,
     Location,
-    LocationAlias,
+    Partner,
     Pricing,
     PricingLine,
-    Route,
+    Setting,
     TripOrder,
     TripOrderContainer,
-    TripOrderWorkOrder,
-    Vendor,
+    Vehicle,
     WorkOrder,
     WorkOrderContainer,
 )
@@ -49,11 +45,18 @@ SEED_USERS = [
     {"phone": "0000000001", "username": "giamdoc", "password": "admin123", "role": "director",   "full_name": "Giám Đốc Test"},
     {"phone": "0000000002", "username": "ketoan",  "password": "admin123", "role": "accountant", "full_name": "Kế Toán Test"},
     {"phone": "0901234567", "username": "taixe",   "password": "admin123", "role": "driver",
-     "full_name": "Nguyễn Văn Tài", "tractor_plate": "29C-12345", "vendor": "Vận Tải Phúc Lộc"},
+     "full_name": "Nguyễn Văn Tài"},
     {"phone": "0902345678", "username": "taixe1",  "password": "admin123", "role": "driver",
-     "full_name": "Trần Minh Đức", "tractor_plate": "29C-23456", "vendor": "Vận Tải Phúc Lộc"},
+     "full_name": "Trần Minh Đức"},
     {"phone": "0903456789", "username": "taixe2",  "password": "admin123", "role": "driver",
-     "full_name": "Lê Quang Anh", "tractor_plate": "29C-34567", "vendor": "Vận Tải Phúc Lộc"},
+     "full_name": "Lê Quang Anh"},
+]
+
+# Vehicle plates linked to drivers by username
+SEED_VEHICLES = [
+    {"plate": "29C-12345", "driver_username": "taixe"},
+    {"plate": "29C-23456", "driver_username": "taixe1"},
+    {"plate": "29C-34567", "driver_username": "taixe2"},
 ]
 
 LOCATION_NAMES = [
@@ -64,27 +67,37 @@ LOCATION_NAMES = [
     "TCT Terminal", "SSIT", "Tân Thuận",
 ]
 
-SEED_CLIENTS = [
+SEED_PARTNERS = [
+    # Clients
     {"code": "HAIAN",  "name": "Công ty TNHH HẢI AN",
+     "partner_type": "client", "partner_role": "shipping_line",
      "phone": "02838221188", "tax_code": "0302784512",
      "address": "Lô B, KCN Hiệp Phước, X. Hiệp Phước, H. Nhà Bè, TP.HCM",
      "contact_person": "Trần Văn Hải"},
     {"code": "PAN",    "name": "Công ty TNHH PAN HẢI AN",
+     "partner_type": "client", "partner_role": "shipping_line",
      "phone": "02838256677", "tax_code": "0304749215",
      "address": "Lô B1, KCN Hiệp Phước, H. Nhà Bè, TP.HCM",
      "contact_person": "Nguyễn Thị Hồng"},
     {"code": "HAP",    "name": "Công ty TNHH HAP",
+     "partner_type": "client", "partner_role": "factory",
      "phone": "02838256789", "tax_code": "0304749216",
      "address": "Số 6, Đường số 3, KCN Hiệp Phước, H. Nhà Bè, TP.HCM",
      "contact_person": "Phạm Minh Tuấn"},
     {"code": "NEWWAY", "name": "Công ty TNHH NEWWAY",
+     "partner_type": "client", "partner_role": "shipping_line",
      "phone": "02839756888", "tax_code": "0313425678",
      "address": "282 Nguyễn Văn Linh, Q. 7, TP.HCM",
      "contact_person": "Võ Đình An"},
+    # Vendor (our company)
+    {"code": "PHUCLOC", "name": "Vận Tải Phúc Lộc",
+     "partner_type": "vendor", "partner_role": "transport",
+     "phone": "02838255555", "tax_code": "0300000001",
+     "address": "KCN Hiệp Phước, H. Nhà Bè, TP.HCM",
+     "contact_person": "Nguyễn Văn Phúc"},
 ]
 
-# Realistic VND prices per (work_type, approximate distance)
-# unit_price = what client pays, driver_salary + allowance = what driver earns
+# Realistic VND prices per work_type
 PRICING_DATA = [
     # work_type, unit_price, driver_salary, allowance
     ("E20", 550_000,  200_000,  50_000),
@@ -136,34 +149,62 @@ async def seed_dev() -> None:
     async with async_session() as db:
         # ── 1. Users ────────────────────────────────────────────────────
         print("=== Seeding Users ===")
+        user_map: dict[str, User] = {}
         for u in SEED_USERS:
             result = await db.execute(select(User).where(User.username == u["username"]))
             existing = result.scalars().first()
             if existing is None:
-                db.add(User(
+                existing = User(
                     phone=u["phone"],
                     username=u["username"],
                     hashed_password=hash_password(u["password"]),
                     role=u["role"],
                     is_active=True,
                     full_name=u.get("full_name"),
-                    tractor_plate=u.get("tractor_plate"),
-                    vendor=u.get("vendor"),
-                ))
+                )
+                db.add(existing)
+                await db.flush()
                 print(f"  + {u['role']} ({u['username']})")
             else:
                 changed = False
-                for field in ("full_name", "tractor_plate", "vendor", "phone"):
-                    if u.get(field) and not getattr(existing, field, None):
-                        setattr(existing, field, u[field])
-                        changed = True
+                if not existing.full_name and u.get("full_name"):
+                    existing.full_name = u["full_name"]
+                    changed = True
+                if u.get("phone") and existing.phone in (None, "", "0000000003"):
+                    existing.phone = u["phone"]
+                    changed = True
                 if changed:
                     print(f"  ~ updated {u['username']}")
                 else:
                     print(f"  = {u['username']} exists")
+            user_map[u["username"]] = existing
         await db.commit()
 
-        # ── 2. Locations ────────────────────────────────────────────────
+        # ── 2. Vehicles ────────────────────────────────────────────────
+        print("\n=== Seeding Vehicles ===")
+        vehicle_map: dict[str, Vehicle] = {}
+        for v in SEED_VEHICLES:
+            result = await db.execute(select(Vehicle).where(Vehicle.plate == v["plate"]))
+            existing = result.scalars().first()
+            driver = user_map.get(v["driver_username"])
+            if driver is None:
+                print(f"  ! Driver {v['driver_username']} not found, skipping vehicle {v['plate']}")
+                continue
+            if existing is None:
+                existing = Vehicle(
+                    plate=v["plate"],
+                    driver_id=driver.id,
+                    is_active=True,
+                )
+                db.add(existing)
+                await db.flush()
+                print(f"  + {v['plate']} → {v['driver_username']}")
+            else:
+                print(f"  = {v['plate']}")
+            vehicle_map[v["plate"]] = existing
+        await db.commit()
+
+        # ── 3. Locations ────────────────────────────────────────────────
         print("\n=== Seeding Locations ===")
         loc_map: dict[str, Location] = {}
         for name in LOCATION_NAMES:
@@ -180,85 +221,59 @@ async def seed_dev() -> None:
             loc_map[name] = loc
         await db.commit()
 
-        # ── 3. Vendor ──────────────────────────────────────────────────
-        print("\n=== Seeding Vendor ===")
-        vname = "Vận Tải Phúc Lộc"
-        result = await db.execute(select(Vendor).where(Vendor.name == vname))
-        vendor = result.scalars().first()
-        if vendor is None:
-            vendor = Vendor(name=vname, type="company", phone="02838255555",
-                            tax_code="0300000001",
-                            address="KCN Hiệp Phước, H. Nhà Bè, TP.HCM",
-                            contact_person="Nguyễn Văn Phúc", is_active=True)
-            db.add(vendor)
-            await db.flush()
-            print(f"  + {vname} (id={vendor.id})")
-        else:
-            print(f"  = {vname} (id={vendor.id})")
-        await db.commit()
-
-        # ── 4. Clients ─────────────────────────────────────────────────
-        print("\n=== Seeding Clients ===")
-        client_map: dict[str, Client] = {}
-        for c in SEED_CLIENTS:
-            result = await db.execute(select(Client).where(Client.code == c["code"]))
-            client = result.scalars().first()
-            if client is None:
-                client = Client(
-                    code=c["code"], name=c["name"], type="company",
-                    phone=c["phone"], tax_code=c["tax_code"],
-                    address=c["address"], contact_person=c["contact_person"],
-                    outstanding_debt=0, is_active=True,
+        # ── 4. Partners ────────────────────────────────────────────────
+        print("\n=== Seeding Partners ===")
+        partner_map: dict[str, Partner] = {}
+        for p in SEED_PARTNERS:
+            result = await db.execute(select(Partner).where(Partner.code == p["code"]))
+            partner = result.scalars().first()
+            if partner is None:
+                partner = Partner(
+                    code=p["code"], name=p["name"],
+                    partner_type=p["partner_type"],
+                    partner_role=p.get("partner_role"),
+                    phone=p["phone"], tax_code=p["tax_code"],
+                    address=p["address"], contact_person=p["contact_person"],
+                    is_active=True,
                 )
-                db.add(client)
+                db.add(partner)
                 await db.flush()
-                print(f"  + {c['code']} — {c['name']} (id={client.id})")
+                print(f"  + {p['code']} — {p['name']} (id={partner.id})")
             else:
                 # Backfill missing fields
                 for field in ("phone", "tax_code", "address", "contact_person"):
-                    if c.get(field) and not getattr(client, field, None):
-                        setattr(client, field, c[field])
-                print(f"  = {c['code']} (id={client.id})")
-            client_map[c["code"]] = client
+                    if p.get(field) and not getattr(partner, field, None):
+                        setattr(partner, field, p[field])
+                print(f"  = {p['code']} (id={partner.id})")
+            partner_map[p["code"]] = partner
         await db.commit()
 
-        # ── 5. Routes ──────────────────────────────────────────────────
-        print("\n=== Seeding Routes ===")
-        route_map: dict[tuple[int, int], Route] = {}
-        for pickup_idx, dropoff_idx in ROUTE_PAIRS:
-            pickup_name = LOCATION_NAMES[pickup_idx]
-            dropoff_name = LOCATION_NAMES[dropoff_idx]
-            pickup_loc = loc_map[pickup_name]
-            dropoff_loc = loc_map[dropoff_name]
-
+        # ── 5. Salary config (Setting table) ────────────────────────────
+        print("\n=== Seeding Salary Config ===")
+        salary_defaults = {
+            "salary_from_day": "21",
+            "salary_to_day": "20",
+        }
+        for key, value in salary_defaults.items():
             result = await db.execute(
-                select(Route).where(
-                    Route.pickup_location_id == pickup_loc.id,
-                    Route.dropoff_location_id == dropoff_loc.id,
-                )
+                select(Setting).where(Setting.key == key)
             )
-            route = result.scalars().first()
-            if route is None:
-                route = Route(
-                    route=f"{pickup_name} → {dropoff_name}",
-                    pickup_location_id=pickup_loc.id,
-                    dropoff_location_id=dropoff_loc.id,
-                    is_active=True,
-                )
-                db.add(route)
-                await db.flush()
-                print(f"  + {pickup_name} → {dropoff_name} (id={route.id})")
+            setting = result.scalars().first()
+            if setting is None:
+                db.add(Setting(key=key, value=value))
+                print(f"  + {key}={value}")
             else:
-                print(f"  = {pickup_name} → {dropoff_name} (id={route.id})")
-            route_map[(pickup_loc.id, dropoff_loc.id)] = route
+                print(f"  = {key} exists")
         await db.commit()
 
         # ── 6. Pricings + PricingLines ─────────────────────────────────
         print("\n=== Seeding Pricings ===")
         pricing_map: dict[tuple[str, int, int, str], Pricing] = {}
+        # Only create pricings for client-type partners
+        client_codes = [p["code"] for p in SEED_PARTNERS if p["partner_type"] in ("client", "both")]
 
-        for client_code in SEED_CLIENTS:
-            client = client_map[client_code]
+        for client_code in client_codes:
+            partner = partner_map[client_code]
             for (pickup_idx, dropoff_idx) in ROUTE_PAIRS:
                 pickup_loc = loc_map[LOCATION_NAMES[pickup_idx]]
                 dropoff_loc = loc_map[LOCATION_NAMES[dropoff_idx]]
@@ -267,7 +282,7 @@ async def seed_dev() -> None:
                     key = (client_code, pickup_loc.id, dropoff_loc.id, work_type)
                     result = await db.execute(
                         select(Pricing).where(
-                            Pricing.client_id == client.id,
+                            Pricing.partner_id == partner.id,
                             Pricing.work_type == work_type,
                             Pricing.pickup_location_id == pickup_loc.id,
                             Pricing.dropoff_location_id == dropoff_loc.id,
@@ -276,7 +291,7 @@ async def seed_dev() -> None:
                     pricing = result.scalars().first()
                     if pricing is None:
                         pricing = Pricing(
-                            client_id=client.id,
+                            partner_id=partner.id,
                             work_type=work_type,
                             pickup_location_id=pickup_loc.id,
                             dropoff_location_id=dropoff_loc.id,
@@ -296,45 +311,38 @@ async def seed_dev() -> None:
                     pricing_map[key] = pricing
 
         await db.commit()
-        print(f"  Created {len(pricing_map)} pricing entries (4 clients × 20 routes × 4 types)")
+        print(f"  Created {len(pricing_map)} pricing entries ({len(client_codes)} clients x {len(ROUTE_PAIRS)} routes x {len(PRICING_DATA)} types)")
 
         # ── 7. Clear existing operational data ──────────────────────────
         print("\n=== Clearing existing operational data ===")
         for table in [
-            "trip_order_work_orders", "trip_order_containers", "trip_orders",
+            "reconciliations",
+            "trip_order_containers", "trip_orders",
             "work_order_containers", "work_orders",
         ]:
             await db.execute(text(f"DELETE FROM {table}"))
         await db.commit()
-        print("  Cleared work_orders, trip_orders, and related tables")
+        print("  Cleared work_orders, trip_orders, reconciliations, and related tables")
 
         # ── 8. Gather references for operational data ───────────────────
         drivers = (await db.execute(
             text("SELECT id FROM users WHERE role = 'driver'")
         )).scalars().all()
 
-        # Build a list of (pricing, pricing_line, route_str) tuples
+        vehicles = (await db.execute(
+            text("SELECT id, driver_id FROM vehicles WHERE is_active = true")
+        )).fetchall()
+        vehicle_by_driver: dict[int, int] = {v.driver_id: v.id for v in vehicles}
+
+        # Build a list of (pricing, pricing_line) tuples
         result = await db.execute(text("""
-            SELECT pr.id, pr.client_id, pr.work_type,
+            SELECT pr.id, pr.partner_id, pr.work_type,
                    pr.pickup_location_id, pr.dropoff_location_id,
                    pl.unit_price, pl.driver_salary, pl.allowance
             FROM pricings pr
             JOIN pricing_lines pl ON pr.id = pl.pricing_id
         """))
         pricing_rows = result.fetchall()
-
-        # Route strings for display
-        result = await db.execute(text("""
-            SELECT r.pickup_location_id, r.dropoff_location_id,
-                   p.name AS pickup, d.name AS dropoff
-            FROM routes r
-            JOIN locations p ON r.pickup_location_id = p.id
-            JOIN locations d ON r.dropoff_location_id = d.id
-        """))
-        route_str_map = {
-            (r.pickup_location_id, r.dropoff_location_id): f"{r.pickup} → {r.dropoff}"
-            for r in result.fetchall()
-        }
 
         # ── 9. Work Orders ─────────────────────────────────────────────
         print("\n=== Creating Work Orders ===")
@@ -343,30 +351,24 @@ async def seed_dev() -> None:
         for i in range(wo_count):
             pr = random.choice(pricing_rows)
             driver_id = random.choice(drivers)
-            route_str = route_str_map.get(
-                (pr.pickup_location_id, pr.dropoff_location_id), "Unknown"
-            )
+            vehicle_id = vehicle_by_driver.get(driver_id)
 
             r = random.random()
-            if r < 0.4:
+            if r < 0.5:
                 status = "PENDING"
-            elif r < 0.8:
-                status = "MATCHED"
             else:
-                status = "COMPLETED"
+                status = "MATCHED"
 
             wo = WorkOrder(
-                client_id=pr.client_id,
+                partner_id=pr.partner_id,
                 code=f"W{1001 + i:06d}",
-                route=route_str,
                 pickup_location_id=pr.pickup_location_id,
                 dropoff_location_id=pr.dropoff_location_id,
                 driver_id=driver_id,
-                tractor_plate=random.choice(PLATES),
+                vehicle_id=vehicle_id,
                 unit_price=pr.unit_price,
                 driver_salary=pr.driver_salary,
                 allowance=pr.allowance,
-                earning=pr.driver_salary + pr.allowance,
                 pricing_id=pr.id,
                 status=status,
             )
@@ -395,36 +397,25 @@ async def seed_dev() -> None:
         trip_orders = []
         for i in range(to_count):
             pr = random.choice(pricing_rows)
-            route_str = route_str_map.get(
-                (pr.pickup_location_id, pr.dropoff_location_id), "Unknown"
-            )
             trip_date = _rand_date()
 
             r = random.random()
-            if r < 0.3:
-                status = "DRAFT"
-            elif r < 0.6:
+            if r < 0.5:
                 status = "PENDING"
-            elif r < 0.9:
-                status = "COMPLETED"
-                is_confirmed = random.random() < 0.7
             else:
-                status = "CANCELLED"
+                status = "MATCHED"
 
             to = TripOrder(
                 trip_date=trip_date,
-                client_id=pr.client_id,
+                partner_id=pr.partner_id,
                 code=f"T{2001 + i:06d}",
-                route=route_str,
                 pickup_location_id=pr.pickup_location_id,
                 dropoff_location_id=pr.dropoff_location_id,
                 pricing_id=pr.id,
                 unit_price=pr.unit_price,
                 driver_salary=pr.driver_salary,
                 allowance=pr.allowance,
-                revenue=pr.unit_price,
                 status=status,
-                is_confirmed=is_confirmed if status == "COMPLETED" else False,
             )
             db.add(to)
             trip_orders.append(to)
@@ -447,24 +438,6 @@ async def seed_dev() -> None:
         await db.flush()
         print("  Created trip order containers")
 
-        # ── 11. Link matched trips ↔ work orders ───────────────────────
-        matched_tos = [to for to in trip_orders if to.status == "COMPLETED"]
-        matched_wos = [wo for wo in work_orders if wo.status in ("MATCHED", "COMPLETED")]
-
-        link_count = 0
-        for to in matched_tos:
-            n_links = min(random.randint(1, 2), len(matched_wos))
-            chosen = random.sample(matched_wos, n_links)
-            for wo in chosen:
-                db.add(TripOrderWorkOrder(
-                    trip_order_id=to.id,
-                    work_order_id=wo.id,
-                ))
-                link_count += 1
-
-        await db.flush()
-        print(f"  Created {link_count} trip ↔ work order links")
-
         await db.commit()
 
         # ── Summary ─────────────────────────────────────────────────────
@@ -472,11 +445,11 @@ async def seed_dev() -> None:
         print("SEED COMPLETE")
         print("=" * 50)
         tables = [
-            "users", "locations", "clients", "vendors", "routes",
+            "users", "vehicles", "locations", "partners",
+            "settings",
             "pricings", "pricing_lines",
             "work_orders", "work_order_containers",
             "trip_orders", "trip_order_containers",
-            "trip_order_work_orders",
         ]
         for t in tables:
             cnt = (await db.execute(text(f"SELECT count(*) FROM {t}"))).scalar()

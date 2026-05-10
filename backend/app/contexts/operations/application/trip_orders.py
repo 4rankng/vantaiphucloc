@@ -270,15 +270,15 @@ class DeleteTripOrder:
 
 
 class CreateTripOrderFromImport:
-    """Create TripOrders from the customer-Excel import pipeline.
+    """Create TripOrders from the partner-Excel import pipeline.
 
-    Groups rows by (trip_date + dropoff + tractor/customer-ref) so a
+    Groups rows by (trip_date + dropoff + tractor/partner-ref) so a
     truck running multiple containers becomes one TripOrder with N
-    TripContainer rows. Pricing is intentionally NOT applied here — the
+    TripContainer rows. Pricing is intentionally NOT applied here -- the
     accountant prices the trip later via Apply Pricing or manually, so
-    every imported trip starts in DRAFT.
+    every imported trip starts in PENDING.
 
-    Idempotent on `(client_id, trip_date, container_number)`. Returns
+    Idempotent on `(partner_id, trip_date, container_number)`. Returns
     counts plus the new trip ids so the UI can chain the apply-pricing
     flow.
     """
@@ -299,7 +299,7 @@ class CreateTripOrderFromImport:
         )
         from app.contexts.operations.infrastructure.import_queries import (
             count_locations,
-            fetch_client,
+            fetch_partner,
             find_duplicate_trip,
         )
         from app.models.domain import (
@@ -307,9 +307,9 @@ class CreateTripOrderFromImport:
             TripOrderContainer as TripOrderContainerORM,
         )
 
-        client = await fetch_client(self.session, data.client_id)
-        if client is None:
-            raise NotFound("Client", data.client_id)
+        partner = await fetch_partner(self.session, data.partner_id)
+        if partner is None:
+            raise NotFound("Partner", data.partner_id)
 
         rows_as_dicts = [
             {
@@ -355,7 +355,7 @@ class CreateTripOrderFromImport:
                         continue
                     existing = await find_duplicate_trip(
                         self.session,
-                        client_id=data.client_id,
+                        partner_id=data.partner_id,
                         trip_date=td,
                         container_no=cn,
                     )
@@ -377,10 +377,6 @@ class CreateTripOrderFromImport:
                 pickup = grp.pickup_location or first.get("pickup_location") or ""
                 dropoff = grp.dropoff_location or first.get("dropoff_location") or ""
                 work_type = first.get("work_type") or ""
-                route_str = (
-                    (f"{pickup} - {dropoff}").strip(" -")
-                    if pickup or dropoff else ""
-                )
 
                 pickup_loc = None
                 dropoff_loc = None
@@ -404,15 +400,14 @@ class CreateTripOrderFromImport:
 
                 if not pickup_loc or not dropoff_loc:
                     errors.append(
-                        f"Nhóm {idx}: pickup/dropoff không thể giải quyết "
+                        f"Nhom {idx}: pickup/dropoff khong the giai quyet "
                         f"(pickup={pickup!r}, dropoff={dropoff!r})"
                     )
                     continue
 
                 trip = TripOrderORM(
                     trip_date=trip_date,
-                    client_id=client.id,
-                    route=route_str,
+                    partner_id=partner.id,
                     pickup_raw=pickup or None,
                     dropoff_raw=dropoff or None,
                     pickup_location_id=pickup_loc.id,
@@ -421,8 +416,7 @@ class CreateTripOrderFromImport:
                     unit_price=0,
                     driver_salary=0,
                     allowance=0,
-                    revenue=0,
-                    status=TripOrderStatus.DRAFT.value,
+                    status=TripOrderStatus.PENDING.value,
                     location_review_needed=review_needed,
                 )
                 if review_needed:
@@ -450,7 +444,7 @@ class CreateTripOrderFromImport:
                 if len(new_rows) > 1:
                     grouped_trips += 1
             except Exception as exc:
-                errors.append(f"Nhóm {idx}: {exc}")
+                errors.append(f"Nhom {idx}: {exc}")
 
         locations_created = max(
             0, await count_locations(self.session) - locations_seen_before
@@ -482,7 +476,7 @@ class ApplyPricingToTrips:
     async def __call__(
         self,
         *,
-        client_id: int | None,
+        partner_id: int | None,
         trip_ids: list[int] | None,
         skip_already_priced: bool,
     ) -> tuple[int, list[int]]:
@@ -492,14 +486,13 @@ class ApplyPricingToTrips:
         from app.contexts.operations.infrastructure.import_queries import (
             count_containers_for_trip,
             first_container_work_type,
-            list_drafts_for_pricing,
+            list_unpriced_trips,
         )
 
-        rows = await list_drafts_for_pricing(
+        rows = await list_unpriced_trips(
             self.session,
-            client_id=client_id,
+            partner_id=partner_id,
             trip_ids=trip_ids,
-            draft_status=TripOrderStatus.DRAFT.value,
         )
 
         priced = 0
@@ -519,7 +512,7 @@ class ApplyPricingToTrips:
                 continue
             tiered = await find_tiered_pricing(
                 self.session,
-                client_id=trip.client_id,
+                partner_id=trip.partner_id,
                 work_type=wt,
                 quantity=int(cont_count),
                 pickup_location_id=trip.pickup_location_id,
@@ -531,7 +524,6 @@ class ApplyPricingToTrips:
             trip.unit_price = tiered.unit_price
             trip.driver_salary = tiered.driver_salary
             trip.allowance = tiered.allowance
-            trip.revenue = tiered.unit_price
             trip.pricing_id = tiered.pricing.id
             priced += 1
 

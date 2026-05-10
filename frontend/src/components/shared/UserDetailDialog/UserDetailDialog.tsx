@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Users, Truck, Phone, CreditCard, Pencil, Trash2 } from 'lucide-react'
+import { Users, Phone, CreditCard, Pencil, Trash2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
-import { InlineSelect } from '@/components/shared/InlineSelect'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { ROLE_ICONS } from '@/pages/superadmin/types'
 import type { UserAccount } from '@/services/api/users.api'
@@ -17,9 +16,7 @@ interface EditForm {
   phone: string
   cccd: string
   role: Role
-  tractorPlate: string
   password: string
-  vendor: string
 }
 
 function RequiredLabel({ children }: { children: React.ReactNode }) {
@@ -37,7 +34,6 @@ export function UserDetailDialog({
   onEdit,
   onDelete,
   editableRoles,
-  vendors,
   saving: externalSaving,
 }: {
   user: UserAccount | null
@@ -46,33 +42,29 @@ export function UserDetailDialog({
   onEdit?: (userId: string, data: Record<string, unknown>) => Promise<void>
   onDelete?: (userId: string) => Promise<void>
   editableRoles?: { value: Role; label: string }[]
-  vendors?: { id: string | number; name: string }[]
   saving?: boolean
 }) {
   const { user: currentUser } = useAuth()
   const isEditMode = !!onEdit
   const [editForm, setEditForm] = useState<EditForm>({
-    username: '', fullName: '', phone: '', cccd: '', role: 'driver', tractorPlate: '', password: '', vendor: '',
+    username: '', fullName: '', phone: '', cccd: '', role: 'driver', password: '',
   })
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     if (user) {
-      const vendorId = vendors?.find(v => v.name === user.vendor)?.id
       setEditForm({
         username: user.username,
         fullName: user.fullName ?? '',
         phone: user.phone ?? '',
         cccd: user.cccd ?? '',
         role: user.role,
-        tractorPlate: user.tractorPlate ?? '',
         password: '',
-        vendor: vendorId != null ? String(vendorId) : '',
       })
       setDeleteConfirm(false)
     }
-  }, [user, vendors])
+  }, [user])
 
   const updateField = useCallback((field: keyof EditForm, value: string) => {
     setEditForm(prev => ({ ...prev, [field]: value }))
@@ -85,17 +77,12 @@ export function UserDetailDialog({
     if (!onEdit || !editForm.username.trim()) return
     setSaving(true)
     try {
-      const vendorObj = vendors?.find(v => String(v.id) === editForm.vendor)
       const payload: Record<string, unknown> = {
         username: editForm.username.trim(),
         full_name: editForm.fullName.trim() || undefined,
         phone: editForm.phone.trim() || undefined,
         cccd: editForm.cccd.trim() || undefined,
         role: editForm.role,
-      }
-      if (editForm.role === 'driver') {
-        if (editForm.tractorPlate.trim()) payload.tractor_plate = editForm.tractorPlate.trim()
-        if (vendorObj) payload.vendor = vendorObj.name
       }
       if (editForm.password.trim()) payload.password = editForm.password.trim()
       await onEdit(user.id, payload)
@@ -168,30 +155,10 @@ export function UserDetailDialog({
                   <Input value={editForm.cccd} onChange={e => updateField('cccd', e.target.value)} className="text-sm font-mono" placeholder="001234567890" />
                 </div>
               </div>
-              {/* Driver-only: vendor full-width, then tractor plate + password */}
-              {editForm.role === 'driver' && (
-                <div className="space-y-1.5">
-                  <RequiredLabel>Nhà thầu</RequiredLabel>
-                  <InlineSelect
-                    options={(vendors ?? []).map(v => ({ value: String(v.id), label: v.name }))}
-                    value={editForm.vendor}
-                    onChange={v => updateField('vendor', v)}
-                    placeholder="Chọn nhà thầu"
-                  />
-                </div>
-              )}
-              {/* Row 3: tractor plate (driver) + password */}
-              <div className="grid grid-cols-2 gap-3">
-                {editForm.role === 'driver' && (
-                  <div className="space-y-1.5">
-                    <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Biển số đầu kéo</Label>
-                    <Input value={editForm.tractorPlate} onChange={e => updateField('tractorPlate', e.target.value)} className="text-sm font-mono" />
-                  </div>
-                )}
-                <div className={`space-y-1.5 ${editForm.role !== 'driver' ? 'col-span-2' : ''}`}>
-                  <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mật khẩu mới</Label>
-                  <Input type="password" value={editForm.password} onChange={e => updateField('password', e.target.value)} placeholder="••••••••" className="text-sm" />
-                </div>
+              {/* Password */}
+              <div className="space-y-1.5">
+                <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mật khẩu mới</Label>
+                <Input type="password" value={editForm.password} onChange={e => updateField('password', e.target.value)} placeholder="••••••••" className="text-sm" />
               </div>
             </div>
           ) : (
@@ -213,8 +180,6 @@ export function UserDetailDialog({
                 {user.fullName && <InfoRow icon={Users} label="Họ và tên" value={user.fullName} noBorder />}
                 {user.phone && <InfoRow icon={Phone} label="Số điện thoại" value={user.phone} noBorder />}
                 {user.cccd && <InfoRow icon={CreditCard} label="CCCD" value={user.cccd} noBorder />}
-                <InfoRow icon={Users} label={user.role === 'driver' ? 'Nhà thầu' : 'Công ty'} value={user.vendor} noBorder />
-                {user.tractorPlate && <InfoRow icon={Truck} label="Biển số đầu kéo" value={user.tractorPlate} noBorder />}
               </div>
             </>
           )}

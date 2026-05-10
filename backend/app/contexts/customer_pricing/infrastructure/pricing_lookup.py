@@ -1,13 +1,13 @@
-"""Pricing lookup helpers — read-only.
+"""Pricing lookup helpers -- read-only.
 
 Used by Operations (work-order / trip-order creation, bulk apply-pricing,
-imports) to auto-fill `unit_price`, `driver_salary`, `allowance`, and
-`earning` from the matching Pricing + PricingLine. Lookup is FK-only —
-callers can pass `pickup_location_id`/`dropoff_location_id` directly,
-or pass name strings and we resolve them via the `locations` table.
+imports) to auto-fill `unit_price`, `driver_salary`, and `allowance` from
+the matching Pricing + PricingLine. Lookup is FK-only -- callers can pass
+`pickup_location_id`/`dropoff_location_id` directly, or pass name strings
+and we resolve them via the `locations` table.
 
-Talks to ORM models directly — Operations consumers pass their existing
-`AsyncSession`. Migrating the consumers to a thin port lives in C3.
+Talks to ORM models directly -- Operations consumers pass their existing
+`AsyncSession`.
 """
 
 from __future__ import annotations
@@ -26,10 +26,10 @@ from app.core.cache import CacheManager
 
 
 def _pricing_cache_key(
-    client_id: int, work_type: str,
+    partner_id: int, work_type: str,
     pickup_location_id: int, dropoff_location_id: int,
 ) -> str:
-    raw = f"{client_id}:{work_type}:{pickup_location_id}:{dropoff_location_id}"
+    raw = f"{partner_id}:{work_type}:{pickup_location_id}:{dropoff_location_id}"
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
@@ -46,16 +46,15 @@ async def _resolve_location_id(db: AsyncSession, name: str | None) -> int | None
 
 async def find_pricing(
     db: AsyncSession,
-    client_id: int,
+    partner_id: int,
     work_type: str,
     pickup_location_id: int | None = None,
     dropoff_location_id: int | None = None,
     pickup_location: str | None = None,
     dropoff_location: str | None = None,
     cache: CacheManager | None = None,
-    route: str | None = None,
 ) -> PricingORM | None:
-    """Find the Pricing row for `(client_id, work_type, pickup, dropoff)`.
+    """Find the Pricing row for `(partner_id, work_type, pickup, dropoff)`.
 
     `pickup_location_id`/`dropoff_location_id` are preferred. If only
     name strings are passed, this resolves them to IDs via the
@@ -69,7 +68,7 @@ async def find_pricing(
         return None
 
     cache_key = _pricing_cache_key(
-        client_id, work_type, pickup_location_id, dropoff_location_id
+        partner_id, work_type, pickup_location_id, dropoff_location_id
     )
     if cache:
         cached = await cache.get_json("pricing_lookup", cache_key)
@@ -81,7 +80,7 @@ async def find_pricing(
 
     res = await db.execute(
         select(PricingORM).where(
-            PricingORM.client_id == client_id,
+            PricingORM.partner_id == partner_id,
             PricingORM.work_type == work_type,
             PricingORM.pickup_location_id == pickup_location_id,
             PricingORM.dropoff_location_id == dropoff_location_id,
@@ -112,7 +111,7 @@ class TieredPricing:
 
 async def find_tiered_pricing(
     db: AsyncSession,
-    client_id: int,
+    partner_id: int,
     work_type: str,
     quantity: int = 1,
     pickup_location_id: int | None = None,
@@ -120,14 +119,13 @@ async def find_tiered_pricing(
     pickup_location: str | None = None,
     dropoff_location: str | None = None,
     cache: CacheManager | None = None,
-    route: str | None = None,
 ) -> TieredPricing | None:
     """Find pricing + the matching PricingLine for the requested quantity.
 
     Falls back to `quantity=1` when the exact tier isn't defined.
     """
     pricing = await find_pricing(
-        db, client_id, work_type,
+        db, partner_id, work_type,
         pickup_location_id=pickup_location_id,
         dropoff_location_id=dropoff_location_id,
         pickup_location=pickup_location,

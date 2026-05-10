@@ -12,170 +12,111 @@ from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contexts.customer_pricing.domain.entities import (
-    Customer,
     Location,
+    Partner,
     Pricing,
-    Route,
-    Vendor,
 )
 from app.contexts.customer_pricing.domain.repositories import (
-    ClientRepository,
     LocationRepository,
+    PartnerRepository,
     PricingRepository,
-    RouteRepository,
-    VendorRepository,
 )
 from app.contexts.customer_pricing.domain.value_objects import (
-    ClientId,
     LocationId,
+    PartnerId,
     PricingId,
-    RouteId,
-    VendorId,
     WorkType,
 )
 from app.contexts.customer_pricing.infrastructure.mappers import (
-    alias_to_domain,
     alias_to_orm,
-    customer_to_domain,
-    customer_to_orm,
     location_to_domain,
     location_to_orm,
+    partner_to_domain,
+    partner_to_orm,
     pricing_line_to_orm,
     pricing_to_domain,
     pricing_to_orm,
-    route_to_domain,
-    route_to_orm,
-    vendor_to_domain,
-    vendor_to_orm,
 )
 from app.contexts.customer_pricing.infrastructure.orm import (
-    ClientORM,
     LocationAliasORM,
     LocationORM,
+    PartnerORM,
     PricingLineORM,
     PricingORM,
-    RouteORM,
-    VendorORM,
 )
 
 
-# ── Customer ─────────────────────────────────────────────────────
+# -- Partner ---------------------------------------------------------
 
 
-class SqlClientRepository(ClientRepository):
+class SqlPartnerRepository(PartnerRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def get_by_id(self, cid: ClientId) -> Customer | None:
+    async def get_by_id(self, pid: PartnerId) -> Partner | None:
         orm = (await self.session.execute(
-            select(ClientORM).where(ClientORM.id == int(cid))
+            select(PartnerORM).where(PartnerORM.id == int(pid))
         )).scalar_one_or_none()
-        return customer_to_domain(orm) if orm else None
+        return partner_to_domain(orm) if orm else None
 
-    async def find_by_code(self, code: str) -> Customer | None:
+    async def find_by_code(self, code: str) -> Partner | None:
         orm = (await self.session.execute(
-            select(ClientORM).where(ClientORM.code == code)
+            select(PartnerORM).where(PartnerORM.code == code)
         )).scalar_one_or_none()
-        return customer_to_domain(orm) if orm else None
+        return partner_to_domain(orm) if orm else None
 
-    async def find_by_name(self, name: str) -> Customer | None:
+    async def find_by_name(self, name: str) -> Partner | None:
         orm = (await self.session.execute(
-            select(ClientORM).where(ClientORM.name == name)
+            select(PartnerORM).where(PartnerORM.name == name)
         )).scalar_one_or_none()
-        return customer_to_domain(orm) if orm else None
+        return partner_to_domain(orm) if orm else None
 
     async def list(
-        self, *, offset: int, limit: int, active_only: bool = True
-    ) -> tuple[Sequence[Customer], int]:
-        q = select(ClientORM)
+        self,
+        *,
+        offset: int,
+        limit: int,
+        partner_type: str | None = None,
+        active_only: bool = True,
+    ) -> tuple[Sequence[Partner], int]:
+        q = select(PartnerORM)
         if active_only:
-            q = q.where(ClientORM.is_active.is_(True))
+            q = q.where(PartnerORM.is_active.is_(True))
+        if partner_type is not None:
+            # "both" partners match both "client" and "vendor" filters
+            if partner_type in ("client", "vendor"):
+                q = q.where(
+                    PartnerORM.partner_type.in_([partner_type, "both"])
+                )
+            else:
+                q = q.where(PartnerORM.partner_type == partner_type)
         total = await self.session.scalar(
             select(func.count()).select_from(q.subquery())
         ) or 0
-        q = q.order_by(ClientORM.name.asc()).offset(offset).limit(limit)
+        q = q.order_by(PartnerORM.name.asc()).offset(offset).limit(limit)
         rows = list((await self.session.execute(q)).scalars().all())
-        return [customer_to_domain(r) for r in rows], int(total)
+        return [partner_to_domain(r) for r in rows], int(total)
 
-    async def add(self, c: Customer) -> Customer:
-        orm = customer_to_orm(c)
+    async def add(self, p: Partner) -> Partner:
+        orm = partner_to_orm(p)
         self.session.add(orm)
         await self.session.flush()
-        return customer_to_domain(orm)
+        return partner_to_domain(orm)
 
-    async def save(self, c: Customer) -> Customer:
+    async def save(self, p: Partner) -> Partner:
         existing = (await self.session.execute(
-            select(ClientORM).where(ClientORM.id == int(c.id))
+            select(PartnerORM).where(PartnerORM.id == int(p.id))
         )).scalar_one()
-        customer_to_orm(c, existing)
+        partner_to_orm(p, existing)
         await self.session.flush()
-        return customer_to_domain(existing)
-
-    async def increment_debt(self, cid: ClientId, amount: int) -> None:
-        if amount <= 0:
-            return
-        existing = (await self.session.execute(
-            select(ClientORM).where(ClientORM.id == int(cid))
-        )).scalar_one_or_none()
-        if existing is not None:
-            existing.outstanding_debt = (existing.outstanding_debt or 0) + amount
-            await self.session.flush()
+        return partner_to_domain(existing)
 
 
-# ── Vendor ───────────────────────────────────────────────────────
-
-
-class SqlVendorRepository(VendorRepository):
-    def __init__(self, session: AsyncSession) -> None:
-        self.session = session
-
-    async def get_by_id(self, vid: VendorId) -> Vendor | None:
-        orm = (await self.session.execute(
-            select(VendorORM).where(VendorORM.id == int(vid))
-        )).scalar_one_or_none()
-        return vendor_to_domain(orm) if orm else None
-
-    async def find_by_name(self, name: str) -> Vendor | None:
-        orm = (await self.session.execute(
-            select(VendorORM).where(VendorORM.name == name)
-        )).scalar_one_or_none()
-        return vendor_to_domain(orm) if orm else None
-
-    async def list(
-        self, *, offset: int, limit: int, active_only: bool = True
-    ) -> tuple[Sequence[Vendor], int]:
-        q = select(VendorORM)
-        if active_only:
-            q = q.where(VendorORM.is_active.is_(True))
-        total = await self.session.scalar(
-            select(func.count()).select_from(q.subquery())
-        ) or 0
-        q = q.order_by(VendorORM.name.asc()).offset(offset).limit(limit)
-        rows = list((await self.session.execute(q)).scalars().all())
-        return [vendor_to_domain(r) for r in rows], int(total)
-
-    async def add(self, v: Vendor) -> Vendor:
-        orm = vendor_to_orm(v)
-        self.session.add(orm)
-        await self.session.flush()
-        return vendor_to_domain(orm)
-
-    async def save(self, v: Vendor) -> Vendor:
-        existing = (await self.session.execute(
-            select(VendorORM).where(VendorORM.id == int(v.id))
-        )).scalar_one()
-        vendor_to_orm(v, existing)
-        await self.session.flush()
-        return vendor_to_domain(existing)
-
-
-# ── Location ─────────────────────────────────────────────────────
+# -- Location --------------------------------------------------------
 
 
 class SqlLocationRepository(LocationRepository):
     _EXTERNAL_REFS = (
-        ("routes", "pickup_location_id"),
-        ("routes", "dropoff_location_id"),
         ("work_orders", "pickup_location_id"),
         ("work_orders", "dropoff_location_id"),
         ("trip_orders", "pickup_location_id"),
@@ -277,59 +218,7 @@ class SqlLocationRepository(LocationRepository):
         return None
 
 
-# ── Route ────────────────────────────────────────────────────────
-
-
-class SqlRouteRepository(RouteRepository):
-    def __init__(self, session: AsyncSession) -> None:
-        self.session = session
-
-    async def get_by_id(self, rid: RouteId) -> Route | None:
-        orm = (await self.session.execute(
-            select(RouteORM).where(RouteORM.id == int(rid))
-        )).scalar_one_or_none()
-        return route_to_domain(orm) if orm else None
-
-    async def find_by_lane(
-        self, pickup_id: LocationId, dropoff_id: LocationId
-    ) -> Route | None:
-        orm = (await self.session.execute(
-            select(RouteORM).where(
-                RouteORM.pickup_location_id == int(pickup_id),
-                RouteORM.dropoff_location_id == int(dropoff_id),
-            )
-        )).scalar_one_or_none()
-        return route_to_domain(orm) if orm else None
-
-    async def list(
-        self, *, offset: int, limit: int, active_only: bool = True
-    ) -> tuple[Sequence[Route], int]:
-        q = select(RouteORM)
-        if active_only:
-            q = q.where(RouteORM.is_active.is_(True))
-        total = await self.session.scalar(
-            select(func.count()).select_from(q.subquery())
-        ) or 0
-        q = q.order_by(RouteORM.id.asc()).offset(offset).limit(limit)
-        rows = list((await self.session.execute(q)).scalars().all())
-        return [route_to_domain(r) for r in rows], int(total)
-
-    async def add(self, r: Route) -> Route:
-        orm = route_to_orm(r)
-        self.session.add(orm)
-        await self.session.flush()
-        return route_to_domain(orm)
-
-    async def save(self, r: Route) -> Route:
-        existing = (await self.session.execute(
-            select(RouteORM).where(RouteORM.id == int(r.id))
-        )).scalar_one()
-        route_to_orm(r, existing)
-        await self.session.flush()
-        return route_to_domain(existing)
-
-
-# ── Pricing ──────────────────────────────────────────────────────
+# -- Pricing ---------------------------------------------------------
 
 
 class SqlPricingRepository(PricingRepository):
@@ -356,14 +245,14 @@ class SqlPricingRepository(PricingRepository):
     async def find_by_lane(
         self,
         *,
-        client_id: ClientId,
+        partner_id: PartnerId,
         work_type: WorkType,
         pickup_location_id: LocationId,
         dropoff_location_id: LocationId,
     ) -> Pricing | None:
         orm = (await self.session.execute(
             select(PricingORM).where(
-                PricingORM.client_id == int(client_id),
+                PricingORM.partner_id == int(partner_id),
                 PricingORM.work_type == work_type,
                 PricingORM.pickup_location_id == int(pickup_location_id),
                 PricingORM.dropoff_location_id == int(dropoff_location_id),
@@ -375,10 +264,10 @@ class SqlPricingRepository(PricingRepository):
         lines = await self._lines_for(orm.id)
         return pricing_to_domain(orm, lines)
 
-    async def list_for_client(
-        self, client_id: ClientId, *, active_only: bool = True
+    async def list_for_partner(
+        self, partner_id: PartnerId, *, active_only: bool = True
     ) -> Sequence[Pricing]:
-        q = select(PricingORM).where(PricingORM.client_id == int(client_id))
+        q = select(PricingORM).where(PricingORM.partner_id == int(partner_id))
         if active_only:
             q = q.where(PricingORM.is_active.is_(True))
         rows = list((await self.session.execute(q)).scalars().all())
@@ -389,12 +278,12 @@ class SqlPricingRepository(PricingRepository):
         return out
 
     async def list(
-        self, *, offset: int, limit: int, client_id: ClientId | None = None,
+        self, *, offset: int, limit: int, partner_id: PartnerId | None = None,
         active_only: bool = True,
     ) -> tuple[Sequence[Pricing], int]:
         q = select(PricingORM)
-        if client_id is not None:
-            q = q.where(PricingORM.client_id == int(client_id))
+        if partner_id is not None:
+            q = q.where(PricingORM.partner_id == int(partner_id))
         if active_only:
             q = q.where(PricingORM.is_active.is_(True))
         total = await self.session.scalar(

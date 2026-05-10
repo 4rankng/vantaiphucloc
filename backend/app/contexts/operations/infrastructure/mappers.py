@@ -1,4 +1,4 @@
-"""ORM ↔ domain entity mappers for the Operations context."""
+"""ORM <-> domain entity mappers for the Operations context."""
 
 from __future__ import annotations
 
@@ -118,23 +118,15 @@ def trip_order_to_domain(
     return TripOrder(
         id=TripOrderId(orm.id) if orm.id is not None else None,
         trip_date=orm.trip_date,
-        client_id=orm.client_id,
+        partner_id=orm.partner_id,
         code=orm.code,
-        route=orm.route,
         pickup_location_id=orm.pickup_location_id,
         dropoff_location_id=orm.dropoff_location_id,
         pricing_id=orm.pricing_id,
         unit_price=int(orm.unit_price or 0),
         driver_salary=int(orm.driver_salary or 0),
         allowance=int(orm.allowance or 0),
-        revenue=int(orm.revenue or 0),
         status=orm.status,
-        is_confirmed=bool(orm.is_confirmed),
-        confirmed_by=orm.confirmed_by,
-        confirmed_at=orm.confirmed_at,
-        is_locked=bool(orm.is_locked),
-        locked_at=orm.locked_at,
-        locked_by=orm.locked_by,
         pickup_raw=orm.pickup_raw,
         dropoff_raw=orm.dropoff_raw,
         location_review_needed=bool(orm.location_review_needed),
@@ -153,23 +145,15 @@ def trip_order_to_orm(
     if t.id is not None:
         orm.id = int(t.id)
     orm.trip_date = t.trip_date
-    orm.client_id = int(t.client_id)
+    orm.partner_id = int(t.partner_id)
     orm.code = t.code
-    orm.route = t.route
     orm.pickup_location_id = int(t.pickup_location_id)
     orm.dropoff_location_id = int(t.dropoff_location_id)
     orm.pricing_id = t.pricing_id
     orm.unit_price = int(t.unit_price)
     orm.driver_salary = int(t.driver_salary)
     orm.allowance = int(t.allowance)
-    orm.revenue = int(t.revenue)
     orm.status = str(t.status)
-    orm.is_confirmed = bool(t.is_confirmed)
-    orm.confirmed_by = t.confirmed_by
-    orm.confirmed_at = t.confirmed_at
-    orm.is_locked = bool(t.is_locked)
-    orm.locked_at = t.locked_at
-    orm.locked_by = t.locked_by
     orm.pickup_raw = t.pickup_raw
     orm.dropoff_raw = t.dropoff_raw
     orm.location_review_needed = bool(t.location_review_needed)
@@ -220,25 +204,20 @@ def work_order_to_domain(
 ) -> WorkOrder:
     return WorkOrder(
         id=WorkOrderId(orm.id) if orm.id is not None else None,
-        client_id=orm.client_id,
+        partner_id=orm.partner_id,
         code=orm.code,
-        route=orm.route,
         pickup_location_id=orm.pickup_location_id,
         dropoff_location_id=orm.dropoff_location_id,
         driver_id=orm.driver_id,
-        tractor_plate=orm.tractor_plate,
+        vehicle_id=orm.vehicle_id,
         gps_lat=orm.gps_lat,
         gps_lng=orm.gps_lng,
         gps_address=orm.gps_address,
         unit_price=int(orm.unit_price or 0),
         driver_salary=int(orm.driver_salary or 0),
         allowance=int(orm.allowance or 0),
-        earning=int(orm.earning or 0),
         pricing_id=orm.pricing_id,
         status=orm.status,
-        is_locked=bool(orm.is_locked),
-        locked_at=orm.locked_at,
-        locked_by=orm.locked_by,
         created_at=orm.created_at,
         updated_at=orm.updated_at,
         containers=[work_container_to_domain(c) for c in (containers or [])],
@@ -252,23 +231,18 @@ def work_order_to_orm(
         orm = WorkOrderORM()
     if w.id is not None:
         orm.id = int(w.id)
-    orm.client_id = int(w.client_id)
+    orm.partner_id = int(w.partner_id)
     orm.code = w.code
-    orm.route = w.route
     orm.pickup_location_id = int(w.pickup_location_id)
     orm.dropoff_location_id = int(w.dropoff_location_id)
     orm.driver_id = int(w.driver_id)
-    orm.tractor_plate = w.tractor_plate
+    orm.vehicle_id = w.vehicle_id
     orm.gps_lat = w.gps_lat
     orm.gps_lng = w.gps_lng
     orm.gps_address = w.gps_address
     orm.unit_price = int(w.unit_price)
     orm.driver_salary = int(w.driver_salary)
     orm.allowance = int(w.allowance)
-    orm.earning = int(w.earning)
     orm.pricing_id = w.pricing_id
     orm.status = str(w.status)
-    orm.is_locked = bool(w.is_locked)
-    orm.locked_at = w.locked_at
-    orm.locked_by = w.locked_by
     return orm

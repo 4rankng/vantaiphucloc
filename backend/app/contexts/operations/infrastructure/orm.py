@@ -11,6 +11,7 @@ from app.models.domain import (
     TripContainerPhoto as TripContainerPhotoORM,
     TripOrder as TripOrderORM,
     TripOrderContainer as TripOrderContainerORM,
+    TripOrderWorkOrder as TripOrderWorkOrderORM,
     WorkOrder as WorkOrderORM,
     WorkOrderContainer as WorkOrderContainerORM,
 )
@@ -20,6 +21,7 @@ __all__ = [
     "TripContainerPhotoORM",
     "TripOrderORM",
     "TripOrderContainerORM",
+    "TripOrderWorkOrderORM",
     "WorkOrderORM",
     "WorkOrderContainerORM",
 ]

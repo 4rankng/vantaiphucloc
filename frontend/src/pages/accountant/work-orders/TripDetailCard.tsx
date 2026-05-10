@@ -30,10 +30,10 @@ export function TripDetailCard({ workOrder }: TripDetailCardProps) {
           <Calendar className="w-3 h-3" />
           {workOrder.createdAt ? fmtDate(workOrder.createdAt) : '—'}
         </span>
-        {workOrder.tractorPlate && (
+        {workOrder.vehicleId && (
           <span className="flex items-center gap-1 text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-secondary)' }}>
             <Truck className="w-3 h-3" />
-            {workOrder.tractorPlate}
+            V{workOrder.vehicleId}
           </span>
         )}
       </div>
@@ -41,7 +41,7 @@ export function TripDetailCard({ workOrder }: TripDetailCardProps) {
       {/* Second row: client + driver */}
       <div className="flex items-center gap-3 text-sm">
         <span className="font-medium truncate" style={{ color: 'var(--theme-text-primary)' }}>
-          KH {workOrder.client.name}
+          KH {workOrder.partner.name}
         </span>
         <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
           TX: {workOrder.driver.name || '—'}

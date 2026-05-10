@@ -10,7 +10,13 @@ import { fuzzyMatch } from '@/lib/search-utils'
 import { useRoutes, useCreateRoute, useUpdateRoute, useDeleteRoute, useLocations } from '@/hooks/use-queries'
 import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
 import { RouteDisplay } from '@/components/shared/RouteDisplay'
-import type { Route } from '@/data/domain'
+// Route type removed from domain — routes are deprecated
+interface Route {
+  id: number
+  route: string
+  pickupLocation: { id: number; name: string }
+  dropoffLocation: { id: number; name: string }
+}
 
 interface RouteForm {
   route: string

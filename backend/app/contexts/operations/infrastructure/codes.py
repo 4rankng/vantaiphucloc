@@ -1,9 +1,9 @@
 """Generate human-readable codes for WorkOrders and TripOrders.
 
-Format: {CLIENT_CODE}{SEQ}  e.g. ABC0001, ABC0002, ABC10000
-- CLIENT_CODE comes from clients.code (uppercased, alphanumeric only)
-- Fallback: first 3 chars of client name (uppercased, alphanumeric only)
-- SEQ is the per-client sequential count of existing orders + 1
+Format: {PARTNER_CODE}{SEQ}  e.g. ABC0001, ABC0002, ABC10000
+- PARTNER_CODE comes from partners.code (uppercased, alphanumeric only)
+- Fallback: first 3 chars of partner name (uppercased, alphanumeric only)
+- SEQ is the per-partner sequential count of existing orders + 1
 - Minimum 4 digits, auto-expands when count > 9999
 """
 
@@ -12,7 +12,7 @@ import re
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.domain import Client, WorkOrder, TripOrder
+from app.models.domain import Partner, WorkOrder, TripOrder
 
 
 def _clean_code(raw: str | None, fallback: str) -> str:
@@ -40,19 +40,19 @@ def _extract_max_seq(codes: list[str]) -> int:
     return max_seq
 
 
-async def generate_work_order_code(db: AsyncSession, client_id: int) -> str:
-    client_res = await db.execute(
-        select(Client.code, Client.name).where(Client.id == client_id)
+async def generate_work_order_code(db: AsyncSession, partner_id: int) -> str:
+    partner_res = await db.execute(
+        select(Partner.code, Partner.name).where(Partner.id == partner_id)
     )
-    row = client_res.one_or_none()
+    row = partner_res.one_or_none()
     if not row:
-        return f"W{client_id:08d}"
-    client_code, client_name = row
-    prefix = _clean_code(client_code, client_name)
+        return f"W{partner_id:08d}"
+    partner_code, partner_name = row
+    prefix = _clean_code(partner_code, partner_name)
 
     result = await db.execute(
         select(WorkOrder.code).where(
-            WorkOrder.client_id == client_id,
+            WorkOrder.partner_id == partner_id,
             WorkOrder.code.isnot(None),
         )
     )
@@ -60,19 +60,19 @@ async def generate_work_order_code(db: AsyncSession, client_id: int) -> str:
     return f"{prefix}{_format_seq(max_seq + 1)}"
 
 
-async def generate_trip_order_code(db: AsyncSession, client_id: int) -> str:
-    client_res = await db.execute(
-        select(Client.code, Client.name).where(Client.id == client_id)
+async def generate_trip_order_code(db: AsyncSession, partner_id: int) -> str:
+    partner_res = await db.execute(
+        select(Partner.code, Partner.name).where(Partner.id == partner_id)
     )
-    row = client_res.one_or_none()
+    row = partner_res.one_or_none()
     if not row:
-        return f"T{client_id:08d}"
-    client_code, client_name = row
-    prefix = _clean_code(client_code, client_name)
+        return f"T{partner_id:08d}"
+    partner_code, partner_name = row
+    prefix = _clean_code(partner_code, partner_name)
 
     result = await db.execute(
         select(TripOrder.code).where(
-            TripOrder.client_id == client_id,
+            TripOrder.partner_id == partner_id,
             TripOrder.code.isnot(None),
         )
     )

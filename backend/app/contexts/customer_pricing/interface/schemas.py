@@ -1,9 +1,8 @@
 """Pydantic schemas for the Customer & Pricing interface layer.
 
-Defines wire shapes for `/clients`, `/vendors`, `/locations`, `/pricings`,
-and `/routes`. Read-DTOs use the shared `*SummaryOut` shapes from
-`app.schemas.domain` for cross-context summaries (Client/Location nested
-inside Pricing/Route etc.).
+Defines wire shapes for `/partners`, `/locations`, and `/pricings`.
+Read-DTOs use the shared `*SummaryOut` shapes from `app.schemas.domain`
+for cross-context summaries (Partner/Location nested inside Pricing etc.).
 """
 
 from __future__ import annotations
@@ -14,36 +13,20 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.schemas.domain import (
-    ClientSummaryOut,
     LocationSummaryOut,
+    PartnerSummaryOut,
 )
 
 
-# ── Customer ─────────────────────────────────────────────────────
+# -- Partner ---------------------------------------------------------
 
 
-class CustomerOut(BaseModel):
-    id: int
-    code: str | None
-    name: str
-    type: str
-    phone: str
-    tax_code: str | None = None
-    address: str | None = None
-    contact_person: str | None = None
-    outstanding_debt: int
-    is_active: bool = True
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class CustomerCreate(BaseModel):
+class PartnerCreateBody(BaseModel):
     name: str
     code: str | None = None
-    type: str          # "company" | "individual" — validated by domain
-    phone: str
+    partner_type: Literal["client", "vendor", "both"]
+    partner_role: str | None = None
+    phone: str | None = None
     tax_code: str | None = None
     address: str | None = None
     contact_person: str | None = None
@@ -59,7 +42,9 @@ class CustomerCreate(BaseModel):
 
     @field_validator("phone")
     @classmethod
-    def validate_phone(cls, v: str) -> str:
+    def validate_phone(cls, v: str | None) -> str | None:
+        if not v:
+            return v
         import re
         cleaned = re.sub(r"[\s\-]", "", v)
         if cleaned and not re.match(r"^(0|\+?84)[35789]\d{8}$", cleaned):
@@ -67,46 +52,48 @@ class CustomerCreate(BaseModel):
         return v
 
 
-class CustomerUpdate(BaseModel):
+class PartnerUpdateBody(BaseModel):
     name: str | None = None
     code: str | None = None
-    type: str | None = None
+    partner_type: Literal["client", "vendor", "both"] | None = None
+    partner_role: str | None = None
     phone: str | None = None
     tax_code: str | None = None
     address: str | None = None
     contact_person: str | None = None
     is_active: bool | None = None
 
+    @field_validator("tax_code")
+    @classmethod
+    def validate_tax_code(cls, v: str | None) -> str | None:
+        if v and not v.isdigit():
+            raise ValueError("Mã số thuế chỉ chứa chữ số")
+        if v and len(v) not in (10, 13):
+            raise ValueError("Mã số thuế phải 10 hoặc 13 chữ số")
+        return v
 
-def customer_to_out(c) -> CustomerOut:
-    """Domain Customer → wire shape."""
-    return CustomerOut(
-        id=int(c.id),
-        code=c.code,
-        name=c.name,
-        type=c.type,
-        phone=c.phone,
-        tax_code=c.tax_code,
-        address=c.address,
-        contact_person=c.contact_person,
-        outstanding_debt=int(c.outstanding_debt),
-        is_active=c.is_active,
-        created_at=c.created_at,
-        updated_at=c.updated_at,
-    )
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: str | None) -> str | None:
+        if not v:
+            return v
+        import re
+        cleaned = re.sub(r"[\s\-]", "", v)
+        if cleaned and not re.match(r"^(0|\+?84)[35789]\d{8}$", cleaned):
+            raise ValueError("Số điện thoại không hợp lệ (VD: 0912345678)")
+        return v
 
 
-# ── Vendor ───────────────────────────────────────────────────────
-
-
-class VendorOut(BaseModel):
+class PartnerOutBody(BaseModel):
     id: int
+    code: str | None
     name: str
-    type: str | None = None
-    phone: str | None = None
-    tax_code: str | None = None
-    address: str | None = None
-    contact_person: str | None = None
+    partner_type: str
+    partner_role: str | None
+    phone: str | None
+    tax_code: str | None
+    address: str | None
+    contact_person: str | None
     is_active: bool = True
     created_at: datetime
     updated_at: datetime
@@ -114,80 +101,25 @@ class VendorOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class VendorCreate(BaseModel):
-    name: str
-    type: Literal["company", "individual"] | None = None
-    phone: str | None = None
-    tax_code: str | None = None
-    address: str | None = None
-    contact_person: str | None = None
-
-    @field_validator("tax_code")
-    @classmethod
-    def validate_tax_code(cls, v: str | None) -> str | None:
-        if v and not v.isdigit():
-            raise ValueError("Mã số thuế chỉ chứa chữ số")
-        if v and len(v) not in (10, 13):
-            raise ValueError("Mã số thuế phải 10 hoặc 13 chữ số")
-        return v
-
-    @field_validator("phone")
-    @classmethod
-    def validate_phone(cls, v: str | None) -> str | None:
-        if not v:
-            return v
-        import re
-        cleaned = re.sub(r"[\s\-]", "", v)
-        if cleaned and not re.match(r"^(0|\+?84)[35789]\d{8}$", cleaned):
-            raise ValueError("Số điện thoại không hợp lệ (VD: 0912345678)")
-        return v
-
-
-class VendorUpdate(BaseModel):
-    name: str | None = None
-    type: Literal["company", "individual"] | None = None
-    phone: str | None = None
-    tax_code: str | None = None
-    address: str | None = None
-    contact_person: str | None = None
-
-    @field_validator("tax_code")
-    @classmethod
-    def validate_tax_code(cls, v: str | None) -> str | None:
-        if v and not v.isdigit():
-            raise ValueError("Mã số thuế chỉ chứa chữ số")
-        if v and len(v) not in (10, 13):
-            raise ValueError("Mã số thuế phải 10 hoặc 13 chữ số")
-        return v
-
-    @field_validator("phone")
-    @classmethod
-    def validate_phone(cls, v: str | None) -> str | None:
-        if not v:
-            return v
-        import re
-        cleaned = re.sub(r"[\s\-]", "", v)
-        if cleaned and not re.match(r"^(0|\+?84)[35789]\d{8}$", cleaned):
-            raise ValueError("Số điện thoại không hợp lệ (VD: 0912345678)")
-        return v
-
-
-def vendor_to_out(v) -> VendorOut:
-    return VendorOut(
-        id=int(v.id),
-        name=v.name,
-        type=v.type,
-        phone=v.phone,
-        tax_code=v.tax_code,
-        address=v.address,
-        contact_person=v.contact_person,
-        is_active=v.is_active,
-        created_at=v.created_at,
-        updated_at=v.updated_at,
+def partner_to_out(p) -> PartnerOutBody:
+    """Domain Partner -> wire shape."""
+    return PartnerOutBody(
+        id=int(p.id),
+        code=p.code,
+        name=p.name,
+        partner_type=p.partner_type,
+        partner_role=p.partner_role,
+        phone=p.phone,
+        tax_code=p.tax_code,
+        address=p.address,
+        contact_person=p.contact_person,
+        is_active=p.is_active,
+        created_at=p.created_at,
+        updated_at=p.updated_at,
     )
 
 
-# ── Location ─────────────────────────────────────────────────────
+# -- Location --------------------------------------------------------
 
 
 class LocationOut(BaseModel):
@@ -249,34 +181,7 @@ def location_to_out(loc) -> LocationOut:
     )
 
 
-# ── Route ────────────────────────────────────────────────────────
-
-
-class RouteCreate(BaseModel):
-    route: str
-    pickup_location_id: int
-    dropoff_location_id: int
-
-
-class RouteUpdate(BaseModel):
-    route: str | None = None
-    pickup_location_id: int | None = None
-    dropoff_location_id: int | None = None
-
-
-class RouteOut(BaseModel):
-    id: int
-    route: str
-    pickup_location: LocationSummaryOut
-    dropoff_location: LocationSummaryOut
-    is_active: bool = True
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-# ── Pricing ──────────────────────────────────────────────────────
+# -- Pricing ---------------------------------------------------------
 
 
 class PricingLineCreate(BaseModel):
@@ -297,7 +202,7 @@ class PricingLineOut(BaseModel):
 
 
 class PricingCreate(BaseModel):
-    client_id: int
+    partner_id: int
     work_type: str
     pickup_location_id: int
     dropoff_location_id: int
@@ -305,7 +210,7 @@ class PricingCreate(BaseModel):
 
 
 class PricingUpdate(BaseModel):
-    client_id: int | None = None
+    partner_id: int | None = None
     work_type: str | None = None
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
@@ -314,7 +219,7 @@ class PricingUpdate(BaseModel):
 
 class PricingOut(BaseModel):
     id: int
-    client: ClientSummaryOut
+    partner: PartnerSummaryOut
     work_type: str
     pickup_location: LocationSummaryOut
     dropoff_location: LocationSummaryOut

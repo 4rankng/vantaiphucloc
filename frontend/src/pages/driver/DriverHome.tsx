@@ -26,16 +26,16 @@ export function DriverHome() {
   const { data: config } = useSalaryConfig()
   const now = new Date()
   const defaultPeriod = useMemo(
-    () => getSalaryPeriodDates(now, { fromDay: config?.from_day ?? 1, toDay: config?.to_day ?? 31 }),
+    () => getSalaryPeriodDates(now, { fromDay: config?.fromDay ?? 1, toDay: config?.toDay ?? 31 }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [config?.from_day, config?.to_day],
+    [config?.fromDay, config?.toDay],
   )
   const [periodStart, setPeriodStart] = useState<Date>(defaultPeriod.startDate)
 
   // Recompute end date from start + config
   const currentPeriod = useMemo(
-    () => getSalaryPeriodDates(periodStart, { fromDay: config?.from_day ?? 1, toDay: config?.to_day ?? 31 }),
-    [periodStart, config?.from_day, config?.to_day],
+    () => getSalaryPeriodDates(periodStart, { fromDay: config?.fromDay ?? 1, toDay: config?.toDay ?? 31 }),
+    [periodStart, config?.fromDay, config?.toDay],
   )
 
   // Fetch driver earnings for current period
@@ -47,12 +47,12 @@ export function DriverHome() {
   useEffect(() => { setVisibleCount(PAGE_SIZE) }, [periodStart, filter])
 
   const handlePrevPeriod = useCallback(() => {
-    setPeriodStart(getSalaryPeriodDates(dayBefore(currentPeriod.startDate), { fromDay: config?.from_day ?? 1, toDay: config?.to_day ?? 31 }).startDate)
-  }, [currentPeriod.startDate, config?.from_day, config?.to_day])
+    setPeriodStart(getSalaryPeriodDates(dayBefore(currentPeriod.startDate), { fromDay: config?.fromDay ?? 1, toDay: config?.toDay ?? 31 }).startDate)
+  }, [currentPeriod.startDate, config?.fromDay, config?.toDay])
 
   const handleNextPeriod = useCallback(() => {
-    setPeriodStart(getSalaryPeriodDates(dayAfter(currentPeriod.endDate), { fromDay: config?.from_day ?? 1, toDay: config?.to_day ?? 31 }).startDate)
-  }, [currentPeriod.endDate, config?.from_day, config?.to_day])
+    setPeriodStart(getSalaryPeriodDates(dayAfter(currentPeriod.endDate), { fromDay: config?.fromDay ?? 1, toDay: config?.toDay ?? 31 }).startDate)
+  }, [currentPeriod.endDate, config?.fromDay, config?.toDay])
 
   // Trips in the current pay period — used by the monthly stat card (always
   // reflects the period total regardless of the active list filter).

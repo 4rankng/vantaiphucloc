@@ -12,7 +12,6 @@ export interface UserAccount {
   email?: string
   role: Role
   vendor: string
-  tractorPlate?: string
   isActive: boolean
   createdAt: string
 }
@@ -30,7 +29,6 @@ export function toUserAccount(raw: Record<string, unknown>): UserAccount {
     email: camel.email as string | undefined,
     role: camel.role as Role,
     vendor: (camel.vendor as string) || DEFAULT_VENDOR,
-    tractorPlate: camel.tractorPlate as string | undefined,
     isActive: camel.isActive as boolean,
     createdAt: (camel.createdAt as string) ?? '',
   }
@@ -55,7 +53,6 @@ export async function createUser(data: {
   role: Role
   password: string
   vendor?: string
-  tractorPlate?: string
 }): Promise<ApiResponse<UserAccount>> {
   try {
     const res = await api.post('/users', toSnake(data))

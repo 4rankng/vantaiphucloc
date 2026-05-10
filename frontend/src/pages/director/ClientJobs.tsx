@@ -14,7 +14,7 @@ export function ClientJobs() {
   const { data: pricings = [] } = usePricings({ clientId })
 
   const jobs = useMemo(
-    () => allWorkOrders.filter(j => j.client.id === clientId),
+    () => allWorkOrders.filter(j => j.partner.id === clientId),
     [allWorkOrders, clientId],
   )
 
@@ -29,7 +29,7 @@ export function ClientJobs() {
   )
 
   const totalRevenue = useMemo(() => jobs.reduce((s, j) => s + j.unitPrice, 0), [jobs])
-  const totalDriverEarning = useMemo(() => jobs.reduce((s, j) => s + j.earning, 0), [jobs])
+  const totalDriverEarning = useMemo(() => jobs.reduce((s, j) => s + j.driverSalary, 0), [jobs])
 
   const pricingJobCounts = useMemo(() => {
     const map = new Map<string, number>()
@@ -132,7 +132,7 @@ export function ClientJobs() {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium" style={{ color: 'var(--theme-text-primary)' }}>{job.driver.name}</span>
-            <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>• {job.tractorPlate}</span>
+            <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>• {job.driver.name}</span>
           </div>
           <div className="flex flex-wrap gap-1">
             {job.containers.map((c, i) => (

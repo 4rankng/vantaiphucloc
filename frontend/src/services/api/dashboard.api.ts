@@ -15,7 +15,6 @@ export async function getNotifications(): Promise<ApiResponse<unknown[]>> {
 export interface DriverSalarySummary {
   driverId: number
   driverName: string
-  tractorPlate: string | null
   totalJobs: number
   totalSalary: number
 }

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Plus, Phone, Truck, X, Car } from 'lucide-react'
+import { Plus, Phone, X, Car } from 'lucide-react'
 import { DataTablePro, type Column } from '@/components/shared/DataTablePro/DataTablePro'
 import { SettingsPageLayout } from '@/components/shared/SettingsPageLayout'
 import { useDrivers, useCreateDriver } from '@/hooks/use-queries'
@@ -13,11 +13,11 @@ export function DriverList() {
   const createDriver = useCreateDriver()
   const [search, setSearch] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [form, setForm] = useState({ fullName: '', phone: '', tractorPlate: '', vendor: 'Vận Tải Phúc Lộc' })
+  const [form, setForm] = useState({ fullName: '', phone: '' })
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
   const filtered = useMemo(
-    () => drivers.filter(d => !search || fuzzyMatch(search, `${d.fullName ?? ''} ${d.username} ${d.phone} ${d.tractorPlate ?? ''}`)),
+    () => drivers.filter(d => !search || fuzzyMatch(search, `${d.fullName ?? ''} ${d.username} ${d.phone}`)),
     [drivers, search],
   )
 
@@ -35,12 +35,12 @@ export function DriverList() {
     const fullName = form.fullName.trim()
     const username = fullName.toLowerCase().replace(/\s+/g, '').replace(/đ/g, 'd').normalize('NFD').replace(/[̀-ͯ]/g, '')
     createDriver.mutate(
-      { username, fullName, phone: form.phone.trim(), tractorPlate: form.tractorPlate.trim() || undefined, vendor: form.vendor.trim() || undefined },
+      { username, fullName, phone: form.phone.trim() },
       {
         onSuccess: () => {
           toast.success('Đã thêm tài xế', form.fullName)
           setDialogOpen(false)
-          setForm({ fullName: '', phone: '', tractorPlate: '', vendor: 'Vận Tải Phúc Lộc' })
+          setForm({ fullName: '', phone: '' })
           setFormErrors({})
         },
         onError: (err: unknown) => {
@@ -57,11 +57,6 @@ export function DriverList() {
       ? <span>{d.phone}</span>
       : <span className="text-xs font-medium px-2 py-0.5 rounded-md" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-brand-primary)' }}>+ Thêm SĐT</span>,
       sortable: true },
-    { key: 'plate', header: 'Biển số xe', accessor: d => d.tractorPlate
-      ? <span className="font-mono">{d.tractorPlate}</span>
-      : <span className="text-xs font-medium px-2 py-0.5 rounded-md" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-brand-primary)' }}>+ Thêm biển số</span>,
-      sortable: true, sortKey: d => d.tractorPlate ?? '' },
-    { key: 'vendor', header: 'Nhà xe', accessor: d => d.vendor ?? <span style={{ color: 'var(--theme-text-muted)' }}>—</span> },
   ]
 
   return (
@@ -79,7 +74,7 @@ export function DriverList() {
       <div className="flex items-center gap-3">
         <input
           type="text"
-          placeholder="Tìm tài xế, SĐT, biển số..."
+          placeholder="Tìm tài xế, SĐT..."
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="w-full max-w-md h-9 px-3 rounded-lg text-sm border"
@@ -129,17 +124,6 @@ export function DriverList() {
                   <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="0912345678" className="w-full h-9 pl-9 pr-3 rounded-lg text-sm border" style={{ background: 'var(--theme-bg-secondary)', borderColor: formErrors.phone ? 'var(--theme-status-error)' : 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }} />
                 </div>
                 {formErrors.phone && <p className="text-xs" style={{ color: 'var(--theme-status-error)' }}>{formErrors.phone}</p>}
-              </div>
-              <div className="space-y-1">
-                <label className="typo-form-label">Biển số xe đầu kéo</label>
-                <div className="relative">
-                  <Truck className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-                  <input value={form.tractorPlate} onChange={e => setForm(f => ({ ...f, tractorPlate: e.target.value }))} placeholder="VD: 29C-12345" className="w-full h-9 pl-9 pr-3 rounded-lg text-sm border" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }} />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="typo-form-label">Nhà xe</label>
-                <input value={form.vendor} onChange={e => setForm(f => ({ ...f, vendor: e.target.value }))} className="w-full h-9 px-3 rounded-lg text-sm border" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }} />
               </div>
             </div>
 

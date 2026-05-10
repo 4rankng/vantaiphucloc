@@ -82,7 +82,7 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
   }
 
   const handleOpenEdit = () => {
-    setEditClientId(String(trip.client.id))
+    setEditClientId(String(trip.partner.id))
     setEditPickup(trip.pickupLocation?.name ?? '')
     setEditDropoff(trip.dropoffLocation?.name ?? '')
     setEditDriverSalary(trip.driverSalary)
@@ -144,7 +144,7 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
 
   const handleToggleConfirmation = () => {
     if (!trip) return
-    if (!trip.isConfirmed) {
+    if (trip.status !== 'MATCHED') {
       setShowConfirmChot(true)
       return
     }
@@ -155,7 +155,7 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
     if (!trip) return
     toggleConfirmation(trip.id, {
       onSuccess: () => {
-        toast.success('Thành công', trip.isConfirmed ? 'Đã bỏ chốt chuyến' : 'Đã khớp chuyến')
+        toast.success('Thành công', trip.status === 'MATCHED' ? 'Đã bỏ chốt chuyến' : 'Đã khớp chuyến')
       },
       onError: () => {
         toast.error('Lỗi', 'Không thể thay đổi trạng thái chốt')
@@ -194,10 +194,10 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
           <span className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
             {trip.code ?? `#${trip.id}`}
           </span>
-          <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{trip.client.name}</span>
+          <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{trip.partner.name}</span>
         </div>
         <div className="flex items-center gap-2">
-          {!trip.isConfirmed && (
+          {trip.status !== 'MATCHED' && (
             <button onClick={handleOpenEdit} className="btn-secondary" aria-label="Sửa">
               <Pencil size={16} />
             </button>
@@ -217,7 +217,7 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <span className={`chip chip-${statusVariant}`}>{statusLabel}</span>
-              {trip.isConfirmed && (
+              {trip.status === 'MATCHED' && (
                 <span className="chip chip-success">
                   <Lock size={12} />
                   Đã khớp
@@ -226,14 +226,14 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
             </div>
             {!onClose && (
               <ConfirmationCheckbox
-                isConfirmed={trip.isConfirmed}
+                isConfirmed={trip.status === 'MATCHED'}
                 onToggle={handleToggleConfirmation}
                 disabled={toggling || trip.status === 'CANCELLED'}
                 label="Chốt chuyến"
               />
             )}
           </div>
-          {trip.isConfirmed && (
+          {trip.status === 'MATCHED' && (
             <div className="rounded-lg p-3 flex items-start gap-2 mb-4" style={{ background: 'var(--theme-status-success-light)' }}>
               <Lock size={14} style={{ color: 'var(--theme-status-success)' }} className="mt-0.5 shrink-0" />
               <p className="typo-meta" style={{ color: 'var(--theme-status-success-text)' }}>
@@ -245,7 +245,7 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
           <dl className="space-y-3">
             <div className="flex items-start justify-between">
               <dt className="typo-form-label flex items-center gap-2"><Building2 size={14} />Khách hàng</dt>
-              <dd className="typo-body text-right">{trip.client.name}</dd>
+              <dd className="typo-body text-right">{trip.partner.name}</dd>
             </div>
             <div className="flex items-start justify-between">
               <dt className="typo-form-label flex items-center gap-2"><Route size={14} />Cung đường</dt>
@@ -284,7 +284,7 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
           <div className="card p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="typo-h3">Đã khớp ({matchedJobs.length})</h3>
-              {!trip.isConfirmed && (
+              {trip.status !== 'MATCHED' && (
                 <button
                   onClick={() => setShowUnmatchDialog(true)}
                   className="btn-ghost text-xs"
@@ -304,9 +304,9 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
                       <ContBadge type={job.containers[0]?.workType ?? 'E20'} />
                       <span className="typo-mono font-semibold">{job.code}</span>
                     </div>
-                    <span className="typo-mono" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyFull(job.earning)}</span>
+                    <span className="typo-mono" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyFull(job.driverSalary)}</span>
                   </div>
-                  <p className="typo-meta">{job.driver.name} · {job.tractorPlate}</p>
+                  <p className="typo-meta">{job.driver.name}</p>
                 </div>
               ))}
             </div>
@@ -434,10 +434,10 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
                     </span>
                   </div>
                   <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-                    {job.driver.name} · {job.tractorPlate}
+                    {job.driver.name}
                   </p>
                   <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                    {job.client.name} · {job.pickupLocation?.name ?? ''} → {job.dropoffLocation?.name ?? ''}
+                    {job.partner.name} · {job.pickupLocation?.name ?? ''} → {job.dropoffLocation?.name ?? ''}
                   </p>
                 </button>
               ))}
@@ -487,7 +487,7 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
         onClose={() => setShowConfirmChot(false)}
         onConfirm={() => { setShowConfirmChot(false); doToggleConfirmation() }}
         title="Chốt chuyến?"
-        description={`Xác nhận chốt đơn hàng với ${trip?.client.name ?? 'khách hàng'}? Đơn đã chốt sẽ khoá chỉnh sửa.`}
+        description={`Xác nhận chốt đơn hàng với ${trip?.partner.name ?? 'khách hàng'}? Đơn đã chốt sẽ khoá chỉnh sửa.`}
         confirmLabel="Chốt chuyến"
       />
 

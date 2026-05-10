@@ -64,13 +64,13 @@ function ChuyenCard({
         </button>
       </div>
       <p className="text-xs truncate mb-1.5" style={{ color: 'var(--theme-text-secondary)' }}>
-        {wo.client.name} · {resolveRoute(wo)}
+        {wo.partner.name} · {resolveRoute(wo)}
       </p>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-        {wo.tractorPlate && (
+        {wo.partner.name && (
           <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
             <Truck className="h-3 w-3 shrink-0" />
-            {wo.tractorPlate}
+            {wo.partner.name}
           </span>
         )}
         {types && (
@@ -138,7 +138,7 @@ function DonHangCard({
     >
       <div className="flex items-start justify-between gap-1 mb-1">
         <p className="text-sm font-semibold leading-tight truncate" style={{ color: 'var(--theme-text-primary)' }}>
-          {trip.code ? `${trip.code} · ` : ''}{trip.client.name}
+          {trip.code ? `${trip.code} · ` : ''}{trip.partner.name}
         </p>
         <div className="flex items-center gap-1 shrink-0">
           {isHighlighted && matchScore !== undefined && (
@@ -278,7 +278,7 @@ export function MatchSuggestionPanel({
 
     const map = new Map<number, { score: number; confidence: 'full' | 'partial' | 'none' }>()
     const woRouteLower = wo.route.toLowerCase()
-    const woClientLower = wo.client.name.toLowerCase()
+    const woClientLower = wo.partner.name.toLowerCase()
     const woContainers = new Set(wo.containers.map(c => c.containerNumber?.toLowerCase()).filter(Boolean))
     const woTypes = new Set(wo.containers.map(c => c.workType))
 
@@ -286,7 +286,7 @@ export function MatchSuggestionPanel({
       let matched = 0
       const total = 3
 
-      if (trip.client.name.toLowerCase() === woClientLower) matched++
+      if (trip.partner.name.toLowerCase() === woClientLower) matched++
       if (trip.route.toLowerCase() === woRouteLower) matched++
 
       const tripContainers = new Set(trip.containers.map(c => c.containerNumber?.toLowerCase()).filter(Boolean))
@@ -318,7 +318,7 @@ export function MatchSuggestionPanel({
 
   const openEditWO = (e: React.MouseEvent, wo: WorkOrder) => {
     e.stopPropagation()
-    setWoClient(wo.client.name)
+    setWoClient(wo.partner.name)
     setWoRoute(wo.route)
     setWoDriver(wo.driver.name)
     setEditWO(wo)
@@ -332,7 +332,7 @@ export function MatchSuggestionPanel({
 
   const openEditTrip = (e: React.MouseEvent, trip: TripOrder) => {
     e.stopPropagation()
-    setTripClient(trip.client.name)
+    setTripClient(trip.partner.name)
     setTripRoute(trip.route)
     setEditTrip(trip)
   }

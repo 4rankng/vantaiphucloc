@@ -13,7 +13,6 @@ from fastapi.responses import StreamingResponse
 
 from app.contexts.operations.application import (
     BatchCreateWorkOrders,
-    CancelWorkOrder,
     CreateWorkOrder,
     CurrentUserContext,
     GetWorkOrder,
@@ -30,7 +29,6 @@ from app.contexts.operations.domain.entities import WorkOrder
 from app.contexts.operations.domain.value_objects import WorkOrderStatus
 from app.contexts.operations.interface.dependencies import (
     get_batch_create_work_orders,
-    get_cancel_work_order,
     get_create_work_order,
     get_get_work_order,
     get_list_work_orders,
@@ -45,7 +43,6 @@ from app.schemas.base import PaginatedResponse
 from app.schemas.domain import (
     BatchWorkOrderCreate,
     BatchWorkOrderResult,
-    CancelRequest,
     ContainerOCRRequest,
     ContainerOCRResponse,
     ContainerOut,
@@ -54,12 +51,12 @@ from app.schemas.domain import (
     WorkOrderUpdate,
 )
 from app.core.summaries import (
-    get_client_summary,
     get_driver_summary,
     get_location_summary,
-    load_client_summaries,
+    get_partner_summary,
     load_driver_summaries,
     load_location_summaries,
+    load_partner_summaries,
 )
 from app.utils.iso6346 import normalize_container_number as _norm
 
@@ -75,30 +72,22 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
-def _wo_to_out(w: WorkOrder, clients, drivers, locations) -> WorkOrderOut:
+def _wo_to_out(w: WorkOrder, partners, drivers, locations) -> WorkOrderOut:
     return WorkOrderOut(
         id=int(w.id),  # type: ignore[arg-type]
-        client=get_client_summary(clients, w.client_id),
+        partner=get_partner_summary(partners, w.partner_id),
         code=w.code,
-        route=w.route,
         pickup_location=get_location_summary(locations, w.pickup_location_id),
         dropoff_location=get_location_summary(locations, w.dropoff_location_id),
         driver=get_driver_summary(drivers, w.driver_id),
-        tractor_plate=w.tractor_plate,
         gps_lat=w.gps_lat,
         gps_lng=w.gps_lng,
         gps_address=w.gps_address,
         unit_price=w.unit_price,
         driver_salary=w.driver_salary,
         allowance=w.allowance,
-        earning=w.earning,
         pricing_id=w.pricing_id,
         status=w.status,
-        is_locked=w.is_locked,
-        locked_at=w.locked_at,
-        locked_by=w.locked_by,
-        created_at=w.created_at,
-        updated_at=w.updated_at,
         containers=[
             ContainerOut(
                 id=int(c.id),  # type: ignore[arg-type]
@@ -112,6 +101,8 @@ def _wo_to_out(w: WorkOrder, clients, drivers, locations) -> WorkOrderOut:
             )
             for c in w.containers
         ],
+        created_at=w.created_at,
+        updated_at=w.updated_at,
     )
 
 
@@ -122,20 +113,19 @@ async def _load_one(session, w: WorkOrder) -> WorkOrderOut:
 async def _load_many(session, wos: list[WorkOrder]) -> list[WorkOrderOut]:
     if not wos:
         return []
-    clients = await load_client_summaries(session, {w.client_id for w in wos})
+    partners = await load_partner_summaries(session, {w.partner_id for w in wos})
     drivers = await load_driver_summaries(session, {w.driver_id for w in wos})
     locations = await load_location_summaries(
         session,
         {w.pickup_location_id for w in wos}
         | {w.dropoff_location_id for w in wos},
     )
-    return [_wo_to_out(w, clients, drivers, locations) for w in wos]
+    return [_wo_to_out(w, partners, drivers, locations) for w in wos]
 
 
 def _hide_salary_fields(wo_out: WorkOrderOut) -> None:
     wo_out.driver_salary = 0
     wo_out.allowance = 0
-    wo_out.earning = 0
 
 
 def _container_inputs(items) -> list[WorkOrderContainerInput]:
@@ -173,8 +163,8 @@ async def _enqueue_notification(w: WorkOrder) -> None:
         await enqueue(
             "send_notification_task",
             user_id=None,
-            title="Phiếu làm việc mới",
-            message=f"{w.code or w.id} đã được tạo (driver_id={w.driver_id})",
+            title="Phieu lam viec moi",
+            message=f"{w.code or w.id} da duoc tao (driver_id={w.driver_id})",
             channel="in_app",
         )
     except Exception:
@@ -209,12 +199,11 @@ async def create_work_order_endpoint(
     try:
         w = await use_case(
             WorkOrderCreateInput(
-                client_id=body.client_id,
-                route=body.route,
+                partner_id=body.partner_id,
                 pickup_location_id=body.pickup_location_id,
                 dropoff_location_id=body.dropoff_location_id,
                 driver_id=body.driver_id,
-                tractor_plate=body.tractor_plate,
+                vehicle_id=body.vehicle_id,
                 containers=_container_inputs(body.containers),
                 gps_lat=body.gps_lat,
                 gps_lng=body.gps_lng,
@@ -234,7 +223,6 @@ async def create_work_order_endpoint(
 @router.get("/work-orders", response_model=PaginatedResponse[WorkOrderOut])
 async def list_work_orders(
     driver_id: int | None = None,
-    tractor_plate: str | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
     status: str | None = None,
@@ -248,7 +236,7 @@ async def list_work_orders(
 
     items, total = await use_case(WorkOrderListFilters(
         page=page, page_size=page_size,
-        driver_id=driver_id, tractor_plate=tractor_plate,
+        driver_id=driver_id,
         date_from=date_from, date_to=date_to, status=status,
     ))
     out = await _load_many(use_case.repo.session, items)  # type: ignore[attr-defined]
@@ -297,12 +285,11 @@ async def batch_create_work_orders(
 ):
     items_input = [
         WorkOrderCreateInput(
-            client_id=item.client_id,
-            route=item.route,
+            partner_id=item.partner_id,
             pickup_location_id=item.pickup_location_id,
             dropoff_location_id=item.dropoff_location_id,
             driver_id=item.driver_id,
-            tractor_plate=item.tractor_plate,
+            vehicle_id=item.vehicle_id,
             containers=_container_inputs(item.containers),
             gps_lat=item.gps_lat,
             gps_lng=item.gps_lng,
@@ -343,7 +330,7 @@ async def ocr_container_number(
         return ContainerOCRResponse(
             success=False,
             container_number=None,
-            error="Đã hết số lần quét OCR. Vui lòng nhập số container thủ công.",
+            error="Da het so lan quet OCR. Vui long nhap so container thu cong.",
             attempts_remaining=0,
         )
 
@@ -353,7 +340,7 @@ async def ocr_container_number(
         return ContainerOCRResponse(
             success=False,
             container_number=None,
-            error="Dữ liệu hình ảnh không hợp lệ",
+            error="Du lieu hinh anh khong hop le",
             attempts_remaining=attempts_remaining,
         )
 
@@ -408,19 +395,17 @@ async def update_work_order(
         w = await use_case(
             work_order_id,
             WorkOrderUpdateInput(
-                client_id=body.client_id,
-                route=body.route,
+                partner_id=body.partner_id,
                 pickup_location_id=body.pickup_location_id,
                 dropoff_location_id=body.dropoff_location_id,
                 driver_id=body.driver_id,
-                tractor_plate=body.tractor_plate,
+                vehicle_id=body.vehicle_id,
                 containers=containers_input,
                 gps_lat=body.gps_lat,
                 gps_lng=body.gps_lng,
                 unit_price=body.unit_price,
                 driver_salary=body.driver_salary,
                 allowance=body.allowance,
-                earning=body.earning,
                 status=body.status,
             ),
             _user_ctx(current_user),
@@ -432,19 +417,3 @@ async def update_work_order(
     except Exception as exc:
         _logger.exception("Failed to load WO#%s after update", work_order_id)
         raise translate(exc)
-
-
-@router.put("/work-orders/{work_order_id:int}/cancel", response_model=WorkOrderOut)
-async def cancel_work_order(
-    work_order_id: int,
-    body: CancelRequest,
-    request: Request,
-    current_user: User = Depends(require_permission("cancel", "WorkOrder")),
-    use_case: CancelWorkOrder = Depends(get_cancel_work_order),
-):
-    set_audit_reason(body.reason)
-    try:
-        w = await use_case(work_order_id, user=_user_ctx(current_user))
-    except Exception as exc:
-        raise translate(exc)
-    return await _load_one(use_case.session, w)

@@ -10,11 +10,9 @@ import { StatusBadge } from '@/components/shared/StatusBadge'
 import { fuzzyMatch } from '@/lib/search-utils'
 import { useToast } from '@/components/atoms/Toast'
 import {
-  useClients, useCreateClient, useUpdateClient, useDeleteClient,
-  useVendors, useCreateVendor, useUpdateVendor, useDeleteVendor,
+  usePartners, useCreatePartner, useUpdatePartner, useDeletePartner,
 } from '@/hooks/use-queries'
-import type { Client, ClientType } from '@/data/domain'
-import type { Vendor, VendorType } from '@/services/api/vendors.api'
+import type { Partner } from '@/data/domain'
 import { useIsMobile } from '@/hooks/use-mobile'
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
@@ -25,20 +23,20 @@ interface UnifiedPartner {
   id: number
   kind: PartnerKind
   name: string
-  type: ClientType | VendorType
+  type: 'company' | 'individual'
   phone: string
   taxCode: string
   code: string
   address: string
   contactPerson: string
-  raw: Client | Vendor
+  raw: Partner
 }
 
 // ─── Form state ─────────────────────────────────────────────────────────────────
 
 type PartnerForm = {
   name: string
-  type: ClientType | VendorType
+  type: 'company' | 'individual'
   taxCode: string
   address: string
   phone: string
@@ -81,32 +79,19 @@ function pickAvatarColor(name: string): string {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
 }
 
-function toUnified(clients: Client[], vendors: Vendor[]): UnifiedPartner[] {
-  const clientRows: UnifiedPartner[] = clients.map(c => ({
-    id: c.id,
-    kind: 'client' as const,
-    name: c.name,
-    type: c.type,
-    phone: c.phone,
-    taxCode: c.taxCode ?? '',
-    code: c.code ?? '',
-    address: c.address ?? '',
-    contactPerson: c.contactPerson ?? '',
-    raw: c,
+function toUnified(partners: Partner[]): UnifiedPartner[] {
+  return partners.map(p => ({
+    id: p.id,
+    kind: (p.partnerType === 'vendor' ? 'vendor' : 'client') as PartnerKind,
+    name: p.name,
+    type: 'company' as const,
+    phone: p.phone ?? '',
+    taxCode: p.taxCode ?? '',
+    code: p.code ?? '',
+    address: p.address ?? '',
+    contactPerson: p.contactPerson ?? '',
+    raw: p,
   }))
-  const vendorRows: UnifiedPartner[] = vendors.map(v => ({
-    id: v.id,
-    kind: 'vendor' as const,
-    name: v.name,
-    type: v.type ?? 'company',
-    phone: v.phone ?? '',
-    taxCode: v.taxCode ?? '',
-    code: '',
-    address: v.address ?? '',
-    contactPerson: v.contactPerson ?? '',
-    raw: v,
-  }))
-  return [...clientRows, ...vendorRows]
 }
 
 // ─── Detail dialog ──────────────────────────────────────────────────────────────
@@ -179,10 +164,8 @@ function FormDialog({ open, onClose, kind, editing }: FormDialogProps) {
   const toast = useToast()
   const [form, setForm] = useState<PartnerForm>(EMPTY_FORM)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const createClient = useCreateClient()
-  const updateClient = useUpdateClient()
-  const createVendor = useCreateVendor()
-  const updateVendor = useUpdateVendor()
+  const createPartner = useCreatePartner()
+  const updatePartner = useUpdatePartner()
 
   useEffect(() => {
     if (open) {
@@ -223,21 +206,13 @@ function FormDialog({ open, onClose, kind, editing }: FormDialogProps) {
       onClose()
     }
     if (editing) {
-      if (editing.kind === 'client') {
-        updateClient.mutate({ id: editing.id, data: form as Partial<Client> }, { onSuccess })
-      } else {
-        updateVendor.mutate({ id: editing.id, data: form }, { onSuccess })
-      }
+      updatePartner.mutate({ id: editing.id, data: form as Partial<Partner> }, { onSuccess })
     } else {
-      if (kind === 'client') {
-        createClient.mutate(form as Omit<Client, 'id'>, { onSuccess })
-      } else {
-        createVendor.mutate(form, { onSuccess })
-      }
+      createPartner.mutate(form as Omit<Partner, 'id'>, { onSuccess })
     }
-  }, [editing, kind, form, createClient, createVendor, updateClient, updateVendor, onClose, toast])
+  }, [editing, kind, form, createPartner, updatePartner, onClose, toast])
 
-  const isPending = createClient.isPending || updateClient.isPending || createVendor.isPending || updateVendor.isPending
+  const isPending = createPartner.isPending || updatePartner.isPending
   const label = kind === 'client' ? 'khách hàng' : 'nhà thầu'
 
   return (
@@ -311,8 +286,7 @@ interface DeleteDialogProps {
 
 function DeleteDialog({ partner, onClose }: DeleteDialogProps) {
   const toast = useToast()
-  const deleteClient = useDeleteClient()
-  const deleteVendor = useDeleteVendor()
+  const deletePartner = useDeletePartner()
 
   const handleDelete = useCallback(() => {
     if (!partner) return
@@ -325,14 +299,10 @@ function DeleteDialog({ partner, onClose }: DeleteDialogProps) {
       toast.error('Không thể xoá', detail ?? `${partner.name} có dữ liệu liên quan, không thể xoá.`)
       onClose()
     }
-    if (partner.kind === 'client') {
-      deleteClient.mutate(partner.id, { onSuccess: onDone, onError })
-    } else {
-      deleteVendor.mutate(partner.id, { onSuccess: onDone, onError })
-    }
-  }, [partner, deleteClient, deleteVendor, onClose, toast])
+    deletePartner.mutate(partner.id, { onSuccess: onDone, onError })
+  }, [partner, deletePartner, onClose, toast])
 
-  const isPending = deleteClient.isPending || deleteVendor.isPending
+  const isPending = deletePartner.isPending
   const label = partner?.kind === 'client' ? 'khách hàng' : 'nhà thầu'
 
   return (
@@ -357,8 +327,7 @@ function DeleteDialog({ partner, onClose }: DeleteDialogProps) {
 // ─── Page ───────────────────────────────────────────────────────────────────────
 
 export function ClientsAndVendors() {
-  const { data: clients = [], isLoading: loadingClients } = useClients()
-  const { data: vendors = [], isLoading: loadingVendors } = useVendors()
+  const { data: partnersRaw = [], isLoading: loadingPartners } = usePartners()
 
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('ALL')
@@ -368,10 +337,10 @@ export function ClientsAndVendors() {
   const [editing, setEditing] = useState<UnifiedPartner | null>(null)
   const [deleting, setDeleting] = useState<UnifiedPartner | null>(null)
 
-  const loading = loadingClients || loadingVendors
+  const loading = loadingPartners
   const isMobile = useIsMobile(1024)
 
-  const partners = useMemo(() => toUnified(clients, vendors), [clients, vendors])
+  const partners = useMemo(() => toUnified(partnersRaw), [partnersRaw])
 
   const partnerCounts = useMemo(() => ({
     all: partners.length,
