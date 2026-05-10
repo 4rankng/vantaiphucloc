@@ -2,6 +2,7 @@
 
 from datetime import date
 from uuid import uuid4
+from conftest import _container_number
 
 
 class TestFullFreightPipeline:
@@ -57,7 +58,7 @@ class TestFullFreightPipeline:
                 "dropoff_location_id": dropoff["id"],
                 "driver_id": 4,
                 "tractor_plate": "29C-12345",
-                "containers": [{"container_number": f"ITPL{uid}", "work_type": "E20"}],
+                "containers": [{"container_number": _container_number(), "work_type": "E20"}],
             },
         )
         assert wo_resp.status_code in (200, 201)
@@ -79,7 +80,7 @@ class TestFullFreightPipeline:
                 "driver_salary": 400000,
                 "allowance": 80000,
                 "revenue": 1500000,
-                "containers": [{"container_number": f"ITPL{uid}", "work_type": "E20"}],
+                "containers": [{"container_number": _container_number(), "work_type": "E20"}],
             },
         )
         assert to_resp.status_code in (200, 201)
@@ -185,7 +186,7 @@ class TestReconciliationCycle:
                 "dropoff_location_id": dropoff["id"],
                 "driver_id": 4,
                 "tractor_plate": "29C-12345",
-                "containers": [{"container_number": f"ITRC{uid}", "work_type": "E20"}],
+                "containers": [{"container_number": _container_number(), "work_type": "E20"}],
             },
         )
         wo = wo_resp.json()
@@ -204,7 +205,7 @@ class TestReconciliationCycle:
                 "driver_salary": 300000,
                 "allowance": 50000,
                 "revenue": 1000000,
-                "containers": [{"container_number": f"ITRC{uid}", "work_type": "E20"}],
+                "containers": [{"container_number": _container_number(), "work_type": "E20"}],
             },
         )
         to = to_resp.json()

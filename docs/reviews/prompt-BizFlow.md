@@ -1,8 +1,8 @@
-Act as a Senior QA Engineer. Your task is to comprehensively evaluate the functionality and usability of the logistics web application at http://localhost:5174/. You are authorized to seed the database with any necessary test data to facilitate this testing.
+Act as a Senior QA Engineer. Your task is to comprehensively evaluate the functionality and usability of the logistics web application at https://phucloc.tingting.vip/ (currently test env). You are authorized to seed the database with any necessary test data to facilitate this testing.
 
 Context & Resources:
 
-Target URL: http://localhost:5174/
+Target URL: https://phucloc.tingting.vip/ (test env)
 User Roles: Kế toán (Accountant), Tài xế (Driver), Giám đốc (Director)
 Test Data: Customer Excel files for creating đơn hàng are located in /Users/dev/Documents/vantaiphucloc/docs/don-hang.
 Core Business Flows to Test:

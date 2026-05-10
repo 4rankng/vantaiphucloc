@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from redis.asyncio import Redis
 
@@ -38,14 +38,16 @@ router = APIRouter(prefix="/auth")
 
 @router.post("/login", response_model=LoginResponse)
 async def login(
+    request: Request,
     body: LoginRequest,
     repo: UserRepository = Depends(get_user_repository),
     use_case: AuthenticateUser = Depends(get_authenticate_user),
     redis: Redis = Depends(get_redis),
 ):
+    client_ip = request.client.host if request.client else "unknown"
     limiter = RateLimiter(redis)
     await limiter.check(
-        f"login:{body.username}",
+        f"login:{client_ip}:{body.username}",
         settings.RATE_LIMIT_LOGIN_MAX,
         settings.RATE_LIMIT_LOGIN_WINDOW,
     )

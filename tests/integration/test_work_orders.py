@@ -2,6 +2,7 @@
 
 from datetime import date
 from uuid import uuid4
+from conftest import _container_number
 
 
 class TestWorkOrders:
@@ -97,7 +98,7 @@ class TestWorkOrders:
                         "dropoff_location_id": dropoff["id"],
                         "driver_id": 4,
                         "tractor_plate": "29C-12345",
-                        "containers": [{"container_number": f"BTCH{uid}1", "work_type": "E20"}],
+                        "containers": [{"container_number": _container_number(), "work_type": "E20"}],
                     },
                     {
                         "client_id": client["id"],
@@ -106,7 +107,7 @@ class TestWorkOrders:
                         "dropoff_location_id": dropoff["id"],
                         "driver_id": 4,
                         "tractor_plate": "29C-12345",
-                        "containers": [{"container_number": f"BTCH{uid}2", "work_type": "E20"}],
+                        "containers": [{"container_number": _container_number(), "work_type": "E20"}],
                     },
                 ]
             },
