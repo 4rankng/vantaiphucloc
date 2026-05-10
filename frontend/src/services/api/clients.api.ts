@@ -34,9 +34,9 @@ export async function updateClient(id: number, data: Partial<Client>): Promise<A
   }
 }
 
-export async function deleteClient(id: number): Promise<ApiResponse<{ success: boolean }>> {
+export async function deleteClient(id: number, reason = 'Xoá đối tác'): Promise<ApiResponse<{ success: boolean }>> {
   try {
-    await api.delete(`/clients/${id}`)
+    await api.delete(`/clients/${id}`, { data: { reason } })
     return ok({ success: true })
   } catch (err) {
     return fail(err)

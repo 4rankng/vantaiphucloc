@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
@@ -8,6 +8,7 @@ import { Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react'
 export function Login() {
   const { login } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -29,7 +30,10 @@ export function Login() {
           director: '/director',
           superadmin: '/superadmin',
         }
-        navigate(roleRoutes[loggedInUser.role] ?? '/driver', { replace: true })
+        const from = (location.state as { from?: string } | null)?.from ?? localStorage.getItem('ttransport_redirect')
+        localStorage.removeItem('ttransport_redirect')
+        const defaultRoute = roleRoutes[loggedInUser.role] ?? '/driver'
+        navigate(from ?? defaultRoute, { replace: true })
       }
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status

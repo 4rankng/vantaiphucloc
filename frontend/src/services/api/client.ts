@@ -71,6 +71,7 @@ api.interceptors.response.use(
 
       if (!refreshToken) {
         clearTokens()
+        localStorage.setItem('ttransport_redirect', window.location.pathname + window.location.search)
         window.location.href = '/'
         return Promise.reject(error)
       }
@@ -103,6 +104,7 @@ api.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null)
         clearTokens()
+        localStorage.setItem('ttransport_redirect', window.location.pathname + window.location.search)
         window.location.href = '/'
         return Promise.reject(refreshError)
       } finally {
