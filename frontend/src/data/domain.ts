@@ -1,11 +1,11 @@
 export type Role = 'superadmin' | 'director' | 'accountant' | 'driver'
 export type TrailerType = '20FT' | '40FT'
 export type JobStatus = 'DRAFT' | 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
-export type ClientType = 'company' | 'individual'
+export type PartnerType = 'client' | 'vendor' | 'both'
+export type PartnerRole = 'shipping_line' | 'factory' | 'transport' | 'other'
 export type WorkType = 'E20' | 'E40' | 'F20' | 'F40'
-export type WorkOrderStatus = 'PENDING' | 'MATCHED' | 'COMPLETED'
-export type TripOrderStatus = 'DRAFT' | 'PENDING' | 'COMPLETED' | 'CANCELLED'
-export type SalaryPeriodStatus = 'OPEN' | 'CALCULATED' | 'PAID'
+export type WorkOrderStatus = 'PENDING' | 'MATCHED'
+export type TripOrderStatus = 'PENDING' | 'MATCHED'
 
 export interface ContainerItem {
   containerNumber: string
@@ -42,28 +42,33 @@ export interface Driver {
   username: string
   fullName: string | null
   phone: string
-  tractorPlate: string | null
-  vendor: string | null
   createdAt: string
   updatedAt: string
 }
 
-export interface Client {
+export interface Vehicle {
+  id: number
+  plate: string
+  driverId: number
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Partner {
   id: number
   code?: string
   name: string
-  type: ClientType
+  partnerType: PartnerType
+  partnerRole?: PartnerRole
   taxCode?: string
   address?: string
-  phone: string
+  phone?: string
   contactPerson?: string
-  outstandingDebt: number
   isActive?: boolean
   createdAt?: string
+  updatedAt?: string
 }
-
-// TODO: Add when partner management feature is implemented
-// export interface Partner { ... }
 
 // TODO: Add when job management feature is implemented
 // export interface Job { ... }
@@ -84,7 +89,7 @@ export interface Client {
 // Domain DB stores only FKs; backend composes these via batch JOIN. See
 // BizLogic.md §4 for the rationale.
 
-export interface ClientSummary {
+export interface PartnerSummary {
   id: number
   code?: string | null
   name: string
@@ -99,17 +104,11 @@ export interface DriverSummary {
   id: number
   name: string
   phone?: string | null
-  tractorPlate?: string | null
 }
 
-export interface Route {
+export interface VehicleSummary {
   id: number
-  route: string
-  pickupLocation: LocationSummary
-  dropoffLocation: LocationSummary
-  isActive: boolean
-  createdAt: string
-  updatedAt: string
+  plate: string
 }
 
 // TODO: Add when reporting feature is implemented
@@ -122,19 +121,17 @@ export interface WorkOrder {
   id: number
   code?: string
   containers: ContainerItem[]
-  client: ClientSummary
-  route: string
+  partner: PartnerSummary
   pickupLocation: LocationSummary
   dropoffLocation: LocationSummary
   driver: DriverSummary
-  tractorPlate: string
+  vehicleId?: number | null
   gpsLat: number
   gpsLng: number
   gpsAddress?: string
   unitPrice: number
   driverSalary: number
   allowance: number
-  earning: number
   pricingId?: number
   createdAt: string
   status: WorkOrderStatus
@@ -152,7 +149,7 @@ export interface PricingLine {
 
 export interface Pricing {
   id: number
-  client: ClientSummary
+  partner: PartnerSummary
   workType: WorkType
   pickupLocation: LocationSummary
   dropoffLocation: LocationSummary
@@ -170,8 +167,7 @@ export interface TripOrder {
   id: number
   code?: string
   tripDate: string
-  client: ClientSummary
-  route: string
+  partner: PartnerSummary
   pickupLocation: LocationSummary
   dropoffLocation: LocationSummary
   containers: TripOrderContainerItem[]
@@ -179,27 +175,9 @@ export interface TripOrder {
   unitPrice: number
   driverSalary: number
   allowance: number
-  revenue: number
   matchedWorkOrderIds: number[]
   status: TripOrderStatus
-  isConfirmed: boolean
-  confirmedBy?: number
-  confirmedAt?: string
   createdAt: string
-}
-
-export interface SalaryPeriod {
-  id: number
-  driver: DriverSummary
-  startDate: string
-  endDate: string
-  workOrderCount: number
-  pricePerOrder: number
-  totalSalary: number
-  totalAllowance: number
-  totalDeduction: number
-  netPay: number
-  status: SalaryPeriodStatus
 }
 
 export interface ApiResponse<T> {
@@ -373,24 +351,16 @@ export function getWorkOrderStatusBadge(status: WorkOrderStatus): { variant: 'de
   switch (status) {
     case 'PENDING': return { variant: 'warning', label: 'Chờ khớp' }
     case 'MATCHED': return { variant: 'success', label: 'Đã khớp' }
-    case 'COMPLETED': return { variant: 'success', label: 'Đã khớp' }
   }
 }
 
 export function getTripOrderStatusBadge(status: TripOrderStatus): { variant: 'default'|'success'|'warning'|'danger'|'info'|'neutral'; label: string } {
   switch (status) {
-    case 'DRAFT': return { variant: 'neutral', label: 'Nháp' }
     case 'PENDING': return { variant: 'warning', label: 'Chờ khớp' }
     case 'MATCHED': return { variant: 'success', label: 'Đã khớp' }
-    case 'COMPLETED': return { variant: 'success', label: 'Đã khớp' }
-    case 'CANCELLED': return { variant: 'danger', label: 'Đã huỷ' }
   }
 }
 
-export function getSalaryStatusBadge(status: SalaryPeriodStatus): { variant: 'default'|'success'|'warning'|'danger'|'info'|'neutral'; label: string } {
-  switch (status) {
-    case 'OPEN': return { variant: 'warning', label: 'Chờ tính' }
-    case 'CALCULATED': return { variant: 'info', label: 'Đã tính' }
-    case 'PAID': return { variant: 'success', label: 'Đã trả' }
-  }
+export function getSalaryStatusBadge(status: string): { variant: 'default'|'success'|'warning'|'danger'|'info'|'neutral'; label: string } {
+  return { variant: 'neutral', label: status }
 }
