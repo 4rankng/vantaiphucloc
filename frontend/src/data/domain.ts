@@ -314,6 +314,32 @@ export interface Location {
   updatedAt: string
 }
 
+export type LocationAliasStatus = 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'MERGED'
+
+export interface LocationAlias {
+  id: number
+  locationId: number
+  alias: string
+  aliasNormalized: string
+  source: string
+  status: LocationAliasStatus
+  confirmedById?: number | null
+  confirmedAt?: string | null
+  rejectedById?: number | null
+  rejectedAt?: string | null
+  mergeTargetLocationId?: number | null
+  note?: string | null
+  createdAt: string
+  createdById?: number | null
+}
+
+export interface MergeLocationsResponse {
+  sourceLocationId: number
+  targetLocationId: number
+  aliasesMoved: number
+  fkUpdates: Record<string, number>
+}
+
 export function formatCurrency(amount: number | undefined | null): string {
   if (amount == null) return '—'
   return amount.toLocaleString('vi-VN') + ' ₫'
