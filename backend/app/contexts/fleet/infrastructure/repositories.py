@@ -47,8 +47,6 @@ class SqlDriverRepository(DriverRepository):
         phone: str,
         hashed_password: str,
         full_name: str | None = None,
-        vendor: str | None,
-        tractor_plate: str | None,
     ) -> Driver:
         row = DriverORM(
             username=username,
@@ -56,8 +54,6 @@ class SqlDriverRepository(DriverRepository):
             hashed_password=hashed_password,
             role="driver",
             full_name=full_name,
-            vendor=vendor,
-            tractor_plate=tractor_plate,
             is_active=True,
         )
         self.session.add(row)
