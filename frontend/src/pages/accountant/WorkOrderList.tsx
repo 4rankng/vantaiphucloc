@@ -17,7 +17,7 @@ import type { AutoMatchResponse } from '@/services/api/tripOrders.api'
 import { useToast } from '@/components/atoms/Toast'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useMonthParams } from './use-month-params'
-import type { WorkOrder, WorkOrderMatchScore } from '@/data/domain'
+import type { WorkOrderMatchScore } from '@/data/domain'
 
 type StatusFilter = 'all' | 'PENDING' | 'COMPLETED'
 
@@ -218,26 +218,43 @@ export function WorkOrderList() {
   )
 
   // ── Filter bar (shared between mobile and desktop) ──
+  // On mobile (<lg): stack month navigator + pending counter on row 1, search/chips on row 2.
+  // On desktop (≥lg): single row with month navigator pinned left, search/chips center, counter right.
   const filterBar = (
     <div
-      className="flex items-center gap-3 px-3 py-2 border-b"
+      className="px-3 py-2 border-b flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3"
       style={{ borderColor: 'var(--theme-border-default)' }}
     >
-      <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
-      <div className="flex-1" />
-      <FilterToolbar
-        search={search}
-        onSearchChange={setSearch}
-        searchPlaceholder="Tìm mã, biển số, container..."
-        statusOptions={STATUS_OPTIONS}
-        selectedStatus={statusFilter}
-        onStatusChange={(s) => setStatusFilter(s as StatusFilter)}
-        onClearFilters={handleClearFilters}
-        compact
-      />
+      {/* Month navigator + counter (counter only on mobile in this row; on desktop counter goes to the right) */}
+      <div className="flex items-center gap-2 lg:contents">
+        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
+        {pendingCount > 0 && (
+          <span
+            className="lg:hidden ml-auto text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
+            style={{ background: 'color-mix(in srgb, var(--theme-status-warning) 12%, transparent)', color: 'var(--theme-status-warning)' }}
+          >
+            {pendingCount} chờ khớp
+          </span>
+        )}
+      </div>
+
+      {/* Search + chips — full width on mobile, flex-1 between navigator and counter on desktop */}
+      <div className="min-w-0 lg:flex-1">
+        <FilterToolbar
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Tìm mã, biển số, container..."
+          statusOptions={STATUS_OPTIONS}
+          selectedStatus={statusFilter}
+          onStatusChange={(s) => setStatusFilter(s as StatusFilter)}
+          onClearFilters={handleClearFilters}
+        />
+      </div>
+
+      {/* Counter on desktop only — appears at far right */}
       {pendingCount > 0 && (
         <span
-          className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0"
+          className="hidden lg:inline-flex text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
           style={{ background: 'color-mix(in srgb, var(--theme-status-warning) 12%, transparent)', color: 'var(--theme-status-warning)' }}
         >
           {pendingCount} chờ khớp
