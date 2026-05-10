@@ -33,40 +33,55 @@ class WorkOrderStatus(str, Enum):
 class TripOrderStatus(str, Enum):
     DRAFT = "DRAFT"
     PENDING = "PENDING"
+    CONFIRMED = "CONFIRMED"
     COMPLETED = "COMPLETED"
     CANCELLED = "CANCELLED"
 
 
 # ---------------------------------------------------------------------------
-# Vendor
+# Partner (unified clients + vendors)
 # ---------------------------------------------------------------------------
 
-class VendorCreate(BaseModel):
+class PartnerCreate(BaseModel):
     name: str
-    type: Literal["company", "individual"] | None = None
+    code: str | None = None
+    partner_type: Literal["client", "vendor", "both"]
+    partner_role: str | None = None
     phone: str | None = None
     tax_code: str | None = None
     address: str | None = None
     contact_person: str | None = None
 
 
-class VendorUpdate(BaseModel):
+class PartnerUpdate(BaseModel):
     name: str | None = None
-    type: Literal["company", "individual"] | None = None
+    code: str | None = None
+    partner_type: Literal["client", "vendor", "both"] | None = None
+    partner_role: str | None = None
     phone: str | None = None
     tax_code: str | None = None
     address: str | None = None
     contact_person: str | None = None
 
 
-class VendorOut(BaseModel):
+class PartnerSummaryOut(BaseModel):
     id: int
+    code: str | None = None
     name: str
-    type: str | None = None
-    phone: str | None = None
-    tax_code: str | None = None
-    address: str | None = None
-    contact_person: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PartnerOut(BaseModel):
+    id: int
+    code: str | None
+    name: str
+    partner_type: str
+    partner_role: str | None
+    phone: str | None
+    tax_code: str | None
+    address: str | None
+    contact_person: str | None
     is_active: bool = True
     created_at: datetime
     updated_at: datetime
@@ -75,7 +90,34 @@ class VendorOut(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Client
+# Vehicle
+# ---------------------------------------------------------------------------
+
+class VehicleCreate(BaseModel):
+    plate: str
+    driver_id: int
+
+
+class VehicleOut(BaseModel):
+    id: int
+    plate: str
+    driver_id: int
+    is_active: bool = True
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class VehicleSummaryOut(BaseModel):
+    id: int
+    plate: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# Location
 # ---------------------------------------------------------------------------
 
 class LocationCreate(BaseModel):
@@ -84,22 +126,6 @@ class LocationCreate(BaseModel):
 
 class LocationUpdate(BaseModel):
     name: str | None = None
-
-
-# ---------------------------------------------------------------------------
-# Read-DTO summary schemas — nested in OUT responses
-#
-# Domain DB stores only FKs; the application layer composes these on read
-# so frontends get the human-readable label without storing a denormalized
-# duplicate column. See BizLogic.md §4.
-# ---------------------------------------------------------------------------
-
-class ClientSummaryOut(BaseModel):
-    id: int
-    code: str | None = None
-    name: str
-
-    model_config = ConfigDict(from_attributes=True)
 
 
 class LocationSummaryOut(BaseModel):
@@ -113,7 +139,7 @@ class DriverSummaryOut(BaseModel):
     id: int
     name: str
     phone: str | None = None
-    tractor_plate: str | None = None
+    vehicle: VehicleSummaryOut | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -140,7 +166,7 @@ class LocationNearbyOut(BaseModel):
     name: str
     lat: float | None = None
     lng: float | None = None
-    distance_km: float | None = None  # null when location has no coords
+    distance_km: float | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -197,75 +223,6 @@ class MergeLocationsResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Client
-# ---------------------------------------------------------------------------
-
-class ClientCreate(BaseModel):
-    name: str
-    code: str | None = None
-    type: Literal["company", "individual"]
-    phone: str
-    tax_code: str | None = None
-    address: str | None = None
-    contact_person: str | None = None
-
-
-class ClientUpdate(BaseModel):
-    name: str | None = None
-    code: str | None = None
-    type: Literal["company", "individual"] | None = None
-    phone: str | None = None
-    tax_code: str | None = None
-    address: str | None = None
-    contact_person: str | None = None
-
-
-class ClientOut(BaseModel):
-    id: int
-    code: str | None
-    name: str
-    type: str
-    phone: str
-    tax_code: str | None
-    address: str | None
-    contact_person: str | None
-    outstanding_debt: int
-    is_active: bool = True
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-# ---------------------------------------------------------------------------
-# Route
-# ---------------------------------------------------------------------------
-
-class RouteCreate(BaseModel):
-    route: str
-    pickup_location_id: int
-    dropoff_location_id: int
-
-
-class RouteUpdate(BaseModel):
-    route: str | None = None
-    pickup_location_id: int | None = None
-    dropoff_location_id: int | None = None
-
-
-class RouteOut(BaseModel):
-    id: int
-    route: str
-    pickup_location: LocationSummaryOut
-    dropoff_location: LocationSummaryOut
-    is_active: bool = True
-    created_at: datetime
-    updated_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-# ---------------------------------------------------------------------------
 # Pricing
 # ---------------------------------------------------------------------------
 
@@ -287,7 +244,7 @@ class PricingLineOut(BaseModel):
 
 
 class PricingCreate(BaseModel):
-    client_id: int
+    partner_id: int
     work_type: str
     pickup_location_id: int
     dropoff_location_id: int
@@ -295,7 +252,7 @@ class PricingCreate(BaseModel):
 
 
 class PricingUpdate(BaseModel):
-    client_id: int | None = None
+    partner_id: int | None = None
     work_type: str | None = None
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
@@ -304,7 +261,7 @@ class PricingUpdate(BaseModel):
 
 class PricingOut(BaseModel):
     id: int
-    client: ClientSummaryOut
+    partner: PartnerSummaryOut
     work_type: str
     pickup_location: LocationSummaryOut
     dropoff_location: LocationSummaryOut
@@ -317,7 +274,7 @@ class PricingOut(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# WorkOrder
+# WorkOrder (driver trip)
 # ---------------------------------------------------------------------------
 
 class ContainerCreate(BaseModel):
@@ -344,54 +301,49 @@ class ContainerOut(BaseModel):
 
 class WorkOrderCreate(BaseModel):
     containers: list[ContainerCreate]
-    client_id: int
-    route: str
+    partner_id: int
     pickup_location_id: int
     dropoff_location_id: int
     driver_id: int
-    tractor_plate: str
+    vehicle_id: int | None = None
     gps_lat: float | None = None
     gps_lng: float | None = None
 
 
 class WorkOrderUpdate(BaseModel):
     containers: list[ContainerCreate] | None = None
-    client_id: int | None = None
-    route: str | None = None
+    partner_id: int | None = None
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
     driver_id: int | None = None
-    tractor_plate: str | None = None
+    vehicle_id: int | None = None
     gps_lat: float | None = None
     gps_lng: float | None = None
     unit_price: int | None = None
     driver_salary: int | None = None
     allowance: int | None = None
-    earning: int | None = None
     status: str | None = None
 
 
 class WorkOrderOut(BaseModel):
     id: int
-    client: ClientSummaryOut
+    partner: PartnerSummaryOut
     code: str | None = None
-    route: str
+    route: str  # computed from pickup/dropoff location names
     pickup_location: LocationSummaryOut
     dropoff_location: LocationSummaryOut
     driver: DriverSummaryOut
-    tractor_plate: str
+    vehicle: VehicleSummaryOut | None = None
+    tractor_plate: str | None = None  # convenience alias from vehicle
     gps_lat: float | None
     gps_lng: float | None
     gps_address: str | None
     unit_price: int
     driver_salary: int
     allowance: int
-    earning: int
+    earning: int  # computed: driver_salary + allowance
     pricing_id: int | None
     status: str
-    is_locked: bool = False
-    locked_at: datetime | None = None
-    locked_by: int | None = None
     containers: list[ContainerOut] = []
     created_at: datetime
     updated_at: datetime
@@ -400,7 +352,7 @@ class WorkOrderOut(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# TripOrder
+# TripOrder (customer order from Excel)
 # ---------------------------------------------------------------------------
 
 class TripContainerPhotoOut(BaseModel):
@@ -444,8 +396,7 @@ class TripContainerOut(BaseModel):
 
 class TripOrderCreate(BaseModel):
     trip_date: date
-    client_id: int
-    route: str
+    partner_id: int
     pickup_location_id: int
     dropoff_location_id: int
     containers: list[TripContainerCreate] = []
@@ -453,14 +404,12 @@ class TripOrderCreate(BaseModel):
     unit_price: int = Field(ge=0)
     driver_salary: int = Field(ge=0)
     allowance: int = Field(ge=0)
-    revenue: int = Field(ge=0)
     matched_work_order_ids: list[int] = []
 
 
 class TripOrderUpdate(BaseModel):
     trip_date: date | None = None
-    client_id: int | None = None
-    route: str | None = None
+    partner_id: int | None = None
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
     containers: list[TripContainerCreate] | None = None
@@ -468,20 +417,16 @@ class TripOrderUpdate(BaseModel):
     unit_price: int | None = None
     driver_salary: int | None = None
     allowance: int | None = None
-    revenue: int | None = None
     status: str | None = None
-    is_confirmed: bool | None = None
-    confirmed_by: int | None = None
-    confirmed_at: datetime | None = None
     matched_work_order_ids: list[int] | None = None
 
 
 class TripOrderOut(BaseModel):
     id: int
     trip_date: date
-    client: ClientSummaryOut
+    partner: PartnerSummaryOut
     code: str | None = None
-    route: str
+    route: str  # computed from pickup/dropoff location names
     pickup_location: LocationSummaryOut
     dropoff_location: LocationSummaryOut
     containers: list[TripContainerOut] = []
@@ -489,14 +434,8 @@ class TripOrderOut(BaseModel):
     unit_price: int
     driver_salary: int
     allowance: int
-    revenue: int
+    revenue: int  # computed: unit_price × container count
     status: str
-    is_confirmed: bool = False
-    confirmed_by: int | None = None
-    confirmed_at: datetime | None = None
-    is_locked: bool = False
-    locked_at: datetime | None = None
-    locked_by: int | None = None
     matched_work_order_ids: list[int] = []
     created_at: datetime
     updated_at: datetime
@@ -505,8 +444,24 @@ class TripOrderOut(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Reconcile
+# Reconciliation
 # ---------------------------------------------------------------------------
+
+class ReconciliationOut(BaseModel):
+    id: int
+    trip_order_id: int
+    work_order_id: int
+    match_score: float
+    matched_by: int
+    matched_at: datetime
+    unmatched_by: int | None = None
+    unmatched_at: datetime | None = None
+    reason: str | None = None
+    is_active: bool = True
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
 
 class ReconcileRequest(BaseModel):
     work_order_id: int
@@ -514,16 +469,6 @@ class ReconcileRequest(BaseModel):
 
 
 class CriterionBreakdown(BaseModel):
-    """Per-criterion comparison between WorkOrder and TripOrder, for UI display.
-
-    `name`  : machine key (one of: container_number, date, route, client,
-              pickup_location, dropoff_location)
-    `label` : user-facing Vietnamese label
-    `match` : True if the two sides matched on this criterion
-    `wo_value` / `to_value` : human-readable values from each side, so the UI
-              can render `WO ↔ TO` and a pencil to fix typos. May be None if
-              the side has no value.
-    """
     name: str
     label: str
     match: bool
@@ -536,12 +481,7 @@ class MatchSuggestion(BaseModel):
     confidence: Literal["full", "partial", "none"]
     matched_fields: list[str]
     score: float
-    # Per-criterion comparison rows for the new "Ghép chuyến" UI. Always 6
-    # entries in the canonical order: container_number, date, route, client,
-    # pickup_location, dropoff_location.
     criteria: list[CriterionBreakdown] = Field(default_factory=list)
-    # Convenience: integer match count out of len(criteria) — saves the
-    # frontend having to recompute.
     match_score: int = 0
     max_score: int = 6
 
@@ -688,16 +628,15 @@ class SalaryConfigUpdate(BaseModel):
 class DriverCreate(BaseModel):
     username: str
     phone: str | None = None
-    tractor_plate: str | None = None
-    vendor: str | None = None  # defaults to "Phúc Lộc" if omitted
+    plate: str | None = None  # vehicle plate
 
 
 class DriverOut(BaseModel):
     id: int
     username: str
     phone: str | None = None
-    tractor_plate: str | None = None
-    vendor: str | None = None
+    vehicle: VehicleSummaryOut | None = None
+    tractor_plate: str | None = None  # convenience alias
     created_at: datetime
     updated_at: datetime
 
@@ -710,7 +649,7 @@ class DriverOut(BaseModel):
 
 class JobStatusResponse(BaseModel):
     job_id: str
-    status: str          # queued | in_progress | complete | not_found
+    status: str
     result: dict | None = None
 
 
@@ -739,9 +678,9 @@ class BatchWorkOrderResult(BaseModel):
 # ---------------------------------------------------------------------------
 
 class ContainerOCRRequest(BaseModel):
-    image_data: str  # base64-encoded image
+    image_data: str
     mime_type: str = "image/jpeg"
-    container_index: int = 0  # which container slot (0-based) this OCR attempt is for
+    container_index: int = 0
 
 
 class ContainerOCRResponse(BaseModel):
