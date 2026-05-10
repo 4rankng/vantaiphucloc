@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useWorkOrders, useTripOrders, useClients, useRoutes, useUpdateWorkOrder, useUpdateTripOrder, useCreateTripOrder, useSuggestWosForTrip } from '@/hooks/use-queries'
+import { useWorkOrders, useTripOrders, useClients, useRoutes, useUpdateWorkOrder, useUpdateTripOrder, useReconcile, useSuggestWosForTrip } from '@/hooks/use-queries'
 import { type WorkType } from '@/data/domain'
 
 interface EditedTrip {
@@ -23,7 +23,7 @@ export function useMatchTrip(initialTripId: number) {
   const { data: suggestionsData, isLoading: loadingSuggestions } = useSuggestWosForTrip(initialTripId)
   const updateWorkOrder = useUpdateWorkOrder()
   const updateTripOrder = useUpdateTripOrder()
-  const createTripOrder = useCreateTripOrder()
+  const reconcile = useReconcile()
 
   const loading = loadingWO || loadingTrips || loadingClients || loadingRoutes
   const [submitting, setSubmitting] = useState(false)
@@ -113,28 +113,22 @@ export function useMatchTrip(initialTripId: number) {
     if (!selectedTrip || !selectedJob || !editedTrip || !editedJob || submitting) return
     setSubmitting(true)
     try {
-      await updateTripOrder.mutateAsync({ id: selectedTripId, data: {
-        route: editedTrip.route,
-        containers: editedTrip.containers.map(c => ({ containerNumber: c.number, workType: c.type as WorkType })),
-      }})
-      await updateWorkOrder.mutateAsync({ id: selectedJobId, data: {
-        route: editedJob.route,
-        containers: editedJob.containers.map(c => ({ containerNumber: c.number, workType: c.type as WorkType, photoUrl: '' })),
-      }})
-      await createTripOrder.mutateAsync({
-        tripDate: selectedTrip.tripDate,
-        clientId: selectedTrip.client.id,
-        route: editedTrip.route,
-        pickupLocationId: selectedTrip.pickupLocation.id,
-        dropoffLocationId: selectedTrip.dropoffLocation.id,
-        containers: editedTrip.containers.map(c => ({ containerNumber: c.number, workType: c.type as WorkType })),
-        pricingId: selectedTrip.pricingId,
-        unitPrice: selectedTrip.unitPrice,
-        driverSalary: selectedTrip.driverSalary,
-        allowance: selectedTrip.allowance,
-        revenue: selectedTrip.unitPrice,
-        matchedWorkOrderIds: [selectedJobId],
-      })
+      // Apply edits to trip order if changed
+      if (tripOverride) {
+        await updateTripOrder.mutateAsync({ id: selectedTripId, data: {
+          route: editedTrip.route,
+          containers: editedTrip.containers.map(c => ({ containerNumber: c.number, workType: c.type as WorkType })),
+        }})
+      }
+      // Apply edits to work order if changed
+      if (jobOverride) {
+        await updateWorkOrder.mutateAsync({ id: selectedJobId, data: {
+          route: editedJob.route,
+          containers: editedJob.containers.map(c => ({ containerNumber: c.number, workType: c.type as WorkType, photoUrl: '' })),
+        }})
+      }
+      // Link them via the proper reconcile endpoint
+      await reconcile.mutateAsync({ workOrderId: selectedJobId, tripOrderId: selectedTripId })
       navigate(-1)
     } catch (err) { setSubmitting(false); throw err }
   }
