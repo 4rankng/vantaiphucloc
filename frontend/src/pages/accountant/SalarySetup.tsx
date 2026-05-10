@@ -8,7 +8,7 @@ import {
 import { useToast } from '@/components/atoms/Toast'
 import { formatCurrencyFull, type SalaryPeriodStatus } from '@/data/domain'
 import { formatDate, formatDateRange } from '@/lib/format'
-import { Calculator, Download, CheckCircle2, Wallet } from 'lucide-react'
+import { Calculator, Download, CheckCircle2, Wallet, AlertCircle } from 'lucide-react'
 
 // ─── Status badge config ──────────────────────────────────────────────────────
 
@@ -301,6 +301,11 @@ function SalaryPeriodsList() {
                     <div className="flex items-center gap-1.5 pt-1" style={{ color: 'var(--theme-status-success)' }}>
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <p className="text-xs font-semibold">Kỳ lương đã chốt</p>
+                    </div>
+                  ) : period.totalSalary === 0 ? (
+                    <div className="flex items-center gap-1.5 pt-1" style={{ color: 'var(--theme-status-warning)' }}>
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      <p className="text-xs font-semibold">Lương bằng 0 — chưa có đơn hàng trong kỳ</p>
                     </div>
                   ) : isConfirming ? (
                     <div className="space-y-2">

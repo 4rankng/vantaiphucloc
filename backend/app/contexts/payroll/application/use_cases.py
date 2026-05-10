@@ -143,7 +143,7 @@ class GetOrCreateSalaryConfig:
         config = await self.repo.get_current()
         if config is None:
             config = await self.repo.upsert(
-                SalaryPeriodConfig(id=None, from_day=1, to_day=31)
+                SalaryPeriodConfig(id=None, from_day=26, to_day=25)
             )
         return config
 
@@ -165,8 +165,8 @@ class UpdateSalaryConfig:
         if current is None:
             new = SalaryPeriodConfig(
                 id=None,
-                from_day=payload.from_day or 1,
-                to_day=payload.to_day or 28,
+                from_day=payload.from_day or 26,
+                to_day=payload.to_day or 25,
             )
         else:
             current.from_day = (

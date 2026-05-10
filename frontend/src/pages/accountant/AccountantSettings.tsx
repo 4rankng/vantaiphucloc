@@ -1,5 +1,5 @@
 import { useNavigate, useLocation, Outlet } from 'react-router-dom'
-import { Settings, Wallet, Tag, Users, UserCog, Truck, ArrowLeft } from 'lucide-react'
+import { Settings, Wallet, Tag, Users, UserCog, Truck, ArrowLeft, Car } from 'lucide-react'
 
 type SettingSection = {
   key: string
@@ -15,6 +15,7 @@ const SECTIONS: SettingSection[] = [
   { key: 'pricing', label: 'Bảng giá', desc: 'Giá vận chuyển theo tuyến & khách hàng', icon: Tag, path: '/accountant/settings/pricing', color: 'var(--theme-brand-primary)' },
   { key: 'clients', label: 'Khách hàng', desc: 'Quản lý thông tin khách hàng', icon: Users, path: '/accountant/settings/clients', color: 'var(--theme-status-info)' },
   { key: 'vendors', label: 'Nhà thầu', desc: 'Quản lý đơn vị vận chuyển', icon: Truck, path: '/accountant/settings/vendors', color: 'var(--theme-status-warning)' },
+  { key: 'drivers', label: 'Tài xế', desc: 'Danh sách tài xế và xe đầu kéo', icon: Car, path: '/accountant/settings/drivers', color: 'var(--theme-status-info)' },
   { key: 'users', label: 'Người dùng', desc: 'Tạo & quản lý tài khoản', icon: UserCog, path: '/accountant/settings/users', color: 'var(--theme-text-secondary)' },
 ]
 

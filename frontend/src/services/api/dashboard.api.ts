@@ -37,9 +37,12 @@ export interface DashboardSummary {
  * Fetches the dashboard summary from the backend SQL aggregation endpoint.
  * Falls back to client-side computation if the backend endpoint fails.
  */
-export async function getDashboardSummary(): Promise<ApiResponse<DashboardSummary>> {
+export async function getDashboardSummary(dateFrom?: string, dateTo?: string): Promise<ApiResponse<DashboardSummary>> {
   try {
-    const res = await api.get('/dashboard/summary')
+    const params: Record<string, string> = {}
+    if (dateFrom) params.date_from = dateFrom
+    if (dateTo) params.date_to = dateTo
+    const res = await api.get('/dashboard/summary', { params })
     const data = toCamel<DashboardSummary>(res.data)
     // Fill in fields not yet in backend response
     if (!data.monthlyRevenue) data.monthlyRevenue = []
