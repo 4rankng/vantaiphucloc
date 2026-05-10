@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useTripOrders, useWorkOrders, useUpdateTripOrder, useReconcile, useToggleTripConfirmation, useUnmatch } from '@/hooks/use-queries'
+import { useTripOrders, useWorkOrders, useUpdateTripOrder, useReconcile, useToggleTripConfirmation, useUnmatch, useClients, useLocations } from '@/hooks/use-queries'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { ConfirmationCheckbox } from '@/components/shared/ConfirmationCheckbox'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { formatCurrencyFull, WORK_TYPES, type WorkType } from '@/data/domain'
 import { RouteDisplay } from '@/components/shared/RouteDisplay'
-import { Building2, Route, UserCircle, Wallet, Link2, Pencil, Lock, Unlink, Trash2, ChevronLeft } from 'lucide-react'
+import { InlineSelect } from '@/components/shared/InlineSelect'
+import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
+import { Building2, Route, UserCircle, Wallet, Link2, Pencil, Lock, Unlink, Trash2, ChevronLeft, Plus } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
@@ -26,10 +28,15 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
   const navigate = useNavigate()
   const { data: trips = [], isLoading: loadingTrips } = useTripOrders()
   const { data: jobs = [], isLoading: loadingJobs } = useWorkOrders()
+  const { data: clients = [] } = useClients()
+  const { data: locations = [] } = useLocations()
   const [editTrip, setEditTrip] = useState(false)
-  const [editClientName, setEditClientName] = useState('')
-  const [editRoute, setEditRoute] = useState('')
-  const [editWorkType, setEditWorkType] = useState<WorkType>('E20')
+  const [editClientId, setEditClientId] = useState('')
+  const [editPickup, setEditPickup] = useState('')
+  const [editDropoff, setEditDropoff] = useState('')
+  const [editDriverSalary, setEditDriverSalary] = useState(0)
+  const [editAllowance, setEditAllowance] = useState(0)
+  const [editContainers, setEditContainers] = useState<{ workType: WorkType; containerNumber: string }[]>([])
   const [showMatchDialog, setShowMatchDialog] = useState(false)
   const [showUnmatchDialog, setShowUnmatchDialog] = useState(false)
   const [showConfirmChot, setShowConfirmChot] = useState(false)
@@ -72,17 +79,43 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
     )
   }
 
+  const clientOptions = useMemo(() => clients.map(x => ({ value: String(x.id), label: x.name })), [clients])
+
   const handleOpenEdit = () => {
-    setEditClientName(trip.client.name)
-    setEditRoute(trip.route)
-    setEditWorkType(trip.containers[0]?.workType ?? 'E20')
+    setEditClientId(String(trip.client.id))
+    setEditPickup(trip.pickupLocation?.name ?? '')
+    setEditDropoff(trip.dropoffLocation?.name ?? '')
+    setEditDriverSalary(trip.driverSalary)
+    setEditAllowance(trip.allowance)
+    setEditContainers(
+      trip.containers.length > 0
+        ? trip.containers.map(c => ({ workType: c.workType, containerNumber: c.containerNumber }))
+        : [{ workType: 'E20' as WorkType, containerNumber: '' }],
+    )
     setEditTrip(true)
   }
 
   const handleSaveEdit = () => {
     if (!trip) return
+    const pickupId = locations.find(l => l.name === editPickup)?.id
+    const dropoffId = locations.find(l => l.name === editDropoff)?.id
+    if (!pickupId || !dropoffId) {
+      toast.error('Vui lòng chọn điểm lấy/trả từ danh sách')
+      return
+    }
     updateTripOrder.mutate(
-      { id: trip.id, data: { route: editRoute } },
+      {
+        id: trip.id,
+        data: {
+          clientId: Number(editClientId),
+          route: `${editPickup} - ${editDropoff}`,
+          pickupLocationId: pickupId,
+          dropoffLocationId: dropoffId,
+          driverSalary: editDriverSalary,
+          allowance: editAllowance,
+          containers: editContainers.map(c => ({ containerNumber: c.containerNumber, workType: c.workType })),
+        },
+      },
       {
         onSuccess: (res) => {
           if (res.success) toast.success('Đã lưu')
@@ -291,38 +324,94 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
 
       {/* Edit Trip Dialog */}
       <Dialog open={editTrip} onOpenChange={setEditTrip}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Sửa chuyến</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[65dvh] overflow-y-auto pr-1">
+            {/* Client */}
             <div className="space-y-2">
-              <Label className="typo-form-label">Loại container</Label>
-              <div className="flex flex-wrap gap-1.5">
-                {WORK_TYPES.map(w => (
-                  <button key={w} onClick={() => setEditWorkType(w)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors touch-manipulation"
-                    style={{
-                      background: editWorkType === w ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
-                      color: editWorkType === w ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
-                    }}>
-                    {w}
-                  </button>
+              <Label className="typo-form-label">Khách hàng</Label>
+              <InlineSelect
+                options={clientOptions}
+                value={editClientId}
+                onChange={setEditClientId}
+                placeholder="Chọn khách hàng"
+              />
+            </div>
+
+            {/* Route */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="typo-form-label">Điểm lấy</Label>
+                <LocationSelect value={editPickup} onChange={val => { setEditPickup(val); setEditDropoff('') }} placeholder="Chọn điểm lấy" />
+              </div>
+              <div className="space-y-2">
+                <Label className="typo-form-label">Điểm trả</Label>
+                <LocationSelect value={editDropoff} onChange={setEditDropoff} placeholder="Chọn điểm trả" />
+              </div>
+            </div>
+
+            {/* Containers */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="typo-form-label">Container</Label>
+                <button
+                  onClick={() => setEditContainers(prev => [...prev, { workType: 'E20', containerNumber: '' }])}
+                  className="flex items-center gap-1 text-xs font-semibold h-7 px-2 rounded-md transition-colors"
+                  style={{ color: 'var(--theme-brand-primary)', background: 'var(--theme-brand-primary-light)' }}
+                >
+                  <Plus size={14} /> Thêm
+                </button>
+              </div>
+              <div className="space-y-2">
+                {editContainers.map((c, i) => (
+                  <div key={i} className="flex items-center gap-2 p-2 rounded-lg" style={{ background: 'var(--theme-bg-tertiary)' }}>
+                    <span className="text-xs font-medium w-5 text-center" style={{ color: 'var(--theme-text-muted)' }}>#{i + 1}</span>
+                    <div className="flex gap-1">
+                      {WORK_TYPES.map(w => (
+                        <button key={w} onClick={() => setEditContainers(prev => prev.map((x, j) => j === i ? { ...x, workType: w } : x))}
+                          className="h-7 px-2 rounded text-xs font-bold transition-colors"
+                          style={{
+                            background: c.workType === w ? 'var(--theme-brand-primary)' : 'var(--theme-bg-secondary)',
+                            color: c.workType === w ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
+                            border: c.workType === w ? 'none' : '1px solid var(--theme-border-default)',
+                          }}>
+                          {w}
+                        </button>
+                      ))}
+                    </div>
+                    <Input
+                      value={c.containerNumber}
+                      onChange={e => setEditContainers(prev => prev.map((x, j) => j === i ? { ...x, containerNumber: e.target.value.replace(/-/g, '').toUpperCase() } : x))}
+                      placeholder="Số container"
+                      className="text-sm font-mono h-8 flex-1"
+                    />
+                    {editContainers.length > 1 && (
+                      <button onClick={() => setEditContainers(prev => prev.filter((_, j) => j !== i))} className="shrink-0" style={{ color: 'var(--theme-status-error)' }}>
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
-            <div className="space-y-2">
-              <Label className="typo-form-label">Khách hàng</Label>
-              <Input value={editClientName} onChange={e => setEditClientName(e.target.value)} className="text-sm" />
-            </div>
-            <div className="space-y-2">
-              <Label className="typo-form-label">Cung đường</Label>
-              <Input value={editRoute} onChange={e => setEditRoute(e.target.value)} className="text-sm" />
+
+            {/* Salary */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="typo-form-label">Lương tài xế</Label>
+                <Input type="number" value={editDriverSalary || ''} onChange={e => setEditDriverSalary(Number(e.target.value))} placeholder="0" className="text-sm font-mono h-9" />
+              </div>
+              <div className="space-y-2">
+                <Label className="typo-form-label">Phụ cấp</Label>
+                <Input type="number" value={editAllowance || ''} onChange={e => setEditAllowance(Number(e.target.value))} placeholder="0" className="text-sm font-mono h-9" />
+              </div>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditTrip(false)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleSaveEdit} className="flex-1" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+            <Button onClick={handleSaveEdit} disabled={!editClientId || !editPickup || !editDropoff} className="flex-1" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
               Lưu
             </Button>
           </DialogFooter>

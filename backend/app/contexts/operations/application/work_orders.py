@@ -253,7 +253,7 @@ class UpdateWorkOrder:
 
         await self.repo.save(w)
         await self.session.commit()
-        return w
+        return await self.repo.get_by_id(WorkOrderId(wid))
 
 
 class CancelWorkOrder:
