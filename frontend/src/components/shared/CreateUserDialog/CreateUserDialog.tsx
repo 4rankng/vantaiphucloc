@@ -11,7 +11,7 @@ import type { Role } from '@/data/domain'
 import { ROLE_LABELS } from '@/data/domain'
 import { useVendors, useCreateVendor } from '@/hooks/use-queries'
 
-const PHUC_LOC = 'Phúc Lộc'
+const PHUC_LOC = 'Vận Tải Phúc Lộc'
 
 const DEFAULT_CREATABLE_ROLES: { value: Role; label: string }[] = [
   { value: 'director', label: ROLE_LABELS.director },

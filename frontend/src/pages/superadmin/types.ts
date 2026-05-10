@@ -1,7 +1,7 @@
 import { Truck, CircleDollarSign, LayoutDashboard, Shield, type LucideIcon } from 'lucide-react'
 import type { Role } from '@/data/domain'
 
-const PHUC_LOC = 'Phúc Lộc'
+const PHUC_LOC = 'Vận Tải Phúc Lộc'
 
 export interface UserAccount {
   id: string

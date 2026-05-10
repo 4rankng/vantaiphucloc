@@ -96,9 +96,9 @@ allow(user, "update", "SalaryConfig") if role_allow(user, "accountant");
 
 # ── Users ─────────────────────────────────────────────────────────
 
-allow(user, "list", "User") if role_allow(user, "director");
-allow(user, "create", "User") if role_allow(user, "director");
-allow(user, "update", "User") if role_allow(user, "director");
+allow(user, "list", "User") if role_allow(user, "accountant");
+allow(user, "create", "User") if role_allow(user, "accountant");
+allow(user, "update", "User") if role_allow(user, "accountant");
 allow(user, "delete", "User") if role_allow(user, "director");
 
 # ── Vendors ───────────────────────────────────────────────────────

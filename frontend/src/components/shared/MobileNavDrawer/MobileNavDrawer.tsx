@@ -51,7 +51,7 @@ export function MobileNavDrawer({ items, roleLabel }: MobileNavDrawerProps) {
             <div className="flex items-center gap-2.5">
               <img src="/logo.avif" alt="Logo" className="h-7 w-7 object-contain rounded-md" />
               <div>
-                <SheetTitle className="text-sm font-bold">Phúc Lộc</SheetTitle>
+                <SheetTitle className="text-sm font-bold">TTransport</SheetTitle>
                 <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{roleLabel}</p>
               </div>
             </div>

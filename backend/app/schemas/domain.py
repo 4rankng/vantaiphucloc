@@ -112,6 +112,7 @@ class LocationSummaryOut(BaseModel):
 class DriverSummaryOut(BaseModel):
     id: int
     name: str
+    phone: str | None = None
     tractor_plate: str | None = None
 
     model_config = ConfigDict(from_attributes=True)

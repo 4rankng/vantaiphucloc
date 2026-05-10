@@ -32,6 +32,7 @@ def _to_out(d: DriverDTO) -> DriverOut:
     return DriverOut(
         id=d.id,
         username=d.username,
+        full_name=d.full_name,
         phone=d.phone,
         tractor_plate=d.tractor_plate,
         vendor=d.vendor,
@@ -88,6 +89,7 @@ async def create_driver(
     payload = CreateDriverInput(
         username=body.username,
         phone=body.phone,
+        full_name=body.full_name,
         vendor=body.vendor,
         tractor_plate=body.tractor_plate,
     )
