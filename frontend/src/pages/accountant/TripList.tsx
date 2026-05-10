@@ -27,7 +27,7 @@ type SimpleStatus = 'ALL' | 'PENDING' | 'MATCHED'
 
 const STATUS_OPTIONS: { key: SimpleStatus; label: string; color?: string }[] = [
   { key: 'ALL', label: 'Tất cả' },
-  { key: 'PENDING', label: 'Chờ đối soát', color: 'var(--theme-status-warning)' },
+  { key: 'PENDING', label: 'Chờ khớp', color: 'var(--theme-status-warning)' },
   { key: 'MATCHED', label: 'Đã khớp', color: 'var(--theme-status-success)' },
 ]
 
@@ -45,7 +45,7 @@ function getStatusVariant(t: TripOrder): 'pending' | 'success' | 'neutral' {
 }
 function getStatusLabel(t: TripOrder): string {
   if (isMatched(t)) return 'Đã khớp'
-  if (isPending(t)) return 'Chờ đối soát'
+  if (isPending(t)) return 'Chờ khớp'
   return t.status
 }
 
@@ -175,7 +175,7 @@ export function TripList() {
               </div>
               <div>
                 <p className="text-xl font-bold leading-none" style={{ color: 'var(--theme-status-warning)' }}>{stats.pending}</p>
-                <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Chờ đối soát</p>
+                <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Chờ khớp</p>
               </div>
             </button>
             <button
@@ -314,7 +314,7 @@ export function TripList() {
           className="card p-3 flex flex-col gap-0.5 text-left transition active:scale-[0.98]"
           style={{ borderColor: statusFilter === 'PENDING' ? 'var(--theme-status-warning)' : undefined, borderWidth: statusFilter === 'PENDING' ? 2 : 1 }}
         >
-          <p className="typo-label flex items-center gap-1"><Clock className="h-3 w-3" style={{ color: 'var(--theme-status-warning)' }} />Chờ đối soát</p>
+          <p className="typo-label flex items-center gap-1"><Clock className="h-3 w-3" style={{ color: 'var(--theme-status-warning)' }} />Chờ khớp</p>
           <p className="text-lg font-bold" style={{ color: 'var(--theme-status-warning)' }}>{stats.pending}</p>
         </button>
         <button
@@ -386,7 +386,7 @@ function DirectorTripView({
             className="card p-3 flex flex-col gap-0.5 text-left"
             style={{ borderColor: statusFilter === 'PENDING' ? 'var(--theme-status-warning)' : undefined, borderWidth: statusFilter === 'PENDING' ? 2 : 1 }}
           >
-            <p className="typo-label flex items-center gap-1"><Clock className="h-3 w-3" style={{ color: 'var(--theme-status-warning)' }} />Chờ đối soát</p>
+            <p className="typo-label flex items-center gap-1"><Clock className="h-3 w-3" style={{ color: 'var(--theme-status-warning)' }} />Chờ khớp</p>
             <p className="text-lg font-bold" style={{ color: 'var(--theme-status-warning)' }}>{stats.pending}</p>
           </button>
           <button onClick={() => setStatusFilter(statusFilter === 'MATCHED' ? 'ALL' : 'MATCHED')}

@@ -364,7 +364,7 @@ export function getJobStatusBadge(status: JobStatus): { variant: 'default'|'succ
     case 'DRAFT': return { variant: 'neutral', label: 'Nháp' }
     case 'PLANNED': return { variant: 'warning', label: 'Lên kế hoạch' }
     case 'IN_PROGRESS': return { variant: 'success', label: 'Đang chạy' }
-    case 'COMPLETED': return { variant: 'info', label: 'Hoàn thành' }
+    case 'COMPLETED': return { variant: 'success', label: 'Đã khớp' }
     case 'CANCELLED': return { variant: 'danger', label: 'Huỷ' }
   }
 }
@@ -372,8 +372,8 @@ export function getJobStatusBadge(status: JobStatus): { variant: 'default'|'succ
 export function getWorkOrderStatusBadge(status: WorkOrderStatus): { variant: 'default'|'success'|'warning'|'danger'|'info'|'neutral'; label: string } {
   switch (status) {
     case 'PENDING': return { variant: 'warning', label: 'Chờ khớp' }
-    case 'MATCHED': return { variant: 'info', label: 'Đã đối soát (chờ giá)' }
-    case 'COMPLETED': return { variant: 'success', label: 'Hoàn thành' }
+    case 'MATCHED': return { variant: 'success', label: 'Đã khớp' }
+    case 'COMPLETED': return { variant: 'success', label: 'Đã khớp' }
   }
 }
 
@@ -381,7 +381,8 @@ export function getTripOrderStatusBadge(status: TripOrderStatus): { variant: 'de
   switch (status) {
     case 'DRAFT': return { variant: 'neutral', label: 'Nháp' }
     case 'PENDING': return { variant: 'warning', label: 'Chờ khớp' }
-    case 'COMPLETED': return { variant: 'success', label: 'Hoàn thành' }
+    case 'MATCHED': return { variant: 'success', label: 'Đã khớp' }
+    case 'COMPLETED': return { variant: 'success', label: 'Đã khớp' }
     case 'CANCELLED': return { variant: 'danger', label: 'Đã huỷ' }
   }
 }

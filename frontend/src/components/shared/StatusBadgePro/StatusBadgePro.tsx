@@ -145,7 +145,7 @@ export function StatusBadgePro({
 export const STATUS_LABEL_MAP: Record<string, { variant: StatusVariant; label: string }> = {
   DRAFT: { variant: 'draft', label: 'Nháp' },
   PENDING: { variant: 'pending', label: 'Chờ xử lý' },
-  COMPLETED: { variant: 'completed', label: 'Hoàn thành' },
+  COMPLETED: { variant: 'completed', label: 'Đã khớp' },
   CANCELLED: { variant: 'cancelled', label: 'Đã huỷ' },
   MATCHED: { variant: 'matched', label: 'Đã ghép' },
   PROCESSING: { variant: 'processing', label: 'Đang xử lý' },

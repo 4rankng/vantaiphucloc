@@ -7,7 +7,7 @@ interface ConfirmationCheckboxProps {
   label?: string
 }
 
-export function ConfirmationCheckbox({ isConfirmed, onToggle, disabled = false, label = 'Đã chốt' }: ConfirmationCheckboxProps) {
+export function ConfirmationCheckbox({ isConfirmed, onToggle, disabled = false, label = 'Đã khớp' }: ConfirmationCheckboxProps) {
   return (
     <button
       onClick={onToggle}
