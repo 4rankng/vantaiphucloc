@@ -427,7 +427,11 @@ async def update_work_order(
         )
     except Exception as exc:
         raise translate(exc)
-    return await _load_one(use_case.session, w)
+    try:
+        return await _load_one(use_case.session, w)
+    except Exception as exc:
+        _logger.exception("Failed to load WO#%s after update", work_order_id)
+        raise translate(exc)
 
 
 @router.put("/work-orders/{work_order_id:int}/cancel", response_model=WorkOrderOut)

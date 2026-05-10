@@ -42,12 +42,12 @@ def _role_allows(user_role: str, required_role: str) -> bool:
 # ── Policy loader ──────────────────────────────────────────────────────────────
 
 _ALLOW_RE = re.compile(
-    r'allow\(\s*(_user|user)\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"\s*\)\s*;'
-    r'\s*if\s+role_allow\(\s*user\s*,\s*"([^"]+)"\s*\)'
+    r'allow\(\s*(_user|user)\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"\s*\)\s*'
+    r'if\s+role_allow\(\s*user\s*,\s*"([^"]+)"\s*\)\s*;'
 )
 _ALLOW_OWNER_RE = re.compile(
-    r'allow\(\s*user\s*,\s*"([^"]+)"\s*,\s*\w+:\s*\w+\s*\)\s*if'
-    r'\s+role_allow\(\s*user\s*,\s*"([^"]+)"\s*\)\s+and\s+(user\.\w+)\s*=\s*(\w+\.\w+)'
+    r'allow\(\s*user\s*,\s*"([^"]+)"\s*,\s*\w+:\s*\w+\s*\)\s*if\s*'
+    r'role_allow\(\s*user\s*,\s*"([^"]+)"\s*\)\s+and\s+(user\.\w+)\s*=\s*(\w+\.\w+)'
 )
 _ALLOW_ANY_RE = re.compile(
     r'allow\(\s*_user\s*,\s*"([^"]+)"\s*,\s*"([^"]+)"\s*\)'
