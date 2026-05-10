@@ -34,8 +34,6 @@ def _to_out(d: DriverDTO) -> DriverOut:
         username=d.username,
         full_name=d.full_name,
         phone=d.phone,
-        tractor_plate=d.tractor_plate,
-        vendor=d.vendor,
         created_at=d.created_at,
         updated_at=d.updated_at,
     )
@@ -90,8 +88,6 @@ async def create_driver(
         username=body.username,
         phone=body.phone,
         full_name=body.full_name,
-        vendor=body.vendor,
-        tractor_plate=body.tractor_plate,
     )
     dto = await use_case(payload)
     await CacheManager(redis).invalidate_namespace("drivers")
