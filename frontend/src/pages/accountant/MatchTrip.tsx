@@ -182,6 +182,15 @@ export function MatchTrip() {
 
   const allMatched = contMatched && clientMatched && routeMatched
 
+  const handleMatchWithToast = async () => {
+    try {
+      await handleMatch()
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      toast.error('Không thể khớp chuyến', detail ?? 'Lỗi hệ thống. Thử lại sau.')
+    }
+  }
+
   if (loading) {
     return (
       <div className="p-4 lg:p-8 space-y-4">
@@ -534,7 +543,7 @@ export function MatchTrip() {
                   <Plus className="w-4 h-4" /> Tạo chuyến mới
                 </button>
                 <Button
-                  onClick={handleMatch}
+                  onClick={handleMatchWithToast}
                   disabled={submitting}
                   className="flex-1 h-10 font-bold rounded-lg text-sm gap-2"
                   style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}

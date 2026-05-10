@@ -8,6 +8,7 @@ import { InfoRow } from '@/components/shared/InfoRow'
 import { FilterToolbar, type FilterOption } from '@/components/shared/FilterToolbar'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { fuzzyMatch } from '@/lib/search-utils'
+import { useToast } from '@/components/atoms/Toast'
 import {
   useClients, useCreateClient, useUpdateClient, useDeleteClient,
   useVendors, useCreateVendor, useUpdateVendor, useDeleteVendor,
@@ -134,17 +135,17 @@ function DetailDialog({ partner, onClose, onEdit, onDelete }: DetailDialogProps)
               value={partner.kind === 'client' ? 'Khách hàng' : 'Nhà thầu'}
             />
             <InfoRow label="Điện thoại" value={partner.phone || '—'} />
-            {partner.taxCode && <InfoRow label="Mã số thuế" value={partner.taxCode} />}
-            {partner.address && <InfoRow label="Địa chỉ" value={partner.address} />}
-            {partner.contactPerson && <InfoRow label="Người liên hệ" value={partner.contactPerson} />}
+            <InfoRow label="Mã số thuế" value={partner.taxCode || '—'} />
+            <InfoRow label="Địa chỉ" value={partner.address || '—'} />
+            <InfoRow label="Người liên hệ" value={partner.contactPerson || '—'} />
           </div>
         )}
         <DialogFooter>
-          <Button variant="outline" onClick={() => partner && onDelete(partner)} className="flex-1" style={{ color: 'var(--theme-status-error)' }}>
-            <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Xoá
-          </Button>
           <Button onClick={() => partner && onEdit(partner)} className="flex-1" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
             <Pencil className="w-3.5 h-3.5 mr-1.5" /> Sửa
+          </Button>
+          <Button variant="outline" onClick={() => partner && onDelete(partner)} className="flex-1" style={{ color: 'var(--theme-status-error)' }}>
+            <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Xoá
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -161,14 +162,18 @@ interface FormDialogProps {
   editing: UnifiedPartner | null
 }
 
+const MST_RE = /^\d{10}(\d{3})?$/
+const PHONE_RE = /^(0|\+?84)[35789]\d{8}$/
+
 function FormDialog({ open, onClose, kind, editing }: FormDialogProps) {
+  const toast = useToast()
   const [form, setForm] = useState<PartnerForm>(EMPTY_FORM)
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const createClient = useCreateClient()
   const updateClient = useUpdateClient()
   const createVendor = useCreateVendor()
   const updateVendor = useUpdateVendor()
 
-  // Populate form whenever the dialog opens or the editing target changes
   useEffect(() => {
     if (open) {
       setForm(editing ? {
@@ -179,6 +184,7 @@ function FormDialog({ open, onClose, kind, editing }: FormDialogProps) {
         phone: editing.phone,
         contactPerson: editing.contactPerson,
       } : EMPTY_FORM)
+      setErrors({})
     }
   }, [open, editing])
 
@@ -188,29 +194,38 @@ function FormDialog({ open, onClose, kind, editing }: FormDialogProps) {
 
   const updateField = useCallback((field: string, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }))
+    setErrors(prev => { const next = { ...prev }; delete next[field]; return next })
   }, [])
 
+  const validate = (): boolean => {
+    const e: Record<string, string> = {}
+    if (!form.name.trim()) e.name = 'Vui lòng nhập tên'
+    if (form.taxCode && !MST_RE.test(form.taxCode)) e.taxCode = 'MST phải 10 hoặc 13 chữ số'
+    if (form.phone && !PHONE_RE.test(form.phone)) e.phone = 'SĐT không hợp lệ (VD: 0901234567)'
+    setErrors(e)
+    return Object.keys(e).length === 0
+  }
+
   const handleSubmit = useCallback(() => {
+    if (!validate()) return
+    const onSuccess = () => {
+      toast.success(editing ? `Đã cập nhật ${form.name}` : `Đã thêm ${form.name}`)
+      onClose()
+    }
     if (editing) {
       if (editing.kind === 'client') {
-        updateClient.mutate(
-          { id: editing.id, data: form as Partial<Client> },
-          { onSuccess: onClose },
-        )
+        updateClient.mutate({ id: editing.id, data: form as Partial<Client> }, { onSuccess })
       } else {
-        updateVendor.mutate(
-          { id: editing.id, data: form },
-          { onSuccess: onClose },
-        )
+        updateVendor.mutate({ id: editing.id, data: form }, { onSuccess })
       }
     } else {
       if (kind === 'client') {
-        createClient.mutate(form as Omit<Client, 'id'>, { onSuccess: onClose })
+        createClient.mutate(form as Omit<Client, 'id'>, { onSuccess })
       } else {
-        createVendor.mutate(form, { onSuccess: onClose })
+        createVendor.mutate(form, { onSuccess })
       }
     }
-  }, [editing, kind, form, createClient, createVendor, updateClient, updateVendor, onClose])
+  }, [editing, kind, form, createClient, createVendor, updateClient, updateVendor, onClose, toast])
 
   const isPending = createClient.isPending || updateClient.isPending || createVendor.isPending || updateVendor.isPending
   const label = kind === 'client' ? 'khách hàng' : 'nhà thầu'
@@ -223,8 +238,9 @@ function FormDialog({ open, onClose, kind, editing }: FormDialogProps) {
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tên</Label>
+            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tên *</Label>
             <Input value={form.name} onChange={e => updateField('name', e.target.value)} placeholder={`Tên ${label}`} className="text-sm" autoFocus />
+            {errors.name && <p className="text-xs" style={{ color: 'var(--theme-status-error)' }}>{errors.name}</p>}
           </div>
           <div className="space-y-2">
             <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Loại</Label>
@@ -248,10 +264,12 @@ function FormDialog({ open, onClose, kind, editing }: FormDialogProps) {
             <div className="space-y-2">
               <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mã số thuế</Label>
               <Input value={form.taxCode} onChange={e => updateField('taxCode', e.target.value)} placeholder="0123456789" className="text-sm" />
+              {errors.taxCode && <p className="text-xs" style={{ color: 'var(--theme-status-error)' }}>{errors.taxCode}</p>}
             </div>
             <div className="space-y-2">
               <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điện thoại</Label>
               <Input value={form.phone} onChange={e => updateField('phone', e.target.value)} placeholder="0901234567" className="text-sm" />
+              {errors.phone && <p className="text-xs" style={{ color: 'var(--theme-status-error)' }}>{errors.phone}</p>}
             </div>
           </div>
           <div className="space-y-2">
@@ -282,17 +300,27 @@ interface DeleteDialogProps {
 }
 
 function DeleteDialog({ partner, onClose }: DeleteDialogProps) {
+  const toast = useToast()
   const deleteClient = useDeleteClient()
   const deleteVendor = useDeleteVendor()
 
   const handleDelete = useCallback(() => {
     if (!partner) return
-    if (partner.kind === 'client') {
-      deleteClient.mutate(partner.id, { onSuccess: onClose })
-    } else {
-      deleteVendor.mutate(partner.id, { onSuccess: onClose })
+    const onDone = () => {
+      toast.success(`Đã xoá ${partner.name}`)
+      onClose()
     }
-  }, [partner, deleteClient, deleteVendor, onClose])
+    const onError = (err: unknown) => {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      toast.error('Không thể xoá', detail ?? `${partner.name} có dữ liệu liên quan, không thể xoá.`)
+      onClose()
+    }
+    if (partner.kind === 'client') {
+      deleteClient.mutate(partner.id, { onSuccess: onDone, onError })
+    } else {
+      deleteVendor.mutate(partner.id, { onSuccess: onDone, onError })
+    }
+  }, [partner, deleteClient, deleteVendor, onClose, toast])
 
   const isPending = deleteClient.isPending || deleteVendor.isPending
   const label = partner?.kind === 'client' ? 'khách hàng' : 'nhà thầu'
@@ -380,15 +408,37 @@ export function ClientsAndVendors() {
 
   // ─── Mobile cards ────────────────────────────────────────────────────────────
 
-  const renderMobile = () => {
-    if (filtered.length === 0) {
+  const renderEmpty = () => {
+    const hasSearch = search.trim().length > 0
+    if (hasSearch) {
       return (
         <div className="card py-16 text-center">
           <Building2 className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--theme-text-muted)' }} />
-          <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Không có đối tác</p>
-          <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Nhấn "+ Thêm" để bắt đầu</p>
+          <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
+            Không tìm thấy đối tác cho &ldquo;{search}&rdquo;
+          </p>
+          <button
+            onClick={() => setSearch('')}
+            className="mt-2 text-xs font-semibold"
+            style={{ color: 'var(--theme-brand-primary)' }}
+          >
+            Xoá tìm kiếm
+          </button>
         </div>
       )
+    }
+    return (
+      <div className="card py-16 text-center">
+        <Building2 className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--theme-text-muted)' }} />
+        <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Không có đối tác</p>
+        <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Nhấn "+ Thêm" để bắt đầu</p>
+      </div>
+    )
+  }
+
+  const renderMobile = () => {
+    if (filtered.length === 0) {
+      return renderEmpty()
     }
 
     return (
@@ -452,13 +502,7 @@ export function ClientsAndVendors() {
 
   const renderDesktop = () => {
     if (!loading && filtered.length === 0) {
-      return (
-        <div className="card py-16 text-center">
-          <Building2 className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--theme-text-muted)' }} />
-          <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Không có đối tác</p>
-          <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Nhấn "+ Thêm" để bắt đầu</p>
-        </div>
-      )
+      return renderEmpty()
     }
 
     return (
