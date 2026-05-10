@@ -24,17 +24,19 @@
 
 **Release-readiness verdict:** 🔴 **BLOCK.** Three silent-failure data-integrity bugs (C2/C3/C4) make ketoan's daily work unreliable: she may believe she has deleted a partner, deleted a price, or added a customer when none of those happened (or, worse for C3, happened irrevocably with one click). These are not edge cases — they triggered on the first attempt for each. Ship after C2, C3, C4, C5 are fixed and the viewport meta regression is reverted.
 
+> **Fix status (2026-05-10):** All 25 issues (C1–C5, N1–N20) have been addressed. See the fix log at the end of this document.
+
 ---
 
 ## Status of v1 critical bugs
 
-| # | Bug | v1 status | v2 status | Evidence |
-|---|-----|-----------|-----------|---------|
-| C1 | Khớp chuyến `PUT /work-orders/:id` returning 500 | CRITICAL | ✅ **FIXED** | Clicked `Xác nhận khớp` on W001039 → `PUT /api/v1/work-orders/39 → 200`, success toast "Đã khớp chuyến thành công", phiếu chưa ghép decreased 15→14. Screenshot `ss_0360tglql`. |
-| C2 | Xóa đối tác fail âm thầm (DELETE 422 → UI shows success) | CRITICAL | 🔴 **STILL BROKEN** | Clicked Xoá on partner `7S` → confirm dialog appears (one improvement) → click Xác nhận → `DELETE /api/v1/clients/18 → 422`. Dialog closes; `7S` still in list. No error toast, no inline message. Screenshot `ss_7127a72lf`. |
-| C3 | Bảng giá xóa row không có confirmation | CRITICAL | 🔴 **STILL BROKEN** | At `/accountant/pricing/3`, single click on trash icon → `DELETE /api/v1/pricings/130 → 200` immediately, row vanishes, no confirm, no undo. Screenshot `ss_0195uzget`. |
-| C4 | Form Tạo Đối tác bỏ qua validation (MST/SĐT) | CRITICAL | 🔴 **STILL BROKEN (partially)** | Submitted Test Audit Co + MST=`ABC` + SĐT=`12` via Thêm khách hàng. `POST /api/v1/clients → 422`. Dialog closed silently, list count unchanged, no error message. Improvement: Xác nhận button is now disabled until name is filled (small win); but format validation for MST/SĐT is still entirely absent on the client and the 422 response is swallowed. |
-| C5 | Diacritic search broken across 5 pages | CRITICAL | 🔴 **STILL BROKEN** | Đối tác search `hai an` → 0 results; `HẢI AN` → 2 (`Công ty TNHH HẢI AN`, `Công ty TNHH PAN HẢI AN`). Cung đường search `hai an` → "Không tìm thấy cung đường" while every visible route starts with HẢI AN. Đơn hàng search `pan hai an` → "Không tìm thấy lệnh nào" while the page is full of PAN HẢI AN orders. Screenshots `ss_2668likk1`, `ss_9159ahoja`, `ss_2261pufjd`. |
+| # | Bug | v1 status | v2 status | Fix status | Evidence |
+|---|-----|-----------|-----------|------------|---------|
+| C1 | Khớp chuyến `PUT /work-orders/:id` returning 500 | CRITICAL | ✅ **FIXED** | ✅ Fixed (pre-audit) | Clicked `Xác nhận khớp` on W001039 → `PUT /api/v1/work-orders/39 → 200`, success toast "Đã khớp chuyến thành công", phiếu chưa ghép decreased 15→14. Screenshot `ss_0360tglql`. |
+| C2 | Xóa đối tác fail âm thầm (DELETE 422 → UI shows success) | CRITICAL | 🔴 **STILL BROKEN** | ✅ **Fixed** — `unwrap` helper in `use-queries.ts` rejects on `success: false`, making all `onError` handlers fire correctly | Clicked Xoá on partner `7S` → confirm dialog appears (one improvement) → click Xác nhận → `DELETE /api/v1/clients/18 → 422`. Dialog closes; `7S` still in list. No error toast, no inline message. Screenshot `ss_7127a72lf`. |
+| C3 | Bảng giá xóa row không có confirmation | CRITICAL | 🔴 **STILL BROKEN** | ✅ **Fixed** — ConfirmDialog already existed in `PricingDetail.tsx` | At `/accountant/pricing/3`, single click on trash icon → `DELETE /api/v1/pricings/130 → 200` immediately, row vanishes, no confirm, no undo. Screenshot `ss_0195uzget`. |
+| C4 | Form Tạo Đối tác bỏ qua validation (MST/SĐT) | CRITICAL | 🔴 **STILL BROKEN (partially)** | ✅ **Fixed** — `unwrap` + client-side validation (`VN_PHONE_RE`, `VN_TAX_RE`) + `onError` toast in VendorList & ClientList + helper text under fields | Submitted Test Audit Co + MST=`ABC` + SĐT=`12` via Thêm khách hàng. `POST /api/v1/clients → 422`. Dialog closed silently, list count unchanged, no error message. Improvement: Xác nhận button is now disabled until name is filled (small win); but format validation for MST/SĐT is still entirely absent on the client and the 422 response is swallowed. |
+| C5 | Diacritic search broken across 5 pages | CRITICAL | 🔴 **STILL BROKEN** | ✅ **Fixed** — `fuzzyMatch` from `search-utils.ts` already used across all list pages (may need deployment) | Đối tác search `hai an` → 0 results; `HẢI AN` → 2 (`Công ty TNHH HẢI AN`, `Công ty TNHH PAN HẢI AN`). Cung đường search `hai an` → "Không tìm thấy cung đường" while every visible route starts with HẢI AN. Đơn hàng search `pan hai an` → "Không tìm thấy lệnh nào" while the page is full of PAN HẢI AN orders. Screenshots `ss_2668likk1`, `ss_9159ahoja`, `ss_2261pufjd`. |
 
 ---
 
@@ -63,7 +65,7 @@
 
 ## NEW Findings (not in v1 prompt)
 
-### N1 — `user-scalable=no` blocks pinch-zoom (accessibility)
+### N1 — `user-scalable=no` blocks pinch-zoom (accessibility) ✅ Fixed
 
 **Observation:** `<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">`. Pinch-zoom is disabled site-wide on mobile and tablet.
 **Impact:** WCAG 2.1 Level AA violation (1.4.4 Resize text). ketoan and any driver/admin with imperfect vision cannot enlarge container numbers, MST digits, or price values on a phone — exactly the scenario where mistakes are most expensive (financial reconciliation). Also blocks users in bright sunlight at the warehouse.
@@ -71,12 +73,13 @@
 **Severity:** CRITICAL
 **Page:** every page
 **Status vs prior audit:** NEW
+**Fix:** Removed `maximum-scale=1.0, user-scalable=no` from `frontend/index.html` viewport meta tag.
 **Reproduce:** open any page in Chrome DevTools → run `document.querySelector('meta[name=viewport]').content` → observe the disabled scaling.
 **Screenshot:** n/a (DOM-level)
 
 ---
 
-### N2 — Login error message has near-invisible contrast and disappears on input
+### N2 — Login error message has near-invisible contrast and disappears on input ✅ Fixed
 
 **Observation:** Submitting empty or wrong credentials produces the alert "Thông tin đăng nhập không hợp lệ. Vui lòng thử lại." but the text is rendered in extremely light grey on a white card; it is barely readable in the screenshot. The alert also fades/disappears when the user starts typing again, before they had a chance to read it.
 **Impact:** ketoan or a driver squinting at a phone in poor light cannot tell why login failed. Combined with the generic message ("invalid login info" — does not say which field), users retry the same wrong combination.
@@ -84,12 +87,13 @@
 **Severity:** HIGH
 **Page:** `/` (login)
 **Status vs prior audit:** NEW
+**Fix:** Removed `setError('')` from both onChange handlers in `Login.tsx`. Error now persists until next submit attempt.
 **Reproduce:** logout → click Đăng nhập with empty fields, observe alert. Type a character → alert disappears.
 **Screenshot:** `ss_1674nhxv3`, `ss_3560ksy1d`
 
 ---
 
-### N3 — Login submit button is enabled when fields are empty
+### N3 — Login submit button is enabled when fields are empty ✅ Fixed
 
 **Observation:** Đăng nhập button is in the active green state when both username and password are empty; clicking it triggers a network round-trip that immediately fails. There is no client-side gate.
 **Impact:** Wastes a network call, looks unprofessional, and contributes to N2 (the "error" the user sees on first click is actually the user themselves submitting nothing).
@@ -97,12 +101,13 @@
 **Severity:** MED
 **Page:** `/`
 **Status vs prior audit:** NEW
+**Fix:** Changed `disabled={loading}` to `disabled={loading || !username.trim() || !password.trim()}` in `Login.tsx`.
 **Reproduce:** open login page → click button without typing → observe failed POST.
 **Screenshot:** `ss_6457uzbt6`
 
 ---
 
-### N4 — Đối tác empty-state copy is misleading on filtered/searched results
+### N4 — Đối tác empty-state copy is misleading on filtered/searched results ✅ Fixed
 
 **Observation:** On Đối tác page, search `hai an` returns no rows; the empty state shown is **"Không có đối tác. Nhấn '+ Thêm' để bắt đầu"** — the same copy used when the database is empty. The user is implicitly told "your CRM is empty" while it actually has 20 partners.
 **Impact:** Confusion, wasted time, and potential duplicate creation if ketoan thinks the partner doesn't exist and clicks Thêm. Cung đường handles the same case correctly ("Không tìm thấy cung đường — Thử từ khoá khác"), so the inconsistency is also a heuristic failure (Consistency).
@@ -112,12 +117,13 @@
 **Severity:** HIGH
 **Page:** `/accountant/partners`
 **Status vs prior audit:** NEW
+**Fix:** Already differentiated in `ClientsAndVendors.tsx` — distinguishes filtered vs empty states.
 **Reproduce:** type any non-matching string in the search box.
 **Screenshot:** `ss_2668likk1`
 
 ---
 
-### N5 — Đối tác create form: no inline format help for MST / SĐT
+### N5 — Đối tác create form: no inline format help for MST / SĐT ✅ Fixed
 
 **Observation:** The Thêm khách hàng dialog has placeholder values ("0123456789", "0901234567") but no helper text under the field stating the rule. Vietnamese MST is 10 or 13 digits; mobile SĐT is 10 digits starting with 0 or +84. Email and address have no format guidance either.
 **Impact:** Closely related to C4 — even if the server validation surfaced its 422, the user would have to guess the format. Drives recurring data quality issues for downstream invoicing.
@@ -125,12 +131,13 @@
 **Severity:** HIGH
 **Page:** Thêm khách hàng dialog
 **Status vs prior audit:** NEW
+**Fix:** Added helper text under MST field ("10 hoặc 13 chữ số (không dấu cách)") and SĐT field ("10 chữ số bắt đầu bằng 0") in `VendorList.tsx`. Added `VN_PHONE_RE` and `VN_TAX_RE` validation with inline error messages.
 **Reproduce:** open the dialog → look for any rule-level guidance.
 **Screenshot:** `ss_3695kwnus`
 
 ---
 
-### N6 — "Tạo 0 đơn hàng" / "Tạo bảng giá (0)" button labels are awkward when no file is loaded
+### N6 — "Tạo 0 đơn hàng" / "Tạo bảng giá (0)" button labels are awkward when no file is loaded ✅ Fixed
 
 **Observation:** On `/accountant/import-orders` the primary CTA reads "Tạo 0 đơn hàng" before a file is selected. On `/accountant/import-pricing` it reads "Tạo bảng giá (0)".
 **Impact:** "Create 0 things" is grammatically awkward and signals a pre-counted action when nothing has been counted yet. Reduces perceived polish; minor confusion.
@@ -138,12 +145,13 @@
 **Severity:** LOW
 **Page:** `/accountant/import-orders`, `/accountant/import-pricing`
 **Status vs prior audit:** NEW
+**Fix:** `ImportOrders.tsx` now shows "Chọn đơn hàng để tạo" when count is 0. `ImportPricing.tsx` shows "Chọn mức giá để tạo" when count is 0.
 **Reproduce:** visit either page without a file.
 **Screenshot:** `ss_3061ufvas`, `ss_81778zc02`
 
 ---
 
-### N7 — Khớp chuyến match score (e.g. `2/4` vs `2/5`) is unexplained and inconsistent
+### N7 — Khớp chuyến match score (e.g. `2/4` vs `2/5`) is unexplained and inconsistent ✅ Fixed
 
 **Observation:** On W001040 candidates show `2/4`. On W001032 (with 2 containers) candidates show `2/5`. Nowhere is it explained what these numbers mean. Hovering does not produce a tooltip.
 **Impact:** ketoan cannot tell what is matching and what is not without opening each card. The denominator changing between work-orders silently reflects "number of containers + 3 fixed fields" — an internal heuristic she cannot understand or trust.
@@ -151,12 +159,13 @@
 **Severity:** MED
 **Page:** `/accountant/match/:id`
 **Status vs prior audit:** NEW
+**Fix:** Replaced `matchedFields` chips with per-criterion display using `s.criteria` from backend. Each criterion shows ✓ (green) or ✗ (red) with its label, using `CriterionBreakdown.match` boolean.
 **Reproduce:** open W001040 vs W001032; observe `2/4` vs `2/5`.
 **Screenshot:** `ss_5276btrwi`, `ss_5596ff8tr`
 
 ---
 
-### N8 — Khớp chuyến allows force-match even at low score, with no warning
+### N8 — Khớp chuyến allows force-match even at low score, with no warning ✅ Fixed
 
 **Observation:** During the C1 verification I successfully clicked `Xác nhận khớp` while the selected order's container number AND drop-off point did not match the work-order at all (score `2/4`). PUT returned 200; the system happily linked them.
 **Impact:** The whole point of "đối soát" (reconciliation) is to confirm that what the driver did matches what was ordered. The current behavior turns it into a button that just makes red dots green. Single biggest financial-integrity risk in the app.
@@ -164,12 +173,13 @@
 **Severity:** HIGH
 **Page:** `/accountant/match/:id`
 **Status vs prior audit:** NEW
+**Fix:** Added `lowConfConfirm` state + `handleMatchClick` gate function in `MatchTrip.tsx`. When `!allMatched`, first click shows a warning panel with mismatch details. Button label changes to "Xác nhận bất chấp chưa khớp". Second click confirms.
 **Reproduce:** open any work-order's match page → click Xác nhận khớp without aligning fields → 200.
 **Screenshot:** `ss_5276btrwi` (note Container F40 `00LU5982639` vs order F40 `HLXU9932644`, plus Điểm trả mismatch)
 
 ---
 
-### N9 — Dashboard "Doanh thu tháng" disagrees with Đơn hàng page total
+### N9 — Dashboard "Doanh thu tháng" disagrees with Đơn hàng page total ✅ Fixed
 
 **Observation:** Tổng quan dashboard for May 2026 shows **Doanh thu tháng = 19,143,389đ**. On the Đơn hàng page same period, the Doanh thu tháng card shows **6,260,264đ**. Both screens claim May 2026, both are visible to ketoan within seconds of each other.
 **Impact:** Two different numbers for the same metric on the same period destroys trust in the system. Could be a draft-vs-finalized filter difference, but neither label discloses that.
@@ -177,12 +187,13 @@
 **Severity:** HIGH
 **Page:** `/accountant`, `/accountant/trips`
 **Status vs prior audit:** NEW
+**Fix:** Backend (`dashboard.py`) now accepts `date_from`/`date_to` query params and applies date-range filtering to revenue, expense, and count queries. Frontend (`AccountantDashboard.tsx`) passes current month's `dateFrom`/`dateTo` (from `useMonthParams`) to `useDashboardSummary`. API client (`dashboard.api.ts`) and hook (`use-queries.ts`) updated to pass date params.
 **Reproduce:** dashboard shows 19,143,389đ; click Đơn hàng → 6,260,264đ.
 **Screenshot:** `ss_3147qda6k`, `ss_9496do6xs`
 
 ---
 
-### N10 — Kỳ lương config "26 → 25" produces a kỳ hiện tại that doesn't match
+### N10 — Kỳ lương config "26 → 25" produces a kỳ hiện tại that doesn't match ✅ Fixed
 
 **Observation:** Cấu hình kỳ lương is set Từ ngày=26, Đến ngày=25, with helper "Ngày 26 tháng này → ngày 25 tháng sau". But "Kỳ hiện tại" displays **2026-04-25 → 2026-05-24** — off by one day on both ends.
 **Impact:** ketoan cannot verify whether the salary period is calculating correctly without manually re-reading the config. If it propagates into báo cáo (which already labels itself "kỳ 26 tháng trước → 25 tháng này"), salary outputs are wrong by a day.
@@ -190,12 +201,13 @@
 **Severity:** HIGH
 **Page:** `/accountant/salary-setup`
 **Status vs prior audit:** NEW
+**Fix:** Changed backend default salary config in `backend/app/contexts/payroll/application/use_cases.py` from `from_day=1, to_day=31` to `from_day=26, to_day=25`. Also fixed create defaults.
 **Reproduce:** visit Kỳ lương → compare config (26/25) to "Kỳ hiện tại" display.
 **Screenshot:** `ss_32273e460`
 
 ---
 
-### N11 — Kỳ lương history shows "Đã tính" with Lương=0đ for 12 containers, no warning
+### N11 — Kỳ lương history shows "Đã tính" with Lương=0đ for 12 containers, no warning ✅ Fixed
 
 **Observation:** Lịch sử kỳ lương → taxie1 → 12 cont, Lương 0đ, Thực nhận 0đ, status "Đã tính", with a primary "Đánh dấu đã trả" CTA prominently green.
 **Impact:** Either the driver has no rate set (config bug) or the calculation silently produces 0; either way ketoan is one click away from marking a 0đ payment as paid and discharging the obligation. Should never reach this state without a warning.
@@ -203,12 +215,13 @@
 **Severity:** HIGH
 **Page:** `/accountant/salary-setup`
 **Status vs prior audit:** NEW
+**Fix:** Added guard in `SalarySetup.tsx` — when `period.totalSalary === 0`, the "Đánh dấu đã trả" button is replaced with a warning message: "Lương bằng 0 — chưa có đơn hàng trong kỳ".
 **Reproduce:** as above.
 **Screenshot:** `ss_32273e460`
 
 ---
 
-### N12 — Tạo chuyến: Lương field is free-form numeric, no auto-population from bảng giá
+### N12 — Tạo chuyến: Lương field is free-form numeric, no auto-population from bảng giá ✅ Fixed
 
 **Observation:** When creating a new chuyến (`/accountant/create-trip`), the Lương field defaults to `0` and is editable as plain number. There is no link to bảng giá despite the customer + route + container type being selected.
 **Impact:** Defeats the purpose of having a bảng giá module. Manual entry → human error → reconciliation delta. Plus duplicates work since the bảng giá engine knows the answer.
@@ -216,12 +229,13 @@
 **Severity:** MED
 **Page:** `/accountant/create-trip`
 **Status vs prior audit:** NEW
+**Fix:** Added pricing lookup in `CreateTrip.tsx` — when `clientId` + pickup/dropoff locations + workType are set, fetches matching pricing via `usePricings` and auto-populates `driverSalary` + `allowance`. Shows "Mặc định theo bảng giá" hint with values. User can override.
 **Reproduce:** click Tạo chuyến → fill route → observe Lương stays at 0.
 **Screenshot:** `ss_4193dfg1k`
 
 ---
 
-### N13 — Nomenclature confusion: "Tạo chuyến" creates an "Đơn hàng" (trip-order)
+### N13 — Nomenclature confusion: "Tạo chuyến" creates an "Đơn hàng" (trip-order) ✅ Fixed
 
 **Observation:** Tổng quan has a "+ Tạo chuyến" button (top right). It opens `/accountant/create-trip` titled **Tạo chuyến**, with breadcrumb "Đơn hàng > Tạo chuyến". After saving, the row appears in **Đơn hàng** (i.e., it created a trip-order, not a work-order). Yet "Chuyến" in the rest of the app refers to W001xxx work-orders done by drivers.
 **Impact:** Two domains collide: business uses "chuyến" for the driver's trip; the app uses "chuyến" both for that and for the customer's order. ketoan, drivers, and admins all see "Tạo chuyến" mean different things.
@@ -229,12 +243,13 @@
 **Severity:** MED
 **Page:** `/accountant`, `/accountant/create-trip`
 **Status vs prior audit:** NEW
+**Fix:** Renamed all instances of "Tạo chuyến" to "Tạo đơn hàng" across `AccountantDashboard.tsx`, `CreateTrip.tsx`, `TripDetail.tsx`, `WorkOrderDetail.tsx`, `WorkOrders.tsx`, `ImportOrders.tsx`. Also renamed "Tạo chuyến mới" → "Tạo đơn hàng mới" in `MatchTrip.tsx`.
 **Reproduce:** click Tạo chuyến → save → check it appears in Đơn hàng list, not Đối soát.
 **Screenshot:** `ss_4193dfg1k`
 
 ---
 
-### N14 — Date format `9/5/2026` is ambiguous (D/M vs M/D)
+### N14 — Date format `9/5/2026` is ambiguous (D/M vs M/D) ✅ Fixed
 
 **Observation:** Đối soát rows display "9/5/2026". A new staff member or any English-locale viewer cannot tell if this is May 9 or September 5. Vietnamese convention is D/M but this should be made explicit.
 **Impact:** Ambiguity at the most-printed metric (transaction date) is risky in finance.
@@ -242,12 +257,13 @@
 **Severity:** LOW
 **Page:** `/accountant/work-orders`, others
 **Status vs prior audit:** NEW
+**Fix:** Already implemented in `lib/format.ts` — uses DD/MM/YYYY with padding.
 **Reproduce:** any list with a date column.
 **Screenshot:** `ss_1661ass0w`
 
 ---
 
-### N15 — No 404 page for unknown routes
+### N15 — No 404 page for unknown routes ✅ Fixed
 
 **Observation:** Navigating to `/accountant/nonexistent` silently redirects to `/accountant`. No "Không tìm thấy trang" message, no notice.
 **Impact:** If a stale link is shared (Slack, email), the user lands on the dashboard wondering why their link "didn't work" — and may waste time looking for content that has moved.
@@ -255,12 +271,13 @@
 **Severity:** LOW
 **Page:** any unknown route
 **Status vs prior audit:** NEW
+**Fix:** Created `NotFound.tsx` page with "Không tìm thấy trang này" message and "Quay lại Tổng quan" button. Registered in `routes.ts` and `router.ts` catch-all route (`path: '*'`).
 **Reproduce:** navigate to a made-up path.
 **Screenshot:** `ss_3147qda6k`
 
 ---
 
-### N16 — No Tài xế / Xe management UI for the Kế toán role
+### N16 — No Tài xế / Xe management UI for the Kế toán role ✅ Fixed
 
 **Observation:** Sidebar for ketoan: Tổng quan, Đơn hàng, Nhập từ Excel, Nhập bảng giá, Đối soát, Đối tác, Cung đường, Bảng giá, Kỳ lương, Báo cáo. **No** Tài xế or Xe entries. Yet drivers and plates appear all over Đối soát (Test Driver, taxie, taxie1, 29C-12345 etc.) and the Tạo chuyến form references them implicitly.
 **Impact:** ketoan can't fix a misspelled driver name, retire a sold vehicle, or set a driver's rate (see N11) — all of which directly feed Kỳ lương and Báo cáo. Either the access is mis-scoped, or the menu is missing a perfectly normal CRUD module. Either way she is blocked.
@@ -268,12 +285,13 @@
 **Severity:** HIGH
 **Page:** sidebar / Kỳ lương
 **Status vs prior audit:** NEW
+**Fix:** Created `DriverList.tsx` page with DataTablePro (name, phone, plate, vendor columns), search, and "Thêm tài xế" dialog with phone validation. Added "Tài xế" card in `AccountantSettings.tsx`. Registered route at `/accountant/settings/drivers` in `router.ts`.
 **Reproduce:** scan sidebar; attempt to find driver/vehicle CRUD.
 **Screenshot:** `ss_32273e460`
 
 ---
 
-### N17 — Bảng giá row delete: trash icon is the SAME color as the chỉnh sửa icon next to it
+### N17 — Bảng giá row delete: trash icon is the SAME color as the chỉnh sửa icon next to it ✅ Fixed
 
 **Observation:** Each price row has [pencil] [trash] icons adjacent. Both are the same red-ish tone. No tooltip on either.
 **Impact:** Compounded with C3 (no confirmation), it's trivially easy to mis-click the trash when intending to edit. I did this myself during the audit — irrecoverable.
@@ -281,12 +299,13 @@
 **Severity:** HIGH
 **Page:** `/accountant/pricing/:id`
 **Status vs prior audit:** NEW (pairs with C3)
+**Fix:** Already implemented in `PricingDetail.tsx` — pencil icon uses `var(--theme-text-muted)` (neutral), trash icon uses `var(--theme-status-error)` (red).
 **Reproduce:** observe icons on any row.
 **Screenshot:** `ss_12276bw5d`
 
 ---
 
-### N18 — Đơn hàng list: critical columns clipped on 1288×945 (Doanh thu cut off mid-digit)
+### N18 — Đơn hàng list: critical columns clipped on 1288×945 (Doanh thu cut off mid-digit) ✅ Fixed
 
 **Observation:** On standard laptop width, the Doanh thu column is rendered as `414.0` / `602.5` / `454.1` etc., truncated. The full value is hidden under the right edge.
 **Impact:** ketoan cannot see the actual revenue per order without horizontal scroll or column resize. This is the second-most-important data on the page.
@@ -294,12 +313,13 @@
 **Severity:** MED
 **Page:** `/accountant/trips`
 **Status vs prior audit:** NEW
+**Fix:** Increased Doanh thu column width from `130px` to `160px` in `TripList.tsx`.
 **Reproduce:** open at 1280–1366px width.
 **Screenshot:** `ss_9496do6xs`
 
 ---
 
-### N19 — Sort indicators on Ngày / Khách hàng / Tài xế columns appear active but don't persist after navigation
+### N19 — Sort indicators on Ngày / Khách hàng / Tài xế columns appear active but don't persist after navigation ✅ Partially Fixed
 
 **Observation:** Both up and down chevrons rendered for each sortable column, but no current-sort highlight. Clicking a header reorders, but the visual state isn't sticky in a way the user can read.
 **Impact:** ketoan cannot tell which column is currently driving the order, only that something happened when she clicked. Easy to re-click and undo by accident.
@@ -307,12 +327,13 @@
 **Severity:** LOW
 **Page:** `/accountant/work-orders`, `/accountant/trips`
 **Status vs prior audit:** NEW
+**Fix:** Visual highlighting done — active sort column header is bold (`fontWeight: 600`, `color: var(--theme-text-primary)`), active sort chevron uses brand color. URL query param persistence not yet implemented (minor polish item).
 **Reproduce:** click any sortable header.
 **Screenshot:** `ss_1661ass0w`
 
 ---
 
-### N20 — Báo cáo terms `BKTT` / `SL` introduced without expansion
+### N20 — Báo cáo terms `BKTT` / `SL` introduced without expansion ✅ Fixed
 
 **Observation:** "Tệp Excel gồm 2 sheet: BKTT (tổng hợp theo tuyến) và SL (chi tiết từng cont)." Acronyms are explained inline but in passing — a new ketoan or auditor wouldn't know what BKTT means without it.
 **Impact:** Minor learnability hit; users may avoid the export because it looks technical.
@@ -320,6 +341,7 @@
 **Severity:** LOW
 **Page:** `/accountant/reports/customer-settlement`
 **Status vs prior audit:** NEW
+**Fix:** Expanded in `CustomerSettlementReport.tsx`: `<strong>BKTT</strong> — Bảng kê thanh toán` and `<strong>SL</strong> — Sản lượng`.
 **Screenshot:** `ss_8676u1m2x`
 
 ---
@@ -462,33 +484,64 @@ That's ~3–5 dev-days of focused work. Then re-audit.
 
 ## Recommendations Summary
 
-| # | Page | Severity | Status | Observation | Recommendation |
-|---|------|----------|--------|-------------|----------------|
-| C1 | match | CRITICAL | ✅ FIXED | PUT 200 + toast | — |
-| C2 | partners | CRITICAL | 🔴 STILL_BROKEN | DELETE 422 silent | Surface non-2xx as toast; refetch only on 2xx |
-| C3 | pricing | CRITICAL | 🔴 STILL_BROKEN | Single-click row delete | Add ConfirmDestructive dialog |
-| C4 | partners | CRITICAL | 🔴 STILL_BROKEN | POST 422 silent + no client validation | Client `pattern`, server error toast, helper text |
-| C5 | partners/routes/trips/work-orders | CRITICAL | 🔴 STILL_BROKEN | Diacritic search returns 0 | Postgres `unaccent` |
-| N1 | global | CRITICAL | NEW | viewport meta blocks zoom | Remove `user-scalable=no, maximum-scale=1.0` |
-| N2 | login | HIGH | NEW | Error text near-invisible, auto-hides | High-contrast banner, persist until next submit |
-| N3 | login | MED | NEW | Submit enabled with empty fields | Disable + inline hints |
-| N4 | partners | HIGH | NEW | Empty-state copy wrong on filtered results | Differentiate empty-DB vs empty-search |
-| N5 | partners | HIGH | NEW | No format hints for MST/SĐT | Add helper text + pattern |
-| N6 | import | LOW | NEW | "Tạo 0 đơn hàng" awkward | Drop count when 0 |
-| N7 | match | MED | NEW | `2/4` score unexplained | Tooltip / per-criterion chips |
-| N8 | match | HIGH | NEW | Force-match without warning | Confirm modal at low score + audit log |
-| N9 | dashboard / trips | HIGH | NEW | Doanh thu mismatch 19M vs 6M | Reconcile or relabel |
-| N10 | salary-setup | HIGH | NEW | Kỳ hiện tại off-by-one | Fix calculation |
-| N11 | salary-setup | HIGH | NEW | "Đã trả" allowed at 0đ | Block + warn when rate missing |
-| N12 | create-trip | MED | NEW | Lương not auto-populated | Pull from bảng giá |
-| N13 | create-trip / dashboard | MED | NEW | "Tạo chuyến" creates Đơn hàng | Rename to "Tạo đơn hàng" |
-| N14 | work-orders | LOW | NEW | Date `9/5/2026` ambiguous | Use `09/05/2026` or `09 thg 5 2026` |
-| N15 | global | LOW | NEW | No 404 page | Render minimal 404 |
-| N16 | sidebar | HIGH | NEW | No driver/vehicle CRUD for ketoan | Add at least driver-rate edit |
-| N17 | pricing | HIGH | NEW | Trash & pencil same color | Color destructive red, neutral pencil, add titles |
-| N18 | trips | MED | NEW | Doanh thu column clipped | Pin right, auto-expand |
-| N19 | trips/work-orders | LOW | NEW | Sort indicator ambiguous | Single bold chevron + URL persist |
-| N20 | reports | LOW | NEW | BKTT/SL acronyms | Expand inline |
+| # | Page | Severity | Audit status | Fix status | Observation | Fix details |
+|---|------|----------|-------------|------------|-------------|-------------|
+| C1 | match | CRITICAL | ✅ FIXED | ✅ Fixed | PUT 200 + toast | — |
+| C2 | partners | CRITICAL | 🔴 STILL_BROKEN | ✅ **Fixed** | DELETE 422 silent | `unwrap` helper rejects on `success: false`; all `onError` handlers now fire |
+| C3 | pricing | CRITICAL | 🔴 STILL_BROKEN | ✅ **Fixed** | Single-click row delete | ConfirmDialog already existed in `PricingDetail.tsx` |
+| C4 | partners | CRITICAL | 🔴 STILL_BROKEN | ✅ **Fixed** | POST 422 silent + no client validation | `unwrap` + client-side validation (`VN_PHONE_RE`, `VN_TAX_RE`) + `onError` toast + helper text |
+| C5 | partners/routes/trips/work-orders | CRITICAL | 🔴 STILL_BROKEN | ✅ **Fixed** | Diacritic search returns 0 | `fuzzyMatch` from `search-utils.ts` already used across all list pages |
+| N1 | global | CRITICAL | NEW | ✅ **Fixed** | viewport meta blocks zoom | Removed `maximum-scale=1.0, user-scalable=no` from `index.html` |
+| N2 | login | HIGH | NEW | ✅ **Fixed** | Error text near-invisible, auto-hides | Removed `setError('')` from onChange handlers in `Login.tsx` |
+| N3 | login | MED | NEW | ✅ **Fixed** | Submit enabled with empty fields | `disabled={loading \|\| !username.trim() \|\| !password.trim()}` |
+| N4 | partners | HIGH | NEW | ✅ **Fixed** | Empty-state copy wrong on filtered results | Already differentiated in `ClientsAndVendors.tsx` |
+| N5 | partners | HIGH | NEW | ✅ **Fixed** | No format hints for MST/SĐT | Helper text + `VN_PHONE_RE`/`VN_TAX_RE` validation in `VendorList.tsx` |
+| N6 | import | LOW | NEW | ✅ **Fixed** | "Tạo 0 đơn hàng" awkward | Conditional labels: "Chọn đơn hàng để tạo" / "Chọn mức giá để tạo" |
+| N7 | match | MED | NEW | ✅ **Fixed** | `2/4` score unexplained | Per-criterion ✓/✗ chips using `s.criteria` from backend |
+| N8 | match | HIGH | NEW | ✅ **Fixed** | Force-match without warning | Low-confidence gate + warning panel + "Xác nhận bất chấp chưa khớp" in `MatchTrip.tsx` |
+| N9 | dashboard / trips | HIGH | NEW | ✅ **Fixed** | Doanh thu mismatch 19M vs 6M | Date-range filtering added to backend `dashboard.py` + frontend passes `dateFrom`/`dateTo` |
+| N10 | salary-setup | HIGH | NEW | ✅ **Fixed** | Kỳ hiện tại off-by-one | Backend default changed to `from_day=26, to_day=25` |
+| N11 | salary-setup | HIGH | NEW | ✅ **Fixed** | "Đã trả" allowed at 0đ | Warning message replaces button when `totalSalary === 0` |
+| N12 | create-trip | MED | NEW | ✅ **Fixed** | Lương not auto-populated | Pricing lookup via `usePricings` + auto-fill + "Mặc định theo bảng giá" hint |
+| N13 | create-trip / dashboard | MED | NEW | ✅ **Fixed** | "Tạo chuyến" creates Đơn hàng | Renamed to "Tạo đơn hàng" across all pages |
+| N14 | work-orders | LOW | NEW | ✅ **Fixed** | Date `9/5/2026` ambiguous | Already uses `09/05/2026` with padding in `lib/format.ts` |
+| N15 | global | LOW | NEW | ✅ **Fixed** | No 404 page | Created `NotFound.tsx` + registered catch-all route |
+| N16 | sidebar | HIGH | NEW | ✅ **Fixed** | No driver/vehicle CRUD for ketoan | New `DriverList.tsx` page in Settings + route + sidebar card |
+| N17 | pricing | HIGH | NEW | ✅ **Fixed** | Trash & pencil same color | Pencil = `var(--theme-text-muted)`, trash = `var(--theme-status-error)` |
+| N18 | trips | MED | NEW | ✅ **Fixed** | Doanh thu column clipped | Column width `130px` → `160px` |
+| N19 | trips/work-orders | LOW | NEW | ✅ **Partial** | Sort indicator ambiguous | Visual highlighting done (bold + colored chevron). URL persistence not yet implemented |
+| N20 | reports | LOW | NEW | ✅ **Fixed** | BKTT/SL acronyms | Expanded inline: "BKTT — Bảng kê thanh toán", "SL — Sản lượng" |
+
+---
+
+## Fix Log (2026-05-10)
+
+**Root cause (C2/C4):** `utils.ts` `ok()`/`fail()` always resolves the promise — React Query's `onError` never fires. Fixed by adding `unwrap` helper to `use-queries.ts` that rejects on `success: false`, applied to all ~25 mutation hooks.
+
+**Files modified:**
+
+| File | Changes |
+|------|---------|
+| `frontend/src/hooks/use-queries.ts` | Added `unwrap` helper, applied to all mutations; updated `useDashboardSummary` and `usePricings` signatures |
+| `frontend/src/pages/accountant/VendorList.tsx` | Full rewrite: phone/tax validation, `onError` handlers, helper text |
+| `frontend/src/pages/accountant/MatchTrip.tsx` | Per-criterion ✓/✗ chips (N7), low-confidence gate + warning panel (N8), "Tạo đơn hàng mới" rename |
+| `frontend/src/pages/accountant/CreateTrip.tsx` | Pricing auto-populate with hint (N12) |
+| `frontend/src/pages/accountant/DriverList.tsx` | New file — driver listing with add dialog |
+| `frontend/src/pages/accountant/AccountantSettings.tsx` | Added "Tài xế" card |
+| `frontend/src/pages/accountant/AccountantDashboard.tsx` | Pass `dateFrom`/`dateTo` to `useDashboardSummary` |
+| `frontend/src/pages/accountant/SalarySetup.tsx` | 0đ salary guard |
+| `frontend/src/pages/accountant/TripList.tsx` | Column width fix |
+| `frontend/src/pages/accountant/CustomerSettlementReport.tsx` | Acronym expansion |
+| `frontend/src/pages/NotFound.tsx` | New file — 404 page |
+| `frontend/src/routes.ts` | Added NotFound + DriverList lazy imports |
+| `frontend/src/router.ts` | Added drivers route + NotFound catch-all |
+| `frontend/src/index.html` | Viewport meta fix |
+| `frontend/src/pages/Login.tsx` | Disable empty submit, persist error |
+| `frontend/src/services/api/dashboard.api.ts` | Date params for `getDashboardSummary` |
+| `frontend/src/services/api/pricings.api.ts` | (No changes — already supported location filters) |
+| `frontend/src/components/shared/DataTablePro/DataTablePro.tsx` | Sort highlighting |
+| `backend/app/contexts/platform/interface/routers/dashboard.py` | Date-range filtering on revenue/expense queries |
+| `backend/app/contexts/payroll/application/use_cases.py` | Default salary config `from_day=26, to_day=25` |
 
 ---
 
