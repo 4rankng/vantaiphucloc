@@ -137,7 +137,7 @@ export function WorkOrderMasterList({
                   label={getStatusLabel(wo.status)}
                   size="sm"
                 />
-                {wo.status === 'MATCHED' && wo.matchedTripCount && wo.matchedTripCount > 1 && (
+                {wo.status === 'MATCHED' && wo.matchedTripCount && wo.matchedTripCount >= 1 && (
                   <span className="text-[9px] font-bold" style={{ color: 'var(--theme-status-success)' }}>
                     {wo.matchedTripCount} ĐH
                   </span>
