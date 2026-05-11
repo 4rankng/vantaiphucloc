@@ -81,6 +81,7 @@ export function createAppRouter() {
               { path: 'pricing/:clientId',       element: ebc('SettingsPricingDetail', h(Lazy, { component: R.SettingsPricingDetail })) },
               { path: 'clients',                 element: ebc('ClientList', h(Lazy, { component: R.ClientList })) },
               { path: 'vendors',                 element: ebc('VendorList', h(Lazy, { component: R.VendorList })) },
+              { path: 'contractors',             element: h(Navigate, { to: '/accountant/settings/vendors', replace: true }) },
               { path: 'users',                   element: ebc('UserManagement', h(Lazy, { component: R.UserManagement })) },
               { path: 'drivers',                 element: ebc('DriverList', h(Lazy, { component: R.DriverList })) },
             ]},
