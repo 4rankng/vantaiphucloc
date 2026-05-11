@@ -31,9 +31,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import (
     LocationAlias,
+    Reconciliation,
     TripOrder,
     TripOrderContainer,
-    TripOrderWorkOrder,
     WorkOrder,
     WorkOrderContainer,
 )
@@ -47,10 +47,10 @@ from app.schemas.domain import (
     WorkOrderOut,
 )
 from app.core.summaries import (
-    get_client_summary,
+    get_partner_summary,
     get_driver_summary,
     get_location_summary,
-    load_client_summaries,
+    load_partner_summaries,
     load_driver_summaries,
     load_location_summaries,
 )
@@ -219,13 +219,12 @@ async def suggest_trip_matches(
         select(TripOrderContainer.trip_order_id)
         .where(TripOrderContainer.container_number.in_(wo_container_numbers))
     )
-    matched_to_subquery = select(TripOrderWorkOrder.trip_order_id)
+    matched_to_subquery = select(Reconciliation.trip_order_id)
     query = select(TripOrder).where(
         TripOrder.status == "PENDING",
         ~TripOrder.id.in_(matched_to_subquery),
         or_(
-            TripOrder.client_id == work_order.client_id,
-            TripOrder.route == work_order.route,
+            TripOrder.partner_id == work_order.partner_id,
             TripOrder.id.in_(container_subquery),
         ),
     )
@@ -242,17 +241,17 @@ async def suggest_trip_matches(
     for c in cont_result.scalars().all():
         to_containers[c.trip_order_id].append(c)
 
-    client_ids = {to.client_id for to in candidates} | {work_order.client_id}
+    partner_ids = {to.partner_id for to in candidates} | {work_order.partner_id}
     location_ids = (
         {to.pickup_location_id for to in candidates}
         | {to.dropoff_location_id for to in candidates}
         | {work_order.pickup_location_id, work_order.dropoff_location_id}
     )
-    clients = await load_client_summaries(db, client_ids)
+    partners = await load_partner_summaries(db, partner_ids)
     locations = await load_location_summaries(db, location_ids)
     alias_groups = await _load_alias_groups(db)
 
-    wo_client_name = get_client_summary(clients, work_order.client_id).name
+    wo_client_name = get_partner_summary(partners, work_order.partner_id).name
     wo_pickup_name = get_location_summary(
         locations, work_order.pickup_location_id,
     ).name
@@ -278,8 +277,7 @@ async def suggest_trip_matches(
         )
         to_out = TripOrderOut(
             id=to.id, code=to.code, trip_date=to.trip_date,
-            client=get_client_summary(clients, to.client_id),
-            route=to.route,
+            partner=get_partner_summary(partners, to.partner_id),
             pickup_location=get_location_summary(locations, to.pickup_location_id),
             dropoff_location=get_location_summary(locations, to.dropoff_location_id),
             containers=[
@@ -290,12 +288,7 @@ async def suggest_trip_matches(
             unit_price=to.unit_price,
             driver_salary=to.driver_salary,
             allowance=to.allowance,
-            revenue=to.revenue,
             status=to.status,
-            is_confirmed=to.is_confirmed,
-            confirmed_by=to.confirmed_by,
-            confirmed_at=to.confirmed_at,
-            is_locked=to.is_locked,
             matched_work_order_ids=[],
             created_at=to.created_at,
             updated_at=to.updated_at,
@@ -304,10 +297,10 @@ async def suggest_trip_matches(
             matched_fields=matched_fields,
             wo_date_str=wo_date_str,
             to_date_str=to.trip_date.isoformat() if to.trip_date else None,
-            wo_route=work_order.route,
-            to_route=to.route,
+            wo_route=None,
+            to_route=None,
             wo_client=wo_client_name,
-            to_client=get_client_summary(clients, to.client_id).name,
+            to_client=get_partner_summary(partners, to.partner_id).name,
             wo_pickup=wo_pickup_name,
             to_pickup=get_location_summary(
                 locations, to.pickup_location_id,
@@ -353,13 +346,12 @@ async def suggest_wo_matches(
         select(WorkOrderContainer.work_order_id)
         .where(WorkOrderContainer.container_number.in_(to_container_numbers))
     )
-    matched_wo_subquery = select(TripOrderWorkOrder.work_order_id)
+    matched_wo_subquery = select(Reconciliation.work_order_id)
     query = select(WorkOrder).where(
         WorkOrder.status == "PENDING",
         ~WorkOrder.id.in_(matched_wo_subquery),
         or_(
-            WorkOrder.client_id == trip_order.client_id,
-            WorkOrder.route == trip_order.route,
+            WorkOrder.partner_id == trip_order.partner_id,
             WorkOrder.id.in_(container_subquery),
         ),
     )
@@ -376,18 +368,18 @@ async def suggest_wo_matches(
     for c in cont_result.scalars().all():
         wo_containers[c.work_order_id].append(c)
 
-    client_ids = {wo.client_id for wo in candidates} | {trip_order.client_id}
+    partner_ids = {wo.partner_id for wo in candidates} | {trip_order.partner_id}
     drivers = await load_driver_summaries(db, {wo.driver_id for wo in candidates})
     location_ids = (
         {wo.pickup_location_id for wo in candidates}
         | {wo.dropoff_location_id for wo in candidates}
         | {trip_order.pickup_location_id, trip_order.dropoff_location_id}
     )
-    clients = await load_client_summaries(db, client_ids)
+    partners = await load_partner_summaries(db, partner_ids)
     locations = await load_location_summaries(db, location_ids)
     alias_groups = await _load_alias_groups(db)
 
-    to_client_name = get_client_summary(clients, trip_order.client_id).name
+    to_client_name = get_partner_summary(partners, trip_order.partner_id).name
     to_pickup_name = get_location_summary(
         locations, trip_order.pickup_location_id,
     ).name
@@ -411,22 +403,18 @@ async def suggest_wo_matches(
         wo_out = WorkOrderOut(
             id=wo.id,
             code=wo.code,
-            client=get_client_summary(clients, wo.client_id),
-            route=wo.route,
+            partner=get_partner_summary(partners, wo.partner_id),
             pickup_location=get_location_summary(locations, wo.pickup_location_id),
             dropoff_location=get_location_summary(locations, wo.dropoff_location_id),
             driver=get_driver_summary(drivers, wo.driver_id),
-            tractor_plate=wo.tractor_plate,
             gps_lat=wo.gps_lat,
             gps_lng=wo.gps_lng,
             gps_address=wo.gps_address,
             unit_price=wo.unit_price,
             driver_salary=wo.driver_salary,
             allowance=wo.allowance,
-            earning=wo.earning,
             pricing_id=wo.pricing_id,
             status=wo.status,
-            is_locked=wo.is_locked,
             containers=[
                 ContainerOut.model_validate(c)
                 for c in wo_containers.get(wo.id, [])
@@ -441,9 +429,9 @@ async def suggest_wo_matches(
             matched_fields=matched_fields,
             wo_date_str=wo_date_str,
             to_date_str=to_date_str,
-            wo_route=wo.route,
-            to_route=trip_order.route,
-            wo_client=get_client_summary(clients, wo.client_id).name,
+            wo_route=None,
+            to_route=None,
+            wo_client=get_partner_summary(partners, wo.partner_id).name,
             to_client=to_client_name,
             wo_pickup=get_location_summary(
                 locations, wo.pickup_location_id,
@@ -506,12 +494,9 @@ def _score_to_against_wo(
     if _locations_match(work_order.dropoff_location_id, to.dropoff_location_id, ag):
         matched_fields.append("dropoff_location")
         score += WEIGHTS["dropoff_location"]
-    if to.client_id == work_order.client_id:
+    if to.partner_id == work_order.partner_id:
         matched_fields.append("client")
         score += WEIGHTS["client"]
-    if to.route == work_order.route:
-        matched_fields.append("route")
-        score += WEIGHTS["route"]
 
     return matched_fields, score
 
@@ -551,11 +536,8 @@ def _score_wo_against_to(
     if _locations_match(wo.dropoff_location_id, trip_order.dropoff_location_id, ag):
         matched_fields.append("dropoff_location")
         score += WEIGHTS["dropoff_location"]
-    if wo.client_id == trip_order.client_id:
+    if wo.partner_id == trip_order.partner_id:
         matched_fields.append("client")
         score += WEIGHTS["client"]
-    if wo.route == trip_order.route:
-        matched_fields.append("route")
-        score += WEIGHTS["route"]
 
     return matched_fields, score

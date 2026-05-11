@@ -30,10 +30,10 @@ from app.contexts.operations.infrastructure.mappers import (
     work_order_to_orm,
 )
 from app.contexts.operations.infrastructure.orm import (
+    ReconciliationORM,
     TripContainerPhotoORM,
     TripOrderContainerORM,
     TripOrderORM,
-    TripOrderWorkOrderORM,
     WorkOrderContainerORM,
     WorkOrderORM,
 )
@@ -71,8 +71,11 @@ class SqlTripOrderRepository(TripOrderRepository):
 
     async def _matched_wo_ids(self, tid: int) -> list[int]:
         rows = (await self.session.execute(
-            select(TripOrderWorkOrderORM.work_order_id)
-            .where(TripOrderWorkOrderORM.trip_order_id == tid)
+            select(ReconciliationORM.work_order_id)
+            .where(
+                ReconciliationORM.trip_order_id == tid,
+                ReconciliationORM.is_active == True,  # noqa: E712
+            )
         )).all()
         return [r[0] for r in rows]
 
@@ -159,8 +162,9 @@ class SqlTripOrderRepository(TripOrderRepository):
         await self.session.flush()
         # Matched WO links
         for wo_id in t.matched_work_order_ids:
-            self.session.add(TripOrderWorkOrderORM(
+            self.session.add(ReconciliationORM(
                 trip_order_id=orm.id, work_order_id=int(wo_id),
+                match_score=1.0, matched_by=0,
             ))
         await self.session.flush()
         return await self._hydrate(orm)
@@ -190,13 +194,14 @@ class SqlTripOrderRepository(TripOrderRepository):
 
         # Reconcile matched WO links (replace).
         await self.session.execute(
-            sa_delete(TripOrderWorkOrderORM).where(
-                TripOrderWorkOrderORM.trip_order_id == existing.id
+            sa_delete(ReconciliationORM).where(
+                ReconciliationORM.trip_order_id == existing.id
             )
         )
         for wo_id in t.matched_work_order_ids:
-            self.session.add(TripOrderWorkOrderORM(
+            self.session.add(ReconciliationORM(
                 trip_order_id=existing.id, work_order_id=int(wo_id),
+                match_score=1.0, matched_by=0,
             ))
         await self.session.flush()
 

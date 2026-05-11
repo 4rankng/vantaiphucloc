@@ -1,7 +1,7 @@
 """Customer-template cache.
 
 Lookup / upsert helpers around `customer_import_templates`. The pipeline
-calls `find_template(client_id, structure_hash)` after detecting the
+calls `find_template(partner_id, structure_hash)` after detecting the
 sheet + header row, and reuses the saved mapping if a row exists. On
 commit, `save_template(...)` upserts the mapping the user confirmed.
 """
@@ -19,14 +19,14 @@ from app.models.domain import CustomerImportTemplate
 
 async def find_template(
     db: AsyncSession,
-    client_id: int | None,
+    partner_id: int | None,
     structure_hash: str,
 ) -> CustomerImportTemplate | None:
-    if client_id is None:
+    if partner_id is None:
         return None
     res = await db.execute(
         select(CustomerImportTemplate).where(
-            CustomerImportTemplate.client_id == client_id,
+            CustomerImportTemplate.partner_id == partner_id,
             CustomerImportTemplate.structure_hash == structure_hash,
         )
     )
@@ -36,7 +36,7 @@ async def find_template(
 async def save_template(
     db: AsyncSession,
     *,
-    client_id: int | None,
+    partner_id: int | None,
     structure_hash: str,
     template_name: str,
     sheet_name: str,
@@ -44,12 +44,11 @@ async def save_template(
     column_mapping: list[dict[str, Any]],
     user_id: int | None,
 ) -> CustomerImportTemplate:
-    """Upsert a template. Bumps `last_used_at` if the row already exists."""
-    existing = await find_template(db, client_id, structure_hash)
+    existing = await find_template(db, partner_id, structure_hash)
     now = datetime.now(timezone.utc)
     if existing is None:
         row = CustomerImportTemplate(
-            client_id=client_id,
+            partner_id=partner_id,
             template_name=template_name,
             structure_hash=structure_hash,
             sheet_name=sheet_name,
@@ -72,12 +71,12 @@ async def save_template(
     return existing
 
 
-async def list_templates_for_client(
-    db: AsyncSession, client_id: int
+async def list_templates_for_partner(
+    db: AsyncSession, partner_id: int
 ) -> list[CustomerImportTemplate]:
     res = await db.execute(
         select(CustomerImportTemplate)
-        .where(CustomerImportTemplate.client_id == client_id)
+        .where(CustomerImportTemplate.partner_id == partner_id)
         .order_by(CustomerImportTemplate.last_used_at.desc())
     )
     return list(res.scalars().all())
