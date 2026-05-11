@@ -56,7 +56,7 @@ async def fixtures(db_session):
     db_session.add_all([client, pickup, dropoff])
     await db_session.flush()
     return {
-        "client_id": client.id,
+        "partner_id": client.id,
         "pickup_id": pickup.id,
         "dropoff_id": dropoff.id,
     }
@@ -72,7 +72,7 @@ async def test_create_trip_order_with_no_pricing_lands_in_draft(
 
     t = await use_case(TripOrderCreateInput(
         trip_date=date(2026, 5, 1),
-        client_id=fixtures["client_id"],
+        partner_id=fixtures["client_id"],
         route="Cát Lái - Long Hậu",
         pickup_location_id=fixtures["pickup_id"],
         dropoff_location_id=fixtures["dropoff_id"],
@@ -97,7 +97,7 @@ async def test_create_trip_order_with_explicit_pricing_lands_in_pending(
 
     t = await use_case(TripOrderCreateInput(
         trip_date=date(2026, 5, 1),
-        client_id=fixtures["client_id"],
+        partner_id=fixtures["client_id"],
         route="Cát Lái - Long Hậu",
         pickup_location_id=fixtures["pickup_id"],
         dropoff_location_id=fixtures["dropoff_id"],
@@ -126,7 +126,7 @@ async def test_list_trip_orders_paginates_and_filters(db_session, fixtures):
     for i in range(3):
         await create(TripOrderCreateInput(
             trip_date=date(2026, 5, 1),
-            client_id=fixtures["client_id"],
+            partner_id=fixtures["client_id"],
             route=f"Lane{i}",
             pickup_location_id=fixtures["pickup_id"],
             dropoff_location_id=fixtures["dropoff_id"],
@@ -134,7 +134,7 @@ async def test_list_trip_orders_paginates_and_filters(db_session, fixtures):
 
     listing = ListTripOrders(to_repo)
     items, total = await listing(TripOrderListFilters(
-        page=1, page_size=2, client_id=fixtures["client_id"],
+        page=1, page_size=2, partner_id=fixtures["client_id"],
     ))
     assert total == 3
     assert len(items) == 2
@@ -147,7 +147,7 @@ async def test_cancel_trip_order_blocked_when_locked(db_session, fixtures):
     create = CreateTripOrder(to_repo, wo_repo, db_session)
     t = await create(TripOrderCreateInput(
         trip_date=date(2026, 5, 1),
-        client_id=fixtures["client_id"],
+        partner_id=fixtures["client_id"],
         route="A-B",
         pickup_location_id=fixtures["pickup_id"],
         dropoff_location_id=fixtures["dropoff_id"],
@@ -170,7 +170,7 @@ async def test_match_and_unmatch_round_trip(db_session, fixtures):
     create_to = CreateTripOrder(to_repo, wo_repo, db_session)
     to = await create_to(TripOrderCreateInput(
         trip_date=date(2026, 5, 5),
-        client_id=fixtures["client_id"],
+        partner_id=fixtures["client_id"],
         route="A-B",
         pickup_location_id=fixtures["pickup_id"],
         dropoff_location_id=fixtures["dropoff_id"],
@@ -198,7 +198,7 @@ async def test_match_and_unmatch_round_trip(db_session, fixtures):
     create_wo = CreateWorkOrder(wo_repo, db_session)
     wo = await create_wo(
         WorkOrderCreateInput(
-            client_id=fixtures["client_id"],
+            partner_id=fixtures["client_id"],
             route="A-B",
             pickup_location_id=fixtures["pickup_id"],
             dropoff_location_id=fixtures["dropoff_id"],
@@ -259,7 +259,7 @@ async def test_match_rejects_when_wo_has_no_containers(db_session, fixtures):
     create_to = CreateTripOrder(to_repo, wo_repo, db_session)
     to = await create_to(TripOrderCreateInput(
         trip_date=date(2026, 5, 5),
-        client_id=fixtures["client_id"],
+        partner_id=fixtures["client_id"],
         route="A-B",
         pickup_location_id=fixtures["pickup_id"],
         dropoff_location_id=fixtures["dropoff_id"],
@@ -274,7 +274,7 @@ async def test_match_rejects_when_wo_has_no_containers(db_session, fixtures):
     create_wo = CreateWorkOrder(wo_repo, db_session)
     wo = await create_wo(
         WorkOrderCreateInput(
-            client_id=fixtures["client_id"],
+            partner_id=fixtures["client_id"],
             route="A-B",
             pickup_location_id=fixtures["pickup_id"],
             dropoff_location_id=fixtures["dropoff_id"],
@@ -326,7 +326,7 @@ async def test_confirm_completes_matched_work_orders(db_session, fixtures):
     create_to = CreateTripOrder(to_repo, wo_repo, db_session)
     to = await create_to(TripOrderCreateInput(
         trip_date=date(2026, 5, 5),
-        client_id=fixtures["client_id"],
+        partner_id=fixtures["client_id"],
         route="A-B",
         pickup_location_id=fixtures["pickup_id"],
         dropoff_location_id=fixtures["dropoff_id"],
@@ -341,7 +341,7 @@ async def test_confirm_completes_matched_work_orders(db_session, fixtures):
     create_wo = CreateWorkOrder(wo_repo, db_session)
     wo = await create_wo(
         WorkOrderCreateInput(
-            client_id=fixtures["client_id"],
+            partner_id=fixtures["client_id"],
             route="A-B",
             pickup_location_id=fixtures["pickup_id"],
             dropoff_location_id=fixtures["dropoff_id"],
@@ -375,7 +375,7 @@ async def test_update_trip_order_replaces_containers(db_session, fixtures):
     create = CreateTripOrder(to_repo, wo_repo, db_session)
     t = await create(TripOrderCreateInput(
         trip_date=date(2026, 5, 5),
-        client_id=fixtures["client_id"],
+        partner_id=fixtures["client_id"],
         route="A-B",
         pickup_location_id=fixtures["pickup_id"],
         dropoff_location_id=fixtures["dropoff_id"],
@@ -416,7 +416,7 @@ async def test_create_work_order_validates_container_number(
     with pytest.raises(ValueError):
         await create(
             WorkOrderCreateInput(
-                client_id=fixtures["client_id"],
+                partner_id=fixtures["client_id"],
                 route="A-B",
                 pickup_location_id=fixtures["pickup_id"],
                 dropoff_location_id=fixtures["dropoff_id"],

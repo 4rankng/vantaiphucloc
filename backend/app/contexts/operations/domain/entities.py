@@ -146,6 +146,10 @@ class TripOrder:
     containers: list[TripOrderContainer] = field(default_factory=list)
     matched_work_order_ids: list[int] = field(default_factory=list)
     matched_by: int = 0
+    is_locked: bool = False
+    is_confirmed: bool = False
+    locked_by: int | None = None
+    confirmed_by: int | None = None
 
     # ── behaviour ────────────────────────────────────────────
 
@@ -236,8 +240,37 @@ class TripOrder:
             self.matched_work_order_ids.remove(int(work_order_id))
             self.updated_at = _utcnow()
 
+    def lock(self, user_id: int | None = None) -> None:
+        """Lock the TripOrder, preventing cancellation."""
+        self.is_locked = True
+        self.locked_by = user_id
+        self.updated_at = _utcnow()
 
-# ── WorkOrder aggregate ─────────────────────────────────────────
+    def unlock(self) -> None:
+        """Unlock the TripOrder."""
+        self.is_locked = False
+        self.locked_by = None
+        self.updated_at = _utcnow()
+
+    def confirm(self, user_id: int | None = None) -> None:
+        """Confirm the TripOrder — permanent, no unconfirm."""
+        if self.is_locked is False:
+            raise TripOrderLocked(
+                "TripOrder must be locked before confirmation"
+            )
+        self.is_confirmed = True
+        self.confirmed_by = user_id
+        self.status = TripOrderStatus.CONFIRMED
+        self.updated_at = _utcnow()
+
+    def cancel(self) -> None:
+        """Cancel the TripOrder. Blocked when locked."""
+        if self.is_locked:
+            raise TripOrderLocked(
+                "Cannot cancel a locked TripOrder"
+            )
+        self.status = TripOrderStatus.CANCELLED
+        self.updated_at = _utcnow() ─────────────────────────────────────────
 
 
 @dataclass
@@ -282,6 +315,7 @@ class WorkOrder:
     pricing_id: int | None = None
     trip_date: object | None = None  # explicit trip execution date; falls back to created_at
     status: str = WorkOrderStatus.PENDING
+    is_locked: bool = False
     created_at: datetime = field(default_factory=_utcnow)
     updated_at: datetime = field(default_factory=_utcnow)
     containers: list[WorkOrderContainer] = field(default_factory=list)
