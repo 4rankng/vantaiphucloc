@@ -257,7 +257,7 @@ function DesktopDashboard() {
       onClick: () => navigate('/accountant/salary-setup'),
     },
     {
-      label: 'Doanh thu (đơn hàng tháng)',
+      label: 'Doanh thu tháng',
       value: fmt(revenue),
       icon: <DollarSign className="h-5 w-5" />,
       onClick: () => navigate('/accountant/trips'),

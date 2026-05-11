@@ -1,14 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Upload, FileText, AlertTriangle, CheckCircle2, XCircle, Save, Tag, FileSpreadsheet } from 'lucide-react'
-import { Button, Input, Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui'
-import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
+import { ArrowLeft, AlertTriangle, CheckCircle2, XCircle, Tag, FileSpreadsheet } from 'lucide-react'
+import { Button } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { useClients } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { apiClient } from '@/services/api'
 import type {
-  CanonicalSchema,
   ColumnMappingDto,
   CommitResponse,
   CommitRow,
@@ -17,21 +15,12 @@ import type {
   PreviewResultDto,
 } from '@/services/api/imports.api'
 
-const SKIP_FIELD = '__skip__'
-
 function todayIso(): string {
   const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function confidenceBadge(conf: number): { label: string; color: string } {
-  if (conf >= 0.95) return { label: 'Cao', color: 'var(--theme-status-success)' }
-  if (conf >= 0.6) return { label: 'TB', color: 'var(--theme-status-info)' }
-  if (conf > 0) return { label: 'Thấp', color: 'var(--theme-status-warning)' }
-  return { label: '—', color: 'var(--theme-text-muted)' }
-}
-
-export function ImportOrders() {
+export function ImportOrders({ onClose }: { onClose?: () => void } = {}) {
   const toast = useToast()
   const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -46,15 +35,8 @@ export function ImportOrders() {
   const [preview, setPreview] = useState<PreviewResultDto | null>(null)
   const [mapping, setMapping] = useState<ColumnMappingDto[]>([])
   const [editedRows, setEditedRows] = useState<ParsedRowDto[]>([])
-  const [saveTemplateName, setSaveTemplateName] = useState('')
-  const [overwriteDuplicates, setOverwriteDuplicates] = useState(false)
-  const [schema, setSchema] = useState<CanonicalSchema | null>(null)
   const [lastCommit, setLastCommit] = useState<CommitResponse | null>(null)
   const [pricingResult, setPricingResult] = useState<{ priced: number; unpriced: number } | null>(null)
-
-  useEffect(() => {
-    apiClient.getCanonicalSchema().then(setSchema).catch(() => {/* non-fatal */})
-  }, [])
 
   const clientOptions = useMemo(
     () => clients.map(c => ({ value: String(c.id), label: c.name, sublabel: c.code ? `Mã: ${c.code}` : undefined })),
@@ -92,16 +74,6 @@ export function ImportOrders() {
     } finally {
       setBusy(false)
     }
-  }
-
-  const updateMapping = (colIdx: number, newField: string | null) => {
-    setMapping(prev =>
-      prev.map(m =>
-        m.column_index === colIdx
-          ? { ...m, canonical_field: newField, source: 'manual', confidence: newField ? 1.0 : 0.0 }
-          : m,
-      ),
-    )
   }
 
   const updateRowValue = (rowSourceIdx: number, key: keyof ParsedRowDto['values'], value: string) => {
@@ -173,8 +145,7 @@ export function ImportOrders() {
       const res = await apiClient.commitCustomerExcel({
         partner_id: Number(clientId),
         rows,
-        overwrite_duplicates: overwriteDuplicates,
-        save_template_as: saveTemplateName || undefined,
+        overwrite_duplicates: false,
         structure_hash: preview.structure_hash,
         sheet_name: preview.sheet_name,
         header_row_index: preview.header_row_index,
@@ -194,7 +165,6 @@ export function ImportOrders() {
       setMapping([])
       setEditedRows([])
       setFile(null)
-      setSaveTemplateName('')
       if (fileInputRef.current) fileInputRef.current.value = ''
     } catch (err) {
       const detail = (err as { message?: string })?.message ?? 'Không tạo được đơn hàng.'
@@ -230,6 +200,26 @@ export function ImportOrders() {
 
   return (
     <div className="space-y-4">
+      {/* Page header — only shown when used as a standalone page (no onClose prop) */}
+      {!onClose && (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-[color-mix(in_srgb,var(--theme-brand-primary)_8%,transparent)]"
+            style={{ color: 'var(--theme-text-secondary)' }}
+            aria-label="Quay lại"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div>
+            <h1 className="typo-h1">Nhập dữ liệu đơn hàng</h1>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+              Tải lên file Excel từ khách hàng để tạo đơn hàng tự động
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Results panel — appears after a successful commit */}
       {lastCommit && (lastCommit.created_trip_ids?.length ?? 0) > 0 && (
         <div
@@ -303,7 +293,7 @@ export function ImportOrders() {
             <label className="typo-form-label" htmlFor="default-trip-date">Ngày mặc định</label>
             <Input
               id="default-trip-date"
-              type="datetime-local"
+              type="date"
               value={defaultTripDate}
               onChange={e => setDefaultTripDate(e.target.value)}
               className="h-11 text-sm"
@@ -347,37 +337,80 @@ export function ImportOrders() {
               </button>
             </div>
           ) : (
-            <div className="space-y-2">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto" style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)' }}>
-                <Upload className="w-5 h-5" style={{ color: 'var(--theme-brand-primary)' }} />
+            <div className="space-y-3">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto" style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 12%, transparent)' }}>
+                <FileSpreadsheet className="w-7 h-7" style={{ color: 'var(--theme-brand-primary)' }} />
               </div>
               <div>
                 <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
                   Kéo thả tệp Excel vào đây
                 </p>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-                  hoặc bấm để chọn tệp · Hỗ trợ .xlsx, .xls
+                <p className="text-xs mt-1" style={{ color: 'var(--theme-text-secondary)' }}>
+                  hoặc{' '}
+                  <span className="font-semibold underline underline-offset-2" style={{ color: 'var(--theme-brand-primary)' }}>
+                    bấm để chọn tệp
+                  </span>
                 </p>
+              </div>
+              <div className="flex items-center justify-center gap-2 pt-1">
+                <span
+                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium"
+                  style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)', color: 'var(--theme-brand-primary)' }}
+                >
+                  .xlsx · .xls
+                </span>
+                <span style={{ color: 'var(--theme-border-default)' }}>·</span>
+                <a
+                  href="/sample-import-template.xlsx"
+                  download
+                  onClick={e => e.stopPropagation()}
+                  className="text-[11px] underline underline-offset-2 transition hover:opacity-70"
+                  style={{ color: 'var(--theme-text-muted)' }}
+                >
+                  Tải file mẫu
+                </a>
               </div>
             </div>
           )}
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-end gap-2">
-          <Button onClick={runPreview} disabled={!file || busy} className="btn-primary h-10 px-5 text-sm">
-            {busy ? 'Đang phân tích...' : 'Phân tích tệp'}
-          </Button>
-          {preview && (
+        <div className="flex items-center justify-between gap-2 pt-1">
+          <div>
+            {onClose && !preview && (
+              <Button
+                onClick={onClose}
+                className="btn-ghost h-10 px-4 text-sm"
+                style={{ color: 'var(--theme-text-secondary)' }}
+              >
+                Huỷ
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
             <Button
-              onClick={commit}
-              disabled={!clientId || !editedRows.length || committing}
-              className="btn-primary h-10 px-5 text-sm"
+              onClick={runPreview}
+              disabled={!file || busy}
+              className="btn-primary h-10 px-5 text-sm font-semibold"
+              style={
+                file && !busy
+                  ? { background: 'var(--theme-brand-primary)', color: '#fff', opacity: 1 }
+                  : undefined
+              }
             >
-              <CheckCircle2 className="w-4 h-4 mr-1.5" />
-              {committing ? 'Đang tạo...' : `Tạo ${editedRows.length} đơn hàng`}
+              {busy ? 'Đang phân tích...' : 'Phân tích tệp'}
             </Button>
-          )}
+            {preview && (
+              <Button
+                onClick={commit}
+                disabled={!clientId || !editedRows.length || committing}
+                className="btn-primary h-10 px-5 text-sm"
+              >
+                <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                {committing ? 'Đang tạo...' : `Tạo ${editedRows.length} đơn hàng`}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -413,56 +446,6 @@ export function ImportOrders() {
         </div>
       )}
 
-      {/* Pane 3a — column mapping table */}
-      {preview && schema && (
-        <div className="card p-5">
-          <h3 className="typo-h2 mb-3">Ánh xạ cột</h3>
-          <p className="typo-caption mb-3">Có thể chọn lại trường nếu cột nào ánh xạ chưa đúng.</p>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead style={{ color: 'var(--theme-text-secondary)' }}>
-                <tr className="text-left">
-                  <th className="py-2 px-2 font-medium">Cột</th>
-                  <th className="py-2 px-2 font-medium">Tiêu đề</th>
-                  <th className="py-2 px-2 font-medium">Trường</th>
-                  <th className="py-2 px-2 font-medium">Tin cậy</th>
-                  <th className="py-2 px-2 font-medium">Mẫu giá trị</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mapping.map(m => (
-                  <tr key={m.column_index} className="border-t" style={{ borderColor: 'var(--theme-border-subtle)' }}>
-                    <td className="py-2 px-2 font-mono">{m.column_index + 1}</td>
-                    <td className="py-2 px-2">{m.header_text || <em>(trống)</em>}</td>
-                    <td className="py-2 px-2">
-                      <select
-                        value={m.canonical_field ?? ''}
-                        onChange={e => updateMapping(m.column_index, e.target.value || null)}
-                        className="h-8 px-2 rounded border text-sm"
-                        style={{ borderColor: 'var(--theme-border)', background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)' }}
-                      >
-                        <option value="">— Chưa ánh xạ —</option>
-                        <option value={SKIP_FIELD}>Bỏ qua (vessel/admin)</option>
-                        {schema.fields.map(f => (
-                          <option key={f.name} value={f.name}>{f.label} ({f.name})</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="py-2 px-2">
-                      <span style={{ color: confidenceBadge(m.confidence).color }} className="text-xs font-medium">
-                        {confidenceBadge(m.confidence).label} · {Math.round(m.confidence * 100)}%
-                      </span>
-                    </td>
-                    <td className="py-2 px-2 text-xs text-truncate" style={{ color: 'var(--theme-text-muted)' }}>
-                      {m.sample_values.slice(0, 3).join(' · ')}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
       {/* Pane 3b — parsed rows preview */}
       {preview && editedRows.length > 0 && (
@@ -478,9 +461,6 @@ export function ImportOrders() {
                   <th className="py-1.5 px-2 font-medium">Ngày</th>
                   <th className="py-1.5 px-2 font-medium">Điểm đi</th>
                   <th className="py-1.5 px-2 font-medium">Điểm đến</th>
-                  <th className="py-1.5 px-2 font-medium">Trọng lượng</th>
-                  <th className="py-1.5 px-2 font-medium">Khách hàng</th>
-                  <th className="py-1.5 px-2 font-medium">Booking</th>
                   <th className="py-1.5 px-2"></th>
                 </tr>
               </thead>
@@ -492,7 +472,7 @@ export function ImportOrders() {
                     <td className="py-1 px-2">{r.values.work_type}</td>
                     <td className="py-1 px-2">
                       <input
-                        type="datetime-local"
+                        type="date"
                         value={r.values.trip_date ?? ''}
                         onChange={e => updateRowValue(r.source_row_index, 'trip_date', e.target.value)}
                         className="h-7 px-1 rounded border text-xs w-32"
@@ -523,9 +503,6 @@ export function ImportOrders() {
                         <LocationBadge resolution={preview.location_resolutions?.[r.values.dropoff_location ?? '']} />
                       </div>
                     </td>
-                    <td className="py-1 px-2 tabular-nums">{r.values.gross_weight_kg ?? ''}</td>
-                    <td className="py-1 px-2">{r.values.consignee ?? ''}</td>
-                    <td className="py-1 px-2 font-mono text-[11px]">{r.values.customer_ref ?? ''}</td>
                     <td className="py-1 px-2">
                       <button
                         type="button"
@@ -548,60 +525,9 @@ export function ImportOrders() {
             )}
           </div>
 
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="typo-form-label" htmlFor="save-template-name">
-                Lưu thành template (tuỳ chọn)
-              </label>
-              <Input
-                id="save-template-name"
-                placeholder="VD: HAIAN Loading List"
-                value={saveTemplateName}
-                onChange={e => setSaveTemplateName(e.target.value)}
-                className="h-9 text-sm"
-              />
-              <p className="typo-caption">Lần sau khi nhập tệp cùng cấu trúc, hệ thống dùng lại ánh xạ này.</p>
-            </div>
-            <div className="space-y-1.5">
-              <label className="typo-form-label">Tuỳ chọn</label>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={overwriteDuplicates}
-                  onChange={e => setOverwriteDuplicates(e.target.checked)}
-                />
-                Ghi đè đơn trùng (cùng ngày + container)
-              </label>
-            </div>
-          </div>
         </div>
       )}
 
-      {/* Rejected rows */}
-      {preview && preview.rejected.length > 0 && (
-        <div className="card p-5">
-          <h3 className="typo-h2 mb-2">Dòng bị bỏ ({preview.rejected.length})</h3>
-          <p className="typo-caption mb-3">Các dòng dưới đây không vượt qua kiểm tra. Có thể sửa file gốc rồi tải lại.</p>
-          <div className="overflow-x-auto" style={{ maxHeight: '240px', overflowY: 'auto' }}>
-            <table className="w-full text-xs">
-              <thead><tr className="text-left">
-                <th className="py-1.5 px-2 font-medium">#</th>
-                <th className="py-1.5 px-2 font-medium">Lý do</th>
-                <th className="py-1.5 px-2 font-medium">Container</th>
-              </tr></thead>
-              <tbody>
-                {preview.rejected.slice(0, 100).map(r => (
-                  <tr key={r.source_row_index} className="border-t" style={{ borderColor: 'var(--theme-border-subtle)' }}>
-                    <td className="py-1 px-2 text-muted-foreground">{r.source_row_index + 1}</td>
-                    <td className="py-1 px-2">{(r.reasons ?? []).join(', ')}</td>
-                    <td className="py-1 px-2 font-mono">{String((r.raw as Record<string, unknown>).container_no ?? '')}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -664,25 +590,3 @@ function Stat({ label, value, ok, warn }: { label: string; value: string; ok?: b
   )
 }
 
-// ─── Dialog wrapper ──────────────────────────────────────────────────────────
-
-/** Opens the full import flow inside a large modal — no page navigation needed. */
-export function ImportOrdersDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent
-        className="max-w-5xl w-[95vw] max-h-[90vh] overflow-y-auto p-0"
-        style={{ background: 'var(--theme-bg-primary)' }}
-      >
-        <DialogHeader className="sr-only">
-          <VisuallyHidden>
-            <DialogTitle>Nhập đơn hàng</DialogTitle>
-          </VisuallyHidden>
-        </DialogHeader>
-        <div className="p-5 pb-8">
-          <ImportOrders />
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
