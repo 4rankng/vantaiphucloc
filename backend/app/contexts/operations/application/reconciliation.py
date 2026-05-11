@@ -138,11 +138,6 @@ class UnmatchTripFromWorkOrder:
             count_links_for_wo,
         )
 
-        if not data.work_order_id and not data.trip_order_id:
-            raise ReconciliationConflict(
-                "Must provide work_order_id or trip_order_id"
-            )
-
         link = await find_link(
             self.session,
             work_order_id=data.work_order_id,
@@ -150,7 +145,7 @@ class UnmatchTripFromWorkOrder:
         )
         if link is None:
             raise NotFound("Reconciliation", (
-                data.trip_order_id or data.work_order_id
+                data.trip_order_id, data.work_order_id
             ))
 
         wo = await self.wo_repo.get_by_id(WorkOrderId(link.work_order_id))

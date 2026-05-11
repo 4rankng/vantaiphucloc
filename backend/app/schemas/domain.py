@@ -695,8 +695,8 @@ class CancelRequest(BaseModel):
 
 class UnmatchRequest(BaseModel):
     reason: str = Field(..., min_length=1, description="Required reason for unmatching")
-    work_order_id: int | None = None
-    trip_order_id: int | None = None
+    work_order_id: int
+    trip_order_id: int
 
 
 class SoftDeleteRequest(BaseModel):

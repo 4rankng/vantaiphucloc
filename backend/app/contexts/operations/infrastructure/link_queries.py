@@ -27,7 +27,7 @@ async def trip_order_has_link(
             ReconciliationORM.is_active == True,  # noqa: E712
         )
     )
-    return res.scalar_one_or_none() is not None
+    return res.scalars().first() is not None
 
 
 async def find_link(
