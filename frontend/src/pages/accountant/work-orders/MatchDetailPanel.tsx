@@ -100,6 +100,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
 
   // ── Matched mode ──
   if (isMatched && workOrder) {
+    const unmatchTarget = unmatchTargetId ? matchedTrips.find(t => t.id === unmatchTargetId) : null
     return (
       <div className="h-full overflow-y-auto p-4 space-y-4">
         <TripDetailCard workOrder={workOrder} />
@@ -109,36 +110,57 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
           <h2 className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
             Đã ghép với đơn hàng
           </h2>
+          <span
+            className="text-xs font-semibold px-2 py-0.5 rounded-full"
+            style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
+          >
+            {matchedTrips.length}
+          </span>
         </div>
 
-        {matchedTrip ? (
-          <div
-            className="rounded-xl px-4 py-3 space-y-2"
-            style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
-          >
-            <div className="flex items-center gap-2">
-              {matchedTrip.code && (
-                <span className="text-xs font-mono font-semibold px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}>
-                  {matchedTrip.code}
-                </span>
-              )}
-              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                {matchedTrip.tripDate}
-              </span>
-            </div>
-            <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
-              {matchedTrip.partner?.name || '—'}
-            </p>
-            {(matchedTrip.pickupLocation?.name || matchedTrip.dropoffLocation?.name) && (
-              <p className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>
-                {matchedTrip.pickupLocation?.name ?? '?'} → {matchedTrip.dropoffLocation?.name ?? '?'}
-              </p>
-            )}
-            {matchedTrip.containers.length > 0 && (
-              <p className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>
-                {matchedTrip.containers.map(c => c.containerNumber || c.workType).filter(Boolean).join(', ')}
-              </p>
-            )}
+        {matchedTrips.length > 0 ? (
+          <div className="space-y-2">
+            {matchedTrips.map(trip => (
+              <div
+                key={trip.id}
+                className="rounded-xl px-4 py-3 space-y-2"
+                style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {trip.code && (
+                      <span className="text-xs font-mono font-semibold px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}>
+                        {trip.code}
+                      </span>
+                    )}
+                    <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                      {trip.tripDate}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => { setUnmatchTargetId(trip.id); setUnmatchReason('') }}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80"
+                    style={{ background: 'color-mix(in srgb, var(--theme-status-error) 10%, transparent)', color: 'var(--theme-status-error)' }}
+                  >
+                    <Unlink className="w-3 h-3" />
+                    Bỏ ghép
+                  </button>
+                </div>
+                <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
+                  {trip.partner?.name || '—'}
+                </p>
+                {(trip.pickupLocation?.name || trip.dropoffLocation?.name) && (
+                  <p className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>
+                    {trip.pickupLocation?.name ?? '?'} → {trip.dropoffLocation?.name ?? '?'}
+                  </p>
+                )}
+                {trip.containers.length > 0 && (
+                  <p className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>
+                    {trip.containers.map(c => c.containerNumber || c.workType).filter(Boolean).join(', ')}
+                  </p>
+                )}
+              </div>
+            ))}
           </div>
         ) : (
           <div className="rounded-xl p-6 text-center" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
@@ -147,7 +169,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
           </div>
         )}
 
-        {unmatchConfirm ? (
+        {unmatchTargetId && unmatchTarget ? (
           <div
             className="rounded-xl p-4 space-y-3"
             style={{ background: 'color-mix(in srgb, var(--theme-status-warning) 6%, transparent)', border: '1px solid var(--theme-status-warning)' }}
@@ -157,7 +179,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
               <span className="text-sm font-semibold" style={{ color: 'var(--theme-status-warning)' }}>Xác nhận hủy ghép</span>
             </div>
             <p className="text-xs" style={{ color: 'var(--theme-text-primary)' }}>
-              Phiếu <strong>{workOrder.code}</strong> sẽ được tách khỏi đơn hàng <strong>{matchedTrip?.code ?? ''}</strong>. Hành động này có thể ảnh hưởng đến tính lương và đối soát.
+              Phiếu <strong>{workOrder.code}</strong> sẽ được tách khỏi đơn hàng <strong>{unmatchTarget.code ?? ''}</strong>. Hành động này có thể ảnh hưởng đến tính lương và đối soát.
             </p>
             <input
               value={unmatchReason}
@@ -177,7 +199,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
                 Xác nhận hủy ghép
               </button>
               <button
-                onClick={() => { setUnmatchConfirm(false); setUnmatchReason('') }}
+                onClick={() => { setUnmatchTargetId(null); setUnmatchReason('') }}
                 className="px-3 py-2 rounded-lg text-xs font-semibold"
                 style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
               >
@@ -185,16 +207,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
               </button>
             </div>
           </div>
-        ) : (
-          <button
-            onClick={() => setUnmatchConfirm(true)}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-opacity hover:opacity-80"
-            style={{ background: 'color-mix(in srgb, var(--theme-status-error) 10%, transparent)', color: 'var(--theme-status-error)', border: '1px solid color-mix(in srgb, var(--theme-status-error) 30%, transparent)' }}
-          >
-            <Unlink className="w-4 h-4" />
-            Hủy ghép chuyến
-          </button>
-        )}
+        ) : null}
       </div>
     )
   }
