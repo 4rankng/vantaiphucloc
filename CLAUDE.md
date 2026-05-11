@@ -7,6 +7,24 @@
 
 ## 📋 Project State
 
+### ✅ Recently Completed (2026-05-11) — QA v8 Cycle
+
+1. **QA v8 Full Audit + Fixes** — COMMITTED, PENDING DEPLOYMENT
+   - QA found 4 issues (tasks 0059–0062)
+   - All 4 fixed in commit `705d7eb`
+   - **⚠️ DEPLOY NEEDED:** Run `make push-all && make deploy-all` from project root
+   
+   Fixes:
+   - `task-0059`: Client "Loại" column fix (isCompany heuristic) — was already in code, deployment issue
+   - `task-0060`: Driver earnings 403 — name collision in `salary.py` import shadowed by route handler; renamed import to `_get_driver_earnings_dep`
+   - `task-0061`: Match "Tuyến đường" always "—" — `match_suggester.py` hardcoded `wo_route=None`; now builds from pickup/dropoff names
+   - `task-0062`: Work order route truncated — changed `truncate` → `line-clamp-2` in `WorkOrderMasterList.tsx`
+
+   Key files changed:
+   - `backend/app/contexts/payroll/interface/routers/salary.py`
+   - `backend/app/contexts/operations/infrastructure/match_suggester.py`
+   - `frontend/src/pages/accountant/work-orders/WorkOrderMasterList.tsx`
+
 ### ✅ Recently Completed (2026-05-06)
 
 1. **Tech Lead + QA Review** - COMPLETED
@@ -24,7 +42,12 @@
 
 ### 🎯 Next Steps (Priority Order)
 
-1. **🔴 CRITICAL: Fix Driver Login Bug**
+1. **🔴 DEPLOY PENDING COMMIT 705d7eb**
+   - Run: `cd /Users/dev/Documents/projects/vantaiphucloc && make push-all && make deploy-all`
+   - This deploys QA v8 fixes (driver earnings 403, match route display, etc.)
+   - Then re-run QA scheduled task to verify fixes are live
+
+2. **🔴 CRITICAL: Fix Driver Login Bug (if still present)**
    - File: `frontend/src/pages/DriverDashboard.tsx` (or similar)
    - Issue: Missing `import { useEffect } from 'react'`
    - Impact: BLOCKS all freight operations

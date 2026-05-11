@@ -30,6 +30,28 @@ Driver     -> inherits (driver) only
 
 ---
 
+## PREVIOUSLY FIXED (DO NOT RE-REPORT)
+
+The following issues were fixed across QA rounds v6–v8. Verify they remain fixed but do NOT file new bugs for them unless they regress:
+
+1. **Doanh thu column** — `/accountant/trips` shows real values (not 0 ₫). Verify still working.
+2. **Director "Đã khớp" KPI** — Shows correct count (not 0). Verify still working.
+3. **Filter chip vocabulary** — Both pages use "Chờ ghép" / "Đã khớp" (not "Chờ khớp"). Verify still working.
+4. **Director navigation** — Uses horizontal NavStrip (not sidebar). Verify still working.
+5. **Activity log copy** — Shows proper Vietnamese ("Kế toán đã ghép chuyến #1"). Verify still working.
+6. **Auto-fill chips** — Clicking a chip fills Khách hàng, Điểm lấy, Điểm trả. Verify still working.
+7. **Work order card routes** — Ghép chuyến shows routes (not "—"). Verify still working.
+8. **Driver job detail route** — Shows "Cung đường: X → Y" (not "-"). Verify still working.
+9. **Salary period display** — Kỳ lương shows correct period (e.g. "26/04 → 25/05"). Verify still working.
+10. **Trip detail MATCHED badge** — Matched orders show single green "Đã khớp" chip (not duplicate "Đã huỷ"). Verify still working.
+11. **Client "Loại" column** — Companies show "Công ty" (not "Cá nhân"). Verify still working.
+12. **Driver earnings API** — `/api/v1/driver/earnings` returns 200 (not 403). Verify still working.
+13. **Match "Tuyến đường"** — Match comparison shows route strings (not "—"). Verify still working.
+14. **Work order route display** — Route text wraps to 2 lines (not truncated with "..."). Verify still working.
+15. **Push subscription loop** — `POST /api/v1/push/subscriptions` fires once per session (not 4-5 times). Verify still working.
+
+---
+
 ## FLOW 1: DRIVER (Tai xe) — Mobile-First User
 
 The driver is a mobile-first user who creates work orders from the field, tracks own earnings, and pins new GPS locations.
@@ -312,6 +334,54 @@ The superadmin is the god-role with full access to everything, including all acc
 
 ### 4.5 Access All Driver Flows
 - Verify superadmin can create work orders (though typically would not).
+
+---
+
+## OPEN ISSUES — FOCUS TESTING AREAS
+
+These are known issues that have NOT been fixed yet. Test each one carefully and report if still present.
+
+### OPEN-01 — Manual Ghép allows low-confidence matches with no confirmation (High)
+**Flow:** Kế toán — Ghép chuyến
+**Issue:** Clicking "Ghép" on a 2/6 score match succeeds instantly with no confirm dialog. No warning about mismatched fields, no free-text reason logged.
+**Test:** Match a work order to a trip order with score 2/6 or 3/6 → verify no confirm dialog appears.
+**Expected:** A confirm dialog should appear when score < 5/6, listing mismatched fields and requiring a reason.
+
+### OPEN-02 — No manual fallback when 0 candidates suggested (High)
+**Flow:** Kế toán — Ghép chuyến
+**Issue:** When a work order has 0 candidate trip orders, the accountant has no way to browse all orders, search by container, or cross-month pick. They must give up.
+**Test:** Find a work order that shows 0 candidates → verify there is no "Ghép thủ công" or search option.
+**Expected:** A "Tìm đơn hàng" search box should allow browsing all trip orders by container number or PO.
+
+### OPEN-03 — Auto-match threshold unreachable with current data (Medium)
+**Flow:** Kế toán — Ghép chuyến
+**Issue:** Auto-match requires a 6/6 (1.0) score, but no pair of work orders and trip orders in the current data achieves this. Auto-match is effectively a no-op.
+**Test:** Click "Tự động ghép" → verify 0 pairs matched → verify no feedback toast about why.
+**Expected:** Either lower the threshold or seed data with some perfect matches. Also, auto-match should always show a toast ("Đã ghép {n} cặp" — even if n=0).
+
+### OPEN-04 — No location alias management UI (High)
+**Flow:** Kế toán — Settings + Ghép chuyến
+**Issue:** The backend has a `location_aliases` table with PENDING/MATCHED statuses, and the match suggester uses aliases for location comparison. But there is NO UI anywhere to review and confirm PENDING aliases. Aliases accumulate as PENDING and are never considered equivalent for auto-matching.
+**Test:** Search for any alias management page → verify none exists.
+**Expected:** A "Địa điểm & bí danh" page under Settings listing PENDING aliases with confirm/reject actions.
+
+### OPEN-05 — Container validation inconsistency between Excel import and driver form (Medium)
+**Flow:** Kế toán import vs Tài xế Tạo chuyến
+**Issue:** The driver form validates ISO 6346 check digits strictly. If Excel import doesn't validate the same way, orders with invalid container numbers can be imported but drivers can never type the same number to match them.
+**Test:** Note a container number from a trip order → try typing it in the driver Tạo chuyến form → verify if it's accepted or rejected.
+**Expected:** Both paths should use the same validation (either both strict or both lenient).
+
+### OPEN-06 — Excel import default-date lacks time (Low)
+**Flow:** Kế toán — Nhập đơn hàng
+**Issue:** The default-date input on the import modal is a plain `<input type="date">` with no time component. No per-row date override is available.
+**Test:** Open the import modal → verify the date input is `type="date"` with no time selector.
+**Expected:** At minimum a datetime-local input; ideally per-row date override.
+
+### OPEN-07 — "Chờ ghép" badge clipped behind sibling card (Low)
+**Flow:** Tài xế — Lịch sử
+**Issue:** When two trip cards sit side-by-side, the orange "Chờ ghép" badge on the right card is partially hidden behind the left card. Text becomes "Chờ" with the rest cropped.
+**Test:** Login as taixe → History → look for a row with two cards side-by-side → check badge clipping.
+**Expected:** Badge fully visible, no overlap.
 
 ---
 
