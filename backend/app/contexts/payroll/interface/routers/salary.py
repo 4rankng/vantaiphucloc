@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 
 from app.contexts.payroll.application import GetDriverEarnings
-from app.contexts.payroll.interface.dependencies import get_driver_earnings
+from app.contexts.payroll.interface.dependencies import get_driver_earnings as _get_driver_earnings_dep
 from app.core.deps import require_permission
 from app.database import get_db
 from app.models.base import User
@@ -31,7 +31,7 @@ async def get_driver_earnings(
     start_date: date = Query(...),
     end_date: date = Query(...),
     _current_user: User = Depends(require_permission("read", "Salary")),
-    use_case: GetDriverEarnings = Depends(get_driver_earnings),
+    use_case: GetDriverEarnings = Depends(_get_driver_earnings_dep),
 ):
     dto = await use_case(driver_id=driver_id, start_date=start_date, end_date=end_date)
     return DriverEarningsOut(
@@ -51,7 +51,7 @@ async def get_my_earnings(
     start_date: date = Query(...),
     end_date: date = Query(...),
     current_user: User = Depends(require_permission("read_own_salary", "Salary")),
-    use_case: GetDriverEarnings = Depends(get_driver_earnings),
+    use_case: GetDriverEarnings = Depends(_get_driver_earnings_dep),
 ):
     dto = await use_case(
         driver_id=current_user.id, start_date=start_date, end_date=end_date
