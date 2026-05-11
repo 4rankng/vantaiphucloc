@@ -69,6 +69,28 @@ export function DirectorDashboard() {
   const pendingThisMonth = useMemo(() => monthlyTrips.filter(t => t.status === 'PENDING').length, [monthlyTrips])
   const revenueThisMonth = useMemo(() => monthlyTrips.reduce((s, t) => s + (t.revenue ?? t.unitPrice), 0), [monthlyTrips])
 
+  // Previous month stats for delta computation
+  const prevMonthTrips = useMemo(() => {
+    const pm = month.month === 1 ? 12 : month.month - 1
+    const py = month.month === 1 ? month.year - 1 : month.year
+    return trips.filter(t => {
+      const d = new Date(t.tripDate)
+      return d.getFullYear() === py && d.getMonth() + 1 === pm
+    })
+  }, [trips, month])
+  const prevRequested = prevMonthTrips.length
+  const prevCompleted = prevMonthTrips.filter(t => t.status === 'MATCHED' || (t.status as string) === 'COMPLETED').length
+  const prevPending = prevMonthTrips.filter(t => t.status === 'PENDING').length
+  const prevRevenue = prevMonthTrips.reduce((s, t) => s + (t.revenue ?? t.unitPrice), 0)
+
+  const delta = (curr: number, prev: number): string | undefined => {
+    if (prev === 0 && curr === 0) return undefined
+    if (prev === 0) return curr > 0 ? '+100%' : undefined
+    const pct = Math.round(((curr - prev) / prev) * 100)
+    if (pct === 0) return undefined
+    return pct > 0 ? `+${pct}%` : `${pct}%`
+  }
+
   // Recent trips (last 5)
   const recentTrips = useMemo(() => {
     return [...trips]
@@ -188,7 +210,7 @@ export function DirectorDashboard() {
           label="Tổng chuyến"
           value={requestedThisMonth.toLocaleString('vi-VN')}
           icon={<Truck className="h-5 w-5" />}
-          trend={requestedThisMonth > 0 ? '+12%' : undefined}
+          trend={delta(requestedThisMonth, prevRequested)}
           color="primary"
           loading={loading}
         />
@@ -196,7 +218,7 @@ export function DirectorDashboard() {
           label="Đã khớp"
           value={String(completedThisMonth)}
           icon={<CheckCircle2 className="h-5 w-5" />}
-          trend={completedThisMonth > 0 ? '+8%' : undefined}
+          trend={delta(completedThisMonth, prevCompleted)}
           color="success"
           loading={loading}
         />
@@ -204,6 +226,7 @@ export function DirectorDashboard() {
           label="Chờ xử lý"
           value={String(pendingThisMonth)}
           icon={<AlertCircle className="h-5 w-5" />}
+          trend={delta(pendingThisMonth, prevPending)}
           color="warning"
           loading={loading}
         />
@@ -211,7 +234,7 @@ export function DirectorDashboard() {
           label="Doanh thu"
           value={compact(revenueThisMonth) + ' ₫'}
           icon={<DollarSign className="h-5 w-5" />}
-          trend={revenueThisMonth > 0 ? '+15%' : undefined}
+          trend={delta(revenueThisMonth, prevRevenue)}
           color="info"
           loading={loading}
         />
