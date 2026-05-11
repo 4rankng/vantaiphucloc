@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback } from 'react'
 import { Sparkles, FileText, ClipboardList, Search, Loader2, X, Check, Container, Link2, Unlink, AlertTriangle } from 'lucide-react'
-import { useSuggestMatches, useReconcile, useBulkMatch, useTripOrders, useUnmatch } from '@/hooks/use-queries'
+import { useSuggestMatches, useReconcile, useBulkMatch, useTripOrders, useUnmatch, useBatchReconcileForWO } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { TripDetailCard } from './TripDetailCard'
 import { MatchCard, scoreColor } from './MatchCard'
@@ -27,6 +27,34 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
   const [searchQuery, setSearchQuery] = useState('')
   const [unmatchTargetId, setUnmatchTargetId] = useState<number | null>(null)
   const [unmatchReason, setUnmatchReason] = useState('')
+  const [selectedToIds, setSelectedToIds] = useState<Set<number>>(new Set())
+  const batchForWO = useBatchReconcileForWO()
+
+  const toggleSelection = useCallback((id: number) => {
+    setSelectedToIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }, [])
+
+  const handleBatchForWO = useCallback(async () => {
+    if (!workOrder || selectedToIds.size === 0) return
+    try {
+      const res = await batchForWO.mutateAsync({ workOrderId: workOrder.id, tripOrderIds: Array.from(selectedToIds) })
+      const matched = res.matched?.filter((r: any) => r.success).length ?? 0
+      if (matched > 0) {
+        toast.success('Thành công', `Đã ghép ${matched} đơn hàng`)
+        setSelectedToIds(new Set())
+        onMatchSuccess()
+      }
+      if (res.errors?.length > 0) {
+        toast.error('Lỗi', `${res.errors.length} đơn không thể ghép`)
+      }
+    } catch {
+      toast.error('Lỗi', 'Không thể ghép hàng loạt')
+    }
+  }, [workOrder, selectedToIds, batchForWO, toast, onMatchSuccess])
   const { data: allTripOrders = [] } = useTripOrders()
 
   // Find ALL matched trips for matched WOs (multi-match support)
@@ -198,21 +226,59 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
           ) : (
             <div className="space-y-3">
               {suggestions.map(s => (
-                <MatchCard
-                  key={s.tripOrder.id}
-                  matchScore={s.matchScore}
-                  maxScore={s.maxScore}
-                  criteria={s.criteria}
-                  tripOrder={s.tripOrder}
-                  workOrder={workOrder}
-                  onConfirm={() => handleMatch(s.tripOrder.id)}
-                  submitting={submittingId === s.tripOrder.id}
-                  onEdited={invalidateSuggestions}
-                />
+                <div key={s.tripOrder.id} className="relative">
+                  <label
+                    className="absolute top-3 left-3 z-10 flex items-center gap-1 cursor-pointer select-none"
+                    onClick={e => { e.stopPropagation(); toggleSelection(s.tripOrder.id) }}
+                  >
+                    <span
+                      className="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
+                      style={{
+                        borderColor: selectedToIds.has(s.tripOrder.id) ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)',
+                        background: selectedToIds.has(s.tripOrder.id) ? 'var(--theme-brand-primary)' : 'transparent',
+                      }}
+                    >
+                      {selectedToIds.has(s.tripOrder.id) && <Check className="w-3 h-3" style={{ color: 'var(--theme-text-on-brand)' }} />}
+                    </span>
+                  </label>
+                  <div className="pl-9">
+                    <MatchCard
+                      matchScore={s.matchScore}
+                      maxScore={s.maxScore}
+                      criteria={s.criteria}
+                      tripOrder={s.tripOrder}
+                      workOrder={workOrder}
+                      onConfirm={() => handleMatch(s.tripOrder.id)}
+                      submitting={submittingId === s.tripOrder.id}
+                      onEdited={invalidateSuggestions}
+                    />
+                  </div>
+                </div>
               ))}
             </div>
           )}
         </div>
+
+        {/* Batch action bar in matched mode */}
+        {selectedToIds.size > 0 && (
+          <div
+            className="flex items-center justify-between px-4 py-3 rounded-xl"
+            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+          >
+            <span className="text-sm font-bold">
+              Đã chọn {selectedToIds.size} đơn
+            </span>
+            <button
+              onClick={handleBatchForWO}
+              disabled={batchForWO.isPending}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-opacity disabled:opacity-60"
+              style={{ background: 'var(--theme-text-on-brand)', color: 'var(--theme-brand-primary)' }}
+                       >
+              {batchForWO.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />}
+              Ghép tất cả
+            </button>
+          </div>
+        )}
 
         {unmatchTargetId && unmatchTarget ? (
           <div
@@ -373,19 +439,57 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
       {/* Suggestion cards */}
       <div className="space-y-3">
         {visibleSuggestions.map(s => (
-          <MatchCard
-            key={s.tripOrder.id}
-            matchScore={s.matchScore}
-            maxScore={s.maxScore}
-            criteria={s.criteria}
-            tripOrder={s.tripOrder}
-            workOrder={workOrder}
-            onConfirm={() => handleMatch(s.tripOrder.id)}
-            submitting={submittingId === s.tripOrder.id}
-            onEdited={invalidateSuggestions}
-          />
+          <div key={s.tripOrder.id} className="relative">
+            <label
+              className="absolute top-3 left-3 z-10 flex items-center gap-1 cursor-pointer select-none"
+              onClick={e => { e.stopPropagation(); toggleSelection(s.tripOrder.id) }}
+            >
+              <span
+                className="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
+                style={{
+                  borderColor: selectedToIds.has(s.tripOrder.id) ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)',
+                  background: selectedToIds.has(s.tripOrder.id) ? 'var(--theme-brand-primary)' : 'transparent',
+                }}
+              >
+                {selectedToIds.has(s.tripOrder.id) && <Check className="w-3 h-3" style={{ color: 'var(--theme-text-on-brand)' }} />}
+              </span>
+            </label>
+            <div className="pl-9">
+              <MatchCard
+                matchScore={s.matchScore}
+                maxScore={s.maxScore}
+                criteria={s.criteria}
+                tripOrder={s.tripOrder}
+                workOrder={workOrder}
+                onConfirm={() => handleMatch(s.tripOrder.id)}
+                submitting={submittingId === s.tripOrder.id}
+                onEdited={invalidateSuggestions}
+              />
+            </div>
+          </div>
         ))}
       </div>
+
+      {/* Batch action bar */}
+      {selectedToIds.size > 0 && (
+        <div
+          className="sticky bottom-0 left-0 right-0 flex items-center justify-between px-4 py-3 rounded-xl"
+          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+        >
+          <span className="text-sm font-bold">
+            Đã chọn {selectedToIds.size} đơn
+          </span>
+          <button
+            onClick={handleBatchForWO}
+            disabled={batchForWO.isPending}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-opacity disabled:opacity-60"
+            style={{ background: 'var(--theme-text-on-brand)', color: 'var(--theme-brand-primary)' }}
+          >
+            {batchForWO.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />}
+            Ghép tất cả vào {workOrder.code}
+          </button>
+        </div>
+      )}
     </div>
   )
 }
