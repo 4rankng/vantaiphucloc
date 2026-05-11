@@ -176,7 +176,7 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
   }
 
   const statusVariant = trip.status === 'DRAFT' ? 'draft' : trip.status === 'PENDING' ? 'warning' : trip.status === 'COMPLETED' ? 'success' : 'error'
-  const statusLabel = trip.status === 'DRAFT' ? 'Nháp' : trip.status === 'PENDING' ? 'Chờ khớp' : trip.status === 'COMPLETED' ? 'Đã khớp' : 'Đã huỷ'
+  const statusLabel = trip.status === 'DRAFT' ? 'Nháp' : trip.status === 'PENDING' ? 'Chờ ghép' : trip.status === 'COMPLETED' ? 'Đã khớp' : 'Đã huỷ'
 
   return (
     <div className="space-y-6">

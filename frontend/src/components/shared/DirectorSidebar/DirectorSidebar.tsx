@@ -5,6 +5,7 @@ import {
   Bell,
   LogOut,
   UserCircle,
+  Users,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUnreadCount } from '@/components/shared/NotificationPanel/NotificationPanel'
@@ -25,6 +26,7 @@ export interface SidebarItem {
 const NAV_ITEMS: SidebarItem[] = [
   { label: 'Tổng quan', href: '/director', icon: LayoutDashboard },
   { label: 'Thông báo', href: '/director/notifications', icon: Bell },
+  { label: 'Quản lý tài khoản', href: '/director/users', icon: Users },
 ]
 
 export interface DirectorSidebarProps {

@@ -63,15 +63,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
-  // Auto-subscribe to push on login — request permission if not yet decided, then subscribe
+  // Auto-subscribe to push on login — runs at most once per browser session.
+  // A sessionStorage guard prevents re-registration on every route change or
+  // component remount that might recreate the user object reference.
   useEffect(() => {
     if (!user || !isPushSupported()) return
+    if (sessionStorage.getItem('push_registered')) return
     getPushSubscriptionStatus().then(async status => {
-      if (status.subscribed) return
+      if (status.subscribed) {
+        sessionStorage.setItem('push_registered', '1')
+        return
+      }
       // If permission already denied, nothing we can do silently
       if (Notification.permission === 'denied') return
       // Request permission (no-op if already granted), then subscribe
-      subscribeToPush().catch(() => {})
+      subscribeToPush().then(ok => {
+        if (ok) sessionStorage.setItem('push_registered', '1')
+      }).catch(() => {})
     })
   }, [user])
 
