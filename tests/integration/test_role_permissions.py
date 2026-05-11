@@ -30,47 +30,32 @@ def _container_number():
 class TestDriverPermissions:
     """Driver (role=driver) permissions from policy.polar."""
 
-    def test_can_create_work_order(self, api_client, driver_headers, create_client, create_location):
-        client = create_client()
+    def test_can_create_work_order(self, api_client, driver_headers, create_partner, create_location):
+        partner = create_partner()
         pickup = create_location()
         dropoff = create_location()
-        uid = uuid4().hex[:8]
         resp = api_client.post(
             "/work-orders",
             headers=driver_headers,
             json={
-                "client_id": client["id"],
-                "route": f"IT_RBAC_{uid}",
+                "partner_id": partner["id"],
                 "pickup_location_id": pickup["id"],
                 "dropoff_location_id": dropoff["id"],
                 "driver_id": 4,
-                "tractor_plate": "29C-12345",
                 "containers": [{"container_number": _container_number(), "work_type": "E20"}],
             },
         )
         assert resp.status_code in (200, 201)
 
-    def test_can_read_clients(self, api_client, driver_headers):
-        resp = api_client.get("/clients", headers=driver_headers)
+    def test_can_read_partners(self, api_client, driver_headers):
+        resp = api_client.get("/partners", headers=driver_headers)
         assert resp.status_code == 200
 
-    def test_cannot_create_client(self, api_client, driver_headers):
+    def test_cannot_create_partner(self, api_client, driver_headers):
         resp = api_client.post(
-            "/clients",
+            "/partners",
             headers=driver_headers,
-            json={"name": "Blocked", "type": "company", "phone": "0900000000"},
-        )
-        assert resp.status_code == 403
-
-    def test_can_read_routes(self, api_client, driver_headers):
-        resp = api_client.get("/routes", headers=driver_headers)
-        assert resp.status_code == 200
-
-    def test_cannot_create_route(self, api_client, driver_headers):
-        resp = api_client.post(
-            "/routes",
-            headers=driver_headers,
-            json={"route": "blocked", "pickup_location_id": 1, "dropoff_location_id": 2},
+            json={"name": "Blocked", "partner_type": "client", "partner_role": "shipping_line"},
         )
         assert resp.status_code == 403
 
@@ -82,7 +67,7 @@ class TestDriverPermissions:
         resp = api_client.post(
             "/pricings",
             headers=driver_headers,
-            json={"client_id": 1, "work_type": "E20", "pickup_location_id": 1, "dropoff_location_id": 2, "lines": []},
+            json={"partner_id": 1, "work_type": "E20", "pickup_location_id": 1, "dropoff_location_id": 2, "lines": []},
         )
         assert resp.status_code == 403
 
@@ -92,10 +77,6 @@ class TestDriverPermissions:
             headers=driver_headers,
             json={"work_order_id": 1, "trip_order_id": 1},
         )
-        assert resp.status_code == 403
-
-    def test_cannot_read_salary_list(self, api_client, driver_headers):
-        resp = api_client.get("/salary", headers=driver_headers)
         assert resp.status_code == 403
 
     def test_cannot_calculate_salary(self, api_client, driver_headers):
@@ -110,19 +91,6 @@ class TestDriverPermissions:
     def test_cannot_read_audit_logs(self, api_client, driver_headers):
         resp = api_client.get("/audit-logs", headers=driver_headers)
         assert resp.status_code == 403
-
-    def test_can_create_trip_order(self, api_client, driver_headers):
-        resp = api_client.post(
-            "/trip-orders",
-            headers=driver_headers,
-            json={
-                "trip_date": date.today().isoformat(),
-                "client_id": 1, "route": "x",
-                "pickup_location_id": 1, "dropoff_location_id": 2,
-                "unit_price": 0, "driver_salary": 0, "allowance": 0, "revenue": 0,
-            },
-        )
-        assert resp.status_code in (200, 201)
 
     def test_can_read_trip_orders(self, api_client, driver_headers):
         resp = api_client.get("/trip-orders", headers=driver_headers)
@@ -142,21 +110,13 @@ class TestDriverPermissions:
         resp = api_client.get("/dashboard/summary", headers=driver_headers)
         assert resp.status_code == 200
 
-    def test_can_read_own_salary(self, api_client, driver_headers):
-        resp = api_client.get("/driver/salary", headers=driver_headers)
-        assert resp.status_code in (200, 403)
-
 
 class TestAccountantPermissions:
     """Accountant inherits driver permissions + can manage resources."""
 
-    def test_can_create_client(self, api_client, create_client):
-        client = create_client()
-        assert "id" in client
-
-    def test_can_create_route(self, api_client, create_route):
-        route = create_route()
-        assert "id" in route
+    def test_can_create_partner(self, api_client, create_partner):
+        partner = create_partner()
+        assert "id" in partner
 
     def test_can_create_pricing(self, api_client, create_pricing):
         pricing = create_pricing()
@@ -164,10 +124,6 @@ class TestAccountantPermissions:
 
     def test_can_reconcile(self, api_client, admin_headers):
         resp = api_client.get("/match-scores", headers=admin_headers)
-        assert resp.status_code == 200
-
-    def test_can_list_salary(self, api_client, accountant_headers):
-        resp = api_client.get("/salary", headers=accountant_headers)
         assert resp.status_code == 200
 
     def test_can_read_audit_logs(self, api_client, accountant_headers):

@@ -34,8 +34,6 @@ def user_orm_to_entity(orm: UserORM) -> User:
         email=orm.email,
         full_name=orm.full_name,
         cccd=orm.cccd,
-        vendor=None,
-        tractor_plate=None,
         created_at=orm.created_at,
         updated_at=orm.updated_at,
     )

@@ -25,7 +25,7 @@ def _uid() -> str:
     return uuid4().hex[:8]
 
 
-# ISO 6346 letter-to-number mapping (same as backend/app/utils/iso6346.py)
+# ISO 6346 letter-to-number mapping
 _ISO_LETTER_MAP = {
     "A": 10, "B": 12, "C": 13, "D": 14, "E": 15, "F": 16, "G": 17, "H": 18, "I": 19,
     "J": 20, "K": 21, "L": 23, "M": 24, "N": 25, "O": 26, "P": 27, "Q": 28, "R": 29,
@@ -55,7 +55,6 @@ def _get_token(client: httpx.Client, role: str) -> str:
     if role in _cached_tokens:
         return _cached_tokens[role]
     creds = SEED_USERS[role]
-    # Retry with backoff to handle rate limiting
     for attempt in range(5):
         resp = client.post("/auth/login", json=creds)
         if resp.status_code == 200:
@@ -71,7 +70,6 @@ def _get_token(client: httpx.Client, role: str) -> str:
 
 # ── HTTP client fixture ──────────────────────────────────────────────
 
-# Shared client at module scope to avoid rate limiting
 _shared_client: httpx.Client | None = None
 
 
@@ -115,30 +113,32 @@ def driver_headers(api_client):
 
 
 @pytest.fixture
-def create_client(api_client, admin_headers):
+def create_partner(api_client, admin_headers):
     created = []
 
     def _factory(**overrides):
         import random
+        uid = _uid()
         payload = {
-            "name": f"IT_Client_{_uid()}",
-            "code": f"IT{_uid().upper()}",
-            "type": "company",
+            "name": f"IT_Partner_{uid}",
+            "code": f"IT{uid.upper()}",
+            "partner_type": "client",
+            "partner_role": "shipping_line",
             "phone": f"090{random.randint(1000000, 9999999)}",
         }
         payload.update(overrides)
-        resp = api_client.post("/clients", json=payload, headers=admin_headers)
-        assert resp.status_code in (200, 201), f"Create client failed: {resp.text}"
+        resp = api_client.post("/partners", json=payload, headers=admin_headers)
+        assert resp.status_code in (200, 201), f"Create partner failed: {resp.text}"
         data = resp.json()
         created.append(data["id"])
         return data
 
     yield _factory
 
-    for cid in created:
+    for pid in created:
         try:
             api_client.request(
-                "DELETE", f"/clients/{cid}",
+                "DELETE", f"/partners/{pid}",
                 headers=admin_headers,
                 json={"reason": "integration test cleanup"},
             )
@@ -169,65 +169,15 @@ def create_location(api_client, admin_headers):
 
 
 @pytest.fixture
-def create_vendor(api_client, admin_headers):
+def create_pricing(api_client, admin_headers, create_partner, create_location):
     created = []
 
     def _factory(**overrides):
-        payload = {"name": f"IT_Vendor_{_uid()}", "type": "company"}
-        payload.update(overrides)
-        resp = api_client.post("/vendors", json=payload, headers=admin_headers)
-        assert resp.status_code in (200, 201), f"Create vendor failed: {resp.text}"
-        data = resp.json()
-        created.append(data["id"])
-        return data
-
-    yield _factory
-
-    for vid in created:
-        try:
-            api_client.delete(f"/vendors/{vid}", headers=admin_headers)
-        except Exception:
-            pass
-
-
-@pytest.fixture
-def create_route(api_client, admin_headers, create_location):
-    created = []
-
-    def _factory(**overrides):
+        partner = create_partner()
         pickup = create_location()
         dropoff = create_location()
         payload = {
-            "route": f"IT_Route_{_uid()}",
-            "pickup_location_id": pickup["id"],
-            "dropoff_location_id": dropoff["id"],
-        }
-        payload.update(overrides)
-        resp = api_client.post("/routes", json=payload, headers=admin_headers)
-        assert resp.status_code in (200, 201), f"Create route failed: {resp.text}"
-        data = resp.json()
-        created.append(data["id"])
-        return data
-
-    yield _factory
-
-    for rid in created:
-        try:
-            api_client.delete(f"/routes/{rid}", headers=admin_headers)
-        except Exception:
-            pass
-
-
-@pytest.fixture
-def create_pricing(api_client, admin_headers, create_client, create_location):
-    created = []
-
-    def _factory(**overrides):
-        client = create_client()
-        pickup = create_location()
-        dropoff = create_location()
-        payload = {
-            "client_id": client["id"],
+            "partner_id": partner["id"],
             "work_type": "E20",
             "pickup_location_id": pickup["id"],
             "dropoff_location_id": dropoff["id"],
@@ -250,21 +200,18 @@ def create_pricing(api_client, admin_headers, create_client, create_location):
 
 
 @pytest.fixture
-def create_work_order(api_client, admin_headers, create_client, create_location):
+def create_work_order(api_client, admin_headers, create_partner, create_location):
     created = []
 
     def _factory(driver_id=None, **overrides):
-        client = create_client()
+        partner = create_partner()
         pickup = create_location()
         dropoff = create_location()
-        uid = _uid()
         payload = {
-            "client_id": client["id"],
-            "route": f"IT_Route_{uid}",
+            "partner_id": partner["id"],
             "pickup_location_id": pickup["id"],
             "dropoff_location_id": dropoff["id"],
             "driver_id": driver_id or 4,
-            "tractor_plate": "29C-12345",
             "containers": [{"container_number": _container_number(), "work_type": "E20"}],
         }
         payload.update(overrides)
@@ -278,34 +225,27 @@ def create_work_order(api_client, admin_headers, create_client, create_location)
 
     for wid in created:
         try:
-            api_client.put(
-                f"/work-orders/{wid}/cancel",
-                headers=admin_headers,
-                json={"reason": "integration test cleanup"},
-            )
+            api_client.delete(f"/work-orders/{wid}", headers=admin_headers)
         except Exception:
             pass
 
 
 @pytest.fixture
-def create_trip_order(api_client, admin_headers, create_client, create_location):
+def create_trip_order(api_client, admin_headers, create_partner, create_location):
     created = []
 
     def _factory(**overrides):
-        client = create_client()
+        partner = create_partner()
         pickup = create_location()
         dropoff = create_location()
-        uid = _uid()
         payload = {
             "trip_date": date.today().isoformat(),
-            "client_id": client["id"],
-            "route": f"IT_Route_{uid}",
+            "partner_id": partner["id"],
             "pickup_location_id": pickup["id"],
             "dropoff_location_id": dropoff["id"],
             "unit_price": 1000000,
             "driver_salary": 300000,
             "allowance": 50000,
-            "revenue": 1000000,
             "containers": [{"container_number": _container_number(), "work_type": "E20"}],
         }
         payload.update(overrides)
