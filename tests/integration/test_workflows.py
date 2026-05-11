@@ -97,12 +97,15 @@ class TestFullFreightPipeline:
             headers=admin_headers,
             json={"work_order_id": wo["id"], "trip_order_id": to["id"]},
         )
-        assert match_resp.status_code in (200, 500), f"Match failed: {match_resp.text}"
+        assert match_resp.status_code == 200, f"Match failed: {match_resp.text}"
 
         # 7. Verify WO status changed to MATCHED
         wo_check = api_client.get(f"/work-orders/{wo['id']}", headers=admin_headers)
-        if match_resp.status_code == 200:
-            assert wo_check.json()["status"] == "MATCHED"
+        assert wo_check.json()["status"] == "MATCHED"
+
+        # 8. Verify TO status changed to MATCHED
+        to_check = api_client.get(f"/trip-orders/{to['id']}", headers=admin_headers)
+        assert to_check.json()["status"] == "MATCHED"
 
         # Cleanup
         api_client.delete(f"/pricings/{pricing['id']}", headers=admin_headers)
@@ -216,9 +219,7 @@ class TestReconciliationCycle:
             headers=admin_headers,
             json={"work_order_id": wo["id"], "trip_order_id": to["id"]},
         )
-        if match.status_code != 200:
-            import pytest
-            pytest.skip(f"Match prerequisite failed: {match.text}")
+        assert match.status_code == 200, f"Match failed: {match.text}"
 
         # Unmatch
         unmatch = api_client.post(
@@ -228,13 +229,19 @@ class TestReconciliationCycle:
         )
         assert unmatch.status_code == 200, f"Unmatch failed: {unmatch.text}"
 
-        # Bulk re-match
+        # Verify both back to PENDING
+        wo_after = api_client.get(f"/work-orders/{wo['id']}", headers=admin_headers)
+        assert wo_after.json()["status"] == "PENDING"
+        to_after = api_client.get(f"/trip-orders/{to['id']}", headers=admin_headers)
+        assert to_after.json()["status"] == "PENDING"
+
+        # Re-match via bulk
         bulk = api_client.post(
             "/reconcile/bulk-match",
             headers=admin_headers,
             json={"pairs": [{"work_order_id": wo["id"], "trip_order_id": to["id"]}]},
         )
-        assert bulk.status_code in (200, 500)
+        assert bulk.status_code == 200, f"Bulk re-match failed: {bulk.text}"
 
 
 class TestSalaryLifecycle:
@@ -521,27 +528,27 @@ class TestMatchUnmatchWorkflow:
             headers=admin_headers,
             json={"work_order_id": wo["id"], "trip_order_id": to["id"]},
         )
-        assert match_resp.status_code in (200, 500), f"Match failed: {match_resp.text}"
+        assert match_resp.status_code == 200, f"Match failed: {match_resp.text}"
 
-        # Both should be MATCHED (if match succeeded)
+        # Both should be MATCHED
         wo_check = api_client.get(f"/work-orders/{wo['id']}", headers=admin_headers)
-        if match_resp.status_code == 200:
-            assert wo_check.json()["status"] == "MATCHED"
+        assert wo_check.json()["status"] == "MATCHED"
 
-            to_check = api_client.get(f"/trip-orders/{to['id']}", headers=admin_headers)
-            assert to_check.json()["status"] == "MATCHED"
+        to_check = api_client.get(f"/trip-orders/{to['id']}", headers=admin_headers)
+        assert to_check.json()["status"] == "MATCHED"
+        assert wo["id"] in to_check.json().get("matched_work_order_ids", [])
 
-            # Unmatch
-            unmatch_resp = api_client.post(
-                "/reconcile/unmatch",
-                headers=admin_headers,
-                json={"work_order_id": wo["id"], "trip_order_id": to["id"], "reason": "reverting"},
-            )
-            assert unmatch_resp.status_code == 200, f"Unmatch failed: {unmatch_resp.text}"
+        # Unmatch
+        unmatch_resp = api_client.post(
+            "/reconcile/unmatch",
+            headers=admin_headers,
+            json={"work_order_id": wo["id"], "trip_order_id": to["id"], "reason": "reverting"},
+        )
+        assert unmatch_resp.status_code == 200, f"Unmatch failed: {unmatch_resp.text}"
 
-            # Both should be PENDING again
-            wo_after = api_client.get(f"/work-orders/{wo['id']}", headers=admin_headers)
-            assert wo_after.json()["status"] == "PENDING"
+        # Both should be PENDING again
+        wo_after = api_client.get(f"/work-orders/{wo['id']}", headers=admin_headers)
+        assert wo_after.json()["status"] == "PENDING"
 
-            to_after = api_client.get(f"/trip-orders/{to['id']}", headers=admin_headers)
-            assert to_after.json()["status"] == "PENDING"
+        to_after = api_client.get(f"/trip-orders/{to['id']}", headers=admin_headers)
+        assert to_after.json()["status"] == "PENDING"
