@@ -159,7 +159,7 @@ export function useMatchTrip(initialTripId: number) {
     getTripMatchStatus,
     selectedTripId: selectedTripIds[0] ?? 0,
     selectedJobId, setSelectedJobId: handleSelectJob,
-    suggestions: [] as unknown[], // not used in batch flow
+    // suggestions removed — not used in batch flow
     tripClient, jobClient, tripRoute, jobRoute, tripConts, jobConts,
     contMatched, clientMatched, routeMatched,
     setTripClient, setTripRoute, setTripContainers,
