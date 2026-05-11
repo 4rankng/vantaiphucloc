@@ -329,9 +329,10 @@ class WorkOrder:
         allowance: Money,
         pricing_id: int | None,
     ) -> None:
-        self.unit_price = int(unit_price)
-        self.driver_salary = int(driver_salary)
-        self.allowance = int(allowance)
+        # Accumulate for multi-match: add this TO's values to existing.
+        self.unit_price = (self.unit_price or 0) + int(unit_price)
+        self.driver_salary = (self.driver_salary or 0) + int(driver_salary)
+        self.allowance = (self.allowance or 0) + int(allowance)
         self.pricing_id = pricing_id
         self.updated_at = _utcnow()
 
