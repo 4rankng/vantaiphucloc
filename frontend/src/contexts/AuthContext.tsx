@@ -4,6 +4,7 @@ import type { Role } from '@/data/domain'
 import { api, setTokens, clearTokens } from '@/services/api/client'
 import { subscribeToPush, isPushSupported, getPushSubscriptionStatus } from '@/lib/push-subscription'
 import { startHealthMonitor, stopHealthMonitor } from '@/lib/network'
+import { queryClient } from '@/lib/query-client'
 
 export interface UserInfo {
   id: string
@@ -32,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { id, username: userUsername, full_name, role } = res.data.user
 
     setTokens(access_token, refresh_token)
+    queryClient.clear()
 
     const u: UserInfo = {
       id: String(id),
@@ -48,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     api.post('/auth/logout').catch(() => {})
     clearTokens()
     stopHealthMonitor()
+    queryClient.clear()
     setUser(null)
   }, [])
 

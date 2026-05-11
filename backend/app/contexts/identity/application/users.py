@@ -77,8 +77,6 @@ class CreateUser:
             email=cmd.email,
             full_name=cmd.full_name,
             cccd=cmd.cccd,
-            vendor=cmd.vendor,
-            tractor_plate=cmd.tractor_plate,
         )
         return await self._users.add(user)
 
@@ -109,8 +107,6 @@ class UpdateUser:
             username=cmd.username,
             email=cmd.email,
             cccd=cmd.cccd,
-            vendor=cmd.vendor,
-            tractor_plate=cmd.tractor_plate,
         )
         if cmd.role is not None:
             user.assign_role(cmd.role, actor_role=actor_role)

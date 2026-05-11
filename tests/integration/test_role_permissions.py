@@ -41,7 +41,7 @@ class TestDriverPermissions:
                 "partner_id": partner["id"],
                 "pickup_location_id": pickup["id"],
                 "dropoff_location_id": dropoff["id"],
-                "driver_id": 4,
+                "driver_id": 5,
                 "containers": [{"container_number": _container_number(), "work_type": "E20"}],
             },
         )
@@ -159,7 +159,7 @@ class TestDirectorPermissions:
                 "role": "driver",
             },
         )
-        assert resp.status_code in (200, 201)
+        assert resp.status_code in (200, 201), f"Create user failed: {resp.text}"
         user_id = resp.json()["id"]
         api_client.delete(f"/users/{user_id}", headers=director_headers)
 
@@ -178,6 +178,7 @@ class TestDirectorPermissions:
                 "role": "driver",
             },
         )
+        assert create.status_code in (200, 201), f"Create user failed: {create.text}"
         user_id = create.json()["id"]
         resp = api_client.delete(f"/users/{user_id}", headers=director_headers)
         assert resp.status_code in (200, 204)

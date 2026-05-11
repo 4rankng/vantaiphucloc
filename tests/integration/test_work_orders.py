@@ -42,7 +42,7 @@ class TestWorkOrders:
             assert item["status"] == "PENDING"
 
     def test_list_filter_driver(self, api_client, accountant_headers):
-        resp = api_client.get("/work-orders", headers=accountant_headers, params={"driver_id": 4})
+        resp = api_client.get("/work-orders", headers=accountant_headers, params={"driver_id": 5})
         assert resp.status_code == 200
 
     def test_list_filter_date(self, api_client, accountant_headers):
@@ -93,14 +93,14 @@ class TestWorkOrders:
                         "partner_id": partner["id"],
                         "pickup_location_id": pickup["id"],
                         "dropoff_location_id": dropoff["id"],
-                        "driver_id": 4,
+                        "driver_id": 5,
                         "containers": [{"container_number": _container_number(), "work_type": "E20"}],
                     },
                     {
                         "partner_id": partner["id"],
                         "pickup_location_id": pickup["id"],
                         "dropoff_location_id": dropoff["id"],
-                        "driver_id": 4,
+                        "driver_id": 5,
                         "containers": [{"container_number": _container_number(), "work_type": "E20"}],
                     },
                 ]
@@ -132,5 +132,6 @@ class TestWorkOrders:
         resp = api_client.get("/work-orders", headers=driver_headers)
         assert resp.status_code == 200
         items = resp.json()["items"]
+        # Driver taixe1 has id=5; all returned WOs should belong to this driver
         for item in items:
-            assert item["driver"]["id"] == 4
+            assert item["driver"]["id"] == 5
