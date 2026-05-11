@@ -64,22 +64,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // Auto-subscribe to push on login — runs at most once per browser session.
-  // A sessionStorage guard prevents re-registration on every route change or
-  // component remount that might recreate the user object reference.
+  // A sessionStorage guard is set BEFORE any async operation to prevent
+  // race conditions when AuthContext remounts or user changes rapidly.
   useEffect(() => {
     if (!user || !isPushSupported()) return
     if (sessionStorage.getItem('push_registered')) return
+    // Claim the slot synchronously before any await to prevent concurrent calls
+    sessionStorage.setItem('push_registered', '1')
     getPushSubscriptionStatus().then(async status => {
-      if (status.subscribed) {
-        sessionStorage.setItem('push_registered', '1')
-        return
-      }
+      if (status.subscribed) return
       // If permission already denied, nothing we can do silently
       if (Notification.permission === 'denied') return
       // Request permission (no-op if already granted), then subscribe
-      subscribeToPush().then(ok => {
-        if (ok) sessionStorage.setItem('push_registered', '1')
-      }).catch(() => {})
+      subscribeToPush().catch(() => {})
+    }).catch(() => {
+      // On error, clear the guard so next session can retry
+      sessionStorage.removeItem('push_registered')
     })
   }, [user])
 

@@ -45,7 +45,7 @@ export function DirectorDashboard() {
 
   const monthlyTrips = useMemo(() => {
     return trips.filter(t => {
-      const d = new Date(t.createdAt)
+      const d = new Date(t.tripDate)
       return d.getFullYear() === month.year && d.getMonth() + 1 === month.month
     })
   }, [trips, month])
@@ -59,7 +59,7 @@ export function DirectorDashboard() {
   // Recent trips (last 5)
   const recentTrips = useMemo(() => {
     return [...trips]
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .sort((a, b) => new Date(b.tripDate).getTime() - new Date(a.tripDate).getTime())
       .slice(0, 5)
   }, [trips])
 
@@ -68,7 +68,7 @@ export function DirectorDashboard() {
     const days = daysInMonth(month.year, month.month)
     const counts = Array(days).fill(0)
     for (const t of monthlyTrips) {
-      const day = new Date(t.createdAt).getDate()
+      const day = new Date(t.tripDate).getDate()
       counts[day - 1]++
     }
     return counts
@@ -247,7 +247,7 @@ export function DirectorDashboard() {
             <div className="divide-y" style={{ borderColor: 'var(--theme-border-light)' }}>
               {recentTrips.map((t) => {
                 const badge = getTripOrderStatusBadge(t.status)
-                const date = new Date(t.createdAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
+                const date = new Date(t.tripDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
                 const tripCode = `T${String(t.id).padStart(4, '0')}`
                 const route = [t.pickupLocation?.name, t.dropoffLocation?.name].filter(Boolean).join(' → ') || t.route
                 const tripWorkType = t.containers[0]?.workType
@@ -428,9 +428,19 @@ const ACTIVITY_LABELS: Record<string, Record<string, string>> = {
     trip_order_work_orders: 'ghép chuyến',
     work_orders: 'ghép chuyến',
     trip_orders: 'ghép chuyến',
+    reconciliations: 'ghép chuyến',
     _default: 'ghép chuyến',
   },
+  AUTO_MATCH: {
+    reconciliations: 'tự động ghép chuyến',
+    _default: 'tự động ghép chuyến',
+  },
+  BULK_MATCH: {
+    reconciliations: 'ghép chuyến hàng loạt',
+    _default: 'ghép chuyến hàng loạt',
+  },
   UNMATCH: {
+    reconciliations: 'bỏ ghép chuyến',
     _default: 'bỏ ghép chuyến',
   },
   CANCEL: {

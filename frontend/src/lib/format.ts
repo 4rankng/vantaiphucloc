@@ -7,10 +7,19 @@
  * For API calls, use `toISODate()` from utils/salaryPeriod.ts instead.
  */
 
-/** Parse a date string (ISO, locale, or Date) into a Date object. Returns null if invalid. */
+/**
+ * Parse a date-only string (YYYY-MM-DD) as LOCAL midnight to avoid UTC off-by-one.
+ * Falls back to `new Date(value)` for datetime strings that include time info.
+ */
 function parseDate(value: string | Date | null | undefined): Date | null {
   if (!value) return null
   if (value instanceof Date) return isNaN(value.getTime()) ? null : value
+  // ISO date-only string (YYYY-MM-DD) — parse as local midnight to avoid
+  // UTC timezone shift (e.g. "2026-04-26" UTC midnight = Apr 25 in UTC+7)
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [y, m, d] = value.split('-').map(Number)
+    return new Date(y, m - 1, d)
+  }
   const d = new Date(value)
   return isNaN(d.getTime()) ? null : d
 }
