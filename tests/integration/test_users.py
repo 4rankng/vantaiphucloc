@@ -1,5 +1,6 @@
 """Integration tests for user management endpoints."""
 
+import pytest
 from uuid import uuid4
 
 
@@ -53,12 +54,11 @@ class TestUsers:
             "username": f"it_user_{uid}",
             "password": "testpass123",
             "full_name": f"IT Test {uid}",
-            "phone": f"091{uid}",
+            "phone": f"091{uid[:7]}",
             "role": "driver",
-            "tractor_plate": "29C-IT999",
         }
         resp = api_client.post("/users", json=payload, headers=admin_headers)
-        assert resp.status_code in (200, 201)
+        assert resp.status_code in (200, 201), f"Create user failed: {resp.text}"
         user = resp.json()
         assert user["role"] == "driver"
         assert "id" in user
@@ -85,12 +85,12 @@ class TestUsers:
                 "username": f"it_upd_{uid}",
                 "password": "testpass123",
                 "full_name": "ToUpdate",
-                "phone": f"092{uid}",
+                "phone": f"092{uid[:7]}",
                 "role": "driver",
-                "tractor_plate": "29C-IT001",
             },
             headers=admin_headers,
         )
+        assert create.status_code in (200, 201), f"Create failed: {create.text}"
         user_id = create.json()["id"]
 
         resp = api_client.put(
@@ -111,11 +111,12 @@ class TestUsers:
                 "username": f"it_pwd_{uid}",
                 "password": "oldpass123",
                 "full_name": "PwdTest",
-                "phone": f"093{uid}",
+                "phone": f"093{uid[:7]}",
                 "role": "driver",
             },
             headers=admin_headers,
         )
+        assert create.status_code in (200, 201), f"Create failed: {create.text}"
         user_id = create.json()["id"]
 
         login = api_client.post(
