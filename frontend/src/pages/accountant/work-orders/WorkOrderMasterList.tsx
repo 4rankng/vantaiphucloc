@@ -147,7 +147,7 @@ export function WorkOrderMasterList({
               </div>
 
               {/* Line 2: client + route */}
-              <p className="text-xs font-medium truncate" style={{ color: 'var(--theme-text-primary)' }}>
+              <p className="text-xs font-medium line-clamp-2" style={{ color: 'var(--theme-text-primary)' }}>
                 {wo.partner.name} · {resolveRoute(wo) || '—'}
               </p>
 
