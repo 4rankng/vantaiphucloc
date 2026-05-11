@@ -143,6 +143,23 @@ export interface SavedTemplate {
 // API
 // ──────────────────────────────────────────────────────────────────────────
 
+export interface SheetInfo {
+  name: string
+  score: number
+  container_hits: number
+  n_rows: number
+  is_auto_selected: boolean
+}
+
+export async function listExcelSheets(file: File): Promise<SheetInfo[]> {
+  const fd = new FormData()
+  fd.append('file', file)
+  const res = await api.post('/imports/customer-excel/sheets', fd, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return res.data as SheetInfo[]
+}
+
 export async function getCanonicalSchema(): Promise<CanonicalSchema> {
   const res = await api.get('/imports/customer-excel/schema')
   return res.data as CanonicalSchema
