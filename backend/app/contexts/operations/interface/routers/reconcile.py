@@ -272,9 +272,43 @@ async def suggest_wos(
     )
 
 
-@router.post("/upload-excel")
-async def upload_customer_excel(
-    file: UploadFile = File(...),
+@router.get("/reconcile/links/{work_order_id}")
+async def get_linked_trip_orders(
+    work_order_id: int,
+    current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
+):
+    """Return all TripOrders linked to a WorkOrder via active reconciliations."""
+    from app.contexts.operations.infrastructure.link_queries import (
+        find_all_links_for_wo,
+    )
+
+    db: AsyncSession  # will be injected via dependency below
+    # Use a simple approach: get the session from any use case dependency
+    from sqlalchemy import select as sa_select
+    from app.models.domain import TripOrder as TripOrderORM
+
+    links = await find_all_links_for_wo(
+        _get_session(), work_order_id,
+    )
+    to_ids = [link.trip_order_id for link in links]
+    if not to_ids:
+        return {"work_order_id": work_order_id, "trip_orders": []}
+
+    tos = list((await _get_session().execute(
+        sa_select(TripOrderORM).where(TripOrderORM.id.in_(to_ids))
+    )).scalars().all())
+
+    from app.contexts.operations.interface.routers.trip_orders import (
+        _load_one as _load_trip_one,
+    )
+    result = []
+    for to_orm in tos:
+        try:
+            out = await _load_trip_one(_get_session(), to_orm)
+            result.append(out)
+        except Exception:
+            pass
+    return {"work_order_id": work_order_id, "trip_orders": result}
     partner_id: int = Query(..., description="Partner ID for reconciliation"),
     date_from: str | None = Query(None, description="Filter from date (YYYY-MM-DD)"),
     date_to: str | None = Query(None, description="Filter to date (YYYY-MM-DD)"),
