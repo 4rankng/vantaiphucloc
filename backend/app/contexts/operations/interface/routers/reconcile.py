@@ -306,6 +306,11 @@ async def get_linked_trip_orders(
         except Exception:
             pass
     return {"work_order_id": work_order_id, "trip_orders": result}
+
+
+@router.post("/upload-excel")
+async def upload_customer_excel(
+    file: UploadFile = File(...),
     partner_id: int = Query(..., description="Partner ID for reconciliation"),
     date_from: str | None = Query(None, description="Filter from date (YYYY-MM-DD)"),
     date_to: str | None = Query(None, description="Filter to date (YYYY-MM-DD)"),
