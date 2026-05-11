@@ -4,7 +4,7 @@
 **Type:** Usability Issue  
 **Layer:** Frontend  
 **Affected Role/Flow:** ketoan — `/accountant/work-orders` — Ghép chuyến match panel  
-**Status:** ⚠️ Still Present (verified QA v9, 2026-05-11)
+**Status:** ✅ Already Implemented — MatchTrip.tsx has `lowConfConfirm` state (lines 203-209) requiring confirmation for partial matches, plus toast notifications via `handleMatchWithToast` (lines 191-201). QA v9 likely tested stale deployment.
 
 ---
 

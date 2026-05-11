@@ -4,7 +4,7 @@
 **Type:** Usability Issue  
 **Layer:** Frontend  
 **Affected Role/Flow:** giamdoc — `/director` — KPI stats row  
-**Status:** ⚠️ Still Present (verified QA v9, 2026-05-11)
+**Status:** ✅ Already Implemented — StatCard component accepts `loading` prop and renders skeleton placeholder (DirectorDashboard.tsx lines 536-537). QA v9 likely tested stale deployment.
 
 ---
 
