@@ -23,11 +23,46 @@
    **Frontend changes:**
    - `use-match-trip.ts`: refactored for multi-TO selection (`selectedTripIds[]`, `toggleTripSelection`, `getTripMatchStatus`)
    - `MatchTrip.tsx`: redesigned for 1:N flow (pick 1 WO → pick N TOs with checkboxes)
-   - `MatchDetailPanel.tsx`: already had per-TO unmatch support (no changes needed)
+   - `MatchDetailPanel.tsx`: per-TO unmatch + suggestions for matched WOs + checkbox multi-select
 
    **Tests:**
    - `test_multi_match_reconciliation.py`: 9 integration tests covering AC-1 through AC-7
    - Full suite: 167 passed, 0 regressions
+
+### ✅ Completed (2026-05-12) — Multi-Match FE Fixes (MULTI-MATCH-00..04)
+
+Tasks resolved by autonomous cron agent:
+
+1. **MULTI-MATCH-01** — Show suggestions for adding TOs to already-matched WO
+   - Removed `isMatched` guard on `useSuggestMatches` in `MatchDetailPanel.tsx`
+   - Added "Thêm đơn hàng khác cho chuyến này" section in matched mode
+   - Backend `match_suggester.py` already supports MATCHED WOs (calculates unclaimed containers)
+
+2. **MULTI-MATCH-02** — Fix broken navigation `/accountant/match` → `/accountant/match-trip`
+   - `AccountantDashboard.tsx` had wrong route path (`/match/` vs `/match-trip/`)
+   - Fixed both navigation calls (lines 298, 420)
+
+3. **MULTI-MATCH-03** — Checkbox multi-select + batch action bar in MatchDetailPanel
+   - Added `selectedToIds` state with toggle callback
+   - Checkbox overlay on each `MatchCard` (both matched & unmatched modes)
+   - Floating batch action bar calls `useBatchReconcileForWO` → `POST /reconcile/batch-for-wo`
+   - Single "Ghép" buttons still work for one-by-one flow
+
+4. **MULTI-MATCH-04** — Deploy pending (NOT executed, requires user approval)
+   - Commits ahead of origin need `git push origin main && make push-all && make deploy-all`
+
+5. **Test fix** — Updated TO status assertions MATCHED→COMPLETED
+   - Commit `1d99b22` changed TO lifecycle: `PENDING → COMPLETED` on match (skipping MATCHED)
+   - Fixed 5 test assertions across 3 files
+
+**Key lesson:** TripOrder status goes directly to COMPLETED on match (not MATCHED). WorkOrder goes to MATCHED.
+
+**Files modified:**
+   - `frontend/src/pages/accountant/work-orders/MatchDetailPanel.tsx`
+   - `frontend/src/pages/accountant/AccountantDashboard.tsx`
+   - `tests/integration/test_multi_match_reconciliation.py`
+   - `tests/integration/test_reconcile.py`
+   - `tests/integration/test_workflows.py`
 
 ### ✅ Recently Completed (2026-05-11) — QA v8 Cycle
 
