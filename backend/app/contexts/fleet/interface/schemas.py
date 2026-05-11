@@ -18,6 +18,7 @@ class DriverOut(BaseModel):
     username: str
     full_name: str | None = None
     phone: str | None = None
+    vehicle_plate: str | None = None
     created_at: datetime
     updated_at: datetime
 
