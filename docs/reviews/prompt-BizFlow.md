@@ -528,12 +528,12 @@ Tests tiered pricing lookup (`find_tiered_pricing`) and the apply-pricing flow.
 - **Expected:** System calls `find_tiered_pricing` with `quantity=2`. TripOrder gets `unit_price=350000` (the quantity=2 tier), NOT 2 × 297000.
 - **This is the core twin-lift pricing scenario** — 2 containers on one trip have a different price than 2 separate trips.
 
-### 2D.3 Fallback to quantity=1 tier
+### 2D.3 No quantity=2 tier — should inform accountant, NOT silently fallback
 - **Precondition:** Only `PricingLine(quantity=1, unit_price=297000)` exists for F20 route A→B. No quantity=2 tier.
 - Import a TripOrder with 2 F20 containers on route A→B.
 - Apply pricing.
-- **Expected:** `find_tiered_pricing` falls back to quantity=1 tier. `unit_price=297000`.
-- **Verify:** Fallback behavior should be surfaced as a warning or notification to the accountant.
+- **Expected:** `find_tiered_pricing` returns `None`. TripOrder stays with `unit_price=0`. The API response includes this trip in `not_found_trip_ids`. The accountant sees a clear message in Vietnamese that no pricing was found for this route/container combination.
+- **REPORT AS BUG if:** The system silently falls back to `quantity=1` pricing (current behavior in `pricing_lookup.py` lines 144-151). This hides the fact that the twin-lift pricing tier is missing and gives the wrong price.
 
 ### 2D.4 No pricing rule found
 - Import a TripOrder for a route/work_type combo with no Pricing record.
