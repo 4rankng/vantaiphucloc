@@ -13,6 +13,7 @@ import { useVendors, useCreateVendor, useUpdateVendor, useDeleteVendor } from '@
 import { useToast } from '@/components/atoms/Toast'
 import type { VendorFormData } from '@/services/api/vendors.api'
 import type { Vendor } from '@/services/api/vendors.api'
+import { isCompany } from '@/lib/utils'
 
 const VN_PHONE_RE = /^(0|\+?84)[35789]\d{8}$/
 const VN_TAX_RE = /^\d{10}(\d{3})?$/
@@ -111,7 +112,7 @@ export function VendorList() {
     { key: 'name', header: 'Tên', accessor: v => <span className="font-medium">{v.name}</span>, sortable: true },
     { key: 'phone', header: 'SĐT', accessor: v => v.phone ?? '—' },
     { key: 'taxCode', header: 'MST', accessor: v => v.taxCode ?? '—' },
-    { key: 'type', header: 'Loại', accessor: v => v.type === 'company' ? 'Công ty' : 'Cá nhân' },
+    { key: 'type', header: 'Loại', accessor: v => isCompany(v) ? 'Công ty' : 'Cá nhân' },
     { key: 'address', header: 'Địa chỉ', accessor: v => v.address ?? '—', hideOnMobile: true },
   ], [])
 
@@ -199,7 +200,7 @@ export function VendorList() {
           </DialogHeader>
           {selected && (
             <div className="space-y-1">
-              <InfoRow label="Loại" value={selected.type === 'company' ? 'Công ty' : 'Cá nhân'} />
+              <InfoRow label="Loại" value={isCompany(selected) ? 'Công ty' : 'Cá nhân'} />
               <InfoRow label="Điện thoại" value={selected.phone ?? '—'} />
               {selected.taxCode && <InfoRow label="Mã số thuế" value={selected.taxCode} />}
               {selected.address && <InfoRow label="Địa chỉ" value={selected.address} />}
