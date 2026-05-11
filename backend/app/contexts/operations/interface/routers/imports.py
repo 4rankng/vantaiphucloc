@@ -62,7 +62,7 @@ from app.contexts.operations.infrastructure.import_pipeline.pipeline import (
 )
 from app.contexts.operations.infrastructure.import_pipeline.templates import (
     find_template,
-    list_templates_for_client,
+    list_templates_for_partner,
     save_template,
 )
 from app.contexts.operations.infrastructure.import_pipeline.workbook import load_workbook
@@ -291,7 +291,6 @@ async def commit_customer_excel(
             customer_ref=r.customer_ref,
             consignee=r.consignee,
             driver_name=r.driver_name,
-            tractor_plate=r.tractor_plate,
             remarks=r.remarks,
         )
         for r in body.rows
@@ -347,7 +346,7 @@ async def commit_customer_excel(
 
 
 class ApplyPricingRequest(BaseModel):
-    client_id: int
+    partner_id: int
     trip_order_ids: list[int] | None = None
 
 
@@ -402,7 +401,7 @@ async def apply_pricing_to_trip_ids(
         return ApplyPricingByIdsResponse(priced=0, unpriced=0, unpriced_trip_ids=[])
 
     priced, unpriced_ids = await use_case(
-        client_id=None,
+        partner_id=None,
         trip_ids=body.trip_ids,
         skip_already_priced=True,
     )
@@ -415,15 +414,15 @@ async def apply_pricing_to_trip_ids(
 
 @router.get("/customer-excel/templates")
 async def list_templates(
-    client_id: int,
+    partner_id: int,
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(require_roles("accountant", "superadmin")),
 ):
-    rows = await list_templates_for_client(db, client_id)
+    rows = await list_templates_for_partner(db, partner_id)
     return [
         {
             "id": r.id,
-            "client_id": r.client_id,
+            "partner_id": r.partner_id,
             "template_name": r.template_name,
             "structure_hash": r.structure_hash,
             "sheet_name": r.sheet_name,
@@ -452,7 +451,7 @@ class PricingPreviewRowDto(BaseModel):
 
 
 class PricingCommitRequest(BaseModel):
-    client_id: int
+    partner_id: int
     rows: list[PricingPreviewRowDto]
     update_existing_lines: bool = False
 

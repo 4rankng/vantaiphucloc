@@ -324,7 +324,6 @@ class CreateTripOrderFromImport:
                 "pickup_location": r.pickup_location,
                 "dropoff_location": r.dropoff_location,
                 "trip_date": r.trip_date.isoformat() if r.trip_date else None,
-                "tractor_plate": r.tractor_plate,
                 "driver_name": r.driver_name,
                 "customer_ref": r.customer_ref,
                 "remarks": r.remarks,
@@ -558,7 +557,7 @@ _CONTAINER_DIRECT_FIELDS = {
     "container_no", "container_size", "container_type", "freight_kind",
     "work_type", "gross_weight_kg", "seal_no", "commodity",
     "pickup_location", "dropoff_location", "trip_date",
-    "tractor_plate", "driver_name", "customer_ref",
+    "driver_name", "customer_ref",
 }
 
 
@@ -588,6 +587,5 @@ def trip_row_from_dict(d: dict) -> ImportTripRow:
         customer_ref=d.get("customer_ref") or "",
         consignee=d.get("consignee") or "",
         driver_name=d.get("driver_name") or "",
-        tractor_plate=d.get("tractor_plate") or "",
         remarks=d.get("remarks") or "",
     )

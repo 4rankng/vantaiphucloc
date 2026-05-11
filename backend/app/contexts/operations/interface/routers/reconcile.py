@@ -210,7 +210,7 @@ async def suggest_wos(
 @router.post("/upload-excel")
 async def upload_customer_excel(
     file: UploadFile = File(...),
-    client_id: int = Query(..., description="Customer ID for reconciliation"),
+    partner_id: int = Query(..., description="Partner ID for reconciliation"),
     date_from: str | None = Query(None, description="Filter from date (YYYY-MM-DD)"),
     date_to: str | None = Query(None, description="Filter to date (YYYY-MM-DD)"),
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
@@ -228,13 +228,13 @@ async def upload_customer_excel(
         )
 
     file_content = await file.read()
-    excel_data = await parse_customer_excel(file_content, client_id)
+    excel_data = await parse_customer_excel(file_content, partner_id)
     if not excel_data:
         raise HTTPException(status_code=400, detail="No data found in Excel file")
 
     db = use_case.repo.session  # type: ignore[attr-defined]
     results = await compare_with_system_records(
-        db=db, client_id=client_id, excel_data=excel_data,
+        db=db, partner_id=partner_id, excel_data=excel_data,
         date_from=date_from, date_to=date_to,
     )
 
@@ -272,7 +272,7 @@ async def auto_match(
 
     # Fetch all PENDING work orders in date range
     from sqlalchemy import select as sa_select
-    from app.models.domain import WorkOrder as WO, TripOrderWorkOrder
+    from app.models.domain import WorkOrder as WO, Reconciliation
 
     wo_query = sa_select(WO).where(WO.status == "PENDING")
     if date_from:
@@ -282,10 +282,11 @@ async def auto_match(
 
     work_orders = list((await db.execute(wo_query)).scalars().all())
 
-    # Track which trip orders are already matched to avoid double-matching
     matched_to_ids = set(
         r[0] for r in (await db.execute(
-            sa_select(TripOrderWorkOrder.trip_order_id)
+            sa_select(Reconciliation.trip_order_id).where(
+                Reconciliation.is_active == True  # noqa: E712
+            )
         )).all()
     )
 
@@ -378,7 +379,7 @@ async def match_scores(
     """
     from datetime import date as date_type
     from sqlalchemy import select as sa_select
-    from app.models.domain import WorkOrder as WO, TripOrderWorkOrder
+    from app.models.domain import WorkOrder as WO, Reconciliation
 
     db = use_case.repo.session  # type: ignore[attr-defined]
 
@@ -491,7 +492,7 @@ async def bulk_match(
 
 @router.get("/export-excel")
 async def export_reconciliation_excel(
-    client_id: int = Query(..., description="Customer ID"),
+    partner_id: int = Query(..., description="Partner ID"),
     date_from: str | None = Query(None, description="Filter from date (YYYY-MM-DD)"),
     date_to: str | None = Query(None, description="Filter to date (YYYY-MM-DD)"),
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
@@ -501,10 +502,10 @@ async def export_reconciliation_excel(
 
     db = use_case.repo.session  # type: ignore[attr-defined]
     excel_content = await generate_reconciliation_excel(
-        db=db, client_id=client_id, date_from=date_from, date_to=date_to,
+        db=db, partner_id=partner_id, date_from=date_from, date_to=date_to,
     )
 
-    filename = f"reconciliation_client_{client_id}"
+    filename = f"reconciliation_partner_{partner_id}"
     if date_from:
         filename += f"_{date_from}"
     if date_to:
