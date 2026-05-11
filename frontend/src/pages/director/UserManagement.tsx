@@ -71,6 +71,7 @@ function UserManagementInner() {
   const [editForm, setEditForm] = useState<UserForm>(EMPTY_FORM)
 
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [createErrors, setCreateErrors] = useState<Partial<Record<keyof UserForm, string>>>({})
 
   const isMobile = useIsMobile(768)
 
@@ -111,7 +112,12 @@ function UserManagementInner() {
   }, [])
 
   const handleCreate = useCallback(async () => {
-    if (!createForm.username.trim() || !createForm.password.trim()) return
+    const errors: Partial<Record<keyof UserForm, string>> = {}
+    if (!createForm.username.trim()) errors.username = 'Vui lòng nhập tên đăng nhập'
+    if (!createForm.password.trim()) errors.password = 'Vui lòng nhập mật khẩu'
+    if (!createForm.role) errors.role = 'Vui lòng chọn vai trò'
+    setCreateErrors(errors)
+    if (Object.keys(errors).length > 0) return
     try {
       await createUser.mutateAsync({
         username: createForm.username.trim(),
@@ -124,6 +130,7 @@ function UserManagementInner() {
       toast.success('Đã tạo tài khoản')
       setCreateOpen(false)
       setCreateForm(EMPTY_FORM)
+      setCreateErrors({})
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Lỗi không xác định'
       toast.error('Lỗi', detail)
@@ -311,7 +318,8 @@ function UserManagementInner() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <RequiredLabel>Tên đăng nhập</RequiredLabel>
-                <Input value={createForm.username} onChange={e => updateCreateField('username', e.target.value)} placeholder="nguyenvana" className="text-sm" />
+                <Input value={createForm.username} onChange={e => { updateCreateField('username', e.target.value); if (createErrors.username) setCreateErrors(prev => ({ ...prev, username: undefined })) }} placeholder="nguyenvana" className="text-sm" />
+                {createErrors.username && <p className="text-xs font-medium" style={{ color: 'var(--theme-status-error)' }}>{createErrors.username}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Họ và tên</Label>
@@ -332,7 +340,8 @@ function UserManagementInner() {
             {/* Password */}
             <div className="space-y-1.5">
               <RequiredLabel>Mật khẩu mặc định</RequiredLabel>
-              <Input type="password" value={createForm.password} onChange={e => updateCreateField('password', e.target.value)} placeholder="••••••••" className="text-sm" />
+              <Input type="password" value={createForm.password} onChange={e => { updateCreateField('password', e.target.value); if (createErrors.password) setCreateErrors(prev => ({ ...prev, password: undefined })) }} placeholder="••••••••" className="text-sm" />
+              {createErrors.password && <p className="text-xs font-medium" style={{ color: 'var(--theme-status-error)' }}>{createErrors.password}</p>}
             </div>
           </div>
           <DialogFooter className="flex-row gap-2">

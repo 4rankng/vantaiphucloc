@@ -24,11 +24,12 @@ function DriverShell() {
         actions: (
           <button
             onClick={() => navigate('/driver/work-orders/new')}
-            className="w-8 h-8 flex items-center justify-center rounded-full touch-manipulation"
+            className="h-8 flex items-center gap-1 px-2.5 rounded-full touch-manipulation"
             style={{ background: 'rgba(5, 150, 105, 0.08)', color: 'var(--theme-brand-primary)' }}
             aria-label="Tạo chuyến"
           >
-            <Plus className="w-[17px] h-[17px]" />
+            <Plus className="w-[15px] h-[15px]" />
+            <span className="text-xs font-semibold">Tạo chuyến</span>
           </button>
         ),
       }}

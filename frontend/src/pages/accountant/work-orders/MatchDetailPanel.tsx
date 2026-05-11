@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback } from 'react'
-import { Sparkles, FileText, ClipboardList, Search, Loader2, X, Check, Container } from 'lucide-react'
-import { useSuggestMatches, useReconcile, useBulkMatch, useTripOrders } from '@/hooks/use-queries'
+import { Sparkles, FileText, ClipboardList, Search, Loader2, X, Check, Container, Link2, Unlink, AlertTriangle } from 'lucide-react'
+import { useSuggestMatches, useReconcile, useBulkMatch, useTripOrders, useUnmatch } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { TripDetailCard } from './TripDetailCard'
 import { MatchCard, scoreColor } from './MatchCard'
@@ -15,14 +15,25 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
   const toast = useToast()
   const reconcile = useReconcile()
   const bulkMatch = useBulkMatch()
+  const unmatchMut = useUnmatch()
 
-  const { data: suggestionsData, isLoading } = useSuggestMatches(workOrder?.id ?? null)
+  const isMatched = workOrder?.status === 'MATCHED' || workOrder?.status === 'COMPLETED'
+
+  const { data: suggestionsData, isLoading } = useSuggestMatches(isMatched ? null : (workOrder?.id ?? null))
   const suggestions = suggestionsData?.suggestions ?? []
 
   const [submittingId, setSubmittingId] = useState<number | null>(null)
   const [manualSearchOpen, setManualSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const { data: allTripOrders = [] } = useTripOrders(manualSearchOpen ? { status: 'PENDING' } : undefined)
+  const [unmatchConfirm, setUnmatchConfirm] = useState(false)
+  const [unmatchReason, setUnmatchReason] = useState('')
+  const { data: allTripOrders = [] } = useTripOrders(isMatched || manualSearchOpen ? undefined : undefined)
+
+  // Find the matched trip for matched WOs
+  const matchedTrip = useMemo(() => {
+    if (!isMatched || !workOrder) return null
+    return allTripOrders.find(t => t.matchedWorkOrderIds?.includes(workOrder.id)) ?? null
+  }, [isMatched, workOrder, allTripOrders])
 
   const visibleSuggestions = useMemo(
     () => suggestions,
@@ -73,6 +84,120 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
     // Force refetch by relying on react-query invalidation from the reconcile mutation
     onMatchSuccess()
   }, [onMatchSuccess])
+
+  const handleUnmatch = useCallback(async () => {
+    if (!matchedTrip) return
+    try {
+      await unmatchMut.mutateAsync({ tripOrderId: matchedTrip.id, reason: unmatchReason.trim() || 'Hủy ghép' })
+      toast.success('Thành công', 'Đã hủy ghép chuyến')
+      setUnmatchConfirm(false)
+      setUnmatchReason('')
+      onMatchSuccess()
+    } catch {
+      toast.error('Lỗi', 'Không thể hủy ghép')
+    }
+  }, [matchedTrip, unmatchMut, unmatchReason, toast, onMatchSuccess])
+
+  // ── Matched mode ──
+  if (isMatched && workOrder) {
+    return (
+      <div className="h-full overflow-y-auto p-4 space-y-4">
+        <TripDetailCard workOrder={workOrder} />
+
+        <div className="flex items-center gap-2">
+          <Link2 className="w-4 h-4" style={{ color: 'var(--theme-status-success)' }} />
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+            Đã ghép với đơn hàng
+          </h2>
+        </div>
+
+        {matchedTrip ? (
+          <div
+            className="rounded-xl px-4 py-3 space-y-2"
+            style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
+          >
+            <div className="flex items-center gap-2">
+              {matchedTrip.code && (
+                <span className="text-xs font-mono font-semibold px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}>
+                  {matchedTrip.code}
+                </span>
+              )}
+              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                {matchedTrip.tripDate}
+              </span>
+            </div>
+            <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
+              {matchedTrip.partner?.name || '—'}
+            </p>
+            {(matchedTrip.pickupLocation?.name || matchedTrip.dropoffLocation?.name) && (
+              <p className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>
+                {matchedTrip.pickupLocation?.name ?? '?'} → {matchedTrip.dropoffLocation?.name ?? '?'}
+              </p>
+            )}
+            {matchedTrip.containers.length > 0 && (
+              <p className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>
+                {matchedTrip.containers.map(c => c.containerNumber || c.workType).filter(Boolean).join(', ')}
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="rounded-xl p-6 text-center" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
+            <Loader2 className="w-5 h-5 animate-spin mx-auto" style={{ color: 'var(--theme-text-muted)' }} />
+            <p className="text-xs mt-2" style={{ color: 'var(--theme-text-muted)' }}>Đang tải thông tin đơn hàng...</p>
+          </div>
+        )}
+
+        {unmatchConfirm ? (
+          <div
+            className="rounded-xl p-4 space-y-3"
+            style={{ background: 'color-mix(in srgb, var(--theme-status-warning) 6%, transparent)', border: '1px solid var(--theme-status-warning)' }}
+          >
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" style={{ color: 'var(--theme-status-warning)' }} />
+              <span className="text-sm font-semibold" style={{ color: 'var(--theme-status-warning)' }}>Xác nhận hủy ghép</span>
+            </div>
+            <p className="text-xs" style={{ color: 'var(--theme-text-primary)' }}>
+              Phiếu <strong>{workOrder.code}</strong> sẽ được tách khỏi đơn hàng <strong>{matchedTrip?.code ?? ''}</strong>. Hành động này có thể ảnh hưởng đến tính lương và đối soát.
+            </p>
+            <input
+              value={unmatchReason}
+              onChange={e => setUnmatchReason(e.target.value)}
+              placeholder="Lý do hủy ghép (tuỳ chọn)"
+              className="w-full px-3 py-2 rounded-lg text-xs border"
+              style={{ background: 'var(--theme-bg-primary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
+            />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleUnmatch}
+                disabled={unmatchMut.isPending}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-opacity disabled:opacity-40"
+                style={{ background: 'var(--theme-status-error)', color: '#fff' }}
+              >
+                {unmatchMut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Unlink className="w-3 h-3" />}
+                Xác nhận hủy ghép
+              </button>
+              <button
+                onClick={() => { setUnmatchConfirm(false); setUnmatchReason('') }}
+                className="px-3 py-2 rounded-lg text-xs font-semibold"
+                style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
+              >
+                Giữ nguyên
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setUnmatchConfirm(true)}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-opacity hover:opacity-80"
+            style={{ background: 'color-mix(in srgb, var(--theme-status-error) 10%, transparent)', color: 'var(--theme-status-error)', border: '1px solid color-mix(in srgb, var(--theme-status-error) 30%, transparent)' }}
+          >
+            <Unlink className="w-4 h-4" />
+            Hủy ghép chuyến
+          </button>
+        )}
+      </div>
+    )
+  }
 
   // ── Empty state: no WO selected ──
   if (!workOrder) {
@@ -220,9 +345,10 @@ function ManualSearchResults({
   const [submittingId, setSubmittingId] = useState<number | null>(null)
 
   const filtered = useMemo(() => {
-    if (!query.trim()) return tripOrders.slice(0, 20)
+    const pending = tripOrders.filter(to => to.status === 'PENDING' || to.status === 'DRAFT')
+    if (!query.trim()) return pending.slice(0, 20)
     const q = query.toLowerCase()
-    return tripOrders.filter(to =>
+    return pending.filter(to =>
       (to.containers?.some(c => c.containerNumber?.toLowerCase().includes(q))) ||
       (to.partner?.name?.toLowerCase().includes(q)) ||
       (to.code?.toLowerCase().includes(q))
