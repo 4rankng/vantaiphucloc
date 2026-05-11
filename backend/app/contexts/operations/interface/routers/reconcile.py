@@ -137,12 +137,6 @@ async def unmatch(
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
     use_case: UnmatchTripFromWorkOrder = Depends(get_unmatch_trip_from_work_order),
 ):
-    if not body.work_order_id and not body.trip_order_id:
-        raise HTTPException(
-            status_code=400,
-            detail="Must provide work_order_id or trip_order_id",
-        )
-
     set_audit_reason(body.reason)
     try:
         to, wo = await use_case(UnmatchInput(

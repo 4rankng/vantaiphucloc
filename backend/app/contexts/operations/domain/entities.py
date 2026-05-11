@@ -336,7 +336,10 @@ class WorkOrder:
         self.updated_at = _utcnow()
 
     def match(self) -> None:
-        """PENDING → MATCHED."""
+        """PENDING → MATCHED. Idempotent: MATCHED → MATCHED is a no-op
+        (multi-container run — WO may already be matched)."""
+        if self.status == WorkOrderStatus.MATCHED:
+            return
         if self.status != WorkOrderStatus.PENDING:
             raise InvalidStateTransition(
                 kind="WorkOrder",

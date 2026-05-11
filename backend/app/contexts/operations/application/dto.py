@@ -172,5 +172,5 @@ class ReconcileInput:
 class UnmatchInput:
     user_id: int
     reason: str
-    work_order_id: int | None = None
-    trip_order_id: int | None = None
+    work_order_id: int
+    trip_order_id: int
