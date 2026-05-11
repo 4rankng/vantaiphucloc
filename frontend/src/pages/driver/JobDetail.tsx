@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { formatCurrencyFull } from '@/data/domain'
 import { useWorkOrder } from '@/hooks/use-queries'
+import { resolveRoute } from '@/lib/route-utils'
 
 export function JobDetail() {
   const { jobId: jobIdStr } = useParams<{ jobId: string }>()
@@ -123,7 +124,7 @@ export function JobDetail() {
       {/* Trip info */}
       <div className="rounded-lg overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
         <InfoRow icon={Building2} label="Khách hàng" value={job.partner.name} />
-        <InfoRow icon={RouteIcon} label="Cung đường" value={job.route} />
+        <InfoRow icon={RouteIcon} label="Cung đường" value={resolveRoute(job)} />
         {(() => {
           const loc = job.gpsAddress ?? (job.gpsLat && job.gpsLng ? `${job.gpsLat}, ${job.gpsLng}` : null)
           return loc ? <InfoRow icon={MapPin} label="Vị trí" value={loc} /> : null

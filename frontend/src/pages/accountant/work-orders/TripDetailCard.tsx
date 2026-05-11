@@ -1,6 +1,7 @@
 import { Truck, Calendar, MapPin } from 'lucide-react'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { fmtDate } from '@/lib/date-utils'
+import { resolveRoute } from '@/lib/route-utils'
 import type { WorkOrder } from '@/data/domain'
 
 interface TripDetailCardProps {
@@ -52,7 +53,7 @@ export function TripDetailCard({ workOrder }: TripDetailCardProps) {
       <div className="flex items-center gap-2 flex-wrap">
         <span className="flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--theme-text-secondary)' }}>
           <MapPin className="w-3 h-3" />
-          {workOrder.route || '—'}
+          {resolveRoute(workOrder) || '—'}
         </span>
         {workOrder.containers.slice(0, 4).map((c, i) => (
           <span key={i} className="flex items-center gap-1">
