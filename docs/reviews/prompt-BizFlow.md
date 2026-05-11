@@ -4,7 +4,11 @@ Context & Resources:
 
 Target URL: https://phucloc.tingting.vip/ (test env)
 User Roles: SuperAdmin, Giam doc (Director), Ke toan (Accountant), Tai xe (Driver)
-Test Data: Customer Excel files for creating don hang are located in /Users/dev/Documents/vantaiphucloc/docs/don-hang.
+Test Data: Customer Excel files for creating don hang are located in `/Users/dev/Documents/projects/vantaiphucloc/docs/don-hang/`. Files include:
+- `Phúc Lộc - Shipside T4.26 HAP.xlsx` — Invoice + CUOC pricing (4 sheets: "Bảng kê SS" = containers, "CUOC" = pricing catalog with volume tiers)
+- `2.GLORY SHANGHAI- 2612N.xlsx` — Bay Plan
+- `8.CONSCIENCE 2615N.xlsx` — Bay Plan
+- `Loading list of HAIAN BETA 062S.xls` — Loading List (.xls format)
 
 ---
 
@@ -385,6 +389,225 @@ These are known issues that have NOT been fixed yet. Test each one carefully and
 
 ---
 
+## FLOW 2A: EXCEL UPLOAD PARSING (Kế toán — Nhập đơn hàng)
+
+Tests the import pipeline against each real customer file in `/Users/dev/Documents/projects/vantaiphucloc/docs/don-hang/`.
+
+**Precondition:** Log in as ketoan. Ensure the target partner exists before uploading. Clear any previous test imports for the target partner.
+
+### 2A.1 Upload "Phúc Lộc - Shipside T4.26 HAP.xlsx" (Invoice pattern)
+- Navigate to Nhập đơn hàng từ Excel page.
+- Select the partner for Phúc Lộc (HAP).
+- Set default trip date to 2026-04-26.
+- Upload `docs/don-hang/Phúc Lộc - Shipside T4.26 HAP.xlsx`.
+- **Expected:** Pattern detector identifies the "Bảng kê SS" sheet. Preview shows parsed container rows with container numbers, work type (H/R → F/E + size), pickup/dropoff locations, trip date.
+- **Verify:** The CUOC sheet should NOT be selected as the data sheet.
+- **Edge case:** Rows with no pickup/dropoff should still be accepted with empty strings.
+
+### 2A.2 Upload "2.GLORY SHANGHAI- 2612N.xlsx" (Bay Plan pattern)
+- Upload `docs/don-hang/2.GLORY SHANGHAI- 2612N.xlsx`.
+- **Expected:** Pattern detector identifies the bay-plan sheet (3+ Container header columns at regular intervals). Multiple containers from different port sections extracted with correct dropoff ports. F/E lookup from System Export sheet if present. Pickup defaults to "HAIPHONG".
+- **Verify:** Vessel name extracted from filename ("GLORY SHANGHAI").
+
+### 2A.3 Upload "8.CONSCIENCE 2615N.xlsx" (Bay Plan pattern)
+- Upload `docs/don-hang/8.CONSCIENCE 2615N.xlsx`.
+- **Expected:** Same bay-plan extraction as 2A.2. Vessel name = "CONSCIENCE" from filename.
+- **Verify:** No duplicate containers across port sections. Deduplication by container number is applied.
+
+### 2A.4 Upload "Loading list of HAIAN BETA 062S.xls" (Loading List pattern)
+- Upload `docs/don-hang/Loading list of HAIAN BETA 062S.xls`.
+- **Expected:** Pattern detector identifies loading-list format. Preview shows containers with pickup from "Port of Loading", dropoff from POD column, work type from F/E and SIZE columns.
+- **Verify:** `.xls` format (old Excel) is handled correctly.
+- **Edge case:** No phantom rows after the real data terminates.
+
+### 2A.5 Re-upload (Idempotency)
+- After committing rows from any file above, re-upload and commit the same file.
+- **Expected:** `skipped_duplicates` equals the number of previously committed containers. `created` = 0. No duplicate TripOrders.
+- **Verify:** Idempotency key is `(partner_id, trip_date, container_number)`.
+
+### 2A.6 AI Fallback
+- Upload a file with no recognizable pattern or standard headers.
+- **Expected:** Generic pipeline fails → AI extractor invoked. If AI succeeds, rows appear in preview. If AI also fails, user gets "Không thể đọc tệp. Vui lòng nhập thủ công."
+
+---
+
+## FLOW 2B: CONTAINER-PER-ROW VERIFICATION (Kế toán)
+
+Tests that each Excel row produces exactly one container entry with correct data.
+
+### 2B.1 Container count matches row count
+- Upload and preview any of the 4 Excel files.
+- Count the accepted rows in preview. Commit the import.
+- Query the API: `GET /api/v1/trip-orders?partner_id={id}` for newly created trips.
+- **Expected:** Sum of `TripOrderContainer` records across all new TripOrders equals the accepted row count.
+- **Verify:** Each container number appears exactly once in the database.
+
+### 2B.2 Per-container data integrity
+- Open a TripOrder created from import.
+- **Verify each container has:**
+  - `container_number` = normalized (uppercase, no hyphens) value from Excel
+  - `work_type` = computed from F/E + size (e.g., F20, E40)
+  - `container_size` = "20" or "40"
+  - `freight_kind` = "F" or "E"
+  - `gross_weight_kg` = weight value if present, else null
+  - `seal_no` = seal number if present
+- **Edge case:** If a row has no pickup/dropoff but the group has them, the container inherits the group's resolved locations.
+
+### 2B.3 Container validation consistency (regression for OPEN-05)
+- Import a file with a container number that has a bad ISO 6346 check digit.
+- **Expected:** Import pipeline accepts it (does NOT enforce check digit).
+- Log in as taixe. Try to create a WorkOrder with the same container number.
+- **Expected:** Driver form accepts the same container number. If rejected, report as regression of OPEN-05.
+
+---
+
+## FLOW 2C: MULTI-CONTAINER TRIP MATCHING (Kế toán + Tài xế)
+
+Tests the `group_rows_into_trips()` logic and match suggester with multi-container scenarios.
+
+### 2C.1 Grouped import: 2 containers → 1 TripOrder
+- **Setup:** Create test data where 2 Excel rows have the same `tractor_plate` (e.g., "30A-12345"), same `trip_date`, same `dropoff_location`, but different container numbers (two 20ft empties).
+- Upload and commit.
+- **Expected:** Commit response shows `grouped_trips >= 1`.
+- **Verify:** One TripOrder with exactly 2 containers. Both share `trip_date`, `pickup_location_id`, `dropoff_location_id`. Status is PENDING. `unit_price = 0`.
+
+### 2C.2 Ungrouped import: 2 containers → 2 separate TripOrders
+- **Setup:** 2 Excel rows with NO `tractor_plate`, NO `customer_ref`, different container numbers, same date and route.
+- Upload and commit.
+- **Expected:** Two separate TripOrders (1 container each). `grouped_trips = 0`.
+- **Verify:** Each TripOrder has exactly 1 container. They share the same route but are independent records.
+
+### 2C.3 Match WorkOrder (2 containers) to grouped TripOrder (2 containers)
+- **Precondition:** A TripOrder with 2 containers exists (from 2C.1).
+- **Driver:** Creates a WorkOrder with 2 matching containers on the same route and partner.
+- **Accountant:** Opens the WorkOrder, clicks "suggest matches".
+- **Expected:** The grouped TripOrder appears as a high-score candidate.
+- Confirm the match.
+- **Verify:** WorkOrder → MATCHED. TripOrder → MATCHED/COMPLETED. `Reconciliation` record created.
+
+### 2C.4 Match WorkOrder (2 containers) to 2 separate TripOrders — USABILITY ISSUE
+- **Precondition:** Two separate TripOrders exist (from 2C.2), each with 1 container.
+- **Driver:** Creates a WorkOrder with 2 containers (both container numbers match the two TripOrders).
+- **Accountant:** Opens the WorkOrder, clicks "suggest matches".
+- **Expected to find:** Both TripOrders appear as candidates (container number overlap).
+- **Try to match both:** Attempt to match the WorkOrder to the first TripOrder, then to the second.
+- **Expected result:** The second match is BLOCKED — the system enforces 1:1 matching.
+- **REPORT AS USABILITY ISSUE:** The system should allow **1:N matching** (one WorkOrder matching multiple TripOrders). When a driver's trip carries 2 containers but the customer's orders were imported as 2 separate TripOrders (1 container each), the accountant should be able to link the single WorkOrder to both TripOrders. Recommend updating the `Reconciliation` model to support 1:N by removing the per-WO uniqueness constraint and allowing multiple active `Reconciliation` rows for the same `work_order_id`.
+
+### 2C.5 Grouping signal precedence
+- Upload a file where some rows have `tractor_plate` and others have only `customer_ref`.
+- **Expected:**
+  - Rows with `tractor_plate` group by `(trip_date, dropoff, plate)`.
+  - Rows with only `customer_ref` group by `(trip_date, dropoff, ref)`.
+  - Rows with neither are singletons.
+- **Verify:** `grouped_trips` count reflects only rows actually grouped (2+ containers in one TripOrder).
+
+### 2C.6 Mixed work_type in one group
+- **Setup:** Two rows with same tractor_plate and trip_date, but one is F20 and the other is E40.
+- Upload and commit.
+- **Expected:** If the system groups them into one TripOrder despite different work_types, report as a bug. All containers in a TripOrder should share the same work_type.
+
+---
+
+## FLOW 2D: PRICING SCENARIOS (Kế toán — Bảng giá)
+
+Tests tiered pricing lookup (`find_tiered_pricing`) and the apply-pricing flow.
+
+### 2D.1 Per-container pricing (quantity=1)
+- **Precondition:** A `Pricing` + `PricingLine(quantity=1, unit_price=297000)` exists for partner, work_type F20, route A→B.
+- Import a TripOrder with 1 F20 container on route A→B.
+- Apply pricing.
+- **Expected:** `unit_price=297000`, `pricing_id` set, `driver_salary` and `allowance` set from PricingLine values.
+
+### 2D.2 Quantity-based tiered pricing (quantity=2, twin-lift)
+- **Precondition:**
+  - `PricingLine(quantity=1, unit_price=297000)` for F20 route A→B.
+  - `PricingLine(quantity=2, unit_price=350000)` for F20 route A→B.
+- Import a TripOrder with 2 F20 containers on route A→B (grouped from 2 rows with same tractor_plate).
+- Apply pricing.
+- **Expected:** System calls `find_tiered_pricing` with `quantity=2`. TripOrder gets `unit_price=350000` (the quantity=2 tier), NOT 2 × 297000.
+- **This is the core twin-lift pricing scenario** — 2 containers on one trip have a different price than 2 separate trips.
+
+### 2D.3 Fallback to quantity=1 tier
+- **Precondition:** Only `PricingLine(quantity=1, unit_price=297000)` exists for F20 route A→B. No quantity=2 tier.
+- Import a TripOrder with 2 F20 containers on route A→B.
+- Apply pricing.
+- **Expected:** `find_tiered_pricing` falls back to quantity=1 tier. `unit_price=297000`.
+- **Verify:** Fallback behavior should be surfaced as a warning or notification to the accountant.
+
+### 2D.4 No pricing rule found
+- Import a TripOrder for a route/work_type combo with no Pricing record.
+- Apply pricing.
+- **Expected:** TripOrder stays with `unit_price=0`. API response includes it in `not_found_trip_ids`.
+- **Verify:** Accountant can manually set the price via trip detail UI.
+
+### 2D.5 Per-trip vs per-container pricing display
+- Open a TripOrder with 2 containers and `unit_price=350000`.
+- **Expected:** Price displayed is the **per-trip** total (350,000), NOT per-container.
+- **Verify:** Customer settlement report (Bảng kê SL) also shows trip-level price, not doubled.
+- **Verify:** Salary calculation uses TripOrder's `unit_price`, not multiplied by container count.
+
+### 2D.6 40-foot containers always quantity=1
+- **Precondition:** `PricingLine(quantity=1, unit_price=345000)` for F40 route A→B.
+- Import a TripOrder with 1 F40 container on route A→B.
+- Apply pricing.
+- **Expected:** `unit_price=345000`. 40-foot orders carry exactly 1 container, so quantity is always 1 for F40/E40.
+
+---
+
+## FLOW 2E: CUOC SHEET PRICING IMPORT (Kế toán — Nhập bảng giá)
+
+Tests importing the pricing catalog from the HAP Excel file's CUOC sheet.
+
+### 2E.1 Upload HAP file as pricing import
+- Navigate to Nhập bảng giá từ Excel page.
+- Select the HAP partner. Choose format "HAP" (or leave auto-detect — filename contains "HAP").
+- Upload `docs/don-hang/Phúc Lộc - Shipside T4.26 HAP.xlsx`.
+- **Expected:** `parse_hap_bytes` reads the CUOC sheet:
+  - Route from column B (split on dash/en-dash for pickup/dropoff).
+  - F20 price from column C, F40 from D, E20 from E, E40 from F.
+  - One `TariffRow` per (route, work_type) where price > 0.
+- **Verify:** Preview shows rows for all 4 work types on each route with non-zero prices.
+
+### 2E.2 Commit CUOC pricing
+- Review preview rows. Commit.
+- **Expected:**
+  - `pricings_created` = number of unique (pickup, dropoff, work_type) combos.
+  - `lines_created` = matching count of `PricingLine(quantity=1)` rows.
+- **Verify in DB:** For each unique route/work_type, a `Pricing` record exists with correct `partner_id`, `work_type`, `pickup_location_id`, `dropoff_location_id`, and a `PricingLine` with `unit_price` matching the CUOC value.
+
+### 2E.3 Volume-based monthly tiers — MISSING FEATURE
+- **Context:** The CUOC sheet contains a "GIÁ HỢP ĐỒNG" section with volume-based tiers:
+  - Base: F20 = 297,000 / F40 = 345,000
+  - 22-25 trips/month: +10% → 326,700 / 379,500
+  - 25-28 trips: +15% → 341,550 / 396,750
+  - 28-31 trips: +20% → 356,400 / 414,000
+  - 31-34 trips: +25% → 371,250 / 431,250
+  - Up to 49-52 trips: +55% → 460,350 / 534,750
+- **Current behavior:** `parse_hap_bytes` only reads the standard rates from cols C-F. Volume tiers are NOT parsed or imported.
+- **REPORT AS MISSING FEATURE:** The CUOC volume-based tier data is present in the Excel file but the system ignores it entirely. The import should parse the tier section and create `PricingLine` rows for each volume bracket, or the system should support monthly volume-based pricing adjustments.
+
+### 2E.4 Special pricing: "5 cont vỏ/1 chuyến"
+- **Context:** CUOC sheet mentions "Hải An – Lạch Huyện (5 cont vỏ/ 1 chuyến)" = 1,500,000 VND for 5 empty 40ft containers in one trip.
+- **Test:** Manually create a `PricingLine(quantity=5, work_type=E40)` at 1,500,000. Then import 5 E20 containers on the same route with the same tractor_plate to create a grouped TripOrder.
+- **Verify:** `find_tiered_pricing` with `quantity=5` resolves to this tier.
+- **If the system does not support quantity > 2:** Report as missing feature — the tier system should support higher quantities for multi-container trips.
+
+### 2E.5 Re-import CUOC (idempotency)
+- Upload and commit the same CUOC file again.
+- **Expected:** `pricings_existing` = previous `pricings_created`. `lines_existing` = previous `lines_created`. `lines_created` = 0.
+- **With `update_existing_lines=true`:** If prices changed, verify existing PricingLine `unit_price` is updated.
+
+### 2E.6 Location resolution in CUOC import
+- **Context:** CUOC routes use Vietnamese names (e.g., "Hải An – Nam Hải, Đoạn Xá, TVN").
+- **Expected:** Each `pickup_raw`/`dropoff_raw` is resolved via `LocationResolverService`:
+  - Exact match → `match_kind = "exact"`.
+  - Fuzzy match → `match_kind = "fuzzy"`, `review_needed = true`.
+  - No match → new Location created.
+- **Verify:** Preview `location_resolutions` correctly categorize each location string.
+
+---
+
 ## CROSS-CUTTING FLOWS (Multi-Role)
 
 ### C1: End-to-End Order Lifecycle
@@ -439,6 +662,24 @@ These are known issues that have NOT been fixed yet. Test each one carefully and
 3. **Accountant**: Match the work order to a trip order.
 4. **Director**: Verify notification appears for the match event.
 5. **Driver**: Verify notification appears confirming the match.
+
+### C9: Full Import → Pricing → Match → Export → KPI Cycle
+1. **Accountant:** Import pricing from CUOC sheet (FLOW 2E.1). Verify `Pricing` + `PricingLine` rows exist.
+2. **Accountant:** Import customer Excel (FLOW 2A.1). Verify TripOrders are created.
+3. **Accountant:** Apply pricing to the imported trips (FLOW 2D.1/2D.2). Verify prices are filled.
+4. **Driver:** Create a WorkOrder with matching container numbers and route.
+5. **Accountant:** Match WorkOrder to TripOrder (FLOW 2C.3).
+6. **Accountant:** Export customer settlement report. Verify the report includes the matched trips with correct pricing.
+7. **Director:** Verify KPI dashboard shows the revenue from the matched trips.
+
+### C10: Multi-Container Pricing Edge Case
+1. **Accountant:** Create a Pricing with two tiers: `PricingLine(quantity=1, unit_price=297000)` and `PricingLine(quantity=2, unit_price=350000)` for F20 route A→B.
+2. **Accountant:** Import two containers on route A→B as two SEPARATE TripOrders (no grouping signal).
+3. **Accountant:** Apply pricing to both → each gets quantity=1 price (297,000 each). **Total: 594,000.**
+4. **Accountant:** Import two containers on route A→B as ONE TripOrder (grouped by tractor_plate).
+5. **Accountant:** Apply pricing → the single trip gets quantity=2 price (350,000). **Total: 350,000.**
+6. **Verify:** The pricing difference (594,000 vs 350,000) correctly reflects the volume discount for twin-lift.
+7. **Report as bug if:** Both scenarios produce the same total price.
 
 ---
 
