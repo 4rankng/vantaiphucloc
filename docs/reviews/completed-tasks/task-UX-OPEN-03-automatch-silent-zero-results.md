@@ -4,7 +4,7 @@
 **Type:** Usability Issue  
 **Layer:** Frontend  
 **Affected Role/Flow:** ketoan — `/accountant/work-orders` — "Tự động ghép" button  
-**Status:** ⚠️ Still Present (verified QA v9, 2026-05-11)
+**Status:** ✅ Already Implemented — WorkOrderList.tsx `handleAutoMatch` (lines 125-142) shows `toast.info` for 0 results and `toast.success` for positive results. QA v9 likely tested stale deployment.
 
 ---
 

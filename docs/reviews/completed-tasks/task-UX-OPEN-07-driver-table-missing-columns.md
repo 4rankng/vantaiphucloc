@@ -4,7 +4,7 @@
 **Type:** Usability Issue  
 **Layer:** Frontend  
 **Affected Role/Flow:** ketoan — `/accountant/settings/drivers`  
-**Status:** ⚠️ Still Present (verified QA v9, 2026-05-11)
+**Status:** ✅ Partially Fixed — Biển số xe column already exists in DriverList.tsx (line 60). Nhà xe column blocked: backend Driver model has no `nhaXe` field.
 
 ---
 
