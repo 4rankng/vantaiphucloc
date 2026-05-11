@@ -9,7 +9,7 @@ import { formatCurrencyFull, WORK_TYPES, type WorkType } from '@/data/domain'
 import { RouteDisplay } from '@/components/shared/RouteDisplay'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
-import { Building2, Route, UserCircle, Wallet, Link2, Pencil, Lock, Unlink, Trash2, ChevronLeft, Plus } from 'lucide-react'
+import { Building2, Route, UserCircle, Wallet, Link2, Pencil, Lock, Unlink, Trash2, ChevronLeft, Plus, DollarSign } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
@@ -258,6 +258,12 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
                   pickupLocation={trip.pickupLocation?.name}
                   dropoffLocation={trip.dropoffLocation?.name}
                 />
+              </dd>
+            </div>
+            <div className="flex items-start justify-between">
+              <dt className="typo-form-label flex items-center gap-2"><DollarSign size={14} />Doanh thu</dt>
+              <dd className="typo-mono text-right">
+                {trip.unitPrice > 0 ? formatCurrencyFull(trip.unitPrice) : <span style={{ color: 'var(--theme-text-muted)' }}>—</span>}
               </dd>
             </div>
             <div className="flex items-start justify-between">

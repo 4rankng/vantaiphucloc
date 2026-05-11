@@ -567,6 +567,7 @@ export function useCalculateSalary() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['driver-earnings'] })
       qc.invalidateQueries({ queryKey: ['my-earnings'] })
+      qc.invalidateQueries({ queryKey: ['salary-dashboard'] })
     },
   })
 }

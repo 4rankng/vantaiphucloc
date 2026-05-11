@@ -1,10 +1,10 @@
 import { useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { MapPin, Check, X, RotateCcw, Clock, Filter } from 'lucide-react'
+import { MapPin, Check, X, RotateCcw, Clock, Filter, Plus } from 'lucide-react'
 import { SettingsPageLayout } from '@/components/shared/SettingsPageLayout'
 import { useToast } from '@/components/atoms/Toast'
-import { listAliases, confirmAlias, rejectAlias, reopenAlias, getPendingReviewLocations } from '@/services/api/locationAliases.api'
-import { getLocations } from '@/services/api/locations.api'
+import { listAliases, createAlias, confirmAlias, rejectAlias, reopenAlias, getPendingReviewLocations } from '@/services/api/locationAliases.api'
+import { getLocations, createLocation } from '@/services/api/locations.api'
 import type { LocationAlias, LocationAliasStatus, Location } from '@/data/domain'
 
 type TabKey = 'pending' | 'all'
@@ -44,6 +44,10 @@ export function LocationAliasManager() {
   const [statusFilter, setStatusFilter] = useState<LocationAliasStatus | ''>('')
   const [rejectingId, setRejectingId] = useState<number | null>(null)
   const [rejectNote, setRejectNote] = useState('')
+  const [createOpen, setCreateOpen] = useState(false)
+  const [selectedLocationId, setSelectedLocationId] = useState<number | ''>('')
+  const [newLocationName, setNewLocationName] = useState('')
+  const [newAliasName, setNewAliasName] = useState('')
 
   const { data: locations = [] } = useQuery({
     queryKey: ['locations'],
@@ -97,6 +101,29 @@ export function LocationAliasManager() {
     onError: () => toast.error('Lỗi', 'Không thể mở lại'),
   })
 
+  const createMut = useMutation({
+    mutationFn: async ({ locationId, alias }: { locationId: number; alias: string }) => createAlias(locationId, alias),
+    onSuccess: () => {
+      toast.success('Đã thêm bí danh')
+      setCreateOpen(false)
+      setNewAliasName('')
+      setNewLocationName('')
+      invalidate()
+      qc.invalidateQueries({ queryKey: ['locations'] })
+    },
+    onError: () => toast.error('Lỗi', 'Không thể thêm bí danh'),
+  })
+
+  const createLocationMut = useMutation({
+    mutationFn: (name: string) => createLocation({ name }),
+    onSuccess: (res) => {
+      if (!res.success) { toast.error('Lỗi', 'Không thể tạo địa điểm'); return }
+      qc.invalidateQueries({ queryKey: ['locations'] })
+      createMut.mutate({ locationId: res.data.id, alias: newAliasName })
+    },
+    onError: () => toast.error('Lỗi', 'Không thể tạo địa điểm'),
+  })
+
   const aliases = tab === 'pending' ? pendingAliases : allAliases
   const loading = tab === 'pending' ? loadingPending : loadingAll
 
@@ -133,6 +160,78 @@ export function LocationAliasManager() {
           Tất cả
         </button>
       </div>
+
+      {/* Add alias button + form */}
+      {!createOpen ? (
+        <button
+          onClick={() => setCreateOpen(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
+          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+        >
+          <Plus className="w-3.5 h-3.5" /> Thêm bí danh
+        </button>
+      ) : (
+        <div className="card p-4 flex items-end gap-3">
+          <div className="flex-1 space-y-1.5">
+            <label className="typo-form-label">Địa điểm chính</label>
+            <select
+              value={selectedLocationId}
+              onChange={e => {
+                const v = e.target.value
+                if (v === '__new__') {
+                  setSelectedLocationId('__new__' as any)
+                } else {
+                  setSelectedLocationId(Number(v) || '')
+                  setNewLocationName('')
+                }
+              }}
+              className="h-9 w-full px-2 rounded-md text-sm"
+              style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
+            >
+              <option value="">— Chọn địa điểm —</option>
+              <option value="__new__">+ Tạo địa điểm mới</option>
+              {locations.map((l: Location) => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex-1 space-y-1.5">
+            <label className="typo-form-label">Bí danh</label>
+            <input
+              value={newAliasName}
+              onChange={e => setNewAliasName(e.target.value)}
+              placeholder="Nhập bí danh..."
+              className="h-9 w-full px-2 rounded-md text-sm"
+              style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
+              autoFocus
+            />
+          </div>
+          <button
+            onClick={() => {
+              if (!newAliasName.trim()) { toast.error('Lỗi', 'Nhập bí danh'); return }
+              if (selectedLocationId === '__new__') {
+                if (!newLocationName.trim()) { toast.error('Lỗi', 'Nhập tên địa điểm'); return }
+                createLocationMut.mutate(newLocationName.trim())
+              } else {
+                if (!selectedLocationId) { toast.error('Lỗi', 'Chọn địa điểm'); return }
+                createMut.mutate({ locationId: selectedLocationId as number, alias: newAliasName.trim() })
+              }
+            }}
+            disabled={createMut.isPending || createLocationMut.isPending}
+            className="h-9 px-4 rounded-lg text-sm font-semibold transition-opacity disabled:opacity-60"
+            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+          >
+            {(createMut.isPending || createLocationMut.isPending) ? 'Đang lưu...' : 'Thêm'}
+          </button>
+          <button
+            onClick={() => { setCreateOpen(false); setNewAliasName(''); setNewLocationName('') }}
+            className="h-9 px-3 rounded-lg text-sm font-medium"
+            style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
+          >
+            Huỷ
+          </button>
+        </div>
+      )}
 
       {/* Filter (all tab only) */}
       {tab === 'all' && (

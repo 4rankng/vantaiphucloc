@@ -1,4 +1,5 @@
 import { useMemo, useState, useRef, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Upload, FileSpreadsheet, X, Sparkles, ArrowLeft } from 'lucide-react'
 import {
   Button,
@@ -37,8 +38,9 @@ export function WorkOrderList() {
   const { mutate: uploadExcel, isPending: uploading } = useUploadCustomerExcel()
   const { mutate: runAutoMatch, isPending: autoMatching } = useAutoMatch()
 
+  const [searchParams] = useSearchParams()
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('PENDING')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(() => (searchParams.get('status') as StatusFilter) || 'PENDING')
   const [autoMatchResult, setAutoMatchResult] = useState<AutoMatchResponse | null>(null)
   const [selectedWoId, setSelectedWoId] = useState<number | null>(null)
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
@@ -200,8 +202,8 @@ export function WorkOrderList() {
             ) : (
               <>
                 <Upload className="h-8 w-8" style={{ color: 'var(--theme-text-muted)' }} />
-                <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Kéo thả file vào đây</p>
-                <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>hoặc click để chọn file .xlsx / .xls</p>
+                <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Kéo thả tệp Excel vào đây</p>
+                <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>hoặc bấm để chọn tệp · Hỗ trợ .xlsx, .xls</p>
               </>
             )}
           </div>
@@ -211,7 +213,7 @@ export function WorkOrderList() {
               Huỷ
             </Button>
             <Button onClick={handleUpload} disabled={uploading || !file || !selectedClient} className="flex-1 h-10 text-sm font-semibold rounded-xl" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-              {uploading ? 'Đang tải...' : 'Tải lên'}
+              {uploading ? 'Đang phân tích...' : 'Phân tích tệp'}
             </Button>
           </div>
         </div>

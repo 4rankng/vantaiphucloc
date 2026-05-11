@@ -15,3 +15,6 @@ The accountant and director use the percentage delta to quickly gauge trends. "C
 
 ## Recommendation
 Add a percentage delta to the "Chờ xử lý" KPI card consistent with the other three cards. If the backend does not return a delta for this field, either (a) compute it from prior-month data or (b) explicitly show "—" to signal the delta is unavailable rather than simply omitting the element.
+
+## Resolution
+Already fixed in current code. DirectorDashboard.tsx already computes `delta(pendingThisMonth, prevPending)` on line 229 and passes it as `trend` prop to the StatCard. The delta may not display when both current and previous month have zero pending trips (delta returns undefined for 0→0).

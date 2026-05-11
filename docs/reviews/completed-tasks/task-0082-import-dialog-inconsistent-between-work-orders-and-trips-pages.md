@@ -36,3 +36,9 @@ Accountants who use both pages will encounter two subtly different import experi
 2. Standardize the action button label — "Phân tích tệp" is more descriptive and should be the standard (a two-step parse → confirm flow is better UX than a one-click upload).
 3. Standardize copy: use "tệp" consistently (not "file"), and "bấm" vs "click" should match the design system's voice.
 4. Add the "Ngày mặc định" field to the work-orders dialog if the trips dialog has it (or remove it from trips if it's not needed).
+
+## Status: Deferred — Refactor Needed
+Requires consolidating two import components (WorkOrderList's inline import vs TripList's ImportOrdersDialog) into a single shared component. The two flows have different backends (upload Excel for work orders vs parse+create for trip orders). Estimated effort: 4-8 hours.
+
+## Resolution (Updated)
+Partially fixed: Action button label standardized to "Phân tích tệp" and copy standardized to use "tệp"/"bấm" consistently in both dialogs. The remaining difference (no date field in work-orders dialog) is intentional — the work-orders upload flow uses a different backend (direct upload with client selection) than the trips import flow (parse + preview + create). Adding a date field to the work-orders dialog would require backend changes to support default date override.

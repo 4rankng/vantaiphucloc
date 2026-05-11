@@ -22,3 +22,6 @@ Accountants opening a trip detail to verify billing cannot see the revenue figur
 
 ## Recommendation
 Add a "Doanh thu" row to the trip detail dialog, displaying the revenue amount. This is already available in the API response (it shows in the table). Place it alongside or near the "Lương + Phụ cấp" field for financial context.
+
+## Resolution
+Already fixed in current code. TripDetail.tsx (lines 264-267) displays "Doanh thu" field with DollarSign icon, showing `trip.unitPrice` formatted as currency or "—" when zero.

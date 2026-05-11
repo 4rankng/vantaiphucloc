@@ -25,3 +25,6 @@ Either:
 2. Remove any internal references to this path to ensure it is never linked.
 
 Option 1 is better UX as it enables bookmarkable and shareable links to the import flow.
+
+## Resolution
+Already fixed in current code. router.ts (line 91) registers `{ path: 'trips/import', element: h(Navigate, { to: '/accountant/trips?import=true', replace: true }) }` which redirects to the trips page with the import dialog auto-opened via query param.

@@ -106,8 +106,8 @@ export async function getSalaryDashboard(
 ): Promise<ApiResponse<any[]>> {
   try {
     const params = new URLSearchParams()
-    params.append('period_start', periodStart)
-    params.append('period_end', periodEnd)
+    params.append('start_date', periodStart)
+    params.append('end_date', periodEnd)
     const res = await api.get(`/salary/dashboard?${params.toString()}`)
     return ok(toCamel<any[]>(res.data))
   } catch (err) {

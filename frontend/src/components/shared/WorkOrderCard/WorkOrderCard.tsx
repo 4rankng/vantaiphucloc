@@ -1,5 +1,6 @@
 import { Clock, CheckCircle, Lock } from 'lucide-react'
 import { formatCurrencyFull, type WorkOrder } from '@/data/domain'
+import { formatDate } from '@/lib/format'
 import { resolveRoute } from '@/lib/route-utils'
 
 type CardVariant = 'driver' | 'accountant'
@@ -37,9 +38,7 @@ function fmtDate(iso: string): string {
     d.getMonth() === now.getMonth() &&
     d.getFullYear() === now.getFullYear()
   const time = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-  const day = isToday
-    ? 'Hôm nay'
-    : `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  const day = isToday ? 'Hôm nay' : formatDate(iso, 'short')
   return `${day} · ${time}`
 }
 

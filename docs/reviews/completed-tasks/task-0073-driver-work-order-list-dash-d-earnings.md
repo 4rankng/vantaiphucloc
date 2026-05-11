@@ -19,3 +19,6 @@ Example:
 
 ## Recommendation
 In the earnings display logic, when the trip is unmatched or earnings is null/0, render a plain "—" without the currency suffix. For example: `earnings ? formatCurrency(earnings) : '—'`.
+
+## Resolution
+Already fixed in current code. WorkOrderCard DriverCard (lines 146-148) shows plain "—" for unmatched trips without currency suffix. `formatCurrencyFull` is only called when `driverSalary > 0`.

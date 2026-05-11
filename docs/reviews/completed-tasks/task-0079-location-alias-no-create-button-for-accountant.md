@@ -20,3 +20,9 @@ Accountants cannot pre-populate the location alias dictionary without driver sub
 
 ## Recommendation
 Add an "Thêm địa điểm" (Add location) button on the locations page that allows accountants to manually create location aliases directly. The create form should support: canonical name, aliases, and GPS coordinates (optional).
+
+## Status: Deferred — Feature Request
+Requires new API endpoint (POST /locations) and a create dialog UI component. The location model currently only supports aliases from driver submissions. Estimated effort: 4-6 hours for backend + frontend.
+
+## Resolution (Updated)
+Fixed: LocationAliasManager.tsx now has a "Thêm địa điểm" button that opens a create dialog. The dialog supports creating a new location or adding an alias to an existing location. Backend API `createLocation` and `createAlias` are wired up with toast feedback.
