@@ -19,6 +19,12 @@ import type { Partner } from '@/data/domain'
 const VN_PHONE_RE = /^(0|\+?84)[35789]\d{8}$/
 const VN_TAX_RE = /^\d{10}(\d{3})?$/
 
+/** Derive company vs individual from name keywords or the stored type field. */
+function isCompany(client: Partner): boolean {
+  const n = client.name?.toLowerCase() ?? ''
+  return n.includes('công ty') || n.includes('tnhh') || n.includes('co.') || n.includes('corp') || client.type === 'company'
+}
+
 const EMPTY_CLIENT = {
   name: '', type: 'company' as const, taxCode: '', address: '', phone: '', contactPerson: '',
 }
@@ -128,7 +134,7 @@ export function ClientList() {
     { key: 'name', header: 'Tên', accessor: c => <span className="font-medium">{c.name}</span>, sortable: true, sortKey: c => c.name },
     { key: 'phone', header: 'SĐT', accessor: c => c.phone || <span style={{ color: 'var(--theme-text-muted)' }}>—</span>, sortable: true },
     { key: 'taxCode', header: 'MST', accessor: c => c.taxCode || <span style={{ color: 'var(--theme-text-muted)' }}>—</span>, sortable: true },
-    { key: 'type', header: 'Loại', accessor: c => c.type === 'company' ? 'Công ty' : 'Cá nhân' },
+    { key: 'type', header: 'Loại', accessor: c => isCompany(c) ? 'Công ty' : 'Cá nhân' },
     { key: 'address', header: 'Địa chỉ', accessor: c => c.address ? <span className="truncate block max-w-[200px]">{c.address}</span> : <span style={{ color: 'var(--theme-text-muted)' }}>—</span> },
   ], [])
 
@@ -247,7 +253,7 @@ export function ClientList() {
           </DialogHeader>
           {selectedClient && (
             <div className="space-y-1">
-              <InfoRow icon={selectedClient.type === 'company' ? Building2 : UserCircle} label="Loại" value={selectedClient.type === 'company' ? 'Công ty' : 'Cá nhân'} />
+              <InfoRow icon={isCompany(selectedClient) ? Building2 : UserCircle} label="Loại" value={isCompany(selectedClient) ? 'Công ty' : 'Cá nhân'} />
               <InfoRow label="Điện thoại" value={selectedClient.phone} />
               {selectedClient.taxCode && <InfoRow label="Mã số thuế" value={selectedClient.taxCode} />}
               {selectedClient.address && <InfoRow label="Địa chỉ" value={selectedClient.address} />}
