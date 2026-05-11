@@ -56,10 +56,14 @@ export function DriverHome() {
 
   // Trips in the current pay period — used by the monthly stat card (always
   // reflects the period total regardless of the active list filter).
+  // Uses tripDate (actual execution date) rather than createdAt (seed date).
   const periodJobs = useMemo(() => {
-    const startISO = currentPeriod.startDate.toISOString()
-    const endISO = new Date(currentPeriod.endDate.getFullYear(), currentPeriod.endDate.getMonth(), currentPeriod.endDate.getDate(), 23, 59, 59).toISOString()
-    return workOrders.filter(w => w.createdAt >= startISO && w.createdAt <= endISO)
+    const startDate = toISODate(currentPeriod.startDate)
+    const endDate = toISODate(currentPeriod.endDate)
+    return workOrders.filter(w => {
+      const d = (w.tripDate ?? w.createdAt.slice(0, 10))
+      return d >= startDate && d <= endDate
+    })
   }, [workOrders, currentPeriod])
 
   // Trips that match BOTH the period and the active list filter — used by the list.
@@ -67,7 +71,11 @@ export function DriverHome() {
     const byFilter = filter === 'pending'
       ? periodJobs.filter(w => w.status === 'PENDING')
       : periodJobs
-    return [...byFilter].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    return [...byFilter].sort((a, b) => {
+      const da = a.tripDate ?? a.createdAt.slice(0, 10)
+      const db = b.tripDate ?? b.createdAt.slice(0, 10)
+      return db.localeCompare(da)
+    })
   }, [periodJobs, filter])
 
   const visibleJobs = useMemo(
