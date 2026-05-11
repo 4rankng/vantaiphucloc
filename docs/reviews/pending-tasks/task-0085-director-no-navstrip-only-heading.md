@@ -25,3 +25,6 @@ Currently the director only has one main view so the missing NavStrip has no fun
 
 ## Recommendation
 If the director is intended to have only one view long-term, update the spec to match (no NavStrip needed). If additional views are planned, scaffold the NavStrip now with "Tổng quan" as the single active tab so the pattern is established before expanding the director's feature set.
+
+## Status: Deferred — Future Enhancement
+The director currently has only one main view (Tổng quan). Adding a NavStrip is premature until additional director views are planned. When views are added, scaffold NavStrip with tabs in DirectorLayout.

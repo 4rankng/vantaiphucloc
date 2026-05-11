@@ -22,3 +22,6 @@ A driver viewing their job detail sees a confusing label under "Thu nhập" wher
 
 ## Recommendation
 For unmatched trips, display a monetary placeholder in the "Thu nhập" row such as "—" or "Chưa xác định (chờ ghép)". The trip status ("Chờ ghép" badge) should remain a separate, visually distinct element — not substitute for the income field value.
+
+## Resolution
+Already fixed in current code. JobDetail.tsx (lines 152-160) shows "—" for zero salary, not "Chờ ghép". The status badge is a separate visual element.

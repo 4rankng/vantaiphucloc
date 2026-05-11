@@ -26,3 +26,6 @@ Pass a filter parameter when navigating from KPI cards:
 - "Đơn chờ đối soát" → navigate to `/accountant/trips?filter=cho-ghep`
 
 The destination page should read this query param and pre-select the corresponding filter tab on mount. Alternatively, use React Router state to pass the filter intent without exposing it in the URL.
+
+## Resolution
+Fixed: AccountantDashboard.tsx desktop stats now pass `?status=PENDING` when navigating from KPI cards to trips and work-orders pages. Mobile dashboard already had this. Destination pages read the status query param and pre-select the corresponding filter tab.

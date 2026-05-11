@@ -20,3 +20,9 @@ If trip dates need time precision for sorting, salary period matching, or audit 
 
 ## Recommendation
 Consider changing the import date field to `type="datetime-local"` if time precision matters for the import flow. Alternatively, add a note explaining that imported trips will use "start of day" (00:00) as the time component. At minimum, document the behavior so accountants understand what they're setting.
+
+## Status: Deferred — Low Priority
+Changing to datetime-local would affect all imported trips. Current behavior (date-only → midnight 00:00) is acceptable since Excel imports typically don't have time data. If time precision is needed later, change type="date" to type="datetime-local" in ImportOrders.tsx.
+
+## Resolution (Updated)
+Fixed: ImportOrders.tsx now uses `type="datetime-local"` for the default date input and row-level date inputs. The default date now includes the current time (HH:MM) instead of midnight 00:00.

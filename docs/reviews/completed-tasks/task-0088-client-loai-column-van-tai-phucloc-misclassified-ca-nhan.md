@@ -25,3 +25,6 @@ Improve the `isCompany` heuristic to cover more Vietnamese business name pattern
 - "TNHH" (LLC abbreviation appearing mid-name)
 
 Better yet, add an explicit "Loại" field to the client data model (Company / Individual) that can be set during creation, rather than inferring it from the name.
+
+## Resolution
+Already fixed in current code. isCompany() heuristic in utils.ts now checks for: "công ty", "tnhh", "co.", "corp", "vận tải", "xí nghiệp", "doanh nghiệp", "dịch vụ", "thương mại", "cp.", "jsc", plus explicit type='company'. "Vận Tải Phúc Lộc" now correctly classifies as company.

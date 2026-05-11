@@ -241,14 +241,14 @@ function DesktopDashboard() {
       value: String(pendingWOs.length),
       valueColor: pendingWOs.length > 0 ? 'var(--theme-status-warning)' : undefined,
       icon: <AlertTriangle className="h-5 w-5" />,
-      onClick: () => navigate('/accountant/work-orders'),
+      onClick: () => navigate('/accountant/work-orders?status=PENDING'),
     },
     {
       label: 'Đơn chờ đối soát',
       value: String(pendingTrips.length),
       valueColor: pendingTrips.length > 0 ? 'var(--theme-status-warning)' : undefined,
       icon: <Clock className="h-5 w-5" />,
-      onClick: () => navigate('/accountant/trips'),
+      onClick: () => navigate('/accountant/trips?status=PENDING'),
     },
     {
       label: 'Lương sản lượng TX',
@@ -354,8 +354,8 @@ function MobileDashboard() {
   )
 
   const stats = [
-    { label: 'Chuyến chưa ghép', value: String(pendingWOs.length), valueColor: pendingWOs.length > 0 ? 'var(--theme-status-warning)' : undefined, icon: <AlertTriangle className="h-5 w-5" />, onClick: () => navigate('/accountant/work-orders') },
-    { label: 'Đơn chờ đối soát', value: String(pendingTrips.length), valueColor: pendingTrips.length > 0 ? 'var(--theme-status-warning)' : undefined, icon: <Clock className="h-5 w-5" />, onClick: () => navigate('/accountant/trips') },
+    { label: 'Chuyến chưa ghép', value: String(pendingWOs.length), valueColor: pendingWOs.length > 0 ? 'var(--theme-status-warning)' : undefined, icon: <AlertTriangle className="h-5 w-5" />, onClick: () => navigate('/accountant/work-orders?status=PENDING') },
+    { label: 'Đơn chờ đối soát', value: String(pendingTrips.length), valueColor: pendingTrips.length > 0 ? 'var(--theme-status-warning)' : undefined, icon: <Clock className="h-5 w-5" />, onClick: () => navigate('/accountant/trips?status=PENDING') },
     { label: 'Lương sản lượng TX', value: fmt(totalDriverSalary), icon: <Wallet className="h-5 w-5" />, onClick: () => navigate('/accountant/salary-setup') },
     { label: 'Doanh thu tháng', value: fmt(revenue), icon: <DollarSign className="h-5 w-5" />, onClick: () => navigate('/accountant/trips') },
   ]

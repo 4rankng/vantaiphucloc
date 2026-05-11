@@ -24,3 +24,6 @@ Inconsistent capitalization creates a visually noisy header row. It makes the UI
 
 ## Recommendation
 Standardize all column headers to Title Case (or sentence case). Convert "CONTAINER" → "Container", "TRẠNG THÁI" → "Trạng thái", "LOẠI" → "Loại", "ĐỊA CHỈ" → "Địa chỉ". Keep abbreviations like SĐT and MST in caps as they are standard Vietnamese abbreviations.
+
+## Resolution
+Already fixed in current code. TripList.tsx uses Title Case headers ("Container", "Trạng thái"). ClientList.tsx uses Title Case ("Tên", "SĐT", "MST", "Loại", "Địa chỉ"). No ALL CAPS headers remain.
