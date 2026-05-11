@@ -101,7 +101,7 @@ function StatCard({
         )}
         <div className="min-w-0 flex-1">
           {/* Label */}
-          <p className="typo-label mb-2">{label}</p>
+          <p className="typo-label mb-2 leading-tight line-clamp-2">{label}</p>
 
           {/* Value — using typo-display for lg screens */}
           <p

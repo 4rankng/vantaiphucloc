@@ -12,14 +12,13 @@ import {
   Upload, Download, Calendar,
   Clock, CheckCircle2, Hash, Search, X,
 } from 'lucide-react'
-import { useLocation, useSearchParams } from 'react-router-dom'
+import { useLocation, useSearchParams, useNavigate } from 'react-router-dom'
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { useMonthParams } from './use-month-params'
 import { useIsMobile } from '@/hooks/use-mobile'
 import type { TripOrder } from '@/data/domain'
 import { formatCurrencyFull as fmt } from '@/data/domain'
-import { ImportOrdersDialog } from './ImportOrders'
 import { TripDetailContent } from './TripDetail'
 
 // ─── Status config ─────────────────────────────────────────────────────────────
@@ -61,11 +60,11 @@ export function TripList() {
   const [searchParams] = useSearchParams()
   const isMobile = useIsMobile(1024)
 
-  const [viewMode, setViewMode] = useState<ViewMode>('orders')
+  const navigate = useNavigate()
+
   const [statusFilter, setStatusFilter] = useState<SimpleStatus>(() => (searchParams.get('status') as SimpleStatus) || 'ALL')
   const [clientFilter, setClientFilter] = useState<string>('ALL')
   const [search, setSearch] = useState('')
-  const [showImport, setShowImport] = useState(() => searchParams.get('import') === 'true')
   const [selectedTripId, setSelectedTripId] = useState<number | null>(null)
 
   const isDirector = location.pathname.startsWith('/director')
@@ -207,7 +206,7 @@ export function TripList() {
               <Download className="w-3.5 h-3.5 mr-1" /> Xuất
             </Button>
             <button
-              onClick={() => setShowImport(true)}
+              onClick={() => navigate('/accountant/import-orders')}
               className="flex items-center gap-1.5 h-9 px-4 rounded-lg text-sm font-semibold transition hover:opacity-90 active:scale-[0.98]"
               style={{ background: 'var(--theme-brand-primary)', color: '#fff' }}
             >
@@ -280,7 +279,7 @@ export function TripList() {
                 </p>
                 {!hasFilters && (
                   <button
-                    onClick={() => setShowImport(true)}
+                    onClick={() => navigate('/accountant/import-orders')}
                     className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90"
                     style={{ background: 'var(--theme-brand-primary)', color: '#fff' }}
                   >
@@ -292,7 +291,6 @@ export function TripList() {
           />
         </div>
 
-        <ImportOrdersDialog open={showImport} onClose={() => setShowImport(false)} />
         {detailDialog}
       </div>
     )
@@ -305,7 +303,7 @@ export function TripList() {
       <div className="flex items-center justify-between">
         <h1 className="typo-h1">Đơn hàng</h1>
         <button
-          onClick={() => setShowImport(true)}
+          onClick={() => navigate('/accountant/import-orders')}
           className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold"
           style={{ background: 'var(--theme-brand-primary)', color: '#fff' }}
         >
@@ -357,7 +355,6 @@ export function TripList() {
         )}
       </div>
 
-      <ImportOrdersDialog open={showImport} onClose={() => setShowImport(false)} />
       {detailDialog}
     </div>
   )
