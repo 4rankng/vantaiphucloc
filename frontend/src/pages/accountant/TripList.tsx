@@ -12,7 +12,7 @@ import {
   Upload, Download, Calendar,
   Clock, CheckCircle2, Hash, Search, X,
 } from 'lucide-react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useSearchParams } from 'react-router-dom'
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { useMonthParams } from './use-month-params'
@@ -58,13 +58,14 @@ export function TripList() {
   const { data: clients = [] } = useClients()
   const exportMutation = useExportTripOrdersExcel()
   const location = useLocation()
+  const [searchParams] = useSearchParams()
   const isMobile = useIsMobile(1024)
 
   const [viewMode, setViewMode] = useState<ViewMode>('orders')
-  const [statusFilter, setStatusFilter] = useState<SimpleStatus>('ALL')
+  const [statusFilter, setStatusFilter] = useState<SimpleStatus>(() => (searchParams.get('status') as SimpleStatus) || 'ALL')
   const [clientFilter, setClientFilter] = useState<string>('ALL')
   const [search, setSearch] = useState('')
-  const [showImport, setShowImport] = useState(false)
+  const [showImport, setShowImport] = useState(() => searchParams.get('import') === 'true')
   const [selectedTripId, setSelectedTripId] = useState<number | null>(null)
 
   const isDirector = location.pathname.startsWith('/director')

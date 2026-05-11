@@ -21,3 +21,6 @@ Add inline validation on the container number field:
 - Show a red helper text on blur: "Số container không hợp lệ (ví dụ: MSKU1234567)"
 - Disable the "Xác nhận" button if the container number is present but invalid
 - Align validation rules with the Excel import parser to ensure consistency (OPEN-05)
+
+## Resolution
+Already fixed in current code. useCreateWorkOrder.ts has `validateContainerFormat()` (lines 25-31) that validates `^[A-Z]{4}\d{7}$` with Vietnamese error messages. The border turns red on invalid input and the submit button is disabled.

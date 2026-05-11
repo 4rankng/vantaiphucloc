@@ -23,3 +23,6 @@ The manual search results should display the same criteria comparison grid used 
 - Criteria breakdown showing which fields match/mismatch
 
 At minimum, add the route and container type to the manual search result rows.
+
+## Resolution
+Already fixed in current code. ManualSearchResults in MatchDetailPanel.tsx (lines 277-287) already shows route (pickup → dropoff) and container types for each result. Match scores are not computed for manual search (intentional — only auto-suggestions get scored).

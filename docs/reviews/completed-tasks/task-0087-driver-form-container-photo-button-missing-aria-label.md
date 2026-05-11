@@ -28,3 +28,6 @@ The form summary "Còn thiếu: số cont, ảnh cont" mentions "ảnh cont" (co
 
 ## Recommendation
 Add an `aria-label="Chụp ảnh container"` to the button. Optionally, add a short visible label below the icon (e.g., "Chụp ảnh") to improve discoverability for new users. The existing dashed-border style is a good affordance — pair it with text for clarity.
+
+## Resolution
+Already fixed in current code. CreateWorkOrder.tsx (line 86) has `aria-label="Chụp ảnh container"` on the container photo upload button.

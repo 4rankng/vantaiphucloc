@@ -25,3 +25,6 @@ Accountants cannot confirm whether auto-match ran and what it accomplished. They
 2. After completion, show a toast notification: "Đã ghép X chuyến" or "Không tìm thấy chuyến phù hợp để ghép tự động"
 3. Refresh the work order list count after the operation completes
 4. If 0 matches: show a brief explanation (e.g., "Tất cả chuyến chờ ghép đều có điểm phù hợp thấp hơn ngưỡng")
+
+## Resolution
+Already fixed in current code. WorkOrderList.tsx has loading state ("Đang ghép..."), success toast (`Đã ghép X cặp`), info toast for 0 matches, error toast, and AutoMatchDialog showing detailed results.

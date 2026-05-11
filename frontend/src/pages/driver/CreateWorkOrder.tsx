@@ -83,6 +83,7 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
                 /* ── No photo: square placeholder fills card height ── */
                 <button
                   onClick={openScanner(idx)}
+                  aria-label="Chụp ảnh container"
                   className="rounded-xl border-2 border-dashed flex items-center justify-center touch-manipulation transition-colors flex-1"
                   style={{ borderColor: 'var(--theme-border-default)', minHeight: 148 }}
                 >

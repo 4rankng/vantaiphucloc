@@ -88,6 +88,7 @@ export function createAppRouter() {
             ]},
 
             { path: 'match-trip/:tripId',    element: ebc('MatchTrip', h(Lazy, { component: R.MatchTrip })) },
+            { path: 'trips/import',          element: h(Navigate, { to: '/accountant/trips?import=true', replace: true }) },
             { path: 'notifications',         element: ebc('Notifications', h(Lazy, { component: R.AccountantNotifications })) },
             { path: 'profile',               element: ebc('Profile', h(Lazy, { component: R.Profile })) },
             { path: '*',                     element: ebc('NotFound', h(Lazy, { component: R.NotFound })) },

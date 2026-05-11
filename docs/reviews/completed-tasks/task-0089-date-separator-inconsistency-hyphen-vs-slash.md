@@ -25,3 +25,6 @@ Minor visual inconsistency. Users toggling between director and accountant views
 
 ## Recommendation
 Standardize all short date displays to use the slash separator: DD/MM (e.g., "10/05"). Update the director dashboard's recent trips list to match the accountant format. Check date formatting utilities in the codebase — if both views use different formatters or locale configs, consolidate them.
+
+## Resolution
+Fixed: WorkOrderCard fmtDate() now uses centralized `formatDate()` from `@/lib/format` which outputs DD/MM (slash separator) instead of the previous DD-MM (hyphen). All views now consistently use slash separators.

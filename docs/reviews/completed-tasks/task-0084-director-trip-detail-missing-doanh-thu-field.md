@@ -25,3 +25,6 @@ The director cannot see the revenue figure for an individual trip without closin
 
 ## Recommendation
 Add a "Doanh thu" row to the director trip detail page, displaying the revenue amount. Place it above or alongside the "Lương + Phụ cấp" row so financial figures are grouped together. This data is already available in the API response (it populates the list view).
+
+## Resolution
+Already fixed in current code. Director uses the same TripDetail.tsx component (router.ts line 110) which shows "Doanh thu" field at lines 264-267.

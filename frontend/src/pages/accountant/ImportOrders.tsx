@@ -21,7 +21,7 @@ const SKIP_FIELD = '__skip__'
 
 function todayIso(): string {
   const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
 function confidenceBadge(conf: number): { label: string; color: string } {
@@ -303,7 +303,7 @@ export function ImportOrders() {
             <label className="typo-form-label" htmlFor="default-trip-date">Ngày mặc định</label>
             <Input
               id="default-trip-date"
-              type="date"
+              type="datetime-local"
               value={defaultTripDate}
               onChange={e => setDefaultTripDate(e.target.value)}
               className="h-11 text-sm"
@@ -492,7 +492,7 @@ export function ImportOrders() {
                     <td className="py-1 px-2">{r.values.work_type}</td>
                     <td className="py-1 px-2">
                       <input
-                        type="date"
+                        type="datetime-local"
                         value={r.values.trip_date ?? ''}
                         onChange={e => updateRowValue(r.source_row_index, 'trip_date', e.target.value)}
                         className="h-7 px-1 rounded border text-xs w-32"

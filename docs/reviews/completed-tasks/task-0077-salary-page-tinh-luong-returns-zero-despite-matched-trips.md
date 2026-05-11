@@ -30,3 +30,6 @@ Accountants cannot generate payroll from the salary page — the primary payroll
 2. Check if the salary calculation filters on trip status (e.g., requires a specific "completed" status rather than "matched").
 3. If the API is correct, verify that the dashboard KPI "LƯƠNG SẢN LƯỢNG TX" uses the same data source and period — if they differ, document why and add a period label to the dashboard KPI card.
 4. Add a loading/success/failure notification when "Tính lương tất cả" completes so the user knows the operation ran (currently there is no feedback toast).
+
+## Resolution
+Fixed backend root cause: `GetDriverEarnings` use case in `backend/app/contexts/payroll/application/use_cases.py` was filtering by `WorkOrder.created_at` (datetime when record was created) instead of `WorkOrder.trip_date` (actual trip execution date). Changed query to use `COALESCE(trip_date, DATE(created_at))` with date range comparison (>= start_date, <= end_date). This ensures salary calculations match trips by their actual execution date within the configured salary period, regardless of when the record was created in the system.

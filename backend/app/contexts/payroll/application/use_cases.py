@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import date
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,16 +37,6 @@ class GetDriverEarnings:
     async def __call__(
         self, *, driver_id: int, start_date: date, end_date: date
     ) -> DriverEarningsDTO:
-        start_dt = datetime(
-            start_date.year, start_date.month, start_date.day, tzinfo=timezone.utc
-        )
-        end_dt = (
-            datetime(
-                end_date.year, end_date.month, end_date.day, tzinfo=timezone.utc
-            )
-            + timedelta(days=1)
-        )
-
         row = (
             await self.session.execute(
                 select(
@@ -56,8 +46,8 @@ class GetDriverEarnings:
                 ).where(
                     WorkOrder.driver_id == driver_id,
                     WorkOrder.status == "MATCHED",
-                    WorkOrder.created_at >= start_dt,
-                    WorkOrder.created_at < end_dt,
+                    func.coalesce(WorkOrder.trip_date, func.date(WorkOrder.created_at)) >= start_date,
+                    func.coalesce(WorkOrder.trip_date, func.date(WorkOrder.created_at)) <= end_date,
                 )
             )
         ).one()
