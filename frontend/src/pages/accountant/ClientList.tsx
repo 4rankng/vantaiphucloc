@@ -14,16 +14,11 @@ import { usePartners, useCreatePartner, useUpdatePartner, useDeletePartner } fro
 import { useToast } from '@/components/atoms/Toast'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { fuzzyMatch } from '@/lib/search-utils'
+import { isCompany } from '@/lib/utils'
 import type { Partner } from '@/data/domain'
 
 const VN_PHONE_RE = /^(0|\+?84)[35789]\d{8}$/
 const VN_TAX_RE = /^\d{10}(\d{3})?$/
-
-/** Derive company vs individual from name keywords or the stored type field. */
-function isCompany(client: Partner): boolean {
-  const n = client.name?.toLowerCase() ?? ''
-  return n.includes('công ty') || n.includes('tnhh') || n.includes('co.') || n.includes('corp') || client.type === 'company'
-}
 
 const EMPTY_CLIENT = {
   name: '', type: 'company' as const, taxCode: '', address: '', phone: '', contactPerson: '',
