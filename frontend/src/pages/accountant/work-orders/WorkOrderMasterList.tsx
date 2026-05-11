@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Calendar, Truck, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react'
+import { Calendar, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
 import { fmtDate } from '@/lib/date-utils'
@@ -147,11 +147,15 @@ export function WorkOrderMasterList({
 
             {/* Content */}
             <div className="flex-1 min-w-0">
-              {/* Line 1: code + date */}
+              {/* Line 1: plate + date */}
               <div className="flex items-center gap-1.5 mb-0.5">
-                {wo.code && (
+                {wo.driver.vehicle?.plate ? (
                   <span className="text-xs font-mono font-bold" style={{ color: 'var(--theme-brand-primary)' }}>
-                    {wo.code}
+                    {wo.driver.vehicle.plate}
+                  </span>
+                ) : (
+                  <span className="text-xs font-mono font-bold" style={{ color: 'var(--theme-brand-primary)' }}>
+                    {wo.driver.name || '—'}
                   </span>
                 )}
                 <span className="flex items-center gap-0.5 text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
@@ -165,17 +169,8 @@ export function WorkOrderMasterList({
                 {wo.partner.name} · {resolveRoute(wo) || '—'}
               </p>
 
-              {/* Line 3: driver + plate + containers — single row, overflow hidden */}
+              {/* Line 3: containers — single row */}
               <div className="flex items-center gap-1.5 mt-0.5 min-w-0 overflow-hidden whitespace-nowrap">
-                <span className="flex items-center gap-0.5 text-[11px] shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
-                  <Truck className="w-2.5 h-2.5" />
-                  <span className="truncate max-w-[80px]">{wo.driver.name || '—'}</span>
-                </span>
-                {wo.vehicleId && (
-                  <span className="text-[10px] font-mono shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
-                    V{wo.vehicleId}
-                  </span>
-                )}
                 {wo.containers.slice(0, 2).map((c, i) => (
                   <span key={i} className="flex items-center gap-0.5 shrink-0 min-w-0">
                     <ContBadge type={c.workType} />
