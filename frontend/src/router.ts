@@ -84,6 +84,7 @@ export function createAppRouter() {
               { path: 'contractors',             element: h(Navigate, { to: '/accountant/settings/vendors', replace: true }) },
               { path: 'users',                   element: ebc('UserManagement', h(Lazy, { component: R.UserManagement })) },
               { path: 'drivers',                 element: ebc('DriverList', h(Lazy, { component: R.DriverList })) },
+              { path: 'locations',                element: ebc('LocationAliasManager', h(Lazy, { component: R.LocationAliasManager })) },
             ]},
 
             { path: 'match-trip/:tripId',    element: ebc('MatchTrip', h(Lazy, { component: R.MatchTrip })) },

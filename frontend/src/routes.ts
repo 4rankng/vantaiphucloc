@@ -41,6 +41,7 @@ export const AccountantSettings      = lazy(() => import('@/pages/accountant/Acc
 export const DriverList              = lazy(() => import('@/pages/accountant/DriverList').then(m => ({ default: m.DriverList })))
 export const SettingsPricingList     = lazy(() => import('@/pages/accountant/SettingsPricingList').then(m => ({ default: m.SettingsPricingList })))
 export const SettingsPricingDetail   = lazy(() => import('@/pages/accountant/SettingsPricingDetail').then(m => ({ default: m.SettingsPricingDetail })))
+export const LocationAliasManager    = lazy(() => import('@/pages/accountant/LocationAliasManager').then(m => ({ default: m.LocationAliasManager })))
 
 
 // ─── Director pages ───────────────────────────────────────────────────────────

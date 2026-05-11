@@ -13,6 +13,7 @@ import {
   formatCurrencyFull,
   type Pricing,
   type PricingLine,
+  type WorkType,
 } from '@/data/domain'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { ContBadge } from '@/components/shared/ContBadge'
@@ -22,6 +23,15 @@ import { fuzzyMatch } from '@/lib/search-utils'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { PricingForm } from './PricingForm'
 import { Plus, Pencil, Trash2, ChevronLeft, MapPin } from 'lucide-react'
+
+/** Grid order: full containers first, then empty */
+const GRID_ORDER: WorkType[] = ['F20', 'F40', 'E20', 'E40']
+const WORK_TYPE_LABELS: Record<WorkType, string> = {
+  F20: 'Hàng 20ft',
+  F40: 'Hàng 40ft',
+  E20: 'Rỗng 20ft',
+  E40: 'Rỗng 40ft',
+}
 
 interface Props {
   clientId: number
@@ -48,13 +58,13 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
 
   const clientName = clients.find(c => c.id === clientId)?.name ?? pricings[0]?.partner.name ?? ''
 
+  // Group by route key, then build a map of workType -> Pricing per route
   const grouped = useMemo(() => {
-    const map = new Map<string, Pricing[]>()
+    const map = new Map<string, Map<WorkType, Pricing>>()
     pricings.forEach(p => {
       const routeKey = `${p.pickupLocation.name} - ${p.dropoffLocation.name}`
-      const list = map.get(routeKey) ?? []
-      list.push(p)
-      map.set(routeKey, list)
+      if (!map.has(routeKey)) map.set(routeKey, new Map())
+      map.get(routeKey)!.set(p.workType, p)
     })
     return Array.from(map.entries())
   }, [pricings])
@@ -105,7 +115,11 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
   }, [])
 
   const handleCreateSave = (data: PricingCreatePayload) => {
-    createPricing.mutate(data, { onSuccess: () => setShowForm(false) })
+    createPricing.mutate(data)
+  }
+
+  const handleCreateComplete = () => {
+    setShowForm(false)
   }
 
   if (isLoading) {
@@ -155,6 +169,7 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
           clients={clients}
           lockedClientId={clientId}
           onSave={handleCreateSave}
+          onSaveComplete={handleCreateComplete}
           onCancel={() => setShowForm(false)}
           onCreateClient={() => setCreateClientOpen(true)}
         />
@@ -182,9 +197,15 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
         </div>
       ) : (
         <div className="space-y-6">
-          {filteredGroups.map(([route, items]) => {
+          {filteredGroups.map(([route, workTypeMap]) => {
             const [pickup, dropoff] = route.split(' - ')
-            const isEditingAny = items.some(p => editingPricingId === p.id)
+            const totalLines = Array.from(workTypeMap.values()).reduce((sum, p) => sum + p.lines.length, 0)
+            const editingPricing = editingPricingId
+              ? workTypeMap.get(
+                  Array.from(workTypeMap.keys()).find(wt => workTypeMap.get(wt)?.id === editingPricingId) ?? 'F20'
+                ) ?? null
+              : null
+            const isEditingAny = editingPricingId !== null && !!editingPricing
 
             return (
               <div key={route}>
@@ -199,191 +220,168 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
                       className="ml-auto text-xs font-semibold px-2 py-1 rounded-md"
                       style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
                     >
-                      {items.reduce((sum, p) => sum + p.lines.length, 0)} mức
+                      {totalLines} mức
                     </span>
                   </div>
                 </div>
 
-                {/* Single merged table per route */}
+                {/* 2x2 grid of work types */}
                 <div
-                  className="card overflow-hidden"
-                  style={isEditingAny ? { background: 'color-mix(in srgb, var(--theme-brand-primary) 5%, transparent)' } : undefined}
+                  className="grid grid-cols-2 gap-px"
+                  style={{ background: 'var(--theme-border-light)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}
                 >
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr>
-                        <th className="px-3 py-2 text-left typo-label">Loại cont</th>
-                        <th className="px-3 py-2 text-left typo-label">SL</th>
-                        <th className="px-3 py-2 text-right typo-label">Đơn giá</th>
-                        <th className="px-3 py-2 text-right typo-label">Lương tài xế</th>
-                        <th className="px-3 py-2 text-right typo-label">Phụ cấp</th>
-                        <th className="px-3 py-2 w-10" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {items.map((pricing) => {
-                        const isEditing = editingPricingId === pricing.id
-                        const lines = isEditing ? draftLines : pricing.lines
+                  {GRID_ORDER.map(wt => {
+                    const pricing = workTypeMap.get(wt)
+                    const isEditing = editingPricingId === pricing?.id
+                    const lines = isEditing ? draftLines : (pricing?.lines ?? [])
 
-                        if (!isEditing && lines.length === 0) return null
-
-                        return lines.map((line, lIdx) => (
-                          <tr
-                            key={`${pricing.id}-${lIdx}`}
-                            style={{
-                              borderBottom: '1px solid var(--theme-border-light)',
-                              background: isEditing ? 'color-mix(in srgb, var(--theme-brand-primary) 5%, transparent)' : undefined,
-                            }}
-                          >
-                            {/* Cont type — only on first line of this pricing */}
-                            <td className="px-3 py-3">
-                              {lIdx === 0 && <ContBadge type={pricing.workType} />}
-                            </td>
-
-                            {/* Quantity */}
-                            <td className="px-3 py-3">
-                              {isEditing ? (
-                                <div className="flex items-center gap-1">
-                                  {[1, 2].map(q => (
-                                    <button
-                                      key={q}
-                                      onClick={e => { e.stopPropagation(); updateDraftLine(lIdx, 'quantity', q) }}
-                                      className="px-2 py-1 rounded-md text-xs font-bold"
-                                      style={{
-                                        background: line.quantity === q ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
-                                        color: line.quantity === q ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
-                                      }}
-                                    >
-                                      ×{q}
-                                    </button>
-                                  ))}
-                                </div>
-                              ) : (
-                                <span className="font-mono-num">{line.quantity}</span>
-                              )}
-                            </td>
-
-                            {/* Unit price */}
-                            <td className="px-3 py-3 text-right">
-                              {isEditing ? (
-                                <InlineCell value={line.unitPrice} onChange={v => updateDraftLine(lIdx, 'unitPrice', v)} editing />
-                              ) : (
-                                <span className="font-mono-num font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>
-                                  {formatCurrencyFull(line.unitPrice)}
-                                </span>
-                              )}
-                            </td>
-
-                            {/* Driver salary */}
-                            <td className="px-3 py-3 text-right">
-                              {isEditing ? (
-                                <InlineCell value={line.driverSalary} onChange={v => updateDraftLine(lIdx, 'driverSalary', v)} editing />
-                              ) : (
-                                <span className="font-mono-num">{formatCurrencyFull(line.driverSalary)}</span>
-                              )}
-                            </td>
-
-                            {/* Allowance */}
-                            <td className="px-3 py-3 text-right">
-                              {isEditing ? (
-                                <InlineCell value={line.allowance} onChange={v => updateDraftLine(lIdx, 'allowance', v)} editing />
-                              ) : (
-                                <span className="font-mono-num">{formatCurrencyFull(line.allowance)}</span>
-                              )}
-                            </td>
-
-                            {/* Row actions */}
-                            <td className="px-3 py-3 text-right">
-                              {isEditing ? (
-                                lIdx === 0 ? (
-                                  <div className="flex items-center gap-1 justify-end">
-                                    <button
-                                      onClick={() => cancelEdit()}
-                                      className="btn-secondary text-xs h-7"
-                                    >
-                                      Huỷ
-                                    </button>
-                                    <button
-                                      onClick={() => saveEdit(pricing)}
-                                      className="btn-primary text-xs h-7"
-                                    >
-                                      Lưu
-                                    </button>
-                                  </div>
-                                ) : lines.length > 1 ? (
+                    return (
+                      <div
+                        key={wt}
+                        className="p-4"
+                        style={{
+                          background: isEditing
+                            ? 'color-mix(in srgb, var(--theme-brand-primary) 5%, var(--theme-bg-primary))'
+                            : 'var(--theme-bg-primary)',
+                        }}
+                      >
+                        {/* Work type header */}
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <ContBadge type={wt} />
+                            <span className="typo-body-sm font-medium" style={{ color: 'var(--theme-text-secondary)' }}>
+                              {WORK_TYPE_LABELS[wt]}
+                            </span>
+                          </div>
+                          {pricing && (
+                            <div className="flex items-center gap-1">
+                              {!isEditing && (
+                                <>
                                   <button
-                                    onClick={() => removeDraftLine(lIdx)}
+                                    onClick={() => startEdit(pricing)}
+                                    className="p-1 rounded-md hover:bg-[var(--theme-bg-tertiary)]"
+                                    style={{ color: 'var(--theme-text-muted)' }}
+                                    title="Chỉnh sửa"
+                                  >
+                                    <Pencil size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => setDeleteTarget({
+                                      id: pricing.id,
+                                      desc: `${wt} · ${pickup} → ${dropoff}`,
+                                    })}
                                     className="p-1 rounded-md hover:bg-[var(--theme-bg-tertiary)]"
                                     style={{ color: 'var(--theme-status-error)' }}
-                                    title="Xoá dòng"
+                                    title="Xoá"
                                   >
-                                    <Trash2 size={16} />
+                                    <Trash2 size={14} />
                                   </button>
-                                ) : null
-                              ) : (
-                                lIdx === 0 && (
-                                  <div className="flex items-center gap-1 justify-end">
-                                    <button
-                                      onClick={() => startEdit(pricing)}
-                                      className="p-1 rounded-md hover:bg-[var(--theme-bg-tertiary)]"
-                                      style={{ color: 'var(--theme-text-muted)' }}
-                                      title="Chỉnh sửa"
-                                    >
-                                      <Pencil size={16} />
-                                    </button>
-                                    <button
-                                      onClick={() => setDeleteTarget({ id: pricing.id, desc: `${pricing.workType} · SL=${pricing.lines[0]?.quantity ?? 1} · ${formatCurrencyFull(pricing.lines[0]?.unitPrice ?? 0)}` })}
-                                      className="p-1 rounded-md hover:bg-[var(--theme-bg-tertiary)]"
-                                      style={{ color: 'var(--theme-status-error)' }}
-                                      title="Xoá"
-                                    >
-                                      <Trash2 size={16} />
-                                    </button>
-                                  </div>
-                                )
+                                </>
                               )}
-                            </td>
-                          </tr>
-                        ))
-                      })}
+                            </div>
+                          )}
+                        </div>
 
-                      {/* Add row / actions footer */}
-                      <tr style={{ borderTop: '1px solid var(--theme-border-light)' }}>
-                        {isEditingAny ? (
-                          <>
-                            <td colSpan={3} className="px-3 py-3">
-                              <button
-                                onClick={() => addDraftLine()}
-                                className="flex items-center gap-1.5 text-xs font-medium"
-                                style={{ color: 'var(--theme-brand-primary)' }}
-                              >
-                                <Plus size={14} />
-                                Thêm dòng
-                              </button>
-                            </td>
-                            <td colSpan={3} />
-                          </>
+                        {/* Lines */}
+                        {pricing ? (
+                          <div className="space-y-2">
+                            {lines.map((line, lIdx) => (
+                              <div key={lIdx}>
+                                {/* Quantity badge row */}
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  {isEditing ? (
+                                    <div className="flex items-center gap-1">
+                                      {[1, 2].map(q => (
+                                        <button
+                                          key={q}
+                                          onClick={() => updateDraftLine(lIdx, 'quantity', q)}
+                                          className="px-2 py-0.5 rounded text-xs font-bold"
+                                          style={{
+                                            background: line.quantity === q ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
+                                            color: line.quantity === q ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
+                                          }}
+                                        >
+                                          x{q}
+                                        </button>
+                                      ))}
+                                      {lines.length > 1 && (
+                                        <button
+                                          onClick={() => removeDraftLine(lIdx)}
+                                          className="p-0.5 rounded hover:bg-[var(--theme-bg-tertiary)]"
+                                          style={{ color: 'var(--theme-status-error)' }}
+                                          title="Xoá dòng"
+                                        >
+                                          <Trash2 size={12} />
+                                        </button>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    lines.length > 1 && (
+                                      <span className="text-xs font-mono-num" style={{ color: 'var(--theme-text-muted)' }}>
+                                        x{line.quantity}
+                                      </span>
+                                    )
+                                  )}
+                                </div>
+
+                                {/* Price fields */}
+                                <div className="grid grid-cols-3 gap-2 text-xs">
+                                  <div>
+                                    <div className="typo-label mb-0.5" style={{ fontSize: '10px' }}>Đơn giá</div>
+                                    {isEditing ? (
+                                      <InlineCell value={line.unitPrice} onChange={v => updateDraftLine(lIdx, 'unitPrice', v)} editing />
+                                    ) : (
+                                      <span className="font-mono-num font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>
+                                        {formatCurrencyFull(line.unitPrice)}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <div className="typo-label mb-0.5" style={{ fontSize: '10px' }}>Lương TX</div>
+                                    {isEditing ? (
+                                      <InlineCell value={line.driverSalary} onChange={v => updateDraftLine(lIdx, 'driverSalary', v)} editing />
+                                    ) : (
+                                      <span className="font-mono-num">{formatCurrencyFull(line.driverSalary)}</span>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <div className="typo-label mb-0.5" style={{ fontSize: '10px' }}>Phụ cấp</div>
+                                    {isEditing ? (
+                                      <InlineCell value={line.allowance} onChange={v => updateDraftLine(lIdx, 'allowance', v)} editing />
+                                    ) : (
+                                      <span className="font-mono-num">{formatCurrencyFull(line.allowance)}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+
+                            {/* Edit actions */}
+                            {isEditing && (
+                              <div className="flex items-center gap-2 pt-2" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
+                                <button
+                                  onClick={() => addDraftLine()}
+                                  className="flex items-center gap-1 text-xs font-medium"
+                                  style={{ color: 'var(--theme-brand-primary)' }}
+                                >
+                                  <Plus size={12} />
+                                  Thêm dòng
+                                </button>
+                                <div className="flex gap-1 ml-auto">
+                                  <button onClick={() => cancelEdit()} className="btn-secondary text-xs h-7">Huỷ</button>
+                                  <button onClick={() => editingPricing && saveEdit(editingPricing)} className="btn-primary text-xs h-7">Lưu</button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         ) : (
-                          <td colSpan={6} className="px-3 py-3">
-                            <button
-                              onClick={() => {
-                                const unedited = items.find(p => !editingPricingId || editingPricingId !== p.id)
-                                if (unedited) {
-                                  startEdit(unedited)
-                                  addDraftLine()
-                                }
-                              }}
-                              className="flex items-center gap-1.5 text-xs font-medium"
-                              style={{ color: 'var(--theme-text-muted)' }}
-                            >
-                              <Plus size={14} />
-                              Thêm dòng
-                            </button>
-                          </td>
+                          <div className="text-xs py-2" style={{ color: 'var(--theme-text-muted)' }}>
+                            Chưa có giá
+                          </div>
                         )}
-                      </tr>
-                    </tbody>
-                  </table>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )

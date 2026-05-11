@@ -72,7 +72,7 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
-def _wo_to_out(w: WorkOrder, partners, drivers, locations) -> WorkOrderOut:
+def _wo_to_out(w: WorkOrder, partners, drivers, locations, matched_trip_count: int = 0) -> WorkOrderOut:
     return WorkOrderOut(
         id=int(w.id),  # type: ignore[arg-type]
         partner=get_partner_summary(partners, w.partner_id),
@@ -101,6 +101,7 @@ def _wo_to_out(w: WorkOrder, partners, drivers, locations) -> WorkOrderOut:
             )
             for c in w.containers
         ],
+        matched_trip_count=matched_trip_count,
         created_at=w.created_at,
         updated_at=w.updated_at,
     )
@@ -120,7 +121,26 @@ async def _load_many(session, wos: list[WorkOrder]) -> list[WorkOrderOut]:
         {w.pickup_location_id for w in wos}
         | {w.dropoff_location_id for w in wos},
     )
-    return [_wo_to_out(w, partners, drivers, locations) for w in wos]
+    # Count active reconciliation links per WO (multi-container matching)
+    from sqlalchemy import func, select as sa_select
+    from app.models.domain import Reconciliation
+    wo_ids = [int(w.id) for w in wos]  # type: ignore[arg-type]
+    link_counts: dict[int, int] = {}
+    if wo_ids:
+        rows = (await session.execute(
+            sa_select(Reconciliation.work_order_id, func.count())
+            .where(
+                Reconciliation.work_order_id.in_(wo_ids),
+                Reconciliation.is_active == True,  # noqa: E712
+            )
+            .group_by(Reconciliation.work_order_id)
+        )).all()
+        link_counts = {r[0]: r[1] for r in rows}
+
+    return [
+        _wo_to_out(w, partners, drivers, locations, link_counts.get(int(w.id), 0))  # type: ignore[arg-type]
+        for w in wos
+    ]
 
 
 def _hide_salary_fields(wo_out: WorkOrderOut) -> None:
