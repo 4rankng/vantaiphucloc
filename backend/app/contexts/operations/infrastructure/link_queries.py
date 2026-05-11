@@ -43,8 +43,10 @@ async def find_link(
         q = q.where(ReconciliationORM.work_order_id == work_order_id)
     if trip_order_id is not None:
         q = q.where(ReconciliationORM.trip_order_id == trip_order_id)
+    # Use scalars().first() instead of scalar_one_or_none() to avoid
+    # MultipleResultsFound when a WO has multiple active links.
     res = await session.execute(q)
-    return res.scalar_one_or_none()
+    return res.scalars().first()
 
 
 async def find_all_links_for_wo(
