@@ -129,8 +129,15 @@ async def _load_many(session, trips: list[TripOrder]) -> list[TripOrderOut]:
 
 
 def _container_inputs(items) -> list[TripContainerInput]:
-    return [
-        TripContainerInput(
+    from app.utils.iso6346 import validate_container_number
+    results = []
+    for c in (items or []):
+        cn = (c.container_number or "").strip()
+        if cn:
+            valid, err = validate_container_number(cn)
+            if not valid:
+                raise HTTPException(status_code=422, detail=f"Số container không hợp lệ '{cn}': {err}")
+        results.append(TripContainerInput(
             container_number=c.container_number,
             work_type=c.work_type,
             container_size=c.container_size,
@@ -140,8 +147,8 @@ def _container_inputs(items) -> list[TripContainerInput]:
             seal_no=c.seal_no,
             commodity=c.commodity,
             container_metadata=c.container_metadata,
-        )
-        for c in (items or [])
+        ))
+    return results
     ]
 
 
