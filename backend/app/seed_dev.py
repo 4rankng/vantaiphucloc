@@ -438,6 +438,186 @@ async def seed_dev() -> None:
         await db.flush()
         print("  Created trip order containers")
 
+        # ── 11. Reconciliation links for MATCHED pairs ───────────────────
+        from app.models.domain import Reconciliation
+        from datetime import datetime, timezone
+
+        print("\n=== Creating Reconciliation Links ===")
+        ketoan_user = user_map["ketoan"]
+        matched_wos = [wo for wo in work_orders if wo.status == "MATCHED"]
+        matched_tos = [to for to in trip_orders if to.status == "MATCHED"]
+        link_count = 0
+
+        # Pair MATCHED WOs with MATCHED TOs that share the same partner
+        for wo in matched_wos:
+            await db.refresh(wo)
+            # Find TOs with same partner
+            candidates = [to for to in matched_tos
+                          if to.partner_id == wo.partner_id
+                          and to.pickup_location_id == wo.pickup_location_id
+                          and to.dropoff_location_id == wo.dropoff_location_id]
+            if candidates:
+                to = candidates[0]
+                matched_tos.remove(to)
+                db.add(Reconciliation(
+                    trip_order_id=to.id,
+                    work_order_id=wo.id,
+                    match_score=1.0,
+                    matched_by=ketoan_user.id,
+                    matched_at=datetime(2026, 5, 5, tzinfo=timezone.utc),
+                    is_active=True,
+                ))
+                link_count += 1
+
+        await db.flush()
+        print(f"  Created {link_count} reconciliation links")
+
+        # ── 12. Matchable test data (shared containers) ──────────────────
+        print("\n=== Creating Matchable Test Data ===")
+        # Create WOs and TOs that share containers so the match suggester
+        # can find them. Uses the first partner and first route pair.
+        test_partner = partner_map["HAIAN"]
+        test_route = ROUTE_PAIRS[0]  # Cát Lái → Bình Dương
+        pickup_loc = loc_map[LOCATION_NAMES[test_route[0]]]
+        dropoff_loc = loc_map[LOCATION_NAMES[test_route[1]]]
+        test_driver = drivers[0]
+        test_vehicle_id = vehicle_by_driver.get(test_driver)
+
+        # Find pricing for this combination
+        for wt, up, ds, al in PRICING_DATA:
+            if wt == "F20":
+                test_pricing_up, test_pricing_ds, test_pricing_al = up, ds, al
+                break
+
+        test_pricing_key = ("HAIAN", pickup_loc.id, dropoff_loc.id, "F20")
+        test_pricing = pricing_map.get(test_pricing_key)
+        if test_pricing:
+            # Shared containers that WO and TOs will reference
+            shared_containers = ["MSCU1111111", "MSCU2222222", "TCNU3333333"]
+
+            # WO with 2 containers (F20, can hold up to 2)
+            wo_test = WorkOrder(
+                partner_id=test_partner.id,
+                code="W-TEST-01",
+                pickup_location_id=pickup_loc.id,
+                dropoff_location_id=dropoff_loc.id,
+                driver_id=test_driver,
+                vehicle_id=test_vehicle_id,
+                unit_price=test_pricing_up,
+                driver_salary=test_pricing_ds,
+                allowance=test_pricing_al,
+                pricing_id=test_pricing.id,
+                status="PENDING",
+                trip_date=date(2026, 5, 10),
+            )
+            db.add(wo_test)
+            await db.flush()
+            for cont in shared_containers[:2]:
+                db.add(WorkOrderContainer(
+                    work_order_id=wo_test.id,
+                    container_number=cont,
+                    work_type="F20",
+                ))
+            await db.flush()
+            print(f"  + Test WO #{wo_test.id} with containers {shared_containers[:2]}")
+
+            # 3 PENDING TOs: 2 match by container, 1 doesn't
+            for idx, (cont, should_match) in enumerate([
+                ("MSCU1111111", True),
+                ("TCNU3333333", True),
+                ("HLXU9999999", False),
+            ]):
+                to_test = TripOrder(
+                    trip_date=date(2026, 5, 10),
+                    partner_id=test_partner.id,
+                    code=f"T-TEST-0{idx + 1}",
+                    pickup_location_id=pickup_loc.id,
+                    dropoff_location_id=dropoff_loc.id,
+                    pricing_id=test_pricing.id,
+                    unit_price=test_pricing_up,
+                    driver_salary=test_pricing_ds,
+                    allowance=test_pricing_al,
+                    status="PENDING",
+                )
+                db.add(to_test)
+                await db.flush()
+                db.add(TripOrderContainer(
+                    trip_order_id=to_test.id,
+                    container_number=cont,
+                    work_type="F20",
+                    container_size="20",
+                    freight_kind="F",
+                ))
+                await db.flush()
+                label = "MATCH" if should_match else "NO-MATCH"
+                print(f"  + Test TO #{to_test.id} container={cont} ({label})")
+
+            # Extra WO already MATCHED with 2 TOs (multi-match verification)
+            wo_multi = WorkOrder(
+                partner_id=test_partner.id,
+                code="W-MULTI-01",
+                pickup_location_id=pickup_loc.id,
+                dropoff_location_id=dropoff_loc.id,
+                driver_id=test_driver,
+                vehicle_id=test_vehicle_id,
+                unit_price=test_pricing_up * 2,
+                driver_salary=test_pricing_ds * 2,
+                allowance=test_pricing_al * 2,
+                pricing_id=test_pricing.id,
+                status="MATCHED",
+                trip_date=date(2026, 5, 9),
+            )
+            db.add(wo_multi)
+            await db.flush()
+            for cont in ["CMAU4444444", "CMAU5555555"]:
+                db.add(WorkOrderContainer(
+                    work_order_id=wo_multi.id,
+                    container_number=cont,
+                    work_type="F20",
+                ))
+            await db.flush()
+
+            # 2 TOs linked to this WO via reconciliation
+            multi_to_ids = []
+            for idx, cont in enumerate(["CMAU4444444", "CMAU5555555"]):
+                to_multi = TripOrder(
+                    trip_date=date(2026, 5, 9),
+                    partner_id=test_partner.id,
+                    code=f"T-MULTI-0{idx + 1}",
+                    pickup_location_id=pickup_loc.id,
+                    dropoff_location_id=dropoff_loc.id,
+                    pricing_id=test_pricing.id,
+                    unit_price=test_pricing_up,
+                    driver_salary=test_pricing_ds,
+                    allowance=test_pricing_al,
+                    status="MATCHED",
+                )
+                db.add(to_multi)
+                await db.flush()
+                db.add(TripOrderContainer(
+                    trip_order_id=to_multi.id,
+                    container_number=cont,
+                    work_type="F20",
+                    container_size="20",
+                    freight_kind="F",
+                ))
+                multi_to_ids.append(to_multi.id)
+            await db.flush()
+
+            for to_id in multi_to_ids:
+                db.add(Reconciliation(
+                    trip_order_id=to_id,
+                    work_order_id=wo_multi.id,
+                    match_score=1.0,
+                    matched_by=ketoan_user.id,
+                    matched_at=datetime(2026, 5, 9, tzinfo=timezone.utc),
+                    is_active=True,
+                ))
+            await db.flush()
+            print(f"  + Multi-match WO #{wo_multi.id} linked to TOs {multi_to_ids}")
+        else:
+            print("  ! Test pricing not found, skipping matchable test data")
+
         await db.commit()
 
         # ── Summary ─────────────────────────────────────────────────────
@@ -450,6 +630,7 @@ async def seed_dev() -> None:
             "pricings", "pricing_lines",
             "work_orders", "work_order_containers",
             "trip_orders", "trip_order_containers",
+            "reconciliations",
         ]
         for t in tables:
             cnt = (await db.execute(text(f"SELECT count(*) FROM {t}"))).scalar()

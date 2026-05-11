@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
-import { Plus, History } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { formatCurrencyFull } from '@/data/domain'
@@ -171,7 +171,7 @@ export function DriverHome() {
               {formatCurrencyFull(earningsValue)}
             </p>
             <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-              {matchedCount} chuyến · <button onClick={() => navigate('/driver/history')} className="inline-flex items-center gap-0.5 underline underline-offset-2" style={{ color: 'var(--theme-brand-primary)' }}><History className="w-3 h-3" />Lịch sử</button>
+              {matchedCount} chuyến
             </p>
           </div>
         </div>
