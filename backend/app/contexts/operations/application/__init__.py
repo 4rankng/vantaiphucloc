@@ -14,6 +14,8 @@ from app.contexts.operations.application.reconciliation import (
 )
 from app.contexts.operations.application.trip_orders import (
     ApplyPricingToTrips,
+    CancelTripOrder,
+    ConfirmTripOrder,
     CreateTripOrder,
     CreateTripOrderFromImport,
     DeleteTripOrder,
@@ -33,6 +35,8 @@ from app.contexts.operations.application.work_orders import (
 __all__ = [
     # TripOrder
     "ApplyPricingToTrips",
+    "CancelTripOrder",
+    "ConfirmTripOrder",
     "CreateTripOrder",
     "CreateTripOrderFromImport",
     "DeleteTripOrder",
