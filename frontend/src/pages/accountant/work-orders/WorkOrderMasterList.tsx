@@ -3,6 +3,7 @@ import { Calendar, Truck } from 'lucide-react'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
 import { fmtDate } from '@/lib/date-utils'
+import { resolveRoute } from '@/lib/route-utils'
 import type { WorkOrder, WorkOrderMatchScore } from '@/data/domain'
 
 function scoreChipColor(matchScore: number, maxScore: number): string {
@@ -147,7 +148,7 @@ export function WorkOrderMasterList({
 
               {/* Line 2: client + route */}
               <p className="text-xs font-medium truncate" style={{ color: 'var(--theme-text-primary)' }}>
-                {wo.partner.name} · {wo.route || '—'}
+                {wo.partner.name} · {resolveRoute(wo) || '—'}
               </p>
 
               {/* Line 3: driver + plate + containers — single row, overflow hidden */}
