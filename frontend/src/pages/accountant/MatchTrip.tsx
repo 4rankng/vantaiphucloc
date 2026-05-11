@@ -442,7 +442,7 @@ export function MatchTrip() {
                                 {s.criteria.length > 0 && (
                                   <div className="flex flex-wrap gap-1 mt-1">
                                     {s.criteria.map(c => (
-                                      <span key={c.name} className="text-[10px] px-1.5 py-0.5 rounded font-medium flex items-center gap-0.5" style={{ background: c.match ? 'var(--theme-status-success-light)' : 'color-mix(in_srgb, var(--theme-status-error) 10%, transparent)', color: c.match ? 'var(--theme-status-success)' : 'var(--theme-status-error)' }}>
+                                      <span key={c.name} className="text-[10px] px-1.5 py-0.5 rounded font-medium flex items-center gap-0.5" style={{ background: c.match ? 'var(--theme-status-success-light)' : 'color-mix(in srgb, var(--theme-status-error) 10%, transparent)', color: c.match ? 'var(--theme-status-success)' : 'var(--theme-status-error)' }}>
                                         {c.match ? <Check className="w-2.5 h-2.5" /> : <X className="w-2.5 h-2.5" />}
                                         {c.label}
                                       </span>
@@ -573,7 +573,7 @@ export function MatchTrip() {
               {lowConfConfirm && !allMatched && (
                 <div
                   className="mt-2 rounded-lg p-3 flex items-start gap-2"
-                  style={{ background: 'color-mix(in_srgb, var(--theme-status-warning) 10%, transparent)', borderLeft: '3px solid var(--theme-status-warning)' }}
+                  style={{ background: 'color-mix(in srgb, var(--theme-status-warning) 10%, transparent)', borderLeft: '3px solid var(--theme-status-warning)' }}
                 >
                   <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--theme-status-warning)' }} />
                   <div className="text-sm" style={{ color: 'var(--theme-text-primary)' }}>
