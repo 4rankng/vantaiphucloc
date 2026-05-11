@@ -68,6 +68,9 @@ export interface Partner {
   isActive?: boolean
   createdAt?: string
   updatedAt?: string
+  /** Frontend-only display field: 'company' | 'individual'.
+   *  Not stored in the backend — derived from the partner name heuristic. */
+  type?: 'company' | 'individual'
 }
 
 // TODO: Add when job management feature is implemented

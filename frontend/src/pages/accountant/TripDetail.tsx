@@ -175,8 +175,14 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
     }
   }
 
-  const statusVariant = trip.status === 'DRAFT' ? 'draft' : trip.status === 'PENDING' ? 'warning' : trip.status === 'COMPLETED' ? 'success' : 'error'
-  const statusLabel = trip.status === 'DRAFT' ? 'Nháp' : trip.status === 'PENDING' ? 'Chờ ghép' : trip.status === 'COMPLETED' ? 'Đã khớp' : 'Đã huỷ'
+  const statusVariant = trip.status === 'DRAFT' ? 'draft'
+    : trip.status === 'PENDING' ? 'warning'
+    : trip.status === 'MATCHED' ? 'success'
+    : 'error'
+  const statusLabel = trip.status === 'DRAFT' ? 'Nháp'
+    : trip.status === 'PENDING' ? 'Chờ ghép'
+    : trip.status === 'MATCHED' ? 'Đã khớp'
+    : 'Đã huỷ'
 
   return (
     <div className="space-y-6">
@@ -217,12 +223,6 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <span className={`chip chip-${statusVariant}`}>{statusLabel}</span>
-              {trip.status === 'MATCHED' && (
-                <span className="chip chip-success">
-                  <Lock size={12} />
-                  Đã khớp
-                </span>
-              )}
             </div>
             {!onClose && (
               <ConfirmationCheckbox
