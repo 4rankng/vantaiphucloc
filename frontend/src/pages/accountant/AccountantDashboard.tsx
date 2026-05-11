@@ -295,7 +295,7 @@ function DesktopDashboard() {
               <EmptyState icon={CheckCircle2} text="Tất cả phiếu đã ghép xong" />
             ) : (
               unmatchedWOs.map((wo, i) => (
-                <UnmatchedRow key={wo.id} wo={wo} isLast={i === unmatchedWOs.length - 1} onClick={() => navigate(`/accountant/match/${wo.id}`)} />
+                <UnmatchedRow key={wo.id} wo={wo} isLast={i === unmatchedWOs.length - 1} onClick={() => navigate(`/accountant/match-trip/${wo.id}`)} />
               ))
             )}
           </div>
@@ -417,7 +417,7 @@ function MobileDashboard() {
           <EmptyState icon={CheckCircle2} text="Không có phiếu chờ" />
         ) : (
           unmatchedWOs.map((wo, i) => (
-            <UnmatchedRow key={wo.id} wo={wo} isLast={i === unmatchedWOs.length - 1} onClick={() => navigate(`/accountant/match/${wo.id}`)} />
+            <UnmatchedRow key={wo.id} wo={wo} isLast={i === unmatchedWOs.length - 1} onClick={() => navigate(`/accountant/match-trip/${wo.id}`)} />
           ))
         )}
       </WorkbenchCard>
