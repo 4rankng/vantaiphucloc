@@ -107,7 +107,7 @@ class MatchTripToWorkOrder:
         )
 
         to.match()
-        to.link_work_order(int(wo.id))  # type: ignore[arg-type]
+        to.link_work_order(int(wo.id), matched_by=data.user_id)  # type: ignore[arg-type]
 
         await self.wo_repo.save(wo)
         await self.to_repo.save(to)
