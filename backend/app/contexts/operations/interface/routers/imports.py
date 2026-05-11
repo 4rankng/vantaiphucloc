@@ -121,6 +121,62 @@ class CommitResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Response schemas
+# ---------------------------------------------------------------------------
+
+
+class SheetInfo(BaseModel):
+    name: str
+    score: float
+    container_hits: int
+    n_rows: int
+    is_auto_selected: bool
+
+
+# ---------------------------------------------------------------------------
+# Sheet listing (lightweight — no AI, no column mapping)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/customer-excel/sheets")
+async def list_excel_sheets(
+    file: UploadFile = File(...),
+    _user: User = Depends(require_roles("accountant", "superadmin")),
+) -> list[SheetInfo]:
+    """Return all sheets in the uploaded workbook with their auto-detection scores.
+
+    This is a fast probe — no AI, no full parsing. The frontend uses the result
+    to render a sheet picker so users can override the auto-selected sheet before
+    triggering a full preview.
+    """
+    if file.filename is None:
+        raise HTTPException(status_code=400, detail="Tệp tải lên không có tên.")
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Tệp tải lên rỗng.")
+
+    from app.contexts.operations.infrastructure.import_pipeline.sheet_picker import score_sheets
+
+    sheets = load_workbook(content, file.filename)
+    if not sheets:
+        return []
+
+    scored = score_sheets(sheets)
+    best_name = scored[0].sheet.name if scored and scored[0].score > 0 else (sheets[0].name if sheets else None)
+
+    return [
+        SheetInfo(
+            name=s.sheet.name,
+            score=round(s.score, 1),
+            container_hits=s.container_hits,
+            n_rows=s.sheet.n_rows,
+            is_auto_selected=s.sheet.name == best_name,
+        )
+        for s in scored
+    ]
+
+
+# ---------------------------------------------------------------------------
 # Schema introspection
 # ---------------------------------------------------------------------------
 

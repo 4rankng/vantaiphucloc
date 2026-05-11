@@ -133,6 +133,7 @@ export const apiClient = {
 
   // Customer-Excel imports
   getCanonicalSchema: importsApi.getCanonicalSchema,
+  listExcelSheets: importsApi.listExcelSheets,
   previewCustomerExcel: importsApi.previewCustomerExcel,
   commitCustomerExcel: importsApi.commitCustomerExcel,
   listImportTemplates: importsApi.listImportTemplates,

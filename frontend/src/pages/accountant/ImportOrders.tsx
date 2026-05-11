@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, AlertTriangle, CheckCircle2, XCircle, Tag, FileSpreadsheet } from 'lucide-react'
+import { ArrowLeft, AlertTriangle, CheckCircle2, XCircle, Tag, FileSpreadsheet, Trash2, Layers } from 'lucide-react'
 import { Button, Input } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { useClients } from '@/hooks/use-queries'
@@ -13,6 +13,7 @@ import type {
   LocationResolutionDto,
   ParsedRowDto,
   PreviewResultDto,
+  SheetInfo,
 } from '@/services/api/imports.api'
 
 function todayIso(): string {
@@ -38,16 +39,60 @@ export function ImportOrders({ onClose }: { onClose?: () => void } = {}) {
   const [lastCommit, setLastCommit] = useState<CommitResponse | null>(null)
   const [pricingResult, setPricingResult] = useState<{ priced: number; unpriced: number } | null>(null)
 
+  // Sheet picker state
+  const [availableSheets, setAvailableSheets] = useState<SheetInfo[]>([])
+  const [selectedSheetName, setSelectedSheetName] = useState<string | null>(null)
+  const [loadingSheets, setLoadingSheets] = useState(false)
+
+  // Bulk-select state
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
+
   const clientOptions = useMemo(
     () => clients.map(c => ({ value: String(c.id), label: c.name, sublabel: c.code ? `Mã: ${c.code}` : undefined })),
     [clients],
   )
 
+  // Determine if all locations are "new" so we can collapse per-row badges into a banner
+  const allLocationsNew = useMemo(() => {
+    if (!preview?.location_resolutions) return false
+    const vals = Object.values(preview.location_resolutions)
+    return vals.length > 0 && vals.every(r => r.match_kind === 'new')
+  }, [preview])
+
+  const newLocationCount = useMemo(() => {
+    if (!preview?.location_resolutions) return 0
+    return Object.values(preview.location_resolutions).filter(r => r.match_kind === 'new').length
+  }, [preview])
+
   const handlePickFile = () => fileInputRef.current?.click()
+
+  const loadSheets = async (f: File) => {
+    setLoadingSheets(true)
+    try {
+      const sheets = await apiClient.listExcelSheets(f)
+      setAvailableSheets(sheets)
+      const auto = sheets.find(s => s.is_auto_selected)
+      setSelectedSheetName(auto?.name ?? sheets[0]?.name ?? null)
+    } catch {
+      // Non-fatal: sheet picker just won't appear
+      setAvailableSheets([])
+      setSelectedSheetName(null)
+    } finally {
+      setLoadingSheets(false)
+    }
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
-    if (f) setFile(f)
+    if (f) {
+      setFile(f)
+      setPreview(null)
+      setMapping([])
+      setEditedRows([])
+      setAvailableSheets([])
+      setSelectedSheetName(null)
+      loadSheets(f)
+    }
   }
 
   const runPreview = async () => {
@@ -61,10 +106,12 @@ export function ImportOrders({ onClose }: { onClose?: () => void } = {}) {
         file,
         clientId: clientId ? Number(clientId) : undefined,
         defaultTripDate,
+        sheetName: selectedSheetName ?? undefined,
       })
       setPreview(result)
       setMapping(result.column_mappings)
       setEditedRows(result.accepted)
+      setSelectedRows(new Set())
       if (result.template_used) {
         toast.success('Đã áp dụng template đã lưu')
       }
@@ -88,6 +135,29 @@ export function ImportOrders({ onClose }: { onClose?: () => void } = {}) {
 
   const removeRow = (rowSourceIdx: number) => {
     setEditedRows(prev => prev.filter(r => r.source_row_index !== rowSourceIdx))
+    setSelectedRows(prev => { const next = new Set(prev); next.delete(rowSourceIdx); return next })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedRows.size === editedRows.length) {
+      setSelectedRows(new Set())
+    } else {
+      setSelectedRows(new Set(editedRows.map(r => r.source_row_index)))
+    }
+  }
+
+  const toggleSelectRow = (idx: number) => {
+    setSelectedRows(prev => {
+      const next = new Set(prev)
+      if (next.has(idx)) next.delete(idx)
+      else next.add(idx)
+      return next
+    })
+  }
+
+  const deleteSelected = () => {
+    setEditedRows(prev => prev.filter(r => !selectedRows.has(r.source_row_index)))
+    setSelectedRows(new Set())
   }
 
   const applyPricing = async () => {
@@ -164,6 +234,7 @@ export function ImportOrders({ onClose }: { onClose?: () => void } = {}) {
       setPreview(null)
       setMapping([])
       setEditedRows([])
+      setSelectedRows(new Set())
       setFile(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
     } catch (err) {
@@ -193,6 +264,12 @@ export function ImportOrders({ onClose }: { onClose?: () => void } = {}) {
     const f = e.dataTransfer.files?.[0]
     if (f && (f.name.endsWith('.xlsx') || f.name.endsWith('.xls'))) {
       setFile(f)
+      setPreview(null)
+      setMapping([])
+      setEditedRows([])
+      setAvailableSheets([])
+      setSelectedSheetName(null)
+      loadSheets(f)
     } else if (f) {
       toast.error('Định dạng không hỗ trợ', 'Chỉ chấp nhận file .xlsx hoặc .xls')
     }
@@ -205,9 +282,10 @@ export function ImportOrders({ onClose }: { onClose?: () => void } = {}) {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-[color-mix(in_srgb,var(--theme-brand-primary)_8%,transparent)]"
+            className="flex h-9 w-9 items-center justify-center rounded-lg transition hover:bg-[color-mix(in_srgb,var(--theme-brand-primary)_8%,transparent)] hover:text-[var(--theme-brand-primary)]"
             style={{ color: 'var(--theme-text-secondary)' }}
             aria-label="Quay lại"
+            title="Quay lại"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
@@ -314,21 +392,30 @@ export function ImportOrders({ onClose }: { onClose?: () => void } = {}) {
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={file ? undefined : handlePickFile}
-          className={`relative rounded-xl border-2 border-dashed p-8 text-center transition-colors cursor-pointer ${
+          className={`relative rounded-xl border-2 border-dashed p-8 text-center transition-colors ${
+            file ? 'cursor-default' : 'cursor-pointer'
+          } ${
             dragging ? 'border-[var(--theme-brand-primary)] bg-[var(--theme-brand-primary-light)]' : 'border-[var(--theme-border-default)]'
           }`}
           style={{ background: dragging ? undefined : 'var(--theme-bg-tertiary)' }}
         >
           {file ? (
             <div className="flex items-center justify-center gap-3">
-              <FileSpreadsheet className="w-8 h-8 shrink-0" style={{ color: 'var(--theme-brand-primary)' }} />
+              {/* Success indicator when already analyzed */}
+              {preview ? (
+                <CheckCircle2 className="w-8 h-8 shrink-0" style={{ color: 'var(--theme-status-success)' }} />
+              ) : (
+                <FileSpreadsheet className="w-8 h-8 shrink-0" style={{ color: 'var(--theme-brand-primary)' }} />
+              )}
               <div className="text-left min-w-0">
                 <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{file.name}</p>
-                <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{(file.size / 1024).toFixed(0)} KB</p>
+                <p className="text-xs" style={{ color: preview ? 'var(--theme-status-success)' : 'var(--theme-text-muted)' }}>
+                  {preview ? 'Đã phân tích thành công' : `${(file.size / 1024).toFixed(0)} KB`}
+                </p>
               </div>
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); setFile(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
+                onClick={(e) => { e.stopPropagation(); setFile(null); setPreview(null); setMapping([]); setEditedRows([]); setAvailableSheets([]); setSelectedSheetName(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
                 className="ml-2 w-7 h-7 flex items-center justify-center rounded-full shrink-0 transition-colors hover:bg-[var(--theme-bg-secondary)]"
                 style={{ color: 'var(--theme-text-muted)' }}
                 aria-label="Xoá tệp"
@@ -374,7 +461,72 @@ export function ImportOrders({ onClose }: { onClose?: () => void } = {}) {
           )}
         </div>
 
-        {/* Actions */}
+        {/* Sheet picker — shown once the workbook is scanned */}
+        {file && availableSheets.length > 1 && (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5" style={{ color: 'var(--theme-text-secondary)' }}>
+              <Layers className="w-3.5 h-3.5" />
+              <span className="text-xs font-medium">Chọn sheet</span>
+              {loadingSheets && (
+                <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>đang đọc...</span>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {availableSheets.map(sheet => {
+                const isSelected = sheet.name === selectedSheetName
+                return (
+                  <button
+                    key={sheet.name}
+                    type="button"
+                    onClick={() => {
+                      setSelectedSheetName(sheet.name)
+                      // Clear preview so user has to re-analyze for the new sheet
+                      if (preview && sheet.name !== preview.sheet_name) {
+                        setPreview(null)
+                        setMapping([])
+                        setEditedRows([])
+                        setSelectedRows(new Set())
+                      }
+                    }}
+                    className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-all border"
+                    style={
+                      isSelected
+                        ? {
+                            background: 'var(--theme-brand-primary)',
+                            color: '#fff',
+                            borderColor: 'var(--theme-brand-primary)',
+                          }
+                        : {
+                            background: 'var(--theme-bg-secondary)',
+                            color: 'var(--theme-text-secondary)',
+                            borderColor: 'var(--theme-border-default)',
+                          }
+                    }
+                  >
+                    {sheet.name}
+                    {sheet.is_auto_selected && !isSelected && (
+                      <span className="opacity-60 text-[10px]">· auto</span>
+                    )}
+                    {sheet.container_hits > 0 && (
+                      <span
+                        className="rounded-full px-1.5 py-px text-[10px] font-semibold"
+                        style={
+                          isSelected
+                            ? { background: 'rgba(255,255,255,0.25)', color: '#fff' }
+                            : { background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }
+                        }
+                      >
+                        {sheet.container_hits}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Actions — primary/secondary hierarchy based on analysis state */}
         <div className="flex items-center justify-between gap-2 pt-1">
           <div>
             {onClose && !preview && (
@@ -388,23 +540,25 @@ export function ImportOrders({ onClose }: { onClose?: () => void } = {}) {
             )}
           </div>
           <div className="flex items-center gap-2">
+            {/* "Phân tích tệp" is secondary once analysis is done; primary when not yet analyzed */}
             <Button
               onClick={runPreview}
               disabled={!file || busy}
-              className="btn-primary h-10 px-5 text-sm font-semibold"
+              className={preview ? 'btn-secondary h-10 px-5 text-sm' : 'btn-primary h-10 px-5 text-sm font-semibold'}
               style={
-                file && !busy
+                !preview && file && !busy
                   ? { background: 'var(--theme-brand-primary)', color: '#fff', opacity: 1 }
                   : undefined
               }
             >
-              {busy ? 'Đang phân tích...' : 'Phân tích tệp'}
+              {busy ? 'Đang phân tích...' : preview ? 'Phân tích lại' : 'Phân tích tệp'}
             </Button>
+            {/* "Tạo đơn hàng" is the clear primary CTA once analysis succeeds */}
             {preview && (
               <Button
                 onClick={commit}
                 disabled={!clientId || !editedRows.length || committing}
-                className="btn-primary h-10 px-5 text-sm"
+                className="btn-primary h-10 px-5 text-sm font-semibold"
               >
                 <CheckCircle2 className="w-4 h-4 mr-1.5" />
                 {committing ? 'Đang tạo...' : `Tạo ${editedRows.length} đơn hàng`}
@@ -426,7 +580,7 @@ export function ImportOrders({ onClose }: { onClose?: () => void } = {}) {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
             <Stat label="Sheet" value={preview.sheet_name} />
             <Stat label="Đã chấp nhận" value={String(preview.accepted.length)} ok />
-            <Stat label="Bị bỏ" value={String(preview.rejected.length)} warn />
+            <Stat label="Bị bỏ" value={String(preview.rejected.length)} warn={preview.rejected.length > 0} />
           </div>
           {preview.warnings.length > 0 && (
             <div
@@ -445,76 +599,136 @@ export function ImportOrders({ onClose }: { onClose?: () => void } = {}) {
         </div>
       )}
 
-
-      {/* Pane 3b — parsed rows preview */}
+      {/* Pane 3 — parsed rows preview */}
       {preview && editedRows.length > 0 && (
         <div className="card p-5">
-          <h3 className="typo-h2 mb-3">Xem trước đơn hàng ({editedRows.length})</h3>
+          {/* Table header row with bulk controls */}
+          <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
+            <h3 className="typo-h2">Xem trước đơn hàng ({editedRows.length})</h3>
+            <div className="flex items-center gap-2">
+              {/* New-location banner — shown only when all locations are new */}
+              {allLocationsNew && newLocationCount > 0 && (
+                <span
+                  className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium"
+                  style={{ background: 'rgba(59,130,246,0.12)', color: '#1d4ed8' }}
+                >
+                  {newLocationCount} địa điểm mới sẽ được tạo
+                </span>
+              )}
+              {selectedRows.size > 0 && (
+                <Button
+                  onClick={deleteSelected}
+                  className="btn-ghost h-8 px-3 text-xs flex items-center gap-1"
+                  style={{ color: 'var(--theme-status-error)' }}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Xoá {selectedRows.size} dòng đã chọn
+                </Button>
+              )}
+            </div>
+          </div>
+
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead style={{ color: 'var(--theme-text-secondary)', position: 'sticky', top: 0, background: 'var(--theme-bg-primary)' }}>
-                <tr className="text-left">
-                  <th className="py-1.5 px-2 font-medium">#</th>
-                  <th className="py-1.5 px-2 font-medium">Container</th>
-                  <th className="py-1.5 px-2 font-medium">Loại</th>
-                  <th className="py-1.5 px-2 font-medium">Ngày</th>
-                  <th className="py-1.5 px-2 font-medium">Điểm đi</th>
-                  <th className="py-1.5 px-2 font-medium">Điểm đến</th>
-                  <th className="py-1.5 px-2"></th>
+                <tr className="text-left" style={{ borderBottom: '1px solid var(--theme-border-subtle)' }}>
+                  {/* Bulk-select checkbox */}
+                  <th className="py-2 px-2">
+                    <input
+                      type="checkbox"
+                      checked={editedRows.length > 0 && selectedRows.size === editedRows.length}
+                      ref={el => { if (el) el.indeterminate = selectedRows.size > 0 && selectedRows.size < editedRows.length }}
+                      onChange={toggleSelectAll}
+                      className="h-3.5 w-3.5 cursor-pointer rounded"
+                      aria-label="Chọn tất cả"
+                    />
+                  </th>
+                  <th className="py-2 px-2 font-medium">#</th>
+                  <th className="py-2 px-2 font-medium">Container</th>
+                  <th className="py-2 px-2 font-medium">Loại</th>
+                  <th className="py-2 px-2 font-medium">Ngày</th>
+                  <th className="py-2 px-2 font-medium">Điểm đi</th>
+                  <th className="py-2 px-2 font-medium">Điểm đến</th>
+                  <th className="py-2 px-2"></th>
                 </tr>
               </thead>
               <tbody>
-                {editedRows.slice(0, 200).map(r => (
-                  <tr key={r.source_row_index} className="border-t" style={{ borderColor: 'var(--theme-border-subtle)' }}>
-                    <td className="py-1 px-2 text-muted-foreground">{r.source_row_index + 1}</td>
-                    <td className="py-1 px-2 font-mono">{r.values.container_no}</td>
-                    <td className="py-1 px-2">{r.values.work_type}</td>
-                    <td className="py-1 px-2">
-                      <input
-                        type="date"
-                        value={r.values.trip_date ?? ''}
-                        onChange={e => updateRowValue(r.source_row_index, 'trip_date', e.target.value)}
-                        className="h-7 px-1 rounded border text-xs w-32"
-                        style={{ borderColor: 'var(--theme-border)', background: 'transparent' }}
-                      />
-                    </td>
-                    <td className="py-1 px-2">
-                      <div className="flex items-center gap-1">
+                {editedRows.slice(0, 200).map(r => {
+                  const isSelected = selectedRows.has(r.source_row_index)
+                  return (
+                    <tr
+                      key={r.source_row_index}
+                      className="border-t transition-colors"
+                      style={{
+                        borderColor: 'var(--theme-border-subtle)',
+                        background: isSelected ? 'color-mix(in srgb, var(--theme-brand-primary) 5%, transparent)' : undefined,
+                      }}
+                    >
+                      {/* Row checkbox */}
+                      <td className="py-1 px-2">
                         <input
-                          type="text"
-                          value={r.values.pickup_location ?? ''}
-                          onChange={e => updateRowValue(r.source_row_index, 'pickup_location', e.target.value)}
-                          className="h-7 px-1 rounded border text-xs w-24"
-                          style={{ borderColor: 'var(--theme-border)', background: 'transparent' }}
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelectRow(r.source_row_index)}
+                          className="h-3.5 w-3.5 cursor-pointer rounded"
+                          aria-label={`Chọn dòng ${r.source_row_index + 1}`}
                         />
-                        <LocationBadge resolution={preview.location_resolutions?.[r.values.pickup_location ?? '']} />
-                      </div>
-                    </td>
-                    <td className="py-1 px-2">
-                      <div className="flex items-center gap-1">
+                      </td>
+                      <td className="py-1 px-2 text-muted-foreground">{r.source_row_index + 1}</td>
+                      <td className="py-1 px-2 font-mono">{r.values.container_no}</td>
+                      <td className="py-1 px-2">{r.values.work_type}</td>
+                      <td className="py-1 px-2">
                         <input
-                          type="text"
-                          value={r.values.dropoff_location ?? ''}
-                          onChange={e => updateRowValue(r.source_row_index, 'dropoff_location', e.target.value)}
-                          className="h-7 px-1 rounded border text-xs w-24"
-                          style={{ borderColor: 'var(--theme-border)', background: 'transparent' }}
+                          type="date"
+                          value={r.values.trip_date ?? ''}
+                          onChange={e => updateRowValue(r.source_row_index, 'trip_date', e.target.value)}
+                          className="h-7 px-1 rounded text-xs w-32 border-transparent transition-colors hover:border-[var(--theme-border)] focus:border-[var(--theme-brand-primary)] focus:outline-none border"
+                          style={{ background: 'transparent' }}
                         />
-                        <LocationBadge resolution={preview.location_resolutions?.[r.values.dropoff_location ?? '']} />
-                      </div>
-                    </td>
-                    <td className="py-1 px-2">
-                      <button
-                        type="button"
-                        onClick={() => removeRow(r.source_row_index)}
-                        className="text-xs"
-                        style={{ color: 'var(--theme-status-error)' }}
-                        title="Bỏ dòng"
-                      >
-                        <XCircle className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="py-1 px-2">
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="text"
+                            value={r.values.pickup_location ?? ''}
+                            onChange={e => updateRowValue(r.source_row_index, 'pickup_location', e.target.value)}
+                            className="h-7 px-1 rounded text-xs w-24 border-transparent transition-colors hover:border-[var(--theme-border)] focus:border-[var(--theme-brand-primary)] focus:outline-none border"
+                            style={{ background: 'transparent' }}
+                          />
+                          {/* Only show individual badge when not all are new */}
+                          {!allLocationsNew && (
+                            <LocationBadge resolution={preview.location_resolutions?.[r.values.pickup_location ?? '']} />
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-1 px-2">
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="text"
+                            value={r.values.dropoff_location ?? ''}
+                            onChange={e => updateRowValue(r.source_row_index, 'dropoff_location', e.target.value)}
+                            className="h-7 px-1 rounded text-xs w-24 border-transparent transition-colors hover:border-[var(--theme-border)] focus:border-[var(--theme-brand-primary)] focus:outline-none border"
+                            style={{ background: 'transparent' }}
+                          />
+                          {!allLocationsNew && (
+                            <LocationBadge resolution={preview.location_resolutions?.[r.values.dropoff_location ?? '']} />
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-1 px-2">
+                        <button
+                          type="button"
+                          onClick={() => removeRow(r.source_row_index)}
+                          className="text-xs opacity-40 hover:opacity-100 transition-opacity"
+                          style={{ color: 'var(--theme-status-error)' }}
+                          title="Bỏ dòng"
+                        >
+                          <XCircle className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
             {editedRows.length > 200 && (
@@ -523,10 +737,8 @@ export function ImportOrders({ onClose }: { onClose?: () => void } = {}) {
               </p>
             )}
           </div>
-
         </div>
       )}
-
     </div>
   )
 }
@@ -575,17 +787,42 @@ function LocationBadge({ resolution }: { resolution?: LocationResolutionDto }) {
 
 function Stat({ label, value, ok, warn }: { label: string; value: string; ok?: boolean; warn?: boolean }) {
   return (
-    <div className="rounded-md p-2.5" style={{ background: 'var(--theme-bg-tertiary)' }}>
-      <p className="typo-caption mb-0.5">{label}</p>
-      <p
-        className="text-sm font-semibold"
-        style={{
-          color: ok ? 'var(--theme-status-success)' : warn ? 'var(--theme-status-warning)' : 'var(--theme-text-primary)',
-        }}
-      >
-        {value}
-      </p>
+    <div className="rounded-md p-2.5 flex items-center gap-2.5" style={{ background: 'var(--theme-bg-tertiary)' }}>
+      {ok && (
+        <CheckCircle2
+          className="w-5 h-5 shrink-0"
+          style={{ color: 'var(--theme-status-success)' }}
+        />
+      )}
+      {warn && Number(value) > 0 && (
+        <AlertTriangle
+          className="w-5 h-5 shrink-0"
+          style={{ color: 'var(--theme-status-warning)' }}
+        />
+      )}
+      {warn && Number(value) === 0 && (
+        <CheckCircle2
+          className="w-5 h-5 shrink-0"
+          style={{ color: 'var(--theme-status-success)' }}
+        />
+      )}
+      <div>
+        <p className="typo-caption mb-0.5">{label}</p>
+        <p
+          className="text-sm font-semibold"
+          style={{
+            color: ok
+              ? 'var(--theme-status-success)'
+              : warn && Number(value) > 0
+              ? 'var(--theme-status-warning)'
+              : warn && Number(value) === 0
+              ? 'var(--theme-status-success)'
+              : 'var(--theme-text-primary)',
+          }}
+        >
+          {value}
+        </p>
+      </div>
     </div>
   )
 }
-
