@@ -132,7 +132,7 @@ function TripRow({ trip, onClick, isLast }: { trip: TripOrder; onClick: () => vo
     statusLabel = 'Đã khớp'
   } else if (isPending) {
     statusVariant = 'pending'
-    statusLabel = 'Chờ khớp'
+    statusLabel = 'Chờ ghép'
   } else if (trip.status === 'CANCELLED') {
     statusVariant = 'neutral'
     statusLabel = 'Đã huỷ'
@@ -183,7 +183,7 @@ function UnmatchedRow({ wo, onClick, isLast }: { wo: WorkOrder; onClick: () => v
         <span className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
           {wo.code} · {wo.driver.name}
         </span>
-        <StatusBadgePro variant="warning" label="Chờ khớp" size="sm" />
+        <StatusBadgePro variant="warning" label="Chờ ghép" size="sm" />
       </div>
       <p className="mt-0.5 text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
         {wo.partner.name} | {resolveRoute(wo)}

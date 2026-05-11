@@ -126,7 +126,7 @@ export function ClientJobs() {
                 background: 'var(--theme-status-warning-light)',
                 color: 'var(--theme-status-warning)',
               }}>
-                Chờ khớp
+                Chờ ghép
               </span>
             )}
           </div>

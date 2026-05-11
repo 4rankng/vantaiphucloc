@@ -76,7 +76,7 @@ function StatusPill({ status, variant, compact = false }: { status: WorkOrder['s
         }}
       >
         <Clock className={iconSize} />
-        {variant === 'driver' ? 'Chờ khớp' : 'Chờ khớp'}
+        {variant === 'driver' ? 'Chờ ghép' : 'Chờ ghép'}
       </span>
     )
   }
@@ -156,7 +156,7 @@ function DriverCard({ wo, onClick }: { wo: WorkOrder; onClick: () => void }) {
           {pickup}
         </p>
         <span className="text-[11px] tabular-nums whitespace-nowrap shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
-          {fmtDate(wo.createdAt)}
+          {fmtDate(wo.tripDate ?? wo.createdAt)}
         </span>
       </div>
 
@@ -202,7 +202,7 @@ function AccountantCard({ wo }: { wo: WorkOrder }) {
 
       <div className="mt-3 pt-2.5 flex items-center justify-between" style={{ borderTop: '1px solid var(--surface-border)' }}>
         <span className="text-xs tabular-nums" style={{ color: 'var(--theme-text-muted)' }}>
-          {fmtDate(wo.createdAt)}
+          {fmtDate(wo.tripDate ?? wo.createdAt)}
         </span>
         {wo.driverSalary > 0 ? (
           <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-brand-primary)' }}>
@@ -210,7 +210,7 @@ function AccountantCard({ wo }: { wo: WorkOrder }) {
           </span>
         ) : (
           <span className="text-xs font-medium" style={{ color: 'var(--theme-text-muted)' }}>
-            Chờ khớp
+            Chờ ghép
           </span>
         )}
       </div>

@@ -207,6 +207,7 @@ async def create_work_order_endpoint(
                 containers=_container_inputs(body.containers),
                 gps_lat=body.gps_lat,
                 gps_lng=body.gps_lng,
+                trip_date=body.trip_date,
             ),
             _user_ctx(current_user),
         )

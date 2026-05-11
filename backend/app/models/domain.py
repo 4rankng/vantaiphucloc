@@ -185,6 +185,7 @@ class WorkOrder(AuditableMixin, Base):
     driver_salary = Column(Integer, nullable=False, default=0)    # VND
     allowance = Column(Integer, nullable=False, default=0)        # VND
     pricing_id = Column(Integer, ForeignKey("pricings.id"), nullable=True)
+    trip_date = Column(Date, nullable=True)  # explicit trip execution date; falls back to created_at date
     status = Column(String(20), nullable=False, default="PENDING")  # PENDING | MATCHED
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(

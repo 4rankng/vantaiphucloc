@@ -52,7 +52,7 @@ export function DirectorDashboard() {
 
   // KPI stats — all scoped to selected month
   const requestedThisMonth = monthlyTrips.length
-  const completedThisMonth = useMemo(() => monthlyTrips.filter(t => t.status === 'COMPLETED').length, [monthlyTrips])
+  const completedThisMonth = useMemo(() => monthlyTrips.filter(t => t.status === 'MATCHED' || (t.status as string) === 'COMPLETED').length, [monthlyTrips])
   const pendingThisMonth = useMemo(() => monthlyTrips.filter(t => t.status === 'PENDING').length, [monthlyTrips])
   const revenueThisMonth = useMemo(() => monthlyTrips.reduce((s, t) => s + (t.revenue ?? t.unitPrice), 0), [monthlyTrips])
 
@@ -355,8 +355,8 @@ export function DirectorDashboard() {
               const time = new Date(log.createdAt)
               const timeStr = time.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
               const dateStr = time.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
-              const actionLabel = ACTION_LABELS[log.action] ?? log.action
-              const tableLabel = TABLE_LABELS[log.tableName] ?? log.tableName
+              const actor = log.userId ? 'Kế toán' : 'Hệ thống'
+              const activityText = formatActivityEntry(log.action, log.tableName)
               return (
                 <div key={log.id} className="px-5 py-3 flex items-start gap-3">
                   <div
@@ -367,8 +367,8 @@ export function DirectorDashboard() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm" style={{ color: 'var(--theme-text-primary)' }}>
-                      <span className="font-medium">{actionLabel}</span>{' '}
-                      <span style={{ color: 'var(--theme-text-muted)' }}>{tableLabel}</span>
+                      <span className="font-medium">{actor}</span>{' '}
+                      <span>đã {activityText}</span>
                       {log.recordId ? <span className="font-mono text-xs" style={{ color: 'var(--theme-text-muted)' }}> #{log.recordId}</span> : null}
                     </p>
                     {log.reason && (
@@ -390,25 +390,66 @@ export function DirectorDashboard() {
 
 // ─── Lookup tables ──────────────────────────────────────────────────────────────
 
-const ACTION_LABELS: Record<string, string> = {
-  CREATE: 'Tạo',
-  UPDATE: 'Cập nhật',
-  DELETE: 'Xoá',
-  MATCH: 'Ghép',
-  UNMATCH: 'Bỏ ghép',
-  CANCEL: 'Huỷ',
-  CONFIRM: 'Xác nhận',
+/** Combined action+table → Vietnamese description to avoid double-word issues. */
+const ACTIVITY_LABELS: Record<string, Record<string, string>> = {
+  CREATE: {
+    work_orders: 'tạo phiếu chuyến',
+    trip_orders: 'tạo đơn hàng',
+    trip_order_work_orders: 'ghép chuyến',
+    reconciliations: 'ghép chuyến',
+    clients: 'tạo khách hàng',
+    locations: 'tạo địa điểm',
+    routes: 'tạo cung đường',
+    pricings: 'tạo bảng giá',
+    users: 'tạo tài khoản',
+  },
+  CREATE_RECONCILIATION: {
+    _default: 'ghép chuyến',
+  },
+  UPDATE: {
+    work_orders: 'cập nhật phiếu chuyến',
+    trip_orders: 'cập nhật đơn hàng',
+    clients: 'cập nhật khách hàng',
+    locations: 'cập nhật địa điểm',
+    routes: 'cập nhật cung đường',
+    pricings: 'cập nhật bảng giá',
+    users: 'cập nhật tài khoản',
+  },
+  DELETE: {
+    work_orders: 'xoá phiếu chuyến',
+    trip_orders: 'xoá đơn hàng',
+    clients: 'xoá khách hàng',
+    locations: 'xoá địa điểm',
+    routes: 'xoá cung đường',
+    pricings: 'xoá bảng giá',
+    users: 'xoá tài khoản',
+  },
+  MATCH: {
+    trip_order_work_orders: 'ghép chuyến',
+    work_orders: 'ghép chuyến',
+    trip_orders: 'ghép chuyến',
+    _default: 'ghép chuyến',
+  },
+  UNMATCH: {
+    _default: 'bỏ ghép chuyến',
+  },
+  CANCEL: {
+    work_orders: 'huỷ phiếu chuyến',
+    trip_orders: 'huỷ đơn hàng',
+    _default: 'huỷ',
+  },
+  CONFIRM: {
+    _default: 'xác nhận',
+  },
 }
 
-const TABLE_LABELS: Record<string, string> = {
-  work_orders: 'đơn hàng',
-  trip_orders: 'chuyến',
-  clients: 'khách hàng',
-  locations: 'địa điểm',
-  routes: 'cung đường',
-  pricings: 'bảng giá',
-  users: 'tài khoản',
-  trip_order_work_orders: 'ghép chuyến',
+function formatActivityEntry(action: string, tableName: string): string {
+  const tableMap = ACTIVITY_LABELS[action]
+  if (tableMap) {
+    return tableMap[tableName] ?? tableMap['_default'] ?? `${action.toLowerCase()} ${tableName}`
+  }
+  // Fallback: lowercase the action + table name (removes raw English)
+  return `${action.toLowerCase()} ${tableName.replace(/_/g, ' ')}`
 }
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────

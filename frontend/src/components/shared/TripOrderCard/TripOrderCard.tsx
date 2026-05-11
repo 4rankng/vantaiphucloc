@@ -12,7 +12,7 @@ interface TripOrderCardProps {
 // Per spec: gray=DRAFT, yellow=PENDING, green=COMPLETED, red=CANCELLED
 const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
   DRAFT:     { label: 'Nháp',         bg: 'var(--theme-bg-tertiary)',           color: 'var(--theme-text-muted)'    },
-  PENDING:   { label: 'Chờ khớp', bg: 'var(--theme-status-warning-light)',  color: 'var(--theme-status-warning)' },
+  PENDING:   { label: 'Chờ ghép', bg: 'var(--theme-status-warning-light)',  color: 'var(--theme-status-warning)' },
   COMPLETED: { label: 'Đã khớp',      bg: 'var(--theme-status-success-light)',  color: 'var(--theme-status-success)' },
   CANCELLED: { label: 'Đã huỷ',       bg: 'var(--theme-status-error-light)',    color: 'var(--theme-status-error)'   },
 }
