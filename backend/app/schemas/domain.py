@@ -303,6 +303,7 @@ class WorkOrderCreate(BaseModel):
     vehicle_id: int | None = None
     gps_lat: float | None = None
     gps_lng: float | None = None
+    trip_date: date | None = None  # explicit trip execution date; defaults to today if not provided
 
 
 class WorkOrderUpdate(BaseModel):
@@ -335,6 +336,7 @@ class WorkOrderOut(BaseModel):
     driver_salary: int
     allowance: int
     pricing_id: int | None
+    trip_date: date | None = None
     status: str
     containers: list[ContainerOut] = []
     created_at: datetime

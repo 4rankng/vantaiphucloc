@@ -129,6 +129,7 @@ class WorkOrderCreateInput:
     containers: list[WorkOrderContainerInput] = field(default_factory=list)
     gps_lat: float | None = None
     gps_lng: float | None = None
+    trip_date: date | None = None
 
 
 @dataclass

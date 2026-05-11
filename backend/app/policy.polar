@@ -79,7 +79,7 @@ allow(user, "update", "Salary") if role_allow(user, "accountant");
 allow(user, "export", "Salary") if role_allow(user, "accountant");
 
 # driver can read own salary periods
-allow(user, "read_own_salary", "Salary") if user.role = "driver";
+allow(user, "read_own_salary", "Salary") if role_allow(user, "driver");
 
 # ── Salary Config ─────────────────────────────────────────────────
 

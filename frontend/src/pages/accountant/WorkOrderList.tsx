@@ -23,7 +23,7 @@ type StatusFilter = 'all' | 'PENDING' | 'MATCHED'
 
 const STATUS_OPTIONS = [
   { key: 'all', label: 'Tất cả' },
-  { key: 'PENDING', label: 'Chờ khớp', color: 'var(--theme-status-warning)' },
+  { key: 'PENDING', label: 'Chờ ghép', color: 'var(--theme-status-warning)' },
   { key: 'MATCHED', label: 'Đã khớp', color: 'var(--theme-status-success)' },
 ]
 
@@ -235,7 +235,7 @@ export function WorkOrderList() {
             className="lg:hidden ml-auto text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
             style={{ background: 'color-mix(in srgb, var(--theme-status-warning) 12%, transparent)', color: 'var(--theme-status-warning)' }}
           >
-            {pendingCount} chờ khớp
+            {pendingCount} chờ ghép
           </span>
         )}
       </div>
@@ -259,7 +259,7 @@ export function WorkOrderList() {
           className="hidden lg:inline-flex text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
           style={{ background: 'color-mix(in srgb, var(--theme-status-warning) 12%, transparent)', color: 'var(--theme-status-warning)' }}
         >
-          {pendingCount} chờ khớp
+          {pendingCount} chờ ghép
         </span>
       )}
     </div>

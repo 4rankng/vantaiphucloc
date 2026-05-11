@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -159,6 +159,7 @@ class CreateWorkOrder:
             gps_lng=data.gps_lng,
             gps_address=gps_address,
             pricing_id=pricing.id if pricing else None,
+            trip_date=data.trip_date if data.trip_date else date.today(),
             status=WorkOrderStatus.PENDING,
         )
         await _add_containers(w, data.containers)

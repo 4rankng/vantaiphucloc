@@ -30,7 +30,7 @@ export function JobDetail() {
     )
   }
 
-  const date = new Date(job.createdAt)
+  const date = new Date(job.tripDate ?? job.createdAt)
   const dateStr = date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
   const timeStr = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
 
@@ -154,7 +154,7 @@ export function JobDetail() {
           </p>
         ) : (
           <span className="text-xs font-semibold" style={{ color: 'var(--theme-status-warning)' }}>
-            Chờ khớp
+            Chờ ghép
           </span>
         )}
       </div>

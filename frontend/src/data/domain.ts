@@ -133,6 +133,8 @@ export interface WorkOrder {
   driverSalary: number
   allowance: number
   pricingId?: number
+  /** Explicit trip execution date (YYYY-MM-DD). Falls back to createdAt if absent. */
+  tripDate?: string | null
   createdAt: string
   status: WorkOrderStatus
   /** True when created offline, not yet synced to server */
@@ -366,14 +368,14 @@ export function getJobStatusBadge(status: JobStatus): { variant: 'default'|'succ
 
 export function getWorkOrderStatusBadge(status: WorkOrderStatus): { variant: 'default'|'success'|'warning'|'danger'|'info'|'neutral'; label: string } {
   switch (status) {
-    case 'PENDING': return { variant: 'warning', label: 'Chờ khớp' }
+    case 'PENDING': return { variant: 'warning', label: 'Chờ ghép' }
     case 'MATCHED': return { variant: 'success', label: 'Đã khớp' }
   }
 }
 
 export function getTripOrderStatusBadge(status: TripOrderStatus): { variant: 'default'|'success'|'warning'|'danger'|'info'|'neutral'; label: string } {
   switch (status) {
-    case 'PENDING': return { variant: 'warning', label: 'Chờ khớp' }
+    case 'PENDING': return { variant: 'warning', label: 'Chờ ghép' }
     case 'MATCHED': return { variant: 'success', label: 'Đã khớp' }
   }
 }

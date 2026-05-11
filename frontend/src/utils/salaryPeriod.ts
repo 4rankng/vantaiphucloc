@@ -75,7 +75,11 @@ export function dayAfter(date: Date): Date {
   return d
 }
 
-/** Convert a Date to ISO date string (YYYY-MM-DD) for API calls */
+/** Convert a Date to ISO date string (YYYY-MM-DD) for API calls.
+ * Uses local date components to avoid UTC-offset off-by-one errors. */
 export function toISODate(date: Date): string {
-  return date.toISOString().split('T')[0]
+  const yyyy = date.getFullYear()
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const dd = String(date.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
 }
