@@ -280,6 +280,7 @@ class WorkOrder:
     gps_lng: float | None = None
     gps_address: str | None = None
     pricing_id: int | None = None
+    trip_date: object | None = None  # explicit trip execution date; falls back to created_at
     status: str = WorkOrderStatus.PENDING
     created_at: datetime = field(default_factory=_utcnow)
     updated_at: datetime = field(default_factory=_utcnow)

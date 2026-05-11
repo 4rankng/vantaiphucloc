@@ -217,6 +217,7 @@ def work_order_to_domain(
         driver_salary=int(orm.driver_salary or 0),
         allowance=int(orm.allowance or 0),
         pricing_id=orm.pricing_id,
+        trip_date=orm.trip_date,
         status=orm.status,
         created_at=orm.created_at,
         updated_at=orm.updated_at,
@@ -244,5 +245,6 @@ def work_order_to_orm(
     orm.driver_salary = int(w.driver_salary)
     orm.allowance = int(w.allowance)
     orm.pricing_id = w.pricing_id
+    orm.trip_date = w.trip_date
     orm.status = str(w.status)
     return orm
