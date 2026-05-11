@@ -111,17 +111,8 @@ async def reconcile(
         except Exception:
             pass
 
-    # Salary recalc for the assigned driver. Pull the WO's driver from the
-    # ORM directly to avoid a second hydration round-trip.
-    from sqlalchemy import select
-    wo = (await db.execute(
-        select(WorkOrderORM).where(WorkOrderORM.id == body.work_order_id)
-    )).scalar_one_or_none()
-    if wo is not None and wo.driver_id:
-        ref_date = (
-            wo.created_at.date() if wo.created_at else to.trip_date
-        )
-        pass  # salary calculated on-the-fly
+    # Salary is calculated on-the-fly from matched WorkOrder earnings,
+    # not materialised at match time. No post-match recalc needed.
 
     try:
         return await _load_trip_one(db, to)
@@ -172,6 +163,13 @@ async def batch_reconcile_for_wo(
             results.append(BatchMatchForWOResult(
                 trip_order_id=to_id, success=False, error=str(exc),
             ))
+
+    success_count = sum(1 for r in results if r.success)
+    fail_count = len(results) - success_count
+    _logger.info(
+        "Batch match WO#%s: %d/%d succeeded",
+        body.work_order_id, success_count, len(results),
+    )
 
     try:
         await db.commit()
@@ -224,9 +222,7 @@ async def unmatch(
         except Exception:
             pass
 
-    if wo.driver_id:
-        ref_date = wo.created_at.date() if wo.created_at else to.trip_date
-        pass  # salary calculated on-the-fly
+    # Salary is calculated on-the-fly; no post-unmatch recalc needed.
 
     return {"success": True, "message": "Unmatched successfully"}
 
@@ -573,10 +569,7 @@ async def bulk_match(
             )
             await db.commit()
 
-            # Salary recalc
-            if wo.driver_id:
-                ref_date = wo.created_at.date() if wo.created_at else to.trip_date
-                pass  # salary calculated on-the-fly
+            # Salary is calculated on-the-fly; no post-match recalc needed.
 
             matched.append(BulkMatchResult(
                 work_order_id=pair.work_order_id,
