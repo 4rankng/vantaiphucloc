@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useRef } from 'react'
 import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
@@ -19,6 +19,7 @@ export function LocationSelect({ value, onChange, placeholder = 'Chọn địa �
   const [createOpen, setCreateOpen] = useState(false)
   const [newName, setNewName] = useState('')
   const { toast } = useToast()
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const options: InlineSelectOption[] = useMemo(
     () => locations.map(l => ({ value: l.name, label: l.name })),
@@ -39,6 +40,15 @@ export function LocationSelect({ value, onChange, placeholder = 'Chọn địa �
     setCreateOpen(true)
   }, [])
 
+  const handleOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      setCreateOpen(false)
+      setNewName('')
+      // Return focus to the input to prevent aria-hidden focus trap
+      setTimeout(() => inputRef.current?.focus(), 0)
+    }
+  }, [])
+
   return (
     <>
       <InlineSelect
@@ -49,20 +59,22 @@ export function LocationSelect({ value, onChange, placeholder = 'Chọn địa �
         onCreateNew={handleCreateNew}
         createNewLabel="Tạo địa điểm mới"
       />
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={createOpen} onOpenChange={handleOpenChange}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Tạo địa điểm mới</DialogTitle>
           </DialogHeader>
           <Input
+            ref={inputRef}
             value={newName}
             onChange={e => setNewName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleCreate() }}
             placeholder="Nhập tên địa điểm"
             className="text-sm"
             autoFocus
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)} className="flex-1">Huỷ</Button>
+            <Button variant="outline" onClick={() => handleOpenChange(false)} className="flex-1">Huỷ</Button>
             <Button onClick={handleCreate} disabled={!newName.trim()} className="flex-1 btn-primary">
               Tạo
             </Button>

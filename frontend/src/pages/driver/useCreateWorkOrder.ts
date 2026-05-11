@@ -274,7 +274,6 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
         photoTimestamp: c.photoTimestamp ?? null,
       }))
 
-      const route = `${pickupLocation} - ${dropoffLocation}`
       const pickupId = locations.find(l => l.name === pickupLocation)?.id
       const dropoffId = locations.find(l => l.name === dropoffLocation)?.id
       if (!pickupId || !dropoffId) {
@@ -286,7 +285,6 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
         await apiClient.updateWorkOrder(existingWorkOrder.id, {
           containers: containerItems,
           partnerId: Number(clientId),
-          route,
           pickupLocationId: pickupId,
           dropoffLocationId: dropoffId,
         })
@@ -303,7 +301,6 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
         await apiClient.createWorkOrder({
           containers: containerItems,
           partnerId: Number(clientId),
-          route,
           pickupLocationId: pickupId,
           dropoffLocationId: dropoffId,
           driverId: Number(user!.id),

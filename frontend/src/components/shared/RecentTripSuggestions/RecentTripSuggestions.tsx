@@ -3,7 +3,6 @@ import type { WorkOrder } from '@/data/domain'
 
 interface RecentTripSuggestionsProps {
   trips: WorkOrder[]
-  /** ID of the selected work order (trip.id), used for unambiguous single-selection */
   selectedTripId?: number | string
   onSelect: (trip: { tripId: number; clientId: string; clientName: string; pickupLocation: string; dropoffLocation: string }) => void
 }
@@ -18,15 +17,8 @@ export function RecentTripSuggestions({
   return (
     <div className="flex flex-col gap-1.5">
       {trips.map((trip) => {
-        // Parse route string — support both ' - ' and ' → ' separators
-        const routeStr = trip.route || ''
-        const routeParts = routeStr.includes(' - ')
-          ? routeStr.split(' - ')
-          : routeStr.includes(' → ')
-            ? routeStr.split(' → ')
-            : [routeStr]
-        const pickup = trip.pickupLocation?.name || routeParts[0] || ''
-        const dropoff = trip.dropoffLocation?.name || routeParts.slice(1).join(' - ') || ''
+        const pickup = trip.pickupLocation?.name || ''
+        const dropoff = trip.dropoffLocation?.name || ''
         const clientLabel = trip.partner.code || trip.partner.name
         const isSelected = selectedTripId !== undefined && String(selectedTripId) === String(trip.id)
         return (

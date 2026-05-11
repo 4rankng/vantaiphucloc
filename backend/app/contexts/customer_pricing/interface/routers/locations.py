@@ -109,7 +109,7 @@ async def list_all_locations(
 @router.post("/locations", response_model=LocationOut, status_code=201)
 async def create_location(
     body: LocationCreate,
-    current_user: User = Depends(require_permission("update", "Location")),
+    current_user: User = Depends(require_permission("create", "Location")),
     use_case: CreateLocation = Depends(get_create_location),
     redis: Redis = Depends(get_redis),
 ):
