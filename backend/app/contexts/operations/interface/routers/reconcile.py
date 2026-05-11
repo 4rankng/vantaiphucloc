@@ -296,11 +296,8 @@ async def get_linked_trip_orders(
     )
     result = []
     for to_orm in tos:
-        try:
-            out = await _load_trip_one(db, to_orm)
-            result.append(out)
-        except Exception:
-            pass
+        out = await _load_trip_one(db, to_orm)
+        result.append(out)
     return {"work_order_id": work_order_id, "trip_orders": result}
 
 
