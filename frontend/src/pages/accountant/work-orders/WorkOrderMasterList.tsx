@@ -120,7 +120,7 @@ export function WorkOrderMasterList({
               </div>
             ) : (
               <div
-                className="shrink-0 flex items-center justify-center rounded-lg mt-0.5"
+                className="shrink-0 flex flex-col items-center justify-center rounded-lg mt-0.5 gap-0.5"
                 style={{ width: 44, height: 44, background: 'var(--theme-bg-tertiary)' }}
               >
                 <StatusBadgePro
@@ -128,6 +128,11 @@ export function WorkOrderMasterList({
                   label={getStatusLabel(wo.status)}
                   size="sm"
                 />
+                {wo.status === 'MATCHED' && wo.matchedTripCount && wo.matchedTripCount > 1 && (
+                  <span className="text-[9px] font-bold" style={{ color: 'var(--theme-status-success)' }}>
+                    {wo.matchedTripCount} ĐH
+                  </span>
+                )}
               </div>
             )}
 

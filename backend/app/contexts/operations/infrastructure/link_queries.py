@@ -3,6 +3,7 @@
 Reconciliation use cases need to ask:
   - is this TripOrder already linked to anything?
   - which link row points at this WorkOrder / TripOrder id?
+  - how many TripOrders are linked to this WorkOrder? (multi-container)
 
 Those are pure infrastructure concerns — keeping them out of the
 application layer means the use case body stays free of select()
@@ -44,3 +45,28 @@ async def find_link(
         q = q.where(ReconciliationORM.trip_order_id == trip_order_id)
     res = await session.execute(q)
     return res.scalar_one_or_none()
+
+
+async def find_all_links_for_wo(
+    session: AsyncSession, work_order_id: int
+) -> list[ReconciliationORM]:
+    res = await session.execute(
+        select(ReconciliationORM).where(
+            ReconciliationORM.work_order_id == work_order_id,
+            ReconciliationORM.is_active == True,  # noqa: E712
+        )
+    )
+    return list(res.scalars().all())
+
+
+async def count_links_for_wo(
+    session: AsyncSession, work_order_id: int
+) -> int:
+    from sqlalchemy import func
+    res = await session.execute(
+        select(func.count()).select_from(ReconciliationORM).where(
+            ReconciliationORM.work_order_id == work_order_id,
+            ReconciliationORM.is_active == True,  # noqa: E712
+        )
+    )
+    return res.scalar_one()

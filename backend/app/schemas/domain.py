@@ -339,6 +339,7 @@ class WorkOrderOut(BaseModel):
     trip_date: date | None = None
     status: str
     containers: list[ContainerOut] = []
+    matched_trip_count: int = 0
     created_at: datetime
     updated_at: datetime
 
