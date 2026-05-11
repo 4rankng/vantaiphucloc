@@ -293,12 +293,14 @@ async def suggest_trip_matches(
             created_at=to.created_at,
             updated_at=to.updated_at,
         )
+        to_pickup_name = get_location_summary(locations, to.pickup_location_id).name
+        to_dropoff_name = get_location_summary(locations, to.dropoff_location_id).name
         criteria = _build_criteria(
             matched_fields=matched_fields,
             wo_date_str=wo_date_str,
             to_date_str=to.trip_date.isoformat() if to.trip_date else None,
-            wo_route=None,
-            to_route=None,
+            wo_route=f"{wo_pickup_name} → {wo_dropoff_name}" if wo_pickup_name and wo_dropoff_name else None,
+            to_route=f"{to_pickup_name} → {to_dropoff_name}" if to_pickup_name and to_dropoff_name else None,
             wo_client=wo_client_name,
             to_client=get_partner_summary(partners, to.partner_id).name,
             wo_pickup=wo_pickup_name,
@@ -425,12 +427,14 @@ async def suggest_wo_matches(
         wo_date_str = (
             wo.created_at.date().isoformat() if wo.created_at else None
         )
+        wo_pickup_loc = get_location_summary(locations, wo.pickup_location_id).name
+        wo_dropoff_loc = get_location_summary(locations, wo.dropoff_location_id).name
         criteria = _build_criteria(
             matched_fields=matched_fields,
             wo_date_str=wo_date_str,
             to_date_str=to_date_str,
-            wo_route=None,
-            to_route=None,
+            wo_route=f"{wo_pickup_loc} → {wo_dropoff_loc}" if wo_pickup_loc and wo_dropoff_loc else None,
+            to_route=f"{to_pickup_name} → {to_dropoff_name}" if to_pickup_name and to_dropoff_name else None,
             wo_client=get_partner_summary(partners, wo.partner_id).name,
             to_client=to_client_name,
             wo_pickup=get_location_summary(
