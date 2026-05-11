@@ -14,7 +14,6 @@ interface WorkOrderFilters {
 export interface WorkOrderCreatePayload {
   containers: ContainerItem[]
   partnerId: number
-  route: string
   pickupLocationId: number
   dropoffLocationId: number
   driverId: number
@@ -25,7 +24,6 @@ export interface WorkOrderCreatePayload {
 export interface WorkOrderUpdatePayload {
   containers?: ContainerItem[]
   partnerId?: number
-  route?: string
   pickupLocationId?: number
   dropoffLocationId?: number
   driverId?: number
@@ -93,7 +91,6 @@ export async function createWorkOrder(
         id: -Date.now(),
         containers: data.containers,
         partner: { id: data.partnerId, name: '', code: null },
-        route: data.route,
         pickupLocation: { id: data.pickupLocationId, name: '' },
         dropoffLocation: { id: data.dropoffLocationId, name: '' },
         driver: { id: data.driverId, name: '' },
