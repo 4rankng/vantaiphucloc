@@ -27,7 +27,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
   const [searchQuery, setSearchQuery] = useState('')
   const [unmatchTargetId, setUnmatchTargetId] = useState<number | null>(null)
   const [unmatchReason, setUnmatchReason] = useState('')
-  const { data: allTripOrders = [] } = useTripOrders(isMatched || manualSearchOpen ? undefined : undefined)
+  const { data: allTripOrders = [] } = useTripOrders()
 
   // Find ALL matched trips for matched WOs (multi-match support)
   const matchedTrips = useMemo(() => {
@@ -164,8 +164,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
           </div>
         ) : (
           <div className="rounded-xl p-6 text-center" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
-            <Loader2 className="w-5 h-5 animate-spin mx-auto" style={{ color: 'var(--theme-text-muted)' }} />
-            <p className="text-xs mt-2" style={{ color: 'var(--theme-text-muted)' }}>Đang tải thông tin đơn hàng...</p>
+            <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có đơn hàng nào được ghép</p>
           </div>
         )}
 
