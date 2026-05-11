@@ -57,6 +57,7 @@ export function DriverList() {
       ? <span>{d.phone}</span>
       : <span className="text-xs font-medium px-2 py-0.5 rounded-md" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-brand-primary)' }}>+ Thêm SĐT</span>,
       sortable: true },
+    { key: 'plate', header: 'Biển số xe', accessor: d => <span className="font-mono text-xs">{d.vehiclePlate || '—'}</span> },
   ]
 
   return (
