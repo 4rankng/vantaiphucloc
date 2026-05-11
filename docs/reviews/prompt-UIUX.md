@@ -19,7 +19,7 @@ The following issues were resolved across QA rounds v6–v8. Verify they remain 
 1. Doanh thu column — `/accountant/trips` shows real values (not 0 ₫).
 2. Director "Đã khớp" KPI — Shows correct non-zero count.
 3. Filter chip vocabulary — Both pages use "Chờ ghép" / "Đã khớp" (not "Chờ khớp").
-4. Director navigation — Horizontal NavStrip present, functional (Tổng quan, Thông báo, Quản lý tài khoản).
+4. Director navigation — Horizontal NavStrip present with **"Tổng quan" tab only**. "Thông báo" and "Quản lý tài khoản" must NOT appear.
 5. Activity log copy — Proper Vietnamese text, no garbled/duplicated words.
 6. Auto-fill chips — All three fields populated (Khách hàng, Điểm lấy, Điểm trả).
 7. Work order card routes — Ghép chuyến cards show route text (not "—").
@@ -36,7 +36,11 @@ The following issues were resolved across QA rounds v6–v8. Verify they remain 
 
 Authenticate using the credentials above and thoroughly traverse the platform. You are specifically evaluating:
 
-Role-Based Architecture (CRITICAL RULE): The application uses role-specific navigation. The ketoan role requires a persistent sidebar. All other user roles must NOT have a sidebar. Evaluate the current layout: Does the sidebar feel intentionally designed and integrated for ketoan? Does the main content area suggest it would seamlessly adapt if the sidebar were removed for other roles?
+Role-Based Architecture (CRITICAL RULES):
+- **ketoan only**: persistent sidebar. All other roles must NOT have a sidebar.
+- **giamdoc (Director)**: NavStrip with **"Tổng quan" tab only**. No "Quản lý tài khoản". No "Thông báo" NavStrip tab. Director is a read-only dashboard viewer — they see KPI metrics and nothing else. Note: the topbar bell icon is global and acceptable for all roles (taixe, admin, giamdoc) — only the dedicated Thông báo page tab must be absent from the Director NavStrip.
+- **taixe (Driver)**: mobile-first layout, no sidebar, no top nav management links.
+- **admin (SuperAdmin)**: no sidebar; access to all pages via direct URL or dedicated admin navigation.
 Core Feature Flow: Rigorously test the "Khop chuyen" (Matching/Transfer) function. Assess if the flow is frictionless and logical.
 Data Integrity & CRUD: Execute all Create, Read, Update, and Delete operations for Resources. Look for missing confirmations, broken states, or poor error handling.
 Interactive Real Estate: Click every button, link, and toggle. Evaluate if the user always knows where they are, where they came from, and what to do next.
