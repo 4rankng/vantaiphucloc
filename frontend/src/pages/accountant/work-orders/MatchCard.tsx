@@ -200,17 +200,19 @@ export function MatchCard({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            {tripOrder.code && (
-              <span
-                className="text-xs font-mono font-semibold px-1.5 py-0.5 rounded"
-                style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
-              >
-                {tripOrder.code}
-              </span>
-            )}
+            <span className="text-xs font-medium" style={{ color: 'var(--theme-text-primary)' }}>
+              {tripOrder.partner?.name || '—'}
+            </span>
             <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
               {fmtDate(tripOrder.tripDate)}
             </span>
+          </div>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            {tripOrder.containers.slice(0, 3).map((c, i) => (
+              <span key={i} className="text-[10px] font-mono" style={{ color: 'var(--theme-text-secondary)' }}>
+                {c.containerNumber || c.workType}
+              </span>
+            ))}
           </div>
         </div>
       </div>

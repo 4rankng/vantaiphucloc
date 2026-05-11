@@ -110,3 +110,72 @@ async def create_driver(
     dto = await use_case(payload)
     await CacheManager(redis).invalidate_namespace("drivers")
     return _to_out(dto)
+
+
+# ── PUT /drivers/{id}/vehicle ─────────────────────────────────────────────────
+# Set / update the biển số xe for a driver. Useful for accountant UI and for
+# the seed script (`python -m app.seed_plates_for_all_drivers`).
+
+from pydantic import BaseModel, Field
+
+
+class DriverVehicleSetIn(BaseModel):
+    plate: str = Field(..., min_length=4, max_length=20)
+
+
+@router.put("/drivers/{driver_id}/vehicle", response_model=DriverOut)
+async def set_driver_vehicle(
+    driver_id: int,
+    body: DriverVehicleSetIn,
+    _current_user: User = Depends(require_permission("update", "Driver")),
+    db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis),
+):
+    """Assign or update the biển số xe for a driver.
+
+    Idempotent — if the driver already has an active vehicle, the plate is
+    updated in place; otherwise a new Vehicle row is created.
+    """
+    from fastapi import HTTPException
+
+    user = (await db.execute(
+        select(User).where(User.id == driver_id, User.role == "driver")
+    )).scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=404, detail="Driver not found")
+
+    plate = body.plate.strip().upper()
+
+    conflict = (await db.execute(
+        select(Vehicle).where(
+            Vehicle.plate == plate,
+            Vehicle.is_active == True,  # noqa: E712
+            Vehicle.driver_id != driver_id,
+        )
+    )).scalar_one_or_none()
+    if conflict is not None:
+        raise HTTPException(status_code=409, detail=f"Plate '{plate}' already in use")
+
+    existing = (await db.execute(
+        select(Vehicle).where(
+            Vehicle.driver_id == driver_id,
+            Vehicle.is_active == True,  # noqa: E712
+        )
+    )).scalar_one_or_none()
+
+    if existing is None:
+        db.add(Vehicle(plate=plate, driver_id=driver_id, is_active=True))
+    else:
+        existing.plate = plate
+    await db.commit()
+
+    await CacheManager(redis).invalidate_namespace("drivers")
+    return DriverOut(
+        id=user.id,
+        username=user.username,
+        full_name=user.full_name,
+        phone=user.phone,
+        vehicle_plate=plate,
+        created_at=user.created_at,
+        updated_at=user.updated_at,
+    )

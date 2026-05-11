@@ -156,9 +156,9 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {trip.code && (
+                    {trip.containers.length > 0 && (
                       <span className="text-xs font-mono font-semibold px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}>
-                        {trip.code}
+                        {trip.containers.map(c => c.containerNumber || c.workType).filter(Boolean).join(', ')}
                       </span>
                     )}
                     <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
@@ -290,7 +290,15 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
               <span className="text-sm font-semibold" style={{ color: 'var(--theme-status-warning)' }}>Xác nhận hủy ghép</span>
             </div>
             <p className="text-xs" style={{ color: 'var(--theme-text-primary)' }}>
-              Phiếu <strong>{workOrder.code}</strong> sẽ được tách khỏi đơn hàng <strong>{unmatchTarget.code ?? ''}</strong>. Hành động này có thể ảnh hưởng đến tính lương và đối soát.
+              Chuyến <strong>{workOrder.driver.vehicle?.plate || workOrder.driver.name || '—'}</strong>{' '}
+              sẽ được tách khỏi đơn hàng{' '}
+              <strong>
+                {unmatchTarget.containers
+                  .map(c => c.containerNumber || c.workType)
+                  .filter(Boolean)
+                  .join(', ') || unmatchTarget.partner?.name || '—'}
+              </strong>
+              . Hành động này có thể ảnh hưởng đến tính lương và đối soát.
             </p>
             <input
               value={unmatchReason}
@@ -486,7 +494,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
             style={{ background: 'var(--theme-text-on-brand)', color: 'var(--theme-brand-primary)' }}
           >
             {batchForWO.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />}
-            Ghép tất cả vào {workOrder.code}
+            Ghép tất cả vào {workOrder.driver.vehicle?.plate || workOrder.driver.name || 'chuyến này'}
           </button>
         </div>
       )}
