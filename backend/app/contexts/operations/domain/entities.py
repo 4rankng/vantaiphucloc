@@ -270,7 +270,7 @@ class TripOrder:
                 "Cannot cancel a locked TripOrder"
             )
         self.status = TripOrderStatus.CANCELLED
-        self.updated_at = _utcnow() ─────────────────────────────────────────
+        self.updated_at = _utcnow()
 
 
 @dataclass
