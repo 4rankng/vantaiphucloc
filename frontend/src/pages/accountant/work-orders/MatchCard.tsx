@@ -163,6 +163,21 @@ export function MatchCard({
   onConfirm, submitting, onEdited,
 }: MatchCardProps) {
   const color = scoreColor(matchScore, maxScore)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const isLowConfidence = matchScore < maxScore && matchScore >= 2
+
+  const handleGhep = useCallback(() => {
+    if (isLowConfidence) {
+      setConfirmOpen(true)
+    } else {
+      onConfirm()
+    }
+  }, [isLowConfidence, onConfirm])
+
+  const handleConfirmYes = useCallback(() => {
+    setConfirmOpen(false)
+    onConfirm()
+  }, [onConfirm])
 
   return (
     <div
@@ -216,7 +231,7 @@ export function MatchCard({
       {/* Actions */}
       <div className="flex items-center gap-2 px-4 pb-3 pt-1">
         <button
-          onClick={onConfirm}
+          onClick={handleGhep}
           disabled={submitting || matchScore < 2}
           className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-opacity disabled:opacity-40"
           style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
@@ -225,6 +240,34 @@ export function MatchCard({
           {submitting ? 'Đang ghép...' : 'Ghép'}
         </button>
       </div>
+
+      {/* Low-confidence confirmation overlay */}
+      {confirmOpen && (
+        <div
+          className="px-4 pb-3 pt-1"
+          style={{ borderTop: '1px solid var(--theme-border-default)', background: 'color-mix(in srgb, var(--theme-status-warning) 6%, transparent)' }}
+        >
+          <p className="text-xs font-semibold mb-2" style={{ color: 'var(--theme-status-warning)' }}>
+            Mức độ phù hợp thấp ({matchScore}/{maxScore}). Xác nhận ghép?
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleConfirmYes}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold"
+              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+            >
+              <Check className="w-3 h-3" /> Xác nhận
+            </button>
+            <button
+              onClick={() => setConfirmOpen(false)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
+              style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
+            >
+              <X className="w-3 h-3" /> Huỷ
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
