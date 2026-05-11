@@ -87,17 +87,26 @@ async def reconcile(
         raise translate(exc)
 
     db = use_case.session
-    await log_action(
-        db, user_id=current_user.id, action="MATCH",
-        table_name="trip_order_work_orders",
-        record_id=int(to.id),  # type: ignore[arg-type]
-        new_value={
-            "work_order_id": body.work_order_id,
-            "trip_order_id": body.trip_order_id,
-        },
-        request=request,
-    )
-    await db.commit()
+    try:
+        await log_action(
+            db, user_id=current_user.id, action="MATCH",
+            table_name="reconciliations",
+            record_id=int(to.id),  # type: ignore[arg-type]
+            new_value={
+                "work_order_id": body.work_order_id,
+                "trip_order_id": body.trip_order_id,
+            },
+            request=request,
+        )
+        await db.commit()
+    except Exception:
+        _logger.exception("Audit log failed after reconcile WO#%s ↔ TO#%s",
+                          body.work_order_id, body.trip_order_id)
+        # Match already succeeded; commit without audit log.
+        try:
+            await db.commit()
+        except Exception:
+            pass
 
     # Salary recalc for the assigned driver. Pull the WO's driver from the
     # ORM directly to avoid a second hydration round-trip.
@@ -146,18 +155,26 @@ async def unmatch(
         raise translate(exc)
 
     db = use_case.session
-    await log_action(
-        db, user_id=current_user.id, action="UNMATCH",
-        table_name="trip_order_work_orders",
-        record_id=int(to.id),  # type: ignore[arg-type]
-        reason=body.reason,
-        old_value={
-            "work_order_id": int(wo.id),  # type: ignore[arg-type]
-            "trip_order_id": int(to.id),  # type: ignore[arg-type]
-        },
-        request=request,
-    )
-    await db.commit()
+    try:
+        await log_action(
+            db, user_id=current_user.id, action="UNMATCH",
+            table_name="reconciliations",
+            record_id=int(to.id),  # type: ignore[arg-type]
+            reason=body.reason,
+            old_value={
+                "work_order_id": int(wo.id),  # type: ignore[arg-type]
+                "trip_order_id": int(to.id),  # type: ignore[arg-type]
+            },
+            request=request,
+        )
+        await db.commit()
+    except Exception:
+        _logger.exception("Audit log failed after unmatch WO#%s ↔ TO#%s",
+                          body.work_order_id, body.trip_order_id)
+        try:
+            await db.commit()
+        except Exception:
+            pass
 
     if wo.driver_id:
         ref_date = wo.created_at.date() if wo.created_at else to.trip_date
@@ -317,7 +334,7 @@ async def auto_match(
                     ))
                     await log_action(
                         db, user_id=current_user.id, action="AUTO_MATCH",
-                        table_name="trip_order_work_orders",
+                        table_name="reconciliations",
                         record_id=int(to.id),  # type: ignore[arg-type]
                         new_value={
                             "work_order_id": wo.id,
@@ -464,7 +481,7 @@ async def bulk_match(
             ))
             await log_action(
                 db, user_id=current_user.id, action="BULK_MATCH",
-                table_name="trip_order_work_orders",
+                table_name="reconciliations",
                 record_id=int(to.id),  # type: ignore[arg-type]
                 new_value={
                     "work_order_id": pair.work_order_id,
