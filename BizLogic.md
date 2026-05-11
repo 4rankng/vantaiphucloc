@@ -144,14 +144,19 @@ Driver-side record of a trip actually performed.
 - **`WorkOrderContainer` fields:** `container_number`, `work_type`, `photo_url` + `photo_lat`/`photo_lng`/`photo_timestamp`/`photo_address` (the driver's pickup-proof photo).
 - **Driver visibility rule:** `driver_salary` / `allowance` / `earning` are HIDDEN from the driver until reconciliation matches their WorkOrder to a TripOrder.
 
-### 4.9 Reconciliation (`trip_order_work_orders`) — đối soát
+### 4.9 Reconciliation (`reconciliations`) — đối soát
 
-Strict 1:1 join between TripOrder and WorkOrder. The kế toán performs this manually after Zalo coordination.
+N:M join between TripOrder and WorkOrder via the `reconciliations` link table. The kế toán performs this manually after Zalo coordination.
 
-- **Composite PK:** `(trip_order_id, work_order_id)`.
-- **Match criteria:** same `tractor_plate`, same route, same `work_type`, same `client`.
-- **Effect of match:** both TO and WO get `is_locked=true`. TO becomes `COMPLETED`. WO becomes `MATCHED` then `COMPLETED` once TO is confirmed. Driver finally sees the income.
-- **Unmatch:** allowed only if TO is not yet confirmed. Reverts both records to `PENDING` and unlocks them. Triggers salary recalculation.
+- **Direction:** 1 WorkOrder ↔ N TripOrders (one "chuyến" can carry containers from multiple "đơn hàng"). The reverse (1 TO → N WOs) is currently blocked — see DECISION-001.
+- **Link table columns:** `trip_order_id`, `work_order_id`, `is_active`, `match_score`, `matched_by`, `matched_at`, `unmatched_by`, `unmatched_at`, `reason`.
+- **Unique constraint:** `(trip_order_id, work_order_id, is_active)`.
+- **Match criteria:** same route, same `work_type`, same partner, container number overlap. Score-based via `suggest_trip_matches`.
+- **Effect of match:** WO gets `is_locked=true`, status → `MATCHED`. TO gets `is_locked=true`, status → `COMPLETED`. Pricing snapshot accumulates on WO (unit_price, driver_salary, allowance are summed per matched TO).
+- **Multi-match:** `POST /reconcile/batch-for-wo` accepts `{work_order_id, trip_order_ids[]}` to bind one WO to multiple TOs in a single call.
+- **Unmatch:** `POST /reconcile/unmatch` requires both `work_order_id` and `trip_order_id`. If the WO still has other active links, only the specific TO's salary values are subtracted from accumulated WO totals. If it was the last link, WO resets to `PENDING` with all values zeroed.
+- **Unmatch restriction:** allowed only if the TO is not yet confirmed (`is_confirmed=false`).
+- **Auto-match:** `POST /reconcile/auto-match` iterates all PENDING WOs and matches ALL full-score TOs (not just top 1).
 
 ### 4.10 SalaryPeriod + SalaryPeriodConfig (`salary_periods`, `salary_period_configs`) — kỳ lương
 
