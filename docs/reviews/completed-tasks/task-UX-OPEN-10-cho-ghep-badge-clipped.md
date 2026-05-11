@@ -4,7 +4,7 @@
 **Type:** Usability Issue  
 **Layer:** Frontend  
 **Affected Role/Flow:** taixe — `/driver/history` — trip card layout  
-**Status:** ❓ Could Not Reproduce (QA v9, 2026-05-11) — may be viewport-dependent
+**Status:** ✅ Already Fixed — WorkOrderCard DriverCard has `overflow-visible` (line 124) and badge container has `relative z-10` (line 169). Badge has `shrink-0` class preventing compression.
 
 ---
 
