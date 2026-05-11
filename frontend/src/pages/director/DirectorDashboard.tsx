@@ -172,7 +172,7 @@ export function DirectorDashboard() {
             Tổng quan
           </h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-            Dữ liệu tháng {MONTH_NAMES[month.month - 1]} {month.year}
+            Dữ liệu tháng {month.month} {month.year}
           </p>
         </div>
         <div 

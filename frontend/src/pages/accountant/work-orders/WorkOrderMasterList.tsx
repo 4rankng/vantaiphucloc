@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Calendar, Truck } from 'lucide-react'
+import { Calendar, Truck, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
 import { fmtDate } from '@/lib/date-utils'
@@ -109,9 +109,18 @@ export function WorkOrderMasterList({
                 className="shrink-0 flex flex-col items-center justify-center rounded-lg mt-0.5"
                 style={{ width: 44, height: 44, background: `color-mix(in srgb, ${color} 12%, transparent)` }}
               >
-                <span className="text-xs font-bold tabular-nums leading-none" style={{ color }}>
-                  {bestScore}/{maxScore}
-                </span>
+                <div className="flex items-center gap-0.5">
+                  {bestScore === maxScore ? (
+                    <CheckCircle2 className="w-3 h-3" style={{ color }} />
+                  ) : bestScore >= Math.ceil(maxScore * 0.66) ? (
+                    <AlertTriangle className="w-3 h-3" style={{ color }} />
+                  ) : (
+                    <XCircle className="w-3 h-3" style={{ color }} />
+                  )}
+                  <span className="text-xs font-bold tabular-nums leading-none" style={{ color }}>
+                    {bestScore}/{maxScore}
+                  </span>
+                </div>
                 {score.suggestionCount > 0 && (
                   <span className="text-[9px] mt-0.5" style={{ color }}>
                     {score.suggestionCount}

@@ -143,7 +143,7 @@ function DriverCard({ wo, onClick }: { wo: WorkOrder; onClick: () => void }) {
           </span>
         ) : (
           <span className="text-[11px] font-medium whitespace-nowrap shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
-            —
+            {wo.status === 'PENDING' ? 'Chờ ghép' : '—'}
           </span>
         )}
       </div>
