@@ -55,7 +55,7 @@ export interface TripOrderUpdatePayload {
 export async function getTripOrders(filters?: TripOrderFilters): Promise<ApiResponse<TripOrder[]>> {
   try {
     const params: Record<string, string> = {}
-    if (filters?.clientId) params.client_id = String(filters.clientId)
+    if (filters?.clientId) params.partner_id = String(filters.clientId)
     if (filters?.status) params.status = filters.status
     if (filters?.dateFrom) params.date_from = filters.dateFrom
     if (filters?.dateTo) params.date_to = filters.dateTo
@@ -161,7 +161,7 @@ export async function uploadCustomerExcel(
     formData.append('file', file)
 
     const params = new URLSearchParams()
-    params.append('client_id', String(clientId))
+    params.append('partner_id', String(clientId))
     if (dateFrom) params.append('date_from', dateFrom)
     if (dateTo) params.append('date_to', dateTo)
 
@@ -180,7 +180,7 @@ export async function exportReconciliationExcel(
   dateTo?: string,
 ): Promise<Blob> {
   const params = new URLSearchParams()
-  params.append('client_id', String(clientId))
+  params.append('partner_id', String(clientId))
   if (dateFrom) params.append('date_from', dateFrom)
   if (dateTo) params.append('date_to', dateTo)
 

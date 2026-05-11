@@ -87,6 +87,7 @@ def _wo_to_out(w: WorkOrder, partners, drivers, locations, matched_trip_count: i
         driver_salary=w.driver_salary,
         allowance=w.allowance,
         pricing_id=w.pricing_id,
+        trip_date=w.trip_date,
         status=w.status,
         containers=[
             ContainerOut(
