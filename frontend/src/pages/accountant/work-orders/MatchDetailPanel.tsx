@@ -25,14 +25,14 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
   const [submittingId, setSubmittingId] = useState<number | null>(null)
   const [manualSearchOpen, setManualSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [unmatchConfirm, setUnmatchConfirm] = useState(false)
+  const [unmatchTargetId, setUnmatchTargetId] = useState<number | null>(null)
   const [unmatchReason, setUnmatchReason] = useState('')
   const { data: allTripOrders = [] } = useTripOrders(isMatched || manualSearchOpen ? undefined : undefined)
 
-  // Find the matched trip for matched WOs
-  const matchedTrip = useMemo(() => {
-    if (!isMatched || !workOrder) return null
-    return allTripOrders.find(t => t.matchedWorkOrderIds?.includes(workOrder.id)) ?? null
+  // Find ALL matched trips for matched WOs (multi-match support)
+  const matchedTrips = useMemo(() => {
+    if (!isMatched || !workOrder) return []
+    return allTripOrders.filter(t => t.matchedWorkOrderIds?.includes(workOrder.id))
   }, [isMatched, workOrder, allTripOrders])
 
   const visibleSuggestions = useMemo(
@@ -86,17 +86,17 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
   }, [onMatchSuccess])
 
   const handleUnmatch = useCallback(async () => {
-    if (!matchedTrip || !workOrder) return
+    if (!unmatchTargetId || !workOrder) return
     try {
-      await unmatchMut.mutateAsync({ workOrderId: workOrder.id, tripOrderId: matchedTrip.id, reason: unmatchReason.trim() || 'Hủy ghép' })
+      await unmatchMut.mutateAsync({ workOrderId: workOrder.id, tripOrderId: unmatchTargetId, reason: unmatchReason.trim() || 'Hủy ghép' })
       toast.success('Thành công', 'Đã hủy ghép chuyến')
-      setUnmatchConfirm(false)
+      setUnmatchTargetId(null)
       setUnmatchReason('')
       onMatchSuccess()
     } catch {
       toast.error('Lỗi', 'Không thể hủy ghép')
     }
-  }, [matchedTrip, workOrder, unmatchMut, unmatchReason, toast, onMatchSuccess])
+  }, [unmatchTargetId, workOrder, unmatchMut, unmatchReason, toast, onMatchSuccess])
 
   // ── Matched mode ──
   if (isMatched && workOrder) {
