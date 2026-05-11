@@ -64,7 +64,7 @@ export function PartnersTable({ partners, onRowClick, loading }: PartnersTablePr
       {/* Header */}
       <div className="hidden lg:grid grid-cols-[2fr_1fr_1fr_1.5fr_1fr] gap-4 px-5 py-3 border-b border-[var(--theme-border-default)]">
         {['Tên', 'Loại đối tác', 'Điện thoại', 'Địa chỉ', 'Người liên hệ'].map(h => (
-          <span key={h} className="text-[11px] font-semibold uppercase tracking-wider text-[var(--theme-text-muted)]">
+          <span key={h} className="text-[11px] font-semibold tracking-wider text-[var(--theme-text-muted)]">
             {h}
           </span>
         ))}

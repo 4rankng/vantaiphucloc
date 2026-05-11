@@ -16,7 +16,7 @@ export function TripTable({ data, onRowClick, showActions }: TripTableProps) {
     <GlassCard className="overflow-hidden">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-[11px] text-[var(--theme-text-muted)] uppercase tracking-wider" style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
+          <tr className="text-left text-[11px] text-[var(--theme-text-muted)] tracking-wider" style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
             <th className="px-4 py-2.5 font-semibold">Mã</th>
             <th className="px-4 py-2.5 font-semibold">Ngày</th>
             <th className="px-4 py-2.5 font-semibold">Tuyến</th>

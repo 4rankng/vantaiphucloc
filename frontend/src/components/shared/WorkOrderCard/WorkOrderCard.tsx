@@ -144,7 +144,7 @@ function DriverCard({ wo, onClick }: { wo: WorkOrder; onClick: () => void }) {
           </span>
         ) : (
           <span className="text-[11px] font-medium whitespace-nowrap shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
-            — đ
+            —
           </span>
         )}
       </div>
@@ -210,7 +210,7 @@ function AccountantCard({ wo }: { wo: WorkOrder }) {
           </span>
         ) : (
           <span className="text-xs font-medium" style={{ color: 'var(--theme-text-muted)' }}>
-            Chờ ghép
+            —
           </span>
         )}
       </div>
