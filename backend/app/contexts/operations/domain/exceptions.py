@@ -61,3 +61,10 @@ class ContainerCountInvalid(OperationsError):
         )
         self.work_type = work_type
         self.count = count
+
+
+class TripOrderLocked(OperationsError):
+    """Cannot modify a locked TripOrder."""
+
+    def __init__(self, msg: str = "TripOrder is locked") -> None:
+        super().__init__(msg)

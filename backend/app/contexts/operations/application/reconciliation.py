@@ -103,6 +103,7 @@ class MatchTripToWorkOrder:
 
         # Mutate via domain methods.
         wo.match()
+        wo.is_locked = True
         wo.apply_pricing_snapshot(
             unit_price=to.unit_price,
             driver_salary=to.driver_salary,
@@ -111,7 +112,10 @@ class MatchTripToWorkOrder:
         )
 
         to.match()
+        # In 1:1 match, TO transitions directly to COMPLETED
+        to.status = TripOrderStatus.COMPLETED
         to.link_work_order(int(wo.id), matched_by=data.user_id)  # type: ignore[arg-type]
+        to.is_locked = True
 
         await self.wo_repo.save(wo)
         await self.to_repo.save(to)
@@ -167,6 +171,7 @@ class UnmatchTripFromWorkOrder:
                 wo.unmatch()
             else:
                 wo.status = WorkOrderStatus.PENDING
+            wo.is_locked = False
             wo.driver_salary = 0
             wo.allowance = 0
             wo.unit_price = 0
@@ -177,11 +182,9 @@ class UnmatchTripFromWorkOrder:
             wo.unit_price = max(0, (wo.unit_price or 0) - (to.unit_price or 0))
 
         # Reset TO: MATCHED->PENDING.
-        if to.status == TripOrderStatus.MATCHED:
-            to.unmatch()
-        else:
+        if to.status in (TripOrderStatus.MATCHED, TripOrderStatus.COMPLETED):
             to.status = TripOrderStatus.PENDING
-
+        to.is_locked = False
         to.unlink_work_order(int(wo.id))  # type: ignore[arg-type]
 
         await self.wo_repo.save(wo)

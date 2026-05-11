@@ -154,7 +154,7 @@ class CreateTripOrder:
             driver_salary=driver_salary,
             allowance=allowance,
             pricing_id=pricing_id,
-            status=TripOrderStatus.PENDING,
+            status=TripOrderStatus.DRAFT if (unit_price == 0 and driver_salary == 0) else TripOrderStatus.PENDING,
             matched_work_order_ids=list(data.matched_work_order_ids or []),
         )
         _add_containers(t, data.containers)
@@ -589,3 +589,53 @@ def trip_row_from_dict(d: dict) -> ImportTripRow:
         driver_name=d.get("driver_name") or "",
         remarks=d.get("remarks") or "",
     )
+
+
+class CancelTripOrder:
+    """Cancel a TripOrder. Blocked when locked."""
+
+    def __init__(self, to_repo: TripOrderRepository, session: AsyncSession) -> None:
+        self.to_repo = to_repo
+        self.session = session
+
+    async def __call__(self, trip_order_id: int) -> TripOrder:
+        to = await self.to_repo.get_by_id(trip_order_id)
+        if to is None:
+            raise NotFound("TripOrder", trip_order_id)
+        to.cancel()
+        await self.to_repo.save(to)
+        return to
+
+
+class ConfirmTripOrder:
+    """Confirm a TripOrder — permanent, flips to CONFIRMED status.
+    Also completes any matched WorkOrders."""
+
+    def __init__(
+        self,
+        to_repo: TripOrderRepository,
+        wo_repo: WorkOrderRepository,
+        session: AsyncSession,
+    ) -> None:
+        self.to_repo = to_repo
+        self.wo_repo = wo_repo
+        self.session = session
+
+    async def __call__(self, trip_order_id: int, *, user_id: int = 0) -> TripOrder:
+        from app.contexts.operations.domain.value_objects import WorkOrderStatus
+
+        to = await self.to_repo.get_by_id(trip_order_id)
+        if to is None:
+            raise NotFound("TripOrder", trip_order_id)
+        to.lock(user_id=user_id)
+        to.confirm(user_id=user_id)
+        await self.to_repo.save(to)
+
+        # Complete all matched WorkOrders
+        for wo_id in to.matched_work_order_ids:
+            wo = await self.wo_repo.get_by_id(wo_id)
+            if wo is not None:
+                wo.status = WorkOrderStatus.COMPLETED
+                await self.wo_repo.save(wo)
+
+        return to
