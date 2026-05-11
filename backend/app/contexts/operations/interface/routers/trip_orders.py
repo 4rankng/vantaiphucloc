@@ -149,7 +149,6 @@ def _container_inputs(items) -> list[TripContainerInput]:
             container_metadata=c.container_metadata,
         ))
     return results
-    ]
 
 
 # ---------------------------------------------------------------------------

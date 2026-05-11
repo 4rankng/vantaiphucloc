@@ -141,6 +141,7 @@ export interface WorkOrder {
   tripDate?: string | null
   createdAt: string
   status: WorkOrderStatus
+  matchedTripCount?: number
   /** True when created offline, not yet synced to server */
   pendingSync?: boolean
 }

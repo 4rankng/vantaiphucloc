@@ -348,10 +348,8 @@ async def suggest_wo_matches(
         select(WorkOrderContainer.work_order_id)
         .where(WorkOrderContainer.container_number.in_(to_container_numbers))
     )
-    matched_wo_subquery = select(Reconciliation.work_order_id)
     query = select(WorkOrder).where(
-        WorkOrder.status == "PENDING",
-        ~WorkOrder.id.in_(matched_wo_subquery),
+        WorkOrder.status.in_(["PENDING", "MATCHED"]),
         or_(
             WorkOrder.partner_id == trip_order.partner_id,
             WorkOrder.id.in_(container_subquery),

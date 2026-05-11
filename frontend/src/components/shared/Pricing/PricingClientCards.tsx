@@ -44,9 +44,11 @@ export function PricingClientCards({ basePath }: Props) {
   }, [pricings])
 
   const handleSave = (data: PricingCreatePayload) => {
-    createPricing.mutate(data, {
-      onSuccess: () => setShowForm(false),
-    })
+    createPricing.mutate(data)
+  }
+
+  const handleSaveComplete = () => {
+    setShowForm(false)
   }
 
   if (isLoading) {
@@ -78,6 +80,7 @@ export function PricingClientCards({ basePath }: Props) {
         <PricingForm
           clients={clients}
           onSave={handleSave}
+          onSaveComplete={handleSaveComplete}
           onCancel={() => setShowForm(false)}
           onCreateClient={() => setCreateClientOpen(true)}
         />

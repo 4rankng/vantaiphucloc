@@ -4,7 +4,7 @@
 **Type:** Missing Feature  
 **Layer:** Frontend  
 **Affected Role/Flow:** ketoan — Settings; Backend — match suggester  
-**Status:** ⚠️ Still Present (verified QA v9, 2026-05-11)
+**Status:** ✅ Already Implemented — Backend has full CRUD at `/api/v1/location-aliases` (confirm/reject/reopen/merge). Frontend has `LocationAliasManager.tsx` at `/accountant/settings/locations` with tabs for pending review and all aliases. QA v9 likely tested stale deployment.
 
 ---
 

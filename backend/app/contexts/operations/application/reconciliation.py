@@ -1,10 +1,11 @@
 """Reconciliation use cases.
 
-Bind a WorkOrder to a TripOrder (and vice versa). The 1:1 link lives
-in `trip_order_work_orders`. Domain rules:
+Bind a WorkOrder to a TripOrder (and vice versa). The link lives
+in `reconciliations`. Domain rules:
 
   - Work order must have at least one container.
-  - Both must currently be in PENDING status.
+  - A WorkOrder may match multiple TripOrders (one per container in a run).
+  - A TripOrder may only match one WorkOrder.
   - Pricing snapshots flow from TripOrder onto WorkOrder at match time;
     they're cleared on unmatch.
 """
@@ -54,6 +55,9 @@ class MatchTripToWorkOrder:
     """Bind a WorkOrder to a TripOrder. After:
       - WO.status = MATCHED
       - TO.status = MATCHED, pricing snapshot copied to WO
+
+    A single WorkOrder may be linked to multiple TripOrders (multi-container
+    run). Each TripOrder may only be linked to one WorkOrder.
     """
 
     def __init__(
@@ -86,8 +90,8 @@ class MatchTripToWorkOrder:
         if to is None:
             raise NotFound("TripOrder", data.trip_order_id)
 
-        if wo.status == WorkOrderStatus.MATCHED:
-            raise ReconciliationConflict("Work order is already matched")
+        # WO may already be MATCHED (multi-container run) — that's fine.
+        # Only block if the TO is already linked.
 
         if await trip_order_has_link(self.session, int(to.id)):  # type: ignore[arg-type]
             raise ReconciliationConflict("Trip order is already matched")
@@ -115,8 +119,8 @@ class MatchTripToWorkOrder:
 
 
 class UnmatchTripFromWorkOrder:
-    """Break a TO<->WO link. Both go back to PENDING, WO pricing snapshot
-    is cleared."""
+    """Break a TO<->WO link. TO goes back to PENDING. WO goes back to
+    PENDING only if it has no other active links (multi-container)."""
 
     def __init__(
         self,
@@ -131,6 +135,7 @@ class UnmatchTripFromWorkOrder:
     async def __call__(self, data: UnmatchInput) -> tuple[TripOrder, WorkOrder]:
         from app.contexts.operations.infrastructure.link_queries import (
             find_link,
+            count_links_for_wo,
         )
 
         if not data.work_order_id and not data.trip_order_id:
@@ -156,13 +161,19 @@ class UnmatchTripFromWorkOrder:
                 (link.trip_order_id, link.work_order_id),
             )
 
-        # Reset WO: MATCHED->PENDING, clear pricing snapshot.
-        if wo.status == WorkOrderStatus.MATCHED:
-            wo.unmatch()
-        else:
-            wo.status = WorkOrderStatus.PENDING
-        wo.driver_salary = 0
-        wo.allowance = 0
+        # Check remaining links for this WO
+        remaining = await count_links_for_wo(
+            self.session, int(wo.id)  # type: ignore[arg-type]
+        )
+
+        # Reset WO only if this was the last link
+        if remaining <= 1:
+            if wo.status == WorkOrderStatus.MATCHED:
+                wo.unmatch()
+            else:
+                wo.status = WorkOrderStatus.PENDING
+            wo.driver_salary = 0
+            wo.allowance = 0
 
         # Reset TO: MATCHED->PENDING.
         if to.status == TripOrderStatus.MATCHED:
