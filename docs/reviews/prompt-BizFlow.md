@@ -27,7 +27,7 @@ Test Data: Customer Excel files for creating don hang are located in `/Users/dev
 
 ```
 SuperAdmin -> inherits all roles (superadmin, director, accountant, driver)
-Director   -> inherits (director, accountant, driver)
+Director   -> dashboard view ONLY — sees KPI dashboard, no management capabilities
 Accountant -> inherits (accountant, driver)
 Driver     -> inherits (driver) only
 ```
@@ -41,7 +41,7 @@ The following issues were fixed across QA rounds v6–v8. Verify they remain fix
 1. **Doanh thu column** — `/accountant/trips` shows real values (not 0 ₫). Verify still working.
 2. **Director "Đã khớp" KPI** — Shows correct count (not 0). Verify still working.
 3. **Filter chip vocabulary** — Both pages use "Chờ ghép" / "Đã khớp" (not "Chờ khớp"). Verify still working.
-4. **Director navigation** — Uses horizontal NavStrip (not sidebar). Verify still working.
+4. **Director navigation** — Uses horizontal NavStrip with **"Tổng quan" tab only** (no sidebar, no "Quản lý tài khoản", no "Thông báo"). Verify still working.
 5. **Activity log copy** — Shows proper Vietnamese ("Kế toán đã ghép chuyến #1"). Verify still working.
 6. **Auto-fill chips** — Clicking a chip fills Khách hàng, Điểm lấy, Điểm trả. Verify still working.
 7. **Work order card routes** — Ghép chuyến shows routes (not "—"). Verify still working.
@@ -239,73 +239,31 @@ The accountant is the main operational role: imports orders, manages pricing, ma
 
 ---
 
-## FLOW 3: DIRECTOR (Giam doc) — Oversight & Management
+## FLOW 3: DIRECTOR (Giam doc) — Dashboard View Only
 
-The director has high-level oversight: views KPIs, drills down into per-driver and per-client details, manages users, and can perform all accountant actions.
+The director role is **read-only dashboard access**. The director views KPI metrics only. They do NOT manage users, partners, pricing, trips, notifications, or any other resource. All management is done by ketoan (Accountant) or SuperAdmin.
+
+**Navigation:** Director sees a single tab — **"Tổng quan"** (Dashboard). No sidebar. No "Quản lý tài khoản". No "Thông báo".
 
 ### 3.1 Login & Dashboard
-- Log in with director credentials.
-- Verify dashboard loads with KPI widgets: monthly revenue, trip counts, expense, bar chart.
-- Verify recent trips list displays correctly.
-- Verify audit log section shows recent system actions.
+- Log in with director credentials (`giamdoc` / `admin123`).
+- Verify the page loads directly to the KPI dashboard.
+- Verify navigation shows **only "Tổng quan"** — no other tabs or links.
+- Verify there is NO sidebar.
+- Verify there is NO "Quản lý tài khoản" link anywhere.
+- Verify there is NO "Thông báo" tab in the NavStrip (the global topbar bell icon is acceptable and applies to all roles).
 
 ### 3.2 KPI Dashboard Verification
-- Verify monthly revenue figure matches sum of completed trip orders.
-- Verify trip count stats (total, by status breakdown).
+- Verify KPI widgets display: monthly revenue (Doanh thu), trip counts (Tổng chuyến, Đã khớp, Chờ xử lý), bar chart.
+- Verify monthly revenue figure is non-zero and reflects completed trip orders.
+- Verify trip count stats show correct totals and status breakdown.
 - Verify bar chart renders correctly (trips or revenue by period).
-- Verify all KPIs update when new data is created (by accountant or driver).
 
-### 3.3 User Management (Quan ly tai khoan)
-- Navigate to User Management page.
-- View user list -> verify all users EXCEPT superadmin are visible.
-- Create a new user (any role except superadmin).
-- Edit user details.
-- **Delete** a user -> verify deletion.
-- **Cannot promote to superadmin**: Try promoting a user to superadmin -> verify the system rejects it.
-
-### 3.4 View Partners
-- Navigate to Partners page.
-- Verify partner list displays correctly (read-only for director).
-
-### 3.5 View Routes
-- Navigate to Routes page.
-- Verify route/location list displays correctly.
-
-### 3.6 View Pricing
-- Navigate to Pricing page.
-- View pricing list.
-- View client-specific pricing detail.
-
-### 3.7 View Trips
-- Navigate to Trip list.
-- View all trip orders with filters.
-- Open trip detail -> verify full detail including matched work orders.
-
-### 3.8 Create Trip Order
-- Navigate to Create Trip page.
-- Create a trip order -> verify creation (director inherits accountant permissions).
-
-### 3.9 View Notifications
-- Navigate to Notifications page.
-- Verify notifications display correctly.
-
-### 3.10 Drill-Down: Driver Jobs
-- From dashboard or user list, click on a driver.
-- Verify driver jobs page shows all work orders for that driver.
-- Verify work order details, status, and earnings breakdown.
-
-### 3.11 Drill-Down: Client Jobs
-- From dashboard or partner list, click on a client.
-- Verify client jobs page shows all trip orders for that client.
-- Verify trip order details, matching status, and totals.
-
-### 3.12 Profile
-- View and edit own profile.
-
-### 3.13 Director Cannot See SuperAdmin
-- Log in as director.
-- Navigate to User Management.
-- Verify no superadmin accounts appear in the user list.
+### 3.3 Access Restriction Checks
+- Attempt to navigate directly to `/accountant/...` URLs → verify redirect or 403.
+- Attempt to navigate directly to `/admin/...` or user management URLs → verify redirect or 403.
+- Verify director cannot create, edit, or delete any resource (trips, users, partners, pricing, locations).
+- Verify director cannot reach the full "Thông báo" page via the NavStrip tab (topbar bell icon is fine for all roles).
 
 ---
 
@@ -639,10 +597,11 @@ Tests importing the pricing catalog from the HAP Excel file's CUOC sheet.
 5. **Director**: View dashboard -> verify salary expenses are reflected.
 
 ### C5: User Management Restrictions
-1. **Director**: Try to create a superadmin user -> verify system rejects.
-2. **Director**: View user list -> verify superadmin accounts are hidden.
-3. **Accountant**: Try to delete a user -> verify system rejects (delete requires director level).
+1. **Director**: Attempt to navigate to any user management page → verify redirect or 403 (director has NO user management access).
+2. **Director**: Attempt to navigate to `/accountant/...` routes → verify access is denied.
+3. **Accountant**: Try to delete a user → verify system rejects (delete requires superadmin level).
 4. **SuperAdmin**: Create/edit/delete any user including superadmins.
+5. **SuperAdmin**: Only role that can manage users — verify this is enforced at the API level, not just UI.
 
 ### C6: Work Order Status Lifecycle
 1. **Driver**: Create work order -> status: PENDING.
