@@ -7,6 +7,28 @@
 
 ## 📋 Project State
 
+### ✅ Recently Completed (2026-05-12) — Ghép chuyến 1:N (REQ-001)
+
+1. **Multi-match reconciliation** — COMMITTED
+   Tasks 0090–0098 all completed. Full 1 WO → N TOs matching feature.
+
+   **Backend changes:**
+   - `link_queries.py`: `find_link()` uses `scalars().first()` to avoid `MultipleResultsFound` crash
+   - `entities.py` (WorkOrder): `apply_pricing_snapshot()` now accumulates salary values instead of overwriting
+   - `reconciliation.py`: unmatch subtracts salary on partial unmatch, resets fully when last link removed
+   - `dto.py` / `domain.py` schemas: `UnmatchInput`/`UnmatchRequest` require both `work_order_id` and `trip_order_id`
+   - `match_suggester.py`: scores based on unclaimed containers (excludes already-matched TOs)
+   - `reconcile.py` router: batch-for-wo endpoint already existed; unmatch validation simplified
+
+   **Frontend changes:**
+   - `use-match-trip.ts`: refactored for multi-TO selection (`selectedTripIds[]`, `toggleTripSelection`, `getTripMatchStatus`)
+   - `MatchTrip.tsx`: redesigned for 1:N flow (pick 1 WO → pick N TOs with checkboxes)
+   - `MatchDetailPanel.tsx`: already had per-TO unmatch support (no changes needed)
+
+   **Tests:**
+   - `test_multi_match_reconciliation.py`: 9 integration tests covering AC-1 through AC-7
+   - Full suite: 167 passed, 0 regressions
+
 ### ✅ Recently Completed (2026-05-11) — QA v8 Cycle
 
 1. **QA v8 Full Audit + Fixes** — COMMITTED, PENDING DEPLOYMENT
@@ -831,6 +853,6 @@ grep -r "useEffect" src/ | grep -v "import"
 
 ---
 
-**Last Updated:** 2026-05-06
+**Last Updated:** 2026-05-12
 **Maintained By:** Orbit (AI Agent)
 **Version:** 1.0
