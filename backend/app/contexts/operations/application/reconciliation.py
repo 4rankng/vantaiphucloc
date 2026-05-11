@@ -145,7 +145,7 @@ class UnmatchTripFromWorkOrder:
             trip_order_id=data.trip_order_id,
         )
         if link is None:
-            raise NotFound("TripOrderWorkOrder", (
+            raise NotFound("Reconciliation", (
                 data.trip_order_id or data.work_order_id
             ))
 

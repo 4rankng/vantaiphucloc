@@ -83,7 +83,6 @@ class ImportTripRow:
     customer_ref: str = ""
     consignee: str = ""
     driver_name: str = ""
-    tractor_plate: str = ""
     remarks: str = ""
 
 

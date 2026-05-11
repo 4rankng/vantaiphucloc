@@ -70,7 +70,7 @@ async def get_dashboard_summary(
     trip_count = trip_count_q.scalar() or 0
 
     active_query = select(func.count(TripOrder.id)).where(
-        TripOrder.status.in_(["DRAFT", "PENDING"])
+        TripOrder.status == "PENDING"
     )
     if parsed_from:
         active_query = active_query.where(TripOrder.created_at >= parsed_from)
@@ -93,7 +93,7 @@ async def get_dashboard_summary(
         )
         .join(Vehicle, Vehicle.driver_id == User.id, isouter=True)
         .join(WorkOrder, WorkOrder.driver_id == User.id)
-        .where(WorkOrder.status.in_(["MATCHED", "COMPLETED"]))
+        .where(WorkOrder.status == "MATCHED")
         .group_by(User.id, User.username, Vehicle.plate)
     )
     driver_salary_summary = [
@@ -119,7 +119,7 @@ async def get_dashboard_summary(
     unmatched_work_order_count = unmatched_q.scalar() or 0
 
     pending_q = await db.execute(
-        select(func.count(TripOrder.id)).where(TripOrder.status == "DRAFT")
+        select(func.count(TripOrder.id)).where(TripOrder.status == "PENDING")
     )
     pending_trip_count = pending_q.scalar() or 0
 
