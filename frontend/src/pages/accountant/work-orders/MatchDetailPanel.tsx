@@ -273,6 +273,18 @@ function ManualSearchResults({
             <p className="text-xs font-medium truncate mt-0.5" style={{ color: 'var(--theme-text-primary)' }}>
               {to.partner?.name || '—'}
             </p>
+            <div className="flex items-center gap-2 mt-0.5">
+              {(to.pickupLocation?.name || to.dropoffLocation?.name) && (
+                <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>
+                  {to.pickupLocation?.name ?? '?'} → {to.dropoffLocation?.name ?? '?'}
+                </span>
+              )}
+              {to.containers.length > 0 && (
+                <span className="text-[10px] font-mono" style={{ color: 'var(--theme-text-muted)' }}>
+                  {to.containers.map(c => c.workType).join(', ')}
+                </span>
+              )}
+            </div>
           </div>
           <button
             onClick={() => handleManualMatch(to.id)}

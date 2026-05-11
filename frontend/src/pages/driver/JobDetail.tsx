@@ -154,8 +154,8 @@ export function JobDetail() {
             {formatCurrencyFull(job.driverSalary)}
           </p>
         ) : (
-          <span className="text-xs font-semibold" style={{ color: 'var(--theme-status-warning)' }}>
-            Chờ ghép
+          <span className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>
+            —
           </span>
         )}
       </div>
