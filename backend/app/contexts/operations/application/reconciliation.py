@@ -169,6 +169,12 @@ class UnmatchTripFromWorkOrder:
                 wo.status = WorkOrderStatus.PENDING
             wo.driver_salary = 0
             wo.allowance = 0
+            wo.unit_price = 0
+        else:
+            # Subtract this TO's salary values from accumulated WO totals
+            wo.driver_salary = max(0, (wo.driver_salary or 0) - (to.driver_salary or 0))
+            wo.allowance = max(0, (wo.allowance or 0) - (to.allowance or 0))
+            wo.unit_price = max(0, (wo.unit_price or 0) - (to.unit_price or 0))
 
         # Reset TO: MATCHED->PENDING.
         if to.status == TripOrderStatus.MATCHED:

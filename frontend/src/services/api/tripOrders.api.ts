@@ -10,6 +10,7 @@ import type {
   MatchScoresResponse,
   BulkMatchResponse,
   BulkMatchPair,
+  BatchMatchForWOResponse,
 } from '@/data/domain'
 
 interface TripOrderFilters {
@@ -103,11 +104,13 @@ export async function reconcile(
 }
 
 export async function unmatch(
+  workOrderId: number,
   tripOrderId: number,
   reason: string,
 ): Promise<ApiResponse<{ success: boolean; message: string }>> {
   try {
     const res = await api.post('/reconcile/unmatch', {
+      work_order_id: workOrderId,
       trip_order_id: tripOrderId,
       reason,
     })
@@ -283,6 +286,23 @@ export async function bulkMatch(
       pairs: pairs.map(p => ({ work_order_id: p.workOrderId, trip_order_id: p.tripOrderId })),
     })
     return ok(toCamel<BulkMatchResponse>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+// ── Batch Match for WO (1 WO → N TripOrders) ─────────────────────
+
+export async function batchReconcileForWO(
+  workOrderId: number,
+  tripOrderIds: number[],
+): Promise<ApiResponse<BatchMatchForWOResponse>> {
+  try {
+    const res = await api.post('/reconcile/batch-for-wo', {
+      work_order_id: workOrderId,
+      trip_order_ids: tripOrderIds,
+    })
+    return ok(toCamel<BatchMatchForWOResponse>(res.data))
   } catch (err) {
     return fail(err)
   }

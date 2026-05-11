@@ -541,6 +541,24 @@ class BulkMatchResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Batch match for WO (1 WO → N TripOrders)
+# ---------------------------------------------------------------------------
+
+class BatchMatchForWORequest(BaseModel):
+    work_order_id: int
+    trip_order_ids: list[int]
+
+class BatchMatchForWOResult(BaseModel):
+    trip_order_id: int
+    success: bool
+    error: str | None = None
+
+class BatchMatchForWOResponse(BaseModel):
+    work_order_id: int
+    results: list[BatchMatchForWOResult]
+
+
+# ---------------------------------------------------------------------------
 # Auto-match
 # ---------------------------------------------------------------------------
 
@@ -697,6 +715,22 @@ class UnmatchRequest(BaseModel):
     reason: str = Field(..., min_length=1, description="Required reason for unmatching")
     work_order_id: int
     trip_order_id: int
+
+
+class BatchMatchForWORequest(BaseModel):
+    work_order_id: int
+    trip_order_ids: list[int] = Field(..., min_length=1)
+
+
+class BatchMatchForWOResult(BaseModel):
+    trip_order_id: int
+    success: bool
+    error: str | None = None
+
+
+class BatchMatchForWOResponse(BaseModel):
+    work_order_id: int
+    results: list[BatchMatchForWOResult]
 
 
 class SoftDeleteRequest(BaseModel):
