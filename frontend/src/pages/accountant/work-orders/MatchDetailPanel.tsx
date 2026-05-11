@@ -19,7 +19,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
 
   const isMatched = workOrder?.status === 'MATCHED' || workOrder?.status === 'COMPLETED'
 
-  const { data: suggestionsData, isLoading } = useSuggestMatches(isMatched ? null : (workOrder?.id ?? null))
+  const { data: suggestionsData, isLoading } = useSuggestMatches(workOrder?.id ?? null)
   const suggestions = suggestionsData?.suggestions ?? []
 
   const [submittingId, setSubmittingId] = useState<number | null>(null)
@@ -167,6 +167,52 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
             <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có đơn hàng nào được ghép</p>
           </div>
         )}
+
+        {/* Suggestions for adding more TOs to this matched WO */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4" style={{ color: 'var(--theme-brand-primary)' }} />
+            <h2 className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+              Thêm đơn hàng khác cho chuyến này
+            </h2>
+            {suggestions.length > 0 && (
+              <span
+                className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
+              >
+                {suggestions.length}
+              </span>
+            )}
+          </div>
+          {isLoading ? (
+            <div className="h-20 rounded-xl animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+          ) : suggestions.length === 0 ? (
+            <div
+              className="rounded-xl p-4 text-center"
+              style={{ background: 'var(--theme-bg-secondary)', border: '1px dashed var(--theme-border-default)' }}
+            >
+              <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                Không còn đơn hàng phù hợp để thêm
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {suggestions.map(s => (
+                <MatchCard
+                  key={s.tripOrder.id}
+                  matchScore={s.matchScore}
+                  maxScore={s.maxScore}
+                  criteria={s.criteria}
+                  tripOrder={s.tripOrder}
+                  workOrder={workOrder}
+                  onConfirm={() => handleMatch(s.tripOrder.id)}
+                  submitting={submittingId === s.tripOrder.id}
+                  onEdited={invalidateSuggestions}
+                />
+              ))}
+            </div>
+          )}
+        </div>
 
         {unmatchTargetId && unmatchTarget ? (
           <div
