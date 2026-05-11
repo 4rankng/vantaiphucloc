@@ -276,25 +276,22 @@ async def suggest_wos(
 async def get_linked_trip_orders(
     work_order_id: int,
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
+    use_case: GetWorkOrder = Depends(get_get_work_order),
 ):
     """Return all TripOrders linked to a WorkOrder via active reconciliations."""
     from app.contexts.operations.infrastructure.link_queries import (
         find_all_links_for_wo,
     )
-
-    db: AsyncSession  # will be injected via dependency below
-    # Use a simple approach: get the session from any use case dependency
     from sqlalchemy import select as sa_select
-    from app.models.domain import TripOrder as TripOrderORM
 
-    links = await find_all_links_for_wo(
-        _get_session(), work_order_id,
-    )
+    db = use_case.repo.session  # type: ignore[attr-defined]
+
+    links = await find_all_links_for_wo(db, work_order_id)
     to_ids = [link.trip_order_id for link in links]
     if not to_ids:
         return {"work_order_id": work_order_id, "trip_orders": []}
 
-    tos = list((await _get_session().execute(
+    tos = list((await db.execute(
         sa_select(TripOrderORM).where(TripOrderORM.id.in_(to_ids))
     )).scalars().all())
 
@@ -304,7 +301,7 @@ async def get_linked_trip_orders(
     result = []
     for to_orm in tos:
         try:
-            out = await _load_trip_one(_get_session(), to_orm)
+            out = await _load_trip_one(db, to_orm)
             result.append(out)
         except Exception:
             pass

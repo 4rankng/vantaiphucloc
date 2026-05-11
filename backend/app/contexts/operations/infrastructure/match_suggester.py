@@ -213,11 +213,37 @@ async def suggest_trip_matches(
     if not wo_container_numbers:
         return []
 
+    # Fetch already-matched TO IDs for this WO to compute claimed containers
+    already_matched_links = (await db.execute(
+        select(Reconciliation.trip_order_id).where(
+            Reconciliation.work_order_id == work_order.id,
+            Reconciliation.is_active == True,  # noqa: E712
+        )
+    )).all()
+    matched_to_ids_for_wo = {r[0] for r in already_matched_links}
+
+    # Build set of claimed container numbers from already-matched TOs
+    claimed_containers: set[str] = set()
+    if matched_to_ids_for_wo:
+        claimed_rows = (await db.execute(
+            select(TripOrderContainer.container_number)
+            .where(TripOrderContainer.trip_order_id.in_(matched_to_ids_for_wo))
+        )).all()
+        claimed_containers = {
+            normalize_container_number(r[0])
+            for r in claimed_rows if r[0]
+        }
+
+    # Unclaimed containers are what's available for scoring
+    unclaimed_wo_containers = wo_container_numbers - claimed_containers
+    if not unclaimed_wo_containers:
+        return []
+
     wo_date = work_order.created_at.date() if work_order.created_at else None
 
     container_subquery = (
         select(TripOrderContainer.trip_order_id)
-        .where(TripOrderContainer.container_number.in_(wo_container_numbers))
+        .where(TripOrderContainer.container_number.in_(unclaimed_wo_containers))
     )
     matched_to_subquery = select(Reconciliation.trip_order_id)
     query = select(TripOrder).where(
@@ -272,7 +298,7 @@ async def suggest_trip_matches(
     for to in candidates:
         matched_fields, score = _score_to_against_wo(
             to, to_containers.get(to.id, []),
-            wo_container_numbers, wo_date, work_order,
+            unclaimed_wo_containers, wo_date, work_order,
             alias_groups,
         )
         to_out = TripOrderOut(
