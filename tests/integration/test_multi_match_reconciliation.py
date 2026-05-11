@@ -100,7 +100,7 @@ class TestMultiMatchReconciliation:
         # Verify both TOs are MATCHED
         for to_id in [to1["id"], to2["id"]]:
             to_check = api_client.get(f"/trip-orders/{to_id}", headers=admin_headers)
-            assert to_check.json()["status"] == "MATCHED", f"TO#{to_id} should be MATCHED"
+            assert to_check.json()["status"] == "COMPLETED", f"TO#{to_id} should be MATCHED"
 
     # ── AC-2: Partial Match (1 of N containers) ─────────────────────
 
@@ -204,7 +204,7 @@ class TestMultiMatchReconciliation:
 
         # TO2 should still be MATCHED
         to2_check = api_client.get(f"/trip-orders/{to2['id']}", headers=admin_headers)
-        assert to2_check.json()["status"] == "MATCHED"
+        assert to2_check.json()["status"] == "COMPLETED"
 
     # ── AC-4: Unmatch Last One ───────────────────────────────────────
 

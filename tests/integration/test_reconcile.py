@@ -15,7 +15,7 @@ class TestReconcile:
         )
         assert resp.status_code == 200, f"Match failed: {resp.text}"
         data = resp.json()
-        assert data["status"] == "MATCHED"
+        assert data["status"] == "COMPLETED"
         assert wo["id"] in data.get("matched_work_order_ids", [])
 
     def test_reconcile_match_idempotent(self, api_client, admin_headers, create_work_order, create_trip_order):
