@@ -1,18 +1,15 @@
 import { useState, useMemo } from 'react'
-import { Button, Input } from '@/components/ui'
+import { Button, Input, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui'
 import {
   useSalaryConfig, useUpdateSalaryConfig,
   useCalculateSalary, useExportSalaryExcel,
-  useDriverEarnings, useDrivers,
+  useDriverEarnings, useDrivers, useSalaryDashboard,
 } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { formatCurrencyFull } from '@/data/domain'
 import { formatDateRange } from '@/lib/format'
 import { Calculator, Download, Wallet } from 'lucide-react'
 import { SettingsPageLayout } from '@/components/shared/SettingsPageLayout'
-import {
-  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
-} from '@/components/ui'
 import { getSalaryPeriodDates, toISODate } from '@/utils/salaryPeriod'
 
 // ─── Period config card ───────────────────────────────────────────────────────
@@ -194,13 +191,12 @@ function CalculateCard() {
   )
 }
 
-// ─── Driver Earnings Viewer ──────────────────────────────────────────────────
+// ─── Driver Earnings Viewer (multi-driver table) ────────────────────────────
 
 function DriverEarningsViewer() {
   const { data: config } = useSalaryConfig()
-  const { data: drivers = [], isLoading: loadingDrivers } = useDrivers()
+  const { data: drivers = [] } = useDrivers()
 
-  // Compute current period dates from config
   const { startDate, endDate } = useMemo(() => {
     const now = new Date()
     const fromDay = config?.fromDay ?? 26
@@ -213,12 +209,21 @@ function DriverEarningsViewer() {
   }, [config])
 
   const [selectedDriverId, setSelectedDriverId] = useState<string>('')
-
-  const { data: earnings, isLoading: loadingEarnings } = useDriverEarnings(
-    Number(selectedDriverId),
+  const { data: selectedEarnings, isLoading: loadingSelected } = useDriverEarnings(
+    Number(selectedDriverId) || 0,
     startDate,
     endDate,
   )
+
+  // Fetch all drivers' earnings via dashboard API
+  const { data: dashboardData = [], isLoading: loadingDashboard } = useSalaryDashboard(startDate, endDate)
+
+  const totals = useMemo(() => ({
+    orders: dashboardData.reduce((s, d) => s + d.matchedOrderCount, 0),
+    salary: dashboardData.reduce((s, d) => s + d.totalSalary, 0),
+    allowance: dashboardData.reduce((s, d) => s + d.totalAllowance, 0),
+    earnings: dashboardData.reduce((s, d) => s + d.totalEarnings, 0),
+  }), [dashboardData])
 
   if (!config) {
     return (
@@ -234,74 +239,76 @@ function DriverEarningsViewer() {
 
   return (
     <div className="space-y-4">
-      {/* Driver selector */}
-      <div className="flex items-end gap-3">
-        <div className="flex-1 max-w-xs">
-          <label className="typo-form-label mb-1.5 block">Chọn tài xế</label>
-          <Select value={selectedDriverId} onValueChange={setSelectedDriverId}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Chọn tài xế" />
-            </SelectTrigger>
-            <SelectContent>
-              {drivers.map(d => (
-                <SelectItem key={d.id} value={String(d.id)}>
-                  {d.fullName ?? d.username} — {d.phone}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {/* Summary totals */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="card p-4">
+          <p className="typo-caption">Tổng đơn đã khớp</p>
+          <p className="typo-value-lg">{totals.orders}</p>
+        </div>
+        <div className="card p-4">
+          <p className="typo-caption">Tổng lương</p>
+          <p className="typo-mono text-sm">{formatCurrencyFull(totals.salary)}</p>
+        </div>
+        <div className="card p-4">
+          <p className="typo-caption">Tổng phụ cấp</p>
+          <p className="typo-mono text-sm">{formatCurrencyFull(totals.allowance)}</p>
+        </div>
+        <div className="card p-4">
+          <p className="typo-caption">Tổng thu nhập</p>
+          <p className="typo-mono text-sm font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>
+            {formatCurrencyFull(totals.earnings)}
+          </p>
         </div>
       </div>
 
-      {/* Earnings display */}
-      {!selectedDriverId ? (
-        <div className="card p-10 text-center">
-          <Wallet className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--theme-text-muted)', opacity: 0.5 }} />
-          <p className="typo-h3 mb-1" style={{ color: 'var(--theme-text-primary)' }}>Chọn tài xế để xem thu nhập</p>
-          <p className="typo-body-sm" style={{ color: 'var(--theme-text-muted)' }}>
-            Kỳ hiện tại: {formatDateRange(startDate, endDate, 'short')}
-          </p>
-        </div>
-      ) : loadingEarnings || loadingDrivers ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="h-24 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+      {/* Per-driver table */}
+      {loadingDashboard ? (
+        <div className="space-y-2">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-12 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
           ))}
         </div>
-      ) : !earnings ? (
-        <div className="card p-10 text-center">
-          <Wallet className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--theme-text-muted)', opacity: 0.5 }} />
-          <p className="typo-h3 mb-1" style={{ color: 'var(--theme-text-primary)' }}>Không có dữ liệu</p>
-          <p className="typo-body-sm" style={{ color: 'var(--theme-text-muted)' }}>
-            Chưa có đơn hàng khớp trong kỳ {formatDateRange(startDate, endDate, 'short')}.
-          </p>
-        </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="card p-4">
-            <p className="typo-caption">Đơn đã khớp</p>
-            <p className="typo-value-lg" style={{ color: 'var(--theme-text-primary)' }}>
-              {earnings.matchedOrderCount}
-            </p>
-          </div>
-          <div className="card p-4">
-            <p className="typo-caption">Lương tài xế</p>
-            <p className="typo-mono text-sm" style={{ color: 'var(--theme-text-primary)' }}>
-              {formatCurrencyFull(earnings.totalSalary)}
-            </p>
-          </div>
-          <div className="card p-4">
-            <p className="typo-caption">Phụ cấp</p>
-            <p className="typo-mono text-sm" style={{ color: 'var(--theme-text-primary)' }}>
-              {formatCurrencyFull(earnings.totalAllowance)}
-            </p>
-          </div>
-          <div className="card p-4">
-            <p className="typo-caption">Tổng thu nhập</p>
-            <p className="typo-mono text-sm font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>
-              {formatCurrencyFull(earnings.totalEarnings)}
-            </p>
-          </div>
+        <div className="rounded-lg overflow-hidden" style={{ border: '1px solid var(--theme-border-default)' }}>
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ background: 'var(--theme-bg-tertiary)' }}>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Tài xế</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Đơn</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Lương</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Phụ cấp</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Tổng</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dashboardData.map((d, i) => (
+                <tr
+                  key={d.driverId}
+                  className="transition-colors cursor-pointer"
+                  style={{
+                    background: i % 2 === 0 ? 'var(--theme-bg-primary)' : 'var(--theme-bg-secondary)',
+                    borderTop: '1px solid var(--theme-border-light)',
+                  }}
+                  onClick={() => setSelectedDriverId(String(d.driverId))}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = i % 2 === 0 ? 'var(--theme-bg-primary)' : 'var(--theme-bg-secondary)' }}
+                >
+                  <td className="px-4 py-2.5 font-medium" style={{ color: 'var(--theme-text-primary)' }}>{d.driverName}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{d.matchedOrderCount}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(d.totalSalary)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(d.totalAllowance)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyFull(d.totalEarnings)}</td>
+                </tr>
+              ))}
+              {dashboardData.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-6 text-center text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                    Chưa có dữ liệu kỳ {formatDateRange(startDate, endDate, 'short')}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
