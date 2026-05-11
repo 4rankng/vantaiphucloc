@@ -623,8 +623,8 @@ export function useChangePassword() {
 export function useUnmatch() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ tripOrderId, reason }: { tripOrderId: number; reason: string }) =>
-      apiClient.unmatch(tripOrderId, reason).then(unwrap),
+    mutationFn: ({ workOrderId, tripOrderId, reason }: { workOrderId: number; tripOrderId: number; reason: string }) =>
+      apiClient.unmatch(workOrderId, tripOrderId, reason).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.tripOrders })
       qc.invalidateQueries({ queryKey: queryKeys.workOrders })
@@ -669,6 +669,18 @@ export function useBulkMatch() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (pairs: BulkMatchPair[]) => apiClient.bulkMatch(pairs).then(unwrap),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.workOrders })
+      qc.invalidateQueries({ queryKey: queryKeys.tripOrders })
+    },
+  })
+}
+
+export function useBatchReconcileForWO() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ workOrderId, tripOrderIds }: { workOrderId: number; tripOrderIds: number[] }) =>
+      apiClient.batchReconcileForWO(workOrderId, tripOrderIds).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.workOrders })
       qc.invalidateQueries({ queryKey: queryKeys.tripOrders })

@@ -48,6 +48,9 @@ from app.schemas.domain import (
     AutoMatchRequest,
     AutoMatchResponse,
     AutoMatchResult,
+    BatchMatchForWORequest,
+    BatchMatchForWOResponse,
+    BatchMatchForWOResult,
     BulkMatchRequest,
     BulkMatchResponse,
     BulkMatchResult,
@@ -128,6 +131,57 @@ async def reconcile(
             body.trip_order_id, body.work_order_id,
         )
         raise translate(exc)
+
+
+@router.post("/reconcile/batch-for-wo", response_model=BatchMatchForWOResponse)
+async def batch_reconcile_for_wo(
+    body: BatchMatchForWORequest,
+    request: Request,
+    current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
+    match_use_case: MatchTripToWorkOrder = Depends(get_match_trip_to_work_order),
+):
+    """Match one WorkOrder with multiple TripOrders in a single call."""
+    db = match_use_case.session
+    results: list[BatchMatchForWOResult] = []
+
+    for to_id in body.trip_order_ids:
+        try:
+            to = await match_use_case(ReconcileInput(
+                work_order_id=body.work_order_id,
+                trip_order_id=to_id,
+                user_id=current_user.id,
+            ))
+            try:
+                await log_action(
+                    db, user_id=current_user.id, action="BATCH_MATCH_WO",
+                    table_name="reconciliations",
+                    record_id=int(to.id),  # type: ignore[arg-type]
+                    new_value={
+                        "work_order_id": body.work_order_id,
+                        "trip_order_id": to_id,
+                    },
+                    request=request,
+                )
+            except Exception:
+                _logger.exception("Audit log failed for batch match WO#%s ↔ TO#%s",
+                                  body.work_order_id, to_id)
+            results.append(BatchMatchForWOResult(
+                trip_order_id=to_id, success=True,
+            ))
+        except Exception as exc:
+            results.append(BatchMatchForWOResult(
+                trip_order_id=to_id, success=False, error=str(exc),
+            ))
+
+    try:
+        await db.commit()
+    except Exception:
+        _logger.exception("Commit failed after batch match for WO#%s", body.work_order_id)
+        raise
+
+    return BatchMatchForWOResponse(
+        work_order_id=body.work_order_id, results=results,
+    )
 
 
 @router.post("/reconcile/unmatch")
@@ -316,51 +370,49 @@ async def auto_match(
                 unmatched_work_order_ids.append(wo.id)
                 continue
 
-            best = suggestions[0]  # sorted by score desc
+            # Match ALL full-score TOs (multi-container: 1 WO → N TOs)
+            full_matches = [s for s in suggestions if s.score >= 1.0]
+            partial = [s for s in suggestions if 0.5 <= s.score < 1.0]
 
-            if best.score >= 1.0:
-                # Auto-confirm
-                try:
-                    to = await match_use_case(ReconcileInput(
+            if full_matches:
+                for match in full_matches:
+                    try:
+                        to = await match_use_case(ReconcileInput(
+                            work_order_id=wo.id,
+                            trip_order_id=match.trip_order.id,
+                            user_id=current_user.id,
+                        ))
+                        await log_action(
+                            db, user_id=current_user.id, action="AUTO_MATCH",
+                            table_name="reconciliations",
+                            record_id=int(to.id),  # type: ignore[arg-type]
+                            new_value={
+                                "work_order_id": wo.id,
+                                "trip_order_id": match.trip_order.id,
+                                "score": match.score,
+                                "matched_fields": match.matched_fields,
+                            },
+                            request=request,
+                        )
+                        await db.commit()
+                        matched_to_ids.add(match.trip_order.id)
+
+                        auto_matched.append(AutoMatchResult(
+                            work_order_id=wo.id,
+                            trip_order_id=match.trip_order.id,
+                            score=match.score,
+                            matched_fields=match.matched_fields,
+                        ))
+                    except Exception as exc:
+                        errors.append(f"WO#{wo.id} → TO#{match.trip_order.id}: {exc}")
+            elif partial:
+                for p in partial:
+                    partial_matches.append(AutoMatchResult(
                         work_order_id=wo.id,
-                        trip_order_id=best.trip_order.id,
-                        user_id=current_user.id,
+                        trip_order_id=p.trip_order.id,
+                        score=p.score,
+                        matched_fields=p.matched_fields,
                     ))
-                    await log_action(
-                        db, user_id=current_user.id, action="AUTO_MATCH",
-                        table_name="reconciliations",
-                        record_id=int(to.id),  # type: ignore[arg-type]
-                        new_value={
-                            "work_order_id": wo.id,
-                            "trip_order_id": best.trip_order.id,
-                            "score": best.score,
-                            "matched_fields": best.matched_fields,
-                        },
-                        request=request,
-                    )
-                    await db.commit()
-                    matched_to_ids.add(best.trip_order.id)
-
-                    # Salary recalc
-                    if wo.driver_id:
-                        ref_date = wo.created_at.date() if wo.created_at else to.trip_date
-                        pass  # salary calculated on-the-fly
-
-                    auto_matched.append(AutoMatchResult(
-                        work_order_id=wo.id,
-                        trip_order_id=best.trip_order.id,
-                        score=best.score,
-                        matched_fields=best.matched_fields,
-                    ))
-                except Exception as exc:
-                    errors.append(f"WO#{wo.id} → TO#{best.trip_order.id}: {exc}")
-            elif best.score >= 0.5:
-                partial_matches.append(AutoMatchResult(
-                    work_order_id=wo.id,
-                    trip_order_id=best.trip_order.id,
-                    score=best.score,
-                    matched_fields=best.matched_fields,
-                ))
             else:
                 unmatched_work_order_ids.append(wo.id)
                 skipped += 1

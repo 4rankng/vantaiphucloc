@@ -86,9 +86,9 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
   }, [onMatchSuccess])
 
   const handleUnmatch = useCallback(async () => {
-    if (!matchedTrip) return
+    if (!matchedTrip || !workOrder) return
     try {
-      await unmatchMut.mutateAsync({ tripOrderId: matchedTrip.id, reason: unmatchReason.trim() || 'Hủy ghép' })
+      await unmatchMut.mutateAsync({ workOrderId: workOrder.id, tripOrderId: matchedTrip.id, reason: unmatchReason.trim() || 'Hủy ghép' })
       toast.success('Thành công', 'Đã hủy ghép chuyến')
       setUnmatchConfirm(false)
       setUnmatchReason('')
@@ -96,7 +96,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
     } catch {
       toast.error('Lỗi', 'Không thể hủy ghép')
     }
-  }, [matchedTrip, unmatchMut, unmatchReason, toast, onMatchSuccess])
+  }, [matchedTrip, workOrder, unmatchMut, unmatchReason, toast, onMatchSuccess])
 
   // ── Matched mode ──
   if (isMatched && workOrder) {

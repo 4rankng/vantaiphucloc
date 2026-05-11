@@ -268,6 +268,19 @@ export interface BulkMatchResponse {
   errors: string[]
 }
 
+// ─── Batch Match for WO (1 WO → N TripOrders) ──────────────────────────────────────
+
+export interface BatchMatchForWOResult {
+  tripOrderId: number
+  success: boolean
+  error: string | null
+}
+
+export interface BatchMatchForWOResponse {
+  workOrderId: number
+  results: BatchMatchForWOResult[]
+}
+
 // ─── Reconciliation ────────────────────────────────────────────────────────────
 
 export interface ReconciliationResult {
