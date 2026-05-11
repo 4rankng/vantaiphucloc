@@ -164,7 +164,7 @@ class SqlTripOrderRepository(TripOrderRepository):
         for wo_id in t.matched_work_order_ids:
             self.session.add(ReconciliationORM(
                 trip_order_id=orm.id, work_order_id=int(wo_id),
-                match_score=1.0, matched_by=0,
+                match_score=1.0, matched_by=t.matched_by or 0,
             ))
         await self.session.flush()
         return await self._hydrate(orm)
@@ -201,7 +201,7 @@ class SqlTripOrderRepository(TripOrderRepository):
         for wo_id in t.matched_work_order_ids:
             self.session.add(ReconciliationORM(
                 trip_order_id=existing.id, work_order_id=int(wo_id),
-                match_score=1.0, matched_by=0,
+                match_score=1.0, matched_by=t.matched_by or 0,
             ))
         await self.session.flush()
 

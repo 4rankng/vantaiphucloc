@@ -145,6 +145,7 @@ class TripOrder:
     updated_at: datetime = field(default_factory=_utcnow)
     containers: list[TripOrderContainer] = field(default_factory=list)
     matched_work_order_ids: list[int] = field(default_factory=list)
+    matched_by: int = 0
 
     # ── behaviour ────────────────────────────────────────────
 
@@ -224,9 +225,10 @@ class TripOrder:
         self.status = TripOrderStatus.PENDING
         self.updated_at = _utcnow()
 
-    def link_work_order(self, work_order_id: int) -> None:
+    def link_work_order(self, work_order_id: int, matched_by: int = 0) -> None:
         if work_order_id not in self.matched_work_order_ids:
             self.matched_work_order_ids.append(int(work_order_id))
+            self.matched_by = matched_by
             self.updated_at = _utcnow()
 
     def unlink_work_order(self, work_order_id: int) -> None:
