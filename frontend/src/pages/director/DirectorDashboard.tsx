@@ -33,8 +33,21 @@ export function DirectorDashboard() {
 
   useEffect(() => {
     let cancelled = false
-    getAuditLogs({ pageSize: 8 }).then(data => {
-      if (!cancelled) setAuditLogs(data.items)
+    getAuditLogs({ pageSize: 12 }).then(data => {
+      if (!cancelled) {
+        // Deduplicate consecutive entries: same activity text + within 2s
+        const deduped: typeof data.items = []
+        for (const entry of data.items) {
+          const prev = deduped[deduped.length - 1]
+          const prevText = prev ? formatActivityEntry(prev.action, prev.tableName) : ''
+          const curText = formatActivityEntry(entry.action, entry.tableName)
+          const prevTime = prev ? new Date(prev.createdAt).getTime() : 0
+          const curTime = new Date(entry.createdAt).getTime()
+          if (prev && prevText === curText && Math.abs(curTime - prevTime) < 2000) continue
+          deduped.push(entry)
+        }
+        setAuditLogs(deduped.slice(0, 8))
+      }
     }).catch(() => {})
     return () => { cancelled = true }
   }, [])

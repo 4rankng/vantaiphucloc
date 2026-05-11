@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@/contexts/AuthContext'
 import { useTripOrders, useWorkOrders, useUpdateTripOrder, useReconcile, useToggleTripConfirmation, useUnmatch, useClients, useLocations } from '@/hooks/use-queries'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { ConfirmationCheckbox } from '@/components/shared/ConfirmationCheckbox'
@@ -26,6 +27,8 @@ interface TripDetailContentProps {
 
 export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const canEdit = user?.role === 'accountant' || user?.role === 'superadmin'
   const { data: trips = [], isLoading: loadingTrips } = useTripOrders()
   const { data: jobs = [], isLoading: loadingJobs } = useWorkOrders()
   const { data: clients = [] } = useClients()
@@ -203,12 +206,12 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
           <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{trip.partner.name}</span>
         </div>
         <div className="flex items-center gap-2">
-          {trip.status !== 'MATCHED' && (
+          {canEdit && trip.status !== 'MATCHED' && (
             <button onClick={handleOpenEdit} className="btn-secondary" aria-label="Sửa">
               <Pencil size={16} />
             </button>
           )}
-          {trip.status !== 'COMPLETED' && (
+          {canEdit && trip.status !== 'COMPLETED' && (
             <button onClick={() => setShowMatchDialog(true)} className="btn-primary">
               <Link2 size={16} />
               <span className="hidden sm:inline">Khớp chuyến</span>
@@ -224,7 +227,7 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
             <div className="flex items-center gap-2">
               <span className={`chip chip-${statusVariant}`}>{statusLabel}</span>
             </div>
-            {!onClose && (
+            {!onClose && canEdit && (
               <ConfirmationCheckbox
                 isConfirmed={trip.status === 'MATCHED'}
                 onToggle={handleToggleConfirmation}
@@ -284,7 +287,7 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
           <div className="card p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="typo-h3">Đã khớp ({matchedJobs.length})</h3>
-              {trip.status !== 'MATCHED' && (
+              {canEdit && trip.status !== 'MATCHED' && (
                 <button
                   onClick={() => setShowUnmatchDialog(true)}
                   className="btn-ghost text-xs"

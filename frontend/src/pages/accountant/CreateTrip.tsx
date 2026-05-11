@@ -288,7 +288,7 @@ export function CreateTrip() {
         <section className="p-5 space-y-4">
           <h3 className="typo-h3">Lương tài xế</h3>
           {matchedLine && (
-            <div className="flex items-start gap-2 text-xs px-3 py-2 rounded-lg" style={{ background: 'color-mix(in_srgb, var(--theme-brand-primary) 8%, transparent)', color: 'var(--theme-brand-primary)' }}>
+            <div className="flex items-start gap-2 text-xs px-3 py-2 rounded-lg" style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)', color: 'var(--theme-brand-primary)' }}>
               <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
               <span>Mặc định theo bảng giá: Lương {matchedLine.driverSalary?.toLocaleString('vi-VN')}đ · Phụ cấp {matchedLine.allowance?.toLocaleString('vi-VN')}đ</span>
             </div>
