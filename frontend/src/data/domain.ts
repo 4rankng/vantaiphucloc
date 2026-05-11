@@ -108,6 +108,7 @@ export interface DriverSummary {
   id: number
   name: string
   phone?: string | null
+  vehicle?: VehicleSummary | null
 }
 
 export interface VehicleSummary {

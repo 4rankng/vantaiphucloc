@@ -273,6 +273,7 @@ async def get_linked_trip_orders(
     work_order_id: int,
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
     use_case: GetWorkOrder = Depends(get_get_work_order),
+    to_use_case: GetTripOrder = Depends(get_get_trip_order),
 ):
     """Return all TripOrders linked to a WorkOrder via active reconciliations."""
     from app.contexts.operations.infrastructure.link_queries import (
@@ -287,16 +288,14 @@ async def get_linked_trip_orders(
     if not to_ids:
         return {"work_order_id": work_order_id, "trip_orders": []}
 
-    tos = list((await db.execute(
-        sa_select(TripOrderORM).where(TripOrderORM.id.in_(to_ids))
-    )).scalars().all())
-
     from app.contexts.operations.interface.routers.trip_orders import (
         _load_one as _load_trip_one,
     )
+    to_session = to_use_case.repo.session  # type: ignore[attr-defined]
     result = []
-    for to_orm in tos:
-        out = await _load_trip_one(db, to_orm)
+    for to_id in to_ids:
+        t = await to_use_case(to_id)
+        out = await _load_trip_one(to_session, t)
         result.append(out)
     return {"work_order_id": work_order_id, "trip_orders": result}
 
