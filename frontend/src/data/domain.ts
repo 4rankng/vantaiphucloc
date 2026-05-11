@@ -42,6 +42,7 @@ export interface Driver {
   username: string
   fullName: string | null
   phone: string
+  vehiclePlate: string | null
   createdAt: string
   updatedAt: string
 }

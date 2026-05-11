@@ -173,30 +173,34 @@ export function DirectorDashboard() {
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
           label="Tổng chuyến"
-          value={loading ? '—' : requestedThisMonth.toLocaleString('vi-VN')}
+          value={requestedThisMonth.toLocaleString('vi-VN')}
           icon={<Truck className="h-5 w-5" />}
           trend={requestedThisMonth > 0 ? '+12%' : undefined}
           color="primary"
+          loading={loading}
         />
         <StatCard
           label="Đã khớp"
-          value={loading ? '—' : String(completedThisMonth)}
+          value={String(completedThisMonth)}
           icon={<CheckCircle2 className="h-5 w-5" />}
           trend={completedThisMonth > 0 ? '+8%' : undefined}
           color="success"
+          loading={loading}
         />
         <StatCard
           label="Chờ xử lý"
-          value={loading ? '—' : String(pendingThisMonth)}
+          value={String(pendingThisMonth)}
           icon={<AlertCircle className="h-5 w-5" />}
           color="warning"
+          loading={loading}
         />
         <StatCard
           label="Doanh thu"
-          value={loading ? '—' : compact(revenueThisMonth) + ' ₫'}
+          value={compact(revenueThisMonth) + ' ₫'}
           icon={<DollarSign className="h-5 w-5" />}
           trend={revenueThisMonth > 0 ? '+15%' : undefined}
           color="info"
+          loading={loading}
         />
       </section>
 
@@ -470,6 +474,7 @@ interface StatCardProps {
   icon: ReactNode
   trend?: string
   color: 'primary' | 'success' | 'warning' | 'info'
+  loading?: boolean
 }
 
 const STAT_COLORS = {
@@ -499,9 +504,9 @@ const STAT_COLORS = {
   },
 }
 
-function StatCard({ label, value, icon, trend, color }: StatCardProps) {
+function StatCard({ label, value, icon, trend, color, loading }: StatCardProps) {
   const colors = STAT_COLORS[color]
-  
+
   return (
     <div
       className="rounded-lg p-4 transition-all hover:shadow-md"
@@ -512,14 +517,14 @@ function StatCard({ label, value, icon, trend, color }: StatCardProps) {
       }}
     >
       <div className="flex items-start justify-between mb-3">
-        <div 
+        <div
           className="flex h-11 w-11 items-center justify-center rounded-xl"
           style={{ background: colors.iconBg, color: colors.iconColor }}
         >
           {icon}
         </div>
         {trend && (
-          <div 
+          <div
             className="flex items-center gap-0.5 px-2 py-1 rounded-full text-[10px] font-bold"
             style={{ background: colors.trendBg, color: colors.trendColor }}
           >
@@ -528,9 +533,13 @@ function StatCard({ label, value, icon, trend, color }: StatCardProps) {
           </div>
         )}
       </div>
-      <p className="text-lg lg:text-2xl font-bold leading-none tracking-tight mb-1 whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
-        {value}
-      </p>
+      {loading ? (
+        <div className="h-7 w-20 rounded-md animate-pulse mb-1" style={{ background: 'var(--theme-bg-tertiary)' }} />
+      ) : (
+        <p className="text-lg lg:text-2xl font-bold leading-none tracking-tight mb-1 whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
+          {value}
+        </p>
+      )}
       <p className="text-xs font-medium" style={{ color: 'var(--theme-text-muted)' }}>
         {label}
       </p>
