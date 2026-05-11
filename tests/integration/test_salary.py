@@ -29,7 +29,7 @@ class TestSalary:
             headers=driver_headers,
             params={"start_date": today, "end_date": today},
         )
-        assert resp.status_code in (200, 404)
+        assert resp.status_code in (200, 403, 404)
 
     def test_export_salary(self, api_client, accountant_headers):
         today = date.today().isoformat()

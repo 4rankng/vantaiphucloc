@@ -211,7 +211,7 @@ def create_work_order(api_client, admin_headers, create_partner, create_location
             "partner_id": partner["id"],
             "pickup_location_id": pickup["id"],
             "dropoff_location_id": dropoff["id"],
-            "driver_id": driver_id or 4,
+            "driver_id": driver_id or 5,
             "containers": [{"container_number": _container_number(), "work_type": "E20"}],
         }
         payload.update(overrides)

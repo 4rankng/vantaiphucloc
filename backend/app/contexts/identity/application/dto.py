@@ -37,8 +37,6 @@ class CreateUserInput:
     email: str | None = None
     full_name: str | None = None
     cccd: str | None = None
-    vendor: str | None = None
-    tractor_plate: str | None = None
 
 
 @dataclass(frozen=True)
@@ -49,8 +47,6 @@ class UpdateUserInput:
     email: str | None = None
     full_name: str | None = None
     cccd: str | None = None
-    vendor: str | None = None
-    tractor_plate: str | None = None
     role: UserRole | None = None
     is_active: bool | None = None
     new_password: str | None = None

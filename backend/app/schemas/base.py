@@ -54,8 +54,6 @@ class UserOut(BaseModel):
     full_name: str | None = None
     cccd: str | None = None
     role: str
-    vendor: str | None = None
-    tractor_plate: str | None = None
     is_active: bool
     created_at: datetime
 
@@ -88,8 +86,6 @@ class UserCreate(BaseModel):
     role: RoleType = "driver"
     full_name: str | None = None
     cccd: str | None = None
-    vendor: str | None = None
-    tractor_plate: str | None = None
 
     @field_validator("cccd")
     @classmethod
@@ -105,10 +101,8 @@ class UserUpdate(BaseModel):
     username: str | None = None
     full_name: str | None = None
     cccd: str | None = None
-    vendor: str | None = None
     role: RoleType | None = None
     password: str | None = None
-    tractor_plate: str | None = None
     is_active: bool | None = None
 
     @field_validator("cccd")

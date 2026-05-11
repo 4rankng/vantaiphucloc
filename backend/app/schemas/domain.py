@@ -607,7 +607,6 @@ class DriverOut(BaseModel):
     username: str
     phone: str | None = None
     vehicle: VehicleSummaryOut | None = None
-    tractor_plate: str | None = None  # convenience alias
     created_at: datetime
     updated_at: datetime
 
@@ -668,7 +667,6 @@ class ContainerOCRResponse(BaseModel):
 class DriverSalarySummaryItem(BaseModel):
     driver_id: int
     driver_name: str
-    tractor_plate: str | None = None
     total_jobs: int
     total_salary: int
 
