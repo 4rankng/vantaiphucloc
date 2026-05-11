@@ -111,7 +111,6 @@ class MatchTripToWorkOrder:
 
         await self.wo_repo.save(wo)
         await self.to_repo.save(to)
-        await self.session.commit()
         return to
 
 
@@ -175,6 +174,5 @@ class UnmatchTripFromWorkOrder:
 
         await self.wo_repo.save(wo)
         await self.to_repo.save(to)
-        await self.session.commit()
 
         return to, wo
