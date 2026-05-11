@@ -79,9 +79,10 @@ def upgrade() -> None:
     # Migrate vendors → partners (skip duplicate names)
     if "vendors" in existing:
         conn.execute(sa.text("""
-            INSERT INTO partners (code, name, partner_type, partner_role, phone, is_active,
-                                  created_at, updated_at)
-            SELECT code, name, 'vendor', 'transport', phone,
+            INSERT INTO partners (code, name, partner_type, partner_role, phone, tax_code,
+                                  address, contact_person, is_active, created_at, updated_at)
+            SELECT NULL, name, 'vendor', 'transport', phone, tax_code,
+                   address, contact_person,
                    COALESCE(is_active, true), COALESCE(created_at, now()), COALESCE(updated_at, now())
             FROM vendors
             WHERE name NOT IN (SELECT name FROM partners)
@@ -90,12 +91,14 @@ def upgrade() -> None:
 
     # ── 3. Add partner_id to tables that had client_id ────────────────────
 
-    # work_orders: add partner_id
-    op.add_column("work_orders", sa.Column("partner_id", sa.Integer, sa.ForeignKey("partners.id"), nullable=True))
-    # work_orders: add vehicle_id
-    op.add_column("work_orders", sa.Column("vehicle_id", sa.Integer, sa.ForeignKey("vehicles.id"), nullable=True))
+    def _add_col(table: str, col: sa.Column) -> None:
+        cols = [c["name"] for c in insp.get_columns(table)] if table in existing else []
+        if col.name not in cols:
+            op.add_column(table, col)
 
-    # Migrate client_id → partner_id for work_orders
+    _add_col("work_orders", sa.Column("partner_id", sa.Integer, sa.ForeignKey("partners.id"), nullable=True))
+    _add_col("work_orders", sa.Column("vehicle_id", sa.Integer, sa.ForeignKey("vehicles.id"), nullable=True))
+
     if "clients" in existing:
         conn.execute(sa.text("""
             UPDATE work_orders SET partner_id = p.id
@@ -104,11 +107,10 @@ def upgrade() -> None:
             WHERE work_orders.client_id = c.id
         """))
 
-    # trip_orders: add partner_id
-    op.add_column("trip_orders", sa.Column("partner_id", sa.Integer, sa.ForeignKey("partners.id"), nullable=True))
-    op.add_column("trip_orders", sa.Column("pickup_raw", sa.String(500), nullable=True))
-    op.add_column("trip_orders", sa.Column("dropoff_raw", sa.String(500), nullable=True))
-    op.add_column("trip_orders", sa.Column("location_review_needed", sa.Boolean, nullable=False, server_default=sa.text("false")))
+    _add_col("trip_orders", sa.Column("partner_id", sa.Integer, sa.ForeignKey("partners.id"), nullable=True))
+    _add_col("trip_orders", sa.Column("pickup_raw", sa.String(500), nullable=True))
+    _add_col("trip_orders", sa.Column("dropoff_raw", sa.String(500), nullable=True))
+    _add_col("trip_orders", sa.Column("location_review_needed", sa.Boolean, nullable=False, server_default=sa.text("false")))
 
     if "clients" in existing:
         conn.execute(sa.text("""
@@ -119,7 +121,7 @@ def upgrade() -> None:
         """))
 
     # pricings: add partner_id
-    op.add_column("pricings", sa.Column("partner_id", sa.Integer, sa.ForeignKey("partners.id"), nullable=True))
+    _add_col("pricings", sa.Column("partner_id", sa.Integer, sa.ForeignKey("partners.id"), nullable=True))
 
     if "clients" in existing:
         conn.execute(sa.text("""
@@ -130,7 +132,7 @@ def upgrade() -> None:
         """))
 
     # customer_import_templates: add partner_id
-    op.add_column("customer_import_templates", sa.Column("partner_id", sa.Integer, sa.ForeignKey("partners.id", ondelete="CASCADE"), nullable=True))
+    _add_col("customer_import_templates", sa.Column("partner_id", sa.Integer, sa.ForeignKey("partners.id", ondelete="CASCADE"), nullable=True))
 
     if "clients" in existing:
         conn.execute(sa.text("""

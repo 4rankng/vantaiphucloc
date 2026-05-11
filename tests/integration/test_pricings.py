@@ -54,15 +54,18 @@ class TestPricings:
         resp = api_client.get("/pricings", headers=driver_headers)
         assert resp.status_code == 200
 
-    def test_driver_cannot_create_pricing(self, api_client, driver_headers):
+    def test_driver_cannot_create_pricing(self, api_client, driver_headers, create_partner, create_location):
+        partner = create_partner()
+        pickup = create_location()
+        dropoff = create_location()
         resp = api_client.post(
             "/pricings",
             headers=driver_headers,
             json={
-                "client_id": 1,
+                "partner_id": partner["id"],
                 "work_type": "E20",
-                "pickup_location_id": 1,
-                "dropoff_location_id": 2,
+                "pickup_location_id": pickup["id"],
+                "dropoff_location_id": dropoff["id"],
                 "lines": [{"quantity": 1, "unit_price": 100}],
             },
         )

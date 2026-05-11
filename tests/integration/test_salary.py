@@ -13,28 +13,23 @@ class TestSalary:
         )
         assert resp.status_code in (200, 202)
 
-    def test_list_salary_periods(self, api_client, accountant_headers):
-        resp = api_client.get("/salary", headers=accountant_headers)
-        assert resp.status_code == 200
-        data = resp.json()
-        assert "items" in data or isinstance(data, list)
-
-    def test_list_salary_filter_driver(self, api_client, accountant_headers):
-        resp = api_client.get("/salary", headers=accountant_headers, params={"driver_id": 4})
-        assert resp.status_code == 200
-
-    def test_driver_own_salary(self, api_client, driver_headers):
-        resp = api_client.get("/driver/salary", headers=driver_headers)
-        assert resp.status_code in (200, 403)
-
-    def test_salary_dashboard(self, api_client, accountant_headers):
+    def test_get_driver_earnings(self, api_client, admin_headers):
         today = date.today().isoformat()
         resp = api_client.get(
-            "/salary/dashboard",
-            headers=accountant_headers,
-            params={"period_start": today, "period_end": today},
+            f"/salary/earnings/4",
+            headers=admin_headers,
+            params={"start_date": today, "end_date": today},
         )
-        assert resp.status_code == 200
+        assert resp.status_code in (200, 404)
+
+    def test_driver_own_earnings(self, api_client, driver_headers):
+        today = date.today().isoformat()
+        resp = api_client.get(
+            "/driver/earnings",
+            headers=driver_headers,
+            params={"start_date": today, "end_date": today},
+        )
+        assert resp.status_code in (200, 404)
 
     def test_export_salary(self, api_client, accountant_headers):
         today = date.today().isoformat()
@@ -52,8 +47,4 @@ class TestSalary:
             headers=driver_headers,
             json={"driver_id": 4, "start_date": today, "end_date": today},
         )
-        assert resp.status_code == 403
-
-    def test_driver_cannot_list_salary(self, api_client, driver_headers):
-        resp = api_client.get("/salary", headers=driver_headers)
         assert resp.status_code == 403

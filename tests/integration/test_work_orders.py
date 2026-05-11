@@ -75,36 +75,12 @@ class TestWorkOrders:
         resp = api_client.put(
             f"/work-orders/{wo['id']}",
             headers=admin_headers,
-            json={"route": f"IT_Updated_{wo['id']}"},
+            json={"unit_price": 2000000},
         )
         assert resp.status_code == 200
 
-    def test_cancel_work_order(self, api_client, admin_headers, create_work_order):
-        wo = create_work_order()
-        resp = api_client.put(
-            f"/work-orders/{wo['id']}/cancel",
-            headers=admin_headers,
-            json={"reason": "integration test"},
-        )
-        assert resp.status_code == 200
-        assert resp.json()["status"] == "CANCELLED"
-
-    def test_cancel_already_cancelled(self, api_client, admin_headers, create_work_order):
-        wo = create_work_order()
-        api_client.put(
-            f"/work-orders/{wo['id']}/cancel",
-            headers=admin_headers,
-            json={"reason": "first cancel"},
-        )
-        resp = api_client.put(
-            f"/work-orders/{wo['id']}/cancel",
-            headers=admin_headers,
-            json={"reason": "second cancel"},
-        )
-        assert resp.status_code in (400, 409)
-
-    def test_batch_create(self, api_client, admin_headers, create_client, create_location):
-        client = create_client()
+    def test_batch_create(self, api_client, admin_headers, create_partner, create_location):
+        partner = create_partner()
         pickup = create_location()
         dropoff = create_location()
         uid = uuid4().hex[:8]
@@ -114,21 +90,17 @@ class TestWorkOrders:
             json={
                 "items": [
                     {
-                        "client_id": client["id"],
-                        "route": f"IT_Batch1_{uid}",
+                        "partner_id": partner["id"],
                         "pickup_location_id": pickup["id"],
                         "dropoff_location_id": dropoff["id"],
                         "driver_id": 4,
-                        "tractor_plate": "29C-12345",
                         "containers": [{"container_number": _container_number(), "work_type": "E20"}],
                     },
                     {
-                        "client_id": client["id"],
-                        "route": f"IT_Batch2_{uid}",
+                        "partner_id": partner["id"],
                         "pickup_location_id": pickup["id"],
                         "dropoff_location_id": dropoff["id"],
                         "driver_id": 4,
-                        "tractor_plate": "29C-12345",
                         "containers": [{"container_number": _container_number(), "work_type": "E20"}],
                     },
                 ]

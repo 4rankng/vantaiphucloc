@@ -82,6 +82,10 @@ async def seed_settings() -> None:
         await db.commit()
 
 
+async def _main() -> None:
+    await seed_users()
+    await seed_settings()
+
+
 if __name__ == "__main__":
-    asyncio.run(seed_users())
-    asyncio.run(seed_settings())
+    asyncio.run(_main())
