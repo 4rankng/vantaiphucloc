@@ -126,8 +126,10 @@ api.interceptors.response.use(
         : 'Không thể kết nối đến máy chủ'
     } else {
       const status = error.response?.status
-      const backendMsg = (error.response?.data as { detail?: string; error?: string })?.detail
-        || (error.response?.data as { detail?: string; error?: string })?.error
+      const rawData = error.response?.data as { detail?: string | { msg: string }[]; error?: string } | undefined
+      const detail = rawData?.detail
+      const backendMsg = (Array.isArray(detail) ? detail.map(d => d.msg).join('; ') : detail)
+        || rawData?.error
       apiError.statusCode = status
       switch (status) {
         case 400: apiError.type = 'validation'; apiError.message = backendMsg || 'Dữ liệu không hợp lệ'; break

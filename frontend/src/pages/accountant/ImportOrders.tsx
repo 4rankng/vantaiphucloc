@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, AlertTriangle, CheckCircle2, XCircle, Tag, FileSpreadsheet } from 'lucide-react'
-import { Button } from '@/components/ui'
+import { Button, Input } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { useClients } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
@@ -425,7 +425,6 @@ export function ImportOrders({ onClose }: { onClose?: () => void } = {}) {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
             <Stat label="Sheet" value={preview.sheet_name} />
-            <Stat label="Hàng tiêu đề" value={`Hàng ${preview.header_row_index + 1}`} />
             <Stat label="Đã chấp nhận" value={String(preview.accepted.length)} ok />
             <Stat label="Bị bỏ" value={String(preview.rejected.length)} warn />
           </div>
@@ -451,7 +450,7 @@ export function ImportOrders({ onClose }: { onClose?: () => void } = {}) {
       {preview && editedRows.length > 0 && (
         <div className="card p-5">
           <h3 className="typo-h2 mb-3">Xem trước đơn hàng ({editedRows.length})</h3>
-          <div className="overflow-x-auto" style={{ maxHeight: '420px', overflowY: 'auto' }}>
+          <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead style={{ color: 'var(--theme-text-secondary)', position: 'sticky', top: 0, background: 'var(--theme-bg-primary)' }}>
                 <tr className="text-left">
