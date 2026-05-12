@@ -62,7 +62,7 @@ class Partner(AuditableMixin, Base):
     id = Column(Integer, primary_key=True, index=True)
     code = Column(String(50), nullable=True, unique=True, index=True)
     name = Column(String(255), nullable=False, index=True)
-    partner_type = Column(String(20), nullable=False)  # client | vendor | both
+    partner_type = Column(String(20), nullable=False)  # client | vendor
     partner_role = Column(String(20), nullable=True)  # shipping_line | factory | transport | other
     phone = Column(String(50), nullable=True)
     tax_code = Column(String(50), nullable=True)

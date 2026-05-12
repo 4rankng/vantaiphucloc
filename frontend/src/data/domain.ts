@@ -1,7 +1,7 @@
 export type Role = 'superadmin' | 'director' | 'accountant' | 'driver'
 export type TrailerType = '20FT' | '40FT'
 export type JobStatus = 'DRAFT' | 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
-export type PartnerType = 'client' | 'vendor' | 'both'
+export type PartnerType = 'client' | 'vendor'
 export type PartnerRole = 'shipping_line' | 'factory' | 'transport' | 'other'
 export type WorkType = 'E20' | 'E40' | 'F20' | 'F40'
 export type WorkOrderStatus = 'PENDING' | 'MATCHED'

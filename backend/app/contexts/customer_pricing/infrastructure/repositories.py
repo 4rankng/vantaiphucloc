@@ -83,13 +83,7 @@ class SqlPartnerRepository(PartnerRepository):
         if active_only:
             q = q.where(PartnerORM.is_active.is_(True))
         if partner_type is not None:
-            # "both" partners match both "client" and "vendor" filters
-            if partner_type in ("client", "vendor"):
-                q = q.where(
-                    PartnerORM.partner_type.in_([partner_type, "both"])
-                )
-            else:
-                q = q.where(PartnerORM.partner_type == partner_type)
+            q = q.where(PartnerORM.partner_type == partner_type)
         total = await self.session.scalar(
             select(func.count()).select_from(q.subquery())
         ) or 0
