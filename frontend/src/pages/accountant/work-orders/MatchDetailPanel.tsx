@@ -235,6 +235,9 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
         setSelectedKeys(new Set())
         onMatchSuccess()
       }
+      if (matched === 0 && (!res.errors || res.errors.length === 0)) {
+        toast.info('Thông báo', 'Không tìm thấy đơn hàng phù hợp để ghép tự động')
+      }
       if (res.errors?.length > 0) {
         toast.error('Lỗi', `${res.errors.length} đơn không thể ghép`)
       }
@@ -336,6 +339,9 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
       if (matched > 0) {
         toast.success('Thành công', `Đã ghép ${matched} cặp`)
         onMatchSuccess()
+      }
+      if (matched === 0 && (!res.errors || res.errors.length === 0)) {
+        toast.info('Thông báo', 'Không tìm thấy đơn hàng phù hợp để ghép tự động')
       }
       if (res.errors.length > 0) {
         toast.error('Lỗi', `${res.errors.length} cặp không thể ghép`)

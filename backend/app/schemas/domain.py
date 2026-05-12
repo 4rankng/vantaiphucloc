@@ -180,6 +180,7 @@ class LocationPinRequest(BaseModel):
 class LocationAliasOut(BaseModel):
     id: int
     location_id: int
+    location_name: str | None = None
     alias: str
     alias_normalized: str
     source: str

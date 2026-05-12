@@ -407,6 +407,7 @@ export type LocationAliasStatus = 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'MERGED
 export interface LocationAlias {
   id: number
   locationId: number
+  locationName?: string | null
   alias: string
   aliasNormalized: string
   source: string

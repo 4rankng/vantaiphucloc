@@ -43,10 +43,11 @@ router = APIRouter()
 # ── Helpers ────────────────────────────────────────────────────
 
 
-def _alias_to_out(a) -> LocationAliasOut:
+def _alias_to_out(a, location_name: str | None = None) -> LocationAliasOut:
     return LocationAliasOut(
         id=int(a.id),
         location_id=int(a.location_id),
+        location_name=location_name,
         alias=a.alias,
         alias_normalized=a.alias_normalized,
         source=a.source,
@@ -79,14 +80,17 @@ async def list_aliases(
     current_user: User = Depends(require_permission("read", "Location")),
     db: AsyncSession = Depends(get_db),
 ):
-    q = select(LocationAliasORM)
+    q = (
+        select(LocationAliasORM, LocationORM.name.label("location_name"))
+        .join(LocationORM, LocationORM.id == LocationAliasORM.location_id)
+    )
     if status:
         q = q.where(LocationAliasORM.status == status)
     if location_id:
         q = q.where(LocationAliasORM.location_id == location_id)
     q = q.order_by(LocationAliasORM.created_at.desc())
-    rows = (await db.execute(q)).scalars().all()
-    return [_alias_to_out(r) for r in rows]
+    rows = (await db.execute(q)).all()
+    return [_alias_to_out(alias_orm, location_name=loc_name) for alias_orm, loc_name in rows]
 
 
 @router.post("/location-aliases", response_model=LocationAliasOut, status_code=201)
@@ -281,6 +285,6 @@ async def locations_pending_review(
         )).scalars().all()
         result.append({
             "location": {"id": loc.id, "name": loc.name},
-            "pending_aliases": [_alias_to_out(a) for a in aliases],
+            "pending_aliases": [_alias_to_out(a, location_name=loc.name) for a in aliases],
         })
     return result
