@@ -20,9 +20,9 @@ class TestPartners:
         partner = create_partner(partner_type="vendor", partner_role="transport")
         assert partner["partner_type"] == "vendor"
 
-    def test_create_partner_both(self, api_client, create_partner):
-        partner = create_partner(partner_type="both", partner_role="shipping_line")
-        assert partner["partner_type"] == "both"
+    def test_create_partner_vendor(self, api_client, create_partner):
+        partner = create_partner(partner_type="vendor", partner_role="transport")
+        assert partner["partner_type"] == "vendor"
 
     def test_get_partner(self, api_client, admin_headers, create_partner):
         partner = create_partner()

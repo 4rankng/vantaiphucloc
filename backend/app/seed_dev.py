@@ -270,7 +270,7 @@ async def seed_dev() -> None:
         print("\n=== Seeding Pricings ===")
         pricing_map: dict[tuple[str, int, int, str], Pricing] = {}
         # Only create pricings for client-type partners
-        client_codes = [p["code"] for p in SEED_PARTNERS if p["partner_type"] in ("client", "both")]
+        client_codes = [p["code"] for p in SEED_PARTNERS if p["partner_type"] == "client"]]
 
         for client_code in client_codes:
             partner = partner_map[client_code]
