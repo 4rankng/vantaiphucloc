@@ -227,6 +227,23 @@ export async function downloadTripOrderTemplate(): Promise<Blob> {
   return res.data
 }
 
+// ── Đối soát export ─────────────────────────────────────────────────
+
+export async function exportDoiSoatExcel(
+  partnerId: number,
+  dateFrom: string,
+  dateTo: string,
+): Promise<Blob> {
+  const params = new URLSearchParams()
+  params.append('partner_id', String(partnerId))
+  params.append('date_from', dateFrom)
+  params.append('date_to', dateTo)
+  const res = await api.get(`/trip-orders/export-doi-soat?${params.toString()}`, {
+    responseType: 'blob',
+  })
+  return res.data
+}
+
 // ── Auto-match (preview + confirm) ─────────────────────────────────
 
 export interface AutoMatchCriterionFE {
@@ -259,12 +276,23 @@ export interface AutoMatchCandidateFE {
   } | null
 }
 
+export interface AutoMatchRejectionReasonFE {
+  code: string
+  label: string
+  count: number
+}
+
+export interface AutoMatchStatsFE {
+  reasons: AutoMatchRejectionReasonFE[]
+}
+
 export interface AutoMatchPreviewResponseFE {
   scannedWorkOrderCount: number
   skippedAlreadyMatched: number
   candidates: AutoMatchCandidateFE[]
   unmatchedWorkOrderRefs: { id: number; code: string | null; plate: string | null; date: string | null }[]
   errors: string[]
+  stats: AutoMatchStatsFE
 }
 
 export interface AutoMatchConfirmResultFE {
