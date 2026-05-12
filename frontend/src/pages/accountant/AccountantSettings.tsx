@@ -1,5 +1,5 @@
 import { useLocation, useNavigate, Outlet } from 'react-router-dom'
-import { Settings, Wallet, Tag, Users, UserCog, Truck, Car, MapPin } from 'lucide-react'
+import { Settings, Wallet, Tag, Users, UserCog, Truck, MapPin } from 'lucide-react'
 
 type SettingSection = {
   key: string
@@ -23,7 +23,6 @@ const SECTION_GROUPS = [
     items: [
       { key: 'clients', label: 'Khách hàng', desc: 'Quản lý thông tin khách hàng', icon: Users, path: '/accountant/settings/clients', color: 'var(--theme-status-info)' },
       { key: 'vendors', label: 'Nhà thầu', desc: 'Quản lý đơn vị vận chuyển', icon: Truck, path: '/accountant/settings/vendors', color: 'var(--theme-status-warning)' },
-      { key: 'drivers', label: 'Tài xế', desc: 'Danh sách tài xế và xe đầu kéo', icon: Car, path: '/accountant/settings/drivers', color: 'var(--theme-status-info)' },
       { key: 'locations', label: 'Địa điểm', desc: 'Quản lý bí danh địa điểm ghép chuyến', icon: MapPin, path: '/accountant/settings/locations', color: 'var(--theme-status-success)' },
     ],
   },
