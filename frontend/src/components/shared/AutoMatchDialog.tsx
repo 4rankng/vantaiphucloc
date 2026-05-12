@@ -5,6 +5,7 @@ import { useAutoMatchConfirm } from '@/hooks/use-queries'
 import { CheckCircle2, Sparkles, Loader2 } from 'lucide-react'
 import { useToast } from '@/components/atoms/Toast'
 import type { AutoMatchPreviewResponseFE, AutoMatchCandidateFE } from '@/services/api/tripOrders.api'
+import { NoMatchEmptyState } from '@/components/shared/NoMatchEmptyState'
 
 interface AutoMatchDialogProps {
   open: boolean
@@ -92,22 +93,14 @@ export function AutoMatchDialog({ open, onClose, result }: AutoMatchDialogProps)
               </div>
             </>
           ) : (
-            <div className="text-center py-6 space-y-3">
-              <p className="text-lg font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                Không tìm thấy cặp ghép phù hợp
-              </p>
-              <div className="text-xs space-y-1" style={{ color: 'var(--theme-text-muted)' }}>
-                <p>• Chuyến và đơn hàng cần cùng ngày, cùng khách hàng và cùng tuyến đường.</p>
-                <p>• Thử thêm chuyến hoặc đơn hàng mới rồi ghép lại.</p>
-              </div>
-              {result.scannedWorkOrderCount > 0 && (
-                <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>
-                  Đã quét {result.scannedWorkOrderCount} phiếu · {result.skippedAlreadyMatched} đã ghép từ trước
-                </p>
-              )}
-            </div>
+            <NoMatchEmptyState
+              scanned={result.scannedWorkOrderCount}
+              reasons={result.stats?.reasons ?? []}
+              onClose={onClose}
+            />
           )}
 
+          {autoMatched.length > 0 && (
           <div className="flex items-center gap-3 pt-2">
             <Button
               onClick={onClose}
@@ -129,6 +122,7 @@ export function AutoMatchDialog({ open, onClose, result }: AutoMatchDialogProps)
               </Button>
             )}
           </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

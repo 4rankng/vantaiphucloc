@@ -608,12 +608,23 @@ class UnmatchedWorkOrderRef(BaseModel):
     date: str | None = None
 
 
+class AutoMatchRejectionReason(BaseModel):
+    code: str
+    label: str
+    count: int
+
+
+class AutoMatchStats(BaseModel):
+    reasons: list[AutoMatchRejectionReason] = []
+
+
 class AutoMatchResponse(BaseModel):
     scanned_work_order_count: int = 0
     skipped_already_matched: int = 0
     candidates: list[AutoMatchCandidate] = []
     unmatched_work_order_refs: list[UnmatchedWorkOrderRef] = []
     errors: list[str] = []
+    stats: AutoMatchStats = AutoMatchStats()
 
 
 # Legacy aliases for backward compat (old response shape)

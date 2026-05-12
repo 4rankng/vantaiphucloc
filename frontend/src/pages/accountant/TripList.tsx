@@ -376,7 +376,7 @@ function DirectorTripView({
   onSelectTrip: (id: number) => void
 }) {
   if (isMobile) {
-    return (
+    return (<>
       <div className="space-y-3 pb-8">
         <h1 className="typo-h1">Đơn hàng</h1>
         <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
@@ -403,7 +403,7 @@ function DirectorTripView({
         </div>
       </div>
       <DoiSoatExportDialog open={doiSoatOpen} onOpenChange={setDoiSoatOpen} clients={clients} />
-    )
+    </>
   }
 
   return (
