@@ -208,7 +208,10 @@ class TripOrder:
         self.updated_at = _utcnow()
 
     def match(self) -> None:
-        """PENDING → MATCHED."""
+        """PENDING → MATCHED. Idempotent: MATCHED → MATCHED is a no-op
+        (multi-match TO-centric: TO may already be matched with other WOs)."""
+        if self.status == TripOrderStatus.MATCHED:
+            return
         if self.status != TripOrderStatus.PENDING:
             raise InvalidStateTransition(
                 kind="TripOrder",
@@ -219,7 +222,10 @@ class TripOrder:
         self.updated_at = _utcnow()
 
     def unmatch(self) -> None:
-        """MATCHED → PENDING."""
+        """MATCHED → PENDING. Only valid when called by reconciliation
+        (the caller checks remaining links first)."""
+        if self.status == TripOrderStatus.PENDING:
+            return
         if self.status != TripOrderStatus.MATCHED:
             raise InvalidStateTransition(
                 kind="TripOrder",
@@ -363,10 +369,10 @@ class WorkOrder:
         allowance: Money,
         pricing_id: int | None,
     ) -> None:
-        # Accumulate for multi-match: add this TO's values to existing.
-        self.unit_price = (self.unit_price or 0) + int(unit_price)
-        self.driver_salary = (self.driver_salary or 0) + int(driver_salary)
-        self.allowance = (self.allowance or 0) + int(allowance)
+        # WO is 1:1 with TO — overwrite (no accumulation needed)
+        self.unit_price = int(unit_price)
+        self.driver_salary = int(driver_salary)
+        self.allowance = int(allowance)
         self.pricing_id = pricing_id
         self.updated_at = _utcnow()
 
