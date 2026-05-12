@@ -172,10 +172,10 @@ export function ClientList() {
             className="w-full h-9 pl-9 pr-3 rounded-lg text-sm border"
             style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
           />
-          <span className="text-xs shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
-            {search ? `${filtered.length}/${clients.length}` : `${clients.length}`} khách hàng
-          </span>
         </div>
+        <span className="text-xs shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
+          {search ? `${filtered.length}/${clients.length}` : `${clients.length}`} khách hàng
+        </span>
       </div>
 
       {/* Desktop: Table / Mobile: Cards */}

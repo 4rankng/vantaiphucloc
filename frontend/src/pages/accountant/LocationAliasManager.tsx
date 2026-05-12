@@ -327,7 +327,7 @@ export function LocationAliasManager() {
                   >
                     <td className="px-4 py-2.5 font-medium" style={{ color: 'var(--theme-text-primary)' }}>{a.alias}</td>
                     <td className="px-4 py-2.5" style={{ color: 'var(--theme-text-secondary)' }}>
-                      {locationMap.get(a.locationId) ?? `#${a.locationId}`}
+                      {a.locationName ?? locationMap.get(a.locationId) ?? `#${a.locationId}`}
                     </td>
                     {tab === 'all' && (
                       <td className="px-4 py-2.5"><StatusBadge status={a.status} /></td>
