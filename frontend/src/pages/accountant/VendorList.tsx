@@ -112,7 +112,7 @@ export function VendorList() {
     { key: 'name', header: 'Tên', accessor: v => <span className="font-medium">{v.name}</span>, sortable: true },
     { key: 'phone', header: 'SĐT', accessor: v => v.phone ?? '—' },
     { key: 'taxCode', header: 'MST', accessor: v => v.taxCode ?? '—' },
-    { key: 'type', header: 'Loại', accessor: v => isCompany(v) ? 'Công ty' : 'Cá nhân' },
+    { key: 'type', header: 'Loại', accessor: v => <span className="whitespace-nowrap">{isCompany(v) ? 'Công ty' : 'Cá nhân'}</span> },
     { key: 'address', header: 'Địa chỉ', accessor: v => v.address ?? '—', hideOnMobile: true },
   ], [])
 

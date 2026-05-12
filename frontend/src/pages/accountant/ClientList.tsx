@@ -131,8 +131,8 @@ export function ClientList() {
     { key: 'name', header: 'Tên', accessor: c => <span className="font-medium">{c.name}</span>, sortable: true, sortKey: c => c.name },
     { key: 'phone', header: 'SĐT', accessor: c => c.phone || <span style={{ color: 'var(--theme-text-muted)' }}>—</span>, sortable: true },
     { key: 'taxCode', header: 'MST', accessor: c => c.taxCode || <span style={{ color: 'var(--theme-text-muted)' }}>—</span>, sortable: true },
-    { key: 'type', header: 'Loại', accessor: c => isCompany(c) ? 'Công ty' : 'Cá nhân' },
-    { key: 'address', header: 'Địa chỉ', accessor: c => c.address ? <span className="truncate block max-w-[200px]">{c.address}</span> : <span style={{ color: 'var(--theme-text-muted)' }}>—</span> },
+    { key: 'type', header: 'Loại', accessor: c => <span className="whitespace-nowrap">{isCompany(c) ? 'Công ty' : 'Cá nhân'}</span> },
+    { key: 'address', header: 'Địa chỉ', accessor: c => c.address ? <span className="line-clamp-2 max-w-[280px]">{c.address}</span> : <span style={{ color: 'var(--theme-text-muted)' }}>—</span> },
   ], [])
 
   if (loading) {
