@@ -534,6 +534,13 @@ export function useExportTripOrdersExcel() {
   })
 }
 
+export function useExportDoiSoatExcel() {
+  return useMutation({
+    mutationFn: (params: { partnerId: number; dateFrom: string; dateTo: string }) =>
+      apiClient.exportDoiSoatExcel(params.partnerId, params.dateFrom, params.dateTo),
+  })
+}
+
 export function useExportWorkOrdersExcel() {
   return useMutation({
     mutationFn: (filters?: { dateFrom?: string; dateTo?: string; status?: string }) =>
