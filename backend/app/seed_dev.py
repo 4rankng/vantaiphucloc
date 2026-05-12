@@ -368,11 +368,15 @@ async def seed_dev() -> None:
         # ── 9. Work Orders ─────────────────────────────────────────────
         print("\n=== Creating Work Orders ===")
         wo_count = 40
+        # Only use drivers that have a vehicle assigned
+        drivers_with_vehicle = [d for d in drivers if d in vehicle_by_driver]
+        if not drivers_with_vehicle:
+            drivers_with_vehicle = drivers
         work_orders = []
         for i in range(wo_count):
             pr = random.choice(pricing_rows)
-            driver_id = random.choice(drivers)
-            vehicle_id = vehicle_by_driver.get(driver_id)
+            driver_id = random.choice(drivers_with_vehicle)
+            vehicle_id = vehicle_by_driver[driver_id]
 
             r = random.random()
             if r < 0.5:

@@ -1,11 +1,11 @@
 import { useMemo, useState, useCallback, useEffect } from 'react'
-import { Sparkles, FileText, ClipboardList, Search, Loader2, X, Check, Link2, Unlink, AlertTriangle, Pencil, Save, RefreshCw } from 'lucide-react'
+import { Sparkles, FileText, ClipboardList, Search, Loader2, X, Check, Link2, Unlink, AlertTriangle, Pencil, Save, RefreshCw, CheckCircle2 } from 'lucide-react'
 import { useSuggestMatches, useReconcile, useBulkMatch, useTripOrders, useUnmatch, useBatchReconcileForWO, useUpdateTripOrder, useUpdateWorkOrder, usePartners, useLocations } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
 import { TripDetailCard } from './TripDetailCard'
 import { MatchCard, scoreColor } from './MatchCard'
-import type { WorkOrder, TripOrder, TripOrderContainerItem, WorkType } from '@/data/domain'
+import type { WorkOrder, TripOrder, TripOrderContainerItem, WorkType, MatchSuggestion } from '@/data/domain'
 import { WORK_TYPES, WORK_TYPE_LABELS } from '@/data/domain'
 
 interface MatchDetailPanelProps {
@@ -195,6 +195,20 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
   const [editingTripId, setEditingTripId] = useState<number | null>(null)
   const batchForWO = useBatchReconcileForWO()
 
+  // ── Conflict resolution state ──────────────────────────────────────────────
+  // Opened when the user checks a card that has field mismatches.
+  // resolutions maps criterion.name → 'wo' (use driver record) | 'to' (use order record)
+  const [conflictState, setConflictState] = useState<{
+    suggestion: MatchSuggestion
+    resolutions: Record<string, 'wo' | 'to'>
+  } | null>(null)
+  const updateTOForConflict = useUpdateTripOrder()
+
+  // Clear conflict state when the selected WO changes
+  useEffect(() => {
+    setConflictState(null)
+  }, [workOrder?.id])
+
   const toggleSelection = useCallback((key: string) => {
     setSelectedKeys(prev => {
       const next = new Set(prev)
@@ -227,6 +241,50 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
       toast.error('Lỗi', 'Không thể ghép hàng loạt')
     }
   }, [workOrder, selectedKeys, batchForWO, toast, onMatchSuccess])
+  const handleConflictConfirm = useCallback(async () => {
+    if (!conflictState || !workOrder) return
+    const { suggestion, resolutions } = conflictState
+    const to = suggestion.tripOrder
+    const mismatchedCriteria = suggestion.criteria.filter(c => !c.match)
+    const allResolved = mismatchedCriteria.every(c => resolutions[c.name])
+    if (!allResolved) return
+
+    // Build TO field updates for criteria where user picked the WO value
+    const toUpdates: Record<string, unknown> = {}
+    for (const criterion of mismatchedCriteria) {
+      if (resolutions[criterion.name] === 'wo') {
+        switch (criterion.name) {
+          case 'date':
+            toUpdates.tripDate = workOrder.tripDate ?? workOrder.createdAt?.split('T')[0]
+            break
+          case 'client':
+            if (workOrder.partner?.id) toUpdates.clientId = workOrder.partner.id
+            break
+          case 'pickup_location':
+            if (workOrder.pickupLocation?.id) toUpdates.pickupLocationId = workOrder.pickupLocation.id
+            break
+          case 'dropoff_location':
+            if (workOrder.dropoffLocation?.id) toUpdates.dropoffLocationId = workOrder.dropoffLocation.id
+            break
+          // container_number: reconcile handles the link; skip field update
+        }
+      }
+      // 'to' choice: keep TO as-is, accept mismatch and proceed with match
+    }
+
+    try {
+      if (Object.keys(toUpdates).length > 0) {
+        await updateTOForConflict.mutateAsync({ id: to.id, data: toUpdates })
+      }
+      await reconcile.mutateAsync({ workOrderId: workOrder.id, tripOrderId: to.id })
+      toast.success('Thành công', 'Đã ghép chuyến')
+      setConflictState(null)
+      onMatchSuccess()
+    } catch {
+      toast.error('Lỗi', 'Không thể ghép chuyến')
+    }
+  }, [conflictState, workOrder, reconcile, updateTOForConflict, toast, onMatchSuccess])
+
   const { data: allTripOrders = [] } = useTripOrders()
 
   // Find ALL matched trips for matched WOs (multi-match support)
@@ -457,23 +515,38 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
               {suggestions.map(s => {
                 const selKey = `${s.tripOrder.id}-${s.containerId}`
                 const isSelected = selectedKeys.has(selKey)
+                const hasMismatches = s.matchScore < s.maxScore
+                const isInConflict = conflictState !== null &&
+                  `${conflictState.suggestion.tripOrder.id}-${conflictState.suggestion.containerId}` === selKey
                 return (
                 <div key={selKey} className="relative">
                   <label
-                    className={`absolute top-3 left-3 z-10 flex items-center gap-1 ${atCapacity && !isSelected ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'} select-none`}
+                    className={`absolute top-3 left-3 z-10 flex items-center gap-1 ${atCapacity && !isSelected && !hasMismatches ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'} select-none`}
                     onClick={e => {
-                      e.stopPropagation();
-                      if (!atCapacity || isSelected) toggleSelection(selKey)
+                      e.stopPropagation()
+                      if (isSelected) {
+                        toggleSelection(selKey)
+                        if (isInConflict) setConflictState(null)
+                      } else if (hasMismatches) {
+                        setConflictState({ suggestion: s, resolutions: {} })
+                      } else {
+                        if (!atCapacity) toggleSelection(selKey)
+                      }
                     }}
                   >
                     <span
                       className="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
                       style={{
-                        borderColor: isSelected ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)',
-                        background: isSelected ? 'var(--theme-brand-primary)' : 'transparent',
+                        borderColor: isInConflict
+                          ? 'var(--theme-status-warning)'
+                          : isSelected ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)',
+                        background: isInConflict
+                          ? 'color-mix(in srgb, var(--theme-status-warning) 20%, transparent)'
+                          : isSelected ? 'var(--theme-brand-primary)' : 'transparent',
                       }}
                     >
-                      {isSelected && <Check className="w-3 h-3" style={{ color: 'var(--theme-text-on-brand)' }} />}
+                      {isInConflict && <AlertTriangle className="w-3 h-3" style={{ color: 'var(--theme-status-warning)' }} />}
+                      {isSelected && !isInConflict && <Check className="w-3 h-3" style={{ color: 'var(--theme-text-on-brand)' }} />}
                     </span>
                   </label>
                   <div className="pl-9">
@@ -495,8 +568,21 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
           )}
         </div>
 
-      {/* Batch action bar in matched mode */}
-      {selectedKeys.size > 0 && (
+      {/* Bottom bar in matched mode: conflict resolution OR batch selection */}
+      {conflictState ? (
+        <ConflictResolutionBar
+          conflictState={conflictState}
+          onResolutionChange={(name, side) =>
+            setConflictState(prev => prev ? ({
+              ...prev,
+              resolutions: { ...prev.resolutions, [name]: side },
+            }) : null)
+          }
+          onConfirm={handleConflictConfirm}
+          onCancel={() => setConflictState(null)}
+          isPending={reconcile.isPending || updateTOForConflict.isPending}
+        />
+      ) : selectedKeys.size > 0 ? (
         <div
           className="flex items-center justify-between px-4 py-3 rounded-xl"
           style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
@@ -521,7 +607,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
             Ghép tất cả
           </button>
         </div>
-      )}
+      ) : null}
 
         {unmatchTargetId && unmatchTarget ? (
           <div
@@ -692,23 +778,43 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
         {visibleSuggestions.map(s => {
           const selKey = `${s.tripOrder.id}-${s.containerId}`
           const isSelected = selectedKeys.has(selKey)
+          const hasMismatches = s.matchScore < s.maxScore
+          const isInConflict = conflictState !== null &&
+            `${conflictState.suggestion.tripOrder.id}-${conflictState.suggestion.containerId}` === selKey
           return (
           <div key={selKey} className="relative">
             <label
               onClick={e => {
-                e.stopPropagation();
-                if (!atCapacity || isSelected) toggleSelection(selKey)
+                e.stopPropagation()
+                if (isSelected) {
+                  toggleSelection(selKey)
+                  if (isInConflict) setConflictState(null)
+                } else if (hasMismatches) {
+                  // Open conflict resolution instead of normal selection
+                  setConflictState({ suggestion: s, resolutions: {} })
+                } else {
+                  if (!atCapacity) toggleSelection(selKey)
+                }
               }}
-              className={`absolute top-3 left-3 z-10 flex items-center gap-1 ${atCapacity && !isSelected ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'} select-none`}
+              className={`absolute top-3 left-3 z-10 flex items-center gap-1 ${atCapacity && !isSelected && !hasMismatches ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'} select-none`}
             >
               <span
                 className="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
                 style={{
-                  borderColor: isSelected ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)',
-                  background: isSelected ? 'var(--theme-brand-primary)' : 'transparent',
+                  borderColor: isInConflict
+                    ? 'var(--theme-status-warning)'
+                    : isSelected
+                    ? 'var(--theme-brand-primary)'
+                    : 'var(--theme-border-default)',
+                  background: isInConflict
+                    ? 'color-mix(in srgb, var(--theme-status-warning) 20%, transparent)'
+                    : isSelected
+                    ? 'var(--theme-brand-primary)'
+                    : 'transparent',
                 }}
               >
-                {isSelected && <Check className="w-3 h-3" style={{ color: 'var(--theme-text-on-brand)' }} />}
+                {isInConflict && <AlertTriangle className="w-3 h-3" style={{ color: 'var(--theme-status-warning)' }} />}
+                {isSelected && !isInConflict && <Check className="w-3 h-3" style={{ color: 'var(--theme-text-on-brand)' }} />}
               </span>
             </label>
             <div className="pl-9">
@@ -728,8 +834,21 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
         })}
       </div>
 
-      {/* Batch action bar */}
-      {selectedKeys.size > 0 && (
+      {/* Bottom bar: conflict resolution (mismatched card ticked) OR batch selection */}
+      {conflictState ? (
+        <ConflictResolutionBar
+          conflictState={conflictState}
+          onResolutionChange={(name, side) =>
+            setConflictState(prev => prev ? ({
+              ...prev,
+              resolutions: { ...prev.resolutions, [name]: side },
+            }) : null)
+          }
+          onConfirm={handleConflictConfirm}
+          onCancel={() => setConflictState(null)}
+          isPending={reconcile.isPending || updateTOForConflict.isPending}
+        />
+      ) : selectedKeys.size > 0 ? (
         <div
           className="sticky bottom-0 left-0 right-0 flex items-center justify-between px-4 py-3 rounded-xl"
           style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
@@ -754,7 +873,157 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
             Ghép vào {workOrder.driver.vehicle?.plate || workOrder.driver.name || 'chuyến này'}
           </button>
         </div>
-      )}
+      ) : null}
+    </div>
+  )
+}
+
+// ─── Conflict Resolution Bar ─────────────────────────────────────────────────
+// Appears in the sticky bottom area when the user ticks a card with mismatches.
+// For each mismatched criterion the accountant picks which side is authoritative:
+//   🚛 Chuyến đi (WO) — the driver's ground-truth record
+//   📋 Đơn hàng   (TO) — the customer import
+// Once all conflicts are resolved, "Xác nhận ghép" becomes active.
+
+function ConflictResolutionBar({
+  conflictState,
+  onResolutionChange,
+  onConfirm,
+  onCancel,
+  isPending,
+}: {
+  conflictState: { suggestion: MatchSuggestion; resolutions: Record<string, 'wo' | 'to'> }
+  onResolutionChange: (criterionName: string, side: 'wo' | 'to') => void
+  onConfirm: () => void
+  onCancel: () => void
+  isPending: boolean
+}) {
+  const mismatchedCriteria = conflictState.suggestion.criteria.filter(c => !c.match)
+  const resolvedCount = mismatchedCriteria.filter(c => conflictState.resolutions[c.name]).length
+  const allResolved = resolvedCount === mismatchedCriteria.length
+
+  return (
+    <div
+      className="sticky bottom-0 rounded-xl overflow-hidden shadow-lg"
+      style={{ border: '1px solid var(--theme-status-warning)', background: 'var(--theme-bg-primary)' }}
+    >
+      {/* Header */}
+      <div
+        className="flex items-center justify-between px-4 py-2.5"
+        style={{
+          background: 'color-mix(in srgb, var(--theme-status-warning) 10%, transparent)',
+          borderBottom: '1px solid color-mix(in srgb, var(--theme-status-warning) 25%, transparent)',
+        }}
+      >
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4" style={{ color: 'var(--theme-status-warning)' }} />
+          <span className="text-xs font-bold" style={{ color: 'var(--theme-status-warning)' }}>
+            Xử lý xung đột — chọn giá trị đúng cho từng trường
+          </span>
+        </div>
+        <button onClick={onCancel} className="p-1 rounded opacity-60 hover:opacity-100 transition-opacity">
+          <X className="w-3.5 h-3.5" style={{ color: 'var(--theme-text-secondary)' }} />
+        </button>
+      </div>
+
+      {/* One row per mismatched criterion */}
+      <div className="p-3 space-y-2.5">
+        {mismatchedCriteria.map(criterion => {
+          const chosen = conflictState.resolutions[criterion.name]
+          return (
+            <div key={criterion.name}>
+              <div
+                className="text-[9px] font-bold uppercase tracking-widest mb-1 px-0.5"
+                style={{ color: 'var(--theme-text-muted)' }}
+              >
+                {criterion.label}
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {/* WO (driver) side */}
+                <button
+                  onClick={() => onResolutionChange(criterion.name, 'wo')}
+                  className="relative flex flex-col gap-0.5 px-3 py-2.5 rounded-lg text-left transition-all"
+                  style={{
+                    border: chosen === 'wo'
+                      ? '2px solid var(--theme-brand-primary)'
+                      : '1px solid var(--theme-border-default)',
+                    background: chosen === 'wo'
+                      ? 'color-mix(in srgb, var(--theme-brand-primary) 8%, var(--theme-bg-primary))'
+                      : 'var(--theme-bg-secondary)',
+                  }}
+                >
+                  {chosen === 'wo' && (
+                    <span className="absolute top-1.5 right-1.5">
+                      <CheckCircle2 className="w-3 h-3" style={{ color: 'var(--theme-brand-primary)' }} />
+                    </span>
+                  )}
+                  <span
+                    className="text-[9px] font-bold uppercase tracking-wider"
+                    style={{ color: chosen === 'wo' ? 'var(--theme-brand-primary)' : 'var(--theme-text-muted)' }}
+                  >
+                    🚛 Chuyến đi
+                  </span>
+                  <span className="text-xs font-medium truncate" style={{ color: 'var(--theme-text-primary)' }}>
+                    {criterion.woValue || '—'}
+                  </span>
+                </button>
+                {/* TO (order) side */}
+                <button
+                  onClick={() => onResolutionChange(criterion.name, 'to')}
+                  className="relative flex flex-col gap-0.5 px-3 py-2.5 rounded-lg text-left transition-all"
+                  style={{
+                    border: chosen === 'to'
+                      ? '2px solid var(--theme-status-success)'
+                      : '1px solid var(--theme-border-default)',
+                    background: chosen === 'to'
+                      ? 'color-mix(in srgb, var(--theme-status-success) 8%, var(--theme-bg-primary))'
+                      : 'var(--theme-bg-secondary)',
+                  }}
+                >
+                  {chosen === 'to' && (
+                    <span className="absolute top-1.5 right-1.5">
+                      <CheckCircle2 className="w-3 h-3" style={{ color: 'var(--theme-status-success)' }} />
+                    </span>
+                  )}
+                  <span
+                    className="text-[9px] font-bold uppercase tracking-wider"
+                    style={{ color: chosen === 'to' ? 'var(--theme-status-success)' : 'var(--theme-text-muted)' }}
+                  >
+                    📋 Đơn hàng
+                  </span>
+                  <span className="text-xs font-medium truncate" style={{ color: 'var(--theme-text-primary)' }}>
+                    {criterion.toValue || '—'}
+                  </span>
+                </button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2 px-3 pb-3">
+        <button
+          onClick={onConfirm}
+          disabled={!allResolved || isPending}
+          className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-opacity disabled:opacity-40 flex-1"
+          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+        >
+          {isPending
+            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            : <Check className="w-3.5 h-3.5" />}
+          {allResolved
+            ? 'Xác nhận ghép'
+            : `Xác nhận ghép (${resolvedCount}/${mismatchedCriteria.length} đã chọn)`}
+        </button>
+        <button
+          onClick={onCancel}
+          className="px-3 py-2 rounded-lg text-xs font-semibold"
+          style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
+        >
+          Huỷ
+        </button>
+      </div>
     </div>
   )
 }

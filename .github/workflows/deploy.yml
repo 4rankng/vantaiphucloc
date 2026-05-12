@@ -1,17 +1,14 @@
 name: Deploy
 
-# First version: manual trigger only. Once secrets are configured and the
-# workflow has been run end-to-end successfully, you can flip on the
-# `push: branches: [main]` trigger below to enable continuous deployment.
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       skip_smoke_check:
         description: "Skip the post-deploy smoke check (not recommended)"
         type: boolean
         default: false
-  # push:
-  #   branches: [main]
 
 concurrency:
   group: deploy-production
