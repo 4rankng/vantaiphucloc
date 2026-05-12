@@ -38,13 +38,13 @@ function TripDetailCardView({ workOrder }: { workOrder: WorkOrder }) {
       <div className="flex items-center gap-2 flex-wrap">
         {plate ? (
           <span
-            className="text-sm font-mono font-bold px-2 py-0.5 rounded"
+            className="text-xs font-mono font-bold px-2 py-0.5 rounded"
             style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
           >
             {plate}
           </span>
         ) : (
-          <span className="text-sm font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>
+          <span className="text-xs font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>
             {workOrder.driver.name || '—'}
           </span>
         )}
@@ -54,21 +54,22 @@ function TripDetailCardView({ workOrder }: { workOrder: WorkOrder }) {
         </span>
       </div>
 
-      <div className="flex items-center gap-3 text-sm">
-        <span className="font-medium truncate" style={{ color: 'var(--theme-text-primary)' }}>
-          KH {workOrder.partner.name}
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: 'var(--theme-text-muted)' }}>KH</span>
+        <span className="text-xs font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
+          {workOrder.partner.name}
         </span>
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--theme-text-secondary)' }}>
+        <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: 'var(--theme-text-secondary)' }}>
           <MapPin className="w-3 h-3" />
           {resolveRoute(workOrder) || '—'}
         </span>
         {workOrder.containers.slice(0, 4).map((c, i) => (
           <span key={i} className="flex items-center gap-1">
             <ContBadge type={c.workType} />
-            <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+            <span className="text-[10px] font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
               {c.containerNumber}
             </span>
           </span>
@@ -147,16 +148,16 @@ function TripDetailCardEditable({ workOrder, onEdited }: { workOrder: WorkOrder;
       >
         <div className="flex items-center gap-2">
           <Pencil className="w-3.5 h-3.5" style={{ color: 'var(--theme-brand-primary)' }} />
-          <span className="text-xs font-bold" style={{ color: 'var(--theme-brand-primary)' }}>Chỉnh sửa chuyến</span>
+          <span className="text-[11px] uppercase tracking-wider font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>Chỉnh sửa chuyến</span>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
           {plate ? (
-            <span className="text-sm font-mono font-bold px-2 py-0.5 rounded" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
+            <span className="text-xs font-mono font-bold px-2 py-0.5 rounded" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
               {plate}
             </span>
           ) : (
-            <span className="text-sm font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>
+            <span className="text-xs font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>
               {workOrder.driver.name || '—'}
             </span>
           )}
@@ -167,7 +168,7 @@ function TripDetailCardEditable({ workOrder, onEdited }: { workOrder: WorkOrder;
         </div>
 
         <div>
-          <label className="text-[10px] font-semibold block mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</label>
+          <label className="text-[11px] font-semibold block mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</label>
           <select
             value={clientId}
             onChange={e => setClientId(e.target.value)}
@@ -182,18 +183,18 @@ function TripDetailCardEditable({ workOrder, onEdited }: { workOrder: WorkOrder;
 
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-[10px] font-semibold block mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>Điểm lấy</label>
+            <label className="text-[11px] font-semibold block mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>Điểm lấy</label>
             <LocationSelect value={pickupName} onChange={setPickupName} placeholder="Điểm lấy hàng" />
           </div>
           <div>
-            <label className="text-[10px] font-semibold block mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>Điểm trả</label>
+            <label className="text-[11px] font-semibold block mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>Điểm trả</label>
             <LocationSelect value={dropoffName} onChange={setDropoffName} placeholder="Điểm trả hàng" />
           </div>
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="text-[10px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Container</label>
+            <label className="text-[11px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Container</label>
             <button onClick={addContainer} className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ color: 'var(--theme-brand-primary)', background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)' }}>
               + Thêm
             </button>
@@ -268,13 +269,13 @@ function TripDetailCardEditable({ workOrder, onEdited }: { workOrder: WorkOrder;
       <div className="flex items-center gap-2 flex-wrap">
         {plate ? (
           <span
-            className="text-sm font-mono font-bold px-2 py-0.5 rounded"
+            className="text-xs font-mono font-bold px-2 py-0.5 rounded"
             style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
           >
             {plate}
           </span>
         ) : (
-          <span className="text-sm font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>
+          <span className="text-xs font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>
             {workOrder.driver.name || '—'}
           </span>
         )}
@@ -284,21 +285,20 @@ function TripDetailCardEditable({ workOrder, onEdited }: { workOrder: WorkOrder;
         </span>
       </div>
 
-      <div className="flex items-center gap-3 text-sm">
-        <span className="font-medium truncate" style={{ color: 'var(--theme-text-primary)' }}>
-          KH {workOrder.partner.name}
-        </span>
+      <div className="flex items-center gap-2 text-xs">
+        <span className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: 'var(--theme-text-muted)' }}>KH</span>
+        <span className="font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{workOrder.partner.name}</span>
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--theme-text-secondary)' }}>
+        <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: 'var(--theme-text-secondary)' }}>
           <MapPin className="w-3 h-3" />
           {resolveRoute(workOrder) || '—'}
         </span>
         {workOrder.containers.slice(0, 4).map((c, i) => (
           <span key={i} className="flex items-center gap-1">
             <ContBadge type={c.workType} />
-            <span className="text-xs font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+            <span className="text-[10px] font-mono font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
               {c.containerNumber}
             </span>
           </span>

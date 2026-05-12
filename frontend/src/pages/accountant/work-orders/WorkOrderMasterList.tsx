@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
-import { Calendar, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react'
+import { Calendar } from 'lucide-react'
 import { ContBadge } from '@/components/shared/ContBadge'
-import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
 import { fmtDate } from '@/lib/date-utils'
 import { resolveRoute } from '@/lib/route-utils'
 import type { WorkOrder, WorkOrderMatchScore } from '@/data/domain'
@@ -14,21 +13,19 @@ function scoreChipColor(matchScore: number, maxScore: number): string {
   return 'var(--theme-text-muted)'
 }
 
-function getStatusVariant(status: string): 'pending' | 'completed' | 'neutral' {
-  switch (status) {
-    case 'PENDING': return 'pending'
-    case 'MATCHED': return 'completed'
-    case 'COMPLETED': return 'completed'
-    default: return 'neutral'
-  }
-}
-
 function getStatusLabel(status: string): string {
   switch (status) {
     case 'PENDING': return 'Chờ ghép'
     case 'MATCHED': return 'Đã khớp'
-    case 'COMPLETED': return 'Đã khớp'
     default: return status
+  }
+}
+
+function getStatusColor(status: string): string {
+  switch (status) {
+    case 'PENDING': return 'var(--theme-status-warning)'
+    case 'MATCHED': return 'var(--theme-status-success)'
+    default: return 'var(--theme-text-muted)'
   }
 }
 
@@ -87,14 +84,16 @@ export function WorkOrderMasterList({
         const maxScore = score?.maxScore ?? 6
         const color = scoreChipColor(bestScore, maxScore)
 
+        const matchCount = wo.matchedTripCount ?? 0
+
         return (
           <button
             key={wo.id}
             onClick={() => onSelect(wo.id)}
-            className="w-full text-left px-3 py-2.5 flex items-start gap-2.5 transition-colors"
+            className="w-full text-left px-3 py-2 flex items-start gap-2.5 transition-colors"
             style={{
               background: isSelected ? 'color-mix(in srgb, var(--theme-brand-primary) 6%, transparent)' : 'transparent',
-              borderLeft: isSelected ? '3px solid var(--theme-brand-primary)' : '3px solid transparent',
+              borderLeft: isSelected ? '2px solid var(--theme-brand-primary)' : '2px solid transparent',
             }}
             onMouseEnter={e => {
               if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)'
@@ -103,43 +102,30 @@ export function WorkOrderMasterList({
               if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent'
             }}
           >
-            {/* Score chip */}
+            {/* Score / status chip — 36×36 */}
             {wo.status === 'PENDING' && score ? (
               <div
-                className="shrink-0 flex flex-col items-center justify-center rounded-lg mt-0.5"
-                style={{ width: 44, height: 44, background: `color-mix(in srgb, ${color} 12%, transparent)` }}
+                className="shrink-0 flex items-center justify-center rounded-lg mt-0.5"
+                style={{ width: 36, height: 36, background: `color-mix(in srgb, ${color} 12%, transparent)` }}
               >
-                <div className="flex items-center gap-0.5">
-                  {bestScore === maxScore ? (
-                    <CheckCircle2 className="w-3 h-3" style={{ color }} />
-                  ) : bestScore >= Math.ceil(maxScore * 0.66) ? (
-                    <AlertTriangle className="w-3 h-3" style={{ color }} />
-                  ) : (
-                    <XCircle className="w-3 h-3" style={{ color }} />
-                  )}
-                  <span className="text-xs font-bold tabular-nums leading-none" style={{ color }}>
-                    {bestScore}/{maxScore}
-                  </span>
-                </div>
-                {score.suggestionCount > 0 && (
-                  <span className="text-[9px] mt-0.5" style={{ color }}>
-                    {score.suggestionCount}
-                  </span>
-                )}
+                <span className="text-[11px] font-bold tabular-nums leading-none" style={{ color }}>
+                  {bestScore}/{maxScore}
+                </span>
               </div>
             ) : (
               <div
-                className="shrink-0 flex flex-col items-center justify-center rounded-lg mt-0.5 gap-0.5"
-                style={{ width: 44, height: 44, background: 'var(--theme-bg-tertiary)' }}
+                className="shrink-0 flex flex-col items-center justify-center rounded-lg mt-0.5"
+                style={{ width: 36, height: 36, background: 'var(--theme-bg-tertiary)' }}
               >
-                <StatusBadgePro
-                  variant={getStatusVariant(wo.status)}
-                  label={getStatusLabel(wo.status)}
-                  size="sm"
-                />
-                {wo.status === 'MATCHED' && wo.matchedTripCount && wo.matchedTripCount >= 1 && (
-                  <span className="text-[9px] font-bold" style={{ color: 'var(--theme-status-success)' }}>
-                    {wo.matchedTripCount} ĐH
+                <span
+                  className="text-[10px] font-semibold leading-none"
+                  style={{ color: getStatusColor(wo.status) }}
+                >
+                  {getStatusLabel(wo.status)}
+                </span>
+                {matchCount >= 1 && (
+                  <span className="text-[10px] font-bold tabular-nums mt-0.5" style={{ color: 'var(--theme-status-success)' }}>
+                    {matchCount} ĐH
                   </span>
                 )}
               </div>
@@ -154,7 +140,7 @@ export function WorkOrderMasterList({
                     {wo.driver.vehicle.plate}
                   </span>
                 ) : (
-                  <span className="text-xs font-mono font-bold" style={{ color: 'var(--theme-brand-primary)' }}>
+                  <span className="text-xs font-bold" style={{ color: 'var(--theme-brand-primary)' }}>
                     {wo.driver.name || '—'}
                   </span>
                 )}
@@ -164,10 +150,16 @@ export function WorkOrderMasterList({
                 </span>
               </div>
 
-              {/* Line 2: client + route */}
-              <p className="text-xs font-medium line-clamp-2" style={{ color: 'var(--theme-text-primary)' }}>
-                {wo.partner.name} · {resolveRoute(wo) || '—'}
-              </p>
+              {/* Line 2: partner (primary) + route (muted) */}
+              <div className="flex items-center gap-1 text-xs">
+                <span className="font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
+                  {wo.partner.name}
+                </span>
+                <span style={{ color: 'var(--theme-text-muted)' }}>·</span>
+                <span className="truncate text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
+                  {resolveRoute(wo) || '—'}
+                </span>
+              </div>
 
               {/* Line 3: containers — single row */}
               <div className="flex items-center gap-1.5 mt-0.5 min-w-0 overflow-hidden whitespace-nowrap">

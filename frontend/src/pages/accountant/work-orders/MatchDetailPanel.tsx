@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback, useEffect } from 'react'
-import { Sparkles, FileText, ClipboardList, Search, Loader2, X, Check, Container, Link2, Unlink, AlertTriangle, Pencil, Save } from 'lucide-react'
-import { useSuggestMatches, useReconcile, useBulkMatch, useTripOrders, useUnmatch, useBatchReconcileForWO, useUpdateTripOrder, usePartners, useLocations } from '@/hooks/use-queries'
+import { Sparkles, FileText, ClipboardList, Search, Loader2, X, Check, Container, Link2, Unlink, AlertTriangle, Pencil, Save, RefreshCw } from 'lucide-react'
+import { useSuggestMatches, useReconcile, useBulkMatch, useTripOrders, useUnmatch, useBatchReconcileForWO, useUpdateTripOrder, useUpdateWorkOrder, usePartners, useLocations } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
 import { TripDetailCard } from './TripDetailCard'
@@ -235,6 +235,12 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
     return allTripOrders.filter(t => t.matchedWorkOrderIds?.includes(workOrder.id))
   }, [isMatched, workOrder, allTripOrders])
 
+  // Detect stale MATCHED state: WO says MATCHED but no linked TOs found
+  const isStaleMatched = isMatched && matchedTrips.length === 0
+
+  // For resetting stale MATCHED WOs back to PENDING
+  const updateWOMut = useUpdateWorkOrder()
+
   const visibleSuggestions = useMemo(
     () => suggestions,
     [suggestions]
@@ -307,18 +313,51 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
 
         <div className="flex items-center gap-2">
           <Link2 className="w-4 h-4" style={{ color: 'var(--theme-status-success)' }} />
-          <h2 className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+          <h2 className="text-[13px] font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
             Đã ghép với đơn hàng
           </h2>
           <span
-            className="text-xs font-semibold px-2 py-0.5 rounded-full"
+            className="text-[10px] font-semibold tabular-nums px-2 py-0.5 rounded-full"
             style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
           >
             {matchedTrips.length}
           </span>
         </div>
 
-        {matchedTrips.length > 0 ? (
+        {/* Stale MATCHED error state — WO says MATCHED but no linked TOs */}
+        {isStaleMatched && (
+          <div
+            className="rounded-xl p-4 space-y-3"
+            style={{ background: 'color-mix(in srgb, var(--theme-status-warning) 6%, transparent)', border: '1px solid var(--theme-status-warning)' }}
+          >
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" style={{ color: 'var(--theme-status-warning)' }} />
+              <span className="text-[13px] font-semibold" style={{ color: 'var(--theme-status-warning)' }}>Trạng thái chuyến đang lệch dữ liệu</span>
+            </div>
+            <p className="text-xs" style={{ color: 'var(--theme-text-primary)' }}>
+              Phiếu <strong>{workOrder.driver.vehicle?.plate || workOrder.driver.name}</strong> hiển thị "Đã khớp" nhưng không tìm thấy đơn hàng nào được liên kết.
+            </p>
+            <button
+              onClick={async () => {
+                try {
+                  await updateWOMut.mutateAsync({ id: workOrder.id, data: { status: 'PENDING' } })
+                  toast.success('Thành công', 'Đã đặt lại trạng thái về Chờ ghép')
+                  onMatchSuccess()
+                } catch {
+                  toast.error('Lỗi', 'Không thể đặt lại trạng thái')
+                }
+              }}
+              disabled={updateWOMut.isPending}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-opacity disabled:opacity-40"
+              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+            >
+              {updateWOMut.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+              Đặt lại trạng thái PENDING
+            </button>
+          </div>
+        )}
+
+        {!isStaleMatched && matchedTrips.length > 0 ? (
           <div className="space-y-2">
             {matchedTrips.map(trip => (
               editingTripId === trip.id ? (
@@ -340,7 +379,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
                           {trip.containers.map(c => c.containerNumber || c.workType).filter(Boolean).join(', ')}
                         </span>
                       )}
-                      <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                      <span className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
                         {trip.tripDate}
                       </span>
                     </div>
@@ -363,7 +402,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
                       </button>
                     </div>
                   </div>
-                  <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
+                  <p className="text-xs font-medium" style={{ color: 'var(--theme-text-primary)' }}>
                     {trip.partner?.name || '—'}
                   </p>
                   {(trip.pickupLocation?.name || trip.dropoffLocation?.name) && (
@@ -380,22 +419,22 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
               )
             ))}
           </div>
-        ) : (
+        ) : !isStaleMatched ? (
           <div className="rounded-xl p-6 text-center" style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}>
-            <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có đơn hàng nào được ghép</p>
+            <p className="text-[13px]" style={{ color: 'var(--theme-text-muted)' }}>Chưa có đơn hàng nào được ghép</p>
           </div>
-        )}
+        ) : null}
 
         {/* Suggestions for adding more TOs to this matched WO */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4" style={{ color: 'var(--theme-brand-primary)' }} />
-            <h2 className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+            <h2 className="text-[13px] font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
               Thêm đơn hàng khác cho chuyến này
             </h2>
             {suggestions.length > 0 && (
               <span
-                className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                className="text-[10px] font-semibold tabular-nums px-2 py-0.5 rounded-full"
                 style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
               >
                 {suggestions.length}
@@ -578,11 +617,11 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
 
       {/* Suggestions header */}
       <div className="flex items-center gap-2">
-        <h2 className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+        <h2 className="text-[13px] font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
           Đơn hàng có thể ghép
         </h2>
         <span
-          className="text-xs font-semibold px-2 py-0.5 rounded-full"
+          className="text-[10px] font-semibold tabular-nums px-2 py-0.5 rounded-full"
           style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
         >
           {suggestions.length}

@@ -75,7 +75,7 @@ function CriterionRow({
       title={tooltip}
     >
       {icon}
-      <span className="text-xs font-semibold shrink-0 w-20" style={{ color: 'var(--theme-text-muted)' }}>
+      <span className="text-[11px] font-semibold shrink-0 w-24" style={{ color: 'var(--theme-text-muted)' }}>
         {criterion.label}
       </span>
 
@@ -157,20 +157,20 @@ export function MatchCard({
       {/* Header: TO code + date + score */}
       <div className="flex items-center gap-3 px-4 py-2.5">
         <div
-          className="shrink-0 flex flex-col items-center justify-center w-11 h-11 rounded-lg"
+          className="shrink-0 flex items-center justify-center w-9 h-9 rounded-lg"
           style={{ background: `color-mix(in srgb, ${color} 12%, transparent)` }}
         >
-          <span className="text-sm font-bold tabular-nums leading-none" style={{ color }}>
+          <span className="text-[11px] font-bold tabular-nums leading-none" style={{ color }}>
             {matchScore}/{maxScore}
           </span>
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium" style={{ color: 'var(--theme-text-primary)' }}>
+            <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
               {tripOrder.partner?.name || '—'}
             </span>
-            <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+            <span className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
               {fmtDate(tripOrder.tripDate)}
             </span>
           </div>
@@ -208,7 +208,7 @@ export function MatchCard({
         <button
           onClick={handleGhep}
           disabled={submitting || matchScore < 2}
-          className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-opacity disabled:opacity-40"
+          className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-opacity disabled:opacity-40"
           style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
         >
           <Check className="w-3.5 h-3.5" />
