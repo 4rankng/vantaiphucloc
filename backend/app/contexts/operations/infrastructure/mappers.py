@@ -110,6 +110,7 @@ def trip_order_to_domain(
     containers: list[TripOrderContainerORM] | None = None,
     photos_by_container: dict[int, list[TripContainerPhotoORM]] | None = None,
     matched_work_order_ids: list[int] | None = None,
+    matched_by: int = 0,
 ) -> TripOrder:
     container_entities: list[TripOrderContainer] = []
     for c_orm in containers or []:
@@ -134,6 +135,7 @@ def trip_order_to_domain(
         updated_at=orm.updated_at,
         containers=container_entities,
         matched_work_order_ids=list(matched_work_order_ids or []),
+        matched_by=matched_by,
     )
 
 
