@@ -228,37 +228,93 @@ export async function downloadTripOrderTemplate(): Promise<Blob> {
   return res.data
 }
 
-// ── Auto-match ────────────────────────────────────────────────────────
+// ── Auto-match (preview + confirm) ─────────────────────────────────
 
-export interface AutoMatchResult {
+export interface AutoMatchCriterionFE {
+  key: string
+  label: string
+  match: boolean
+}
+
+export interface AutoMatchCandidateFE {
   workOrderId: number
   tripOrderId: number
   score: number
+  matchScore: number
+  maxScore: number
   matchedFields: string[]
+  criteria: AutoMatchCriterionFE[]
+  suggestedDefault: boolean
+  workOrderRef: {
+    id: number
+    code: string | null
+    plate: string | null
+    date: string | null
+    clientName: string | null
+    route: string | null
+  } | null
+  tripOrderRef: {
+    id: number
+    code: string | null
+    clientName: string | null
+    route: string | null
+    containers: TripOrderContainerItem[]
+  } | null
 }
 
-export interface AutoMatchResponse {
-  autoMatched: AutoMatchResult[]
-  partialMatches: AutoMatchResult[]
-  unmatchedWorkOrderIds: number[]
+export interface AutoMatchPreviewResponseFE {
+  scannedWorkOrderCount: number
   skippedAlreadyMatched: number
+  candidates: AutoMatchCandidateFE[]
+  unmatchedWorkOrderRefs: { id: number; code: string | null; plate: string | null; date: string | null }[]
   errors: string[]
 }
 
-export async function autoMatch(
+export interface AutoMatchConfirmResultFE {
+  workOrderId: number
+  tripOrderId: number
+  success: boolean
+  error: string | null
+}
+
+export interface AutoMatchConfirmResponseFE {
+  matched: AutoMatchConfirmResultFE[]
+  failed: AutoMatchConfirmResultFE[]
+  durationMs: number
+}
+
+export async function autoMatchPreview(
   dateFrom?: string,
   dateTo?: string,
-): Promise<ApiResponse<AutoMatchResponse>> {
+): Promise<ApiResponse<AutoMatchPreviewResponseFE>> {
   try {
     const res = await api.post('/reconcile/auto-match', {
       date_from: dateFrom ?? null,
       date_to: dateTo ?? null,
     })
-    return ok(toCamel<AutoMatchResponse>(res.data))
+    return ok(toCamel<AutoMatchPreviewResponseFE>(res.data))
   } catch (err) {
     return fail(err)
   }
 }
+
+export async function autoMatchConfirm(
+  pairs: { workOrderId: number; tripOrderId: number }[],
+): Promise<ApiResponse<AutoMatchConfirmResponseFE>> {
+  try {
+    const res = await api.post('/reconcile/auto-match/confirm', {
+      pairs: pairs.map(p => ({ work_order_id: p.workOrderId, trip_order_id: p.tripOrderId })),
+    })
+    return ok(toCamel<AutoMatchConfirmResponseFE>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+// Legacy alias
+export const autoMatch = autoMatchPreview
+export type AutoMatchResponse = AutoMatchPreviewResponseFE
+export type AutoMatchResult = AutoMatchCandidateFE
 
 // ── Match Scores (lightweight for master list) ───────────────────────
 
