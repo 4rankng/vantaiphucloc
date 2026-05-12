@@ -35,7 +35,9 @@ export function DoiSoatExportDialog({ open, onOpenChange, clients }: DoiSoatExpo
 
   const clientOptions = [
     { value: '', label: '— Chọn khách hàng —' },
-    ...clients.map(c => ({ value: String(c.id), label: c.name })),
+    ...clients
+      .filter(c => c.partnerRole !== 'shipping_line')
+      .map(c => ({ value: String(c.id), label: c.name })),
   ]
 
   const canExport = selectedClientId && dateFrom && dateTo
