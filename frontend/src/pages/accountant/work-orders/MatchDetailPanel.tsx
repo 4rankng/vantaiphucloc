@@ -1,14 +1,168 @@
 import { useMemo, useState, useCallback, useEffect } from 'react'
-import { Sparkles, FileText, ClipboardList, Search, Loader2, X, Check, Container, Link2, Unlink, AlertTriangle } from 'lucide-react'
-import { useSuggestMatches, useReconcile, useBulkMatch, useTripOrders, useUnmatch, useBatchReconcileForWO } from '@/hooks/use-queries'
+import { Sparkles, FileText, ClipboardList, Search, Loader2, X, Check, Container, Link2, Unlink, AlertTriangle, Pencil, Save } from 'lucide-react'
+import { useSuggestMatches, useReconcile, useBulkMatch, useTripOrders, useUnmatch, useBatchReconcileForWO, useUpdateTripOrder, usePartners, useLocations } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
+import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
 import { TripDetailCard } from './TripDetailCard'
 import { MatchCard, scoreColor } from './MatchCard'
-import type { WorkOrder, TripOrder } from '@/data/domain'
+import type { WorkOrder, TripOrder, TripOrderContainerItem, WorkType } from '@/data/domain'
+import { WORK_TYPES, WORK_TYPE_LABELS } from '@/data/domain'
 
 interface MatchDetailPanelProps {
   workOrder: WorkOrder | null
   onMatchSuccess: () => void
+}
+
+function EditMatchedTripCard({ trip, onDone }: { trip: TripOrder; onDone: () => void }) {
+  const toast = useToast()
+  const updateTO = useUpdateTripOrder()
+  const { data: partners = [] } = usePartners()
+  const { data: locations = [] } = useLocations()
+
+  const [tripDate, setTripDate] = useState(trip.tripDate)
+  const [clientId, setClientId] = useState(String(trip.partner.id))
+  const [pickupName, setPickupName] = useState(trip.pickupLocation?.name ?? '')
+  const [dropoffName, setDropoffName] = useState(trip.dropoffLocation?.name ?? '')
+  const [containers, setContainers] = useState<TripOrderContainerItem[]>(trip.containers)
+
+  const handleSave = useCallback(async () => {
+    const pickupLoc = locations.find(l => l.name === pickupName)
+    const dropoffLoc = locations.find(l => l.name === dropoffName)
+    if (!pickupLoc || !dropoffLoc) {
+      toast.error('Lỗi', 'Điểm lấy/trả không hợp lệ')
+      return
+    }
+    try {
+      await updateTO.mutateAsync({
+        id: trip.id,
+        data: {
+          tripDate,
+          clientId: Number(clientId),
+          pickupLocationId: pickupLoc.id,
+          dropoffLocationId: dropoffLoc.id,
+          containers,
+        },
+      })
+      toast.success('Thành công', 'Đã cập nhật đơn hàng')
+      onDone()
+    } catch {
+      toast.error('Lỗi', 'Không thể cập nhật đơn hàng')
+    }
+  }, [trip.id, tripDate, clientId, pickupName, dropoffName, containers, locations, updateTO, toast, onDone])
+
+  const updateContainer = useCallback((idx: number, field: keyof TripOrderContainerItem, value: string) => {
+    setContainers(prev => prev.map((c, i) =>
+      i === idx ? { ...c, [field]: value } : c
+    ))
+  }, [])
+
+  const addContainer = useCallback(() => {
+    setContainers(prev => [...prev, { containerNumber: '', workType: 'E20' as WorkType }])
+  }, [])
+
+  const removeContainer = useCallback((idx: number) => {
+    setContainers(prev => prev.filter((_, i) => i !== idx))
+  }, [])
+
+  return (
+    <div className="space-y-3" style={{ background: 'var(--theme-bg-primary)', border: '1px solid var(--theme-brand-primary)', borderRadius: '0.75rem', padding: '0.75rem' }}>
+      <div className="flex items-center gap-2 mb-1">
+        <Pencil className="w-3.5 h-3.5" style={{ color: 'var(--theme-brand-primary)' }} />
+        <span className="text-xs font-bold" style={{ color: 'var(--theme-brand-primary)' }}>Chỉnh sửa đơn hàng</span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-[10px] font-semibold block mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>Ngày</label>
+          <input
+            type="date"
+            value={tripDate}
+            onChange={e => setTripDate(e.target.value)}
+            className="w-full px-2 py-1.5 rounded-lg text-xs border"
+            style={{ background: 'var(--theme-bg-primary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
+          />
+        </div>
+        <div>
+          <label className="text-[10px] font-semibold block mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>Khách hàng</label>
+          <select
+            value={clientId}
+            onChange={e => setClientId(e.target.value)}
+            className="w-full px-2 py-1.5 rounded-lg text-xs border"
+            style={{ background: 'var(--theme-bg-primary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
+          >
+            {partners.map(p => (
+              <option key={p.id} value={String(p.id)}>{p.code ? `[${p.code}] ` : ''}{p.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-[10px] font-semibold block mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>Điểm lấy</label>
+          <LocationSelect value={pickupName} onChange={setPickupName} placeholder="Điểm lấy hàng" />
+        </div>
+        <div>
+          <label className="text-[10px] font-semibold block mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>Điểm trả</label>
+          <LocationSelect value={dropoffName} onChange={setDropoffName} placeholder="Điểm trả hàng" />
+        </div>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-[10px] font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Container</label>
+          <button onClick={addContainer} className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ color: 'var(--theme-brand-primary)', background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)' }}>
+            + Thêm
+          </button>
+        </div>
+        <div className="space-y-1">
+          {containers.map((c, i) => (
+            <div key={i} className="flex items-center gap-1.5">
+              <input
+                value={c.containerNumber}
+                onChange={e => updateContainer(i, 'containerNumber', e.target.value.toUpperCase())}
+                placeholder="Số cont"
+                className="flex-1 px-2 py-1 rounded text-xs border font-mono"
+                style={{ background: 'var(--theme-bg-primary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
+              />
+              <select
+                value={c.workType}
+                onChange={e => updateContainer(i, 'workType', e.target.value as WorkType)}
+                className="px-1.5 py-1 rounded text-xs border"
+                style={{ background: 'var(--theme-bg-primary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
+              >
+                {WORK_TYPES.map(wt => <option key={wt} value={wt}>{wt}</option>)}
+              </select>
+              {containers.length > 1 && (
+                <button onClick={() => removeContainer(i)} className="p-1 rounded hover:opacity-70" style={{ color: 'var(--theme-status-error)' }}>
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 pt-1">
+        <button
+          onClick={handleSave}
+          disabled={updateTO.isPending}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-opacity disabled:opacity-40"
+          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+        >
+          {updateTO.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+          Lưu
+        </button>
+        <button
+          onClick={onDone}
+          className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+          style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
+        >
+          Huỷ
+        </button>
+      </div>
+    </div>
+  )
 }
 
 export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanelProps) {
@@ -39,6 +193,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
   const [searchQuery, setSearchQuery] = useState('')
   const [unmatchTargetId, setUnmatchTargetId] = useState<number | null>(null)
   const [unmatchReason, setUnmatchReason] = useState('')
+  const [editingTripId, setEditingTripId] = useState<number | null>(null)
   const batchForWO = useBatchReconcileForWO()
 
   const toggleSelection = useCallback((id: number) => {
@@ -166,45 +321,63 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
         {matchedTrips.length > 0 ? (
           <div className="space-y-2">
             {matchedTrips.map(trip => (
-              <div
-                key={trip.id}
-                className="rounded-xl px-4 py-3 space-y-2"
-                style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {trip.containers.length > 0 && (
-                      <span className="text-xs font-mono font-semibold px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}>
-                        {trip.containers.map(c => c.containerNumber || c.workType).filter(Boolean).join(', ')}
+              editingTripId === trip.id ? (
+                <EditMatchedTripCard
+                  key={trip.id}
+                  trip={trip}
+                  onDone={() => setEditingTripId(null)}
+                />
+              ) : (
+                <div
+                  key={trip.id}
+                  className="rounded-xl px-4 py-3 space-y-2"
+                  style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {trip.containers.length > 0 && (
+                        <span className="text-xs font-mono font-semibold px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}>
+                          {trip.containers.map(c => c.containerNumber || c.workType).filter(Boolean).join(', ')}
+                        </span>
+                      )}
+                      <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                        {trip.tripDate}
                       </span>
-                    )}
-                    <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                      {trip.tripDate}
-                    </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setEditingTripId(trip.id)}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80"
+                        style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)', color: 'var(--theme-brand-primary)' }}
+                      >
+                        <Pencil className="w-3 h-3" />
+                        Chỉnh sửa
+                      </button>
+                      <button
+                        onClick={() => { setUnmatchTargetId(trip.id); setUnmatchReason('') }}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80"
+                        style={{ background: 'color-mix(in srgb, var(--theme-status-error) 10%, transparent)', color: 'var(--theme-status-error)' }}
+                      >
+                        <Unlink className="w-3 h-3" />
+                        Bỏ ghép
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => { setUnmatchTargetId(trip.id); setUnmatchReason('') }}
-                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80"
-                    style={{ background: 'color-mix(in srgb, var(--theme-status-error) 10%, transparent)', color: 'var(--theme-status-error)' }}
-                  >
-                    <Unlink className="w-3 h-3" />
-                    Bỏ ghép
-                  </button>
+                  <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
+                    {trip.partner?.name || '—'}
+                  </p>
+                  {(trip.pickupLocation?.name || trip.dropoffLocation?.name) && (
+                    <p className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>
+                      {trip.pickupLocation?.name ?? '?'} → {trip.dropoffLocation?.name ?? '?'}
+                    </p>
+                  )}
+                  {trip.containers.length > 0 && (
+                    <p className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>
+                      {trip.containers.map(c => c.containerNumber || c.workType).filter(Boolean).join(', ')}
+                    </p>
+                  )}
                 </div>
-                <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
-                  {trip.partner?.name || '—'}
-                </p>
-                {(trip.pickupLocation?.name || trip.dropoffLocation?.name) && (
-                  <p className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>
-                    {trip.pickupLocation?.name ?? '?'} → {trip.dropoffLocation?.name ?? '?'}
-                  </p>
-                )}
-                {trip.containers.length > 0 && (
-                  <p className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>
-                    {trip.containers.map(c => c.containerNumber || c.workType).filter(Boolean).join(', ')}
-                  </p>
-                )}
-              </div>
+              )
             ))}
           </div>
         ) : (
