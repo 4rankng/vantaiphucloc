@@ -459,6 +459,7 @@ class ReconciliationOut(BaseModel):
 class ReconcileRequest(BaseModel):
     work_order_id: int
     trip_order_id: int
+    reason: str | None = None
 
 
 class CriterionBreakdown(BaseModel):
