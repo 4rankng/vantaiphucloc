@@ -24,7 +24,7 @@ from app.schemas.domain import (
 class PartnerCreateBody(BaseModel):
     name: str
     code: str | None = None
-    partner_type: Literal["client", "vendor", "both"]
+    partner_type: Literal["client", "vendor"]
     partner_role: str | None = None
     phone: str | None = None
     tax_code: str | None = None
@@ -55,7 +55,7 @@ class PartnerCreateBody(BaseModel):
 class PartnerUpdateBody(BaseModel):
     name: str | None = None
     code: str | None = None
-    partner_type: Literal["client", "vendor", "both"] | None = None
+    partner_type: Literal["client", "vendor"] | None = None
     partner_role: str | None = None
     phone: str | None = None
     tax_code: str | None = None

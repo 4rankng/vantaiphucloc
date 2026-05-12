@@ -40,7 +40,7 @@ class TripOrderStatus(str, Enum):
 class PartnerCreate(BaseModel):
     name: str
     code: str | None = None
-    partner_type: Literal["client", "vendor", "both"]
+    partner_type: Literal["client", "vendor"]
     partner_role: str | None = None
     phone: str | None = None
     tax_code: str | None = None
@@ -51,7 +51,7 @@ class PartnerCreate(BaseModel):
 class PartnerUpdate(BaseModel):
     name: str | None = None
     code: str | None = None
-    partner_type: Literal["client", "vendor", "both"] | None = None
+    partner_type: Literal["client", "vendor"] | None = None
     partner_role: str | None = None
     phone: str | None = None
     tax_code: str | None = None

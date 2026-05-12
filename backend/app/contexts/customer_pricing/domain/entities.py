@@ -38,13 +38,13 @@ class Partner:
     """Partner aggregate root.
 
     Replaces the former Client and Vendor entities. A single partner can
-    act as client, vendor, or both. `partner_type` discriminates:
+    act as client or vendor. `partner_type` discriminates:
     ``client`` | ``vendor`` | ``both``.
     """
 
     id: PartnerId | None
     name: str
-    partner_type: str          # "client" | "vendor" | "both"
+    partner_type: str          # "client" | "vendor"
     partner_role: str | None = None   # "shipping_line" | "factory" | "transport" | "other"
     code: str | None = None
     phone: str | None = None
