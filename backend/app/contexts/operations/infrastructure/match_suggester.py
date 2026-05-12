@@ -377,6 +377,7 @@ async def suggest_trip_matches(
             match_score = sum(1 for c in criteria if c.match)
             suggestions.append(MatchSuggestion(
                 trip_order=to_out,
+                container_id=container.id,
                 confidence=_confidence(score),
                 matched_fields=matched_fields,
                 score=score,

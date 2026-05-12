@@ -174,16 +174,15 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
   const isMatched = workOrder?.status === 'MATCHED'
 
   // bug-0080: reset checkbox selections when WO changes
-  const [selectedToIds, setSelectedToIds] = useState<Set<number>>(new Set())
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
   useEffect(() => {
-    setSelectedToIds(new Set())
+    setSelectedKeys(new Set())
   }, [workOrder?.id])
 
-  // bug-0079: capacity guard — WO can only match 1 TO (1:1 in TO-centric model)
-  // But in the WO-centric view, the WO's containers count is the max selectable
+  // Capacity guard: each selected row = 1 container; max = WO container count
   const containerCapacity = workOrder?.containers?.length ?? 0
-  const isOverCapacity = selectedToIds.size > containerCapacity
-  const atCapacity = selectedToIds.size >= containerCapacity && containerCapacity > 0
+  const isOverCapacity = selectedKeys.size > containerCapacity
+  const atCapacity = selectedKeys.size >= containerCapacity && containerCapacity > 0
 
   const { data: suggestionsData, isLoading } = useSuggestMatches(workOrder?.id ?? null)
   const suggestions = suggestionsData?.suggestions ?? []
@@ -196,28 +195,29 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
   const [editingTripId, setEditingTripId] = useState<number | null>(null)
   const batchForWO = useBatchReconcileForWO()
 
-  const toggleSelection = useCallback((id: number) => {
-    setSelectedToIds(prev => {
+  const toggleSelection = useCallback((key: string) => {
+    setSelectedKeys(prev => {
       const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
+      if (next.has(key)) {
+        next.delete(key)
       } else {
-        // bug-0079: prevent selecting beyond capacity
         if (prev.size >= containerCapacity) return prev
-        next.add(id)
+        next.add(key)
       }
       return next
     })
   }, [containerCapacity])
 
   const handleBatchForWO = useCallback(async () => {
-    if (!workOrder || selectedToIds.size === 0) return
+    if (!workOrder || selectedKeys.size === 0) return
+    // Deduplicate TO ids from composite keys (one TO may have multiple containers selected)
+    const toIds = [...new Set(Array.from(selectedKeys).map(k => Number(k.split('-')[0])))]
     try {
-      const res = await batchForWO.mutateAsync({ workOrderId: workOrder.id, tripOrderIds: Array.from(selectedToIds) })
+      const res = await batchForWO.mutateAsync({ workOrderId: workOrder.id, tripOrderIds: toIds })
       const matched = res.matched?.filter((r: any) => r.success).length ?? 0
       if (matched > 0) {
         toast.success('Thành công', `Đã ghép ${matched} đơn hàng`)
-        setSelectedToIds(new Set())
+        setSelectedKeys(new Set())
         onMatchSuccess()
       }
       if (res.errors?.length > 0) {
@@ -226,7 +226,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
     } catch {
       toast.error('Lỗi', 'Không thể ghép hàng loạt')
     }
-  }, [workOrder, selectedToIds, batchForWO, toast, onMatchSuccess])
+  }, [workOrder, selectedKeys, batchForWO, toast, onMatchSuccess])
   const { data: allTripOrders = [] } = useTripOrders()
 
   // Find ALL matched trips for matched WOs (multi-match support)
@@ -454,23 +454,26 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
             </div>
           ) : (
             <div className="space-y-3">
-              {suggestions.map(s => (
-                <div key={s.tripOrder.id} className="relative">
+              {suggestions.map(s => {
+                const selKey = `${s.tripOrder.id}-${s.containerId}`
+                const isSelected = selectedKeys.has(selKey)
+                return (
+                <div key={selKey} className="relative">
                   <label
-                    className={`absolute top-3 left-3 z-10 flex items-center gap-1 ${atCapacity && !selectedToIds.has(s.tripOrder.id) ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'} select-none`}
+                    className={`absolute top-3 left-3 z-10 flex items-center gap-1 ${atCapacity && !isSelected ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'} select-none`}
                     onClick={e => {
                       e.stopPropagation();
-                      if (!atCapacity || selectedToIds.has(s.tripOrder.id)) toggleSelection(s.tripOrder.id)
+                      if (!atCapacity || isSelected) toggleSelection(selKey)
                     }}
                   >
                     <span
                       className="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
                       style={{
-                        borderColor: selectedToIds.has(s.tripOrder.id) ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)',
-                        background: selectedToIds.has(s.tripOrder.id) ? 'var(--theme-brand-primary)' : 'transparent',
+                        borderColor: isSelected ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)',
+                        background: isSelected ? 'var(--theme-brand-primary)' : 'transparent',
                       }}
                     >
-                      {selectedToIds.has(s.tripOrder.id) && <Check className="w-3 h-3" style={{ color: 'var(--theme-text-on-brand)' }} />}
+                      {isSelected && <Check className="w-3 h-3" style={{ color: 'var(--theme-text-on-brand)' }} />}
                     </span>
                   </label>
                   <div className="pl-9">
@@ -486,24 +489,25 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
                     />
                   </div>
                 </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
 
       {/* Batch action bar in matched mode */}
-      {selectedToIds.size > 0 && (
+      {selectedKeys.size > 0 && (
         <div
           className="flex items-center justify-between px-4 py-3 rounded-xl"
           style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
         >
           <div className="flex flex-col">
             <span className="text-sm font-bold">
-              Đã chọn {selectedToIds.size} / {containerCapacity} container
+              Đã chọn {selectedKeys.size} / {containerCapacity} container
             </span>
             {isOverCapacity && (
               <span className="text-xs mt-0.5" style={{ color: 'var(--theme-status-error)' }}>
-                Chuyến chỉ có {containerCapacity} container — bỏ chọn {selectedToIds.size - containerCapacity} đơn
+                Chuyến chỉ có {containerCapacity} container — bỏ chọn {selectedKeys.size - containerCapacity} đơn
               </span>
             )}
           </div>
@@ -685,23 +689,26 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
 
       {/* Suggestion cards */}
       <div className="space-y-3">
-        {visibleSuggestions.map(s => (
-          <div key={s.tripOrder.id} className="relative">
+        {visibleSuggestions.map(s => {
+          const selKey = `${s.tripOrder.id}-${s.containerId}`
+          const isSelected = selectedKeys.has(selKey)
+          return (
+          <div key={selKey} className="relative">
             <label
               onClick={e => {
                 e.stopPropagation();
-                if (!atCapacity || selectedToIds.has(s.tripOrder.id)) toggleSelection(s.tripOrder.id)
+                if (!atCapacity || isSelected) toggleSelection(selKey)
               }}
-              className={`absolute top-3 left-3 z-10 flex items-center gap-1 ${atCapacity && !selectedToIds.has(s.tripOrder.id) ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'} select-none`}
+              className={`absolute top-3 left-3 z-10 flex items-center gap-1 ${atCapacity && !isSelected ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'} select-none`}
             >
               <span
                 className="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
                 style={{
-                  borderColor: selectedToIds.has(s.tripOrder.id) ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)',
-                  background: selectedToIds.has(s.tripOrder.id) ? 'var(--theme-brand-primary)' : 'transparent',
+                  borderColor: isSelected ? 'var(--theme-brand-primary)' : 'var(--theme-border-default)',
+                  background: isSelected ? 'var(--theme-brand-primary)' : 'transparent',
                 }}
               >
-                {selectedToIds.has(s.tripOrder.id) && <Check className="w-3 h-3" style={{ color: 'var(--theme-text-on-brand)' }} />}
+                {isSelected && <Check className="w-3 h-3" style={{ color: 'var(--theme-text-on-brand)' }} />}
               </span>
             </label>
             <div className="pl-9">
@@ -717,22 +724,23 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
               />
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Batch action bar */}
-      {selectedToIds.size > 0 && (
+      {selectedKeys.size > 0 && (
         <div
           className="sticky bottom-0 left-0 right-0 flex items-center justify-between px-4 py-3 rounded-xl"
           style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
         >
           <div className="flex flex-col">
             <span className="text-sm font-bold">
-              Đã chọn {selectedToIds.size} / {containerCapacity} container
+              Đã chọn {selectedKeys.size} / {containerCapacity} container
             </span>
             {isOverCapacity && (
               <span className="text-xs mt-0.5" style={{ color: 'var(--theme-status-error)' }}>
-                Chuyến chỉ có {containerCapacity} container — bỏ chọn {selectedToIds.size - containerCapacity} đơn
+                Chuyến chỉ có {containerCapacity} container — bỏ chọn {selectedKeys.size - containerCapacity} đơn
               </span>
             )}
           </div>

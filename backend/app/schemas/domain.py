@@ -471,6 +471,7 @@ class CriterionBreakdown(BaseModel):
 
 class MatchSuggestion(BaseModel):
     trip_order: TripOrderOut
+    container_id: int
     confidence: Literal["full", "partial", "none"]
     matched_fields: list[str]
     score: float

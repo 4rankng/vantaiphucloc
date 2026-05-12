@@ -275,6 +275,32 @@ async def export_trip_orders_excel(
     )
 
 
+@router.get("/trip-orders/distinct-partners")
+async def get_distinct_trip_partners(
+    date_from: date | None = None,
+    date_to: date | None = None,
+    current_user: User = Depends(require_permission("read", "TripOrder")),
+    use_case: ListTripOrders = Depends(get_list_trip_orders),
+):
+    """Return distinct partners that have trip orders in the given date range.
+    Used by the Xuất đối soát dialog to populate the customer dropdown."""
+    from sqlalchemy import text
+    session = use_case.repo.session  # type: ignore[attr-defined]
+    sql = "SELECT DISTINCT p.id, p.name FROM partners p " \
+          "JOIN trip_orders t ON t.partner_id = p.id " \
+          "WHERE p.is_active = true"
+    params = {}
+    if date_from:
+        sql += " AND t.trip_date >= :date_from"
+        params["date_from"] = date_from
+    if date_to:
+        sql += " AND t.trip_date <= :date_to"
+        params["date_to"] = date_to
+    sql += " ORDER BY p.name"
+    rows = await session.execute(text(sql), params)
+    return [{"id": r.id, "name": r.name} for r in rows]
+
+
 @router.get("/trip-orders/export-doi-soat")
 async def export_doi_soat_excel(
     partner_id: int = Query(..., description="Partner (khách hàng) ID"),
