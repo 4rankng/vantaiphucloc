@@ -83,11 +83,6 @@ export function WorkOrderList() {
     [workOrders, selectedWoId]
   )
 
-  const pendingCount = useMemo(
-    () => filtered.filter(w => w.status === 'PENDING').length,
-    [filtered]
-  )
-
   const handleSelectWo = useCallback((id: number) => {
     setSelectedWoId(prev => prev === id ? null : id)
     if (isMobile) {
@@ -230,17 +225,8 @@ export function WorkOrderList() {
       {/* Month navigator + counter (counter only on mobile in this row; on desktop counter goes to the right) */}
       <div className="flex items-center gap-2 lg:contents">
         <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
-        {pendingCount > 0 && (
-          <span
-            className="lg:hidden ml-auto text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
-            style={{ background: 'color-mix(in srgb, var(--theme-status-warning) 12%, transparent)', color: 'var(--theme-status-warning)' }}
-          >
-            {pendingCount} chờ ghép
-          </span>
-        )}
       </div>
 
-      {/* Search + chips — full width on mobile, flex-1 between navigator and counter on desktop */}
       <div className="min-w-0 lg:flex-1">
         <FilterToolbar
           search={search}
@@ -252,16 +238,6 @@ export function WorkOrderList() {
           onClearFilters={handleClearFilters}
         />
       </div>
-
-      {/* Counter on desktop only — appears at far right */}
-      {pendingCount > 0 && (
-        <span
-          className="hidden lg:inline-flex text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap"
-          style={{ background: 'color-mix(in srgb, var(--theme-status-warning) 12%, transparent)', color: 'var(--theme-status-warning)' }}
-        >
-          {pendingCount} chờ ghép
-        </span>
-      )}
     </div>
   )
 
