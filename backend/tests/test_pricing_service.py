@@ -15,7 +15,7 @@ async def test_find_pricing_returns_matching_pricing():
     """When a matching Pricing exists, find_pricing returns it."""
     mock_pricing = MagicMock()
     mock_pricing.id = 42
-    mock_pricing.client_id = 1
+    mock_pricing.partner_id = 1
     mock_pricing.work_type = "E20"
 
     scalar_result = MagicMock()
@@ -25,12 +25,12 @@ async def test_find_pricing_returns_matching_pricing():
     mock_db.execute.return_value = scalar_result
 
     result = await find_pricing(
-        db=mock_db, client_id=1, work_type="E20",
+        db=mock_db, partner_id=1, work_type="E20",
         pickup_location_id=10, dropoff_location_id=20,
     )
 
     assert result is mock_pricing
-    assert result.client_id == 1
+    assert result.partner_id == 1
     assert result.work_type == "E20"
 
 
@@ -43,7 +43,7 @@ async def test_find_pricing_returns_none_when_no_match():
     mock_db.execute.return_value = scalar_result
 
     result = await find_pricing(
-        db=mock_db, client_id=999, work_type="E40",
+        db=mock_db, partner_id=999, work_type="E40",
         pickup_location_id=1, dropoff_location_id=2,
     )
 
@@ -54,13 +54,12 @@ async def test_find_pricing_returns_none_when_no_match():
 async def test_find_pricing_returns_none_when_locations_unresolvable():
     """No name → no id resolution → no lookup → None."""
     mock_db = AsyncMock()
-    # _resolve_location_id is called twice; both return scalar None
     res = MagicMock()
     res.scalar_one_or_none.return_value = None
     mock_db.execute.return_value = res
 
     result = await find_pricing(
-        db=mock_db, client_id=1, work_type="E20",
+        db=mock_db, partner_id=1, work_type="E20",
         pickup_location="Unknown Place", dropoff_location="Other Unknown",
     )
     assert result is None
@@ -96,7 +95,7 @@ async def test_find_pricing_with_cache_hit():
     mock_cache.get_json.return_value = {"id": 10}
 
     result = await find_pricing(
-        db=mock_db, client_id=1, work_type="E20",
+        db=mock_db, partner_id=1, work_type="E20",
         pickup_location_id=10, dropoff_location_id=20,
         cache=mock_cache,
     )
@@ -121,7 +120,7 @@ async def test_find_tiered_pricing_returns_none_when_no_line():
     mock_db.execute.side_effect = [pricing_result, no_line, no_line]
 
     result = await find_tiered_pricing(
-        db=mock_db, client_id=1, work_type="E20",
+        db=mock_db, partner_id=1, work_type="E20",
         pickup_location_id=1, dropoff_location_id=2,
     )
     assert result is None
@@ -148,7 +147,7 @@ async def test_find_tiered_pricing_uses_line_financials():
     mock_db.execute.side_effect = [pricing_result, line_result]
 
     result = await find_tiered_pricing(
-        db=mock_db, client_id=1, work_type="E20",
+        db=mock_db, partner_id=1, work_type="E20",
         pickup_location_id=1, dropoff_location_id=2,
     )
 

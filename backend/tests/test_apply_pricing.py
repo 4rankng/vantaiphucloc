@@ -10,8 +10,8 @@ import pytest
 from sqlalchemy import select
 
 from app.models.domain import (
-    Client,
     Location,
+    Partner,
     Pricing,
     PricingLine,
     TripOrder,
@@ -22,18 +22,18 @@ from app.models.enums import TripOrderStatus
 
 @pytest.fixture
 async def seeded_world(db_session):
-    """One client, two locations, one pricing rule."""
-    client = Client(
-        code="ACME", name="Acme", type="company", phone="0900",
-        outstanding_debt=0, is_active=True,
+    """One partner, two locations, one pricing rule."""
+    partner = Partner(
+        code="ACME", name="Acme", partner_type="client",
+        phone="0900", is_active=True,
     )
     pickup = Location(name="Cảng A", is_active=True, pending_geocode=True)
     dropoff = Location(name="Kho B", is_active=True, pending_geocode=True)
-    db_session.add_all([client, pickup, dropoff])
+    db_session.add_all([partner, pickup, dropoff])
     await db_session.flush()
 
     pricing = Pricing(
-        client_id=client.id,
+        partner_id=partner.id,
         work_type="F20",
         pickup_location_id=pickup.id,
         dropoff_location_id=dropoff.id,
@@ -50,7 +50,7 @@ async def seeded_world(db_session):
     ))
     await db_session.commit()
     return {
-        "client": client,
+        "partner": partner,
         "pickup": pickup,
         "dropoff": dropoff,
         "pricing": pricing,
@@ -60,14 +60,12 @@ async def seeded_world(db_session):
 async def _make_trip(db, world, *, work_type="F20", unit_price=0):
     trip = TripOrder(
         trip_date=date(2026, 4, 15),
-        client_id=world["client"].id,
-        route="Cảng A - Kho B",
+        partner_id=world["partner"].id,
         pickup_location_id=world["pickup"].id,
         dropoff_location_id=world["dropoff"].id,
         unit_price=unit_price,
         driver_salary=0,
         allowance=0,
-        revenue=unit_price,
         status=TripOrderStatus.DRAFT.value,
     )
     db.add(trip)
