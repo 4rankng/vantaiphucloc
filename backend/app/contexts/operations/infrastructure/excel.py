@@ -727,12 +727,19 @@ async def generate_trip_orders_excel(
     date_from: str | None = None,
     date_to: str | None = None,
     status: str | None = None,
+    partner_id: int | None = None,
 ) -> bytes:
-    """Export trip orders to Excel."""
+    """Export trip orders to Excel.
+
+    When partner_id is provided, filters to that partner and includes
+    match status columns for customer reconciliation.
+    """
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment
 
     query = select(TripOrder).order_by(TripOrder.id.desc())
+    if partner_id:
+        query = query.where(TripOrder.partner_id == partner_id)
     if date_from:
         query = query.where(TripOrder.trip_date >= date_from)
     if date_to:
@@ -760,11 +767,73 @@ async def generate_trip_orders_excel(
     partner_name_by_id = {c.id: c.name for c in (await db.execute(select(Partner).where(Partner.id.in_(partner_ids)))).scalars().all()} if partner_ids else {}
     loc_name_by_id = {l.id: l.name for l in (await db.execute(select(Location).where(Location.id.in_(loc_ids)))).scalars().all()} if loc_ids else {}
 
+    # For per-partner export: load match status and vehicle plates
+    match_map: dict[int, str] = {}  # to_id -> "Đã khớp" / "Chưa khớp"
+    plate_map: dict[int, str] = {}  # to_id -> plate
+    partner_name = None
+    if partner_id:
+        # Get partner name for filename
+        p_result = await db.execute(select(Partner).where(Partner.id == partner_id))
+        partner_obj = p_result.scalar_one_or_none()
+        partner_name = partner_obj.name if partner_obj else None
+
+        # Load reconciliation links to determine match status
+        from app.models.domain import Reconciliation
+        if to_ids:
+            recon_result = await db.execute(
+                select(Reconciliation.trip_order_id).where(
+                    Reconciliation.trip_order_id.in_(to_ids),
+                    Reconciliation.is_active == True,  # noqa: E712
+                )
+            )
+            matched_to_ids = {r for (r,) in recon_result.all()}
+            for to_id in to_ids:
+                match_map[to_id] = "Đã khớp" if to_id in matched_to_ids else "Chưa khớp"
+
+        # Load driver plates via work orders linked to these TOs
+        from app.models.base import User as _User
+        from app.models.domain import Vehicle
+        if to_ids:
+            # Get driver_ids from work orders linked via reconciliation
+            recon_wo_result = await db.execute(
+                select(Reconciliation.work_order_id, Reconciliation.trip_order_id).where(
+                    Reconciliation.trip_order_id.in_(to_ids),
+                    Reconciliation.is_active == True,  # noqa: E712
+                )
+            )
+            wo_to_pairs = recon_wo_result.all()
+            wo_ids = list({r[0] for r in wo_to_pairs})
+
+            if wo_ids:
+                wo_result = await db.execute(
+                    select(WorkOrder.id, WorkOrder.driver_id).where(WorkOrder.id.in_(wo_ids))
+                )
+                wo_driver_map = {r[0]: r[1] for r in wo_result.all()}
+                driver_ids = list(set(wo_driver_map.values()))
+
+                if driver_ids:
+                    v_result = await db.execute(
+                        select(Vehicle.driver_id, Vehicle.plate).where(
+                            Vehicle.driver_id.in_(driver_ids),
+                            Vehicle.is_active == True,  # noqa: E712
+                        )
+                    )
+                    driver_plate_map = dict(v_result.all())
+
+                    for wo_id, to_id in wo_to_pairs:
+                        driver_id = wo_driver_map.get(wo_id)
+                        if driver_id and driver_id in driver_plate_map:
+                            plate_map[to_id] = driver_plate_map[driver_id]
+
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "Đơn hàng"
 
-    headers = ["Mã TO", "Ngày chạy", "Khách hàng", "Điểm lấy", "Điểm trả", "Số cont", "Loại", "Đơn giá", "Lương TX", "Phụ cấp", "Trạng thái"]
+    if partner_id:
+        ws.title = "Chuyến theo khách hàng"
+        headers = ["STT", "Số container", "Tuyến đường", "Ngày chạy", "Biển số xe", "Trạng thái khớp", "Đơn giá"]
+    else:
+        ws.title = "Đơn hàng"
+        headers = ["Mã TO", "Ngày chạy", "Khách hàng", "Điểm lấy", "Điểm trả", "Số cont", "Loại", "Đơn giá", "Lương TX", "Phụ cấp", "Trạng thái"]
     ws.append(headers)
 
     header_font = Font(bold=True, color="FFFFFF")
@@ -776,18 +845,40 @@ async def generate_trip_orders_excel(
         cell.alignment = Alignment(horizontal="center")
 
     status_labels = {"PENDING": "Chờ ghép", "MATCHED": "Đã đối soát"}
-    for to in trip_orders:
-        containers = containers_map.get(to.id, [])
-        for c in containers:
-            ws.append([
-                f"TO#{to.id}", to.trip_date,
-                partner_name_by_id.get(to.partner_id, ""),
-                loc_name_by_id.get(to.pickup_location_id, ""),
-                loc_name_by_id.get(to.dropoff_location_id, ""),
-                c.container_number, c.work_type,
-                to.unit_price, to.driver_salary, to.allowance,
-                status_labels.get(to.status, to.status),
-            ])
+
+    if partner_id:
+        stt = 0
+        for to in trip_orders:
+            containers = containers_map.get(to.id, [])
+            pickup = loc_name_by_id.get(to.pickup_location_id, "")
+            dropoff = loc_name_by_id.get(to.dropoff_location_id, "")
+            route = f"{pickup} → {dropoff}" if pickup and dropoff else ""
+            plate = plate_map.get(to.id, "")
+            match_status = match_map.get(to.id, "Chưa khớp")
+            for c in containers:
+                stt += 1
+                ws.append([
+                    stt,
+                    c.container_number,
+                    route,
+                    to.trip_date,
+                    plate,
+                    match_status,
+                    to.unit_price or "",
+                ])
+    else:
+        for to in trip_orders:
+            containers = containers_map.get(to.id, [])
+            for c in containers:
+                ws.append([
+                    f"TO#{to.id}", to.trip_date,
+                    partner_name_by_id.get(to.partner_id, ""),
+                    loc_name_by_id.get(to.pickup_location_id, ""),
+                    loc_name_by_id.get(to.dropoff_location_id, ""),
+                    c.container_number, c.work_type,
+                    to.unit_price, to.driver_salary, to.allowance,
+                    status_labels.get(to.status, to.status),
+                ])
 
     for col in ws.columns:
         max_len = max(len(str(c.value or "")) for c in col)
@@ -797,7 +888,7 @@ async def generate_trip_orders_excel(
     wb.save(buf)
     wb.close()
     buf.seek(0)
-    return buf.getvalue()
+    return buf.getvalue(), partner_name
 
 
 async def generate_salary_excel(

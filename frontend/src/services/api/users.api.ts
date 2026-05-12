@@ -13,6 +13,7 @@ export interface UserAccount {
   role: Role
   vendor: string
   isActive: boolean
+  vehiclePlate: string | null
   createdAt: string
 }
 
@@ -30,6 +31,7 @@ export function toUserAccount(raw: Record<string, unknown>): UserAccount {
     role: camel.role as Role,
     vendor: (camel.vendor as string) || DEFAULT_VENDOR,
     isActive: camel.isActive as boolean,
+    vehiclePlate: (camel.vehiclePlate as string) ?? null,
     createdAt: (camel.createdAt as string) ?? '',
   }
 }

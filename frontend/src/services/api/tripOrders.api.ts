@@ -211,12 +211,13 @@ export async function importTripOrders(file: File): Promise<ApiResponse<ImportRe
 }
 
 export async function exportTripOrdersExcel(filters?: {
-  dateFrom?: string; dateTo?: string; status?: string
+  dateFrom?: string; dateTo?: string; status?: string; partnerId?: number
 }): Promise<Blob> {
   const params = new URLSearchParams()
   if (filters?.dateFrom) params.append('date_from', filters.dateFrom)
   if (filters?.dateTo) params.append('date_to', filters.dateTo)
   if (filters?.status) params.append('status', filters.status)
+  if (filters?.partnerId) params.append('partner_id', String(filters.partnerId))
   const res = await api.get(`/trip-orders/export?${params.toString()}`, { responseType: 'blob' })
   return res.data
 }
