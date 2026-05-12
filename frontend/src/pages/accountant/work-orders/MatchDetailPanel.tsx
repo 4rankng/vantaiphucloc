@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback, useEffect } from 'react'
 import { Sparkles, FileText, ClipboardList, Search, Loader2, X, Check, Link2, Unlink, AlertTriangle, Pencil, Save, RefreshCw, CheckCircle2 } from 'lucide-react'
-import { useSuggestMatches, useReconcile, useBulkMatch, useTripOrders, useUnmatch, useBatchReconcileForWO, useUpdateTripOrder, useUpdateWorkOrder, usePartners, useLocations } from '@/hooks/use-queries'
+import { useSuggestMatches, useReconcile, useBulkMatch, useTripOrders, useUnmatch, useBatchReconcileForWO, useUpdateTripOrder, useUpdateWorkOrder, usePartners, useLocations, useSearchTripOrders } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
 import { fmtDate } from '@/lib/date-utils'
@@ -766,7 +766,6 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
             </button>
           </div>
           <ManualSearchResults
-            tripOrders={allTripOrders}
             query={searchQuery}
             workOrderId={workOrder!.id}
             onMatch={() => { setManualSearchOpen(false); setSearchQuery(''); onMatchSuccess() }}
@@ -1030,9 +1029,8 @@ function ConflictResolutionBar({
 }
 
 function ManualSearchResults({
-  tripOrders, query, workOrderId, onMatch,
+  query, workOrderId, onMatch,
 }: {
-  tripOrders: TripOrder[]
   query: string
   workOrderId: number
   onMatch: () => void
@@ -1041,16 +1039,8 @@ function ManualSearchResults({
   const reconcile = useReconcile()
   const [submittingId, setSubmittingId] = useState<number | null>(null)
 
-  const filtered = useMemo(() => {
-    const pending = tripOrders.filter(to => to.status === 'PENDING' || to.status === 'DRAFT')
-    if (!query.trim()) return pending.slice(0, 20)
-    const q = query.toLowerCase()
-    return pending.filter(to =>
-      (to.containers?.some(c => c.containerNumber?.toLowerCase().includes(q))) ||
-      (to.partner?.name?.toLowerCase().includes(q)) ||
-      (to.code?.toLowerCase().includes(q))
-    ).slice(0, 20)
-  }, [tripOrders, query])
+  const { data: searchResult, isLoading } = useSearchTripOrders(query, workOrderId)
+  const results = searchResult?.items ?? []
 
   const handleManualMatch = useCallback(async (tripOrderId: number) => {
     setSubmittingId(tripOrderId)
@@ -1065,7 +1055,24 @@ function ManualSearchResults({
     }
   }, [workOrderId, reconcile, toast, onMatch])
 
-  if (filtered.length === 0) {
+  if (query.trim().length < 2) {
+    return (
+      <p className="text-xs text-center py-4" style={{ color: 'var(--theme-text-muted)' }}>
+        Nhập ít nhất 2 ký tự để tìm kiếm
+      </p>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-4 gap-2">
+        <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--theme-brand-primary)' }} />
+        <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Đang tìm...</span>
+      </div>
+    )
+  }
+
+  if (results.length === 0) {
     return (
       <p className="text-xs text-center py-4" style={{ color: 'var(--theme-text-muted)' }}>
         Không tìm thấy đơn hàng phù hợp
@@ -1073,53 +1080,73 @@ function ManualSearchResults({
     )
   }
 
+  const total = searchResult?.total ?? results.length
+
   return (
     <div className="space-y-2 max-h-[50vh] overflow-y-auto">
       <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-        Tìm thấy {filtered.length} đơn hàng
+        Tìm thấy {total} đơn hàng
       </p>
-      {filtered.map(to => (
-        <div
-          key={to.id}
-          className="flex items-center gap-2 p-2.5 rounded-lg"
-          style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
-        >
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5">
-              {to.code && (
-                <span className="text-xs font-mono font-semibold px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}>
-                  {to.code}
-                </span>
-              )}
-              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{fmtDate(to.tripDate)}</span>
-            </div>
-            <p className="text-xs font-medium truncate mt-0.5" style={{ color: 'var(--theme-text-primary)' }}>
-              {to.partner?.name || '—'}
-            </p>
-            <div className="flex items-center gap-2 mt-0.5">
-              {(to.pickupLocation?.name || to.dropoffLocation?.name) && (
-                <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>
-                  {to.pickupLocation?.name ?? '?'} → {to.dropoffLocation?.name ?? '?'}
-                </span>
-              )}
-              {to.containers.length > 0 && (
-                <span className="text-[10px] font-mono" style={{ color: 'var(--theme-text-muted)' }}>
-                  {to.containers.map(c => c.workType).join(', ')}
-                </span>
-              )}
-            </div>
-          </div>
-          <button
-            onClick={() => handleManualMatch(to.id)}
-            disabled={submittingId === to.id}
-            className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-opacity disabled:opacity-40"
-            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+      {results.map(item => {
+        const to = item.tripOrder
+        const scorePercent = item.maxScore > 0 ? Math.round((item.matchScore / item.maxScore) * 100) : 0
+        const scoreColor = scorePercent >= 80
+          ? 'var(--theme-status-success)'
+          : scorePercent >= 50
+            ? 'var(--theme-status-warning)'
+            : 'var(--theme-text-muted)'
+        return (
+          <div
+            key={`${to.id}-${item.containerId}`}
+            className="flex items-center gap-2 p-2.5 rounded-lg"
+            style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
           >
-            {submittingId === to.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-            Ghép
-          </button>
-        </div>
-      ))}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                {to.code && (
+                  <span className="text-xs font-mono font-semibold px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}>
+                    {to.code}
+                  </span>
+                )}
+                <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{fmtDate(to.tripDate)}</span>
+                {item.matchedFields.length > 0 && (
+                  <span
+                    className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                    style={{ background: `color-mix(in srgb, ${scoreColor} 12%, transparent)`, color: scoreColor }}
+                  >
+                    {scorePercent}%
+                  </span>
+                )}
+              </div>
+              <p className="text-xs font-medium truncate mt-0.5" style={{ color: 'var(--theme-text-primary)' }}>
+                {to.partner?.name || '—'}
+              </p>
+              <div className="flex items-center gap-2 mt-0.5">
+                {(to.pickupLocation?.name || to.dropoffLocation?.name) && (
+                  <span className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>
+                    {to.pickupLocation?.name ?? '?'} → {to.dropoffLocation?.name ?? '?'}
+                  </span>
+                )}
+                {to.containers.length > 0 && (
+                  <span className="text-[10px] font-mono" style={{ color: 'var(--theme-text-muted)' }}>
+                    {to.containers.map(c => c.workType).join(', ')}
+                  </span>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={() => handleManualMatch(to.id)}
+              disabled={submittingId === to.id}
+              className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-opacity disabled:opacity-40"
+              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+            >
+              {submittingId === to.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+              Ghép
+            </button>
+          </div>
+        )
+      })}
     </div>
   )
 }
+
