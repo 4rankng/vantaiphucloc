@@ -83,13 +83,29 @@ export function NoMatchEmptyState({ scanned, reasons, onClose }: NoMatchEmptySta
 
       {/* Illustration */}
       <div className="flex justify-center">
-        <img
-          src="/src/assets/illustrations/no-match-empty-state.svg"
-          alt=""
-          width={120}
-          height={120}
-          className="pointer-events-none"
-        />
+        <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="pointer-events-none">
+          {/* Background circle */}
+          <circle cx="60" cy="60" r="52" fill="#F0FDF4" />
+          {/* Document left */}
+          <rect x="18" y="32" width="34" height="44" rx="5" fill="#FFFFFF" stroke="#D1FAE5" strokeWidth="1.5" />
+          <rect x="24" y="42" width="22" height="2.5" rx="1.25" fill="#A7F3D0" />
+          <rect x="24" y="49" width="16" height="2.5" rx="1.25" fill="#A7F3D0" />
+          <rect x="24" y="56" width="20" height="2.5" rx="1.25" fill="#A7F3D0" />
+          {/* Document right */}
+          <rect x="68" y="32" width="34" height="44" rx="5" fill="#FFFFFF" stroke="#D1FAE5" strokeWidth="1.5" />
+          <rect x="74" y="42" width="22" height="2.5" rx="1.25" fill="#A7F3D0" />
+          <rect x="74" y="49" width="16" height="2.5" rx="1.25" fill="#A7F3D0" />
+          <rect x="74" y="56" width="20" height="2.5" rx="1.25" fill="#A7F3D0" />
+          {/* X / no-match indicator in center */}
+          <circle cx="60" cy="54" r="12" fill="#FEE2E2" />
+          <line x1="54.5" y1="48.5" x2="65.5" y2="59.5" stroke="#EF4444" strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="65.5" y1="48.5" x2="54.5" y2="59.5" stroke="#EF4444" strokeWidth="2.5" strokeLinecap="round" />
+          {/* Dashed connector lines */}
+          <line x1="52" y1="54" x2="36" y2="54" stroke="#A7F3D0" strokeWidth="1.5" strokeDasharray="3 2" strokeLinecap="round" />
+          <line x1="68" y1="54" x2="84" y2="54" stroke="#A7F3D0" strokeWidth="1.5" strokeDasharray="3 2" strokeLinecap="round" />
+          {/* Small sparkle top-right */}
+          <path d="M93 28 L94.5 32 L98 33.5 L94.5 35 L93 39 L91.5 35 L88 33.5 L91.5 32 Z" fill="#6EE7B7" />
+        </svg>
       </div>
 
       {/* Title + subtitle */}
