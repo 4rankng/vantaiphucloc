@@ -407,6 +407,43 @@ export async function batchReconcileForTO(
   }
 }
 
+// ── Manual search (bypasses match suggester threshold) ────────────────
+
+export interface SearchResultItem {
+  tripOrder: TripOrder
+  containerId: number
+  confidence: 'full' | 'partial' | 'none'
+  matchedFields: string[]
+  score: number
+  matchScore: number
+  maxScore: number
+  criteria: { name: string; label: string; match: boolean; woValue: string; toValue: string }[]
+}
+
+export interface SearchTripOrdersResponse {
+  items: SearchResultItem[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
+export async function searchTripOrders(
+  q: string,
+  workOrderId: number,
+  page = 1,
+  pageSize = 20,
+): Promise<ApiResponse<SearchTripOrdersResponse>> {
+  try {
+    const res = await api.get('/trip-orders/search', {
+      params: { q, work_order_id: workOrderId, page, page_size: pageSize },
+    })
+    return ok(toCamel<SearchTripOrdersResponse>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
 export async function getDistinctTripPartners(params?: { dateFrom?: string; dateTo?: string }): Promise<{ id: number; name: string }[]> {
   const res = await api.get('/trip-orders/distinct-partners', { params: toSnake(params ?? {}) })
   return res.data

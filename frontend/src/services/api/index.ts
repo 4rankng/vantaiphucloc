@@ -104,6 +104,7 @@ export const apiClient = {
   bulkMatch: tripOrdersApi.bulkMatch,
   batchReconcileForWO: tripOrdersApi.batchReconcileForWO,
   batchReconcileForTO: tripOrdersApi.batchReconcileForTO,
+  searchTripOrders: tripOrdersApi.searchTripOrders,
 
   // Salary
   calculateSalary: salaryApi.calculateSalary,
