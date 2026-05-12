@@ -88,6 +88,8 @@ allow(user, "update", "SalaryConfig") if role_allow(user, "accountant");
 
 # ── Users ─────────────────────────────────────────────────────────
 
+allow(user, "read", "User") if role_allow(user, "accountant");
+allow(user, "read_list", "User") if role_allow(user, "accountant");
 allow(user, "list", "User") if role_allow(user, "accountant");
 allow(user, "create", "User") if role_allow(user, "accountant");
 allow(user, "update", "User") if role_allow(user, "accountant");

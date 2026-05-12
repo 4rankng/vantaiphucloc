@@ -529,7 +529,8 @@ async def import_trip_orders(
             if cn:
                 valid, err = validate_container_number(cn)
                 if not valid:
-                    warnings.append(f"Container {cn}: {err}")
+                    errors.append(f"Nhóm {key}: Container {cn} không hợp lệ — {err}")
+                    continue
                 containers_data.append({"container_number": cn, "work_type": wt or "E20"})
 
         if not containers_data:

@@ -56,6 +56,14 @@ from app.core.summaries import (
 from app.utils.iso6346 import normalize_container_number
 
 
+def _get_wo_date(wo: WorkOrder):
+    """Return trip_date if set, otherwise created_at.date(). Mirrors the
+    COALESCE(trip_date, DATE(created_at)) pattern used in salary queries."""
+    if getattr(wo, "trip_date", None):
+        return wo.trip_date
+    return wo.created_at.date() if wo.created_at else None
+
+
 WEIGHTS = {
     "container_number": 1.0 / 5,
     "date": 1.0 / 5,
@@ -231,7 +239,7 @@ async def suggest_trip_matches(
     if already_linked is not None:
         return []
 
-    wo_date = work_order.created_at.date() if work_order.created_at else None
+    wo_date = _get_wo_date(work_order)
 
     # Find TOs that share container numbers with this WO
     container_subquery = (
@@ -489,9 +497,8 @@ async def suggest_wo_matches(
             created_at=wo.created_at,
             updated_at=wo.updated_at,
         )
-        wo_date_str = (
-            wo.created_at.date().isoformat() if wo.created_at else None
-        )
+        wo_date_raw = _get_wo_date(wo)
+        wo_date_str = wo_date_raw.isoformat() if wo_date_raw else None
         criteria = _build_criteria(
             matched_fields=matched_fields,
             wo_date_str=wo_date_str,
@@ -708,7 +715,7 @@ def _score_wo_against_to(
             matched_fields.append("container_number_partial")
             score += WEIGHTS["container_number"] * 0.5
 
-    wo_date = wo.created_at.date() if wo.created_at else None
+    wo_date = _get_wo_date(wo)
     if wo_date and trip_order.trip_date == wo_date:
         matched_fields.append("date")
         score += WEIGHTS["date"]

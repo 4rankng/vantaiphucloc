@@ -69,7 +69,7 @@ function EditMatchedTripCard({ trip, onDone }: { trip: TripOrder; onDone: () => 
     <div className="space-y-3" style={{ background: 'var(--theme-bg-primary)', border: '1px solid var(--theme-brand-primary)', borderRadius: '0.75rem', padding: '0.75rem' }}>
       <div className="flex items-center gap-2 mb-1">
         <Pencil className="w-3.5 h-3.5" style={{ color: 'var(--theme-brand-primary)' }} />
-        <span className="text-xs font-bold" style={{ color: 'var(--theme-brand-primary)' }}>Chỉnh sửa đơn hàng</span>
+        <span className="text-[13px] font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>Chỉnh sửa đơn hàng</span>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
