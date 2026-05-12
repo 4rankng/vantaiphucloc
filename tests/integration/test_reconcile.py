@@ -102,9 +102,9 @@ class TestReconcile:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert "auto_matched" in data
-        assert "partial_matches" in data
-        assert "unmatched_work_order_ids" in data
+        assert "candidates" in data
+        assert "scanned_work_order_count" in data
+        assert "unmatched_work_order_refs" in data
         assert "errors" in data
 
     def test_bulk_match(self, api_client, admin_headers, create_work_order, create_trip_order):
