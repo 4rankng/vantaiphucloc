@@ -406,3 +406,8 @@ export async function batchReconcileForTO(
     return fail(err)
   }
 }
+
+export async function getDistinctTripPartners(params?: { dateFrom?: string; dateTo?: string }): Promise<{ id: number; name: string }[]> {
+  const res = await api.get('/trip-orders/distinct-partners', { params: toSnake(params ?? {}) })
+  return res.data
+}

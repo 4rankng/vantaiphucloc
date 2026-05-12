@@ -92,6 +92,7 @@ export const apiClient = {
   suggestWosForTrip: tripOrdersApi.suggestWosForTrip,
   toggleTripConfirmation: tripOrdersApi.toggleTripConfirmation,
   uploadCustomerExcel: tripOrdersApi.uploadCustomerExcel,
+  getDistinctTripPartners: tripOrdersApi.getDistinctTripPartners,
   exportReconciliationExcel: tripOrdersApi.exportReconciliationExcel,
   exportDoiSoatExcel: tripOrdersApi.exportDoiSoatExcel,
   importTripOrders: tripOrdersApi.importTripOrders,
