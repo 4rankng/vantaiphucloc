@@ -11,6 +11,7 @@ import type {
   BulkMatchResponse,
   BulkMatchPair,
   BatchMatchForWOResponse,
+  BatchMatchForTOResponse,
 } from '@/data/domain'
 
 interface TripOrderFilters {
@@ -303,6 +304,23 @@ export async function batchReconcileForWO(
       trip_order_ids: tripOrderIds,
     })
     return ok(toCamel<BatchMatchForWOResponse>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+// ── Batch Match for TO (1 TO → N WorkOrders) ─────────────────────
+
+export async function batchReconcileForTO(
+  tripOrderId: number,
+  workOrderIds: number[],
+): Promise<ApiResponse<BatchMatchForTOResponse>> {
+  try {
+    const res = await api.post('/reconcile/batch-for-to', {
+      trip_order_id: tripOrderId,
+      work_order_ids: workOrderIds,
+    })
+    return ok(toCamel<BatchMatchForTOResponse>(res.data))
   } catch (err) {
     return fail(err)
   }

@@ -282,6 +282,17 @@ export interface BatchMatchForWOResponse {
   results: BatchMatchForWOResult[]
 }
 
+export interface BatchMatchForTOResult {
+  workOrderId: number
+  success: boolean
+  error: string | null
+}
+
+export interface BatchMatchForTOResponse {
+  tripOrderId: number
+  results: BatchMatchForTOResult[]
+}
+
 // ─── Reconciliation ────────────────────────────────────────────────────────────
 
 export interface ReconciliationResult {

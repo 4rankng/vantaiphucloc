@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback, useEffect } from 'react'
 import { Sparkles, FileText, ClipboardList, Search, Loader2, X, Check, Container, Link2, Unlink, AlertTriangle } from 'lucide-react'
 import { useSuggestMatches, useReconcile, useBulkMatch, useTripOrders, useUnmatch, useBatchReconcileForWO } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
@@ -17,7 +17,19 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
   const bulkMatch = useBulkMatch()
   const unmatchMut = useUnmatch()
 
-  const isMatched = workOrder?.status === 'MATCHED' || workOrder?.status === 'COMPLETED'
+  const isMatched = workOrder?.status === 'MATCHED'
+
+  // bug-0080: reset checkbox selections when WO changes
+  const [selectedToIds, setSelectedToIds] = useState<Set<number>>(new Set())
+  useEffect(() => {
+    setSelectedToIds(new Set())
+  }, [workOrder?.id])
+
+  // bug-0079: capacity guard — WO can only match 1 TO (1:1 in TO-centric model)
+  // But in the WO-centric view, the WO's containers count is the max selectable
+  const containerCapacity = workOrder?.containers?.length ?? 0
+  const isOverCapacity = selectedToIds.size > containerCapacity
+  const atCapacity = selectedToIds.size >= containerCapacity && containerCapacity > 0
 
   const { data: suggestionsData, isLoading } = useSuggestMatches(workOrder?.id ?? null)
   const suggestions = suggestionsData?.suggestions ?? []
@@ -27,16 +39,21 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
   const [searchQuery, setSearchQuery] = useState('')
   const [unmatchTargetId, setUnmatchTargetId] = useState<number | null>(null)
   const [unmatchReason, setUnmatchReason] = useState('')
-  const [selectedToIds, setSelectedToIds] = useState<Set<number>>(new Set())
   const batchForWO = useBatchReconcileForWO()
 
   const toggleSelection = useCallback((id: number) => {
     setSelectedToIds(prev => {
       const next = new Set(prev)
-      if (next.has(id)) next.delete(id); else next.add(id)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        // bug-0079: prevent selecting beyond capacity
+        if (prev.size >= containerCapacity) return prev
+        next.add(id)
+      }
       return next
     })
-  }, [])
+  }, [containerCapacity])
 
   const handleBatchForWO = useCallback(async () => {
     if (!workOrder || selectedToIds.size === 0) return
@@ -228,8 +245,11 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
               {suggestions.map(s => (
                 <div key={s.tripOrder.id} className="relative">
                   <label
-                    className="absolute top-3 left-3 z-10 flex items-center gap-1 cursor-pointer select-none"
-                    onClick={e => { e.stopPropagation(); toggleSelection(s.tripOrder.id) }}
+                    className={`absolute top-3 left-3 z-10 flex items-center gap-1 ${atCapacity && !selectedToIds.has(s.tripOrder.id) ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'} select-none`}
+                    onClick={e => {
+                      e.stopPropagation();
+                      if (!atCapacity || selectedToIds.has(s.tripOrder.id)) toggleSelection(s.tripOrder.id)
+                    }}
                   >
                     <span
                       className="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
@@ -259,26 +279,33 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
           )}
         </div>
 
-        {/* Batch action bar in matched mode */}
-        {selectedToIds.size > 0 && (
-          <div
-            className="flex items-center justify-between px-4 py-3 rounded-xl"
-            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-          >
+      {/* Batch action bar in matched mode */}
+      {selectedToIds.size > 0 && (
+        <div
+          className="flex items-center justify-between px-4 py-3 rounded-xl"
+          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+        >
+          <div className="flex flex-col">
             <span className="text-sm font-bold">
-              Đã chọn {selectedToIds.size} đơn
+              Đã chọn {selectedToIds.size} / {containerCapacity} container
             </span>
-            <button
-              onClick={handleBatchForWO}
-              disabled={batchForWO.isPending}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-opacity disabled:opacity-60"
-              style={{ background: 'var(--theme-text-on-brand)', color: 'var(--theme-brand-primary)' }}
-                       >
-              {batchForWO.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />}
-              Ghép tất cả
-            </button>
+            {isOverCapacity && (
+              <span className="text-xs mt-0.5" style={{ color: 'var(--theme-status-error)' }}>
+                Chuyến chỉ có {containerCapacity} container — bỏ chọn {selectedToIds.size - containerCapacity} đơn
+              </span>
+            )}
           </div>
-        )}
+          <button
+            onClick={handleBatchForWO}
+            disabled={batchForWO.isPending || isOverCapacity}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-opacity disabled:opacity-60"
+            style={{ background: 'var(--theme-text-on-brand)', color: 'var(--theme-brand-primary)' }}
+          >
+            {batchForWO.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />}
+            Ghép tất cả
+          </button>
+        </div>
+      )}
 
         {unmatchTargetId && unmatchTarget ? (
           <div
@@ -449,8 +476,11 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
         {visibleSuggestions.map(s => (
           <div key={s.tripOrder.id} className="relative">
             <label
-              className="absolute top-3 left-3 z-10 flex items-center gap-1 cursor-pointer select-none"
-              onClick={e => { e.stopPropagation(); toggleSelection(s.tripOrder.id) }}
+              onClick={e => {
+                e.stopPropagation();
+                if (!atCapacity || selectedToIds.has(s.tripOrder.id)) toggleSelection(s.tripOrder.id)
+              }}
+              className={`absolute top-3 left-3 z-10 flex items-center gap-1 ${atCapacity && !selectedToIds.has(s.tripOrder.id) ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'} select-none`}
             >
               <span
                 className="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
@@ -484,12 +514,19 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
           className="sticky bottom-0 left-0 right-0 flex items-center justify-between px-4 py-3 rounded-xl"
           style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
         >
-          <span className="text-sm font-bold">
-            Đã chọn {selectedToIds.size} đơn
-          </span>
+          <div className="flex flex-col">
+            <span className="text-sm font-bold">
+              Đã chọn {selectedToIds.size} / {containerCapacity} container
+            </span>
+            {isOverCapacity && (
+              <span className="text-xs mt-0.5" style={{ color: 'var(--theme-status-error)' }}>
+                Chuyến chỉ có {containerCapacity} container — bỏ chọn {selectedToIds.size - containerCapacity} đơn
+              </span>
+            )}
+          </div>
           <button
             onClick={handleBatchForWO}
-            disabled={batchForWO.isPending}
+            disabled={batchForWO.isPending || isOverCapacity}
             className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-opacity disabled:opacity-60"
             style={{ background: 'var(--theme-text-on-brand)', color: 'var(--theme-brand-primary)' }}
           >
