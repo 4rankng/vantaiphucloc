@@ -73,10 +73,13 @@ async def _max_to_seq(db: AsyncSession, partner_id: int) -> int:
 
 
 async def _advisory_lock(db: AsyncSession, partner_id: int) -> None:
-    await db.execute(
-        text("SELECT pg_advisory_xact_lock(:ns, :pid)"),
-        {"ns": _LOCK_NS, "pid": partner_id},
-    )
+    # pg_advisory_xact_lock only works on PostgreSQL; skip in SQLite (tests)
+    dialect = db.bind.dialect.name if db.bind else "unknown"
+    if dialect == "postgresql":
+        await db.execute(
+            text("SELECT pg_advisory_xact_lock(:ns, :pid)"),
+            {"ns": _LOCK_NS, "pid": partner_id},
+        )
 
 
 async def _next_wo_code(db: AsyncSession, partner_id: int) -> str:

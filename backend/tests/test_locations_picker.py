@@ -12,8 +12,8 @@ import pytest
 from sqlalchemy import select
 
 from app.models.domain import (
-    Client,
     Location,
+    Partner,
     TripOrder,
 )
 from app.models.enums import TripOrderStatus
@@ -52,12 +52,10 @@ async def test_nearby_orders_by_haversine_distance(
     assert res.status_code == 200, res.text
     items = res.json()
     coord_items = [i for i in items if i["distance_km"] is not None]
-    # near (~2 km) before mid (~15 km); far (~300 km) excluded by radius
     names = [i["name"] for i in coord_items]
     assert names[0] == "Cảng A"
     assert names[1] == "Kho B"
     assert "Vùng xa" not in names
-    # Distance is monotonic ascending
     distances = [i["distance_km"] for i in coord_items]
     assert distances == sorted(distances)
 
@@ -72,14 +70,12 @@ async def test_nearby_null_coord_locations_appear_at_bottom(
         headers=headers,
     )
     items = res.json()
-    # The NULL-coord row should appear AFTER all coord'd rows
     nogps_idx = next(i for i, item in enumerate(items)
                      if item["name"] == "Địa điểm chưa có GPS")
     last_coord_idx = max(
         i for i, item in enumerate(items) if item["distance_km"] is not None
     )
     assert nogps_idx > last_coord_idx
-    # NULL-coord items have distance_km = null
     nogps = items[nogps_idx]
     assert nogps["distance_km"] is None
     assert nogps["lat"] is None
@@ -100,7 +96,7 @@ async def test_nearby_q_filter_combined_with_distance(
     items = res.json()
     names = [i["name"] for i in items]
     assert "Cảng A" in names
-    assert "Kho B" not in names  # filtered out by q
+    assert "Kho B" not in names
 
 
 @pytest.mark.asyncio
@@ -111,23 +107,20 @@ async def test_nearby_trip_id_pins_pickup_and_dropoff_to_top(
     even if they are far away from the GPS point."""
     headers = await make_auth_headers("driver")
     locs = three_geo_locations
-    client = Client(
-        code="ACME", name="Acme", type="company", phone="0900",
-        outstanding_debt=0, is_active=True,
+    partner = Partner(
+        code="ACME", name="Acme", partner_type="client", phone="0900",
+        is_active=True,
     )
-    db_session.add(client)
+    db_session.add(partner)
     await db_session.flush()
-    # Trip pickup is the FAR location (300 km away) — would normally be excluded
     trip = TripOrder(
         trip_date=date(2026, 5, 1),
-        client_id=client.id,
-        route="far → near",
+        partner_id=partner.id,
         pickup_location_id=locs["far"].id,
         dropoff_location_id=locs["near"].id,
         unit_price=0,
         driver_salary=0,
         allowance=0,
-        revenue=0,
         status=TripOrderStatus.DRAFT.value,
     )
     db_session.add(trip)
@@ -141,10 +134,8 @@ async def test_nearby_trip_id_pins_pickup_and_dropoff_to_top(
     assert res.status_code == 200
     items = res.json()
     names = [i["name"] for i in items]
-    # Pickup (far) and dropoff (near) come first in that order
     assert names[0] == "Vùng xa"
     assert names[1] == "Cảng A"
-    # Distance for far is populated even though it's outside the radius
     assert items[0]["distance_km"] is not None and items[0]["distance_km"] > 50
 
 
@@ -152,13 +143,10 @@ async def test_nearby_trip_id_pins_pickup_and_dropoff_to_top(
 async def test_nearby_no_gps_returns_alphabetical(
     three_geo_locations, async_client, make_auth_headers,
 ):
-    """No lat/lng given → all coord'd rows treated as no-distance,
-    sorted alphabetically with the genuinely null-coord one."""
     headers = await make_auth_headers("driver")
     res = await async_client.get("/api/v1/locations/nearby", headers=headers)
     assert res.status_code == 200
     items = res.json()
-    # All 4 fixture locations show up, all with distance_km = null
     assert len(items) == 4
     assert all(i["distance_km"] is None for i in items)
 
@@ -197,8 +185,6 @@ async def test_pin_creates_location_with_driver_pin_provenance(
 async def test_pin_idempotent_on_existing_name_backfills_coords(
     db_session, async_client, make_auth_headers,
 ):
-    """If a location with the same name already exists but has no coords,
-    the pin endpoint backfills the coords instead of erroring."""
     headers = await make_auth_headers("driver")
     existing = Location(name="Bãi xe trùng tên", is_active=True, pending_geocode=True)
     db_session.add(existing)

@@ -287,6 +287,7 @@ export function TripList() {
         </div>
 
         {detailDialog}
+        <DoiSoatExportDialog open={doiSoatOpen} onOpenChange={setDoiSoatOpen} clients={clients} />
       </div>
     )
   }
