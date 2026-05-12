@@ -7,7 +7,27 @@
 
 ## 📋 Project State
 
-### ✅ Recently Completed (2026-05-12) — Auto-heal Persistence Fix + Integration Tests (tasks 0102, 0103)
+### ✅ Recently Completed (2026-05-12) — Tasks 0104–0106
+
+**3 task specs completed:**
+
+1. **task-0104** — Removed duplicate "Thêm tài xế" from DriverList page (`/accountant/settings/drivers`). Page is now read-only (search + table). Driver creation only via `/accountant/settings/users`.
+   - File: `frontend/src/pages/accountant/DriverList.tsx`
+
+2. **task-0105** — Added "Biển số xe" column to UserManagement page.
+   - Backend: `UserOut.vehicle_plate` field, batch-loaded from `Vehicle` table via `use_case._users.session` in `list_users` endpoint.
+   - Frontend: `UserAccount.vehiclePlate`, new column in table + mobile cards (drivers only).
+   - Files: `identity/interface/schemas.py`, `identity/interface/routers/users.py`, `users.api.ts`, `UserManagement.tsx`
+
+3. **task-0106** — Export danh sách chuyến theo khách hàng.
+   - Backend: `partner_id` param on `GET /trip-orders/export`, per-partner columns (STT, Số cont, Tuyến, Ngày, Biển số, Trạng thái khớp, Đơn giá).
+   - Filename: `chuyen_khach_hang_{slug}_{date}.xlsx` using new `slugify_vi` utility.
+   - Frontend: "Xuất Excel" button in ClientList detail dialog.
+   - Files: `trip_orders.py` router, `excel.py`, `tripOrders.api.ts`, `ClientList.tsx`, new `utils/text.py`
+
+**Test suite:** 174 passed, 1 skipped, 0 failures.
+
+### ✅ Previously Completed (2026-05-12) — Auto-heal Persistence Fix + Integration Tests (tasks 0102, 0103)
 
 **2 task specs completed:**
 
