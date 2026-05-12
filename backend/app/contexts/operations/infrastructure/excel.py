@@ -913,12 +913,18 @@ async def generate_doi_soat_excel(
     partner = p_result.scalar_one_or_none()
     partner_name = partner.name if partner else f"partner_{partner_id}"
 
+    from datetime import date as date_type
+
+    # Convert string dates to date objects for proper SQL comparison
+    df = date_type.fromisoformat(date_from)
+    dt = date_type.fromisoformat(date_to)
+
     # Find matched trip orders for this partner in date range
     to_query = select(TripOrder).where(
         TripOrder.partner_id == partner_id,
         TripOrder.status == "MATCHED",
-        TripOrder.trip_date >= date_from,
-        TripOrder.trip_date <= date_to,
+        TripOrder.trip_date >= df,
+        TripOrder.trip_date <= dt,
     ).order_by(TripOrder.trip_date, TripOrder.id)
     to_result = await db.execute(to_query)
     trip_orders = to_result.scalars().all()
