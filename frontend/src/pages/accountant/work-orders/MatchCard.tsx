@@ -63,14 +63,18 @@ function CriterionRow({
     ? 'color-mix(in srgb, var(--theme-status-success) 20%, transparent)'
     : 'color-mix(in srgb, var(--theme-status-error) 18%, transparent)'
 
+  // Format date criterion values for display
+  const formatVal = (val: string | null | undefined) =>
+    criterion.name === 'date' && val ? fmtDate(val) : (val ?? '')
+
   // Hover tooltip showing trip value for on-demand comparison
   const tooltip = !criterion.match && criterion.woValue
-    ? `Chuyến đi: ${criterion.woValue}`
+    ? `Chuyến đi: ${formatVal(criterion.woValue)}`
     : undefined
 
   return (
     <div
-      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm"
+      className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
       style={{ ...bgStyle, border: `1px solid ${borderColor}` }}
       title={tooltip}
     >
@@ -87,7 +91,7 @@ function CriterionRow({
               value={toDraft}
               onChange={e => setToDraft(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') saveTo(); if (e.key === 'Escape') setEditingTo(false) }}
-              className="flex-1 px-1.5 py-0.5 rounded text-xs border"
+              className="flex-1 px-1.5 py-0.5 rounded text-[11px] border"
               style={{ background: 'var(--theme-bg-primary)', borderColor: 'var(--theme-brand-primary)', color: 'var(--theme-text-primary)' }}
             />
             <button onClick={saveTo} className="p-0.5" style={{ color: 'var(--theme-status-success)' }}><Check className="w-3 h-3" /></button>
@@ -96,10 +100,10 @@ function CriterionRow({
         ) : (
           <button
             onClick={() => { if (!criterion.match) { setToDraft(criterion.toValue ?? ''); setEditingTo(true) } }}
-            className="text-xs truncate text-left w-full group/edit"
+            className="text-[11px] truncate text-left w-full group/edit"
             style={{ color: criterion.toValue ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}
           >
-            {criterion.toValue || '—'}
+            {formatVal(criterion.toValue) || '—'}
             {!criterion.match && (
               <Pencil className="w-2.5 h-2.5 inline ml-1 opacity-0 group-hover/edit:opacity-60 transition-opacity" style={{ color: 'var(--theme-text-muted)' }} />
             )}
