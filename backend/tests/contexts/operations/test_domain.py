@@ -50,10 +50,10 @@ def test_trip_match_idempotent() -> None:
     assert t.status == TripOrderStatus.MATCHED
 
 
-def test_trip_invalid_unmatch_from_pending_raises() -> None:
+def test_trip_unmatch_from_pending_is_noop() -> None:
     t = _make_trip()
-    with pytest.raises(InvalidStateTransition):
-        t.unmatch()
+    t.unmatch()  # idempotent — PENDING is fine
+    assert t.status == TripOrderStatus.PENDING
 
 
 def test_trip_locked_blocks_cancel() -> None:

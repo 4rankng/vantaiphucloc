@@ -26,7 +26,7 @@ from app.contexts.billing.infrastructure.settlement_loader import (
     _split_unit_price_per_container,
 )
 from app.models.domain import (
-    Client,
+    Partner,
     TripOrder,
     TripOrderContainer,
 )
@@ -39,10 +39,10 @@ def settlement_period_for(year: int, month: int):
     return p.start, p.end
 
 
-async def load_settlement_data(db_session, client_id, period_start, period_end):
+async def load_settlement_data(db_session, partner_id, period_start, period_end):
     loader = SqlSettlementDataLoader(db_session)
     return await loader.load(
-        client_id=client_id,
+        partner_id=partner_id,
         period=SettlementPeriod(start=period_start, end=period_end),
     )
 
@@ -68,8 +68,6 @@ def test_number_to_words_simple(amount: int, expected_endswith: str):
 
 
 def test_number_to_words_billion_range():
-    # 1.234.567.890 → "Một tỷ hai trăm ba mươi tư triệu năm trăm sáu mươi
-    # bảy nghìn tám trăm chín mươi đồng" — accept either "tư" or "bốn"
     text = number_to_vietnamese_words(1_234_567_890)
     assert text.startswith("Một tỷ ")
     assert text.endswith("đồng")
@@ -99,7 +97,6 @@ def test_split_single_container_takes_full_price():
 def test_split_two_containers_equal_with_remainder_on_last():
     conts = [_fake_container(1), _fake_container(2)]
     out = _split_unit_price_per_container(999_999, conts)
-    # 999999 / 2 = 499999.5 → base=499999, remainder=1 on last
     assert out == {1: 499_999, 2: 500_000}
     assert sum(out.values()) == 999_999
 
@@ -136,37 +133,33 @@ def test_settlement_period_january_crosses_year():
 
 @pytest.mark.asyncio
 async def test_load_settlement_data_aggregates_routes(db_session):
-    client = Client(
+    partner = Partner(
         code="PAN",
         name="CÔNG TY TNHH PAN HẢI AN",
-        type="company",
+        partner_type="client",
         phone="0225",
         tax_code="0201815115",
         address="Lô KB5, KCN Nam Đình Vũ, Hải An, Hải Phòng",
+        is_active=True,
     )
-    db_session.add(client)
+    db_session.add(partner)
     await db_session.flush()
 
-    # Locations (FK targets after schema overhaul)
     from app.models.domain import Location
     pickup = Location(name="PAN HA", is_active=True)
     dropoff = Location(name="HẢI AN", is_active=True)
     db_session.add_all([pickup, dropoff])
     await db_session.flush()
 
-    # Two trips on same route: 1 F20 (split into 2 conts) + 1 F40
     t1 = TripOrder(
         trip_date=date(2026, 4, 1),
-        client_id=client.id,
-        route="PAN HA - HẢI AN",
+        partner_id=partner.id,
         pickup_location_id=pickup.id,
         dropoff_location_id=dropoff.id,
-        unit_price=1_309_742,  # 2 × ~654871
+        unit_price=1_309_742,
         driver_salary=400_000,
         allowance=0,
-        revenue=1_309_742,
         status="PENDING",
-        is_confirmed=True,
     )
     db_session.add(t1)
     await db_session.flush()
@@ -177,16 +170,13 @@ async def test_load_settlement_data_aggregates_routes(db_session):
 
     t2 = TripOrder(
         trip_date=date(2026, 4, 2),
-        client_id=client.id,
-        route="PAN HA - HẢI AN",
+        partner_id=partner.id,
         pickup_location_id=pickup.id,
         dropoff_location_id=dropoff.id,
         unit_price=681_050,
         driver_salary=420_000,
         allowance=0,
-        revenue=681_050,
         status="PENDING",
-        is_confirmed=False,
     )
     db_session.add(t2)
     await db_session.flush()
@@ -196,7 +186,7 @@ async def test_load_settlement_data_aggregates_routes(db_session):
     await db_session.flush()
 
     data = await load_settlement_data(
-        db_session, client.id, date(2026, 3, 26), date(2026, 4, 25)
+        db_session, partner.id, date(2026, 3, 26), date(2026, 4, 25)
     )
 
     assert len(data.trip_lines) == 3
@@ -211,15 +201,16 @@ async def test_load_settlement_data_aggregates_routes(db_session):
 
 @pytest.mark.asyncio
 async def test_generate_workbook_produces_two_sheets_with_data(db_session):
-    client = Client(
+    partner = Partner(
         code="PAN",
         name="CÔNG TY TNHH PAN HẢI AN",
-        type="company",
+        partner_type="client",
         phone="0225",
         tax_code="0201815115",
         address="Hải Phòng",
+        is_active=True,
     )
-    db_session.add(client)
+    db_session.add(partner)
     await db_session.flush()
 
     from app.models.domain import Location
@@ -230,16 +221,13 @@ async def test_generate_workbook_produces_two_sheets_with_data(db_session):
 
     trip = TripOrder(
         trip_date=date(2026, 4, 10),
-        client_id=client.id,
-        route="PAN HA - HẢI AN",
+        partner_id=partner.id,
         pickup_location_id=pickup.id,
         dropoff_location_id=dropoff.id,
         unit_price=654_871,
         driver_salary=400_000,
         allowance=0,
-        revenue=654_871,
-        status="COMPLETED",
-        is_confirmed=True,
+        status="PENDING",
     )
     db_session.add(trip)
     await db_session.flush()
@@ -249,7 +237,7 @@ async def test_generate_workbook_produces_two_sheets_with_data(db_session):
     await db_session.flush()
 
     data = await load_settlement_data(
-        db_session, client.id, date(2026, 3, 26), date(2026, 4, 25)
+        db_session, partner.id, date(2026, 3, 26), date(2026, 4, 25)
     )
     blob = generate_pan_bk_sl_workbook(data)
 
@@ -257,9 +245,7 @@ async def test_generate_workbook_produces_two_sheets_with_data(db_session):
     assert wb.sheetnames == ["BKTT T4.26", "SL T4.26"]
 
     sl = wb["SL T4.26"]
-    # First data row should be at row 11 (header is row 10)
     assert sl.cell(row=11, column=4).value == "HACU1234567"
-    # F20 marker in column E
     assert sl.cell(row=11, column=5).value == 1
     assert sl.cell(row=11, column=13).value == 654_871
 
@@ -274,17 +260,18 @@ async def test_generate_workbook_produces_two_sheets_with_data(db_session):
 
 @pytest.mark.asyncio
 async def test_workbook_with_no_trips_is_still_valid(db_session):
-    client = Client(
+    partner = Partner(
         code="PAN",
         name="PAN HẢI AN",
-        type="company",
+        partner_type="client",
         phone="0225",
+        is_active=True,
     )
-    db_session.add(client)
+    db_session.add(partner)
     await db_session.flush()
 
     data = await load_settlement_data(
-        db_session, client.id, date(2026, 3, 26), date(2026, 4, 25)
+        db_session, partner.id, date(2026, 3, 26), date(2026, 4, 25)
     )
     blob = generate_pan_bk_sl_workbook(data)
 

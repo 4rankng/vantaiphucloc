@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from app.contexts.operations.domain.exceptions import (
     ContainerCountInvalid,
     InvalidStateTransition,
+    TripOrderLocked,
 )
 from app.contexts.operations.domain.value_objects import (
     Money,

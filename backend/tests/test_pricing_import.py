@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy import select
 
-from app.models.domain import Client, Pricing, PricingLine
+from app.models.domain import Partner, Pricing, PricingLine
 from app.contexts.customer_pricing.infrastructure.pricing_import import (
     PricingPreview,
     SUPPORTED_FORMATS,
@@ -81,8 +81,6 @@ class TestParsePAN:
 
     def test_pickup_dropoff_present(self):
         preview = parse_tariff_bytes(_read(_PAN_FILE), "pan")
-        # PAN's `Trucking (HD)` rows have routes like "Khách – Cảng"; with at
-        # least some rows resolving to non-empty pickup + dropoff.
         with_both = [
             r for r in preview.rows if r.pickup_raw and r.dropoff_raw
         ]
@@ -119,11 +117,9 @@ class TestParseNEWWAY:
     def test_runs_without_error(self):
         preview = parse_tariff_bytes(_read(_NEWWAY_FILE), "newway")
         assert preview.format == "newway"
-        # Each row, if any, has the right shape
         for row in preview.rows:
             assert row.work_type in {"E20", "E40", "F20", "F40"}
             assert row.unit_price > 0
-        # If 0 rows, expect a warning explaining it
         if not preview.rows:
             assert any("NEWWAY" in w for w in preview.warnings)
 
@@ -145,22 +141,21 @@ def test_supported_formats_set():
 
 @pytest.mark.asyncio
 class TestCommitTariffRows:
-    async def _seed_client(self, db_session):
-        client = Client(
+    async def _seed_partner(self, db_session):
+        partner = Partner(
             code="ACME",
             name="Acme",
-            type="company",
+            partner_type="client",
             phone="0900",
-            outstanding_debt=0,
             is_active=True,
         )
-        db_session.add(client)
+        db_session.add(partner)
         await db_session.commit()
-        await db_session.refresh(client)
-        return client
+        await db_session.refresh(partner)
+        return partner
 
     async def test_creates_pricing_and_line(self, db_session):
-        client = await self._seed_client(db_session)
+        partner = await self._seed_partner(db_session)
         rows = [
             TariffRow(
                 pickup_raw="Cảng Hải Phòng",
@@ -170,14 +165,13 @@ class TestCommitTariffRows:
             )
         ]
         result = await commit_tariff_rows(
-            db_session, client=client, rows=rows, user_id=None
+            db_session, client=partner, rows=rows, user_id=None
         )
         assert result.pricings_created == 1
         assert result.lines_created == 1
 
-        # The Pricing row exists with the expected FKs
         pricing = (await db_session.execute(select(Pricing))).scalar_one()
-        assert pricing.client_id == client.id
+        assert pricing.partner_id == partner.id
         assert pricing.work_type == "F20"
 
         line = (await db_session.execute(select(PricingLine))).scalar_one()
@@ -186,7 +180,7 @@ class TestCommitTariffRows:
         assert line.quantity == 1
 
     async def test_idempotent_second_run_no_new_rows(self, db_session):
-        client = await self._seed_client(db_session)
+        partner = await self._seed_partner(db_session)
         rows = [
             TariffRow(
                 pickup_raw="Cảng A",
@@ -195,9 +189,9 @@ class TestCommitTariffRows:
                 unit_price=2_000_000,
             )
         ]
-        await commit_tariff_rows(db_session, client=client, rows=rows, user_id=None)
+        await commit_tariff_rows(db_session, client=partner, rows=rows, user_id=None)
         result = await commit_tariff_rows(
-            db_session, client=client, rows=rows, user_id=None
+            db_session, client=partner, rows=rows, user_id=None
         )
         assert result.pricings_created == 0
         assert result.pricings_existing == 1
@@ -205,14 +199,14 @@ class TestCommitTariffRows:
         assert result.lines_existing == 1
 
     async def test_update_existing_line_when_flag_set(self, db_session):
-        client = await self._seed_client(db_session)
+        partner = await self._seed_partner(db_session)
         first = TariffRow(
             pickup_raw="Cảng A",
             dropoff_raw="Kho B",
             work_type="F20",
             unit_price=1_000_000,
         )
-        await commit_tariff_rows(db_session, client=client, rows=[first], user_id=None)
+        await commit_tariff_rows(db_session, client=partner, rows=[first], user_id=None)
         updated = TariffRow(
             pickup_raw="Cảng A",
             dropoff_raw="Kho B",
@@ -221,7 +215,7 @@ class TestCommitTariffRows:
         )
         result = await commit_tariff_rows(
             db_session,
-            client=client,
+            client=partner,
             rows=[updated],
             user_id=None,
             update_existing_lines=True,
@@ -231,7 +225,7 @@ class TestCommitTariffRows:
         assert line.unit_price == 1_200_000
 
     async def test_skips_rows_with_blank_pickup_or_dropoff(self, db_session):
-        client = await self._seed_client(db_session)
+        partner = await self._seed_partner(db_session)
         rows = [
             TariffRow(
                 pickup_raw="", dropoff_raw="Kho B", work_type="F20",
@@ -243,7 +237,7 @@ class TestCommitTariffRows:
             ),
         ]
         result = await commit_tariff_rows(
-            db_session, client=client, rows=rows, user_id=None
+            db_session, client=partner, rows=rows, user_id=None
         )
         assert result.skipped_no_locations == 2
         assert result.lines_created == 0
