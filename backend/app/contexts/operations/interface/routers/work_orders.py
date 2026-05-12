@@ -151,10 +151,6 @@ async def _load_many(session, wos: list[WorkOrder]) -> list[WorkOrderOut]:
                 "Auto-healing stale MATCHED WO#%s (no active links)", w.id
             )
             w.status = WOS.PENDING
-            w.is_locked = False
-            w.unit_price = 0
-            w.driver_salary = 0
-            w.allowance = 0
             healed += 1
     if healed:
         await session.commit()
