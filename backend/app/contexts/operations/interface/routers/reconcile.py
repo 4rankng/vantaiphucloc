@@ -480,6 +480,8 @@ async def auto_match(
         AutoMatchWorkOrderRef,
         AutoMatchTripOrderRef,
         UnmatchedWorkOrderRef,
+        AutoMatchStats,
+        AutoMatchRejectionReason,
     )
     from app.core.summaries import (
         get_partner_summary,
@@ -513,6 +515,7 @@ async def auto_match(
 
     candidates: list[AutoMatchCandidate] = []
     unmatched_refs: list[UnmatchedWorkOrderRef] = []
+    unmatched_wos: list[WO] = []
     skipped = 0
     errors: list[str] = []
 
@@ -533,6 +536,7 @@ async def auto_match(
                 if has_link:
                     skipped += 1
                 else:
+                    unmatched_wos.append(wo)
                     unmatched_refs.append(UnmatchedWorkOrderRef(
                         id=wo.id,
                         code=wo.code,
@@ -598,12 +602,99 @@ async def auto_match(
         except Exception as exc:
             errors.append(f"WO#{wo.id}: {exc}")
 
+    # ── Compute rejection breakdown for unmatched WOs ──
+    stats = AutoMatchStats()
+    if unmatched_wos:
+        from app.models.domain import TripOrder as TORM, TripOrderContainer as TOC, WorkOrderContainer as WOC
+        from app.contexts.operations.infrastructure.match_suggester import (
+            _load_alias_groups, _locations_match,
+        )
+        from app.utils.iso6346 import normalize_container_number
+
+        all_tos = list((await db.execute(
+            sa_select(TORM).where(TORM.status.in_(["PENDING", "MATCHED"]))
+        )).scalars().all())
+
+        if all_tos:
+            alias_groups = await _load_alias_groups(db)
+
+            to_partner_ids = {to.partner_id for to in all_tos}
+            to_dates = {to.trip_date for to in all_tos if to.trip_date}
+            to_cont_rows = (await db.execute(
+                sa_select(TOC.trip_order_id, TOC.container_number)
+            )).all()
+            to_container_map: dict[int, set[str]] = {}
+            for tid, cn in to_cont_rows:
+                if cn:
+                    to_container_map.setdefault(tid, set()).add(
+                        normalize_container_number(cn)
+                    )
+            to_pickup_ids = {to.pickup_location_id for to in all_tos if to.pickup_location_id}
+            to_dropoff_ids = {to.dropoff_location_id for to in all_tos if to.dropoff_location_id}
+
+            wo_cont_rows = (await db.execute(
+                sa_select(WOC.work_order_id, WOC.container_number)
+                .where(WOC.work_order_id.in_([wo.id for wo in unmatched_wos]))
+            )).all()
+            wo_container_map: dict[int, set[str]] = {}
+            for wid, cn in wo_cont_rows:
+                if cn:
+                    wo_container_map.setdefault(wid, set()).add(
+                        normalize_container_number(cn)
+                    )
+
+            location_mismatch = 0
+            date_mismatch = 0
+            client_mismatch = 0
+            container_mismatch = 0
+
+            for wo in unmatched_wos:
+                has_client = wo.partner_id in to_partner_ids
+                wo_date = wo.created_at.date() if wo.created_at else None
+                has_date = wo_date in to_dates if wo_date else False
+                has_pickup = any(
+                    _locations_match(wo.pickup_location_id, pid, alias_groups)
+                    for pid in to_pickup_ids
+                ) if wo.pickup_location_id else False
+                has_dropoff = any(
+                    _locations_match(wo.dropoff_location_id, did, alias_groups)
+                    for did in to_dropoff_ids
+                ) if wo.dropoff_location_id else False
+                has_location = has_pickup or has_dropoff
+
+                wo_cns = wo_container_map.get(wo.id, set())
+                has_container = any(
+                    wo_cns & to_container_map.get(to.id, set())
+                    for to in all_tos
+                ) if wo_cns else False
+
+                if not has_location:
+                    location_mismatch += 1
+                if not has_date:
+                    date_mismatch += 1
+                if not has_client:
+                    client_mismatch += 1
+                if not has_container:
+                    container_mismatch += 1
+
+            reason_defs = [
+                ("location_mismatch", "Chưa map địa điểm", location_mismatch),
+                ("date_mismatch", "Ngày không khớp", date_mismatch),
+                ("client_mismatch", "Khách hàng không khớp", client_mismatch),
+                ("container_mismatch", "Container không khớp", container_mismatch),
+            ]
+            stats = AutoMatchStats(reasons=[
+                AutoMatchRejectionReason(code=c, label=l, count=n)
+                for c, l, n in reason_defs if n > 0
+            ])
+
     return AutoMatchResponse(
         scanned_work_order_count=len(work_orders),
         skipped_already_matched=skipped,
         candidates=candidates,
         unmatched_work_order_refs=unmatched_refs,
         errors=errors,
+        stats=stats,
     )
 
 
