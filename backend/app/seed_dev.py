@@ -204,6 +204,27 @@ async def seed_dev() -> None:
             vehicle_map[v["plate"]] = existing
         await db.commit()
 
+        # ── 2b. Ensure every driver has a vehicle ────────────────────
+        all_drivers = (await db.execute(
+            text("SELECT id, username FROM users WHERE role = 'driver'")
+        )).fetchall()
+        drivers_with_vehicle = set(v.driver_id for v in (await db.execute(
+            text("SELECT driver_id FROM vehicles WHERE is_active = true")
+        )).fetchall())
+        new_vehicle_count = 0
+        for d in all_drivers:
+            if d.id not in drivers_with_vehicle:
+                plate_prefix = random.choice(["29C", "30C", "37C", "38C", "39C", "50C", "51C", "60C", "61C", "63C", "64C", "65C", "66C", "67C", "68C", "70C", "71C", "72C", "73C", "75C", "76C", "77C", "79C", "80C", "81C"])
+                plate_num = f"{random.randint(100, 999)}.{random.randint(10, 99)}"
+                plate = f"{plate_prefix}-{plate_num}"
+                db.add(Vehicle(plate=plate, driver_id=d.id, is_active=True))
+                drivers_with_vehicle.add(d.id)
+                new_vehicle_count += 1
+        if new_vehicle_count:
+            await db.flush()
+            print(f"  + Created {new_vehicle_count} vehicles for drivers without one")
+        await db.commit()
+
         # ── 3. Locations ────────────────────────────────────────────────
         print("\n=== Seeding Locations ===")
         loc_map: dict[str, Location] = {}
@@ -270,7 +291,7 @@ async def seed_dev() -> None:
         print("\n=== Seeding Pricings ===")
         pricing_map: dict[tuple[str, int, int, str], Pricing] = {}
         # Only create pricings for client-type partners
-        client_codes = [p["code"] for p in SEED_PARTNERS if p["partner_type"] == "client"]]
+        client_codes = [p["code"] for p in SEED_PARTNERS if p["partner_type"] == "client"]
 
         for client_code in client_codes:
             partner = partner_map[client_code]
