@@ -57,8 +57,6 @@ export function LocationAliasManager() {
     },
   })
 
-  const locationMap = new Map(locations.map((l: Location) => [l.id, l.name]))
-
   const { data: pendingGroups = [], isLoading: loadingPending } = useQuery({
     queryKey: ['location-aliases', 'pending-review'],
     queryFn: async () => {
@@ -69,6 +67,11 @@ export function LocationAliasManager() {
   })
 
   const pendingAliases = pendingGroups.flatMap(g => g.pendingAliases)
+
+  const locationMap = new Map([
+    ...locations.map((l: Location) => [l.id, l.name] as [number, string]),
+    ...pendingGroups.map((g: { location: { id: number; name: string }; pendingAliases: LocationAlias[] }) => [g.location.id, g.location.name] as [number, string]),
+  ])
 
   const { data: allAliases = [], isLoading: loadingAll } = useQuery({
     queryKey: ['location-aliases', 'all', statusFilter],
@@ -83,11 +86,27 @@ export function LocationAliasManager() {
     qc.invalidateQueries({ queryKey: ['location-aliases'] })
   }, [qc])
 
+  const [confirmingAll, setConfirmingAll] = useState(false)
+
   const confirmMut = useMutation({
     mutationFn: (id: number) => confirmAlias(id),
     onSuccess: () => { toast.success('Đã xác nhận bí danh'); invalidate() },
     onError: () => toast.error('Lỗi', 'Không thể xác nhận'),
   })
+
+  const handleConfirmAll = useCallback(async () => {
+    if (pendingAliases.length === 0) return
+    setConfirmingAll(true)
+    try {
+      await Promise.all(pendingAliases.map((a: LocationAlias) => confirmAlias(a.id)))
+      toast.success(`Đã duyệt ${pendingAliases.length} bí danh`)
+      invalidate()
+    } catch {
+      toast.error('Lỗi', 'Không thể duyệt tất cả')
+    } finally {
+      setConfirmingAll(false)
+    }
+  }, [pendingAliases, invalidate, toast])
 
   const rejectMut = useMutation({
     mutationFn: ({ id, note }: { id: number; note?: string }) => rejectAlias(id, note),
@@ -163,13 +182,25 @@ export function LocationAliasManager() {
 
       {/* Add alias button + form */}
       {!createOpen ? (
-        <button
-          onClick={() => setCreateOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
-          style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
-        >
-          <Plus className="w-3.5 h-3.5" /> Thêm bí danh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCreateOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
+            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+          >
+            <Plus className="w-3.5 h-3.5" /> Thêm bí danh
+          </button>
+          {tab === 'pending' && pendingAliases.length > 0 && (
+            <button
+              onClick={handleConfirmAll}
+              disabled={confirmingAll}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors disabled:opacity-60"
+              style={{ background: 'color-mix(in srgb, var(--theme-status-success) 15%, transparent)', color: 'var(--theme-status-success)', border: '1px solid color-mix(in srgb, var(--theme-status-success) 30%, transparent)' }}
+            >
+              <Check className="w-3.5 h-3.5" /> {confirmingAll ? 'Đang duyệt...' : `Duyệt hết (${pendingAliases.length})`}
+            </button>
+          )}
+        </div>
       ) : (
         <div className="card p-4 flex items-end gap-3">
           <div className="flex-1 space-y-1.5">
@@ -276,7 +307,6 @@ export function LocationAliasManager() {
               <tr style={{ background: 'var(--theme-bg-tertiary)' }}>
                 <th className="text-left px-4 py-2.5 text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Bí danh</th>
                 <th className="text-left px-4 py-2.5 text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Địa điểm chính</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Nguồn</th>
                 {tab === 'all' && (
                   <th className="text-left px-4 py-2.5 text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Trạng thái</th>
                 )}
@@ -298,9 +328,6 @@ export function LocationAliasManager() {
                     <td className="px-4 py-2.5 font-medium" style={{ color: 'var(--theme-text-primary)' }}>{a.alias}</td>
                     <td className="px-4 py-2.5" style={{ color: 'var(--theme-text-secondary)' }}>
                       {locationMap.get(a.locationId) ?? `#${a.locationId}`}
-                    </td>
-                    <td className="px-4 py-2.5" style={{ color: 'var(--theme-text-muted)' }}>
-                      <span className="text-xs">{a.source}</span>
                     </td>
                     {tab === 'all' && (
                       <td className="px-4 py-2.5"><StatusBadge status={a.status} /></td>
