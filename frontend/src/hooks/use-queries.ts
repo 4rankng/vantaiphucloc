@@ -455,7 +455,11 @@ export function useUpdateWorkOrder() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: WorkOrderUpdatePayload }) => apiClient.updateWorkOrder(id, data).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['work-orders'] }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['work-orders'] })
+      qc.invalidateQueries({ queryKey: ['suggest-matches'] })
+      qc.invalidateQueries({ queryKey: ['suggest-wos'] })
+    },
   })
 }
 
@@ -474,7 +478,11 @@ export function useUpdateTripOrder() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: TripOrderUpdatePayload }) => apiClient.updateTripOrder(id, data).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['trip-orders'] }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trip-orders'] })
+      qc.invalidateQueries({ queryKey: ['suggest-matches'] })
+      qc.invalidateQueries({ queryKey: ['suggest-wos'] })
+    },
   })
 }
 
