@@ -101,6 +101,15 @@ function UserManagementInner() {
     },
     { key: 'role', header: 'Vai trò', accessor: u => ROLE_LABELS[u.role] },
     { key: 'phone', header: 'SĐT', accessor: u => u.phone ?? '—' },
+    {
+      key: 'plate',
+      header: 'Biển số xe',
+      accessor: u => u.role === 'driver'
+        ? (u.vehiclePlate
+          ? <span className="font-mono text-xs">{u.vehiclePlate}</span>
+          : '—')
+        : '',
+    },
   ], [])
 
   const updateCreateField = useCallback((field: keyof UserForm, value: string) => {
@@ -267,6 +276,13 @@ function UserManagementInner() {
                       if (renderedAny) items.push(<span key="sep-cccd">{sep}</span>)
                       items.push(
                         <span key="cccd" className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>CCCD: {u.cccd}</span>,
+                      )
+                      renderedAny = true
+                    }
+                    if (u.role === 'driver' && u.vehiclePlate) {
+                      if (renderedAny) items.push(<span key="sep-plate">{sep}</span>)
+                      items.push(
+                        <span key="plate" className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>{u.vehiclePlate}</span>,
                       )
                       renderedAny = true
                     }
