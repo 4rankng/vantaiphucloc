@@ -921,6 +921,24 @@ grep -r "useEffect" src/ | grep -v "import"
 
 ---
 
+### ✅ Completed (2026-05-12) — Auto-Match Preview + Confirm + Driver Auto-Fill
+
+Both specs fully implemented in codebase prior to this cron run.
+
+**Auto-Match Interactive Feedback (preview + confirm flow):**
+- Backend: `POST /reconcile/auto-match` is read-only preview, `POST /reconcile/auto-match/confirm` commits selected pairs
+- Frontend: `AutoMatchDialog.tsx` renders candidates with checkboxes, criteria chips, score badges, confirm action
+- Fix applied: `test_reconcile.py` assertions updated from old shape (`auto_matched`) to new shape (`candidates`)
+- Files: `reconcile.py`, `AutoMatchDialog.tsx`, `WorkOrderList.tsx`, `tripOrders.api.ts`, `use-queries.ts`
+
+**Driver Auto-Fill Personalization (Phase 1 + GPS bonus):**
+- Backend: `GET /drivers/me/suggested-routes` — frequency × recency scoring with GPS proximity bonus, global popular fallback
+- Frontend: `RecentTripSuggestions` component with source badges (Quen thuộc/Gần đây/Phổ biến), loading skeleton
+- GPS: Auto-requested on page mount with graceful fallback
+- Files: `suggested_routes.py`, `useCreateWorkOrder.ts`, `RecentTripSuggestions.tsx`, `workOrders.api.ts`
+
+---
+
 **Last Updated:** 2026-05-12
 **Maintained By:** Orbit (AI Agent)
 **Version:** 1.0
