@@ -3,6 +3,7 @@ import { Sparkles, FileText, ClipboardList, Search, Loader2, X, Check, Link2, Un
 import { useSuggestMatches, useReconcile, useBulkMatch, useTripOrders, useUnmatch, useBatchReconcileForWO, useUpdateTripOrder, useUpdateWorkOrder, usePartners, useLocations } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
+import { fmtDate } from '@/lib/date-utils'
 import { TripDetailCard } from './TripDetailCard'
 import { MatchCard, scoreColor } from './MatchCard'
 import type { WorkOrder, TripOrder, TripOrderContainerItem, WorkType, MatchSuggestion } from '@/data/domain'
@@ -438,7 +439,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
                         </span>
                       )}
                       <span className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
-                        {trip.tripDate}
+                        {fmtDate(trip.tripDate)}
                       </span>
                     </div>
                     <div className="flex items-center gap-1">
@@ -1090,7 +1091,7 @@ function ManualSearchResults({
                   {to.code}
                 </span>
               )}
-              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{to.tripDate}</span>
+              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{fmtDate(to.tripDate)}</span>
             </div>
             <p className="text-xs font-medium truncate mt-0.5" style={{ color: 'var(--theme-text-primary)' }}>
               {to.partner?.name || '—'}
