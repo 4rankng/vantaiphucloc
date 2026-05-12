@@ -129,13 +129,11 @@ export function WorkOrderList() {
       { dateFrom, dateTo },
       {
         onSuccess: (res) => {
-          if (res.data) {
-            setAutoMatchResult(res.data)
-            if (res.data.autoMatched.length > 0) {
-              toast.success('Tự động ghép', `Đã ghép ${res.data.autoMatched.length} cặp`)
-            } else {
-              toast.info('Tự động ghép', 'Không tìm thấy cặp nào để tự động ghép')
-            }
+          setAutoMatchResult(res)
+          if (res.candidates.length > 0) {
+            toast.info('Tự động ghép', `Tìm thấy ${res.candidates.length} cặp đề xuất`)
+          } else {
+            toast.info('Tự động ghép', 'Không tìm thấy cặp nào để tự động ghép')
           }
         },
         onError: () => toast.error('Lỗi', 'Không thể tự động ghép'),
