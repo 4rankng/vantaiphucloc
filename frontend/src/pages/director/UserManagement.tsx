@@ -191,6 +191,7 @@ function UserManagementInner() {
 
   const roleCounts = {
     ALL: users.length,
+    superadmin: users.filter(u => u.role === 'superadmin').length,
     director: users.filter(u => u.role === 'director').length,
     accountant: users.filter(u => u.role === 'accountant').length,
     driver: users.filter(u => u.role === 'driver').length,
@@ -220,6 +221,7 @@ function UserManagementInner() {
       <FilterPills
         options={[
           { value: 'ALL', label: 'Tất cả', count: roleCounts.ALL },
+          { value: 'superadmin', label: ROLE_LABELS.superadmin, count: roleCounts.superadmin },
           { value: 'director', label: ROLE_LABELS.director, count: roleCounts.director },
           { value: 'accountant', label: ROLE_LABELS.accountant, count: roleCounts.accountant },
           { value: 'driver', label: ROLE_LABELS.driver, count: roleCounts.driver },
