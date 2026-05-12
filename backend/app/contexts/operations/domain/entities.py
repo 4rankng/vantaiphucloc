@@ -38,6 +38,7 @@ from app.contexts.operations.domain.value_objects import (
     WorkType,
     normalize_work_type,
 )
+from app.utils.iso6346 import validate_container_number
 
 
 def _utcnow() -> datetime:
@@ -168,6 +169,10 @@ class TripOrder:
         container_metadata: dict | None = None,
     ) -> TripOrderContainer:
         wt = normalize_work_type(work_type)
+        # Validate ISO 6346 container number
+        valid, err = validate_container_number(container_number)
+        if not valid:
+            raise ValueError(f"Invalid container number {container_number!r}: {err}")
         # All containers in a trip must share work_type — twin lift rule.
         if self.containers:
             existing_wt = self.containers[0].work_type
@@ -339,6 +344,10 @@ class WorkOrder:
         photo_address: str | None = None,
     ) -> WorkOrderContainer:
         wt = normalize_work_type(work_type)
+        # Validate ISO 6346 container number
+        valid, err = validate_container_number(container_number)
+        if not valid:
+            raise ValueError(f"Invalid container number {container_number!r}: {err}")
         if self.containers:
             existing_wt = self.containers[0].work_type
             if wt != existing_wt:

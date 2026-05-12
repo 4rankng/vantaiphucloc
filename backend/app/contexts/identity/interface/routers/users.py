@@ -130,7 +130,7 @@ async def list_users(
 @router.post("/users", response_model=UserOut, status_code=201)
 async def create_user(
     body: UserCreate,
-    current_user: UserORM = Depends(require_permission("list", "User")),
+    current_user: UserORM = Depends(require_permission("create", "User")),
     use_case: CreateUser = Depends(get_create_user),
 ):
     cmd = CreateUserInput(
@@ -153,7 +153,7 @@ async def create_user(
 async def update_user(
     user_id: int,
     body: UserUpdate,
-    current_user: UserORM = Depends(require_permission("list", "User")),
+    current_user: UserORM = Depends(require_permission("update", "User")),
     use_case: UpdateUser = Depends(get_update_user),
 ):
     payload = body.model_dump(exclude_unset=True)
@@ -179,7 +179,7 @@ async def update_user(
 @router.delete("/users/{user_id}", status_code=204)
 async def delete_user(
     user_id: int,
-    current_user: UserORM = Depends(require_permission("list", "User")),
+    current_user: UserORM = Depends(require_permission("delete", "User")),
     use_case: DeleteUser = Depends(get_delete_user),
 ):
     try:

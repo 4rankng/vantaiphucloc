@@ -2,26 +2,14 @@
 
 from enum import StrEnum
 
+# Re-export from value_objects (single source of truth)
+from app.contexts.operations.domain.value_objects import (  # noqa: F401
+    TripOrderStatus,
+    WorkOrderStatus,
+    WorkType,
+)
 
-class WorkOrderStatus(StrEnum):
-    PENDING = "PENDING"
-    MATCHED = "MATCHED"
-    COMPLETED = "COMPLETED"
-    CANCELLED = "CANCELLED"
-
-
-class TripOrderStatus(StrEnum):
-    DRAFT = "DRAFT"
-    PENDING = "PENDING"
-    COMPLETED = "COMPLETED"
-    CANCELLED = "CANCELLED"
-
-
-class WorkType(StrEnum):
-    E20 = "E20"
-    E40 = "E40"
-    F20 = "F20"
-    F40 = "F40"
+# Keep WorkType alias here for backward compat — it was already identical.
 
 
 class LocationAliasStatus(StrEnum):
