@@ -11,7 +11,7 @@ import pytest
 
 from app.core.security import hash_password
 from app.models.base import User
-from app.models.domain import Client, Location
+from app.models.domain import Location, Partner
 
 
 async def _seed_two_drivers_with_wos(db_session, async_client):
@@ -19,7 +19,7 @@ async def _seed_two_drivers_with_wos(db_session, async_client):
 
     Returns (driver_a_headers, driver_b_headers, wo_a_id, wo_b_id).
     """
-    client = Client(name="Acme", type="company", phone="0900111", is_active=True)
+    partner = Partner(name="Acme", partner_type="client", phone="0900111", is_active=True)
     pickup = Location(name="Cảng Cát Lái", is_active=True)
     dropoff = Location(name="KCN Long Hậu", is_active=True)
     drv_a = User(
@@ -32,7 +32,7 @@ async def _seed_two_drivers_with_wos(db_session, async_client):
         hashed_password=hash_password("p"),
         role="driver", is_active=True,
     )
-    db_session.add_all([client, pickup, dropoff, drv_a, drv_b])
+    db_session.add_all([partner, pickup, dropoff, drv_a, drv_b])
     await db_session.commit()
 
     from app.contexts.operations.application.dto import (
@@ -50,9 +50,9 @@ async def _seed_two_drivers_with_wos(db_session, async_client):
 
     wo_a = await create(
         WorkOrderCreateInput(
-            client_id=client.id, route="A-B",
+            partner_id=partner.id,
             pickup_location_id=pickup.id, dropoff_location_id=dropoff.id,
-            driver_id=drv_a.id, tractor_plate="29C-A",
+            driver_id=drv_a.id,
             containers=[WorkOrderContainerInput(
                 container_number="ABCU0000104", work_type="F20",
             )],
@@ -61,9 +61,9 @@ async def _seed_two_drivers_with_wos(db_session, async_client):
     )
     wo_b = await create(
         WorkOrderCreateInput(
-            client_id=client.id, route="A-B",
+            partner_id=partner.id,
             pickup_location_id=pickup.id, dropoff_location_id=dropoff.id,
-            driver_id=drv_b.id, tractor_plate="29C-B",
+            driver_id=drv_b.id,
             containers=[WorkOrderContainerInput(
                 container_number="EFGU0000100", work_type="F40",
             )],
