@@ -69,21 +69,26 @@ class SqlTripOrderRepository(TripOrderRepository):
             out[p.trip_container_id].append(p)
         return out
 
-    async def _matched_wo_ids(self, tid: int) -> list[int]:
+    async def _matched_wo_ids(self, tid: int) -> tuple[list[int], int]:
+        """Return (matched WO ids, matched_by user id) for a TripOrder."""
         rows = (await self.session.execute(
-            select(ReconciliationORM.work_order_id)
-            .where(
+            select(
+                ReconciliationORM.work_order_id,
+                ReconciliationORM.matched_by,
+            ).where(
                 ReconciliationORM.trip_order_id == tid,
                 ReconciliationORM.is_active == True,  # noqa: E712
             )
         )).all()
-        return [r[0] for r in rows]
+        wo_ids = [r[0] for r in rows]
+        matched_by = rows[0][1] if rows else 0
+        return wo_ids, matched_by
 
     async def _hydrate(self, orm: TripOrderORM) -> TripOrder:
         containers = await self._containers_for(orm.id)
         photos = await self._photos_for_containers([c.id for c in containers])
-        matched = await self._matched_wo_ids(orm.id)
-        return trip_order_to_domain(orm, containers, photos, matched)
+        matched, matched_by = await self._matched_wo_ids(orm.id)
+        return trip_order_to_domain(orm, containers, photos, matched, matched_by=matched_by)
 
     async def get_by_id(self, tid: TripOrderId) -> TripOrder | None:
         orm = (await self.session.execute(
