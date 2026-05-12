@@ -7,6 +7,25 @@
 
 ## 📋 Project State
 
+### ✅ Recently Completed (2026-05-12) — Remove Tuyến đường + Multi-Container Scoring (task specs)
+
+**3 task specs completed in one cron run:**
+
+1. **Remove Tuyến đường field everywhere** — `route`/`tuyen_duong` removed from AutoMatch DTOs (both backend Pydantic and frontend TypeScript). All frontend displays now compute `pickupLocation → dropoffLocation` inline. Match criteria reduced from 6 to 5 (max_score=5). Removed `route` from `TripOrderCreatePayload` and `CreateTrip.tsx` submission.
+
+2. **Simplify match comparison to single column** — `MatchCard.tsx` already had single-column layout (✅/❌ icons, subtle bg, hover tooltips, match counter). No additional changes needed.
+
+3. **Split multi-container orders** — `match_suggester.py` now emits one `MatchSuggestion` per `(TO × container)` tuple. Added `_score_to_container_against_wo` and `_used_container_ids_for_tos` helper functions to score per-container and track which TO containers are already matched.
+
+**Key bug fix:** The match suggester was calling `_used_container_ids_for_tos` and `_score_to_container_against_wo` but these functions were never defined, causing 500 errors on `/match-scores` and `/suggest-matches`. Both functions implemented.
+
+**Files changed:**
+- Backend: `match_suggester.py`, `reconcile.py` router, `domain.py` schemas
+- Frontend: `AutoMatchDialog.tsx`, `RouteDisplay.tsx`, `TripOrderCard.tsx`, `TripSummaryDialog.tsx`, `CreateTrip.tsx`, `TripDetail.tsx`, `TripList.tsx`, `MatchCard.tsx`, `MatchPanel.tsx`, `use-match-trip.ts`, `domain.ts`, `tripOrders.api.ts`
+- Director pages: `DriverJobs.tsx`, `ClientJobs.tsx`, `DirectorDashboard.tsx`
+
+**Tests:** 169 passed, 0 failed.
+
 ### ✅ Recently Completed (2026-05-12) — TO-Centric Matching Model (bug-0078..0083, task-0099..0101)
 
 **Major model inversion:** Changed from WO-centric (1 WO → N TOs) to TO-centric (1 TO → N WOs).
