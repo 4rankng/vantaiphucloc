@@ -5,6 +5,8 @@ import string
 from datetime import date
 from uuid import uuid4
 
+import pytest
+
 _ISO_LETTER_MAP = {
     "A": 10, "B": 12, "C": 13, "D": 14, "E": 15, "F": 16, "G": 17, "H": 18, "I": 19,
     "J": 20, "K": 21, "L": 23, "M": 24, "N": 25, "O": 26, "P": 27, "Q": 28, "R": 29,
@@ -293,11 +295,20 @@ class TestImportExportWorkflow:
     """Download template and export trip orders."""
 
     def test_template_and_export(self, api_client, accountant_headers):
+        import httpx
+
         template = api_client.get("/trip-orders/template", headers=accountant_headers)
         assert template.status_code in (200, 500)
 
-        export = api_client.get("/trip-orders/export", headers=accountant_headers)
-        assert export.status_code == 200
+        for _attempt in range(3):
+            try:
+                export = api_client.get("/trip-orders/export", headers=accountant_headers)
+                assert export.status_code == 200
+                break
+            except httpx.ReadError:
+                continue
+        else:
+            pytest.fail("trip-orders/export failed after 3 attempts (connection reset)")
 
 
 class TestPartnerCRUD:

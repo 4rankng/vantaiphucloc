@@ -137,19 +137,19 @@ class CreateWorkOrder:
 
         driver_id = user.id if user.role == "driver" else data.driver_id
 
-        pricing = await find_pricing(
-            self.session,
-            partner_id=data.partner_id,
-            work_type=work_type,
-            pickup_location_id=data.pickup_location_id,
-            dropoff_location_id=data.dropoff_location_id,
-        )
-
         gps_address = (
             None if (data.gps_lat and data.gps_lng) else "Khong xac dinh"
         )
 
         for _attempt in range(3):
+            pricing = await find_pricing(
+                self.session,
+                partner_id=data.partner_id,
+                work_type=work_type,
+                pickup_location_id=data.pickup_location_id,
+                dropoff_location_id=data.dropoff_location_id,
+            )
+
             w = WorkOrder(
                 id=None,
                 partner_id=data.partner_id,
