@@ -80,6 +80,7 @@ export const apiClient = {
   updateWorkOrder: workOrdersApi.updateWorkOrder,
   ocrContainer: workOrdersApi.ocrContainer,
   validateContainer: workOrdersApi.validateContainer,
+  getSuggestedRoutes: workOrdersApi.getSuggestedRoutes,
 
   // Trip Orders
   getTripOrders: tripOrdersApi.getTripOrders,

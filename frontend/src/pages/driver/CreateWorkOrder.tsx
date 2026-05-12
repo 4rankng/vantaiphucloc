@@ -18,7 +18,7 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
     containers, clientId, pickupLocation, dropoffLocation,
     selectedTripId,
     submitting, scannerOpen, isOnline, summaryOpen, showSuccess,
-    forceManualEntry, missingFields, containerErrors,
+    forceManualEntry, missingFields, containerErrors, suggestionLoading,
     canSubmit, summaryContainers, summaryClientName,
     setClientId, setPickupLocation, setDropoffLocation,
     openScanner, handleScanComplete, setScannerOpen,
@@ -186,9 +186,10 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
         </div>
 
         <RecentTripSuggestions
-          trips={recentOrders}
+          suggestions={recentOrders}
           selectedTripId={selectedTripId ?? undefined}
           onSelect={handleRecentTripSelect}
+          loading={suggestionLoading}
         />
 
         <div className="space-y-3">

@@ -17,6 +17,7 @@ from app.contexts.customer_pricing.interface import (
 from app.contexts.operations.interface import (
     imports_router,
     reconcile_router,
+    suggested_routes_router,
     trip_orders_router,
     work_orders_router,
 )
@@ -38,6 +39,7 @@ router.include_router(locations_router)
 router.include_router(location_aliases_router)
 router.include_router(pricings_router)
 router.include_router(work_orders_router)
+router.include_router(suggested_routes_router)
 router.include_router(trip_orders_router)
 router.include_router(reconcile_router)
 router.include_router(salary_router)
