@@ -15,7 +15,8 @@ class TestReconcile:
         )
         assert resp.status_code == 200, f"Match failed: {resp.text}"
         data = resp.json()
-        assert data["status"] == "COMPLETED"
+        # TO-centric: status should be MATCHED (not COMPLETED)
+        assert data["status"] == "MATCHED", f"Expected MATCHED, got {data['status']}"
         assert wo["id"] in data.get("matched_work_order_ids", [])
 
     def test_reconcile_match_idempotent(self, api_client, admin_headers, create_work_order, create_trip_order):
@@ -30,7 +31,7 @@ class TestReconcile:
         )
         assert resp1.status_code == 200, f"First match failed: {resp1.text}"
 
-        # Second match on same pair should fail
+        # Second match on same pair should fail (WO already matched)
         resp2 = api_client.post(
             "/reconcile",
             headers=admin_headers,
