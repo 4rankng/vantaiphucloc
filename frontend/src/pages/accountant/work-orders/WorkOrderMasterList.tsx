@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Calendar } from 'lucide-react'
+import { Calendar, Check } from 'lucide-react'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { fmtDate } from '@/lib/date-utils'
 import { resolveRoute } from '@/lib/route-utils'
@@ -112,22 +112,28 @@ export function WorkOrderMasterList({
                   {bestScore}/{maxScore}
                 </span>
               </div>
-            ) : (
+            ) : wo.status === 'MATCHED' ? (
+              /* MATCHED chip: ✓ icon + trip count — avoids "Đã khớp" text wrapping in 36px */
               <div
-                className="shrink-0 flex flex-col items-center justify-center rounded-lg mt-0.5"
-                style={{ width: 36, height: 36, background: 'var(--theme-bg-tertiary)' }}
+                className="shrink-0 flex flex-col items-center justify-center rounded-lg mt-0.5 gap-0.5"
+                style={{ width: 36, height: 36, background: 'color-mix(in srgb, var(--theme-status-success) 12%, transparent)' }}
               >
-                <span
-                  className="text-[10px] font-semibold leading-none"
-                  style={{ color: getStatusColor(wo.status) }}
-                >
-                  {getStatusLabel(wo.status)}
-                </span>
+                <Check className="w-3.5 h-3.5" style={{ color: 'var(--theme-status-success)' }} />
                 {matchCount >= 1 && (
-                  <span className="text-[10px] font-bold tabular-nums mt-0.5" style={{ color: 'var(--theme-status-success)' }}>
+                  <span className="text-[10px] font-bold tabular-nums leading-none" style={{ color: 'var(--theme-status-success)' }}>
                     {matchCount} ĐH
                   </span>
                 )}
+              </div>
+            ) : (
+              /* Fallback for other statuses */
+              <div
+                className="shrink-0 flex items-center justify-center rounded-lg mt-0.5"
+                style={{ width: 36, height: 36, background: 'var(--theme-bg-tertiary)' }}
+              >
+                <span className="text-[10px] font-semibold leading-none" style={{ color: getStatusColor(wo.status) }}>
+                  {getStatusLabel(wo.status)}
+                </span>
               </div>
             )}
 
