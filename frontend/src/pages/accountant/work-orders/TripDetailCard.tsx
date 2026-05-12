@@ -148,7 +148,7 @@ function TripDetailCardEditable({ workOrder, onEdited }: { workOrder: WorkOrder;
       >
         <div className="flex items-center gap-2">
           <Pencil className="w-3.5 h-3.5" style={{ color: 'var(--theme-brand-primary)' }} />
-          <span className="text-[11px] uppercase tracking-wider font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>Chỉnh sửa chuyến</span>
+          <span className="text-[13px] font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>Chỉnh sửa chuyến</span>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
