@@ -32,6 +32,9 @@ TripOrder has N containers and may match N WorkOrders. WorkOrder is 1:1 with Tri
 - `test_multi_match_reconciliation.py`: Rewritten for TO-centric model (AC1-AC7: capacity, unmatch, MATCHED status, pricing).
 - `test_reconcile.py`: Fixed COMPLETED → MATCHED assertion.
 - `test_workflows.py`: Fixed COMPLETED → MATCHED assertions (2 locations).
+- Full suite: 169 passed, 0 failed.
+
+**Bug found and fixed:** `TripOrderRepository._hydrate` wasn't returning `matched_by` from reconciliation records, causing FK violation (`matched_by=0`) on unmatch. Fixed by fetching `matched_by` from `ReconciliationORM` during hydration.
 
 **Design constraint (bug-0083):** Driver "Tạo chuyến" button must stay as FAB, not topbar. Documentation-only.
 
