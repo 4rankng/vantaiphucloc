@@ -1,5 +1,6 @@
 .PHONY: help install migrate dev dev-infra dev-backend dev-frontend dev-worker lint seed stop clean \
-        push-all deploy-all push-backend push-frontend deploy-backend deploy-frontend
+        push-all deploy-all push-backend push-frontend deploy-backend deploy-frontend \
+        api-test
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 # Override with: make dev BACKEND_PORT=9000 FRONTEND_PORT=5180
@@ -24,6 +25,7 @@ help:
 	@echo "  dev-worker       Start arq background worker"
 	@echo "  stop             Stop all Docker infra services"
 	@echo "  clean            Kill stale dev processes"
+	@echo "  api-test         Run integration tests against live dev backend"
 	@echo "  lint             Run ruff (backend) and eslint (frontend)"
 	@echo ""
 	@echo "Ports (override with env vars):"
@@ -129,6 +131,11 @@ clean:
 			echo "✗ port $$port still in use after cleanup — aborting"; exit 1; \
 		fi; \
 	done
+
+## api-test: Run integration tests against the live dev backend (localhost:8100)
+api-test:
+	@echo "Running integration tests against http://localhost:$(BACKEND_PORT)..."
+	cd tests && pytest integration/ -v --tb=short -s
 
 ## lint: Run ruff on backend and eslint on frontend
 lint:
