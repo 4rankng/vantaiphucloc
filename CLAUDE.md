@@ -7,7 +7,37 @@
 
 ## 📋 Project State
 
-### ✅ Recently Completed (2026-05-12) — Ghép chuyến 1:N (REQ-001)
+### ✅ Recently Completed (2026-05-12) — TO-Centric Matching Model (bug-0078..0083, task-0099..0101)
+
+**Major model inversion:** Changed from WO-centric (1 WO → N TOs) to TO-centric (1 TO → N WOs).
+TripOrder has N containers and may match N WorkOrders. WorkOrder is 1:1 with TripOrder.
+
+**Backend changes:**
+- `reconciliation.py`: `MatchTripToWorkOrder` — capacity check via `count_links_for_to`, WO 1:1 check via `work_order_has_link`. TO stays MATCHED when additional WOs linked. Pricing snapshot is overwrite (not accumulation) on WO.
+- `reconciliation.py`: `UnmatchTripFromWorkOrder` — WO always resets to PENDING. TO resets only when last link removed. Uses `count_links_for_to` instead of `count_links_for_wo`.
+- `entities.py`: `TripOrder.match()` is idempotent (MATCHED→MATCHED is no-op). `TripOrder.unmatch()` accepts PENDING as no-op. `WorkOrder.apply_pricing_snapshot()` overwrites (no accumulation).
+- `link_queries.py`: Added `count_links_for_to`, `work_order_has_link`, `find_all_links_for_to`.
+- `match_suggester.py`: `suggest_trip_matches` filters TOs by remaining capacity. `suggest_wo_matches` excludes already-matched WOs.
+- `reconcile.py` router: New `POST /reconcile/batch-for-to` endpoint with capacity validation.
+- `domain.py` schemas: `BatchMatchForTORequest/Response/Result` added.
+- Status: COMPLETED removed from match flow. PENDING ↔ MATCHED only.
+
+**Frontend changes:**
+- `MatchDetailPanel.tsx`: Capacity guard (disable checkboxes beyond `containerCapacity`), capacity counter in batch bar, reset `selectedToIds` on WO change (useEffect), removed COMPLETED from `isMatched` check.
+- `use-queries.ts`: Added `useBatchReconcileForTO` hook.
+- `tripOrders.api.ts`: Added `batchReconcileForTO` API function.
+- `domain.ts`: Added `BatchMatchForTOResult/Response` types.
+
+**Tests:**
+- `test_multi_match_reconciliation.py`: Rewritten for TO-centric model (AC1-AC7: capacity, unmatch, MATCHED status, pricing).
+- `test_reconcile.py`: Fixed COMPLETED → MATCHED assertion.
+- `test_workflows.py`: Fixed COMPLETED → MATCHED assertions (2 locations).
+
+**Design constraint (bug-0083):** Driver "Tạo chuyến" button must stay as FAB, not topbar. Documentation-only.
+
+---
+
+### ✅ Completed (2026-05-12) — Ghép chuyến 1:N (REQ-001)
 
 1. **Multi-match reconciliation** — COMMITTED
    Tasks 0090–0098 all completed. Full 1 WO → N TOs matching feature.
