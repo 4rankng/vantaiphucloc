@@ -201,7 +201,13 @@ def _format_containers(items) -> str | None:
 async def suggest_trip_matches(
     db: AsyncSession, work_order: WorkOrder
 ) -> list[MatchSuggestion]:
-    """Find candidate TripOrders for *work_order*."""
+    """Find candidate TripOrders for *work_order*.
+
+    TO-centric: a TO with N containers can match N WOs. We find TOs that:
+    1. Share container numbers with this WO (or share partner)
+    2. Have remaining capacity (matched WO count < TO container count)
+    3. Are PENDING or MATCHED (not COMPLETED/CANCELLED)
+    """
     wo_containers = (await db.execute(
         select(WorkOrderContainer.container_number)
         .where(WorkOrderContainer.work_order_id == work_order.id)
@@ -213,42 +219,26 @@ async def suggest_trip_matches(
     if not wo_container_numbers:
         return []
 
-    # Fetch already-matched TO IDs for this WO to compute claimed containers
-    already_matched_links = (await db.execute(
-        select(Reconciliation.trip_order_id).where(
+    # WO should not already be matched
+    already_linked = (await db.execute(
+        select(Reconciliation.id).where(
             Reconciliation.work_order_id == work_order.id,
             Reconciliation.is_active == True,  # noqa: E712
         )
-    )).all()
-    matched_to_ids_for_wo = {r[0] for r in already_matched_links}
-
-    # Build set of claimed container numbers from already-matched TOs
-    claimed_containers: set[str] = set()
-    if matched_to_ids_for_wo:
-        claimed_rows = (await db.execute(
-            select(TripOrderContainer.container_number)
-            .where(TripOrderContainer.trip_order_id.in_(matched_to_ids_for_wo))
-        )).all()
-        claimed_containers = {
-            normalize_container_number(r[0])
-            for r in claimed_rows if r[0]
-        }
-
-    # Unclaimed containers are what's available for scoring
-    unclaimed_wo_containers = wo_container_numbers - claimed_containers
-    if not unclaimed_wo_containers:
+    )).scalar_one_or_none()
+    if already_linked is not None:
         return []
 
     wo_date = work_order.created_at.date() if work_order.created_at else None
 
+    # Find TOs that share container numbers with this WO
     container_subquery = (
         select(TripOrderContainer.trip_order_id)
-        .where(TripOrderContainer.container_number.in_(unclaimed_wo_containers))
+        .where(TripOrderContainer.container_number.in_(wo_container_numbers))
     )
-    matched_to_subquery = select(Reconciliation.trip_order_id)
+    # TOs that are PENDING or MATCHED (have capacity for more WOs)
     query = select(TripOrder).where(
-        TripOrder.status == "PENDING",
-        ~TripOrder.id.in_(matched_to_subquery),
+        TripOrder.status.in_(["PENDING", "MATCHED"]),
         or_(
             TripOrder.partner_id == work_order.partner_id,
             TripOrder.id.in_(container_subquery),
@@ -258,7 +248,23 @@ async def suggest_trip_matches(
     if not candidates:
         return []
 
+    # Filter TOs that have remaining capacity
     to_ids = [to.id for to in candidates]
+    # Count already-matched WOs per TO
+    link_counts: dict[int, int] = {}
+    if to_ids:
+        from sqlalchemy import func
+        link_rows = (await db.execute(
+            select(
+                Reconciliation.trip_order_id,
+                func.count(),
+            ).where(
+                Reconciliation.trip_order_id.in_(to_ids),
+                Reconciliation.is_active == True,  # noqa: E712
+            ).group_by(Reconciliation.trip_order_id)
+        )).all()
+        link_counts = {r[0]: r[1] for r in link_rows}
+
     cont_result = await db.execute(
         select(TripOrderContainer)
         .where(TripOrderContainer.trip_order_id.in_(to_ids))
@@ -266,6 +272,12 @@ async def suggest_trip_matches(
     to_containers: dict[int, list[TripOrderContainer]] = defaultdict(list)
     for c in cont_result.scalars().all():
         to_containers[c.trip_order_id].append(c)
+
+    # Filter out TOs at full capacity
+    candidates = [
+        to for to in candidates
+        if link_counts.get(to.id, 0) < len(to_containers.get(to.id, []))
+    ]
 
     partner_ids = {to.partner_id for to in candidates} | {work_order.partner_id}
     location_ids = (
@@ -298,7 +310,7 @@ async def suggest_trip_matches(
     for to in candidates:
         matched_fields, score = _score_to_against_wo(
             to, to_containers.get(to.id, []),
-            unclaimed_wo_containers, wo_date, work_order,
+            wo_container_numbers, wo_date, work_order,
             alias_groups,
         )
         to_out = TripOrderOut(
@@ -370,12 +382,18 @@ async def suggest_wo_matches(
     if not to_container_numbers:
         return []
 
+    # Find WOs that share container numbers with this TO
     container_subquery = (
         select(WorkOrderContainer.work_order_id)
         .where(WorkOrderContainer.container_number.in_(to_container_numbers))
     )
+    # Exclude WOs that are already matched (have active reconciliation)
+    already_matched_wos = select(Reconciliation.work_order_id).where(
+        Reconciliation.is_active == True,  # noqa: E712
+    )
     query = select(WorkOrder).where(
-        WorkOrder.status.in_(["PENDING", "MATCHED"]),
+        WorkOrder.status == "PENDING",
+        ~WorkOrder.id.in_(already_matched_wos),
         or_(
             WorkOrder.partner_id == trip_order.partner_id,
             WorkOrder.id.in_(container_subquery),

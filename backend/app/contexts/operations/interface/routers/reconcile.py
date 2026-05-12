@@ -43,11 +43,14 @@ from app.contexts.operations.interface.routers.trip_orders import (
 from app.core.audit_context import set_audit_reason
 from app.core.deps import require_permission
 from app.models.base import User
-from app.models.domain import TripOrder as TripOrderORM, WorkOrder as WorkOrderORM
+from app.models.domain import TripOrder as TripOrderORM, TripOrderContainer, WorkOrder as WorkOrderORM
 from app.schemas.domain import (
     AutoMatchRequest,
     AutoMatchResponse,
     AutoMatchResult,
+    BatchMatchForTORequest,
+    BatchMatchForTOResponse,
+    BatchMatchForTOResult,
     BatchMatchForWORequest,
     BatchMatchForWOResponse,
     BatchMatchForWOResult,
@@ -131,7 +134,12 @@ async def batch_reconcile_for_wo(
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
     match_use_case: MatchTripToWorkOrder = Depends(get_match_trip_to_work_order),
 ):
-    """Match one WorkOrder with multiple TripOrders in a single call."""
+    """Match one WorkOrder with multiple TripOrders in a single call.
+
+    NOTE: In the TO-centric model, this endpoint is kept for backward
+    compatibility but each call is validated: a WO can only match 1 TO.
+    For multi-WO matching, use /reconcile/batch-for-to instead.
+    """
     db = match_use_case.session
     results: list[BatchMatchForWOResult] = []
 
@@ -179,6 +187,105 @@ async def batch_reconcile_for_wo(
 
     return BatchMatchForWOResponse(
         work_order_id=body.work_order_id, results=results,
+    )
+
+
+@router.post("/reconcile/batch-for-to", response_model=BatchMatchForTOResponse)
+async def batch_reconcile_for_to(
+    body: BatchMatchForTORequest,
+    request: Request,
+    current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
+    match_use_case: MatchTripToWorkOrder = Depends(get_match_trip_to_work_order),
+):
+    """Match multiple WorkOrders to a single TripOrder (TO-centric model).
+
+    Validates: len(work_order_ids) <= TripOrder.container_count - already_matched.
+    """
+    from app.contexts.operations.infrastructure.link_queries import (
+        count_links_for_to,
+    )
+    from sqlalchemy import select as sa_select
+
+    db = match_use_case.session
+
+    # Fetch the TripOrder to check capacity
+    to_orm = (await db.execute(
+        sa_select(TripOrderORM).where(TripOrderORM.id == body.trip_order_id)
+    )).scalar_one_or_none()
+    if to_orm is None:
+        raise HTTPException(status_code=404, detail="TripOrder not found")
+
+    # Load TO containers
+    to_containers = (await db.execute(
+        sa_select(TripOrderContainer).where(
+            TripOrderContainer.trip_order_id == body.trip_order_id
+        )
+    )).scalars().all()
+    container_count = len(to_containers)
+    if container_count == 0:
+        raise HTTPException(
+            status_code=422,
+            detail="Đơn hàng chưa có container",
+        )
+
+    # Check capacity
+    already_matched = await count_links_for_to(db, body.trip_order_id)
+    remaining_capacity = container_count - already_matched
+    if len(body.work_order_ids) > remaining_capacity:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Số đơn hàng ({len(body.work_order_ids)}) vượt quá số container "
+                f"còn trống của chuyến (tối đa: {remaining_capacity}, "
+                f"tổng container: {container_count}, đã ghép: {already_matched})"
+            ),
+        )
+
+    results: list[BatchMatchForTOResult] = []
+    for wo_id in body.work_order_ids:
+        try:
+            to = await match_use_case(ReconcileInput(
+                work_order_id=wo_id,
+                trip_order_id=body.trip_order_id,
+                user_id=current_user.id,
+            ))
+            try:
+                await log_action(
+                    db, user_id=current_user.id, action="BATCH_MATCH_TO",
+                    table_name="reconciliations",
+                    record_id=int(to.id),  # type: ignore[arg-type]
+                    new_value={
+                        "work_order_id": wo_id,
+                        "trip_order_id": body.trip_order_id,
+                    },
+                    request=request,
+                )
+            except Exception:
+                _logger.exception("Audit log failed for batch match TO#%s ↔ WO#%s",
+                                  body.trip_order_id, wo_id)
+            results.append(BatchMatchForTOResult(
+                work_order_id=wo_id, success=True,
+            ))
+        except Exception as exc:
+            results.append(BatchMatchForTOResult(
+                work_order_id=wo_id, success=False, error=str(exc),
+            ))
+
+    success_count = sum(1 for r in results if r.success)
+    fail_count = len(results) - success_count
+    _logger.info(
+        "Batch match TO#%s: %d/%d succeeded",
+        body.trip_order_id, success_count, len(results),
+    )
+
+    try:
+        await db.commit()
+    except Exception:
+        _logger.exception("Commit failed after batch match for TO#%s", body.trip_order_id)
+        raise
+
+    return BatchMatchForTOResponse(
+        trip_order_id=body.trip_order_id, results=results,
     )
 
 

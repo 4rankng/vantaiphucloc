@@ -735,3 +735,23 @@ class BatchMatchForWOResponse(BaseModel):
 
 class SoftDeleteRequest(BaseModel):
     reason: str = Field(..., min_length=1, description="Required reason for soft deletion")
+
+
+# ---------------------------------------------------------------------------
+# Batch match for TO (1 TO → N WorkOrders) — TO-centric model
+# ---------------------------------------------------------------------------
+
+class BatchMatchForTORequest(BaseModel):
+    trip_order_id: int
+    work_order_ids: list[int] = Field(..., min_length=1)
+
+
+class BatchMatchForTOResult(BaseModel):
+    work_order_id: int
+    success: bool
+    error: str | None = None
+
+
+class BatchMatchForTOResponse(BaseModel):
+    trip_order_id: int
+    results: list[BatchMatchForTOResult]
