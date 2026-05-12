@@ -208,6 +208,7 @@ export interface CriterionBreakdown {
 
 export interface MatchSuggestion {
   tripOrder: TripOrder
+  containerId: number
   confidence: MatchConfidence
   matchedFields: string[]
   score: number
