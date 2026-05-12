@@ -181,10 +181,21 @@ export function MatchCard({
         ))}
       </div>
 
-      {/* Subtle counter below criteria */}
+      {/* Counter + conflict hint */}
       {criteria.length > 0 && (
-        <div className="px-4 pb-2 text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
-          {matchScore} chỉ tiêu khớp · {Math.max(maxScore - matchScore, 0)} chưa khớp
+        <div className="px-4 pb-3 space-y-1">
+          <div className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
+            {matchScore} chỉ tiêu khớp · {Math.max(maxScore - matchScore, 0)} chưa khớp
+          </div>
+          {matchScore < maxScore && (
+            <div
+              className="flex items-center gap-1 text-[11px] font-medium"
+              style={{ color: 'var(--theme-status-warning)' }}
+            >
+              <span>☑</span>
+              <span>Tích ô để chọn giá trị đúng &amp; ghép</span>
+            </div>
+          )}
         </div>
       )}
 
