@@ -545,7 +545,7 @@ async def auto_match(
             partner_ids_set = {s.trip_order.partner.id for s in suggestions} | {wo.partner_id}
             location_ids_set = set()
             for s in suggestions:
-                location_ids_set |= {s.trip_order.pickupLocation.id, s.trip_order.dropoffLocation.id}
+                location_ids_set |= {s.trip_order.pickup_location.id, s.trip_order.dropoff_location.id}
             location_ids_set |= {wo.pickup_location_id, wo.dropoff_location_id}
 
             partners_map = await load_partner_summaries(db, partner_ids_set)
@@ -568,16 +568,13 @@ async def auto_match(
                 if s.score < 0.5:
                     continue  # skip below-threshold
                 to_partner = get_partner_summary(partners_map, s.trip_order.partner.id)
-                to_pickup = get_location_summary(locations_map, s.trip_order.pickupLocation.id)
-                to_dropoff = get_location_summary(locations_map, s.trip_order.dropoffLocation.id)
+                to_pickup = get_location_summary(locations_map, s.trip_order.pickup_location.id)
+                to_dropoff = get_location_summary(locations_map, s.trip_order.dropoff_location.id)
                 to_ref = AutoMatchTripOrderRef(
                     id=s.trip_order.id,
                     code=s.trip_order.code,
                     client_name=to_partner.name,
-                    containers=[
-                        TripContainerOut.model_validate(c)
-                        for c in getattr(s.trip_order, '_containers', [])
-                    ],
+                    containers=list(s.trip_order.containers or []),
                 )
 
                 criteria = [
