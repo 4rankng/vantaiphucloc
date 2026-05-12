@@ -7,7 +7,21 @@
 
 ## 📋 Project State
 
-### ✅ Recently Completed (2026-05-12) — Stale MATCHED Fix + Typography Polish
+### ✅ Recently Completed (2026-05-12) — Auto-heal Persistence Fix + Integration Tests (tasks 0102, 0103)
+
+**2 task specs completed:**
+
+1. **task-0102** — Root cause of stale "Đã khớp" with 0 orders: auto-heal in `_load_many` modified domain entity `w.status` in memory, but domain objects are plain dataclasses (not ORM). `session.commit()` did not persist the change.
+   - Fix: replaced in-memory mutation with `sqlalchemy.update(WorkOrderORM)` to directly persist status change to DB before commit.
+   - File: `backend/app/contexts/operations/interface/routers/work_orders.py` `_load_many()`
+
+2. **task-0103** — Added 5 integration tests for auto-heal mechanism (`test_stale_matched_heal.py`):
+   - TC1-TC5 covering: stale heal, legitimate match preserved, individual GET heal, mixed states, normal unmatch flow.
+   - All 5 tests pass standalone and within full suite.
+
+**Test suite:** 174 passed, 1 skipped, 0 failures (was 169 tests, now 174).
+
+### ✅ Previously Completed (2026-05-12) — Stale MATCHED Fix + Typography Polish
 
 **3 task specs completed:**
 
