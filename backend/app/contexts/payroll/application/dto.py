@@ -10,9 +10,10 @@ from datetime import date
 class DriverEarningsDTO:
     driver_id: int
     driver_name: str | None
-    start_date: date
-    end_date: date
-    matched_order_count: int
-    total_salary: int      # sum of driver_salary
-    total_allowance: int   # sum of allowance
-    total_earnings: int    # total_salary + total_allowance
+    driver_phone: str | None = None
+    start_date: date = date(2000, 1, 1)
+    end_date: date = date(2000, 1, 1)
+    matched_order_count: int = 0
+    total_salary: int = 0      # sum of driver_salary
+    total_allowance: int = 0   # sum of allowance
+    total_earnings: int = 0    # total_salary + total_allowance
