@@ -101,11 +101,11 @@ function StatCard({
         )}
         <div className="min-w-0 flex-1">
           {/* Label */}
-          <p className="typo-label mb-2 leading-tight line-clamp-2">{label}</p>
+          <p className="typo-label mb-2 leading-tight line-clamp-2 min-h-[2.5em]">{label}</p>
 
           {/* Value — using typo-display for lg screens */}
           <p
-            className="font-display text-lg lg:text-xl font-700 leading-tight whitespace-nowrap tabular-nums"
+            className={`font-display font-700 leading-tight tabular-nums ${String(value).length > 10 ? 'text-base lg:text-lg' : 'text-lg lg:text-xl'}`}
             style={{ color: valueColor ?? 'var(--theme-text-primary)' }}
           >
             {value}

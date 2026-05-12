@@ -153,7 +153,7 @@ function TripRow({ trip, onClick, isLast }: { trip: TripOrder; onClick: () => vo
         </span>
         <StatusBadgePro variant={statusVariant} label={statusLabel} size="sm" />
       </div>
-      <p className="mt-0.5 text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
+      <p className="mt-0.5 text-xs line-clamp-2" style={{ color: 'var(--theme-text-secondary)' }}>
         {tripDate}{tripDate && ' | '}{resolveRoute(trip)}
       </p>
       {types && (
@@ -185,7 +185,7 @@ function UnmatchedRow({ wo, onClick, isLast }: { wo: WorkOrder; onClick: () => v
         </span>
         <StatusBadgePro variant="warning" label="Chờ ghép" size="sm" />
       </div>
-      <p className="mt-0.5 text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
+      <p className="mt-0.5 text-xs line-clamp-2" style={{ color: 'var(--theme-text-secondary)' }}>
         {wo.partner.name} | {resolveRoute(wo)}
       </p>
       <div className="mt-1.5 flex items-center gap-3">
@@ -290,7 +290,8 @@ function DesktopDashboard() {
               </span>
             )}
           </div>
-          <div className="flex-1 overflow-y-auto min-h-0" style={{ maxHeight: '320px' }}>
+          <div className="flex-1 overflow-hidden min-h-0 relative" style={{ maxHeight: '320px' }}>
+            <div className="overflow-y-auto h-full">
             {unmatchedWOs.length === 0 ? (
               <EmptyState icon={CheckCircle2} text="Tất cả phiếu đã ghép xong" />
             ) : (
@@ -298,6 +299,8 @@ function DesktopDashboard() {
                 <UnmatchedRow key={wo.id} wo={wo} isLast={i === unmatchedWOs.length - 1} onClick={() => navigate(`/accountant/match-trip/${wo.id}`)} />
               ))
             )}
+            </div>
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8" style={{ background: 'linear-gradient(to top, var(--theme-bg-secondary), transparent)' }} />
           </div>
           <div style={{ borderTop: '1px solid var(--theme-border-default)', paddingTop: 12, marginTop: 12 }}>
             <button onClick={() => navigate('/accountant/work-orders')} className="flex items-center justify-center gap-1.5 w-full text-xs font-semibold transition hover:opacity-70" style={{ color: 'var(--theme-brand-primary)' }}>
@@ -311,7 +314,8 @@ function DesktopDashboard() {
           <div className="mb-4">
             <h2 className="typo-h2" style={{ color: 'var(--theme-text-primary)' }}>Đơn hàng gần đây</h2>
           </div>
-          <div className="flex-1 overflow-y-auto min-h-0" style={{ maxHeight: '320px' }}>
+          <div className="flex-1 overflow-hidden min-h-0 relative" style={{ maxHeight: '320px' }}>
+            <div className="overflow-y-auto h-full">
             {sortedTrips.length === 0 ? (
               <EmptyState icon={FileText} text="Chưa có đơn hàng nào" illustrated />
             ) : (
@@ -319,6 +323,8 @@ function DesktopDashboard() {
                 <TripRow key={trip.id} trip={trip} isLast={i === sortedTrips.length - 1} onClick={() => navigate(`/accountant/trip/${trip.id}`)} />
               ))
             )}
+            </div>
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8" style={{ background: 'linear-gradient(to top, var(--theme-bg-secondary), transparent)' }} />
           </div>
           <div style={{ borderTop: '1px solid var(--theme-border-default)', paddingTop: 12, marginTop: 12 }}>
             <button onClick={() => navigate('/accountant/trips')} className="flex items-center justify-center gap-1.5 w-full text-xs font-semibold transition hover:opacity-70" style={{ color: 'var(--theme-brand-primary)' }}>
