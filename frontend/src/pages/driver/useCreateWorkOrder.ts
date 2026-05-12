@@ -90,28 +90,40 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
     return () => { cancelled = true }
   }, [])
 
-  // Load recent orders for suggestions
+  // Load smart route suggestions (personalized per driver)
+  const [recentOrders, setRecentOrders] = useState<any[]>([])
+  const [suggestionLoading, setSuggestionLoading] = useState(true)
+
   useEffect(() => {
-    if (!user) return
+    if (!user || user.role !== 'driver') return
     let cancelled = false
-    apiClient.getWorkOrders({ driverId: user.id })
-      .then(res => {
-        if (!cancelled && res.success) {
-          const sorted = [...res.data].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-          const seen = new Set<string>()
-          const unique: WorkOrder[] = []
-          for (const wo of sorted) {
-            const key = `${wo.partner.id}-${wo.pickupLocation.id}-${wo.dropoffLocation.id}`
-            if (!seen.has(key)) {
-              seen.add(key)
-              unique.push(wo)
-              if (unique.length >= 5) break
-            }
-          }
-          setRecentOrders(unique)
-        }
-      })
-      .catch((err) => { console.error('Failed to load recent orders:', err) })
+    setSuggestionLoading(true)
+
+    // Try to get GPS for proximity bonus
+    const fetchWithGPS = async () => {
+      let lat: number | undefined, lng: number | undefined
+      try {
+        const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+          if (!navigator.geolocation) return reject(new Error('no geolocation'))
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: false, timeout: 3000,
+          })
+        })
+        lat = pos.coords.latitude
+        lng = pos.coords.longitude
+      } catch { /* GPS unavailable — still get suggestions without proximity */ }
+
+      const res = await apiClient.getSuggestedRoutes(lat, lng, 5)
+      if (!cancelled && res.success) {
+        setRecentOrders(res.data)
+      }
+      if (!cancelled) setSuggestionLoading(false)
+    }
+
+    fetchWithGPS().catch(() => {
+      if (!cancelled) setSuggestionLoading(false)
+    })
+
     return () => { cancelled = true }
   }, [user])
 
@@ -206,16 +218,21 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
     setContainers(prev => prev.filter((_, i) => i !== idx))
   }, [])
 
-  // Recent trip selection (toggle: click again to deselect)
-  const handleRecentTripSelect = useCallback((trip: { tripId: number; clientId: string; clientName: string; pickupLocation: string; dropoffLocation: string }) => {
+  // Suggestion selection (toggle: click again to deselect)
+  const handleRecentTripSelect = useCallback((trip: {
+    tripId?: number | string
+    clientId: string
+    clientName: string
+    pickupLocation: string
+    dropoffLocation: string
+  }) => {
     if (selectedTripId === trip.tripId) {
-      // Deselect
       setSelectedTripId(null)
       setClientId('')
       setPickupLocation('')
       setDropoffLocation('')
     } else {
-      setSelectedTripId(trip.tripId)
+      setSelectedTripId(trip.tripId ?? null)
       setClientId(trip.clientId)
       setPickupLocation(trip.pickupLocation)
       setDropoffLocation(trip.dropoffLocation)
@@ -345,7 +362,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
 
     // UI state
     submitting, scannerOpen, galleryImage, isOnline, summaryOpen, showSuccess,
-    forceManualEntry, missingFields, containerErrors,
+    forceManualEntry, missingFields, containerErrors, suggestionLoading,
 
     // Derived
     canSubmit, summaryContainers, summaryClientName,

@@ -4,6 +4,16 @@ import { setCache, getCache } from '@/lib/offline-db'
 import { offlineQueue } from '@/lib/offline-queue'
 import type { WorkOrder, ContainerItem, ApiResponse } from '@/data/domain'
 
+export interface SuggestedRoute {
+  partner: { id: number; code: string | null; name: string }
+  pickupLocation: { id: number; name: string }
+  dropoffLocation: { id: number; name: string }
+  frequency: number
+  lastUsed: string
+  score: number
+  source: 'frequent' | 'recent' | 'popular'
+}
+
 interface WorkOrderFilters {
   driverId?: number
   dateFrom?: string
@@ -162,4 +172,23 @@ export async function exportWorkOrdersExcel(filters?: {
   if (filters?.status) params.append('status', filters.status)
   const res = await api.get(`/work-orders/export?${params.toString()}`, { responseType: 'blob' })
   return res.data
+}
+
+export async function getSuggestedRoutes(
+  lat?: number | null,
+  lng?: number | null,
+  limit = 5,
+): Promise<ApiResponse<SuggestedRoute[]>> {
+  try {
+    const params: Record<string, string> = { limit: String(limit) }
+    if (lat != null && lng != null) {
+      params.lat = String(lat)
+      params.lng = String(lng)
+    }
+    const res = await api.get('/drivers/me/suggested-routes', { params })
+    const items = (res.data?.items ?? []) as SuggestedRoute[]
+    return ok(items)
+  } catch (err) {
+    return fail(err)
+  }
 }
