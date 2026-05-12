@@ -660,6 +660,7 @@ class AutoMatchConfirmResponse(BaseModel):
 class DriverEarningsOut(BaseModel):
     driver_id: int
     driver_name: str | None = None
+    driver_phone: str | None = None
     start_date: date
     end_date: date
     matched_order_count: int

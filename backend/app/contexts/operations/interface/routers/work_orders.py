@@ -138,30 +138,6 @@ async def _load_many(session, wos: list[WorkOrder]) -> list[WorkOrderOut]:
         )).all()
         link_counts = {r[0]: r[1] for r in rows}
 
-    # Auto-heal stale MATCHED WOs: if a WO says MATCHED but has 0 active
-    # reconciliation links, reset it back to PENDING to keep state consistent.
-    from sqlalchemy import update as sa_update
-    from app.contexts.operations.domain.value_objects import WorkOrderStatus as WOS
-    from app.models.domain import WorkOrder as WorkOrderORM
-    healed_ids: list[int] = []
-    for w in wos:
-        if (
-            w.status == WOS.MATCHED
-            and link_counts.get(int(w.id), 0) == 0  # type: ignore[arg-type]
-        ):
-            _logger.warning(
-                "Auto-healing stale MATCHED WO#%s (no active links)", w.id
-            )
-            w.status = WOS.PENDING
-            healed_ids.append(int(w.id))  # type: ignore[arg-type]
-    if healed_ids:
-        await session.execute(
-            sa_update(WorkOrderORM)
-            .where(WorkOrderORM.id.in_(healed_ids))
-            .values(status=str(WOS.PENDING))
-        )
-        await session.commit()
-
     return [
         _wo_to_out(w, partners, drivers, locations, link_counts.get(int(w.id), 0))  # type: ignore[arg-type]
         for w in wos

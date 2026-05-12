@@ -56,19 +56,22 @@ class GetDriverEarnings:
         total_salary = row[1] or 0
         total_allowance = row[2] or 0
 
-        # Look up driver name
+        # Look up driver name and phone
         user_row = (
             await self.session.execute(
-                select(User.full_name, User.username).where(User.id == driver_id)
+                select(User.full_name, User.username, User.phone).where(User.id == driver_id)
             )
         ).one_or_none()
         driver_name = None
+        driver_phone = None
         if user_row is not None:
             driver_name = user_row[0] or user_row[1]
+            driver_phone = user_row[2]
 
         return DriverEarningsDTO(
             driver_id=driver_id,
             driver_name=driver_name,
+            driver_phone=driver_phone,
             start_date=start_date,
             end_date=end_date,
             matched_order_count=matched_order_count,
