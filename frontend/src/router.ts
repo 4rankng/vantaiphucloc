@@ -65,6 +65,7 @@ export function createAppRouter() {
             { index: true,                   element: ebc('AccountantDashboard', h(Lazy, { component: R.AccountantDashboard })) },
             { path: 'partners',              element: ebc('ClientsAndVendors', h(Lazy, { component: R.ClientsAndVendors })) },
             { path: 'routes',                element: ebc('RouteList', h(Lazy, { component: R.RouteList })) },
+            { path: 'orders',               element: h(Navigate, { to: '/accountant/trips', replace: true }) },
             { path: 'work-orders',           element: ebc('WorkOrderList', h(Lazy, { component: R.WorkOrderList })) },
             { path: 'trips',                 element: ebc('TripList', h(Lazy, { component: R.TripList })) },
             { path: 'trip/:tripId',          element: ebc('TripDetail', h(Lazy, { component: R.TripDetail })) },
