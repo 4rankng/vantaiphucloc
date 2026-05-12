@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { Plus, Pencil, Trash2, Building2, UserCircle, MoreVertical, Search, Users } from 'lucide-react'
+import { Plus, Pencil, Trash2, Building2, UserCircle, MoreVertical, Search, Users, Download } from 'lucide-react'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
@@ -15,6 +15,7 @@ import { useToast } from '@/components/atoms/Toast'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { fuzzyMatch } from '@/lib/search-utils'
 import { isCompany } from '@/lib/utils'
+import { exportTripOrdersExcel } from '@/services/api/tripOrders.api'
 import type { Partner } from '@/data/domain'
 
 const VN_PHONE_RE = /^(0|\+?84)[35789]\d{8}$/
@@ -43,6 +44,7 @@ export function ClientList() {
   // Delete confirm
   const [deleteConfirm, setDeleteConfirm] = useState<Partner | null>(null)
   const [showOverflow, setShowOverflow] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   const createClient = useCreatePartner()
   const updateClient = useUpdatePartner()
@@ -257,6 +259,31 @@ export function ClientList() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => { setSelectedClient(null); setShowOverflow(false) }} className="flex-1">Đóng</Button>
+            <Button
+              onClick={async () => {
+                if (!selectedClient) return
+                setExporting(true)
+                try {
+                  const blob = await exportTripOrdersExcel({ partnerId: Number(selectedClient.id) })
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = url
+                  a.download = `chuyen_${selectedClient.name}_${new Date().toISOString().slice(0, 10)}.xlsx`
+                  a.click()
+                  URL.revokeObjectURL(url)
+                  toast.success('Đã xuất Excel', selectedClient.name)
+                } catch {
+                  toast.error('Lỗi', 'Không thể xuất Excel')
+                } finally {
+                  setExporting(false)
+                }
+              }}
+              disabled={exporting}
+              variant="outline"
+              className="flex-1"
+            >
+              <Download className="w-3.5 h-3.5 mr-1.5" /> {exporting ? 'Đang xuất...' : 'Xuất Excel'}
+            </Button>
             <Button onClick={() => selectedClient && handleOpenEdit(selectedClient)} className="flex-1 btn-primary">
               <Pencil className="w-3.5 h-3.5 mr-1.5" /> Sửa
             </Button>

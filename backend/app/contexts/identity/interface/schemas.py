@@ -70,10 +70,11 @@ class UserOut(BaseModel):
     cccd: str | None = None
     role: str
     is_active: bool
+    vehicle_plate: str | None = None
     created_at: datetime
 
     @classmethod
-    def from_entity(cls, user: UserEntity) -> "UserOut":
+    def from_entity(cls, user: UserEntity, *, vehicle_plate: str | None = None) -> "UserOut":
         assert user.id is not None
         return cls(
             id=int(user.id),
@@ -84,6 +85,7 @@ class UserOut(BaseModel):
             cccd=user.cccd,
             role=user.role.value,
             is_active=user.is_active,
+            vehicle_plate=vehicle_plate,
             created_at=user.created_at,
         )
 

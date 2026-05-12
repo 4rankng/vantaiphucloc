@@ -247,23 +247,31 @@ async def export_trip_orders_excel(
     date_from: date | None = None,
     date_to: date | None = None,
     status: str | None = None,
+    partner_id: int | None = None,
     current_user: User = Depends(require_permission("create", "TripOrder")),
     use_case: GetTripOrder = Depends(get_get_trip_order),
 ):
     from app.contexts.operations.infrastructure.excel import generate_trip_orders_excel
     session = use_case.repo.session  # type: ignore[attr-defined]
-    content = await generate_trip_orders_excel(
+    content, partner_name = await generate_trip_orders_excel(
         session,
         date_from=date_from.isoformat() if date_from else None,
         date_to=date_to.isoformat() if date_to else None,
         status=status,
+        partner_id=partner_id,
     )
+    if partner_id and partner_name:
+        from app.utils.text import slugify_vi
+        slug = slugify_vi(partner_name)
+        filename = f"chuyen_khach_hang_{slug}_{date.today().isoformat()}.xlsx"
+    else:
+        filename = "trip_orders.xlsx"
     return StreamingResponse(
         io.BytesIO(content),
         media_type=(
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         ),
-        headers={"Content-Disposition": "attachment; filename=trip_orders.xlsx"},
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
 
 

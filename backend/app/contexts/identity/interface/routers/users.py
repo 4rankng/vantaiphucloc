@@ -99,8 +99,27 @@ async def list_users(
             exclude_superadmin=exclude_superadmin,
         )
     )
+
+    # Batch-load vehicle plates for driver-role users
+    driver_ids = [int(u.id) for u in items if u.role == UserRole.DRIVER and u.id is not None]  # type: ignore[arg-type]
+    plate_map: dict[int, str] = {}
+    if driver_ids:
+        from sqlalchemy import select as sa_select
+        from app.models.domain import Vehicle
+        result = await use_case._users.session.execute(
+            sa_select(Vehicle.driver_id, Vehicle.plate).where(
+                Vehicle.driver_id.in_(driver_ids),
+                Vehicle.is_active == True,  # noqa: E712
+            )
+        )
+        for row in result.all():
+            plate_map[row[0]] = row[1]
+
     return PaginatedResponse[UserOut](
-        items=[UserOut.from_entity(u) for u in items],
+        items=[
+            UserOut.from_entity(u, vehicle_plate=plate_map.get(int(u.id)) if u.role == UserRole.DRIVER else None)  # type: ignore[arg-type]
+            for u in items
+        ],
         total=total,
         page=page,
         page_size=page_size,
