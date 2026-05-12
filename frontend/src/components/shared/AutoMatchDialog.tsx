@@ -97,13 +97,12 @@ export function AutoMatchDialog({ open, onClose, result }: AutoMatchDialogProps)
                 Không tìm thấy cặp ghép phù hợp
               </p>
               <div className="text-xs space-y-1" style={{ color: 'var(--theme-text-muted)' }}>
-                <p>• Kiểm tra alias địa điểm — pickup/dropoff có thể chưa được map.</p>
-                <p>• Đảm bảo chuyến và đơn hàng cùng ngày và cùng khách hàng.</p>
-                <p>• Nhập thêm phiếu chuyến hoặc đơn hàng mới.</p>
+                <p>• Chuyến và đơn hàng cần cùng ngày, cùng khách hàng và cùng tuyến đường.</p>
+                <p>• Thử thêm chuyến hoặc đơn hàng mới rồi ghép lại.</p>
               </div>
               {result.scannedWorkOrderCount > 0 && (
                 <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>
-                  Đã quét {result.scannedWorkOrderCount} phiếu PENDING · {result.skippedAlreadyMatched} đã ghép từ trước được bỏ qua
+                  Đã quét {result.scannedWorkOrderCount} phiếu · {result.skippedAlreadyMatched} đã ghép từ trước
                 </p>
               )}
             </div>
