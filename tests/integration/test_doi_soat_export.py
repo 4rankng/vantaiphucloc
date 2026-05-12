@@ -15,11 +15,12 @@ class TestDoiSoatExport:
         create_work_order, create_trip_order,
     ):
         """TC1: Export with matched trips returns correct Excel with only MATCHED rows."""
-        partner = create_partner(name=f"Công ty Đối Soát Test {_uid()}", code=f"DS-{_uid().upper()}")
+        uid = _uid()
+        partner = create_partner(name=f"CTY DS {uid}", code=f"DS{uid.upper()}")
         partner_id = partner["id"]
 
-        pickup = create_location(name="Kho ĐS A")
-        dropoff = create_location(name="Cảng ĐS B")
+        pickup = create_location(name=f"Kho DS {uid}A")
+        dropoff = create_location(name=f"Cảng DS {uid}B")
 
         cn1 = _container_number()
         cn2 = _container_number()
@@ -91,7 +92,8 @@ class TestDoiSoatExport:
         # Verify Excel structure
         wb = load_workbook(io.BytesIO(resp.content))
         ws = wb.active
-        assert ws.title == "Công ty Đối Soát Test"[:31]
+        expected_title = f"CTY DS {uid}"[:31]
+        assert ws.title == expected_title
 
         # Check headers
         headers = [c.value for c in ws[1]]
@@ -109,8 +111,8 @@ class TestDoiSoatExport:
         assert data_rows[0][1] == "2026-05-10"
 
         # Check locations
-        assert data_rows[0][4] == "Kho ĐS A"
-        assert data_rows[0][5] == "Cảng ĐS B"
+        assert data_rows[0][4] == f"Kho DS {uid}A"
+        assert data_rows[0][5] == f"Cảng DS {uid}B"
 
         wb.close()
 
@@ -119,9 +121,10 @@ class TestDoiSoatExport:
         create_work_order, create_trip_order,
     ):
         """TC2: Date range with no trips returns Excel with only header row."""
-        partner = create_partner(name=f"Công ty Trống {_uid()}", code=f"DS-{_uid().upper()}")
-        pickup = create_location(name="Kho Trống")
-        dropoff = create_location(name="Cảng Trống")
+        uid = _uid()
+        partner = create_partner(name=f"CTY Empty {uid}", code=f"EM{uid.upper()}")
+        pickup = create_location(name=f"Kho Empty {uid}")
+        dropoff = create_location(name=f"Cảng Empty {uid}")
 
         # Create trip outside date range
         create_trip_order(
