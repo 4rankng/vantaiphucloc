@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
+import { searchTripOrders } from '@/services/api/tripOrders.api'
 import { api } from '@/services/api/client'
 import type { ApiResponse, Pricing, WorkOrder, TripOrder, WorkType, Partner, SuggestMatchesResponse, SuggestWosResponse, Location, MatchScoresResponse, BulkMatchPair, BulkMatchResponse } from '@/data/domain'
 import type { DriverEarnings } from '@/services/api/salary.api'
@@ -720,5 +721,16 @@ export function useBatchReconcileForTO() {
       qc.invalidateQueries({ queryKey: queryKeys.workOrders })
       qc.invalidateQueries({ queryKey: queryKeys.tripOrders })
     },
+  })
+}
+
+export function useSearchTripOrders(q: string, workOrderId: number | null) {
+  return useQuery({
+    queryKey: ['trip-orders-search', q, workOrderId],
+    queryFn: async () => {
+      const res = await searchTripOrders(q, workOrderId!)
+      return res.success ? res.data : null
+    },
+    enabled: !!workOrderId && q.trim().length >= 2,
   })
 }
