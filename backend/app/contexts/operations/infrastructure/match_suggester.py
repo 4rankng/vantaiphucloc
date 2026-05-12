@@ -649,48 +649,6 @@ async def _used_container_ids_for_tos(
     return result
 
 
-def _score_to_against_wo(
-    to: TripOrder,
-    to_containers: Sequence[TripOrderContainer],
-    wo_container_numbers: set[str],
-    wo_date,
-    work_order: WorkOrder,
-    alias_groups: dict[int, set[int]] | None = None,
-) -> tuple[list[str], float]:
-    matched_fields: list[str] = []
-    score = 0.0
-
-    to_cn_set = {
-        normalize_container_number(c.container_number)
-        for c in to_containers if c.container_number
-    }
-    if wo_container_numbers & to_cn_set:
-        matched_fields.append("container_number")
-        score += WEIGHTS["container_number"]
-    else:
-        wo_digits = {re.sub(r'[^0-9]', '', cn) for cn in wo_container_numbers if cn}
-        to_digits = {re.sub(r'[^0-9]', '', cn) for cn in to_cn_set if cn}
-        if wo_digits & to_digits:
-            matched_fields.append("container_number_partial")
-            score += WEIGHTS["container_number"] * 0.5
-
-    if wo_date and to.trip_date == wo_date:
-        matched_fields.append("date")
-        score += WEIGHTS["date"]
-    ag = alias_groups or {}
-    if _locations_match(work_order.pickup_location_id, to.pickup_location_id, ag):
-        matched_fields.append("pickup_location")
-        score += WEIGHTS["pickup_location"]
-    if _locations_match(work_order.dropoff_location_id, to.dropoff_location_id, ag):
-        matched_fields.append("dropoff_location")
-        score += WEIGHTS["dropoff_location"]
-    if to.partner_id == work_order.partner_id:
-        matched_fields.append("client")
-        score += WEIGHTS["client"]
-
-    return matched_fields, score
-
-
 def _score_wo_against_to(
     wo: WorkOrder,
     wo_containers: Sequence[WorkOrderContainer],

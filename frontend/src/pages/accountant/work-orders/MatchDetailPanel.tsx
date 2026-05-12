@@ -5,9 +5,9 @@ import { useToast } from '@/components/atoms/Toast'
 import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
 import { fmtDate } from '@/lib/date-utils'
 import { TripDetailCard } from './TripDetailCard'
-import { MatchCard, scoreColor } from './MatchCard'
+import { MatchCard } from './MatchCard'
 import type { WorkOrder, TripOrder, TripOrderContainerItem, WorkType, MatchSuggestion } from '@/data/domain'
-import { WORK_TYPES, WORK_TYPE_LABELS } from '@/data/domain'
+import { WORK_TYPES } from '@/data/domain'
 
 interface MatchDetailPanelProps {
   workOrder: WorkOrder | null
