@@ -78,6 +78,8 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
   const forceManualEntry = consecutiveOCRFailures >= 2
 
   // Load reference data
+  const [suggestionLoading, setSuggestionLoading] = useState(true)
+
   useEffect(() => {
     let cancelled = false
     Promise.all([apiClient.getClients()])
@@ -89,10 +91,6 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
       .catch((err) => { console.error('Failed to load clients:', err) })
     return () => { cancelled = true }
   }, [])
-
-  // Load smart route suggestions (personalized per driver)
-  const [recentOrders, setRecentOrders] = useState<any[]>([])
-  const [suggestionLoading, setSuggestionLoading] = useState(true)
 
   useEffect(() => {
     if (!user || user.role !== 'driver') return
