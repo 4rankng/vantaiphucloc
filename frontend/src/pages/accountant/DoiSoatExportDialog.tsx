@@ -116,6 +116,7 @@ export function DoiSoatExportDialog({ open, onOpenChange, clients }: DoiSoatExpo
             size="sm"
             disabled={!canExport || mutation.isPending}
             onClick={handleExport}
+            style={{ background: 'var(--theme-brand-primary)', color: '#fff' }}
           >
             {mutation.isPending ? 'Đang xuất...' : 'Xuất Excel'}
           </Button>
