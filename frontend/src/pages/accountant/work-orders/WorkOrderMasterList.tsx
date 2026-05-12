@@ -107,6 +107,7 @@ export function WorkOrderMasterList({
               <div
                 className="shrink-0 flex items-center justify-center rounded-lg mt-0.5"
                 style={{ width: 36, height: 36, background: `color-mix(in srgb, ${color} 12%, transparent)` }}
+                title={`${bestScore} tiêu chí khớp trên ${maxScore}`}
               >
                 <span className="text-[11px] font-bold tabular-nums leading-none" style={{ color }}>
                   {bestScore}/{maxScore}
@@ -156,15 +157,14 @@ export function WorkOrderMasterList({
                 </span>
               </div>
 
-              {/* Line 2: partner (primary) + route (muted) */}
-              <div className="flex items-center gap-1 text-xs">
-                <span className="font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
+              {/* Line 2: partner (primary) + route (muted) — stacked vertically */}
+              <div className="min-w-0 text-xs">
+                <p className="font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
                   {wo.partner.name}
-                </span>
-                <span style={{ color: 'var(--theme-text-muted)' }}>·</span>
-                <span className="truncate text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
+                </p>
+                <p className="truncate text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
                   {resolveRoute(wo) || '—'}
-                </span>
+                </p>
               </div>
 
               {/* Line 3: containers — single row */}
