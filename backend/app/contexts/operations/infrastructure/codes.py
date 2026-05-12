@@ -5,18 +5,22 @@ Format: {PARTNER_CODE}{SEQ}  e.g. ABC0001, ABC0002, ABC10000
 - Fallback: first 3 chars of partner name (uppercased, alphanumeric only)
 - SEQ is the per-partner sequential count of existing orders + 1
 - Minimum 4 digits, auto-expands when count > 9999
+
+Concurrency: uses pg_advisory_xact_lock to serialise per-partner code
+generation within a single transaction, preventing duplicate-key races.
 """
 
 import re
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import Partner, WorkOrder, TripOrder
 
+_LOCK_NS = 7
+
 
 def _clean_code(raw: str | None, fallback: str) -> str:
-    """Extract uppercase alphanumeric characters, fallback to 3 chars of name."""
     if raw:
         cleaned = re.sub(r"[^A-Za-z0-9]", "", raw).upper()
         if cleaned:
@@ -25,13 +29,11 @@ def _clean_code(raw: str | None, fallback: str) -> str:
 
 
 def _format_seq(n: int) -> str:
-    """Format sequential number: minimum 4 digits, auto-expands."""
     digits = max(4, len(str(n)))
     return f"{n:0{digits}d}"
 
 
 def _extract_max_seq(codes: list[str]) -> int:
-    """Extract the maximum numeric suffix from a list of codes."""
     max_seq = 0
     for code in codes:
         m = re.search(r"(\d+)$", code)
@@ -40,41 +42,70 @@ def _extract_max_seq(codes: list[str]) -> int:
     return max_seq
 
 
-async def generate_work_order_code(db: AsyncSession, partner_id: int) -> str:
-    partner_res = await db.execute(
+async def _partner_prefix(db: AsyncSession, partner_id: int, fallback_char: str) -> str:
+    res = await db.execute(
         select(Partner.code, Partner.name).where(Partner.id == partner_id)
     )
-    row = partner_res.one_or_none()
+    row = res.one_or_none()
     if not row:
-        return f"W{partner_id:08d}"
-    partner_code, partner_name = row
-    prefix = _clean_code(partner_code, partner_name)
+        return f"{fallback_char}{partner_id:07d}"
+    return _clean_code(row[0], row[1])
 
-    result = await db.execute(
+
+async def _max_wo_seq(db: AsyncSession, partner_id: int) -> int:
+    res = await db.execute(
         select(WorkOrder.code).where(
             WorkOrder.partner_id == partner_id,
             WorkOrder.code.isnot(None),
         )
     )
-    max_seq = _extract_max_seq([r[0] for r in result.all()])
-    return f"{prefix}{_format_seq(max_seq + 1)}"
+    return _extract_max_seq([r[0] for r in res.all()])
 
 
-async def generate_trip_order_code(db: AsyncSession, partner_id: int) -> str:
-    partner_res = await db.execute(
-        select(Partner.code, Partner.name).where(Partner.id == partner_id)
-    )
-    row = partner_res.one_or_none()
-    if not row:
-        return f"T{partner_id:08d}"
-    partner_code, partner_name = row
-    prefix = _clean_code(partner_code, partner_name)
-
-    result = await db.execute(
+async def _max_to_seq(db: AsyncSession, partner_id: int) -> int:
+    res = await db.execute(
         select(TripOrder.code).where(
             TripOrder.partner_id == partner_id,
             TripOrder.code.isnot(None),
         )
     )
-    max_seq = _extract_max_seq([r[0] for r in result.all()])
+    return _extract_max_seq([r[0] for r in res.all()])
+
+
+async def _advisory_lock(db: AsyncSession, partner_id: int) -> None:
+    await db.execute(
+        text("SELECT pg_advisory_xact_lock(:ns, :pid)"),
+        {"ns": _LOCK_NS, "pid": partner_id},
+    )
+
+
+async def _next_wo_code(db: AsyncSession, partner_id: int) -> str:
+    prefix = await _partner_prefix(db, partner_id, "W")
+    max_seq = await _max_wo_seq(db, partner_id)
     return f"{prefix}{_format_seq(max_seq + 1)}"
+
+
+async def _next_to_code(db: AsyncSession, partner_id: int) -> str:
+    prefix = await _partner_prefix(db, partner_id, "T")
+    max_seq = await _max_to_seq(db, partner_id)
+    return f"{prefix}{_format_seq(max_seq + 1)}"
+
+
+async def generate_work_order_code(db: AsyncSession, partner_id: int) -> str:
+    """Generate the next unique code for a WorkOrder.
+
+    Acquires a per-partner advisory lock so that concurrent requests for
+    the same partner are serialised.  The lock is transaction-scoped and
+    auto-releases on COMMIT / ROLLBACK.
+    """
+    await _advisory_lock(db, partner_id)
+    return await _next_wo_code(db, partner_id)
+
+
+async def generate_trip_order_code(db: AsyncSession, partner_id: int) -> str:
+    """Generate the next unique code for a TripOrder.
+
+    Same concurrency strategy as generate_work_order_code.
+    """
+    await _advisory_lock(db, partner_id)
+    return await _next_to_code(db, partner_id)

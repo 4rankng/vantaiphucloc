@@ -121,10 +121,14 @@ class CreateWorkOrder:
     async def __call__(
         self, data: WorkOrderCreateInput, user: CurrentUserContext
     ) -> WorkOrder:
+        from sqlalchemy.exc import IntegrityError
+
         from app.contexts.customer_pricing.infrastructure.pricing_lookup import (
             find_pricing,
         )
-        from app.contexts.operations.infrastructure.codes import generate_work_order_code
+        from app.contexts.operations.infrastructure.codes import (
+            generate_work_order_code,
+        )
 
         _validate_containers(data.containers)
 
@@ -145,31 +149,38 @@ class CreateWorkOrder:
             None if (data.gps_lat and data.gps_lng) else "Khong xac dinh"
         )
 
-        w = WorkOrder(
-            id=None,
-            partner_id=data.partner_id,
-            pickup_location_id=data.pickup_location_id,
-            dropoff_location_id=data.dropoff_location_id,
-            driver_id=driver_id,
-            vehicle_id=data.vehicle_id,
-            unit_price=0,
-            driver_salary=0,
-            allowance=0,
-            gps_lat=data.gps_lat,
-            gps_lng=data.gps_lng,
-            gps_address=gps_address,
-            pricing_id=pricing.id if pricing else None,
-            trip_date=data.trip_date if data.trip_date else date.today(),
-            status=WorkOrderStatus.PENDING,
+        for _attempt in range(3):
+            w = WorkOrder(
+                id=None,
+                partner_id=data.partner_id,
+                pickup_location_id=data.pickup_location_id,
+                dropoff_location_id=data.dropoff_location_id,
+                driver_id=driver_id,
+                vehicle_id=data.vehicle_id,
+                unit_price=0,
+                driver_salary=0,
+                allowance=0,
+                gps_lat=data.gps_lat,
+                gps_lng=data.gps_lng,
+                gps_address=gps_address,
+                pricing_id=pricing.id if pricing else None,
+                trip_date=data.trip_date if data.trip_date else date.today(),
+                status=WorkOrderStatus.PENDING,
+            )
+            await _add_containers(w, data.containers)
+
+            saved = await self.repo.add(w)
+            saved.code = await generate_work_order_code(self.session, data.partner_id)
+            try:
+                saved = await self.repo.save(saved)
+                await self.session.commit()
+                return saved
+            except IntegrityError:
+                await self.session.rollback()
+                await self.session.begin()
+        raise RuntimeError(
+            f"Failed to generate unique WorkOrder code after 3 attempts for partner_id={data.partner_id}"
         )
-        await _add_containers(w, data.containers)
-
-        saved = await self.repo.add(w)
-        saved.code = await generate_work_order_code(self.session, data.partner_id)
-        saved = await self.repo.save(saved)
-
-        await self.session.commit()
-        return saved
 
 
 class UpdateWorkOrder:
