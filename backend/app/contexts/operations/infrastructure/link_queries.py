@@ -72,3 +72,43 @@ async def count_links_for_wo(
         )
     )
     return res.scalar_one()
+
+
+async def work_order_has_link(
+    session: AsyncSession, work_order_id: int
+) -> bool:
+    """Check if a WorkOrder has any active reconciliation link."""
+    res = await session.execute(
+        select(ReconciliationORM).where(
+            ReconciliationORM.work_order_id == work_order_id,
+            ReconciliationORM.is_active == True,  # noqa: E712
+        )
+    )
+    return res.scalars().first() is not None
+
+
+async def count_links_for_to(
+    session: AsyncSession, trip_order_id: int
+) -> int:
+    """Count active reconciliations for a TripOrder (TO-centric capacity)."""
+    from sqlalchemy import func
+    res = await session.execute(
+        select(func.count()).select_from(ReconciliationORM).where(
+            ReconciliationORM.trip_order_id == trip_order_id,
+            ReconciliationORM.is_active == True,  # noqa: E712
+        )
+    )
+    return res.scalar_one()
+
+
+async def find_all_links_for_to(
+    session: AsyncSession, trip_order_id: int
+) -> list[ReconciliationORM]:
+    """Return all active reconciliation links for a TripOrder."""
+    res = await session.execute(
+        select(ReconciliationORM).where(
+            ReconciliationORM.trip_order_id == trip_order_id,
+            ReconciliationORM.is_active == True,  # noqa: E712
+        )
+    )
+    return list(res.scalars().all())
