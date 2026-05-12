@@ -105,7 +105,7 @@ class TestFullFreightPipeline:
 
         # 8. Verify TO status changed to MATCHED
         to_check = api_client.get(f"/trip-orders/{to['id']}", headers=admin_headers)
-        assert to_check.json()["status"] == "COMPLETED"
+        assert to_check.json()["status"] == "MATCHED"
 
         # Cleanup
         api_client.delete(f"/pricings/{pricing['id']}", headers=admin_headers)
@@ -535,7 +535,7 @@ class TestMatchUnmatchWorkflow:
         assert wo_check.json()["status"] == "MATCHED"
 
         to_check = api_client.get(f"/trip-orders/{to['id']}", headers=admin_headers)
-        assert to_check.json()["status"] == "COMPLETED"
+        assert to_check.json()["status"] == "MATCHED"
         assert wo["id"] in to_check.json().get("matched_work_order_ids", [])
 
         # Unmatch
