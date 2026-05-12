@@ -81,7 +81,10 @@ export function InlineSelect({ placeholder, value, options, onChange, onCreateNe
           />
         </div>
 
-        <div className="max-h-64 overflow-y-auto overscroll-contain">
+        <div
+          className="max-h-64 overflow-y-auto overscroll-contain"
+          onWheel={e => e.stopPropagation()}
+        >
           {filtered.length === 0 ? (
             <p className="text-xs text-center py-6" style={{ color: 'var(--theme-text-muted)' }}>
               Không tìm thấy kết quả
