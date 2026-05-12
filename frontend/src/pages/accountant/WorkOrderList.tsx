@@ -247,7 +247,7 @@ export function WorkOrderList() {
       <Button
         onClick={handleAutoMatch}
         disabled={autoMatching}
-        className="h-9 gap-1.5 text-xs font-semibold rounded-lg"
+        className="h-8 gap-1.5 text-[11px] font-semibold rounded-lg"
         style={{ background: 'var(--theme-status-success)', color: '#fff' }}
       >
         <Sparkles className="h-3.5 w-3.5" />
@@ -255,8 +255,8 @@ export function WorkOrderList() {
       </Button>
       <Button
         onClick={() => setImportOpen(true)}
-        className="h-9 gap-1.5 text-xs font-semibold rounded-lg"
-        style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+        className="h-8 gap-1.5 text-[11px] font-semibold rounded-lg"
+        style={{ background: 'transparent', border: '1px solid var(--theme-brand-primary)', color: 'var(--theme-brand-primary)' }}
       >
         <FileSpreadsheet className="h-3.5 w-3.5" />
         Nhập đơn
