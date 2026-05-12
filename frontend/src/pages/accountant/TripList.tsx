@@ -403,7 +403,7 @@ function DirectorTripView({
         </div>
       </div>
       <DoiSoatExportDialog open={doiSoatOpen} onOpenChange={setDoiSoatOpen} clients={clients} />
-    </>
+    </>)
   }
 
   return (
