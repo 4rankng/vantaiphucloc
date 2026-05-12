@@ -919,10 +919,9 @@ async def generate_doi_soat_excel(
     df = date_type.fromisoformat(date_from)
     dt = date_type.fromisoformat(date_to)
 
-    # Find matched trip orders for this partner in date range
+    # Find ALL trip orders for this partner in date range (not just MATCHED)
     to_query = select(TripOrder).where(
         TripOrder.partner_id == partner_id,
-        TripOrder.status == "MATCHED",
         TripOrder.trip_date >= df,
         TripOrder.trip_date <= dt,
     ).order_by(TripOrder.trip_date, TripOrder.id)

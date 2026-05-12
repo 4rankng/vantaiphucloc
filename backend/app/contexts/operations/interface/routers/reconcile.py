@@ -602,7 +602,7 @@ async def auto_match(
         except Exception as exc:
             errors.append(f"WO#{wo.id}: {exc}")
 
-    # ── Compute rejection breakdown for unmatched WOs ──
+    # ── Compute rejection breakdown (trip-based: why trips don't match WOs) ──
     stats = AutoMatchStats()
     if unmatched_wos:
         from app.models.domain import TripOrder as TORM, TripOrderContainer as TOC, WorkOrderContainer as WOC
@@ -618,19 +618,8 @@ async def auto_match(
         if all_tos:
             alias_groups = await _load_alias_groups(db)
 
-            to_partner_ids = {to.partner_id for to in all_tos}
-            to_dates = {to.trip_date for to in all_tos if to.trip_date}
-            to_cont_rows = (await db.execute(
-                sa_select(TOC.trip_order_id, TOC.container_number)
-            )).all()
-            to_container_map: dict[int, set[str]] = {}
-            for tid, cn in to_cont_rows:
-                if cn:
-                    to_container_map.setdefault(tid, set()).add(
-                        normalize_container_number(cn)
-                    )
-            to_pickup_ids = {to.pickup_location_id for to in all_tos if to.pickup_location_id}
-            to_dropoff_ids = {to.dropoff_location_id for to in all_tos if to.dropoff_location_id}
+            wo_partner_ids = {wo.partner_id for wo in unmatched_wos}
+            wo_dates = {wo.created_at.date() for wo in unmatched_wos if wo.created_at}
 
             wo_cont_rows = (await db.execute(
                 sa_select(WOC.work_order_id, WOC.container_number)
@@ -642,31 +631,43 @@ async def auto_match(
                     wo_container_map.setdefault(wid, set()).add(
                         normalize_container_number(cn)
                     )
+            wo_pickup_ids = {wo.pickup_location_id for wo in unmatched_wos if wo.pickup_location_id}
+            wo_dropoff_ids = {wo.dropoff_location_id for wo in unmatched_wos if wo.dropoff_location_id}
+
+            to_cont_rows = (await db.execute(
+                sa_select(TOC.trip_order_id, TOC.container_number)
+            )).all()
+            to_container_map: dict[int, set[str]] = {}
+            for tid, cn in to_cont_rows:
+                if cn:
+                    to_container_map.setdefault(tid, set()).add(
+                        normalize_container_number(cn)
+                    )
 
             location_mismatch = 0
             date_mismatch = 0
             client_mismatch = 0
             container_mismatch = 0
 
-            for wo in unmatched_wos:
-                has_client = wo.partner_id in to_partner_ids
-                wo_date = wo.created_at.date() if wo.created_at else None
-                has_date = wo_date in to_dates if wo_date else False
+            for to in all_tos:
+                has_client = to.partner_id in wo_partner_ids
+                to_date = to.trip_date
+                has_date = to_date in wo_dates if to_date else False
                 has_pickup = any(
-                    _locations_match(wo.pickup_location_id, pid, alias_groups)
-                    for pid in to_pickup_ids
-                ) if wo.pickup_location_id else False
+                    _locations_match(to.pickup_location_id, pid, alias_groups)
+                    for pid in wo_pickup_ids
+                ) if to.pickup_location_id else False
                 has_dropoff = any(
-                    _locations_match(wo.dropoff_location_id, did, alias_groups)
-                    for did in to_dropoff_ids
-                ) if wo.dropoff_location_id else False
+                    _locations_match(to.dropoff_location_id, did, alias_groups)
+                    for did in wo_dropoff_ids
+                ) if to.dropoff_location_id else False
                 has_location = has_pickup or has_dropoff
 
-                wo_cns = wo_container_map.get(wo.id, set())
+                to_cns = to_container_map.get(to.id, set())
                 has_container = any(
-                    wo_cns & to_container_map.get(to.id, set())
-                    for to in all_tos
-                ) if wo_cns else False
+                    to_cns & wo_container_map.get(wo.id, set())
+                    for wo in unmatched_wos
+                ) if to_cns else False
 
                 if not has_location:
                     location_mismatch += 1

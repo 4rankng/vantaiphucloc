@@ -64,7 +64,7 @@ export function AutoMatchDialog({ open, onClose, result }: AutoMatchDialogProps)
 
   return (
     <Dialog open={open} onOpenChange={() => !confirming && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" hideCloseButton>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5" style={{ color: 'var(--theme-brand-primary)' }} />

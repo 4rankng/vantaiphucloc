@@ -13,8 +13,8 @@ interface NoMatchEmptyStateProps {
 const REASON_META: Record<string, { icon: React.ElementType; suggestion: string; suggestionDetail?: string }> = {
   location_mismatch: {
     icon: MapPin,
-    suggestion: 'Kiểm tra alias địa điểm',
-    suggestionDetail: 'HAIAN, HPH, Hai Phong...',
+    suggestion: 'Kiểm tra bí danh địa điểm',
+    suggestionDetail: 'HAIAN, HPH, Hải Phòng...',
   },
   date_mismatch: {
     icon: Calendar,
@@ -30,26 +30,20 @@ const REASON_META: Record<string, { icon: React.ElementType; suggestion: string;
   },
 }
 
-function severityColor(pct: number): { text: string; bg: string } {
-  if (pct > 50) return { text: '#dc2626', bg: 'color-mix(in srgb, #dc2626 10%, transparent)' }
-  if (pct > 10) return { text: '#d97706', bg: 'color-mix(in srgb, #d97706 10%, transparent)' }
-  return { text: 'var(--theme-text-muted)', bg: 'var(--theme-bg-tertiary)' }
-}
-
 export function NoMatchEmptyState({ scanned, reasons, onClose }: NoMatchEmptyStateProps) {
   const navigate = useNavigate()
 
-  const topReason = reasons[0]?.code
+  const sortedReasons = useMemo(() =>
+    [...reasons].sort((a, b) => b.count - a.count),
+    [reasons],
+  )
+
+  const topReason = sortedReasons[0]?.code
 
   const isLocationTop = topReason === 'location_mismatch'
   const isDateTop = topReason === 'date_mismatch'
 
-  const enrichedReasons = useMemo(() => {
-    if (scanned === 0) return []
-    return reasons
-      .map(r => ({ ...r, pct: Math.round((r.count / scanned) * 100) }))
-      .sort((a, b) => b.count - a.count)
-  }, [reasons, scanned])
+  const enrichedReasons = useMemo(() => sortedReasons, [sortedReasons])
 
   const suggestions = useMemo(() => {
     if (enrichedReasons.length === 0) return []
@@ -64,7 +58,7 @@ export function NoMatchEmptyState({ scanned, reasons, onClose }: NoMatchEmptySta
     }
     if (result.length === 0) {
       result.push(
-        { icon: MapPin, text: 'Kiểm tra alias địa điểm' },
+        { icon: MapPin, text: 'Kiểm tra bí danh địa điểm' },
         { icon: Calendar, text: 'Bổ sung ngày đi cho phiếu thiếu thông tin' },
       )
     }
@@ -104,7 +98,7 @@ export function NoMatchEmptyState({ scanned, reasons, onClose }: NoMatchEmptySta
           Không tìm thấy cặp ghép phù hợp
         </p>
         <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-          Hệ thống đã quét {scanned} phiếu chờ ghép nhưng chưa tìm được cặp khớp.
+          Không tìm thấy chuyến phù hợp với {scanned} phiếu chờ ghép.
         </p>
       </div>
 
@@ -120,21 +114,14 @@ export function NoMatchEmptyState({ scanned, reasons, onClose }: NoMatchEmptySta
           {enrichedReasons.map(r => {
             const meta = REASON_META[r.code]
             const Icon = meta?.icon ?? Box
-            const sev = severityColor(r.pct)
             return (
               <div key={r.code} className="flex items-center gap-2">
-                <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: sev.text }} />
-                <span className="text-xs font-semibold tabular-nums" style={{ color: sev.text }}>
+                <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
+                <span className="text-xs font-semibold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
                   {r.count}
                 </span>
                 <span className="text-xs flex-1" style={{ color: 'var(--theme-text-primary)' }}>
                   {r.label}
-                </span>
-                <span
-                  className="text-[10px] font-semibold tabular-nums px-1.5 py-0.5 rounded-full"
-                  style={{ background: sev.bg, color: sev.text }}
-                >
-                  {r.pct}%
                 </span>
               </div>
             )
