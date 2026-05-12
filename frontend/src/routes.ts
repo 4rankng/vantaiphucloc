@@ -38,7 +38,6 @@ export const ImportOrders            = lazy(() => import('@/pages/accountant/Imp
 export const ImportPricing           = lazy(() => import('@/pages/accountant/ImportPricing').then(m => ({ default: m.ImportPricing })))
 export const VendorList             = lazy(() => import('@/pages/accountant/VendorList').then(m => ({ default: m.VendorList })))
 export const AccountantSettings      = lazy(() => import('@/pages/accountant/AccountantSettings').then(m => ({ default: m.AccountantSettings })))
-export const DriverList              = lazy(() => import('@/pages/accountant/DriverList').then(m => ({ default: m.DriverList })))
 export const SettingsPricingList     = lazy(() => import('@/pages/accountant/SettingsPricingList').then(m => ({ default: m.SettingsPricingList })))
 export const SettingsPricingDetail   = lazy(() => import('@/pages/accountant/SettingsPricingDetail').then(m => ({ default: m.SettingsPricingDetail })))
 export const LocationAliasManager    = lazy(() => import('@/pages/accountant/LocationAliasManager').then(m => ({ default: m.LocationAliasManager })))
