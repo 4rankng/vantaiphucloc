@@ -83,7 +83,7 @@ export function TripList() {
       const q = search
       list = list.filter(t =>
         fuzzyMatch(t.partner.name, q) ||
-        fuzzyMatch(t.route ?? '', q) ||
+        fuzzyMatch(`${t.pickupLocation?.name ?? ''} → ${t.dropoffLocation?.name ?? ''}`, q) ||
         fuzzyMatch(t.code ?? '', q) ||
         t.containers.some(c => fuzzyMatch(c.containerNumber ?? '', q))
       )
@@ -504,7 +504,6 @@ function buildColumns(): Column<TripOrder>[] {
             {row.partner.name}
           </p>
           <RouteDisplay
-            route={row.route}
             pickupLocation={row.pickupLocation?.name}
             dropoffLocation={row.dropoffLocation?.name}
             className="mt-0.5"

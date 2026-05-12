@@ -289,7 +289,7 @@ export function DirectorDashboard() {
                 const badge = getTripOrderStatusBadge(t.status)
                 const date = new Date(t.tripDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
                 const tripCode = `T${String(t.id).padStart(4, '0')}`
-                const route = [t.pickupLocation?.name, t.dropoffLocation?.name].filter(Boolean).join(' → ') || t.route
+                const route = [t.pickupLocation?.name, t.dropoffLocation?.name].filter(Boolean).join(' → ')
                 const tripWorkType = t.containers[0]?.workType
 
                 return (

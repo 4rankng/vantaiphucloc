@@ -57,7 +57,7 @@ export function DriverJobs() {
               ))}
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{job.route}</span>
+              <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{job.pickupLocation?.name} → {job.dropoffLocation?.name}</span>
               <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(job.driverSalary)}</span>
             </div>
             <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>{new Date(job.createdAt).toLocaleDateString('vi-VN')}</p>

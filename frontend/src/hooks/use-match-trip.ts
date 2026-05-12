@@ -62,13 +62,13 @@ export function useMatchTrip(initialTripId: number) {
 
   const baseTrip = useMemo(() => selectedTrip ? {
     clientName: selectedTrip.partner.name,
-    route: selectedTrip.route,
+    route: `${selectedTrip.pickupLocation?.name ?? ''} → ${selectedTrip.dropoffLocation?.name ?? ''}`,
     containers: (selectedTrip.containers ?? []).map(c => ({ type: c.workType, number: c.containerNumber })),
   } : null, [selectedTrip])
 
   const baseJob = useMemo(() => selectedJob ? {
     clientName: selectedJob.partner.name,
-    route: selectedJob.route,
+    route: `${selectedJob.pickupLocation?.name ?? ''} → ${selectedJob.dropoffLocation?.name ?? ''}`,
     containers: selectedJob.containers.map(c => ({ type: c.workType, number: c.containerNumber })),
   } : null, [selectedJob])
 

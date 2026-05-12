@@ -467,8 +467,8 @@ async def auto_match(
 ):
     """Auto-match preview: returns candidates WITHOUT committing.
 
-    Full-score candidates (6/6) are marked suggested_default=True.
-    Partial candidates (≥ 3/6) are also returned for review.
+    Full-score candidates (5/5) are marked suggested_default=True.
+    Partial candidates (≥ 3/5) are also returned for review.
     Use /reconcile/auto-match/confirm to actually commit selected pairs.
     """
     from datetime import date as date_type
@@ -556,15 +556,12 @@ async def auto_match(
             wo_pickup = get_location_summary(locations_map, wo.pickup_location_id)
             wo_dropoff = get_location_summary(locations_map, wo.dropoff_location_id)
             wo_driver = get_driver_summary(drivers_map, wo.driver_id)
-            wo_route = f"{wo_pickup.name} → {wo_dropoff.name}"
-
             wo_ref = AutoMatchWorkOrderRef(
                 id=wo.id,
                 code=wo.code,
                 plate=wo_driver.vehicle.plate if wo_driver and wo_driver.vehicle else None,
                 date=wo.created_at.date().isoformat() if wo.created_at else None,
                 client_name=wo_partner.name,
-                route=wo_route,
             )
 
             for s in suggestions:
@@ -573,13 +570,10 @@ async def auto_match(
                 to_partner = get_partner_summary(partners_map, s.trip_order.partner.id)
                 to_pickup = get_location_summary(locations_map, s.trip_order.pickupLocation.id)
                 to_dropoff = get_location_summary(locations_map, s.trip_order.dropoffLocation.id)
-                to_route = f"{to_pickup.name} → {to_dropoff.name}"
-
                 to_ref = AutoMatchTripOrderRef(
                     id=s.trip_order.id,
                     code=s.trip_order.code,
                     client_name=to_partner.name,
-                    route=to_route,
                     containers=[
                         TripContainerOut.model_validate(c)
                         for c in getattr(s.trip_order, '_containers', [])
@@ -599,7 +593,7 @@ async def auto_match(
                     max_score=s.max_score,
                     matched_fields=s.matched_fields,
                     criteria=criteria,
-                    suggested_default=s.score >= (5.0 / 6.0),
+                    suggested_default=s.score >= (4.0 / 5.0),
                     work_order_ref=wo_ref,
                     trip_order_ref=to_ref,
                 ))
@@ -825,7 +819,7 @@ async def bulk_match(
 ):
     """Bulk-match pairs of work orders with trip orders.
 
-    Only accepts pairs where the suggestion has score == 1.0 (6/6 full match).
+    Only accepts pairs where the suggestion has score == 1.0 (5/5 full match).
     """
     db = match_use_case.session
     matched: list[BulkMatchResult] = []
@@ -853,7 +847,7 @@ async def bulk_match(
                 errors.append(
                     f"WO #{pair.work_order_id} → TO #{pair.trip_order_id}: "
                     f"score {matching[0].match_score}/{matching[0].max_score}, "
-                    f"only full matches (6/6) allowed"
+                    f"only full matches (5/5) allowed"
                 )
                 continue
 
