@@ -327,7 +327,7 @@ export interface AutoMatchResult {
   tripOrderId: number
   score: number
   matchedFields: string[]
-}────────
+}
 
 export interface BulkMatchPair {
   workOrderId: number
