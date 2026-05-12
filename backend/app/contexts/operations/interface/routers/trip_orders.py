@@ -275,6 +275,32 @@ async def export_trip_orders_excel(
     )
 
 
+@router.get("/trip-orders/export-doi-soat")
+async def export_doi_soat_excel(
+    partner_id: int = Query(..., description="Partner (khách hàng) ID"),
+    date_from: date = Query(..., description="From date (YYYY-MM-DD)"),
+    date_to: date = Query(..., description="To date (YYYY-MM-DD)"),
+    current_user: User = Depends(require_permission("create", "TripOrder")),
+    use_case: GetTripOrder = Depends(get_get_trip_order),
+):
+    from app.contexts.operations.infrastructure.excel import generate_doi_soat_excel
+    from app.utils.text import slugify_vi
+
+    session = use_case.repo.session  # type: ignore[attr-defined]
+    content, partner_name = await generate_doi_soat_excel(
+        session, partner_id, date_from.isoformat(), date_to.isoformat(),
+    )
+    slug = slugify_vi(partner_name)
+    filename = f"doi_soat_{slug}_{date_from.isoformat()}_{date_to.isoformat()}.xlsx"
+    return StreamingResponse(
+        io.BytesIO(content),
+        media_type=(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ),
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
 @router.get("/trip-orders/{trip_order_id}", response_model=TripOrderOut)
 async def get_trip_order(
     trip_order_id: int,
