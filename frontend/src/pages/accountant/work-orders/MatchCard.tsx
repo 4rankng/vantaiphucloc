@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react'
-import { Check, X, Pencil, ChevronRight, ChevronDown, CheckCircle2, XCircle } from 'lucide-react'
-import { useUpdateWorkOrder, useUpdateTripOrder, useReconcile } from '@/hooks/use-queries'
+import { Check, X, Pencil, CheckCircle2, XCircle } from 'lucide-react'
+import { useUpdateTripOrder } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { fmtDate } from '@/lib/date-utils'
-import type { CriterionBreakdown, WorkOrder, TripOrder, WorkType } from '@/data/domain'
+import type { CriterionBreakdown, WorkOrder, TripOrder } from '@/data/domain'
 
 function scoreColor(matchScore: number, maxScore: number): string {
   const ratio = maxScore > 0 ? matchScore / maxScore : 0
@@ -13,47 +13,31 @@ function scoreColor(matchScore: number, maxScore: number): string {
   return 'var(--theme-text-muted)'
 }
 
-// ─── Editable criterion row ──────────────────────────────────────────────────
+// ─── Single-column criterion row ─────────────────────────────────────────────
+// Shows only the order's (TO) value per criterion. The trip's (WO) value is
+// already displayed in the TripDetailCard at the top of the section, so we
+// avoid the redundant `↔` comparison. The ✅/❌ icon indicates match status;
+// mismatched rows get a subtle red tint and a hover tooltip with the trip value.
 
 function CriterionRow({
   criterion,
-  woId,
   toId,
   onEdited,
 }: {
   criterion: CriterionBreakdown
-  woId: number
   toId: number
   onEdited: () => void
 }) {
-  const [editingWo, setEditingWo] = useState(false)
   const [editingTo, setEditingTo] = useState(false)
-  const [woDraft, setWoDraft] = useState(criterion.woValue ?? '')
   const [toDraft, setToDraft] = useState(criterion.toValue ?? '')
 
-  const updateWo = useUpdateWorkOrder()
   const updateTo = useUpdateTripOrder()
   const toast = useToast()
-
-  const saveWo = useCallback(async () => {
-    setEditingWo(false)
-    try {
-      const field = criterion.name === 'container_number' ? 'containers' : criterion.name === 'client' ? 'clientId' : criterion.name === 'pickup_location' ? 'pickupLocationId' : criterion.name === 'dropoff_location' ? 'dropoffLocationId' : criterion.name === 'route' ? 'route' : null
-      if (!field) return
-      await updateWo.mutateAsync({
-        id: woId,
-        data: { [field]: woDraft } as Record<string, unknown>,
-      })
-      onEdited()
-    } catch {
-      toast.error('Lỗi', 'Không thể cập nhật phiếu')
-    }
-  }, [criterion.name, woDraft, woId, updateWo, onEdited, toast])
 
   const saveTo = useCallback(async () => {
     setEditingTo(false)
     try {
-      const field = criterion.name === 'container_number' ? 'containers' : criterion.name === 'client' ? 'clientId' : criterion.name === 'pickup_location' ? 'pickupLocationId' : criterion.name === 'dropoff_location' ? 'dropoffLocationId' : criterion.name === 'route' ? 'route' : null
+      const field = criterion.name === 'container_number' ? 'containers' : criterion.name === 'client' ? 'clientId' : criterion.name === 'pickup_location' ? 'pickupLocationId' : criterion.name === 'dropoff_location' ? 'dropoffLocationId' : null
       if (!field) return
       await updateTo.mutateAsync({
         id: toId,
@@ -73,47 +57,28 @@ function CriterionRow({
 
   const bgStyle = criterion.match
     ? { background: 'color-mix(in srgb, var(--theme-status-success) 6%, transparent)' }
-    : { background: 'transparent' }
+    : { background: 'color-mix(in srgb, var(--theme-status-error) 5%, transparent)' }
+
+  const borderColor = criterion.match
+    ? 'color-mix(in srgb, var(--theme-status-success) 20%, transparent)'
+    : 'color-mix(in srgb, var(--theme-status-error) 18%, transparent)'
+
+  // Hover tooltip showing trip value for on-demand comparison
+  const tooltip = !criterion.match && criterion.woValue
+    ? `Chuyến đi: ${criterion.woValue}`
+    : undefined
 
   return (
     <div
       className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm"
-      style={{ ...bgStyle, border: `1px solid ${criterion.match ? 'color-mix(in srgb, var(--theme-status-success) 20%, transparent)' : 'var(--theme-border-default)'}` }}
+      style={{ ...bgStyle, border: `1px solid ${borderColor}` }}
+      title={tooltip}
     >
       {icon}
       <span className="text-xs font-semibold shrink-0 w-20" style={{ color: 'var(--theme-text-muted)' }}>
         {criterion.label}
       </span>
 
-      {/* WO value */}
-      <div className="flex-1 min-w-0">
-        {editingWo ? (
-          <div className="flex items-center gap-1">
-            <input
-              autoFocus
-              value={woDraft}
-              onChange={e => setWoDraft(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') saveWo(); if (e.key === 'Escape') setEditingWo(false) }}
-              className="flex-1 px-1.5 py-0.5 rounded text-xs border"
-              style={{ background: 'var(--theme-bg-primary)', borderColor: 'var(--theme-brand-primary)', color: 'var(--theme-text-primary)' }}
-            />
-            <button onClick={saveWo} className="p-0.5" style={{ color: 'var(--theme-status-success)' }}><Check className="w-3 h-3" /></button>
-            <button onClick={() => setEditingWo(false)} className="p-0.5" style={{ color: 'var(--theme-text-muted)' }}><X className="w-3 h-3" /></button>
-          </div>
-        ) : (
-          <button
-            onClick={() => { if (!criterion.match) { setWoDraft(criterion.woValue ?? ''); setEditingWo(true) } }}
-            className="text-xs truncate text-left w-full"
-            style={{ color: criterion.woValue ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}
-          >
-            {criterion.woValue || '—'}
-          </button>
-        )}
-      </div>
-
-      <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>↔</span>
-
-      {/* TO value */}
       <div className="flex-1 min-w-0">
         {editingTo ? (
           <div className="flex items-center gap-1">
@@ -152,6 +117,8 @@ interface MatchCardProps {
   maxScore: number
   criteria: CriterionBreakdown[]
   tripOrder: TripOrder
+  /** Trip (WO) context — kept in the prop shape for callers; not rendered
+   *  here because the trip detail is already shown at the top of the section. */
   workOrder: WorkOrder
   onConfirm: () => void
   submitting: boolean
@@ -159,7 +126,7 @@ interface MatchCardProps {
 }
 
 export function MatchCard({
-  matchScore, maxScore, criteria, tripOrder, workOrder,
+  matchScore, maxScore, criteria, tripOrder,
   onConfirm, submitting, onEdited,
 }: MatchCardProps) {
   const color = scoreColor(matchScore, maxScore)
@@ -217,18 +184,24 @@ export function MatchCard({
         </div>
       </div>
 
-      {/* Criteria breakdown */}
-      <div className="px-3 pb-2 space-y-1">
+      {/* Criteria breakdown — single-column TO values; trip values are at top */}
+      <div className="px-3 pb-1 space-y-1">
         {criteria.map(c => (
           <CriterionRow
             key={c.name}
             criterion={c}
-            woId={workOrder.id}
             toId={tripOrder.id}
             onEdited={onEdited}
           />
         ))}
       </div>
+
+      {/* Subtle counter below criteria */}
+      {criteria.length > 0 && (
+        <div className="px-4 pb-2 text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
+          {matchScore} chỉ tiêu khớp · {Math.max(maxScore - matchScore, 0)} chưa khớp
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex items-center gap-2 px-4 pb-3 pt-1">
@@ -254,11 +227,11 @@ export function MatchCard({
           </p>
           <div className="space-y-1 mb-2">
             {criteria.filter(c => !c.match).map(c => (
-              <div key={c.name} className="flex items-start gap-1.5 text-[11px]">
+              <div key={c.name} className="flex items-start gap-1.5 text-[11px]" title={c.woValue ? `Chuyến đi: ${c.woValue}` : undefined}>
                 <XCircle className="w-3 h-3 shrink-0 mt-0.5" style={{ color: 'var(--theme-status-error)' }} />
                 <span style={{ color: 'var(--theme-text-primary)' }}>
                   <span className="font-semibold" style={{ color: 'var(--theme-text-muted)' }}>{c.label}:</span>{' '}
-                  {c.woValue || '—'} ↔ {c.toValue || '—'}
+                  {c.toValue || '—'}
                 </span>
               </div>
             ))}

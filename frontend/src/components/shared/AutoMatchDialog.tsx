@@ -282,11 +282,6 @@ function CandidateRow({ candidate, compact = false }: { candidate: AutoMatchCand
           {candidate.matchScore}/{candidate.maxScore}
         </span>
       </div>
-      {woRef?.route && toRef?.route && (
-        <p className="text-[10px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-          🚛 {woRef.route} → {toRef.route}
-        </p>
-      )}
       {candidate.criteria.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-1">
           {candidate.criteria.map((c, i) => (

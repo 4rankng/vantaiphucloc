@@ -1,17 +1,16 @@
 """Suggestion algorithm for matching WorkOrders ↔ TripOrders.
 
-Six matching criteria, each weighted 1/6:
+Five matching criteria, each weighted 1/5:
 
   1. Container number (normalized to ISO 6346)
   2. Date (trip_date vs WO created_at date)
   3. Pickup location (FK)
   4. Dropoff location (FK)
   5. Customer (client_id)
-  6. Route (route string)
 
 Confidence buckets:
-  - score == 1.0   → "full"     (auto-confirm candidate)
-  - score ≥ 0.5    → "partial"  (≥ 3/6 fields)
+  - score ≥ 0.8    → "full"     (≥ 4/5 fields, auto-confirm candidate)
+  - score ≥ 0.6    → "partial"  (≥ 3/5 fields)
   - else           → "none"     (still surfaced if any single field matched)
 
 Pure read flow: queries the ORM directly via the AsyncSession and
@@ -58,16 +57,15 @@ from app.utils.iso6346 import normalize_container_number
 
 
 WEIGHTS = {
-    "container_number": 1.0 / 6,
-    "date": 1.0 / 6,
-    "pickup_location": 1.0 / 6,
-    "dropoff_location": 1.0 / 6,
-    "client": 1.0 / 6,
-    "route": 1.0 / 6,
+    "container_number": 1.0 / 5,
+    "date": 1.0 / 5,
+    "pickup_location": 1.0 / 5,
+    "dropoff_location": 1.0 / 5,
+    "client": 1.0 / 5,
 }
-FULL_MATCH_THRESHOLD = 5.0 / 6.0
-POTENTIAL_MATCH_THRESHOLD = 3.0 / 6.0
-MIN_MATCH_THRESHOLD = 2.0 / 6.0
+FULL_MATCH_THRESHOLD = 4.0 / 5.0
+POTENTIAL_MATCH_THRESHOLD = 3.0 / 5.0
+MIN_MATCH_THRESHOLD = 2.0 / 5.0
 
 
 # ---------------------------------------------------------------------------
@@ -128,7 +126,6 @@ def _confidence(score: float) -> str:
 
 CRITERIA_ORDER = [
     ("date", "Ngày đi"),
-    ("route", "Tuyến đường"),
     ("client", "Khách hàng"),
     ("pickup_location", "Điểm lấy"),
     ("dropoff_location", "Điểm trả"),
@@ -141,8 +138,6 @@ def _build_criteria(
     matched_fields: list[str],
     wo_date_str: str | None,
     to_date_str: str | None,
-    wo_route: str | None,
-    to_route: str | None,
     wo_client: str | None,
     to_client: str | None,
     wo_pickup: str | None,
@@ -152,7 +147,7 @@ def _build_criteria(
     wo_containers: str | None,
     to_containers: str | None,
 ) -> list[CriterionBreakdown]:
-    """Build the canonical 6-criteria breakdown for UI rendering.
+    """Build the canonical 5-criteria breakdown for UI rendering.
 
     `matched_fields` is the existing list returned by `_score_*_against_*`. We
     treat `container_number` and `container_number_partial` as the same row
@@ -167,7 +162,6 @@ def _build_criteria(
 
     values: dict[str, tuple[str | None, str | None]] = {
         "date": (wo_date_str, to_date_str),
-        "route": (wo_route, to_route),
         "client": (wo_client, to_client),
         "pickup_location": (wo_pickup, to_pickup),
         "dropoff_location": (wo_dropoff, to_dropoff),
@@ -207,6 +201,14 @@ async def suggest_trip_matches(
     1. Share container numbers with this WO (or share partner)
     2. Have remaining capacity (matched WO count < TO container count)
     3. Are PENDING or MATCHED (not COMPLETED/CANCELLED)
+
+    Per-container expansion: a TO with K available containers (after
+    excluding those already linked to other WOs) emits K independent
+    ``MatchSuggestion`` entries — each carrying exactly one container in
+    ``trip_order.containers``. The ``container_number`` criterion and
+    match score are recomputed per (work_order, trip_order, container)
+    tuple, so the UI can render one row per container and the user can
+    pick which specific container of the TO this trip is fulfilling.
     """
     wo_containers = (await db.execute(
         select(WorkOrderContainer.container_number)
@@ -306,65 +308,85 @@ async def suggest_trip_matches(
     wo_containers_str = _format_containers(wo_full_containers)
     wo_date_str = wo_date.isoformat() if wo_date else None
 
+    # Determine which TO containers are already "used" by existing
+    # active reconciliations so we only emit rows for the remaining
+    # ones. Heuristic: a TO container is considered used if its
+    # container_number matches one of the linked WO's containers; if
+    # not enough containers can be matched that way, fall back to the
+    # first containers (by id order) to fill the link count.
+    used_container_ids = await _used_container_ids_for_tos(
+        db, [to.id for to in candidates], to_containers, link_counts,
+    )
+
     suggestions: list[MatchSuggestion] = []
     for to in candidates:
-        matched_fields, score = _score_to_against_wo(
-            to, to_containers.get(to.id, []),
-            wo_container_numbers, wo_date, work_order,
-            alias_groups,
-        )
-        to_out = TripOrderOut(
-            id=to.id, code=to.code, trip_date=to.trip_date,
-            partner=get_partner_summary(partners, to.partner_id),
-            pickup_location=get_location_summary(locations, to.pickup_location_id),
-            dropoff_location=get_location_summary(locations, to.dropoff_location_id),
-            containers=[
-                TripContainerOut.model_validate(c)
-                for c in to_containers.get(to.id, [])
-            ],
-            pricing_id=to.pricing_id,
-            unit_price=to.unit_price,
-            driver_salary=to.driver_salary,
-            allowance=to.allowance,
-            status=to.status,
-            matched_work_order_ids=[],
-            created_at=to.created_at,
-            updated_at=to.updated_at,
-        )
-        to_pickup_name = get_location_summary(locations, to.pickup_location_id).name
-        to_dropoff_name = get_location_summary(locations, to.dropoff_location_id).name
-        criteria = _build_criteria(
-            matched_fields=matched_fields,
-            wo_date_str=wo_date_str,
-            to_date_str=to.trip_date.isoformat() if to.trip_date else None,
-            wo_route=f"{wo_pickup_name} → {wo_dropoff_name}" if wo_pickup_name and wo_dropoff_name else None,
-            to_route=f"{to_pickup_name} → {to_dropoff_name}" if to_pickup_name and to_dropoff_name else None,
-            wo_client=wo_client_name,
-            to_client=get_partner_summary(partners, to.partner_id).name,
-            wo_pickup=wo_pickup_name,
-            to_pickup=get_location_summary(
-                locations, to.pickup_location_id,
-            ).name,
-            wo_dropoff=wo_dropoff_name,
-            to_dropoff=get_location_summary(
-                locations, to.dropoff_location_id,
-            ).name,
-            wo_containers=wo_containers_str,
-            to_containers=_format_containers(to_containers.get(to.id, [])),
-        )
-        match_score = sum(1 for c in criteria if c.match)
-        suggestions.append(MatchSuggestion(
-            trip_order=to_out,
-            confidence=_confidence(score),
-            matched_fields=matched_fields,
-            score=score,
-            criteria=criteria,
-            match_score=match_score,
-            max_score=len(criteria),
-        ))
+        all_to_containers = to_containers.get(to.id, [])
+        used_ids = used_container_ids.get(to.id, set())
+        available_containers = [
+            c for c in all_to_containers if c.id not in used_ids
+        ]
+        if not available_containers:
+            continue
+        to_pickup_name = get_location_summary(
+            locations, to.pickup_location_id,
+        ).name
+        to_dropoff_name = get_location_summary(
+            locations, to.dropoff_location_id,
+        ).name
+        to_partner_name = get_partner_summary(partners, to.partner_id).name
+        to_date_iso = to.trip_date.isoformat() if to.trip_date else None
+        # Emit one MatchSuggestion entry per available container so the
+        # UI renders independent rows for each container.
+        for container in available_containers:
+            matched_fields, score = _score_to_container_against_wo(
+                to, container, wo_container_numbers, wo_date, work_order,
+                alias_groups,
+            )
+            to_out = TripOrderOut(
+                id=to.id, code=to.code, trip_date=to.trip_date,
+                partner=get_partner_summary(partners, to.partner_id),
+                pickup_location=get_location_summary(
+                    locations, to.pickup_location_id,
+                ),
+                dropoff_location=get_location_summary(
+                    locations, to.dropoff_location_id,
+                ),
+                containers=[TripContainerOut.model_validate(container)],
+                pricing_id=to.pricing_id,
+                unit_price=to.unit_price,
+                driver_salary=to.driver_salary,
+                allowance=to.allowance,
+                status=to.status,
+                matched_work_order_ids=[],
+                created_at=to.created_at,
+                updated_at=to.updated_at,
+            )
+            criteria = _build_criteria(
+                matched_fields=matched_fields,
+                wo_date_str=wo_date_str,
+                to_date_str=to_date_iso,
+                wo_client=wo_client_name,
+                to_client=to_partner_name,
+                wo_pickup=wo_pickup_name,
+                to_pickup=to_pickup_name,
+                wo_dropoff=wo_dropoff_name,
+                to_dropoff=to_dropoff_name,
+                wo_containers=wo_containers_str,
+                to_containers=_format_containers([container]),
+            )
+            match_score = sum(1 for c in criteria if c.match)
+            suggestions.append(MatchSuggestion(
+                trip_order=to_out,
+                confidence=_confidence(score),
+                matched_fields=matched_fields,
+                score=score,
+                criteria=criteria,
+                match_score=match_score,
+                max_score=len(criteria),
+            ))
 
     suggestions.sort(key=lambda s: s.score, reverse=True)
-    return [s for s in suggestions if s.score >= MIN_MATCH_THRESHOLD][:30]
+    return [s for s in suggestions if s.score >= MIN_MATCH_THRESHOLD][:50]
 
 
 async def suggest_wo_matches(
@@ -469,14 +491,10 @@ async def suggest_wo_matches(
         wo_date_str = (
             wo.created_at.date().isoformat() if wo.created_at else None
         )
-        wo_pickup_loc = get_location_summary(locations, wo.pickup_location_id).name
-        wo_dropoff_loc = get_location_summary(locations, wo.dropoff_location_id).name
         criteria = _build_criteria(
             matched_fields=matched_fields,
             wo_date_str=wo_date_str,
             to_date_str=to_date_str,
-            wo_route=f"{wo_pickup_loc} → {wo_dropoff_loc}" if wo_pickup_loc and wo_dropoff_loc else None,
-            to_route=f"{to_pickup_name} → {to_dropoff_name}" if to_pickup_name and to_dropoff_name else None,
             wo_client=get_partner_summary(partners, wo.partner_id).name,
             to_client=to_client_name,
             wo_pickup=get_location_summary(
@@ -503,6 +521,124 @@ async def suggest_wo_matches(
 
     suggestions.sort(key=lambda s: s.score, reverse=True)
     return [s for s in suggestions if s.score >= MIN_MATCH_THRESHOLD][:30]
+
+
+def _score_to_container_against_wo(
+    to: TripOrder,
+    container: TripOrderContainer,
+    wo_container_numbers: set[str],
+    wo_date,
+    work_order: WorkOrder,
+    alias_groups: dict[int, set[int]] | None = None,
+) -> tuple[list[str], float]:
+    """Score a single TO container against a work order."""
+    matched_fields: list[str] = []
+    score = 0.0
+
+    cn = normalize_container_number(container.container_number) if container.container_number else None
+    if cn and cn in wo_container_numbers:
+        matched_fields.append("container_number")
+        score += WEIGHTS["container_number"]
+    else:
+        wo_digits = {re.sub(r'[^0-9]', '', c) for c in wo_container_numbers if c}
+        to_digits = {re.sub(r'[^0-9]', '', cn)} if cn else set()
+        if wo_digits & to_digits:
+            matched_fields.append("container_number_partial")
+            score += WEIGHTS["container_number"] * 0.5
+
+    if wo_date and to.trip_date == wo_date:
+        matched_fields.append("date")
+        score += WEIGHTS["date"]
+    ag = alias_groups or {}
+    if _locations_match(work_order.pickup_location_id, to.pickup_location_id, ag):
+        matched_fields.append("pickup_location")
+        score += WEIGHTS["pickup_location"]
+    if _locations_match(work_order.dropoff_location_id, to.dropoff_location_id, ag):
+        matched_fields.append("dropoff_location")
+        score += WEIGHTS["dropoff_location"]
+    if to.partner_id == work_order.partner_id:
+        matched_fields.append("client")
+        score += WEIGHTS["client"]
+
+    return matched_fields, score
+
+
+async def _used_container_ids_for_tos(
+    db: AsyncSession,
+    to_ids: list[int],
+    to_containers: dict[int, list[TripOrderContainer]],
+    link_counts: dict[int, int],
+) -> dict[int, set[int]]:
+    """Determine which TO containers are already 'used' by active reconciliations.
+
+    Heuristic: find active reconciliations for these TOs, load the linked
+    WO containers, and match them to TO containers by normalized container
+    number. If not enough can be matched, fall back to the first containers
+    (by id order) to fill the link count.
+    """
+    if not to_ids:
+        return {}
+
+    from sqlalchemy import func
+
+    # Get active reconciliations for these TOs
+    recon_rows = (await db.execute(
+        select(
+            Reconciliation.trip_order_id,
+            Reconciliation.work_order_id,
+        ).where(
+            Reconciliation.trip_order_id.in_(to_ids),
+            Reconciliation.is_active == True,  # noqa: E712
+        )
+    )).all()
+
+    if not recon_rows:
+        return {tid: set() for tid in to_ids}
+
+    # Load WO containers for the linked WOs
+    wo_ids = list({r.work_order_id for r in recon_rows})
+    wo_cont_rows = (await db.execute(
+        select(WorkOrderContainer)
+        .where(WorkOrderContainer.work_order_id.in_(wo_ids))
+    )).scalars().all()
+    wo_containers_by_wo: dict[int, list[WorkOrderContainer]] = defaultdict(list)
+    for c in wo_cont_rows:
+        wo_containers_by_wo[c.work_order_id].append(c)
+
+    result: dict[int, set[int]] = {}
+    for to_id in to_ids:
+        recons_for_to = [r for r in recon_rows if r.trip_order_id == to_id]
+        used: set[int] = set()
+        to_conts = to_containers.get(to_id, [])
+
+        for recon in recons_for_to:
+            wo_conts = wo_containers_by_wo.get(recon.work_order_id, [])
+            matched_in_this_link = False
+            for wo_c in wo_conts:
+                wo_cn = normalize_container_number(wo_c.container_number) if wo_c.container_number else None
+                if wo_cn:
+                    for to_c in to_conts:
+                        if to_c.id in used:
+                            continue
+                        to_cn = normalize_container_number(to_c.container_number) if to_c.container_number else None
+                        if to_cn == wo_cn:
+                            used.add(to_c.id)
+                            matched_in_this_link = True
+                            break
+                if matched_in_this_link:
+                    break
+
+        # If not enough matched by container number, fill from front
+        if len(used) < len(recons_for_to):
+            for to_c in sorted(to_conts, key=lambda c: c.id):
+                if len(used) >= len(recons_for_to):
+                    break
+                if to_c.id not in used:
+                    used.add(to_c.id)
+
+        result[to_id] = used
+
+    return result
 
 
 def _score_to_against_wo(

@@ -427,7 +427,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
             Không tìm thấy đơn hàng phù hợp
           </p>
           <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-            Kiểm tra ngày, tuyến đường, hoặc container
+            Kiểm tra ngày, điểm lấy/trả, hoặc container
           </p>
           <button
             onClick={() => setManualSearchOpen(true)}
@@ -531,7 +531,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
             style={{ background: 'var(--theme-text-on-brand)', color: 'var(--theme-brand-primary)' }}
           >
             {batchForWO.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />}
-            Ghép tất cả vào {workOrder.driver.vehicle?.plate || workOrder.driver.name || 'chuyến này'}
+            Ghép vào {workOrder.driver.vehicle?.plate || workOrder.driver.name || 'chuyến này'}
           </button>
         </div>
       )}

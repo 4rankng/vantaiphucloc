@@ -264,14 +264,12 @@ export interface AutoMatchWorkOrderRef {
   plate: string | null
   date: string | null
   clientName: string | null
-  route: string | null
 }
 
 export interface AutoMatchTripOrderRef {
   id: number
   code: string | null
   clientName: string | null
-  route: string | null
   containers: TripOrderContainerItem[]
 }
 

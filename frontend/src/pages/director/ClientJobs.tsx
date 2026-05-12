@@ -34,7 +34,7 @@ export function ClientJobs() {
   const pricingJobCounts = useMemo(() => {
     const map = new Map<string, number>()
     for (const j of jobs) {
-      const key = `${j.containers[0]?.workType ?? ''}|${j.route}`
+      const key = `${j.containers[0]?.workType ?? ''}|${j.pickupLocation?.name}→${j.dropoffLocation?.name}`
       map.set(key, (map.get(key) ?? 0) + 1)
     }
     return map
@@ -142,7 +142,7 @@ export function ClientJobs() {
             ))}
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{job.route}</span>
+            <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{job.pickupLocation?.name} → {job.dropoffLocation?.name}</span>
             <span className="text-sm font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(job.unitPrice)}</span>
           </div>
           <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>{new Date(job.createdAt).toLocaleDateString('vi-VN')}</p>

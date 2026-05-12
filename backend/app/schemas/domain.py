@@ -476,7 +476,7 @@ class MatchSuggestion(BaseModel):
     score: float
     criteria: list[CriterionBreakdown] = Field(default_factory=list)
     match_score: int = 0
-    max_score: int = 6
+    max_score: int = 5
 
 
 class SuggestMatchesResponse(BaseModel):
@@ -491,7 +491,7 @@ class WOSuggestion(BaseModel):
     score: float
     criteria: list[CriterionBreakdown] = Field(default_factory=list)
     match_score: int = 0
-    max_score: int = 6
+    max_score: int = 5
 
 
 class SuggestWosResponse(BaseModel):
@@ -507,7 +507,7 @@ class WorkOrderMatchScore(BaseModel):
     work_order_id: int
     best_score: float
     best_match_score: int
-    max_score: int = 6
+    max_score: int = 5
     suggestion_count: int = 0
 
 
@@ -579,14 +579,12 @@ class AutoMatchWorkOrderRef(BaseModel):
     plate: str | None = None
     date: str | None = None
     client_name: str | None = None
-    route: str | None = None
 
 
 class AutoMatchTripOrderRef(BaseModel):
     id: int
     code: str | None = None
     client_name: str | None = None
-    route: str | None = None
     containers: list[TripContainerOut] = []
 
 
@@ -595,7 +593,7 @@ class AutoMatchCandidate(BaseModel):
     trip_order_id: int
     score: float
     match_score: int
-    max_score: int = 6
+    max_score: int = 5
     matched_fields: list[str]
     criteria: list[AutoMatchCriterion] = []
     suggested_default: bool = False

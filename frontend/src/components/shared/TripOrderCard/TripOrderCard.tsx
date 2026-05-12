@@ -30,7 +30,7 @@ export function TripOrderCard({ trip, onClick }: TripOrderCardProps) {
             {trip.partner.name}
           </p>
           <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-            {trip.route}
+            {trip.pickupLocation.name} → {trip.dropoffLocation.name}
           </p>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
@@ -47,7 +47,7 @@ export function TripOrderCard({ trip, onClick }: TripOrderCardProps) {
       </div>
 
       {/* Route */}
-      <RouteDisplay route={trip.route} pickupLocation={trip.pickupLocation.name} dropoffLocation={trip.dropoffLocation.name} />
+      <RouteDisplay pickupLocation={trip.pickupLocation.name} dropoffLocation={trip.dropoffLocation.name} />
 
       {/* Containers */}
       {trip.containers.length > 0 && (

@@ -387,7 +387,7 @@ function SuggestionCard({
 
           <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
             <span className="font-medium">{trip.partner.name}</span>
-            {trip.route ? <span> · {trip.route}</span> : null}
+            {trip.pickupLocation?.name ? <span> · {trip.pickupLocation.name} → {trip.dropoffLocation?.name}</span> : null}
           </p>
         </div>
 
@@ -433,7 +433,7 @@ function SuggestionCard({
           </div>
           <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
             <span className="font-medium">{trip.partner.name}</span>
-            {trip.route ? <span> · {trip.route}</span> : null}
+            {trip.pickupLocation?.name ? <span> · {trip.pickupLocation.name} → {trip.dropoffLocation?.name}</span> : null}
           </p>
         </div>
 

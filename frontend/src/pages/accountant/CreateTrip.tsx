@@ -142,11 +142,9 @@ export function CreateTrip() {
       return
     }
     setSubmitting(true)
-    const route = `${pickupLocation} - ${dropoffLocation}`
     createTripOrder.mutate({
       tripDate: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` })(),
       clientId: Number(clientId),
-      route,
       pickupLocationId: pickupId,
       dropoffLocationId: dropoffId,
       containers: congItems.map(item => ({ containerNumber: item.containerNumber, workType: item.workType })),
