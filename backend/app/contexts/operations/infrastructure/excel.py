@@ -891,6 +891,142 @@ async def generate_trip_orders_excel(
     return buf.getvalue(), partner_name
 
 
+async def generate_doi_soat_excel(
+    db: AsyncSession,
+    partner_id: int,
+    date_from: str,
+    date_to: str,
+) -> tuple[bytes, str]:
+    """Generate reconciliation (đối soát) Excel for a specific partner.
+
+    Returns (excel_bytes, partner_name) tuple.
+    Only includes MATCHED trip orders within the date range.
+    One row per container with: STT, Ngày chạy, Số cont, Loại, Điểm lấy, Điểm trả, Biển số xe.
+    """
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment
+    from app.models.domain import Partner, Location, Reconciliation, Vehicle
+    from app.models.base import User as _User
+
+    # Get partner name
+    p_result = await db.execute(select(Partner).where(Partner.id == partner_id))
+    partner = p_result.scalar_one_or_none()
+    partner_name = partner.name if partner else f"partner_{partner_id}"
+
+    # Find matched trip orders for this partner in date range
+    to_query = select(TripOrder).where(
+        TripOrder.partner_id == partner_id,
+        TripOrder.status == "MATCHED",
+        TripOrder.trip_date >= date_from,
+        TripOrder.trip_date <= date_to,
+    ).order_by(TripOrder.trip_date, TripOrder.id)
+    to_result = await db.execute(to_query)
+    trip_orders = to_result.scalars().all()
+
+    to_ids = [to.id for to in trip_orders]
+
+    # Load containers
+    containers_map: dict[int, list[TripOrderContainer]] = {}
+    if to_ids:
+        cont_result = await db.execute(
+            select(TripOrderContainer).where(TripOrderContainer.trip_order_id.in_(to_ids))
+        )
+        for c in cont_result.scalars().all():
+            containers_map.setdefault(c.trip_order_id, []).append(c)
+
+    # Load location names
+    loc_ids = set()
+    for to in trip_orders:
+        if to.pickup_location_id:
+            loc_ids.add(to.pickup_location_id)
+        if to.dropoff_location_id:
+            loc_ids.add(to.dropoff_location_id)
+    loc_name_by_id: dict[int, str] = {}
+    if loc_ids:
+        loc_result = await db.execute(select(Location).where(Location.id.in_(loc_ids)))
+        loc_name_by_id = {l.id: l.name for l in loc_result.scalars().all()}
+
+    # Load vehicle plates via reconciliation -> work_order -> driver -> vehicle
+    plate_map: dict[int, str] = {}  # to_id -> plate
+    if to_ids:
+        recon_result = await db.execute(
+            select(Reconciliation.work_order_id, Reconciliation.trip_order_id).where(
+                Reconciliation.trip_order_id.in_(to_ids),
+                Reconciliation.is_active == True,  # noqa: E712
+            )
+        )
+        wo_to_pairs = recon_result.all()
+        wo_ids = list({r[0] for r in wo_to_pairs})
+
+        if wo_ids:
+            wo_result = await db.execute(
+                select(WorkOrder.id, WorkOrder.driver_id).where(WorkOrder.id.in_(wo_ids))
+            )
+            wo_driver_map = {r[0]: r[1] for r in wo_result.all()}
+            driver_ids = list(set(wo_driver_map.values()))
+
+            if driver_ids:
+                v_result = await db.execute(
+                    select(Vehicle.driver_id, Vehicle.plate).where(
+                        Vehicle.driver_id.in_(driver_ids),
+                        Vehicle.is_active == True,  # noqa: E712
+                    )
+                )
+                driver_plate_map = dict(v_result.all())
+
+                for wo_id, to_id in wo_to_pairs:
+                    driver_id = wo_driver_map.get(wo_id)
+                    if driver_id and driver_id in driver_plate_map:
+                        plate_map[to_id] = driver_plate_map[driver_id]
+
+    # Build Excel
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    # Truncate sheet name to 31 chars (Excel limit)
+    ws.title = partner_name[:31]
+
+    headers = ["STT", "Ngày chạy", "Số cont", "Loại", "Điểm lấy", "Điểm trả", "Biển số xe"]
+    ws.append(headers)
+
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    for col_num in range(1, len(headers) + 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center")
+
+    stt = 0
+    for to in trip_orders:
+        containers = containers_map.get(to.id, [])
+        pickup = loc_name_by_id.get(to.pickup_location_id, "")
+        dropoff = loc_name_by_id.get(to.dropoff_location_id, "")
+        plate = plate_map.get(to.id, "")
+        trip_date_str = to.trip_date.isoformat() if to.trip_date else ""
+        for c in containers:
+            stt += 1
+            ws.append([
+                stt,
+                trip_date_str,
+                c.container_number,
+                c.work_type or "",
+                pickup,
+                dropoff,
+                plate,
+            ])
+
+    # Auto-adjust column widths
+    for col in ws.columns:
+        max_len = max(len(str(c.value or "")) for c in col)
+        ws.column_dimensions[col[0].column_letter].width = min(max_len + 2, 40)
+
+    buf = BytesIO()
+    wb.save(buf)
+    wb.close()
+    buf.seek(0)
+    return buf.getvalue(), partner_name
+
+
 async def generate_salary_excel(
     db: AsyncSession,
     start_date: str,
