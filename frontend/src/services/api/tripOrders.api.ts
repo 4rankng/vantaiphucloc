@@ -25,7 +25,6 @@ interface TripOrderFilters {
 export interface TripOrderCreatePayload {
   tripDate: string
   clientId: number
-  route: string
   pickupLocationId: number
   dropoffLocationId: number
   containers: TripOrderContainerItem[]
@@ -40,7 +39,6 @@ export interface TripOrderCreatePayload {
 export interface TripOrderUpdatePayload {
   tripDate?: string
   clientId?: number
-  route?: string
   pickupLocationId?: number
   dropoffLocationId?: number
   containers?: TripOrderContainerItem[]
@@ -251,13 +249,11 @@ export interface AutoMatchCandidateFE {
     plate: string | null
     date: string | null
     clientName: string | null
-    route: string | null
   } | null
   tripOrderRef: {
     id: number
     code: string | null
     clientName: string | null
-    route: string | null
     containers: TripOrderContainerItem[]
   } | null
 }

@@ -254,7 +254,6 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
               <dt className="typo-form-label flex items-center gap-2"><Route size={14} />Cung đường</dt>
               <dd className="typo-body text-right">
                 <RouteDisplay
-                  route={trip.route}
                   pickupLocation={trip.pickupLocation?.name}
                   dropoffLocation={trip.dropoffLocation?.name}
                 />

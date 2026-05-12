@@ -68,7 +68,7 @@ export function TripSummaryDialog({
           {/* Route */}
           <div>
             <p className="text-xs font-semibold mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-              Tuyến đường
+              Tuyến
             </p>
             <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
               {pickupLocation} → {dropoffLocation}
