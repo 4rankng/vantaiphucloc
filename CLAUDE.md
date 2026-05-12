@@ -7,6 +7,41 @@
 
 ## 📋 Project State
 
+### ✅ Recently Completed (2026-05-12) — Stale MATCHED Fix + Typography Polish
+
+**3 task specs completed:**
+
+1. **bug-MATCHED-empty-orders** — WO shows MATCHED but 0 linked TripOrders.
+   - Backend root cause: stale WO status after reconciliation link deactivated without resetting WO.
+   - Fix: auto-heal in `_load_many` (work_orders.py) — detects MATCHED WOs with 0 active links, resets to PENDING, commits.
+   - Frontend defense: MatchDetailPanel shows error state with "Đặt lại trạng thái PENDING" recovery button when `isStaleMatched`.
+   - Added `useUpdateWorkOrder` import to MatchDetailPanel.
+
+2. **bug-master-list-zero-count-badge** — Literal "0" rendered under "Đã khớp" chip.
+   - Root cause: classic React bug — `{0 && <JSX/>}` renders "0" as text (0 is a valid React child).
+   - Fix: changed guard to `matchedTripCount > 0` (boolean result, not numeric).
+
+3. **task-typography-work-orders-page** — Unified type scale across work-orders page.
+   - Score/status chips: 44×44 → 36×36, `text-[11px] font-bold tabular-nums`
+   - Section headings: `text-sm` → `text-[13px] font-semibold`
+   - Count badges: `text-[10px] font-semibold tabular-nums`
+   - TripDetailCard: plate `text-sm` → `text-xs`, KH label `text-[10px] uppercase`
+   - MatchCard: score chip → 36×36, criterion label `text-[11px] w-24`, "Ghép" button `font-semibold`
+   - WorkOrderList: header buttons `h-9` → `h-8`, "Nhập đơn" demoted to outline style
+   - Master list: `py-2.5` → `py-2`, `border-left 3px` → `2px`
+
+**Files changed:**
+- `backend/app/contexts/operations/interface/routers/work_orders.py` (auto-heal in `_load_many`)
+- `frontend/src/pages/accountant/work-orders/WorkOrderMasterList.tsx`
+- `frontend/src/pages/accountant/work-orders/MatchDetailPanel.tsx`
+- `frontend/src/pages/accountant/work-orders/TripDetailCard.tsx`
+- `frontend/src/pages/accountant/work-orders/MatchCard.tsx`
+- `frontend/src/pages/accountant/WorkOrderList.tsx`
+
+**Tests:** 169 passed, 0 failed.
+
+---
+
 ### ✅ Recently Completed (2026-05-12) — Remove Tuyến đường + Multi-Container Scoring (task specs)
 
 **3 task specs completed in one cron run:**
