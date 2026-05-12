@@ -687,3 +687,15 @@ export function useBatchReconcileForWO() {
     },
   })
 }
+
+export function useBatchReconcileForTO() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ tripOrderId, workOrderIds }: { tripOrderId: number; workOrderIds: number[] }) =>
+      apiClient.batchReconcileForTO(tripOrderId, workOrderIds).then(unwrap),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.workOrders })
+      qc.invalidateQueries({ queryKey: queryKeys.tripOrders })
+    },
+  })
+}
