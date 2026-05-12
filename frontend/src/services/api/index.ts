@@ -93,6 +93,7 @@ export const apiClient = {
   toggleTripConfirmation: tripOrdersApi.toggleTripConfirmation,
   uploadCustomerExcel: tripOrdersApi.uploadCustomerExcel,
   exportReconciliationExcel: tripOrdersApi.exportReconciliationExcel,
+  exportDoiSoatExcel: tripOrdersApi.exportDoiSoatExcel,
   importTripOrders: tripOrdersApi.importTripOrders,
   exportTripOrdersExcel: tripOrdersApi.exportTripOrdersExcel,
   autoMatch: tripOrdersApi.autoMatch,

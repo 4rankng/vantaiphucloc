@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
-import { useTripOrders, useExportTripOrdersExcel, useClients } from '@/hooks/use-queries'
+import { useTripOrders, useClients } from '@/hooks/use-queries'
 import { TripOrderCard } from '@/components/shared/TripOrderCard'
 import { DataTablePro, type Column } from '@/components/shared/DataTablePro'
 import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
@@ -17,6 +17,7 @@ import { Button, Dialog, DialogContent, DialogHeader, DialogTitle } from '@/comp
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { useMonthParams } from './use-month-params'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { DoiSoatExportDialog } from './DoiSoatExportDialog'
 import type { TripOrder } from '@/data/domain'
 import { formatCurrencyFull as fmt } from '@/data/domain'
 import { TripDetailContent } from './TripDetail'
@@ -55,7 +56,7 @@ export function TripList() {
   const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
   const { data: trips = [], isLoading: loading } = useTripOrders({ dateFrom, dateTo })
   const { data: clients = [] } = useClients()
-  const exportMutation = useExportTripOrdersExcel()
+  const [doiSoatOpen, setDoiSoatOpen] = useState(false)
   const location = useLocation()
   const [searchParams] = useSearchParams()
   const isMobile = useIsMobile(1024)
@@ -97,14 +98,8 @@ export function TripList() {
     total: trips.length,
   }), [trips])
 
-  const handleExport = async () => {
-    const blob = await exportMutation.mutateAsync()
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'don_hang.xlsx'
-    a.click()
-    URL.revokeObjectURL(url)
+  const handleExport = () => {
+    setDoiSoatOpen(true)
   }
 
   const clearFilters = useCallback(() => {
@@ -203,7 +198,7 @@ export function TripList() {
           </div>
           <div className="ml-auto flex items-center gap-2">
             <Button onClick={handleExport} className="btn-ghost h-9 px-3 text-xs font-semibold">
-              <Download className="w-3.5 h-3.5 mr-1" /> Xuất
+              <Download className="w-3.5 h-3.5 mr-1" /> Xuất đối soát
             </Button>
             <button
               onClick={() => navigate('/accountant/import-orders')}
@@ -407,6 +402,7 @@ function DirectorTripView({
           ))}
         </div>
       </div>
+      <DoiSoatExportDialog open={doiSoatOpen} onOpenChange={setDoiSoatOpen} clients={clients} />
     )
   }
 
@@ -420,7 +416,7 @@ function DirectorTripView({
         <div className="flex items-center gap-2">
           <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
           <Button onClick={handleExport} className="btn-ghost h-9 px-3 text-xs font-semibold">
-            <Download className="w-3.5 h-3.5 mr-1" /> Xuất
+            <Download className="w-3.5 h-3.5 mr-1" /> Xuất đối soát
           </Button>
         </div>
       </div>
@@ -474,6 +470,7 @@ function DirectorTripView({
           }
         />
       </div>
+      <DoiSoatExportDialog open={doiSoatOpen} onOpenChange={setDoiSoatOpen} clients={clients} />
     </div>
   )
 }
