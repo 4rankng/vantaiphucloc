@@ -171,3 +171,26 @@ const toggleSelection = useCallback((id: number) => {
 
 - Auto-match preview dialog (`AutoMatchDialog.tsx`) — that flow has no checkboxes today and is not affected.
 - TripOrder side (TO-centric panel) selecting WOs — if a similar checkbox flow exists there it should be audited (T-008) but is not part of this spec.
+
+## Resolution
+
+**Root cause:** Multi-container TripOrders emit N suggestion rows sharing the same `tripOrder.id`. Frontend tracked selection by `Set<number>` keyed on TO id only, causing all sibling rows to share checked state.
+
+**Fix applied — clean BE+FE approach (T-002 option b):**
+
+1. **Backend `MatchSuggestion` Pydantic schema** (`app/schemas/domain.py`): Added `container_id: int` field.
+2. **Backend `match_suggester.py`**: Populated `container_id=container.id` when building per-container suggestions.
+3. **Frontend `domain.ts`**: Added `containerId: number` to `MatchSuggestion` interface.
+4. **Frontend `MatchDetailPanel.tsx`**:
+   - Changed `selectedToIds: Set<number>` → `selectedKeys: Set<string>` with composite key `${toId}-${containerId}`
+   - React `key` uses composite key (fixes duplicate key warning)
+   - Counter counts selected rows accurately
+   - `handleBatchForWO` deduplicates TO ids from composite keys before sending to API
+
+**Files changed:**
+- `backend/app/schemas/domain.py`
+- `backend/app/contexts/operations/infrastructure/match_suggester.py`
+- `frontend/src/data/domain.ts`
+- `frontend/src/pages/accountant/work-orders/MatchDetailPanel.tsx`
+
+**Tests:** 224 passed, 27 skipped, 0 failures.

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -8,13 +8,7 @@ import {
 import { Button } from '@/components/ui/Button'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { useExportDoiSoatExcel } from '@/hooks/use-queries'
-import type { Partner } from '@/data/domain'
-
-interface DoiSoatExportDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  clients: Partner[]
-}
+import { apiClient } from '@/services/api'
 
 /** Returns YYYY-MM-DD for the first day of the current month. */
 function firstDayOfMonth(): string {
@@ -27,17 +21,29 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
-export function DoiSoatExportDialog({ open, onOpenChange, clients }: DoiSoatExportDialogProps) {
+interface DoiSoatExportDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  /** Ignored — partners are now fetched from trip orders. Kept for backward compat. */
+  clients?: unknown[]
+}
+
+export function DoiSoatExportDialog({ open, onOpenChange }: DoiSoatExportDialogProps) {
   const [selectedClientId, setSelectedClientId] = useState<string>('')
   const [dateFrom, setDateFrom] = useState(firstDayOfMonth)
   const [dateTo, setDateTo] = useState(todayISO)
+  const [tripPartners, setTripPartners] = useState<{ id: number; name: string }[]>([])
   const mutation = useExportDoiSoatExcel()
+
+  // Fetch distinct partners that have trip orders
+  useEffect(() => {
+    if (!open) return
+    apiClient.getDistinctTripPartners({ dateFrom, dateTo }).then(setTripPartners).catch(() => setTripPartners([]))
+  }, [open, dateFrom, dateTo])
 
   const clientOptions = [
     { value: '', label: '— Chọn khách hàng —' },
-    ...clients
-      .filter(c => c.partnerRole !== 'shipping_line')
-      .map(c => ({ value: String(c.id), label: c.name })),
+    ...tripPartners.map(p => ({ value: String(p.id), label: p.name })),
   ]
 
   const canExport = selectedClientId && dateFrom && dateTo
