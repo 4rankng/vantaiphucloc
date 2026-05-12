@@ -27,7 +27,7 @@ Alphabetised. The right column is the code identifier we standardise on.
 | đầu kéo, biển số | tractor plate | `TractorPlate` (VO) | VN plate format |
 | điểm đi / điểm trả | pickup / dropoff | `pickup_location_id` / `dropoff_location_id` | FK → Location |
 | điều hành / lệnh điều hành | dispatch / dispatch order | `TripOrder` (synonym) | — |
-| đối soát | reconciliation | `Reconciliation` | TripOrder ↔ WorkOrder 1:1 |
+| đối soát | reconciliation | `Reconciliation` | 1 WO → N TOs (multi-match) |
 | đơn giá | unit price | `unit_price` (VND) | on `PricingLine` |
 | đơn hàng | customer order | `TripOrder` | what the customer booked |
 | F/E (full/empty) | freight kind | `FreightKind` (VO: `F` \| `E`) | — |
@@ -48,7 +48,7 @@ Alphabetised. The right column is the code identifier we standardise on.
 Two notes on naming:
 
 - **TripOrder ≡ đơn hàng.** Earlier internal docs called it "Lệnh điều hành"; the kế toán's term is "đơn hàng" and the system follows the kế toán. The DB table is `trip_orders`; the class is `TripOrder`. They are the customer order.
-- **WorkOrder ≡ phiếu làm việc.** Driver-side: "what I did". Distinct from TripOrder. They reconcile 1:1 at the end.
+- **WorkOrder ≡ phiếu làm việc.** Driver-side: "what I did". Distinct from TripOrder. One WO can reconcile with N TOs (multi-match).
 
 ---
 
@@ -238,8 +238,8 @@ Driver_salary + allowance default to 0 — customer tariffs only carry `unit_pri
 ### 5.4 Reconciliation (đối soát)
 
 1. Kế toán reviews unmatched `PENDING` TripOrders and `PENDING` WorkOrders side-by-side.
-2. Matches one-to-one by `(tractor_plate, route, work_type, client)`.
-3. System creates a `trip_order_work_orders` row, locks both records, transitions WO to `MATCHED`. WO `earning` syncs from TO.
+2. Matches by `(tractor_plate, route, work_type, client, container overlap)`. One WO can match multiple TOs via `POST /reconcile/batch-for-wo`.
+3. System creates `reconciliations` rows (one per WO-TO pair), locks both records, transitions WO to `MATCHED`, TO to `COMPLETED`. WO salary values accumulate per matched TO.
 4. Driver now sees the trip income on the mobile app.
 5. Salary recalculation auto-queued (arq job).
 
@@ -279,7 +279,7 @@ Background job sums each driver's matched WorkOrder earnings for the period and 
   - `seed` — added by the migration's starter set.
   - `seed_confirmed` — extracted by the sample-file seeder (treated as accountant-verified by virtue of being from a real customer file).
 - **Driver_salary / allowance default to 0** when seeding pricing from customer tariff sheets. Customer tariffs only carry `unit_price`; the internal cost split is a Phúc Lộc rule the kế toán enters via the `PricingDetail` UI.
-- **TripOrder ↔ WorkOrder is strict 1:1.** A WorkOrder cannot be partially matched, cannot be split across multiple TripOrders, and cannot be matched to a TripOrder from a different client.
+- **WorkOrder → N TripOrders (1:N multi-match).** One "chuyến" (WO) can carry containers from multiple "đơn hàng" (TOs). A TO can only be matched to one WO (1:1 on the TO side). Cross-client matching is blocked. Salary values accumulate on the WO as each TO is matched and subtract on unmatch.
 - **Status side-effects of confirmation are permanent.** Once `TripOrder.is_confirmed=true`, the linked WorkOrder cannot be unmatched and the kế toán cannot revise the trip price. To correct an error, cancel-and-recreate.
 
 ---
