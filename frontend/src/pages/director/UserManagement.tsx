@@ -189,10 +189,14 @@ function UserManagementInner() {
     }
   }, [deleteId, toast, deleteUser])
 
-  // Exclude superadmin from director's view
-  const visibleUsers = users.filter(u => u.role !== 'superadmin')
+  // Only superadmin can see superadmin accounts; all other roles are excluded
+  const currentUser = useAuth().user
+  const visibleUsers = currentUser?.role === 'superadmin'
+    ? users
+    : users.filter(u => u.role !== 'superadmin')
   const roleCounts = {
     ALL: visibleUsers.length,
+    ...(currentUser?.role === 'superadmin' ? { superadmin: visibleUsers.filter(u => u.role === 'superadmin').length } : {}),
     director: visibleUsers.filter(u => u.role === 'director').length,
     accountant: users.filter(u => u.role === 'accountant').length,
     driver: users.filter(u => u.role === 'driver').length,
@@ -222,6 +226,7 @@ function UserManagementInner() {
       <FilterPills
         options={[
           { value: 'ALL', label: 'Tất cả', count: roleCounts.ALL },
+          ...(currentUser?.role === 'superadmin' ? [{ value: 'superadmin', label: ROLE_LABELS.superadmin, count: roleCounts.superadmin }] : []),
           { value: 'director', label: ROLE_LABELS.director, count: roleCounts.director },
           { value: 'accountant', label: ROLE_LABELS.accountant, count: roleCounts.accountant },
           { value: 'driver', label: ROLE_LABELS.driver, count: roleCounts.driver },
