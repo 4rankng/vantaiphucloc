@@ -88,6 +88,7 @@ async def get_my_earnings(
     return DriverEarningsOut(
         driver_id=dto.driver_id,
         driver_name=dto.driver_name,
+        driver_phone=dto.driver_phone,
         start_date=dto.start_date,
         end_date=dto.end_date,
         matched_order_count=dto.matched_order_count,
