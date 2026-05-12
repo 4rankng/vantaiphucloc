@@ -98,6 +98,7 @@ export const apiClient = {
   getMatchScores: tripOrdersApi.getMatchScores,
   bulkMatch: tripOrdersApi.bulkMatch,
   batchReconcileForWO: tripOrdersApi.batchReconcileForWO,
+  batchReconcileForTO: tripOrdersApi.batchReconcileForTO,
 
   // Salary
   calculateSalary: salaryApi.calculateSalary,
