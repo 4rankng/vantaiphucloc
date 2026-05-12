@@ -303,7 +303,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
     const unmatchTarget = unmatchTargetId ? matchedTrips.find(t => t.id === unmatchTargetId) : null
     return (
       <div className="h-full overflow-y-auto p-4 space-y-4">
-        <TripDetailCard workOrder={workOrder} />
+        <TripDetailCard workOrder={workOrder} onEdited={onMatchSuccess} />
 
         <div className="flex items-center gap-2">
           <Link2 className="w-4 h-4" style={{ color: 'var(--theme-status-success)' }} />
@@ -561,7 +561,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
   return (
     <div className="h-full overflow-y-auto p-4 space-y-4">
       {/* Trip detail card */}
-      <TripDetailCard workOrder={workOrder} />
+      <TripDetailCard workOrder={workOrder} onEdited={invalidateSuggestions} />
 
       {/* Bulk match banner */}
       {perfectMatches.length >= 2 && (
