@@ -965,7 +965,7 @@ function ConflictResolutionBar({
                     🚛 Chuyến đi
                   </span>
                   <span className="text-xs font-medium truncate" style={{ color: 'var(--theme-text-primary)' }}>
-                    {criterion.woValue || '—'}
+                    {(criterion.name === 'date' && criterion.woValue ? fmtDate(criterion.woValue) : criterion.woValue) || '—'}
                   </span>
                 </button>
                 {/* TO (order) side */}
@@ -993,7 +993,7 @@ function ConflictResolutionBar({
                     📋 Đơn hàng
                   </span>
                   <span className="text-xs font-medium truncate" style={{ color: 'var(--theme-text-primary)' }}>
-                    {criterion.toValue || '—'}
+                    {(criterion.name === 'date' && criterion.toValue ? fmtDate(criterion.toValue) : criterion.toValue) || '—'}
                   </span>
                 </button>
               </div>
