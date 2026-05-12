@@ -250,7 +250,84 @@ export interface MatchScoresResponse {
   scores: WorkOrderMatchScore[]
 }
 
-// ─── Bulk Match ────────────────────────────────────────────────────────────────
+// ─── Auto-match (preview + confirm) ────────────────────────────────────
+
+export interface AutoMatchCriterion {
+  key: string
+  label: string
+  match: boolean
+}
+
+export interface AutoMatchWorkOrderRef {
+  id: number
+  code: string | null
+  plate: string | null
+  date: string | null
+  clientName: string | null
+  route: string | null
+}
+
+export interface AutoMatchTripOrderRef {
+  id: number
+  code: string | null
+  clientName: string | null
+  route: string | null
+  containers: TripOrderContainerItem[]
+}
+
+export interface AutoMatchCandidate {
+  workOrderId: number
+  tripOrderId: number
+  score: number
+  matchScore: number
+  maxScore: number
+  matchedFields: string[]
+  criteria: AutoMatchCriterion[]
+  suggestedDefault: boolean
+  workOrderRef: AutoMatchWorkOrderRef | null
+  tripOrderRef: AutoMatchTripOrderRef | null
+}
+
+export interface UnmatchedWorkOrderRef {
+  id: number
+  code: string | null
+  plate: string | null
+  date: string | null
+}
+
+export interface AutoMatchPreviewResponse {
+  scannedWorkOrderCount: number
+  skippedAlreadyMatched: number
+  candidates: AutoMatchCandidate[]
+  unmatchedWorkOrderRefs: UnmatchedWorkOrderRef[]
+  errors: string[]
+}
+
+export interface AutoMatchConfirmPair {
+  workOrderId: number
+  tripOrderId: number
+}
+
+export interface AutoMatchConfirmResult {
+  workOrderId: number
+  tripOrderId: number
+  success: boolean
+  error: string | null
+}
+
+export interface AutoMatchConfirmResponse {
+  matched: AutoMatchConfirmResult[]
+  failed: AutoMatchConfirmResult[]
+  durationMs: number
+}
+
+// Legacy aliases
+export interface AutoMatchResult {
+  workOrderId: number
+  tripOrderId: number
+  score: number
+  matchedFields: string[]
+}────────
 
 export interface BulkMatchPair {
   workOrderId: number

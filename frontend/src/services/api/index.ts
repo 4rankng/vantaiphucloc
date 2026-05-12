@@ -96,6 +96,8 @@ export const apiClient = {
   importTripOrders: tripOrdersApi.importTripOrders,
   exportTripOrdersExcel: tripOrdersApi.exportTripOrdersExcel,
   autoMatch: tripOrdersApi.autoMatch,
+  autoMatchPreview: tripOrdersApi.autoMatchPreview,
+  autoMatchConfirm: tripOrdersApi.autoMatchConfirm,
   getMatchScores: tripOrdersApi.getMatchScores,
   bulkMatch: tripOrdersApi.bulkMatch,
   batchReconcileForWO: tripOrdersApi.batchReconcileForWO,

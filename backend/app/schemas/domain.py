@@ -567,6 +567,58 @@ class AutoMatchRequest(BaseModel):
     date_to: str | None = None
 
 
+class AutoMatchCriterion(BaseModel):
+    key: str
+    label: str
+    match: bool
+
+
+class AutoMatchWorkOrderRef(BaseModel):
+    id: int
+    code: str | None = None
+    plate: str | None = None
+    date: str | None = None
+    client_name: str | None = None
+    route: str | None = None
+
+
+class AutoMatchTripOrderRef(BaseModel):
+    id: int
+    code: str | None = None
+    client_name: str | None = None
+    route: str | None = None
+    containers: list[TripContainerOut] = []
+
+
+class AutoMatchCandidate(BaseModel):
+    work_order_id: int
+    trip_order_id: int
+    score: float
+    match_score: int
+    max_score: int = 6
+    matched_fields: list[str]
+    criteria: list[AutoMatchCriterion] = []
+    suggested_default: bool = False
+    work_order_ref: AutoMatchWorkOrderRef | None = None
+    trip_order_ref: AutoMatchTripOrderRef | None = None
+
+
+class UnmatchedWorkOrderRef(BaseModel):
+    id: int
+    code: str | None = None
+    plate: str | None = None
+    date: str | None = None
+
+
+class AutoMatchResponse(BaseModel):
+    scanned_work_order_count: int = 0
+    skipped_already_matched: int = 0
+    candidates: list[AutoMatchCandidate] = []
+    unmatched_work_order_refs: list[UnmatchedWorkOrderRef] = []
+    errors: list[str] = []
+
+
+# Legacy aliases for backward compat (old response shape)
 class AutoMatchResult(BaseModel):
     work_order_id: int
     trip_order_id: int
@@ -574,12 +626,21 @@ class AutoMatchResult(BaseModel):
     matched_fields: list[str]
 
 
-class AutoMatchResponse(BaseModel):
-    auto_matched: list[AutoMatchResult]
-    partial_matches: list[AutoMatchResult]
-    unmatched_work_order_ids: list[int] = []
-    skipped_already_matched: int
-    errors: list[str]
+class AutoMatchConfirmRequest(BaseModel):
+    pairs: list[BulkMatchPair]
+
+
+class AutoMatchConfirmResult(BaseModel):
+    work_order_id: int
+    trip_order_id: int
+    success: bool
+    error: str | None = None
+
+
+class AutoMatchConfirmResponse(BaseModel):
+    matched: list[AutoMatchConfirmResult]
+    failed: list[AutoMatchConfirmResult] = []
+    duration_ms: int = 0
 
 
 # ---------------------------------------------------------------------------
