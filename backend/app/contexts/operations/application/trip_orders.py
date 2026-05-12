@@ -114,6 +114,8 @@ class CreateTripOrder:
         self.session = session
 
     async def __call__(self, data: TripOrderCreateInput) -> TripOrder:
+        from sqlalchemy.exc import IntegrityError
+
         from app.contexts.customer_pricing.infrastructure.pricing_lookup import (
             find_tiered_pricing,
         )
@@ -144,36 +146,42 @@ class CreateTripOrder:
                 allowance = tiered.allowance
                 pricing_id = tiered.pricing.id
 
-        t = TripOrder(
-            id=None,
-            trip_date=data.trip_date,
-            partner_id=data.partner_id,
-            pickup_location_id=data.pickup_location_id,
-            dropoff_location_id=data.dropoff_location_id,
-            unit_price=unit_price,
-            driver_salary=driver_salary,
-            allowance=allowance,
-            pricing_id=pricing_id,
-            status=TripOrderStatus.DRAFT if (unit_price == 0 and driver_salary == 0) else TripOrderStatus.PENDING,
-            matched_work_order_ids=list(data.matched_work_order_ids or []),
+        for _attempt in range(3):
+            t = TripOrder(
+                id=None,
+                trip_date=data.trip_date,
+                partner_id=data.partner_id,
+                pickup_location_id=data.pickup_location_id,
+                dropoff_location_id=data.dropoff_location_id,
+                unit_price=unit_price,
+                driver_salary=driver_salary,
+                allowance=allowance,
+                pricing_id=pricing_id,
+                status=TripOrderStatus.DRAFT if (unit_price == 0 and driver_salary == 0) else TripOrderStatus.PENDING,
+                matched_work_order_ids=list(data.matched_work_order_ids or []),
+            )
+            _add_containers(t, data.containers)
+
+            saved = await self.repo.add(t)
+            saved.code = await generate_trip_order_code(self.session, data.partner_id)
+            try:
+                saved = await self.repo.save(saved)
+
+                for wo_id in saved.matched_work_order_ids:
+                    wo = await self.wo_repo.get_by_id(wo_id)  # type: ignore[arg-type]
+                    if wo is not None and wo.status == WorkOrderStatus.PENDING:
+                        wo.match()
+                        await self.wo_repo.save(wo)
+
+                await self.session.commit()
+                return saved
+            except IntegrityError:
+                await self.session.rollback()
+                await self.session.begin()
+
+        raise RuntimeError(
+            f"Failed to generate unique TripOrder code after 3 attempts for partner_id={data.partner_id}"
         )
-        _add_containers(t, data.containers)
-
-        saved = await self.repo.add(t)
-
-        # Generate code now that the row is flushed.
-        saved.code = await generate_trip_order_code(self.session, data.partner_id)
-        saved = await self.repo.save(saved)
-
-        # Mark linked WOs as MATCHED — separate aggregate.
-        for wo_id in saved.matched_work_order_ids:
-            wo = await self.wo_repo.get_by_id(wo_id)  # type: ignore[arg-type]
-            if wo is not None and wo.status == WorkOrderStatus.PENDING:
-                wo.match()
-                await self.wo_repo.save(wo)
-
-        await self.session.commit()
-        return saved
 
 
 class UpdateTripOrder:
