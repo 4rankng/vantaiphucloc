@@ -4,6 +4,7 @@ import io
 
 import pytest
 from openpyxl import load_workbook
+from tests.integration.conftest import _container_number, _uid
 
 
 class TestDoiSoatExport:
@@ -14,11 +15,15 @@ class TestDoiSoatExport:
         create_work_order, create_trip_order,
     ):
         """TC1: Export with matched trips returns correct Excel with only MATCHED rows."""
-        partner = create_partner(name="Công ty Đối Soát Test", code="DS-TEST")
+        partner = create_partner(name=f"Công ty Đối Soát Test {_uid()}", code=f"DS-{_uid().upper()}")
         partner_id = partner["id"]
 
         pickup = create_location(name="Kho ĐS A")
         dropoff = create_location(name="Cảng ĐS B")
+
+        cn1 = _container_number()
+        cn2 = _container_number()
+        cn3 = _container_number()
 
         # Create 3 trip orders
         to1 = create_trip_order(
@@ -26,21 +31,21 @@ class TestDoiSoatExport:
             pickup_location_id=pickup["id"],
             dropoff_location_id=dropoff["id"],
             trip_date="2026-05-10",
-            containers=[{"container_number": "DSNU0000010", "work_type": "E20"}],
+            containers=[{"container_number": cn1, "work_type": "E20"}],
         )
         to2 = create_trip_order(
             partner_id=partner_id,
             pickup_location_id=pickup["id"],
             dropoff_location_id=dropoff["id"],
             trip_date="2026-05-10",
-            containers=[{"container_number": "DSNU0000020", "work_type": "E40"}],
+            containers=[{"container_number": cn2, "work_type": "E40"}],
         )
         to3 = create_trip_order(
             partner_id=partner_id,
             pickup_location_id=pickup["id"],
             dropoff_location_id=dropoff["id"],
             trip_date="2026-05-10",
-            containers=[{"container_number": "DSNU0000030", "work_type": "E20"}],
+            containers=[{"container_number": cn3, "work_type": "E20"}],
         )
 
         # Create 2 work orders and match with first 2 trip orders
@@ -48,13 +53,13 @@ class TestDoiSoatExport:
             partner_id=partner_id,
             pickup_location_id=pickup["id"],
             dropoff_location_id=dropoff["id"],
-            containers=[{"container_number": "DSNU0000010", "work_type": "E20"}],
+            containers=[{"container_number": cn1, "work_type": "E20"}],
         )
         wo2 = create_work_order(
             partner_id=partner_id,
             pickup_location_id=pickup["id"],
             dropoff_location_id=dropoff["id"],
-            containers=[{"container_number": "DSNU0000020", "work_type": "E40"}],
+            containers=[{"container_number": cn2, "work_type": "E40"}],
         )
 
         # Match first 2 pairs
@@ -114,7 +119,7 @@ class TestDoiSoatExport:
         create_work_order, create_trip_order,
     ):
         """TC2: Date range with no trips returns Excel with only header row."""
-        partner = create_partner(name="Công ty Trống", code="DS-EMPTY")
+        partner = create_partner(name=f"Công ty Trống {_uid()}", code=f"DS-{_uid().upper()}")
         pickup = create_location(name="Kho Trống")
         dropoff = create_location(name="Cảng Trống")
 
@@ -124,7 +129,7 @@ class TestDoiSoatExport:
             pickup_location_id=pickup["id"],
             dropoff_location_id=dropoff["id"],
             trip_date="2026-04-10",
-            containers=[{"container_number": "EMNU0000010", "work_type": "E20"}],
+            containers=[{"container_number": _container_number(), "work_type": "E20"}],
         )
 
         resp = api_client.get(
