@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from app.models.domain import (
+    DriverSalaryConfig as DriverSalaryConfigORM,
+)
 from app.models.domain import Setting as SettingORM
 from app.models.domain import WorkOrder as WorkOrderORM
 
-__all__ = ["SettingORM", "WorkOrderORM"]
+__all__ = ["DriverSalaryConfigORM", "SettingORM", "WorkOrderORM"]

@@ -26,6 +26,8 @@ import * as usersApi from './users.api'
 import * as reportsApi from './reports.api'
 import * as importsApi from './imports.api'
 import * as auditApi from './audit.api'
+import * as pnlApi from './pnl.api'
+import * as reconciliationImportsApi from './reconciliationImports.api'
 
 export const apiClient = {
   // Partners (replaces Clients + Vendors)
@@ -115,6 +117,17 @@ export const apiClient = {
   updateSalaryConfig: salaryApi.updateSalaryConfig,
   getSalaryDashboard: salaryApi.getSalaryDashboard,
   exportSalaryExcel: salaryApi.exportSalaryExcel,
+  getDriverBaseSalaryHistory: salaryApi.getDriverBaseSalaryHistory,
+  setDriverBaseSalary: salaryApi.setDriverBaseSalary,
+
+  // Monthly P&L
+  getMonthlyPnL: pnlApi.getMonthlyPnL,
+
+  // Customer reconciliation imports
+  previewReconciliationImport: reconciliationImportsApi.previewReconciliationImport,
+  commitReconciliationImport: reconciliationImportsApi.commitReconciliationImport,
+  listReconciliationImports: reconciliationImportsApi.listReconciliationImports,
+  getReconciliationImport: reconciliationImportsApi.getReconciliationImport,
 
   // Work Order Export
   exportWorkOrdersExcel: workOrdersApi.exportWorkOrdersExcel,
@@ -156,4 +169,23 @@ export const apiClient = {
 }
 
 // Re-export types from salary.api
-export type { AsyncJobResult, JobStatus, DriverEarnings } from './salary.api'
+export type {
+  AsyncJobResult,
+  JobStatus,
+  DriverEarnings,
+  DriverBaseSalary,
+  SetDriverBaseSalaryInput,
+} from './salary.api'
+export type {
+  MonthlyPnL,
+  PartnerRevenueBreakdown,
+} from './pnl.api'
+export type {
+  CustomerVerdict,
+  ImportStatus,
+  RowApplyStatus,
+  ParsedRowInput,
+  ImportPreviewRequest,
+  ReconciliationRow,
+  ReconciliationImport,
+} from './reconciliationImports.api'

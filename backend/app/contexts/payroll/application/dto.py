@@ -14,6 +14,16 @@ class DriverEarningsDTO:
     start_date: date = date(2000, 1, 1)
     end_date: date = date(2000, 1, 1)
     matched_order_count: int = 0
-    total_salary: int = 0      # sum of driver_salary
+    base_salary: int = 0       # effective base salary at end_date
+    total_salary: int = 0      # sum of driver_salary (productivity)
     total_allowance: int = 0   # sum of allowance
-    total_earnings: int = 0    # total_salary + total_allowance
+    total_earnings: int = 0    # base_salary + total_salary + total_allowance
+
+
+@dataclass
+class DriverSalaryConfigDTO:
+    id: int
+    driver_id: int
+    base_salary: int
+    effective_from: date
+    note: str | None = None
