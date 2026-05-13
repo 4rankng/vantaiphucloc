@@ -11,12 +11,17 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.domain import Partner, Reconciliation, TripOrder, Vehicle, WorkOrder
+from app.models.domain import Partner, Reconciliation, TripOrder, Vehicle, VehicleDriver, VehicleExpense, WorkOrder
 from app.models.base import User
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, require_permission
 from app.core.worker import get_arq_pool
 from app.database import get_db
-from app.schemas.domain import DashboardSummaryOut
+from app.schemas.domain import (
+    DashboardSummaryOut,
+    VehicleExpenseSummary,
+    VehiclePnLResponse,
+    VehiclePnLRow,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +88,9 @@ async def get_dashboard_summary(
 
     outstanding_debt = 0
 
+    # Use vehicle_drivers join for plate lookup so multi-driver vehicles
+    # show the correct plate per driver. Falls back to NULL plate gracefully
+    # when no vehicle_drivers row exists for the driver.
     driver_salary_q = await db.execute(
         select(
             User.id.label("driver_id"),
@@ -91,7 +99,12 @@ async def get_dashboard_summary(
             func.count(WorkOrder.id).label("total_jobs"),
             func.coalesce(func.sum(WorkOrder.driver_salary + WorkOrder.allowance), 0).label("total_salary"),
         )
-        .join(Vehicle, Vehicle.driver_id == User.id, isouter=True)
+        .join(
+            VehicleDriver,
+            (VehicleDriver.driver_id == User.id) & (VehicleDriver.is_active == True),  # noqa: E712
+            isouter=True,
+        )
+        .join(Vehicle, Vehicle.id == VehicleDriver.vehicle_id, isouter=True)
         .join(WorkOrder, WorkOrder.driver_id == User.id)
         .where(WorkOrder.status == "MATCHED")
         .group_by(User.id, User.username, Vehicle.plate)
@@ -132,6 +145,191 @@ async def get_dashboard_summary(
         driver_salary_summary=driver_salary_summary,
         unmatched_work_order_count=unmatched_work_order_count,
         pending_trip_count=pending_trip_count,
+    )
+
+
+@router.get("/vehicle-pnl", response_model=VehiclePnLResponse)
+async def get_vehicle_pnl(
+    date_from: str = Query(..., description="YYYY-MM-DD"),
+    date_to: str = Query(..., description="YYYY-MM-DD"),
+    vehicle_id: Optional[int] = Query(None, description="Filter to a single vehicle"),
+    _current_user: User = Depends(require_permission("read", "Salary")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Per-vehicle P&L: Doanh thu − Chi phí = Lợi nhuận.
+
+    For each vehicle returns:
+      - Doanh thu: SUM(TripOrder.unit_price) for MATCHED TOs whose reconciled
+        WorkOrder has this vehicle_id.
+      - CP Xe: vehicle_expenses subtotals (XANG_DAU, SUA_CHUA, KHAC).
+      - CP Lương sản lượng: SUM(WorkOrder.driver_salary + allowance) for WOs
+        on this vehicle.
+      - CP Lương cơ bản: effective base salary × period for drivers attached to
+        this vehicle via vehicle_drivers.
+      - CP Chung: total CHUNG expenses (shown at company level, not allocated).
+    """
+    from datetime import datetime as _dt
+    from app.contexts.payroll.infrastructure.repositories import SqlDriverSalaryConfigRepository
+    from app.contexts.payroll.domain.base_salary import effective_base_salary
+
+    try:
+        df = _dt.strptime(date_from, "%Y-%m-%d").date()
+        dt = _dt.strptime(date_to, "%Y-%m-%d").date()
+    except ValueError:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail="Invalid date format. Use YYYY-MM-DD.")
+
+    # ── 1. Build vehicle set ─────────────────────────────────────────────────
+    veh_q = select(Vehicle.id, Vehicle.plate).where(Vehicle.is_active == True)  # noqa: E712
+    if vehicle_id is not None:
+        veh_q = veh_q.where(Vehicle.id == vehicle_id)
+    veh_rows = (await db.execute(veh_q)).all()
+    vehicles: dict[int, str] = {r[0]: r[1] for r in veh_rows}
+
+    # ── 2. Revenue per vehicle via Reconciliation → WorkOrder.vehicle_id ────
+    # MATCHED TripOrders whose reconciliation links a WorkOrder with a known vehicle_id.
+    recon_rows = (await db.execute(
+        select(
+            Reconciliation.trip_order_id,
+            WorkOrder.vehicle_id,
+        )
+        .join(WorkOrder, WorkOrder.id == Reconciliation.work_order_id)
+        .where(
+            Reconciliation.is_active == True,  # noqa: E712
+            WorkOrder.vehicle_id.in_(list(vehicles.keys())),
+        )
+    )).all()
+
+    # trip_order_id → vehicle_id (one WO per recon)
+    to_vehicle: dict[int, int] = {r[0]: r[1] for r in recon_rows if r[1]}
+
+    # Fetch matched TOs in period
+    to_rows = (await db.execute(
+        select(TripOrder.id, TripOrder.unit_price)
+        .where(
+            TripOrder.status == "MATCHED",
+            TripOrder.trip_date >= df,
+            TripOrder.trip_date <= dt,
+            TripOrder.id.in_(list(to_vehicle.keys())),
+        )
+    )).all()
+
+    revenue_by_vehicle: dict[int, int] = {}
+    for to_id, unit_price in to_rows:
+        vid = to_vehicle.get(to_id)
+        if vid:
+            revenue_by_vehicle[vid] = revenue_by_vehicle.get(vid, 0) + int(unit_price or 0)
+
+    # ── 3. CP Lương sản lượng per vehicle ───────────────────────────────────
+    wo_salary_rows = (await db.execute(
+        select(
+            WorkOrder.vehicle_id,
+            func.coalesce(func.sum(WorkOrder.driver_salary), 0),
+            func.coalesce(func.sum(WorkOrder.allowance), 0),
+        )
+        .where(
+            WorkOrder.status == "MATCHED",
+            WorkOrder.vehicle_id.in_(list(vehicles.keys())),
+            func.coalesce(WorkOrder.trip_date, func.date(WorkOrder.created_at)) >= df,
+            func.coalesce(WorkOrder.trip_date, func.date(WorkOrder.created_at)) <= dt,
+        )
+        .group_by(WorkOrder.vehicle_id)
+    )).all()
+
+    salary_by_vehicle: dict[int, int] = {}
+    for vid, sal, allow in wo_salary_rows:
+        if vid:
+            salary_by_vehicle[vid] = int(sal or 0) + int(allow or 0)
+
+    # ── 4. CP Xe (vehicle expenses) per vehicle ──────────────────────────────
+    expense_rows = (await db.execute(
+        select(
+            VehicleExpense.vehicle_id,
+            VehicleExpense.category,
+            func.coalesce(func.sum(VehicleExpense.amount), 0),
+        )
+        .where(
+            VehicleExpense.expense_date >= df,
+            VehicleExpense.expense_date <= dt,
+            VehicleExpense.category.in_(["XANG_DAU", "SUA_CHUA", "KHAC", "CHUNG"]),
+        )
+        .group_by(VehicleExpense.vehicle_id, VehicleExpense.category)
+    )).all()
+
+    cp_xe_by_vehicle: dict[int, dict[str, int]] = {}
+    cp_chung_total = 0
+    for vid, cat, total_amt in expense_rows:
+        amt = int(total_amt or 0)
+        if cat == "CHUNG":
+            cp_chung_total += amt
+        elif vid and vid in vehicles:
+            slot = cp_xe_by_vehicle.setdefault(vid, {"XANG_DAU": 0, "SUA_CHUA": 0, "KHAC": 0})
+            slot[cat] = slot.get(cat, 0) + amt
+
+    # ── 5. CP Lương cơ bản: drivers attached to each vehicle via vehicle_drivers
+    vd_rows = (await db.execute(
+        select(VehicleDriver.vehicle_id, VehicleDriver.driver_id)
+        .where(
+            VehicleDriver.vehicle_id.in_(list(vehicles.keys())),
+            VehicleDriver.is_active == True,  # noqa: E712
+            VehicleDriver.effective_from <= dt,
+        )
+    )).all()
+
+    vehicle_driver_map: dict[int, list[int]] = {}
+    for vid, did in vd_rows:
+        vehicle_driver_map.setdefault(vid, []).append(did)
+
+    all_driver_ids = list({d for drivers in vehicle_driver_map.values() for d in drivers})
+    base_salary_repo = SqlDriverSalaryConfigRepository(db)
+    history_by_driver = await base_salary_repo.list_history_for_drivers(all_driver_ids) if all_driver_ids else {}
+
+    base_salary_by_vehicle: dict[int, int] = {}
+    for vid, driver_ids in vehicle_driver_map.items():
+        total_base = sum(
+            effective_base_salary(history_by_driver.get(did, []), dt)
+            for did in driver_ids
+        )
+        base_salary_by_vehicle[vid] = total_base
+
+    # ── 6. Assemble rows ─────────────────────────────────────────────────────
+    rows: list[VehiclePnLRow] = []
+    total_revenue = 0
+    sum_row_profits = 0
+
+    for vid, plate in sorted(vehicles.items(), key=lambda x: x[1]):
+        rev = revenue_by_vehicle.get(vid, 0)
+        sal = salary_by_vehicle.get(vid, 0)
+        base = base_salary_by_vehicle.get(vid, 0)
+        xe_cats = cp_xe_by_vehicle.get(vid, {})
+        xe_summary = VehicleExpenseSummary(
+            xang_dau=xe_cats.get("XANG_DAU", 0),
+            sua_chua=xe_cats.get("SUA_CHUA", 0),
+            khac=xe_cats.get("KHAC", 0),
+            total=xe_cats.get("XANG_DAU", 0) + xe_cats.get("SUA_CHUA", 0) + xe_cats.get("KHAC", 0),
+        )
+        loi_nhuan = rev - (xe_summary.total + sal + base)
+        rows.append(VehiclePnLRow(
+            vehicle_id=vid,
+            plate=plate,
+            revenue=rev,
+            cp_xe=xe_summary,
+            cp_luong_san_luong=sal,
+            cp_luong_co_ban=base,
+            loi_nhuan=loi_nhuan,
+        ))
+        total_revenue += rev
+        sum_row_profits += loi_nhuan
+
+    total_profit = sum_row_profits - cp_chung_total
+
+    return VehiclePnLResponse(
+        date_from=df,
+        date_to=dt,
+        rows=rows,
+        cp_chung=cp_chung_total,
+        total_revenue=total_revenue,
+        total_profit=total_profit,
     )
 
 

@@ -833,6 +833,74 @@ class ContainerOCRResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# VehicleExpense (CP Xe)
+# ---------------------------------------------------------------------------
+
+VEHICLE_EXPENSE_CATEGORIES = {"XANG_DAU", "SUA_CHUA", "KHAC", "CHUNG"}
+
+
+class VehicleExpenseCreate(BaseModel):
+    vehicle_id: int | None = None  # null for CHUNG (general overhead)
+    category: str = Field(..., pattern="^(XANG_DAU|SUA_CHUA|KHAC|CHUNG)$")
+    amount: int = Field(..., gt=0, description="Amount in VND")
+    expense_date: date
+    description: str | None = Field(default=None, max_length=500)
+    receipt_url: str | None = Field(default=None, max_length=1000)
+
+
+class VehicleExpenseUpdate(BaseModel):
+    vehicle_id: int | None = None
+    category: str | None = Field(default=None, pattern="^(XANG_DAU|SUA_CHUA|KHAC|CHUNG)$")
+    amount: int | None = Field(default=None, gt=0)
+    expense_date: date | None = None
+    description: str | None = Field(default=None, max_length=500)
+    receipt_url: str | None = Field(default=None, max_length=1000)
+
+
+class VehicleExpenseOut(BaseModel):
+    id: int
+    vehicle_id: int | None
+    vehicle_plate: str | None = None
+    category: str
+    amount: int
+    expense_date: date
+    description: str | None
+    receipt_url: str | None
+    created_by: int | None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# VehicleDriver (multi-driver per vehicle)
+# ---------------------------------------------------------------------------
+
+
+class VehicleDriverCreate(BaseModel):
+    vehicle_id: int
+    driver_id: int
+    role: str = Field(default="PRIMARY", pattern="^(PRIMARY|SECONDARY)$")
+    effective_from: date
+    effective_to: date | None = None
+
+
+class VehicleDriverOut(BaseModel):
+    id: int
+    vehicle_id: int
+    vehicle_plate: str | None = None
+    driver_id: int
+    driver_name: str | None = None
+    role: str
+    effective_from: date
+    effective_to: date | None
+    is_active: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
 # Dashboard
 # ---------------------------------------------------------------------------
 
@@ -852,6 +920,39 @@ class DashboardSummaryOut(BaseModel):
     driver_salary_summary: list[DriverSalarySummaryItem] = []
     unmatched_work_order_count: int = 0
     pending_trip_count: int = 0
+
+
+# ---------------------------------------------------------------------------
+# Per-vehicle P&L
+# ---------------------------------------------------------------------------
+
+
+class VehicleExpenseSummary(BaseModel):
+    """Expense subtotals by category for one vehicle."""
+    xang_dau: int = 0    # Fuel
+    sua_chua: int = 0    # Repairs
+    khac: int = 0        # Other
+    total: int = 0
+
+
+class VehiclePnLRow(BaseModel):
+    """P&L breakdown for a single vehicle in a period."""
+    vehicle_id: int
+    plate: str
+    revenue: int                          # Σ TripOrder.unit_price for matched TOs linked to this vehicle
+    cp_xe: VehicleExpenseSummary          # Vehicle-specific expenses (excl. CHUNG)
+    cp_luong_san_luong: int               # Σ WorkOrder.driver_salary + allowance
+    cp_luong_co_ban: int                  # Base salary for drivers on this vehicle
+    loi_nhuan: int                        # revenue − all costs (excl. CHUNG allocation)
+
+
+class VehiclePnLResponse(BaseModel):
+    date_from: date
+    date_to: date
+    rows: list[VehiclePnLRow]
+    cp_chung: int                         # General overhead total (CHUNG category)
+    total_revenue: int
+    total_profit: int                     # Sum of row profits − cp_chung
 
 
 # ---------------------------------------------------------------------------

@@ -23,3 +23,15 @@ class SalaryStatus(StrEnum):
     OPEN = "OPEN"
     CALCULATED = "CALCULATED"
     PAID = "PAID"
+
+
+class VehicleExpenseCategory(StrEnum):
+    XANG_DAU = "XANG_DAU"   # Fuel
+    SUA_CHUA = "SUA_CHUA"   # Repairs
+    KHAC = "KHAC"           # Other vehicle costs
+    CHUNG = "CHUNG"         # General overhead (not tied to a specific vehicle)
+
+
+class VehicleDriverRole(StrEnum):
+    PRIMARY = "PRIMARY"
+    SECONDARY = "SECONDARY"

@@ -59,8 +59,8 @@ export function RecentTripSuggestions({
               tripId: idx,
               clientId: String(route.partner.id),
               clientName: route.partner.name,
-              pickupLocation,
-              dropoffLocation,
+              pickupLocation: pickup,
+              dropoffLocation: dropoff,
             })}
             className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all active:scale-[0.98] touch-manipulation"
             style={{

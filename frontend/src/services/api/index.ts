@@ -27,6 +27,7 @@ import * as reportsApi from './reports.api'
 import * as importsApi from './imports.api'
 import * as auditApi from './audit.api'
 import * as pnlApi from './pnl.api'
+import * as vehicleExpensesApi from './vehicleExpenses.api'
 import * as reconciliationImportsApi from './reconciliationImports.api'
 
 export const apiClient = {
@@ -122,6 +123,13 @@ export const apiClient = {
 
   // Monthly P&L
   getMonthlyPnL: pnlApi.getMonthlyPnL,
+  getVehiclePnL: pnlApi.getVehiclePnL,
+
+  // Vehicle expenses (CP Xe)
+  listVehicleExpenses: vehicleExpensesApi.listVehicleExpenses,
+  createVehicleExpense: vehicleExpensesApi.createVehicleExpense,
+  updateVehicleExpense: vehicleExpensesApi.updateVehicleExpense,
+  deleteVehicleExpense: vehicleExpensesApi.deleteVehicleExpense,
 
   // Customer reconciliation imports
   previewReconciliationImport: reconciliationImportsApi.previewReconciliationImport,
@@ -179,7 +187,15 @@ export type {
 export type {
   MonthlyPnL,
   PartnerRevenueBreakdown,
+  VehiclePnLRow,
+  VehiclePnLResponse,
+  VehicleExpenseSummary,
 } from './pnl.api'
+export type {
+  VehicleExpense,
+  VehicleExpenseCreate,
+  VehicleExpenseCategory,
+} from './vehicleExpenses.api'
 export type {
   CustomerVerdict,
   ImportStatus,
