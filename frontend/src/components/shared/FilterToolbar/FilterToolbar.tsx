@@ -54,7 +54,6 @@ export function FilterToolbar({
   onDateRangeChange,
   showDateRange = false,
   extraFilters,
-  activeFilterCount = 0,
   extraAction,
 }: FilterToolbarProps) {
   const [dateExpanded, setDateExpanded] = useState(false)

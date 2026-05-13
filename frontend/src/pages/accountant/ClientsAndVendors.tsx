@@ -191,16 +191,15 @@ function FormDialog({ open, onClose, kind, editing }: FormDialogProps) {
     setErrors(prev => { const next = { ...prev }; delete next[field]; return next })
   }, [])
 
-  const validate = (): boolean => {
-    const e: Record<string, string> = {}
-    if (!form.name.trim()) e.name = 'Vui lòng nhập tên'
-    if (form.taxCode && !MST_RE.test(form.taxCode)) e.taxCode = 'MST phải 10 hoặc 13 chữ số'
-    if (form.phone && !PHONE_RE.test(form.phone)) e.phone = 'SĐT không hợp lệ (VD: 0901234567)'
-    setErrors(e)
-    return Object.keys(e).length === 0
-  }
-
   const handleSubmit = useCallback(() => {
+    const validate = (): boolean => {
+      const e: Record<string, string> = {}
+      if (!form.name.trim()) e.name = 'Vui lòng nhập tên'
+      if (form.taxCode && !MST_RE.test(form.taxCode)) e.taxCode = 'MST phải 10 hoặc 13 chữ số'
+      if (form.phone && !PHONE_RE.test(form.phone)) e.phone = 'SĐT không hợp lệ (VD: 0901234567)'
+      setErrors(e)
+      return Object.keys(e).length === 0
+    }
     if (!validate()) return
     const onSuccess = () => {
       toast.success(editing ? `Đã cập nhật ${form.name}` : `Đã thêm ${form.name}`)
@@ -211,7 +210,7 @@ function FormDialog({ open, onClose, kind, editing }: FormDialogProps) {
     } else {
       createPartner.mutate(form as Omit<Partner, 'id'>, { onSuccess })
     }
-  }, [editing, kind, form, createPartner, updatePartner, onClose, toast, validate])
+  }, [editing, form, createPartner, updatePartner, onClose, toast])
 
   const isPending = createPartner.isPending || updatePartner.isPending
   const label = kind === 'client' ? 'khách hàng' : 'nhà thầu'

@@ -164,7 +164,7 @@ class SqlSettlementDataLoader(SettlementDataLoader):
                 plate_by_wo[wo_id] = plate
 
         # Build vessel map from WorkOrders
-        vessel_by_wo: dict[int, str] = {wo_id: (wo.vessel or "") for wo_id, wo in work_orders.items()}
+        vessel_by_wo: dict[int, str] = {wo_id: (wo.vessel or "") for wo_id, wo in work_orders.items()} if wo_ids else {}
 
         plates_by_trip: dict[int, list[str]] = {}
         vessels_by_trip: dict[int, list[str]] = {}

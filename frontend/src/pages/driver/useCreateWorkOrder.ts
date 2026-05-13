@@ -337,7 +337,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
       console.error('Submit failed:', err)
       setSubmitting(false)
     }
-  }, [containers, clientId, pickupLocation, dropoffLocation, locations, user, navigate, isEdit, existingWorkOrder])
+  }, [containers, clientId, vessel, pickupLocation, dropoffLocation, locations, user, navigate, isEdit, existingWorkOrder])
 
   // Summary data for dialog
   const summaryContainers = useMemo(() =>

@@ -50,8 +50,8 @@ export function CreateTrip() {
 
   // Pre-fill from match context when clients/locations are loaded
   const [prefilled, setPrefilled] = useState(false)
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
     if (prefilled || !matchContext) return
     if (clients.length === 0 || locations.length === 0) return
 
@@ -70,6 +70,7 @@ export function CreateTrip() {
     }
 
     setPrefilled(true)
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [matchContext, clients.length, locations.length, prefilled])
 
   // Pricing lookup for auto-populating salary
@@ -87,12 +88,13 @@ export function CreateTrip() {
   const matchedLine = matchedPricing?.lines[0]
 
   const [salaryAutoFilled, setSalaryAutoFilled] = useState(false)
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
     if (!matchedLine || salaryAutoFilled) return
     setDriverSalary(matchedLine.driverSalary ?? 0)
     setAllowance(matchedLine.allowance ?? 0)
     setSalaryAutoFilled(true)
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [matchedLine, salaryAutoFilled])
 
   // Reset auto-fill flag when key fields change

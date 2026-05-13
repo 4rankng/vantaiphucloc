@@ -75,6 +75,12 @@ function UserManagementInner() {
 
   const isMobile = useIsMobile(768)
 
+  // Only superadmin can see superadmin accounts; all other roles are excluded
+  const currentUser = useAuth().user
+  const visibleUsers = currentUser?.role === 'superadmin'
+    ? users
+    : users.filter(u => u.role !== 'superadmin')
+
   const filtered = useMemo(
     () => filterRole === 'ALL' ? visibleUsers : visibleUsers.filter(u => u.role === filterRole),
     [filterRole, visibleUsers],
@@ -189,11 +195,7 @@ function UserManagementInner() {
     }
   }, [deleteId, toast, deleteUser])
 
-  // Only superadmin can see superadmin accounts; all other roles are excluded
-  const currentUser = useAuth().user
-  const visibleUsers = currentUser?.role === 'superadmin'
-    ? users
-    : users.filter(u => u.role !== 'superadmin')
+  // visibleUsers moved before filtered useMemo
   const roleCounts = {
     ALL: visibleUsers.length,
     ...(currentUser?.role === 'superadmin' ? { superadmin: visibleUsers.filter(u => u.role === 'superadmin').length } : {}),
