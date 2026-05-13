@@ -211,7 +211,7 @@ function FormDialog({ open, onClose, kind, editing }: FormDialogProps) {
     } else {
       createPartner.mutate(form as Omit<Partner, 'id'>, { onSuccess })
     }
-  }, [editing, kind, form, createPartner, updatePartner, onClose, toast])
+  }, [editing, kind, form, createPartner, updatePartner, onClose, toast, validate])
 
   const isPending = createPartner.isPending || updatePartner.isPending
   const label = kind === 'client' ? 'khách hàng' : 'nhà thầu'

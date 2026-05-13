@@ -66,12 +66,6 @@ export function FilterToolbar({
     [onStatusChange]
   )
 
-  const hasActiveFilters =
-    search.trim() !== '' ||
-    selectedStatus !== 'ALL' ||
-    (dateRange && (dateRange.from || dateRange.to)) ||
-    activeFilterCount > 0
-
   return (
     <div className="space-y-3">
       {/* Main toolbar row */}

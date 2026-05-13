@@ -55,8 +55,8 @@ export function AutoMatchDialog({ open, onClose, result }: AutoMatchDialogProps)
           onClose()
         }
       },
-      onError: (err: any) => {
-        const msg = err?.message ?? 'Lỗi không xác định'
+      onError: (err: unknown) => {
+        const msg = err instanceof Error ? err.message : 'Lỗi không xác định'
         toast.error('Lỗi', `Không thể xác nhận ghép: ${msg}`)
       },
     })

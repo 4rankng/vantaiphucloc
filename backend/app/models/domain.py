@@ -178,6 +178,7 @@ class WorkOrder(AuditableMixin, Base):
     dropoff_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
     driver_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     vehicle_id = Column(Integer, ForeignKey("vehicles.id"), nullable=True, index=True)
+    vessel = Column(String(100), nullable=True)
     gps_lat = Column(Float, nullable=True)
     gps_lng = Column(Float, nullable=True)
     gps_address = Column(String(500), nullable=True)

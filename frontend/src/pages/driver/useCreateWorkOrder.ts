@@ -60,6 +60,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
     existingWorkOrder ? woToContainers(existingWorkOrder) : [{ ...EMPTY_CONT }],
   )
   const [clientId, setClientId] = useState(existingWorkOrder ? String(existingWorkOrder.partner.id) : '')
+  const [vessel, setVessel] = useState(existingWorkOrder?.vessel ?? '')
   const [pickupLocation, setPickupLocation] = useState(existingWorkOrder?.pickupLocation.name ?? '')
   const [dropoffLocation, setDropoffLocation] = useState(existingWorkOrder?.dropoffLocation.name ?? '')
   const [selectedTripId, setSelectedTripId] = useState<number | null>(null)
@@ -303,6 +304,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
           partnerId: Number(clientId),
           pickupLocationId: pickupId,
           dropoffLocationId: dropoffId,
+          vessel: vessel || null,
         })
       } else {
         const gps = await new Promise<{ lat: number; lng: number }>((resolve) => {
@@ -320,6 +322,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
           pickupLocationId: pickupId,
           dropoffLocationId: dropoffId,
           driverId: Number(user!.id),
+          vessel: vessel || null,
           gpsLat: gps.lat,
           gpsLng: gps.lng,
         })
@@ -356,7 +359,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
     clients, recentOrders,
 
     // Form state
-    containers, clientId, pickupLocation, dropoffLocation,
+    containers, clientId, vessel, pickupLocation, dropoffLocation,
     selectedTripId,
 
     // UI state
@@ -368,6 +371,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
 
     // Actions
     setClientId: (v: string) => { setSelectedTripId(null); setClientId(v) },
+    setVessel,
     setPickupLocation: (v: string) => { setSelectedTripId(null); setPickupLocation(v) },
     setDropoffLocation: (v: string) => { setSelectedTripId(null); setDropoffLocation(v) },
     openScanner, openGallery, handleScanComplete, setScannerOpen,

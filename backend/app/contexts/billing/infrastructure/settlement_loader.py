@@ -163,11 +163,18 @@ class SqlSettlementDataLoader(SettlementDataLoader):
                 plate = vehicle_plate_map.get(wo.vehicle_id, "") if wo.vehicle_id else ""
                 plate_by_wo[wo_id] = plate
 
+        # Build vessel map from WorkOrders
+        vessel_by_wo: dict[int, str] = {wo_id: (wo.vessel or "") for wo_id, wo in work_orders.items()}
+
         plates_by_trip: dict[int, list[str]] = {}
+        vessels_by_trip: dict[int, list[str]] = {}
         for r in join_rows:
             plate = plate_by_wo.get(r.work_order_id, "")
             if plate:
                 plates_by_trip.setdefault(r.trip_order_id, []).append(plate)
+            vessel = vessel_by_wo.get(r.work_order_id, "")
+            if vessel:
+                vessels_by_trip.setdefault(r.trip_order_id, []).append(vessel)
 
         client_code = (partner.code or "").strip() or partner.name
 
@@ -179,6 +186,8 @@ class SqlSettlementDataLoader(SettlementDataLoader):
             prices = _split_unit_price_per_container(trip.unit_price, conts)
             plates = plates_by_trip.get(trip.id, [])
             plate_str = ", ".join(sorted(set(plates))) if plates else ""
+            vessels = vessels_by_trip.get(trip.id, [])
+            vessel_str = ", ".join(sorted(set(vessels))) if vessels else ""
             for c in conts:
                 trip_lines.append(
                     TripLine(
@@ -187,6 +196,7 @@ class SqlSettlementDataLoader(SettlementDataLoader):
                         container_number=c.container_number,
                         work_type=(c.work_type or "").upper(),
                         tractor_plate=plate_str,
+                        vessel=vessel_str,
                         pickup_location=name_by_loc_id.get(
                             trip.pickup_location_id, ""
                         ),

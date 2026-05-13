@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Search, ArrowRight, FileText, Truck, Users, MapPin, Tag, Wallet,
-  Plus, Settings, LayoutDashboard, Calendar, Briefcase, X,
+  Search, ArrowRight, FileText, Users, MapPin, Tag, Wallet,
+  Plus, LayoutDashboard, Briefcase, X,
 } from 'lucide-react'
 
 export interface CommandItem {
@@ -142,7 +142,9 @@ export function CommandPalette({
   // Focus input on open
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setQuery('')
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedIndex(0)
       setTimeout(() => inputRef.current?.focus(), 50)
     }
@@ -150,6 +152,7 @@ export function CommandPalette({
 
   // Reset selection when filtered list changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedIndex(0)
   }, [query])
 
@@ -351,6 +354,7 @@ export function CommandPalette({
 }
 
 // Hook to manage command palette state
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCommandPalette() {
   const [open, setOpen] = useState(false)
 

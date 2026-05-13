@@ -77,7 +77,7 @@ function UserManagementInner() {
 
   const filtered = useMemo(
     () => filterRole === 'ALL' ? visibleUsers : visibleUsers.filter(u => u.role === filterRole),
-    [filterRole, users],
+    [filterRole, visibleUsers],
   )
 
   const columns: Column<UserAccount>[] = useMemo(() => [

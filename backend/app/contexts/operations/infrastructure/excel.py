@@ -685,7 +685,7 @@ async def generate_work_orders_excel(
     ws = wb.active
     ws.title = "Phiếu làm việc"
 
-    headers = ["Mã WO", "Khách hàng", "Điểm lấy", "Điểm trả", "Tài xế", "Biển số", "Số cont", "Loại", "Lương TX", "Phụ cấp", "Thu nhập", "Trạng thái", "Ngày tạo"]
+    headers = ["Mã WO", "Khách hàng", "Điểm lấy", "Điểm trả", "Tài xế", "Biển số", "Số tàu", "Số cont", "Loại", "Lương TX", "Phụ cấp", "Thu nhập", "Trạng thái", "Ngày tạo"]
     ws.append(headers)
 
     header_font = Font(bold=True, color="FFFFFF")
@@ -706,6 +706,7 @@ async def generate_work_orders_excel(
                 loc_name_by_id.get(wo.pickup_location_id, ""),
                 loc_name_by_id.get(wo.dropoff_location_id, ""),
                 driver_name_by_id.get(wo.driver_id, ""), plate,
+                wo.vessel or "",
                 c.container_number, c.work_type,
                 wo.driver_salary, wo.allowance, wo.driver_salary + wo.allowance,
                 status_labels.get(wo.status, wo.status),
@@ -771,6 +772,7 @@ async def generate_trip_orders_excel(
     # For per-partner export: load match status and vehicle plates
     match_map: dict[int, str] = {}  # to_id -> "Đã khớp" / "Chưa khớp"
     plate_map: dict[int, str] = {}  # to_id -> plate
+    vessel_map: dict[int, str] = {}  # to_id -> vessel
     partner_name = None
     if partner_id:
         # Get partner name for filename
@@ -807,9 +809,10 @@ async def generate_trip_orders_excel(
 
             if wo_ids:
                 wo_result = await db.execute(
-                    select(WorkOrder.id, WorkOrder.driver_id).where(WorkOrder.id.in_(wo_ids))
+                    select(WorkOrder.id, WorkOrder.driver_id, WorkOrder.vessel).where(WorkOrder.id.in_(wo_ids))
                 )
                 wo_driver_map = {r[0]: r[1] for r in wo_result.all()}
+                wo_vessel_map = {r[0]: (r[2] or "") for r in wo_result.all()}
                 driver_ids = list(set(wo_driver_map.values()))
 
                 if driver_ids:
@@ -825,13 +828,16 @@ async def generate_trip_orders_excel(
                         driver_id = wo_driver_map.get(wo_id)
                         if driver_id and driver_id in driver_plate_map:
                             plate_map[to_id] = driver_plate_map[driver_id]
+                        vessel = wo_vessel_map.get(wo_id, "")
+                        if vessel:
+                            vessel_map[to_id] = vessel
 
     wb = openpyxl.Workbook()
     ws = wb.active
 
     if partner_id:
         ws.title = "Chuyến theo khách hàng"
-        headers = ["STT", "Số container", "Tuyến đường", "Ngày chạy", "Biển số xe", "Trạng thái khớp", "Đơn giá"]
+        headers = ["STT", "Số container", "Tuyến đường", "Ngày chạy", "Biển số xe", "Số tàu", "Trạng thái khớp", "Đơn giá"]
     else:
         ws.title = "Đơn hàng"
         headers = ["Mã TO", "Ngày chạy", "Khách hàng", "Điểm lấy", "Điểm trả", "Số cont", "Loại", "Đơn giá", "Lương TX", "Phụ cấp", "Trạng thái"]
@@ -864,6 +870,7 @@ async def generate_trip_orders_excel(
                     route,
                     to.trip_date,
                     plate,
+                    vessel_map.get(to.id, ""),
                     match_status,
                     to.unit_price or "",
                 ])
@@ -952,8 +959,9 @@ async def generate_doi_soat_excel(
         loc_result = await db.execute(select(Location).where(Location.id.in_(loc_ids)))
         loc_name_by_id = {l.id: l.name for l in loc_result.scalars().all()}
 
-    # Load vehicle plates via reconciliation -> work_order -> driver -> vehicle
+    # Load vehicle plates and vessels via reconciliation -> work_order -> driver -> vehicle
     plate_map: dict[int, str] = {}  # to_id -> plate
+    vessel_map: dict[int, str] = {}  # to_id -> vessel
     if to_ids:
         recon_result = await db.execute(
             select(Reconciliation.work_order_id, Reconciliation.trip_order_id).where(
@@ -966,9 +974,10 @@ async def generate_doi_soat_excel(
 
         if wo_ids:
             wo_result = await db.execute(
-                select(WorkOrder.id, WorkOrder.driver_id).where(WorkOrder.id.in_(wo_ids))
+                select(WorkOrder.id, WorkOrder.driver_id, WorkOrder.vessel).where(WorkOrder.id.in_(wo_ids))
             )
             wo_driver_map = {r[0]: r[1] for r in wo_result.all()}
+            wo_vessel_map = {r[0]: (r[2] or "") for r in wo_result.all()}
             driver_ids = list(set(wo_driver_map.values()))
 
             if driver_ids:
@@ -984,6 +993,9 @@ async def generate_doi_soat_excel(
                     driver_id = wo_driver_map.get(wo_id)
                     if driver_id and driver_id in driver_plate_map:
                         plate_map[to_id] = driver_plate_map[driver_id]
+                    vessel = wo_vessel_map.get(wo_id, "")
+                    if vessel:
+                        vessel_map[to_id] = vessel
 
     # Build Excel
     wb = openpyxl.Workbook()
@@ -991,7 +1003,7 @@ async def generate_doi_soat_excel(
     # Truncate sheet name to 31 chars (Excel limit)
     ws.title = partner_name[:31]
 
-    headers = ["STT", "Ngày chạy", "Số cont", "Loại", "Điểm lấy", "Điểm trả", "Biển số xe"]
+    headers = ["STT", "Ngày chạy", "Số cont", "Loại", "Điểm lấy", "Điểm trả", "Biển số xe", "Số tàu"]
     ws.append(headers)
 
     header_font = Font(bold=True, color="FFFFFF")
@@ -1019,6 +1031,7 @@ async def generate_doi_soat_excel(
                 pickup,
                 dropoff,
                 plate,
+                vessel_map.get(to.id, ""),
             ])
 
     # Auto-adjust column widths

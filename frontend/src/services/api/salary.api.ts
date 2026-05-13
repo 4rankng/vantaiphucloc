@@ -103,13 +103,13 @@ export async function getJobStatus(jobId: string): Promise<ApiResponse<JobStatus
 export async function getSalaryDashboard(
   periodStart: string,
   periodEnd: string,
-): Promise<ApiResponse<any[]>> {
-  try {
-    const params = new URLSearchParams()
-    params.append('start_date', periodStart)
-    params.append('end_date', periodEnd)
-    const res = await api.get(`/salary/dashboard?${params.toString()}`)
-    return ok(toCamel<any[]>(res.data))
+): Promise<ApiResponse<Record<string, unknown>[]>> {
+    try {
+      const params = new URLSearchParams()
+      params.append('start_date', periodStart)
+      params.append('end_date', periodEnd)
+      const res = await api.get(`/salary/dashboard?${params.toString()}`)
+      return ok(toCamel<Record<string, unknown>[]>(res.data))
   } catch (err) {
     return fail(err)
   }

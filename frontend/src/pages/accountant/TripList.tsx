@@ -360,10 +360,11 @@ export function TripList() {
 
 function DirectorTripView({
   year, month, onPrev, onNext,
-  trips: _trips, loading, filtered, stats, clientOptions,
+  loading, filtered, stats, clientOptions,
   statusFilter, setStatusFilter, clientFilter, setClientFilter,
   search, setSearch, hasFilters, clearFilters, handleExport,
   isMobile, onSelectTrip,
+  trips: _trips,
 }: {
   year: number; month: number; onPrev: () => void; onNext: () => void
   trips: TripOrder[]; loading: boolean; filtered: TripOrder[]

@@ -44,6 +44,7 @@ export function usePolling<T>(
       // eslint-disable-next-line react-hooks/set-state-in-effect
       fetch()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, isOnline])
 
   useEffect(() => {

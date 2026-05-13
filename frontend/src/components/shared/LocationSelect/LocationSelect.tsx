@@ -33,7 +33,7 @@ export function LocationSelect({ value, onChange, placeholder = 'Chọn địa �
     onChange(res.name)
     setCreateOpen(false)
     setNewName('')
-  }, [newName, createLocation, onChange, toast])
+  }, [newName, createLocation, onChange])
 
   const handleCreateNew = useCallback(() => {
     setNewName('')

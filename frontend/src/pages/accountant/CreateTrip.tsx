@@ -50,17 +50,15 @@ export function CreateTrip() {
 
   // Pre-fill from match context when clients/locations are loaded
   const [prefilled, setPrefilled] = useState(false)
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (prefilled || !matchContext) return
     if (clients.length === 0 || locations.length === 0) return
 
     const cId = matchContext.clientId ?? matchContext.client?.id
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (cId) setClientId(String(cId))
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (matchContext.pickupLocation?.name) setPickupLocation(matchContext.pickupLocation.name)
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (matchContext.dropoffLocation?.name) setDropoffLocation(matchContext.dropoffLocation.name)
 
     if (matchContext.containers?.length) {
@@ -89,13 +87,11 @@ export function CreateTrip() {
   const matchedLine = matchedPricing?.lines[0]
 
   const [salaryAutoFilled, setSalaryAutoFilled] = useState(false)
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (!matchedLine || salaryAutoFilled) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDriverSalary(matchedLine.driverSalary ?? 0)
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAllowance(matchedLine.allowance ?? 0)
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSalaryAutoFilled(true)
   }, [matchedLine, salaryAutoFilled])
 

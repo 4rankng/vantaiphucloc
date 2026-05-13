@@ -47,7 +47,7 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
   const cameraRef = useRef<unknown>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [captured, setCaptured] = useState<string | null>(null)
+  const [, setCaptured] = useState<string | null>(null)
   const [finalCropped, setFinalCropped] = useState<string | null>(null)
   const [imageToCrop, setImageToCrop] = useState<string | null>(galleryImage ?? null)
   const [gpsCoords, setGpsCoords] = useState<{ lat: number | null; lng: number | null }>({ lat: null, lng: null })
@@ -66,6 +66,7 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
   // Sync galleryImage prop
   useEffect(() => {
     if (galleryImage) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setImageToCrop(galleryImage)
       setCaptured(null)
       setCrop({ x: 0, y: 0 })
@@ -85,13 +86,13 @@ export function ContainerScanner({ onCapture, onClose, galleryImage }: Container
 
   // ── Flash toggle via MediaStreamTrack ────────────────────────────────────
   const handleFlashToggle = useCallback(() => {
-    const cam = cameraRef.current as any
+    const cam = cameraRef.current as { video?: { srcObject?: MediaStream } } | null
     if (!cam?.video?.srcObject) return
     const track = (cam.video.srcObject as MediaStream).getVideoTracks()[0]
     if (!track) return
     try {
       const constraints = { torch: !flashOn }
-      track.applyConstraints({ advanced: [constraints as any] })
+      track.applyConstraints({ advanced: [constraints as ConstrainBooleanParameters] })
       setFlashOn(!flashOn)
     } catch {
       // Flash not supported on this device

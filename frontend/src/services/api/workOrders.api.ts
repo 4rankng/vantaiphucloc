@@ -27,6 +27,7 @@ export interface WorkOrderCreatePayload {
   pickupLocationId: number
   dropoffLocationId: number
   driverId: number
+  vessel?: string | null
   gpsLat?: number | null
   gpsLng?: number | null
 }
@@ -37,6 +38,7 @@ export interface WorkOrderUpdatePayload {
   pickupLocationId?: number
   dropoffLocationId?: number
   driverId?: number
+  vessel?: string | null
   gpsLat?: number | null
   gpsLng?: number | null
   unitPrice?: number
@@ -107,6 +109,7 @@ export async function createWorkOrder(
         gpsLat: data.gpsLat ?? 0,
         gpsLng: data.gpsLng ?? 0,
         gpsAddress: undefined,
+        vessel: data.vessel ?? undefined,
         unitPrice: 0,
         driverSalary: 0,
         allowance: 0,
