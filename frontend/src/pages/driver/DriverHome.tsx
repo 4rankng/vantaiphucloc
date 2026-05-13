@@ -44,7 +44,8 @@ export function DriverHome() {
   const { data: myEarnings } = useMyEarnings(startISO, endISO)
 
   // Reset visible count when period or filter changes
-  useEffect(() => { setVisibleCount(PAGE_SIZE) }, [periodStart, filter])
+  useEffect(() => { // eslint-disable-next-line react-hooks/set-state-in-effect
+ setVisibleCount(PAGE_SIZE) }, [periodStart, filter])
 
   const handlePrevPeriod = useCallback(() => {
     setPeriodStart(getSalaryPeriodDates(dayBefore(currentPeriod.startDate), { fromDay: config?.fromDay ?? 1, toDay: config?.toDay ?? 31 }).startDate)

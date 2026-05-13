@@ -131,7 +131,7 @@ interface MatchCardProps {
 
 export function MatchCard({
   matchScore, maxScore, criteria, tripOrder,
-  onConfirm: _onConfirm, submitting: _submitting, onEdited,
+  onEdited,
 }: MatchCardProps) {
   const color = scoreColor(matchScore, maxScore)
 

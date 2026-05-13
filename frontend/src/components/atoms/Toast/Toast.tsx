@@ -87,7 +87,6 @@ export function useToast() {
 // Convenience component for adding Toaster to app root.
 // The actual viewport is rendered inside ToastProvider — this is a no-op kept
 // for API compatibility with existing imports.
-// eslint-disable-next-line react-refresh/only-export-components
 export function Toaster() {
   return null
 }

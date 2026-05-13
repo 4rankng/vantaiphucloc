@@ -15,7 +15,6 @@ interface TripDetailCardProps {
 }
 
 export function TripDetailCard({ workOrder, onEdited }: TripDetailCardProps) {
-  const plate = workOrder.driver.vehicle?.plate
 
   if (!onEdited) {
     return <TripDetailCardView workOrder={workOrder} />

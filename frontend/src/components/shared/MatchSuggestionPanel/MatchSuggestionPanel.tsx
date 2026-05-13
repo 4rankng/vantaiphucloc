@@ -1,13 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useUpdateWorkOrder, useUpdateTripOrder, useSuggestMatches } from '@/hooks/use-queries'
-import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
 import { EditDialog } from '@/components/shared/EditDialog'
 import { formatDate } from '@/lib/format'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
 import { resolveRoute } from '@/lib/route-utils'
 import {
-  AlertTriangle, Car, Calendar, Pencil, Truck, CheckCircle2,
+  AlertTriangle, Car, Calendar, Pencil, CheckCircle2,
 } from 'lucide-react'
 import type { WorkOrder, TripOrder } from '@/data/domain'
 

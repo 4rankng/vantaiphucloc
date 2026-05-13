@@ -142,6 +142,7 @@ export function StatusBadgePro({
 }
 
 // Convenience exports for common status mappings
+// eslint-disable-next-line react-refresh/only-export-components
 export const STATUS_LABEL_MAP: Record<string, { variant: StatusVariant; label: string }> = {
   DRAFT: { variant: 'draft', label: 'Nháp' },
   PENDING: { variant: 'pending', label: 'Chờ xử lý' },
@@ -151,6 +152,7 @@ export const STATUS_LABEL_MAP: Record<string, { variant: StatusVariant; label: s
   PROCESSING: { variant: 'processing', label: 'Đang xử lý' },
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function getStatusProps(status: string): { variant: StatusVariant; label: string } {
   return STATUS_LABEL_MAP[status] ?? { variant: 'neutral', label: status }
 }

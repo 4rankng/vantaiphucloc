@@ -1,33 +1,27 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useMatchTrip } from '@/hooks/use-match-trip'
 import { ContBadge } from '@/components/shared/ContBadge'
-import { ConfirmationCheckbox } from '@/components/shared/ConfirmationCheckbox'
 import {
-  Check, ChevronDown, X, Sparkles, ArrowLeft, ArrowUpDown,
-  Truck, FileText, AlertCircle, CheckCircle2, Plus, Pencil,
+  Check, ChevronDown, X, ArrowLeft, ArrowUpDown,
+  Truck, FileText, AlertCircle, CheckCircle2,
 } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { useToast } from '@/components/atoms/Toast'
 import { useIsMobile } from '@/hooks/use-mobile'
-import { useState } from 'react'
 
 export function MatchTrip() {
   const { tripId: tripIdStr } = useParams<{ tripId: string }>()
   const navigate = useNavigate()
   const toast = useToast()
   const isMobile = useIsMobile(1024)
-  const [lowConfConfirm, setLowConfConfirm] = useState(false)
 
   const {
     loading, submitting, pickMode, setPickMode,
-    clientOptions, routeOptions,
     unmatchedJobs, draftTrips,
     selectedJob,
     selectedTrips, selectedTripIds, toggleTripSelection,
     getTripMatchStatus,
     selectedJobId, setSelectedJobId,
-    jobClient, jobRoute, jobConts,
-    setJobClient, setJobRoute, setJobContainers,
     handleMatch,
   } = useMatchTrip(Number(tripIdStr))
 
@@ -35,7 +29,6 @@ export function MatchTrip() {
     try {
       await handleMatch()
       toast.success('Thành công', `Đã ghép ${selectedTripIds.length} đơn hàng thành công`)
-      setLowConfConfirm(false)
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
         ?? (err instanceof Error ? err.message : undefined)

@@ -1,5 +1,5 @@
 import { api } from './client'
-import { toCamel, ok, fail } from './utils'
+import { toCamel } from './utils'
 
 export interface AuditLogEntry {
   id: number

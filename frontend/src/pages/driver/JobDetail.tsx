@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MapPin, Calendar, Truck, Building2, Route as RouteIcon, Camera, X, Pencil } from 'lucide-react'
+import { MapPin, Calendar, Building2, Route as RouteIcon, Camera, X, Pencil } from 'lucide-react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { formatCurrencyFull } from '@/data/domain'

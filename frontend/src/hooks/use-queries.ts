@@ -1,8 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
 import { searchTripOrders } from '@/services/api/tripOrders.api'
-import { api } from '@/services/api/client'
-import type { ApiResponse, Pricing, WorkOrder, TripOrder, WorkType, Partner, SuggestMatchesResponse, SuggestWosResponse, Location, MatchScoresResponse, BulkMatchPair, BulkMatchResponse } from '@/data/domain'
+import type { ApiResponse, Pricing, WorkOrder, TripOrder, WorkType, Partner, BulkMatchPair } from '@/data/domain'
 import type { DriverEarnings } from '@/services/api/salary.api'
 
 /** Reject on failed ApiResponse so React Query onError fires. */
@@ -659,7 +658,6 @@ export function useUpdateSalaryConfig() {
 // ── Auto-match ────────────────────────────────────────────────
 
 export function useAutoMatch() {
-  const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ dateFrom, dateTo }: { dateFrom?: string; dateTo?: string }) =>
       apiClient.autoMatchPreview(dateFrom, dateTo).then(unwrap),

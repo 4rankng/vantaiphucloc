@@ -21,7 +21,6 @@ export function useMatchTrip(initialTripId: number) {
   const { data: clients = [], isLoading: loadingClients } = useClients()
   const { data: routes = [], isLoading: loadingRoutes } = useRoutes()
   const updateWorkOrder = useUpdateWorkOrder()
-  const updateTripOrder = useUpdateTripOrder()
   const batchReconcile = useBatchReconcileForWO()
 
   const loading = loadingWO || loadingTrips || loadingClients || loadingRoutes
