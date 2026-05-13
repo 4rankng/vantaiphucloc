@@ -140,17 +140,11 @@ export function WorkOrderMasterList({
 
             {/* Content */}
             <div className="flex-1 min-w-0">
-              {/* Line 1: plate + date */}
+              {/* Line 1: driver name + plate + date */}
               <div className="flex items-center gap-1.5 mb-0.5">
-                {wo.driver.vehicle?.plate ? (
-                  <span className="text-xs font-mono font-bold" style={{ color: 'var(--theme-brand-primary)' }}>
-                    {wo.driver.vehicle.plate}
-                  </span>
-                ) : (
-                  <span className="text-xs font-bold" style={{ color: 'var(--theme-brand-primary)' }}>
-                    {wo.driver.name || '—'}
-                  </span>
-                )}
+                <span className="text-xs font-bold" style={{ color: 'var(--theme-brand-primary)' }}>
+                  {wo.driver.name}{wo.driver.vehicle?.plate ? ` · ${wo.driver.vehicle.plate}` : ''}
+                </span>
                 <span className="flex items-center gap-0.5 text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
                   <Calendar className="w-3 h-3" />
                   {wo.createdAt ? fmtDate(wo.createdAt) : '—'}

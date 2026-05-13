@@ -51,7 +51,7 @@ function ChuyenCard({
     >
       <div className="flex items-start justify-between gap-1 mb-1">
         <p className="text-sm font-semibold leading-tight truncate" style={{ color: 'var(--theme-text-primary)' }}>
-          {wo.driver.name}
+          {wo.driver.name}{wo.driver.vehicle?.plate ? ` · ${wo.driver.vehicle.plate}` : ''}
         </p>
         <button
           type="button"
@@ -64,15 +64,9 @@ function ChuyenCard({
         </button>
       </div>
       <p className="text-xs truncate mb-1.5" style={{ color: 'var(--theme-text-secondary)' }}>
-        {wo.partner.name} · {resolveRoute(wo)}
+        {resolveRoute(wo)}
       </p>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-        {wo.partner.name && (
-          <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-            <Truck className="h-3 w-3 shrink-0" />
-            {wo.partner.name}
-          </span>
-        )}
         {types && (
           <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
             <Car className="h-3 w-3 shrink-0" />
@@ -138,7 +132,7 @@ function DonHangCard({
     >
       <div className="flex items-start justify-between gap-1 mb-1">
         <p className="text-sm font-semibold leading-tight truncate" style={{ color: 'var(--theme-text-primary)' }}>
-          {trip.code ? `${trip.code} · ` : ''}{trip.partner.name}
+          {trip.partner.name}
         </p>
         <div className="flex items-center gap-1 shrink-0">
           {isHighlighted && matchScore !== undefined && (
