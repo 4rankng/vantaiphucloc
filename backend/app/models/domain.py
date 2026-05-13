@@ -7,7 +7,7 @@ All timestamps use DateTime(timezone=True) so PostgreSQL stores them
 as TIMESTAMP WITH TIME ZONE.
 """
 
-from datetime import datetime, date, timezone
+from datetime import datetime, timezone
 
 from sqlalchemy import (
     Boolean,
@@ -24,11 +24,11 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB
 
-# Use JSONB on Postgres, fall back to JSON on sqlite (used in unit tests).
-JSON_TYPE = JSON().with_variant(JSONB(), "postgresql")
-
 from app.database import Base
 from app.models.mixins import AuditableMixin
+
+# Use JSONB on Postgres, fall back to JSON on sqlite (used in unit tests).
+JSON_TYPE = JSON().with_variant(JSONB(), "postgresql")
 
 
 def _utcnow() -> datetime:

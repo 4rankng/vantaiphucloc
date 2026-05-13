@@ -16,7 +16,7 @@ from datetime import date, datetime
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ---------------------------------------------------------------------------
@@ -541,24 +541,6 @@ class BulkMatchResult(BaseModel):
 class BulkMatchResponse(BaseModel):
     matched: list[BulkMatchResult]
     errors: list[str]
-
-
-# ---------------------------------------------------------------------------
-# Batch match for WO (1 WO → N TripOrders)
-# ---------------------------------------------------------------------------
-
-class BatchMatchForWORequest(BaseModel):
-    work_order_id: int
-    trip_order_ids: list[int]
-
-class BatchMatchForWOResult(BaseModel):
-    trip_order_id: int
-    success: bool
-    error: str | None = None
-
-class BatchMatchForWOResponse(BaseModel):
-    work_order_id: int
-    results: list[BatchMatchForWOResult]
 
 
 # ---------------------------------------------------------------------------

@@ -10,7 +10,7 @@ All tests use the in-memory SQLite test DB from ``conftest.py``.
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date
 
 import pytest
 
