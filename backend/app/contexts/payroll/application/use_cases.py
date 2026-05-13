@@ -9,9 +9,19 @@ from datetime import date
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.contexts.payroll.application.dto import DriverEarningsDTO
-from app.contexts.payroll.domain.repositories import SettingsRepository
-from app.models.domain import WorkOrder
+from app.contexts.payroll.application.dto import (
+    DriverEarningsDTO,
+    DriverSalaryConfigDTO,
+)
+from app.contexts.payroll.domain.base_salary import (
+    DriverSalaryConfig,
+    effective_base_salary,
+)
+from app.contexts.payroll.domain.repositories import (
+    DriverSalaryConfigRepository,
+    SettingsRepository,
+)
+from app.models.domain import TripOrder, TripOrderContainer, WorkOrder
 from app.models.base import User
 
 _logger = logging.getLogger(__name__)
@@ -28,11 +38,18 @@ class GetDriverEarnings:
     """Calculate driver earnings on-the-fly from MATCHED work orders.
 
     Cross-context read: queries WorkOrder rows from Operations and User
-    from Identity directly at the ORM level.
+    from Identity directly at the ORM level. Base salary is layered on
+    top via :class:`DriverSalaryConfigRepository` (latest rate effective
+    at *end_date*).
     """
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        base_salary_repo: DriverSalaryConfigRepository | None = None,
+    ) -> None:
         self.session = session
+        self.base_salary_repo = base_salary_repo
 
     async def __call__(
         self, *, driver_id: int, start_date: date, end_date: date
@@ -68,6 +85,13 @@ class GetDriverEarnings:
             driver_name = user_row[0] or user_row[1]
             driver_phone = user_row[2]
 
+        # Base salary: take the rate effective at end_date. No pro-rating.
+        base_salary = 0
+        if self.base_salary_repo is not None:
+            cfg = await self.base_salary_repo.latest_at_or_before(driver_id, end_date)
+            if cfg is not None:
+                base_salary = cfg.base_salary
+
         return DriverEarningsDTO(
             driver_id=driver_id,
             driver_name=driver_name,
@@ -75,9 +99,10 @@ class GetDriverEarnings:
             start_date=start_date,
             end_date=end_date,
             matched_order_count=matched_order_count,
+            base_salary=base_salary,
             total_salary=total_salary,
             total_allowance=total_allowance,
-            total_earnings=total_salary + total_allowance,
+            total_earnings=base_salary + total_salary + total_allowance,
         )
 
 
@@ -112,3 +137,238 @@ class UpdateSalaryConfig:
         if payload.to_day is not None:
             await self.repo.set("salary_to_day", str(payload.to_day))
         return await self.repo.get_many(SALARY_PREFIX)
+
+
+# ---------------------------------------------------------------------------
+# Base salary use cases
+# ---------------------------------------------------------------------------
+
+
+def _to_dto(cfg: DriverSalaryConfig) -> DriverSalaryConfigDTO:
+    return DriverSalaryConfigDTO(
+        id=cfg.id,
+        driver_id=cfg.driver_id,
+        base_salary=cfg.base_salary,
+        effective_from=cfg.effective_from,
+        note=cfg.note,
+    )
+
+
+class ListDriverBaseSalaryHistory:
+    """Return the append-only history of a driver's base salary rates."""
+
+    def __init__(self, repo: DriverSalaryConfigRepository) -> None:
+        self.repo = repo
+
+    async def __call__(self, *, driver_id: int) -> list[DriverSalaryConfigDTO]:
+        history = await self.repo.list_for_driver(driver_id)
+        return [_to_dto(c) for c in history]
+
+
+@dataclass
+class SetDriverBaseSalaryInput:
+    driver_id: int
+    base_salary: int
+    effective_from: date
+    note: str | None = None
+    created_by: int | None = None
+
+
+class SetDriverBaseSalary:
+    """Add (or update) a base salary entry for a driver.
+
+    Idempotent on ``(driver_id, effective_from)``: re-submitting the same
+    effective date overwrites the existing row's amount and note.
+    """
+
+    def __init__(self, repo: DriverSalaryConfigRepository) -> None:
+        self.repo = repo
+
+    async def __call__(
+        self, payload: SetDriverBaseSalaryInput
+    ) -> DriverSalaryConfigDTO:
+        if payload.base_salary < 0:
+            raise ValueError("base_salary must be non-negative")
+        cfg = await self.repo.add(
+            driver_id=payload.driver_id,
+            base_salary=payload.base_salary,
+            effective_from=payload.effective_from,
+            note=payload.note,
+            created_by=payload.created_by,
+        )
+        return _to_dto(cfg)
+
+
+# ---------------------------------------------------------------------------
+# P&L (Doanh thu & Lãi) dashboard
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class PartnerRevenueBreakdownDTO:
+    partner_id: int
+    partner_name: str
+    matched_trip_count: int
+    revenue: int
+
+
+@dataclass
+class MonthlyPnLDTO:
+    start_date: date
+    end_date: date
+    revenue: int
+    total_productivity_salary: int  # Σ WorkOrder.driver_salary
+    total_allowance: int            # Σ WorkOrder.allowance
+    total_base_salary: int          # Σ effective base salary per driver
+    profit: int                     # revenue − all salary costs
+    matched_trip_count: int
+    partner_breakdown: list[PartnerRevenueBreakdownDTO]
+
+
+class GetMonthlyPnL:
+    """Compute revenue, total wages, and profit for an accounting period.
+
+    Revenue counts every MATCHED ``TripOrder`` whose ``trip_date`` falls
+    within ``[start_date, end_date]``. Each trip contributes
+    ``unit_price × number_of_containers`` to revenue.
+
+    Costs are summed across all WorkOrders matched in the period:
+      * productivity salary (``WorkOrder.driver_salary``)
+      * allowance (``WorkOrder.allowance``)
+      * base salary — for every driver who has any MATCHED WorkOrder in
+        the period, take the rate effective at ``end_date``. Drivers
+        without a base salary configured contribute 0.
+
+    Profit = revenue − (productivity + allowance + base).
+    """
+
+    def __init__(
+        self,
+        session: AsyncSession,
+        base_salary_repo: DriverSalaryConfigRepository,
+    ) -> None:
+        self.session = session
+        self.base_salary_repo = base_salary_repo
+
+    async def __call__(
+        self, *, start_date: date, end_date: date
+    ) -> MonthlyPnLDTO:
+        # ---- Revenue: Σ unit_price × container_count over MATCHED TOs ----
+        # We compute container counts per TO first, then multiply.
+        per_to_rows = (
+            await self.session.execute(
+                select(
+                    TripOrder.id,
+                    TripOrder.partner_id,
+                    TripOrder.unit_price,
+                    func.count(TripOrderContainer.id),
+                )
+                .join(
+                    TripOrderContainer,
+                    TripOrderContainer.trip_order_id == TripOrder.id,
+                    isouter=True,
+                )
+                .where(
+                    TripOrder.status == "MATCHED",
+                    TripOrder.trip_date >= start_date,
+                    TripOrder.trip_date <= end_date,
+                )
+                .group_by(TripOrder.id, TripOrder.partner_id, TripOrder.unit_price)
+            )
+        ).all()
+
+        revenue = 0
+        per_partner: dict[int, dict] = {}
+        for to_id, partner_id, unit_price, container_count in per_to_rows:
+            line = int(unit_price or 0) * int(container_count or 0)
+            revenue += line
+            slot = per_partner.setdefault(
+                partner_id,
+                {"trip_count": 0, "revenue": 0},
+            )
+            slot["trip_count"] += 1
+            slot["revenue"] += line
+
+        matched_trip_count = len(per_to_rows)
+
+        # Resolve partner names for the breakdown.
+        from app.models.domain import Partner  # local import: avoids cycles
+
+        partner_rows = []
+        if per_partner:
+            partner_rows = (
+                await self.session.execute(
+                    select(Partner.id, Partner.name).where(
+                        Partner.id.in_(list(per_partner.keys()))
+                    )
+                )
+            ).all()
+        partner_names = {pid: pname for pid, pname in partner_rows}
+
+        partner_breakdown = [
+            PartnerRevenueBreakdownDTO(
+                partner_id=pid,
+                partner_name=partner_names.get(pid, f"#{pid}"),
+                matched_trip_count=slot["trip_count"],
+                revenue=slot["revenue"],
+            )
+            for pid, slot in sorted(
+                per_partner.items(), key=lambda kv: kv[1]["revenue"], reverse=True
+            )
+        ]
+
+        # ---- Productivity & allowance: Σ over MATCHED WOs in period ----
+        wage_row = (
+            await self.session.execute(
+                select(
+                    func.coalesce(func.sum(WorkOrder.driver_salary), 0),
+                    func.coalesce(func.sum(WorkOrder.allowance), 0),
+                ).where(
+                    WorkOrder.status == "MATCHED",
+                    func.coalesce(WorkOrder.trip_date, func.date(WorkOrder.created_at))
+                    >= start_date,
+                    func.coalesce(WorkOrder.trip_date, func.date(WorkOrder.created_at))
+                    <= end_date,
+                )
+            )
+        ).one()
+        total_productivity = int(wage_row[0] or 0)
+        total_allowance = int(wage_row[1] or 0)
+
+        # ---- Base salary: distinct drivers with MATCHED WOs in period ----
+        driver_id_rows = (
+            await self.session.execute(
+                select(WorkOrder.driver_id)
+                .where(
+                    WorkOrder.status == "MATCHED",
+                    func.coalesce(WorkOrder.trip_date, func.date(WorkOrder.created_at))
+                    >= start_date,
+                    func.coalesce(WorkOrder.trip_date, func.date(WorkOrder.created_at))
+                    <= end_date,
+                )
+                .distinct()
+            )
+        ).scalars().all()
+        driver_ids = [d for d in driver_id_rows if d is not None]
+
+        history_by_driver = await self.base_salary_repo.list_history_for_drivers(
+            driver_ids
+        )
+        total_base_salary = sum(
+            effective_base_salary(history_by_driver.get(did, []), end_date)
+            for did in driver_ids
+        )
+
+        profit = revenue - (total_productivity + total_allowance + total_base_salary)
+
+        return MonthlyPnLDTO(
+            start_date=start_date,
+            end_date=end_date,
+            revenue=revenue,
+            total_productivity_salary=total_productivity,
+            total_allowance=total_allowance,
+            total_base_salary=total_base_salary,
+            profit=profit,
+            matched_trip_count=matched_trip_count,
+            partner_breakdown=partner_breakdown,
+        )

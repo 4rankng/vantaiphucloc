@@ -41,6 +41,8 @@ export const AccountantSettings      = lazy(() => import('@/pages/accountant/Acc
 export const SettingsPricingList     = lazy(() => import('@/pages/accountant/SettingsPricingList').then(m => ({ default: m.SettingsPricingList })))
 export const SettingsPricingDetail   = lazy(() => import('@/pages/accountant/SettingsPricingDetail').then(m => ({ default: m.SettingsPricingDetail })))
 export const LocationAliasManager    = lazy(() => import('@/pages/accountant/LocationAliasManager').then(m => ({ default: m.LocationAliasManager })))
+export const RevenueProfit           = lazy(() => import('@/pages/accountant/RevenueProfit').then(m => ({ default: m.RevenueProfit })))
+export const CustomerReconciliation  = lazy(() => import('@/pages/accountant/CustomerReconciliation').then(m => ({ default: m.CustomerReconciliation })))
 
 
 // ─── Director pages ───────────────────────────────────────────────────────────

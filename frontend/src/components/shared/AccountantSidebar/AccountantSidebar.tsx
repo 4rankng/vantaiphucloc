@@ -9,6 +9,8 @@ import {
   Bell,
   UserCircle,
   ChevronLeft,
+  DollarSign,
+  FileSpreadsheet,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUnreadCount } from '@/components/shared/NotificationPanel/NotificationPanel'
@@ -30,6 +32,8 @@ const ACCOUNTANT_NAV_ITEMS: SidebarItem[] = [
   { label: 'Tổng quan', href: '/accountant', icon: LayoutDashboard },
   { label: 'Đơn hàng', href: '/accountant/trips', icon: FileText },
   { label: 'Ghép chuyến', href: '/accountant/work-orders', icon: Briefcase },
+  { label: 'Doanh thu & Lãi', href: '/accountant/revenue-profit', icon: DollarSign },
+  { label: 'Đối soát KH', href: '/accountant/customer-reconciliation', icon: FileSpreadsheet },
   { label: 'Cài đặt', href: '/accountant/settings', icon: Settings },
 ]
 

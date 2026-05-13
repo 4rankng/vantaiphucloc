@@ -7,11 +7,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contexts.payroll.application import (
     GetDriverEarnings,
+    GetMonthlyPnL,
     GetSalaryConfig,
+    ListDriverBaseSalaryHistory,
+    SetDriverBaseSalary,
     UpdateSalaryConfig,
 )
-from app.contexts.payroll.domain.repositories import SettingsRepository
-from app.contexts.payroll.infrastructure.repositories import SqlSettingsRepository
+from app.contexts.payroll.domain.repositories import (
+    DriverSalaryConfigRepository,
+    SettingsRepository,
+)
+from app.contexts.payroll.infrastructure.repositories import (
+    SqlDriverSalaryConfigRepository,
+    SqlSettingsRepository,
+)
 from app.database import get_db
 
 
@@ -19,6 +28,12 @@ def get_settings_repository(
     db: AsyncSession = Depends(get_db),
 ) -> SettingsRepository:
     return SqlSettingsRepository(db)
+
+
+def get_driver_salary_config_repository(
+    db: AsyncSession = Depends(get_db),
+) -> DriverSalaryConfigRepository:
+    return SqlDriverSalaryConfigRepository(db)
 
 
 def get_get_salary_config(
@@ -35,5 +50,29 @@ def get_update_salary_config(
 
 def get_driver_earnings(
     db: AsyncSession = Depends(get_db),
+    base_salary_repo: DriverSalaryConfigRepository = Depends(
+        get_driver_salary_config_repository
+    ),
 ) -> GetDriverEarnings:
-    return GetDriverEarnings(db)
+    return GetDriverEarnings(db, base_salary_repo=base_salary_repo)
+
+
+def get_list_driver_base_salary_history(
+    repo: DriverSalaryConfigRepository = Depends(get_driver_salary_config_repository),
+) -> ListDriverBaseSalaryHistory:
+    return ListDriverBaseSalaryHistory(repo)
+
+
+def get_set_driver_base_salary(
+    repo: DriverSalaryConfigRepository = Depends(get_driver_salary_config_repository),
+) -> SetDriverBaseSalary:
+    return SetDriverBaseSalary(repo)
+
+
+def get_monthly_pnl(
+    db: AsyncSession = Depends(get_db),
+    base_salary_repo: DriverSalaryConfigRepository = Depends(
+        get_driver_salary_config_repository
+    ),
+) -> GetMonthlyPnL:
+    return GetMonthlyPnL(db, base_salary_repo=base_salary_repo)

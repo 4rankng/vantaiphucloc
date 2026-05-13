@@ -8,9 +8,10 @@ import {
 import { useToast } from '@/components/atoms/Toast'
 import { formatCurrencyFull } from '@/data/domain'
 import { formatDateRange } from '@/lib/format'
-import { Calculator, Download, Wallet } from 'lucide-react'
+import { Calculator, Download, Pencil, Wallet } from 'lucide-react'
 import { SettingsPageLayout } from '@/components/shared/SettingsPageLayout'
 import { getSalaryPeriodDates, toISODate } from '@/utils/salaryPeriod'
+import { DriverBaseSalaryDialog } from '@/components/payroll/DriverBaseSalaryDialog'
 
 // ─── Period config card ───────────────────────────────────────────────────────
 
@@ -208,6 +209,11 @@ function DriverEarningsViewer() {
   }, [config])
 
   const [selectedDriverId, setSelectedDriverId] = useState<string>('')
+  const [baseSalaryDriver, setBaseSalaryDriver] = useState<{
+    id: number
+    name: string | null
+  } | null>(null)
+
   useDriverEarnings(
     Number(selectedDriverId) || 0,
     startDate,
@@ -219,6 +225,7 @@ function DriverEarningsViewer() {
 
   const totals = useMemo(() => ({
     orders: dashboardData.reduce((s, d) => s + d.matchedOrderCount, 0),
+    base: dashboardData.reduce((s, d) => s + (d.baseSalary ?? 0), 0),
     salary: dashboardData.reduce((s, d) => s + d.totalSalary, 0),
     allowance: dashboardData.reduce((s, d) => s + d.totalAllowance, 0),
     earnings: dashboardData.reduce((s, d) => s + d.totalEarnings, 0),
@@ -239,13 +246,17 @@ function DriverEarningsViewer() {
   return (
     <div className="space-y-4">
       {/* Summary totals */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <div className="card p-4">
           <p className="typo-caption">Tổng đơn đã khớp</p>
           <p className="typo-value-lg">{totals.orders}</p>
         </div>
         <div className="card p-4">
-          <p className="typo-caption">Tổng lương</p>
+          <p className="typo-caption">Tổng lương cơ bản</p>
+          <p className="typo-mono text-sm">{formatCurrencyFull(totals.base)}</p>
+        </div>
+        <div className="card p-4">
+          <p className="typo-caption">Tổng lương sản lượng</p>
           <p className="typo-mono text-sm">{formatCurrencyFull(totals.salary)}</p>
         </div>
         <div className="card p-4">
@@ -274,9 +285,11 @@ function DriverEarningsViewer() {
               <tr style={{ background: 'var(--theme-bg-tertiary)' }}>
                 <th className="text-left px-4 py-2.5 text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Tài xế</th>
                 <th className="text-right px-4 py-2.5 text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Đơn</th>
-                <th className="text-right px-4 py-2.5 text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Lương</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Lương cơ bản</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Sản lượng</th>
                 <th className="text-right px-4 py-2.5 text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Phụ cấp</th>
                 <th className="text-right px-4 py-2.5 text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Tổng</th>
+                <th className="w-10 px-2 py-2.5"></th>
               </tr>
             </thead>
             <tbody>
@@ -294,14 +307,29 @@ function DriverEarningsViewer() {
                 >
                   <td className="px-4 py-2.5 font-medium" style={{ color: 'var(--theme-text-primary)' }}>{d.driverName}</td>
                   <td className="px-4 py-2.5 text-right tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{d.matchedOrderCount}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(d.baseSalary ?? 0)}</td>
                   <td className="px-4 py-2.5 text-right tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(d.totalSalary)}</td>
                   <td className="px-4 py-2.5 text-right tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrencyFull(d.totalAllowance)}</td>
                   <td className="px-4 py-2.5 text-right tabular-nums font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>{formatCurrencyFull(d.totalEarnings)}</td>
+                  <td className="px-2 py-2.5 text-center">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setBaseSalaryDriver({ id: d.driverId, name: d.driverName })
+                      }}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-[var(--theme-bg-tertiary)]"
+                      aria-label="Cấu hình lương cơ bản"
+                      title="Cấu hình lương cơ bản"
+                    >
+                      <Pencil className="h-3.5 w-3.5" style={{ color: 'var(--theme-text-muted)' }} />
+                    </button>
+                  </td>
                 </tr>
               ))}
               {dashboardData.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                  <td colSpan={7} className="px-4 py-6 text-center text-xs" style={{ color: 'var(--theme-text-muted)' }}>
                     Chưa có dữ liệu kỳ {formatDateRange(startDate, endDate, 'short')}
                   </td>
                 </tr>
@@ -310,6 +338,13 @@ function DriverEarningsViewer() {
           </table>
         </div>
       )}
+
+      <DriverBaseSalaryDialog
+        open={baseSalaryDriver !== null}
+        onOpenChange={(open) => { if (!open) setBaseSalaryDriver(null) }}
+        driverId={baseSalaryDriver?.id ?? null}
+        driverName={baseSalaryDriver?.name ?? null}
+      />
     </div>
   )
 }
