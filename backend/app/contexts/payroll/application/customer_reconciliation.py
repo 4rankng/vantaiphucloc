@@ -32,6 +32,37 @@ from app.models.domain import (
 
 VALID_STATUSES = {"MATCHED", "REJECTED", "UNKNOWN"}
 
+_VI_TO_EN = {
+    "KHỚP": "MATCHED",
+    "KHÓP": "MATCHED",
+    "TỪ_CHỐI": "REJECTED",
+    "TỪ_CHỐI": "REJECTED",
+    "TỪ CHỐI": "REJECTED",
+    "TỪ CHỐI": "REJECTED",
+    "KHÔNG_RÕ": "UNKNOWN",
+    "KHÔNG RÕ": "UNKNOWN",
+    "KHÔNGRO": "UNKNOWN",
+}
+
+
+def normalize_customer_status(raw: str) -> str:
+    raw = raw.strip().upper()
+    if raw in VALID_STATUSES:
+        return raw
+    mapped = _VI_TO_EN.get(raw)
+    if mapped:
+        return mapped
+    without_spaces = raw.replace(" ", "_")
+    if without_spaces in VALID_STATUSES:
+        return without_spaces
+    mapped = _VI_TO_EN.get(without_spaces)
+    if mapped:
+        return mapped
+    raise ValueError(
+        f"Invalid customer_status {raw!r}; "
+        f"expected one of {sorted(VALID_STATUSES)} or Vietnamese: KHỚP, TỪ_CHỐI, KHÔNG_RÕ"
+    )
+
 
 @dataclass
 class ParsedRow:
@@ -128,11 +159,7 @@ class PreviewCustomerReconciliationImport:
 
     async def __call__(self, payload: PreviewInput) -> ImportDTO:
         for r in payload.rows:
-            if r.customer_status not in VALID_STATUSES:
-                raise ValueError(
-                    f"Invalid customer_status {r.customer_status!r}; "
-                    f"expected one of {sorted(VALID_STATUSES)}"
-                )
+            r.customer_status = normalize_customer_status(r.customer_status)
 
         # Verify partner exists.
         partner = (

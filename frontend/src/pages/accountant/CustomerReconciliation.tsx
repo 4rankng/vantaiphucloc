@@ -104,7 +104,7 @@ export function CustomerReconciliation() {
           >
             Dán mỗi dòng theo format:{' '}
             <code className="text-[11px] px-1 py-0.5 rounded bg-[var(--theme-bg-tertiary)]">
-              container, YYYY-MM-DD, MATCHED|REJECTED|UNKNOWN, ghi chú
+              container, YYYY-MM-DD, KHỚP|TỪ_CHỐI|KHÔNG_RÕ, ghi chú
             </code>
           </p>
           <textarea
@@ -112,7 +112,7 @@ export function CustomerReconciliation() {
             value={r.fields.rawRows}
             onChange={(e) => r.setRawRows(e.target.value)}
             placeholder={
-              'HLBU1234567, 2026-05-10, MATCHED\nABCU0000123, 2026-05-12, REJECTED, Không nhận chuyến'
+              'HLBU1234567, 2026-05-10, KHỚP\nABCU0000123, 2026-05-12, TỪ_CHỐI, Không nhận chuyến'
             }
             rows={6}
             className="w-full rounded-md px-3 py-2 text-sm font-mono"

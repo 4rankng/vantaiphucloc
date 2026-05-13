@@ -21,11 +21,33 @@ import type {
 /**
  * Until the file parser ships, we let the accountant paste rows as
  * tab/comma-separated text (one row per line). Format:
- *   container_number, trip_date (YYYY-MM-DD), MATCHED|REJECTED|UNKNOWN, optional note
+ *   container_number, trip_date (YYYY-MM-DD), KHỚP|TỪ_CHỐI|KHÔNG_RÕ, optional note
  *
+ * Also accepts English: MATCHED|REJECTED|UNKNOWN.
  * This keeps the API surface stable so the Excel parser can plug in later
  * by emitting the same `ParsedRowInput[]` shape.
  */
+
+const VI_STATUS_MAP: Record<string, ParsedRowInput['customerStatus']> = {
+  MATCHED: 'MATCHED',
+  REJECTED: 'REJECTED',
+  UNKNOWN: 'UNKNOWN',
+  KHỚP: 'MATCHED',
+  KHÓP: 'MATCHED',
+  'TỪ_CHỐI': 'REJECTED',
+  'TỪ_CHỐI': 'REJECTED',
+  'TỪ CHỐI': 'REJECTED',
+  'TỪ CHỐI': 'REJECTED',
+  'KHÔNG_RÕ': 'UNKNOWN',
+  'KHÔNG RÕ': 'UNKNOWN',
+  KHÔNGRO: 'UNKNOWN',
+}
+
+function normalizeStatus(raw: string): ParsedRowInput['customerStatus'] | null {
+  const key = raw.trim().toUpperCase().replace(/\s+/g, ' ')
+  return VI_STATUS_MAP[key] ?? VI_STATUS_MAP[key.replace(/ /g, '_')] ?? null
+}
+
 export function parseRowsFromText(raw: string): ParsedRowInput[] {
   const lines = raw
     .split('\n')
@@ -36,12 +58,12 @@ export function parseRowsFromText(raw: string): ParsedRowInput[] {
     const parts = line.split(/[\t,;]/).map((p) => p.trim())
     if (parts.length < 3) continue
     const [container, tripDate, status, ...rest] = parts
-    const normalized = status.toUpperCase()
-    if (!['MATCHED', 'REJECTED', 'UNKNOWN'].includes(normalized)) continue
+    const normalized = normalizeStatus(status)
+    if (!normalized) continue
     rows.push({
       containerNumber: container || null,
       tripDate: tripDate || null,
-      customerStatus: normalized as ParsedRowInput['customerStatus'],
+      customerStatus: normalized,
       customerNote: rest.join(' ').trim() || null,
     })
   }
