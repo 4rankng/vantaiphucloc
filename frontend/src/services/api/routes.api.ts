@@ -8,6 +8,6 @@ export interface RouteCreatePayload { route: string; pickupLocationId: number; d
 export interface RouteUpdatePayload { route?: string; pickupLocationId?: number; dropoffLocationId?: number }
 
 export async function getRoutes(): Promise<ApiResponse<never[]>> { return { data: [], success: true } }
-export async function createRoute(_data: RouteCreatePayload): Promise<ApiResponse<never>> { throw new Error('Routes removed') }
-export async function updateRoute(_id: number | string, _data: RouteUpdatePayload): Promise<ApiResponse<never>> { throw new Error('Routes removed') }
-export async function deleteRoute(_id: number | string): Promise<ApiResponse<{ success: boolean }>> { throw new Error('Routes removed') }
+export async function createRoute(data: RouteCreatePayload): Promise<ApiResponse<never>> { void data; throw new Error('Routes removed') }
+export async function updateRoute(id: number | string, data: RouteUpdatePayload): Promise<ApiResponse<never>> { void id; void data; throw new Error('Routes removed') }
+export async function deleteRoute(id: number | string): Promise<ApiResponse<{ success: boolean }>> { void id; throw new Error('Routes removed') }

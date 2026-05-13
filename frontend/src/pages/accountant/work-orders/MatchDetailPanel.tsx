@@ -187,7 +187,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
   const atCapacity = selectedKeys.size >= containerCapacity && containerCapacity > 0
 
   const { data: suggestionsData, isLoading } = useSuggestMatches(workOrder?.id ?? null)
-  const suggestions = suggestionsData?.suggestions ?? []
+  const suggestions = useMemo(() => suggestionsData?.suggestions ?? [], [suggestionsData])
 
   const [submittingId, setSubmittingId] = useState<number | null>(null)
   const [manualSearchOpen, setManualSearchOpen] = useState(false)
@@ -230,7 +230,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
     const toIds = [...new Set(Array.from(selectedKeys).map(k => Number(k.split('-')[0])))]
     try {
       const res = await batchForWO.mutateAsync({ workOrderId: workOrder.id, tripOrderIds: toIds })
-      const matched = res.matched?.filter((r: any) => r.success).length ?? 0
+      const matched = res.matched?.filter((r: { success: boolean }) => r.success).length ?? 0
       if (matched > 0) {
         toast.success('Thành công', `Đã ghép ${matched} đơn hàng`)
         setSelectedKeys(new Set())

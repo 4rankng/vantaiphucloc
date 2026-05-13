@@ -131,6 +131,7 @@ export interface WorkOrder {
   dropoffLocation: LocationSummary
   driver: DriverSummary
   vehicleId?: number | null
+  vessel?: string | null
   gpsLat: number
   gpsLng: number
   gpsAddress?: string

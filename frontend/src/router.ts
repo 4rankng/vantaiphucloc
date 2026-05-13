@@ -1,6 +1,6 @@
 // Pure .ts — NO JSX. Avoids @vitejs/plugin-react preamble crash.
 import { createElement, Fragment, Suspense, type ComponentType } from 'react'
-import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom' // eslint-disable-line
+import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Login } from '@/pages/Login'
 import { ScrollToTop } from '@/components/shared/ScrollToTop'

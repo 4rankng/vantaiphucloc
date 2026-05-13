@@ -157,6 +157,7 @@ class CreateWorkOrder:
                 dropoff_location_id=data.dropoff_location_id,
                 driver_id=driver_id,
                 vehicle_id=data.vehicle_id,
+                vessel=data.vessel,
                 unit_price=0,
                 driver_salary=0,
                 allowance=0,
@@ -233,6 +234,8 @@ class UpdateWorkOrder:
             w.driver_id = data.driver_id
         if data.vehicle_id is not None:
             w.vehicle_id = data.vehicle_id
+        if data.vessel is not None:
+            w.vessel = data.vessel
         if data.gps_lat is not None:
             w.gps_lat = data.gps_lat
         if data.gps_lng is not None:
@@ -308,6 +311,7 @@ class BatchCreateWorkOrders:
                             dropoff_location_id=item.dropoff_location_id,
                             driver_id=driver_id,
                             vehicle_id=item.vehicle_id,
+                            vessel=item.vessel,
                             unit_price=0, driver_salary=0,
                             allowance=0,
                             gps_lat=item.gps_lat,

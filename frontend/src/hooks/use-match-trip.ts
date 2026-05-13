@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useWorkOrders, useTripOrders, useClients, useRoutes, useUpdateWorkOrder, useUpdateTripOrder, useBatchReconcileForWO } from '@/hooks/use-queries'
+import { useWorkOrders, useTripOrders, useClients, useRoutes, useUpdateWorkOrder, useBatchReconcileForWO } from '@/hooks/use-queries'
 import { type WorkType } from '@/data/domain'
 
 interface EditedTrip {

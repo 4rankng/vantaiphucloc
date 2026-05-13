@@ -3,7 +3,7 @@ import { Button, Input } from '@/components/ui'
 import {
   useSalaryConfig, useUpdateSalaryConfig,
   useCalculateSalary, useExportSalaryExcel,
-  useDriverEarnings, useDrivers, useSalaryDashboard,
+  useDriverEarnings, useSalaryDashboard,
 } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { formatCurrencyFull } from '@/data/domain'

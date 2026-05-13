@@ -43,6 +43,7 @@ class TripLine:
     pickup_location: str
     dropoff_location: str
     unit_price: int
+    vessel: str = ""         # ship/vessel name from WorkOrder
 
 
 @dataclass

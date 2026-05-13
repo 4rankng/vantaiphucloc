@@ -179,7 +179,7 @@ export function LocationAliasManager() {
               onChange={e => {
                 const v = e.target.value
                 if (v === '__new__') {
-                  setSelectedLocationId('__new__' as any)
+                  setSelectedLocationId('__new__' as string)
                 } else {
                   setSelectedLocationId(Number(v) || '')
                   setNewLocationName('')

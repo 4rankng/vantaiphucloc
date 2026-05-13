@@ -302,6 +302,7 @@ class WorkOrderCreate(BaseModel):
     dropoff_location_id: int
     driver_id: int
     vehicle_id: int | None = None
+    vessel: str | None = None
     gps_lat: float | None = None
     gps_lng: float | None = None
     trip_date: date | None = None  # explicit trip execution date; defaults to today if not provided
@@ -314,6 +315,7 @@ class WorkOrderUpdate(BaseModel):
     dropoff_location_id: int | None = None
     driver_id: int | None = None
     vehicle_id: int | None = None
+    vessel: str | None = None
     gps_lat: float | None = None
     gps_lng: float | None = None
     unit_price: int | None = None
@@ -330,6 +332,7 @@ class WorkOrderOut(BaseModel):
     dropoff_location: LocationSummaryOut
     driver: DriverSummaryOut
     vehicle: VehicleSummaryOut | None = None
+    vessel: str | None = None
     gps_lat: float | None
     gps_lng: float | None
     gps_address: str | None

@@ -15,6 +15,7 @@ interface TripSummaryDialogProps {
   onClose: () => void
   containers: Array<{ number: string; type: WorkType }>
   clientName: string
+  vessel?: string
   pickupLocation: string
   dropoffLocation: string
 }
@@ -25,6 +26,7 @@ export function TripSummaryDialog({
   onClose,
   containers,
   clientName,
+  vessel,
   pickupLocation,
   dropoffLocation,
 }: TripSummaryDialogProps) {
@@ -64,6 +66,18 @@ export function TripSummaryDialog({
               {clientName}
             </p>
           </div>
+
+          {/* Vessel */}
+          {vessel && (
+            <div>
+              <p className="text-xs font-semibold mb-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+                Số tàu
+              </p>
+              <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
+                {vessel}
+              </p>
+            </div>
+          )}
 
           {/* Route */}
           <div>

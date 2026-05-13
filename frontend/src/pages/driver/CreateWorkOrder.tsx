@@ -15,12 +15,12 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
   const {
     isEdit,
     clients, recentOrders,
-    containers, clientId, pickupLocation, dropoffLocation,
+    containers, clientId, vessel, pickupLocation, dropoffLocation,
     selectedTripId,
     submitting, scannerOpen, isOnline, summaryOpen, showSuccess,
     forceManualEntry, missingFields, containerErrors, suggestionLoading,
     canSubmit, summaryContainers, summaryClientName,
-    setClientId, setPickupLocation, setDropoffLocation,
+    setClientId, setVessel, setPickupLocation, setDropoffLocation,
     openScanner, handleScanComplete, setScannerOpen,
     updateContainer, addContainer, removeContainer,
     handleRecentTripSelect,
@@ -172,6 +172,22 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
         <Plus className="w-4 h-4" /> Thêm cont
       </button>
 
+      {/* Vessel */}
+      <div className="space-y-1.5">
+        <label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Số tàu</label>
+        <input
+          value={vessel}
+          onChange={e => setVessel(e.target.value)}
+          placeholder="Nhập số tàu"
+          className="w-full h-11 rounded-xl px-3.5 text-sm"
+          style={{
+            background: 'var(--theme-bg-tertiary)',
+            border: '1.5px solid transparent',
+            color: 'var(--theme-text-primary)',
+          }}
+        />
+      </div>
+
       {/* Customer & Route section */}
       <div className="space-y-4">
         <div className="flex items-center gap-3">
@@ -281,6 +297,7 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
         onClose={() => setSummaryOpen(false)}
         containers={summaryContainers}
         clientName={summaryClientName}
+        vessel={vessel}
         pickupLocation={pickupLocation}
         dropoffLocation={dropoffLocation}
       />
