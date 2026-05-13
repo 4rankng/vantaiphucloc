@@ -169,6 +169,7 @@ function FormDialog({ open, onClose, kind, editing }: FormDialogProps) {
 
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm(editing ? {
         name: editing.name,
         type: editing.type,

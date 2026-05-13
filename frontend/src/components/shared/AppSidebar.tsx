@@ -1,9 +1,9 @@
-import { useState, useCallback, useMemo, useRef, useEffect, type ReactNode } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   LogOut, ChevronDown, ChevronUp,
-  Home, Handshake, Route, Plus, Receipt, Settings, Wallet,
-  Users, Truck, TrendingUp, ClipboardList, Clock, FileText,
+  Home, Handshake, Route, Plus, Receipt, Settings,
+  Users, Truck, ClipboardList,
   UserCog, History, Bell as BellIcon,
 } from 'lucide-react'
 import { useSidebar } from '@/components/ui/sidebar'
@@ -133,8 +133,9 @@ const NavGroup = ({ label, groupKey, items, isCollapsed, isExpanded, onToggle, o
   useEffect(() => {
     const el = contentRef.current
     if (!el) return
-    setContentHeight(el.scrollHeight)
-    const ro = new ResizeObserver(() => setContentHeight(el.scrollHeight))
+    const update = () => setContentHeight(el.scrollHeight)
+    update()
+    const ro = new ResizeObserver(update)
     ro.observe(el)
     return () => ro.disconnect()
   }, [isCollapsed, items])

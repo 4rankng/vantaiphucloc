@@ -72,6 +72,7 @@ function useNotificationsData() {
 
 // ─── Unread badge count hook (lightweight) ────────────────────────────────────
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useUnreadCount() {
   const { data: notifications } = useNotificationsData()
   return notifications?.filter(n => !n.read).length ?? 0

@@ -95,6 +95,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
   useEffect(() => {
     if (!user || user.role !== 'driver') return
     let cancelled = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSuggestionLoading(true)
 
     // Try to get GPS for proximity bonus

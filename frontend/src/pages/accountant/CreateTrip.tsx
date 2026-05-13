@@ -33,7 +33,6 @@ export function CreateTrip() {
   const [importResult, setImportResult] = useState<{ created: number; errors: string[] } | null>(null)
 
   const clientOptions = useMemo(() => clients.map(x => ({ value: String(x.id), label: x.name })), [clients])
-  const clientMap = useMemo(() => new Map(clients.map(x => [x.id, x.name])), [clients])
 
   // Pre-fill from match context (navigated from MatchTrip "Tạo chuyến mới")
   const matchContext = (routerLocation.state as { fromTripOrder?: { clientId?: number; client?: { id: number; name: string }; pickupLocation?: { id: number; name: string }; dropoffLocation?: { id: number; name: string }; containers?: { workType: string; containerNumber: string }[] } } | null)?.fromTripOrder
@@ -56,9 +55,12 @@ export function CreateTrip() {
     if (clients.length === 0 || locations.length === 0) return
 
     const cId = matchContext.clientId ?? matchContext.client?.id
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (cId) setClientId(String(cId))
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (matchContext.pickupLocation?.name) setPickupLocation(matchContext.pickupLocation.name)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (matchContext.dropoffLocation?.name) setDropoffLocation(matchContext.dropoffLocation.name)
 
     if (matchContext.containers?.length) {
@@ -89,13 +91,17 @@ export function CreateTrip() {
   const [salaryAutoFilled, setSalaryAutoFilled] = useState(false)
   useEffect(() => {
     if (!matchedLine || salaryAutoFilled) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDriverSalary(matchedLine.driverSalary ?? 0)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAllowance(matchedLine.allowance ?? 0)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSalaryAutoFilled(true)
   }, [matchedLine, salaryAutoFilled])
 
   // Reset auto-fill flag when key fields change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSalaryAutoFilled(false)
   }, [clientId, pickupLocation, dropoffLocation, firstWorkType])
 

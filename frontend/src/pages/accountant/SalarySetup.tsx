@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Button, Input, Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui'
+import { Button, Input } from '@/components/ui'
 import {
   useSalaryConfig, useUpdateSalaryConfig,
   useCalculateSalary, useExportSalaryExcel,
@@ -195,7 +195,6 @@ function CalculateCard() {
 
 function DriverEarningsViewer() {
   const { data: config } = useSalaryConfig()
-  const { data: drivers = [] } = useDrivers()
 
   const { startDate, endDate } = useMemo(() => {
     const now = new Date()
@@ -209,7 +208,7 @@ function DriverEarningsViewer() {
   }, [config])
 
   const [selectedDriverId, setSelectedDriverId] = useState<string>('')
-  const { data: selectedEarnings, isLoading: loadingSelected } = useDriverEarnings(
+  useDriverEarnings(
     Number(selectedDriverId) || 0,
     startDate,
     endDate,

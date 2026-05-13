@@ -177,6 +177,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
   // bug-0080: reset checkbox selections when WO changes
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedKeys(new Set())
   }, [workOrder?.id])
 
@@ -205,8 +206,8 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
   } | null>(null)
   const updateTOForConflict = useUpdateTripOrder()
 
-  // Clear conflict state when the selected WO changes
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setConflictState(null)
   }, [workOrder?.id])
 

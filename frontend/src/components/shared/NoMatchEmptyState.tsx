@@ -40,7 +40,6 @@ export function NoMatchEmptyState({ scanned, reasons, onClose }: NoMatchEmptySta
 
   const topReason = sortedReasons[0]?.code
 
-  const isLocationTop = topReason === 'location_mismatch'
   const isDateTop = topReason === 'date_mismatch'
 
   const enrichedReasons = useMemo(() => sortedReasons, [sortedReasons])

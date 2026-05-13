@@ -1,4 +1,4 @@
-import { Home, Plus, Clock, Bell, User, Users, LayoutDashboard, Truck, CircleDollarSign, Route, Briefcase, FileText, DollarSign, type LucideIcon } from 'lucide-react'
+import { Home, Plus, Clock, Bell, User, Users, LayoutDashboard, Truck, Route, Briefcase, FileText, DollarSign, type LucideIcon } from 'lucide-react'
 
 export interface NavItem {
   path: string

@@ -1,7 +1,7 @@
 import { api } from './client'
 import { toCamel, toSnake, ok, fail, isNetworkError, unwrapList } from './utils'
 import { setCache, getCache } from '@/lib/offline-db'
-import type { Partner, PartnerType, PartnerRole, ApiResponse } from '@/data/domain'
+import type { Partner, PartnerType, ApiResponse } from '@/data/domain'
 
 export async function getPartners(params?: { partnerType?: PartnerType }): Promise<ApiResponse<Partner[]>> {
   try {

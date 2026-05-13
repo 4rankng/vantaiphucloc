@@ -16,7 +16,6 @@ export function SettingsPageLayout({
   title,
   subtitle,
   icon,
-  iconColor,
   actions,
   children,
 }: SettingsPageLayoutProps) {

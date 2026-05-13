@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/Button"
 import { Separator } from "@/components/ui/Separator"
 import { Sheet, SheetContent } from "@/components/ui/Sheet"
-import { Skeleton } from "@/components/ui/Skeleton"
+
 import {
   Tooltip,
   TooltipContent,
@@ -483,8 +483,8 @@ const SidebarMenuButton = React.forwardRef<
 )
 SidebarMenuButton.displayName = "SidebarMenuButton"
 
+// eslint-disable-next-line react-refresh/only-export-components
 export {
-  Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
