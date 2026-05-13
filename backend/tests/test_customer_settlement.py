@@ -247,7 +247,7 @@ async def test_generate_workbook_produces_two_sheets_with_data(db_session):
     sl = wb["SL T4.26"]
     assert sl.cell(row=11, column=4).value == "HACU1234567"
     assert sl.cell(row=11, column=5).value == 1
-    assert sl.cell(row=11, column=13).value == 654_871
+    assert sl.cell(row=11, column=14).value == 654_871
 
     bktt = wb["BKTT T4.26"]
     assert bktt.cell(row=11, column=2).value == "PAN HA"
