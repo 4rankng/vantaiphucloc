@@ -71,24 +71,24 @@ def test_trip_cancel_sets_status() -> None:
 
 def test_trip_add_container_enforces_same_work_type() -> None:
     t = _make_trip()
-    t.add_container(container_number="ABCD0000001", work_type="F20")
+    t.add_container(container_number="ABCU0000017", work_type="F20")
     with pytest.raises(ValueError):
-        t.add_container(container_number="ABCD0000002", work_type="F40")
+        t.add_container(container_number="ABCU0000022", work_type="F40")
 
 
 def test_trip_add_container_enforces_quantity_rules() -> None:
     t = _make_trip()
     # F40 → max 1
-    t.add_container(container_number="ABCD0000001", work_type="F40")
+    t.add_container(container_number="ABCU0000017", work_type="F40")
     with pytest.raises(ContainerCountInvalid):
-        t.add_container(container_number="ABCD0000002", work_type="F40")
+        t.add_container(container_number="ABCU0000022", work_type="F40")
 
     # F20 → max 2
     t2 = _make_trip(id_=2)
-    t2.add_container(container_number="EFGH0000001", work_type="F20")
-    t2.add_container(container_number="EFGH0000002", work_type="F20")
+    t2.add_container(container_number="EFGH0000011", work_type="F20")
+    t2.add_container(container_number="EFGH0000027", work_type="F20")
     with pytest.raises(ContainerCountInvalid):
-        t2.add_container(container_number="EFGH0000003", work_type="F20")
+        t2.add_container(container_number="EFGH0000032", work_type="F20")
 
 
 def test_trip_apply_pricing_snapshot() -> None:
