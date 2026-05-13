@@ -666,9 +666,101 @@ class DriverEarningsOut(BaseModel):
     start_date: date
     end_date: date
     matched_order_count: int
+    base_salary: int = 0
     total_salary: int
     total_allowance: int
     total_earnings: int
+
+
+# ---------------------------------------------------------------------------
+# Driver base salary history (append-only)
+# ---------------------------------------------------------------------------
+
+class DriverBaseSalaryOut(BaseModel):
+    id: int
+    driver_id: int
+    base_salary: int
+    effective_from: date
+    note: str | None = None
+
+
+class DriverBaseSalarySet(BaseModel):
+    base_salary: int = Field(..., ge=0)
+    effective_from: date
+    note: str | None = Field(default=None, max_length=500)
+
+
+# ---------------------------------------------------------------------------
+# P&L dashboard (revenue & profit per accounting period)
+# ---------------------------------------------------------------------------
+
+class PartnerRevenueBreakdownOut(BaseModel):
+    partner_id: int
+    partner_name: str
+    matched_trip_count: int
+    revenue: int
+
+
+class MonthlyPnLOut(BaseModel):
+    start_date: date
+    end_date: date
+    revenue: int
+    total_productivity_salary: int
+    total_allowance: int
+    total_base_salary: int
+    profit: int
+    matched_trip_count: int
+    partner_breakdown: list[PartnerRevenueBreakdownOut]
+
+
+# ---------------------------------------------------------------------------
+# Customer reconciliation import (file đối soát do KH gửi lại)
+# ---------------------------------------------------------------------------
+
+class CustomerReconciliationRowInput(BaseModel):
+    """One parsed row from a customer's reconciliation file.
+
+    The frontend (or a future Excel parser) is responsible for producing
+    this shape. The backend treats it as authoritative parsed output.
+    """
+
+    container_number: str | None = Field(default=None, max_length=50)
+    trip_date: date | None = None
+    customer_status: str = Field(..., pattern="^(MATCHED|REJECTED|UNKNOWN)$")
+    customer_note: str | None = Field(default=None, max_length=500)
+
+
+class CustomerReconciliationPreviewRequest(BaseModel):
+    partner_id: int
+    period_start: date
+    period_end: date
+    source_filename: str | None = Field(default=None, max_length=500)
+    rows: list[CustomerReconciliationRowInput]
+
+
+class CustomerReconciliationRowOut(BaseModel):
+    id: int
+    container_number: str | None = None
+    trip_date: date | None = None
+    customer_status: str
+    customer_note: str | None = None
+    resolved_trip_order_id: int | None = None
+    apply_status: str
+    apply_message: str | None = None
+
+
+class CustomerReconciliationImportOut(BaseModel):
+    id: int
+    partner_id: int
+    partner_name: str | None = None
+    period_start: date
+    period_end: date
+    source_filename: str | None = None
+    status: str  # PARSED | APPLIED
+    summary: dict | None = None
+    uploaded_at: datetime
+    applied_at: datetime | None = None
+    rows: list[CustomerReconciliationRowOut] = []
 
 
 # ---------------------------------------------------------------------------

@@ -62,6 +62,13 @@ export const queryKeys = {
   suggestMatches: (woId: number) => ['suggest-matches', woId] as const,
   suggestWos: (toId: number) => ['suggest-wos', toId] as const,
   matchScores: (dateFrom?: string, dateTo?: string) => ['match-scores', dateFrom, dateTo] as const,
+  driverBaseSalary: (driverId: number) => ['driver-base-salary', driverId] as const,
+  monthlyPnL: (startDate: string, endDate: string) =>
+    ['monthly-pnl', startDate, endDate] as const,
+  reconciliationImports: (partnerId?: number) =>
+    ['reconciliation-imports', partnerId ?? 'all'] as const,
+  reconciliationImport: (id: number) =>
+    ['reconciliation-imports', id] as const,
 }
 
 // ─── Query hooks (GET) ───────────────────────────────────────────────────────
@@ -730,5 +737,104 @@ export function useSearchTripOrders(q: string, workOrderId: number | null) {
       return res.success ? res.data : null
     },
     enabled: !!workOrderId && q.trim().length >= 2,
+  })
+}
+
+// ── Driver base salary ────────────────────────────────────────────────────
+
+export function useDriverBaseSalaryHistory(driverId: number | null | undefined) {
+  return useQuery({
+    queryKey: queryKeys.driverBaseSalary(driverId ?? 0),
+    queryFn: async () => {
+      const res = await apiClient.getDriverBaseSalaryHistory(driverId!)
+      return res.success ? res.data : []
+    },
+    enabled: !!driverId,
+  })
+}
+
+export function useSetDriverBaseSalary() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      driverId,
+      baseSalary,
+      effectiveFrom,
+      note,
+    }: {
+      driverId: number
+      baseSalary: number
+      effectiveFrom: string
+      note?: string | null
+    }) =>
+      apiClient
+        .setDriverBaseSalary(driverId, { baseSalary, effectiveFrom, note })
+        .then(unwrap),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: queryKeys.driverBaseSalary(vars.driverId) })
+      qc.invalidateQueries({ queryKey: ['driver-earnings'] })
+      qc.invalidateQueries({ queryKey: ['salary-dashboard'] })
+      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
+    },
+  })
+}
+
+// ── Monthly P&L ───────────────────────────────────────────────────────────
+
+export function useMonthlyPnL(startDate: string, endDate: string) {
+  return useQuery({
+    queryKey: queryKeys.monthlyPnL(startDate, endDate),
+    queryFn: async () => {
+      const res = await apiClient.getMonthlyPnL(startDate, endDate)
+      return res.success ? res.data : null
+    },
+    enabled: !!startDate && !!endDate,
+  })
+}
+
+// ── Customer reconciliation imports ───────────────────────────────────────
+
+export function useReconciliationImports(partnerId?: number) {
+  return useQuery({
+    queryKey: queryKeys.reconciliationImports(partnerId),
+    queryFn: async () => {
+      const res = await apiClient.listReconciliationImports(partnerId)
+      return res.success ? res.data : []
+    },
+  })
+}
+
+export function useReconciliationImport(importId: number | null | undefined) {
+  return useQuery({
+    queryKey: queryKeys.reconciliationImport(importId ?? 0),
+    queryFn: async () => {
+      const res = await apiClient.getReconciliationImport(importId!)
+      return res.success ? res.data : null
+    },
+    enabled: !!importId,
+  })
+}
+
+export function usePreviewReconciliationImport() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (
+      payload: Parameters<typeof apiClient.previewReconciliationImport>[0],
+    ) => apiClient.previewReconciliationImport(payload).then(unwrap),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['reconciliation-imports'] })
+    },
+  })
+}
+
+export function useCommitReconciliationImport() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (importId: number) =>
+      apiClient.commitReconciliationImport(importId).then(unwrap),
+    onSuccess: (_data, importId) => {
+      qc.invalidateQueries({ queryKey: ['reconciliation-imports'] })
+      qc.invalidateQueries({ queryKey: queryKeys.reconciliationImport(importId) })
+    },
   })
 }

@@ -19,9 +19,24 @@ export interface DriverEarnings {
   startDate: string
   endDate: string
   matchedOrderCount: number
+  baseSalary: number
   totalSalary: number
   totalAllowance: number
   totalEarnings: number
+}
+
+export interface DriverBaseSalary {
+  id: number
+  driverId: number
+  baseSalary: number
+  effectiveFrom: string
+  note: string | null
+}
+
+export interface SetDriverBaseSalaryInput {
+  baseSalary: number
+  effectiveFrom: string
+  note?: string | null
 }
 
 export async function getDriverEarnings(
@@ -124,4 +139,35 @@ export async function exportSalaryExcel(
   params.append('end_date', endDate)
   const res = await api.get(`/salary/export?${params.toString()}`, { responseType: 'blob' })
   return res.data
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Driver base salary (append-only history per driver)
+// ───────────────────────────────────────────────────────────────────────────
+
+export async function getDriverBaseSalaryHistory(
+  driverId: number,
+): Promise<ApiResponse<DriverBaseSalary[]>> {
+  try {
+    const res = await api.get(`/salary/drivers/${driverId}/base-salary`)
+    return ok(toCamel<DriverBaseSalary[]>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export async function setDriverBaseSalary(
+  driverId: number,
+  payload: SetDriverBaseSalaryInput,
+): Promise<ApiResponse<DriverBaseSalary>> {
+  try {
+    const res = await api.post(`/salary/drivers/${driverId}/base-salary`, {
+      base_salary: payload.baseSalary,
+      effective_from: payload.effectiveFrom,
+      note: payload.note ?? null,
+    })
+    return ok(toCamel<DriverBaseSalary>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
 }

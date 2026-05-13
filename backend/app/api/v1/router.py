@@ -23,7 +23,11 @@ from app.contexts.operations.interface import (
 )
 from app.contexts.fleet.interface import drivers_router
 from app.contexts.billing.interface import reports_router
-from app.contexts.payroll.interface import salary_config_router, salary_router
+from app.contexts.payroll.interface import (
+    customer_reconciliation_router,
+    salary_config_router,
+    salary_router,
+)
 from app.database import engine
 from app.contexts.platform.interface.routers.dashboard import router as dashboard_router
 from app.contexts.platform.interface.routers.audit import router as audit_router
@@ -44,6 +48,7 @@ router.include_router(trip_orders_router)
 router.include_router(reconcile_router)
 router.include_router(salary_router)
 router.include_router(salary_config_router)
+router.include_router(customer_reconciliation_router)
 router.include_router(drivers_router)
 router.include_router(push_router)
 router.include_router(users_router)

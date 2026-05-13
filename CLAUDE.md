@@ -7,7 +7,53 @@
 
 ## 📋 Project State
 
-### ✅ Recently Completed (2026-05-12) — Tasks 0104–0106
+### ✅ Recently Completed (2026-05-13) — Driver Payroll System (3 features)
+
+Branch: `claude/driver-payroll-system-IPRTN`. Three accountant-facing features delivered together:
+
+**1. Lương cơ bản theo tài xế** — new `driver_salary_configs` table (append-only history of base salary per driver). Migration `007`. Endpoints `GET/POST /salary/drivers/{driver_id}/base-salary`. `GetDriverEarnings` now adds `base_salary` to `total_earnings`, taking the latest rate whose `effective_from <= end_date` (no pro-rating). Idempotent on `(driver_id, effective_from)`.
+
+**2. Doanh thu & Lãi dashboard** — new `GetMonthlyPnL` use case + `GET /salary/pnl`. Revenue = Σ `TripOrder.unit_price × container_count` over MATCHED TOs in period. Cost = Σ productivity salary (`WorkOrder.driver_salary`) + Σ allowance + Σ effective base salary across drivers with MATCHED WOs. Profit = revenue − cost. Partner breakdown sorted by revenue desc. New page `/accountant/revenue-profit`.
+
+**3. Đối soát chuyến KH (scaffolding)** — new tables `customer_reconciliation_imports` + `customer_reconciliation_rows`. Migration `008`. Router prefix `/reconcile/customer-files` with `preview` / `commit` / `list` / `get` endpoints. Resolves rows to `TripOrder` by `(partner_id, container_number, trip_date)`. The actual Excel parser is deferred — the `ParsedRowInput[]` shape is the stable contract any future parser will emit. Frontend accepts CSV-style text paste for now. New page `/accountant/customer-reconciliation`.
+
+**Files (backend, all new or extended):**
+- `alembic/versions/007_driver_salary_config.py`, `008_customer_reconciliation_imports.py`
+- `app/models/domain.py` (+ `DriverSalaryConfig`, `CustomerReconciliationImport`, `CustomerReconciliationRow`)
+- `app/contexts/payroll/domain/base_salary.py` (new)
+- `app/contexts/payroll/domain/repositories.py` (+ `DriverSalaryConfigRepository`)
+- `app/contexts/payroll/infrastructure/{orm.py, repositories.py}` (+ ORM re-export, `SqlDriverSalaryConfigRepository`)
+- `app/contexts/payroll/application/use_cases.py` (+ `ListDriverBaseSalaryHistory`, `SetDriverBaseSalary`, `GetMonthlyPnL`)
+- `app/contexts/payroll/application/customer_reconciliation.py` (new — `PreviewCustomerReconciliationImport`, `CommitCustomerReconciliationImport`, list/get)
+- `app/contexts/payroll/application/dto.py` (+ `DriverSalaryConfigDTO`, `base_salary` on `DriverEarningsDTO`)
+- `app/contexts/payroll/interface/{dependencies.py, dependencies_recon.py}`
+- `app/contexts/payroll/interface/routers/{salary.py, customer_reconciliation.py}`
+- `app/schemas/domain.py` (+ `DriverBaseSalaryOut/Set`, `MonthlyPnLOut`, `PartnerRevenueBreakdownOut`, `CustomerReconciliation*`)
+- `app/api/v1/router.py` (register `customer_reconciliation_router`)
+
+**Files (frontend, all new or extended):**
+- `services/api/salary.api.ts` (+ base salary endpoints, `baseSalary` on `DriverEarnings`)
+- `services/api/pnl.api.ts` (new)
+- `services/api/reconciliationImports.api.ts` (new)
+- `services/api/index.ts` (wire new functions + type re-exports)
+- `hooks/use-queries.ts` (+ `useDriverBaseSalaryHistory`, `useSetDriverBaseSalary`, `useMonthlyPnL`, `useReconciliationImports`, `useReconciliationImport`, `usePreviewReconciliationImport`, `useCommitReconciliationImport`)
+- `components/payroll/{DriverBaseSalaryDialog.tsx, useDriverBaseSalaryForm.ts}` (new component + logic split per .tsx/.ts rule)
+- `pages/accountant/{RevenueProfit.tsx, useRevenueProfit.ts}` (new)
+- `pages/accountant/{CustomerReconciliation.tsx, useCustomerReconciliation.ts}` (new)
+- `pages/accountant/SalarySetup.tsx` (+ base salary column, edit button → dialog)
+- `routes.ts`, `router.ts` (register new lazy routes)
+- `components/shared/AccountantSidebar/AccountantSidebar.tsx` (+ 2 nav items)
+
+**Tests:** new file `tests/test_payroll_driver_system.py` — 12 tests, all pass. Full suite **233 passed, 3 pre-existing failures unchanged** (xlrd missing, container-checksum mismatch — both env/data issues unrelated to this work).
+
+**Design decisions chốt với chủ shop:**
+- Base salary lưu lịch sử (bảng riêng), không pro-rate giữa kỳ — lấy mức effective_from <= end_date mới nhất.
+- Doanh thu = `unit_price × container_count` (mỗi container một đơn vị giá).
+- File đối soát: định dạng cụ thể chưa chốt, nhưng `ParsedRowInput[]` là contract stable cho parser tương lai.
+
+---
+
+### ✅ Previously Completed (2026-05-12) — Tasks 0104–0106
 
 **3 task specs completed:**
 
