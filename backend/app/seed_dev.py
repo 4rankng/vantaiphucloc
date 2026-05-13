@@ -1,24 +1,18 @@
-"""One-shot dev seed: reference data + demo operational data.
+"""Dev seed using real operational data from Phuc Loc's April 2026 Shipside billing.
 
 Usage:
     cd backend && python -m app.seed_dev
 
-Creates:
-  - Users (superadmin, director, accountant, drivers)
-  - Vehicles (tractor plates linked to drivers)
-  - Locations (common VN ports & industrial zones)
-  - Partners (HAIAN, PAN, HAP, NEWWAY as clients; Phuc Loc as vendor)
-  - Pricings + PricingLines (realistic VND rates)
-  - Work orders (40, PENDING or MATCHED)
-  - Trip orders (35, PENDING or MATCHED)
-  - Containers for each order
+Reads ``docs/real-life-data/trips_shipside_t4_26.json`` (414 real container
+trips) and populates every table with production-like data.
 
-Idempotent: clears operational data on re-run, keeps reference data.
+Run ``alembic upgrade head`` first on a fresh database.
 """
 
 import asyncio
-import random
-from datetime import date, timedelta
+import json
+from datetime import date, datetime, timezone
+from pathlib import Path
 
 from sqlalchemy import select, text
 
@@ -29,217 +23,161 @@ from app.models.domain import (
     Partner,
     Pricing,
     PricingLine,
+    Reconciliation,
     Setting,
     TripOrder,
     TripOrderContainer,
     Vehicle,
+    VehicleDriver,
     WorkOrder,
     WorkOrderContainer,
 )
 from app.core.security import hash_password
 
-# ── Reference data ──────────────────────────────────────────────────────
+_REAL_DATA_PATH = (
+    Path(__file__).resolve().parent.parent.parent
+    / "docs" / "real-life-data" / "trips_shipside_t4_26.json"
+)
 
 SEED_USERS = [
-    {"phone": "0000000000", "username": "admin",  "password": "admin123", "role": "superadmin", "full_name": "Super Admin"},
-    {"phone": "0000000001", "username": "giamdoc", "password": "admin123", "role": "director",   "full_name": "Giám Đốc Test"},
-    {"phone": "0000000002", "username": "ketoan",  "password": "admin123", "role": "accountant", "full_name": "Kế Toán Test"},
-    {"phone": "0901234567", "username": "taixe",   "password": "admin123", "role": "driver",
-     "full_name": "Nguyễn Văn Tài"},
-    {"phone": "0902345678", "username": "taixe1",  "password": "admin123", "role": "driver",
-     "full_name": "Trần Minh Đức"},
-    {"phone": "0903456789", "username": "taixe2",  "password": "admin123", "role": "driver",
-     "full_name": "Lê Quang Anh"},
+    {"phone": "0000000000", "username": "admin", "password": "admin123", "role": "superadmin", "full_name": "Super Admin"},
+    {"phone": "0000000001", "username": "giamdoc", "password": "admin123", "role": "director", "full_name": "Giám Đốc Test"},
+    {"phone": "0000000002", "username": "ketoan", "password": "admin123", "role": "accountant", "full_name": "Kế Toán Test"},
 ]
 
-# Vehicle plates linked to drivers by username
-SEED_VEHICLES = [
-    {"plate": "29C-12345", "driver_username": "taixe"},
-    {"plate": "29C-23456", "driver_username": "taixe1"},
-    {"plate": "29C-34567", "driver_username": "taixe2"},
-]
+DRIVER_VEHICLES = {
+    "15C09877": {"full_name": "Nguyễn Văn Tám", "phone": "0901001001"},
+    "15C15033": {"full_name": "Trần Minh Đức", "phone": "0902002002"},
+    "15C17301": {"full_name": "Lê Quang Anh", "phone": "0903003003"},
+    "15C17442": {"full_name": "Phạm Văn Hùng", "phone": "0904004004"},
+    "15C30649": {"full_name": "Hoàng Đức Thắng", "phone": "0905005005"},
+    "15H06892": {"full_name": "Vũ Đình Nam", "phone": "0906006006"},
+    "15H07135": {"full_name": "Đỗ Quang Hải", "phone": "0907007007"},
+    "15H07524": {"full_name": "Bùi Thanh Sơn", "phone": "0908008008"},
+    "15H07644": {"full_name": "Ngô Minh Tuấn", "phone": "0909009009"},
+    "15H07788": {"full_name": "Dương Văn Thành", "phone": "0910101001"},
+    "15H08574": {"full_name": "Lý Hoàng Long", "phone": "0911111002"},
+    "15H12925": {"full_name": "Trịnh Đức Minh", "phone": "0912122003"},
+    "15H15378": {"full_name": "Cao Văn Lượng", "phone": "0913133004"},
+    "15H17403": {"full_name": "Đinh Công Phú", "phone": "0914144005"},
+    "15H17712": {"full_name": "Mai Văn Bình", "phone": "0915155006"},
+    "15H18552": {"full_name": "Tạ Quang Vinh", "phone": "0916166007"},
+    "15H18753": {"full_name": "Chu Đức Anh", "phone": "0917177008"},
+    "15H20645": {"full_name": "Lâm Thanh Tùng", "phone": "0918188009"},
+}
 
-LOCATION_NAMES = [
-    "Cát Lái", "Bình Dương", "Đồng Nai", "Vũng Tàu",
-    "Cái Mép", "Hiệp Phước", "Tân Cảng", "Bình Tân",
-    "Long Bình", "Nhà Bè", "Cần Giuộc", "Tân Tập",
-    "SGN Terminal", "Lotus Terminal", "Gem Terminal",
-    "TCT Terminal", "SSIT", "Tân Thuận",
+SEED_LOCATIONS = [
+    {"name": "HẢI AN", "lat": 20.8515, "lng": 106.7538},
+    {"name": "NHĐV", "lat": 20.8425, "lng": 106.7747},
 ]
 
 SEED_PARTNERS = [
-    # Clients
-    {"code": "HAIAN",  "name": "Công ty TNHH HẢI AN",
-     "partner_type": "client", "partner_role": "shipping_line",
-     "phone": "02838221188", "tax_code": "0302784512",
-     "address": "Lô B, KCN Hiệp Phước, X. Hiệp Phước, H. Nhà Bè, TP.HCM",
-     "contact_person": "Trần Văn Hải"},
-    {"code": "PAN",    "name": "Công ty TNHH PAN HẢI AN",
-     "partner_type": "client", "partner_role": "shipping_line",
-     "phone": "02838256677", "tax_code": "0304749215",
-     "address": "Lô B1, KCN Hiệp Phước, H. Nhà Bè, TP.HCM",
-     "contact_person": "Nguyễn Thị Hồng"},
-    {"code": "HAP",    "name": "Công ty TNHH HAP",
-     "partner_type": "client", "partner_role": "factory",
-     "phone": "02838256789", "tax_code": "0304749216",
-     "address": "Số 6, Đường số 3, KCN Hiệp Phước, H. Nhà Bè, TP.HCM",
-     "contact_person": "Phạm Minh Tuấn"},
-    {"code": "NEWWAY", "name": "Công ty TNHH NEWWAY",
-     "partner_type": "client", "partner_role": "shipping_line",
-     "phone": "02839756888", "tax_code": "0313425678",
-     "address": "282 Nguyễn Văn Linh, Q. 7, TP.HCM",
-     "contact_person": "Võ Đình An"},
-    # Vendor (our company)
-    {"code": "PHUCLOC", "name": "Vận Tải Phúc Lộc",
-     "partner_type": "vendor", "partner_role": "transport",
-     "phone": "02838255555", "tax_code": "0300000001",
-     "address": "KCN Hiệp Phước, H. Nhà Bè, TP.HCM",
-     "contact_person": "Nguyễn Văn Phúc"},
+    {
+        "code": "HAIAN",
+        "name": "CÔNG TY TNHH CẢNG HẢI AN",
+        "partner_type": "client",
+        "partner_role": "shipping_line",
+        "phone": "02253979724",
+        "tax_code": "0201126468",
+        "address": "Tầng 1, Tòa nhà Hải An, Km 2 đường Đình Vũ, P. Đông Hải, TP. Hải Phòng",
+        "contact_person": "Phòng Shipside",
+    },
+    {
+        "code": "PHUCLOC",
+        "name": "CÔNG TY TNHH AMT PHÚC LỘC",
+        "partner_type": "vendor",
+        "partner_role": "transport",
+        "phone": "02253825555",
+        "tax_code": "0201965047",
+        "address": "Số 56B/97 đường Đoàn Kết, Phường Hải An, Thành Phố Hải Phòng",
+        "contact_person": "Nguyễn Văn Phúc",
+    },
 ]
 
-# Realistic VND prices per work_type
-PRICING_DATA = [
-    # work_type, unit_price, driver_salary, allowance
-    ("E20", 550_000,  200_000,  50_000),
-    ("E40", 750_000,  280_000,  70_000),
-    ("F20", 650_000,  250_000,  50_000),
-    ("F40", 900_000,  350_000,  70_000),
-]
-
-# Route pairs — (pickup_index, dropoff_index) into LOCATION_NAMES
-ROUTE_PAIRS = [
-    (0, 1),   # Cát Lái → Bình Dương
-    (0, 2),   # Cát Lái → Đồng Nai
-    (0, 3),   # Cát Lái → Vũng Tàu
-    (0, 4),   # Cát Lái → Cái Mép
-    (0, 5),   # Cát Lái → Hiệp Phước
-    (1, 0),   # Bình Dương → Cát Lái
-    (1, 2),   # Bình Dương → Đồng Nai
-    (2, 0),   # Đồng Nai → Cát Lái
-    (2, 1),   # Đồng Nai → Bình Dương
-    (3, 0),   # Vũng Tàu → Cát Lái
-    (4, 0),   # Cái Mép → Cát Lái
-    (5, 0),   # Hiệp Phước → Cát Lái
-    (6, 1),   # Tân Cảng → Bình Dương
-    (6, 5),   # Tân Cảng → Hiệp Phước
-    (7, 0),   # Bình Tân → Cát Lái
-    (1, 4),   # Bình Dương → Cái Mép
-    (3, 1),   # Vũng Tàu → Bình Dương
-    (0, 7),   # Cát Lái → Bình Tân
-    (6, 2),   # Tân Cảng → Đồng Nai
-    (4, 1),   # Cái Mép → Bình Dương
-]
-
-PLATES = ["29C-12345", "29C-23456", "29C-34567", "29C-45678", "29C-56789"]
-CONTAINER_PREFIXES = ["MSCU", "TCNU", "CMAU", "OOLU", "HLXU", "TGHU", "BMOU", "EISU"]
-WORK_TYPES = ["E20", "E40", "F20", "F40"]
+REAL_PRICING = {
+    ("NHĐV", "HẢI AN", "F20"): {"unit_price": 386100, "driver_salary": 150000, "allowance": 50000},
+    ("NHĐV", "HẢI AN", "F40"): {"unit_price": 448500, "driver_salary": 180000, "allowance": 70000},
+    ("HẢI AN", "NHĐV", "F20"): {"unit_price": 386100, "driver_salary": 150000, "allowance": 50000},
+    ("HẢI AN", "NHĐV", "F40"): {"unit_price": 448500, "driver_salary": 180000, "allowance": 70000},
+}
 
 
-def _rand_container() -> str:
-    return f"{random.choice(CONTAINER_PREFIXES)}{random.randint(1000000, 9999999)}"
-
-
-def _rand_date(days_back: int = 20) -> date:
-    base = date(2026, 5, 10)
-    return base - timedelta(days=random.randint(0, days_back))
+def _load_trips() -> list[dict]:
+    with open(_REAL_DATA_PATH) as f:
+        return json.load(f)
 
 
 async def seed_dev() -> None:
-    random.seed(42)
+    trips = _load_trips()
+    print(f"Loaded {len(trips)} real trips from {_REAL_DATA_PATH.name}")
+
     async with async_session() as db:
-        # ── 1. Users ────────────────────────────────────────────────────
-        print("=== Seeding Users ===")
+        # ── 1. Staff users ──────────────────────────────────────────────
+        print("\n=== Seeding Staff Users ===")
         user_map: dict[str, User] = {}
         for u in SEED_USERS:
             result = await db.execute(select(User).where(User.username == u["username"]))
             existing = result.scalars().first()
             if existing is None:
                 existing = User(
-                    phone=u["phone"],
-                    username=u["username"],
+                    phone=u["phone"], username=u["username"],
                     hashed_password=hash_password(u["password"]),
-                    role=u["role"],
-                    is_active=True,
-                    full_name=u.get("full_name"),
+                    role=u["role"], is_active=True, full_name=u.get("full_name"),
                 )
                 db.add(existing)
                 await db.flush()
                 print(f"  + {u['role']} ({u['username']})")
             else:
-                changed = False
-                if not existing.full_name and u.get("full_name"):
-                    existing.full_name = u["full_name"]
-                    changed = True
-                if u.get("phone") and existing.phone in (None, "", "0000000003"):
-                    existing.phone = u["phone"]
-                    changed = True
-                if changed:
-                    print(f"  ~ updated {u['username']}")
-                else:
-                    print(f"  = {u['username']} exists")
+                print(f"  = {u['username']}")
             user_map[u["username"]] = existing
-        await db.commit()
 
-        # ── 2. Vehicles ────────────────────────────────────────────────
-        print("\n=== Seeding Vehicles ===")
+        # ── 2. Drivers + vehicles ───────────────────────────────────────
+        print("\n=== Seeding Drivers & Vehicles ===")
+        driver_map: dict[str, User] = {}
         vehicle_map: dict[str, Vehicle] = {}
-        for v in SEED_VEHICLES:
-            result = await db.execute(select(Vehicle).where(Vehicle.plate == v["plate"]))
-            existing = result.scalars().first()
-            driver = user_map.get(v["driver_username"])
-            if driver is None:
-                print(f"  ! Driver {v['driver_username']} not found, skipping vehicle {v['plate']}")
-                continue
-            if existing is None:
-                existing = Vehicle(
-                    plate=v["plate"],
-                    driver_id=driver.id,
-                    is_active=True,
-                )
-                db.add(existing)
-                await db.flush()
-                print(f"  + {v['plate']} → {v['driver_username']}")
-            else:
-                print(f"  = {v['plate']}")
-            vehicle_map[v["plate"]] = existing
-        await db.commit()
 
-        # ── 2b. Ensure every driver has a vehicle ────────────────────
-        all_drivers = (await db.execute(
-            text("SELECT id, username FROM users WHERE role = 'driver'")
-        )).fetchall()
-        drivers_with_vehicle = set(v.driver_id for v in (await db.execute(
-            text("SELECT driver_id FROM vehicles WHERE is_active = true")
-        )).fetchall())
-        new_vehicle_count = 0
-        for d in all_drivers:
-            if d.id not in drivers_with_vehicle:
-                plate_prefix = random.choice(["29C", "30C", "37C", "38C", "39C", "50C", "51C", "60C", "61C", "63C", "64C", "65C", "66C", "67C", "68C", "70C", "71C", "72C", "73C", "75C", "76C", "77C", "79C", "80C", "81C"])
-                plate_num = f"{random.randint(100, 999)}.{random.randint(10, 99)}"
-                plate = f"{plate_prefix}-{plate_num}"
-                db.add(Vehicle(plate=plate, driver_id=d.id, is_active=True))
-                drivers_with_vehicle.add(d.id)
-                new_vehicle_count += 1
-        if new_vehicle_count:
-            await db.flush()
-            print(f"  + Created {new_vehicle_count} vehicles for drivers without one")
+        for plate, info in DRIVER_VEHICLES.items():
+            uname = f"driver_{plate.replace('-', '').lower()}"
+            result = await db.execute(select(User).where(User.username == uname))
+            drv = result.scalars().first()
+            if drv is None:
+                drv = User(
+                    phone=info["phone"], username=uname,
+                    hashed_password=hash_password("admin123"),
+                    role="driver", is_active=True, full_name=info["full_name"],
+                )
+                db.add(drv)
+                await db.flush()
+                print(f"  + {info['full_name']} ({plate})")
+            driver_map[plate] = drv
+
+            result = await db.execute(select(Vehicle).where(Vehicle.plate == plate))
+            veh = result.scalars().first()
+            if veh is None:
+                veh = Vehicle(plate=plate, driver_id=drv.id, is_active=True)
+                db.add(veh)
+                await db.flush()
+            vehicle_map[plate] = veh
+
         await db.commit()
 
         # ── 3. Locations ────────────────────────────────────────────────
         print("\n=== Seeding Locations ===")
         loc_map: dict[str, Location] = {}
-        for name in LOCATION_NAMES:
-            result = await db.execute(select(Location).where(Location.name == name))
+        for loc_data in SEED_LOCATIONS:
+            result = await db.execute(select(Location).where(Location.name == loc_data["name"]))
             loc = result.scalars().first()
             if loc is None:
-                loc = Location(name=name, is_active=True, pending_geocode=False,
-                               created_via="dev_seed", location_review_needed=False)
+                loc = Location(
+                    name=loc_data["name"], is_active=True,
+                    lat=loc_data.get("lat"), lng=loc_data.get("lng"),
+                    pending_geocode=False, created_via="real_seed",
+                    location_review_needed=False,
+                )
                 db.add(loc)
                 await db.flush()
-                print(f"  + {name} (id={loc.id})")
-            else:
-                print(f"  = {name} (id={loc.id})")
-            loc_map[name] = loc
+                print(f"  + {loc_data['name']} (id={loc.id})")
+            loc_map[loc_data["name"]] = loc
         await db.commit()
 
         # ── 4. Partners ────────────────────────────────────────────────
@@ -251,413 +189,185 @@ async def seed_dev() -> None:
             if partner is None:
                 partner = Partner(
                     code=p["code"], name=p["name"],
-                    partner_type=p["partner_type"],
-                    partner_role=p.get("partner_role"),
+                    partner_type=p["partner_type"], partner_role=p.get("partner_role"),
                     phone=p["phone"], tax_code=p["tax_code"],
                     address=p["address"], contact_person=p["contact_person"],
                     is_active=True,
                 )
                 db.add(partner)
                 await db.flush()
-                print(f"  + {p['code']} — {p['name']} (id={partner.id})")
-            else:
-                # Backfill missing fields
-                for field in ("phone", "tax_code", "address", "contact_person"):
-                    if p.get(field) and not getattr(partner, field, None):
-                        setattr(partner, field, p[field])
-                print(f"  = {p['code']} (id={partner.id})")
+                print(f"  + {p['code']} — {p['name']}")
             partner_map[p["code"]] = partner
         await db.commit()
 
-        # ── 5. Salary config (Setting table) ────────────────────────────
-        print("\n=== Seeding Salary Config ===")
-        salary_defaults = {
-            "salary_from_day": "21",
-            "salary_to_day": "20",
-        }
-        for key, value in salary_defaults.items():
-            result = await db.execute(
-                select(Setting).where(Setting.key == key)
-            )
-            setting = result.scalars().first()
-            if setting is None:
+        # ── 5. Settings ────────────────────────────────────────────────
+        print("\n=== Seeding Settings ===")
+        for key, value in {"salary_from_day": "21", "salary_to_day": "20"}.items():
+            result = await db.execute(select(Setting).where(Setting.key == key))
+            if result.scalars().first() is None:
                 db.add(Setting(key=key, value=value))
                 print(f"  + {key}={value}")
-            else:
-                print(f"  = {key} exists")
         await db.commit()
 
-        # ── 6. Pricings + PricingLines ─────────────────────────────────
+        # ── 6. Pricings ────────────────────────────────────────────────
         print("\n=== Seeding Pricings ===")
-        pricing_map: dict[tuple[str, int, int, str], Pricing] = {}
-        # Only create pricings for client-type partners
-        client_codes = [p["code"] for p in SEED_PARTNERS if p["partner_type"] == "client"]
+        client = partner_map["HAIAN"]
+        pricing_map: dict[tuple, Pricing] = {}
 
-        for client_code in client_codes:
-            partner = partner_map[client_code]
-            for (pickup_idx, dropoff_idx) in ROUTE_PAIRS:
-                pickup_loc = loc_map[LOCATION_NAMES[pickup_idx]]
-                dropoff_loc = loc_map[LOCATION_NAMES[dropoff_idx]]
-
-                for work_type, unit_price, driver_salary, allowance in PRICING_DATA:
-                    key = (client_code, pickup_loc.id, dropoff_loc.id, work_type)
-                    result = await db.execute(
-                        select(Pricing).where(
-                            Pricing.partner_id == partner.id,
-                            Pricing.work_type == work_type,
-                            Pricing.pickup_location_id == pickup_loc.id,
-                            Pricing.dropoff_location_id == dropoff_loc.id,
-                        )
-                    )
-                    pricing = result.scalars().first()
-                    if pricing is None:
-                        pricing = Pricing(
-                            partner_id=partner.id,
-                            work_type=work_type,
-                            pickup_location_id=pickup_loc.id,
-                            dropoff_location_id=dropoff_loc.id,
-                            is_active=True,
-                        )
-                        db.add(pricing)
-                        await db.flush()
-
-                        db.add(PricingLine(
-                            pricing_id=pricing.id,
-                            quantity=1,
-                            unit_price=unit_price,
-                            driver_salary=driver_salary,
-                            allowance=allowance,
-                        ))
-                        await db.flush()
-                    pricing_map[key] = pricing
-
+        for (pickup_name, dropoff_name, work_type), prices in REAL_PRICING.items():
+            result = await db.execute(
+                select(Pricing).where(
+                    Pricing.partner_id == client.id,
+                    Pricing.work_type == work_type,
+                    Pricing.pickup_location_id == loc_map[pickup_name].id,
+                    Pricing.dropoff_location_id == loc_map[dropoff_name].id,
+                )
+            )
+            pricing = result.scalars().first()
+            if pricing is None:
+                pricing = Pricing(
+                    partner_id=client.id, work_type=work_type,
+                    pickup_location_id=loc_map[pickup_name].id,
+                    dropoff_location_id=loc_map[dropoff_name].id,
+                    is_active=True,
+                )
+                db.add(pricing)
+                await db.flush()
+                db.add(PricingLine(
+                    pricing_id=pricing.id, quantity=1,
+                    unit_price=prices["unit_price"],
+                    driver_salary=prices["driver_salary"],
+                    allowance=prices["allowance"],
+                ))
+                await db.flush()
+                print(f"  + {pickup_name}→{dropoff_name} {work_type}: {prices['unit_price']:,}")
+            pricing_map[(pickup_name, dropoff_name, work_type)] = pricing
         await db.commit()
-        print(f"  Created {len(pricing_map)} pricing entries ({len(client_codes)} clients x {len(ROUTE_PAIRS)} routes x {len(PRICING_DATA)} types)")
 
-        # ── 7. Clear existing operational data ──────────────────────────
-        print("\n=== Clearing existing operational data ===")
-        for table in [
-            "reconciliations",
-            "trip_order_containers", "trip_orders",
-            "work_order_containers", "work_orders",
-        ]:
-            await db.execute(text(f"DELETE FROM {table}"))
+        # ── 7. VehicleDrivers ──────────────────────────────────────────
+        print("\n=== Creating VehicleDriver records ===")
+        for plate, veh in vehicle_map.items():
+            db.add(VehicleDriver(
+                vehicle_id=veh.id, driver_id=driver_map[plate].id,
+                role="PRIMARY", effective_from=date(2026, 1, 1), is_active=True,
+            ))
+        await db.flush()
+        print(f"  Created {len(vehicle_map)} vehicle-driver links")
         await db.commit()
-        print("  Cleared work_orders, trip_orders, reconciliations, and related tables")
 
-        # ── 8. Gather references for operational data ───────────────────
-        drivers = (await db.execute(
-            text("SELECT id FROM users WHERE role = 'driver'")
-        )).scalars().all()
+        # ── 8. WorkOrders from real data ────────────────────────────────
+        print("\n=== Creating WorkOrders ===")
+        ketoan = user_map["ketoan"]
+        all_wos: list[WorkOrder] = []
 
-        vehicles = (await db.execute(
-            text("SELECT id, driver_id FROM vehicles WHERE is_active = true")
-        )).fetchall()
-        vehicle_by_driver: dict[int, int] = {v.driver_id: v.id for v in vehicles}
-
-        # Build a list of (pricing, pricing_line) tuples
-        result = await db.execute(text("""
-            SELECT pr.id, pr.partner_id, pr.work_type,
-                   pr.pickup_location_id, pr.dropoff_location_id,
-                   pl.unit_price, pl.driver_salary, pl.allowance
-            FROM pricings pr
-            JOIN pricing_lines pl ON pr.id = pl.pricing_id
-        """))
-        pricing_rows = result.fetchall()
-
-        # ── 9. Work Orders ─────────────────────────────────────────────
-        print("\n=== Creating Work Orders ===")
-        wo_count = 40
-        # Only use drivers that have a vehicle assigned
-        drivers_with_vehicle = [d for d in drivers if d in vehicle_by_driver]
-        if not drivers_with_vehicle:
-            drivers_with_vehicle = drivers
-        work_orders = []
-        for i in range(wo_count):
-            pr = random.choice(pricing_rows)
-            driver_id = random.choice(drivers_with_vehicle)
-            vehicle_id = vehicle_by_driver[driver_id]
-
-            r = random.random()
-            if r < 0.5:
-                status = "PENDING"
-            else:
-                status = "MATCHED"
+        for idx, trip in enumerate(trips):
+            pickup = trip["pickup"]
+            dropoff = trip["dropoff"]
+            wt = f"F{trip['size']}"
+            plate = trip["plate"]
+            prices = REAL_PRICING.get((pickup, dropoff, wt), {})
+            pricing = pricing_map.get((pickup, dropoff, wt))
+            trip_date = date.fromisoformat(trip["trip_date"]) if trip["trip_date"] else date(2026, 4, 1)
 
             wo = WorkOrder(
-                partner_id=pr.partner_id,
-                code=f"W{1001 + i:06d}",
-                pickup_location_id=pr.pickup_location_id,
-                dropoff_location_id=pr.dropoff_location_id,
-                driver_id=driver_id,
-                vehicle_id=vehicle_id,
-                unit_price=pr.unit_price,
-                driver_salary=pr.driver_salary,
-                allowance=pr.allowance,
-                pricing_id=pr.id,
-                status=status,
+                partner_id=client.id,
+                code=f"W{1001 + idx:06d}",
+                pickup_location_id=loc_map[pickup].id,
+                dropoff_location_id=loc_map[dropoff].id,
+                driver_id=driver_map[plate].id,
+                vehicle_id=vehicle_map[plate].id,
+                vessel=f"{trip.get('vessel', '')} {trip.get('voyage', '')}".strip() or None,
+                unit_price=trip["unit_price"],
+                driver_salary=prices.get("driver_salary", 150000),
+                allowance=prices.get("allowance", 50000),
+                pricing_id=pricing.id if pricing else None,
+                status="MATCHED",
+                trip_date=trip_date,
             )
             db.add(wo)
-            work_orders.append(wo)
+            all_wos.append(wo)
 
         await db.flush()
-        print(f"  Created {wo_count} work orders")
+        print(f"  Created {len(all_wos)} work orders")
 
-        # Work order containers
-        for wo in work_orders:
-            await db.refresh(wo)
-            pr_row = next(p for p in pricing_rows if p.id == wo.pricing_id)
-            for _ in range(random.randint(1, 2)):
-                db.add(WorkOrderContainer(
-                    work_order_id=wo.id,
-                    container_number=_rand_container(),
-                    work_type=pr_row.work_type,
-                ))
+        for i, wo in enumerate(all_wos):
+            db.add(WorkOrderContainer(
+                work_order_id=wo.id,
+                container_number=trips[i]["container"],
+                work_type=f"F{trips[i]['size']}",
+            ))
         await db.flush()
-        print("  Created work order containers")
+        print(f"  Created {len(all_wos)} work order containers")
 
-        # ── 10. Trip Orders ────────────────────────────────────────────
-        print("\n=== Creating Trip Orders ===")
-        to_count = 35
-        trip_orders = []
-        for i in range(to_count):
-            pr = random.choice(pricing_rows)
-            trip_date = _rand_date()
+        # ── 9. TripOrders (client-side mirror) ─────────────────────────
+        print("\n=== Creating TripOrders ===")
+        all_tos: list[TripOrder] = []
 
-            r = random.random()
-            if r < 0.5:
-                status = "PENDING"
-            else:
-                status = "MATCHED"
+        for idx, trip in enumerate(trips):
+            pickup = trip["pickup"]
+            dropoff = trip["dropoff"]
+            wt = f"F{trip['size']}"
+            prices = REAL_PRICING.get((pickup, dropoff, wt), {})
+            pricing = pricing_map.get((pickup, dropoff, wt))
+            trip_date = date.fromisoformat(trip["trip_date"]) if trip["trip_date"] else date(2026, 4, 1)
 
             to = TripOrder(
                 trip_date=trip_date,
-                partner_id=pr.partner_id,
-                code=f"T{2001 + i:06d}",
-                pickup_location_id=pr.pickup_location_id,
-                dropoff_location_id=pr.dropoff_location_id,
-                pricing_id=pr.id,
-                unit_price=pr.unit_price,
-                driver_salary=pr.driver_salary,
-                allowance=pr.allowance,
-                status=status,
+                partner_id=client.id,
+                code=f"T{2001 + idx:06d}",
+                pickup_location_id=loc_map[pickup].id,
+                dropoff_location_id=loc_map[dropoff].id,
+                pricing_id=pricing.id if pricing else None,
+                unit_price=trip["unit_price"],
+                driver_salary=prices.get("driver_salary", 150000),
+                allowance=prices.get("allowance", 50000),
+                status="MATCHED",
+                pickup_raw=pickup, dropoff_raw=dropoff,
+                location_review_needed=False,
             )
             db.add(to)
-            trip_orders.append(to)
+            all_tos.append(to)
 
         await db.flush()
-        print(f"  Created {to_count} trip orders")
+        print(f"  Created {len(all_tos)} trip orders")
 
-        # Trip order containers
-        for to in trip_orders:
-            await db.refresh(to)
-            pr_row = next(p for p in pricing_rows if p.id == to.pricing_id)
-            for _ in range(random.randint(1, 2)):
-                db.add(TripOrderContainer(
-                    trip_order_id=to.id,
-                    container_number=_rand_container(),
-                    work_type=pr_row.work_type,
-                    container_size=pr_row.work_type[1:],
-                    freight_kind=pr_row.work_type[0],
-                ))
+        for idx, to in enumerate(all_tos):
+            db.add(TripOrderContainer(
+                trip_order_id=to.id,
+                container_number=trips[idx]["container"],
+                work_type=f"F{trips[idx]['size']}",
+                container_size=str(trips[idx]["size"]),
+                freight_kind="F",
+            ))
         await db.flush()
-        print("  Created trip order containers")
+        print(f"  Created {len(all_tos)} trip order containers")
 
-        # ── 11. Reconciliation links for MATCHED pairs ───────────────────
-        from app.models.domain import Reconciliation
-        from datetime import datetime, timezone
-
-        print("\n=== Creating Reconciliation Links ===")
-        ketoan_user = user_map["ketoan"]
-        matched_wos = [wo for wo in work_orders if wo.status == "MATCHED"]
-        matched_tos = [to for to in trip_orders if to.status == "MATCHED"]
-        link_count = 0
-
-        # Pair MATCHED WOs with MATCHED TOs that share the same partner
-        for wo in matched_wos:
-            await db.refresh(wo)
-            # Find TOs with same partner
-            candidates = [to for to in matched_tos
-                          if to.partner_id == wo.partner_id
-                          and to.pickup_location_id == wo.pickup_location_id
-                          and to.dropoff_location_id == wo.dropoff_location_id]
-            if candidates:
-                to = candidates[0]
-                matched_tos.remove(to)
-                db.add(Reconciliation(
-                    trip_order_id=to.id,
-                    work_order_id=wo.id,
-                    match_score=1.0,
-                    matched_by=ketoan_user.id,
-                    matched_at=datetime(2026, 5, 5, tzinfo=timezone.utc),
-                    is_active=True,
-                ))
-                link_count += 1
-
+        # ── 10. Reconciliations ────────────────────────────────────────
+        print("\n=== Creating Reconciliations ===")
+        for i in range(len(all_wos)):
+            db.add(Reconciliation(
+                trip_order_id=all_tos[i].id,
+                work_order_id=all_wos[i].id,
+                match_score=1.0,
+                matched_by=ketoan.id,
+                matched_at=datetime(2026, 4, 30, tzinfo=timezone.utc),
+                is_active=True,
+            ))
         await db.flush()
-        print(f"  Created {link_count} reconciliation links")
-
-        # ── 12. Matchable test data (shared containers) ──────────────────
-        print("\n=== Creating Matchable Test Data ===")
-        # Create WOs and TOs that share containers so the match suggester
-        # can find them. Uses the first partner and first route pair.
-        test_partner = partner_map["HAIAN"]
-        test_route = ROUTE_PAIRS[0]  # Cát Lái → Bình Dương
-        pickup_loc = loc_map[LOCATION_NAMES[test_route[0]]]
-        dropoff_loc = loc_map[LOCATION_NAMES[test_route[1]]]
-        test_driver = drivers[0]
-        test_vehicle_id = vehicle_by_driver.get(test_driver)
-
-        # Find pricing for this combination
-        for wt, up, ds, al in PRICING_DATA:
-            if wt == "F20":
-                test_pricing_up, test_pricing_ds, test_pricing_al = up, ds, al
-                break
-
-        test_pricing_key = ("HAIAN", pickup_loc.id, dropoff_loc.id, "F20")
-        test_pricing = pricing_map.get(test_pricing_key)
-        if test_pricing:
-            # Shared containers that WO and TOs will reference
-            shared_containers = ["MSCU1111111", "MSCU2222222", "TCNU3333333"]
-
-            # WO with 2 containers (F20, can hold up to 2)
-            wo_test = WorkOrder(
-                partner_id=test_partner.id,
-                code="W-TEST-01",
-                pickup_location_id=pickup_loc.id,
-                dropoff_location_id=dropoff_loc.id,
-                driver_id=test_driver,
-                vehicle_id=test_vehicle_id,
-                unit_price=test_pricing_up,
-                driver_salary=test_pricing_ds,
-                allowance=test_pricing_al,
-                pricing_id=test_pricing.id,
-                status="PENDING",
-                trip_date=date(2026, 5, 10),
-            )
-            db.add(wo_test)
-            await db.flush()
-            for cont in shared_containers[:2]:
-                db.add(WorkOrderContainer(
-                    work_order_id=wo_test.id,
-                    container_number=cont,
-                    work_type="F20",
-                ))
-            await db.flush()
-            print(f"  + Test WO #{wo_test.id} with containers {shared_containers[:2]}")
-
-            # 3 PENDING TOs: 2 match by container, 1 doesn't
-            for idx, (cont, should_match) in enumerate([
-                ("MSCU1111111", True),
-                ("TCNU3333333", True),
-                ("HLXU9999999", False),
-            ]):
-                to_test = TripOrder(
-                    trip_date=date(2026, 5, 10),
-                    partner_id=test_partner.id,
-                    code=f"T-TEST-0{idx + 1}",
-                    pickup_location_id=pickup_loc.id,
-                    dropoff_location_id=dropoff_loc.id,
-                    pricing_id=test_pricing.id,
-                    unit_price=test_pricing_up,
-                    driver_salary=test_pricing_ds,
-                    allowance=test_pricing_al,
-                    status="PENDING",
-                )
-                db.add(to_test)
-                await db.flush()
-                db.add(TripOrderContainer(
-                    trip_order_id=to_test.id,
-                    container_number=cont,
-                    work_type="F20",
-                    container_size="20",
-                    freight_kind="F",
-                ))
-                await db.flush()
-                label = "MATCH" if should_match else "NO-MATCH"
-                print(f"  + Test TO #{to_test.id} container={cont} ({label})")
-
-            # Extra WO already MATCHED with 2 TOs (multi-match verification)
-            wo_multi = WorkOrder(
-                partner_id=test_partner.id,
-                code="W-MULTI-01",
-                pickup_location_id=pickup_loc.id,
-                dropoff_location_id=dropoff_loc.id,
-                driver_id=test_driver,
-                vehicle_id=test_vehicle_id,
-                unit_price=test_pricing_up * 2,
-                driver_salary=test_pricing_ds * 2,
-                allowance=test_pricing_al * 2,
-                pricing_id=test_pricing.id,
-                status="MATCHED",
-                trip_date=date(2026, 5, 9),
-            )
-            db.add(wo_multi)
-            await db.flush()
-            for cont in ["CMAU4444444", "CMAU5555555"]:
-                db.add(WorkOrderContainer(
-                    work_order_id=wo_multi.id,
-                    container_number=cont,
-                    work_type="F20",
-                ))
-            await db.flush()
-
-            # 2 TOs linked to this WO via reconciliation
-            multi_to_ids = []
-            for idx, cont in enumerate(["CMAU4444444", "CMAU5555555"]):
-                to_multi = TripOrder(
-                    trip_date=date(2026, 5, 9),
-                    partner_id=test_partner.id,
-                    code=f"T-MULTI-0{idx + 1}",
-                    pickup_location_id=pickup_loc.id,
-                    dropoff_location_id=dropoff_loc.id,
-                    pricing_id=test_pricing.id,
-                    unit_price=test_pricing_up,
-                    driver_salary=test_pricing_ds,
-                    allowance=test_pricing_al,
-                    status="MATCHED",
-                )
-                db.add(to_multi)
-                await db.flush()
-                db.add(TripOrderContainer(
-                    trip_order_id=to_multi.id,
-                    container_number=cont,
-                    work_type="F20",
-                    container_size="20",
-                    freight_kind="F",
-                ))
-                multi_to_ids.append(to_multi.id)
-            await db.flush()
-
-            for to_id in multi_to_ids:
-                db.add(Reconciliation(
-                    trip_order_id=to_id,
-                    work_order_id=wo_multi.id,
-                    match_score=1.0,
-                    matched_by=ketoan_user.id,
-                    matched_at=datetime(2026, 5, 9, tzinfo=timezone.utc),
-                    is_active=True,
-                ))
-            await db.flush()
-            print(f"  + Multi-match WO #{wo_multi.id} linked to TOs {multi_to_ids}")
-        else:
-            print("  ! Test pricing not found, skipping matchable test data")
+        print(f"  Created {len(all_wos)} reconciliation links")
 
         await db.commit()
 
         # ── Summary ─────────────────────────────────────────────────────
         print("\n" + "=" * 50)
-        print("SEED COMPLETE")
+        print("SEED COMPLETE — Real operational data (April 2026)")
         print("=" * 50)
-        tables = [
-            "users", "vehicles", "locations", "partners",
-            "settings",
-            "pricings", "pricing_lines",
+        for t in [
+            "users", "vehicles", "vehicle_drivers", "locations", "partners",
+            "settings", "pricings", "pricing_lines",
             "work_orders", "work_order_containers",
-            "trip_orders", "trip_order_containers",
-            "reconciliations",
-        ]
-        for t in tables:
+            "trip_orders", "trip_order_containers", "reconciliations",
+        ]:
             cnt = (await db.execute(text(f"SELECT count(*) FROM {t}"))).scalar()
             print(f"  {t:30s} {cnt:>5d} rows")
 
@@ -665,9 +375,7 @@ async def seed_dev() -> None:
         print("  admin    / admin123  (superadmin)")
         print("  giamdoc  / admin123  (director)")
         print("  ketoan   / admin123  (accountant)")
-        print("  taixe    / admin123  (driver)")
-        print("  taixe1   / admin123  (driver)")
-        print("  taixe2   / admin123  (driver)")
+        print("  driver_* / admin123  (18 drivers)")
 
 
 if __name__ == "__main__":
