@@ -53,6 +53,77 @@ class Vehicle(AuditableMixin, Base):
 
 
 # ---------------------------------------------------------------------------
+# VehicleDriver — many-to-many vehicle ↔ driver with effective dates
+# ---------------------------------------------------------------------------
+
+class VehicleDriver(Base):
+    """Associates a driver with a vehicle for a date range.
+
+    Supports 1 vehicle / 2 drivers (e.g. PRIMARY + SECONDARY).
+    ``effective_to=NULL`` means currently active.
+    ``is_active=True`` is the live record; set False to soft-deactivate without
+    losing history.
+
+    Backfilled from ``Vehicle.driver_id`` on migration 009.
+    """
+
+    __tablename__ = "vehicle_drivers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    vehicle_id = Column(Integer, ForeignKey("vehicles.id", ondelete="CASCADE"),
+                        nullable=False, index=True)
+    driver_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"),
+                       nullable=False, index=True)
+    role = Column(String(20), nullable=False, default="PRIMARY")  # PRIMARY | SECONDARY
+    effective_from = Column(Date, nullable=False)
+    effective_to = Column(Date, nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+    )
+
+    __table_args__ = (
+        Index("ix_vehicle_drivers_vehicle_id", "vehicle_id"),
+        Index("ix_vehicle_drivers_driver_id", "driver_id"),
+    )
+
+
+# ---------------------------------------------------------------------------
+# VehicleExpense — CP Xe (xăng dầu, sửa chữa, khác, chung)
+# ---------------------------------------------------------------------------
+
+class VehicleExpense(AuditableMixin, Base):
+    """Records a vehicle cost item for P&L calculations.
+
+    ``vehicle_id=NULL`` for category=CHUNG (general overhead not tied to a
+    specific truck). All monetary amounts are Integer VND.
+    """
+
+    __tablename__ = "vehicle_expenses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    vehicle_id = Column(Integer, ForeignKey("vehicles.id", ondelete="SET NULL"),
+                        nullable=True, index=True)
+    category = Column(String(20), nullable=False, index=True)
+    # XANG_DAU | SUA_CHUA | KHAC | CHUNG
+    amount = Column(Integer, nullable=False)   # VND
+    expense_date = Column(Date, nullable=False, index=True)
+    description = Column(String(500), nullable=True)
+    receipt_url = Column(String(1000), nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+    )
+
+    __table_args__ = (
+        Index("ix_vehicle_expenses_vehicle_date", "vehicle_id", "expense_date"),
+        Index("ix_vehicle_expenses_category_date", "category", "expense_date"),
+    )
+
+
+# ---------------------------------------------------------------------------
 # Partner (unified clients + vendors)
 # ---------------------------------------------------------------------------
 

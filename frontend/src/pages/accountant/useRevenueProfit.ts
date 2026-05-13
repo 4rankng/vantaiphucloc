@@ -6,7 +6,7 @@
  */
 
 import { useMemo } from 'react'
-import { useSalaryConfig, useMonthlyPnL } from '@/hooks/use-queries'
+import { useSalaryConfig, useMonthlyPnL, useVehiclePnL } from '@/hooks/use-queries'
 import { getSalaryPeriodDates, toISODate } from '@/utils/salaryPeriod'
 
 export function useRevenueProfit() {
@@ -24,6 +24,7 @@ export function useRevenueProfit() {
   }, [config])
 
   const query = useMonthlyPnL(startDate, endDate)
+  const vehicleQuery = useVehiclePnL(startDate, endDate)
 
   return {
     startDate,
@@ -31,5 +32,7 @@ export function useRevenueProfit() {
     pnl: query.data ?? null,
     isLoading: query.isLoading,
     error: query.error,
+    vehiclePnL: vehicleQuery.data ?? null,
+    isVehiclePnLLoading: vehicleQuery.isLoading,
   }
 }

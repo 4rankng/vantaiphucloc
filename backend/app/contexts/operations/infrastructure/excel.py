@@ -927,11 +927,12 @@ async def generate_doi_soat_excel(
     df = date_type.fromisoformat(date_from)
     dt = date_type.fromisoformat(date_to)
 
-    # Find ALL trip orders for this partner in date range (not just MATCHED)
+    # Only MATCHED trip orders — these are the confirmed/completed trips
     to_query = select(TripOrder).where(
         TripOrder.partner_id == partner_id,
         TripOrder.trip_date >= df,
         TripOrder.trip_date <= dt,
+        TripOrder.status == "MATCHED",
     ).order_by(TripOrder.trip_date, TripOrder.id)
     to_result = await db.execute(to_query)
     trip_orders = to_result.scalars().all()

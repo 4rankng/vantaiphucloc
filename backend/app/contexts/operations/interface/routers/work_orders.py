@@ -149,6 +149,15 @@ def _hide_salary_fields(wo_out: WorkOrderOut) -> None:
     wo_out.allowance = 0
 
 
+def _hide_vessel_field(wo_out: WorkOrderOut) -> None:
+    """Mask vessel from accountant views while the trip is PENDING.
+
+    Số tàu is driver-only knowledge during transport; accountant should
+    only see it after the work order has been matched (MATCHED status).
+    """
+    wo_out.vessel = None
+
+
 def _container_inputs(items) -> list[WorkOrderContainerInput]:
     return [
         WorkOrderContainerInput(
@@ -268,6 +277,10 @@ async def list_work_orders(
         for i, w in enumerate(items):
             if w.status == WorkOrderStatus.PENDING:
                 _hide_salary_fields(out[i])
+    elif current_user.role == "accountant":
+        for i, w in enumerate(items):
+            if w.status == WorkOrderStatus.PENDING:
+                _hide_vessel_field(out[i])
 
     return PaginatedResponse[WorkOrderOut](
         items=out, total=total, page=page, page_size=page_size,
@@ -399,6 +412,8 @@ async def get_work_order(
     out = await _load_one(use_case.repo.session, w)  # type: ignore[attr-defined]
     if current_user.role == "driver" and w.status == WorkOrderStatus.PENDING:
         _hide_salary_fields(out)
+    elif current_user.role == "accountant" and w.status == WorkOrderStatus.PENDING:
+        _hide_vessel_field(out)
     return out
 
 

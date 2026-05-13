@@ -3,6 +3,7 @@ import { apiClient } from '@/services/api'
 import { searchTripOrders } from '@/services/api/tripOrders.api'
 import type { ApiResponse, Pricing, WorkOrder, TripOrder, WorkType, Partner, BulkMatchPair } from '@/data/domain'
 import type { DriverEarnings } from '@/services/api/salary.api'
+import type { VehicleExpenseCategory } from '@/services/api/vehicleExpenses.api'
 
 /** Reject on failed ApiResponse so React Query onError fires. */
 function unwrap<T>(res: ApiResponse<T>): T {
@@ -65,6 +66,10 @@ export const queryKeys = {
   driverBaseSalary: (driverId: number) => ['driver-base-salary', driverId] as const,
   monthlyPnL: (startDate: string, endDate: string) =>
     ['monthly-pnl', startDate, endDate] as const,
+  vehiclePnL: (dateFrom: string, dateTo: string, vehicleId?: number) =>
+    ['vehicle-pnl', dateFrom, dateTo, vehicleId ?? 'all'] as const,
+  vehicleExpenses: (params?: object) =>
+    ['vehicle-expenses', params ?? {}] as const,
   reconciliationImports: (partnerId?: number) =>
     ['reconciliation-imports', partnerId ?? 'all'] as const,
   reconciliationImport: (id: number) =>
@@ -835,6 +840,74 @@ export function useCommitReconciliationImport() {
     onSuccess: (_data, importId) => {
       qc.invalidateQueries({ queryKey: ['reconciliation-imports'] })
       qc.invalidateQueries({ queryKey: queryKeys.reconciliationImport(importId) })
+    },
+  })
+}
+
+// ── Vehicle P&L ──────────────────────────────────────────────────────────────
+
+export function useVehiclePnL(dateFrom: string, dateTo: string, vehicleId?: number) {
+  return useQuery({
+    queryKey: queryKeys.vehiclePnL(dateFrom, dateTo, vehicleId),
+    queryFn: async () => {
+      const res = await apiClient.getVehiclePnL(dateFrom, dateTo, vehicleId)
+      return res.success ? res.data : null
+    },
+    enabled: !!dateFrom && !!dateTo,
+  })
+}
+
+// ── Vehicle Expenses ─────────────────────────────────────────────────────────
+
+export function useVehicleExpenses(params?: {
+  vehicleId?: number
+  category?: VehicleExpenseCategory
+  dateFrom?: string
+  dateTo?: string
+  page?: number
+  pageSize?: number
+}) {
+  return useQuery({
+    queryKey: queryKeys.vehicleExpenses(params),
+    queryFn: async () => {
+      const res = await apiClient.listVehicleExpenses(params)
+      return res.success ? res.data : null
+    },
+  })
+}
+
+export function useCreateVehicleExpense() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: Parameters<typeof apiClient.createVehicleExpense>[0]) =>
+      apiClient.createVehicleExpense(payload).then(unwrap),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['vehicle-expenses'] })
+      qc.invalidateQueries({ queryKey: ['vehicle-pnl'] })
+    },
+  })
+}
+
+export function useUpdateVehicleExpense() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: Parameters<typeof apiClient.updateVehicleExpense>[1] }) =>
+      apiClient.updateVehicleExpense(id, payload).then(unwrap),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['vehicle-expenses'] })
+      qc.invalidateQueries({ queryKey: ['vehicle-pnl'] })
+    },
+  })
+}
+
+export function useDeleteVehicleExpense() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) =>
+      apiClient.deleteVehicleExpense(id).then(unwrap),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['vehicle-expenses'] })
+      qc.invalidateQueries({ queryKey: ['vehicle-pnl'] })
     },
   })
 }

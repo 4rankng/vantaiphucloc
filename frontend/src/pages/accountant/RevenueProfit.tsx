@@ -7,10 +7,12 @@
  * Pure UI — derivations live in `useRevenueProfit.ts`.
  */
 
-import { TrendingUp, Wallet, Briefcase, DollarSign } from 'lucide-react'
+import { TrendingUp, Wallet, Briefcase, DollarSign, Car, Fuel, Wrench, MoreHorizontal } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { formatCurrencyFull } from '@/data/domain'
 import { formatDateRange } from '@/lib/format'
 import { useRevenueProfit } from './useRevenueProfit'
+import type { VehiclePnLRow } from '@/services/api/pnl.api'
 
 function KpiCard({
   label,
@@ -49,8 +51,86 @@ function KpiCard({
   )
 }
 
+// ── Per-vehicle table ─────────────────────────────────────────────────────────
+
+function VehiclePnLTable({ rows, cpChung }: { rows: VehiclePnLRow[]; cpChung: number }) {
+  if (rows.length === 0) return (
+    <div className="card p-6 text-center">
+      <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có dữ liệu xe</p>
+    </div>
+  )
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg overflow-x-auto" style={{ border: '1px solid var(--theme-border-default)' }}>
+        <table className="w-full text-sm min-w-[700px]">
+          <thead>
+            <tr style={{ background: 'var(--theme-bg-tertiary)' }}>
+              {['Xe', 'Doanh thu', 'CP Xăng dầu', 'CP Sửa chữa', 'CP Khác', 'CP Lương', 'CP Cơ bản', 'Lợi nhuận'].map((h) => (
+                <th key={h} className="text-right first:text-left px-4 py-2.5 text-xs font-semibold whitespace-nowrap" style={{ color: 'var(--theme-text-muted)' }}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => {
+              const positive = row.loiNhuan >= 0
+              return (
+                <tr
+                  key={row.vehicleId}
+                  style={{
+                    background: i % 2 === 0 ? 'var(--theme-bg-primary)' : 'var(--theme-bg-secondary)',
+                    borderTop: '1px solid var(--theme-border-light)',
+                  }}
+                >
+                  <td className="px-4 py-2.5 font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+                    <span className="flex items-center gap-1.5">
+                      <Car className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
+                      {row.plate}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">{formatCurrencyFull(row.revenue)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums" style={{ color: 'var(--theme-status-error)' }}>{formatCurrencyFull(row.cpXe.xangDau)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums" style={{ color: 'var(--theme-status-error)' }}>{formatCurrencyFull(row.cpXe.suaChua)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums" style={{ color: 'var(--theme-status-error)' }}>{formatCurrencyFull(row.cpXe.khac)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums" style={{ color: 'var(--theme-status-error)' }}>{formatCurrencyFull(row.cpLuongSanLuong)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums" style={{ color: 'var(--theme-status-error)' }}>{formatCurrencyFull(row.cpLuongCoBan)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums font-semibold" style={{ color: positive ? 'var(--theme-status-success)' : 'var(--theme-status-error)' }}>
+                    {formatCurrencyFull(row.loiNhuan)}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+          {cpChung > 0 && (
+            <tfoot>
+              <tr style={{ background: 'var(--theme-bg-tertiary)', borderTop: '2px solid var(--theme-border-default)' }}>
+                <td colSpan={7} className="px-4 py-2.5 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                  CP Chung (chưa phân bổ vào từng xe)
+                </td>
+                <td className="px-4 py-2.5 text-right tabular-nums text-xs font-semibold" style={{ color: 'var(--theme-status-error)' }}>
+                  − {formatCurrencyFull(cpChung)}
+                </td>
+              </tr>
+            </tfoot>
+          )}
+        </table>
+      </div>
+      <div className="flex justify-end">
+        <Link
+          to="/accountant/vehicle-expenses"
+          className="text-sm font-medium hover:underline"
+          style={{ color: 'var(--theme-brand-primary)' }}
+        >
+          Quản lý chi phí xe →
+        </Link>
+      </div>
+    </div>
+  )
+}
+
 export function RevenueProfit() {
-  const { startDate, endDate, pnl, isLoading } = useRevenueProfit()
+  const { startDate, endDate, pnl, isLoading, vehiclePnL, isVehiclePnLLoading } = useRevenueProfit()
 
   return (
     <div className="space-y-6">
@@ -143,6 +223,25 @@ export function RevenueProfit() {
               />
             </div>
           </div>
+
+          {/* Vehicle P&L breakdown */}
+          <section className="space-y-3">
+            <h2 className="typo-h2">Lãi / lỗ theo xe</h2>
+            {isVehiclePnLLoading ? (
+              <div className="h-24 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+            ) : vehiclePnL && vehiclePnL.rows.length > 0 ? (
+              <VehiclePnLTable rows={vehiclePnL.rows} cpChung={vehiclePnL.cpChung} />
+            ) : (
+              <div className="card p-6 text-center">
+                <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>
+                  Chưa có dữ liệu xe trong kỳ này.{' '}
+                  <Link to="/accountant/vehicle-expenses" className="font-medium hover:underline" style={{ color: 'var(--theme-brand-primary)' }}>
+                    Thêm chi phí xe →
+                  </Link>
+                </p>
+              </div>
+            )}
+          </section>
 
           {/* Partner breakdown */}
           <section className="space-y-3">

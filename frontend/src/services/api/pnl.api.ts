@@ -28,6 +28,51 @@ export interface MonthlyPnL {
   partnerBreakdown: PartnerRevenueBreakdown[]
 }
 
+export interface VehicleExpenseSummary {
+  xangDau: number
+  suaChua: number
+  khac: number
+  total: number
+}
+
+export interface VehiclePnLRow {
+  vehicleId: number
+  plate: string
+  revenue: number
+  cpXe: VehicleExpenseSummary
+  cpLuongSanLuong: number
+  cpLuongCoBan: number
+  loiNhuan: number
+}
+
+export interface VehiclePnLResponse {
+  dateFrom: string
+  dateTo: string
+  rows: VehiclePnLRow[]
+  cpChung: number
+  totalRevenue: number
+  totalProfit: number
+}
+
+export async function getVehiclePnL(
+  dateFrom: string,
+  dateTo: string,
+  vehicleId?: number,
+): Promise<ApiResponse<VehiclePnLResponse>> {
+  try {
+    const res = await api.get('/dashboard/vehicle-pnl', {
+      params: {
+        date_from: dateFrom,
+        date_to: dateTo,
+        ...(vehicleId != null ? { vehicle_id: vehicleId } : {}),
+      },
+    })
+    return ok(toCamel<VehiclePnLResponse>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
 export async function getMonthlyPnL(
   startDate: string,
   endDate: string,
