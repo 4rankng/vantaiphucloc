@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+import bcrypt
 import jwt
-from passlib.context import CryptContext
 
 from app.config import settings
 from app.contexts.identity.domain.services import PasswordHasher, TokenIssuer
@@ -13,19 +13,17 @@ from app.contexts.identity.domain.services import PasswordHasher, TokenIssuer
 _ACCESS_TOKEN_TYPE = "access"
 _REFRESH_TOKEN_TYPE = "refresh"
 
-_pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto",
-    bcrypt__rounds=12,
-)
-
 
 class BcryptPasswordHasher(PasswordHasher):
     def hash(self, plain: str) -> str:
-        return _pwd_context.hash(plain)
+        return bcrypt.hashpw(
+            plain.encode("utf-8"), bcrypt.gensalt(rounds=12)
+        ).decode("utf-8")
 
     def verify(self, plain: str, hashed: str) -> bool:
-        return _pwd_context.verify(plain, hashed)
+        return bcrypt.checkpw(
+            plain.encode("utf-8"), hashed.encode("utf-8")
+        )
 
 
 class JwtTokenIssuer(TokenIssuer):
