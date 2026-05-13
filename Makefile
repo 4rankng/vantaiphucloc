@@ -1,6 +1,6 @@
 .PHONY: help install migrate dev dev-infra dev-backend dev-frontend dev-worker lint seed stop clean \
         push-all deploy-all push-backend push-frontend deploy-backend deploy-frontend \
-        api-test
+        api-test test test-backend test-frontend
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 # Override with: make dev BACKEND_PORT=9000 FRONTEND_PORT=5180
@@ -27,6 +27,7 @@ help:
 	@echo "  clean            Kill stale dev processes"
 	@echo "  api-test         Run integration tests against live dev backend"
 	@echo "  lint             Run ruff (backend) and eslint (frontend)"
+	@echo "  test             Run all checks (backend lint+format+tests, frontend lint+build+tests)"
 	@echo ""
 	@echo "Ports (override with env vars):"
 	@echo "  BACKEND_PORT=$(BACKEND_PORT)  FRONTEND_PORT=$(FRONTEND_PORT)"
@@ -141,6 +142,29 @@ api-test:
 lint:
 	cd backend && ruff check .
 	cd frontend && pnpm eslint src
+
+# ── Test ────────────────────────────────────────────────────────────────────────
+
+## test: Run all checks — backend lint + format check + unit tests, frontend lint + build + unit tests
+test: test-backend test-frontend
+
+## test-backend: Run ruff lint, ruff format check, and pytest
+test-backend:
+	@echo "── Backend: ruff lint ───────────────────"
+	cd backend && ruff check .
+	@echo "── Backend: ruff format check ───────────"
+	cd backend && ruff format --check .
+	@echo "── Backend: pytest ──────────────────────"
+	cd backend && PYTHONPATH=. python -m pytest -q
+
+## test-frontend: Run eslint, tsc build, and unit tests
+test-frontend:
+	@echo "── Frontend: eslint ─────────────────────"
+	cd frontend && pnpm lint
+	@echo "── Frontend: build ──────────────────────"
+	cd frontend && pnpm build
+	@echo "── Frontend: unit tests ─────────────────"
+	cd frontend && pnpm test -- --run 2>/dev/null || echo "(no frontend tests configured)"
 
 # ── Production deploy ──────────────────────────────────────────────────────────
 

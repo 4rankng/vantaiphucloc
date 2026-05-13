@@ -528,7 +528,7 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
   const toast = useToast()
 
   // ── Data ──────────────────────────────────────────────────────────────────
-  const { data: workOrders = [], isLoading: loadingWO } = useWorkOrders()
+  const { data: _workOrders = [], isLoading: loadingWO } = useWorkOrders()
   const { data: allTrips = [], isLoading: loadingTrips } = useTripOrders()
   const { data: suggestionsData, isLoading: loadingSuggestions } = useSuggestMatches(workOrder.id)
   const { data: routes = [] } = useRoutes()
@@ -552,7 +552,7 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
   const [woContainers, setWoContainers] = useState<{ workType: string; containerNumber: string }[]>([])
   const [woInitialized, setWoInitialized] = useState(false)
 
-  useMemo(() => {
+  useEffect(() => {
     if (workOrder && !woInitialized) {
       setWoClient(workOrder.partner.name)
       setWoRoute(workOrder.route)
@@ -574,7 +574,7 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
   // ── Selected trip ─────────────────────────────────────────────────────────
   const [selectedTripId, setSelectedTripId] = useState<number | null>(null)
 
-  useMemo(() => {
+  useEffect(() => {
     if (selectedTripId === null && suggestions.length > 0) {
       setSelectedTripId(suggestions[0].tripOrder.id)
     }
@@ -593,7 +593,7 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
   const [tripContainers, setTripContainers] = useState<{ workType: string; containerNumber: string }[]>([])
   const [tripInitKey, setTripInitKey] = useState<number | null>(null)
 
-  useMemo(() => {
+  useEffect(() => {
     if (selectedTrip && selectedTrip.id !== tripInitKey) {
       setTripClient(selectedTrip.partner.name)
       setTripRoute(selectedTrip.route)

@@ -38,7 +38,7 @@ interface Props {
   basePath: string
 }
 
-type DraftLine = PricingLine & { _new?: boolean }
+type DraftLine = PricingLine
 
 export function PricingClientDetail({ clientId, basePath }: Props) {
   const navigate = useNavigate()
@@ -86,7 +86,7 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
   }, [])
 
   const saveEdit = useCallback((pricing: Pricing) => {
-    const cleanLines = draftLines.map(({ _new, ...rest }) => rest)
+    const cleanLines = draftLines.map((rest) => rest)
     updatePricing.mutate(
       {
         id: pricing.id,
@@ -107,7 +107,7 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
   }, [])
 
   const addDraftLine = useCallback(() => {
-    setDraftLines(prev => [...prev, { quantity: 1, unitPrice: 0, driverSalary: 0, allowance: 0, _new: true }])
+    setDraftLines(prev => [...prev, { quantity: 1, unitPrice: 0, driverSalary: 0, allowance: 0 }])
   }, [])
 
   const removeDraftLine = useCallback((idx: number) => {
@@ -205,7 +205,6 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
                   Array.from(workTypeMap.keys()).find(wt => workTypeMap.get(wt)?.id === editingPricingId) ?? 'F20'
                 ) ?? null
               : null
-            const isEditingAny = editingPricingId !== null && !!editingPricing
 
             return (
               <div key={route}>

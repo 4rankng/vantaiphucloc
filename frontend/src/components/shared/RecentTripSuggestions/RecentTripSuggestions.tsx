@@ -1,4 +1,4 @@
-import { Check, Loader2, TrendingUp, Clock, Star } from 'lucide-react'
+import { Check, TrendingUp, Clock, Star } from 'lucide-react'
 import type { SuggestedRoute } from '@/services/api/workOrders.api'
 
 interface RecentTripSuggestionsProps {

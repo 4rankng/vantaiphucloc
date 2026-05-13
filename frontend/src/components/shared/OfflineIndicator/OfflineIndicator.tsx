@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react'
  *  - collapsed: true after 2 s of being offline → show icon-only mode
  *  - graceExpired: false for first 5 s → suppress false-positive on load
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useOfflineIndicatorState() {
   const ctx = useOffline()
   const [graceExpired, setGraceExpired] = useState(false)
@@ -27,7 +28,7 @@ export function useOfflineIndicatorState() {
       const t = setTimeout(() => setCollapsed(true), 2000)
       return () => clearTimeout(t)
     } else {
-      // Reset collapse when back online
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCollapsed(false)
     }
   }, [ctx.isOnline, graceExpired])

@@ -1,4 +1,4 @@
-import { Building2, Truck, Phone, MapPin, User } from 'lucide-react'
+import { Phone, MapPin, User } from 'lucide-react'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { cn } from '@/lib/utils'
 

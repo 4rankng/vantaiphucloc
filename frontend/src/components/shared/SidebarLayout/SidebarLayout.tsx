@@ -84,9 +84,7 @@ export function SidebarLayout({ role, titleMap }: SidebarLayoutProps) {
 }
 
 export function SidebarLayoutCore({ role, titleMap, children }: SidebarLayoutProps) {
-  const { user } = useAuth()
   const location = useLocation()
-  const navigate = useNavigate()
 
   const isHome = location.pathname === `/${role}`
   const title = isHome

@@ -11,7 +11,9 @@ export function SuccessOverlay({ visible, message = 'Đã gửi chuyến', onDon
   const [show, setShow] = useState(false)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!visible) { setShow(false); return }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setShow(true)
     const timer = setTimeout(() => {
       setShow(false)
