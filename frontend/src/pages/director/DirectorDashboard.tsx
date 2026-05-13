@@ -288,7 +288,6 @@ export function DirectorDashboard() {
               {recentTrips.map((t) => {
                 const badge = getTripOrderStatusBadge(t.status)
                 const date = new Date(t.tripDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
-                const tripCode = `T${String(t.id).padStart(4, '0')}`
                 const route = [t.pickupLocation?.name, t.dropoffLocation?.name].filter(Boolean).join(' → ')
                 const tripWorkType = t.containers[0]?.workType
 
@@ -308,15 +307,15 @@ export function DirectorDashboard() {
                       </div>
                       
                       {/* Content */}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm font-bold font-mono" style={{ color: 'var(--theme-text-primary)' }}>{tripCode}</span>
-                          <StatusBadge variant={badge.variant} label={badge.label} />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>{t.partner.name}</span>
+                            <StatusBadge variant={badge.variant} label={badge.label} />
+                          </div>
+                          <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
+                            {route}
+                          </p>
                         </div>
-                        <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
-                          {t.partner.name} <span style={{ color: 'var(--theme-text-muted)' }}>•</span> {route}
-                        </p>
-                      </div>
                       
                       {/* Right side */}
                       <div className="shrink-0 text-right">

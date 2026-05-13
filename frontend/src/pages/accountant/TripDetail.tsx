@@ -201,9 +201,8 @@ export function TripDetailContent({ tripId, onClose }: TripDetailContentProps) {
             </>
           )}
           <span className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-            {trip.code ?? `#${trip.id}`}
+            {trip.partner.name}
           </span>
-          <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{trip.partner.name}</span>
         </div>
         <div className="flex items-center gap-2">
           {canEdit && trip.status !== 'MATCHED' && (
