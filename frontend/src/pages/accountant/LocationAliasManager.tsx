@@ -1,13 +1,11 @@
 import { useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { MapPin, Check, X, RotateCcw, Clock, Filter, Plus } from 'lucide-react'
+import { MapPin, Check, X, RotateCcw, Filter, Plus } from 'lucide-react'
 import { SettingsPageLayout } from '@/components/shared/SettingsPageLayout'
 import { useToast } from '@/components/atoms/Toast'
-import { listAliases, createAlias, confirmAlias, rejectAlias, reopenAlias, getPendingReviewLocations } from '@/services/api/locationAliases.api'
+import { listAliases, createAlias, confirmAlias, rejectAlias, reopenAlias } from '@/services/api/locationAliases.api'
 import { getLocations, createLocation } from '@/services/api/locations.api'
 import type { LocationAlias, LocationAliasStatus, Location } from '@/data/domain'
-
-type TabKey = 'pending' | 'all'
 
 const STATUS_COLORS: Record<LocationAliasStatus, string> = {
   PENDING: 'var(--theme-status-warning)',
@@ -40,7 +38,6 @@ function StatusBadge({ status }: { status: LocationAliasStatus }) {
 export function LocationAliasManager() {
   const toast = useToast()
   const qc = useQueryClient()
-  const [tab, setTab] = useState<TabKey>('pending')
   const [statusFilter, setStatusFilter] = useState<LocationAliasStatus | ''>('')
   const [rejectingId, setRejectingId] = useState<number | null>(null)
   const [rejectNote, setRejectNote] = useState('')
@@ -57,36 +54,25 @@ export function LocationAliasManager() {
     },
   })
 
-  const { data: pendingGroups = [], isLoading: loadingPending } = useQuery({
-    queryKey: ['location-aliases', 'pending-review'],
-    queryFn: async () => {
-      const res = await getPendingReviewLocations()
-      return res.success ? res.data : []
-    },
-    enabled: tab === 'pending',
-  })
-
-  const pendingAliases = pendingGroups.flatMap(g => g.pendingAliases)
-
-  const locationMap = new Map([
-    ...locations.map((l: Location) => [l.id, l.name] as [number, string]),
-    ...pendingGroups.map((g: { location: { id: number; name: string }; pendingAliases: LocationAlias[] }) => [g.location.id, g.location.name] as [number, string]),
-  ])
-
-  const { data: allAliases = [], isLoading: loadingAll } = useQuery({
+  const { data: allAliases = [], isLoading: loadingAliases } = useQuery({
     queryKey: ['location-aliases', 'all', statusFilter],
     queryFn: async () => {
       const res = await listAliases({ status: statusFilter || undefined })
       return res.success ? res.data : []
     },
-    enabled: tab === 'all',
   })
+
+  const locationMap = new Map([
+    ...locations.map((l: Location) => [l.id, l.name] as [number, string]),
+  ])
 
   const invalidate = useCallback(() => {
     qc.invalidateQueries({ queryKey: ['location-aliases'] })
   }, [qc])
 
   const [confirmingAll, setConfirmingAll] = useState(false)
+
+  const pendingAliases = allAliases.filter((a: LocationAlias) => a.status === 'PENDING')
 
   const confirmMut = useMutation({
     mutationFn: (id: number) => confirmAlias(id),
@@ -143,44 +129,12 @@ export function LocationAliasManager() {
     onError: () => toast.error('Lỗi', 'Không thể tạo địa điểm'),
   })
 
-  const aliases = tab === 'pending' ? pendingAliases : allAliases
-  const loading = tab === 'pending' ? loadingPending : loadingAll
+  const aliases = allAliases
+  const loading = loadingAliases
 
   return (
     <SettingsPageLayout title="Địa điểm & bí danh" subtitle="Quản lý bí danh địa điểm để ghép chuyến chính xác" icon={MapPin}>
-      {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-lg" style={{ background: 'var(--theme-bg-tertiary)' }}>
-        <button
-          onClick={() => setTab('pending')}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all"
-          style={{
-            background: tab === 'pending' ? 'var(--theme-bg-primary)' : 'transparent',
-            color: tab === 'pending' ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)',
-            boxShadow: tab === 'pending' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-          }}
-        >
-          <Clock className="w-3.5 h-3.5" />
-          Chờ duyệt
-          {pendingAliases.length > 0 && (
-            <span className="px-1.5 py-0.5 rounded-full text-xs" style={{ background: 'var(--theme-status-warning)', color: '#fff' }}>
-              {pendingAliases.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setTab('all')}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all"
-          style={{
-            background: tab === 'all' ? 'var(--theme-bg-primary)' : 'transparent',
-            color: tab === 'all' ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)',
-            boxShadow: tab === 'all' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-          }}
-        >
-          Tất cả
-        </button>
-      </div>
-
-      {/* Add alias button + form */}
+      {/* Filter + buttons */}
       {!createOpen ? (
         <div className="flex items-center gap-2">
           <button
@@ -190,7 +144,7 @@ export function LocationAliasManager() {
           >
             <Plus className="w-3.5 h-3.5" /> Thêm bí danh
           </button>
-          {tab === 'pending' && pendingAliases.length > 0 && (
+          {pendingAliases.length > 0 && (
             <button
               onClick={handleConfirmAll}
               disabled={confirmingAll}
@@ -200,6 +154,21 @@ export function LocationAliasManager() {
               <Check className="w-3.5 h-3.5" /> {confirmingAll ? 'Đang duyệt...' : `Duyệt hết (${pendingAliases.length})`}
             </button>
           )}
+          <div className="flex items-center gap-2 ml-auto">
+            <Filter className="w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value as LocationAliasStatus | '')}
+              className="h-8 px-2 rounded-md text-sm border-0"
+              style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
+            >
+              <option value="">Tất cả trạng thái</option>
+              <option value="PENDING">Chờ duyệt</option>
+              <option value="CONFIRMED">Đã xác nhận</option>
+              <option value="REJECTED">Đã từ chối</option>
+              <option value="MERGED">Đã gộp</option>
+            </select>
+          </div>
         </div>
       ) : (
         <div className="card p-4 flex items-end gap-3">
@@ -264,25 +233,6 @@ export function LocationAliasManager() {
         </div>
       )}
 
-      {/* Filter (all tab only) */}
-      {tab === 'all' && (
-        <div className="flex items-center gap-2">
-          <Filter className="w-3.5 h-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-          <select
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value as LocationAliasStatus | '')}
-            className="h-8 px-2 rounded-md text-sm border-0"
-            style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
-          >
-            <option value="">Tất cả trạng thái</option>
-            <option value="PENDING">Chờ duyệt</option>
-            <option value="CONFIRMED">Đã xác nhận</option>
-            <option value="REJECTED">Đã từ chối</option>
-            <option value="MERGED">Đã gộp</option>
-          </select>
-        </div>
-      )}
-
       {/* Table */}
       {loading ? (
         <div className="space-y-2">
@@ -294,10 +244,10 @@ export function LocationAliasManager() {
         <div className="card p-10 text-center">
           <MapPin className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--theme-text-muted)', opacity: 0.5 }} />
           <p className="typo-h3 mb-1" style={{ color: 'var(--theme-text-primary)' }}>
-            {tab === 'pending' ? 'Không có bí danh chờ duyệt' : 'Không có bí danh'}
+            Không có bí danh
           </p>
           <p className="typo-body-sm" style={{ color: 'var(--theme-text-muted)' }}>
-            {tab === 'pending' ? 'Bí danh do tài xế gửi sẽ hiển thị ở đây' : 'Thay đổi bộ lọc để xem thêm'}
+            Thay đổi bộ lọc để xem thêm
           </p>
         </div>
       ) : (
@@ -307,9 +257,7 @@ export function LocationAliasManager() {
               <tr style={{ background: 'var(--theme-bg-tertiary)' }}>
                 <th className="text-left px-4 py-2.5 text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Bí danh</th>
                 <th className="text-left px-4 py-2.5 text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Địa điểm chính</th>
-                {tab === 'all' && (
-                  <th className="text-left px-4 py-2.5 text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Trạng thái</th>
-                )}
+                <th className="text-left px-4 py-2.5 text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Trạng thái</th>
                 <th className="text-left px-4 py-2.5 text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Ngày tạo</th>
                 <th className="text-right px-4 py-2.5 text-xs font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Hành động</th>
               </tr>
@@ -329,9 +277,7 @@ export function LocationAliasManager() {
                     <td className="px-4 py-2.5" style={{ color: 'var(--theme-text-secondary)' }}>
                       {a.locationName ?? locationMap.get(a.locationId) ?? `#${a.locationId}`}
                     </td>
-                    {tab === 'all' && (
-                      <td className="px-4 py-2.5"><StatusBadge status={a.status} /></td>
-                    )}
+                    <td className="px-4 py-2.5"><StatusBadge status={a.status} /></td>
                     <td className="px-4 py-2.5 tabular-nums text-xs" style={{ color: 'var(--theme-text-muted)' }}>
                       {new Date(a.createdAt).toLocaleDateString('vi-VN')}
                     </td>
