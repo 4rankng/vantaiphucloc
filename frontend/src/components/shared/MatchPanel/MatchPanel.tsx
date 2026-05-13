@@ -552,8 +552,8 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
   const [woContainers, setWoContainers] = useState<{ workType: string; containerNumber: string }[]>([])
   const [woInitialized, setWoInitialized] = useState(false)
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
     if (workOrder && !woInitialized) {
       setWoClient(workOrder.partner.name)
       setWoRoute(workOrder.route)
@@ -563,6 +563,7 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
       setWoContainers(workOrder.containers.map(c => ({ workType: c.workType, containerNumber: c.containerNumber })))
       setWoInitialized(true)
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [workOrder, woInitialized, routeMap])
 
   const updateWoContainer = useCallback((idx: number, field: 'workType' | 'containerNumber', value: string) => {
@@ -575,11 +576,12 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
   // ── Selected trip ─────────────────────────────────────────────────────────
   const [selectedTripId, setSelectedTripId] = useState<number | null>(null)
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
     if (selectedTripId === null && suggestions.length > 0) {
       setSelectedTripId(suggestions[0].tripOrder.id)
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [suggestions, selectedTripId])
 
   const selectedTrip = useMemo(
@@ -595,8 +597,8 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
   const [tripContainers, setTripContainers] = useState<{ workType: string; containerNumber: string }[]>([])
   const [tripInitKey, setTripInitKey] = useState<number | null>(null)
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
     if (selectedTrip && selectedTrip.id !== tripInitKey) {
       setTripClient(selectedTrip.partner.name)
       setTripRoute(selectedTrip.route)
@@ -608,6 +610,7 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
       )
       setTripInitKey(selectedTrip.id)
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [selectedTrip, tripInitKey, routeMap])
 
   const updateTripContainer = useCallback((idx: number, field: 'workType' | 'containerNumber', value: string) => {

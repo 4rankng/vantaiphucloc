@@ -18,7 +18,7 @@ export function LocationSelect({ value, onChange, placeholder = 'Chọn địa �
   const createLocation = useCreateLocation()
   const [createOpen, setCreateOpen] = useState(false)
   const [newName, setNewName] = useState('')
-  const { toast } = useToast()
+  useToast()
   const inputRef = useRef<HTMLInputElement>(null)
 
   const options: InlineSelectOption[] = useMemo(

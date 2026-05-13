@@ -317,6 +317,7 @@ class WorkOrder:
     dropoff_location_id: int
     driver_id: int
     vehicle_id: int | None = None
+    vessel: str | None = None
     unit_price: Money = 0
     driver_salary: Money = 0
     allowance: Money = 0

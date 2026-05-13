@@ -212,6 +212,7 @@ def work_order_to_domain(
         dropoff_location_id=orm.dropoff_location_id,
         driver_id=orm.driver_id,
         vehicle_id=orm.vehicle_id,
+        vessel=orm.vessel,
         gps_lat=orm.gps_lat,
         gps_lng=orm.gps_lng,
         gps_address=orm.gps_address,
@@ -240,6 +241,7 @@ def work_order_to_orm(
     orm.dropoff_location_id = int(w.dropoff_location_id)
     orm.driver_id = int(w.driver_id)
     orm.vehicle_id = w.vehicle_id
+    orm.vessel = w.vessel
     orm.gps_lat = w.gps_lat
     orm.gps_lng = w.gps_lng
     orm.gps_address = w.gps_address
