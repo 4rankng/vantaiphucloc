@@ -149,7 +149,7 @@ function TripRow({ trip, onClick, isLast }: { trip: TripOrder; onClick: () => vo
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
-          {trip.code ? `${trip.code} · ` : ''}{trip.partner.name}
+          {trip.partner.name}
         </span>
         <StatusBadgePro variant={statusVariant} label={statusLabel} size="sm" />
       </div>
@@ -181,7 +181,7 @@ function UnmatchedRow({ wo, onClick, isLast }: { wo: WorkOrder; onClick: () => v
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
-          {wo.code} · {wo.driver.name}
+          {wo.driver.name}{wo.driver.vehicle?.plate ? ` · ${wo.driver.vehicle.plate}` : ''}
         </span>
         <StatusBadgePro variant="warning" label="Chờ ghép" size="sm" />
       </div>

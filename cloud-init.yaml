@@ -18,7 +18,6 @@
 #   2. Wait for cloud-init to finish: cloud-init status --wait
 #   3. sudo certbot --nginx -d phucloc.tingting.vip
 #   4. cd /opt/vantaiphucloc && docker compose -f deploy/docker-compose.prod.yml exec backend alembic upgrade head
-#   5. docker compose -f deploy/docker-compose.prod.yml exec backend python -m app.seed
 #
 # Debug: cat /var/log/cloud-init-output.log
 
@@ -206,4 +205,4 @@ runcmd:
   - echo "Next: point DNS phucloc.tingting.vip → this droplet IP"
   - echo "Then: sudo certbot --nginx -d phucloc.tingting.vip"
   - echo "Then: cd /opt/vantaiphucloc && docker compose -f deploy/docker-compose.prod.yml exec backend alembic upgrade head"
-  - echo "Then: docker compose -f deploy/docker-compose.prod.yml exec backend python -m app.seed"
+

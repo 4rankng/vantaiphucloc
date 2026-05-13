@@ -172,11 +172,12 @@ function ContainerRow({
 // ─── Work order top card ──────────────────────────────────────────────────────
 
 function WorkOrderCard({
-  driverName, woContainers, woClient, woPickup, woDropoff,
+  driverName, driverPlate, woContainers, woClient, woPickup, woDropoff,
   setWoClient, setWoPickup, setWoDropoff, setWoContainers, updateWoContainer,
   clientMatch, pickupMatch, dropoffMatch, matchedWoIndices,
 }: {
   driverName: string
+  driverPlate?: string | null
   woContainers: { workType: string; containerNumber: string }[]
   woClient: string
   woPickup: string
@@ -210,7 +211,7 @@ function WorkOrderCard({
           <Truck className="w-3.5 h-3.5" style={{ color: 'var(--theme-brand-primary)' }} />
         </div>
         <span className="text-sm font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>Chuyến đã đi</span>
-        <span className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>· {driverName}</span>
+        <span className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>· {driverName}{driverPlate ? ` · ${driverPlate}` : ''}</span>
         <button
           onClick={() => setEditMode(v => !v)}
           className="ml-auto flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors"
@@ -360,14 +361,6 @@ function SuggestionCard({
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1.5">
-            {trip.code && (
-              <span
-                className="text-[11px] font-mono font-semibold px-1.5 py-0.5 rounded"
-                style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
-              >
-                {trip.code}
-              </span>
-            )}
             {tripDateShort && (
               <span className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>{tripDateShort}</span>
             )}
@@ -421,12 +414,6 @@ function SuggestionCard({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
-            {trip.code && (
-              <span className="text-[11px] font-mono font-semibold px-1.5 py-0.5 rounded"
-                style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}>
-                {trip.code}
-              </span>
-            )}
             {tripDateShort && (
               <span className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>{tripDateShort}</span>
             )}
@@ -737,6 +724,7 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
       {/* Work order card */}
       <WorkOrderCard
         driverName={workOrder.driver.name}
+        driverPlate={workOrder.driver.vehicle?.plate}
         woContainers={woContainers}
         woClient={woClient}
         woPickup={woPickup}

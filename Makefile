@@ -51,9 +51,9 @@ install:
 migrate:
 	cd backend && PYTHONPATH=. alembic upgrade head
 
-## seed: Create initial superadmin user (admin/admin123). Safe to re-run.
+## seed: Full dev seed — users, locations, partners, pricings, demo data. Safe to re-run.
 seed:
-	cd backend && PYTHONPATH=. python -m app.seed
+	cd backend && PYTHONPATH=. python -m app.seed_dev
 
 # ── Docker Infra ───────────────────────────────────────────────────────────────
 

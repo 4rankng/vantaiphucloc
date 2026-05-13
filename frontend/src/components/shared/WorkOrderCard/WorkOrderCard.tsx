@@ -188,15 +188,15 @@ function AccountantCard({ wo }: { wo: WorkOrder }) {
       </div>
 
       <p className="text-sm font-bold leading-snug" style={{ color: 'var(--theme-text-primary)' }}>
-        {wo.partner.code ? `${wo.partner.code} · ${wo.partner.name}` : wo.partner.name}
+        {wo.driver.name}{wo.driver.vehicle?.plate ? ` · ${wo.driver.vehicle.plate}` : ''}
+      </p>
+
+      <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+        {wo.partner.code ? `${wo.partner.code} · ` : ''}{wo.partner.name}
       </p>
 
       <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
         {resolveRoute(wo)}
-      </p>
-
-      <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>
-        {wo.driver.name}
       </p>
 
       <div className="mt-3 pt-2.5 flex items-center justify-between" style={{ borderTop: '1px solid var(--surface-border)' }}>
