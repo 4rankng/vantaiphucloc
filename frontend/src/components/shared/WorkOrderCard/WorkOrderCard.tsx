@@ -188,7 +188,7 @@ function AccountantCard({ wo }: { wo: WorkOrder }) {
       </div>
 
       <p className="text-sm font-bold leading-snug" style={{ color: 'var(--theme-text-primary)' }}>
-        {wo.driver.name}{wo.driver.vehicle?.plate ? ` · ${wo.driver.vehicle.plate}` : ''}
+        {wo.driver ? `${wo.driver.name}${wo.driver.vehicle?.plate ? ` · ${wo.driver.vehicle.plate}` : ''}` : (wo.vehicleExternalPlate ? `Xe ngoài · ${wo.vehicleExternalPlate}` : 'Xe ngoài')}
       </p>
 
       <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>

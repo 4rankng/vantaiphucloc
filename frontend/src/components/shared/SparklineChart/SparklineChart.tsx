@@ -5,32 +5,31 @@ interface SparklineChartProps {
   className?: string
 }
 
-export function SparklineChart({ data, color = 'var(--theme-brand-primary)', height = 14, className }: SparklineChartProps) {
-  if (!data || data.length === 0) return null
+export function SparklineChart({ data, color = 'var(--theme-brand-primary)', height = 22, className }: SparklineChartProps) {
+  if (!data || data.length < 2) return null
 
+  const min = Math.min(...data)
   const max = Math.max(...data)
-  const barWidth = 3
-  const gap = 1.5
-  const totalWidth = data.length * (barWidth + gap) - gap
+  const range = max - min || 1
+  const svgHeight = height
+
+  const points = data
+    .map((val, i) => {
+      const x = (i / (data.length - 1)) * 100
+      const y = svgHeight - Math.max(2, ((val - min) / range) * (svgHeight - 4)) - 2
+      return `${x},${y.toFixed(1)}`
+    })
+    .join(' ')
 
   return (
-    <svg width={totalWidth} height={height} className={className} aria-hidden="true">
-      {data.map((val, i) => {
-        const barHeight = max > 0 ? Math.max(2, (val / max) * height) : 2
-        const y = height - barHeight
-        const isLast = i === data.length - 1
-        return (
-          <rect
-            key={i}
-            x={i * (barWidth + gap)}
-            y={y}
-            width={barWidth}
-            height={barHeight}
-            rx={1}
-            fill={isLast ? color : 'var(--theme-border-light)'}
-          />
-        )
-      })}
+    <svg
+      viewBox={`0 0 100 ${svgHeight}`}
+      preserveAspectRatio="none"
+      className={className}
+      aria-hidden="true"
+      style={{ width: '100%', height: 22, display: 'block', opacity: 0.55 }}
+    >
+      <polyline fill="none" stroke={color} strokeWidth="1.2" points={points} />
     </svg>
   )
 }

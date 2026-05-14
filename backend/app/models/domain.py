@@ -133,7 +133,7 @@ class Partner(AuditableMixin, Base):
     id = Column(Integer, primary_key=True, index=True)
     code = Column(String(50), nullable=True, unique=True, index=True)
     name = Column(String(255), nullable=False, index=True)
-    partner_type = Column(String(20), nullable=False)  # client | vendor
+    partner_type = Column(String(20), nullable=False)  # client | vendor | shipper
     partner_role = Column(String(20), nullable=True)  # shipping_line | factory | transport | other
     phone = Column(String(50), nullable=True)
     tax_code = Column(String(50), nullable=True)
@@ -206,6 +206,8 @@ class Pricing(AuditableMixin, Base):
     work_type = Column(String(10), nullable=False)     # E20 | E40 | F20 | F40
     pickup_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
     dropoff_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
+    shipper_partner_id = Column(Integer, ForeignKey("partners.id"), nullable=True, index=True)
+    operation_type = Column(String(20), nullable=True, index=True)  # XUAT_TAU|NHAP_TAU|CHUYEN_BAI|KHAC
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(
@@ -213,9 +215,13 @@ class Pricing(AuditableMixin, Base):
     )
 
     __table_args__ = (
-        UniqueConstraint("partner_id", "work_type",
-                         "pickup_location_id", "dropoff_location_id",
-                         name="uq_pricings_lane"),
+        # NULLs are treated as distinct in Postgres so (partner, NULL, NULL, lane) and
+        # (partner, NULL, "XUAT_TAU", lane) are allowed to coexist — each is a more-specific override.
+        UniqueConstraint(
+            "partner_id", "shipper_partner_id", "operation_type", "work_type",
+            "pickup_location_id", "dropoff_location_id",
+            name="uq_pricings_lane",
+        ),
     )
 
 
@@ -247,9 +253,13 @@ class WorkOrder(AuditableMixin, Base):
     code = Column(String(20), nullable=True, unique=True, index=True)
     pickup_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
     dropoff_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
-    driver_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    driver_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     vehicle_id = Column(Integer, ForeignKey("vehicles.id"), nullable=True, index=True)
+    vendor_partner_id = Column(Integer, ForeignKey("partners.id"), nullable=True, index=True)
+    vehicle_external_plate = Column(String(20), nullable=True)   # vendor plate (free text)
     vessel = Column(String(100), nullable=True)
+    operation_type = Column(String(20), nullable=True, index=True)  # XUAT_TAU|NHAP_TAU|CHUYEN_BAI|KHAC
+    shipper_partner_id = Column(Integer, ForeignKey("partners.id"), nullable=True, index=True)
     gps_lat = Column(Float, nullable=True)
     gps_lng = Column(Float, nullable=True)
     gps_address = Column(String(500), nullable=True)
@@ -304,6 +314,8 @@ class TripOrder(AuditableMixin, Base):
     pickup_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
     dropoff_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
     pricing_id = Column(Integer, ForeignKey("pricings.id"), nullable=True)
+    shipper_partner_id = Column(Integer, ForeignKey("partners.id"), nullable=True, index=True)
+    operation_type = Column(String(20), nullable=True, index=True)  # XUAT_TAU|NHAP_TAU|CHUYEN_BAI|KHAC
     unit_price = Column(Integer, nullable=False, default=0)       # VND
     driver_salary = Column(Integer, nullable=False, default=0)    # VND
     allowance = Column(Integer, nullable=False, default=0)        # VND
@@ -569,3 +581,71 @@ class CustomerReconciliationRow(Base):
     # Row-level apply result: APPLIED | SKIPPED | FAILED | UNRESOLVED (defaults).
     apply_status = Column(String(20), nullable=False, default="PENDING")
     apply_message = Column(String(500), nullable=True)
+
+
+# ---------------------------------------------------------------------------
+# VendorReconciliationImport (file đối soát do nhà xe gửi)
+# ---------------------------------------------------------------------------
+
+class VendorReconciliationImport(Base):
+    """One upload of a vendor (xe ngoài) reconciliation file.
+
+    The vendor sends a monthly Excel listing containers they ran on
+    Phúc Lộc's behalf.  We parse it into rows and compare against our
+    WorkOrders (vendor_partner_id == this vendor, period in range).
+    After review the import is APPLIED — vendor_amount lands on matched WOs.
+    """
+
+    __tablename__ = "vendor_reconciliation_imports"
+
+    id = Column(Integer, primary_key=True, index=True)
+    vendor_partner_id = Column(
+        Integer,
+        ForeignKey("partners.id"),
+        nullable=False,
+        index=True,
+    )
+    period_from = Column(Date, nullable=False)
+    period_to = Column(Date, nullable=False)
+    source_filename = Column(String(500), nullable=True)
+    # PENDING_REVIEW | APPLIED | DISCARDED
+    status = Column(String(20), nullable=False, default="PENDING_REVIEW")
+    totals = Column(JSON_TYPE, nullable=True)  # {matched, vendor_only, our_only, disputed}
+    notes = Column(String(1000), nullable=True)
+    uploaded_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    uploaded_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    applied_at = Column(DateTime(timezone=True), nullable=True)
+    applied_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    __table_args__ = (
+        Index("ix_vendor_recon_imports_vendor_uploaded", "vendor_partner_id", "uploaded_at"),
+        Index("ix_vendor_recon_imports_status", "status"),
+    )
+
+
+class VendorReconciliationRow(Base):
+    """One parsed row from a vendor reconciliation upload."""
+
+    __tablename__ = "vendor_reconciliation_rows"
+
+    id = Column(Integer, primary_key=True, index=True)
+    import_id = Column(
+        Integer,
+        ForeignKey("vendor_reconciliation_imports.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    container_number = Column(String(50), nullable=True, index=True)
+    work_type = Column(String(10), nullable=True)      # E20 | E40 | F20 | F40
+    route_text = Column(String(500), nullable=True)    # free-text from vendor file
+    trip_date = Column(Date, nullable=True)
+    vendor_amount = Column(Integer, nullable=True)     # VND, nullable until confirmed
+    # MATCHED | VENDOR_ONLY | OUR_ONLY | DISPUTED | IGNORED
+    match_status = Column(String(20), nullable=False, default="VENDOR_ONLY", index=True)
+    matched_work_order_id = Column(
+        Integer,
+        ForeignKey("work_orders.id"),
+        nullable=True,
+        index=True,
+    )
+    reviewer_note = Column(String(500), nullable=True)

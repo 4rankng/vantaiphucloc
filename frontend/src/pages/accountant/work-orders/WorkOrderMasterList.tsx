@@ -3,6 +3,7 @@ import { Calendar, Check } from 'lucide-react'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { fmtDate } from '@/lib/date-utils'
 import { resolveRoute } from '@/lib/route-utils'
+import { OPERATION_TYPE_LABELS, type OperationType } from '@/data/domain'
 import type { WorkOrder, WorkOrderMatchScore } from '@/data/domain'
 
 function scoreChipColor(matchScore: number, maxScore: number): string {
@@ -140,12 +141,16 @@ export function WorkOrderMasterList({
 
             {/* Content */}
             <div className="flex-1 min-w-0">
-              {/* Line 1: driver name + plate + date */}
+              {/* Line 1: driver/vendor name + plate + date */}
               <div className="flex items-center gap-1.5 mb-0.5">
-                <span className="text-xs font-bold" style={{ color: 'var(--theme-brand-primary)' }}>
-                  {wo.driver.name}{wo.driver.vehicle?.plate ? ` · ${wo.driver.vehicle.plate}` : ''}
+                <span className="text-xs font-bold truncate" style={{ color: 'var(--theme-brand-primary)' }}>
+                  {wo.driver
+                    ? `${wo.driver.name}${wo.driver.vehicle?.plate ? ` · ${wo.driver.vehicle.plate}` : ''}`
+                    : wo.vehicleExternalPlate
+                      ? `Xe ngoài · ${wo.vehicleExternalPlate}`
+                      : 'Xe ngoài'}
                 </span>
-                <span className="flex items-center gap-0.5 text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
+                <span className="flex items-center gap-0.5 text-[11px] shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
                   <Calendar className="w-3 h-3" />
                   {wo.createdAt ? fmtDate(wo.createdAt) : '—'}
                 </span>
@@ -153,9 +158,19 @@ export function WorkOrderMasterList({
 
               {/* Line 2: partner (primary) + route (muted) — stacked vertically */}
               <div className="min-w-0 text-xs">
-                <p className="font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
-                  {wo.partner.name}
-                </p>
+                <div className="flex items-center gap-1.5">
+                  <p className="font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
+                    {wo.partner.name}
+                  </p>
+                  {wo.operationType && (
+                    <span
+                      className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                      style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)', color: 'var(--theme-brand-primary)' }}
+                    >
+                      {OPERATION_TYPE_LABELS[wo.operationType as OperationType] ?? wo.operationType}
+                    </span>
+                  )}
+                </div>
                 <p className="truncate text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
                   {resolveRoute(wo) || '—'}
                 </p>

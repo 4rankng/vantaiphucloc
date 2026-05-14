@@ -909,25 +909,26 @@ async def generate_doi_soat_excel(
 
     Returns (excel_bytes, partner_name) tuple.
     Only includes MATCHED trip orders within the date range.
-    One row per container with: STT, Ngày chạy, Số cont, Loại, Điểm lấy, Điểm trả, Biển số xe.
+    Columns: STT | Ngày chạy | Số cont | Loại | Điểm lấy | Điểm trả | Tác nghiệp | Biển số xe | Số tàu | Đơn giá
+    Summary row at the bottom: count per work type + total amount.
     """
     import openpyxl
-    from openpyxl.styles import Font, PatternFill, Alignment
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
     from app.models.domain import Partner, Location, Reconciliation, Vehicle
     from app.models.base import User as _User
 
-    # Get partner name
+    # ── 1. Load partner ───────────────────────────────────────────────────────
     p_result = await db.execute(select(Partner).where(Partner.id == partner_id))
     partner = p_result.scalar_one_or_none()
-    partner_name = partner.name if partner else f"partner_{partner_id}"
+    partner_name = partner.name if partner else f"Partner #{partner_id}"
 
     from datetime import date as date_type
 
-    # Convert string dates to date objects for proper SQL comparison
     df = date_type.fromisoformat(date_from)
     dt = date_type.fromisoformat(date_to)
 
-    # Only MATCHED trip orders — these are the confirmed/completed trips
+    # ── 2. Load MATCHED trip orders ───────────────────────────────────────────
     to_query = select(TripOrder).where(
         TripOrder.partner_id == partner_id,
         TripOrder.trip_date >= df,
@@ -939,7 +940,7 @@ async def generate_doi_soat_excel(
 
     to_ids = [to.id for to in trip_orders]
 
-    # Load containers
+    # ── 3. Load containers ───────────────────────────────────────────────────
     containers_map: dict[int, list[TripOrderContainer]] = {}
     if to_ids:
         cont_result = await db.execute(
@@ -948,8 +949,8 @@ async def generate_doi_soat_excel(
         for c in cont_result.scalars().all():
             containers_map.setdefault(c.trip_order_id, []).append(c)
 
-    # Load location names
-    loc_ids = set()
+    # ── 4. Load location names ───────────────────────────────────────────────
+    loc_ids: set[int] = set()
     for to in trip_orders:
         if to.pickup_location_id:
             loc_ids.add(to.pickup_location_id)
@@ -958,11 +959,19 @@ async def generate_doi_soat_excel(
     loc_name_by_id: dict[int, str] = {}
     if loc_ids:
         loc_result = await db.execute(select(Location).where(Location.id.in_(loc_ids)))
-        loc_name_by_id = {l.id: l.name for l in loc_result.scalars().all()}
+        loc_name_by_id = {loc.id: loc.name for loc in loc_result.scalars().all()}
 
-    # Load vehicle plates and vessels via reconciliation -> work_order -> driver -> vehicle
-    plate_map: dict[int, str] = {}  # to_id -> plate
-    vessel_map: dict[int, str] = {}  # to_id -> vessel
+    # ── 5. Load plate + vessel + operation_type via Reconciliation → WorkOrder ─
+    plate_map: dict[int, str] = {}   # to_id -> plate string
+    vessel_map: dict[int, str] = {}  # to_id -> vessel string
+    op_type_map: dict[int, str] = {} # to_id -> operation_type label
+    _op_labels = {
+        "XUAT_TAU": "Xuất tàu",
+        "NHAP_TAU": "Nhập tàu",
+        "CHUYEN_BAI": "Chuyển bãi",
+        "KHAC": "Khác",
+    }
+
     if to_ids:
         recon_result = await db.execute(
             select(Reconciliation.work_order_id, Reconciliation.trip_order_id).where(
@@ -975,12 +984,20 @@ async def generate_doi_soat_excel(
 
         if wo_ids:
             wo_result = await db.execute(
-                select(WorkOrder.id, WorkOrder.driver_id, WorkOrder.vessel).where(WorkOrder.id.in_(wo_ids))
+                select(
+                    WorkOrder.id, WorkOrder.driver_id, WorkOrder.vessel,
+                    WorkOrder.vendor_partner_id, WorkOrder.vehicle_external_plate,
+                    WorkOrder.operation_type,
+                ).where(WorkOrder.id.in_(wo_ids))
             )
-            wo_driver_map = {r[0]: r[1] for r in wo_result.all()}
-            wo_vessel_map = {r[0]: (r[2] or "") for r in wo_result.all()}
-            driver_ids = list(set(wo_driver_map.values()))
+            wo_rows = wo_result.all()
+            wo_driver_map   = {r[0]: r[1] for r in wo_rows}
+            wo_vessel_map   = {r[0]: (r[2] or "") for r in wo_rows}
+            wo_ext_plate_map = {r[0]: r[4] for r in wo_rows if r[3]}
+            wo_op_type_map  = {r[0]: (r[5] or "") for r in wo_rows}
+            driver_ids = [d for d in wo_driver_map.values() if d is not None]
 
+            driver_plate_map: dict[int, str] = {}
             if driver_ids:
                 v_result = await db.execute(
                     select(Vehicle.driver_id, Vehicle.plate).where(
@@ -990,55 +1007,181 @@ async def generate_doi_soat_excel(
                 )
                 driver_plate_map = dict(v_result.all())
 
-                for wo_id, to_id in wo_to_pairs:
-                    driver_id = wo_driver_map.get(wo_id)
-                    if driver_id and driver_id in driver_plate_map:
-                        plate_map[to_id] = driver_plate_map[driver_id]
-                    vessel = wo_vessel_map.get(wo_id, "")
-                    if vessel:
-                        vessel_map[to_id] = vessel
+            for wo_id, to_id in wo_to_pairs:
+                if wo_id in wo_ext_plate_map and wo_ext_plate_map[wo_id]:
+                    plate_map[to_id] = wo_ext_plate_map[wo_id]
+                else:
+                    d_id = wo_driver_map.get(wo_id)
+                    if d_id and d_id in driver_plate_map:
+                        plate_map[to_id] = driver_plate_map[d_id]
+                vessel = wo_vessel_map.get(wo_id, "")
+                if vessel:
+                    vessel_map[to_id] = vessel
+                op = wo_op_type_map.get(wo_id, "")
+                if op:
+                    op_type_map[to_id] = _op_labels.get(op, op)
 
-    # Build Excel
+    # ── 6. Build Excel workbook ───────────────────────────────────────────────
     wb = openpyxl.Workbook()
     ws = wb.active
-    # Truncate sheet name to 31 chars (Excel limit)
     ws.title = partner_name[:31]
 
-    headers = ["STT", "Ngày chạy", "Số cont", "Loại", "Điểm lấy", "Điểm trả", "Biển số xe", "Số tàu"]
-    ws.append(headers)
+    # ── Styles ────────────────────────────────────────────────────────────────
+    thin_side = Side(style="thin", color="BBBBBB")
+    thin_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
+    thick_bottom = Border(
+        left=thin_side, right=thin_side,
+        top=Side(style="thin", color="BBBBBB"),
+        bottom=Side(style="medium", color="1F4E79"),
+    )
+    _blue_dark   = "1F4E79"
+    _blue_header = "2E75B6"
+    _blue_light  = "DEEAF1"
+    _yellow_sum  = "FFF2CC"
+    _white       = "FFFFFF"
+    _grey_row    = "F5F8FC"
 
-    header_font = Font(bold=True, color="FFFFFF")
-    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-    for col_num in range(1, len(headers) + 1):
-        cell = ws.cell(row=1, column=col_num)
+    # ── Title block (rows 1–3) ────────────────────────────────────────────────
+    num_cols = 10  # number of data columns
+    last_col_letter = get_column_letter(num_cols)
+
+    # Row 1: Company + report title
+    ws.append(["VẬN TẢI PHÚC LỘC", "", "", "", "", "", "", "", "", ""])
+    ws.merge_cells(f"A1:{last_col_letter}1")
+    title_cell = ws["A1"]
+    title_cell.font = Font(bold=True, size=14, color=_blue_dark)
+    title_cell.alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[1].height = 24
+
+    # Row 2: Subtitle
+    month_range_str = f"Từ {df.strftime('%d/%m/%Y')} đến {dt.strftime('%d/%m/%Y')}"
+    ws.append([f"BẢNG ĐỐI SOÁT – {partner_name.upper()} – {month_range_str}", *[""] * (num_cols - 1)])
+    ws.merge_cells(f"A2:{last_col_letter}2")
+    subtitle_cell = ws["A2"]
+    subtitle_cell.font = Font(bold=True, size=11, color=_blue_dark)
+    subtitle_cell.alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[2].height = 20
+
+    # Row 3: empty spacer
+    ws.append([""] * num_cols)
+    ws.row_dimensions[3].height = 6
+
+    # ── Header row (row 4) ────────────────────────────────────────────────────
+    headers = [
+        "STT", "Ngày chạy", "Số cont", "Loại cont",
+        "Điểm lấy", "Điểm trả",
+        "Tác nghiệp", "Biển số xe", "Số tàu", "Đơn giá (VNĐ)"
+    ]
+    ws.append(headers)
+    header_row = 4
+    header_font = Font(bold=True, color=_white, size=10)
+    header_fill = PatternFill(start_color=_blue_header, end_color=_blue_header, fill_type="solid")
+    for col_num in range(1, num_cols + 1):
+        cell = ws.cell(row=header_row, column=col_num)
         cell.font = header_font
         cell.fill = header_fill
-        cell.alignment = Alignment(horizontal="center")
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = thick_bottom
+    ws.row_dimensions[header_row].height = 32
 
+    # Freeze rows 1–4 (title + header)
+    ws.freeze_panes = ws.cell(row=5, column=1)
+
+    # ── Data rows ─────────────────────────────────────────────────────────────
+    WORK_TYPE_FULL = {
+        "E20": "Rỗng 20ft", "E40": "Rỗng 40ft",
+        "F20": "Hàng 20ft", "F40": "Hàng 40ft",
+    }
     stt = 0
-    for to in trip_orders:
+    type_count: dict[str, int] = {}
+    total_amount = 0
+
+    for row_idx, to in enumerate(trip_orders):
         containers = containers_map.get(to.id, [])
-        pickup = loc_name_by_id.get(to.pickup_location_id, "")
-        dropoff = loc_name_by_id.get(to.dropoff_location_id, "")
-        plate = plate_map.get(to.id, "")
-        trip_date_str = to.trip_date.isoformat() if to.trip_date else ""
+        pickup  = loc_name_by_id.get(to.pickup_location_id or 0, "")
+        dropoff = loc_name_by_id.get(to.dropoff_location_id or 0, "")
+        plate   = plate_map.get(to.id, "")
+        vessel  = vessel_map.get(to.id, "")
+        op_type = op_type_map.get(to.id, "")
+        unit_price = to.unit_price or 0
+        trip_date_str = to.trip_date.strftime("%d/%m/%Y") if to.trip_date else ""
+
+        # Fill colour alternates every trip (not every row) for readability
+        fill_color = _white if row_idx % 2 == 0 else _grey_row
+        row_fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+
         for c in containers:
             stt += 1
-            ws.append([
-                stt,
-                trip_date_str,
-                c.container_number,
-                c.work_type or "",
-                pickup,
-                dropoff,
-                plate,
-                vessel_map.get(to.id, ""),
-            ])
+            wt_label = WORK_TYPE_FULL.get(c.work_type or "", c.work_type or "")
+            type_count[wt_label] = type_count.get(wt_label, 0) + 1
+            total_amount += unit_price
 
-    # Auto-adjust column widths
-    for col in ws.columns:
-        max_len = max(len(str(c.value or "")) for c in col)
-        ws.column_dimensions[col[0].column_letter].width = min(max_len + 2, 40)
+            data_row = [
+                stt, trip_date_str, c.container_number, wt_label,
+                pickup, dropoff, op_type, plate, vessel, unit_price or "",
+            ]
+            ws.append(data_row)
+            data_row_num = ws.max_row
+
+            for col_num in range(1, num_cols + 1):
+                cell = ws.cell(row=data_row_num, column=col_num)
+                cell.fill = row_fill
+                cell.border = thin_border
+                cell.alignment = Alignment(vertical="center")
+                if col_num == 1:  # STT
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+                if col_num == 10 and unit_price:  # Đơn giá
+                    cell.number_format = '#,##0'
+                    cell.alignment = Alignment(horizontal="right", vertical="center")
+            ws.row_dimensions[data_row_num].height = 18
+
+    # ── Summary rows ──────────────────────────────────────────────────────────
+    sum_fill = PatternFill(start_color=_blue_light, end_color=_blue_light, fill_type="solid")
+    sum_font_bold = Font(bold=True, size=10, color=_blue_dark)
+
+    # Spacer row
+    ws.append([""] * num_cols)
+
+    # Count per loại cont
+    ws.append(["Tổng hợp theo loại container:", *[""] * (num_cols - 1)])
+    label_row = ws.max_row
+    ws.merge_cells(f"A{label_row}:J{label_row}")
+    ws[f"A{label_row}"].font = sum_font_bold
+    ws[f"A{label_row}"].fill = sum_fill
+
+    for wt_label, count in sorted(type_count.items()):
+        ws.append(["", f"  {wt_label}", count, "cont", *[""] * (num_cols - 4)])
+        r = ws.max_row
+        for col_num in range(1, num_cols + 1):
+            ws.cell(row=r, column=col_num).fill = sum_fill
+        ws.cell(row=r, column=2).font = Font(size=10)
+        ws.cell(row=r, column=3).font = Font(bold=True, size=10, color=_blue_dark)
+
+    # Total rows
+    total_row_cells: list[list] = [
+        ["Tổng số container:", *[""] * 3, "", "", "", "", "", stt],
+    ]
+    if total_amount:
+        total_row_cells.append(["Tổng đơn giá:", *[""] * 3, "", "", "", "", "", total_amount])
+
+    total_fill = PatternFill(start_color=_yellow_sum, end_color=_yellow_sum, fill_type="solid")
+    for row_data in total_row_cells:
+        ws.append(row_data)
+        r = ws.max_row
+        ws.merge_cells(f"A{r}:I{r}")
+        label_cell = ws.cell(row=r, column=1)
+        val_cell   = ws.cell(row=r, column=10)
+        label_cell.font = Font(bold=True, size=10, color=_blue_dark)
+        val_cell.font   = Font(bold=True, size=11, color=_blue_dark)
+        val_cell.number_format = '#,##0'
+        val_cell.alignment = Alignment(horizontal="right", vertical="center")
+        for col_num in range(1, num_cols + 1):
+            ws.cell(row=r, column=col_num).fill = total_fill
+
+    # ── Column widths ─────────────────────────────────────────────────────────
+    col_widths = [6, 12, 16, 14, 24, 24, 14, 14, 14, 16]
+    for i, width in enumerate(col_widths, start=1):
+        ws.column_dimensions[get_column_letter(i)].width = width
 
     buf = BytesIO()
     wb.save(buf)

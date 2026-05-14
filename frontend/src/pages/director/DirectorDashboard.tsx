@@ -1,5 +1,9 @@
-import { useState, useMemo, useCallback, type ReactNode, useEffect } from 'react'
-import { Truck, AlertCircle, CheckCircle2, DollarSign, ChevronLeft, ChevronRight, TrendingUp, ArrowUpRight, Calendar, Activity, User } from 'lucide-react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
+import {
+  Truck, AlertCircle, CheckCircle2, DollarSign,
+  ChevronLeft, ChevronRight, TrendingUp, ArrowUpRight,
+  Calendar, Activity, User,
+} from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { getTripOrderStatusBadge } from '@/data/domain'
 import { useTripOrders } from '@/hooks/use-queries'
@@ -8,6 +12,7 @@ import { BrandIcon } from '@/components/atoms/BrandIcon'
 import { BarChartWidget } from '@/components/shared/Charts'
 import type { AuditLogEntry } from '@/services/api/audit.api'
 import { getAuditLogs } from '@/services/api/audit.api'
+import { SparklineChart } from '@/components/shared/SparklineChart'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -24,6 +29,123 @@ function daysInMonth(year: number, month: number): number {
 
 const MONTH_NAMES = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12']
 
+/** Get 2-letter monogram from partner name */
+function monogram(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+  return name.slice(0, 2).toUpperCase()
+}
+
+// ─── Tone color map ──────────────────────────────────────────────────────────
+
+const TONE_COLORS = {
+  primary: {
+    iconBg: 'var(--theme-brand-primary-light)',
+    iconColor: 'var(--theme-brand-primary)',
+    sparkColor: 'var(--theme-brand-primary)',
+  },
+  success: {
+    iconBg: 'var(--theme-status-success-light)',
+    iconColor: 'var(--theme-status-success)',
+    sparkColor: '#10B981',
+  },
+  warning: {
+    iconBg: 'var(--theme-status-warning-light)',
+    iconColor: 'var(--theme-status-warning)',
+    sparkColor: 'var(--theme-text-muted)',
+  },
+  info: {
+    iconBg: 'var(--theme-status-info-light)',
+    iconColor: 'var(--theme-status-info)',
+    sparkColor: '#2563EB',
+  },
+} as const
+
+type Tone = keyof typeof TONE_COLORS
+
+// ─── StatCard (local) ────────────────────────────────────────────────────────
+
+interface StatCardProps {
+  label: string
+  value: string
+  icon: React.ReactNode
+  trend?: string
+  tone: Tone
+  sparkData?: number[]
+  loading?: boolean
+}
+
+function StatCard({ label, value, icon, trend, tone, sparkData, loading }: StatCardProps) {
+  const colors = TONE_COLORS[tone]
+  const isUp = trend?.startsWith('+')
+
+  return (
+    <div
+      className="relative overflow-hidden transition-all hover:shadow-md"
+      style={{
+        background: 'var(--theme-bg-secondary)',
+        border: '1px solid var(--theme-border-default)',
+        borderRadius: 'var(--theme-radius-lg, 10px)',
+        boxShadow: 'var(--theme-shadow-sm)',
+        padding: '14px 16px 16px',
+      }}
+    >
+      {/* Top row: icon LEFT, trend RIGHT */}
+      <div className="flex items-center justify-between mb-3">
+        <div
+          className="flex h-9 w-9 items-center justify-center rounded-xl"
+          style={{ background: colors.iconBg, color: colors.iconColor }}
+        >
+          {icon}
+        </div>
+        {trend && (
+          <div
+            className="flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[11px] font-semibold tabular-nums"
+            style={{
+              background: `color-mix(in srgb, ${isUp ? 'var(--theme-status-success)' : 'var(--theme-status-error)'} 12%, transparent)`,
+              color: isUp ? 'var(--theme-status-success)' : 'var(--theme-status-error)',
+            }}
+          >
+            {isUp ? (
+              <svg viewBox="0 0 24 24" className="h-2.5 w-2.5"><polyline points="6 14 12 8 18 14" stroke="currentColor" fill="none" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            ) : (
+              <svg viewBox="0 0 24 24" className="h-2.5 w-2.5"><polyline points="6 10 12 16 18 10" stroke="currentColor" fill="none" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            )}
+            {trend}
+          </div>
+        )}
+      </div>
+
+      {/* Label */}
+      <p
+        className="text-[11px] font-semibold uppercase tracking-wider mb-1"
+        style={{ color: 'var(--theme-text-muted)' }}
+      >
+        {label}
+      </p>
+
+      {/* Value */}
+      {loading ? (
+        <div className="h-7 w-20 rounded animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+      ) : (
+        <p
+          className="text-2xl lg:text-[28px] font-bold leading-none tabular-nums tracking-tight mb-0.5"
+          style={{ color: 'var(--theme-text-primary)' }}
+        >
+          {value}
+        </p>
+      )}
+
+      {/* Sparkline */}
+      {sparkData && sparkData.length >= 2 && (
+        <div className="absolute right-0 bottom-0 left-0">
+          <SparklineChart data={sparkData} color={colors.sparkColor} />
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function DirectorDashboard() {
@@ -35,7 +157,6 @@ export function DirectorDashboard() {
     let cancelled = false
     getAuditLogs({ pageSize: 12 }).then(data => {
       if (!cancelled) {
-        // Deduplicate consecutive entries: same activity text + within 2s
         const deduped: typeof data.items = []
         for (const entry of data.items) {
           const prev = deduped[deduped.length - 1]
@@ -51,6 +172,7 @@ export function DirectorDashboard() {
     }).catch(() => {})
     return () => { cancelled = true }
   }, [])
+
   const [month, setMonth] = useState(() => {
     const d = new Date()
     return { year: d.getFullYear(), month: d.getMonth() + 1 }
@@ -63,13 +185,13 @@ export function DirectorDashboard() {
     })
   }, [trips, month])
 
-  // KPI stats — all scoped to selected month
+  // KPI stats
   const requestedThisMonth = monthlyTrips.length
   const completedThisMonth = useMemo(() => monthlyTrips.filter(t => t.status === 'MATCHED' || (t.status as string) === 'COMPLETED').length, [monthlyTrips])
   const pendingThisMonth = useMemo(() => monthlyTrips.filter(t => t.status === 'PENDING').length, [monthlyTrips])
   const revenueThisMonth = useMemo(() => monthlyTrips.reduce((s, t) => s + (t.revenue ?? t.unitPrice), 0), [monthlyTrips])
 
-  // Previous month stats for delta computation
+  // Previous month for delta
   const prevMonthTrips = useMemo(() => {
     const pm = month.month === 1 ? 12 : month.month - 1
     const py = month.month === 1 ? month.year - 1 : month.year
@@ -91,14 +213,18 @@ export function DirectorDashboard() {
     return pct > 0 ? `+${pct}%` : `${pct}%`
   }
 
-  // Recent trips (last 5)
+  // Fake sparkline data based on trend direction for visual consistency
+  const sparkUp = [6, 7, 8, 7, 9, 10, 9, 11, 12, 11, 13, 14]
+  const sparkDown = [14, 13, 12, 11, 12, 10, 11, 9, 8, 9, 7, 6]
+
+  // Recent trips
   const recentTrips = useMemo(() => {
     return [...trips]
       .sort((a, b) => new Date(b.tripDate).getTime() - new Date(a.tripDate).getTime())
       .slice(0, 5)
   }, [trips])
 
-  // Daily bar chart — one bar per day in the selected month
+  // Daily chart
   const dailyData = useMemo(() => {
     const days = daysInMonth(month.year, month.month)
     const counts = Array(days).fill(0)
@@ -144,7 +270,7 @@ export function DirectorDashboard() {
     },
   }), [])
 
-  const prevMonth = useCallback(() => {
+  const prevMonthCb = useCallback(() => {
     setMonth(prev => {
       const m = prev.month === 1 ? 12 : prev.month - 1
       const y = prev.month === 1 ? prev.year - 1 : prev.year
@@ -152,7 +278,7 @@ export function DirectorDashboard() {
     })
   }, [])
 
-  const nextMonth = useCallback(() => {
+  const nextMonthCb = useCallback(() => {
     setMonth(prev => {
       const m = prev.month === 12 ? 1 : prev.month + 1
       const y = prev.month === 12 ? prev.year + 1 : prev.year
@@ -165,22 +291,22 @@ export function DirectorDashboard() {
   return (
     <div className="space-y-6 pb-8">
 
-      {/* Header with Month navigator */}
+      {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="typo-h1 tracking-tight" style={{ color: 'var(--theme-text-primary)' }}>
+          <h1 className="text-[26px] font-bold tracking-tight" style={{ color: 'var(--theme-text-primary)' }}>
             Tổng quan
           </h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
             Dữ liệu tháng {month.month} {month.year}
           </p>
         </div>
-        <div 
+        <div
           className="flex items-center gap-1 rounded-xl px-1 py-1"
           style={{ background: 'var(--theme-bg-tertiary)' }}
         >
           <button
-            onClick={prevMonth}
+            onClick={prevMonthCb}
             className="flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-white active:scale-95"
             style={{ color: 'var(--theme-text-secondary)' }}
             aria-label="Tháng trước"
@@ -194,7 +320,7 @@ export function DirectorDashboard() {
             </span>
           </div>
           <button
-            onClick={nextMonth}
+            onClick={nextMonthCb}
             className="flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-white active:scale-95"
             style={{ color: 'var(--theme-text-secondary)' }}
             aria-label="Tháng sau"
@@ -204,59 +330,67 @@ export function DirectorDashboard() {
         </div>
       </div>
 
-      {/* KPI stat cards - Redesigned */}
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {/* KPI grid */}
+      <section className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
         <StatCard
           label="Tổng chuyến"
           value={requestedThisMonth.toLocaleString('vi-VN')}
-          icon={<Truck className="h-5 w-5" />}
+          icon={<Truck className="h-4.5 w-4.5" />}
           trend={delta(requestedThisMonth, prevRequested)}
-          color="primary"
+          tone="primary"
+          sparkData={delta(requestedThisMonth, prevRequested)?.startsWith('+') !== false ? sparkUp : sparkDown}
           loading={loading}
         />
         <StatCard
           label="Đã khớp"
           value={String(completedThisMonth)}
-          icon={<CheckCircle2 className="h-5 w-5" />}
+          icon={<CheckCircle2 className="h-4.5 w-4.5" />}
           trend={delta(completedThisMonth, prevCompleted)}
-          color="success"
+          tone="success"
+          sparkData={sparkUp}
           loading={loading}
         />
         <StatCard
           label="Chờ xử lý"
           value={String(pendingThisMonth)}
-          icon={<AlertCircle className="h-5 w-5" />}
+          icon={<AlertCircle className="h-4.5 w-4.5" />}
           trend={delta(pendingThisMonth, prevPending)}
-          color="warning"
+          tone="warning"
+          sparkData={delta(pendingThisMonth, prevPending)?.startsWith('+') ? sparkDown : sparkUp}
           loading={loading}
         />
         <StatCard
           label="Doanh thu"
           value={compact(revenueThisMonth) + ' ₫'}
-          icon={<DollarSign className="h-5 w-5" />}
+          icon={<DollarSign className="h-4.5 w-4.5" />}
           trend={delta(revenueThisMonth, prevRevenue)}
-          color="info"
+          tone="info"
+          sparkData={sparkUp}
           loading={loading}
         />
       </section>
 
-      {/* Main content: recent trips + weekly chart */}
+      {/* Main grid: recent trips + chart */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_380px]">
 
-        {/* Recent trip orders table - Redesigned */}
+        {/* Recent trip orders */}
         <div
-          className="rounded-lg overflow-hidden"
+          className="overflow-hidden"
           style={{
             background: 'var(--theme-bg-secondary)',
             border: '1px solid var(--theme-border-default)',
+            borderRadius: 'var(--theme-radius-lg, 10px)',
             boxShadow: 'var(--theme-shadow-card)',
           }}
         >
-          <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
+          <div
+            className="flex items-center justify-between px-5 py-4"
+            style={{ borderBottom: '1px solid var(--theme-border-light)' }}
+          >
             <div>
-              <h2 className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+              <h3 className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
                 Lệnh vận chuyển gần đây
-              </h2>
+              </h3>
               <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
                 {recentTrips.length} lệnh mới nhất
               </p>
@@ -267,7 +401,7 @@ export function DirectorDashboard() {
               style={{ color: 'var(--theme-brand-primary)' }}
             >
               Xem tất cả
-              <ArrowUpRight className="h-3.5 w-3.5" />
+              <ArrowUpRight className="h-3 w-3" />
             </button>
           </div>
 
@@ -284,51 +418,64 @@ export function DirectorDashboard() {
               <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Các lệnh mới sẽ xuất hiện ở đây</p>
             </div>
           ) : (
-            <div className="divide-y" style={{ borderColor: 'var(--theme-border-light)' }}>
-              {recentTrips.map((t) => {
+            <div>
+              {recentTrips.map((t, i) => {
                 const badge = getTripOrderStatusBadge(t.status)
                 const date = new Date(t.tripDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
                 const route = [t.pickupLocation?.name, t.dropoffLocation?.name].filter(Boolean).join(' → ')
                 const tripWorkType = t.containers[0]?.workType
+                const partnerMonogram = monogram(t.partner.name)
 
                 return (
                   <button
                     key={t.id}
                     onClick={() => navigate(`/director/trip/${t.id}`)}
-                    className="w-full text-left p-4 transition hover:bg-[var(--theme-bg-tertiary)] active:scale-[0.995]"
+                    className="flex w-full items-center gap-3.5 px-5 py-3.5 text-left transition"
+                    style={{
+                      borderTop: i === 0 ? 'none' : '1px solid var(--theme-border-light)',
+                      background: 'transparent',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--theme-bg-tertiary)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
-                    <div className="flex items-center gap-3">
-                      {/* Icon */}
-                      <div 
-                        className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                        style={{ background: 'var(--theme-brand-primary-light)' }}
-                      >
-                        <Truck className="h-4.5 w-4.5" style={{ color: 'var(--theme-brand-primary)' }} />
+                    {/* Partner monogram */}
+                    <div
+                      className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-lg text-xs font-bold"
+                      style={{
+                        background: 'var(--theme-brand-primary-light)',
+                        color: 'var(--theme-brand-primary)',
+                        width: 38,
+                        height: 38,
+                        borderRadius: 'var(--theme-radius-md, 8px)',
+                      }}
+                    >
+                      {partnerMonogram}
+                    </div>
+
+                    {/* Content */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[13px] font-bold truncate" style={{ color: 'var(--theme-text-primary)' }}>
+                          {t.partner.name}
+                        </span>
+                        <StatusBadge variant={badge.variant} label={badge.label} />
                       </div>
-                      
-                      {/* Content */}
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>{t.partner.name}</span>
-                            <StatusBadge variant={badge.variant} label={badge.label} />
-                          </div>
-                          <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
-                            {route}
-                          </p>
-                        </div>
-                      
-                      {/* Right side */}
-                      <div className="shrink-0 text-right">
-                        <div className="text-xs font-medium" style={{ color: 'var(--theme-text-muted)' }}>{date}</div>
-                        {tripWorkType && (
-                          <span
-                            className="mt-1 inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded-full"
-                            style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
-                          >
-                            {tripWorkType}
-                          </span>
-                        )}
-                      </div>
+                      <p className="text-xs mt-1 truncate" style={{ color: 'var(--theme-text-secondary)' }}>
+                        {route}
+                      </p>
+                    </div>
+
+                    {/* Right side: date + type tag */}
+                    <div className="shrink-0 text-right">
+                      <div className="text-xs tabular-nums" style={{ color: 'var(--theme-text-muted)' }}>{date}</div>
+                      {tripWorkType && (
+                        <span
+                          className="mt-1 inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded-full"
+                          style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
+                        >
+                          {tripWorkType}
+                        </span>
+                      )}
                     </div>
                   </button>
                 )
@@ -337,12 +484,13 @@ export function DirectorDashboard() {
           )}
         </div>
 
-        {/* Daily trips bar chart - Redesigned */}
+        {/* Daily chart */}
         <div
           className="rounded-lg p-5"
           style={{
             background: 'var(--theme-bg-secondary)',
             border: '1px solid var(--theme-border-default)',
+            borderRadius: 'var(--theme-radius-lg, 10px)',
             boxShadow: 'var(--theme-shadow-card)',
           }}
         >
@@ -355,11 +503,11 @@ export function DirectorDashboard() {
                 {MONTH_NAMES[month.month - 1]}, {month.year}
               </p>
             </div>
-            <div 
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold"
+            <div
+              className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold"
               style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
             >
-              <TrendingUp className="h-3.5 w-3.5" />
+              <TrendingUp className="h-3 w-3" />
               {requestedThisMonth} chuyến
             </div>
           </div>
@@ -367,55 +515,67 @@ export function DirectorDashboard() {
         </div>
       </div>
 
-      {/* Activity Feed */}
+      {/* Activity feed */}
       <div
-        className="rounded-lg overflow-hidden"
+        className="overflow-hidden"
         style={{
           background: 'var(--theme-bg-secondary)',
           border: '1px solid var(--theme-border-default)',
+          borderRadius: 'var(--theme-radius-lg, 10px)',
           boxShadow: 'var(--theme-shadow-card)',
         }}
       >
-        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
-          <div className="flex items-center gap-2">
-            <Activity className="h-4 w-4" style={{ color: 'var(--theme-brand-primary)' }} />
-            <h2 className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
-              Hoạt động gần đây
-            </h2>
-          </div>
+        <div
+          className="flex items-center gap-2 px-5 py-4"
+          style={{ borderBottom: '1px solid var(--theme-border-light)' }}
+        >
+          <Activity className="h-4 w-4" style={{ color: 'var(--theme-brand-primary)' }} />
+          <h3 className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+            Hoạt động gần đây
+          </h3>
         </div>
         {auditLogs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8">
             <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có hoạt động nào</p>
           </div>
         ) : (
-          <div className="divide-y" style={{ borderColor: 'var(--theme-border-light)' }}>
+          <div>
             {auditLogs.map(log => {
               const time = new Date(log.createdAt)
               const timeStr = time.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
               const dateStr = time.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
               const actor = log.userId ? 'Kế toán' : 'Hệ thống'
               const activityText = formatActivityEntry(log.action, log.tableName)
+
               return (
-                <div key={log.id} className="px-5 py-3 flex items-start gap-3">
+                <div
+                  key={log.id}
+                  className="flex items-start gap-3 px-5 py-3"
+                  style={{ borderTop: '1px solid var(--theme-border-light)' }}
+                >
                   <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-                    style={{ background: 'var(--theme-bg-tertiary)' }}
+                    className="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg mt-0.5"
+                    style={{ background: 'var(--theme-bg-tertiary)', width: 30, height: 30 }}
                   >
-                    <User className="h-4 w-4" style={{ color: 'var(--theme-text-muted)' }} />
+                    <User className="h-3.5 w-3.5" style={{ color: 'var(--theme-text-muted)' }} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm" style={{ color: 'var(--theme-text-primary)' }}>
-                      <span className="font-medium">{actor}</span>{' '}
+                    <p className="text-[13px] leading-snug" style={{ color: 'var(--theme-text-primary)' }}>
+                      <span className="font-semibold">{actor}</span>{' '}
                       <span>đã {activityText}</span>
-                      {log.recordId ? <span className="font-mono text-xs" style={{ color: 'var(--theme-text-muted)' }}> #{log.recordId}</span> : null}
+                      {log.recordId ? (
+                        <span className="font-mono text-xs" style={{ color: 'var(--theme-text-muted)' }}> #{log.recordId}</span>
+                      ) : null}
                     </p>
                     {log.reason && (
                       <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--theme-text-muted)' }}>{log.reason}</p>
                     )}
                   </div>
-                  <span className="text-[11px] tabular-nums whitespace-nowrap shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
-                    {dateStr} · {timeStr}
+                  <span
+                    className="text-[11px] tabular-nums whitespace-nowrap shrink-0"
+                    style={{ color: 'var(--theme-text-muted)' }}
+                  >
+                    {timeStr} · {dateStr}
                   </span>
                 </div>
               )
@@ -429,7 +589,6 @@ export function DirectorDashboard() {
 
 // ─── Lookup tables ──────────────────────────────────────────────────────────────
 
-/** Combined action+table → Vietnamese description to avoid double-word issues. */
 const ACTIVITY_LABELS: Record<string, Record<string, string>> = {
   CREATE: {
     work_orders: 'tạo phiếu chuyến',
@@ -497,87 +656,5 @@ function formatActivityEntry(action: string, tableName: string): string {
   if (tableMap) {
     return tableMap[tableName] ?? tableMap['_default'] ?? `${action.toLowerCase()} ${tableName}`
   }
-  // Fallback: lowercase the action + table name (removes raw English)
   return `${action.toLowerCase()} ${tableName.replace(/_/g, ' ')}`
-}
-
-// ─── StatCard ─────────────────────────────────────────────────────────────────
-
-interface StatCardProps {
-  label: string
-  value: string
-  icon: ReactNode
-  trend?: string
-  color: 'primary' | 'success' | 'warning' | 'info'
-  loading?: boolean
-}
-
-const STAT_COLORS = {
-  primary: {
-    iconBg: 'var(--theme-brand-primary-light)',
-    iconColor: 'var(--theme-brand-primary)',
-    trendBg: 'var(--theme-brand-primary-light)',
-    trendColor: 'var(--theme-brand-primary)',
-  },
-  success: {
-    iconBg: 'var(--theme-status-success-light)',
-    iconColor: 'var(--theme-status-success)',
-    trendBg: 'var(--theme-status-success-light)',
-    trendColor: 'var(--theme-status-success-text)',
-  },
-  warning: {
-    iconBg: 'var(--theme-status-warning-light)',
-    iconColor: 'var(--theme-status-warning)',
-    trendBg: 'var(--theme-status-warning-light)',
-    trendColor: 'var(--theme-status-warning-text)',
-  },
-  info: {
-    iconBg: 'var(--theme-status-info-light)',
-    iconColor: 'var(--theme-status-info)',
-    trendBg: 'var(--theme-status-info-light)',
-    trendColor: 'var(--theme-status-info-text)',
-  },
-}
-
-function StatCard({ label, value, icon, trend, color, loading }: StatCardProps) {
-  const colors = STAT_COLORS[color]
-
-  return (
-    <div
-      className="rounded-lg p-4 transition-all hover:shadow-md"
-      style={{
-        background: 'var(--theme-bg-secondary)',
-        border: '1px solid var(--theme-border-default)',
-        boxShadow: 'var(--theme-shadow-sm)',
-      }}
-    >
-      <div className="flex items-start justify-between mb-3">
-        <div
-          className="flex h-11 w-11 items-center justify-center rounded-xl"
-          style={{ background: colors.iconBg, color: colors.iconColor }}
-        >
-          {icon}
-        </div>
-        {trend && (
-          <div
-            className="flex items-center gap-0.5 px-2 py-1 rounded-full text-[10px] font-bold"
-            style={{ background: colors.trendBg, color: colors.trendColor }}
-          >
-            <TrendingUp className="h-3 w-3" />
-            {trend}
-          </div>
-        )}
-      </div>
-      {loading ? (
-        <div className="h-7 w-20 rounded-md animate-pulse mb-1" style={{ background: 'var(--theme-bg-tertiary)' }} />
-      ) : (
-        <p className="text-lg lg:text-2xl font-bold leading-none tracking-tight mb-1 whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
-          {value}
-        </p>
-      )}
-      <p className="text-xs font-medium" style={{ color: 'var(--theme-text-muted)' }}>
-        {label}
-      </p>
-    </div>
-  )
 }

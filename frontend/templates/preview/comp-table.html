@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8">
+<link rel="stylesheet" href="_base.css">
+<link rel="stylesheet" href="_components.css">
+<style>
+body { background: var(--bg-1); padding: 24px; }
+
+.tbl-shell {
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 1px 0 rgba(9,9,11,0.02);
+  overflow: hidden;
+}
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl thead th {
+  text-align: left;
+  font-size: 11px; font-weight: 600; color: var(--fg-3);
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border-1);
+  background: var(--bg-2);
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+}
+.tbl tbody td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-2);
+  color: var(--fg-2);
+  vertical-align: middle;
+}
+.tbl tbody tr { cursor: pointer; transition: background 120ms var(--ease); }
+.tbl tbody tr:hover { background: var(--bg-3); }
+.tbl tbody tr:last-child td { border-bottom: none; }
+
+.partner {
+  display: flex; align-items: center; gap: 10px;
+}
+.partner .logo {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  background: var(--brand-soft);
+  color: var(--brand-hover);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+  flex-shrink: 0;
+}
+.partner .meta { min-width: 0; }
+.partner .name { font-size: 13px; font-weight: 600; color: var(--fg-1); line-height: 1.2; }
+.partner .sub  { font-size: 11px; color: var(--fg-3); margin-top: 1px; }
+
+.route { font-size: 13px; color: var(--fg-1); }
+.route .arrow { color: var(--fg-3); margin: 0 4px; }
+
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px; font-weight: 600;
+  color: var(--fg-1);
+  text-align: right;
+}
+.num.muted { color: var(--fg-3); font-weight: 500; }
+
+.driver {
+  display: flex; align-items: center; gap: 7px;
+  color: var(--fg-1);
+}
+.driver .av {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--bg-3); color: var(--fg-2);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.driver .av svg { width: 13px; height: 13px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.driver .nm { font-size: 13px; }
+.driver .nm.empty { color: var(--fg-3); font-style: italic; }
+
+.date { font-size: 12px; color: var(--fg-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+</style></head>
+<body>
+  <div class="tbl-shell">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th style="width:34%">Khách hàng</th>
+          <th>Tuyến</th>
+          <th>Tài xế</th>
+          <th>Trạng thái</th>
+          <th style="text-align:right">Doanh thu</th>
+          <th style="text-align:right">Ngày</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <div class="partner">
+              <div class="logo">PP</div>
+              <div class="meta"><div class="name">Pan Pacific Logistics</div><div class="sub">CONT 40 · 92 km</div></div>
+            </div>
+          </td>
+          <td><span class="route">Hải Phòng <span class="arrow">→</span> Bắc Ninh</span></td>
+          <td>
+            <div class="driver">
+              <span class="av"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></span>
+              <span class="nm">Nguyễn Văn Hùng</span>
+            </div>
+          </td>
+          <td><span class="badge badge-success"><span class="dot"></span>Đã khớp</span></td>
+          <td class="num">8.450.000 ₫</td>
+          <td class="date">22/04</td>
+        </tr>
+        <tr>
+          <td>
+            <div class="partner">
+              <div class="logo">ML</div>
+              <div class="meta"><div class="name">Maersk Line Việt Nam</div><div class="sub">CONT 40 · 108 km</div></div>
+            </div>
+          </td>
+          <td><span class="route">Lạch Huyện <span class="arrow">→</span> Hà Nội</span></td>
+          <td>
+            <div class="driver">
+              <span class="av"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></span>
+              <span class="nm empty">Chưa gán</span>
+            </div>
+          </td>
+          <td><span class="badge badge-warning"><span class="dot"></span>Chờ xử lý</span></td>
+          <td class="num">12.900.000 ₫</td>
+          <td class="date">22/04</td>
+        </tr>
+        <tr>
+          <td>
+            <div class="partner">
+              <div class="logo">HL</div>
+              <div class="meta"><div class="name">Hapag-Lloyd VN</div><div class="sub">CONT 20 · 88 km</div></div>
+            </div>
+          </td>
+          <td><span class="route">Hải Phòng <span class="arrow">→</span> Hưng Yên</span></td>
+          <td>
+            <div class="driver">
+              <span class="av"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></span>
+              <span class="nm">Trần Đình Sơn</span>
+            </div>
+          </td>
+          <td><span class="badge badge-brand"><span class="dot"></span>Đang chạy</span></td>
+          <td class="num">6.200.000 ₫</td>
+          <td class="date">21/04</td>
+        </tr>
+        <tr>
+          <td>
+            <div class="partner">
+              <div class="logo">CC</div>
+              <div class="meta"><div class="name">CMA CGM Việt Nam</div><div class="sub">CONT 20 · 72 km</div></div>
+            </div>
+          </td>
+          <td><span class="route">Đình Vũ <span class="arrow">→</span> Hải Dương</span></td>
+          <td>
+            <div class="driver">
+              <span class="av"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></span>
+              <span class="nm">Phạm Quốc Bảo</span>
+            </div>
+          </td>
+          <td><span class="badge badge-success"><span class="dot"></span>Đã khớp</span></td>
+          <td class="num">7.350.000 ₫</td>
+          <td class="date">21/04</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</body></html>

@@ -28,8 +28,13 @@ from app.core.cache import CacheManager
 def _pricing_cache_key(
     partner_id: int, work_type: str,
     pickup_location_id: int, dropoff_location_id: int,
+    shipper_partner_id: int | None = None,
+    operation_type: str | None = None,
 ) -> str:
-    raw = f"{partner_id}:{work_type}:{pickup_location_id}:{dropoff_location_id}"
+    raw = (
+        f"{partner_id}:{work_type}:{pickup_location_id}:{dropoff_location_id}"
+        f":{shipper_partner_id}:{operation_type}"
+    )
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
@@ -44,6 +49,35 @@ async def _resolve_location_id(db: AsyncSession, name: str | None) -> int | None
     return res.scalar_one_or_none()
 
 
+async def _exact_pricing_query(
+    db: AsyncSession,
+    partner_id: int,
+    work_type: str,
+    pickup_location_id: int,
+    dropoff_location_id: int,
+    shipper_partner_id: int | None,
+    operation_type: str | None,
+) -> PricingORM | None:
+    """Single DB query with exact values (NULLs matched as IS NULL)."""
+    base = [
+        PricingORM.partner_id == partner_id,
+        PricingORM.work_type == work_type,
+        PricingORM.pickup_location_id == pickup_location_id,
+        PricingORM.dropoff_location_id == dropoff_location_id,
+        PricingORM.is_active == True,  # noqa: E712
+    ]
+    if shipper_partner_id is None:
+        base.append(PricingORM.shipper_partner_id.is_(None))
+    else:
+        base.append(PricingORM.shipper_partner_id == shipper_partner_id)
+    if operation_type is None:
+        base.append(PricingORM.operation_type.is_(None))
+    else:
+        base.append(PricingORM.operation_type == operation_type)
+    res = await db.execute(select(PricingORM).where(*base).limit(1))
+    return res.scalar_one_or_none()
+
+
 async def find_pricing(
     db: AsyncSession,
     partner_id: int,
@@ -52,13 +86,20 @@ async def find_pricing(
     dropoff_location_id: int | None = None,
     pickup_location: str | None = None,
     dropoff_location: str | None = None,
+    shipper_partner_id: int | None = None,
+    operation_type: str | None = None,
     cache: CacheManager | None = None,
 ) -> PricingORM | None:
-    """Find the Pricing row for `(partner_id, work_type, pickup, dropoff)`.
+    """Find the most specific Pricing row using a 4-level fallback chain.
 
-    `pickup_location_id`/`dropoff_location_id` are preferred. If only
-    name strings are passed, this resolves them to IDs via the
-    `locations` table (active rows only).
+    Fallback order (most specific → least):
+      1. partner + shipper + operation_type + lane + work_type
+      2. partner + shipper + lane + work_type          (any tác nghiệp)
+      3. partner + operation_type + lane + work_type   (any chủ hàng)
+      4. partner + lane + work_type                    (base rate)
+
+    ``pickup_location_id``/``dropoff_location_id`` are preferred. If only
+    name strings are passed this resolves them via the ``locations`` table.
     """
     if pickup_location_id is None:
         pickup_location_id = await _resolve_location_id(db, pickup_location)
@@ -68,7 +109,8 @@ async def find_pricing(
         return None
 
     cache_key = _pricing_cache_key(
-        partner_id, work_type, pickup_location_id, dropoff_location_id
+        partner_id, work_type, pickup_location_id, dropoff_location_id,
+        shipper_partner_id, operation_type,
     )
     if cache:
         cached = await cache.get_json("pricing_lookup", cache_key)
@@ -78,16 +120,34 @@ async def find_pricing(
             )
             return res.scalar_one_or_none()
 
-    res = await db.execute(
-        select(PricingORM).where(
-            PricingORM.partner_id == partner_id,
-            PricingORM.work_type == work_type,
-            PricingORM.pickup_location_id == pickup_location_id,
-            PricingORM.dropoff_location_id == dropoff_location_id,
-            PricingORM.is_active == True,  # noqa: E712
-        ).limit(1)
+    # --- 4-level fallback ---------------------------------------------------
+    #  Level 1: exact (partner + shipper + op + lane)
+    pricing = await _exact_pricing_query(
+        db, partner_id, work_type, pickup_location_id, dropoff_location_id,
+        shipper_partner_id, operation_type,
     )
-    pricing = res.scalar_one_or_none()
+
+    #  Level 2: partner + shipper + lane (any op_type) — only if both were given
+    if pricing is None and shipper_partner_id is not None and operation_type is not None:
+        pricing = await _exact_pricing_query(
+            db, partner_id, work_type, pickup_location_id, dropoff_location_id,
+            shipper_partner_id, None,
+        )
+
+    #  Level 3: partner + op_type + lane (any shipper)
+    if pricing is None and operation_type is not None:
+        pricing = await _exact_pricing_query(
+            db, partner_id, work_type, pickup_location_id, dropoff_location_id,
+            None, operation_type,
+        )
+
+    #  Level 4: base rate (partner + lane only — shipper=NULL, op=NULL)
+    if pricing is None:
+        pricing = await _exact_pricing_query(
+            db, partner_id, work_type, pickup_location_id, dropoff_location_id,
+            None, None,
+        )
+
     if pricing and cache:
         await cache.set_json(
             "pricing_lookup", cache_key, {"id": pricing.id}, ttl=600
@@ -118,11 +178,14 @@ async def find_tiered_pricing(
     dropoff_location_id: int | None = None,
     pickup_location: str | None = None,
     dropoff_location: str | None = None,
+    shipper_partner_id: int | None = None,
+    operation_type: str | None = None,
     cache: CacheManager | None = None,
 ) -> TieredPricing | None:
     """Find pricing + the matching PricingLine for the requested quantity.
 
-    Falls back to `quantity=1` when the exact tier isn't defined.
+    Uses the 4-level fallback chain; falls back to ``quantity=1`` when the
+    exact tier isn't defined.
     """
     pricing = await find_pricing(
         db, partner_id, work_type,
@@ -130,6 +193,8 @@ async def find_tiered_pricing(
         dropoff_location_id=dropoff_location_id,
         pickup_location=pickup_location,
         dropoff_location=dropoff_location,
+        shipper_partner_id=shipper_partner_id,
+        operation_type=operation_type,
         cache=cache,
     )
     if pricing is None:

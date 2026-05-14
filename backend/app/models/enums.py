@@ -35,3 +35,10 @@ class VehicleExpenseCategory(StrEnum):
 class VehicleDriverRole(StrEnum):
     PRIMARY = "PRIMARY"
     SECONDARY = "SECONDARY"
+
+
+class OperationType(StrEnum):
+    XUAT_TAU = "XUAT_TAU"       # Xuất tàu (ship export)
+    NHAP_TAU = "NHAP_TAU"       # Nhập tàu (ship import)
+    CHUYEN_BAI = "CHUYEN_BAI"   # Chuyển bãi (yard transfer)
+    KHAC = "KHAC"               # Catch-all / other

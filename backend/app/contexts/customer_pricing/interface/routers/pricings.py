@@ -69,6 +69,8 @@ async def _to_out(db: AsyncSession, pricings: list[Pricing]) -> list[PricingOut]
         PricingOut(
             id=int(p.id),
             partner=get_partner_summary(partners, int(p.partner_id)),
+            shipper_partner_id=p.shipper_partner_id,
+            operation_type=p.operation_type,
             work_type=p.work_type,
             pickup_location=get_location_summary(
                 locations, int(p.pickup_location_id)
@@ -156,6 +158,8 @@ async def create_pricing(
             work_type=body.work_type,
             pickup_location_id=body.pickup_location_id,
             dropoff_location_id=body.dropoff_location_id,
+            shipper_partner_id=body.shipper_partner_id,
+            operation_type=body.operation_type,
             lines=_line_inputs(body.lines),
         ))
     except ValueError as e:
@@ -180,6 +184,8 @@ async def update_pricing(
             work_type=body.work_type,
             pickup_location_id=body.pickup_location_id,
             dropoff_location_id=body.dropoff_location_id,
+            shipper_partner_id=body.shipper_partner_id,
+            operation_type=body.operation_type,
             lines=lines,
         ))
     except NotFound as e:

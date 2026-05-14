@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
-import { LogOut, ChevronRight } from 'lucide-react'
+import { LogOut, ChevronRight, User } from 'lucide-react'
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/Dialog'
 import { DialogClose } from '@/components/ui/Dialog'
@@ -12,6 +12,7 @@ export interface SidebarNavItem {
   label: string
   icon: React.ComponentType<{ size?: number; className?: string }>
   path: string
+  section?: 'main' | 'admin'
 }
 
 interface SidebarProps {
@@ -32,84 +33,175 @@ export function Sidebar({ items, title, basePath }: SidebarProps) {
   }
 
   const roleLabel = role ? ROLE_LABELS[role] : ''
+  const mainItems = items.filter(i => i.section !== 'admin')
+  const adminItems = items.filter(i => i.section === 'admin')
+  const hasAdmin = adminItems.length > 0
 
   return (
     <aside
       className="hidden lg:flex flex-col w-64 min-h-screen text-white shrink-0"
-      style={{ background: 'var(--theme-sidebar)' }}
+      style={{
+        background: 'var(--theme-sidebar, #047857)',
+        borderRight: '1px solid var(--theme-sidebar-border, rgba(0,0,0,0.08))',
+      }}
     >
-      {/* Logo */}
-      <div className="px-6 py-5" style={{ borderBottom: '1px solid var(--theme-sidebar-border)' }}>
-        <div className="flex items-center gap-3">
-          <img
-            src="/logo.png"
-            alt="TTransport"
-            className="h-8 w-auto"
-          />
-          <p className="text-xs font-medium tracking-wider uppercase" style={{ color: 'var(--theme-sidebar-text-muted)' }}>{title}</p>
+      {/* Brand */}
+      <div
+        className="flex items-center gap-3 px-[22px] py-5 shrink-0"
+        style={{ borderBottom: '1px solid var(--theme-sidebar-border, rgba(0,0,0,0.08))' }}
+      >
+        <div
+          className="w-8 h-8 rounded-[var(--theme-radius-md,8px)] overflow-hidden flex items-center justify-center"
+          style={{ background: '#fff' }}
+        >
+          <img src="/logo.avif" alt="TTransport" className="w-full h-full object-cover" />
+        </div>
+        <div className="leading-tight">
+          <strong className="block text-sm font-bold tracking-tight" style={{ color: '#fff' }}>
+            TTransport
+          </strong>
+          <span
+            className="text-[10px] font-semibold uppercase"
+            style={{
+              color: 'var(--theme-sidebar-text-muted, rgba(232,245,237,0.60))',
+              letterSpacing: '0.1em',
+            }}
+          >
+            Phúc Lộc
+          </span>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-3 overflow-y-auto sidebar-scroll">
-        <div className="px-3 mb-2">
-          <span className="text-xs font-semibold uppercase tracking-widest px-3" style={{ color: 'var(--theme-sidebar-text-muted)' }}>Menu</span>
+      <nav className="flex-1 overflow-y-auto pb-3 sidebar-scroll">
+        {/* Main section */}
+        <div
+          className="text-[10px] font-bold uppercase"
+          style={{
+            color: 'var(--theme-sidebar-text-muted, rgba(232,245,237,0.60))',
+            letterSpacing: '0.12em',
+            padding: '18px 26px 8px',
+          }}
+        >
+          ĐIỀU HÀNH
         </div>
-        {items.map((item) => {
+
+        {mainItems.map((item) => {
           const Icon = item.icon
           return (
             <NavLink
               key={item.path}
               to={item.path}
               end={item.path === basePath}
-              className={() => cn(
-                'flex items-center gap-3 px-4 py-2.5 mx-2 rounded-[var(--theme-radius-md)] text-sm font-medium transition-all duration-150 group',
-              )}
+              className={() =>
+                cn(
+                  'flex items-center gap-3 rounded-[var(--theme-radius-md,8px)] text-[13px] font-medium transition-all duration-150 group no-underline',
+                )
+              }
               style={({ isActive }) => ({
-                background: isActive ? 'var(--theme-sidebar-active)' : 'transparent',
-                color: isActive ? 'var(--theme-sidebar-active-text)' : 'var(--theme-sidebar-text)',
+                padding: '9px 12px',
+                margin: '1px 12px',
+                width: 'calc(100% - 24px)',
+                background: isActive ? 'var(--theme-sidebar-active, rgba(255,255,255,0.12))' : 'transparent',
+                color: isActive ? 'var(--theme-sidebar-active-text, #ffffff)' : 'var(--theme-sidebar-text, #e8f5ed)',
+                fontWeight: isActive ? 600 : 500,
               })}
             >
               {({ isActive }) => (
                 <>
-                  <Icon size={18} className={isActive ? 'text-[var(--theme-brand-secondary)]' : ''} />
+                  <Icon size={16} className="shrink-0" style={{ strokeWidth: 1.8 }} />
                   <span className="flex-1">{item.label}</span>
-                  {isActive && <ChevronRight size={14} className="opacity-60 text-[var(--theme-brand-secondary)]" />}
+                  {isActive && <ChevronRight size={12} className="opacity-60" />}
                 </>
               )}
             </NavLink>
           )
         })}
+
+        {/* Admin section */}
+        {hasAdmin && (
+          <>
+            <div
+              className="text-[10px] font-bold uppercase"
+              style={{
+                color: 'var(--theme-sidebar-text-muted, rgba(232,245,237,0.60))',
+                letterSpacing: '0.12em',
+                padding: '22px 26px 8px',
+              }}
+            >
+              THIẾT LẬP
+            </div>
+
+            {adminItems.map((item) => {
+              const Icon = item.icon
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  end={item.path === basePath}
+                  className={() =>
+                    cn(
+                      'flex items-center gap-3 rounded-[var(--theme-radius-md,8px)] text-[13px] font-medium transition-all duration-150 group no-underline',
+                    )
+                  }
+                  style={({ isActive }) => ({
+                    padding: '9px 12px',
+                    margin: '1px 12px',
+                    width: 'calc(100% - 24px)',
+                    background: isActive ? 'var(--theme-sidebar-active, rgba(255,255,255,0.12))' : 'transparent',
+                    color: isActive ? 'var(--theme-sidebar-active-text, #ffffff)' : 'var(--theme-sidebar-text, #e8f5ed)',
+                    fontWeight: isActive ? 600 : 500,
+                  })}
+                >
+                  {({ isActive }) => (
+                    <>
+                      <Icon size={16} className="shrink-0" style={{ strokeWidth: 1.8 }} />
+                      <span className="flex-1">{item.label}</span>
+                      {isActive && <ChevronRight size={12} className="opacity-60" />}
+                    </>
+                  )}
+                </NavLink>
+              )
+            })}
+          </>
+        )}
       </nav>
 
-      {/* User account section */}
-      <div className="p-3 space-y-1" style={{ borderTop: '1px solid var(--theme-sidebar-border)' }}>
-        <button
-          onClick={() => setShowProfile(true)}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[var(--theme-radius-md)] transition-all duration-150"
-          style={{ color: 'var(--theme-sidebar-text)' }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--theme-sidebar-hover)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+      {/* Footer user section */}
+      <div
+        className="p-3 shrink-0"
+        style={{ borderTop: '1px solid var(--theme-sidebar-border, rgba(0,0,0,0.08))' }}
+      >
+        <div
+          className="flex items-center gap-2.5 px-2.5 py-2 rounded-[var(--theme-radius-md,8px)] transition-all duration-150"
+          style={{ color: 'var(--theme-sidebar-text, #e8f5ed)' }}
         >
           <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
-            style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-secondary)' }}
+            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+            style={{ background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
           >
-            {roleLabel ? roleLabel[0] : 'U'}
+            <User size={18} strokeWidth={1.8} />
           </div>
-      <div className="min-w-0">
-          <p className="text-sm font-medium truncate" style={{ color: 'var(--theme-sidebar-active-text)', opacity: 0.8 }}>{roleLabel}</p>
-          <p className="text-xs" style={{ color: 'var(--theme-sidebar-text-muted)' }}>TTransport</p>
+          <div className="min-w-0 flex-1 leading-tight">
+            <div className="text-[13px] font-semibold truncate" style={{ color: '#fff' }}>
+              {roleLabel}
+            </div>
+            <div
+              className="text-[11px] truncate"
+              style={{ color: 'var(--theme-sidebar-text-muted, rgba(232,245,237,0.60))' }}
+            >
+              TTransport
+            </div>
+          </div>
+          <button
+            onClick={() => setShowLogoutConfirm(true)}
+            className="p-1 rounded transition-colors hover:bg-[rgba(255,255,255,0.08)]"
+            style={{ color: 'var(--theme-sidebar-text-muted, rgba(232,245,237,0.60))' }}
+            title="Đăng xuất"
+          >
+            <LogOut size={14} />
+          </button>
         </div>
-        </button>
-        <button
-          onClick={() => setShowLogoutConfirm(true)}
-          className="w-full flex items-center gap-3 px-4 py-2 rounded-[var(--theme-radius-md)] text-sm transition-all duration-150 hover:text-red-400"
-          style={{ color: 'var(--theme-sidebar-text-muted)' }}
-        >
-          <LogOut size={16} />
-          <span>Đăng xuất</span>
-        </button>
       </div>
 
       {/* Profile Dialog */}
@@ -121,8 +213,8 @@ export function Sidebar({ items, title, basePath }: SidebarProps) {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-secondary)' }}>
-                {roleLabel ? roleLabel[0] : 'U'}
+              <div className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold" style={{ background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}>
+                <User size={28} />
               </div>
               <div>
                 <p className="font-semibold text-[var(--theme-text-primary)]">{roleLabel}</p>

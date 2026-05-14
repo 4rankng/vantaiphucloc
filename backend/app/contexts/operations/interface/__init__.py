@@ -21,6 +21,9 @@ from app.contexts.operations.interface.routers.trip_orders import (
 from app.contexts.operations.interface.routers.work_orders import (
     router as work_orders_router,
 )
+from app.contexts.operations.interface.routers.vendor_reconciliation import (
+    router as vendor_reconciliation_router,
+)
 
 __all__ = [
     "imports_router",
@@ -28,4 +31,5 @@ __all__ = [
     "suggested_routes_router",
     "trip_orders_router",
     "work_orders_router",
+    "vendor_reconciliation_router",
 ]

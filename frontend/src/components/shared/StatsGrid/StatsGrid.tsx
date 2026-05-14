@@ -1,53 +1,76 @@
 import { type ReactNode } from 'react'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { SparklineChart } from '@/components/shared/SparklineChart'
+
+// ─── Color map for variant tones ────────────────────────────────────────────
+
+const TONE_COLORS = {
+  brand: {
+    iconBg: 'var(--theme-brand-primary-light, var(--brand-soft))',
+    iconColor: 'var(--theme-brand-primary, var(--brand))',
+    sparkColor: 'var(--theme-brand-primary, #10B981)',
+  },
+  success: {
+    iconBg: 'var(--theme-status-success-light, var(--success-soft))',
+    iconColor: 'var(--theme-status-success, var(--success))',
+    sparkColor: '#10B981',
+  },
+  warning: {
+    iconBg: 'var(--theme-status-warning-light, var(--warning-soft))',
+    iconColor: 'var(--theme-status-warning, var(--warning))',
+    sparkColor: 'var(--theme-text-muted, #A1A1AA)',
+  },
+  info: {
+    iconBg: 'var(--theme-status-info-light, var(--info-soft))',
+    iconColor: 'var(--theme-status-info, var(--info))',
+    sparkColor: '#2563EB',
+  },
+} as const
+
+type Tone = keyof typeof TONE_COLORS
+
+// ─── StatCardProps ──────────────────────────────────────────────────────────
 
 export interface StatCardProps {
-  /** Label/title for the stat */
   label: string
-  /** The main value to display */
   value: string | number
-  /** Optional icon to display */
   icon?: ReactNode
-  /** Color override for the value */
   valueColor?: string
-  /** Trend percentage (positive = up, negative = down, 0 = neutral) */
   trend?: number
-  /** Label for trend comparison (e.g., "vs last month") */
   trendLabel?: string
-  /** Click handler - makes card interactive */
+  tone?: Tone
+  sparkData?: number[]
   onClick?: () => void
-  /** Loading state */
   loading?: boolean
-  /** Optional subtitle below value */
   subtitle?: string
 }
 
 export interface StatsGridProps {
-  /** Array of stat card data */
   stats: StatCardProps[]
-  /** Number of columns on desktop (default: auto based on count) */
   columns?: 2 | 3 | 4 | 5
-  /** Gap size between cards */
   gap?: 'sm' | 'md' | 'lg'
-  /** Card style variant */
   variant?: 'default' | 'outline' | 'filled'
 }
+
+// ─── Skeleton ───────────────────────────────────────────────────────────────
 
 function StatCardSkeleton() {
   return (
     <div
-      className="rounded-lg border p-3 lg:p-4"
+      className="rounded-lg border p-4 relative overflow-hidden"
       style={{
-        background: 'var(--theme-bg-secondary)',
-        borderColor: 'var(--theme-border-default)',
+        background: 'var(--theme-bg-secondary, var(--bg-2))',
+        borderColor: 'var(--theme-border-default, var(--border-1))',
       }}
     >
-      <div className="skeleton-shimmer h-3 w-16 rounded mb-1.5" />
-      <div className="skeleton-shimmer h-5 w-24 rounded mb-1" />
-      <div className="skeleton-shimmer h-2.5 w-12 rounded" />
+      <div className="skeleton-shimmer h-6 w-6 rounded mb-3" />
+      <div className="skeleton-shimmer h-3 w-20 rounded mb-2" />
+      <div className="skeleton-shimmer h-6 w-16 rounded" />
     </div>
   )
 }
+
+// ─── StatCard ───────────────────────────────────────────────────────────────
 
 function StatCard({
   label,
@@ -56,97 +79,114 @@ function StatCard({
   valueColor,
   trend,
   trendLabel,
+  tone = 'brand',
+  sparkData,
   onClick,
   loading,
   subtitle,
 }: StatCardProps) {
-  if (loading) {
-    return <StatCardSkeleton />
-  }
+  if (loading) return <StatCardSkeleton />
 
+  const colors = TONE_COLORS[tone]
   const isClickable = !!onClick
   const TrendIcon = trend && trend > 0 ? TrendingUp : trend && trend < 0 ? TrendingDown : Minus
 
   const trendColor =
     trend && trend > 0
-      ? 'var(--theme-status-success)'
+      ? 'var(--theme-status-success, var(--success))'
       : trend && trend < 0
-        ? 'var(--theme-status-error)'
-        : 'var(--theme-text-muted)'
+        ? 'var(--theme-status-error, var(--danger))'
+        : 'var(--theme-text-muted, var(--fg-3))'
 
   const Component = isClickable ? 'button' : 'div'
 
   return (
     <Component
       onClick={onClick}
-      className={`card p-4 text-left transition-all ${
-        isClickable
-          ? 'cursor-pointer hover:border-[color-mix(in_srgb,var(--theme-brand-primary)_30%,transparent)] active:scale-[0.98]'
-          : ''
+      className={`relative overflow-hidden text-left transition-all ${
+        isClickable ? 'cursor-pointer hover:shadow-md active:scale-[0.98]' : ''
       }`}
       style={{
-        background: 'var(--theme-bg-secondary)',
-        borderColor: 'var(--theme-border-default)',
+        background: 'var(--theme-bg-secondary, var(--bg-2))',
+        border: '1px solid var(--theme-border-default, var(--border-1))',
         borderRadius: 'var(--theme-radius-lg, 10px)',
+        boxShadow: 'var(--theme-shadow-sm, 0 1px 0 rgba(9,9,11,0.02))',
+        padding: '14px 16px 16px',
       }}
     >
-      <div className="flex items-start justify-between gap-3">
+      {/* Top row: icon LEFT, trend RIGHT */}
+      <div className="flex items-center justify-between mb-3">
         {icon && (
           <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-            style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+            style={{ background: colors.iconBg, color: colors.iconColor }}
           >
             {icon}
           </div>
         )}
-        <div className="min-w-0 flex-1">
-          {/* Label */}
-          <p className="typo-label mb-2 leading-tight line-clamp-2 min-h-[2.5em]">{label}</p>
-
-          {/* Value — using typo-display for lg screens */}
-          <p
-            className={`font-display font-700 leading-tight tabular-nums ${String(value).length > 10 ? 'text-base lg:text-lg' : 'text-lg lg:text-xl'}`}
-            style={{ color: valueColor ?? 'var(--theme-text-primary)' }}
+        {typeof trend === 'number' && (
+          <div
+            className="flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[11px] font-semibold tabular-nums"
+            style={{
+              background: `color-mix(in srgb, ${trendColor} 12%, transparent)`,
+              color: trendColor,
+            }}
           >
-            {value}
-          </p>
-
-          {/* Subtitle */}
-          {subtitle && (
-            <p className="typo-meta mt-1">{subtitle}</p>
-          )}
-
-          {/* Trend */}
-          {typeof trend === 'number' && (
-            <div className="flex items-center gap-1.5 mt-2">
-              <div
-                className="flex items-center gap-0.5 px-2 py-1 text-xs font-semibold rounded-full"
-                style={{
-                  background: `color-mix(in srgb, ${trendColor} 12%, transparent)`,
-                  color: trendColor,
-                }}
-              >
-                <TrendIcon className="h-3 w-3" />
-                <span>{Math.abs(trend)}%</span>
-              </div>
-              {trendLabel && (
-                <span className="typo-meta">{trendLabel}</span>
-              )}
-            </div>
-          )}
-        </div>
-
-
+            <TrendIcon className="h-3 w-3" />
+            <span>{trend > 0 ? '+' : ''}{trend}%</span>
+          </div>
+        )}
       </div>
+
+      {/* Label (uppercase, muted) */}
+      <p
+        className="text-[11px] font-semibold uppercase tracking-wider mb-1"
+        style={{ color: 'var(--theme-text-muted, var(--fg-3))' }}
+      >
+        {label}
+      </p>
+
+      {/* Value (bold, display) */}
+      <p
+        className="font-bold leading-none tabular-nums text-2xl lg:text-[28px] tracking-tight mb-1"
+        style={{
+          fontFamily: 'var(--font-display, inherit)',
+          color: valueColor ?? 'var(--theme-text-primary, var(--fg-1))',
+        }}
+      >
+        {value}
+      </p>
+
+      {/* Subtitle */}
+      {subtitle && (
+        <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted, var(--fg-3))' }}>
+          {subtitle}
+        </p>
+      )}
+
+      {/* Trend label */}
+      {trendLabel && (
+        <p className="text-[11px] mt-1" style={{ color: 'var(--theme-text-muted, var(--fg-3))' }}>
+          {trendLabel}
+        </p>
+      )}
+
+      {/* Sparkline at bottom */}
+      {sparkData && sparkData.length >= 2 && (
+        <div className="absolute right-0 bottom-0 left-0">
+          <SparklineChart data={sparkData} color={colors.sparkColor} />
+        </div>
+      )}
     </Component>
   )
 }
 
+// ─── StatsGrid ──────────────────────────────────────────────────────────────
+
 export function StatsGrid({ stats, columns, gap = 'md' }: StatsGridProps) {
-  // Auto-determine columns based on stat count if not specified
   const cols = columns ?? (stats.length <= 2 ? 2 : stats.length <= 3 ? 3 : 4)
 
-  const gapClass = gap === 'sm' ? 'gap-2' : gap === 'lg' ? 'gap-4' : 'gap-3'
+  const gapClass = gap === 'sm' ? 'gap-2' : gap === 'lg' ? 'gap-4' : 'gap-2.5'
 
   const gridColsClass =
     cols === 2

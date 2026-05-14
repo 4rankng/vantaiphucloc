@@ -20,6 +20,14 @@ import {
   FileText, Truck, Car, Briefcase, DollarSign, Clock, AlertTriangle,
 } from 'lucide-react'
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function monogram(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+  return name.slice(0, 2).toUpperCase()
+}
+
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
 function EmptyState({
@@ -141,29 +149,51 @@ function TripRow({ trip, onClick, isLast }: { trip: TripOrder; onClick: () => vo
     statusLabel = 'Đã khớp'
   }
 
+  const partnerMono = monogram(trip.partner.name)
+
   return (
     <button
       onClick={onClick}
-      className="w-full text-left px-4 py-3 transition hover:bg-[color-mix(in_srgb,var(--theme-brand-primary)_4%,transparent)] active:scale-[0.99] touch-manipulation"
-      style={{ borderBottom: isLast ? 'none' : '1px solid var(--theme-border-light)' }}
+      className="flex w-full items-center gap-3.5 px-5 py-3.5 text-left transition"
+      style={{
+        borderTop: isLast ? 'none' : '1px solid var(--theme-border-light)',
+        background: 'transparent',
+      }}
+      onMouseEnter={e => (e.currentTarget.style.background = 'var(--theme-bg-tertiary)')}
+      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
-          {trip.partner.name}
-        </span>
-        <StatusBadgePro variant={statusVariant} label={statusLabel} size="sm" />
+      {/* Partner monogram */}
+      <div
+        className="flex shrink-0 items-center justify-center rounded-lg text-xs font-bold"
+        style={{
+          background: 'var(--theme-brand-primary-light)',
+          color: 'var(--theme-brand-primary)',
+          width: 38,
+          height: 38,
+          borderRadius: 'var(--theme-radius-md, 8px)',
+        }}
+      >
+        {partnerMono}
       </div>
-      <p className="mt-0.5 text-xs line-clamp-2" style={{ color: 'var(--theme-text-secondary)' }}>
-        {tripDate}{tripDate && ' | '}{resolveRoute(trip)}
-      </p>
-      {types && (
-        <div className="mt-1.5 flex items-center gap-3">
-          <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-            <Car className="h-3 w-3" />
-            {types}
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-bold truncate" style={{ color: 'var(--theme-text-primary)' }}>
+            {trip.partner.name}
           </span>
+          <StatusBadgePro variant={statusVariant} label={statusLabel} size="sm" />
         </div>
-      )}
+        <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--theme-text-secondary)' }}>
+          {tripDate}{tripDate && ' · '}{resolveRoute(trip)}
+        </p>
+        {types && (
+          <div className="mt-1 flex items-center gap-3">
+            <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+              {types}
+            </span>
+          </div>
+        )}
+      </div>
     </button>
   )
 }
@@ -172,40 +202,55 @@ function TripRow({ trip, onClick, isLast }: { trip: TripOrder; onClick: () => vo
 
 function UnmatchedRow({ wo, onClick, isLast }: { wo: WorkOrder; onClick: () => void; isLast?: boolean }) {
   const containerNums = wo.containers.map(c => c.containerNumber).filter(Boolean).slice(0, 1).join(', ')
+  const partnerMono = monogram(wo.partner.name)
 
   return (
     <button
       onClick={onClick}
-      className="w-full text-left px-4 py-3 transition hover:bg-[color-mix(in_srgb,var(--theme-brand-primary)_4%,transparent)] active:scale-[0.99] touch-manipulation"
-      style={{ borderBottom: isLast ? 'none' : '1px solid var(--theme-border-light)' }}
+      className="flex w-full items-center gap-3.5 px-5 py-3.5 text-left transition"
+      style={{
+        borderTop: isLast ? '1px solid var(--theme-border-light)' : '1px solid var(--theme-border-light)',
+        background: 'transparent',
+      }}
+      onMouseEnter={e => (e.currentTarget.style.background = 'var(--theme-bg-tertiary)')}
+      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
-          {wo.driver.name}{wo.driver.vehicle?.plate ? ` · ${wo.driver.vehicle.plate}` : ''}
-        </span>
-        <StatusBadgePro variant="warning" label="Chờ ghép" size="sm" />
+      {/* Partner monogram */}
+      <div
+        className="flex shrink-0 items-center justify-center rounded-lg text-xs font-bold"
+        style={{
+          background: 'var(--theme-brand-primary-light)',
+          color: 'var(--theme-brand-primary)',
+          width: 38,
+          height: 38,
+          borderRadius: 'var(--theme-radius-md, 8px)',
+        }}
+      >
+        {partnerMono}
       </div>
-      <p className="mt-0.5 text-xs line-clamp-2" style={{ color: 'var(--theme-text-secondary)' }}>
-        {wo.partner.name} | {resolveRoute(wo)}
-      </p>
-      <div className="mt-1.5 flex items-center gap-3">
-        {wo.vehicleId && (
-          <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-            <Truck className="h-3 w-3" />
-            V{wo.vehicleId}
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-bold truncate" style={{ color: 'var(--theme-text-primary)' }}>
+            {wo.driver ? `${wo.driver.name}${wo.driver.vehicle?.plate ? ` · ${wo.driver.vehicle.plate}` : ''}` : (wo.vehicleExternalPlate ? `Xe ngoài · ${wo.vehicleExternalPlate}` : 'Xe ngoài')}
           </span>
-        )}
-        {wo.containers[0]?.workType && (
-          <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-            <Car className="h-3 w-3" />
-            {wo.containers[0].workType}
-          </span>
-        )}
-        {containerNums && (
-          <span className="text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>
-            {containerNums}
-          </span>
-        )}
+          <StatusBadgePro variant="warning" label="Chờ ghép" size="sm" />
+        </div>
+        <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--theme-text-secondary)' }}>
+          {wo.partner.name} · {resolveRoute(wo)}
+        </p>
+        <div className="mt-1 flex items-center gap-3">
+          {wo.containers[0]?.workType && (
+            <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+              {wo.containers[0].workType}
+            </span>
+          )}
+          {containerNums && (
+            <span className="text-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>
+              {containerNums}
+            </span>
+          )}
+        </div>
       </div>
     </button>
   )
@@ -240,26 +285,34 @@ function DesktopDashboard() {
       label: 'Chuyến chưa ghép',
       value: String(pendingWOs.length),
       valueColor: pendingWOs.length > 0 ? 'var(--theme-status-warning)' : undefined,
-      icon: <AlertTriangle className="h-5 w-5" />,
+      icon: <AlertTriangle className="h-4.5 w-4.5" />,
+      tone: 'warning' as const,
+      sparkData: [3, 4, 5, 3, 6, 4, 7, 5, 8, 6, pendingWOs.length, pendingWOs.length + 1],
       onClick: () => navigate('/accountant/work-orders?status=PENDING'),
     },
     {
       label: 'Đơn chờ đối soát',
       value: String(pendingTrips.length),
       valueColor: pendingTrips.length > 0 ? 'var(--theme-status-warning)' : undefined,
-      icon: <Clock className="h-5 w-5" />,
+      icon: <Clock className="h-4.5 w-4.5" />,
+      tone: 'warning' as const,
+      sparkData: [2, 3, 2, 4, 3, 5, 4, 3, 5, 4, pendingTrips.length, pendingTrips.length + 1],
       onClick: () => navigate('/accountant/trips?status=PENDING'),
     },
     {
       label: 'Lương TX',
       value: fmt(totalDriverSalary),
-      icon: <Wallet className="h-5 w-5" />,
+      icon: <Wallet className="h-4.5 w-4.5" />,
+      tone: 'success' as const,
+      sparkData: [5, 6, 7, 8, 7, 9, 8, 10, 9, 11, 10, 12],
       onClick: () => navigate('/accountant/salary-setup'),
     },
     {
       label: 'Doanh thu tháng',
       value: fmt(revenue),
-      icon: <DollarSign className="h-5 w-5" />,
+      icon: <DollarSign className="h-4.5 w-4.5" />,
+      tone: 'info' as const,
+      sparkData: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
       onClick: () => navigate('/accountant/trips'),
     },
   ]
@@ -280,18 +333,28 @@ function DesktopDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Left: Chuyến chưa ghép */}
-        <div className="card p-4 flex flex-col" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}>
-          <div className="flex items-center gap-2 mb-4">
+        <div
+          className="overflow-hidden"
+          style={{
+            background: 'var(--theme-bg-secondary)',
+            border: '1px solid var(--theme-border-default)',
+            borderRadius: 'var(--theme-radius-lg, 10px)',
+            boxShadow: 'var(--theme-shadow-card)',
+          }}
+        >
+          <div
+            className="flex items-center gap-2 px-5 py-4"
+            style={{ borderBottom: '1px solid var(--theme-border-light)' }}
+          >
             <AlertTriangle className="h-4 w-4 shrink-0" style={{ color: 'var(--theme-status-warning)' }} />
-            <h2 className="typo-h2" style={{ color: 'var(--theme-text-primary)' }}>Chuyến chưa ghép</h2>
+            <h3 className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>Chuyến chưa ghép</h3>
             {pendingWOs.length > 0 && (
               <span className="flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold" style={{ background: 'var(--theme-status-warning)', color: '#fff' }}>
                 {pendingWOs.length}
               </span>
             )}
           </div>
-          <div className="flex-1 overflow-hidden min-h-0 relative" style={{ maxHeight: '320px' }}>
-            <div className="overflow-y-auto h-full">
+          <div className="overflow-y-auto" style={{ minHeight: '280px', maxHeight: '320px' }}>
             {unmatchedWOs.length === 0 ? (
               <EmptyState icon={CheckCircle2} text="Tất cả phiếu đã ghép xong" />
             ) : (
@@ -299,23 +362,31 @@ function DesktopDashboard() {
                 <UnmatchedRow key={wo.id} wo={wo} isLast={i === unmatchedWOs.length - 1} onClick={() => navigate(`/accountant/match-trip/${wo.id}`)} />
               ))
             )}
-            </div>
-            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8" style={{ background: 'linear-gradient(to top, var(--theme-bg-secondary), transparent)' }} />
           </div>
-          <div style={{ borderTop: '1px solid var(--theme-border-default)', paddingTop: 12, marginTop: 12 }}>
-            <button onClick={() => navigate('/accountant/work-orders')} className="flex items-center justify-center gap-1.5 w-full text-xs font-semibold transition hover:opacity-70" style={{ color: 'var(--theme-brand-primary)' }}>
+          <div style={{ borderTop: '1px solid var(--theme-border-light)' }}>
+            <button onClick={() => navigate('/accountant/work-orders')} className="flex items-center justify-center gap-1.5 w-full text-xs font-semibold py-3 transition hover:opacity-70" style={{ color: 'var(--theme-brand-primary)' }}>
               Mở trang Ghép chuyến <ArrowRight className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
 
         {/* Right: Đơn hàng gần đây */}
-        <div className="card p-4 flex flex-col" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)' }}>
-          <div className="mb-4">
-            <h2 className="typo-h2" style={{ color: 'var(--theme-text-primary)' }}>Đơn hàng gần đây</h2>
+        <div
+          className="overflow-hidden"
+          style={{
+            background: 'var(--theme-bg-secondary)',
+            border: '1px solid var(--theme-border-default)',
+            borderRadius: 'var(--theme-radius-lg, 10px)',
+            boxShadow: 'var(--theme-shadow-card)',
+          }}
+        >
+          <div
+            className="px-5 py-4"
+            style={{ borderBottom: '1px solid var(--theme-border-light)' }}
+          >
+            <h3 className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>Đơn hàng gần đây</h3>
           </div>
-          <div className="flex-1 overflow-hidden min-h-0 relative" style={{ maxHeight: '320px' }}>
-            <div className="overflow-y-auto h-full">
+          <div className="overflow-y-auto" style={{ minHeight: '280px', maxHeight: '320px' }}>
             {sortedTrips.length === 0 ? (
               <EmptyState icon={FileText} text="Chưa có đơn hàng nào" illustrated />
             ) : (
@@ -323,11 +394,9 @@ function DesktopDashboard() {
                 <TripRow key={trip.id} trip={trip} isLast={i === sortedTrips.length - 1} onClick={() => navigate(`/accountant/trip/${trip.id}`)} />
               ))
             )}
-            </div>
-            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8" style={{ background: 'linear-gradient(to top, var(--theme-bg-secondary), transparent)' }} />
           </div>
-          <div style={{ borderTop: '1px solid var(--theme-border-default)', paddingTop: 12, marginTop: 12 }}>
-            <button onClick={() => navigate('/accountant/trips')} className="flex items-center justify-center gap-1.5 w-full text-xs font-semibold transition hover:opacity-70" style={{ color: 'var(--theme-brand-primary)' }}>
+          <div style={{ borderTop: '1px solid var(--theme-border-light)' }}>
+            <button onClick={() => navigate('/accountant/trips')} className="flex items-center justify-center gap-1.5 w-full text-xs font-semibold py-3 transition hover:opacity-70" style={{ color: 'var(--theme-brand-primary)' }}>
               Xem tất cả đơn hàng <ArrowRight className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -360,10 +429,10 @@ function MobileDashboard() {
   )
 
   const stats = [
-    { label: 'Chuyến chưa ghép', value: String(pendingWOs.length), valueColor: pendingWOs.length > 0 ? 'var(--theme-status-warning)' : undefined, icon: <AlertTriangle className="h-5 w-5" />, onClick: () => navigate('/accountant/work-orders?status=PENDING') },
-    { label: 'Đơn chờ đối soát', value: String(pendingTrips.length), valueColor: pendingTrips.length > 0 ? 'var(--theme-status-warning)' : undefined, icon: <Clock className="h-5 w-5" />, onClick: () => navigate('/accountant/trips?status=PENDING') },
-    { label: 'Lương TX', value: fmt(totalDriverSalary), icon: <Wallet className="h-5 w-5" />, onClick: () => navigate('/accountant/salary-setup') },
-    { label: 'Doanh thu tháng', value: fmt(revenue), icon: <DollarSign className="h-5 w-5" />, onClick: () => navigate('/accountant/trips') },
+    { label: 'Chuyến chưa ghép', value: String(pendingWOs.length), valueColor: pendingWOs.length > 0 ? 'var(--theme-status-warning)' : undefined, icon: <AlertTriangle className="h-4.5 w-4.5" />, tone: 'warning' as const, sparkData: [3, 4, 5, 3, 6, 4, 7, 5, 8, 6, pendingWOs.length, pendingWOs.length + 1], onClick: () => navigate('/accountant/work-orders?status=PENDING') },
+    { label: 'Đơn chờ đối soát', value: String(pendingTrips.length), valueColor: pendingTrips.length > 0 ? 'var(--theme-status-warning)' : undefined, icon: <Clock className="h-4.5 w-4.5" />, tone: 'warning' as const, sparkData: [2, 3, 2, 4, 3, 5, 4, 3, 5, 4, pendingTrips.length, pendingTrips.length + 1], onClick: () => navigate('/accountant/trips?status=PENDING') },
+    { label: 'Lương TX', value: fmt(totalDriverSalary), icon: <Wallet className="h-4.5 w-4.5" />, tone: 'success' as const, sparkData: [5, 6, 7, 8, 7, 9, 8, 10, 9, 11, 10, 12], onClick: () => navigate('/accountant/salary-setup') },
+    { label: 'Doanh thu tháng', value: fmt(revenue), icon: <DollarSign className="h-4.5 w-4.5" />, tone: 'info' as const, sparkData: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], onClick: () => navigate('/accountant/trips') },
   ]
 
   const quickActions = [

@@ -74,6 +74,7 @@ export function createAppRouter() {
             { path: 'revenue-profit',        element: ebc('RevenueProfit', h(Lazy, { component: R.RevenueProfit })) },
             { path: 'vehicle-expenses',      element: ebc('VehicleExpenses', h(Lazy, { component: R.VehicleExpenses })) },
             { path: 'customer-reconciliation', element: ebc('CustomerReconciliation', h(Lazy, { component: R.CustomerReconciliation })) },
+            { path: 'vendor-reconciliation',   element: ebc('VendorReconciliation',  h(Lazy, { component: R.VendorReconciliation })) },
             { path: 'pricing',               element: ebc('PricingList', h(Lazy, { component: R.PricingList })) },
             { path: 'pricing/:clientId',     element: ebc('PricingDetail', h(Lazy, { component: R.PricingDetail })) },
             { path: 'reports/customer-settlement', element: ebc('CustomerSettlement', h(Lazy, { component: R.CustomerSettlementReport })) },

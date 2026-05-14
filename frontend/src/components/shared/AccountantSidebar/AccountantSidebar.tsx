@@ -12,6 +12,7 @@ import {
   DollarSign,
   FileSpreadsheet,
   Car,
+  Truck,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUnreadCount } from '@/components/shared/NotificationPanel/NotificationPanel'
@@ -36,6 +37,7 @@ const ACCOUNTANT_NAV_ITEMS: SidebarItem[] = [
   { label: 'Doanh thu & Lãi', href: '/accountant/revenue-profit', icon: DollarSign },
   { label: 'Chi phí xe', href: '/accountant/vehicle-expenses', icon: Car },
   { label: 'Đối soát KH', href: '/accountant/customer-reconciliation', icon: FileSpreadsheet },
+  { label: 'Đối soát nhà xe', href: '/accountant/vendor-reconciliation', icon: Truck },
   { label: 'Cài đặt', href: '/accountant/settings', icon: Settings },
 ]
 

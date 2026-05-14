@@ -1,11 +1,18 @@
 import { useState, useMemo } from 'react'
-import { type Pricing, type PricingLine, type WorkType } from '@/data/domain'
-import { useLocations, type PricingCreatePayload } from '@/hooks/use-queries'
+import { type Pricing, type PricingLine, type WorkType, OPERATION_TYPE_LABELS, type OperationType } from '@/data/domain'
+import { useLocations, usePartners, type PricingCreatePayload } from '@/hooks/use-queries'
 import { Label } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { X, Check } from 'lucide-react'
+
+const OPERATION_TYPE_OPTIONS = [
+  { value: '', label: '— Không chọn —' },
+  ...(Object.entries(OPERATION_TYPE_LABELS) as [OperationType, string][]).map(
+    ([value, label]) => ({ value, label })
+  ),
+]
 
 /** Grid order: full containers first, then empty */
 const GRID_ORDER: WorkType[] = ['F20', 'F40', 'E20', 'E40']
@@ -164,15 +171,29 @@ function MiniLineEditor({
 
 export function PricingForm({ initial, clients, lockedClientId, onSave, onSaveComplete, onCancel, onCreateClient }: Props) {
   const { data: locations = [] } = useLocations()
+  const { data: shippers = [] } = usePartners({ partnerType: 'shipper' })
+
   const [clientId, setClientId] = useState(
     String(lockedClientId ?? initial?.partner.id ?? ''),
   )
   const [pickupLocationName, setPickupLocationName] = useState(initial?.pickupLocation.name ?? '')
   const [dropoffLocationName, setDropoffLocationName] = useState(initial?.dropoffLocation.name ?? '')
+  const [shipperPartnerId, setShipperPartnerId] = useState(
+    initial?.shipperPartnerId ? String(initial.shipperPartnerId) : '',
+  )
+  const [operationType, setOperationType] = useState(initial?.operationType ?? '')
   const [workTypeLines, setWorkTypeLines] = useState<Record<WorkType, WorkTypeLine>>(() => initWorkTypeLines(initial))
+
   const clientOptions = useMemo(
     () => clients.map(c => ({ value: String(c.id), label: c.name })),
     [clients],
+  )
+  const shipperOptions = useMemo(
+    () => [
+      { value: '', label: '— Không chọn —' },
+      ...shippers.map(s => ({ value: String(s.id), label: s.code ? `${s.code} - ${s.name}` : s.name })),
+    ],
+    [shippers],
   )
 
   const toggleWorkType = (wt: WorkType) => {
@@ -199,6 +220,11 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onSaveCo
     const dropoffId = locations.find(l => l.name === dropoffLocationName)?.id
     if (!clientId || !pickupId || !dropoffId || !hasAnyEnabled) return
 
+    const extraFields = {
+      shipperPartnerId: shipperPartnerId ? Number(shipperPartnerId) : null,
+      operationType: operationType || null,
+    }
+
     // When editing, save only the single initial work type
     if (initial) {
       onSave({
@@ -207,6 +233,7 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onSaveCo
         pickupLocationId: pickupId,
         dropoffLocationId: dropoffId,
         lines: workTypeLines[initial.workType].lines,
+        ...extraFields,
       })
       onSaveComplete?.()
       return
@@ -220,6 +247,7 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onSaveCo
         pickupLocationId: pickupId,
         dropoffLocationId: dropoffId,
         lines: workTypeLines[wt].lines,
+        ...extraFields,
       })
     })
     onSaveComplete?.()
@@ -282,6 +310,42 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onSaveCo
                 onChange={setDropoffLocationName}
                 placeholder="Chọn điểm trả"
               />
+            </div>
+          </div>
+        </div>
+
+        {/* Shipper + Operation type — optional override dimensions */}
+        <div>
+          <div className="typo-label mb-1">PHÂN LOẠI GIÁ (tuỳ chọn)</div>
+          <p className="text-[11px] mb-3" style={{ color: 'var(--theme-text-muted)' }}>
+            Để trống = giá mặc định cho tuyến. Điền để tạo mức giá riêng theo chủ hàng hoặc tác nghiệp.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="typo-form-label">Chủ hàng</Label>
+              <InlineSelect
+                options={shipperOptions}
+                value={shipperPartnerId}
+                onChange={setShipperPartnerId}
+                placeholder="— Không chọn —"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="typo-form-label">Tác nghiệp</Label>
+              <select
+                value={operationType}
+                onChange={e => setOperationType(e.target.value)}
+                className="w-full h-10 rounded-xl px-3 text-sm"
+                style={{
+                  background: 'var(--theme-bg-tertiary)',
+                  border: '1.5px solid transparent',
+                  color: operationType ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)',
+                }}
+              >
+                {OPERATION_TYPE_OPTIONS.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
             </div>
           </div>
         </div>

@@ -44,6 +44,7 @@ export const LocationAliasManager    = lazy(() => import('@/pages/accountant/Loc
 export const RevenueProfit           = lazy(() => import('@/pages/accountant/RevenueProfit').then(m => ({ default: m.RevenueProfit })))
 export const CustomerReconciliation  = lazy(() => import('@/pages/accountant/CustomerReconciliation').then(m => ({ default: m.CustomerReconciliation })))
 export const VehicleExpenses         = lazy(() => import('@/pages/accountant/VehicleExpenses').then(m => ({ default: m.VehicleExpenses })))
+export const VendorReconciliation    = lazy(() => import('@/pages/accountant/VendorReconciliation').then(m => ({ default: m.VendorReconciliation })))
 
 
 // ─── Director pages ───────────────────────────────────────────────────────────

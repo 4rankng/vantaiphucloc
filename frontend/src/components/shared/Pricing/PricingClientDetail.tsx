@@ -11,6 +11,8 @@ import {
 } from '@/hooks/use-queries'
 import {
   formatCurrencyFull,
+  OPERATION_TYPE_LABELS,
+  type OperationType,
   type Pricing,
   type PricingLine,
   type WorkType,
@@ -58,13 +60,22 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
 
   const clientName = clients.find(c => c.id === clientId)?.name ?? pricings[0]?.partner.name ?? ''
 
-  // Group by route key, then build a map of workType -> Pricing per route
+  // Group by route+shipper+op key, then build a map of workType -> Pricing per group
   const grouped = useMemo(() => {
-    const map = new Map<string, Map<WorkType, Pricing>>()
+    const map = new Map<string, { route: string; shipperPartnerId: number | null; operationType: OperationType | null; workTypeMap: Map<WorkType, Pricing> }>()
     pricings.forEach(p => {
-      const routeKey = `${p.pickupLocation.name} - ${p.dropoffLocation.name}`
-      if (!map.has(routeKey)) map.set(routeKey, new Map())
-      map.get(routeKey)!.set(p.workType, p)
+      const shipperId = p.shipperPartnerId ?? null
+      const opType = (p.operationType ?? null) as OperationType | null
+      const groupKey = `${p.pickupLocation.name}|${p.dropoffLocation.name}|${shipperId ?? ''}|${opType ?? ''}`
+      if (!map.has(groupKey)) {
+        map.set(groupKey, {
+          route: `${p.pickupLocation.name} - ${p.dropoffLocation.name}`,
+          shipperPartnerId: shipperId,
+          operationType: opType,
+          workTypeMap: new Map(),
+        })
+      }
+      map.get(groupKey)!.workTypeMap.set(p.workType, p)
     })
     return Array.from(map.entries())
   }, [pricings])
@@ -72,7 +83,7 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
   const filteredGroups = useMemo(() => {
     if (!routeSearch.trim()) return grouped
     const q = routeSearch
-    return grouped.filter(([route]) => fuzzyMatch(route, q))
+    return grouped.filter(([, g]) => fuzzyMatch(g.route, q))
   }, [grouped, routeSearch])
 
   const startEdit = useCallback((pricing: Pricing) => {
@@ -197,7 +208,7 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
         </div>
       ) : (
         <div className="space-y-6">
-          {filteredGroups.map(([route, workTypeMap]) => {
+          {filteredGroups.map(([groupKey, { route, shipperPartnerId, operationType, workTypeMap }]) => {
             const [pickup, dropoff] = route.split(' - ')
             const totalLines = Array.from(workTypeMap.values()).reduce((sum, p) => sum + p.lines.length, 0)
             const editingPricing = editingPricingId
@@ -207,14 +218,30 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
               : null
 
             return (
-              <div key={route}>
+              <div key={groupKey}>
                 {/* Route header */}
                 <div className="card p-4 mb-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <MapPin size={16} style={{ color: 'var(--theme-brand-primary)' }} />
                     <span className="typo-h2">{pickup}</span>
                     <span className="typo-body-sm">→</span>
                     <span className="typo-h2">{dropoff}</span>
+                    {operationType && (
+                      <span
+                        className="text-xs font-semibold px-2 py-0.5 rounded-md"
+                        style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)', color: 'var(--theme-brand-primary)' }}
+                      >
+                        {OPERATION_TYPE_LABELS[operationType] ?? operationType}
+                      </span>
+                    )}
+                    {shipperPartnerId && (
+                      <span
+                        className="text-xs font-semibold px-2 py-0.5 rounded-md"
+                        style={{ background: 'color-mix(in srgb, var(--theme-status-warning) 10%, transparent)', color: 'var(--theme-status-warning)' }}
+                      >
+                        Chủ hàng #{shipperPartnerId}
+                      </span>
+                    )}
                     <span
                       className="ml-auto text-xs font-semibold px-2 py-1 rounded-md"
                       style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}

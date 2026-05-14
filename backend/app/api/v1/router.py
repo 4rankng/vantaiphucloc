@@ -20,6 +20,7 @@ from app.contexts.operations.interface import (
     suggested_routes_router,
     trip_orders_router,
     work_orders_router,
+    vendor_reconciliation_router,
 )
 from app.contexts.fleet.interface import drivers_router, vehicle_expenses_router, vehicle_drivers_router
 from app.contexts.billing.interface import reports_router
@@ -58,6 +59,7 @@ router.include_router(dashboard_router)
 router.include_router(audit_router)
 router.include_router(reports_router)
 router.include_router(imports_router)
+router.include_router(vendor_reconciliation_router)
 
 
 @router.get("/health")

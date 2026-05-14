@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 200" fill="none">
+  <defs>
+    <linearGradient id="es-doc1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"></stop>
+      <stop offset="100%" stop-color="#F9FAFB"></stop>
+    </linearGradient>
+    <linearGradient id="es-lens" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ECFDF5" stop-opacity="0.92"></stop>
+      <stop offset="100%" stop-color="#D1FAE5" stop-opacity="0.75"></stop>
+    </linearGradient>
+    <radialGradient id="es-shadow" cx="50%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#059669" stop-opacity="0.09"></stop>
+      <stop offset="100%" stop-color="#059669" stop-opacity="0"></stop>
+    </radialGradient>
+    <filter id="es-drop-doc" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="1" dy="3" stdDeviation="4" flood-color="#09090B" flood-opacity="0.07"></feDropShadow>
+    </filter>
+    <filter id="es-drop-glass" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#059669" flood-opacity="0.18"></feDropShadow>
+    </filter>
+    
+    <linearGradient id="es-glare" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.55"></stop>
+      <stop offset="45%" stop-color="#FFFFFF" stop-opacity="0.06"></stop>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"></stop>
+    </linearGradient>
+  </defs>
+
+  
+  <ellipse cx="120" cy="172" rx="72" ry="7.5" fill="url(#es-shadow)"></ellipse>
+
+  
+  
+  <rect x="58" y="56" width="84" height="108" rx="8" fill="#F4F4F5" stroke="#E4E4E7" stroke-width="1.5" transform="rotate(-10 100 110)"></rect>
+  
+  <rect x="62" y="54" width="84" height="108" rx="8" fill="#FAFAFA" stroke="#E4E4E7" stroke-width="1.5" transform="rotate(-5 104 108)"></rect>
+  
+  <path d="M130 56 L142 56 L130 68 Z" fill="#E4E4E7" transform="rotate(-5 104 108)"></path>
+
+  
+  <g filter="url(#es-drop-doc)">
+    <rect x="66" y="52" width="86" height="112" rx="9" fill="url(#es-doc1)" stroke="#E4E4E7" stroke-width="1.5"></rect>
+    
+    <rect x="66" y="52" width="86" height="22" rx="9" fill="#F4F4F5"></rect>
+    <rect x="66" y="63" width="86" height="11" rx="0" fill="#F4F4F5"></rect>
+    
+    <rect x="76" y="60" width="44" height="7" rx="2.5" fill="#D1FAE5"></rect>
+    
+    <rect x="138" y="58" width="9" height="11" rx="1.5" fill="#ECFDF5" stroke="#059669" stroke-width="1" stroke-opacity="0.5"></rect>
+    <line x1="140" y1="63" x2="145" y2="63" stroke="#059669" stroke-width="0.8" stroke-opacity="0.45"></line>
+    <line x1="140" y1="66" x2="145" y2="66" stroke="#059669" stroke-width="0.8" stroke-opacity="0.45"></line>
+    
+    <rect x="76" y="82" width="62" height="4.5" rx="2" fill="#E4E4E7"></rect>
+    <rect x="76" y="93" width="50" height="4" rx="2" fill="#F4F4F5"></rect>
+    <rect x="76" y="103" width="56" height="4" rx="2" fill="#F4F4F5"></rect>
+    <rect x="76" y="113" width="44" height="4" rx="2" fill="#F4F4F5"></rect>
+    <rect x="76" y="123" width="52" height="4" rx="2" fill="#F4F4F5"></rect>
+    <rect x="76" y="133" width="38" height="4" rx="2" fill="#F4F4F5"></rect>
+    
+    <path d="M144 52 L152 52 L144 60 Z" fill="#E4E4E7"></path>
+    <path d="M144 60 L152 52 L144 52" stroke="#D4D4D8" stroke-width="1"></path>
+  </g>
+
+  
+  <g filter="url(#es-drop-glass)">
+    
+    <line x1="176" y1="140" x2="197" y2="161" stroke="#059669" stroke-width="7" stroke-linecap="round"></line>
+    <line x1="176" y1="140" x2="197" y2="161" stroke="#047857" stroke-width="3.5" stroke-linecap="round" stroke-opacity="0.4"></line>
+    
+    <circle cx="152" cy="118" r="29" fill="#059669" fill-opacity="0.12" stroke="#059669" stroke-width="3"></circle>
+    
+    <circle cx="152" cy="118" r="26" fill="url(#es-lens)"></circle>
+    
+    <circle cx="152" cy="118" r="26" fill="url(#es-glare)"></circle>
+    
+    <circle cx="152" cy="118" r="26" stroke="#FFFFFF" stroke-width="1.5" stroke-opacity="0.4"></circle>
+    
+    <path d="M137 107 Q139 98 148 98" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-opacity="0.8"></path>
+    
+    <text x="152" y="126" font-family="ui-sans-serif, system-ui, sans-serif" font-size="24" font-weight="700" fill="#059669" text-anchor="middle" letter-spacing="-0.02em">?</text>
+    
+    <circle cx="136" cy="102" r="2.5" fill="#FFFFFF" fill-opacity="0.65"></circle>
+  </g>
+
+  
+  <g fill="#059669" fill-opacity="0.18">
+    <circle cx="208" cy="62" r="3.5"></circle>
+    <circle cx="218" cy="82" r="2"></circle>
+    <circle cx="34" cy="76" r="2.5"></circle>
+    <circle cx="26" cy="96" r="1.5"></circle>
+  </g>
+
+  
+  <g stroke="#059669" stroke-width="1.6" stroke-linecap="round" opacity="0.45">
+    <line x1="38" y1="52" x2="44" y2="58"></line>
+    <line x1="44" y1="52" x2="38" y2="58"></line>
+  </g>
+  <g stroke="#059669" stroke-width="1.2" stroke-linecap="round" opacity="0.3">
+    <line x1="208" y1="108" x2="212" y2="112"></line>
+    <line x1="212" y1="108" x2="208" y2="112"></line>
+  </g>
+</svg>

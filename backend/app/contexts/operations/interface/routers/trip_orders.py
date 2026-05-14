@@ -543,7 +543,9 @@ async def export_doi_soat_excel(
         session, partner_id, date_from.isoformat(), date_to.isoformat(),
     )
     slug = slugify_vi(partner_name)
-    filename = f"doi_soat_{slug}_{date_from.isoformat()}_{date_to.isoformat()}.xlsx"
+    # Format: DoiSoat_<KH>_MM-YYYY  (use date_from's month as the report month)
+    month_str = date_from.strftime("%m-%Y")
+    filename = f"DoiSoat_{slug}_{month_str}.xlsx"
     return StreamingResponse(
         io.BytesIO(content),
         media_type=(

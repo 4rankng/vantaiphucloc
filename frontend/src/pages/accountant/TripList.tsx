@@ -213,8 +213,8 @@ export function TripList() {
 
         {/* Table card */}
         <div className="card overflow-hidden">
-          <div className="flex items-center gap-3 p-3 flex-wrap" style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
-            <div className="relative min-w-[200px] flex-1 max-w-xs">
+          <div className="toolbar">
+            <div className="relative min-w-[200px] flex-1" style={{ maxWidth: 320 }}>
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5" style={{ color: 'var(--theme-text-muted)' }} />
               <input
                 type="text"
@@ -222,7 +222,7 @@ export function TripList() {
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Tìm khách hàng, container..."
                 className="w-full h-8 pl-8 pr-3 text-xs rounded-lg border"
-                style={{ background: 'var(--theme-bg-tertiary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
+                style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
               />
             </div>
             <div className="min-w-[180px] max-w-[280px] shrink-0">
@@ -233,17 +233,13 @@ export function TripList() {
                 placeholder="Tất cả khách hàng"
               />
             </div>
-            <div className="flex gap-1">
+            <div style={{ flex: 1 }} />
+            <div className="tab-row">
               {STATUS_OPTIONS.map(s => (
                 <button
                   key={s.key}
                   onClick={() => setStatusFilter(s.key)}
-                  className="px-3 py-1 rounded-full text-xs font-semibold border transition"
-                  style={{
-                    background: statusFilter === s.key ? (s.color ?? 'var(--theme-brand-primary)') : 'transparent',
-                    borderColor: statusFilter === s.key ? (s.color ?? 'var(--theme-brand-primary)') : 'var(--theme-border-default)',
-                    color: statusFilter === s.key ? '#fff' : 'var(--theme-text-secondary)',
-                  }}
+                  className={statusFilter === s.key ? 'active' : ''}
                 >
                   {s.label}
                 </button>
@@ -254,7 +250,7 @@ export function TripList() {
                 <X className="h-3 w-3" /> Xoá lọc
               </button>
             )}
-            <p className="ml-auto text-xs" style={{ color: 'var(--theme-text-muted)' }}>{filtered.length} đơn hàng</p>
+            <span className="text-xs whitespace-nowrap" style={{ color: 'var(--theme-text-muted)' }}>{filtered.length} đơn hàng</span>
           </div>
           <DataTablePro
             data={filtered}
@@ -422,8 +418,8 @@ function DirectorTripView({
         </div>
       </div>
       <div className="card overflow-hidden">
-        <div className="flex items-center gap-3 p-3 flex-wrap" style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
-          <div className="relative min-w-[200px] flex-1 max-w-xs">
+        <div className="toolbar">
+          <div className="relative min-w-[200px] flex-1" style={{ maxWidth: 320 }}>
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5" style={{ color: 'var(--theme-text-muted)' }} />
             <input
               type="text"
@@ -431,21 +427,17 @@ function DirectorTripView({
               onChange={e => setSearch(e.target.value)}
               placeholder="Tìm khách hàng, container..."
               className="w-full h-8 pl-8 pr-3 text-xs rounded-lg border"
-              style={{ background: 'var(--theme-bg-tertiary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
+              style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
             />
           </div>
           <div className="w-44 shrink-0">
             <InlineSelect value={clientFilter} options={clientOptions} onChange={setClientFilter} placeholder="Tất cả khách hàng" />
           </div>
-          <div className="flex gap-1">
+          <div style={{ flex: 1 }} />
+          <div className="tab-row">
             {STATUS_OPTIONS.map(s => (
               <button key={s.key} onClick={() => setStatusFilter(s.key)}
-                className="px-3 py-1 rounded-full text-xs font-semibold border transition"
-                style={{
-                  background: statusFilter === s.key ? (s.color ?? 'var(--theme-brand-primary)') : 'transparent',
-                  borderColor: statusFilter === s.key ? (s.color ?? 'var(--theme-brand-primary)') : 'var(--theme-border-default)',
-                  color: statusFilter === s.key ? '#fff' : 'var(--theme-text-secondary)',
-                }}
+                className={statusFilter === s.key ? 'active' : ''}
               >{s.label}</button>
             ))}
           </div>
@@ -454,7 +446,7 @@ function DirectorTripView({
               <X className="h-3 w-3" /> Xoá lọc
             </button>
           )}
-          <p className="ml-auto text-xs" style={{ color: 'var(--theme-text-muted)' }}>{filtered.length} đơn hàng</p>
+          <span className="text-xs whitespace-nowrap" style={{ color: 'var(--theme-text-muted)' }}>{filtered.length} đơn hàng</span>
         </div>
         <DataTablePro
           data={filtered}
