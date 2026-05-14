@@ -146,6 +146,7 @@ export const apiClient = {
 
   // Dashboard & Notifications
   getDashboardSummary: dashboardApi.getDashboardSummary,
+  getKpiTrends: dashboardApi.getKpiTrends,
   getNotifications: dashboardApi.getNotifications,
 
   // Users

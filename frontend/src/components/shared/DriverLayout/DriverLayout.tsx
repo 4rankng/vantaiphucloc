@@ -2,10 +2,13 @@ import { Outlet, useNavigate, Navigate } from 'react-router-dom'
 import { AppShell } from '@/components/shared/AppShell'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Role } from '@/data/domain'
+import { useIsMobile } from '@/hooks/use-mobile'
+import { DesktopShell } from '@/components/shared/DesktopShell/DesktopShell'
+import { DRIVER_NAV } from '@/components/shared/DesktopShell/navConfig'
 
 const ALLOWED_ROLES: Role[] = ['driver']
 
-function DriverShell() {
+function MobileDriverShell() {
   const { user } = useAuth()
   const navigate = useNavigate()
 
@@ -16,7 +19,7 @@ function DriverShell() {
         name: user?.name ?? '',
         onNotifications: () => navigate('/driver/notifications'),
       }}
-      contentClassName="px-4 py-4 pb-28 space-y-4 md:px-8 md:py-6 md:pb-28 lg:max-w-2xl lg:mx-auto"
+      contentClassName="px-4 py-4 pb-28 space-y-4"
     >
       <Outlet />
     </AppShell>
@@ -25,10 +28,19 @@ function DriverShell() {
 
 export function DriverLayout() {
   const { user } = useAuth()
+  const isMobile = useIsMobile(1024)
 
   if (!user || !ALLOWED_ROLES.includes(user.role)) {
     return <Navigate to="/" replace />
   }
 
-  return <DriverShell />
+  if (isMobile) {
+    return <MobileDriverShell />
+  }
+
+  return (
+    <DesktopShell navItems={DRIVER_NAV} roleLabel="Tài xế">
+      <Outlet />
+    </DesktopShell>
+  )
 }

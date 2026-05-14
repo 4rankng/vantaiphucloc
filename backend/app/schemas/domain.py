@@ -956,6 +956,35 @@ class DashboardSummaryOut(BaseModel):
     pending_trip_count: int = 0
 
 
+class KpiTrendDeltas(BaseModel):
+    """Percent change comparing the second half of the window vs the first half."""
+    unmatched_work_orders: float = 0.0
+    pending_trips: float = 0.0
+    driver_salary: float = 0.0
+    revenue: float = 0.0
+
+
+class KpiTrendsOut(BaseModel):
+    """Daily time-series for accountant dashboard KPI cards.
+
+    Each series is aligned to ``labels`` (ISO YYYY-MM-DD) and represents the
+    activity that occurred on that day:
+
+    - ``unmatched_work_orders``: count of WorkOrders dated that day still PENDING
+    - ``pending_trips``: count of TripOrders dated that day still PENDING
+    - ``driver_salary``: SUM(driver_salary + allowance) for MATCHED WOs that day
+    - ``revenue``: SUM(TripOrder.unit_price) for trips dated that day
+    """
+    end_date: date
+    days: int
+    labels: list[str]
+    unmatched_work_orders: list[int]
+    pending_trips: list[int]
+    driver_salary: list[int]
+    revenue: list[int]
+    deltas: KpiTrendDeltas
+
+
 # ---------------------------------------------------------------------------
 # Per-vehicle P&L
 # ---------------------------------------------------------------------------

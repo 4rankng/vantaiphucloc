@@ -51,3 +51,39 @@ export async function getDashboardSummary(dateFrom?: string, dateTo?: string): P
     return fail(err)
   }
 }
+
+// ─── KPI Trends ─────────────────────────────────────────────────────────────
+
+export interface KpiTrendDeltas {
+  unmatchedWorkOrders: number
+  pendingTrips: number
+  driverSalary: number
+  revenue: number
+}
+
+export interface KpiTrends {
+  endDate: string
+  days: number
+  labels: string[]
+  unmatchedWorkOrders: number[]
+  pendingTrips: number[]
+  driverSalary: number[]
+  revenue: number[]
+  deltas: KpiTrendDeltas
+}
+
+/**
+ * Fetches per-day KPI activity time-series for accountant dashboard sparklines.
+ * @param days  trailing window length (default 12, max 90)
+ * @param endDate optional YYYY-MM-DD (defaults to today UTC server-side)
+ */
+export async function getKpiTrends(days = 12, endDate?: string): Promise<ApiResponse<KpiTrends>> {
+  try {
+    const params: Record<string, string | number> = { days }
+    if (endDate) params.end_date = endDate
+    const res = await api.get('/dashboard/kpi-trends', { params })
+    return ok(toCamel<KpiTrends>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}

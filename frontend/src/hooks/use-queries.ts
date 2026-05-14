@@ -266,6 +266,18 @@ export function useDashboardSummary(dateFrom?: string, dateTo?: string) {
   })
 }
 
+export function useKpiTrends(days = 12, endDate?: string) {
+  return useQuery({
+    queryKey: ['kpi-trends', days, endDate],
+    queryFn: async () => {
+      const res = await apiClient.getKpiTrends(days, endDate)
+      return res.success ? res.data : null
+    },
+    // KPI trends are activity stats; 1-minute stale time is plenty.
+    staleTime: 60_000,
+  })
+}
+
 export function useUsers() {
   return useQuery({
     queryKey: queryKeys.users,
