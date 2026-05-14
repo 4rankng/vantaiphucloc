@@ -27,23 +27,39 @@ function KpiCard({
   positive?: boolean
   icon: React.ElementType
 }) {
-  const tone = highlight
+  const valueColor = highlight
     ? positive === false
       ? 'var(--theme-status-error)'
       : 'var(--theme-brand-primary)'
     : 'var(--theme-text-primary)'
+  const iconColor = highlight
+    ? positive === false ? 'var(--theme-status-error)' : 'var(--theme-brand-primary)'
+    : 'var(--theme-text-muted)'
   return (
-    <div className="card p-4">
-      <div className="flex items-center gap-2 mb-1.5">
-        <Icon
-          className="h-4 w-4 shrink-0"
+    <div
+      className="rounded-xl p-4"
+      style={{
+        background: 'var(--theme-bg-secondary)',
+        border: '1px solid var(--theme-border-default)',
+        boxShadow: 'var(--theme-shadow-sm)',
+      }}
+    >
+      {/* Row 1: label left · icon right */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <p
+          className="text-[11px] font-semibold uppercase tracking-wider leading-tight"
           style={{ color: 'var(--theme-text-muted)' }}
-        />
-        <p className="typo-caption">{label}</p>
+        >
+          {label}
+        </p>
+        <span className="shrink-0 flex [&_svg]:h-4 [&_svg]:w-4 mt-px" style={{ color: iconColor, opacity: 0.7 }}>
+          <Icon />
+        </span>
       </div>
+      {/* Row 2: value */}
       <p
-        className="text-lg font-semibold tabular-nums"
-        style={{ color: tone }}
+        className="text-[22px] font-bold leading-none tabular-nums tracking-tight"
+        style={{ color: valueColor }}
       >
         {value}
       </p>

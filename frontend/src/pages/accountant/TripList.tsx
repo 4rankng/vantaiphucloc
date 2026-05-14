@@ -138,6 +138,7 @@ export function TripList() {
           handleExport={handleExport}
           isMobile={isMobile}
           onSelectTrip={setSelectedTripId}
+          doiSoatOpen={doiSoatOpen} setDoiSoatOpen={setDoiSoatOpen} clients={clients}
         />
         {detailDialog}
       </>
@@ -360,6 +361,7 @@ function DirectorTripView({
   statusFilter, setStatusFilter, clientFilter, setClientFilter,
   search, setSearch, hasFilters, clearFilters, handleExport,
   isMobile, onSelectTrip,
+  doiSoatOpen, setDoiSoatOpen, clients,
 }: {
   year: number; month: number; onPrev: () => void; onNext: () => void
   trips: TripOrder[]; loading: boolean; filtered: TripOrder[]
@@ -371,6 +373,7 @@ function DirectorTripView({
   hasFilters: boolean; clearFilters: () => void; handleExport: () => void
   isMobile: boolean
   onSelectTrip: (id: number) => void
+  doiSoatOpen: boolean; setDoiSoatOpen: (open: boolean) => void; clients: unknown[]
 }) {
   if (isMobile) {
     return (<>

@@ -39,7 +39,7 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
   }
 
   return (
-    <div className="space-y-6 lg:max-w-3xl lg:mx-auto">
+    <div className="space-y-6">
       {/* Scanner overlay */}
       {scannerOpen && (
         <ContainerScanner

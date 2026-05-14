@@ -5,6 +5,7 @@ import {
   useWorkOrders,
   useTripOrders,
   useDashboardSummary,
+  useKpiTrends,
 } from '@/hooks/use-queries'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
@@ -265,6 +266,7 @@ function DesktopDashboard() {
   const { data: workOrders = [] } = useWorkOrders({ dateFrom, dateTo })
   const { data: trips = [] } = useTripOrders({ dateFrom, dateTo })
   const { data: summary } = useDashboardSummary(dateFrom, dateTo)
+  const { data: kpiTrends } = useKpiTrends(12)
 
   const pendingWOs = useMemo(() => workOrders.filter(w => w.status === 'PENDING'), [workOrders])
   const totalDriverSalary = useMemo(() => workOrders.reduce((s, w) => s + (w.driverSalary ?? 0), 0), [workOrders])
@@ -287,7 +289,9 @@ function DesktopDashboard() {
       valueColor: pendingWOs.length > 0 ? 'var(--theme-status-warning)' : undefined,
       icon: <AlertTriangle className="h-4.5 w-4.5" />,
       tone: 'warning' as const,
-      sparkData: [3, 4, 5, 3, 6, 4, 7, 5, 8, 6, pendingWOs.length, pendingWOs.length + 1],
+      sparkData: kpiTrends?.unmatchedWorkOrders,
+      trend: kpiTrends?.deltas.unmatchedWorkOrders,
+      invertTrend: true,
       onClick: () => navigate('/accountant/work-orders?status=PENDING'),
     },
     {
@@ -296,7 +300,9 @@ function DesktopDashboard() {
       valueColor: pendingTrips.length > 0 ? 'var(--theme-status-warning)' : undefined,
       icon: <Clock className="h-4.5 w-4.5" />,
       tone: 'warning' as const,
-      sparkData: [2, 3, 2, 4, 3, 5, 4, 3, 5, 4, pendingTrips.length, pendingTrips.length + 1],
+      sparkData: kpiTrends?.pendingTrips,
+      trend: kpiTrends?.deltas.pendingTrips,
+      invertTrend: true,
       onClick: () => navigate('/accountant/trips?status=PENDING'),
     },
     {
@@ -304,7 +310,8 @@ function DesktopDashboard() {
       value: fmt(totalDriverSalary),
       icon: <Wallet className="h-4.5 w-4.5" />,
       tone: 'success' as const,
-      sparkData: [5, 6, 7, 8, 7, 9, 8, 10, 9, 11, 10, 12],
+      sparkData: kpiTrends?.driverSalary,
+      trend: kpiTrends?.deltas.driverSalary,
       onClick: () => navigate('/accountant/salary-setup'),
     },
     {
@@ -312,7 +319,8 @@ function DesktopDashboard() {
       value: fmt(revenue),
       icon: <DollarSign className="h-4.5 w-4.5" />,
       tone: 'info' as const,
-      sparkData: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+      sparkData: kpiTrends?.revenue,
+      trend: kpiTrends?.deltas.revenue,
       onClick: () => navigate('/accountant/trips'),
     },
   ]
@@ -414,6 +422,7 @@ function MobileDashboard() {
   const { data: workOrders = [] } = useWorkOrders({ dateFrom, dateTo })
   const { data: trips = [] } = useTripOrders({ dateFrom, dateTo })
   const { data: summary } = useDashboardSummary(dateFrom, dateTo)
+  const { data: kpiTrends } = useKpiTrends(12)
 
   const pendingWOs = useMemo(() => workOrders.filter(w => w.status === 'PENDING'), [workOrders])
   const totalDriverSalary = useMemo(() => workOrders.reduce((s, w) => s + (w.driverSalary ?? 0), 0), [workOrders])
@@ -429,10 +438,10 @@ function MobileDashboard() {
   )
 
   const stats = [
-    { label: 'Chuyến chưa ghép', value: String(pendingWOs.length), valueColor: pendingWOs.length > 0 ? 'var(--theme-status-warning)' : undefined, icon: <AlertTriangle className="h-4.5 w-4.5" />, tone: 'warning' as const, sparkData: [3, 4, 5, 3, 6, 4, 7, 5, 8, 6, pendingWOs.length, pendingWOs.length + 1], onClick: () => navigate('/accountant/work-orders?status=PENDING') },
-    { label: 'Đơn chờ đối soát', value: String(pendingTrips.length), valueColor: pendingTrips.length > 0 ? 'var(--theme-status-warning)' : undefined, icon: <Clock className="h-4.5 w-4.5" />, tone: 'warning' as const, sparkData: [2, 3, 2, 4, 3, 5, 4, 3, 5, 4, pendingTrips.length, pendingTrips.length + 1], onClick: () => navigate('/accountant/trips?status=PENDING') },
-    { label: 'Lương TX', value: fmt(totalDriverSalary), icon: <Wallet className="h-4.5 w-4.5" />, tone: 'success' as const, sparkData: [5, 6, 7, 8, 7, 9, 8, 10, 9, 11, 10, 12], onClick: () => navigate('/accountant/salary-setup') },
-    { label: 'Doanh thu tháng', value: fmt(revenue), icon: <DollarSign className="h-4.5 w-4.5" />, tone: 'info' as const, sparkData: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], onClick: () => navigate('/accountant/trips') },
+    { label: 'Chuyến chưa ghép', value: String(pendingWOs.length), valueColor: pendingWOs.length > 0 ? 'var(--theme-status-warning)' : undefined, icon: <AlertTriangle className="h-4.5 w-4.5" />, tone: 'warning' as const, sparkData: kpiTrends?.unmatchedWorkOrders, trend: kpiTrends?.deltas.unmatchedWorkOrders, invertTrend: true, onClick: () => navigate('/accountant/work-orders?status=PENDING') },
+    { label: 'Đơn chờ đối soát', value: String(pendingTrips.length), valueColor: pendingTrips.length > 0 ? 'var(--theme-status-warning)' : undefined, icon: <Clock className="h-4.5 w-4.5" />, tone: 'warning' as const, sparkData: kpiTrends?.pendingTrips, trend: kpiTrends?.deltas.pendingTrips, invertTrend: true, onClick: () => navigate('/accountant/trips?status=PENDING') },
+    { label: 'Lương TX', value: fmt(totalDriverSalary), icon: <Wallet className="h-4.5 w-4.5" />, tone: 'success' as const, sparkData: kpiTrends?.driverSalary, trend: kpiTrends?.deltas.driverSalary, onClick: () => navigate('/accountant/salary-setup') },
+    { label: 'Doanh thu tháng', value: fmt(revenue), icon: <DollarSign className="h-4.5 w-4.5" />, tone: 'info' as const, sparkData: kpiTrends?.revenue, trend: kpiTrends?.deltas.revenue, onClick: () => navigate('/accountant/trips') },
   ]
 
   const quickActions = [

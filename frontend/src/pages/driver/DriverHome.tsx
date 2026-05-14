@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, Truck, Clock, Wallet, TrendingUp } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { formatCurrencyFull } from '@/data/domain'
@@ -8,12 +8,205 @@ import { WorkOrderCard } from '@/components/shared/WorkOrderCard'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { useMyEarnings, useSalaryConfig, useWorkOrders } from '@/hooks/use-queries'
 import { getSalaryPeriodDates, dayBefore, dayAfter, toISODate } from '@/utils/salaryPeriod'
+import { useIsMobile } from '@/hooks/use-mobile'
+import { formatDate } from '@/lib/format'
+import { resolveRoute } from '@/lib/route-utils'
+import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
 
 const PAGE_SIZE = 10
 
 type FilterTab = 'all' | 'pending'
 
 export function DriverHome() {
+  const isMobile = useIsMobile(1024)
+  return isMobile ? <MobileDriverHome /> : <DesktopDriverHome />
+}
+
+function DesktopDriverHome() {
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const { data: workOrders = [], isLoading: loading } = useWorkOrders({ driverId: Number(user!.id) })
+
+  const { data: config } = useSalaryConfig()
+  const now = new Date()
+  const defaultPeriod = useMemo(
+    () => getSalaryPeriodDates(now, { fromDay: config?.fromDay ?? 1, toDay: config?.toDay ?? 31 }),
+    [config?.fromDay, config?.toDay],
+  )
+  const [periodStart, setPeriodStart] = useState<Date>(defaultPeriod.startDate)
+
+  const currentPeriod = useMemo(
+    () => getSalaryPeriodDates(periodStart, { fromDay: config?.fromDay ?? 1, toDay: config?.toDay ?? 31 }),
+    [periodStart, config?.fromDay, config?.toDay],
+  )
+
+  const handlePrevPeriod = useCallback(() => {
+    setPeriodStart(getSalaryPeriodDates(dayBefore(currentPeriod.startDate), { fromDay: config?.fromDay ?? 1, toDay: config?.toDay ?? 31 }).startDate)
+  }, [currentPeriod.startDate, config?.fromDay, config?.toDay])
+
+  const handleNextPeriod = useCallback(() => {
+    setPeriodStart(getSalaryPeriodDates(dayAfter(currentPeriod.endDate), { fromDay: config?.fromDay ?? 1, toDay: config?.toDay ?? 31 }).startDate)
+  }, [currentPeriod.endDate, config?.fromDay, config?.toDay])
+
+  const startISO = toISODate(currentPeriod.startDate)
+  const endISO = toISODate(currentPeriod.endDate)
+  const { data: myEarnings } = useMyEarnings(startISO, endISO)
+
+  const periodJobs = useMemo(() => {
+    const startDate = toISODate(currentPeriod.startDate)
+    const endDate = toISODate(currentPeriod.endDate)
+    return workOrders.filter(w => {
+      const d = (w.tripDate ?? w.createdAt.slice(0, 10))
+      return d >= startDate && d <= endDate
+    })
+  }, [workOrders, currentPeriod])
+
+  const matchedCount = useMemo(() =>
+    periodJobs.filter(w => w.status === 'MATCHED' || w.status === 'COMPLETED').length,
+    [periodJobs],
+  )
+  const pendingCount = useMemo(() =>
+    periodJobs.filter(w => w.status === 'PENDING').length,
+    [periodJobs],
+  )
+  const totalEarnings = useMemo(() =>
+    periodJobs.reduce((sum, w) => sum + w.driverSalary, 0),
+    [periodJobs],
+  )
+  const earningsValue = myEarnings?.totalEarnings ?? totalEarnings
+
+  const sortedJobs = useMemo(() =>
+    [...periodJobs].sort((a, b) => {
+      const da = a.tripDate ?? a.createdAt.slice(0, 10)
+      const db = b.tripDate ?? b.createdAt.slice(0, 10)
+      return db.localeCompare(da)
+    }).slice(0, 10),
+    [periodJobs],
+  )
+
+  const displayMonth = currentPeriod.startDate.getMonth() + 1
+  const displayYear = currentPeriod.startDate.getFullYear()
+
+  return (
+    <div className="space-y-6 pb-8">
+      {/* Page header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="typo-h1 tracking-tight" style={{ color: 'var(--theme-text-primary)' }}>Tổng quan</h1>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+            Kỳ lương {displayMonth}/{displayYear}
+          </p>
+        </div>
+        <MonthNavigator year={displayYear} month={displayMonth} onPrev={handlePrevPeriod} onNext={handleNextPeriod} />
+      </div>
+
+      {/* Stats grid */}
+      <div className="kpi-grid">
+        <div className="stat-card">
+          <div className="stat-top">
+            <div className="stat-icon brand"><Truck size={16} /></div>
+          </div>
+          <p className="stat-label">Tổng chuyến</p>
+          <p className="stat-value">{periodJobs.length}</p>
+        </div>
+        <div className="stat-card">
+          <div className="stat-top">
+            <div className="stat-icon success"><TrendingUp size={16} /></div>
+          </div>
+          <p className="stat-label">Đã khớp</p>
+          <p className="stat-value">{matchedCount}</p>
+        </div>
+        <div className="stat-card">
+          <div className="stat-top">
+            <div className="stat-icon warning"><Clock size={16} /></div>
+          </div>
+          <p className="stat-label">Chờ ghép</p>
+          <p className="stat-value">{pendingCount}</p>
+        </div>
+        <div className="stat-card">
+          <div className="stat-top">
+            <div className="stat-icon info"><Wallet size={16} /></div>
+          </div>
+          <p className="stat-label">Tổng thu nhập</p>
+          <p className="stat-value" style={{ fontSize: periodJobs.length > 99 ? '22px' : undefined }}>{formatCurrencyFull(earningsValue)}</p>
+        </div>
+      </div>
+
+      {/* Recent trips table */}
+      <div className="card-shell">
+        <div className="card-header">
+          <div>
+            <h3>Chuyến gần đây</h3>
+            <p>{sortedJobs.length} chuyến trong kỳ</p>
+          </div>
+          <button
+            onClick={() => navigate('/driver/work-orders/new')}
+            className="btn-primary-template"
+          >
+            <Plus size={14} /> Tạo chuyến
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="space-y-3 p-5">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-14 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+            ))}
+          </div>
+        ) : sortedJobs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-3">
+            <Truck className="h-10 w-10" style={{ color: 'var(--theme-text-muted)' }} />
+            <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Chưa có chuyến nào</p>
+            <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Nhấn + để tạo chuyến mới</p>
+          </div>
+        ) : (
+          <div>
+            {sortedJobs.map((wo, i) => {
+              const date = new Date(wo.tripDate ?? wo.createdAt)
+              const dateStr = date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
+              const isPending = wo.status === 'PENDING'
+              const isMatched = wo.status === 'MATCHED' || wo.status === 'COMPLETED'
+              return (
+                <button
+                  key={wo.id}
+                  onClick={() => navigate(`/driver/job/${wo.id}`)}
+                  className="tt-list-row"
+                >
+                  <div
+                    className="row-icon"
+                    style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
+                  >
+                    {wo.partner.code
+                      ? wo.partner.code.slice(0, 2).toUpperCase()
+                      : wo.partner.name.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="row-content">
+                    <div className="row-headline">
+                      <strong>{wo.partner.name}</strong>
+                      {isPending ? (
+                        <StatusBadgePro variant="warning" label="Chờ ghép" size="sm" />
+                      ) : isMatched ? (
+                        <StatusBadgePro variant="success" label="Đã khớp" size="sm" />
+                      ) : null}
+                    </div>
+                    <div className="row-meta">{resolveRoute(wo)} · {dateStr}</div>
+                  </div>
+                  <div className="row-tail">
+                    {wo.driverSalary > 0 ? (
+                      <div className="font-mono-num text-sm font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>+{formatCurrencyFull(wo.driverSalary)}</div>
+                    ) : null}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function MobileDriverHome() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { data: workOrders = [], isLoading: loading } = useWorkOrders({ driverId: Number(user!.id) })

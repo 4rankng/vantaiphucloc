@@ -21,3 +21,4 @@ export { Collapsible, CollapsibleTrigger, CollapsibleContent } from './Collapsib
 export { Switch } from './Switch'
 export { Alert, AlertTitle, AlertDescription, alertVariants } from './Alert'
 export { Command, CommandInput, CommandList, CommandItem, CommandEmpty, CommandGroup, CommandSeparator } from './Command'
+export { Popover, PopoverTrigger, PopoverContent } from './Popover'

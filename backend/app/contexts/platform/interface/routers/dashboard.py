@@ -18,6 +18,8 @@ from app.core.worker import get_arq_pool
 from app.database import get_db
 from app.schemas.domain import (
     DashboardSummaryOut,
+    KpiTrendDeltas,
+    KpiTrendsOut,
     VehicleExpenseSummary,
     VehiclePnLResponse,
     VehiclePnLRow,
@@ -145,6 +147,142 @@ async def get_dashboard_summary(
         driver_salary_summary=driver_salary_summary,
         unmatched_work_order_count=unmatched_work_order_count,
         pending_trip_count=pending_trip_count,
+    )
+
+
+@router.get("/kpi-trends", response_model=KpiTrendsOut)
+async def get_kpi_trends(
+    days: int = Query(12, ge=2, le=90, description="Number of trailing days, including end_date"),
+    end_date: Optional[str] = Query(None, description="YYYY-MM-DD; defaults to today (UTC)"),
+    _current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Daily activity time-series powering accountant KPI sparklines.
+
+    Returns parallel arrays (length == ``days``) for unmatched work orders,
+    pending trips, driver salary expense, and revenue. Also returns a
+    second-half-vs-first-half percent delta per series for the trend pill.
+    """
+    from datetime import date as _date, timezone as _tz
+    from fastapi import HTTPException
+
+    # ── 1. Resolve window ────────────────────────────────────────────────────
+    if end_date:
+        try:
+            parsed_end = datetime.strptime(end_date, "%Y-%m-%d").date()
+        except ValueError:
+            raise HTTPException(status_code=422, detail="Invalid end_date. Use YYYY-MM-DD.")
+    else:
+        parsed_end = datetime.now(_tz.utc).date()
+
+    start_date = parsed_end - timedelta(days=days - 1)
+    labels: list[_date] = [start_date + timedelta(days=i) for i in range(days)]
+
+    def _normalize(d):
+        """Coerce SQL date/datetime/string to Python date."""
+        if d is None:
+            return None
+        if isinstance(d, str):
+            try:
+                return datetime.strptime(d[:10], "%Y-%m-%d").date()
+            except ValueError:
+                return None
+        if isinstance(d, datetime):
+            return d.date()
+        return d  # already date
+
+    # ── 2. WorkOrder per-day expression ──────────────────────────────────────
+    # Use explicit trip_date when set, else fall back to created_at's date.
+    wo_day = func.coalesce(WorkOrder.trip_date, func.date(WorkOrder.created_at))
+
+    # ── 3. Unmatched work orders (PENDING, dated in window) ──────────────────
+    wo_pending_rows = (await db.execute(
+        select(wo_day.label("d"), func.count(WorkOrder.id))
+        .where(
+            wo_day >= start_date,
+            wo_day <= parsed_end,
+            WorkOrder.status == "PENDING",
+        )
+        .group_by(wo_day)
+    )).all()
+    wo_pending_map: dict = {_normalize(r[0]): int(r[1]) for r in wo_pending_rows}
+
+    # ── 4. Pending trips (PENDING, trip_date in window) ──────────────────────
+    trip_pending_rows = (await db.execute(
+        select(TripOrder.trip_date.label("d"), func.count(TripOrder.id))
+        .where(
+            TripOrder.trip_date >= start_date,
+            TripOrder.trip_date <= parsed_end,
+            TripOrder.status == "PENDING",
+        )
+        .group_by(TripOrder.trip_date)
+    )).all()
+    trip_pending_map: dict = {_normalize(r[0]): int(r[1]) for r in trip_pending_rows}
+
+    # ── 5. Driver salary per day (MATCHED WOs) ───────────────────────────────
+    salary_rows = (await db.execute(
+        select(
+            wo_day.label("d"),
+            func.coalesce(func.sum(WorkOrder.driver_salary + WorkOrder.allowance), 0),
+        )
+        .where(
+            wo_day >= start_date,
+            wo_day <= parsed_end,
+            WorkOrder.status == "MATCHED",
+        )
+        .group_by(wo_day)
+    )).all()
+    salary_map: dict = {_normalize(r[0]): int(r[1] or 0) for r in salary_rows}
+
+    # ── 6. Revenue per day (all trips dated in window) ───────────────────────
+    revenue_rows = (await db.execute(
+        select(
+            TripOrder.trip_date.label("d"),
+            func.coalesce(func.sum(TripOrder.unit_price), 0),
+        )
+        .where(
+            TripOrder.trip_date >= start_date,
+            TripOrder.trip_date <= parsed_end,
+        )
+        .group_by(TripOrder.trip_date)
+    )).all()
+    revenue_map: dict = {_normalize(r[0]): int(r[1] or 0) for r in revenue_rows}
+
+    def _fill(m: dict) -> list[int]:
+        return [m.get(d, 0) for d in labels]
+
+    unmatched_series = _fill(wo_pending_map)
+    pending_series = _fill(trip_pending_map)
+    salary_series = _fill(salary_map)
+    revenue_series = _fill(revenue_map)
+
+    def _delta_pct(series: list[int]) -> float:
+        """Trend % = (mean of 2nd half − mean of 1st half) / mean of 1st half × 100."""
+        if len(series) < 2:
+            return 0.0
+        mid = len(series) // 2
+        first_half = series[:mid]
+        last_half = series[mid:]
+        first_mean = sum(first_half) / max(len(first_half), 1)
+        last_mean = sum(last_half) / max(len(last_half), 1)
+        if first_mean == 0:
+            return 0.0 if last_mean == 0 else 100.0
+        return round(((last_mean - first_mean) / first_mean) * 100, 1)
+
+    return KpiTrendsOut(
+        end_date=parsed_end,
+        days=days,
+        labels=[d.isoformat() for d in labels],
+        unmatched_work_orders=unmatched_series,
+        pending_trips=pending_series,
+        driver_salary=salary_series,
+        revenue=revenue_series,
+        deltas=KpiTrendDeltas(
+            unmatched_work_orders=_delta_pct(unmatched_series),
+            pending_trips=_delta_pct(pending_series),
+            driver_salary=_delta_pct(salary_series),
+            revenue=_delta_pct(revenue_series),
+        ),
     )
 
 

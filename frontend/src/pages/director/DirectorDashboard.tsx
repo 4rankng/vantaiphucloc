@@ -78,6 +78,8 @@ interface StatCardProps {
 function StatCard({ label, value, icon, trend, tone, sparkData, loading }: StatCardProps) {
   const colors = TONE_COLORS[tone]
   const isUp = trend?.startsWith('+')
+  // Only show trend when there's a real, non-zero delta
+  const showTrend = trend && trend !== '0%' && trend !== '+0%'
 
   return (
     <div
@@ -85,58 +87,58 @@ function StatCard({ label, value, icon, trend, tone, sparkData, loading }: StatC
       style={{
         background: 'var(--theme-bg-secondary)',
         border: '1px solid var(--theme-border-default)',
-        borderRadius: 'var(--theme-radius-lg, 10px)',
+        borderRadius: 'var(--theme-radius-lg, 12px)',
         boxShadow: 'var(--theme-shadow-sm)',
-        padding: '14px 16px 16px',
+        padding: '14px 16px 40px',
       }}
     >
-      {/* Top row: icon LEFT, trend RIGHT */}
-      <div className="flex items-center justify-between mb-3">
-        <div
-          className="flex h-9 w-9 items-center justify-center rounded-xl"
-          style={{ background: colors.iconBg, color: colors.iconColor }}
+      {/* Row 1: label left · bare colored icon right */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <p
+          className="text-[11px] font-semibold uppercase tracking-wider leading-tight"
+          style={{ color: 'var(--theme-text-muted)' }}
+        >
+          {label}
+        </p>
+        <span
+          className="shrink-0 flex [&_svg]:h-4 [&_svg]:w-4 mt-px"
+          style={{ color: colors.iconColor, opacity: 0.7 }}
         >
           {icon}
-        </div>
-        {trend && (
-          <div
-            className="flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[11px] font-semibold tabular-nums"
-            style={{
-              background: `color-mix(in srgb, ${isUp ? 'var(--theme-status-success)' : 'var(--theme-status-error)'} 12%, transparent)`,
-              color: isUp ? 'var(--theme-status-success)' : 'var(--theme-status-error)',
-            }}
-          >
-            {isUp ? (
-              <svg viewBox="0 0 24 24" className="h-2.5 w-2.5"><polyline points="6 14 12 8 18 14" stroke="currentColor" fill="none" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            ) : (
-              <svg viewBox="0 0 24 24" className="h-2.5 w-2.5"><polyline points="6 10 12 16 18 10" stroke="currentColor" fill="none" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            )}
-            {trend}
-          </div>
-        )}
+        </span>
       </div>
 
-      {/* Label */}
-      <p
-        className="text-[11px] font-semibold uppercase tracking-wider mb-1"
-        style={{ color: 'var(--theme-text-muted)' }}
-      >
-        {label}
-      </p>
-
-      {/* Value */}
+      {/* Row 2: value */}
       {loading ? (
-        <div className="h-7 w-20 rounded animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+        <div className="h-7 w-20 rounded animate-pulse mb-2" style={{ background: 'var(--theme-bg-tertiary)' }} />
       ) : (
         <p
-          className="text-2xl lg:text-[28px] font-bold leading-none tabular-nums tracking-tight mb-0.5"
+          className="text-[22px] lg:text-[26px] font-bold leading-none tabular-nums tracking-tight mb-2.5"
           style={{ color: 'var(--theme-text-primary)' }}
         >
           {value}
         </p>
       )}
 
-      {/* Sparkline */}
+      {/* Row 3: trend pill */}
+      {showTrend && (
+        <span
+          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] font-semibold tabular-nums"
+          style={{
+            background: `color-mix(in srgb, ${isUp ? 'var(--theme-status-success)' : 'var(--theme-status-error)'} 14%, transparent)`,
+            color: isUp ? 'var(--theme-status-success)' : 'var(--theme-status-error)',
+          }}
+        >
+          {isUp ? (
+            <svg viewBox="0 0 24 24" className="h-2.5 w-2.5"><polyline points="6 14 12 8 18 14" stroke="currentColor" fill="none" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          ) : (
+            <svg viewBox="0 0 24 24" className="h-2.5 w-2.5"><polyline points="6 10 12 16 18 10" stroke="currentColor" fill="none" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          )}
+          {trend}
+        </span>
+      )}
+
+      {/* Sparkline pinned to bottom */}
       {sparkData && sparkData.length >= 2 && (
         <div className="absolute right-0 bottom-0 left-0">
           <SparklineChart data={sparkData} color={colors.sparkColor} />
