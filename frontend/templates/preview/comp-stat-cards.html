@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8">
+<link rel="stylesheet" href="_base.css">
+<style>
+body { background: var(--bg-1); padding: 24px; }
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+
+.kpi {
+  position: relative;
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 0 rgba(9,9,11,0.02);
+  transition: box-shadow 180ms var(--ease);
+}
+.kpi:hover { box-shadow: 0 4px 16px -8px rgba(9,9,11,0.08); }
+
+.kpi-top {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.kpi-icon {
+  width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--fg-3);
+}
+.kpi-icon svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.kpi-icon.brand   { color: var(--brand); }
+.kpi-icon.success { color: var(--success); }
+.kpi-icon.warning { color: var(--warning); }
+.kpi-icon.info    { color: var(--info); }
+
+.kpi-trend {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-3);
+  letter-spacing: -0.005em;
+}
+.kpi-trend.up   { color: var(--success); }
+.kpi-trend.down { color: var(--danger); }
+.kpi-trend svg { width: 11px; height: 11px; stroke: currentColor; stroke-width: 2.2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+.kpi-label {
+  font-size: 12px; font-weight: 500;
+  color: var(--fg-3);
+  letter-spacing: -0.005em;
+  margin: 0 0 4px;
+}
+.kpi-value {
+  font-family: var(--font-display);
+  font-size: 28px; font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  color: var(--fg-1);
+  font-variant-numeric: tabular-nums;
+}
+.kpi-value .currency {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--fg-2);
+  margin-left: 3px;
+  letter-spacing: 0;
+}
+
+/* spark — 1px stroke baseline */
+.spark { position: absolute; right: 0; bottom: 0; left: 0; height: 22px; pointer-events: none; opacity: 0.5; }
+.spark svg { width: 100%; height: 100%; }
+</style></head>
+<body>
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-top">
+        <div class="kpi-icon brand">
+          <svg viewBox="0 0 24 24"><path d="M3 17h13M3 17V8a2 2 0 012-2h8v11M16 17h2.5a1.5 1.5 0 001.5-1.5V11l-3-3h-1"/><circle cx="6.5" cy="17.5" r="1.5"/><circle cx="17.5" cy="17.5" r="1.5"/></svg>
+        </div>
+        <span class="kpi-trend up"><svg viewBox="0 0 24 24"><polyline points="6 14 12 8 18 14"/></svg>+8.2%</span>
+      </div>
+      <p class="kpi-label">Tổng chuyến</p>
+      <div class="kpi-value">412</div>
+      <div class="spark"><svg viewBox="0 0 100 22" preserveAspectRatio="none"><polyline fill="none" stroke="#10B981" stroke-width="1.2" points="0,16 10,15 20,14 30,12 40,13 50,9 60,11 70,7 80,8 90,5 100,4"/></svg></div>
+    </div>
+
+    <div class="kpi">
+      <div class="kpi-top">
+        <div class="kpi-icon success">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5L16 9.5"/></svg>
+        </div>
+        <span class="kpi-trend up"><svg viewBox="0 0 24 24"><polyline points="6 14 12 8 18 14"/></svg>+12%</span>
+      </div>
+      <p class="kpi-label">Đã khớp</p>
+      <div class="kpi-value">368</div>
+      <div class="spark"><svg viewBox="0 0 100 22" preserveAspectRatio="none"><polyline fill="none" stroke="#10B981" stroke-width="1.2" points="0,18 10,17 20,15 30,14 40,11 50,10 60,8 70,7 80,5 90,4 100,3"/></svg></div>
+    </div>
+
+    <div class="kpi">
+      <div class="kpi-top">
+        <div class="kpi-icon warning">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <span class="kpi-trend down"><svg viewBox="0 0 24 24"><polyline points="6 10 12 16 18 10"/></svg>−4.1%</span>
+      </div>
+      <p class="kpi-label">Chờ xử lý</p>
+      <div class="kpi-value">44</div>
+      <div class="spark"><svg viewBox="0 0 100 22" preserveAspectRatio="none"><polyline fill="none" stroke="#A1A1AA" stroke-width="1.2" points="0,6 10,7 20,9 30,8 40,11 50,12 60,10 70,13 80,15 90,14 100,16"/></svg></div>
+    </div>
+
+    <div class="kpi">
+      <div class="kpi-top">
+        <div class="kpi-icon info">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="3" x2="12" y2="21"/><path d="M16 7H10a3 3 0 100 6h4a3 3 0 110 6H7"/></svg>
+        </div>
+        <span class="kpi-trend up"><svg viewBox="0 0 24 24"><polyline points="6 14 12 8 18 14"/></svg>+18.6%</span>
+      </div>
+      <p class="kpi-label">Doanh thu</p>
+      <div class="kpi-value">1,42<span class="currency">tỷ ₫</span></div>
+      <div class="spark"><svg viewBox="0 0 100 22" preserveAspectRatio="none"><polyline fill="none" stroke="#2563EB" stroke-width="1.2" points="0,18 10,17 20,16 30,12 40,13 50,11 60,8 70,9 80,6 90,4 100,3"/></svg></div>
+    </div>
+  </div>
+</body></html>

@@ -153,6 +153,10 @@ function resolveMobileTitle(pathname: string): string {
     '/accountant/routes': 'Cung đường',
     '/accountant/notifications': 'Thông báo',
     '/accountant/profile': 'Thông tin cá nhân',
+    '/accountant/customer-reconciliation': 'Đối soát KH',
+    '/accountant/vendor-reconciliation': 'Đối soát nhà xe',
+    '/accountant/revenue-profit': 'Doanh thu & Lãi',
+    '/accountant/vehicle-expenses': 'Chi phí xe',
   }
   if (TITLES[pathname]) return TITLES[pathname]
   if (pathname.startsWith('/accountant/trip/')) return 'Chi tiết lệnh'

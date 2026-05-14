@@ -15,12 +15,12 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
   const {
     isEdit,
     clients, recentOrders,
-    containers, clientId, vessel, pickupLocation, dropoffLocation,
+    containers, clientId, vessel, operationType, pickupLocation, dropoffLocation,
     selectedTripId,
     submitting, scannerOpen, isOnline, summaryOpen, showSuccess,
     forceManualEntry, missingFields, containerErrors, suggestionLoading,
     canSubmit, summaryContainers, summaryClientName,
-    setClientId, setVessel, setPickupLocation, setDropoffLocation,
+    setClientId, setVessel, setOperationType, setPickupLocation, setDropoffLocation,
     openScanner, handleScanComplete, setScannerOpen,
     updateContainer, addContainer, removeContainer,
     handleRecentTripSelect,
@@ -39,7 +39,7 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:max-w-3xl lg:mx-auto">
       {/* Scanner overlay */}
       {scannerOpen && (
         <ContainerScanner
@@ -61,13 +61,13 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
             style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}
           >
             {/* ── Left: square photo / capture placeholder ── */}
-            <div className="shrink-0 self-stretch flex flex-col" style={{ width: 148 }}>
+            <div className="shrink-0 self-stretch flex flex-col w-[120px] lg:w-[148px]">
               {cont.photoTaken && cont.photoDataUrl ? (
                 <>
                   <button
                     onClick={openScanner(idx)}
                     className="rounded-xl overflow-hidden touch-manipulation flex-1"
-                    style={{ border: '2px solid var(--theme-brand-primary)', minHeight: 148 }}
+                    style={{ border: '2px solid var(--theme-brand-primary)', minHeight: 120 }}
                   >
                     <img src={cont.photoDataUrl} alt="Container" className="w-full h-full object-cover" />
                   </button>
@@ -85,7 +85,7 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
                   onClick={openScanner(idx)}
                   aria-label="Chụp ảnh container"
                   className="rounded-xl border-2 border-dashed flex items-center justify-center touch-manipulation transition-colors flex-1"
-                  style={{ borderColor: 'var(--theme-border-default)', minHeight: 148 }}
+                  style={{ borderColor: 'var(--theme-border-default)', minHeight: 120 }}
                 >
                   <Camera className="w-8 h-8" style={{ color: 'var(--theme-brand-primary)' }} />
                 </button>
@@ -188,6 +188,8 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
         />
       </div>
 
+
+
       {/* Customer & Route section */}
       <div className="space-y-4">
         <div className="flex items-center gap-3">
@@ -223,7 +225,7 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
             />
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
             <div className="space-y-1.5">
               <label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điểm lấy</label>
               <LocationSelect

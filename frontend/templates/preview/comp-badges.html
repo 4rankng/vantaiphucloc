@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8">
+<link rel="stylesheet" href="_base.css">
+<link rel="stylesheet" href="_components.css">
+<style>
+.lbl { font-size: 10px; font-weight: 700; color: var(--fg-3); text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 10px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.section { margin-bottom: 18px; }
+.section:last-child { margin-bottom: 0; }
+.row-in-context { display: flex; align-items: center; gap: 16px; padding: 10px 0; border-top: 1px solid var(--border-2); }
+.row-in-context:first-of-type { border-top: none; padding-top: 0; }
+.row-in-context .name { font-size: 13px; font-weight: 600; color: var(--fg-1); flex: 1; }
+.row-in-context .route { font-size: 12px; color: var(--fg-3); flex: 1; }
+</style></head>
+<body class="card">
+  <div class="section">
+    <p class="lbl">Status \u2014 with dot</p>
+    <div class="row">
+      <span class="badge badge-success"><span class="dot"></span>Đã khớp</span>
+      <span class="badge badge-warning"><span class="dot"></span>Chờ xử lý</span>
+      <span class="badge badge-brand"><span class="dot"></span>Đang chạy</span>
+      <span class="badge badge-neutral"><span class="dot"></span>Đã huỷ</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <p class="lbl">Tag / label \u2014 no dot</p>
+    <div class="row">
+      <span class="badge badge-info">Doanh nghiệp</span>
+      <span class="badge badge-neutral">Cá nhân</span>
+      <span class="badge badge-outline">CONT 40</span>
+      <span class="badge badge-outline">CONT 20</span>
+      <span class="badge badge-brand">Ưu tiên</span>
+      <span class="badge badge-success">+12%</span>
+      <span class="badge badge-danger">−4%</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <p class="lbl">Sizes</p>
+    <div class="row">
+      <span class="badge badge-success badge-sm"><span class="dot"></span>Đã khớp</span>
+      <span class="badge badge-success"><span class="dot"></span>Đã khớp</span>
+      <span class="badge badge-success badge-lg"><span class="dot"></span>Đã khớp</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <p class="lbl">In context \u2014 list row</p>
+    <div class="row-in-context">
+      <span class="name">Pan Pacific Logistics</span>
+      <span class="route">Hải Phòng → Bắc Ninh</span>
+      <span class="badge badge-success"><span class="dot"></span>Đã khớp</span>
+    </div>
+    <div class="row-in-context">
+      <span class="name">Maersk Line VN</span>
+      <span class="route">Lạch Huyện → Hà Nội</span>
+      <span class="badge badge-warning"><span class="dot"></span>Chờ xử lý</span>
+    </div>
+    <div class="row-in-context">
+      <span class="name">Hapag-Lloyd VN</span>
+      <span class="route">Hải Phòng → Hưng Yên</span>
+      <span class="badge badge-brand"><span class="dot"></span>Đang chạy</span>
+    </div>
+  </div>
+</body></html>

@@ -26,8 +26,12 @@ export interface WorkOrderCreatePayload {
   partnerId: number
   pickupLocationId: number
   dropoffLocationId: number
-  driverId: number
+  driverId?: number | null
+  vendorPartnerId?: number | null
+  vehicleExternalPlate?: string | null
   vessel?: string | null
+  operationType?: string | null
+  shipperPartnerId?: number | null
   gpsLat?: number | null
   gpsLng?: number | null
 }
@@ -38,7 +42,11 @@ export interface WorkOrderUpdatePayload {
   pickupLocationId?: number
   dropoffLocationId?: number
   driverId?: number
+  vendorPartnerId?: number | null
+  vehicleExternalPlate?: string | null
   vessel?: string | null
+  operationType?: string | null
+  shipperPartnerId?: number | null
   gpsLat?: number | null
   gpsLng?: number | null
   unitPrice?: number

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8"><link rel="stylesheet" href="_base.css">
+<style>
+.scale { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.cell {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-1);
+  padding: 18px 16px 14px;
+  min-height: 122px;
+  display: flex; flex-direction: column; justify-content: space-between;
+}
+.cell .big { font-family: var(--font-display); font-size: 26px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+.cell .sub { font-size: 11px; font-weight: 500; letter-spacing: 0.02em; margin-top: 4px; }
+.cell .meta { display:flex; align-items:flex-end; justify-content:space-between; gap: 10px; margin-top: 14px; }
+.cell .name { font-family: var(--font-mono); font-size: 10px; font-weight: 700; }
+.cell .hex { font-family: var(--font-mono); font-size: 10px; font-variant-numeric: tabular-nums; }
+.cell .role { font-size: 10px; margin-top: 8px; line-height: 1.4; }
+
+/* AA / AAA contrast badges, computed against #FAFAFA (page bg) */
+.tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 1px 6px; border-radius: var(--radius-full);
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.tag.aaa { background: rgba(255,255,255,0.18); color: rgba(255,255,255,0.95); }
+.tag.aa  { background: rgba(255,255,255,0.16); color: rgba(255,255,255,0.85); }
+.tag.dark.aaa { background: rgba(9,9,11,0.06); color: var(--fg-1); }
+.tag.dark.aa  { background: rgba(9,9,11,0.06); color: var(--fg-2); }
+</style></head>
+<body class="card">
+  <p class="typo-eyebrow" style="margin:0 0 12px">Foreground scale \u00b7 contrast on page <span class="typo-mono" style="font-size:10px;color:var(--fg-3)">#FAFAFA</span></p>
+  <div class="scale">
+    <div class="cell" style="background:var(--fg-1);color:#fff">
+      <div>
+        <div class="big">Aa</div>
+        <div class="sub" style="color:rgba(255,255,255,0.7)">Headlines, body emphasis</div>
+      </div>
+      <div>
+        <div class="meta"><span class="name">--fg-1</span><span class="hex">#09090B</span></div>
+        <div class="role" style="color:rgba(255,255,255,0.75)">17.3 : 1 \u00b7 <span class="tag aaa">AAA</span></div>
+      </div>
+    </div>
+    <div class="cell" style="background:var(--fg-2);color:#fff">
+      <div>
+        <div class="big">Aa</div>
+        <div class="sub" style="color:rgba(255,255,255,0.78)">Body copy, secondary text</div>
+      </div>
+      <div>
+        <div class="meta"><span class="name">--fg-2</span><span class="hex">#52525B</span></div>
+        <div class="role" style="color:rgba(255,255,255,0.78)">7.5 : 1 \u00b7 <span class="tag aaa">AAA</span></div>
+      </div>
+    </div>
+    <div class="cell" style="background:var(--fg-3);color:#fff">
+      <div>
+        <div class="big">Aa</div>
+        <div class="sub" style="color:rgba(255,255,255,0.85)">Muted, labels, placeholders</div>
+      </div>
+      <div>
+        <div class="meta"><span class="name">--fg-3</span><span class="hex">#A1A1AA</span></div>
+        <div class="role" style="color:rgba(255,255,255,0.85)">3.0 : 1 \u00b7 <span class="tag aa">AA \u00b7 large only</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Inverse / on-page demo -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:10px">
+    <div style="padding:12px 14px;border:1px solid var(--border-1);border-radius:var(--radius-md);background:#FAFAFA">
+      <div style="color:var(--fg-1);font-size:13px;font-weight:600">Tổng quan tháng 4</div>
+      <div style="color:var(--fg-2);font-size:12px;margin-top:3px">412 chuyến, doanh thu 1,42 tỷ ₫</div>
+      <div style="color:var(--fg-3);font-size:11px;margin-top:3px">Cập nhật 2 phút trước</div>
+    </div>
+    <div style="padding:12px 14px;border:1px solid var(--border-1);border-radius:var(--radius-md);background:#FFFFFF">
+      <div style="color:var(--fg-1);font-size:13px;font-weight:600">Trên thẻ trắng</div>
+      <div style="color:var(--fg-2);font-size:12px;margin-top:3px">Body text vẫn đọc rõ</div>
+      <div style="color:var(--fg-3);font-size:11px;margin-top:3px">Caption \u2014 dùng &gt;= 12px</div>
+    </div>
+    <div style="padding:12px 14px;border:1px solid var(--border-1);border-radius:var(--radius-md);background:#F4F4F5">
+      <div style="color:var(--fg-1);font-size:13px;font-weight:600">Trên bề mặt mờ</div>
+      <div style="color:var(--fg-2);font-size:12px;margin-top:3px">Hover row, chip background</div>
+      <div style="color:var(--fg-3);font-size:11px;margin-top:3px">fg-3 vẫn đạt AA cho text lớn</div>
+    </div>
+  </div>
+</body></html>

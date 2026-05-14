@@ -4,6 +4,15 @@ import { searchTripOrders } from '@/services/api/tripOrders.api'
 import type { ApiResponse, Pricing, WorkOrder, TripOrder, WorkType, Partner, BulkMatchPair } from '@/data/domain'
 import type { DriverEarnings } from '@/services/api/salary.api'
 import type { VehicleExpenseCategory } from '@/services/api/vehicleExpenses.api'
+import {
+  listVendorReconciliationImports,
+  getVendorReconciliationImport,
+  uploadVendorReconciliation,
+  updateVendorReconRow,
+  applyVendorReconciliation,
+  discardVendorReconciliation,
+} from '@/services/api/vendorReconciliation.api'
+import type { RowUpdatePayload } from '@/services/api/vendorReconciliation.api'
 
 /** Reject on failed ApiResponse so React Query onError fires. */
 function unwrap<T>(res: ApiResponse<T>): T {
@@ -74,6 +83,10 @@ export const queryKeys = {
     ['reconciliation-imports', partnerId ?? 'all'] as const,
   reconciliationImport: (id: number) =>
     ['reconciliation-imports', id] as const,
+  vendorReconImports: (vendorId?: number) =>
+    ['vendor-recon-imports', vendorId ?? 'all'] as const,
+  vendorReconImport: (id: number) =>
+    ['vendor-recon-imports', id] as const,
 }
 
 // ─── Query hooks (GET) ───────────────────────────────────────────────────────
@@ -908,6 +921,73 @@ export function useDeleteVehicleExpense() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['vehicle-expenses'] })
       qc.invalidateQueries({ queryKey: ['vehicle-pnl'] })
+    },
+  })
+}
+
+// ── Vendor Reconciliation ────────────────────────────────────────────────────
+
+export function useVendorReconImports(vendorId?: number) {
+  return useQuery({
+    queryKey: queryKeys.vendorReconImports(vendorId),
+    queryFn: () => listVendorReconciliationImports(vendorId).then(r => r.success ? r.data : []),
+  })
+}
+
+export function useVendorReconImport(importId: number | null) {
+  return useQuery({
+    queryKey: queryKeys.vendorReconImport(importId ?? 0),
+    queryFn: () => getVendorReconciliationImport(importId!).then(r => r.success ? r.data : null),
+    enabled: importId != null,
+  })
+}
+
+export function useUploadVendorReconciliation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (args: {
+      file: File
+      vendorId: number
+      periodFrom: string
+      periodTo: string
+      notes?: string
+    }) => uploadVendorReconciliation(args.file, args.vendorId, args.periodFrom, args.periodTo, args.notes).then(unwrap),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['vendor-recon-imports'] })
+    },
+  })
+}
+
+export function useUpdateVendorReconRow() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ importId, rowId, payload }: { importId: number; rowId: number; payload: RowUpdatePayload }) =>
+      updateVendorReconRow(importId, rowId, payload).then(unwrap),
+    onSuccess: (_data, { importId }) => {
+      qc.invalidateQueries({ queryKey: queryKeys.vendorReconImport(importId) })
+      qc.invalidateQueries({ queryKey: ['vendor-recon-imports'] })
+    },
+  })
+}
+
+export function useApplyVendorReconciliation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (importId: number) => applyVendorReconciliation(importId).then(unwrap),
+    onSuccess: (_data, importId) => {
+      qc.invalidateQueries({ queryKey: queryKeys.vendorReconImport(importId) })
+      qc.invalidateQueries({ queryKey: ['vendor-recon-imports'] })
+    },
+  })
+}
+
+export function useDiscardVendorReconciliation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (importId: number) => discardVendorReconciliation(importId).then(unwrap),
+    onSuccess: (_data, importId) => {
+      qc.invalidateQueries({ queryKey: queryKeys.vendorReconImport(importId) })
+      qc.invalidateQueries({ queryKey: ['vendor-recon-imports'] })
     },
   })
 }

@@ -50,7 +50,7 @@ function ChuyenCard({
     >
       <div className="flex items-start justify-between gap-1 mb-1">
         <p className="text-sm font-semibold leading-tight truncate" style={{ color: 'var(--theme-text-primary)' }}>
-          {wo.driver.name}{wo.driver.vehicle?.plate ? ` · ${wo.driver.vehicle.plate}` : ''}
+          {wo.driver ? `${wo.driver.name}${wo.driver.vehicle?.plate ? ` · ${wo.driver.vehicle.plate}` : ''}` : (wo.vehicleExternalPlate ? `Xe ngoài · ${wo.vehicleExternalPlate}` : 'Xe ngoài')}
         </p>
         <button
           type="button"
@@ -313,7 +313,7 @@ export function MatchSuggestionPanel({
     e.stopPropagation()
     setWoClient(wo.partner.name)
     setWoRoute(wo.route)
-    setWoDriver(wo.driver.name)
+    setWoDriver(wo.driver?.name ?? wo.vehicleExternalPlate ?? 'Xe ngoài')
     setEditWO(wo)
   }
 

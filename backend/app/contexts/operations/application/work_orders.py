@@ -135,6 +135,7 @@ class CreateWorkOrder:
         first = data.containers[0] if data.containers else None
         work_type = first.work_type if first else ""
 
+        # Drivers always create for themselves; accountants/admins specify driver_id or vendor
         driver_id = user.id if user.role == "driver" else data.driver_id
 
         gps_address = (
@@ -148,6 +149,8 @@ class CreateWorkOrder:
                 work_type=work_type,
                 pickup_location_id=data.pickup_location_id,
                 dropoff_location_id=data.dropoff_location_id,
+                shipper_partner_id=data.shipper_partner_id,
+                operation_type=data.operation_type,
             )
 
             w = WorkOrder(
@@ -156,8 +159,12 @@ class CreateWorkOrder:
                 pickup_location_id=data.pickup_location_id,
                 dropoff_location_id=data.dropoff_location_id,
                 driver_id=driver_id,
+                vendor_partner_id=data.vendor_partner_id,
+                vehicle_external_plate=data.vehicle_external_plate,
                 vehicle_id=data.vehicle_id,
                 vessel=data.vessel,
+                operation_type=data.operation_type,
+                shipper_partner_id=data.shipper_partner_id,
                 unit_price=0,
                 driver_salary=0,
                 allowance=0,
@@ -236,6 +243,14 @@ class UpdateWorkOrder:
             w.vehicle_id = data.vehicle_id
         if data.vessel is not None:
             w.vessel = data.vessel
+        if data.operation_type is not None:
+            w.operation_type = data.operation_type
+        if data.shipper_partner_id is not None:
+            w.shipper_partner_id = data.shipper_partner_id
+        if data.vendor_partner_id is not None:
+            w.vendor_partner_id = data.vendor_partner_id
+        if data.vehicle_external_plate is not None:
+            w.vehicle_external_plate = data.vehicle_external_plate
         if data.gps_lat is not None:
             w.gps_lat = data.gps_lat
         if data.gps_lng is not None:
@@ -299,6 +314,8 @@ class BatchCreateWorkOrders:
                             work_type=work_type,
                             pickup_location_id=item.pickup_location_id,
                             dropoff_location_id=item.dropoff_location_id,
+                            shipper_partner_id=item.shipper_partner_id,
+                            operation_type=item.operation_type,
                         )
                         gps_address = (
                             None if (item.gps_lat and item.gps_lng)
@@ -310,8 +327,12 @@ class BatchCreateWorkOrders:
                             pickup_location_id=item.pickup_location_id,
                             dropoff_location_id=item.dropoff_location_id,
                             driver_id=driver_id,
+                            vendor_partner_id=item.vendor_partner_id,
+                            vehicle_external_plate=item.vehicle_external_plate,
                             vehicle_id=item.vehicle_id,
                             vessel=item.vessel,
+                            operation_type=item.operation_type,
+                            shipper_partner_id=item.shipper_partner_id,
                             unit_price=0, driver_salary=0,
                             allowance=0,
                             gps_lat=item.gps_lat,

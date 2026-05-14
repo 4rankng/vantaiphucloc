@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8"><link rel="stylesheet" href="_base.css">
+<style>
+.sidebar-demo {
+  background: var(--sidebar);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  width: 240px;
+}
+.sidebar-demo .head {
+  color: var(--sidebar-text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 8px 10px;
+}
+.sb-item {
+  display:flex; align-items:center; gap:10px;
+  padding: 8px 10px; border-radius: var(--radius-md);
+  color: var(--sidebar-text); font-size: 13px; font-weight: 500;
+}
+.sb-item.active { background: var(--sidebar-active); color: var(--sidebar-active-text); }
+.sb-item .ico { width:14px; height:14px; border-radius: 3px; background: currentColor; opacity: .8; }
+.sb-item.active .ico { background: var(--brand-2); opacity:1; }
+</style></head>
+<body class="card">
+  <p class="typo-eyebrow" style="margin:0 0 12px">Sidebar surface — deep emerald on dark</p>
+  <div class="row" style="gap:20px;align-items:flex-start">
+    <div class="sidebar-demo">
+      <div class="head">Menu</div>
+      <div class="sb-item active"><span class="ico"></span> Tổng quan</div>
+      <div class="sb-item"><span class="ico"></span> Lệnh vận chuyển</div>
+      <div class="sb-item"><span class="ico"></span> Khách hàng</div>
+      <div class="sb-item"><span class="ico"></span> Bảng giá</div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:8px;font-family:var(--font-mono);font-size:11px;color:var(--fg-3)">
+      <div><span style="color:var(--fg-1);font-weight:600">--sidebar</span> &nbsp; #047857 &nbsp; <span style="color:var(--fg-2)">bg, emerald-700</span></div>
+      <div><span style="color:var(--fg-1);font-weight:600">--sidebar-text</span> &nbsp; rgba(236,253,245,.85) &nbsp; <span style="color:var(--fg-2)">default item</span></div>
+      <div><span style="color:var(--fg-1);font-weight:600">--sidebar-text-muted</span> &nbsp; .55 &nbsp; <span style="color:var(--fg-2)">eyebrow, role</span></div>
+      <div><span style="color:var(--fg-1);font-weight:600">--sidebar-active</span> &nbsp; rgba(255,255,255,.15) &nbsp; <span style="color:var(--fg-2)">selected</span></div>
+      <div><span style="color:var(--fg-1);font-weight:600">--sidebar-hover</span> &nbsp; rgba(255,255,255,.08) &nbsp; <span style="color:var(--fg-2)">hover bg</span></div>
+    </div>
+  </div>
+</body></html>

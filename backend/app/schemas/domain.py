@@ -16,7 +16,7 @@ from datetime import date, datetime
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 # ---------------------------------------------------------------------------
@@ -40,7 +40,7 @@ class TripOrderStatus(str, Enum):
 class PartnerCreate(BaseModel):
     name: str
     code: str | None = None
-    partner_type: Literal["client", "vendor"]
+    partner_type: Literal["client", "vendor", "shipper"]
     partner_role: str | None = None
     phone: str | None = None
     tax_code: str | None = None
@@ -51,7 +51,7 @@ class PartnerCreate(BaseModel):
 class PartnerUpdate(BaseModel):
     name: str | None = None
     code: str | None = None
-    partner_type: Literal["client", "vendor"] | None = None
+    partner_type: Literal["client", "vendor", "shipper"] | None = None
     partner_role: str | None = None
     phone: str | None = None
     tax_code: str | None = None
@@ -244,6 +244,8 @@ class PricingCreate(BaseModel):
     work_type: str
     pickup_location_id: int
     dropoff_location_id: int
+    shipper_partner_id: int | None = None
+    operation_type: str | None = None  # XUAT_TAU | NHAP_TAU | CHUYEN_BAI | KHAC
     lines: list[PricingLineCreate]
 
 
@@ -252,12 +254,16 @@ class PricingUpdate(BaseModel):
     work_type: str | None = None
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
+    shipper_partner_id: int | None = None
+    operation_type: str | None = None
     lines: list[PricingLineCreate] | None = None
 
 
 class PricingOut(BaseModel):
     id: int
     partner: PartnerSummaryOut
+    shipper_partner_id: int | None = None
+    operation_type: str | None = None
     work_type: str
     pickup_location: LocationSummaryOut
     dropoff_location: LocationSummaryOut
@@ -300,12 +306,26 @@ class WorkOrderCreate(BaseModel):
     partner_id: int
     pickup_location_id: int
     dropoff_location_id: int
-    driver_id: int
+    driver_id: int | None = None             # required unless vendor_partner_id is set
+    vendor_partner_id: int | None = None     # xe ngoài: external transport company
+    vehicle_external_plate: str | None = None  # vendor plate (free text)
     vehicle_id: int | None = None
     vessel: str | None = None
+    operation_type: str | None = None   # XUAT_TAU | NHAP_TAU | CHUYEN_BAI | KHAC
+    shipper_partner_id: int | None = None
     gps_lat: float | None = None
     gps_lng: float | None = None
     trip_date: date | None = None  # explicit trip execution date; defaults to today if not provided
+
+    @model_validator(mode="after")
+    def _check_driver_xor_vendor(self) -> "WorkOrderCreate":
+        has_driver = self.driver_id is not None
+        has_vendor = self.vendor_partner_id is not None
+        if has_driver == has_vendor:  # both set or both missing
+            raise ValueError(
+                "Exactly one of driver_id or vendor_partner_id must be provided."
+            )
+        return self
 
 
 class WorkOrderUpdate(BaseModel):
@@ -314,8 +334,12 @@ class WorkOrderUpdate(BaseModel):
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
     driver_id: int | None = None
+    vendor_partner_id: int | None = None
+    vehicle_external_plate: str | None = None
     vehicle_id: int | None = None
     vessel: str | None = None
+    operation_type: str | None = None
+    shipper_partner_id: int | None = None
     gps_lat: float | None = None
     gps_lng: float | None = None
     unit_price: int | None = None
@@ -330,9 +354,13 @@ class WorkOrderOut(BaseModel):
     code: str | None = None
     pickup_location: LocationSummaryOut
     dropoff_location: LocationSummaryOut
-    driver: DriverSummaryOut
+    driver: DriverSummaryOut | None = None
+    vendor_partner_id: int | None = None
+    vehicle_external_plate: str | None = None
     vehicle: VehicleSummaryOut | None = None
     vessel: str | None = None
+    operation_type: str | None = None
+    shipper_partner_id: int | None = None
     gps_lat: float | None
     gps_lng: float | None
     gps_address: str | None
@@ -400,6 +428,8 @@ class TripOrderCreate(BaseModel):
     dropoff_location_id: int
     containers: list[TripContainerCreate] = []
     pricing_id: int | None = None
+    shipper_partner_id: int | None = None
+    operation_type: str | None = None  # XUAT_TAU | NHAP_TAU | CHUYEN_BAI | KHAC
     unit_price: int = Field(ge=0)
     driver_salary: int = Field(ge=0)
     allowance: int = Field(ge=0)
@@ -413,6 +443,8 @@ class TripOrderUpdate(BaseModel):
     dropoff_location_id: int | None = None
     containers: list[TripContainerCreate] | None = None
     pricing_id: int | None = None
+    shipper_partner_id: int | None = None
+    operation_type: str | None = None
     unit_price: int | None = None
     driver_salary: int | None = None
     allowance: int | None = None
@@ -429,6 +461,8 @@ class TripOrderOut(BaseModel):
     dropoff_location: LocationSummaryOut
     containers: list[TripContainerOut] = []
     pricing_id: int | None
+    shipper_partner_id: int | None = None
+    operation_type: str | None = None
     unit_price: int
     driver_salary: int
     allowance: int

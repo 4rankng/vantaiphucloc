@@ -26,8 +26,8 @@ function Initials({ name }: { name: string }) {
     : name.slice(0, 2)
   return (
     <div
-      className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 select-none"
-      style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)', opacity: 0.85 }}
+      className="w-9 h-9 rounded-xl flex items-center justify-center text-[12px] font-bold shrink-0 select-none"
+      style={{ background: 'var(--theme-brand-primary-light, color-mix(in srgb, var(--theme-brand-primary) 12%, transparent))', color: 'var(--theme-brand-primary)' }}
     >
       {letters.toUpperCase()}
     </div>
@@ -60,11 +60,11 @@ export function PartnersTable({ partners, onRowClick, loading }: PartnersTablePr
   }
 
   return (
-    <div className="rounded-lg border border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] overflow-hidden shadow-sm">
+    <div className="rounded-[var(--theme-radius-lg,10px)] border border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] overflow-hidden shadow-[var(--theme-shadow-card,0_1px_0_rgba(9,9,11,0.02))]">
       {/* Header */}
-      <div className="hidden lg:grid grid-cols-[2fr_1fr_1fr_1.5fr_1fr] gap-4 px-5 py-3 border-b border-[var(--theme-border-default)]">
+      <div className="hidden lg:grid grid-cols-[2fr_1fr_1fr_1.5fr_1fr] gap-4 px-5 py-3" style={{ borderBottom: '1px solid var(--theme-border-light, var(--theme-border-default))' }}>
         {['Tên', 'Loại đối tác', 'Điện thoại', 'Địa chỉ', 'Người liên hệ'].map(h => (
-          <span key={h} className="text-[11px] font-semibold tracking-wider text-[var(--theme-text-muted)]">
+          <span key={h} className="text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap" style={{ color: 'var(--theme-text-muted)' }}>
             {h}
           </span>
         ))}
@@ -76,10 +76,10 @@ export function PartnersTable({ partners, onRowClick, loading }: PartnersTablePr
           key={row.id}
           onClick={() => onRowClick(row)}
           className={cn(
-            'flex lg:grid lg:grid-cols-[2fr_1fr_1fr_1.5fr_1fr] items-center gap-4 px-5 py-4',
+            'flex lg:grid lg:grid-cols-[2fr_1fr_1fr_1.5fr_1fr] items-center gap-4 px-5 py-3.5',
             'cursor-pointer transition-colors hover:bg-[var(--theme-bg-tertiary)]',
-            i < partners.length - 1 && 'border-b border-[var(--theme-border-default)]',
           )}
+          style={{ borderBottom: i < partners.length - 1 ? '1px solid var(--theme-border-light, var(--theme-border-default))' : undefined }}
         >
           {/* Name + initials */}
           <div className="flex items-center gap-3 min-w-0">

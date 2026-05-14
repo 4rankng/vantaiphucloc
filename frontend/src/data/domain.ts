@@ -1,7 +1,7 @@
 export type Role = 'superadmin' | 'director' | 'accountant' | 'driver'
 export type TrailerType = '20FT' | '40FT'
 export type JobStatus = 'DRAFT' | 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
-export type PartnerType = 'client' | 'vendor'
+export type PartnerType = 'client' | 'vendor' | 'shipper'
 export type PartnerRole = 'shipping_line' | 'factory' | 'transport' | 'other'
 export type WorkType = 'E20' | 'E40' | 'F20' | 'F40'
 export type WorkOrderStatus = 'PENDING' | 'MATCHED'
@@ -122,6 +122,15 @@ export interface VehicleSummary {
 // TODO: Add when period close feature is implemented
 // export interface PeriodClose { ... }
 
+export type OperationType = 'XUAT_TAU' | 'NHAP_TAU' | 'CHUYEN_BAI' | 'KHAC'
+
+export const OPERATION_TYPE_LABELS: Record<OperationType, string> = {
+  XUAT_TAU: 'Xuất tàu',
+  NHAP_TAU: 'Nhập tàu',
+  CHUYEN_BAI: 'Chuyển bãi',
+  KHAC: 'Khác',
+}
+
 export interface WorkOrder {
   id: number
   code?: string
@@ -129,9 +138,13 @@ export interface WorkOrder {
   partner: PartnerSummary
   pickupLocation: LocationSummary
   dropoffLocation: LocationSummary
-  driver: DriverSummary
+  driver?: DriverSummary | null
+  vendorPartnerId?: number | null
+  vehicleExternalPlate?: string | null
   vehicleId?: number | null
   vessel?: string | null
+  operationType?: OperationType | null
+  shipperPartnerId?: number | null
   gpsLat: number
   gpsLng: number
   gpsAddress?: string
@@ -162,6 +175,8 @@ export interface Pricing {
   workType: WorkType
   pickupLocation: LocationSummary
   dropoffLocation: LocationSummary
+  shipperPartnerId?: number | null
+  operationType?: OperationType | null
   lines: PricingLine[]
   createdAt: string
   updatedAt: string

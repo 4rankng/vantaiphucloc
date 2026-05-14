@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8">
+<link rel="stylesheet" href="_base.css">
+<style>
+/* Refined input system: floating-affix prefix/suffix, focus ring, optional inline hint */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field .label-row { display: flex; align-items: baseline; justify-content: space-between; }
+.field .label { font-size: 12px; font-weight: 600; color: var(--fg-1); letter-spacing: -0.005em; }
+.field .label .req { color: var(--danger); margin-left: 2px; }
+.field .hint { font-size: 11px; color: var(--fg-3); }
+.field .err  { font-size: 11px; color: var(--danger); display:flex; align-items:center; gap:4px; }
+
+.inp {
+  display: flex; align-items: stretch;
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-md);
+  height: 36px;
+  transition: border-color 120ms var(--ease), box-shadow 120ms var(--ease);
+  overflow: hidden;
+}
+.inp input {
+  flex: 1; min-width: 0;
+  height: 100%;
+  padding: 0 12px;
+  border: none; background: transparent;
+  font-family: var(--font-sans);
+  font-size: 13px; font-weight: 400;
+  color: var(--fg-1);
+  outline: none;
+}
+.inp input::placeholder { color: var(--fg-3); font-weight: 400; }
+.inp:focus-within {
+  border-color: var(--brand-2);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-2) 16%, transparent);
+}
+.inp.error { border-color: var(--danger); }
+.inp.error:focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 16%, transparent); }
+.inp.disabled { background: var(--bg-3); color: var(--fg-3); }
+.inp.disabled input { color: var(--fg-3); cursor: not-allowed; }
+.inp .pre, .inp .suf {
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 10px;
+  font-size: 12px; color: var(--fg-3);
+  background: var(--bg-3);
+  border-right: 1px solid var(--border-1);
+  font-family: var(--font-mono);
+}
+.inp .suf { border-right: none; border-left: 1px solid var(--border-1); }
+.inp .icon { display: flex; align-items: center; padding: 0 4px 0 10px; color: var(--fg-3); }
+.inp .icon svg, .inp .clear svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.inp .clear {
+  display: flex; align-items: center; padding: 0 8px;
+  color: var(--fg-3); background: transparent; border: none; cursor: pointer;
+}
+.inp .clear:hover { color: var(--fg-1); }
+
+/* Search variant — pill, no label */
+.search {
+  display: flex; align-items: center;
+  height: 32px; padding: 0 10px;
+  background: var(--bg-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  gap: 6px;
+  transition: background 120ms var(--ease), border-color 120ms var(--ease);
+}
+.search:focus-within { background: var(--bg-2); border-color: var(--border-1); }
+.search input {
+  flex: 1; border: none; background: transparent; outline: none;
+  font-size: 13px; color: var(--fg-1);
+}
+.search input::placeholder { color: var(--fg-3); }
+.search svg { width: 14px; height: 14px; stroke: var(--fg-3); stroke-width: 1.8; fill: none; }
+.search .kbd { font-family: var(--font-mono); font-size: 10px; font-weight: 600; padding: 1px 5px; border-radius: 4px; background: var(--bg-2); border: 1px solid var(--border-1); color: var(--fg-3); }
+
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.full { grid-column: 1 / -1; }
+</style></head>
+<body class="card">
+  <div class="row">
+    <div class="field">
+      <div class="label-row"><span class="label">Tài khoản</span><span class="hint">SĐT hoặc email</span></div>
+      <label class="inp">
+        <span class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg></span>
+        <input value="ketoan@phucloc.vn" />
+      </label>
+    </div>
+
+    <div class="field">
+      <div class="label-row"><span class="label">Mã container <span class="req">*</span></span></div>
+      <label class="inp">
+        <span class="pre">CONT</span>
+        <input value="CXDU 481523 7" style="font-family:var(--font-mono); font-variant-numeric: tabular-nums" />
+      </label>
+    </div>
+
+    <div class="field">
+      <div class="label-row"><span class="label">Số điện thoại</span></div>
+      <label class="inp">
+        <span class="pre">+84</span>
+        <input value="905 821 477" />
+      </label>
+    </div>
+
+    <div class="field">
+      <div class="label-row"><span class="label">Doanh thu</span></div>
+      <label class="inp">
+        <input value="8.450.000" style="font-family:var(--font-mono); font-variant-numeric: tabular-nums; text-align: right" />
+        <span class="suf">₫</span>
+      </label>
+    </div>
+
+    <div class="field full">
+      <div class="label-row"><span class="label">Tìm kiếm</span></div>
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+        <input placeholder="Tìm khách hàng, lệnh, container…" />
+        <span class="kbd">⌘K</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="label-row"><span class="label">Khối lượng (kg)</span></div>
+      <label class="inp error">
+        <input value="abc" />
+        <span class="suf">kg</span>
+      </label>
+      <span class="err">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Vui lòng nhập một số nguyên dương
+      </span>
+    </div>
+
+    <div class="field">
+      <div class="label-row"><span class="label">Tài khoản đã khoá</span></div>
+      <label class="inp disabled">
+        <input value="phuocnv" disabled />
+      </label>
+    </div>
+  </div>
+</body></html>

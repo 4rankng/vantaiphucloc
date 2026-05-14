@@ -729,8 +729,8 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
 
       {/* Work order card */}
       <WorkOrderCard
-        driverName={workOrder.driver.name}
-        driverPlate={workOrder.driver.vehicle?.plate}
+        driverName={workOrder.driver?.name ?? (workOrder.vehicleExternalPlate ? `Xe ngoài · ${workOrder.vehicleExternalPlate}` : 'Xe ngoài')}
+        driverPlate={workOrder.driver?.vehicle?.plate ?? workOrder.vehicleExternalPlate}
         woContainers={woContainers}
         woClient={woClient}
         woPickup={woPickup}

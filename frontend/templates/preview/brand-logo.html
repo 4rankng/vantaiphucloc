@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8">
+<link rel="stylesheet" href="_base.css">
+<style>
+body { background: var(--bg-1); padding: 24px; }
+
+.row { display: flex; gap: 14px; align-items: stretch; }
+.row + .row { margin-top: 14px; }
+
+/* Hero — app icon at scale, in a real surface context */
+.hero {
+  flex: 1.4;
+  display: flex; align-items: center; gap: 18px;
+  padding: 22px 24px;
+  background: linear-gradient(135deg, #047857 0%, #065F46 100%);
+  border-radius: var(--radius-xl);
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(255,255,255,0.10), transparent 50%),
+    radial-gradient(circle at 0% 100%, rgba(0,0,0,0.15), transparent 60%);
+  pointer-events: none;
+}
+.hero .icon-tile {
+  width: 64px; height: 64px;
+  border-radius: 14px;
+  background: #fff;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.18),
+    0 12px 32px -8px rgba(0,0,0,0.4),
+    0 2px 4px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+.hero .icon-tile img { width: 100%; height: 100%; object-fit: cover; }
+.hero .text { color: #fff; position: relative; }
+.hero .wordmark {
+  font-family: var(--font-display);
+  font-size: 24px; font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1;
+  margin: 0;
+}
+.hero .wordmark .accent { color: #6EE7B7; }
+.hero .tagline { font-size: 12px; margin: 6px 0 0; opacity: 0.78; letter-spacing: -0.005em; }
+
+/* On-white usage */
+.on-white {
+  flex: 1;
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-lg);
+}
+.on-white .icon-tile-sm {
+  width: 36px; height: 36px;
+  border-radius: 9px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(9,9,11,0.06);
+}
+.on-white .icon-tile-sm img { width: 100%; height: 100%; }
+.on-white .wordmark { font-family: var(--font-display); font-size: 16px; font-weight: 700; letter-spacing: -0.02em; color: var(--fg-1); }
+.on-white .label    { font-size: 11px; color: var(--fg-3); margin-top: 1px; }
+
+/* Sizes strip */
+.sizes {
+  flex: 1;
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+}
+.sizes .lbl { font-size: 10px; font-weight: 700; color: var(--fg-3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
+.sizes-row { display: flex; align-items: flex-end; gap: 16px; }
+.size {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.size .px { font-family: var(--font-mono); font-size: 9px; color: var(--fg-3); letter-spacing: -0.005em; }
+.size .tile { border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px rgba(9,9,11,0.08); }
+.size .tile img { display: block; width: 100%; height: 100%; }
+.size.s16 .tile { width: 16px; height: 16px; border-radius: 3px; }
+.size.s24 .tile { width: 24px; height: 24px; border-radius: 5px; }
+.size.s32 .tile { width: 32px; height: 32px; border-radius: 7px; }
+.size.s48 .tile { width: 48px; height: 48px; border-radius: 10px; }
+.size.s64 .tile { width: 64px; height: 64px; border-radius: 14px; }
+
+/* Clear-space rule */
+.clear {
+  flex: 1;
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  display: flex; align-items: center; gap: 18px;
+}
+.clear .demo { position: relative; width: 110px; height: 110px; flex-shrink: 0; background: repeating-linear-gradient(45deg, var(--bg-3) 0 6px, var(--bg-2) 6px 12px); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+.clear .demo .core { width: 50px; height: 50px; border-radius: 11px; overflow: hidden; box-shadow: 0 2px 6px rgba(9,9,11,0.15); position: relative; z-index: 1; }
+.clear .demo .core img { width: 100%; height: 100%; }
+.clear .demo .pad { position: absolute; border: 1px dashed color-mix(in srgb, var(--brand) 60%, transparent); width: 80px; height: 80px; border-radius: 13px; }
+.clear .lbl { font-size: 10px; font-weight: 700; color: var(--fg-3); text-transform: uppercase; letter-spacing: 0.1em; }
+.clear .rule { font-size: 12px; color: var(--fg-2); margin-top: 6px; line-height: 1.45; }
+.clear .rule strong { color: var(--fg-1); font-weight: 600; }
+</style></head>
+<body>
+  <div class="row">
+    <div class="hero">
+      <div class="icon-tile"><img src="../assets/logo-512.png" alt="TTransport"></div>
+      <div class="text">
+        <h1 class="wordmark">T<span class="accent">T</span>ransport</h1>
+        <p class="tagline">Quản lý vận tải hàng hóa · Phúc Lộc, Hải Phòng</p>
+      </div>
+    </div>
+    <div class="on-white">
+      <div class="icon-tile-sm"><img src="../assets/logo-512.png" alt=""></div>
+      <div>
+        <div class="wordmark">TTransport</div>
+        <div class="label">Inline · sidebar header</div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="sizes">
+      <div class="lbl">Size ladder</div>
+      <div class="sizes-row">
+        <div class="size s16"><div class="tile"><img src="../assets/logo-512.png"></div><span class="px">16</span></div>
+        <div class="size s24"><div class="tile"><img src="../assets/logo-512.png"></div><span class="px">24</span></div>
+        <div class="size s32"><div class="tile"><img src="../assets/logo-512.png"></div><span class="px">32</span></div>
+        <div class="size s48"><div class="tile"><img src="../assets/logo-512.png"></div><span class="px">48</span></div>
+        <div class="size s64"><div class="tile"><img src="../assets/logo-512.png"></div><span class="px">64</span></div>
+      </div>
+    </div>
+    <div class="clear">
+      <div class="demo">
+        <span class="pad"></span>
+        <div class="core"><img src="../assets/logo-512.png" alt=""></div>
+      </div>
+      <div>
+        <div class="lbl">Clear space</div>
+        <p class="rule"><strong>30%</strong> padding on every side. Never crop. Never recolor — the green-on-white is the brand.</p>
+      </div>
+    </div>
+  </div>
+</body></html>

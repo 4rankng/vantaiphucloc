@@ -76,6 +76,8 @@ class PricingCreateInput:
     work_type: str
     pickup_location_id: int
     dropoff_location_id: int
+    shipper_partner_id: int | None = None
+    operation_type: str | None = None
     lines: list[PricingLineInput] = field(default_factory=list)
 
 
@@ -85,4 +87,6 @@ class PricingUpdateInput:
     work_type: str | None = None
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
+    shipper_partner_id: int | None = None
+    operation_type: str | None = None
     lines: list[PricingLineInput] | None = None

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8"><link rel="stylesheet" href="_base.css">
+<style>
+/* A fuller tonal ramp — Stripe / Linear / Tailwind house style.
+ * Each stop has a fixed role so the system doesn't need new colors invented. */
+.ramp { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; margin-bottom: 14px; }
+.stop {
+  display:flex; flex-direction:column; gap:6px;
+  padding-top: 56px;
+  border-radius: var(--radius-sm);
+  position: relative;
+  cursor: default;
+}
+.stop .swatch { position: absolute; inset: 0 0 auto 0; height: 50px; border-radius: var(--radius-sm); border: 1px solid rgba(9,9,11,0.06); }
+.stop .step  { font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--fg-1); text-align: center; line-height: 1; }
+.stop .hex   { font-family: var(--font-mono); font-size: 9px;  color: var(--fg-3); text-align: center; line-height: 1; font-variant-numeric: tabular-nums; }
+.stop.brand .step { color: var(--brand-hover); }
+
+.legend { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 14px; }
+.use {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 11px; color: var(--fg-2);
+}
+.use .dot { width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0; border: 1px solid rgba(9,9,11,0.06); }
+.use .role { font-weight: 600; color: var(--fg-1); }
+.use .var { font-family: var(--font-mono); font-size: 10px; color: var(--fg-3); }
+</style></head>
+<body class="card">
+  <p class="typo-eyebrow" style="margin:0 0 12px">Emerald tonal ramp \u00b7 10 stops, 4 anchored to roles</p>
+
+  <div class="ramp">
+    <div class="stop">         <div class="swatch" style="background:#ECFDF5"></div><div class="step">50</div> <div class="hex">#ECFDF5</div></div>
+    <div class="stop">         <div class="swatch" style="background:#D1FAE5"></div><div class="step">100</div><div class="hex">#D1FAE5</div></div>
+    <div class="stop">         <div class="swatch" style="background:#A7F3D0"></div><div class="step">200</div><div class="hex">#A7F3D0</div></div>
+    <div class="stop">         <div class="swatch" style="background:#6EE7B7"></div><div class="step">300</div><div class="hex">#6EE7B7</div></div>
+    <div class="stop">         <div class="swatch" style="background:#34D399"></div><div class="step">400</div><div class="hex">#34D399</div></div>
+    <div class="stop brand">   <div class="swatch" style="background:#10B981"></div><div class="step">500</div><div class="hex">#10B981</div></div>
+    <div class="stop brand">   <div class="swatch" style="background:#059669"></div><div class="step">600</div><div class="hex">#059669</div></div>
+    <div class="stop brand">   <div class="swatch" style="background:#047857"></div><div class="step">700</div><div class="hex">#047857</div></div>
+    <div class="stop">         <div class="swatch" style="background:#065F46"></div><div class="step">800</div><div class="hex">#065F46</div></div>
+    <div class="stop">         <div class="swatch" style="background:#064E3B"></div><div class="step">900</div><div class="hex">#064E3B</div></div>
+  </div>
+
+  <div class="legend">
+    <div class="use"><span class="dot" style="background:#ECFDF5"></span><span><span class="role">50 \u00b7</span> Icon halo, chip bg, success-soft \u2014 <span class="var">--brand-soft</span></span></div>
+    <div class="use"><span class="dot" style="background:#10B981"></span><span><span class="role">500 \u00b7</span> Chart fills, hover variation \u2014 <span class="var">--brand-2</span></span></div>
+    <div class="use"><span class="dot" style="background:#059669"></span><span><span class="role">600 \u00b7</span> Primary CTA, links, active \u2014 <span class="var">--brand</span></span></div>
+    <div class="use"><span class="dot" style="background:#047857"></span><span><span class="role">700 \u00b7</span> Hover / pressed, sidebar bg \u2014 <span class="var">--brand-hover</span></span></div>
+    <div class="use"><span class="dot" style="background:#065F46"></span><span><span class="role">800 \u00b7</span> Text-on-tint (success-text)</span></div>
+    <div class="use"><span class="dot" style="background:#064E3B"></span><span><span class="role">900 \u00b7</span> Sidebar text on emerald \u2014 reserve</span></div>
+  </div>
+</body></html>

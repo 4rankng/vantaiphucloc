@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8">
+<link rel="stylesheet" href="_base.css">
+<style>
+body { background: var(--bg-1); padding: 24px; }
+
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+.cell {
+  background: var(--bg-2);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  display: flex; align-items: center; gap: 14px;
+  min-height: 84px;
+}
+.glyph-stage {
+  width: 56px; height: 56px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--bg-3);
+  flex-shrink: 0;
+  color: var(--fg-1);
+}
+.glyph-stage .gly {
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: 1;
+  font-weight: 500;
+}
+.glyph-stage.brand   { background: var(--brand-soft); }
+.glyph-stage.brand   .gly { color: var(--brand-hover); }
+.glyph-stage.success { background: var(--success-soft); }
+.glyph-stage.success .gly { color: var(--success); }
+
+.meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.meta .name { font-size: 13px; font-weight: 600; color: var(--fg-1); }
+.meta .uplus { font-family: var(--font-mono); font-size: 10px; color: var(--fg-3); }
+.meta .eg { font-size: 11px; color: var(--fg-2); margin-top: 4px; }
+.meta .eg.mono { font-family: var(--font-mono); }
+</style></head>
+<body>
+  <div class="grid">
+    <div class="cell">
+      <div class="glyph-stage"><span class="gly">→</span></div>
+      <div class="meta">
+        <span class="name">Route arrow</span>
+        <span class="uplus">U+2192</span>
+        <span class="eg">Hải Phòng → Hà Nội</span>
+      </div>
+    </div>
+
+    <div class="cell">
+      <div class="glyph-stage"><span class="gly" style="font-size:32px;line-height:0.5">·</span></div>
+      <div class="meta">
+        <span class="name">Inline separator</span>
+        <span class="uplus">U+00B7</span>
+        <span class="eg">08:30 · 12 km</span>
+      </div>
+    </div>
+
+    <div class="cell">
+      <div class="glyph-stage success"><span class="gly" style="font-size:18px">●</span></div>
+      <div class="meta">
+        <span class="name">Status dot</span>
+        <span class="uplus">U+25CF</span>
+        <span class="eg" style="color:var(--success)">Hoạt động</span>
+      </div>
+    </div>
+
+    <div class="cell">
+      <div class="glyph-stage brand"><span class="gly" style="font-size:18px">▶</span></div>
+      <div class="meta">
+        <span class="name">Driver — start</span>
+        <span class="uplus">U+25B6</span>
+        <span class="eg">Bắt đầu chuyến</span>
+      </div>
+    </div>
+
+    <div class="cell">
+      <div class="glyph-stage success"><span class="gly" style="font-size:22px">✓</span></div>
+      <div class="meta">
+        <span class="name">Driver — complete</span>
+        <span class="uplus">U+2713</span>
+        <span class="eg">Hoàn thành</span>
+      </div>
+    </div>
+
+    <div class="cell">
+      <div class="glyph-stage"><span class="gly" style="font-size:22px">₫</span></div>
+      <div class="meta">
+        <span class="name">Đồng — trailing</span>
+        <span class="uplus">U+20AB</span>
+        <span class="eg mono">12.450.000 ₫</span>
+      </div>
+    </div>
+  </div>
+</body></html>

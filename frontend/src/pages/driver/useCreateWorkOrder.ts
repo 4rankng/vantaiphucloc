@@ -61,6 +61,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
   )
   const [clientId, setClientId] = useState(existingWorkOrder ? String(existingWorkOrder.partner.id) : '')
   const [vessel, setVessel] = useState(existingWorkOrder?.vessel ?? '')
+  const [operationType, setOperationType] = useState<string>(existingWorkOrder?.operationType ?? '')
   const [pickupLocation, setPickupLocation] = useState(existingWorkOrder?.pickupLocation.name ?? '')
   const [dropoffLocation, setDropoffLocation] = useState(existingWorkOrder?.dropoffLocation.name ?? '')
   const [selectedTripId, setSelectedTripId] = useState<number | null>(null)
@@ -305,6 +306,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
           pickupLocationId: pickupId,
           dropoffLocationId: dropoffId,
           vessel: vessel || null,
+          operationType: operationType || null,
         })
       } else {
         const gps = await new Promise<{ lat: number; lng: number }>((resolve) => {
@@ -323,6 +325,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
           dropoffLocationId: dropoffId,
           driverId: Number(user!.id),
           vessel: vessel || null,
+          operationType: operationType || null,
           gpsLat: gps.lat,
           gpsLng: gps.lng,
         })
@@ -337,7 +340,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
       console.error('Submit failed:', err)
       setSubmitting(false)
     }
-  }, [containers, clientId, vessel, pickupLocation, dropoffLocation, locations, user, navigate, isEdit, existingWorkOrder])
+  }, [containers, clientId, vessel, operationType, pickupLocation, dropoffLocation, locations, user, navigate, isEdit, existingWorkOrder])
 
   // Summary data for dialog
   const summaryContainers = useMemo(() =>
@@ -359,7 +362,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
     clients, recentOrders,
 
     // Form state
-    containers, clientId, vessel, pickupLocation, dropoffLocation,
+    containers, clientId, vessel, operationType, pickupLocation, dropoffLocation,
     selectedTripId,
 
     // UI state
@@ -372,6 +375,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
     // Actions
     setClientId: (v: string) => { setSelectedTripId(null); setClientId(v) },
     setVessel,
+    setOperationType,
     setPickupLocation: (v: string) => { setSelectedTripId(null); setPickupLocation(v) },
     setDropoffLocation: (v: string) => { setSelectedTripId(null); setDropoffLocation(v) },
     openScanner, openGallery, handleScanComplete, setScannerOpen,

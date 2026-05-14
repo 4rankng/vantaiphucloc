@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8">
+<link rel="stylesheet" href="_base.css">
+<style>
+body { background: var(--bg-1); padding: 18px; }
+
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  height: 56px; padding: 0 20px;
+  background: var(--header);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-lg);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+          backdrop-filter: blur(12px) saturate(1.4);
+}
+.h-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.h-left h2 { font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--fg-1); margin: 0; letter-spacing: -0.015em; }
+.h-left .crumb { font-size: 12px; color: var(--fg-3); display: flex; align-items: center; gap: 6px; }
+.h-left .crumb svg { width: 10px; height: 10px; stroke: currentColor; stroke-width: 2; fill: none; }
+
+.h-right { display: flex; align-items: center; gap: 6px; }
+.h-right .search {
+  display: flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 10px;
+  background: var(--bg-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  width: 240px;
+}
+.h-right .search:focus-within { background: var(--bg-2); border-color: var(--border-1); }
+.h-right .search input { flex: 1; border: none; background: transparent; outline: none; font-size: 13px; color: var(--fg-1); }
+.h-right .search input::placeholder { color: var(--fg-3); }
+.h-right .search svg { width: 13px; height: 13px; stroke: var(--fg-3); stroke-width: 1.8; fill: none; }
+.h-right .kbd { font-family: var(--font-mono); font-size: 10px; font-weight: 600; padding: 1px 5px; border-radius: 4px; background: var(--bg-2); border: 1px solid var(--border-1); color: var(--fg-3); }
+
+.icon-btn {
+  width: 32px; height: 32px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--fg-2);
+  cursor: pointer;
+  position: relative;
+}
+.icon-btn:hover { background: var(--bg-3); color: var(--fg-1); }
+.icon-btn svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.icon-btn .dot {
+  position: absolute; top: 6px; right: 6px;
+  width: 7px; height: 7px;
+  background: var(--danger);
+  border: 1.5px solid var(--bg-2);
+  border-radius: 50%;
+}
+
+.user-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 32px; padding: 0 6px 0 4px;
+  background: transparent; border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  color: var(--fg-1);
+  cursor: pointer;
+  transition: background 120ms var(--ease), border-color 120ms var(--ease);
+}
+.user-btn:hover { background: var(--bg-2); border-color: var(--border-1); }
+.user-avatar {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--bg-3);
+  color: var(--fg-2);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.user-avatar svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.user-btn .role { font-size: 13px; font-weight: 500; }
+.user-btn .chev { color: var(--fg-3); }
+.user-btn .chev svg { width: 12px; height: 12px; stroke: currentColor; stroke-width: 2; fill: none; }
+
+.divider { width: 1px; height: 18px; background: var(--border-1); margin: 0 4px; }
+</style></head>
+<body>
+  <div class="header">
+    <div class="h-left">
+      <h2>Tổng quan</h2>
+      <span class="crumb">
+        <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        Tháng 4, 2026
+      </span>
+    </div>
+
+    <div class="h-right">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+        <input placeholder="Tìm khách hàng, lệnh, container…" />
+        <span class="kbd">⌘K</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <button class="icon-btn" aria-label="Thông báo">
+        <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        <span class="dot"></span>
+      </button>
+      <button class="icon-btn" aria-label="Trợ giúp">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 015 0c0 1.5-2.5 2-2.5 4"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </button>
+
+      <button class="user-btn">
+        <span class="user-avatar">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>
+        </span>
+        <span class="role">Kế toán</span>
+        <span class="chev"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
+      </button>
+    </div>
+  </div>
+</body></html>

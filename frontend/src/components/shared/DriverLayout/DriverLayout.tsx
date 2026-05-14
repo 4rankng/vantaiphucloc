@@ -16,7 +16,7 @@ function DriverShell() {
         name: user?.name ?? '',
         onNotifications: () => navigate('/driver/notifications'),
       }}
-      contentClassName="px-4 py-4 pb-28 space-y-4 md:px-6 md:py-6 md:pb-28 md:max-w-md md:mx-auto"
+      contentClassName="px-4 py-4 pb-28 space-y-4 md:px-8 md:py-6 md:pb-28 lg:max-w-2xl lg:mx-auto"
     >
       <Outlet />
     </AppShell>

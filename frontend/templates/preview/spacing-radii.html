@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8"><link rel="stylesheet" href="_base.css">
+<style>
+.r { display:flex; flex-direction:column; align-items:center; gap:8px; flex:1; }
+.shape { background: var(--bg-3); border: 1px solid var(--border-1); width: 100%; height: 80px; }
+.r .name { font-family: var(--font-mono); font-size: 11px; color: var(--fg-1); font-weight: 600; }
+.r .val { font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); font-variant-numeric: tabular-nums; }
+.r .role { font-size: 11px; color: var(--fg-2); text-align:center; line-height: 1.4; }
+</style></head>
+<body class="card">
+  <p class="typo-eyebrow" style="margin:0 0 12px">Radii ladder</p>
+  <div class="row" style="gap:12px;align-items:flex-start">
+    <div class="r"><div class="shape" style="border-radius:var(--radius-sm)"></div><div class="name">sm</div><div class="val">6px</div><div class="role">Chips, badges</div></div>
+    <div class="r"><div class="shape" style="border-radius:var(--radius-md)"></div><div class="name">md</div><div class="val">8px</div><div class="role">Inputs, buttons</div></div>
+    <div class="r"><div class="shape" style="border-radius:var(--radius-lg)"></div><div class="name">lg</div><div class="val">10px</div><div class="role">Cards</div></div>
+    <div class="r"><div class="shape" style="border-radius:var(--radius-xl)"></div><div class="name">xl</div><div class="val">14px</div><div class="role">Dialogs, sheets</div></div>
+    <div class="r"><div class="shape" style="border-radius:var(--radius-full);height:80px;width:80px;align-self:center"></div><div class="name">full</div><div class="val">9999px</div><div class="role">Pills, avatars</div></div>
+  </div>
+</body></html>

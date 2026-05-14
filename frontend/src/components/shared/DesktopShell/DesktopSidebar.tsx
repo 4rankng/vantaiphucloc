@@ -1,4 +1,11 @@
 import { Link, useLocation } from 'react-router-dom'
+import { ChevronRight, User, LogOut } from 'lucide-react'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/Dialog'
+import { DialogClose } from '@/components/ui/Dialog'
+import { Button } from '@/components/ui/Button'
 import type { NavItem } from './navConfig'
 
 export function DesktopSidebar({
@@ -9,90 +16,218 @@ export function DesktopSidebar({
   label: string
 }) {
   const location = useLocation()
+  const { logout } = useAuth()
+  const navigate = useNavigate()
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+
+  const handleLogout = () => {
+    logout()
+    navigate('/')
+  }
+
+  const mainItems = navItems.filter(i => i.section !== 'admin')
+  const adminItems = navItems.filter(i => i.section === 'admin')
+  const hasAdmin = adminItems.length > 0
 
   return (
     <aside
       className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:z-40"
       style={{
-        background: 'var(--theme-bg-secondary)',
-        borderRight: '1px solid var(--theme-border-default)',
+        background: 'var(--theme-sidebar, #047857)',
+        color: 'var(--theme-sidebar-text, #e8f5ed)',
+        borderRight: '1px solid var(--theme-sidebar-border, rgba(0,0,0,0.08))',
       }}
     >
       {/* Brand */}
-      <div className="h-16 flex items-center px-6 shrink-0" style={{ borderBottom: '1px solid var(--theme-border-default)' }}>
-        <span className="text-lg font-bold" style={{ color: 'var(--theme-brand-primary)' }}>
-          TTransport
-        </span>
-        <span className="ml-2 text-xs font-medium px-2 py-0.5 rounded-full" style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}>
-          {label}
-        </span>
+      <div
+        className="flex items-center gap-3 px-[22px] py-5 shrink-0"
+        style={{ borderBottom: '1px solid var(--theme-sidebar-border, rgba(0,0,0,0.08))' }}
+      >
+        <div
+          className="w-8 h-8 rounded-[var(--theme-radius-md,8px)] overflow-hidden flex items-center justify-center"
+          style={{ background: '#fff' }}
+        >
+          <img
+            src="/logo.avif"
+            alt="TTransport"
+            className="w-full h-full object-cover"
+          />
+        </div>
+        <div className="leading-tight">
+          <strong className="block text-sm font-bold tracking-tight" style={{ color: '#fff' }}>
+            TTransport
+          </strong>
+          <span
+            className="text-[10px] font-semibold uppercase"
+            style={{
+              color: 'var(--theme-sidebar-text-muted, rgba(232,245,237,0.60))',
+              letterSpacing: '0.1em',
+            }}
+          >
+            Phúc Lộc
+          </span>
+        </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
-        <ul className="space-y-1">
-          {navItems.map(item => {
-            const isActive = item.exact
-              ? location.pathname === item.path
-              : location.pathname === item.path || location.pathname.startsWith(item.path + '/')
-            const Icon = item.icon
+      <nav className="flex-1 overflow-y-auto pb-3 sidebar-scroll">
+        {/* Main section */}
+        <div
+          className="text-[10px] font-bold uppercase"
+          style={{
+            color: 'var(--theme-sidebar-text-muted, rgba(232,245,237,0.60))',
+            letterSpacing: '0.12em',
+            padding: '18px 26px 8px',
+          }}
+        >
+          ĐIỀU HÀNH
+        </div>
 
-            return (
-              <li key={item.path}>
+        {mainItems.map(item => {
+          const isActive = item.exact
+            ? location.pathname === item.path
+            : location.pathname === item.path || location.pathname.startsWith(item.path + '/')
+          const Icon = item.icon
+
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className="flex items-center gap-3 rounded-[var(--theme-radius-md,8px)] text-[13px] font-medium transition-all duration-150 no-underline"
+              style={{
+                padding: '9px 12px',
+                margin: '1px 12px',
+                width: 'calc(100% - 24px)',
+                background: isActive ? 'var(--theme-sidebar-active, rgba(255,255,255,0.12))' : 'transparent',
+                color: isActive ? 'var(--theme-sidebar-active-text, #ffffff)' : 'var(--theme-sidebar-text, #e8f5ed)',
+                fontWeight: isActive ? 600 : 500,
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.background = 'var(--theme-sidebar-hover, rgba(255,255,255,0.06))'
+                  e.currentTarget.style.color = '#fff'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.color = 'var(--theme-sidebar-text, #e8f5ed)'
+                }
+              }}
+            >
+              <Icon size={16} strokeWidth={1.8} className="shrink-0" />
+              <span className="flex-1">{item.label}</span>
+              {isActive && <ChevronRight size={12} className="opacity-60" />}
+            </Link>
+          )
+        })}
+
+        {/* Admin section */}
+        {hasAdmin && (
+          <>
+            <div
+              className="text-[10px] font-bold uppercase"
+              style={{
+                color: 'var(--theme-sidebar-text-muted, rgba(232,245,237,0.60))',
+                letterSpacing: '0.12em',
+                padding: '22px 26px 8px',
+              }}
+            >
+              THIẾT LẬP
+            </div>
+
+            {adminItems.map(item => {
+              const isActive = item.exact
+                ? location.pathname === item.path
+                : location.pathname === item.path || location.pathname.startsWith(item.path + '/')
+              const Icon = item.icon
+
+              return (
                 <Link
+                  key={item.path}
                   to={item.path}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors"
+                  className="flex items-center gap-3 rounded-[var(--theme-radius-md,8px)] text-[13px] font-medium transition-all duration-150 no-underline"
                   style={{
-                    background: isActive ? 'var(--theme-brand-primary-light)' : 'transparent',
-                    color: isActive ? 'var(--theme-brand-primary)' : 'var(--theme-text-secondary)',
+                    padding: '9px 12px',
+                    margin: '1px 12px',
+                    width: 'calc(100% - 24px)',
+                    background: isActive ? 'var(--theme-sidebar-active, rgba(255,255,255,0.12))' : 'transparent',
+                    color: isActive ? 'var(--theme-sidebar-active-text, #ffffff)' : 'var(--theme-sidebar-text, #e8f5ed)',
+                    fontWeight: isActive ? 600 : 500,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.background = 'var(--theme-sidebar-hover, rgba(255,255,255,0.06))'
+                      e.currentTarget.style.color = '#fff'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.background = 'transparent'
+                      e.currentTarget.style.color = 'var(--theme-sidebar-text, #e8f5ed)'
+                    }
                   }}
                 >
-                  <Icon className="w-4.5 h-4.5" />
-                  <span>{item.label}</span>
+                  <Icon size={16} strokeWidth={1.8} className="shrink-0" />
+                  <span className="flex-1">{item.label}</span>
+                  {isActive && <ChevronRight size={12} className="opacity-60" />}
                 </Link>
-              </li>
-            )
-          })}
-        </ul>
+              )
+            })}
+          </>
+        )}
       </nav>
 
-      {/* Footer */}
-      {/* Road art decoration */}
-      <div className="px-3 pt-2 pb-1 shrink-0 pointer-events-none select-none" style={{ opacity: 0.35 }}>
-        <svg viewBox="0 0 200 56" fill="none" aria-hidden="true" style={{ width: '100%', display: 'block' }}>
-          <circle cx="20"  cy="8"  r="0.9" fill="#059669" fillOpacity="0.6"/>
-          <circle cx="80"  cy="5"  r="0.7" fill="#059669" fillOpacity="0.5"/>
-          <circle cx="140" cy="9"  r="1"   fill="#059669" fillOpacity="0.55"/>
-          <circle cx="185" cy="6"  r="0.8" fill="#059669" fillOpacity="0.4"/>
-          <path d="M0 26 Q50 18 100 23 Q150 28 200 20 L200 30 L0 30 Z" fill="#059669" fillOpacity="0.06"/>
-          <rect x="0" y="30" width="200" height="26" fill="#059669" fillOpacity="0.04" rx="2"/>
-          <g stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeOpacity="0.18">
-            <line x1="0"   y1="43" x2="20"  y2="43"/>
-            <line x1="32"  y1="43" x2="52"  y2="43"/>
-            <line x1="64"  y1="43" x2="84"  y2="43"/>
-            <line x1="96"  y1="43" x2="116" y2="43"/>
-            <line x1="128" y1="43" x2="148" y2="43"/>
-            <line x1="160" y1="43" x2="180" y2="43"/>
-          </g>
-          <g transform="translate(20 30)">
-            <rect x="0" y="2" width="56" height="22" rx="2" fill="#059669" fillOpacity="0.1"/>
-            <path d="M56 5 L72 5 Q75 5 75 8 L75 24 L56 24 Z" fill="#059669" fillOpacity="0.14"/>
-            <circle cx="12"  cy="26" r="4.5" fill="#059669" fillOpacity="0.14"/>
-            <circle cx="61"  cy="26" r="4.5" fill="#059669" fillOpacity="0.14"/>
-          </g>
-          <g transform="translate(118 34)" opacity="0.6">
-            <rect x="0" y="1" width="36" height="14" rx="2" fill="#059669" fillOpacity="0.1"/>
-            <path d="M36 3 L48 3 Q51 3 51 6 L51 15 L36 15 Z" fill="#059669" fillOpacity="0.12"/>
-            <circle cx="8"  cy="17" r="3" fill="#059669" fillOpacity="0.12"/>
-            <circle cx="42" cy="17" r="3" fill="#059669" fillOpacity="0.12"/>
-          </g>
-        </svg>
+      {/* Footer user section */}
+      <div
+        className="p-3 shrink-0"
+        style={{ borderTop: '1px solid var(--theme-sidebar-border, rgba(0,0,0,0.08))' }}
+      >
+        <div
+          className="flex items-center gap-2.5 px-2.5 py-2 rounded-[var(--theme-radius-md,8px)] transition-all duration-150"
+          style={{ color: 'var(--theme-sidebar-text, #e8f5ed)' }}
+        >
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+            style={{ background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)' }}
+          >
+            <User size={18} strokeWidth={1.8} />
+          </div>
+          <div className="min-w-0 flex-1 leading-tight">
+            <div className="text-[13px] font-semibold truncate" style={{ color: '#fff' }}>
+              {label}
+            </div>
+            <div
+              className="text-[11px] truncate"
+              style={{ color: 'var(--theme-sidebar-text-muted, rgba(232,245,237,0.60))' }}
+            >
+              TTransport
+            </div>
+          </div>
+          <button
+            onClick={() => setShowLogoutConfirm(true)}
+            className="p-1 rounded transition-colors hover:bg-[rgba(255,255,255,0.08)]"
+            style={{ color: 'var(--theme-sidebar-text-muted, rgba(232,245,237,0.60))' }}
+            title="Đăng xuất"
+          >
+            <LogOut size={14} />
+          </button>
+        </div>
       </div>
-      <div className="px-3 py-3 shrink-0" style={{ borderTop: '1px solid var(--theme-border-default)' }}>
-        <p className="text-xs text-center" style={{ color: 'var(--theme-text-muted)' }}>
-          Vận tải TTransport
-        </p>
-      </div>
+
+      {/* Logout Confirm Dialog */}
+      <Dialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Đăng xuất</DialogTitle>
+            <DialogDescription>Bạn có chắc muốn đăng xuất?</DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 justify-end mt-2">
+            <DialogClose asChild><Button variant="outline">Huỷ</Button></DialogClose>
+            <Button variant="destructive" onClick={handleLogout}>Đăng xuất</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </aside>
   )
 }

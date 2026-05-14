@@ -401,7 +401,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
               <span className="text-[13px] font-semibold" style={{ color: 'var(--theme-status-warning)' }}>Trạng thái chuyến đang lệch dữ liệu</span>
             </div>
             <p className="text-xs" style={{ color: 'var(--theme-text-primary)' }}>
-              Phiếu <strong>{workOrder.driver.vehicle?.plate || workOrder.driver.name}</strong> hiển thị "Đã khớp" nhưng không tìm thấy đơn hàng nào được liên kết.
+              Phiếu <strong>{workOrder.driver ? (workOrder.driver.vehicle?.plate || workOrder.driver.name) : (workOrder.vehicleExternalPlate || 'Xe ngoài')}</strong> hiển thị "Đã khớp" nhưng không tìm thấy đơn hàng nào được liên kết.
             </p>
             <button
               onClick={async () => {
@@ -627,7 +627,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
               <span className="text-sm font-semibold" style={{ color: 'var(--theme-status-warning)' }}>Xác nhận hủy ghép</span>
             </div>
             <p className="text-xs" style={{ color: 'var(--theme-text-primary)' }}>
-              Chuyến <strong>{workOrder.driver.vehicle?.plate || workOrder.driver.name || '—'}</strong>{' '}
+              Chuyến <strong>{workOrder.driver ? (workOrder.driver.vehicle?.plate || workOrder.driver.name || '—') : (workOrder.vehicleExternalPlate || 'Xe ngoài')}</strong>{' '}
               sẽ được tách khỏi đơn hàng{' '}
               <strong>
                 {unmatchTarget.containers
@@ -877,7 +877,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
             style={{ background: 'var(--theme-text-on-brand)', color: 'var(--theme-brand-primary)' }}
           >
             {batchForWO.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />}
-            Ghép vào {workOrder.driver.vehicle?.plate || workOrder.driver.name || 'chuyến này'}
+            Ghép vào {workOrder.driver ? (workOrder.driver.vehicle?.plate || workOrder.driver.name || 'chuyến này') : (workOrder.vehicleExternalPlate || 'xe ngoài')}
           </button>
         </div>
       ) : null}

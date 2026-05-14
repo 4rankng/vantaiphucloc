@@ -124,9 +124,13 @@ class WorkOrderCreateInput:
     partner_id: int
     pickup_location_id: int
     dropoff_location_id: int
-    driver_id: int
+    driver_id: int | None = None
+    vendor_partner_id: int | None = None
+    vehicle_external_plate: str | None = None
     vehicle_id: int | None = None
     vessel: str | None = None
+    operation_type: str | None = None
+    shipper_partner_id: int | None = None
     containers: list[WorkOrderContainerInput] = field(default_factory=list)
     gps_lat: float | None = None
     gps_lng: float | None = None
@@ -139,8 +143,12 @@ class WorkOrderUpdateInput:
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
     driver_id: int | None = None
+    vendor_partner_id: int | None = None
+    vehicle_external_plate: str | None = None
     vehicle_id: int | None = None
     vessel: str | None = None
+    operation_type: str | None = None
+    shipper_partner_id: int | None = None
     containers: list[WorkOrderContainerInput] | None = None
     gps_lat: float | None = None
     gps_lng: float | None = None

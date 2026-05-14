@@ -20,12 +20,13 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import { useMonthParams } from './use-month-params'
 import type { WorkOrderMatchScore } from '@/data/domain'
 
-type StatusFilter = 'all' | 'PENDING' | 'MATCHED'
+type StatusFilter = 'all' | 'PENDING' | 'MATCHED' | 'NO_SHIPPER'
 
 const STATUS_OPTIONS = [
   { key: 'all', label: 'Tất cả' },
   { key: 'PENDING', label: 'Chờ ghép', color: 'var(--theme-status-warning)' },
   { key: 'MATCHED', label: 'Đã khớp', color: 'var(--theme-status-success)' },
+  { key: 'NO_SHIPPER', label: 'Chưa gán chủ hàng', color: 'var(--theme-status-warning)' },
 ]
 
 export function WorkOrderList() {
@@ -66,10 +67,11 @@ export function WorkOrderList() {
     let result = workOrders
     if (statusFilter === 'PENDING') result = result.filter(w => w.status === 'PENDING')
     else if (statusFilter === 'MATCHED') result = result.filter(w => w.status === 'MATCHED' || w.status === 'COMPLETED')
+    else if (statusFilter === 'NO_SHIPPER') result = result.filter(w => !w.shipperPartnerId)
     if (search.trim()) {
       const q = search
       result = result.filter(w =>
-        fuzzyMatch(w.driver.name, q) ||
+        fuzzyMatch(w.driver?.name ?? '', q) ||
         fuzzyMatch(w.partner.name, q) ||
         fuzzyMatch(w.code ?? '', q) ||
         w.containers.some(c => fuzzyMatch(c.containerNumber ?? '', q))
@@ -218,14 +220,9 @@ export function WorkOrderList() {
   // On mobile (<lg): stack month navigator + pending counter on row 1, search/chips on row 2.
   // On desktop (≥lg): single row with month navigator pinned left, search/chips center, counter right.
   const filterBar = (
-    <div
-      className="px-3 py-2 border-b flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-3"
-      style={{ borderColor: 'var(--theme-border-default)' }}
-    >
-      {/* Month navigator + counter (counter only on mobile in this row; on desktop counter goes to the right) */}
-      <div className="flex items-center gap-2 lg:contents">
-        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
-      </div>
+    <div className="toolbar flex-col gap-2 lg:flex-row">
+      {/* Month navigator */}
+      <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
 
       <div className="min-w-0 lg:flex-1">
         <FilterToolbar
