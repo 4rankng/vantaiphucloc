@@ -22,14 +22,14 @@ class GenerateCustomerSettlement:
         self.loader = loader
 
     async def __call__(
-        self, *, partner_id: int, period: SettlementPeriod
+        self, *, client_id: int, period: SettlementPeriod
     ) -> SettlementExportDTO:
-        data = await self.loader.load(partner_id=partner_id, period=period)
+        data = await self.loader.load(client_id=client_id, period=period)
         workbook_bytes = generate_pan_bk_sl_workbook(data)
         filename = settlement_filename(data)
         _logger.info(
-            "Customer settlement exported: partner_id=%s period=%s→%s lines=%d total=%s",
-            partner_id, period.start, period.end,
+            "Customer settlement exported: client_id=%s period=%s→%s lines=%d total=%s",
+            client_id, period.start, period.end,
             len(data.trip_lines), data.total_with_vat,
         )
         return SettlementExportDTO(

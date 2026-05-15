@@ -26,7 +26,7 @@ from app.database import get_db
 from app.core.deps import get_current_user, require_permission
 from app.core.redis import get_redis
 from app.models.base import User
-from app.models.domain import Vehicle
+from app.models.domain import Vehicle, VehicleDriver
 from app.schemas.base import PaginatedResponse
 
 router = APIRouter()
@@ -61,16 +61,22 @@ async def list_drivers(
 
     result = await use_case(page=page, page_size=page_size)
 
-    # Load vehicle plates for these drivers
+    # Load vehicle plates for these drivers via VehicleDriver
     driver_ids = [d.id for d in result.items]
     plate_map: dict[int, str | None] = {}
     if driver_ids:
-        rows = (await db.execute(
-            select(Vehicle.driver_id, Vehicle.plate)
-            .where(Vehicle.driver_id.in_(driver_ids), Vehicle.is_active == True)  # noqa: E712
+        vd_rows = (await db.execute(
+            select(VehicleDriver.driver_id, Vehicle.plate)
+            .join(Vehicle, Vehicle.id == VehicleDriver.vehicle_id)
+            .where(
+                VehicleDriver.driver_id.in_(driver_ids),
+                VehicleDriver.is_active == True,  # noqa: E712
+                VehicleDriver.role == "PRIMARY",
+                Vehicle.is_active == True,  # noqa: E712
+            )
         )).all()
-        for r in rows:
-            plate_map[r[0]] = r[1]
+        for did, plate in vd_rows:
+            plate_map[did] = plate
 
     response = PaginatedResponse[DriverOut](
         items=[_to_out(d, plate_map.get(d.id)) for d in result.items],
@@ -133,9 +139,11 @@ async def set_driver_vehicle(
 ):
     """Assign or update the biển số xe for a driver.
 
-    Idempotent — if the driver already has an active vehicle, the plate is
-    updated in place; otherwise a new Vehicle row is created.
+    Finds or creates the Vehicle by plate, then upserts a PRIMARY
+    VehicleDriver record for the driver.
     """
+    from datetime import date as _date
+
     from fastapi import HTTPException
 
     user = (await db.execute(
@@ -146,27 +154,35 @@ async def set_driver_vehicle(
 
     plate = body.plate.strip().upper()
 
-    conflict = (await db.execute(
-        select(Vehicle).where(
-            Vehicle.plate == plate,
-            Vehicle.is_active == True,  # noqa: E712
-            Vehicle.driver_id != driver_id,
-        )
+    # Find or create the vehicle
+    vehicle = (await db.execute(
+        select(Vehicle).where(Vehicle.plate == plate, Vehicle.is_active == True)  # noqa: E712
     )).scalar_one_or_none()
-    if conflict is not None:
-        raise HTTPException(status_code=409, detail=f"Plate '{plate}' already in use")
+    if vehicle is None:
+        vehicle = Vehicle(plate=plate, is_active=True)
+        db.add(vehicle)
+        await db.flush()
 
-    existing = (await db.execute(
-        select(Vehicle).where(
-            Vehicle.driver_id == driver_id,
-            Vehicle.is_active == True,  # noqa: E712
+    # Deactivate any existing active PRIMARY assignment for this driver
+    existing_vd = (await db.execute(
+        select(VehicleDriver).where(
+            VehicleDriver.driver_id == driver_id,
+            VehicleDriver.is_active == True,  # noqa: E712
+            VehicleDriver.role == "PRIMARY",
         )
-    )).scalar_one_or_none()
+    )).scalars().all()
+    for vd in existing_vd:
+        vd.is_active = False
+        vd.effective_to = _date.today()
 
-    if existing is None:
-        db.add(Vehicle(plate=plate, driver_id=driver_id, is_active=True))
-    else:
-        existing.plate = plate
+    # Create new PRIMARY assignment
+    db.add(VehicleDriver(
+        vehicle_id=vehicle.id,
+        driver_id=driver_id,
+        role="PRIMARY",
+        effective_from=_date.today(),
+        is_active=True,
+    ))
     await db.commit()
 
     await CacheManager(redis).invalidate_namespace("drivers")

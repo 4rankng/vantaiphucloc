@@ -69,7 +69,6 @@ class CreatePartner:
             id=None,
             name=data.name,
             partner_type=data.partner_type,
-            partner_role=data.partner_role,
             code=data.code,
             phone=data.phone,
             tax_code=data.tax_code,
@@ -96,8 +95,6 @@ class UpdatePartner:
             p.name = data.name
         if data.partner_type is not None:
             p.partner_type = data.partner_type
-        if data.partner_role is not None:
-            p.partner_role = data.partner_role
         if data.code is not None:
             if data.code != p.code:
                 clash = await self.repo.find_by_code(data.code)

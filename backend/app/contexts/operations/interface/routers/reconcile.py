@@ -418,7 +418,7 @@ async def get_linked_trip_orders(
 @router.post("/upload-excel")
 async def upload_customer_excel(
     file: UploadFile = File(...),
-    partner_id: int = Query(..., description="Partner ID for reconciliation"),
+    client_id: int = Query(..., description="Partner ID for reconciliation"),
     date_from: str | None = Query(None, description="Filter from date (YYYY-MM-DD)"),
     date_to: str | None = Query(None, description="Filter to date (YYYY-MM-DD)"),
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
@@ -436,13 +436,13 @@ async def upload_customer_excel(
         )
 
     file_content = await file.read()
-    excel_data = await parse_customer_excel(file_content, partner_id)
+    excel_data = await parse_customer_excel(file_content, client_id)
     if not excel_data:
         raise HTTPException(status_code=400, detail="No data found in Excel file")
 
     db = use_case.repo.session  # type: ignore[attr-defined]
     results = await compare_with_system_records(
-        db=db, partner_id=partner_id, excel_data=excel_data,
+        db=db, client_id=client_id, excel_data=excel_data,
         date_from=date_from, date_to=date_to,
     )
 
@@ -546,17 +546,17 @@ async def auto_match(
                 continue
 
             # Build refs for this WO
-            partner_ids_set = {s.trip_order.partner.id for s in suggestions} | {wo.partner_id}
+            client_ids_set = {s.trip_order.client_id for s in suggestions} | {wo.client_id}
             location_ids_set = set()
             for s in suggestions:
                 location_ids_set |= {s.trip_order.pickup_location.id, s.trip_order.dropoff_location.id}
             location_ids_set |= {wo.pickup_location_id, wo.dropoff_location_id}
 
-            partners_map = await load_partner_summaries(db, partner_ids_set)
+            partners_map = await load_partner_summaries(db, client_ids_set)
             locations_map = await load_location_summaries(db, location_ids_set)
             drivers_map = await load_driver_summaries(db, {wo.driver_id})
 
-            wo_partner = get_partner_summary(partners_map, wo.partner_id)
+            wo_partner = get_partner_summary(partners_map, wo.client_id)
             wo_pickup = get_location_summary(locations_map, wo.pickup_location_id)
             wo_dropoff = get_location_summary(locations_map, wo.dropoff_location_id)
             wo_driver = get_driver_summary(drivers_map, wo.driver_id)
@@ -618,7 +618,7 @@ async def auto_match(
         if all_tos:
             alias_groups = await _load_alias_groups(db)
 
-            wo_partner_ids = {wo.partner_id for wo in unmatched_wos}
+            wo_client_ids = {wo.client_id for wo in unmatched_wos}
             wo_dates = {wo.created_at.date() for wo in unmatched_wos if wo.created_at}
 
             wo_cont_rows = (await db.execute(
@@ -650,7 +650,7 @@ async def auto_match(
             container_mismatch = 0
 
             for to in all_tos:
-                has_client = to.partner_id in wo_partner_ids
+                has_client = to.client_id in wo_client_ids
                 to_date = to.trip_date
                 has_date = to_date in wo_dates if to_date else False
                 has_pickup = any(
@@ -972,7 +972,7 @@ async def bulk_match(
 
 @router.get("/export-excel")
 async def export_reconciliation_excel(
-    partner_id: int = Query(..., description="Partner ID"),
+    client_id: int = Query(..., description="Partner ID"),
     date_from: str | None = Query(None, description="Filter from date (YYYY-MM-DD)"),
     date_to: str | None = Query(None, description="Filter to date (YYYY-MM-DD)"),
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
@@ -982,10 +982,10 @@ async def export_reconciliation_excel(
 
     db = use_case.repo.session  # type: ignore[attr-defined]
     excel_content = await generate_reconciliation_excel(
-        db=db, partner_id=partner_id, date_from=date_from, date_to=date_to,
+        db=db, client_id=client_id, date_from=date_from, date_to=date_to,
     )
 
-    filename = f"reconciliation_partner_{partner_id}"
+    filename = f"reconciliation_partner_{client_id}"
     if date_from:
         filename += f"_{date_from}"
     if date_to:

@@ -58,7 +58,7 @@ async def _to_out(db: AsyncSession, pricings: list[Pricing]) -> list[PricingOut]
     if not pricings:
         return []
     partners = await load_partner_summaries(
-        db, {int(p.partner_id) for p in pricings}
+        db, {int(p.client_id) for p in pricings}
     )
     locations = await load_location_summaries(
         db,
@@ -68,8 +68,7 @@ async def _to_out(db: AsyncSession, pricings: list[Pricing]) -> list[PricingOut]
     return [
         PricingOut(
             id=int(p.id),
-            partner=get_partner_summary(partners, int(p.partner_id)),
-            shipper_partner_id=p.shipper_partner_id,
+            partner=get_partner_summary(partners, int(p.client_id)),
             operation_type=p.operation_type,
             work_type=p.work_type,
             pickup_location=get_location_summary(
@@ -101,7 +100,7 @@ def _line_inputs(items) -> list[PricingLineInput]:
 
 @router.get("/pricings", response_model=PaginatedResponse[PricingOut])
 async def list_pricings(
-    partner_id: int | None = None,
+    client_id: int | None = None,
     work_type: str | None = None,
     pickup_location_id: int | None = None,
     dropoff_location_id: int | None = None,
@@ -113,13 +112,13 @@ async def list_pricings(
     redis: Redis = Depends(get_redis),
 ):
     cache = CacheManager(redis)
-    cache_id = f"list:{partner_id}:{work_type}:{pickup_location_id}:{dropoff_location_id}:{page}:{page_size}"
+    cache_id = f"list:{client_id}:{work_type}:{pickup_location_id}:{dropoff_location_id}:{page}:{page_size}"
     cached = await cache.get_json("pricings", cache_id)
     if cached is not None:
         return PaginatedResponse(**cached)
 
     items, total = await use_case(
-        page=page, page_size=page_size, partner_id=partner_id, active_only=True,
+        page=page, page_size=page_size, client_id=client_id, active_only=True,
     )
     # Optional in-memory filters that the use case doesn't expose directly.
     if work_type is not None:
@@ -154,11 +153,10 @@ async def create_pricing(
 ):
     try:
         p = await use_case(PricingCreateInput(
-            partner_id=body.partner_id,
+            client_id=body.client_id,
             work_type=body.work_type,
             pickup_location_id=body.pickup_location_id,
             dropoff_location_id=body.dropoff_location_id,
-            shipper_partner_id=body.shipper_partner_id,
             operation_type=body.operation_type,
             lines=_line_inputs(body.lines),
         ))
@@ -180,11 +178,10 @@ async def update_pricing(
     try:
         lines = _line_inputs(body.lines) if body.lines is not None else None
         p = await use_case(PricingId(pricing_id), PricingUpdateInput(
-            partner_id=body.partner_id,
+            client_id=body.client_id,
             work_type=body.work_type,
             pickup_location_id=body.pickup_location_id,
             dropoff_location_id=body.dropoff_location_id,
-            shipper_partner_id=body.shipper_partner_id,
             operation_type=body.operation_type,
             lines=lines,
         ))

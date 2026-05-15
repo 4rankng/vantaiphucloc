@@ -8,7 +8,6 @@ export interface PricingCreatePayload {
   pickupLocationId: number
   dropoffLocationId: number
   lines: PricingLine[]
-  shipperPartnerId?: number | null
   operationType?: string | null
 }
 
@@ -18,7 +17,6 @@ export interface PricingUpdatePayload {
   pickupLocationId?: number
   dropoffLocationId?: number
   lines?: PricingLine[]
-  shipperPartnerId?: number | null
   operationType?: string | null
 }
 

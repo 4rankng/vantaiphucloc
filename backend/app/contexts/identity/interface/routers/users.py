@@ -105,10 +105,14 @@ async def list_users(
     plate_map: dict[int, str] = {}
     if driver_ids:
         from sqlalchemy import select as sa_select
-        from app.models.domain import Vehicle
+        from app.models.domain import Vehicle, VehicleDriver
         result = await use_case._users.session.execute(
-            sa_select(Vehicle.driver_id, Vehicle.plate).where(
-                Vehicle.driver_id.in_(driver_ids),
+            sa_select(VehicleDriver.driver_id, Vehicle.plate)
+            .join(Vehicle, Vehicle.id == VehicleDriver.vehicle_id)
+            .where(
+                VehicleDriver.driver_id.in_(driver_ids),
+                VehicleDriver.is_active == True,  # noqa: E712
+                VehicleDriver.role == "PRIMARY",
                 Vehicle.is_active == True,  # noqa: E712
             )
         )

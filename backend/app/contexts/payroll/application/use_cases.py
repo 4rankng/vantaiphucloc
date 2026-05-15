@@ -206,7 +206,7 @@ class SetDriverBaseSalary:
 
 @dataclass
 class PartnerRevenueBreakdownDTO:
-    partner_id: int
+    client_id: int
     partner_name: str
     matched_trip_count: int
     revenue: int
@@ -259,7 +259,7 @@ class GetMonthlyPnL:
             await self.session.execute(
                 select(
                     TripOrder.id,
-                    TripOrder.partner_id,
+                    TripOrder.client_id,
                     TripOrder.unit_price,
                     func.count(TripOrderContainer.id),
                 )
@@ -273,17 +273,17 @@ class GetMonthlyPnL:
                     TripOrder.trip_date >= start_date,
                     TripOrder.trip_date <= end_date,
                 )
-                .group_by(TripOrder.id, TripOrder.partner_id, TripOrder.unit_price)
+                .group_by(TripOrder.id, TripOrder.client_id, TripOrder.unit_price)
             )
         ).all()
 
         revenue = 0
         per_partner: dict[int, dict] = {}
-        for to_id, partner_id, unit_price, container_count in per_to_rows:
+        for to_id, client_id, unit_price, container_count in per_to_rows:
             line = int(unit_price or 0) * int(container_count or 0)
             revenue += line
             slot = per_partner.setdefault(
-                partner_id,
+                client_id,
                 {"trip_count": 0, "revenue": 0},
             )
             slot["trip_count"] += 1
@@ -307,7 +307,7 @@ class GetMonthlyPnL:
 
         partner_breakdown = [
             PartnerRevenueBreakdownDTO(
-                partner_id=pid,
+                client_id=pid,
                 partner_name=partner_names.get(pid, f"#{pid}"),
                 matched_trip_count=slot["trip_count"],
                 revenue=slot["revenue"],

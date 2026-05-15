@@ -33,7 +33,6 @@ def partner_to_domain(orm: PartnerORM) -> Partner:
         id=PartnerId(orm.id) if orm.id is not None else None,
         name=orm.name,
         partner_type=orm.partner_type,
-        partner_role=orm.partner_role,
         code=orm.code,
         phone=orm.phone,
         tax_code=orm.tax_code,
@@ -52,7 +51,6 @@ def partner_to_orm(p: Partner, orm: PartnerORM | None = None) -> PartnerORM:
         orm.id = int(p.id)
     orm.name = p.name
     orm.partner_type = p.partner_type
-    orm.partner_role = p.partner_role
     orm.code = p.code
     orm.phone = p.phone
     orm.tax_code = p.tax_code
@@ -172,11 +170,10 @@ def pricing_line_to_orm(ln: PricingLine, orm: PricingLineORM | None = None) -> P
 def pricing_to_domain(orm: PricingORM, lines: list[PricingLineORM] | None = None) -> Pricing:
     return Pricing(
         id=PricingId(orm.id) if orm.id is not None else None,
-        partner_id=PartnerId(orm.partner_id),
+        client_id=PartnerId(orm.client_id),
         work_type=orm.work_type,
         pickup_location_id=LocationId(orm.pickup_location_id),
         dropoff_location_id=LocationId(orm.dropoff_location_id),
-        shipper_partner_id=orm.shipper_partner_id,
         operation_type=orm.operation_type,
         is_active=bool(orm.is_active),
         created_at=orm.created_at,
@@ -190,11 +187,10 @@ def pricing_to_orm(p: Pricing, orm: PricingORM | None = None) -> PricingORM:
         orm = PricingORM()
     if p.id is not None:
         orm.id = int(p.id)
-    orm.partner_id = int(p.partner_id)
+    orm.client_id = int(p.client_id)
     orm.work_type = p.work_type
     orm.pickup_location_id = int(p.pickup_location_id)
     orm.dropoff_location_id = int(p.dropoff_location_id)
-    orm.shipper_partner_id = p.shipper_partner_id
     orm.operation_type = p.operation_type
     orm.is_active = p.is_active
     return orm

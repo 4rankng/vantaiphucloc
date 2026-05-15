@@ -98,7 +98,7 @@ class CommitRow(BaseModel):
 
 
 class CommitRequest(BaseModel):
-    partner_id: int
+    client_id: int
     rows: list[CommitRow]
     overwrite_duplicates: bool = False
     save_template_as: str | None = None
@@ -207,7 +207,7 @@ async def get_canonical_schema(
 @router.post("/customer-excel/preview")
 async def preview_customer_excel(
     file: UploadFile = File(...),
-    partner_id: int | None = Form(None),
+    client_id: int | None = Form(None),
     default_trip_date: date | None = Form(None),
     sheet_name: str | None = Form(None),
     header_row_index: int | None = Form(None),
@@ -224,7 +224,7 @@ async def preview_customer_excel(
     classifier = get_default_classifier()
 
     cached_mapping: list[ColumnMapping] | None = None
-    if partner_id is not None:
+    if client_id is not None:
         sheets = load_workbook(content, file.filename)
         if not sheets:
             raise HTTPException(
@@ -254,7 +254,7 @@ async def preview_customer_excel(
             if row_idx is not None:
                 hdr_cells = header_row_text(sheet, row_idx)
                 structure_hash = compute_structure_hash(sheet.name, hdr_cells)
-                tpl = await find_template(db, partner_id, structure_hash)
+                tpl = await find_template(db, client_id, structure_hash)
                 if tpl is not None:
                     cached_mapping = column_mappings_from_dicts(
                         list(tpl.column_mapping)
@@ -326,7 +326,7 @@ async def commit_customer_excel(
         raise HTTPException(status_code=400, detail="Không có dòng nào để tạo.")
 
     client = (await db.execute(
-        select(Partner).where(Partner.id == body.partner_id)
+        select(Partner).where(Partner.id == body.client_id)
     )).scalar_one_or_none()
     if client is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy khách hàng.")
@@ -354,7 +354,7 @@ async def commit_customer_excel(
 
     try:
         result = await use_case(ImportCommitInput(
-            partner_id=body.partner_id,
+            client_id=body.client_id,
             rows=rows,
             overwrite_duplicates=body.overwrite_duplicates,
             user_id=user.id,
@@ -372,7 +372,7 @@ async def commit_customer_excel(
     ):
         tpl = await save_template(
             db,
-            partner_id=body.partner_id,
+            client_id=body.client_id,
             structure_hash=body.structure_hash,
             template_name=body.save_template_as,
             sheet_name=body.sheet_name,
@@ -402,7 +402,7 @@ async def commit_customer_excel(
 
 
 class ApplyPricingRequest(BaseModel):
-    partner_id: int
+    client_id: int
     trip_order_ids: list[int] | None = None
 
 
@@ -431,7 +431,7 @@ async def apply_pricing(
     """Legacy endpoint — kept for back-compat. See
     /imports/customer-excel/apply-pricing for the trip-id-only shape."""
     priced, unpriced_ids = await use_case(
-        partner_id=body.partner_id,
+        client_id=body.client_id,
         trip_ids=body.trip_order_ids,
         skip_already_priced=False,
     )
@@ -457,7 +457,7 @@ async def apply_pricing_to_trip_ids(
         return ApplyPricingByIdsResponse(priced=0, unpriced=0, unpriced_trip_ids=[])
 
     priced, unpriced_ids = await use_case(
-        partner_id=None,
+        client_id=None,
         trip_ids=body.trip_ids,
         skip_already_priced=True,
     )
@@ -470,15 +470,15 @@ async def apply_pricing_to_trip_ids(
 
 @router.get("/customer-excel/templates")
 async def list_templates(
-    partner_id: int,
+    client_id: int,
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(require_roles("accountant", "superadmin")),
 ):
-    rows = await list_templates_for_partner(db, partner_id)
+    rows = await list_templates_for_partner(db, client_id)
     return [
         {
             "id": r.id,
-            "partner_id": r.partner_id,
+            "client_id": r.client_id,
             "template_name": r.template_name,
             "structure_hash": r.structure_hash,
             "sheet_name": r.sheet_name,
@@ -507,7 +507,7 @@ class PricingPreviewRowDto(BaseModel):
 
 
 class PricingCommitRequest(BaseModel):
-    partner_id: int
+    client_id: int
     rows: list[PricingPreviewRowDto]
     update_existing_lines: bool = False
 
@@ -584,7 +584,7 @@ async def commit_customer_pricing(
     if not body.rows:
         raise HTTPException(status_code=400, detail="Không có dòng nào để tạo.")
     client = (
-        await db.execute(select(Partner).where(Partner.id == body.partner_id))
+        await db.execute(select(Partner).where(Partner.id == body.client_id))
     ).scalar_one_or_none()
     if client is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy khách hàng.")

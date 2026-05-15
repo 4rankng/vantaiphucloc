@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from enum import Enum
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -40,8 +40,7 @@ class TripOrderStatus(str, Enum):
 class PartnerCreate(BaseModel):
     name: str
     code: str | None = None
-    partner_type: Literal["client", "vendor", "shipper"]
-    partner_role: str | None = None
+    partner_type: Literal["client", "vendor"]
     phone: str | None = None
     tax_code: str | None = None
     address: str | None = None
@@ -51,8 +50,7 @@ class PartnerCreate(BaseModel):
 class PartnerUpdate(BaseModel):
     name: str | None = None
     code: str | None = None
-    partner_type: Literal["client", "vendor", "shipper"] | None = None
-    partner_role: str | None = None
+    partner_type: Literal["client", "vendor"] | None = None
     phone: str | None = None
     tax_code: str | None = None
     address: str | None = None
@@ -72,7 +70,6 @@ class PartnerOut(BaseModel):
     code: str | None
     name: str
     partner_type: str
-    partner_role: str | None
     phone: str | None
     tax_code: str | None
     address: str | None
@@ -90,13 +87,13 @@ class PartnerOut(BaseModel):
 
 class VehicleCreate(BaseModel):
     plate: str
-    driver_id: int
+    driver_id: int | None = None
 
 
 class VehicleOut(BaseModel):
     id: int
     plate: str
-    driver_id: int
+    driver_id: int | None = None
     is_active: bool = True
     created_at: datetime
     updated_at: datetime
@@ -240,21 +237,19 @@ class PricingLineOut(BaseModel):
 
 
 class PricingCreate(BaseModel):
-    partner_id: int
+    client_id: int
     work_type: str
     pickup_location_id: int
     dropoff_location_id: int
-    shipper_partner_id: int | None = None
-    operation_type: str | None = None  # XUAT_TAU | NHAP_TAU | CHUYEN_BAI | KHAC
+    operation_type: str | None = None  # XUAT_NHAP_TAU | CHUYEN_BAI | LAY_VO_HA_HANG | CHAY_SA_LAN | DONG_KHO
     lines: list[PricingLineCreate]
 
 
 class PricingUpdate(BaseModel):
-    partner_id: int | None = None
+    client_id: int | None = None
     work_type: str | None = None
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
-    shipper_partner_id: int | None = None
     operation_type: str | None = None
     lines: list[PricingLineCreate] | None = None
 
@@ -262,7 +257,6 @@ class PricingUpdate(BaseModel):
 class PricingOut(BaseModel):
     id: int
     partner: PartnerSummaryOut
-    shipper_partner_id: int | None = None
     operation_type: str | None = None
     work_type: str
     pickup_location: LocationSummaryOut
@@ -303,16 +297,15 @@ class ContainerOut(BaseModel):
 
 class WorkOrderCreate(BaseModel):
     containers: list[ContainerCreate]
-    partner_id: int
+    client_id: int
     pickup_location_id: int
     dropoff_location_id: int
-    driver_id: int | None = None             # required unless vendor_partner_id is set
-    vendor_partner_id: int | None = None     # xe ngoài: external transport company
+    driver_id: int | None = None             # required unless vendor_client_id is set
+    vendor_client_id: int | None = None     # xe ngoài: external transport company
     vehicle_external_plate: str | None = None  # vendor plate (free text)
     vehicle_id: int | None = None
     vessel: str | None = None
-    operation_type: str | None = None   # XUAT_TAU | NHAP_TAU | CHUYEN_BAI | KHAC
-    shipper_partner_id: int | None = None
+    operation_type: str | None = None   # XUAT_NHAP_TAU | CHUYEN_BAI | LAY_VO_HA_HANG | CHAY_SA_LAN | DONG_KHO
     gps_lat: float | None = None
     gps_lng: float | None = None
     trip_date: date | None = None  # explicit trip execution date; defaults to today if not provided
@@ -320,26 +313,25 @@ class WorkOrderCreate(BaseModel):
     @model_validator(mode="after")
     def _check_driver_xor_vendor(self) -> "WorkOrderCreate":
         has_driver = self.driver_id is not None
-        has_vendor = self.vendor_partner_id is not None
+        has_vendor = self.vendor_client_id is not None
         if has_driver == has_vendor:  # both set or both missing
             raise ValueError(
-                "Exactly one of driver_id or vendor_partner_id must be provided."
+                "Exactly one of driver_id or vendor_client_id must be provided."
             )
         return self
 
 
 class WorkOrderUpdate(BaseModel):
     containers: list[ContainerCreate] | None = None
-    partner_id: int | None = None
+    client_id: int | None = None
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
     driver_id: int | None = None
-    vendor_partner_id: int | None = None
+    vendor_client_id: int | None = None
     vehicle_external_plate: str | None = None
     vehicle_id: int | None = None
     vessel: str | None = None
     operation_type: str | None = None
-    shipper_partner_id: int | None = None
     gps_lat: float | None = None
     gps_lng: float | None = None
     unit_price: int | None = None
@@ -355,12 +347,11 @@ class WorkOrderOut(BaseModel):
     pickup_location: LocationSummaryOut
     dropoff_location: LocationSummaryOut
     driver: DriverSummaryOut | None = None
-    vendor_partner_id: int | None = None
+    vendor_client_id: int | None = None
     vehicle_external_plate: str | None = None
     vehicle: VehicleSummaryOut | None = None
     vessel: str | None = None
     operation_type: str | None = None
-    shipper_partner_id: int | None = None
     gps_lat: float | None
     gps_lng: float | None
     gps_address: str | None
@@ -423,13 +414,12 @@ class TripContainerOut(BaseModel):
 
 class TripOrderCreate(BaseModel):
     trip_date: date
-    partner_id: int
+    client_id: int
     pickup_location_id: int
     dropoff_location_id: int
     containers: list[TripContainerCreate] = []
     pricing_id: int | None = None
-    shipper_partner_id: int | None = None
-    operation_type: str | None = None  # XUAT_TAU | NHAP_TAU | CHUYEN_BAI | KHAC
+    operation_type: str | None = None  # XUAT_NHAP_TAU | CHUYEN_BAI | LAY_VO_HA_HANG | CHAY_SA_LAN | DONG_KHO
     unit_price: int = Field(ge=0)
     driver_salary: int = Field(ge=0)
     allowance: int = Field(ge=0)
@@ -438,12 +428,11 @@ class TripOrderCreate(BaseModel):
 
 class TripOrderUpdate(BaseModel):
     trip_date: date | None = None
-    partner_id: int | None = None
+    client_id: int | None = None
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
     containers: list[TripContainerCreate] | None = None
     pricing_id: int | None = None
-    shipper_partner_id: int | None = None
     operation_type: str | None = None
     unit_price: int | None = None
     driver_salary: int | None = None
@@ -461,7 +450,6 @@ class TripOrderOut(BaseModel):
     dropoff_location: LocationSummaryOut
     containers: list[TripContainerOut] = []
     pricing_id: int | None
-    shipper_partner_id: int | None = None
     operation_type: str | None = None
     unit_price: int
     driver_salary: int
@@ -506,6 +494,7 @@ class CriterionBreakdown(BaseModel):
     match: bool
     wo_value: str | None = None
     to_value: str | None = None
+    fuzzy: bool = False
 
 
 class MatchSuggestion(BaseModel):
@@ -517,6 +506,7 @@ class MatchSuggestion(BaseModel):
     criteria: list[CriterionBreakdown] = Field(default_factory=list)
     match_score: int = 0
     max_score: int = 5
+    match_warnings: list[str] = Field(default_factory=list)
 
 
 class SuggestMatchesResponse(BaseModel):
@@ -532,6 +522,7 @@ class WOSuggestion(BaseModel):
     criteria: list[CriterionBreakdown] = Field(default_factory=list)
     match_score: int = 0
     max_score: int = 5
+    match_warnings: list[str] = Field(default_factory=list)
 
 
 class SuggestWosResponse(BaseModel):
@@ -714,7 +705,7 @@ class DriverBaseSalarySet(BaseModel):
 # ---------------------------------------------------------------------------
 
 class PartnerRevenueBreakdownOut(BaseModel):
-    partner_id: int
+    client_id: int
     partner_name: str
     matched_trip_count: int
     revenue: int
@@ -747,10 +738,11 @@ class CustomerReconciliationRowInput(BaseModel):
     trip_date: date | None = None
     customer_status: str = Field(..., pattern="^(MATCHED|REJECTED|UNKNOWN)$")
     customer_note: str | None = Field(default=None, max_length=500)
+    customer_amount: int | None = None
 
 
 class CustomerReconciliationPreviewRequest(BaseModel):
-    partner_id: int
+    client_id: int
     period_start: date
     period_end: date
     source_filename: str | None = Field(default=None, max_length=500)
@@ -766,11 +758,14 @@ class CustomerReconciliationRowOut(BaseModel):
     resolved_trip_order_id: int | None = None
     apply_status: str
     apply_message: str | None = None
+    diff_classification: str | None = None
+    customer_amount: int | None = None
+    our_amount: int | None = None
 
 
 class CustomerReconciliationImportOut(BaseModel):
     id: int
-    partner_id: int
+    client_id: int
     partner_name: str | None = None
     period_start: date
     period_end: date
@@ -780,6 +775,13 @@ class CustomerReconciliationImportOut(BaseModel):
     uploaded_at: datetime
     applied_at: datetime | None = None
     rows: list[CustomerReconciliationRowOut] = []
+
+
+class RowVerdictUpdate(BaseModel):
+    """Per-row action for customer reconciliation."""
+    action: str = Field(..., pattern="^(accept|dispute|edit)$")
+    amount: int | None = None
+    note: str | None = Field(default=None, max_length=500)
 
 
 # ---------------------------------------------------------------------------
@@ -870,12 +872,12 @@ class ContainerOCRResponse(BaseModel):
 # VehicleExpense (CP Xe)
 # ---------------------------------------------------------------------------
 
-VEHICLE_EXPENSE_CATEGORIES = {"XANG_DAU", "SUA_CHUA", "KHAC", "CHUNG"}
+VEHICLE_EXPENSE_CATEGORIES = {"XANG_DAU", "SUA_CHUA", "CHUNG"}
 
 
 class VehicleExpenseCreate(BaseModel):
     vehicle_id: int | None = None  # null for CHUNG (general overhead)
-    category: str = Field(..., pattern="^(XANG_DAU|SUA_CHUA|KHAC|CHUNG)$")
+    category: str = Field(..., pattern="^(XANG_DAU|SUA_CHUA|CHUNG)$")
     amount: int = Field(..., gt=0, description="Amount in VND")
     expense_date: date
     description: str | None = Field(default=None, max_length=500)
@@ -884,7 +886,7 @@ class VehicleExpenseCreate(BaseModel):
 
 class VehicleExpenseUpdate(BaseModel):
     vehicle_id: int | None = None
-    category: str | None = Field(default=None, pattern="^(XANG_DAU|SUA_CHUA|KHAC|CHUNG)$")
+    category: str | None = Field(default=None, pattern="^(XANG_DAU|SUA_CHUA|CHUNG)$")
     amount: int | None = Field(default=None, gt=0)
     expense_date: date | None = None
     description: str | None = Field(default=None, max_length=500)
@@ -994,7 +996,6 @@ class VehicleExpenseSummary(BaseModel):
     """Expense subtotals by category for one vehicle."""
     xang_dau: int = 0    # Fuel
     sua_chua: int = 0    # Repairs
-    khac: int = 0        # Other
     total: int = 0
 
 
@@ -1070,3 +1071,45 @@ class BatchMatchForTOResult(BaseModel):
 class BatchMatchForTOResponse(BaseModel):
     trip_order_id: int
     results: list[BatchMatchForTOResult]
+
+
+# ---------------------------------------------------------------------------
+# Bulk import + match (Excel upload for work orders)
+# ---------------------------------------------------------------------------
+
+class BulkImportAndMatchResult(BaseModel):
+    total_rows: int
+    created: int
+    matched: int
+    warnings: int
+    unmatched: int
+    errors: list[str] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# AI Parse Preview
+# ---------------------------------------------------------------------------
+
+class AIParsedCell(BaseModel):
+    value: Any = None
+    confidence: float
+    original_value: Any = None
+    cleaned: bool = False
+
+
+class AIParsedRow(BaseModel):
+    row_number: int
+    cells: dict[str, AIParsedCell]
+    source_row_ref: str
+    parse_error: str | None = None
+
+
+class AIParsePreviewResponse(BaseModel):
+    filename: str
+    column_mapping: dict[int, str]
+    mapping_confidence: float
+    header_row: int
+    cached_mapping: bool
+    total_rows: int
+    cost_estimate_usd: float
+    rows: list[AIParsedRow]

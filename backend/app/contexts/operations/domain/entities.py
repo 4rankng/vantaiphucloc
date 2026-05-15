@@ -131,7 +131,7 @@ class TripOrder:
 
     id: TripOrderId | None
     trip_date: object                       # `datetime.date` — kept loose to avoid imports
-    partner_id: int
+    client_id: int
     pickup_location_id: int
     dropoff_location_id: int
     unit_price: Money = 0
@@ -312,7 +312,7 @@ class WorkOrder:
     """
 
     id: WorkOrderId | None
-    partner_id: int
+    client_id: int
     pickup_location_id: int
     dropoff_location_id: int
     driver_id: int

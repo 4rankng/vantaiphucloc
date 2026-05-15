@@ -23,30 +23,28 @@ interface WorkOrderFilters {
 
 export interface WorkOrderCreatePayload {
   containers: ContainerItem[]
-  partnerId: number
+  clientId: number
   pickupLocationId: number
   dropoffLocationId: number
   driverId?: number | null
-  vendorPartnerId?: number | null
+  vendorId?: number | null
   vehicleExternalPlate?: string | null
   vessel?: string | null
   operationType?: string | null
-  shipperPartnerId?: number | null
   gpsLat?: number | null
   gpsLng?: number | null
 }
 
 export interface WorkOrderUpdatePayload {
   containers?: ContainerItem[]
-  partnerId?: number
+  clientId?: number
   pickupLocationId?: number
   dropoffLocationId?: number
   driverId?: number
-  vendorPartnerId?: number | null
+  vendorId?: number | null
   vehicleExternalPlate?: string | null
   vessel?: string | null
   operationType?: string | null
-  shipperPartnerId?: number | null
   gpsLat?: number | null
   gpsLng?: number | null
   unitPrice?: number
@@ -91,7 +89,7 @@ export async function createWorkOrder(
   try {
     const res = await api.post('/work-orders', snakeBody)
     const wo = toCamel<WorkOrder>(res.data)
-    const cacheKey = `work-orders:${data.driverId || ''}:${data.partnerId || ''}`
+    const cacheKey = `work-orders:${data.driverId || ''}:${data.clientId || ''}`
     const cached = await getCache<WorkOrder[]>(cacheKey)
     if (cached) {
       await setCache(cacheKey, [wo, ...cached])
@@ -110,7 +108,7 @@ export async function createWorkOrder(
       return ok({
         id: -Date.now(),
         containers: data.containers,
-        partner: { id: data.partnerId, name: '', code: null },
+        partner: { id: data.clientId, name: '', code: null },
         pickupLocation: { id: data.pickupLocationId, name: '' },
         dropoffLocation: { id: data.dropoffLocationId, name: '' },
         driver: { id: data.driverId, name: '' },
@@ -199,6 +197,75 @@ export async function getSuggestedRoutes(
     const res = await api.get('/drivers/me/suggested-routes', { params })
     const items = (res.data?.items ?? []) as SuggestedRoute[]
     return ok(items)
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export interface BulkImportAndMatchResult {
+  totalRows: number
+  created: number
+  matched: number
+  warnings: number
+  unmatched: number
+  errors: string[]
+}
+
+export async function bulkImportAndMatch(file: File, clientId?: number): Promise<ApiResponse<BulkImportAndMatchResult>> {
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    if (clientId) formData.append('client_id', String(clientId))
+
+    const res = await api.post('/work-orders/bulk-import-and-match', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return ok(toCamel<BulkImportAndMatchResult>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+
+// ---------------------------------------------------------------------------
+// AI Parse Preview
+// ---------------------------------------------------------------------------
+
+export interface AIParsedCell {
+  value: any
+  confidence: number
+  originalValue?: any
+  cleaned: boolean
+}
+
+export interface AIParsedRow {
+  rowNumber: number
+  cells: Record<string, AIParsedCell>
+  sourceRowRef: string
+  parseError?: string
+}
+
+export interface AIParsePreviewResult {
+  filename: string
+  columnMapping: Record<number, string>
+  mappingConfidence: number
+  headerRow: number
+  cachedMapping: boolean
+  totalRows: number
+  costEstimateUsd: number
+  rows: AIParsedRow[]
+}
+
+export async function aiParsePreview(file: File, sourceId?: string): Promise<ApiResponse<AIParsePreviewResult>> {
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    if (sourceId) formData.append('source_id', sourceId)
+
+    const res = await api.post('/work-orders/ai-parse-preview', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return ok(toCamel<AIParsePreviewResult>(res.data))
   } catch (err) {
     return fail(err)
   }

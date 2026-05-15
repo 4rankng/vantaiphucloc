@@ -3,7 +3,7 @@
 Categories:
   XANG_DAU — Fuel costs
   SUA_CHUA — Repair / maintenance
-  KHAC     — Other vehicle-specific costs
+  KHAC     — Other vehicle-specific costs  (DEPRECATED — removed)
   CHUNG    — General overhead (vehicle_id = NULL)
 
 Expenses feed into the per-vehicle P&L report.

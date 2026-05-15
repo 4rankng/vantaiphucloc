@@ -83,7 +83,7 @@ class PricingRepository(ABC):
     async def find_by_lane(
         self,
         *,
-        partner_id: PartnerId,
+        client_id: PartnerId,
         work_type: WorkType,
         pickup_location_id: LocationId,
         dropoff_location_id: LocationId,
@@ -91,12 +91,12 @@ class PricingRepository(ABC):
 
     @abstractmethod
     async def list_for_partner(
-        self, partner_id: PartnerId, *, active_only: bool = True
+        self, client_id: PartnerId, *, active_only: bool = True
     ) -> Sequence[Pricing]: ...
 
     @abstractmethod
     async def list(
-        self, *, offset: int, limit: int, partner_id: PartnerId | None = None,
+        self, *, offset: int, limit: int, client_id: PartnerId | None = None,
         active_only: bool = True,
     ) -> tuple[Sequence[Pricing], int]: ...
 

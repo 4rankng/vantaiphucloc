@@ -53,14 +53,14 @@ class ListPricings:
         *,
         page: int,
         page_size: int,
-        partner_id: int | None = None,
+        client_id: int | None = None,
         active_only: bool = True,
     ) -> tuple[list[Pricing], int]:
         offset = (page - 1) * page_size
         items, total = await self.repo.list(
             offset=offset,
             limit=page_size,
-            partner_id=PartnerId(partner_id) if partner_id is not None else None,
+            client_id=PartnerId(client_id) if client_id is not None else None,
             active_only=active_only,
         )
         return list(items), total
@@ -74,11 +74,10 @@ class CreatePricing:
     async def __call__(self, data: PricingCreateInput) -> Pricing:
         p = Pricing(
             id=None,
-            partner_id=PartnerId(data.partner_id),
+            client_id=PartnerId(data.client_id),
             work_type=data.work_type,
             pickup_location_id=LocationId(data.pickup_location_id),
             dropoff_location_id=LocationId(data.dropoff_location_id),
-            shipper_partner_id=data.shipper_partner_id,
             operation_type=data.operation_type,
             lines=_build_lines(data.lines),
         )
@@ -105,8 +104,8 @@ class UpdatePricing:
         p = await self.repo.get_by_id(pid)
         if p is None:
             raise NotFound("Pricing", int(pid))
-        if data.partner_id is not None:
-            p.partner_id = PartnerId(data.partner_id)
+        if data.client_id is not None:
+            p.client_id = PartnerId(data.client_id)
         if data.work_type is not None:
             from app.contexts.customer_pricing.domain.value_objects import (
                 normalize_work_type,
@@ -116,8 +115,6 @@ class UpdatePricing:
             p.pickup_location_id = LocationId(data.pickup_location_id)
         if data.dropoff_location_id is not None:
             p.dropoff_location_id = LocationId(data.dropoff_location_id)
-        if data.shipper_partner_id is not None:
-            p.shipper_partner_id = data.shipper_partner_id
         if data.operation_type is not None:
             p.operation_type = data.operation_type
         if data.lines is not None:

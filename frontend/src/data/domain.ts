@@ -1,8 +1,7 @@
 export type Role = 'superadmin' | 'director' | 'accountant' | 'driver'
 export type TrailerType = '20FT' | '40FT'
 export type JobStatus = 'DRAFT' | 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
-export type PartnerType = 'client' | 'vendor' | 'shipper'
-export type PartnerRole = 'shipping_line' | 'factory' | 'transport' | 'other'
+export type PartnerType = 'client' | 'vendor'
 export type WorkType = 'E20' | 'E40' | 'F20' | 'F40'
 export type WorkOrderStatus = 'PENDING' | 'MATCHED'
 export type TripOrderStatus = 'PENDING' | 'MATCHED'
@@ -50,7 +49,7 @@ export interface Driver {
 export interface Vehicle {
   id: number
   plate: string
-  driverId: number
+  driverId?: number | null
   isActive: boolean
   createdAt: string
   updatedAt: string
@@ -61,7 +60,6 @@ export interface Partner {
   code?: string
   name: string
   partnerType: PartnerType
-  partnerRole?: PartnerRole
   taxCode?: string
   address?: string
   phone?: string
@@ -122,14 +120,20 @@ export interface VehicleSummary {
 // TODO: Add when period close feature is implemented
 // export interface PeriodClose { ... }
 
-export type OperationType = 'XUAT_TAU' | 'NHAP_TAU' | 'CHUYEN_BAI' | 'KHAC'
+export type OperationType = 'XUAT_NHAP_TAU' | 'CHUYEN_BAI' | 'LAY_VO_HA_HANG' | 'CHAY_SA_LAN' | 'DONG_KHO'
 
 export const OPERATION_TYPE_LABELS: Record<OperationType, string> = {
-  XUAT_TAU: 'Xuất tàu',
-  NHAP_TAU: 'Nhập tàu',
+  XUAT_NHAP_TAU: 'Xuất / Nhập tàu',
   CHUYEN_BAI: 'Chuyển bãi',
-  KHAC: 'Khác',
+  LAY_VO_HA_HANG: 'Lấy vỏ hạ hàng',
+  CHAY_SA_LAN: 'Chạy sà lan',
+  DONG_KHO: 'Đóng kho',
 }
+
+export const OPERATION_TYPE_OPTIONS: { value: OperationType; label: string }[] =
+  (Object.entries(OPERATION_TYPE_LABELS) as [OperationType, string][]).map(
+    ([value, label]) => ({ value, label }),
+  )
 
 export interface WorkOrder {
   id: number
@@ -139,12 +143,11 @@ export interface WorkOrder {
   pickupLocation: LocationSummary
   dropoffLocation: LocationSummary
   driver?: DriverSummary | null
-  vendorPartnerId?: number | null
+  vendorId?: number | null
   vehicleExternalPlate?: string | null
   vehicleId?: number | null
   vessel?: string | null
   operationType?: OperationType | null
-  shipperPartnerId?: number | null
   gpsLat: number
   gpsLng: number
   gpsAddress?: string
@@ -175,7 +178,6 @@ export interface Pricing {
   workType: WorkType
   pickupLocation: LocationSummary
   dropoffLocation: LocationSummary
-  shipperPartnerId?: number | null
   operationType?: OperationType | null
   lines: PricingLine[]
   createdAt: string
@@ -220,6 +222,7 @@ export interface CriterionBreakdown {
   match: boolean
   woValue: string | null
   toValue: string | null
+  fuzzy?: boolean
 }
 
 export interface MatchSuggestion {
@@ -231,6 +234,7 @@ export interface MatchSuggestion {
   criteria: CriterionBreakdown[]
   matchScore: number
   maxScore: number
+  matchWarnings?: string[]
 }
 
 export interface SuggestMatchesResponse {
@@ -246,6 +250,7 @@ export interface WOSuggestion {
   criteria: CriterionBreakdown[]
   matchScore: number
   maxScore: number
+  matchWarnings?: string[]
 }
 
 export interface SuggestWosResponse {

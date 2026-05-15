@@ -567,6 +567,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
                       onConfirm={() => handleMatch(s.tripOrder.id)}
                       submitting={submittingId === s.tripOrder.id}
                       onEdited={invalidateSuggestions}
+                      matchWarnings={s.matchWarnings}
                     />
                   </div>
                 </div>
@@ -834,6 +835,7 @@ export function MatchDetailPanel({ workOrder, onMatchSuccess }: MatchDetailPanel
                 onConfirm={() => handleMatch(s.tripOrder.id)}
                 submitting={submittingId === s.tripOrder.id}
                 onEdited={invalidateSuggestions}
+                matchWarnings={s.matchWarnings}
               />
             </div>
           </div>

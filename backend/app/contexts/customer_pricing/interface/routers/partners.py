@@ -116,7 +116,6 @@ async def create_partner(
         p = await use_case(PartnerCreateInput(
             name=body.name,
             partner_type=body.partner_type,
-            partner_role=body.partner_role,
             code=body.code,
             phone=body.phone,
             tax_code=body.tax_code,
@@ -143,7 +142,6 @@ async def update_partner(
         p = await use_case(PartnerId(partner_id), PartnerUpdateInput(
             name=body.name,
             partner_type=body.partner_type,
-            partner_role=body.partner_role,
             code=body.code,
             phone=body.phone,
             tax_code=body.tax_code,
@@ -175,7 +173,7 @@ async def delete_partner(
     from sqlalchemy import text
     db = use_case.session  # type: ignore[attr-defined]
     has_wo = (await db.execute(
-        text("SELECT 1 FROM work_orders WHERE partner_id = :pid LIMIT 1"),
+        text("SELECT 1 FROM work_orders WHERE client_id = :pid LIMIT 1"),
         {"pid": partner_id},
     )).scalar()
     if has_wo:
@@ -184,7 +182,7 @@ async def delete_partner(
             detail="Cannot delete partner with associated work orders",
         )
     has_to = (await db.execute(
-        text("SELECT 1 FROM trip_orders WHERE partner_id = :pid LIMIT 1"),
+        text("SELECT 1 FROM trip_orders WHERE client_id = :pid LIMIT 1"),
         {"pid": partner_id},
     )).scalar()
     if has_to:

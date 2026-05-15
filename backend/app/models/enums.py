@@ -28,7 +28,6 @@ class SalaryStatus(StrEnum):
 class VehicleExpenseCategory(StrEnum):
     XANG_DAU = "XANG_DAU"   # Fuel
     SUA_CHUA = "SUA_CHUA"   # Repairs
-    KHAC = "KHAC"           # Other vehicle costs
     CHUNG = "CHUNG"         # General overhead (not tied to a specific vehicle)
 
 
@@ -38,7 +37,8 @@ class VehicleDriverRole(StrEnum):
 
 
 class OperationType(StrEnum):
-    XUAT_TAU = "XUAT_TAU"       # Xuất tàu (ship export)
-    NHAP_TAU = "NHAP_TAU"       # Nhập tàu (ship import)
-    CHUYEN_BAI = "CHUYEN_BAI"   # Chuyển bãi (yard transfer)
-    KHAC = "KHAC"               # Catch-all / other
+    XUAT_NHAP_TAU = "XUAT_NHAP_TAU"       # Xuất / Nhập tàu
+    CHUYEN_BAI = "CHUYEN_BAI"             # Chuyển bãi
+    LAY_VO_HA_HANG = "LAY_VO_HA_HANG"     # Lấy vỏ hạ hàng
+    CHAY_SA_LAN = "CHAY_SA_LAN"           # Chạy sà lan
+    DONG_KHO = "DONG_KHO"                 # Đóng kho

@@ -228,7 +228,7 @@ async def get_monthly_pnl_endpoint(
         matched_trip_count=dto.matched_trip_count,
         partner_breakdown=[
             PartnerRevenueBreakdownOut(
-                partner_id=p.partner_id,
+                client_id=p.client_id,
                 partner_name=p.partner_name,
                 matched_trip_count=p.matched_trip_count,
                 revenue=p.revenue,

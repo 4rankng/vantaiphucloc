@@ -12,10 +12,16 @@ import {
   usePartners,
   usePreviewReconciliationImport,
   useReconciliationImports,
+  useUpdateRowVerdict,
+  useUploadCustomerResponse,
 } from '@/hooks/use-queries'
+import {
+  getExportDoiSoatUrl,
+} from '@/services/api/reconciliationImports.api'
 import type {
   ParsedRowInput,
   ReconciliationImport,
+  ReconciliationRow,
 } from '@/services/api/reconciliationImports.api'
 
 /**
@@ -73,7 +79,7 @@ export function parseRowsFromText(raw: string): ParsedRowInput[] {
 export function useCustomerReconciliation() {
   const toast = useToast()
 
-  const [partnerId, setPartnerId] = useState<number | null>(null)
+  const [clientId, setClientId] = useState<number | null>(null)
   const [periodStart, setPeriodStart] = useState('')
   const [periodEnd, setPeriodEnd] = useState('')
   const [filename, setFilename] = useState('')
@@ -84,13 +90,15 @@ export function useCustomerReconciliation() {
     partnerType: 'client',
   })
   const { data: history = [], isLoading: loadingHistory } =
-    useReconciliationImports(partnerId ?? undefined)
+    useReconciliationImports(clientId ?? undefined)
 
   const previewMutation = usePreviewReconciliationImport()
   const commitMutation = useCommitReconciliationImport()
+  const verdictMutation = useUpdateRowVerdict()
+  const uploadMutation = useUploadCustomerResponse()
 
   const handlePreview = useCallback(async () => {
-    if (!partnerId || !periodStart || !periodEnd) {
+    if (!clientId || !periodStart || !periodEnd) {
       toast.error('Thiếu thông tin', 'Chọn khách hàng và kỳ trước khi gửi')
       return
     }
@@ -101,7 +109,7 @@ export function useCustomerReconciliation() {
     }
     try {
       const result = await previewMutation.mutateAsync({
-        partnerId,
+        clientId,
         periodStart,
         periodEnd,
         sourceFilename: filename || null,
@@ -117,7 +125,7 @@ export function useCustomerReconciliation() {
     }
   }, [
     filename,
-    partnerId,
+    clientId,
     periodEnd,
     periodStart,
     previewMutation,
@@ -136,8 +144,72 @@ export function useCustomerReconciliation() {
     }
   }, [commitMutation, preview, toast])
 
+  const handleExport = useCallback(() => {
+    if (!clientId || !periodStart || !periodEnd) {
+      toast.error('Lỗi', 'Vui lòng chọn khách hàng và kỳ đối soát')
+      return
+    }
+    const url = getExportDoiSoatUrl(clientId, periodStart, periodEnd)
+    window.open(url, '_blank')
+  }, [clientId, periodStart, periodEnd, toast])
+
+  const handleFileUpload = useCallback(
+    async (file: File) => {
+      if (!clientId || !periodStart || !periodEnd) {
+        toast.error('Thiếu thông tin', 'Chọn khách hàng và kỳ trước khi tải file')
+        return
+      }
+      try {
+        const result = await uploadMutation.mutateAsync({
+          clientId,
+          periodStart,
+          periodEnd,
+          file,
+        })
+        setPreview(result)
+        toast.success(
+          'Đã phân tích',
+          `${result.summary?.resolved ?? 0}/${result.summary?.total ?? 0} dòng tìm thấy chuyến khớp`,
+        )
+      } catch (e) {
+        toast.error('Lỗi', e instanceof Error ? e.message : 'Không thể tải file')
+      }
+    },
+    [clientId, periodEnd, periodStart, toast, uploadMutation],
+  )
+
+  const handleRowVerdict = useCallback(
+    async (
+      row: ReconciliationRow,
+      action: 'accept' | 'dispute' | 'edit',
+      extra?: { amount?: number | null; note?: string | null },
+    ) => {
+      if (!preview) return
+      try {
+        const updated = await verdictMutation.mutateAsync({
+          importId: preview.id,
+          rowId: row.id,
+          payload: { action, ...extra },
+        })
+        // Replace the row in preview
+        setPreview((prev) =>
+          prev
+            ? {
+                ...prev,
+                rows: prev.rows.map((r) => (r.id === updated.id ? updated : r)),
+              }
+            : prev,
+        )
+        toast.success('Đã cập nhật', `Dòng ${row.containerNumber ?? row.id}: ${action}`)
+      } catch (e) {
+        toast.error('Lỗi', e instanceof Error ? e.message : 'Không thể cập nhật')
+      }
+    },
+    [preview, verdictMutation, toast],
+  )
+
   const reset = useCallback(() => {
-    setPartnerId(null)
+    setClientId(null)
     setPeriodStart('')
     setPeriodEnd('')
     setFilename('')
@@ -147,13 +219,13 @@ export function useCustomerReconciliation() {
 
   return {
     fields: {
-      partnerId,
+      clientId,
       periodStart,
       periodEnd,
       filename,
       rawRows,
     },
-    setPartnerId,
+    setClientId,
     setPeriodStart,
     setPeriodEnd,
     setFilename,
@@ -165,8 +237,13 @@ export function useCustomerReconciliation() {
     preview,
     isPreviewing: previewMutation.isPending,
     isCommitting: commitMutation.isPending,
+    isUploading: uploadMutation.isPending,
+    isUpdatingRow: verdictMutation.isPending,
     handlePreview,
     handleCommit,
+    handleExport,
+    handleFileUpload,
+    handleRowVerdict,
     reset,
   }
 }

@@ -24,8 +24,7 @@ from app.schemas.domain import (
 class PartnerCreateBody(BaseModel):
     name: str
     code: str | None = None
-    partner_type: Literal["client", "vendor", "shipper"]
-    partner_role: str | None = None
+    partner_type: Literal["client", "vendor"]
     phone: str | None = None
     tax_code: str | None = None
     address: str | None = None
@@ -55,8 +54,7 @@ class PartnerCreateBody(BaseModel):
 class PartnerUpdateBody(BaseModel):
     name: str | None = None
     code: str | None = None
-    partner_type: Literal["client", "vendor", "shipper"] | None = None
-    partner_role: str | None = None
+    partner_type: Literal["client", "vendor"] | None = None
     phone: str | None = None
     tax_code: str | None = None
     address: str | None = None
@@ -89,7 +87,6 @@ class PartnerOutBody(BaseModel):
     code: str | None
     name: str
     partner_type: str
-    partner_role: str | None
     phone: str | None
     tax_code: str | None
     address: str | None
@@ -108,7 +105,6 @@ def partner_to_out(p) -> PartnerOutBody:
         code=p.code,
         name=p.name,
         partner_type=p.partner_type,
-        partner_role=p.partner_role,
         phone=p.phone,
         tax_code=p.tax_code,
         address=p.address,
@@ -202,7 +198,7 @@ class PricingLineOut(BaseModel):
 
 
 class PricingCreate(BaseModel):
-    partner_id: int
+    client_id: int
     work_type: str
     pickup_location_id: int
     dropoff_location_id: int
@@ -210,7 +206,7 @@ class PricingCreate(BaseModel):
 
 
 class PricingUpdate(BaseModel):
-    partner_id: int | None = None
+    client_id: int | None = None
     work_type: str | None = None
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None

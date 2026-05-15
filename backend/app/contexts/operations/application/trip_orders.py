@@ -83,7 +83,7 @@ class ListTripOrders:
         items, total = await self.repo.list(
             offset=offset,
             limit=filters.page_size,
-            partner_id=filters.partner_id,
+            client_id=filters.client_id,
             status=TripOrderStatus(filters.status) if filters.status else None,
             trip_date_from=filters.date_from,
             trip_date_to=filters.date_to,
@@ -134,7 +134,7 @@ class CreateTripOrder:
             ) or 1
             tiered = await find_tiered_pricing(
                 self.session,
-                partner_id=data.partner_id,
+                client_id=data.client_id,
                 work_type=wt,
                 quantity=count,
                 pickup_location_id=data.pickup_location_id,
@@ -150,7 +150,7 @@ class CreateTripOrder:
             t = TripOrder(
                 id=None,
                 trip_date=data.trip_date,
-                partner_id=data.partner_id,
+                client_id=data.client_id,
                 pickup_location_id=data.pickup_location_id,
                 dropoff_location_id=data.dropoff_location_id,
                 unit_price=unit_price,
@@ -163,7 +163,7 @@ class CreateTripOrder:
             _add_containers(t, data.containers)
 
             saved = await self.repo.add(t)
-            saved.code = await generate_trip_order_code(self.session, data.partner_id)
+            saved.code = await generate_trip_order_code(self.session, data.client_id)
             try:
                 saved = await self.repo.save(saved)
 
@@ -180,7 +180,7 @@ class CreateTripOrder:
                 await self.session.begin()
 
         raise RuntimeError(
-            f"Failed to generate unique TripOrder code after 3 attempts for partner_id={data.partner_id}"
+            f"Failed to generate unique TripOrder code after 3 attempts for client_id={data.client_id}"
         )
 
 
@@ -207,8 +207,8 @@ class UpdateTripOrder:
         # Scalar fields
         if data.trip_date is not None:
             t.trip_date = data.trip_date
-        if data.partner_id is not None:
-            t.partner_id = data.partner_id
+        if data.client_id is not None:
+            t.client_id = data.client_id
         if data.pickup_location_id is not None:
             t.pickup_location_id = data.pickup_location_id
         if data.dropoff_location_id is not None:
@@ -286,7 +286,7 @@ class CreateTripOrderFromImport:
     accountant prices the trip later via Apply Pricing or manually, so
     every imported trip starts in PENDING.
 
-    Idempotent on `(partner_id, trip_date, container_number)`. Returns
+    Idempotent on `(client_id, trip_date, container_number)`. Returns
     counts plus the new trip ids so the UI can chain the apply-pricing
     flow.
     """
@@ -315,9 +315,9 @@ class CreateTripOrderFromImport:
             TripOrderContainer as TripOrderContainerORM,
         )
 
-        partner = await fetch_partner(self.session, data.partner_id)
+        partner = await fetch_partner(self.session, data.client_id)
         if partner is None:
-            raise NotFound("Partner", data.partner_id)
+            raise NotFound("Partner", data.client_id)
 
         rows_as_dicts = [
             {
@@ -362,7 +362,7 @@ class CreateTripOrderFromImport:
                         continue
                     existing = await find_duplicate_trip(
                         self.session,
-                        partner_id=data.partner_id,
+                        client_id=data.client_id,
                         trip_date=td,
                         container_no=cn,
                     )
@@ -414,7 +414,7 @@ class CreateTripOrderFromImport:
 
                 trip = TripOrderORM(
                     trip_date=trip_date,
-                    partner_id=partner.id,
+                    client_id=partner.id,
                     pickup_raw=pickup or None,
                     dropoff_raw=dropoff or None,
                     pickup_location_id=pickup_loc.id,
@@ -483,7 +483,7 @@ class ApplyPricingToTrips:
     async def __call__(
         self,
         *,
-        partner_id: int | None,
+        client_id: int | None,
         trip_ids: list[int] | None,
         skip_already_priced: bool,
     ) -> tuple[int, list[int]]:
@@ -498,7 +498,7 @@ class ApplyPricingToTrips:
 
         rows = await list_unpriced_trips(
             self.session,
-            partner_id=partner_id,
+            client_id=client_id,
             trip_ids=trip_ids,
         )
 
@@ -519,7 +519,7 @@ class ApplyPricingToTrips:
                 continue
             tiered = await find_tiered_pricing(
                 self.session,
-                partner_id=trip.partner_id,
+                client_id=trip.client_id,
                 work_type=wt,
                 quantity=int(cont_count),
                 pickup_location_id=trip.pickup_location_id,

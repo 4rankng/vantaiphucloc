@@ -84,6 +84,8 @@ export const apiClient = {
   ocrContainer: workOrdersApi.ocrContainer,
   validateContainer: workOrdersApi.validateContainer,
   getSuggestedRoutes: workOrdersApi.getSuggestedRoutes,
+  bulkImportAndMatch: workOrdersApi.bulkImportAndMatch,
+  aiParsePreview: workOrdersApi.aiParsePreview,
 
   // Trip Orders
   getTripOrders: tripOrdersApi.getTripOrders,
@@ -136,6 +138,9 @@ export const apiClient = {
   commitReconciliationImport: reconciliationImportsApi.commitReconciliationImport,
   listReconciliationImports: reconciliationImportsApi.listReconciliationImports,
   getReconciliationImport: reconciliationImportsApi.getReconciliationImport,
+  updateRowVerdict: reconciliationImportsApi.updateRowVerdict,
+  uploadCustomerResponse: reconciliationImportsApi.uploadCustomerResponse,
+  getExportDoiSoatUrl: reconciliationImportsApi.getExportDoiSoatUrl,
 
   // Work Order Export
   exportWorkOrdersExcel: workOrdersApi.exportWorkOrdersExcel,
@@ -201,8 +206,10 @@ export type {
   CustomerVerdict,
   ImportStatus,
   RowApplyStatus,
+  DiffClassification,
   ParsedRowInput,
   ImportPreviewRequest,
   ReconciliationRow,
   ReconciliationImport,
+  RowVerdictPayload,
 } from './reconciliationImports.api'

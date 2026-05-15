@@ -8,6 +8,7 @@ import {
   listVendorReconciliationImports,
   getVendorReconciliationImport,
   uploadVendorReconciliation,
+  exportVendorTripsExcel,
   updateVendorReconRow,
   applyVendorReconciliation,
   discardVendorReconciliation,
@@ -50,7 +51,7 @@ export const queryKeys = {
   routes: ['routes'] as const,
   locations: ['locations'] as const,
   pricings: ['pricings'] as const,
-  pricingsFiltered: (filters?: { partnerId?: number; workType?: WorkType }) =>
+  pricingsFiltered: (filters?: { clientId?: number; workType?: WorkType }) =>
     ['pricings', filters] as const,
   workOrders: ['work-orders'] as const,
   workOrder: (id: number) => ['work-orders', id] as const,
@@ -79,8 +80,8 @@ export const queryKeys = {
     ['vehicle-pnl', dateFrom, dateTo, vehicleId ?? 'all'] as const,
   vehicleExpenses: (params?: object) =>
     ['vehicle-expenses', params ?? {}] as const,
-  reconciliationImports: (partnerId?: number) =>
-    ['reconciliation-imports', partnerId ?? 'all'] as const,
+  reconciliationImports: (clientId?: number) =>
+    ['reconciliation-imports', clientId ?? 'all'] as const,
   reconciliationImport: (id: number) =>
     ['reconciliation-imports', id] as const,
   vendorReconImports: (vendorId?: number) =>
@@ -554,6 +555,25 @@ export function useUploadCustomerExcel() {
   })
 }
 
+export function useBulkImportAndMatch() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ file, clientId }: { file: File; clientId?: number }) =>
+      apiClient.bulkImportAndMatch(file, clientId).then(unwrap),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['work-orders'] })
+      qc.invalidateQueries({ queryKey: ['trip-orders'] })
+    },
+  })
+}
+
+export function useAIParsePreview() {
+  return useMutation({
+    mutationFn: ({ file, sourceId }: { file: File; sourceId?: string }) =>
+      apiClient.aiParsePreview(file, sourceId).then(unwrap),
+  })
+}
+
 export function useExportReconciliationExcel() {
   return useMutation({
     mutationFn: ({ clientId, dateFrom, dateTo }: {
@@ -581,8 +601,8 @@ export function useExportTripOrdersExcel() {
 
 export function useExportDoiSoatExcel() {
   return useMutation({
-    mutationFn: (params: { partnerId: number; dateFrom: string; dateTo: string }) =>
-      apiClient.exportDoiSoatExcel(params.partnerId, params.dateFrom, params.dateTo),
+    mutationFn: (params: { clientId: number; dateFrom: string; dateTo: string }) =>
+      apiClient.exportDoiSoatExcel(params.clientId, params.dateFrom, params.dateTo),
   })
 }
 
@@ -824,11 +844,11 @@ export function useMonthlyPnL(startDate: string, endDate: string) {
 
 // ── Customer reconciliation imports ───────────────────────────────────────
 
-export function useReconciliationImports(partnerId?: number) {
+export function useReconciliationImports(clientId?: number) {
   return useQuery({
-    queryKey: queryKeys.reconciliationImports(partnerId),
+    queryKey: queryKeys.reconciliationImports(clientId),
     queryFn: async () => {
-      const res = await apiClient.listReconciliationImports(partnerId)
+      const res = await apiClient.listReconciliationImports(clientId)
       return res.success ? res.data : []
     },
   })
@@ -865,6 +885,45 @@ export function useCommitReconciliationImport() {
     onSuccess: (_data, importId) => {
       qc.invalidateQueries({ queryKey: ['reconciliation-imports'] })
       qc.invalidateQueries({ queryKey: queryKeys.reconciliationImport(importId) })
+    },
+  })
+}
+
+export function useUpdateRowVerdict() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      importId,
+      rowId,
+      payload,
+    }: {
+      importId: number
+      rowId: number
+      payload: { action: 'accept' | 'dispute' | 'edit'; amount?: number | null; note?: string | null }
+    }) => apiClient.updateRowVerdict(importId, rowId, payload).then(unwrap),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: queryKeys.reconciliationImport(vars.importId) })
+    },
+  })
+}
+
+export function useUploadCustomerResponse() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      clientId,
+      periodStart,
+      periodEnd,
+      file,
+    }: {
+      clientId: number
+      periodStart: string
+      periodEnd: string
+      file: File
+    }) =>
+      apiClient.uploadCustomerResponse(clientId, periodStart, periodEnd, file).then(unwrap),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['reconciliation-imports'] })
     },
   })
 }
@@ -1000,6 +1059,23 @@ export function useDiscardVendorReconciliation() {
     onSuccess: (_data, importId) => {
       qc.invalidateQueries({ queryKey: queryKeys.vendorReconImport(importId) })
       qc.invalidateQueries({ queryKey: ['vendor-recon-imports'] })
+    },
+  })
+}
+
+export function useExportVendorTrips() {
+  return useMutation({
+    mutationFn: async (args: { vendorId: number; dateFrom: string; dateTo: string }) => {
+      const blob = await exportVendorTripsExcel(args.vendorId, args.dateFrom, args.dateTo)
+      // Trigger download
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `DoiSoat_NhaXe_${args.vendorId}_${args.dateFrom}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
     },
   })
 }

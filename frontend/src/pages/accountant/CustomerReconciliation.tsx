@@ -6,13 +6,28 @@
  * same `ParsedRowInput[]` shape (the API is already stable).
  */
 
-import { CheckCircle2, FileSpreadsheet, Search, XCircle } from 'lucide-react'
+import { useCallback, useRef } from 'react'
+import { CheckCircle2, Download, FileSpreadsheet, FileUp, Pencil, Search, ShieldCheck, ShieldX, XCircle } from 'lucide-react'
 import { Button, Input } from '@/components/ui'
 import { useCustomerReconciliation } from './useCustomerReconciliation'
 import { formatDateRange } from '@/lib/format'
+import type { DiffClassification, ReconciliationRow } from '@/services/api/reconciliationImports.api'
 
 export function CustomerReconciliation() {
   const r = useCustomerReconciliation()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const onFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (file) {
+        r.handleFileUpload(file)
+        // Reset input so same file can be re-uploaded
+        e.target.value = ''
+      }
+    },
+    [r],
+  )
 
   return (
     <div className="space-y-6">
@@ -33,9 +48,9 @@ export function CustomerReconciliation() {
             </label>
             <select
               id="recon-partner"
-              value={r.fields.partnerId ?? ''}
+              value={r.fields.clientId ?? ''}
               onChange={(e) =>
-                r.setPartnerId(e.target.value ? Number(e.target.value) : null)
+                r.setClientId(e.target.value ? Number(e.target.value) : null)
               }
               className="h-10 w-full rounded-md px-3 text-sm"
               style={{
@@ -124,7 +139,7 @@ export function CustomerReconciliation() {
           />
         </div>
 
-        <div className="flex gap-2 justify-end">
+        <div className="flex flex-wrap gap-2 justify-end">
           <Button
             type="button"
             onClick={r.reset}
@@ -132,6 +147,30 @@ export function CustomerReconciliation() {
           >
             Xóa
           </Button>
+          <Button
+            type="button"
+            onClick={r.handleExport}
+            className="btn-secondary h-9 px-4 text-sm"
+          >
+            <Download className="w-3.5 h-3.5 mr-1.5" />
+            Xuất báo cáo cho khách
+          </Button>
+          <Button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={r.isUploading}
+            className="btn-secondary h-9 px-4 text-sm"
+          >
+            <FileUp className="w-3.5 h-3.5 mr-1.5" />
+            {r.isUploading ? 'Đang tải…' : 'Tải file phản hồi từ khách'}
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={onFileChange}
+          />
           <Button
             type="button"
             onClick={r.handlePreview}
@@ -235,7 +274,19 @@ export function CustomerReconciliation() {
                     className="text-left px-4 py-2.5 text-xs font-semibold"
                     style={{ color: 'var(--theme-text-muted)' }}
                   >
+                    Phân loại
+                  </th>
+                  <th
+                    className="text-left px-4 py-2.5 text-xs font-semibold"
+                    style={{ color: 'var(--theme-text-muted)' }}
+                  >
                     Ghi chú
+                  </th>
+                  <th
+                    className="text-left px-4 py-2.5 text-xs font-semibold"
+                    style={{ color: 'var(--theme-text-muted)' }}
+                  >
+                    Hành động
                   </th>
                 </tr>
               </thead>
@@ -284,11 +335,21 @@ export function CustomerReconciliation() {
                         </span>
                       )}
                     </td>
+                    <td className="px-4 py-2">
+                      <DiffBadge classification={row.diffClassification} />
+                    </td>
                     <td
                       className="px-4 py-2 text-xs"
                       style={{ color: 'var(--theme-text-muted)' }}
                     >
                       {row.customerNote ?? row.applyMessage ?? '—'}
+                    </td>
+                    <td className="px-4 py-2">
+                      <RowActionButtons
+                        row={row}
+                        disabled={r.isUpdatingRow}
+                        onAction={r.handleRowVerdict}
+                      />
                     </td>
                   </tr>
                 ))}
@@ -485,5 +546,95 @@ function VerdictBadge({ status }: { status: string }) {
     >
       {v.label}
     </span>
+  )
+}
+
+function DiffBadge({ classification }: { classification: DiffClassification }) {
+  const map: Record<string, { label: string; color: string }> = {
+    ok: { label: 'Khách xác nhận', color: 'var(--theme-status-success)' },
+    rejected: { label: 'Khách từ chối', color: 'var(--theme-status-error)' },
+    amount_changed: { label: 'Khách sửa tiền', color: 'var(--theme-status-warning, #eab308)' },
+    container_changed: { label: 'Khách sửa container', color: 'var(--theme-status-warning, #eab308)' },
+    added: { label: 'Khách thêm mới', color: 'var(--theme-status-info, #3b82f6)' },
+    missing: { label: 'Chưa phản hồi', color: 'var(--theme-text-muted)' },
+    unknown: { label: 'Chưa rõ', color: 'var(--theme-text-muted)' },
+  }
+  if (!classification) return <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>—</span>
+  const v = map[classification] ?? map.unknown
+  return (
+    <span
+      className="inline-flex h-5 items-center rounded-full px-2 text-[11px] font-semibold"
+      style={{
+        background: `color-mix(in srgb, ${v.color} 18%, transparent)`,
+        color: v.color,
+      }}
+    >
+      {v.label}
+    </span>
+  )
+}
+
+function RowActionButtons({
+  row,
+  disabled,
+  onAction,
+}: {
+  row: ReconciliationRow
+  disabled: boolean
+  onAction: (row: ReconciliationRow, action: 'accept' | 'dispute' | 'edit', extra?: { amount?: number | null; note?: string | null }) => void
+}) {
+  // Already accepted/resolved
+  if (row.customerStatus === 'MATCHED') {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs" style={{ color: 'var(--theme-status-success)' }}>
+        <ShieldCheck className="w-3.5 h-3.5" /> OK
+      </span>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      {row.customerStatus === 'REJECTED' && (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => onAction(row, 'dispute')}
+          className="inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium transition-colors hover:opacity-80 disabled:opacity-50"
+          style={{
+            background: 'color-mix(in srgb, var(--theme-status-error) 15%, transparent)',
+            color: 'var(--theme-status-error)',
+          }}
+          title="Tranh chấp"
+        >
+          <ShieldX className="w-3 h-3" /> Tranh chấp
+        </button>
+      )}
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onAction(row, 'accept')}
+        className="inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium transition-colors hover:opacity-80 disabled:opacity-50"
+        style={{
+          background: 'color-mix(in srgb, var(--theme-status-success) 15%, transparent)',
+          color: 'var(--theme-status-success)',
+        }}
+        title="Chấp nhận"
+      >
+        <CheckCircle2 className="w-3 h-3" /> Chấp nhận
+      </button>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onAction(row, 'edit')}
+        className="inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium transition-colors hover:opacity-80 disabled:opacity-50"
+        style={{
+          background: 'color-mix(in srgb, var(--theme-text-muted) 15%, transparent)',
+          color: 'var(--theme-text-muted)',
+        }}
+        title="Chỉnh sửa"
+      >
+        <Pencil className="w-3 h-3" />
+      </button>
+    </div>
   )
 }

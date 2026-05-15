@@ -16,7 +16,6 @@ from dataclasses import dataclass, field
 class PartnerCreateInput:
     name: str
     partner_type: str  # "client" | "vendor"
-    partner_role: str | None = None
     code: str | None = None
     phone: str | None = None
     tax_code: str | None = None
@@ -28,7 +27,6 @@ class PartnerCreateInput:
 class PartnerUpdateInput:
     name: str | None = None
     partner_type: str | None = None
-    partner_role: str | None = None
     code: str | None = None
     phone: str | None = None
     tax_code: str | None = None
@@ -72,21 +70,19 @@ class PricingLineInput:
 
 @dataclass
 class PricingCreateInput:
-    partner_id: int
+    client_id: int
     work_type: str
     pickup_location_id: int
     dropoff_location_id: int
-    shipper_partner_id: int | None = None
     operation_type: str | None = None
     lines: list[PricingLineInput] = field(default_factory=list)
 
 
 @dataclass
 class PricingUpdateInput:
-    partner_id: int | None = None
+    client_id: int | None = None
     work_type: str | None = None
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
-    shipper_partner_id: int | None = None
     operation_type: str | None = None
     lines: list[PricingLineInput] | None = None

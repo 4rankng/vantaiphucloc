@@ -145,26 +145,26 @@ class CreateWorkOrder:
         for _attempt in range(3):
             pricing = await find_pricing(
                 self.session,
-                partner_id=data.partner_id,
+                client_id=data.client_id,
                 work_type=work_type,
                 pickup_location_id=data.pickup_location_id,
                 dropoff_location_id=data.dropoff_location_id,
-                shipper_partner_id=data.shipper_partner_id,
+
                 operation_type=data.operation_type,
             )
 
             w = WorkOrder(
                 id=None,
-                partner_id=data.partner_id,
+                client_id=data.client_id,
                 pickup_location_id=data.pickup_location_id,
                 dropoff_location_id=data.dropoff_location_id,
                 driver_id=driver_id,
-                vendor_partner_id=data.vendor_partner_id,
+                vendor_id=data.vendor_id,
                 vehicle_external_plate=data.vehicle_external_plate,
                 vehicle_id=data.vehicle_id,
                 vessel=data.vessel,
                 operation_type=data.operation_type,
-                shipper_partner_id=data.shipper_partner_id,
+
                 unit_price=0,
                 driver_salary=0,
                 allowance=0,
@@ -178,7 +178,7 @@ class CreateWorkOrder:
             await _add_containers(w, data.containers)
 
             saved = await self.repo.add(w)
-            saved.code = await generate_work_order_code(self.session, data.partner_id)
+            saved.code = await generate_work_order_code(self.session, data.client_id)
             try:
                 saved = await self.repo.save(saved)
                 await self.session.commit()
@@ -187,7 +187,7 @@ class CreateWorkOrder:
                 await self.session.rollback()
                 await self.session.begin()
         raise RuntimeError(
-            f"Failed to generate unique WorkOrder code after 3 attempts for partner_id={data.partner_id}"
+            f"Failed to generate unique WorkOrder code after 3 attempts for client_id={data.client_id}"
         )
 
 
@@ -231,8 +231,8 @@ class UpdateWorkOrder:
             data.allowance = None
             data.status = None
 
-        if data.partner_id is not None:
-            w.partner_id = data.partner_id
+        if data.client_id is not None:
+            w.client_id = data.client_id
         if data.pickup_location_id is not None:
             w.pickup_location_id = data.pickup_location_id
         if data.dropoff_location_id is not None:
@@ -245,10 +245,8 @@ class UpdateWorkOrder:
             w.vessel = data.vessel
         if data.operation_type is not None:
             w.operation_type = data.operation_type
-        if data.shipper_partner_id is not None:
-            w.shipper_partner_id = data.shipper_partner_id
-        if data.vendor_partner_id is not None:
-            w.vendor_partner_id = data.vendor_partner_id
+        if data.vendor_id is not None:
+            w.vendor_id = data.vendor_id
         if data.vehicle_external_plate is not None:
             w.vehicle_external_plate = data.vehicle_external_plate
         if data.gps_lat is not None:
@@ -310,11 +308,11 @@ class BatchCreateWorkOrders:
                         )
                         pricing = await find_pricing(
                             self.session,
-                            partner_id=item.partner_id,
+                            client_id=item.client_id,
                             work_type=work_type,
                             pickup_location_id=item.pickup_location_id,
                             dropoff_location_id=item.dropoff_location_id,
-                            shipper_partner_id=item.shipper_partner_id,
+
                             operation_type=item.operation_type,
                         )
                         gps_address = (
@@ -323,16 +321,16 @@ class BatchCreateWorkOrders:
                         )
                         w = WorkOrder(
                             id=None,
-                            partner_id=item.partner_id,
+                            client_id=item.client_id,
                             pickup_location_id=item.pickup_location_id,
                             dropoff_location_id=item.dropoff_location_id,
                             driver_id=driver_id,
-                            vendor_partner_id=item.vendor_partner_id,
+                            vendor_id=item.vendor_id,
                             vehicle_external_plate=item.vehicle_external_plate,
                             vehicle_id=item.vehicle_id,
                             vessel=item.vessel,
                             operation_type=item.operation_type,
-                            shipper_partner_id=item.shipper_partner_id,
+
                             unit_price=0, driver_salary=0,
                             allowance=0,
                             gps_lat=item.gps_lat,
@@ -344,7 +342,7 @@ class BatchCreateWorkOrders:
                         await _add_containers(w, item.containers)
                         saved = await self.repo.add(w)
                         saved.code = await generate_work_order_code(
-                            self.session, item.partner_id
+                            self.session, item.client_id
                         )
                         saved = await self.repo.save(saved)
                         results.append((i, int(saved.id) if saved.id else None, None))

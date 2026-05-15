@@ -1,17 +1,19 @@
 /**
  * Đối soát nhà xe (xe ngoài) — Vendor Reconciliation page.
  *
- * Flow:
- *   1. Accountant selects a vendor + period, uploads their Excel.
- *   2. Backend parses + auto-matches containers against our WOs.
- *   3. Review tabs: Matched / Nhà xe khai / Bên mình khai (our only).
- *   4. Accountant can update row verdicts inline, then Apply.
+ * Enhanced UI with:
+ *   - Vendor picker + period picker at top
+ *   - Export our trips for vendor (Mode 4a)
+ *   - Upload vendor's Excel (Mode 4b)
+ *   - History of past imports
+ *   - Master-detail review panel
  */
 
 import { useCallback, useMemo, useRef, useState } from 'react'
 import {
   Upload, FileSpreadsheet, X, CheckCircle2, AlertTriangle,
   ChevronDown, ChevronRight, Loader2, Trash2, Check,
+  Download, FileUp, History, Filter,
 } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { useToast } from '@/components/atoms/Toast'
@@ -23,6 +25,7 @@ import {
   useUpdateVendorReconRow,
   useApplyVendorReconciliation,
   useDiscardVendorReconciliation,
+  useExportVendorTrips,
 } from '@/hooks/use-queries'
 import type { VendorReconImport, VendorReconRow, VendorRowMatchStatus } from '@/services/api/vendorReconciliation.api'
 import { formatCurrencyFull } from '@/data/domain'
@@ -42,7 +45,7 @@ const STATUS_LABELS: Record<VendorRowMatchStatus, string> = {
 const STATUS_COLORS: Record<VendorRowMatchStatus, string> = {
   MATCHED: 'var(--theme-status-success)',
   VENDOR_ONLY: 'var(--theme-status-warning)',
-  OUR_ONLY: '#60a5fa',  // blue
+  OUR_ONLY: '#60a5fa',
   DISPUTED: 'var(--theme-status-error)',
   IGNORED: 'var(--theme-text-muted)',
 }
@@ -60,6 +63,151 @@ function formatDate(d: string | null | undefined): string {
   } catch {
     return d
   }
+}
+
+// ---------------------------------------------------------------------------
+// Toolbar — vendor picker + period + action buttons
+// ---------------------------------------------------------------------------
+
+function Toolbar({
+  vendorId,
+  setVendorId,
+  periodFrom,
+  setPeriodFrom,
+  periodTo,
+  setPeriodTo,
+  onExport,
+  onToggleUpload,
+  onToggleHistory,
+  showUpload,
+  showHistory,
+  exporting,
+}: {
+  vendorId: string
+  setVendorId: (v: string) => void
+  periodFrom: string
+  setPeriodFrom: (v: string) => void
+  periodTo: string
+  setPeriodTo: (v: string) => void
+  onExport: () => void
+  onToggleUpload: () => void
+  onToggleHistory: () => void
+  showUpload: boolean
+  showHistory: boolean
+  exporting: boolean
+}) {
+  const { data: vendors = [] } = usePartners({ partnerType: 'vendor' })
+
+  return (
+    <div className="card p-4">
+      <div className="flex flex-col lg:flex-row lg:items-end gap-3">
+        {/* Vendor selector */}
+        <div className="space-y-1 lg:w-56 flex-shrink-0">
+          <label className="text-xs font-medium" style={{ color: 'var(--theme-text-secondary)' }}>
+            <Filter className="h-3 w-3 inline mr-1" />Nhà xe
+          </label>
+          <select
+            value={vendorId}
+            onChange={e => setVendorId(e.target.value)}
+            className="h-9 w-full rounded-lg px-2.5 text-sm"
+            style={{
+              border: '1px solid var(--theme-border-default)',
+              background: 'var(--theme-bg-primary)',
+              color: 'var(--theme-text-primary)',
+            }}
+          >
+            <option value="">— Tất cả nhà xe —</option>
+            {vendors.map(v => (
+              <option key={v.id} value={v.id}>{v.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Period */}
+        <div className="flex items-end gap-2 flex-shrink-0">
+          <div className="space-y-1">
+            <label className="text-xs font-medium" style={{ color: 'var(--theme-text-secondary)' }}>
+              Từ ngày
+            </label>
+            <input
+              type="date"
+              value={periodFrom}
+              onChange={e => setPeriodFrom(e.target.value)}
+              className="h-9 w-full rounded-lg px-2.5 text-sm"
+              style={{
+                border: '1px solid var(--theme-border-default)',
+                background: 'var(--theme-bg-primary)',
+                color: 'var(--theme-text-primary)',
+              }}
+            />
+          </div>
+          <span className="text-xs mb-2" style={{ color: 'var(--theme-text-muted)' }}>→</span>
+          <div className="space-y-1">
+            <label className="text-xs font-medium" style={{ color: 'var(--theme-text-secondary)' }}>
+              Đến ngày
+            </label>
+            <input
+              type="date"
+              value={periodTo}
+              onChange={e => setPeriodTo(e.target.value)}
+              className="h-9 w-full rounded-lg px-2.5 text-sm"
+              style={{
+                border: '1px solid var(--theme-border-default)',
+                background: 'var(--theme-bg-primary)',
+                color: 'var(--theme-text-primary)',
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Action buttons */}
+        <div className="flex items-center gap-2 lg:ml-auto flex-shrink-0">
+          <Button
+            onClick={onExport}
+            disabled={exporting || !vendorId || !periodFrom || !periodTo}
+            className="h-9 px-3 text-xs font-semibold rounded-lg"
+            style={{
+              background: 'transparent',
+              border: '1px solid var(--theme-brand-primary)',
+              color: 'var(--theme-brand-primary)',
+              opacity: (!vendorId || !periodFrom || !periodTo) ? 0.5 : 1,
+            }}
+          >
+            {exporting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+            ) : (
+              <Download className="h-3.5 w-3.5 mr-1.5" />
+            )}
+            Xuất báo cáo cho nhà xe
+          </Button>
+          <Button
+            onClick={onToggleUpload}
+            className="h-9 px-3 text-xs font-semibold rounded-lg"
+            style={{
+              background: showUpload ? 'var(--theme-brand-primary)' : 'transparent',
+              border: '1px solid var(--theme-brand-primary)',
+              color: showUpload ? 'var(--theme-text-on-brand)' : 'var(--theme-brand-primary)',
+            }}
+          >
+            <FileUp className="h-3.5 w-3.5 mr-1.5" />
+            Tải file từ nhà xe
+          </Button>
+          <Button
+            onClick={onToggleHistory}
+            className="h-9 px-3 text-xs font-semibold rounded-lg"
+            style={{
+              background: showHistory ? 'var(--theme-bg-tertiary)' : 'transparent',
+              border: '1px solid var(--theme-border-default)',
+              color: 'var(--theme-text-secondary)',
+            }}
+          >
+            <History className="h-3.5 w-3.5 mr-1.5" />
+            Lịch sử đối soát
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -119,7 +267,8 @@ function UploadForm({ onSuccess }: { onSuccess: () => void }) {
   return (
     <div className="card p-4 space-y-4">
       <h2 className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-        Tải lên file đối soát nhà xe
+        <FileUp className="h-4 w-4 inline mr-1.5" />
+        Tải lên file đối soát từ nhà xe
       </h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -328,7 +477,7 @@ function ImportCard({
     >
       <div className="flex items-center justify-between gap-2 mb-1">
         <span className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>
-          {imp.vendorPartnerName}
+          {imp.vendorPartnerName || `Nhà xe #${imp.vendorId}`}
         </span>
         <ImportStatusBadge status={imp.status} />
       </div>
@@ -491,7 +640,7 @@ function ReviewPanel({
         <div className="flex items-center justify-between gap-2">
           <div>
             <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-              {imp.vendorPartnerName}
+              {imp.vendorPartnerName || `Nhà xe #${imp.vendorId}`}
             </p>
             <p className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>
               {formatDate(imp.periodFrom)} – {formatDate(imp.periodTo)}
@@ -627,108 +776,143 @@ function ReviewPanel({
 // ---------------------------------------------------------------------------
 
 export function VendorReconciliation() {
-  const { data: imports = [], isLoading } = useVendorReconImports()
-  const [selectedId, setSelectedId] = useState<number | null>(null)
-  const [showUpload, setShowUpload] = useState(true)
+  const toast = useToast()
+  const exportMutation = useExportVendorTrips()
 
-  // Auto-select most recent pending import when list loads
+  // Filter state
+  const [vendorId, setVendorId] = useState('')
+  const [periodFrom, setPeriodFrom] = useState('')
+  const [periodTo, setPeriodTo] = useState('')
+
+  // Panel toggles
+  const [showUpload, setShowUpload] = useState(false)
+  const [showHistory, setShowHistory] = useState(true)
+
+  // Selected import for review
+  const [selectedId, setSelectedId] = useState<number | null>(null)
+
+  // Fetch imports, optionally filtered by vendor
+  const { data: imports = [], isLoading } = useVendorReconImports(
+    vendorId ? Number(vendorId) : undefined,
+  )
+
+  const handleExport = useCallback(() => {
+    if (!vendorId || !periodFrom || !periodTo) {
+      toast.error('Thiếu thông tin', 'Chọn nhà xe và kỳ để xuất báo cáo')
+      return
+    }
+    exportMutation.mutate(
+      { vendorId: Number(vendorId), dateFrom: periodFrom, dateTo: periodTo },
+      {
+        onSuccess: () => toast.success('Đã tải', 'File báo cáo đã được tải xuống'),
+        onError: () => toast.error('Lỗi', 'Không thể xuất báo cáo'),
+      },
+    )
+  }, [vendorId, periodFrom, periodTo, exportMutation, toast])
+
   const handleUploadSuccess = useCallback(() => {
     setShowUpload(false)
+    setShowHistory(true)
   }, [])
 
   return (
     <div className="space-y-4">
       {/* Page title */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold" style={{ color: 'var(--theme-text-primary)' }}>
-            Đối soát nhà xe
-          </h1>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-secondary)' }}>
-            So sánh file nhà xe gửi với phiếu làm việc của bên mình
-          </p>
-        </div>
-        <Button
-          onClick={() => setShowUpload(s => !s)}
-          className="h-8 gap-1.5 text-[11px] font-semibold rounded-lg"
-          style={{
-            background: 'transparent',
-            border: '1px solid var(--theme-brand-primary)',
-            color: 'var(--theme-brand-primary)',
-          }}
-        >
-          <Upload className="h-3.5 w-3.5" />
-          {showUpload ? 'Ẩn form' : 'Tải lên file mới'}
-        </Button>
+      <div>
+        <h1 className="text-lg font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+          Đối soát nhà xe
+        </h1>
+        <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-secondary)' }}>
+          So sánh file nhà xe gửi với phiếu làm việc của bên mình · Xuất báo cáo gửi nhà xe
+        </p>
       </div>
 
-      {/* Upload form */}
+      {/* Toolbar */}
+      <Toolbar
+        vendorId={vendorId}
+        setVendorId={setVendorId}
+        periodFrom={periodFrom}
+        setPeriodFrom={setPeriodFrom}
+        periodTo={periodTo}
+        setPeriodTo={setPeriodTo}
+        onExport={handleExport}
+        onToggleUpload={() => setShowUpload(s => !s)}
+        onToggleHistory={() => setShowHistory(s => !s)}
+        showUpload={showUpload}
+        showHistory={showHistory}
+        exporting={exportMutation.isPending}
+      />
+
+      {/* Upload form (collapsible) */}
       {showUpload && (
         <UploadForm onSuccess={handleUploadSuccess} />
       )}
 
-      {/* Master-detail */}
-      <div
-        className="card overflow-hidden"
-        style={{ height: 'calc(100vh - 240px)', minHeight: 400 }}
-      >
-        <div className="flex h-full">
-          {/* Import list (left column) */}
-          <div
-            className="overflow-y-auto border-r flex-shrink-0"
-            style={{ width: 280, borderColor: 'var(--theme-border-default)' }}
-          >
+      {/* History + Review master-detail */}
+      {showHistory && (
+        <div
+          className="card overflow-hidden"
+          style={{ height: 'calc(100vh - 320px)', minHeight: 400 }}
+        >
+          <div className="flex h-full">
+            {/* Import list (left column) */}
             <div
-              className="px-3 py-2 text-xs font-semibold border-b"
-              style={{
-                color: 'var(--theme-text-secondary)',
-                borderColor: 'var(--theme-border-default)',
-                background: 'var(--theme-bg-secondary)',
-              }}
+              className="overflow-y-auto border-r flex-shrink-0"
+              style={{ width: 280, borderColor: 'var(--theme-border-default)' }}
             >
-              Lịch sử import ({imports.length})
+              <div
+                className="px-3 py-2 text-xs font-semibold border-b"
+                style={{
+                  color: 'var(--theme-text-secondary)',
+                  borderColor: 'var(--theme-border-default)',
+                  background: 'var(--theme-bg-secondary)',
+                }}
+              >
+                <History className="h-3 w-3 inline mr-1" />
+                Lịch sử import ({imports.length})
+              </div>
+
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--theme-text-muted)' }} />
+                </div>
+              ) : imports.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                  <AlertTriangle className="h-7 w-7 mb-2 opacity-30" style={{ color: 'var(--theme-text-muted)' }} />
+                  <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                    Chưa có file nào. Tải lên file nhà xe để bắt đầu.
+                  </p>
+                </div>
+              ) : (
+                imports.map(imp => (
+                  <ImportCard
+                    key={imp.id}
+                    imp={imp}
+                    selected={selectedId === imp.id}
+                    onSelect={() => setSelectedId(imp.id)}
+                  />
+                ))
+              )}
             </div>
 
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--theme-text-muted)' }} />
-              </div>
-            ) : imports.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                <AlertTriangle className="h-7 w-7 mb-2 opacity-30" style={{ color: 'var(--theme-text-muted)' }} />
-                <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-                  Chưa có file nào. Tải lên file nhà xe để bắt đầu.
-                </p>
-              </div>
-            ) : (
-              imports.map(imp => (
-                <ImportCard
-                  key={imp.id}
-                  imp={imp}
-                  selected={selectedId === imp.id}
-                  onSelect={() => setSelectedId(imp.id)}
+            {/* Review panel (right) */}
+            <div className="flex-1 overflow-hidden">
+              {selectedId == null ? (
+                <div className="flex flex-col items-center justify-center h-full" style={{ color: 'var(--theme-text-muted)' }}>
+                  <ChevronRight className="h-8 w-8 mb-2 opacity-30" />
+                  <p className="text-sm">Chọn một import để xem chi tiết</p>
+                </div>
+              ) : (
+                <ReviewPanel
+                  key={selectedId}
+                  importId={selectedId}
+                  onApplied={() => {/* list will auto-refresh via query invalidation */}}
                 />
-              ))
-            )}
-          </div>
-
-          {/* Review panel (right) */}
-          <div className="flex-1 overflow-hidden">
-            {selectedId == null ? (
-              <div className="flex flex-col items-center justify-center h-full" style={{ color: 'var(--theme-text-muted)' }}>
-                <ChevronRight className="h-8 w-8 mb-2 opacity-30" />
-                <p className="text-sm">Chọn một import để xem chi tiết</p>
-              </div>
-            ) : (
-              <ReviewPanel
-                key={selectedId}
-                importId={selectedId}
-                onApplied={() => {/* list will auto-refresh via query invalidation */}}
-              />
-            )}
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

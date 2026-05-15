@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { Check, X, Pencil, CheckCircle2, XCircle } from 'lucide-react'
+import { Check, X, Pencil, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react'
 import { useUpdateTripOrder } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { fmtDate } from '@/lib/date-utils'
@@ -49,28 +49,36 @@ function CriterionRow({
     }
   }, [criterion.name, toDraft, toId, updateTo, onEdited, toast])
 
-  const icon = criterion.match ? (
+  const icon = criterion.fuzzy ? (
+    <AlertTriangle className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-status-warning)' }} />
+  ) : criterion.match ? (
     <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-status-success)' }} />
   ) : (
     <XCircle className="w-4 h-4 shrink-0" style={{ color: 'var(--theme-status-error)' }} />
   )
 
-  const bgStyle = criterion.match
-    ? { background: 'color-mix(in srgb, var(--theme-status-success) 6%, transparent)' }
-    : { background: 'color-mix(in srgb, var(--theme-status-error) 5%, transparent)' }
+  const bgStyle = criterion.fuzzy
+    ? { background: 'color-mix(in srgb, var(--theme-status-warning) 8%, transparent)' }
+    : criterion.match
+      ? { background: 'color-mix(in srgb, var(--theme-status-success) 6%, transparent)' }
+      : { background: 'color-mix(in srgb, var(--theme-status-error) 5%, transparent)' }
 
-  const borderColor = criterion.match
-    ? 'color-mix(in srgb, var(--theme-status-success) 20%, transparent)'
-    : 'color-mix(in srgb, var(--theme-status-error) 18%, transparent)'
+  const borderColor = criterion.fuzzy
+    ? 'color-mix(in srgb, var(--theme-status-warning) 25%, transparent)'
+    : criterion.match
+      ? 'color-mix(in srgb, var(--theme-status-success) 20%, transparent)'
+      : 'color-mix(in srgb, var(--theme-status-error) 18%, transparent)'
 
   // Format date criterion values for display
   const formatVal = (val: string | null | undefined) =>
     criterion.name === 'date' && val ? fmtDate(val) : (val ?? '')
 
   // Hover tooltip showing trip value for on-demand comparison
-  const tooltip = !criterion.match && criterion.woValue
-    ? `Chuyến đi: ${formatVal(criterion.woValue)}`
-    : undefined
+  const tooltip = criterion.fuzzy
+    ? `Gần đúng (có sai lệch nhỏ): ${formatVal(criterion.woValue)} ≈ ${formatVal(criterion.toValue)}`
+    : !criterion.match && criterion.woValue
+      ? `Chuyến đi: ${formatVal(criterion.woValue)}`
+      : undefined
 
   return (
     <div
@@ -127,11 +135,13 @@ interface MatchCardProps {
   onConfirm: () => void
   submitting: boolean
   onEdited: () => void
+  matchWarnings?: string[]
 }
 
 export function MatchCard({
   matchScore, maxScore, criteria, tripOrder,
   onEdited,
+  matchWarnings,
 }: MatchCardProps) {
   const color = scoreColor(matchScore, maxScore)
 
@@ -172,6 +182,22 @@ export function MatchCard({
           </div>
         </div>
       </div>
+
+      {/* Fuzzy match warnings banner */}
+      {matchWarnings && matchWarnings.length > 0 && (
+        <div
+          className="flex items-center gap-2 mx-3 mt-1 mb-0 px-2.5 py-1.5 rounded-lg"
+          style={{
+            background: 'color-mix(in srgb, var(--theme-status-warning) 8%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--theme-status-warning) 25%, transparent)',
+          }}
+        >
+          <AlertTriangle className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--theme-status-warning)' }} />
+          <span className="text-[10px] font-medium" style={{ color: 'var(--theme-status-warning)' }}>
+            Khớp với cảnh báo — một số tiêu chí có sai lệch nhỏ
+          </span>
+        </div>
+      )}
 
       {/* Criteria breakdown — single-column TO values; trip values are at top */}
       <div className="px-3 pb-1 space-y-1">

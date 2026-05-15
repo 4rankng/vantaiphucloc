@@ -26,9 +26,9 @@ from app.models.domain import (
 )
 
 
-async def fetch_partner(session: AsyncSession, partner_id: int) -> Partner | None:
+async def fetch_partner(session: AsyncSession, client_id: int) -> Partner | None:
     res = await session.execute(
-        select(Partner).where(Partner.id == partner_id)
+        select(Partner).where(Partner.id == client_id)
     )
     return res.scalar_one_or_none()
 
@@ -41,7 +41,7 @@ async def count_locations(session: AsyncSession) -> int:
 async def find_duplicate_trip(
     session: AsyncSession,
     *,
-    partner_id: int,
+    client_id: int,
     trip_date: date,
     container_no: str,
 ) -> TripOrderORM | None:
@@ -53,7 +53,7 @@ async def find_duplicate_trip(
         )
         .where(
             and_(
-                TripOrderORM.partner_id == partner_id,
+                TripOrderORM.client_id == client_id,
                 TripOrderORM.trip_date == trip_date,
                 TripOrderContainerORM.container_number == container_no,
             )
@@ -66,18 +66,18 @@ async def find_duplicate_trip(
 async def list_unpriced_trips(
     session: AsyncSession,
     *,
-    partner_id: int | None,
+    client_id: int | None,
     trip_ids: list[int] | None,
 ) -> Sequence[TripOrderORM]:
     """Trips eligible for bulk apply-pricing.
 
-    When `partner_id` is set we restrict to that partner's unpriced trips;
+    When `client_id` is set we restrict to that partner's unpriced trips;
     when `trip_ids` is set we narrow further to the explicit ids.
     """
     q = select(TripOrderORM)
-    if partner_id is not None:
+    if client_id is not None:
         q = q.where(
-            TripOrderORM.partner_id == partner_id,
+            TripOrderORM.client_id == client_id,
             (TripOrderORM.unit_price == 0) | (TripOrderORM.unit_price.is_(None)),
         )
     if trip_ids:

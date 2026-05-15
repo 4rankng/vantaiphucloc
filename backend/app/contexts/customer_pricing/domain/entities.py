@@ -45,7 +45,6 @@ class Partner:
     id: PartnerId | None
     name: str
     partner_type: str          # "client" | "vendor"
-    partner_role: str | None = None   # "shipping_line" | "factory" | "transport" | "other"
     code: str | None = None
     phone: str | None = None
     tax_code: str | None = None
@@ -236,11 +235,10 @@ class Pricing:
     """
 
     id: PricingId | None
-    partner_id: PartnerId
+    client_id: PartnerId
     work_type: WorkType
     pickup_location_id: LocationId
     dropoff_location_id: LocationId
-    shipper_partner_id: int | None = None
     operation_type: str | None = None
     is_active: bool = True
     created_at: datetime = field(default_factory=_utcnow)

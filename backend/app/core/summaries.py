@@ -14,7 +14,7 @@ from sqlalchemy import select as sa_select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.base import User
-from app.models.domain import Location, Partner, Vehicle
+from app.models.domain import Location, Partner, Vehicle, VehicleDriver
 from app.schemas.domain import (
     DriverSummaryOut,
     LocationSummaryOut,
@@ -24,9 +24,9 @@ from app.schemas.domain import (
 
 
 async def load_partner_summaries(
-    db: AsyncSession, partner_ids: set[int] | list[int]
+    db: AsyncSession, client_ids: set[int] | list[int]
 ) -> dict[int, PartnerSummaryOut]:
-    ids = {i for i in partner_ids if i is not None}
+    ids = {i for i in client_ids if i is not None}
     if not ids:
         return {}
     res = await db.execute(sa_select(Partner).where(Partner.id.in_(ids)))
@@ -57,12 +57,24 @@ async def load_driver_summaries(
         return {}
     res = await db.execute(sa_select(User).where(User.id.in_(ids)))
     users = {u.id: u for u in res.scalars().all()}
-    vehicle_res = await db.execute(
-        sa_select(Vehicle).where(Vehicle.driver_id.in_(ids))
-    )
+    # Resolve active PRIMARY vehicles via VehicleDriver (source of truth).
+    vd_rows = (await db.execute(
+        sa_select(VehicleDriver.driver_id, VehicleDriver.vehicle_id)
+        .where(
+            VehicleDriver.driver_id.in_(ids),
+            VehicleDriver.is_active == True,  # noqa: E712
+            VehicleDriver.role == "PRIMARY",
+        )
+    )).all()
+    vehicle_ids = {vid for _, vid in vd_rows}
+    vehicles = {}
+    if vehicle_ids:
+        v_res = await db.execute(sa_select(Vehicle).where(Vehicle.id.in_(vehicle_ids)))
+        vehicles = {v.id: v for v in v_res.scalars().all()}
     vehicle_by_driver: dict[int, Vehicle] = {}
-    for v in vehicle_res.scalars().all():
-        vehicle_by_driver[v.driver_id] = v
+    for did, vid in vd_rows:
+        if vid in vehicles:
+            vehicle_by_driver[did] = vehicles[vid]
     return {
         uid: DriverSummaryOut(
             id=uid,
@@ -75,11 +87,11 @@ async def load_driver_summaries(
 
 
 def get_partner_summary(
-    summaries: dict[int, PartnerSummaryOut], partner_id: int
+    summaries: dict[int, PartnerSummaryOut], client_id: int
 ) -> PartnerSummaryOut:
     """Return the summary or a placeholder if missing (e.g. soft-deleted)."""
     return summaries.get(
-        partner_id, PartnerSummaryOut(id=partner_id, code=None, name="(không rõ)")
+        client_id, PartnerSummaryOut(id=client_id, code=None, name="(không rõ)")
     )
 
 
