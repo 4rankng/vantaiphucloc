@@ -119,7 +119,7 @@ def trip_order_to_domain(
     return TripOrder(
         id=TripOrderId(orm.id) if orm.id is not None else None,
         trip_date=orm.trip_date,
-        partner_id=orm.partner_id,
+        client_id=orm.client_id,
         code=orm.code,
         pickup_location_id=orm.pickup_location_id,
         dropoff_location_id=orm.dropoff_location_id,
@@ -147,7 +147,7 @@ def trip_order_to_orm(
     if t.id is not None:
         orm.id = int(t.id)
     orm.trip_date = t.trip_date
-    orm.partner_id = int(t.partner_id)
+    orm.client_id = int(t.client_id)
     orm.code = t.code
     orm.pickup_location_id = int(t.pickup_location_id)
     orm.dropoff_location_id = int(t.dropoff_location_id)
@@ -206,7 +206,7 @@ def work_order_to_domain(
 ) -> WorkOrder:
     return WorkOrder(
         id=WorkOrderId(orm.id) if orm.id is not None else None,
-        partner_id=orm.partner_id,
+        client_id=orm.client_id,
         code=orm.code,
         pickup_location_id=orm.pickup_location_id,
         dropoff_location_id=orm.dropoff_location_id,
@@ -235,7 +235,7 @@ def work_order_to_orm(
         orm = WorkOrderORM()
     if w.id is not None:
         orm.id = int(w.id)
-    orm.partner_id = int(w.partner_id)
+    orm.client_id = int(w.client_id)
     orm.code = w.code
     orm.pickup_location_id = int(w.pickup_location_id)
     orm.dropoff_location_id = int(w.dropoff_location_id)

@@ -22,7 +22,8 @@ import re
 from datetime import date, datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,8 +31,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import require_roles
 from app.database import get_db
 from app.models.base import User
+from app.utils.excel_utils import (
+    CONTAINER_RE,
+    add_template_version,
+    looks_like_container,
+    parse_amount,
+    parse_date,
+)
 from app.models.domain import (
+    Location,
     Partner,
+    Vehicle,
+    VehicleDriver,
     VendorReconciliationImport,
     VendorReconciliationRow,
     WorkOrder,
@@ -50,35 +61,7 @@ router = APIRouter(
 # Helpers
 # ---------------------------------------------------------------------------
 
-_CONTAINER_RE = re.compile(r"\b[A-Z]{4}\d{7}\b")
-_DATE_FMTS = ["%d/%m/%Y", "%d-%m-%Y", "%Y-%m-%d", "%d/%m/%y"]
-
-
-def _parse_date(raw: Any) -> date | None:
-    if raw is None:
-        return None
-    if isinstance(raw, (date, datetime)):
-        return raw.date() if isinstance(raw, datetime) else raw
-    s = str(raw).strip()
-    for fmt in _DATE_FMTS:
-        try:
-            return datetime.strptime(s, fmt).date()
-        except ValueError:
-            pass
-    return None
-
-
-def _parse_amount(raw: Any) -> int | None:
-    if raw is None:
-        return None
-    s = re.sub(r"[^\d]", "", str(raw))
-    return int(s) if s else None
-
-
-def _looks_like_container(val: Any) -> bool:
-    if val is None:
-        return False
-    return bool(_CONTAINER_RE.search(str(val).upper().replace(" ", "")))
+# Parsing helpers are imported from app.utils.excel_utils
 
 
 def _parse_vendor_excel(content: bytes, filename: str) -> list[dict]:
@@ -98,6 +81,7 @@ def _parse_vendor_excel(content: bytes, filename: str) -> list[dict]:
         raise RuntimeError("openpyxl is required for Excel parsing")
 
     import io
+    from app.utils.excel_utils import get_template_version, TEMPLATE_VERSION
     wb = openpyxl.load_workbook(io.BytesIO(content), data_only=True, read_only=True)
 
     parsed: list[dict] = []
@@ -110,7 +94,7 @@ def _parse_vendor_excel(content: bytes, filename: str) -> list[dict]:
         # Find a row containing a container number to start data extraction
         data_start = None
         for idx, row in enumerate(rows):
-            if any(_looks_like_container(cell) for cell in row):
+            if any(looks_like_container(cell) for cell in row):
                 data_start = idx
                 break
 
@@ -121,7 +105,7 @@ def _parse_vendor_excel(content: bytes, filename: str) -> list[dict]:
         # by inspecting the first data row and building a simple signature.
         for row in rows[data_start:]:
             cells = [c for c in row]
-            if not any(_looks_like_container(c) for c in cells):
+            if not any(looks_like_container(c) for c in cells):
                 continue
 
             container = None
@@ -132,19 +116,19 @@ def _parse_vendor_excel(content: bytes, filename: str) -> list[dict]:
             for c in cells:
                 if c is None:
                     continue
-                if _looks_like_container(c) and container is None:
-                    m = _CONTAINER_RE.search(str(c).upper().replace(" ", ""))
+                if looks_like_container(c) and container is None:
+                    m = CONTAINER_RE.search(str(c).upper().replace(" ", ""))
                     if m:
                         container = m.group(0)
                 elif isinstance(c, (date, datetime)) and trip_date is None:
-                    trip_date = _parse_date(c)
+                    trip_date = parse_date(c)
                 elif isinstance(c, (int, float)) and vendor_amount is None:
                     if c > 0:
                         vendor_amount = int(c)
                 elif isinstance(c, str):
                     stripped = c.strip()
                     # Try as date string first
-                    d = _parse_date(stripped)
+                    d = parse_date(stripped)
                     if d and trip_date is None:
                         trip_date = d
                     elif stripped and stripped not in (container or ""):
@@ -188,7 +172,7 @@ class VendorReconRowOut(BaseModel):
 
 class VendorReconImportOut(BaseModel):
     id: int
-    vendor_partner_id: int
+    vendor_id: int
     vendor_partner_name: str
     period_from: date
     period_to: date
@@ -225,6 +209,255 @@ class OurOnlyRowOut(BaseModel):
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
+
+@router.get("/export")
+async def export_vendor_trips(
+    vendor_id: int = Query(..., description="Partner (nhà xe) ID"),
+    date_from: date = Query(..., description="From date (YYYY-MM-DD)"),
+    date_to: date = Query(..., description="To date (YYYY-MM-DD)"),
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_roles("accountant", "superadmin")),
+):
+    """Export our WorkOrders for a specific vendor as Excel.
+
+    This generates a đối soát report (our trips) that can be sent to the vendor
+    for review — Mode 4a flow.
+    """
+    import io
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+    from app.utils.text import slugify_vi
+
+    # Validate vendor
+    vendor = (
+        await db.execute(select(Partner).where(Partner.id == vendor_id))
+    ).scalar_one_or_none()
+    if vendor is None or vendor.partner_type != "vendor":
+        raise HTTPException(status_code=404, detail="Không tìm thấy nhà xe.")
+
+    # Load WorkOrders for this vendor in the period
+    wo_result = await db.execute(
+        select(WorkOrder).where(
+            WorkOrder.vendor_id == vendor_id,
+            WorkOrder.trip_date >= date_from,
+            WorkOrder.trip_date <= date_to,
+        ).order_by(WorkOrder.trip_date, WorkOrder.id)
+    )
+    work_orders = wo_result.scalars().all()
+    wo_ids = [wo.id for wo in work_orders]
+
+    # Load containers
+    containers_map: dict[int, list] = {}
+    if wo_ids:
+        cont_result = await db.execute(
+            select(WorkOrderContainer).where(
+                WorkOrderContainer.work_order_id.in_(wo_ids)
+            )
+        )
+        for c in cont_result.scalars().all():
+            containers_map.setdefault(c.work_order_id, []).append(c)
+
+    # Load location names
+    loc_ids: set[int] = set()
+    for wo in work_orders:
+        if wo.pickup_location_id:
+            loc_ids.add(wo.pickup_location_id)
+        if wo.dropoff_location_id:
+            loc_ids.add(wo.dropoff_location_id)
+    loc_name_by_id: dict[int, str] = {}
+    if loc_ids:
+        loc_result = await db.execute(select(Location).where(Location.id.in_(loc_ids)))
+        loc_name_by_id = {loc.id: loc.name for loc in loc_result.scalars().all()}
+
+    # Load vehicle plates via VehicleDriver
+    driver_ids = [wo.driver_id for wo in work_orders if wo.driver_id]
+    driver_plate_map: dict[int, str] = {}
+    if driver_ids:
+        v_result = await db.execute(
+            select(VehicleDriver.driver_id, Vehicle.plate)
+            .join(Vehicle, Vehicle.id == VehicleDriver.vehicle_id)
+            .where(
+                VehicleDriver.driver_id.in_(driver_ids),
+                VehicleDriver.is_active == True,  # noqa: E712
+                VehicleDriver.role == "PRIMARY",
+                Vehicle.is_active == True,  # noqa: E712
+            )
+        )
+        driver_plate_map = dict(v_result.all())
+
+    # Build Excel
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = vendor.name[:31]
+
+    # Styles
+    thin_side = Side(style="thin", color="BBBBBB")
+    thin_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
+    _blue_dark = "1F4E79"
+    _blue_header = "2E75B6"
+    _white = "FFFFFF"
+    _grey_row = "F5F8FC"
+    _blue_light = "DEEAF1"
+    _yellow_sum = "FFF2CC"
+
+    num_cols = 12
+    last_col = get_column_letter(num_cols)
+
+    # Title rows
+    ws.append(["VẬN TẢI PHÚC LỘC", *([""] * (num_cols - 1))])
+    ws.merge_cells(f"A1:{last_col}1")
+    ws["A1"].font = Font(bold=True, size=14, color=_blue_dark)
+    ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[1].height = 24
+
+    month_range = f"Từ {date_from.strftime('%d/%m/%Y')} đến {date_to.strftime('%d/%m/%Y')}"
+    ws.append([f"BẢNG CHUYẾN – {vendor.name.upper()} – {month_range}", *([""] * (num_cols - 1))])
+    ws.merge_cells(f"A2:{last_col}2")
+    ws["A2"].font = Font(bold=True, size=11, color=_blue_dark)
+    ws["A2"].alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[2].height = 20
+
+    ws.append([""] * num_cols)
+    ws.row_dimensions[3].height = 6
+
+    # Header row
+    _op_labels = {
+        "XUAT_NHAP_TAU": "Xuất / Nhập tàu",
+        "CHUYEN_BAI": "Chuyển bãi",
+        "LAY_VO_HA_HANG": "Lấy vỏ hạ hàng",
+        "CHAY_SA_LAN": "Chạy sà lan",
+        "DONG_KHO": "Đóng kho",
+    }
+    WORK_TYPE_FULL = {
+        "E20": "Rỗng 20ft", "E40": "Rỗng 40ft",
+        "F20": "Hàng 20ft", "F40": "Hàng 40ft",
+    }
+
+    headers = [
+        "STT", "Mã phiếu", "Ngày chạy", "Số cont", "Loại cont",
+        "Điểm lấy", "Điểm trả", "Tác nghiệp", "Biển số xe", "Số tàu",
+        "Đơn giá (VNĐ)", "Ghi chú",
+    ]
+    ws.append(headers)
+    header_row = 4
+    header_font = Font(bold=True, color=_white, size=10)
+    header_fill = PatternFill(start_color=_blue_header, end_color=_blue_header, fill_type="solid")
+    for col_num in range(1, num_cols + 1):
+        cell = ws.cell(row=header_row, column=col_num)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = Border(
+            left=thin_side, right=thin_side,
+            top=Side(style="thin", color="BBBBBB"),
+            bottom=Side(style="medium", color="1F4E79"),
+        )
+    ws.row_dimensions[header_row].height = 32
+    ws.freeze_panes = ws.cell(row=5, column=1)
+
+    # Data rows
+    stt = 0
+    type_count: dict[str, int] = {}
+    total_amount = 0
+
+    for row_idx, wo in enumerate(work_orders):
+        containers = containers_map.get(wo.id, [])
+        pickup = loc_name_by_id.get(wo.pickup_location_id or 0, "")
+        dropoff = loc_name_by_id.get(wo.dropoff_location_id or 0, "")
+        plate = wo.vehicle_external_plate or driver_plate_map.get(wo.driver_id or 0, "")
+        vessel = wo.vessel or ""
+        op_type = _op_labels.get(wo.operation_type or "", wo.operation_type or "")
+        unit_price = wo.unit_price or 0
+        trip_date_str = wo.trip_date.strftime("%d/%m/%Y") if wo.trip_date else ""
+
+        fill_color = _white if row_idx % 2 == 0 else _grey_row
+        row_fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+
+        for c in containers:
+            stt += 1
+            wt_label = WORK_TYPE_FULL.get(c.work_type or "", c.work_type or "")
+            type_count[wt_label] = type_count.get(wt_label, 0) + 1
+            total_amount += unit_price
+
+            data_row = [
+                stt, wo.code or wo.id, trip_date_str, c.container_number, wt_label,
+                pickup, dropoff, op_type, plate, vessel, unit_price or "", "",
+            ]
+            ws.append(data_row)
+            data_row_num = ws.max_row
+
+            for col_num in range(1, num_cols + 1):
+                cell = ws.cell(row=data_row_num, column=col_num)
+                cell.fill = row_fill
+                cell.border = thin_border
+                cell.alignment = Alignment(vertical="center")
+                if col_num in (1, 2):
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+                if col_num == 11 and unit_price:
+                    cell.number_format = '#,##0'
+                    cell.alignment = Alignment(horizontal="right", vertical="center")
+            ws.row_dimensions[data_row_num].height = 18
+
+    # Summary
+    sum_fill = PatternFill(start_color=_blue_light, end_color=_blue_light, fill_type="solid")
+    sum_font_bold = Font(bold=True, size=10, color=_blue_dark)
+
+    ws.append([""] * num_cols)
+    ws.append(["Tổng hợp theo loại container:", *([""] * (num_cols - 1))])
+    label_row = ws.max_row
+    ws.merge_cells(f"A{label_row}:{last_col}{label_row}")
+    ws[f"A{label_row}"].font = sum_font_bold
+    ws[f"A{label_row}"].fill = sum_fill
+
+    for wt_label, count in sorted(type_count.items()):
+        ws.append(["", f"  {wt_label}", count, "cont", *([""] * (num_cols - 4))])
+        r = ws.max_row
+        for col_num in range(1, num_cols + 1):
+            ws.cell(row=r, column=col_num).fill = sum_fill
+        ws.cell(row=r, column=2).font = Font(size=10)
+        ws.cell(row=r, column=3).font = Font(bold=True, size=10, color=_blue_dark)
+
+    total_fill = PatternFill(start_color=_yellow_sum, end_color=_yellow_sum, fill_type="solid")
+    total_rows_data = [["Tổng số container:", *([""] * 9), stt, ""]]
+    if total_amount:
+        total_rows_data.append(["Tổng đơn giá:", *([""] * 9), total_amount, ""])
+
+    for row_data in total_rows_data:
+        ws.append(row_data)
+        r = ws.max_row
+        ws.merge_cells(f"A{r}:J{r}")
+        label_cell = ws.cell(row=r, column=1)
+        val_cell = ws.cell(row=r, column=11)
+        label_cell.font = Font(bold=True, size=10, color=_blue_dark)
+        val_cell.font = Font(bold=True, size=11, color=_blue_dark)
+        val_cell.number_format = '#,##0'
+        val_cell.alignment = Alignment(horizontal="right", vertical="center")
+        for col_num in range(1, num_cols + 1):
+            ws.cell(row=r, column=col_num).fill = total_fill
+
+    # Column widths
+    col_widths = [6, 12, 12, 16, 14, 24, 24, 14, 14, 14, 16, 24]
+    for i, width in enumerate(col_widths, start=1):
+        ws.column_dimensions[get_column_letter(i)].width = width
+
+    add_template_version(ws, num_cols)
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    wb.close()
+    buf.seek(0)
+
+    slug = slugify_vi(vendor.name)
+    month_str = date_from.strftime("%m-%Y")
+    filename = f"DoiSoat_NhaXe_{slug}_{month_str}.xlsx"
+
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 @router.post("/upload")
@@ -270,7 +503,7 @@ async def upload_vendor_excel(
             select(WorkOrderContainer.container_number, WorkOrderContainer.work_order_id)
             .join(WorkOrder, WorkOrder.id == WorkOrderContainer.work_order_id)
             .where(
-                WorkOrder.vendor_partner_id == vendor_id,
+                WorkOrder.vendor_id == vendor_id,
                 WorkOrder.trip_date >= period_from,
                 WorkOrder.trip_date <= period_to,
             )
@@ -342,7 +575,7 @@ async def upload_vendor_excel(
     }
 
     imp = VendorReconciliationImport(
-        vendor_partner_id=vendor_id,
+        vendor_id=vendor_id,
         period_from=period_from,
         period_to=period_to,
         source_filename=file.filename,
@@ -363,7 +596,7 @@ async def upload_vendor_excel(
 
     return {
         "import_id": imp.id,
-        "vendor_partner_id": imp.vendor_partner_id,
+        "vendor_id": imp.vendor_id,
         "status": imp.status,
         "totals": imp.totals,
         "row_count": len(orm_rows),
@@ -379,24 +612,24 @@ async def list_imports(
     """List vendor reconciliation imports, optionally filtered by vendor."""
     q = select(VendorReconciliationImport)
     if vendor_id is not None:
-        q = q.where(VendorReconciliationImport.vendor_partner_id == vendor_id)
+        q = q.where(VendorReconciliationImport.vendor_id == vendor_id)
     q = q.order_by(VendorReconciliationImport.uploaded_at.desc())
     imports = (await db.execute(q)).scalars().all()
 
     # Fetch partner names in bulk
-    partner_ids = list({imp.vendor_partner_id for imp in imports})
+    client_ids = list({imp.vendor_id for imp in imports})
     partners_map: dict[int, str] = {}
-    if partner_ids:
+    if client_ids:
         partners = (
-            await db.execute(select(Partner).where(Partner.id.in_(partner_ids)))
+            await db.execute(select(Partner).where(Partner.id.in_(client_ids)))
         ).scalars().all()
         partners_map = {p.id: p.name for p in partners}
 
     return [
         {
             "id": imp.id,
-            "vendor_partner_id": imp.vendor_partner_id,
-            "vendor_partner_name": partners_map.get(imp.vendor_partner_id, ""),
+            "vendor_id": imp.vendor_id,
+            "vendor_partner_name": partners_map.get(imp.vendor_id, ""),
             "period_from": imp.period_from,
             "period_to": imp.period_to,
             "source_filename": imp.source_filename,
@@ -430,7 +663,7 @@ async def get_import(
         raise HTTPException(status_code=404, detail="Không tìm thấy import.")
 
     vendor = (
-        await db.execute(select(Partner).where(Partner.id == imp.vendor_partner_id))
+        await db.execute(select(Partner).where(Partner.id == imp.vendor_id))
     ).scalar_one_or_none()
 
     rows = (
@@ -443,7 +676,7 @@ async def get_import(
 
     return {
         "id": imp.id,
-        "vendor_partner_id": imp.vendor_partner_id,
+        "vendor_id": imp.vendor_id,
         "vendor_partner_name": vendor.name if vendor else "",
         "period_from": imp.period_from,
         "period_to": imp.period_to,

@@ -54,6 +54,8 @@ from app.core.summaries import (
     load_location_summaries,
 )
 from app.utils.iso6346 import normalize_container_number
+from app.utils.fuzzy import fuzzy_match_container
+from app.utils.fuzzy_thresholds import get_thresholds
 
 
 def _get_wo_date(wo: WorkOrder):
@@ -166,7 +168,9 @@ def _build_criteria(
     container_match = (
         "container_number" in matched
         or "container_number_partial" in matched
+        or "container_number_fuzzy" in matched
     )
+    container_fuzzy = "container_number_fuzzy" in matched
 
     values: dict[str, tuple[str | None, str | None]] = {
         "date": (wo_date_str, to_date_str),
@@ -180,12 +184,17 @@ def _build_criteria(
         wo_v, to_v = values[name]
         if name == "container_number":
             is_match = container_match
+            out.append(CriterionBreakdown(
+                name=name, label=label, match=is_match,
+                wo_value=wo_v, to_value=to_v,
+                fuzzy=container_fuzzy,
+            ))
         else:
             is_match = name in matched
-        out.append(CriterionBreakdown(
-            name=name, label=label, match=is_match,
-            wo_value=wo_v, to_value=to_v,
-        ))
+            out.append(CriterionBreakdown(
+                name=name, label=label, match=is_match,
+                wo_value=wo_v, to_value=to_v,
+            ))
     return out
 
 
@@ -250,7 +259,7 @@ async def suggest_trip_matches(
     query = select(TripOrder).where(
         TripOrder.status.in_(["PENDING", "MATCHED"]),
         or_(
-            TripOrder.partner_id == work_order.partner_id,
+            TripOrder.client_id == work_order.client_id,
             TripOrder.id.in_(container_subquery),
         ),
     )
@@ -289,17 +298,17 @@ async def suggest_trip_matches(
         if link_counts.get(to.id, 0) < len(to_containers.get(to.id, []))
     ]
 
-    partner_ids = {to.partner_id for to in candidates} | {work_order.partner_id}
+    client_ids = {to.client_id for to in candidates} | {work_order.client_id}
     location_ids = (
         {to.pickup_location_id for to in candidates}
         | {to.dropoff_location_id for to in candidates}
         | {work_order.pickup_location_id, work_order.dropoff_location_id}
     )
-    partners = await load_partner_summaries(db, partner_ids)
+    partners = await load_partner_summaries(db, client_ids)
     locations = await load_location_summaries(db, location_ids)
     alias_groups = await _load_alias_groups(db)
 
-    wo_client_name = get_partner_summary(partners, work_order.partner_id).name
+    wo_client_name = get_partner_summary(partners, work_order.client_id).name
     wo_pickup_name = get_location_summary(
         locations, work_order.pickup_location_id,
     ).name
@@ -341,7 +350,7 @@ async def suggest_trip_matches(
         to_dropoff_name = get_location_summary(
             locations, to.dropoff_location_id,
         ).name
-        to_partner_name = get_partner_summary(partners, to.partner_id).name
+        to_partner_name = get_partner_summary(partners, to.client_id).name
         to_date_iso = to.trip_date.isoformat() if to.trip_date else None
         # Emit one MatchSuggestion entry per available container so the
         # UI renders independent rows for each container.
@@ -352,7 +361,7 @@ async def suggest_trip_matches(
             )
             to_out = TripOrderOut(
                 id=to.id, code=to.code, trip_date=to.trip_date,
-                partner=get_partner_summary(partners, to.partner_id),
+                partner=get_partner_summary(partners, to.client_id),
                 pickup_location=get_location_summary(
                     locations, to.pickup_location_id,
                 ),
@@ -383,6 +392,10 @@ async def suggest_trip_matches(
                 to_containers=_format_containers([container]),
             )
             match_score = sum(1 for c in criteria if c.match)
+            warnings = [
+                f"{c.label}: {c.wo_value} ≈ {c.to_value}"
+                for c in criteria if c.fuzzy
+            ]
             suggestions.append(MatchSuggestion(
                 trip_order=to_out,
                 container_id=container.id,
@@ -392,6 +405,7 @@ async def suggest_trip_matches(
                 criteria=criteria,
                 match_score=match_score,
                 max_score=len(criteria),
+                match_warnings=warnings,
             ))
 
     suggestions.sort(key=lambda s: s.score, reverse=True)
@@ -426,7 +440,7 @@ async def suggest_wo_matches(
         WorkOrder.status == "PENDING",
         ~WorkOrder.id.in_(already_matched_wos),
         or_(
-            WorkOrder.partner_id == trip_order.partner_id,
+            WorkOrder.client_id == trip_order.client_id,
             WorkOrder.id.in_(container_subquery),
         ),
     )
@@ -443,18 +457,18 @@ async def suggest_wo_matches(
     for c in cont_result.scalars().all():
         wo_containers[c.work_order_id].append(c)
 
-    partner_ids = {wo.partner_id for wo in candidates} | {trip_order.partner_id}
+    client_ids = {wo.client_id for wo in candidates} | {trip_order.client_id}
     drivers = await load_driver_summaries(db, {wo.driver_id for wo in candidates})
     location_ids = (
         {wo.pickup_location_id for wo in candidates}
         | {wo.dropoff_location_id for wo in candidates}
         | {trip_order.pickup_location_id, trip_order.dropoff_location_id}
     )
-    partners = await load_partner_summaries(db, partner_ids)
+    partners = await load_partner_summaries(db, client_ids)
     locations = await load_location_summaries(db, location_ids)
     alias_groups = await _load_alias_groups(db)
 
-    to_client_name = get_partner_summary(partners, trip_order.partner_id).name
+    to_client_name = get_partner_summary(partners, trip_order.client_id).name
     to_pickup_name = get_location_summary(
         locations, trip_order.pickup_location_id,
     ).name
@@ -478,7 +492,7 @@ async def suggest_wo_matches(
         wo_out = WorkOrderOut(
             id=wo.id,
             code=wo.code,
-            partner=get_partner_summary(partners, wo.partner_id),
+            partner=get_partner_summary(partners, wo.client_id),
             pickup_location=get_location_summary(locations, wo.pickup_location_id),
             dropoff_location=get_location_summary(locations, wo.dropoff_location_id),
             driver=get_driver_summary(drivers, wo.driver_id),
@@ -503,7 +517,7 @@ async def suggest_wo_matches(
             matched_fields=matched_fields,
             wo_date_str=wo_date_str,
             to_date_str=to_date_str,
-            wo_client=get_partner_summary(partners, wo.partner_id).name,
+            wo_client=get_partner_summary(partners, wo.client_id).name,
             to_client=to_client_name,
             wo_pickup=get_location_summary(
                 locations, wo.pickup_location_id,
@@ -517,6 +531,10 @@ async def suggest_wo_matches(
             to_containers=to_containers_str,
         )
         match_score = sum(1 for c in criteria if c.match)
+        warnings = [
+            f"{c.label}: {c.wo_value} ≈ {c.to_value}"
+            for c in criteria if c.fuzzy
+        ]
         suggestions.append(WOSuggestion(
             work_order=wo_out,
             confidence=_confidence(score),
@@ -525,6 +543,7 @@ async def suggest_wo_matches(
             criteria=criteria,
             match_score=match_score,
             max_score=len(criteria),
+            match_warnings=warnings,
         ))
 
     suggestions.sort(key=lambda s: s.score, reverse=True)
@@ -548,11 +567,23 @@ def _score_to_container_against_wo(
         matched_fields.append("container_number")
         score += WEIGHTS["container_number"]
     else:
-        wo_digits = {re.sub(r'[^0-9]', '', c) for c in wo_container_numbers if c}
-        to_digits = {re.sub(r'[^0-9]', '', cn)} if cn else set()
-        if wo_digits & to_digits:
-            matched_fields.append("container_number_partial")
-            score += WEIGHTS["container_number"] * 0.5
+        # Fuzzy container match (Levenshtein ≤ 1)
+        fuzzy_matched = False
+        if cn:
+            thresholds = get_thresholds(work_order.client_id)
+            for wo_cn in wo_container_numbers:
+                is_match, is_fuzzy = fuzzy_match_container(cn, wo_cn, threshold=thresholds.container)
+                if is_match and is_fuzzy:
+                    matched_fields.append("container_number_fuzzy")
+                    score += WEIGHTS["container_number"] * 0.8
+                    fuzzy_matched = True
+                    break
+        if not fuzzy_matched:
+            wo_digits = {re.sub(r'[^0-9]', '', c) for c in wo_container_numbers if c}
+            to_digits = {re.sub(r'[^0-9]', '', cn)} if cn else set()
+            if wo_digits & to_digits:
+                matched_fields.append("container_number_partial")
+                score += WEIGHTS["container_number"] * 0.5
 
     if wo_date and to.trip_date == wo_date:
         matched_fields.append("date")
@@ -564,7 +595,7 @@ def _score_to_container_against_wo(
     if _locations_match(work_order.dropoff_location_id, to.dropoff_location_id, ag):
         matched_fields.append("dropoff_location")
         score += WEIGHTS["dropoff_location"]
-    if to.partner_id == work_order.partner_id:
+    if to.client_id == work_order.client_id:
         matched_fields.append("client")
         score += WEIGHTS["client"]
 
@@ -667,11 +698,25 @@ def _score_wo_against_to(
         matched_fields.append("container_number")
         score += WEIGHTS["container_number"]
     else:
-        to_digits = {re.sub(r'[^0-9]', '', cn) for cn in to_container_numbers if cn}
-        wo_digits = {re.sub(r'[^0-9]', '', cn) for cn in wo_cn_set if cn}
-        if to_digits & wo_digits:
-            matched_fields.append("container_number_partial")
-            score += WEIGHTS["container_number"] * 0.5
+        # Fuzzy container match (Levenshtein ≤ 1)
+        fuzzy_matched = False
+        thresholds = get_thresholds(work_order.client_id)
+        for to_cn in to_container_numbers:
+            for wo_cn in wo_cn_set:
+                is_match, is_fuzzy = fuzzy_match_container(to_cn, wo_cn, threshold=thresholds.container)
+                if is_match and is_fuzzy:
+                    matched_fields.append("container_number_fuzzy")
+                    score += WEIGHTS["container_number"] * 0.8
+                    fuzzy_matched = True
+                    break
+            if fuzzy_matched:
+                break
+        if not fuzzy_matched:
+            to_digits = {re.sub(r'[^0-9]', '', cn) for cn in to_container_numbers if cn}
+            wo_digits = {re.sub(r'[^0-9]', '', cn) for cn in wo_cn_set if cn}
+            if to_digits & wo_digits:
+                matched_fields.append("container_number_partial")
+                score += WEIGHTS["container_number"] * 0.5
 
     wo_date = _get_wo_date(wo)
     if wo_date and trip_order.trip_date == wo_date:
@@ -684,7 +729,7 @@ def _score_wo_against_to(
     if _locations_match(wo.dropoff_location_id, trip_order.dropoff_location_id, ag):
         matched_fields.append("dropoff_location")
         score += WEIGHTS["dropoff_location"]
-    if wo.partner_id == trip_order.partner_id:
+    if wo.client_id == trip_order.client_id:
         matched_fields.append("client")
         score += WEIGHTS["client"]
 

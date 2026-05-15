@@ -44,7 +44,7 @@ export interface VendorReconTotals {
 
 export interface VendorReconImport {
   id: number
-  vendorPartnerId: number
+  vendorId: number
   vendorPartnerName: string
   periodFrom: string
   periodTo: string
@@ -61,7 +61,7 @@ export interface VendorReconImport {
 
 export interface UploadResult {
   importId: number
-  vendorPartnerId: number
+  vendorId: number
   status: VendorImportStatus
   totals: VendorReconTotals | null
   rowCount: number
@@ -82,6 +82,18 @@ export interface ApplyResult {
 // ---------------------------------------------------------------------------
 // API calls
 // ---------------------------------------------------------------------------
+
+export async function exportVendorTripsExcel(
+  vendorId: number,
+  dateFrom: string,
+  dateTo: string,
+): Promise<Blob> {
+  const res = await api.get('/vendor-reconciliation/export', {
+    params: { vendor_id: vendorId, date_from: dateFrom, date_to: dateTo },
+    responseType: 'blob',
+  })
+  return res.data as Blob
+}
 
 export async function uploadVendorReconciliation(
   file: File,

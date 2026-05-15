@@ -70,7 +70,7 @@ def _trip_to_out(t: TripOrder, partners, locations) -> TripOrderOut:
     return TripOrderOut(
         id=int(t.id),  # type: ignore[arg-type]
         trip_date=t.trip_date,
-        partner=get_partner_summary(partners, t.partner_id),
+        partner=get_partner_summary(partners, t.client_id),
         code=t.code,
         pickup_location=get_location_summary(locations, t.pickup_location_id),
         dropoff_location=get_location_summary(locations, t.dropoff_location_id),
@@ -119,7 +119,7 @@ async def _load_many(session, trips: list[TripOrder]) -> list[TripOrderOut]:
     if not trips:
         return []
     partners = await load_partner_summaries(
-        session, {t.partner_id for t in trips}
+        session, {t.client_id for t in trips}
     )
     locations = await load_location_summaries(
         session,
@@ -167,7 +167,7 @@ async def create_trip_order(
     try:
         t = await use_case(TripOrderCreateInput(
             trip_date=body.trip_date,
-            partner_id=body.partner_id,
+            client_id=body.client_id,
             pickup_location_id=body.pickup_location_id,
             dropoff_location_id=body.dropoff_location_id,
             containers=_container_inputs(body.containers),
@@ -252,7 +252,7 @@ async def search_trip_orders(
             sa_or(
                 TripOrderORM.code.ilike(term),
                 TripOrderORM.id.in_(container_subquery),
-                TripOrderORM.partner_id.in_(partner_subquery),
+                TripOrderORM.client_id.in_(partner_subquery),
                 # Date search: allow YYYY-MM-DD or DD/MM/YYYY patterns
                 TripOrderORM.trip_date.cast(str).ilike(term),
             )
@@ -286,13 +286,13 @@ async def search_trip_orders(
         }
 
     # Load related data for scoring
-    partner_ids = {t.partner_id for t in page_trips} | {wo.partner_id}
+    client_ids = {t.client_id for t in page_trips} | {wo.client_id}
     location_ids = (
         {t.pickup_location_id for t in page_trips}
         | {t.dropoff_location_id for t in page_trips}
         | {wo.pickup_location_id, wo.dropoff_location_id}
     )
-    partners = await load_partner_summaries(db, partner_ids)
+    partners = await load_partner_summaries(db, client_ids)
     locations = await load_location_summaries(db, location_ids)
     alias_groups = await _load_alias_groups(db)
 
@@ -305,7 +305,7 @@ async def search_trip_orders(
         for c in wo_cont_rows if c.container_number
     }
     wo_date = _get_wo_date(wo)
-    wo_client_name = get_partner_summary(partners, wo.partner_id).name
+    wo_client_name = get_partner_summary(partners, wo.client_id).name
     wo_pickup_name = get_location_summary(locations, wo.pickup_location_id).name
     wo_dropoff_name = get_location_summary(locations, wo.dropoff_location_id).name
     wo_containers_str = _format_containers(wo_cont_rows)
@@ -323,7 +323,7 @@ async def search_trip_orders(
     results = []
     for t in page_trips:
         # Compute match score against WO
-        to_client_name = get_partner_summary(partners, t.partner_id).name
+        to_client_name = get_partner_summary(partners, t.client_id).name
         to_pickup_name = get_location_summary(locations, t.pickup_location_id).name
         to_dropoff_name = get_location_summary(locations, t.dropoff_location_id).name
         to_date_str = t.trip_date.isoformat() if t.trip_date else None
@@ -366,7 +366,7 @@ async def search_trip_orders(
                 match_score += 1
 
         # Client check
-        if wo.partner_id and t.partner_id and wo.partner_id == t.partner_id:
+        if wo.client_id and t.client_id and wo.client_id == t.client_id:
             matched_fields.append("client")
             match_score += 1
 
@@ -409,7 +409,7 @@ async def search_trip_orders(
 
 @router.get("/trip-orders", response_model=PaginatedResponse[TripOrderOut])
 async def list_trip_orders(
-    partner_id: int | None = None,
+    client_id: int | None = None,
     status: str | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
@@ -421,7 +421,7 @@ async def list_trip_orders(
 ):
     items, total = await use_case(TripOrderListFilters(
         page=page, page_size=page_size,
-        partner_id=partner_id, status=status,
+        client_id=client_id, status=status,
         date_from=date_from, date_to=date_to,
         unpriced=unpriced,
     ))
@@ -473,7 +473,7 @@ async def export_trip_orders_excel(
     date_from: date | None = None,
     date_to: date | None = None,
     status: str | None = None,
-    partner_id: int | None = None,
+    client_id: int | None = None,
     current_user: User = Depends(require_permission("create", "TripOrder")),
     use_case: GetTripOrder = Depends(get_get_trip_order),
 ):
@@ -484,9 +484,9 @@ async def export_trip_orders_excel(
         date_from=date_from.isoformat() if date_from else None,
         date_to=date_to.isoformat() if date_to else None,
         status=status,
-        partner_id=partner_id,
+        client_id=client_id,
     )
-    if partner_id and partner_name:
+    if client_id and partner_name:
         from app.utils.text import slugify_vi
         slug = slugify_vi(partner_name)
         filename = f"chuyen_khach_hang_{slug}_{date.today().isoformat()}.xlsx"
@@ -513,7 +513,7 @@ async def get_distinct_trip_partners(
     from sqlalchemy import text
     session = use_case.repo.session  # type: ignore[attr-defined]
     sql = "SELECT DISTINCT p.id, p.name FROM partners p " \
-          "JOIN trip_orders t ON t.partner_id = p.id " \
+          "JOIN trip_orders t ON t.client_id = p.id " \
           "WHERE p.is_active = true"
     params = {}
     if date_from:
@@ -529,7 +529,7 @@ async def get_distinct_trip_partners(
 
 @router.get("/trip-orders/export-doi-soat")
 async def export_doi_soat_excel(
-    partner_id: int = Query(..., description="Partner (khách hàng) ID"),
+    client_id: int = Query(..., description="Partner (khách hàng) ID"),
     date_from: date = Query(..., description="From date (YYYY-MM-DD)"),
     date_to: date = Query(..., description="To date (YYYY-MM-DD)"),
     current_user: User = Depends(require_permission("create", "TripOrder")),
@@ -540,7 +540,7 @@ async def export_doi_soat_excel(
 
     session = use_case.repo.session  # type: ignore[attr-defined]
     content, partner_name = await generate_doi_soat_excel(
-        session, partner_id, date_from.isoformat(), date_to.isoformat(),
+        session, client_id, date_from.isoformat(), date_to.isoformat(),
     )
     slug = slugify_vi(partner_name)
     # Format: DoiSoat_<KH>_MM-YYYY  (use date_from's month as the report month)
@@ -584,7 +584,7 @@ async def update_trip_order(
     try:
         t = await use_case(trip_order_id, TripOrderUpdateInput(
             trip_date=body.trip_date,
-            partner_id=body.partner_id,
+            client_id=body.client_id,
             pickup_location_id=body.pickup_location_id,
             dropoff_location_id=body.dropoff_location_id,
             containers=containers_input,

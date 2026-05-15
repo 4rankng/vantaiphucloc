@@ -30,7 +30,7 @@ router = APIRouter(prefix="/drivers", tags=["drivers"])
 @dataclass
 class _RouteRow:
     """Internal representation of a suggested route."""
-    partner_id: int
+    client_id: int
     partner_code: str | None
     partner_name: str
     pickup_location_id: int
@@ -50,7 +50,7 @@ class SuggestedRouteItem:
     def from_row(r: _RouteRow) -> dict:
         return {
             "partner": {
-                "id": r.partner_id,
+                "id": r.client_id,
                 "code": r.partner_code,
                 "name": r.partner_name,
             },
@@ -93,7 +93,7 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 _DRIVER_ROUTES_SQL = text("""
     SELECT
-        p.id   AS partner_id,
+        p.id   AS client_id,
         p.code AS partner_code,
         p.name AS partner_name,
         pl.id  AS pickup_location_id,
@@ -105,7 +105,7 @@ _DRIVER_ROUTES_SQL = text("""
         COUNT(*) AS frequency,
         MAX(wo.created_at) AS last_used
     FROM work_orders wo
-    JOIN partners p ON p.id = wo.partner_id
+    JOIN partners p ON p.id = wo.client_id
     JOIN locations pl ON pl.id = wo.pickup_location_id
     JOIN locations dl ON dl.id = wo.dropoff_location_id
     WHERE wo.driver_id = :driver_id
@@ -117,7 +117,7 @@ _DRIVER_ROUTES_SQL = text("""
 
 _GLOBAL_POPULAR_SQL = text("""
     SELECT
-        p.id   AS partner_id,
+        p.id   AS client_id,
         p.code AS partner_code,
         p.name AS partner_name,
         pl.id  AS pickup_location_id,
@@ -129,7 +129,7 @@ _GLOBAL_POPULAR_SQL = text("""
         COUNT(*) AS frequency,
         MAX(wo.created_at) AS last_used
     FROM work_orders wo
-    JOIN partners p ON p.id = wo.partner_id
+    JOIN partners p ON p.id = wo.client_id
     JOIN locations pl ON pl.id = wo.pickup_location_id
     JOIN locations dl ON dl.id = wo.dropoff_location_id
     WHERE wo.status NOT IN ('CANCELLED')
@@ -172,7 +172,7 @@ async def _compute_suggestions(
 
         source = "frequent" if freq >= 3 else "recent"
         results.append(_RouteRow(
-            partner_id=r.partner_id,
+            client_id=r.client_id,
             partner_code=r.partner_code,
             partner_name=r.partner_name,
             pickup_location_id=r.pickup_location_id,
@@ -194,7 +194,7 @@ async def _compute_suggestions(
 
     # 2. Fallback: fill remaining slots with global popular routes
     existing_keys = {
-        (r.partner_id, r.pickup_location_id, r.dropoff_location_id)
+        (r.client_id, r.pickup_location_id, r.dropoff_location_id)
         for r in driver_results
     }
     global_rows = (await session.execute(
@@ -202,7 +202,7 @@ async def _compute_suggestions(
     )).fetchall()
 
     for r in global_rows:
-        key = (r.partner_id, r.pickup_location_id, r.dropoff_location_id)
+        key = (r.client_id, r.pickup_location_id, r.dropoff_location_id)
         if key in existing_keys:
             continue
         freq = r.frequency
@@ -219,7 +219,7 @@ async def _compute_suggestions(
                 score *= 1.05
 
         driver_results.append(_RouteRow(
-            partner_id=r.partner_id,
+            client_id=r.client_id,
             partner_code=r.partner_code,
             partner_name=r.partner_name,
             pickup_location_id=r.pickup_location_id,

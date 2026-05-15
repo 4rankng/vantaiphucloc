@@ -107,15 +107,15 @@ class SqlTripOrderRepository(TripOrderRepository):
         *,
         offset: int,
         limit: int,
-        partner_id: int | None = None,
+        client_id: int | None = None,
         status: TripOrderStatus | None = None,
         trip_date_from: date | None = None,
         trip_date_to: date | None = None,
         unpriced_only: bool = False,
     ) -> tuple[Sequence[TripOrder], int]:
         q = select(TripOrderORM)
-        if partner_id is not None:
-            q = q.where(TripOrderORM.partner_id == partner_id)
+        if client_id is not None:
+            q = q.where(TripOrderORM.client_id == client_id)
         if status is not None:
             q = q.where(TripOrderORM.status == str(status))
         if trip_date_from is not None:
@@ -135,7 +135,7 @@ class SqlTripOrderRepository(TripOrderRepository):
     async def find_duplicate(
         self,
         *,
-        partner_id: int,
+        client_id: int,
         trip_date: date,
         container_number: str,
     ) -> TripOrder | None:
@@ -146,7 +146,7 @@ class SqlTripOrderRepository(TripOrderRepository):
                 TripOrderContainerORM.trip_order_id == TripOrderORM.id,
             )
             .where(
-                TripOrderORM.partner_id == partner_id,
+                TripOrderORM.client_id == client_id,
                 TripOrderORM.trip_date == trip_date,
                 TripOrderContainerORM.container_number == container_number,
             )
@@ -277,15 +277,15 @@ class SqlWorkOrderRepository(WorkOrderRepository):
         *,
         offset: int,
         limit: int,
-        partner_id: int | None = None,
+        client_id: int | None = None,
         driver_id: int | None = None,
         date_from: date | None = None,
         date_to: date | None = None,
         status: WorkOrderStatus | None = None,
     ) -> tuple[Sequence[WorkOrder], int]:
         q = select(WorkOrderORM)
-        if partner_id is not None:
-            q = q.where(WorkOrderORM.partner_id == partner_id)
+        if client_id is not None:
+            q = q.where(WorkOrderORM.client_id == client_id)
         if driver_id is not None:
             q = q.where(WorkOrderORM.driver_id == driver_id)
         if date_from is not None:

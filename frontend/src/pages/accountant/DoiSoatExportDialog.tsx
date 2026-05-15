@@ -52,7 +52,7 @@ export function DoiSoatExportDialog({ open, onOpenChange }: DoiSoatExportDialogP
     if (!canExport) return
     try {
       const blob = await mutation.mutateAsync({
-        partnerId: Number(selectedClientId),
+        clientId: Number(selectedClientId),
         dateFrom,
         dateTo,
       })

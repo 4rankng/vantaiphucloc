@@ -302,7 +302,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
       if (isEdit && existingWorkOrder) {
         await apiClient.updateWorkOrder(existingWorkOrder.id, {
           containers: containerItems,
-          partnerId: Number(clientId),
+          clientId: Number(clientId),
           pickupLocationId: pickupId,
           dropoffLocationId: dropoffId,
           vessel: vessel || null,
@@ -320,7 +320,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
 
         await apiClient.createWorkOrder({
           containers: containerItems,
-          partnerId: Number(clientId),
+          clientId: Number(clientId),
           pickupLocationId: pickupId,
           dropoffLocationId: dropoffId,
           driverId: Number(user!.id),

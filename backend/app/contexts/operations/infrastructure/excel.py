@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.domain import WorkOrder, WorkOrderContainer, TripOrder, TripOrderContainer, Partner, PricingLine
+from app.models.domain import WorkOrder, WorkOrderContainer, TripOrder, TripOrderContainer, Partner, PricingLine, Vehicle, VehicleDriver
 from app.utils.iso6346 import normalize_container_number, validate_container_number
 
 _logger = logging.getLogger(__name__)
@@ -49,7 +49,7 @@ class ReconciliationResult:
 
 async def parse_customer_excel(
     file_content: bytes,
-    partner_id: int | None = None,
+    client_id: int | None = None,
 ) -> list[dict[str, Any]]:
     """
     Parse Excel file uploaded by customer.
@@ -90,7 +90,7 @@ async def parse_customer_excel(
 
 async def compare_with_system_records(
     db: AsyncSession,
-    partner_id: int,
+    client_id: int,
     excel_data: list[dict[str, Any]],
     date_from: str | None = None,
     date_to: str | None = None,
@@ -115,7 +115,7 @@ async def compare_with_system_records(
             })
 
     # Query work orders for this partner
-    wo_query = select(WorkOrder).where(WorkOrder.partner_id == partner_id)
+    wo_query = select(WorkOrder).where(WorkOrder.client_id == client_id)
     if date_from:
         wo_query = wo_query.where(WorkOrder.created_at >= date_from)
     if date_to:
@@ -125,7 +125,7 @@ async def compare_with_system_records(
     work_orders = wo_result.scalars().all()
 
     # Query trip orders for this partner
-    to_query = select(TripOrder).where(TripOrder.partner_id == partner_id)
+    to_query = select(TripOrder).where(TripOrder.client_id == client_id)
     if date_from:
         to_query = to_query.where(TripOrder.trip_date >= date_from)
     if date_to:
@@ -233,7 +233,7 @@ async def compare_with_system_records(
 
 async def generate_reconciliation_excel(
     db: AsyncSession,
-    partner_id: int,
+    client_id: int,
     date_from: str | None = None,
     date_to: str | None = None,
 ) -> bytes:
@@ -279,7 +279,7 @@ async def generate_reconciliation_excel(
         cell.alignment = header_alignment
 
     # Query data
-    wo_query = select(WorkOrder).where(WorkOrder.partner_id == partner_id)
+    wo_query = select(WorkOrder).where(WorkOrder.client_id == client_id)
     if date_from:
         wo_query = wo_query.where(WorkOrder.created_at >= date_from)
     if date_to:
@@ -306,7 +306,7 @@ async def generate_reconciliation_excel(
 
         # Check for matched trip orders
         to_result = await db.execute(
-            select(TripOrder).where(TripOrder.partner_id == partner_id)
+            select(TripOrder).where(TripOrder.client_id == client_id)
         )
         trip_orders = to_result.scalars().all()
 
@@ -567,7 +567,7 @@ async def import_trip_orders(
 
         if not unit_price:
             tiered = await find_tiered_pricing(
-                db, partner_id=partner.id, work_type=work_type,
+                db, client_id=partner.id, work_type=work_type,
                 quantity=container_count,
                 pickup_location_id=pickup_id, dropoff_location_id=dropoff_id,
             )
@@ -581,7 +581,7 @@ async def import_trip_orders(
 
         trip_order = TripOrder(
             trip_date=trip_date_val,
-            partner_id=partner.id,
+            client_id=partner.id,
             pickup_location_id=pickup_id,
             dropoff_location_id=dropoff_id,
             pricing_id=pricing_id,
@@ -671,11 +671,11 @@ async def generate_work_orders_excel(
     # Resolve display names via JOIN (denormalized cols dropped).
     from app.models.domain import Partner, Location, Vehicle
     from app.models.base import User as _User
-    partner_ids = {wo.partner_id for wo in work_orders}
+    client_ids = {wo.client_id for wo in work_orders}
     driver_ids = {wo.driver_id for wo in work_orders}
     loc_ids = {wo.pickup_location_id for wo in work_orders} | {wo.dropoff_location_id for wo in work_orders}
     loc_ids.discard(None)
-    partner_name_by_id = {c.id: c.name for c in (await db.execute(select(Partner).where(Partner.id.in_(partner_ids)))).scalars().all()} if partner_ids else {}
+    partner_name_by_id = {c.id: c.name for c in (await db.execute(select(Partner).where(Partner.id.in_(client_ids)))).scalars().all()} if client_ids else {}
     driver_name_by_id = {u.id: (u.full_name or u.username) for u in (await db.execute(select(_User).where(_User.id.in_(driver_ids)))).scalars().all()} if driver_ids else {}
     loc_name_by_id = {l.id: l.name for l in (await db.execute(select(Location).where(Location.id.in_(loc_ids)))).scalars().all()} if loc_ids else {}
     vehicle_ids = {wo.vehicle_id for wo in work_orders if wo.vehicle_id}
@@ -702,7 +702,7 @@ async def generate_work_orders_excel(
         plate = vehicle_by_id.get(wo.vehicle_id).plate if wo.vehicle_id and wo.vehicle_id in vehicle_by_id else ""
         for c in containers:
             ws.append([
-                f"WO#{wo.id}", partner_name_by_id.get(wo.partner_id, ""),
+                f"WO#{wo.id}", partner_name_by_id.get(wo.client_id, ""),
                 loc_name_by_id.get(wo.pickup_location_id, ""),
                 loc_name_by_id.get(wo.dropoff_location_id, ""),
                 driver_name_by_id.get(wo.driver_id, ""), plate,
@@ -729,19 +729,19 @@ async def generate_trip_orders_excel(
     date_from: str | None = None,
     date_to: str | None = None,
     status: str | None = None,
-    partner_id: int | None = None,
+    client_id: int | None = None,
 ) -> bytes:
     """Export trip orders to Excel.
 
-    When partner_id is provided, filters to that partner and includes
+    When client_id is provided, filters to that partner and includes
     match status columns for customer reconciliation.
     """
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment
 
     query = select(TripOrder).order_by(TripOrder.id.desc())
-    if partner_id:
-        query = query.where(TripOrder.partner_id == partner_id)
+    if client_id:
+        query = query.where(TripOrder.client_id == client_id)
     if date_from:
         query = query.where(TripOrder.trip_date >= date_from)
     if date_to:
@@ -763,10 +763,10 @@ async def generate_trip_orders_excel(
 
     # Resolve display names via JOIN.
     from app.models.domain import Partner, Location
-    partner_ids = {to.partner_id for to in trip_orders}
+    client_ids = {to.client_id for to in trip_orders}
     loc_ids = {to.pickup_location_id for to in trip_orders} | {to.dropoff_location_id for to in trip_orders}
     loc_ids.discard(None)
-    partner_name_by_id = {c.id: c.name for c in (await db.execute(select(Partner).where(Partner.id.in_(partner_ids)))).scalars().all()} if partner_ids else {}
+    partner_name_by_id = {c.id: c.name for c in (await db.execute(select(Partner).where(Partner.id.in_(client_ids)))).scalars().all()} if client_ids else {}
     loc_name_by_id = {l.id: l.name for l in (await db.execute(select(Location).where(Location.id.in_(loc_ids)))).scalars().all()} if loc_ids else {}
 
     # For per-partner export: load match status and vehicle plates
@@ -774,9 +774,9 @@ async def generate_trip_orders_excel(
     plate_map: dict[int, str] = {}  # to_id -> plate
     vessel_map: dict[int, str] = {}  # to_id -> vessel
     partner_name = None
-    if partner_id:
+    if client_id:
         # Get partner name for filename
-        p_result = await db.execute(select(Partner).where(Partner.id == partner_id))
+        p_result = await db.execute(select(Partner).where(Partner.id == client_id))
         partner_obj = p_result.scalar_one_or_none()
         partner_name = partner_obj.name if partner_obj else None
 
@@ -817,8 +817,12 @@ async def generate_trip_orders_excel(
 
                 if driver_ids:
                     v_result = await db.execute(
-                        select(Vehicle.driver_id, Vehicle.plate).where(
-                            Vehicle.driver_id.in_(driver_ids),
+                        select(VehicleDriver.driver_id, Vehicle.plate)
+                        .join(Vehicle, Vehicle.id == VehicleDriver.vehicle_id)
+                        .where(
+                            VehicleDriver.driver_id.in_(driver_ids),
+                            VehicleDriver.is_active == True,  # noqa: E712
+                            VehicleDriver.role == "PRIMARY",
                             Vehicle.is_active == True,  # noqa: E712
                         )
                     )
@@ -835,7 +839,7 @@ async def generate_trip_orders_excel(
     wb = openpyxl.Workbook()
     ws = wb.active
 
-    if partner_id:
+    if client_id:
         ws.title = "Chuyến theo khách hàng"
         headers = ["STT", "Số container", "Tuyến đường", "Ngày chạy", "Biển số xe", "Số tàu", "Trạng thái khớp", "Đơn giá"]
     else:
@@ -853,7 +857,7 @@ async def generate_trip_orders_excel(
 
     status_labels = {"PENDING": "Chờ ghép", "MATCHED": "Đã đối soát"}
 
-    if partner_id:
+    if client_id:
         stt = 0
         for to in trip_orders:
             containers = containers_map.get(to.id, [])
@@ -880,7 +884,7 @@ async def generate_trip_orders_excel(
             for c in containers:
                 ws.append([
                     f"TO#{to.id}", to.trip_date,
-                    partner_name_by_id.get(to.partner_id, ""),
+                    partner_name_by_id.get(to.client_id, ""),
                     loc_name_by_id.get(to.pickup_location_id, ""),
                     loc_name_by_id.get(to.dropoff_location_id, ""),
                     c.container_number, c.work_type,
@@ -888,10 +892,13 @@ async def generate_trip_orders_excel(
                     status_labels.get(to.status, to.status),
                 ])
 
+    from app.utils.excel_utils import add_template_version as _add_ver
+
     for col in ws.columns:
         max_len = max(len(str(c.value or "")) for c in col)
         ws.column_dimensions[col[0].column_letter].width = min(max_len + 2, 40)
 
+    _add_ver(ws, 13)
     buf = BytesIO()
     wb.save(buf)
     wb.close()
@@ -901,7 +908,7 @@ async def generate_trip_orders_excel(
 
 async def generate_doi_soat_excel(
     db: AsyncSession,
-    partner_id: int,
+    client_id: int,
     date_from: str,
     date_to: str,
 ) -> tuple[bytes, str]:
@@ -919,9 +926,9 @@ async def generate_doi_soat_excel(
     from app.models.base import User as _User
 
     # ── 1. Load partner ───────────────────────────────────────────────────────
-    p_result = await db.execute(select(Partner).where(Partner.id == partner_id))
+    p_result = await db.execute(select(Partner).where(Partner.id == client_id))
     partner = p_result.scalar_one_or_none()
-    partner_name = partner.name if partner else f"Partner #{partner_id}"
+    partner_name = partner.name if partner else f"Partner #{client_id}"
 
     from datetime import date as date_type
 
@@ -930,7 +937,7 @@ async def generate_doi_soat_excel(
 
     # ── 2. Load MATCHED trip orders ───────────────────────────────────────────
     to_query = select(TripOrder).where(
-        TripOrder.partner_id == partner_id,
+        TripOrder.client_id == client_id,
         TripOrder.trip_date >= df,
         TripOrder.trip_date <= dt,
         TripOrder.status == "MATCHED",
@@ -966,10 +973,12 @@ async def generate_doi_soat_excel(
     vessel_map: dict[int, str] = {}  # to_id -> vessel string
     op_type_map: dict[int, str] = {} # to_id -> operation_type label
     _op_labels = {
-        "XUAT_TAU": "Xuất tàu",
-        "NHAP_TAU": "Nhập tàu",
+        "XUAT_NHAP_TAU": "Xuất / Nhập tàu",
         "CHUYEN_BAI": "Chuyển bãi",
-        "KHAC": "Khác",
+        "LAY_VO_HA_HANG": "Lấy vỏ hạ hàng",
+        "CHAY_SA_LAN": "Chạy sà lan",
+        "DONG_KHO": "Đóng kho",
+        "CHUNG": "Chi phí chung",
     }
 
     if to_ids:
@@ -986,7 +995,7 @@ async def generate_doi_soat_excel(
             wo_result = await db.execute(
                 select(
                     WorkOrder.id, WorkOrder.driver_id, WorkOrder.vessel,
-                    WorkOrder.vendor_partner_id, WorkOrder.vehicle_external_plate,
+                    WorkOrder.vendor_id, WorkOrder.vehicle_external_plate,
                     WorkOrder.operation_type,
                 ).where(WorkOrder.id.in_(wo_ids))
             )
@@ -1000,8 +1009,12 @@ async def generate_doi_soat_excel(
             driver_plate_map: dict[int, str] = {}
             if driver_ids:
                 v_result = await db.execute(
-                    select(Vehicle.driver_id, Vehicle.plate).where(
-                        Vehicle.driver_id.in_(driver_ids),
+                    select(VehicleDriver.driver_id, Vehicle.plate)
+                    .join(Vehicle, Vehicle.id == VehicleDriver.vehicle_id)
+                    .where(
+                        VehicleDriver.driver_id.in_(driver_ids),
+                        VehicleDriver.is_active == True,  # noqa: E712
+                        VehicleDriver.role == "PRIMARY",
                         Vehicle.is_active == True,  # noqa: E712
                     )
                 )
@@ -1042,7 +1055,7 @@ async def generate_doi_soat_excel(
     _grey_row    = "F5F8FC"
 
     # ── Title block (rows 1–3) ────────────────────────────────────────────────
-    num_cols = 10  # number of data columns
+    num_cols = 13  # number of data columns
     last_col_letter = get_column_letter(num_cols)
 
     # Row 1: Company + report title
@@ -1068,9 +1081,10 @@ async def generate_doi_soat_excel(
 
     # ── Header row (row 4) ────────────────────────────────────────────────────
     headers = [
-        "STT", "Ngày chạy", "Số cont", "Loại cont",
+        "STT", "Mã chuyến", "Ngày chạy", "Số cont", "Loại cont",
         "Điểm lấy", "Điểm trả",
-        "Tác nghiệp", "Biển số xe", "Số tàu", "Đơn giá (VNĐ)"
+        "Tác nghiệp", "Biển số xe", "Số tàu", "Đơn giá (VNĐ)",
+        "Xác nhận KH", "Ghi chú KH",
     ]
     ws.append(headers)
     header_row = 4
@@ -1117,8 +1131,9 @@ async def generate_doi_soat_excel(
             total_amount += unit_price
 
             data_row = [
-                stt, trip_date_str, c.container_number, wt_label,
+                stt, to.id, trip_date_str, c.container_number, wt_label,
                 pickup, dropoff, op_type, plate, vessel, unit_price or "",
+                "", "",  # Xác nhận KH, Ghi chú KH — empty for customer to fill
             ]
             ws.append(data_row)
             data_row_num = ws.max_row
@@ -1130,7 +1145,9 @@ async def generate_doi_soat_excel(
                 cell.alignment = Alignment(vertical="center")
                 if col_num == 1:  # STT
                     cell.alignment = Alignment(horizontal="center", vertical="center")
-                if col_num == 10 and unit_price:  # Đơn giá
+                if col_num == 2:  # Mã chuyến
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+                if col_num == 11 and unit_price:  # Đơn giá
                     cell.number_format = '#,##0'
                     cell.alignment = Alignment(horizontal="right", vertical="center")
             ws.row_dimensions[data_row_num].height = 18
@@ -1145,7 +1162,7 @@ async def generate_doi_soat_excel(
     # Count per loại cont
     ws.append(["Tổng hợp theo loại container:", *[""] * (num_cols - 1)])
     label_row = ws.max_row
-    ws.merge_cells(f"A{label_row}:J{label_row}")
+    ws.merge_cells(f"A{label_row}:M{label_row}")
     ws[f"A{label_row}"].font = sum_font_bold
     ws[f"A{label_row}"].fill = sum_fill
 
@@ -1168,9 +1185,9 @@ async def generate_doi_soat_excel(
     for row_data in total_row_cells:
         ws.append(row_data)
         r = ws.max_row
-        ws.merge_cells(f"A{r}:I{r}")
+        ws.merge_cells(f"A{r}:K{r}")
         label_cell = ws.cell(row=r, column=1)
-        val_cell   = ws.cell(row=r, column=10)
+        val_cell   = ws.cell(row=r, column=11)
         label_cell.font = Font(bold=True, size=10, color=_blue_dark)
         val_cell.font   = Font(bold=True, size=11, color=_blue_dark)
         val_cell.number_format = '#,##0'
@@ -1179,7 +1196,7 @@ async def generate_doi_soat_excel(
             ws.cell(row=r, column=col_num).fill = total_fill
 
     # ── Column widths ─────────────────────────────────────────────────────────
-    col_widths = [6, 12, 16, 14, 24, 24, 14, 14, 14, 16]
+    col_widths = [6, 10, 12, 16, 14, 24, 24, 14, 14, 14, 16, 14, 24]
     for i, width in enumerate(col_widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = width
 
@@ -1188,6 +1205,115 @@ async def generate_doi_soat_excel(
     wb.close()
     buf.seek(0)
     return buf.getvalue(), partner_name
+
+
+async def parse_customer_response_excel(file_content: bytes) -> list[dict]:
+    """Parse a customer's response Excel file.
+
+    Expected columns (from our export template):
+    - STT, Mã chuyến (trip_id), Ngày chạy, Số cont, Loại cont,
+      Điểm lấy, Điểm trả, Tác nghiệp, Biển số xe, Số tàu, Đơn giá (VNĐ),
+      Xác nhận KH, Ghi chú KH
+
+    Returns list of dicts with:
+      container_number, trip_date, customer_status, customer_note, customer_amount
+    """
+    import openpyxl
+    from datetime import date as date_type
+    from app.utils.iso6346 import normalize_container_number
+
+    workbook = openpyxl.load_workbook(BytesIO(file_content), read_only=True)
+    sheet = workbook.active
+
+    # Find header row — look for known headers
+    header_row_idx = None
+    headers = []
+    for idx, row in enumerate(sheet.iter_rows(min_row=1, max_row=10, values_only=True), start=1):
+        row_vals = [str(v or "").strip() for v in row]
+        if "Số cont" in row_vals or "Xác nhận KH" in row_vals:
+            header_row_idx = idx
+            headers = row_vals
+            break
+
+    if header_row_idx is None:
+        workbook.close()
+        raise ValueError("Không tìm thấy header. File phải có cột 'Số cont' hoặc 'Xác nhận KH'.")
+
+    # Map header names to column indices
+    col_map: dict[str, int] = {}
+    for i, h in enumerate(headers):
+        if h:
+            col_map[h] = i
+
+    # Vietnamese status normalization
+    _VI_STATUS = {
+        "OK": "MATCHED", "KHỚP": "MATCHED", "KHOP": "MATCHED",
+        "SỬA": "MATCHED", "SỬA_SỐ_TIỀN": "MATCHED",
+        "TỪ CHỐI": "REJECTED", "TỪ_CHỐI": "REJECTED", "TỪCHỐI": "REJECTED",
+        "KHÔNG": "REJECTED",
+    }
+
+    results: list[dict] = []
+    for row in sheet.iter_rows(min_row=header_row_idx + 1, values_only=True):
+        if not any(row):
+            continue
+
+        # Get values by header
+        def _get(header_name: str) -> str | None:
+            idx = col_map.get(header_name)
+            if idx is None or idx >= len(row):
+                return None
+            val = row[idx]
+            return str(val).strip() if val is not None else None
+
+        container = _get("Số cont")
+        trip_date_raw = _get("Ngày chạy")
+        confirm = _get("Xác nhận KH")
+        note = _get("Ghi chú KH")
+        amount_raw = _get("Đơn giá (VNĐ)")
+
+        # Skip rows without container or confirmation
+        if not container and not confirm:
+            continue
+
+        # Parse trip_date
+        trip_date = None
+        if trip_date_raw:
+            try:
+                if isinstance(row[col_map.get("Ngày chạy", -1)], date_type):
+                    trip_date = row[col_map.get("Ngày chạy", -1)]
+                else:
+                    trip_date = date_type.fromisoformat(trip_date_raw)
+            except (ValueError, TypeError, IndexError):
+                pass
+
+        # Parse customer_status from confirmation column
+        customer_status = "UNKNOWN"
+        if confirm:
+            confirm_upper = confirm.upper().strip()
+            customer_status = _VI_STATUS.get(confirm_upper, "UNKNOWN")
+            # If it's empty/unfilled, default to UNKNOWN
+            if confirm_upper in ("", "-", "—"):
+                customer_status = "UNKNOWN"
+
+        # Parse amount
+        customer_amount = None
+        if amount_raw:
+            try:
+                customer_amount = int(str(amount_raw).replace(",", "").replace(".", ""))
+            except ValueError:
+                pass
+
+        results.append({
+            "container_number": container,
+            "trip_date": trip_date,
+            "customer_status": customer_status,
+            "customer_note": note,
+            "customer_amount": customer_amount,
+        })
+
+    workbook.close()
+    return results
 
 
 async def generate_salary_excel(

@@ -213,7 +213,7 @@ export function ImportOrders({ onClose }: { onClose?: () => void } = {}) {
         remarks: r.values.remarks || '',
       }))
       const res = await apiClient.commitCustomerExcel({
-        partner_id: Number(clientId),
+        client_id: Number(clientId),
         rows,
         overwrite_duplicates: false,
         structure_hash: preview.structure_hash,

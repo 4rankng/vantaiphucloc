@@ -18,5 +18,5 @@ class SettlementDataLoader(ABC):
 
     @abstractmethod
     async def load(
-        self, *, partner_id: int, period: SettlementPeriod
+        self, *, client_id: int, period: SettlementPeriod
     ) -> SettlementStatement: ...

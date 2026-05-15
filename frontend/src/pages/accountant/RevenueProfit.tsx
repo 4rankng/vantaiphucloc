@@ -81,7 +81,7 @@ function VehiclePnLTable({ rows, cpChung }: { rows: VehiclePnLRow[]; cpChung: nu
         <table className="w-full text-sm min-w-[700px]">
           <thead>
             <tr style={{ background: 'var(--theme-bg-tertiary)' }}>
-              {['Xe', 'Doanh thu', 'CP Xăng dầu', 'CP Sửa chữa', 'CP Khác', 'CP Lương', 'CP Cơ bản', 'Lợi nhuận'].map((h) => (
+              {['Xe', 'Doanh thu', 'CP Xăng dầu', 'CP Sửa chữa', 'CP Lương', 'CP Cơ bản', 'Lợi nhuận'].map((h) => (
                 <th key={h} className="text-right first:text-left px-4 py-2.5 text-xs font-semibold whitespace-nowrap" style={{ color: 'var(--theme-text-muted)' }}>
                   {h}
                 </th>
@@ -108,7 +108,6 @@ function VehiclePnLTable({ rows, cpChung }: { rows: VehiclePnLRow[]; cpChung: nu
                   <td className="px-4 py-2.5 text-right tabular-nums">{formatCurrencyFull(row.revenue)}</td>
                   <td className="px-4 py-2.5 text-right tabular-nums" style={{ color: 'var(--theme-status-error)' }}>{formatCurrencyFull(row.cpXe.xangDau)}</td>
                   <td className="px-4 py-2.5 text-right tabular-nums" style={{ color: 'var(--theme-status-error)' }}>{formatCurrencyFull(row.cpXe.suaChua)}</td>
-                  <td className="px-4 py-2.5 text-right tabular-nums" style={{ color: 'var(--theme-status-error)' }}>{formatCurrencyFull(row.cpXe.khac)}</td>
                   <td className="px-4 py-2.5 text-right tabular-nums" style={{ color: 'var(--theme-status-error)' }}>{formatCurrencyFull(row.cpLuongSanLuong)}</td>
                   <td className="px-4 py-2.5 text-right tabular-nums" style={{ color: 'var(--theme-status-error)' }}>{formatCurrencyFull(row.cpLuongCoBan)}</td>
                   <td className="px-4 py-2.5 text-right tabular-nums font-semibold" style={{ color: positive ? 'var(--theme-status-success)' : 'var(--theme-status-error)' }}>
@@ -121,7 +120,7 @@ function VehiclePnLTable({ rows, cpChung }: { rows: VehiclePnLRow[]; cpChung: nu
           {cpChung > 0 && (
             <tfoot>
               <tr style={{ background: 'var(--theme-bg-tertiary)', borderTop: '2px solid var(--theme-border-default)' }}>
-                <td colSpan={7} className="px-4 py-2.5 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+                <td colSpan={6} className="px-4 py-2.5 text-xs" style={{ color: 'var(--theme-text-muted)' }}>
                   CP Chung (chưa phân bổ vào từng xe)
                 </td>
                 <td className="px-4 py-2.5 text-right tabular-nums text-xs font-semibold" style={{ color: 'var(--theme-status-error)' }}>
@@ -313,7 +312,7 @@ export function RevenueProfit() {
                           : '0.0'
                       return (
                         <tr
-                          key={p.partnerId}
+                          key={p.clientId}
                           style={{
                             background:
                               i % 2 === 0

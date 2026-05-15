@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { type Pricing, type PricingLine, type WorkType, OPERATION_TYPE_LABELS, type OperationType } from '@/data/domain'
-import { useLocations, usePartners, type PricingCreatePayload } from '@/hooks/use-queries'
+import { useLocations } from '@/hooks/use-queries'
+import type { PricingCreatePayload } from '@/services/api/pricings.api'
 import { Label } from '@/components/ui'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
@@ -171,29 +172,18 @@ function MiniLineEditor({
 
 export function PricingForm({ initial, clients, lockedClientId, onSave, onSaveComplete, onCancel, onCreateClient }: Props) {
   const { data: locations = [] } = useLocations()
-  const { data: shippers = [] } = usePartners({ partnerType: 'shipper' })
 
   const [clientId, setClientId] = useState(
     String(lockedClientId ?? initial?.partner.id ?? ''),
   )
   const [pickupLocationName, setPickupLocationName] = useState(initial?.pickupLocation.name ?? '')
   const [dropoffLocationName, setDropoffLocationName] = useState(initial?.dropoffLocation.name ?? '')
-  const [shipperPartnerId, setShipperPartnerId] = useState(
-    initial?.shipperPartnerId ? String(initial.shipperPartnerId) : '',
-  )
   const [operationType, setOperationType] = useState(initial?.operationType ?? '')
   const [workTypeLines, setWorkTypeLines] = useState<Record<WorkType, WorkTypeLine>>(() => initWorkTypeLines(initial))
 
   const clientOptions = useMemo(
     () => clients.map(c => ({ value: String(c.id), label: c.name })),
     [clients],
-  )
-  const shipperOptions = useMemo(
-    () => [
-      { value: '', label: '— Không chọn —' },
-      ...shippers.map(s => ({ value: String(s.id), label: s.code ? `${s.code} - ${s.name}` : s.name })),
-    ],
-    [shippers],
   )
 
   const toggleWorkType = (wt: WorkType) => {
@@ -221,7 +211,6 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onSaveCo
     if (!clientId || !pickupId || !dropoffId || !hasAnyEnabled) return
 
     const extraFields = {
-      shipperPartnerId: shipperPartnerId ? Number(shipperPartnerId) : null,
       operationType: operationType || null,
     }
 
@@ -314,22 +303,13 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onSaveCo
           </div>
         </div>
 
-        {/* Shipper + Operation type — optional override dimensions */}
+        {/* Operation type — optional override */}
         <div>
-          <div className="typo-label mb-1">PHÂN LOẠI GIÁ (tuỳ chọn)</div>
+          <div className="typo-label mb-1">TÁC NGHIỆP (tuỳ chọn)</div>
           <p className="text-[11px] mb-3" style={{ color: 'var(--theme-text-muted)' }}>
-            Để trống = giá mặc định cho tuyến. Điền để tạo mức giá riêng theo chủ hàng hoặc tác nghiệp.
+            Để trống = giá mặc định cho tuyến. Chọn tác nghiệp để tạo mức giá riêng.
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="typo-form-label">Chủ hàng</Label>
-              <InlineSelect
-                options={shipperOptions}
-                value={shipperPartnerId}
-                onChange={setShipperPartnerId}
-                placeholder="— Không chọn —"
-              />
-            </div>
+          <div className="max-w-md">
             <div className="space-y-2">
               <Label className="typo-form-label">Tác nghiệp</Label>
               <select

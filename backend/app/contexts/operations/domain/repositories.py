@@ -32,7 +32,7 @@ class TripOrderRepository(ABC):
         *,
         offset: int,
         limit: int,
-        partner_id: int | None = None,
+        client_id: int | None = None,
         status: TripOrderStatus | None = None,
         trip_date_from: date | None = None,
         trip_date_to: date | None = None,
@@ -43,12 +43,12 @@ class TripOrderRepository(ABC):
     async def find_duplicate(
         self,
         *,
-        partner_id: int,
+        client_id: int,
         trip_date: date,
         container_number: str,
     ) -> TripOrder | None:
         """Idempotency check used by the customer-Excel import:
-        `(partner_id, trip_date, container_number)`."""
+        `(client_id, trip_date, container_number)`."""
 
     @abstractmethod
     async def add(self, t: TripOrder) -> TripOrder: ...
@@ -73,7 +73,7 @@ class WorkOrderRepository(ABC):
         *,
         offset: int,
         limit: int,
-        partner_id: int | None = None,
+        client_id: int | None = None,
         driver_id: int | None = None,
         date_from: date | None = None,
         date_to: date | None = None,

@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback, Fragment } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   usePricings,
@@ -18,17 +18,16 @@ import {
   type WorkType,
 } from '@/data/domain'
 import { PageHeader } from '@/components/shared/PageHeader'
-import { ContBadge } from '@/components/shared/ContBadge'
 import { InlineCell } from '@/components/shared/InlineCell'
 import { CreateClientDialog } from '@/components/shared/CreateClientDialog'
 import { fuzzyMatch } from '@/lib/search-utils'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { PricingForm } from './PricingForm'
-import { Plus, Pencil, Trash2, ChevronLeft, MapPin } from 'lucide-react'
+import { Plus, Pencil, Trash2, ChevronLeft, X, Check } from 'lucide-react'
 
-/** Grid order: full containers first, then empty */
-const GRID_ORDER: WorkType[] = ['F20', 'F40', 'E20', 'E40']
-const WORK_TYPE_LABELS: Record<WorkType, string> = {
+/** Column order for the table */
+const COL_ORDER: WorkType[] = ['F20', 'F40', 'E20', 'E40']
+const COL_LABELS: Record<WorkType, string> = {
   F20: 'Hàng 20ft',
   F40: 'Hàng 40ft',
   E20: 'Rỗng 20ft',
@@ -42,6 +41,19 @@ interface Props {
 
 type DraftLine = PricingLine
 
+/** Extract the display price for a work-type column */
+function cellPrice(pricing: Pricing | undefined): string {
+  if (!pricing || pricing.lines.length === 0) return '—'
+  const first = pricing.lines[0]
+  return formatCurrencyFull(first.unitPrice)
+}
+
+/** Extract unit price number */
+function cellUnitPrice(pricing: Pricing | undefined): number {
+  if (!pricing || pricing.lines.length === 0) return 0
+  return pricing.lines[0].unitPrice
+}
+
 export function PricingClientDetail({ clientId, basePath }: Props) {
   const navigate = useNavigate()
   const { data: pricings = [], isLoading } = usePricings({ clientId })
@@ -52,25 +64,29 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
   const createClient = useCreateClient()
 
   const [showForm, setShowForm] = useState(false)
-  const [editingPricingId, setEditingPricingId] = useState<number | null>(null)
-  const [draftLines, setDraftLines] = useState<DraftLine[]>([])
   const [createClientOpen, setCreateClientOpen] = useState(false)
   const [routeSearch, setRouteSearch] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; desc: string } | null>(null)
 
-  const clientName = clients.find(c => c.id === clientId)?.name ?? pricings[0]?.partner.name ?? ''
+  // Inline editing: keyed by pricing.id
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [draftLines, setDraftLines] = useState<DraftLine[]>([])
 
-  // Group by route+shipper+op key, then build a map of workType -> Pricing per group
+  // Group by route, build workType map
   const grouped = useMemo(() => {
-    const map = new Map<string, { route: string; shipperPartnerId: number | null; operationType: OperationType | null; workTypeMap: Map<WorkType, Pricing> }>()
+    const map = new Map<string, {
+      pickup: string
+      dropoff: string
+      operationType: OperationType | null
+      workTypeMap: Map<WorkType, Pricing>
+    }>()
     pricings.forEach(p => {
-      const shipperId = p.shipperPartnerId ?? null
       const opType = (p.operationType ?? null) as OperationType | null
-      const groupKey = `${p.pickupLocation.name}|${p.dropoffLocation.name}|${shipperId ?? ''}|${opType ?? ''}`
+      const groupKey = `${p.pickupLocation.name}|${p.dropoffLocation.name}|${opType ?? ''}`
       if (!map.has(groupKey)) {
         map.set(groupKey, {
-          route: `${p.pickupLocation.name} - ${p.dropoffLocation.name}`,
-          shipperPartnerId: shipperId,
+          pickup: p.pickupLocation.name,
+          dropoff: p.dropoffLocation.name,
           operationType: opType,
           workTypeMap: new Map(),
         })
@@ -83,21 +99,20 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
   const filteredGroups = useMemo(() => {
     if (!routeSearch.trim()) return grouped
     const q = routeSearch
-    return grouped.filter(([, g]) => fuzzyMatch(g.route, q))
+    return grouped.filter(([, g]) => fuzzyMatch(`${g.pickup} ${g.dropoff}`, q))
   }, [grouped, routeSearch])
 
   const startEdit = useCallback((pricing: Pricing) => {
-    setEditingPricingId(pricing.id)
+    setEditingId(pricing.id)
     setDraftLines(pricing.lines.map(l => ({ ...l })))
   }, [])
 
   const cancelEdit = useCallback(() => {
-    setEditingPricingId(null)
+    setEditingId(null)
     setDraftLines([])
   }, [])
 
   const saveEdit = useCallback((pricing: Pricing) => {
-    const cleanLines = draftLines.map((rest) => rest)
     updatePricing.mutate(
       {
         id: pricing.id,
@@ -106,7 +121,7 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
           workType: pricing.workType,
           pickupLocationId: pricing.pickupLocation.id,
           dropoffLocationId: pricing.dropoffLocation.id,
-          lines: cleanLines,
+          lines: draftLines,
         },
       },
       { onSuccess: () => cancelEdit() },
@@ -146,6 +161,8 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
     )
   }
 
+  const clientName = clients.find(c => c.id === clientId)?.name ?? pricings[0]?.partner.name ?? ''
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -156,7 +173,7 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
             className="flex items-center gap-1 text-sm"
             style={{ color: 'var(--theme-text-muted)' }}
           >
-            <ChevronLeft size={14} /> Quay lại
+            <ChevronLeft size={14} /> Bảng giá
           </button>
         }
         onAdd={() => setShowForm(true)}
@@ -190,7 +207,7 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
         <div className="flex gap-2">
           <input
             type="text"
-            placeholder="Tìm kiếm cung đường..."
+            placeholder="Tìm cung đường..."
             value={routeSearch}
             onChange={e => setRouteSearch(e.target.value)}
             className="search-pill flex-1"
@@ -207,211 +224,201 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
           </div>
         </div>
       ) : (
-        <div className="space-y-6">
-          {filteredGroups.map(([groupKey, { route, shipperPartnerId, operationType, workTypeMap }]) => {
-            const [pickup, dropoff] = route.split(' - ')
-            const totalLines = Array.from(workTypeMap.values()).reduce((sum, p) => sum + p.lines.length, 0)
-            const editingPricing = editingPricingId
-              ? workTypeMap.get(
-                  Array.from(workTypeMap.keys()).find(wt => workTypeMap.get(wt)?.id === editingPricingId) ?? 'F20'
-                ) ?? null
-              : null
-
-            return (
-              <div key={groupKey}>
-                {/* Route header */}
-                <div className="card p-4 mb-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <MapPin size={16} style={{ color: 'var(--theme-brand-primary)' }} />
-                    <span className="typo-h2">{pickup}</span>
-                    <span className="typo-body-sm">→</span>
-                    <span className="typo-h2">{dropoff}</span>
-                    {operationType && (
-                      <span
-                        className="text-xs font-semibold px-2 py-0.5 rounded-md"
-                        style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)', color: 'var(--theme-brand-primary)' }}
-                      >
-                        {OPERATION_TYPE_LABELS[operationType] ?? operationType}
-                      </span>
-                    )}
-                    {shipperPartnerId && (
-                      <span
-                        className="text-xs font-semibold px-2 py-0.5 rounded-md"
-                        style={{ background: 'color-mix(in srgb, var(--theme-status-warning) 10%, transparent)', color: 'var(--theme-status-warning)' }}
-                      >
-                        Chủ hàng #{shipperPartnerId}
-                      </span>
-                    )}
-                    <span
-                      className="ml-auto text-xs font-semibold px-2 py-1 rounded-md"
-                      style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
-                    >
-                      {totalLines} mức
-                    </span>
-                  </div>
-                </div>
-
-                {/* 2x2 grid of work types */}
-                <div
-                  className="grid grid-cols-2 gap-px"
-                  style={{ background: 'var(--theme-border-light)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}
+        /* ── TABLE ── */
+        <div
+          className="rounded-xl overflow-hidden border"
+          style={{ borderColor: 'var(--theme-border-default)' }}
+        >
+          <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: 'var(--theme-bg-secondary)' }}>
+                <th
+                  className="text-left text-[11px] font-bold uppercase tracking-wider px-4 py-3"
+                  style={{ color: 'var(--theme-text-muted)', width: 280 }}
                 >
-                  {GRID_ORDER.map(wt => {
-                    const pricing = workTypeMap.get(wt)
-                    const isEditing = editingPricingId === pricing?.id
-                    const lines = isEditing ? draftLines : (pricing?.lines ?? [])
+                  Tuyến đường
+                </th>
+                {COL_ORDER.map(wt => (
+                  <th
+                    key={wt}
+                    className="text-right text-[11px] font-bold uppercase tracking-wider px-4 py-3"
+                    style={{ color: 'var(--theme-text-muted)' }}
+                  >
+                    {wt}
+                  </th>
+                ))}
+                <th
+                  className="text-center text-[11px] font-bold uppercase tracking-wider px-3 py-3"
+                  style={{ color: 'var(--theme-text-muted)', width: 80 }}
+                >
+                  Tác vụ
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredGroups.map(([groupKey, { pickup, dropoff, operationType, workTypeMap }], rowIdx) => {
+                // Collect all pricings for actions
+                const allPricings = Array.from(workTypeMap.values())
+                const hasAny = allPricings.length > 0
 
-                    return (
-                      <div
-                        key={wt}
-                        className="p-4"
-                        style={{
-                          background: isEditing
-                            ? 'color-mix(in srgb, var(--theme-brand-primary) 5%, var(--theme-bg-primary))'
-                            : 'var(--theme-bg-primary)',
-                        }}
-                      >
-                        {/* Work type header */}
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            <ContBadge type={wt} />
-                            <span className="typo-body-sm font-medium" style={{ color: 'var(--theme-text-secondary)' }}>
-                              {WORK_TYPE_LABELS[wt]}
+                // Check if ANY pricing in this row is being edited
+                const editingPricing = allPricings.find(p => p.id === editingId)
+                const isEditing = !!editingPricing
+
+                return (
+                  <Fragment key={groupKey}>
+                    {/* ── Main price row ── */}
+                    <tr
+                      style={{
+                        background: rowIdx % 2 === 0 ? 'var(--theme-bg-primary)' : 'var(--theme-bg-secondary)',
+                        borderTop: '1px solid var(--theme-border-light)',
+                      }}
+                    >
+                      {/* Route column */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{pickup}</span>
+                          <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>→</span>
+                          <span className="font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{dropoff}</span>
+                          {operationType && (
+                            <span
+                              className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md"
+                              style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)', color: 'var(--theme-brand-primary)' }}
+                            >
+                              {OPERATION_TYPE_LABELS[operationType] ?? operationType}
                             </span>
-                          </div>
-                          {pricing && (
-                            <div className="flex items-center gap-1">
-                              {!isEditing && (
-                                <>
-                                  <button
-                                    onClick={() => startEdit(pricing)}
-                                    className="p-1 rounded-md hover:bg-[var(--theme-bg-tertiary)]"
-                                    style={{ color: 'var(--theme-text-muted)' }}
-                                    title="Chỉnh sửa"
-                                  >
-                                    <Pencil size={14} />
-                                  </button>
-                                  <button
-                                    onClick={() => setDeleteTarget({
-                                      id: pricing.id,
-                                      desc: `${wt} · ${pickup} → ${dropoff}`,
-                                    })}
-                                    className="p-1 rounded-md hover:bg-[var(--theme-bg-tertiary)]"
-                                    style={{ color: 'var(--theme-status-error)' }}
-                                    title="Xoá"
-                                  >
-                                    <Trash2 size={14} />
-                                  </button>
-                                </>
-                              )}
-                            </div>
                           )}
                         </div>
+                      </td>
 
-                        {/* Lines */}
-                        {pricing ? (
-                          <div className="space-y-2">
-                            {lines.map((line, lIdx) => (
-                              <div key={lIdx}>
-                                {/* Quantity badge row */}
-                                <div className="flex items-center gap-2 mb-1.5">
-                                  {isEditing ? (
-                                    <div className="flex items-center gap-1">
-                                      {[1, 2].map(q => (
-                                        <button
-                                          key={q}
-                                          onClick={() => updateDraftLine(lIdx, 'quantity', q)}
-                                          className="px-2 py-0.5 rounded text-xs font-bold"
-                                          style={{
-                                            background: line.quantity === q ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
-                                            color: line.quantity === q ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)',
-                                          }}
-                                        >
-                                          x{q}
-                                        </button>
-                                      ))}
-                                      {lines.length > 1 && (
-                                        <button
-                                          onClick={() => removeDraftLine(lIdx)}
-                                          className="p-0.5 rounded hover:bg-[var(--theme-bg-tertiary)]"
-                                          style={{ color: 'var(--theme-status-error)' }}
-                                          title="Xoá dòng"
-                                        >
-                                          <Trash2 size={12} />
-                                        </button>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    lines.length > 1 && (
-                                      <span className="text-xs font-mono-num" style={{ color: 'var(--theme-text-muted)' }}>
-                                        x{line.quantity}
-                                      </span>
-                                    )
-                                  )}
-                                </div>
+                      {/* Price columns */}
+                      {COL_ORDER.map(wt => {
+                        const pricing = workTypeMap.get(wt)
+                        const isThisEditing = editingId === pricing?.id
 
-                                {/* Price fields */}
-                                <div className="grid grid-cols-3 gap-2 text-xs">
-                                  <div>
-                                    <div className="typo-label mb-0.5" style={{ fontSize: '10px' }}>Đơn giá</div>
-                                    {isEditing ? (
-                                      <InlineCell value={line.unitPrice} onChange={v => updateDraftLine(lIdx, 'unitPrice', v)} editing />
-                                    ) : (
-                                      <span className="font-mono-num font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>
-                                        {formatCurrencyFull(line.unitPrice)}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div>
-                                    <div className="typo-label mb-0.5" style={{ fontSize: '10px' }}>Lương TX</div>
-                                    {isEditing ? (
-                                      <InlineCell value={line.driverSalary} onChange={v => updateDraftLine(lIdx, 'driverSalary', v)} editing />
-                                    ) : (
-                                      <span className="font-mono-num">{formatCurrencyFull(line.driverSalary)}</span>
-                                    )}
-                                  </div>
-                                  <div>
-                                    <div className="typo-label mb-0.5" style={{ fontSize: '10px' }}>Phụ cấp</div>
-                                    {isEditing ? (
-                                      <InlineCell value={line.allowance} onChange={v => updateDraftLine(lIdx, 'allowance', v)} editing />
-                                    ) : (
-                                      <span className="font-mono-num">{formatCurrencyFull(line.allowance)}</span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-
-                            {/* Edit actions */}
-                            {isEditing && (
-                              <div className="flex items-center gap-2 pt-2" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
-                                <button
-                                  onClick={() => addDraftLine()}
-                                  className="flex items-center gap-1 text-xs font-medium"
-                                  style={{ color: 'var(--theme-brand-primary)' }}
-                                >
-                                  <Plus size={12} />
-                                  Thêm dòng
-                                </button>
-                                <div className="flex gap-1 ml-auto">
-                                  <button onClick={() => cancelEdit()} className="btn-secondary text-xs h-7">Huỷ</button>
-                                  <button onClick={() => editingPricing && saveEdit(editingPricing)} className="btn-primary text-xs h-7">Lưu</button>
-                                </div>
-                              </div>
+                        return (
+                          <td key={wt} className="px-4 py-3 text-right">
+                            {isThisEditing ? (
+                              <InlineCell
+                                value={draftLines[0]?.unitPrice ?? 0}
+                                onChange={v => updateDraftLine(0, 'unitPrice', v)}
+                                editing
+                                className="text-sm"
+                              />
+                            ) : (
+                              <span className="font-mono-num font-semibold tabular-nums" style={{ color: pricing ? 'var(--theme-brand-primary)' : 'var(--theme-text-muted)' }}>
+                                {cellPrice(pricing)}
+                              </span>
                             )}
+                          </td>
+                        )
+                      })}
+
+                      {/* Actions column */}
+                      <td className="px-3 py-3 text-center">
+                        {isEditing ? (
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={() => editingPricing && saveEdit(editingPricing)}
+                              className="p-1.5 rounded-lg"
+                              style={{ color: 'var(--theme-status-success)' }}
+                              title="Lưu"
+                            >
+                              <Check size={14} />
+                            </button>
+                            <button
+                              onClick={cancelEdit}
+                              className="p-1.5 rounded-lg"
+                              style={{ color: 'var(--theme-text-muted)' }}
+                              title="Huỷ"
+                            >
+                              <X size={14} />
+                            </button>
                           </div>
                         ) : (
-                          <div className="text-xs py-2" style={{ color: 'var(--theme-text-muted)' }}>
-                            Chưa có giá
+                          <div className="flex items-center justify-center gap-0.5">
+                            {allPricings.map(p => (
+                              <Fragment key={p.id}>
+                                <button
+                                  onClick={() => startEdit(p)}
+                                  className="p-1.5 rounded-lg hover:bg-[var(--theme-bg-tertiary)]"
+                                  style={{ color: 'var(--theme-text-muted)' }}
+                                  title="Sửa"
+                                >
+                                  <Pencil size={13} />
+                                </button>
+                                <button
+                                  onClick={() => setDeleteTarget({
+                                    id: p.id,
+                                    desc: `${p.workType} · ${pickup} → ${dropoff}`,
+                                  })}
+                                  className="p-1.5 rounded-lg hover:bg-[var(--theme-bg-tertiary)]"
+                                  style={{ color: 'var(--theme-status-error)' }}
+                                  title="Xoá"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </Fragment>
+                            ))}
                           </div>
                         )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })}
+                      </td>
+                    </tr>
+
+                    {/* ── Expanded edit row (salary + allowance) ── */}
+                    {isEditing && editingPricing && (
+                      <tr
+                        style={{
+                          background: 'color-mix(in srgb, var(--theme-brand-primary) 4%, var(--theme-bg-primary))',
+                        }}
+                      >
+                        <td colSpan={6} className="px-4 py-3">
+                          <div className="flex items-center gap-6 flex-wrap">
+                            <span className="text-xs font-medium" style={{ color: 'var(--theme-text-muted)' }}>
+                              {editingPricing.workType} · Chi tiết:
+                            </span>
+                            {draftLines.map((line, lIdx) => (
+                              <div key={lIdx} className="flex items-center gap-4">
+                                {draftLines.length > 1 && (
+                                  <span className="text-[10px] font-mono-num px-1.5 py-0.5 rounded" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}>
+                                    x{line.quantity}
+                                  </span>
+                                )}
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[10px] uppercase font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Đơn giá</span>
+                                  <InlineCell value={line.unitPrice} onChange={v => updateDraftLine(lIdx, 'unitPrice', v)} editing className="text-xs" />
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[10px] uppercase font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Lương TX</span>
+                                  <InlineCell value={line.driverSalary} onChange={v => updateDraftLine(lIdx, 'driverSalary', v)} editing className="text-xs" />
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[10px] uppercase font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Phụ cấp</span>
+                                  <InlineCell value={line.allowance} onChange={v => updateDraftLine(lIdx, 'allowance', v)} editing className="text-xs" />
+                                </div>
+                                {draftLines.length > 1 && (
+                                  <button onClick={() => removeDraftLine(lIdx)} className="p-0.5" style={{ color: 'var(--theme-status-error)' }}>
+                                    <Trash2 size={11} />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                            <button
+                              onClick={addDraftLine}
+                              className="flex items-center gap-1 text-[10px] font-medium"
+                              style={{ color: 'var(--theme-brand-primary)' }}
+                            >
+                              <Plus size={11} /> Thêm dòng
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 

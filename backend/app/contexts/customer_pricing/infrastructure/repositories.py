@@ -239,14 +239,14 @@ class SqlPricingRepository(PricingRepository):
     async def find_by_lane(
         self,
         *,
-        partner_id: PartnerId,
+        client_id: PartnerId,
         work_type: WorkType,
         pickup_location_id: LocationId,
         dropoff_location_id: LocationId,
     ) -> Pricing | None:
         orm = (await self.session.execute(
             select(PricingORM).where(
-                PricingORM.partner_id == int(partner_id),
+                PricingORM.client_id == int(client_id),
                 PricingORM.work_type == work_type,
                 PricingORM.pickup_location_id == int(pickup_location_id),
                 PricingORM.dropoff_location_id == int(dropoff_location_id),
@@ -259,9 +259,9 @@ class SqlPricingRepository(PricingRepository):
         return pricing_to_domain(orm, lines)
 
     async def list_for_partner(
-        self, partner_id: PartnerId, *, active_only: bool = True
+        self, client_id: PartnerId, *, active_only: bool = True
     ) -> Sequence[Pricing]:
-        q = select(PricingORM).where(PricingORM.partner_id == int(partner_id))
+        q = select(PricingORM).where(PricingORM.client_id == int(client_id))
         if active_only:
             q = q.where(PricingORM.is_active.is_(True))
         rows = list((await self.session.execute(q)).scalars().all())
@@ -272,12 +272,12 @@ class SqlPricingRepository(PricingRepository):
         return out
 
     async def list(
-        self, *, offset: int, limit: int, partner_id: PartnerId | None = None,
+        self, *, offset: int, limit: int, client_id: PartnerId | None = None,
         active_only: bool = True,
     ) -> tuple[Sequence[Pricing], int]:
         q = select(PricingORM)
-        if partner_id is not None:
-            q = q.where(PricingORM.partner_id == int(partner_id))
+        if client_id is not None:
+            q = q.where(PricingORM.client_id == int(client_id))
         if active_only:
             q = q.where(PricingORM.is_active.is_(True))
         total = await self.session.scalar(

@@ -299,7 +299,7 @@ async def get_vehicle_pnl(
     For each vehicle returns:
       - Doanh thu: SUM(TripOrder.unit_price) for MATCHED TOs whose reconciled
         WorkOrder has this vehicle_id.
-      - CP Xe: vehicle_expenses subtotals (XANG_DAU, SUA_CHUA, KHAC).
+      - CP Xe: vehicle_expenses subtotals (XANG_DAU, SUA_CHUA).
       - CP Lương sản lượng: SUM(WorkOrder.driver_salary + allowance) for WOs
         on this vehicle.
       - CP Lương cơ bản: effective base salary × period for drivers attached to
@@ -389,7 +389,7 @@ async def get_vehicle_pnl(
         .where(
             VehicleExpense.expense_date >= df,
             VehicleExpense.expense_date <= dt,
-            VehicleExpense.category.in_(["XANG_DAU", "SUA_CHUA", "KHAC", "CHUNG"]),
+            VehicleExpense.category.in_(["XANG_DAU", "SUA_CHUA", "CHUNG"]),
         )
         .group_by(VehicleExpense.vehicle_id, VehicleExpense.category)
     )).all()
@@ -401,7 +401,7 @@ async def get_vehicle_pnl(
         if cat == "CHUNG":
             cp_chung_total += amt
         elif vid and vid in vehicles:
-            slot = cp_xe_by_vehicle.setdefault(vid, {"XANG_DAU": 0, "SUA_CHUA": 0, "KHAC": 0})
+            slot = cp_xe_by_vehicle.setdefault(vid, {"XANG_DAU": 0, "SUA_CHUA": 0})
             slot[cat] = slot.get(cat, 0) + amt
 
     # ── 5. CP Lương cơ bản: drivers attached to each vehicle via vehicle_drivers
@@ -443,8 +443,7 @@ async def get_vehicle_pnl(
         xe_summary = VehicleExpenseSummary(
             xang_dau=xe_cats.get("XANG_DAU", 0),
             sua_chua=xe_cats.get("SUA_CHUA", 0),
-            khac=xe_cats.get("KHAC", 0),
-            total=xe_cats.get("XANG_DAU", 0) + xe_cats.get("SUA_CHUA", 0) + xe_cats.get("KHAC", 0),
+            total=xe_cats.get("XANG_DAU", 0) + xe_cats.get("SUA_CHUA", 0),
         )
         loi_nhuan = rev - (xe_summary.total + sal + base)
         rows.append(VehiclePnLRow(

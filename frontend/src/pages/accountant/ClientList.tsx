@@ -264,7 +264,7 @@ export function ClientList() {
                 if (!selectedClient) return
                 setExporting(true)
                 try {
-                  const blob = await exportTripOrdersExcel({ partnerId: Number(selectedClient.id) })
+                  const blob = await exportTripOrdersExcel({ clientId: Number(selectedClient.id) })
                   const url = URL.createObjectURL(blob)
                   const a = document.createElement('a')
                   a.href = url

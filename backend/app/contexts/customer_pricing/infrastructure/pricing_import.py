@@ -292,7 +292,7 @@ async def commit_tariff_rows(
     update_existing_lines: bool = False,
 ) -> CommitResult:
     """Upsert pricing + lines, idempotent on
-    (partner_id, work_type, pickup_location_id, dropoff_location_id) for the
+    (client_id, work_type, pickup_location_id, dropoff_location_id) for the
     header and (pricing_id, quantity) for the line.
 
     If `update_existing_lines` is False (default), an existing line is left
@@ -325,7 +325,7 @@ async def commit_tariff_rows(
 
         existing_pricing = (await db.execute(
             select(Pricing).where(
-                Pricing.partner_id == _partner.id,
+                Pricing.client_id == _partner.id,
                 Pricing.work_type == row.work_type,
                 Pricing.pickup_location_id == pickup_loc.id,
                 Pricing.dropoff_location_id == dropoff_loc.id,
@@ -333,7 +333,7 @@ async def commit_tariff_rows(
         )).scalar_one_or_none()
         if existing_pricing is None:
             pricing = Pricing(
-                partner_id=_partner.id,
+                client_id=_partner.id,
                 work_type=row.work_type,
                 pickup_location_id=pickup_loc.id,
                 dropoff_location_id=dropoff_loc.id,

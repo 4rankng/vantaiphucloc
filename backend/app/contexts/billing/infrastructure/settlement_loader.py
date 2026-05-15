@@ -78,15 +78,15 @@ class SqlSettlementDataLoader(SettlementDataLoader):
         self.session = session
 
     async def load(
-        self, *, partner_id: int, period: SettlementPeriod
+        self, *, client_id: int, period: SettlementPeriod
     ) -> SettlementStatement:
         partner_res = await self.session.execute(
-            select(Partner).where(Partner.id == partner_id)
+            select(Partner).where(Partner.id == client_id)
         )
         partner = partner_res.scalar_one_or_none()
         if partner is None:
             raise SettlementClientNotFound(
-                f"Khách hàng id={partner_id} không tồn tại"
+                f"Khách hàng id={client_id} không tồn tại"
             )
 
         client_ref = SettlementClientRef(
@@ -99,7 +99,7 @@ class SqlSettlementDataLoader(SettlementDataLoader):
 
         trip_query = (
             select(TripOrder)
-            .where(TripOrder.partner_id == partner_id)
+            .where(TripOrder.client_id == client_id)
             .where(TripOrder.trip_date >= period.start)
             .where(TripOrder.trip_date <= period.end)
             .where(TripOrder.status != "CANCELLED")

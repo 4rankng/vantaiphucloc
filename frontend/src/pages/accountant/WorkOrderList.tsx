@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Upload, FileSpreadsheet, X, Sparkles, ArrowLeft } from 'lucide-react'
+import { Upload, FileSpreadsheet, X, Sparkles, ArrowLeft, Bot } from 'lucide-react'
 import {
   Button,
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -11,22 +11,22 @@ import { FilterToolbar } from '@/components/shared/FilterToolbar'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { AutoMatchDialog } from '@/components/shared/AutoMatchDialog'
 import { fuzzyMatch } from '@/lib/search-utils'
-import { useWorkOrders, useUploadCustomerExcel, usePartners, useAutoMatch, useMatchScores } from '@/hooks/use-queries'
+import { useWorkOrders, useUploadCustomerExcel, useBulkImportAndMatch, usePartners, useAutoMatch, useMatchScores, useAIParsePreview } from '@/hooks/use-queries'
 import { WorkOrderMasterList } from './work-orders/WorkOrderMasterList'
 import { MatchDetailPanel } from './work-orders/MatchDetailPanel'
 import type { AutoMatchResponse } from '@/services/api/tripOrders.api'
+import type { AIParsePreviewResult, AIParsedRow } from '@/services/api/workOrders.api'
 import { useToast } from '@/components/atoms/Toast'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useMonthParams } from './use-month-params'
 import type { WorkOrderMatchScore } from '@/data/domain'
 
-type StatusFilter = 'all' | 'PENDING' | 'MATCHED' | 'NO_SHIPPER'
+type StatusFilter = 'all' | 'PENDING' | 'MATCHED'
 
 const STATUS_OPTIONS = [
   { key: 'all', label: 'Tất cả' },
   { key: 'PENDING', label: 'Chờ ghép', color: 'var(--theme-status-warning)' },
   { key: 'MATCHED', label: 'Đã khớp', color: 'var(--theme-status-success)' },
-  { key: 'NO_SHIPPER', label: 'Chưa gán chủ hàng', color: 'var(--theme-status-warning)' },
 ]
 
 export function WorkOrderList() {
@@ -37,6 +37,7 @@ export function WorkOrderList() {
   const { data: clients = [] } = usePartners()
   const { data: matchScoresData } = useMatchScores(dateFrom, dateTo)
   const { mutate: uploadExcel, isPending: uploading } = useUploadCustomerExcel()
+  const { mutate: bulkImport, isPending: bulkImporting } = useBulkImportAndMatch()
   const { mutate: runAutoMatch, isPending: autoMatching } = useAutoMatch()
 
   const [searchParams] = useSearchParams()
@@ -52,6 +53,13 @@ export function WorkOrderList() {
   const [file, setFile] = useState<File | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const bulkFileRef = useRef<HTMLInputElement>(null)
+
+  // AI parse state
+  const { mutate: aiParse, isPending: aiParsing } = useAIParsePreview()
+  const [aiResult, setAiResult] = useState<AIParsePreviewResult | null>(null)
+  const [aiPreviewOpen, setAiPreviewOpen] = useState(false)
+  const aiFileRef = useRef<HTMLInputElement>(null)
 
   const matchScores = useMemo(() => {
     const map = new Map<number, WorkOrderMatchScore>()
@@ -67,7 +75,6 @@ export function WorkOrderList() {
     let result = workOrders
     if (statusFilter === 'PENDING') result = result.filter(w => w.status === 'PENDING')
     else if (statusFilter === 'MATCHED') result = result.filter(w => w.status === 'MATCHED' || w.status === 'COMPLETED')
-    else if (statusFilter === 'NO_SHIPPER') result = result.filter(w => !w.shipperPartnerId)
     if (search.trim()) {
       const q = search
       result = result.filter(w =>
@@ -137,6 +144,50 @@ export function WorkOrderList() {
       },
     )
   }, [runAutoMatch, dateFrom, dateTo, toast])
+
+  const handleBulkImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    if (!f) return
+    if (!f.name.endsWith('.xlsx') && !f.name.endsWith('.xls')) {
+      toast.error('Lỗi', 'Chỉ hỗ trợ file .xlsx hoặc .xls')
+      return
+    }
+    bulkImport(
+      { file: f },
+      {
+        onSuccess: (res) => {
+          toast.success(
+            'Nhập đơn hàng',
+            `✅ Đã nhập ${res.created} đơn · Khớp: ${res.matched} chuyến · Cảnh báo: ${res.warnings} · Chưa khớp: ${res.unmatched}`,
+          )
+        },
+        onError: () => toast.error('Lỗi', 'Không thể nhập file đơn hàng'),
+      },
+    )
+    // Reset so the same file can be re-selected
+    e.target.value = ''
+  }, [bulkImport, toast])
+
+  const handleAIParse = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    if (!f) return
+    if (!f.name.endsWith('.xlsx') && !f.name.endsWith('.xls')) {
+      toast.error('Lỗi', 'Chỉ hỗ trợ file .xlsx hoặc .xls')
+      return
+    }
+    aiParse(
+      { file: f },
+      {
+        onSuccess: (res) => {
+          setAiResult(res)
+          setAiPreviewOpen(true)
+          toast.info('AI Phân tích', `Đã nhận diện ${res.totalRows} dòng · Độ tin cậy: ${(res.mappingConfidence * 100).toFixed(0)}%`)
+        },
+        onError: () => toast.error('Lỗi', 'Không thể phân tích file bằng AI'),
+      },
+    )
+    e.target.value = ''
+  }, [aiParse, toast])
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -216,6 +267,101 @@ export function WorkOrderList() {
     </Dialog>
   )
 
+  // ── AI Preview dialog ──
+  const aiPreviewDialogJsx = (
+    <Dialog open={aiPreviewOpen} onOpenChange={setAiPreviewOpen}>
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            🤖 Kết quả phân tích AI
+            {aiResult && (
+              <span className="text-xs font-normal px-2 py-0.5 rounded-full" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}>
+                {aiResult.filename}
+              </span>
+            )}
+          </DialogTitle>
+        </DialogHeader>
+
+        {aiResult && (
+          <div className="flex-1 overflow-auto space-y-3">
+            {/* Stats row */}
+            <div className="grid grid-cols-4 gap-3 text-sm">
+              <div className="rounded-xl p-3" style={{ background: 'var(--theme-bg-tertiary)' }}>
+                <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Tổng dòng</div>
+                <div className="font-bold text-lg">{aiResult.totalRows}</div>
+              </div>
+              <div className="rounded-xl p-3" style={{ background: 'var(--theme-bg-tertiary)' }}>
+                <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Độ tin cậy</div>
+                <div className="font-bold text-lg" style={{ color: aiResult.mappingConfidence >= 0.8 ? 'var(--theme-status-success)' : aiResult.mappingConfidence >= 0.5 ? 'var(--theme-status-warning)' : 'var(--theme-status-danger)' }}>
+                  {(aiResult.mappingConfidence * 100).toFixed(0)}%
+                </div>
+              </div>
+              <div className="rounded-xl p-3" style={{ background: 'var(--theme-bg-tertiary)' }}>
+                <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Cache</div>
+                <div className="font-bold text-lg">{aiResult.cachedMapping ? '✅' : '—'}</div>
+              </div>
+              <div className="rounded-xl p-3" style={{ background: 'var(--theme-bg-tertiary)' }}>
+                <div className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Chi phí</div>
+                <div className="font-bold text-lg">${aiResult.costEstimateUsd.toFixed(4)}</div>
+              </div>
+            </div>
+
+            {/* Preview table */}
+            <div className="overflow-x-auto rounded-xl border" style={{ borderColor: 'var(--theme-border-default)' }}>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr style={{ background: 'var(--theme-bg-tertiary)' }}>
+                    <th className="px-2 py-1.5 text-left font-semibold">#</th>
+                    {Object.values(aiResult.columnMapping).map((field) => (
+                      <th key={field} className="px-2 py-1.5 text-left font-semibold">{field}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {aiResult.rows.slice(0, 20).map((row) => (
+                    <tr key={row.rowNumber} className="border-t" style={{ borderColor: 'var(--theme-border-default)' }}>
+                      <td className="px-2 py-1" style={{ color: 'var(--theme-text-muted)' }}>{row.rowNumber}</td>
+                      {Object.values(aiResult.columnMapping).map((field) => {
+                        const cell = row.cells[field]
+                        if (!cell) return <td key={field} className="px-2 py-1">—</td>
+                        const bgColor = cell.confidence >= 0.8
+                          ? 'var(--theme-status-success-bg, rgba(34,197,94,0.1))'
+                          : cell.confidence >= 0.5
+                            ? 'var(--theme-status-warning-bg, rgba(234,179,8,0.1))'
+                            : 'var(--theme-status-danger-bg, rgba(239,68,68,0.1))'
+                        return (
+                          <td
+                            key={field}
+                            className="px-2 py-1"
+                            style={{ background: bgColor }}
+                            title={cell.cleaned && cell.originalValue ? `Gốc: ${cell.originalValue}` : undefined}
+                          >
+                            {cell.value ?? '—'}
+                            {cell.cleaned && ' ✏️'}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                onClick={() => setAiPreviewOpen(false)}
+                className="h-9 text-sm font-semibold rounded-xl"
+                style={{ background: 'var(--theme-bg-secondary)', color: 'var(--theme-text-primary)', border: '1px solid var(--theme-border-default)' }}
+              >
+                Đóng
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+
   // ── Filter bar (shared between mobile and desktop) ──
   // On mobile (<lg): stack month navigator + pending counter on row 1, search/chips on row 2.
   // On desktop (≥lg): single row with month navigator pinned left, search/chips center, counter right.
@@ -258,6 +404,26 @@ export function WorkOrderList() {
         <FileSpreadsheet className="h-3.5 w-3.5" />
         Nhập đơn
       </Button>
+      <input ref={bulkFileRef} type="file" accept=".xlsx,.xls" onChange={handleBulkImport} className="hidden" />
+      <Button
+        onClick={() => bulkFileRef.current?.click()}
+        disabled={bulkImporting}
+        className="h-8 gap-1.5 text-[11px] font-semibold rounded-lg"
+        style={{ background: 'transparent', border: '1px solid var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
+      >
+        <Upload className="h-3.5 w-3.5" />
+        {bulkImporting ? 'Đang nhập...' : 'Tải file PLV'}
+      </Button>
+      <input ref={aiFileRef} type="file" accept=".xlsx,.xls" onChange={handleAIParse} className="hidden" />
+      <Button
+        onClick={() => aiFileRef.current?.click()}
+        disabled={aiParsing}
+        className="h-8 gap-1.5 text-[11px] font-semibold rounded-lg"
+        style={{ background: 'transparent', border: '1px solid var(--theme-brand-primary)', color: 'var(--theme-brand-primary)' }}
+      >
+        <Bot className="h-3.5 w-3.5" />
+        {aiParsing ? 'Đang phân tích...' : '🤖 Phân tích AI'}
+      </Button>
     </div>
   )
 
@@ -296,6 +462,7 @@ export function WorkOrderList() {
         </Sheet>
 
         {importDialogJsx}
+        {aiPreviewDialogJsx}
         <AutoMatchDialog open={!!autoMatchResult} onClose={() => setAutoMatchResult(null)} result={autoMatchResult} />
       </div>
     )
@@ -332,6 +499,7 @@ export function WorkOrderList() {
       </div>
 
       {importDialogJsx}
+      {aiPreviewDialogJsx}
       <AutoMatchDialog open={!!autoMatchResult} onClose={() => setAutoMatchResult(null)} result={autoMatchResult} />
     </div>
   )

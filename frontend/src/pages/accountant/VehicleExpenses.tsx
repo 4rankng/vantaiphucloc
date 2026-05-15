@@ -1,13 +1,13 @@
 /**
- * Chi phí xe — Vehicle Expense management page.
+ * Chi phí xe — Monthly vehicle expense entry.
  *
- * Accountants record fuel, repair, and other vehicle costs here.
- * These feed directly into the per-vehicle P&L report.
+ * Accountant picks a month/year, then enters expenses in a grid:
+ *   Rows = vehicles, Columns = Xăng dầu, Sửa chữa, Chi phí chung
+ * All amounts are for the whole month.
  */
 
-import { useState } from 'react'
-import { Plus, Pencil, Trash2, Car } from 'lucide-react'
-import { Button, Input, Select } from '@/components/ui'
+import { useState, useMemo, useCallback } from 'react'
+import { Save, Loader2, Car, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useToast } from '@/components/atoms/Toast'
 import { formatCurrencyFull } from '@/data/domain'
 import {
@@ -17,238 +17,206 @@ import {
   useDeleteVehicleExpense,
   useDrivers,
 } from '@/hooks/use-queries'
-import type { VehicleExpense, VehicleExpenseCreate } from '@/services/api/vehicleExpenses.api'
+import type { VehicleExpense } from '@/services/api/vehicleExpenses.api'
 import { EXPENSE_CATEGORY_LABELS } from '@/services/api/vehicleExpenses.api'
 
-// ── Form dialog ───────────────────────────────────────────────────────────────
+const CATEGORIES = ['XANG_DAU', 'SUA_CHUA', 'CHUNG'] as const
+type ExpenseCat = typeof CATEGORIES[number]
 
-interface ExpenseFormState {
-  vehicleId: string
-  category: string
-  amount: string
-  expenseDate: string
-  description: string
+const CATEGORY_SHORT: Record<ExpenseCat, string> = {
+  XANG_DAU: 'Xăng dầu',
+  SUA_CHUA: 'Sửa chữa',
+  CHUNG: 'Chi phí chung',
 }
 
-const EMPTY_FORM: ExpenseFormState = {
-  vehicleId: '',
-  category: 'XANG_DAU',
-  amount: '',
-  expenseDate: new Date().toISOString().slice(0, 10),
-  description: '',
+// Get month key from date
+function toMonthKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-function ExpenseFormDialog({
-  initial,
-  vehicles,
-  onSubmit,
-  onClose,
-  loading,
-}: {
-  initial?: ExpenseFormState
-  vehicles: { id: number; plate: string }[]
-  onSubmit: (form: ExpenseFormState) => void
-  onClose: () => void
-  loading?: boolean
-}) {
-  const [form, setForm] = useState<ExpenseFormState>(initial ?? EMPTY_FORM)
-  const isChung = form.category === 'CHUNG'
-
-  const set = (key: keyof ExpenseFormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
-    setForm((f) => ({ ...f, [key]: e.target.value }))
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSubmit(form)
-  }
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.4)' }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
-    >
-      <div
-        className="w-full max-w-md rounded-xl p-6 space-y-4"
-        style={{ background: 'var(--theme-bg-primary)', border: '1px solid var(--theme-border-default)' }}
-      >
-        <h2 className="typo-h2">{initial ? 'Sửa chi phí' : 'Thêm chi phí xe'}</h2>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          {/* Category */}
-          <div>
-            <label className="typo-caption mb-1 block">Loại chi phí *</label>
-            <select
-              value={form.category}
-              onChange={set('category')}
-              required
-              className="w-full rounded-lg border px-3 py-2 text-sm"
-              style={{
-                background: 'var(--theme-bg-secondary)',
-                borderColor: 'var(--theme-border-default)',
-                color: 'var(--theme-text-primary)',
-              }}
-            >
-              {Object.entries(EXPENSE_CATEGORY_LABELS).map(([val, label]) => (
-                <option key={val} value={val}>{label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Vehicle — hidden for CHUNG */}
-          {!isChung && (
-            <div>
-              <label className="typo-caption mb-1 block">Xe *</label>
-              <select
-                value={form.vehicleId}
-                onChange={set('vehicleId')}
-                required={!isChung}
-                className="w-full rounded-lg border px-3 py-2 text-sm"
-                style={{
-                  background: 'var(--theme-bg-secondary)',
-                  borderColor: 'var(--theme-border-default)',
-                  color: 'var(--theme-text-primary)',
-                }}
-              >
-                <option value="">Chọn xe…</option>
-                {vehicles.map((v) => (
-                  <option key={v.id} value={String(v.id)}>{v.plate}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Amount */}
-          <div>
-            <label className="typo-caption mb-1 block">Số tiền (VNĐ) *</label>
-            <Input
-              type="number"
-              min={1}
-              value={form.amount}
-              onChange={set('amount')}
-              placeholder="Nhập số tiền"
-              required
-            />
-          </div>
-
-          {/* Date */}
-          <div>
-            <label className="typo-caption mb-1 block">Ngày *</label>
-            <Input
-              type="date"
-              value={form.expenseDate}
-              onChange={set('expenseDate')}
-              required
-            />
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="typo-caption mb-1 block">Ghi chú</label>
-            <textarea
-              value={form.description}
-              onChange={set('description')}
-              rows={2}
-              placeholder="Mô tả chi phí…"
-              className="w-full rounded-lg border px-3 py-2 text-sm resize-none"
-              style={{
-                background: 'var(--theme-bg-secondary)',
-                borderColor: 'var(--theme-border-default)',
-                color: 'var(--theme-text-primary)',
-              }}
-            />
-          </div>
-
-          <div className="flex gap-2 pt-1">
-            <Button type="button" variant="ghost" onClick={onClose} className="flex-1">
-              Hủy
-            </Button>
-            <Button type="submit" variant="primary" className="flex-1" disabled={loading}>
-              {loading ? 'Đang lưu…' : 'Lưu'}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
+function monthLabel(key: string): string {
+  const [y, m] = key.split('-')
+  return `Tháng ${parseInt(m)}/${y}`
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+function monthStart(key: string): string {
+  return `${key}-01`
+}
+
+function monthEnd(key: string): string {
+  const [y, m] = key.split('-').map(Number)
+  const lastDay = new Date(y, m, 0).getDate()
+  return `${key}-${String(lastDay).padStart(2, '0')}`
+}
+
+function prevMonth(key: string): string {
+  const [y, m] = key.split('-').map(Number)
+  const d = new Date(y, m - 1, 0)
+  return toMonthKey(d)
+}
+
+function nextMonth(key: string): string {
+  const [y, m] = key.split('-').map(Number)
+  const d = new Date(y, m, 1)
+  return toMonthKey(d)
+}
 
 export function VehicleExpenses() {
   const toast = useToast()
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editing, setEditing] = useState<VehicleExpense | null>(null)
-  const [filterCat, setFilterCat] = useState('')
-  const [filterFrom, setFilterFrom] = useState('')
-  const [filterTo, setFilterTo] = useState('')
+  const [monthKey, setMonthKey] = useState(toMonthKey(new Date()))
+  const [draft, setDraft] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState(false)
 
-  const { data: expensePage, isLoading } = useVehicleExpenses({
-    category: (filterCat || undefined) as any,
-    dateFrom: filterFrom || undefined,
-    dateTo: filterTo || undefined,
+  const df = monthStart(monthKey)
+  const dt = monthEnd(monthKey)
+
+  const { data: expensePage, isLoading, refetch } = useVehicleExpenses({
+    dateFrom: df,
+    dateTo: dt,
   })
   const { data: driverPage } = useDrivers()
-
-  // Build list of (vehicle_id, plate) from driver data
-  const vehicles = (driverPage?.items ?? [])
-    .filter((d) => d.vehiclePlate)
-    .map((d) => ({ id: d.id, plate: d.vehiclePlate! }))
 
   const createExpense = useCreateVehicleExpense()
   const updateExpense = useUpdateVehicleExpense()
   const deleteExpense = useDeleteVehicleExpense()
 
-  const handleSubmit = (form: ExpenseFormState) => {
-    const payload: VehicleExpenseCreate = {
-      vehicleId: form.category !== 'CHUNG' && form.vehicleId ? Number(form.vehicleId) : null,
-      category: form.category as any,
-      amount: Number(form.amount),
-      expenseDate: form.expenseDate,
-      description: form.description || null,
-    }
-
-    if (editing) {
-      updateExpense.mutate(
-        { id: editing.id, payload },
-        {
-          onSuccess: () => {
-            toast.success('Đã cập nhật chi phí')
-            setEditing(null)
-          },
-          onError: () => toast.error('Lỗi', 'Không thể cập nhật chi phí'),
-        },
-      )
-    } else {
-      createExpense.mutate(payload, {
-        onSuccess: () => {
-          toast.success('Đã thêm chi phí')
-          setDialogOpen(false)
-        },
-        onError: (err: any) => toast.error('Lỗi', err?.message ?? 'Không thể thêm chi phí'),
-      })
-    }
-  }
-
-  const handleDelete = (exp: VehicleExpense) => {
-    if (!confirm(`Xóa chi phí ${EXPENSE_CATEGORY_LABELS[exp.category]} — ${formatCurrencyFull(exp.amount)}?`)) return
-    deleteExpense.mutate(exp.id, {
-      onSuccess: () => toast.success('Đã xóa chi phí'),
-      onError: () => toast.error('Lỗi', 'Không thể xóa'),
-    })
-  }
-
-  const editingForm: ExpenseFormState | undefined = editing
-    ? {
-        vehicleId: String(editing.vehicleId ?? ''),
-        category: editing.category,
-        amount: String(editing.amount),
-        expenseDate: editing.expenseDate,
-        description: editing.description ?? '',
+  // Build vehicle list from drivers
+  const vehicles = useMemo(() => {
+    const map = new Map<number, string>()
+    for (const d of driverPage?.items ?? []) {
+      if (d.vehiclePlate && d.vehicleId) {
+        map.set(d.vehicleId, d.vehiclePlate)
       }
-    : undefined
+    }
+    return Array.from(map.entries())
+      .map(([id, plate]) => ({ id, plate }))
+      .sort((a, b) => a.plate.localeCompare(b.plate))
+  }, [driverPage])
 
-  const expenses = expensePage?.items ?? []
-  const total = expenses.reduce((sum, e) => sum + e.amount, 0)
+  // Build lookup: `${vehicleId}-${category}` → existing expense
+  const existingMap = useMemo(() => {
+    const map = new Map<string, VehicleExpense>()
+    for (const exp of expensePage?.items ?? []) {
+      const key = exp.category === 'CHUNG' ? `chung-${exp.id}` : `${exp.vehicleId}-${exp.category}`
+      // Keep the first match per vehicle-category combo
+      if (!map.has(`${exp.vehicleId ?? 'chung'}-${exp.category}`)) {
+        map.set(`${exp.vehicleId ?? 'chung'}-${exp.category}`, exp)
+      }
+    }
+    return map
+  }, [expensePage])
+
+  // Get display value for a cell
+  const getCellValue = useCallback((vehicleId: number | null, cat: ExpenseCat): string => {
+    const lookupKey = `${vehicleId ?? 'chung'}-${cat}`
+    const draftKey = `${vehicleId ?? 'chung'}-${cat}`
+    if (draft[draftKey] !== undefined) return draft[draftKey]
+    const existing = existingMap.get(lookupKey)
+    return existing ? String(existing.amount) : ''
+  }, [draft, existingMap])
+
+  const setCellValue = useCallback((vehicleId: number | null, cat: ExpenseCat, value: string) => {
+    const key = `${vehicleId ?? 'chung'}-${cat}`
+    setDraft(prev => ({ ...prev, [key]: value }))
+  }, [])
+
+  // Calculate totals
+  const totals = useMemo(() => {
+    const result: Record<ExpenseCat, number> = { XANG_DAU: 0, SUA_CHUA: 0, CHUNG: 0 }
+    for (const v of vehicles) {
+      for (const cat of CATEGORIES) {
+        const val = parseInt(getCellValue(v.id, cat)) || 0
+        result[cat] += val
+      }
+    }
+    // Also count chung separately
+    const chungVal = parseInt(getCellValue(null, 'CHUNG')) || 0
+    if (chungVal > 0 && vehicles.length === 0) result.CHUNG = chungVal
+    return result
+  }, [vehicles, getCellValue])
+
+  // Save all changes
+  const handleSave = useCallback(async () => {
+    setSaving(true)
+    let errorCount = 0
+
+    for (const v of vehicles) {
+      for (const cat of CATEGORIES) {
+        if (cat === 'CHUNG') continue // handled separately
+        const lookupKey = `${v.id}-${cat}`
+        const rawVal = draft[lookupKey]
+        if (rawVal === undefined) continue // unchanged
+        const amount = parseInt(rawVal) || 0
+        const existing = existingMap.get(lookupKey)
+
+        try {
+          if (existing) {
+            if (amount === 0) {
+              await deleteExpense.mutateAsync(existing.id)
+            } else if (amount !== existing.amount) {
+              await updateExpense.mutateAsync({
+                id: existing.id,
+                payload: {
+                  vehicleId: v.id,
+                  category: cat,
+                  amount,
+                  expenseDate: df,
+                  description: null,
+                },
+              })
+            }
+          } else if (amount > 0) {
+            await createExpense.mutateAsync({
+              vehicleId: v.id,
+              category: cat,
+              amount,
+              expenseDate: df,
+              description: null,
+            })
+          }
+        } catch {
+          errorCount++
+        }
+      }
+    }
+
+    // Handle CHUNG row (no vehicle)
+    const chungKey = `chung-CHUNG`
+    const chungRaw = draft[chungKey]
+    if (chungRaw !== undefined) {
+      const amount = parseInt(chungRaw) || 0
+      // Find existing chung expense for this month
+      const existingChung = (expensePage?.items ?? []).find(e => e.category === 'CHUNG')
+      try {
+        if (existingChung) {
+          if (amount === 0) {
+            await deleteExpense.mutateAsync(existingChung.id)
+          } else if (amount !== existingChung.amount) {
+            await updateExpense.mutateAsync({
+              id: existingChung.id,
+              payload: { vehicleId: null, category: 'CHUNG', amount, expenseDate: df, description: null },
+            })
+          }
+        } else if (amount > 0) {
+          await createExpense.mutateAsync({ vehicleId: null, category: 'CHUNG', amount, expenseDate: df, description: null })
+        }
+      } catch {
+        errorCount++
+      }
+    }
+
+    setSaving(false)
+    setDraft({})
+
+    if (errorCount === 0) {
+      toast.success('Đã lưu chi phí', monthLabel(monthKey))
+    } else {
+      toast.error('Lỗi', `${errorCount} khoản không thể lưu`)
+    }
+    refetch()
+  }, [draft, vehicles, existingMap, df, monthKey, createExpense, updateExpense, deleteExpense, toast, refetch, expensePage])
+
+  const hasChanges = Object.keys(draft).length > 0
 
   return (
     <div className="space-y-6">
@@ -257,172 +225,205 @@ export function VehicleExpenses() {
         <div>
           <h1 className="typo-display">Chi phí xe</h1>
           <p className="typo-body-sm mt-1" style={{ color: 'var(--theme-text-muted)' }}>
-            Xăng dầu · Sửa chữa · Chi phí khác · Chi phí chung
+            Nhập chi phí theo tháng cho từng xe
           </p>
         </div>
-        <Button variant="primary" onClick={() => setDialogOpen(true)}>
-          <Plus className="w-4 h-4 mr-1" />
-          Thêm chi phí
-        </Button>
       </div>
 
-      {/* Filters */}
-      <div className="card p-4 flex flex-wrap gap-3 items-end">
-        <div className="flex-1 min-w-[140px]">
-          <label className="typo-caption mb-1 block">Loại chi phí</label>
-          <select
-            value={filterCat}
-            onChange={(e) => setFilterCat(e.target.value)}
-            className="w-full rounded-lg border px-3 py-2 text-sm"
-            style={{
-              background: 'var(--theme-bg-secondary)',
-              borderColor: 'var(--theme-border-default)',
-              color: 'var(--theme-text-primary)',
-            }}
+      {/* Month navigator */}
+      <div
+        className="flex items-center gap-3 rounded-xl px-4 py-3"
+        style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
+      >
+        <button
+          onClick={() => { setMonthKey(prevMonth(monthKey)); setDraft({}) }}
+          className="p-1.5 rounded-lg"
+          style={{ color: 'var(--theme-text-muted)' }}
+        >
+          <ChevronLeft size={18} />
+        </button>
+        <span className="text-sm font-bold min-w-[120px] text-center" style={{ color: 'var(--theme-text-primary)' }}>
+          {monthLabel(monthKey)}
+        </span>
+        <button
+          onClick={() => { setMonthKey(nextMonth(monthKey)); setDraft({}) }}
+          className="p-1.5 rounded-lg"
+          style={{ color: 'var(--theme-text-muted)' }}
+        >
+          <ChevronRight size={18} />
+        </button>
+        {monthKey !== toMonthKey(new Date()) && (
+          <button
+            onClick={() => { setMonthKey(toMonthKey(new Date())); setDraft({}) }}
+            className="text-xs font-medium px-2 py-1 rounded-md"
+            style={{ color: 'var(--theme-brand-primary)', background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)' }}
           >
-            <option value="">Tất cả</option>
-            {Object.entries(EXPENSE_CATEGORY_LABELS).map(([v, l]) => (
-              <option key={v} value={v}>{l}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="typo-caption mb-1 block">Từ ngày</label>
-          <Input type="date" value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)} />
-        </div>
-        <div>
-          <label className="typo-caption mb-1 block">Đến ngày</label>
-          <Input type="date" value={filterTo} onChange={(e) => setFilterTo(e.target.value)} />
-        </div>
-        {(filterCat || filterFrom || filterTo) && (
-          <Button variant="ghost" onClick={() => { setFilterCat(''); setFilterFrom(''); setFilterTo('') }}>
-            Xóa bộ lọc
-          </Button>
+            Tháng này
+          </button>
         )}
       </div>
 
-      {/* Summary total */}
-      {!isLoading && expenses.length > 0 && (
-        <div
-          className="rounded-lg px-4 py-2.5 flex items-center justify-between"
-          style={{ background: 'var(--theme-bg-tertiary)' }}
-        >
-          <span className="typo-caption">Tổng chi phí ({expenses.length} khoản)</span>
-          <span className="text-sm font-semibold tabular-nums" style={{ color: 'var(--theme-status-error)' }}>
-            {formatCurrencyFull(total)}
-          </span>
-        </div>
-      )}
-
-      {/* Table */}
       {isLoading ? (
         <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
+          {[1, 2, 3].map(i => (
             <div key={i} className="h-12 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
           ))}
         </div>
-      ) : expenses.length === 0 ? (
+      ) : vehicles.length === 0 ? (
         <div className="card p-12 text-center">
           <Car className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--theme-text-muted)', opacity: 0.4 }} />
-          <p className="typo-h3 mb-1">Chưa có chi phí nào</p>
+          <p className="typo-h3 mb-1">Chưa có xe nào</p>
           <p className="typo-body-sm" style={{ color: 'var(--theme-text-muted)' }}>
-            Bấm "Thêm chi phí" để ghi nhận chi phí xe
+            Thêm xe và gán lái xe trước khi nhập chi phí
           </p>
         </div>
       ) : (
-        <div className="rounded-lg overflow-hidden" style={{ border: '1px solid var(--theme-border-default)' }}>
-          <table className="w-full text-sm">
-            <thead>
-              <tr style={{ background: 'var(--theme-bg-tertiary)' }}>
-                {['Ngày', 'Loại', 'Xe', 'Số tiền', 'Ghi chú', ''].map((h) => (
+        <>
+          {/* Monthly expense grid */}
+          <div
+            className="rounded-xl overflow-hidden border"
+            style={{ borderColor: 'var(--theme-border-default)' }}
+          >
+            <table className="w-full text-sm" style={{ borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: 'var(--theme-bg-secondary)' }}>
                   <th
-                    key={h}
-                    className="text-left px-4 py-2.5 text-xs font-semibold"
+                    className="text-left text-[11px] font-bold uppercase tracking-wider px-4 py-3"
                     style={{ color: 'var(--theme-text-muted)' }}
                   >
-                    {h}
+                    Xe
                   </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {expenses.map((exp, i) => (
-                <tr
-                  key={exp.id}
-                  style={{
-                    background: i % 2 === 0 ? 'var(--theme-bg-primary)' : 'var(--theme-bg-secondary)',
-                    borderTop: '1px solid var(--theme-border-light)',
-                  }}
-                >
-                  <td className="px-4 py-2.5 tabular-nums whitespace-nowrap" style={{ color: 'var(--theme-text-muted)' }}>
-                    {exp.expenseDate}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <span
-                      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                  {CATEGORIES.filter(c => c !== 'CHUNG').map(cat => (
+                    <th
+                      key={cat}
+                      className="text-right text-[11px] font-bold uppercase tracking-wider px-4 py-3"
+                      style={{ color: 'var(--theme-text-muted)' }}
+                    >
+                      {CATEGORY_SHORT[cat]}
+                    </th>
+                  ))}
+                  <th
+                    className="text-right text-[11px] font-bold uppercase tracking-wider px-4 py-3"
+                    style={{ color: 'var(--theme-text-muted)' }}
+                  >
+                    Tổng
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {vehicles.map((v, idx) => {
+                  const xangDau = parseInt(getCellValue(v.id, 'XANG_DAU')) || 0
+                  const suaChua = parseInt(getCellValue(v.id, 'SUA_CHUA')) || 0
+                  const rowTotal = xangDau + suaChua
+
+                  return (
+                    <tr
+                      key={v.id}
                       style={{
-                        background: exp.category === 'CHUNG' ? 'var(--theme-bg-tertiary)' : 'var(--theme-brand-primary-10)',
-                        color: exp.category === 'CHUNG' ? 'var(--theme-text-muted)' : 'var(--theme-brand-primary)',
+                        background: idx % 2 === 0 ? 'var(--theme-bg-primary)' : 'var(--theme-bg-secondary)',
+                        borderTop: '1px solid var(--theme-border-light)',
                       }}
                     >
-                      {EXPENSE_CATEGORY_LABELS[exp.category]}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Car size={14} style={{ color: 'var(--theme-text-muted)' }} />
+                          <span className="font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{v.plate}</span>
+                        </div>
+                      </td>
+                      {(['XANG_DAU', 'SUA_CHUA'] as const).map(cat => (
+                        <td key={cat} className="px-4 py-3 text-right">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={getCellValue(v.id, cat)}
+                            onChange={e => {
+                              const val = e.target.value.replace(/[^\d]/g, '')
+                              setCellValue(v.id, cat, val)
+                            }}
+                            placeholder="0"
+                            className="w-full text-right font-mono-num tabular-nums text-sm bg-transparent border-b border-transparent focus:border-[var(--theme-brand-primary)] outline-none py-1 transition-colors"
+                            style={{ color: 'var(--theme-text-primary)' }}
+                          />
+                        </td>
+                      ))}
+                      <td className="px-4 py-3 text-right">
+                        <span className="font-mono-num font-semibold tabular-nums" style={{ color: rowTotal > 0 ? 'var(--theme-status-error)' : 'var(--theme-text-muted)' }}>
+                          {rowTotal > 0 ? formatCurrencyFull(rowTotal) : '—'}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })}
+
+                {/* Chi phí chung row */}
+                <tr
+                  style={{
+                    background: 'var(--theme-bg-tertiary)',
+                    borderTop: '2px solid var(--theme-border-default)',
+                  }}
+                >
+                  <td className="px-4 py-3">
+                    <span className="font-semibold text-xs uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>
+                      Chi phí chung
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 font-medium" style={{ color: 'var(--theme-text-primary)' }}>
-                    {exp.vehiclePlate ?? <span style={{ color: 'var(--theme-text-muted)' }}>—</span>}
+                  <td colSpan={2} className="px-4 py-3 text-right">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={getCellValue(null, 'CHUNG')}
+                      onChange={e => {
+                        const val = e.target.value.replace(/[^\d]/g, '')
+                        setCellValue(null, 'CHUNG', val)
+                      }}
+                      placeholder="0"
+                      className="w-40 ml-auto text-right font-mono-num tabular-nums text-sm bg-transparent border-b border-transparent focus:border-[var(--theme-brand-primary)] outline-none py-1 transition-colors"
+                      style={{ color: 'var(--theme-text-primary)' }}
+                    />
                   </td>
-                  <td className="px-4 py-2.5 tabular-nums font-semibold text-right" style={{ color: 'var(--theme-status-error)' }}>
-                    {formatCurrencyFull(exp.amount)}
-                  </td>
-                  <td className="px-4 py-2.5 max-w-xs truncate" style={{ color: 'var(--theme-text-muted)' }}>
-                    {exp.description ?? '—'}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <div className="flex items-center gap-1 justify-end">
-                      <button
-                        onClick={() => setEditing(exp)}
-                        className="p-1.5 rounded transition-colors hover:opacity-80"
-                        style={{ color: 'var(--theme-text-muted)' }}
-                        title="Sửa"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(exp)}
-                        className="p-1.5 rounded transition-colors hover:opacity-80"
-                        style={{ color: 'var(--theme-status-error)' }}
-                        title="Xóa"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                  <td className="px-4 py-3 text-right">
+                    {(() => {
+                      const chungVal = parseInt(getCellValue(null, 'CHUNG')) || 0
+                      return (
+                        <span className="font-mono-num font-semibold tabular-nums" style={{ color: chungVal > 0 ? 'var(--theme-status-error)' : 'var(--theme-text-muted)' }}>
+                          {chungVal > 0 ? formatCurrencyFull(chungVal) : '—'}
+                        </span>
+                      )
+                    })()}
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </tbody>
+            </table>
+          </div>
 
-      {/* Create dialog */}
-      {dialogOpen && (
-        <ExpenseFormDialog
-          vehicles={vehicles}
-          onSubmit={handleSubmit}
-          onClose={() => setDialogOpen(false)}
-          loading={createExpense.isPending}
-        />
-      )}
-
-      {/* Edit dialog */}
-      {editing && (
-        <ExpenseFormDialog
-          initial={editingForm}
-          vehicles={vehicles}
-          onSubmit={handleSubmit}
-          onClose={() => setEditing(null)}
-          loading={updateExpense.isPending}
-        />
+          {/* Footer: total + save */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div>
+                <p className="text-[10px] uppercase font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Tổng CP xe</p>
+                <p className="font-mono-num font-bold text-sm" style={{ color: 'var(--theme-status-error)' }}>
+                  {formatCurrencyFull(totals.XANG_DAU + totals.SUA_CHUA)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase font-semibold" style={{ color: 'var(--theme-text-muted)' }}>CP Chung</p>
+                <p className="font-mono-num font-bold text-sm" style={{ color: 'var(--theme-status-error)' }}>
+                  {formatCurrencyFull(totals.CHUNG)}
+                </p>
+              </div>
+            </div>
+            {hasChanges && (
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="btn-primary flex items-center gap-2"
+              >
+                {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                {saving ? 'Đang lưu...' : 'Lưu chi phí'}
+              </button>
+            )}
+          </div>
+        </>
       )}
     </div>
   )

@@ -29,7 +29,7 @@ class TripContainerInput:
 @dataclass
 class TripOrderCreateInput:
     trip_date: date
-    partner_id: int
+    client_id: int
     pickup_location_id: int
     dropoff_location_id: int
     containers: list[TripContainerInput] = field(default_factory=list)
@@ -43,7 +43,7 @@ class TripOrderCreateInput:
 @dataclass
 class TripOrderUpdateInput:
     trip_date: date | None = None
-    partner_id: int | None = None
+    client_id: int | None = None
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
     containers: list[TripContainerInput] | None = None
@@ -59,7 +59,7 @@ class TripOrderUpdateInput:
 class TripOrderListFilters:
     page: int = 1
     page_size: int = 50
-    partner_id: int | None = None
+    client_id: int | None = None
     status: str | None = None
     date_from: date | None = None
     date_to: date | None = None
@@ -88,7 +88,7 @@ class ImportTripRow:
 
 @dataclass
 class ImportCommitInput:
-    partner_id: int
+    client_id: int
     rows: list[ImportTripRow]
     overwrite_duplicates: bool = False
     user_id: int | None = None
@@ -121,16 +121,15 @@ class WorkOrderContainerInput:
 
 @dataclass
 class WorkOrderCreateInput:
-    partner_id: int
+    client_id: int
     pickup_location_id: int
     dropoff_location_id: int
     driver_id: int | None = None
-    vendor_partner_id: int | None = None
+    vendor_id: int | None = None
     vehicle_external_plate: str | None = None
     vehicle_id: int | None = None
     vessel: str | None = None
     operation_type: str | None = None
-    shipper_partner_id: int | None = None
     containers: list[WorkOrderContainerInput] = field(default_factory=list)
     gps_lat: float | None = None
     gps_lng: float | None = None
@@ -139,16 +138,15 @@ class WorkOrderCreateInput:
 
 @dataclass
 class WorkOrderUpdateInput:
-    partner_id: int | None = None
+    client_id: int | None = None
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
     driver_id: int | None = None
-    vendor_partner_id: int | None = None
+    vendor_id: int | None = None
     vehicle_external_plate: str | None = None
     vehicle_id: int | None = None
     vessel: str | None = None
     operation_type: str | None = None
-    shipper_partner_id: int | None = None
     containers: list[WorkOrderContainerInput] | None = None
     gps_lat: float | None = None
     gps_lng: float | None = None

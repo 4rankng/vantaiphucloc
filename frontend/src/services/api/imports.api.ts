@@ -100,7 +100,7 @@ export interface CommitRow {
 }
 
 export interface CommitRequest {
-  partner_id: number
+  client_id: number
   rows: CommitRow[]
   overwrite_duplicates?: boolean
   save_template_as?: string
@@ -174,7 +174,7 @@ export async function previewCustomerExcel(args: {
 }): Promise<PreviewResultDto> {
   const fd = new FormData()
   fd.append('file', args.file)
-  if (args.clientId != null) fd.append('partner_id', String(args.clientId))
+  if (args.clientId != null) fd.append('client_id', String(args.clientId))
   if (args.defaultTripDate) fd.append('default_trip_date', args.defaultTripDate)
   if (args.sheetName) fd.append('sheet_name', args.sheetName)
   if (args.headerRowIndex != null) fd.append('header_row_index', String(args.headerRowIndex))
@@ -199,7 +199,7 @@ export async function applyPricingToTripIds(
 }
 
 export async function listImportTemplates(clientId: number): Promise<SavedTemplate[]> {
-  const res = await api.get('/imports/customer-excel/templates', { params: { partner_id: clientId } })
+  const res = await api.get('/imports/customer-excel/templates', { params: { client_id: clientId } })
   return res.data as SavedTemplate[]
 }
 

@@ -8,8 +8,9 @@ import logging
 import math
 from datetime import date
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contexts.operations.application import (
     BatchCreateWorkOrders,
@@ -40,9 +41,12 @@ from app.core.deps import get_current_user, require_permission
 from app.core.redis import get_redis
 from app.models.base import User
 from app.schemas.base import PaginatedResponse
+from app.database import get_db
 from app.schemas.domain import (
+    AIParsePreviewResponse,
     BatchWorkOrderCreate,
     BatchWorkOrderResult,
+    BulkImportAndMatchResult,
     ContainerOCRRequest,
     ContainerOCRResponse,
     ContainerOut,
@@ -75,7 +79,7 @@ router = APIRouter()
 def _wo_to_out(w: WorkOrder, partners, drivers, locations, matched_trip_count: int = 0) -> WorkOrderOut:
     return WorkOrderOut(
         id=int(w.id),  # type: ignore[arg-type]
-        partner=get_partner_summary(partners, w.partner_id),
+        partner=get_partner_summary(partners, w.client_id),
         code=w.code,
         pickup_location=get_location_summary(locations, w.pickup_location_id),
         dropoff_location=get_location_summary(locations, w.dropoff_location_id),
@@ -115,7 +119,7 @@ async def _load_one(session, w: WorkOrder) -> WorkOrderOut:
 async def _load_many(session, wos: list[WorkOrder]) -> list[WorkOrderOut]:
     if not wos:
         return []
-    partners = await load_partner_summaries(session, {w.partner_id for w in wos})
+    partners = await load_partner_summaries(session, {w.client_id for w in wos})
     drivers = await load_driver_summaries(session, {w.driver_id for w in wos})
     locations = await load_location_summaries(
         session,
@@ -229,16 +233,16 @@ async def create_work_order_endpoint(
     try:
         w = await use_case(
             WorkOrderCreateInput(
-                partner_id=body.partner_id,
+                client_id=body.client_id,
                 pickup_location_id=body.pickup_location_id,
                 dropoff_location_id=body.dropoff_location_id,
                 driver_id=body.driver_id,
-                vendor_partner_id=body.vendor_partner_id,
+                vendor_id=body.vendor_id,
                 vehicle_external_plate=body.vehicle_external_plate,
                 vehicle_id=body.vehicle_id,
                 vessel=body.vessel,
                 operation_type=body.operation_type,
-                shipper_partner_id=body.shipper_partner_id,
+
                 containers=_container_inputs(body.containers),
                 gps_lat=body.gps_lat,
                 gps_lng=body.gps_lng,
@@ -325,7 +329,7 @@ async def batch_create_work_orders(
 ):
     items_input = [
         WorkOrderCreateInput(
-            partner_id=item.partner_id,
+            client_id=item.client_id,
             pickup_location_id=item.pickup_location_id,
             dropoff_location_id=item.dropoff_location_id,
             driver_id=item.driver_id,
@@ -421,6 +425,54 @@ async def get_work_order(
     return out
 
 
+@router.post("/work-orders/bulk-import-and-match", response_model=BulkImportAndMatchResult, status_code=201)
+async def bulk_import_and_match(
+    file: UploadFile = File(...),
+    client_id: int | None = Form(None),
+    current_user: User = Depends(require_permission("create", "WorkOrder")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Import work orders from Excel and auto-match against trip orders.
+
+    Accepts .xlsx files with columns: container, date, client, pickup, dropoff,
+    amount. Columns are auto-detected from headers (Vietnamese + English).
+    """
+    if file.filename is None:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Tệp tải lên không có tên.")
+    if not file.filename.endswith((".xlsx", ".xls")):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Chỉ hỗ trợ file .xlsx hoặc .xls.")
+
+    content = await file.read()
+    if not content:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Tệp tải lên rỗng.")
+
+    from app.contexts.operations.application.bulk_import_service import BulkImportService
+    service = BulkImportService(db)
+    try:
+        result = await service.import_and_match(
+            content=content,
+            filename=file.filename,
+            client_id=client_id,
+            user_id=current_user.id,
+        )
+    except Exception as exc:
+        _logger.exception("Bulk import failed: %s", exc)
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail=f"Không thể xử lý file: {exc}")
+
+    return BulkImportAndMatchResult(
+        total_rows=result.total_rows,
+        created=result.created,
+        matched=result.matched,
+        warnings=result.warnings,
+        unmatched=result.unmatched,
+        errors=result.errors,
+    )
+
+
 @router.put("/work-orders/{work_order_id:int}", response_model=WorkOrderOut)
 async def update_work_order(
     work_order_id: int,
@@ -437,16 +489,16 @@ async def update_work_order(
         w = await use_case(
             work_order_id,
             WorkOrderUpdateInput(
-                partner_id=body.partner_id,
+                client_id=body.client_id,
                 pickup_location_id=body.pickup_location_id,
                 dropoff_location_id=body.dropoff_location_id,
                 driver_id=body.driver_id,
-                vendor_partner_id=body.vendor_partner_id,
+                vendor_id=body.vendor_id,
                 vehicle_external_plate=body.vehicle_external_plate,
                 vehicle_id=body.vehicle_id,
                 vessel=body.vessel,
                 operation_type=body.operation_type,
-                shipper_partner_id=body.shipper_partner_id,
+
                 containers=containers_input,
                 gps_lat=body.gps_lat,
                 gps_lng=body.gps_lng,
@@ -464,3 +516,72 @@ async def update_work_order(
     except Exception as exc:
         _logger.exception("Failed to load WO#%s after update", work_order_id)
         raise translate(exc)
+
+
+# ---------------------------------------------------------------------------
+# AI Parse Preview
+# ---------------------------------------------------------------------------
+
+@router.post("/work-orders/ai-parse-preview", response_model=AIParsePreviewResponse)
+async def ai_parse_preview(
+    file: UploadFile = File(...),
+    source_id: str | None = Form(None),
+    current_user: User = Depends(require_permission("create", "WorkOrder")),
+):
+    """AI-powered file parsing for arbitrary-format input files.
+
+    Stage 1-5 pipeline: Sniff → Cache → Apply → Cleanup → Preview.
+    Returns parsed rows with confidence scores for accountant review.
+    Does NOT commit to DB — user must confirm via bulk-import-and-match.
+    """
+    if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Chỉ hỗ trợ file .xlsx hoặc .xls.")
+
+    contents = await file.read()
+
+    try:
+        from app.ai.pipeline import parse_file as ai_parse_file
+        from app.ai.parser import ParsedCell
+
+        result = await ai_parse_file(
+            file=io.BytesIO(contents),
+            filename=file.filename,
+            source_id=source_id,
+        )
+    except ValueError as e:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        _logger.exception("AI parse failed: %s", e)
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"AI parsing failed: {e}")
+
+    from app.schemas.domain import AIParsedCell as SchemaCell, AIParsedRow as SchemaRow
+
+    return AIParsePreviewResponse(
+        filename=file.filename,
+        column_mapping=result.column_mapping.mapping,
+        mapping_confidence=result.column_mapping.confidence,
+        header_row=result.column_mapping.header_row,
+        cached_mapping=result.cached_mapping,
+        total_rows=result.total_rows,
+        cost_estimate_usd=round(result.sniff_cost_estimate, 4),
+        rows=[
+            SchemaRow(
+                row_number=r.row_number,
+                cells={
+                    k: SchemaCell(
+                        value=v.value,
+                        confidence=v.confidence,
+                        original_value=v.original_value,
+                        cleaned=v.cleaned,
+                    )
+                    for k, v in r.cells.items()
+                },
+                source_row_ref=r.source_row_ref,
+                parse_error=r.parse_error,
+            )
+            for r in result.rows[:100]
+        ],
+    )

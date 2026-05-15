@@ -1,5 +1,5 @@
-import { useState, useCallback, useMemo } from 'react'
-import { Calendar, MapPin, Pencil, Save, X, User } from 'lucide-react'
+import { useState, useCallback } from 'react'
+import { Calendar, MapPin, Pencil, Save, X } from 'lucide-react'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
 import { fmtDate } from '@/lib/date-utils'
@@ -9,100 +9,6 @@ import { useToast } from '@/components/atoms/Toast'
 import { WORK_TYPES } from '@/data/domain'
 import type { WorkOrder, ContainerItem, WorkType } from '@/data/domain'
 
-/** Inline shipper (chủ hàng) assignment row — usable in both view and edit modes */
-function ShipperRow({ workOrder, onSaved }: { workOrder: WorkOrder; onSaved?: () => void }) {
-  const { data: shippers = [] } = usePartners({ partnerType: 'shipper' })
-  const updateWO = useUpdateWorkOrder()
-  const toast = useToast()
-  const [editing, setEditing] = useState(false)
-  const [selectedId, setSelectedId] = useState(
-    workOrder.shipperPartnerId ? String(workOrder.shipperPartnerId) : '',
-  )
-
-  const currentShipper = useMemo(
-    () => shippers.find(s => s.id === workOrder.shipperPartnerId),
-    [shippers, workOrder.shipperPartnerId],
-  )
-
-  const handleSave = async () => {
-    try {
-      await updateWO.mutateAsync({
-        id: workOrder.id,
-        data: { shipperPartnerId: selectedId ? Number(selectedId) : null },
-      })
-      toast.success('Đã lưu', 'Chủ hàng đã được cập nhật')
-      setEditing(false)
-      onSaved?.()
-    } catch {
-      toast.error('Lỗi', 'Không thể cập nhật chủ hàng')
-    }
-  }
-
-  if (editing) {
-    return (
-      <div className="flex items-center gap-2">
-        <User className="w-3 h-3 shrink-0" style={{ color: 'var(--theme-brand-primary)' }} />
-        <select
-          value={selectedId}
-          onChange={e => setSelectedId(e.target.value)}
-          className="flex-1 h-7 rounded-lg px-2 text-xs"
-          style={{
-            background: 'var(--theme-bg-tertiary)',
-            border: '1px solid var(--theme-brand-primary)',
-            color: 'var(--theme-text-primary)',
-          }}
-          autoFocus
-        >
-          <option value="">— Chưa gán —</option>
-          {shippers.map(s => (
-            <option key={s.id} value={String(s.id)}>
-              {s.code ? `${s.code} - ${s.name}` : s.name}
-            </option>
-          ))}
-        </select>
-        <button
-          onClick={handleSave}
-          disabled={updateWO.isPending}
-          className="p-1 rounded-md"
-          style={{ color: 'var(--theme-status-success)' }}
-          title="Lưu"
-        >
-          <Save className="w-3 h-3" />
-        </button>
-        <button
-          onClick={() => { setEditing(false); setSelectedId(workOrder.shipperPartnerId ? String(workOrder.shipperPartnerId) : '') }}
-          className="p-1 rounded-md"
-          style={{ color: 'var(--theme-text-muted)' }}
-          title="Huỷ"
-        >
-          <X className="w-3 h-3" />
-        </button>
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex items-center gap-2 group">
-      <User className="w-3 h-3 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
-      <span
-        className="text-[11px] font-medium"
-        style={{ color: currentShipper ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}
-      >
-        {currentShipper
-          ? (currentShipper.code ? `${currentShipper.code} - ${currentShipper.name}` : currentShipper.name)
-          : 'Chưa gán chủ hàng'}
-      </span>
-      <button
-        onClick={() => setEditing(true)}
-        className="opacity-0 group-hover:opacity-100 p-0.5 rounded transition-opacity"
-        style={{ color: 'var(--theme-brand-primary)' }}
-        title="Gán chủ hàng"
-      >
-        <Pencil className="w-2.5 h-2.5" />
-      </button>
-    </div>
-  )
-}
 
 interface TripDetailCardProps {
   workOrder: WorkOrder
@@ -157,9 +63,6 @@ function TripDetailCardView({ workOrder, onEdited }: { workOrder: WorkOrder; onE
         </span>
       </div>
 
-      {/* Chủ hàng assignment — always editable inline */}
-      <ShipperRow workOrder={workOrder} onSaved={onEdited} />
-
       <div className="flex items-center gap-2 flex-wrap">
         <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: 'var(--theme-text-secondary)' }}>
           <MapPin className="w-3 h-3" />
@@ -204,7 +107,7 @@ function TripDetailCardEditable({ workOrder, onEdited }: { workOrder: WorkOrder;
       await updateWO.mutateAsync({
         id: workOrder.id,
         data: {
-          partnerId: Number(clientId),
+          clientId: Number(clientId),
           pickupLocationId: pickupLoc.id,
           dropoffLocationId: dropoffLoc.id,
           containers: containers.map(c => ({
