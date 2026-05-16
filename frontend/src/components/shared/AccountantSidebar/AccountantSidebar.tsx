@@ -2,16 +2,11 @@ import { useCallback } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
-  FileText,
-  Briefcase,
   Settings,
   LogOut,
   Bell,
   UserCircle,
   ChevronLeft,
-  DollarSign,
-  Car,
-
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUnreadCount } from '@/components/shared/NotificationPanel/NotificationPanel'
@@ -40,21 +35,6 @@ const ACCOUNTANT_NAV_SECTIONS: SidebarSection[] = [
     label: null,
     items: [
       { label: 'Tổng quan', href: '/accountant', icon: LayoutDashboard },
-      { label: 'Đơn hàng', href: '/accountant/trips', icon: FileText },
-    ],
-  },
-  {
-    label: 'TÀI CHÍNH',
-    items: [
-      { label: 'Đối soát', href: '/accountant/reconciliation', icon: Briefcase },
-      { label: 'Doanh thu & Lãi', href: '/accountant/revenue-profit', icon: DollarSign },
-      { label: 'Chi phí xe', href: '/accountant/vehicle-expenses', icon: Car },
-    ],
-  },
-  {
-    label: 'HỆ THỐNG',
-    items: [
-      { label: 'Cài đặt', href: '/accountant/settings', icon: Settings },
     ],
   },
 ]
@@ -84,7 +64,7 @@ export function AccountantSidebar({
   forceVisible = false,
   items,
   rootPath = '/accountant',
-  notificationsPath = '/accountant/notifications',
+  notificationsPath,
   profilePath = '/accountant/profile',
 }: AccountantSidebarProps) {
   const location = useLocation()

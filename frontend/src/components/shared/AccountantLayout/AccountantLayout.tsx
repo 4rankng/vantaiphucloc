@@ -11,9 +11,7 @@ import type { Role } from '@/data/domain'
 
 const ALLOWED_ROLES: Role[] = ['accountant']
 
-const FULLSCREEN_PREFIXES = [
-  '/accountant/match-trip/',
-]
+const FULLSCREEN_PREFIXES: string[] = []
 
 const SIDEBAR_WIDTH = 240
 
@@ -142,27 +140,9 @@ function AccountantMobileShell() {
 
 function resolveMobileTitle(pathname: string): string {
   const TITLES: Record<string, string> = {
-    '/accountant/trips': 'Đơn hàng',
-    '/accountant/work-orders': 'Ghép chuyến',
-    '/accountant/settings': 'Cài đặt',
-    '/accountant/settings/salary': 'Kỳ lương',
-    '/accountant/settings/pricing': 'Bảng giá',
-    '/accountant/settings/clients': 'Đối tác',
-    '/accountant/settings/vendors': 'Đối tác',
-    '/accountant/settings/users': 'Người dùng',
-    '/accountant/routes': 'Cung đường',
-    '/accountant/notifications': 'Thông báo',
     '/accountant/profile': 'Thông tin cá nhân',
-    '/accountant/customer-reconciliation': 'Đối soát KH',
-    '/accountant/vendor-reconciliation': 'Đối soát nhà xe',
-    '/accountant/revenue-profit': 'Doanh thu & Lãi',
-    '/accountant/vehicle-expenses': 'Chi phí xe',
   }
   if (TITLES[pathname]) return TITLES[pathname]
-  if (pathname.startsWith('/accountant/trip/')) return 'Chi tiết lệnh'
-  if (pathname.startsWith('/accountant/match-trip/')) return 'Đối soát'
-  if (pathname.startsWith('/accountant/settings/pricing/')) return 'Chi tiết bảng giá'
-  if (pathname.startsWith('/accountant/pricing/')) return 'Bảng giá'
   return ''
 }
 

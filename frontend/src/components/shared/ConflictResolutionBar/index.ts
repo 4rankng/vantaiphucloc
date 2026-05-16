@@ -1,0 +1,1 @@
+export { ConflictResolutionBar } from './ConflictResolutionBar'

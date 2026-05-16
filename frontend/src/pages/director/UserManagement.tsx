@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, type ReactNode } from 'react'
 import { Truck, CircleDollarSign, LayoutDashboard, Phone, Pencil, Trash2, ChevronRight, Plus, UserCog } from 'lucide-react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
@@ -9,7 +9,6 @@ import { DataTablePro, type Column } from '@/components/shared/DataTablePro/Data
 import { useToast } from '@/components/atoms/Toast'
 import { FilterPills } from '@/components/shared/FilterPills'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { SettingsPageLayout } from '@/components/shared/SettingsPageLayout'
 import type { Role } from '@/data/domain'
 import { ROLE_LABELS } from '@/data/domain'
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '@/hooks/use-queries'
@@ -475,26 +474,10 @@ function UserManagementInner() {
 
 export function UserManagement() {
   const { user } = useAuth()
-  const location = useLocation()
-  const inSettings = location.pathname.startsWith('/accountant/settings')
 
   // Guard: director, superadmin, and accountant (needs to create driver accounts)
   if (!user || !['director', 'superadmin', 'accountant'].includes(user.role)) {
     return <Navigate to="/" replace />
-  }
-
-  if (inSettings) {
-    return (
-      <SettingsPageLayout
-        title="Người dùng"
-        subtitle="Tạo & quản lý tài khoản"
-        icon={UserCog}
-        iconColor="var(--theme-text-secondary)"
-        actions={undefined}
-      >
-        <UserManagementInner />
-      </SettingsPageLayout>
-    )
   }
 
   return <UserManagementInner />
