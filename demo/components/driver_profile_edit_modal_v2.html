@@ -1,0 +1,88 @@
+
+<div style="background:var(--color-background-secondary);border-radius:var(--border-radius-xl);padding:16px;display:flex;align-items:center;justify-content:center;">
+  <div style="background:var(--color-background-primary);border-radius:var(--border-radius-lg);border:0.5px solid var(--color-border-tertiary);width:100%;overflow:hidden;">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:0.5px solid var(--color-border-tertiary);">
+      <span style="font-size:14px;font-weight:500;color:var(--color-text-primary);">Thông tin tài xế</span>
+      <button style="border:none;background:none;cursor:pointer;padding:2px;display:flex;align-items:center;color:var(--color-text-secondary);" aria-label="Đóng"><i class="ti ti-x" style="font-size:18px;" aria-hidden="true"></i></button>
+    </div>
+
+    <div style="padding:12px 16px;border-bottom:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;gap:12px;">
+      <div style="width:40px;height:40px;border-radius:50%;background:#1D9E75;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <span style="font-size:13px;font-weight:500;color:#fff;">CH</span>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <p style="font-size:10px;color:var(--color-text-secondary);margin:0 0 2px;letter-spacing:.04em;">HỌ VÀ TÊN</p>
+        <input value="Chu Đức Anh" style="width:100%;border:none;background:transparent;font-size:14px;font-weight:500;color:var(--color-text-primary);padding:0;outline:none;font-family:inherit;" />
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-bottom:0.5px solid var(--color-border-tertiary);">
+
+      <div class="cell" style="padding:10px 16px;border-right:0.5px solid var(--color-border-tertiary);">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">
+          <i class="ti ti-id-badge" style="font-size:13px;color:var(--color-text-secondary);" aria-hidden="true"></i>
+          <p style="font-size:10px;color:var(--color-text-secondary);margin:0;letter-spacing:.04em;">TÊN ĐĂNG NHẬP</p>
+        </div>
+        <input value="@anhcd" style="width:100%;border:none;background:transparent;font-size:13px;font-weight:500;color:var(--color-text-primary);padding:0;outline:none;font-family:inherit;" />
+      </div>
+
+      <div class="cell" style="padding:10px 16px;">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">
+          <i class="ti ti-car" style="font-size:13px;color:var(--color-text-secondary);" aria-hidden="true"></i>
+          <p style="font-size:10px;color:var(--color-text-secondary);margin:0;letter-spacing:.04em;">XE ĐANG LÁI</p>
+        </div>
+        <input value="15H18753" style="width:100%;border:none;background:transparent;font-size:13px;font-weight:500;color:var(--color-text-primary);padding:0;outline:none;font-family:inherit;letter-spacing:.04em;" />
+      </div>
+
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-bottom:0.5px solid var(--color-border-tertiary);">
+
+      <div class="cell" style="padding:10px 16px;border-right:0.5px solid var(--color-border-tertiary);">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">
+          <i class="ti ti-phone" style="font-size:13px;color:var(--color-text-secondary);" aria-hidden="true"></i>
+          <p style="font-size:10px;color:var(--color-text-secondary);margin:0;letter-spacing:.04em;">SỐ ĐIỆN THOẠI</p>
+        </div>
+        <input value="0917177008" type="tel" style="width:100%;border:none;background:transparent;font-size:13px;font-weight:500;color:var(--color-text-primary);padding:0;outline:none;font-family:inherit;" />
+      </div>
+
+      <div class="cell" style="padding:10px 16px;">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">
+          <i class="ti ti-wallet" style="font-size:13px;color:var(--color-text-secondary);" aria-hidden="true"></i>
+          <p style="font-size:10px;color:var(--color-text-secondary);margin:0;letter-spacing:.04em;">LƯƠNG CƠ BẢN</p>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:3px;">
+          <input value="5.500.000" style="width:100%;border:none;background:transparent;font-size:13px;font-weight:500;color:var(--color-text-primary);padding:0;outline:none;font-family:inherit;min-width:0;" />
+          <span style="font-size:12px;color:var(--color-text-secondary);flex-shrink:0;">đ</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="padding:10px 16px 12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <span style="font-size:10px;color:var(--color-text-secondary);letter-spacing:.04em;">LỊCH SỬ LƯƠNG</span>
+        <button onclick="sendPrompt('Tôi muốn điều chỉnh lương cơ bản cho tài xế Chu Đức Anh')" style="font-size:12px;color:#1D9E75;background:none;border:none;cursor:pointer;padding:0;font-family:inherit;">+ Điều chỉnh ↗</button>
+      </div>
+      <div style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:8px 12px;display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:13px;font-weight:500;color:var(--color-text-primary);">5.500.000 đ</span>
+        <div style="display:flex;align-items:center;gap:5px;">
+          <i class="ti ti-calendar" style="font-size:13px;color:var(--color-text-secondary);" aria-hidden="true"></i>
+          <span style="font-size:12px;color:var(--color-text-secondary);">từ 2026-01-01</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="padding:10px 16px 14px;border-top:0.5px solid var(--color-border-tertiary);display:flex;gap:8px;">
+      <button style="flex:1;padding:9px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:transparent;font-size:13px;font-weight:500;color:var(--color-text-secondary);cursor:pointer;font-family:inherit;">Đóng</button>
+      <button style="flex:2;padding:9px;border-radius:var(--border-radius-md);border:none;background:#1D9E75;font-size:13px;font-weight:500;color:#fff;cursor:pointer;font-family:inherit;">Lưu thay đổi</button>
+    </div>
+
+  </div>
+</div>
+
+<style>
+.cell:focus-within { background: var(--color-background-secondary); }
+input:focus { color: var(--color-text-primary) !important; }
+</style>
