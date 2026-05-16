@@ -12,11 +12,11 @@ import pytest
 
 from app.core.security import hash_password
 from app.models.base import User
-from app.models.domain import Location, Partner
+from app.models.domain import Location, Client
 
 
 async def _seed_driver_and_accountant(db_session, async_client):
-    partner = Partner(name="VesselTest Co", partner_type="client", phone="0900999", is_active=True)
+    partner = Client(name="VesselTest Co", phone="0900999", is_active=True)
     pickup = Location(name="Cảng Hiệp Phước", is_active=True)
     dropoff = Location(name="ICD Trường Thọ", is_active=True)
     driver = User(

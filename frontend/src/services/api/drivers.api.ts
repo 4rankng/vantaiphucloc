@@ -27,7 +27,7 @@ export async function updateDriver(
   data: Partial<{ fullName: string; phone: string; username: string }>,
 ): Promise<ApiResponse<Driver>> {
   try {
-    const res = await api.patch(`/drivers/${id}`, toSnake(data))
+    const res = await api.put(`/drivers/${id}`, toSnake(data))
     return ok(toCamel<Driver>(res.data))
   } catch (err) {
     return fail(err)

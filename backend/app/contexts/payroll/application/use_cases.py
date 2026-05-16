@@ -294,14 +294,14 @@ class GetMonthlyPnL:
         matched_trip_count = len(per_to_rows)
 
         # Resolve partner names for the breakdown.
-        from app.models.domain import Partner  # local import: avoids cycles
+        from app.models.domain import Client
 
         partner_rows = []
         if per_partner:
             partner_rows = (
                 await self.session.execute(
-                    select(Partner.id, Partner.name).where(
-                        Partner.id.in_(list(per_partner.keys()))
+                    select(Client.id, Client.name).where(
+                        Client.id.in_(list(per_partner.keys()))
                     )
                 )
             ).all()

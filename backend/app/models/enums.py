@@ -31,11 +31,6 @@ class VehicleExpenseCategory(StrEnum):
     CHUNG = "CHUNG"         # General overhead (not tied to a specific vehicle)
 
 
-class VehicleDriverRole(StrEnum):
-    PRIMARY = "PRIMARY"
-    SECONDARY = "SECONDARY"
-
-
 class OperationType(StrEnum):
     XUAT_NHAP_TAU = "XUAT_NHAP_TAU"       # Xuất / Nhập tàu
     CHUYEN_BAI = "CHUYEN_BAI"             # Chuyển bãi

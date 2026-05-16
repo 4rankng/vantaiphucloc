@@ -23,7 +23,7 @@ from app.contexts.billing.domain.value_objects import (
 )
 from app.models.domain import (
     Location,
-    Partner,
+    Client,
     Reconciliation,
     TripOrder,
     TripOrderContainer,
@@ -81,7 +81,7 @@ class SqlSettlementDataLoader(SettlementDataLoader):
         self, *, client_id: int, period: SettlementPeriod
     ) -> SettlementStatement:
         partner_res = await self.session.execute(
-            select(Partner).where(Partner.id == client_id)
+            select(Client).where(Client.id == client_id)
         )
         partner = partner_res.scalar_one_or_none()
         if partner is None:

@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.domain import (
     CustomerReconciliationImport,
     CustomerReconciliationRow,
-    Partner,
+    Client,
     TripOrder,
     TripOrderContainer,
 )
@@ -197,11 +197,11 @@ class PreviewCustomerReconciliationImport:
         # Verify partner exists.
         partner = (
             await self.session.execute(
-                select(Partner).where(Partner.id == payload.client_id)
+                select(Client).where(Client.id == payload.client_id)
             )
         ).scalar_one_or_none()
         if partner is None:
-            raise ValueError(f"Partner {payload.client_id} not found")
+            raise ValueError(f"Client {payload.client_id} not found")
 
         summary = ImportSummary(total=len(payload.rows))
 
@@ -415,8 +415,8 @@ class ListCustomerReconciliationImports:
         self, *, client_id: int | None = None, limit: int = 50
     ) -> list[ImportDTO]:
         stmt = (
-            select(CustomerReconciliationImport, Partner.name)
-            .join(Partner, Partner.id == CustomerReconciliationImport.client_id)
+            select(CustomerReconciliationImport, Client.name)
+            .join(Client, Client.id == CustomerReconciliationImport.client_id)
             .order_by(CustomerReconciliationImport.uploaded_at.desc())
             .limit(limit)
         )
@@ -459,7 +459,7 @@ async def _load_import_dto(session: AsyncSession, import_id: int) -> ImportDTO:
     if imp is None:
         raise ValueError(f"CustomerReconciliationImport {import_id} not found")
 
-    partner = await session.get(Partner, imp.client_id)
+    partner = await session.get(Client, imp.client_id)
 
     rows = (
         await session.execute(

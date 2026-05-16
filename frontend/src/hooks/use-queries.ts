@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
 import { searchTripOrders } from '@/services/api/tripOrders.api'
-import type { ApiResponse, Pricing, WorkOrder, TripOrder, WorkType, Partner, BulkMatchPair } from '@/data/domain'
+import type { ApiResponse, Pricing, WorkOrder, TripOrder, WorkType, Client, Vendor, VendorSummary, BulkMatchPair } from '@/data/domain'
 import type { DriverEarnings } from '@/services/api/salary.api'
 import type { VehicleExpenseCategory } from '@/services/api/vehicleExpenses.api'
+import type { Vehicle } from '@/services/api/vehicles.api'
 import {
   listVendorReconciliationImports,
   getVendorReconciliationImport,
@@ -43,11 +44,11 @@ export type { UserAccount, UserProfile }
 // ─── Query key factories ─────────────────────────────────────────────────────
 
 export const queryKeys = {
-  partners: ['partners'] as const,
-  partner: (id: number) => ['partners', id] as const,
-  // Legacy aliases for backward compat
-  clients: ['partners'] as const,
-  client: (id: number) => ['partners', id] as const,
+  clients: ['clients'] as const,
+  client: (id: number) => ['clients', id] as const,
+  vendors: ['vendors'] as const,
+  vendor: (id: number) => ['vendors', id] as const,
+  vendorSummary: (id: number) => ['vendor-summary', id] as const,
   routes: ['routes'] as const,
   locations: ['locations'] as const,
   pricings: ['pricings'] as const,
@@ -65,11 +66,12 @@ export const queryKeys = {
   myEarnings: (startDate: string, endDate: string) =>
     ['my-earnings', startDate, endDate] as const,
   drivers: ['drivers'] as const,
+  vehicles: (activeOnly = true) => ['vehicles', activeOnly] as const,
+  vehicleDrivers: ['vehicle-drivers'] as const,
   dashboard: ['dashboard'] as const,
   users: ['users'] as const,
   notifications: ['notifications'] as const,
   salaryConfig: ['salary/config'] as const,
-  vendors: ['partners'] as const,
   suggestMatches: (woId: number) => ['suggest-matches', woId] as const,
   suggestWos: (toId: number) => ['suggest-wos', toId] as const,
   matchScores: (dateFrom?: string, dateTo?: string) => ['match-scores', dateFrom, dateTo] as const,
@@ -92,18 +94,7 @@ export const queryKeys = {
 
 // ─── Query hooks (GET) ───────────────────────────────────────────────────────
 
-// Partners (replaces Clients + Vendors)
-export function usePartners(params?: { partnerType?: Partner['partnerType'] }) {
-  return useQuery({
-    queryKey: [...queryKeys.partners, params],
-    queryFn: async () => {
-      const res = await apiClient.getPartners(params)
-      return res.success ? res.data : []
-    },
-  })
-}
-
-// Backward compat: useClients → usePartners
+// Clients
 export function useClients() {
   return useQuery({
     queryKey: queryKeys.clients,
@@ -114,7 +105,7 @@ export function useClients() {
   })
 }
 
-// Backward compat: useVendors → usePartners
+// Vendors
 export function useVendors() {
   return useQuery({
     queryKey: queryKeys.vendors,
@@ -258,6 +249,62 @@ export function useDrivers() {
   })
 }
 
+export function useVehicles(activeOnly = true) {
+  return useQuery({
+    queryKey: queryKeys.vehicles(activeOnly),
+    queryFn: async () => {
+      const res = await apiClient.getVehicles(activeOnly)
+      return res.success ? res.data : []
+    },
+  })
+}
+
+export function useVehicleDrivers() {
+  return useQuery({
+    queryKey: queryKeys.vehicleDrivers,
+    queryFn: async () => {
+      const res = await apiClient.getVehicleDrivers({ activeOnly: true })
+      return res.success ? res.data : []
+    },
+  })
+}
+
+export function useAddVehicleDriver() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ vehicleId, driverId }: { vehicleId: number; driverId: number }) => {
+      const res = await apiClient.addVehicleDriver(vehicleId, driverId)
+      return unwrap(res)
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.vehicleDrivers }) },
+  })
+}
+
+export function useRemoveVehicleDriver() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiClient.removeVehicleDriver(id)
+      return unwrap(res)
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.vehicleDrivers }) },
+  })
+}
+
+export function useCreateVehicle() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (plate: string) => {
+      const res = await apiClient.createVehicle(plate)
+      return unwrap(res)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.vehicles() })
+      qc.invalidateQueries({ queryKey: queryKeys.vehicleDrivers })
+    },
+  })
+}
+
 export function useDashboardSummary(dateFrom?: string, dateTo?: string) {
   return useQuery({
     queryKey: ['dashboard-summary', dateFrom, dateTo],
@@ -344,78 +391,65 @@ export function useSuggestWosForTrip(tripOrderId: number | null) {
 
 // ─── Mutation hooks ──────────────────────────────────────────────────────────
 
-// Partners (replaces Clients + Vendors)
-export function useCreatePartner() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (data: Omit<Partner, 'id'>) => apiClient.createPartner(data).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.partners }) },
-  })
-}
-
-export function useUpdatePartner() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<Partner> }) => apiClient.updatePartner(id, data).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.partners }) },
-  })
-}
-
-export function useDeletePartner() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (id: number) => apiClient.deletePartner(id).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.partners }) },
-  })
-}
-
-// Backward compat: Client mutations
+// Client mutations
 export function useCreateClient() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: Omit<Partner, 'id'>) => apiClient.createPartner(data).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.partners }) },
+    mutationFn: (data: Omit<Client, 'id'>) => apiClient.createClient(data).then(unwrap),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.clients }) },
   })
 }
 
 export function useUpdateClient() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<Partner> }) => apiClient.updatePartner(id, data).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.partners }) },
+    mutationFn: ({ id, data }: { id: number; data: Partial<Client> }) => apiClient.updateClient(id, data).then(unwrap),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.clients }) },
   })
 }
 
 export function useDeleteClient() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: number) => apiClient.deletePartner(id).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.partners }) },
+    mutationFn: (id: number) => apiClient.deleteClient(id).then(unwrap),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.clients }) },
   })
 }
 
-// Backward compat: Vendor mutations
+// Vendor mutations
 export function useCreateVendor() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: Omit<Partner, 'id'>) => apiClient.createPartner(data).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.partners }) },
+    mutationFn: (data: Omit<Vendor, 'id'>) => apiClient.createVendor(data).then(unwrap),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.vendors }) },
   })
 }
 
 export function useUpdateVendor() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<Partner> }) => apiClient.updatePartner(id, data).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.partners }) },
+    mutationFn: ({ id, data }: { id: number; data: Partial<Vendor> }) => apiClient.updateVendor(id, data).then(unwrap),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.vendors }) },
   })
 }
 
 export function useDeleteVendor() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: number) => apiClient.deletePartner(id).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.partners }) },
+    mutationFn: (id: number) => apiClient.deleteVendor(id).then(unwrap),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.vendors }) },
+  })
+}
+
+// Vendor summary
+export function useVendorSummary(vendorId: number | null, dateFrom?: string, dateTo?: string) {
+  return useQuery({
+    queryKey: [...queryKeys.vendorSummary(vendorId ?? 0), dateFrom, dateTo],
+    queryFn: async () => {
+      const res = await apiClient.getVendorSummary(vendorId!, { dateFrom, dateTo })
+      return res.success ? res.data : null
+    },
+    enabled: !!vendorId,
   })
 }
 

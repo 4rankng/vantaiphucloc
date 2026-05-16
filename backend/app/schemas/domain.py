@@ -34,30 +34,28 @@ class TripOrderStatus(str, Enum):
 
 
 # ---------------------------------------------------------------------------
-# Partner (unified clients + vendors)
+# Client
 # ---------------------------------------------------------------------------
 
-class PartnerCreate(BaseModel):
+class ClientCreate(BaseModel):
     name: str
     code: str | None = None
-    partner_type: Literal["client", "vendor"]
     phone: str | None = None
     tax_code: str | None = None
     address: str | None = None
     contact_person: str | None = None
 
 
-class PartnerUpdate(BaseModel):
+class ClientUpdate(BaseModel):
     name: str | None = None
     code: str | None = None
-    partner_type: Literal["client", "vendor"] | None = None
     phone: str | None = None
     tax_code: str | None = None
     address: str | None = None
     contact_person: str | None = None
 
 
-class PartnerSummaryOut(BaseModel):
+class ClientSummaryOut(BaseModel):
     id: int
     code: str | None = None
     name: str
@@ -65,11 +63,10 @@ class PartnerSummaryOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class PartnerOut(BaseModel):
+class ClientOut(BaseModel):
     id: int
     code: str | None
     name: str
-    partner_type: str
     phone: str | None
     tax_code: str | None
     address: str | None
@@ -79,6 +76,53 @@ class PartnerOut(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# Vendor
+# ---------------------------------------------------------------------------
+
+class VendorCreate(BaseModel):
+    name: str
+    code: str | None = None
+    phone: str | None = None
+    tax_code: str | None = None
+    address: str | None = None
+    contact_person: str | None = None
+
+
+class VendorUpdate(BaseModel):
+    name: str | None = None
+    code: str | None = None
+    phone: str | None = None
+    tax_code: str | None = None
+    address: str | None = None
+    contact_person: str | None = None
+
+
+class VendorOut(BaseModel):
+    id: int
+    code: str | None
+    name: str
+    phone: str | None
+    tax_code: str | None
+    address: str | None
+    contact_person: str | None
+    is_active: bool = True
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# Backward-compat aliases
+# ---------------------------------------------------------------------------
+
+PartnerCreate = ClientCreate
+PartnerUpdate = ClientUpdate
+PartnerOut = ClientOut
+PartnerSummaryOut = ClientSummaryOut
 
 
 # ---------------------------------------------------------------------------
@@ -919,7 +963,6 @@ class VehicleExpenseOut(BaseModel):
 class VehicleDriverCreate(BaseModel):
     vehicle_id: int
     driver_id: int
-    role: str = Field(default="PRIMARY", pattern="^(PRIMARY|SECONDARY)$")
     effective_from: date
     effective_to: date | None = None
 
@@ -930,7 +973,6 @@ class VehicleDriverOut(BaseModel):
     vehicle_plate: str | None = None
     driver_id: int
     driver_name: str | None = None
-    role: str
     effective_from: date
     effective_to: date | None
     is_active: bool

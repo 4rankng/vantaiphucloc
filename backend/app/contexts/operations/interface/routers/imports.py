@@ -51,7 +51,7 @@ from app.contexts.operations.interface.error_translation import translate
 from app.core.deps import require_roles
 from app.database import get_db
 from app.models.base import User
-from app.models.domain import Partner
+from app.models.domain import Client
 from app.contexts.operations.infrastructure.import_pipeline.canonical import CANONICAL_FIELDS, SKIP_FIELD
 from app.contexts.operations.infrastructure.import_pipeline.column_mapper import ColumnMapping
 from app.contexts.operations.infrastructure.import_pipeline.llm import get_default_classifier
@@ -326,7 +326,7 @@ async def commit_customer_excel(
         raise HTTPException(status_code=400, detail="Không có dòng nào để tạo.")
 
     client = (await db.execute(
-        select(Partner).where(Partner.id == body.client_id)
+        select(Client).where(Client.id == body.client_id)
     )).scalar_one_or_none()
     if client is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy khách hàng.")
@@ -584,7 +584,7 @@ async def commit_customer_pricing(
     if not body.rows:
         raise HTTPException(status_code=400, detail="Không có dòng nào để tạo.")
     client = (
-        await db.execute(select(Partner).where(Partner.id == body.client_id))
+        await db.execute(select(Client).where(Client.id == body.client_id))
     ).scalar_one_or_none()
     if client is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy khách hàng.")

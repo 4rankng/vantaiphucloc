@@ -5,7 +5,7 @@ import { useOffline } from '@/contexts/OfflineContext'
 import { apiClient } from '@/services/api'
 import { useLocations } from '@/hooks/use-queries'
 import type { PhotoMeta } from '@/components/shared/ContainerScanner'
-import type { Partner, WorkType, WorkOrder } from '@/data/domain'
+import type { Client, WorkType, WorkOrder } from '@/data/domain'
 
 export interface ContainerForm {
   containerNumber: string
@@ -51,7 +51,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
   const isEdit = !!existingWorkOrder
 
   // Reference data
-  const [clients, setClients] = useState<Partner[]>([])
+  const [clients, setClients] = useState<Client[]>([])
   const [recentOrders, setRecentOrders] = useState<WorkOrder[]>([])
   const { data: locations = [] } = useLocations()
 

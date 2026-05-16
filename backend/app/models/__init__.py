@@ -4,6 +4,8 @@
 from .base import User  # noqa: F401
 from .domain import (  # noqa: F401
     Vehicle,
+    Client,
+    Vendor,
     Partner,
     Location,
     LocationAlias,
@@ -23,6 +25,8 @@ from .audit_log import AuditLog  # noqa: F401
 __all__ = [
     "User",
     "Vehicle",
+    "Client",
+    "Vendor",
     "Partner",
     "Location",
     "LocationAlias",

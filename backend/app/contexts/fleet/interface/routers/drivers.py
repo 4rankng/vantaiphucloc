@@ -71,7 +71,6 @@ async def list_drivers(
             .where(
                 VehicleDriver.driver_id.in_(driver_ids),
                 VehicleDriver.is_active == True,  # noqa: E712
-                VehicleDriver.role == "PRIMARY",
                 Vehicle.is_active == True,  # noqa: E712
             )
         )).all()
@@ -129,6 +128,60 @@ class DriverVehicleSetIn(BaseModel):
     plate: str = Field(..., min_length=4, max_length=20)
 
 
+class DriverUpdateIn(BaseModel):
+    username: str | None = None
+    full_name: str | None = None
+    phone: str | None = None
+
+
+@router.put("/drivers/{driver_id}", response_model=DriverOut)
+async def update_driver(
+    driver_id: int,
+    body: DriverUpdateIn,
+    _current_user: User = Depends(require_permission("update", "Driver")),
+    db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis),
+):
+    from fastapi import HTTPException
+
+    user = (await db.execute(
+        select(User).where(User.id == driver_id, User.role == "driver")
+    )).scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=404, detail="Driver not found")
+
+    if body.username is not None:
+        user.username = body.username
+    if body.full_name is not None:
+        user.full_name = body.full_name
+    if body.phone is not None:
+        user.phone = body.phone
+
+    await db.commit()
+    await db.refresh(user)
+
+    plate_row = (await db.execute(
+        select(Vehicle.plate)
+        .join(VehicleDriver, VehicleDriver.vehicle_id == Vehicle.id)
+        .where(
+            VehicleDriver.driver_id == driver_id,
+            VehicleDriver.is_active == True,  # noqa: E712
+            Vehicle.is_active == True,  # noqa: E712
+        )
+    )).scalar_one_or_none()
+
+    await CacheManager(redis).invalidate_namespace("drivers")
+    return DriverOut(
+        id=user.id,
+        username=user.username,
+        full_name=user.full_name,
+        phone=user.phone,
+        vehicle_plate=plate_row,
+        created_at=user.created_at,
+        updated_at=user.updated_at,
+    )
+
+
 @router.put("/drivers/{driver_id}/vehicle", response_model=DriverOut)
 async def set_driver_vehicle(
     driver_id: int,
@@ -168,18 +221,15 @@ async def set_driver_vehicle(
         select(VehicleDriver).where(
             VehicleDriver.driver_id == driver_id,
             VehicleDriver.is_active == True,  # noqa: E712
-            VehicleDriver.role == "PRIMARY",
         )
     )).scalars().all()
     for vd in existing_vd:
         vd.is_active = False
         vd.effective_to = _date.today()
 
-    # Create new PRIMARY assignment
     db.add(VehicleDriver(
         vehicle_id=vehicle.id,
         driver_id=driver_id,
-        role="PRIMARY",
         effective_from=_date.today(),
         is_active=True,
     ))

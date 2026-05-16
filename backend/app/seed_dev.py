@@ -26,9 +26,9 @@ from sqlalchemy import delete, select, text
 from app.database import async_session
 from app.models.base import User
 from app.models.domain import (
+    Client,
     DriverSalaryConfig,
     Location,
-    Partner,
     Pricing,
     PricingLine,
     Reconciliation,
@@ -36,6 +36,7 @@ from app.models.domain import (
     TripOrder,
     TripOrderContainer,
     Vehicle,
+    Vendor,
     VehicleDriver,
     VehicleExpense,
     WorkOrder,
@@ -115,11 +116,10 @@ SEED_LOCATIONS = [
     {"name": "CHU VĂN AN", "lat": 20.8460, "lng": 106.7700},
 ]
 
-SEED_PARTNERS = [
+SEED_CLIENTS = [
     {
         "code": "HAIAN",
         "name": "CÔNG TY TNHH CẢNG HẢI AN",
-        "partner_type": "client",
         "phone": "02253979724",
         "tax_code": "0201126468",
         "address": "Tầng 1, Tòa nhà Hải An, Km 2 đường Đình Vũ, P. Đông Hải, TP. Hải Phòng",
@@ -128,7 +128,6 @@ SEED_PARTNERS = [
     {
         "code": "GLORY",
         "name": "CÔNG TY CP LOGISTICS GLORY",
-        "partner_type": "client",
         "phone": "02253576789",
         "tax_code": "0201589012",
         "address": "Khu công nghiệp Đình Vũ, Hải Phòng",
@@ -137,16 +136,17 @@ SEED_PARTNERS = [
     {
         "code": "CONSCIENCE",
         "name": "CONSCIENCE SHIPPING",
-        "partner_type": "client",
         "phone": "02253678901",
         "tax_code": "0201678901",
         "address": "Số 12 Đường Nguyễn Trãi, Ngô Quyền, Hải Phòng",
         "contact_person": "Phòng Vận tải",
     },
+]
+
+SEED_VENDORS = [
     {
         "code": "XENGOAI01",
         "name": "XE NGOÀI ANH TUẤN",
-        "partner_type": "vendor",
         "phone": "0912345678",
         "tax_code": None,
         "address": "Hải Phòng",
@@ -155,7 +155,6 @@ SEED_PARTNERS = [
     {
         "code": "XENGOAI02",
         "name": "XE NGOÀI MINH QUANG",
-        "partner_type": "vendor",
         "phone": "0923456789",
         "tax_code": None,
         "address": "Hải Phòng",
@@ -481,24 +480,39 @@ async def seed_dev() -> None:
             loc_map[loc_data["name"]] = loc
         await db.commit()
 
-        # ── 5. Partners ────────────────────────────────────────────────
-        print("\n=== Seeding Partners ===")
-        partner_map: dict[str, Partner] = {}
-        for p in SEED_PARTNERS:
-            result = await db.execute(select(Partner).where(Partner.code == p["code"]))
+        # ── 5. Clients & Vendors ─────────────────────────────────────────
+        print("\n=== Seeding Clients ===")
+        partner_map: dict[str, Client | Vendor] = {}
+        for p in SEED_CLIENTS:
+            result = await db.execute(select(Client).where(Client.code == p["code"]))
             partner = result.scalars().first()
             if partner is None:
-                partner = Partner(
+                partner = Client(
                     code=p["code"], name=p["name"],
-                    partner_type=p["partner_type"],
                     phone=p["phone"], tax_code=p.get("tax_code"),
                     address=p.get("address"), contact_person=p.get("contact_person"),
                     is_active=True,
                 )
                 db.add(partner)
                 await db.flush()
-                print(f"  + {p['code']} ({p['partner_type']}) — {p['name']}")
+                print(f"  + {p['code']} (client) — {p['name']}")
             partner_map[p["code"]] = partner
+
+        print("\n=== Seeding Vendors ===")
+        for p in SEED_VENDORS:
+            result = await db.execute(select(Vendor).where(Vendor.code == p["code"]))
+            vendor = result.scalars().first()
+            if vendor is None:
+                vendor = Vendor(
+                    code=p["code"], name=p["name"],
+                    phone=p["phone"], tax_code=p.get("tax_code"),
+                    address=p.get("address"), contact_person=p.get("contact_person"),
+                    is_active=True,
+                )
+                db.add(vendor)
+                await db.flush()
+                print(f"  + {p['code']} (vendor) — {p['name']}")
+            partner_map[p["code"]] = vendor
         await db.commit()
 
         # ── 6. Settings ────────────────────────────────────────────────

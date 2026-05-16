@@ -56,8 +56,8 @@ from app.schemas.domain import SoftDeleteRequest
 router = APIRouter()
 
 
-@router.get("/partners", response_model=PaginatedResponse[PartnerOutBody])
-async def list_partners(
+@router.get("/clients", response_model=PaginatedResponse[PartnerOutBody])
+async def list_clients(
     type: str | None = Query(None, alias="type"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
@@ -67,7 +67,7 @@ async def list_partners(
 ):
     cache = CacheManager(redis)
     cache_key = f"list:{type}:{page}:{page_size}"
-    cached = await cache.get_json("partners", cache_key)
+    cached = await cache.get_json("clients", cache_key)
     if cached is not None:
         return PaginatedResponse(**cached)
 
@@ -87,13 +87,13 @@ async def list_partners(
     )
     serialized = response.model_dump(mode="json")
     await cache.set_json(
-        "partners", cache_key, serialized, ttl=settings.CACHE_CLIENTS_TTL
+        "clients", cache_key, serialized, ttl=settings.CACHE_CLIENTS_TTL
     )
     return response
 
 
-@router.get("/partners/{partner_id}", response_model=PartnerOutBody)
-async def get_partner(
+@router.get("/clients/{partner_id}", response_model=PartnerOutBody)
+async def get_client(
     partner_id: int,
     current_user: User = Depends(require_permission("read", "Partner")),
     use_case: GetPartner = Depends(get_get_partner),
@@ -105,8 +105,8 @@ async def get_partner(
     return partner_to_out(p)
 
 
-@router.post("/partners", response_model=PartnerOutBody, status_code=201)
-async def create_partner(
+@router.post("/clients", response_model=PartnerOutBody, status_code=201)
+async def create_client(
     body: PartnerCreateBody,
     current_user: User = Depends(require_permission("update", "Partner")),
     use_case: CreatePartner = Depends(get_create_partner),
@@ -126,12 +126,12 @@ async def create_partner(
         raise translate(e)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
-    await CacheManager(redis).invalidate_namespace("partners")
+    await CacheManager(redis).invalidate_namespace("clients")
     return partner_to_out(p)
 
 
-@router.put("/partners/{partner_id}", response_model=PartnerOutBody)
-async def update_partner(
+@router.put("/clients/{partner_id}", response_model=PartnerOutBody)
+async def update_client(
     partner_id: int,
     body: PartnerUpdateBody,
     current_user: User = Depends(require_permission("update", "Partner")),
@@ -155,12 +155,12 @@ async def update_partner(
         raise translate(e)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
-    await CacheManager(redis).invalidate_namespace("partners")
+    await CacheManager(redis).invalidate_namespace("clients")
     return partner_to_out(p)
 
 
-@router.delete("/partners/{partner_id}", status_code=204)
-async def delete_partner(
+@router.delete("/clients/{partner_id}", status_code=204)
+async def delete_client(
     partner_id: int,
     body: SoftDeleteRequest,
     request: Request,
@@ -168,10 +168,8 @@ async def delete_partner(
     use_case: DeletePartner = Depends(get_delete_partner),
     redis: Redis = Depends(get_redis),
 ):
-    # Cross-context guard: partner cannot be deleted while referenced by
-    # work_orders or trip_orders.
     from sqlalchemy import text
-    db = use_case.session  # type: ignore[attr-defined]
+    db = use_case.session
     has_wo = (await db.execute(
         text("SELECT 1 FROM work_orders WHERE client_id = :pid LIMIT 1"),
         {"pid": partner_id},
@@ -179,7 +177,7 @@ async def delete_partner(
     if has_wo:
         raise HTTPException(
             status_code=409,
-            detail="Cannot delete partner with associated work orders",
+            detail="Cannot delete client with associated work orders",
         )
     has_to = (await db.execute(
         text("SELECT 1 FROM trip_orders WHERE client_id = :pid LIMIT 1"),
@@ -188,7 +186,7 @@ async def delete_partner(
     if has_to:
         raise HTTPException(
             status_code=409,
-            detail="Cannot delete partner with associated trip orders",
+            detail="Cannot delete client with associated trip orders",
         )
 
     set_audit_reason(body.reason)
@@ -196,5 +194,5 @@ async def delete_partner(
         await use_case(PartnerId(partner_id))
     except NotFound as e:
         raise translate(e)
-    await CacheManager(redis).invalidate_namespace("partners")
+    await CacheManager(redis).invalidate_namespace("clients")
     return Response()

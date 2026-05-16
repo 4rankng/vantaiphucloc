@@ -59,7 +59,6 @@ class Vehicle(AuditableMixin, Base):
 class VehicleDriver(Base):
     """Associates a driver with a vehicle for a date range.
 
-    Supports 1 vehicle / 2 drivers (e.g. PRIMARY + SECONDARY).
     ``effective_to=NULL`` means currently active.
     ``is_active=True`` is the live record; set False to soft-deactivate without
     losing history.
@@ -74,7 +73,6 @@ class VehicleDriver(Base):
                         nullable=False, index=True)
     driver_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"),
                        nullable=False, index=True)
-    role = Column(String(20), nullable=False, default="PRIMARY")  # PRIMARY | SECONDARY
     effective_from = Column(Date, nullable=False)
     effective_to = Column(Date, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
@@ -124,16 +122,15 @@ class VehicleExpense(AuditableMixin, Base):
 
 
 # ---------------------------------------------------------------------------
-# Partner (unified clients + vendors)
+# Client
 # ---------------------------------------------------------------------------
 
-class Partner(AuditableMixin, Base):
-    __tablename__ = "partners"
+class Client(AuditableMixin, Base):
+    __tablename__ = "clients"
 
     id = Column(Integer, primary_key=True, index=True)
     code = Column(String(50), nullable=True, unique=True, index=True)
     name = Column(String(255), nullable=False, index=True)
-    partner_type = Column(String(20), nullable=False)  # client | vendor
     phone = Column(String(50), nullable=True)
     tax_code = Column(String(50), nullable=True)
     address = Column(String(500), nullable=True)
@@ -143,6 +140,28 @@ class Partner(AuditableMixin, Base):
     updated_at = Column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
     )
+
+
+# ---------------------------------------------------------------------------
+# Vendor
+# ---------------------------------------------------------------------------
+
+class Vendor(AuditableMixin, Base):
+    __tablename__ = "vendors"
+
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String(50), nullable=True, unique=True, index=True)
+    name = Column(String(255), nullable=False, index=True)
+    phone = Column(String(50), nullable=True)
+    tax_code = Column(String(50), nullable=True)
+    address = Column(String(500), nullable=True)
+    contact_person = Column(String(255), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+
+Partner = Client  # backward compat alias
 
 
 # ---------------------------------------------------------------------------
@@ -201,7 +220,7 @@ class Pricing(AuditableMixin, Base):
     __tablename__ = "pricings"
 
     id = Column(Integer, primary_key=True, index=True)
-    client_id = Column(Integer, ForeignKey("partners.id"), nullable=False, index=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
     work_type = Column(String(10), nullable=False)     # E20 | E40 | F20 | F40
     pickup_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
     dropoff_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
@@ -245,13 +264,13 @@ class WorkOrder(AuditableMixin, Base):
     __tablename__ = "work_orders"
 
     id = Column(Integer, primary_key=True, index=True)
-    client_id = Column(Integer, ForeignKey("partners.id"), nullable=False, index=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
     code = Column(String(20), nullable=True, unique=True, index=True)
     pickup_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
     dropoff_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
     driver_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     vehicle_id = Column(Integer, ForeignKey("vehicles.id"), nullable=True, index=True)
-    vendor_id = Column(Integer, ForeignKey("partners.id"), nullable=True, index=True)
+    vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=True, index=True)
     vehicle_external_plate = Column(String(20), nullable=True)   # vendor plate (free text)
     vessel = Column(String(100), nullable=True)
     operation_type = Column(String(20), nullable=True, index=True)  # XUAT_NHAP_TAU|CHUYEN_BAI|LAY_VO_HA_HANG|CHAY_SA_LAN|DONG_KHO
@@ -304,7 +323,7 @@ class TripOrder(AuditableMixin, Base):
 
     id = Column(Integer, primary_key=True, index=True)
     trip_date = Column(Date, nullable=False)
-    client_id = Column(Integer, ForeignKey("partners.id"), nullable=False, index=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
     code = Column(String(20), nullable=True, unique=True, index=True)
     pickup_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
     dropoff_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
@@ -444,7 +463,7 @@ class CustomerImportTemplate(Base):
     __tablename__ = "customer_import_templates"
 
     id = Column(Integer, primary_key=True, index=True)
-    client_id = Column(Integer, ForeignKey("partners.id", ondelete="CASCADE"),
+    client_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"),
                         nullable=True, index=True)
     template_name = Column(String(255), nullable=False)
     structure_hash = Column(String(64), nullable=False, index=True)
@@ -525,7 +544,7 @@ class CustomerReconciliationImport(Base):
     id = Column(Integer, primary_key=True, index=True)
     client_id = Column(
         Integer,
-        ForeignKey("partners.id"),
+        ForeignKey("clients.id"),
         nullable=False,
         index=True,
     )
@@ -600,7 +619,7 @@ class VendorReconciliationImport(Base):
     id = Column(Integer, primary_key=True, index=True)
     vendor_id = Column(
         Integer,
-        ForeignKey("partners.id"),
+        ForeignKey("vendors.id"),
         nullable=False,
         index=True,
     )

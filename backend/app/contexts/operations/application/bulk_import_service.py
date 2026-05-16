@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.domain import (
     Location,
     LocationAlias,
-    Partner,
+    Client,
     Reconciliation,
     TripOrder,
     TripOrderContainer,
@@ -359,9 +359,8 @@ class BulkImportService:
         for name in names:
             partner = (
                 await self.session.execute(
-                    select(Partner).where(
-                        Partner.name.ilike(f"%{name}%"),
-                        Partner.partner_type == "client",
+                    select(Client).where(
+                        Client.name.ilike(f"%{name}%"),
                     )
                 )
             ).scalar_one_or_none()

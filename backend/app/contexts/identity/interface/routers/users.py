@@ -112,7 +112,6 @@ async def list_users(
             .where(
                 VehicleDriver.driver_id.in_(driver_ids),
                 VehicleDriver.is_active == True,  # noqa: E712
-                VehicleDriver.role == "PRIMARY",
                 Vehicle.is_active == True,  # noqa: E712
             )
         )

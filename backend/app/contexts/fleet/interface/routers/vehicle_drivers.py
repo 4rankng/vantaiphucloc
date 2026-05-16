@@ -1,6 +1,5 @@
-"""Vehicle-driver assignment endpoints (multi-driver per vehicle).
+"""Vehicle-driver assignment endpoints.
 
-Supports 1 vehicle / 2+ drivers with date ranges and PRIMARY/SECONDARY roles.
 Used for plate lookups in P&L and salary reports.
 """
 
@@ -36,7 +35,6 @@ async def _enrich(db: AsyncSession, vd: VehicleDriver) -> VehicleDriverOut:
         vehicle_plate=plate,
         driver_id=vd.driver_id,
         driver_name=driver_name,
-        role=vd.role,
         effective_from=vd.effective_from,
         effective_to=vd.effective_to,
         is_active=vd.is_active,
@@ -79,7 +77,6 @@ async def create_vehicle_driver(
     vd = VehicleDriver(
         vehicle_id=body.vehicle_id,
         driver_id=body.driver_id,
-        role=body.role,
         effective_from=body.effective_from,
         effective_to=body.effective_to,
         is_active=True,

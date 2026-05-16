@@ -307,7 +307,7 @@ class CreateTripOrderFromImport:
         )
         from app.contexts.operations.infrastructure.import_queries import (
             count_locations,
-            fetch_partner,
+            fetch_client,
             find_duplicate_trip,
         )
         from app.models.domain import (
@@ -315,9 +315,9 @@ class CreateTripOrderFromImport:
             TripOrderContainer as TripOrderContainerORM,
         )
 
-        partner = await fetch_partner(self.session, data.client_id)
+        partner = await fetch_client(self.session, data.client_id)
         if partner is None:
-            raise NotFound("Partner", data.client_id)
+            raise NotFound("Client", data.client_id)
 
         rows_as_dicts = [
             {

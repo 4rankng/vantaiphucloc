@@ -243,7 +243,7 @@ async def search_trip_orders(
             .where(TOCORM.container_number.ilike(term))
         )
         # Subquery for partner name match
-        from app.models.domain import Partner as PartnerORM
+        from app.models.domain import Client as PartnerORM
         partner_subquery = (
             sa_select(PartnerORM.id)
             .where(PartnerORM.name.ilike(term))

@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.domain import WorkOrder, WorkOrderContainer, TripOrder, TripOrderContainer, Partner, PricingLine, Vehicle, VehicleDriver
+from app.models.domain import WorkOrder, WorkOrderContainer, TripOrder, TripOrderContainer, Client, PricingLine, Vehicle, VehicleDriver
 from app.utils.iso6346 import normalize_container_number, validate_container_number
 
 _logger = logging.getLogger(__name__)
@@ -509,7 +509,7 @@ async def import_trip_orders(
 
         # Look up partner by code
         partner_result = await db.execute(
-            select(Partner).where(Partner.code == client_code_str)
+            select(Client).where(Client.code == client_code_str)
         )
         partner = partner_result.scalar_one_or_none()
         if not partner:
@@ -669,13 +669,13 @@ async def generate_work_orders_excel(
             containers_map.setdefault(c.work_order_id, []).append(c)
 
     # Resolve display names via JOIN (denormalized cols dropped).
-    from app.models.domain import Partner, Location, Vehicle
+    from app.models.domain import Client, Location, Vehicle
     from app.models.base import User as _User
     client_ids = {wo.client_id for wo in work_orders}
     driver_ids = {wo.driver_id for wo in work_orders}
     loc_ids = {wo.pickup_location_id for wo in work_orders} | {wo.dropoff_location_id for wo in work_orders}
     loc_ids.discard(None)
-    partner_name_by_id = {c.id: c.name for c in (await db.execute(select(Partner).where(Partner.id.in_(client_ids)))).scalars().all()} if client_ids else {}
+    partner_name_by_id = {c.id: c.name for c in (await db.execute(select(Client).where(Client.id.in_(client_ids)))).scalars().all()} if client_ids else {}
     driver_name_by_id = {u.id: (u.full_name or u.username) for u in (await db.execute(select(_User).where(_User.id.in_(driver_ids)))).scalars().all()} if driver_ids else {}
     loc_name_by_id = {l.id: l.name for l in (await db.execute(select(Location).where(Location.id.in_(loc_ids)))).scalars().all()} if loc_ids else {}
     vehicle_ids = {wo.vehicle_id for wo in work_orders if wo.vehicle_id}
@@ -762,11 +762,11 @@ async def generate_trip_orders_excel(
             containers_map.setdefault(c.trip_order_id, []).append(c)
 
     # Resolve display names via JOIN.
-    from app.models.domain import Partner, Location
+    from app.models.domain import Client, Location
     client_ids = {to.client_id for to in trip_orders}
     loc_ids = {to.pickup_location_id for to in trip_orders} | {to.dropoff_location_id for to in trip_orders}
     loc_ids.discard(None)
-    partner_name_by_id = {c.id: c.name for c in (await db.execute(select(Partner).where(Partner.id.in_(client_ids)))).scalars().all()} if client_ids else {}
+    partner_name_by_id = {c.id: c.name for c in (await db.execute(select(Client).where(Client.id.in_(client_ids)))).scalars().all()} if client_ids else {}
     loc_name_by_id = {l.id: l.name for l in (await db.execute(select(Location).where(Location.id.in_(loc_ids)))).scalars().all()} if loc_ids else {}
 
     # For per-partner export: load match status and vehicle plates
@@ -776,7 +776,7 @@ async def generate_trip_orders_excel(
     partner_name = None
     if client_id:
         # Get partner name for filename
-        p_result = await db.execute(select(Partner).where(Partner.id == client_id))
+        p_result = await db.execute(select(Client).where(Client.id == client_id))
         partner_obj = p_result.scalar_one_or_none()
         partner_name = partner_obj.name if partner_obj else None
 
@@ -822,7 +822,6 @@ async def generate_trip_orders_excel(
                         .where(
                             VehicleDriver.driver_id.in_(driver_ids),
                             VehicleDriver.is_active == True,  # noqa: E712
-                            VehicleDriver.role == "PRIMARY",
                             Vehicle.is_active == True,  # noqa: E712
                         )
                     )
@@ -922,13 +921,13 @@ async def generate_doi_soat_excel(
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
-    from app.models.domain import Partner, Location, Reconciliation, Vehicle
+    from app.models.domain import Client, Location, Reconciliation, Vehicle
     from app.models.base import User as _User
 
     # ── 1. Load partner ───────────────────────────────────────────────────────
-    p_result = await db.execute(select(Partner).where(Partner.id == client_id))
+    p_result = await db.execute(select(Client).where(Client.id == client_id))
     partner = p_result.scalar_one_or_none()
-    partner_name = partner.name if partner else f"Partner #{client_id}"
+    partner_name = partner.name if partner else f"Client #{client_id}"
 
     from datetime import date as date_type
 
@@ -1014,7 +1013,6 @@ async def generate_doi_soat_excel(
                     .where(
                         VehicleDriver.driver_id.in_(driver_ids),
                         VehicleDriver.is_active == True,  # noqa: E712
-                        VehicleDriver.role == "PRIMARY",
                         Vehicle.is_active == True,  # noqa: E712
                     )
                 )

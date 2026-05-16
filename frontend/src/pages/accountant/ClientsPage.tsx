@@ -4,10 +4,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button,
 import { AccountantPageShell } from '@/components/shared/AccountantPageShell'
 import { EntityTable, type EntityColumn } from '@/components/shared/EntityTable'
 import { InfoTip } from '@/components/shared/InfoTip'
-import { usePartners, useCreatePartner, useUpdatePartner, useDeletePartner } from '@/hooks/use-queries'
+import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { fuzzyMatch } from '@/lib/search-utils'
-import type { Partner } from '@/data/domain'
+import type { Client } from '@/data/domain'
 
 const VN_PHONE_RE = /^(0|\+?84)[35789]\d{8}$/
 const VN_TAX_RE = /^\d{10}(\d{3})?$/
@@ -100,18 +100,16 @@ function ClientFormDialog({
 
 export function ClientsPage() {
   const toast = useToast()
-  const { data: partners = [], isLoading } = usePartners({ partnerType: 'client' })
-  const createPartner = useCreatePartner()
-  const updatePartner = useUpdatePartner()
-  const deletePartner = useDeletePartner()
+  const { data: clients = [], isLoading } = useClients()
+  const createClient = useCreateClient()
+  const updateClient = useUpdateClient()
+  const deleteClient = useDeleteClient()
 
   const [search, setSearch] = useState('')
   const [showCreate, setShowCreate] = useState(false)
-  const [editTarget, setEditTarget] = useState<Partner | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<Partner | null>(null)
-  const [detailTarget, setDetailTarget] = useState<Partner | null>(null)
-
-  const clients = useMemo(() => partners.filter(p => p.partnerType === 'client'), [partners])
+  const [editTarget, setEditTarget] = useState<Client | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Client | null>(null)
+  const [detailTarget, setDetailTarget] = useState<Client | null>(null)
 
   const filtered = useMemo(() => {
     if (!search.trim()) return clients
@@ -122,32 +120,32 @@ export function ClientsPage() {
   }, [clients, search])
 
   const handleCreate = useCallback((data: typeof EMPTY_FORM) => {
-    createPartner.mutate({ ...data, partnerType: 'client' }, {
+    createClient.mutate(data, {
       onSuccess: () => { toast.success('Đã thêm chủ hàng'); setShowCreate(false) },
       onError: () => toast.error('Không thể thêm chủ hàng'),
     })
-  }, [createPartner, toast])
+  }, [createClient, toast])
 
   const handleUpdate = useCallback((data: typeof EMPTY_FORM) => {
     if (!editTarget) return
-    updatePartner.mutate({ id: editTarget.id, ...data }, {
+    updateClient.mutate({ id: editTarget.id, data }, {
       onSuccess: () => { toast.success('Đã cập nhật'); setEditTarget(null) },
       onError: () => toast.error('Không thể cập nhật'),
     })
-  }, [editTarget, updatePartner, toast])
+  }, [editTarget, updateClient, toast])
 
   const handleDelete = useCallback(() => {
     if (!deleteTarget) return
-    deletePartner.mutate(deleteTarget.id, {
+    deleteClient.mutate(deleteTarget.id, {
       onSuccess: () => { toast.success('Đã xoá'); setDeleteTarget(null); setDetailTarget(null) },
       onError: (err: unknown) => {
         const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
         toast.error('Không thể xoá', detail ?? `${deleteTarget.name} có dữ liệu liên quan.`)
       },
     })
-  }, [deleteTarget, deletePartner, toast])
+  }, [deleteTarget, deleteClient, toast])
 
-  const columns: EntityColumn<Partner>[] = useMemo(() => [
+  const columns: EntityColumn<Client>[] = useMemo(() => [
     {
       key: 'name', header: 'Tên chủ hàng', className: '2fr',
       render: (p) => (
@@ -199,7 +197,7 @@ export function ClientsPage() {
         addIcon={Plus}
         addHintKey="clients-add"
       >
-        <EntityTable<Partner>
+        <EntityTable<Client>
           columns={columns}
           data={filtered}
           onRowClick={setDetailTarget}
@@ -276,7 +274,7 @@ export function ClientsPage() {
       </Dialog>
 
       {/* Create */}
-      <ClientFormDialog open={showCreate} onClose={() => setShowCreate(false)} onSave={handleCreate} title="Thêm chủ hàng" saving={createPartner.isPending} />
+      <ClientFormDialog open={showCreate} onClose={() => setShowCreate(false)} onSave={handleCreate} title="Thêm chủ hàng" saving={createClient.isPending} />
 
       {/* Edit */}
       <ClientFormDialog
@@ -284,7 +282,7 @@ export function ClientsPage() {
         onClose={() => setEditTarget(null)}
         onSave={handleUpdate}
         title="Cập nhật chủ hàng"
-        saving={updatePartner.isPending}
+        saving={updateClient.isPending}
         initial={editTarget ? { name: editTarget.name, type: editTarget.type ?? 'company', phone: editTarget.phone ?? '', taxCode: editTarget.taxCode ?? '', address: editTarget.address ?? '', contactPerson: editTarget.contactPerson ?? '' } : undefined}
       />
     </>

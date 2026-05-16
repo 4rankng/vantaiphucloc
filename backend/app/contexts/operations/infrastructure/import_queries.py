@@ -20,15 +20,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import (
     Location,
-    Partner,
+    Client,
     TripOrder as TripOrderORM,
     TripOrderContainer as TripOrderContainerORM,
 )
 
 
-async def fetch_partner(session: AsyncSession, client_id: int) -> Partner | None:
+async def fetch_client(session: AsyncSession, client_id: int) -> Client | None:
     res = await session.execute(
-        select(Partner).where(Partner.id == client_id)
+        select(Client).where(Client.id == client_id)
     )
     return res.scalar_one_or_none()
 

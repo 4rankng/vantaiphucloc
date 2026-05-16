@@ -27,7 +27,7 @@ import openpyxl
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.domain import Partner, Pricing, PricingLine
+from app.models.domain import Client, Pricing, PricingLine
 from app.contexts.customer_pricing.infrastructure.location_resolver import (
     LocationResolverService,
     ResolverSource,
@@ -285,8 +285,8 @@ class CommitResult:
 async def commit_tariff_rows(
     db: AsyncSession,
     *,
-    partner: Partner | None = None,
-    client: Partner | None = None,
+    partner: Client | None = None,
+    client: Client | None = None,
     rows: Sequence[TariffRow] = (),
     user_id: int | None = None,
     update_existing_lines: bool = False,

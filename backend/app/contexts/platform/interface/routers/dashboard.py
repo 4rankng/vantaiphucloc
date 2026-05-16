@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.domain import Partner, Reconciliation, TripOrder, TripOrderContainer, Vehicle, VehicleDriver, VehicleExpense, WorkOrder
+from app.models.domain import Client, Reconciliation, TripOrder, TripOrderContainer, Vehicle, VehicleDriver, VehicleExpense, WorkOrder
 from app.models.base import User
 from app.core.deps import get_current_user, require_permission
 from app.core.worker import get_arq_pool

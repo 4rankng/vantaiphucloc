@@ -20,7 +20,7 @@ from openpyxl import load_workbook
 from sqlalchemy import select
 
 from app.database import async_session
-from app.models.domain import Location, Partner, Pricing, PricingLine
+from app.models.domain import Location, Client, Pricing, PricingLine
 
 # ---------------------------------------------------------------------------
 # Config
@@ -166,39 +166,35 @@ async def seed_ports_pricing() -> None:
         print(f"  Locations: {created_locs} created, {len(all_loc_names) - created_locs} existing")
 
         # ── 2. Partners (14 chủ hàng as clients) ────────────────────────
-        print("\n=== Seeding Partners (Khách hàng) ===")
-        partner_map: dict[str, Partner] = {}
+        print("\n=== Seeding Clients (Khách hàng) ===")
+        partner_map: dict[str, Client] = {}
 
-        # Load existing partners
-        result = await db.execute(select(Partner))
+        result = await db.execute(select(Client))
         for p in result.scalars().all():
             if p.code:
                 partner_map[p.code] = p
 
-        # Collect unique chủ hàng from pricing rows
         chu_hang_names = sorted({r["partner"] for r in pricing_rows})
         created_partners = 0
 
         for name in chu_hang_names:
-            # Use name as code (uppercase, no spaces)
             code = name.upper().replace(" ", "_")
             if code in partner_map:
                 print(f"  = {name} (already exists as {code})")
                 continue
-            partner = Partner(
+            client = Client(
                 code=code,
                 name=name,
-                partner_type="client",
                 is_active=True,
             )
-            db.add(partner)
+            db.add(client)
             await db.flush()
-            partner_map[code] = partner
+            partner_map[code] = client
             created_partners += 1
-            print(f"  + {name} (code={code}, id={partner.id})")
+            print(f"  + {name} (code={code}, id={client.id})")
 
         await db.commit()
-        print(f"  Partners: {created_partners} created, {len(chu_hang_names) - created_partners} existing")
+        print(f"  Clients: {created_partners} created, {len(chu_hang_names) - created_partners} existing")
 
         # ── 3. Pricings + PricingLines ──────────────────────────────────
         print("\n=== Seeding Pricings ===")
