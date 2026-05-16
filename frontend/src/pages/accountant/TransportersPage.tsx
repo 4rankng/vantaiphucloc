@@ -1,19 +1,15 @@
-import { useState, useEffect } from 'react'
-import { Truck, MapPin, DollarSign, Plus, X, User } from 'lucide-react'
+import { useState } from 'react'
+import { Truck, DollarSign, Plus, User } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button, Input, Label } from '@/components/ui'
 import { AccountantPageShell } from '@/components/shared/AccountantPageShell'
 import { DashboardSectionHeader } from '@/components/shared/DashboardSectionHeader'
 import { VehicleDriverCard } from '@/components/shared/VehicleDriverCard'
-import { AliasManager } from '@/components/shared/AliasManager'
-import { InfoTip } from '@/components/shared/InfoTip'
+import { LocationManager } from '@/components/shared/LocationManager'
 import { PulseHint } from '@/components/shared/PulseHint'
-import { useLocations, useCreateLocation, useUpdateLocation, useDeleteLocation, useVehicleExpenses, useCreateVehicleExpense, useSalaryConfig, useDrivers, useVehicles, useVehicleDrivers, useAddVehicleDriver, useRemoveVehicleDriver, useCreateVehicle } from '@/hooks/use-queries'
+import { useVehicleExpenses, useCreateVehicleExpense, useSalaryConfig, useDrivers, useVehicles, useVehicleDrivers, useAddVehicleDriver, useRemoveVehicleDriver, useCreateVehicle } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
-import { useQueryClient } from '@tanstack/react-query'
-import { api } from '@/services/api/client'
-import { toCamel } from '@/services/api/utils'
 import { formatCurrency } from '@/data/domain'
-import type { Driver, Location as Loc, LocationAlias } from '@/data/domain'
+import type { Driver } from '@/data/domain'
 import type { VehicleExpenseCategory } from '@/services/api/vehicleExpenses.api'
 
 interface VehicleGroup {
@@ -29,23 +25,6 @@ function groupByVehicle(rows: { id: number; vehicleId: number; vehiclePlate: str
     map.get(r.vehicleId)!.drivers.push({ id: r.id, driverId: r.driverId, driverName: r.driverName })
   }
   return [...map.values()]
-}
-
-async function fetchLocationAliases(locationId: number): Promise<LocationAlias[]> {
-  const res = await api.get('/location-aliases', { params: { location_id: locationId } })
-  return (res.data?.items ?? res.data ?? []).map((r: Record<string, unknown>) => toCamel<LocationAlias>(r))
-}
-
-async function createAlias(locationId: number, alias: string) {
-  await api.post('/location-aliases', { location_id: locationId, alias, source: 'manual' })
-}
-
-async function confirmAlias(id: number) {
-  await api.post(`/location-aliases/${id}/confirm`)
-}
-
-async function rejectAlias(id: number) {
-  await api.post(`/location-aliases/${id}/reject`)
 }
 
 // ─── Tab 1: Xe ────────────────────────────────────────────────────────
@@ -226,155 +205,11 @@ function VehiclesTab() {
 
 // ─── Tab 2: Địa điểm ─────────────────────────────────────────────────
 function LocationsTab() {
-  const toast = useToast()
-  const qc = useQueryClient()
-  const { data: locations = [], isLoading } = useLocations()
-  const createLocation = useCreateLocation()
-  const updateLocation = useUpdateLocation()
-  const deleteLocation = useDeleteLocation()
-
   const [search, setSearch] = useState('')
-  const [showCreate, setShowCreate] = useState(false)
-  const [newName, setNewName] = useState('')
-  const [aliasData, setAliasData] = useState<Record<number, LocationAlias[]>>({})
-
-  const filtered = search.trim()
-    ? locations.filter((l: Loc) => l.name.toLowerCase().includes(search.toLowerCase()))
-    : locations
-
-  // Load aliases for visible locations
-  useEffect(() => {
-    filtered.slice(0, 30).forEach((l: Loc) => {
-      if (aliasData[l.id]) return
-      fetchLocationAliases(l.id).then(aliases => {
-        setAliasData(prev => ({ ...prev, [l.id]: aliases }))
-      })
-    })
-  }, [filtered])
-
-  const handleCreate = () => {
-    if (!newName.trim()) return
-    createLocation.mutate({ name: newName.trim() }, {
-      onSuccess: () => { toast.success('Đã thêm địa điểm'); setNewName(''); setShowCreate(false); qc.invalidateQueries({ queryKey: ['locations'] }) },
-    })
-  }
-
-  const handleAddAlias = async (locationId: number, alias: string) => {
-    await createAlias(locationId, alias)
-    const aliases = await fetchLocationAliases(locationId)
-    setAliasData(prev => ({ ...prev, [locationId]: aliases }))
-  }
-
-  const handleConfirmAlias = async (locationId: number, aliasId: number | string) => {
-    await confirmAlias(aliasId as number)
-    const aliases = await fetchLocationAliases(locationId)
-    setAliasData(prev => ({ ...prev, [locationId]: aliases }))
-  }
-
-  const handleRejectAlias = async (locationId: number, aliasId: number | string) => {
-    await rejectAlias(aliasId as number)
-    const aliases = await fetchLocationAliases(locationId)
-    setAliasData(prev => ({ ...prev, [locationId]: aliases }))
-  }
-
-  const handlePromote = async (locationId: number, aliasId: number | string) => {
-    const aliases = aliasData[locationId] ?? []
-    const alias = aliases.find(a => a.id === aliasId)
-    if (!alias) return
-    const loc = locations.find((l: Loc) => l.id === locationId)
-    if (!loc) return
-    const oldName = loc.name
-    const newName = alias.alias
-    updateLocation.mutate({ id: locationId, name: newName }, {
-      onSuccess: async () => {
-        await api.post('/location-aliases', { location_id: locationId, alias: oldName, source: 'manual' })
-        const freshAliases = await fetchLocationAliases(locationId)
-        setAliasData(prev => ({ ...prev, [locationId]: freshAliases }))
-        qc.invalidateQueries({ queryKey: ['locations'] })
-        toast.success(`Đã đổi tên chính thành "${newName}"`)
-      },
-    })
-  }
-
   return (
     <div className="space-y-3">
-      {/* Toolbar above the card */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1">
-          <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm địa điểm..." className="text-sm" />
-        </div>
-        <InfoTip text="Mỗi địa điểm có thể có nhiều tên gọi (aliases). Di chuột lên tên phụ để đặt làm tên chính." side="left" />
-        <PulseHint hintKey="locations-add">
-          <button onClick={() => setShowCreate(true)} className="btn-primary text-xs">
-            <Plus size={14} strokeWidth={2.25} /><span>Thêm</span>
-          </button>
-        </PulseHint>
-      </div>
-
-      <div
-        className="rounded-xl border overflow-hidden"
-        style={{
-          background: 'var(--theme-bg-secondary)',
-          borderColor: 'var(--theme-border-default)',
-          boxShadow: '0 0 0 1px rgba(9,9,11,0.03), 0 1px 3px rgba(9,9,11,0.06), 0 4px 16px -4px rgba(9,9,11,0.05)',
-        }}
-      >
-        {isLoading ? (
-          <div className="p-5 space-y-4">
-            {[...Array(4)].map((_, i) => <div key={i} className="h-10 rounded animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center py-12 gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full" style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)' }}>
-              <MapPin className="h-5 w-5" style={{ color: 'var(--theme-brand-primary)' }} />
-            </div>
-            <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có địa điểm</p>
-          </div>
-        ) : (
-          <div>
-            {filtered.map((loc: Loc, i: number) => {
-              const aliases = (aliasData[loc.id] ?? []).filter(a => a.status !== 'REJECTED' && a.status !== 'MERGED')
-              return (
-                <div key={loc.id} className="px-5 py-3.5 group" style={{ borderBottom: i < filtered.length - 1 ? '1px solid var(--theme-border-light)' : 'none' }}>
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg mt-0.5" style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 6%, transparent)' }}>
-                      <MapPin className="h-3.5 w-3.5" style={{ color: 'var(--theme-brand-primary)', opacity: 0.7 }} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{loc.name}</p>
-                      <div className="mt-1">
-                        <AliasManager
-                          aliases={aliases.map(a => ({ id: a.id, alias: a.alias, status: a.status as 'PENDING' | 'CONFIRMED' | 'REJECTED' | undefined }))}
-                          primaryName={loc.name}
-                          onAddAlias={(alias) => handleAddAlias(loc.id, alias)}
-                          onConfirmAlias={(id) => handleConfirmAlias(loc.id, id)}
-                          onRejectAlias={(id) => handleRejectAlias(loc.id, id)}
-                          onPromoteAlias={(id) => handlePromote(loc.id, id)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-
-      <Dialog open={showCreate} onOpenChange={() => setShowCreate(false)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Thêm địa điểm</DialogTitle></DialogHeader>
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tên địa điểm</Label>
-            <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="VD: HẢI AN, NHĐV..." className="text-sm" autoFocus
-              onKeyDown={e => { if (e.key === 'Enter') handleCreate() }} />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreate(false)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleCreate} disabled={!newName.trim()} className="flex-1" style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>Thêm</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm địa điểm..." className="text-sm" />
+      <LocationManager search={search} />
     </div>
   )
 }

@@ -1,43 +1,27 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Star, Plus, Check, X, Loader2 } from 'lucide-react'
-import { InfoTip } from '@/components/shared/InfoTip'
 
 interface Alias {
-  id: number | string
+  id: number
   alias: string
-  status?: 'PENDING' | 'CONFIRMED' | 'REJECTED'
-  isPrimary?: boolean
 }
 
 interface AliasManagerProps {
   aliases: Alias[]
-  primaryName: string
-  onAddAlias: (alias: string) => void | Promise<void>
-  onConfirmAlias?: (id: number | string) => void | Promise<void>
-  onRejectAlias?: (id: number | string) => void | Promise<void>
-  onPromoteAlias?: (id: number | string) => void | Promise<void>
-  loading?: boolean
+  onAddAlias: (alias: string) => Promise<void>
+  onPromoteAlias: (id: number) => Promise<void>
+  onDeleteAlias?: (id: number) => Promise<void>
 }
 
-export function AliasManager({
-  aliases,
-  primaryName,
-  onAddAlias,
-  onConfirmAlias,
-  onRejectAlias,
-  onPromoteAlias,
-  loading,
-}: AliasManagerProps) {
+export function AliasManager({ aliases, onAddAlias, onPromoteAlias, onDeleteAlias }: AliasManagerProps) {
   const [showInput, setShowInput] = useState(false)
   const [newAlias, setNewAlias] = useState('')
   const [adding, setAdding] = useState(false)
+  const [pendingId, setPendingId] = useState<number | null>(null)
 
-  const confirmedAliases = aliases.filter(a => a.status === 'CONFIRMED' || a.status === undefined)
-  const pendingAliases = aliases.filter(a => a.status === 'PENDING')
-
-  const handleAdd = async () => {
+  const handleAdd = useCallback(async () => {
     const trimmed = newAlias.trim()
-    if (!trimmed) return
+    if (!trimmed || adding) return
     setAdding(true)
     try {
       await onAddAlias(trimmed)
@@ -46,87 +30,85 @@ export function AliasManager({
     } finally {
       setAdding(false)
     }
-  }
+  }, [newAlias, adding, onAddAlias])
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handleAdd()
-    if (e.key === 'Escape') { setNewAlias(''); setShowInput(false) }
-  }
+  const handlePromote = useCallback(async (id: number) => {
+    setPendingId(id)
+    try {
+      await onPromoteAlias(id)
+    } finally {
+      setPendingId(null)
+    }
+  }, [onPromoteAlias])
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-1.5 flex-wrap">
-        {/* Primary name badge */}
-        <span
-          className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-bold"
-          style={{
-            background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)',
-            color: 'var(--theme-brand-primary)',
-          }}
-        >
-          <Star className="h-2.5 w-2.5" fill="currentColor" />
-          {primaryName}
-        </span>
+    <div className="space-y-3">
+      <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>
+        Tên phụ
+        {aliases.length > 0 && (
+          <span className="ml-1.5 font-normal normal-case">{aliases.length}</span>
+        )}
+      </p>
 
-        {/* Confirmed aliases */}
-        {confirmedAliases.map(a => (
-          <span
+      <div className="space-y-0.5">
+        {aliases.length === 0 && !showInput && (
+          <p className="text-xs italic" style={{ color: 'var(--theme-text-muted)' }}>Chưa có tên phụ nào.</p>
+        )}
+        {aliases.map(a => (
+          <div
             key={a.id}
-            className="group inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
-            style={{
-              background: 'var(--theme-bg-tertiary)',
-              color: 'var(--theme-text-secondary)',
-            }}
+            className="group flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors"
+            style={{ background: 'transparent' }}
+            onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)')}
+            onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
           >
-            {a.alias}
-            {onPromoteAlias && (
+            <span className="flex-1 text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
+              {a.alias}
+            </span>
+            <button
+              onClick={() => handlePromote(a.id)}
+              disabled={pendingId === a.id}
+              className="shrink-0 inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold transition-colors"
+              style={{
+                background: 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)',
+                color: 'var(--theme-brand-primary)',
+              }}
+              title="Đặt làm tên chính"
+            >
+              {pendingId === a.id ? (
+                <Loader2 className="h-2.5 w-2.5 animate-spin" />
+              ) : (
+                <Star className="h-2.5 w-2.5" />
+              )}
+              Đặt chính
+            </button>
+            {onDeleteAlias && (
               <button
-                onClick={() => onPromoteAlias(a.id)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
-                title="Đặt làm tên chính"
+                onClick={() => onDeleteAlias(a.id)}
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md opacity-0 transition-opacity group-hover:opacity-100"
+                title="Xoá tên phụ"
                 style={{ color: 'var(--theme-text-muted)' }}
               >
-                <Star className="h-2.5 w-2.5" />
+                <X className="h-3 w-3" />
               </button>
             )}
-          </span>
+          </div>
         ))}
-
-        {/* Add alias button */}
-        {!showInput && (
-          <button
-            onClick={() => setShowInput(true)}
-            className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium transition-colors"
-            style={{
-              color: 'var(--theme-text-muted)',
-              border: '1px dashed var(--theme-border-default)',
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.borderColor = 'var(--theme-brand-primary)'
-              (e.currentTarget as HTMLElement).style.color = 'var(--theme-brand-primary)'
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.borderColor = 'var(--theme-border-default)'
-              (e.currentTarget as HTMLElement).style.color = 'var(--theme-text-muted)'
-            }}
-          >
-            <Plus className="h-2.5 w-2.5" />
-            alias
-          </button>
-        )}
       </div>
 
-      {/* Add alias input */}
-      {showInput && (
-        <div className="flex items-center gap-1.5 ml-1">
+      {showInput ? (
+        <div className="flex items-center gap-1.5">
           <input
             value={newAlias}
             onChange={e => setNewAlias(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Tên alias mới"
-            disabled={adding}
+            onKeyDown={e => {
+              if (e.key === 'Enter') handleAdd()
+              if (e.key === 'Escape') { setNewAlias(''); setShowInput(false) }
+            }}
+            placeholder="Nhập tên phụ..."
             autoFocus
-            className="rounded-md border px-2 py-1 text-xs outline-none w-40"
+            disabled={adding}
+            className="flex-1 rounded-md border px-2 py-1.5 text-xs outline-none"
             style={{
               background: 'var(--theme-bg-primary)',
               borderColor: 'var(--theme-brand-primary)',
@@ -136,59 +118,36 @@ export function AliasManager({
           <button
             onClick={handleAdd}
             disabled={adding || !newAlias.trim()}
-            className="flex h-6 w-6 items-center justify-center rounded-md"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
             style={{ background: 'var(--theme-status-success)', color: '#fff' }}
           >
             {adding ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
           </button>
           <button
             onClick={() => { setNewAlias(''); setShowInput(false) }}
-            className="flex h-6 w-6 items-center justify-center rounded-md"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
             style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
           >
             <X className="h-3 w-3" />
           </button>
         </div>
-      )}
-
-      {/* Pending aliases */}
-      {pendingAliases.length > 0 && (
-        <div className="space-y-1 ml-1">
-          {pendingAliases.map(a => (
-            <div
-              key={a.id}
-              className="inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px]"
-              style={{
-                background: 'color-mix(in srgb, var(--theme-status-warning) 8%, transparent)',
-                color: 'var(--theme-status-warning)',
-                border: '1px solid color-mix(in srgb, var(--theme-status-warning) 20%, transparent)',
-              }}
-            >
-              <span className="font-medium">{a.alias}</span>
-              <span style={{ color: 'var(--theme-text-muted)', fontSize: 10 }}>chờ duyệt</span>
-              {onConfirmAlias && (
-                <button
-                  onClick={() => onConfirmAlias(a.id)}
-                  className="flex h-4 w-4 items-center justify-center rounded"
-                  style={{ background: 'var(--theme-status-success)', color: '#fff' }}
-                  title="Xác nhận"
-                >
-                  <Check className="h-2.5 w-2.5" />
-                </button>
-              )}
-              {onRejectAlias && (
-                <button
-                  onClick={() => onRejectAlias(a.id)}
-                  className="flex h-4 w-4 items-center justify-center rounded"
-                  style={{ background: 'var(--theme-status-error)', color: '#fff' }}
-                  title="Từ chối"
-                >
-                  <X className="h-2.5 w-2.5" />
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
+      ) : (
+        <button
+          onClick={() => setShowInput(true)}
+          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors"
+          style={{ border: '1px dashed var(--theme-border-default)', color: 'var(--theme-text-muted)' }}
+          onMouseEnter={e => {
+            ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--theme-brand-primary)'
+            ;(e.currentTarget as HTMLElement).style.color = 'var(--theme-brand-primary)'
+          }}
+          onMouseLeave={e => {
+            ;(e.currentTarget as HTMLElement).style.borderColor = 'var(--theme-border-default)'
+            ;(e.currentTarget as HTMLElement).style.color = 'var(--theme-text-muted)'
+          }}
+        >
+          <Plus className="h-3 w-3" />
+          Thêm tên phụ
+        </button>
       )}
     </div>
   )
