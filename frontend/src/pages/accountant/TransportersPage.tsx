@@ -174,9 +174,6 @@ function VehicleExpensesTab({
 
   return (
     <>
-      <div className="px-5 py-1.5" style={{ borderBottom: '2px solid var(--theme-border-default)' }}>
-        <span className="typo-caption" style={{ color: 'var(--theme-text-muted)', fontSize: 11 }}>Kỳ {periodStart} → {periodEnd}</span>
-      </div>
       <div className="overflow-x-auto">
         <table className="w-full" style={{ borderCollapse: 'collapse' }}>
           <thead>
@@ -432,6 +429,14 @@ export function TransportersPage() {
               Địa điểm
             </button>
           </div>
+
+          {activeTab === 'fleet' && (
+            <div className="flex-1 flex items-center justify-center">
+              <span className="tabular-nums" style={{ fontSize: 15, fontWeight: 700, color: 'var(--theme-text-primary)' }}>
+                Kỳ lương {fromDay}/{String(month.month).padStart(2, '0')} → {toDay}/{String(endMonth).padStart(2, '0')}
+              </span>
+            </div>
+          )}
 
           {activeTab === 'fleet' && (
             <div className="flex items-center gap-3">
