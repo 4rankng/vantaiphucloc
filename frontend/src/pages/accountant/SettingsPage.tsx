@@ -1,17 +1,13 @@
 import { useState, useEffect } from 'react'
-import { Calendar, AlertTriangle, Sparkles } from 'lucide-react'
+import { Calendar, AlertTriangle } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button } from '@/components/ui'
 import { AccountantPageShell } from '@/components/shared/AccountantPageShell'
 import { DashboardSectionHeader } from '@/components/shared/DashboardSectionHeader'
-import { InfoTip } from '@/components/shared/InfoTip'
+import { DayStepperInput } from '@/components/shared/DayStepperInput'
 import { PulseHint } from '@/components/shared/PulseHint'
 import { useSalaryConfig, useUpdateSalaryConfig } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { useQueryClient } from '@tanstack/react-query'
-
-function dayOptions() {
-  return Array.from({ length: 31 }, (_, i) => i + 1)
-}
 
 function periodExample(fromDay: number, toDay: number) {
   const now = new Date()
@@ -34,7 +30,6 @@ export function SettingsPage() {
   const [toDay, setToDay] = useState(25)
   const [dirty, setDirty] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
-  const [sparkleDismissed, setSparkleDismissed] = useState(false)
 
   useEffect(() => {
     if (config) {
@@ -56,7 +51,6 @@ export function SettingsPage() {
       onSuccess: () => {
         toast.success('Đã cập nhật kỳ lương')
         setShowConfirm(false)
-        setSparkleDismissed(true)
         qc.invalidateQueries()
       },
       onError: () => toast.error('Không thể cập nhật'),
@@ -71,18 +65,7 @@ export function SettingsPage() {
         boxShadow: '0 0 0 1px rgba(9,9,11,0.03), 0 1px 3px rgba(9,9,11,0.06), 0 4px 16px -4px rgba(9,9,11,0.05)',
       }}>
         <div className="px-5 pt-4 pb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
-          <DashboardSectionHeader
-            title="Kỳ lương"
-            icon={Calendar}
-            right={
-              !sparkleDismissed && (
-                <span className="flex items-center gap-1 text-[10px] font-medium" style={{ color: 'var(--theme-status-warning)' }}>
-                  <Sparkles className="h-3 w-3" />
-                  Mới
-                </span>
-              )
-            }
-          />
+          <DashboardSectionHeader title="Kỳ lương" icon={Calendar} />
         </div>
 
         {isLoading ? (
@@ -92,41 +75,34 @@ export function SettingsPage() {
           </div>
         ) : (
           <div className="p-5 space-y-5">
-            <div className="flex items-center gap-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>
-                  Ngày bắt đầu <InfoTip text="Ngày đầu tiên của kỳ lương" />
-                </label>
-                <select
-                  value={fromDay}
-                  onChange={e => setFromDay(Number(e.target.value))}
-                  className="rounded-lg border px-3 py-2 text-sm font-semibold w-20"
-                  style={{ background: 'var(--theme-bg-primary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
-                >
-                  {dayOptions().map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
-              </div>
-
-              <span className="text-lg mt-5" style={{ color: 'var(--theme-text-muted)' }}>→</span>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>
-                  Ngày kết thúc <InfoTip text="Ngày cuối cùng của kỳ lương" />
-                </label>
-                <select
-                  value={toDay}
-                  onChange={e => setToDay(Number(e.target.value))}
-                  className="rounded-lg border px-3 py-2 text-sm font-semibold w-20"
-                  style={{ background: 'var(--theme-bg-primary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
-                >
-                  {dayOptions().map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
-              </div>
+            <div className="flex items-end gap-4">
+              <DayStepperInput
+                value={fromDay}
+                onChange={setFromDay}
+                label="Ngày bắt đầu"
+                hint="Ngày đầu tiên của kỳ lương"
+              />
+              <span className="pb-2.5 text-base" style={{ color: 'var(--theme-text-muted)' }}>→</span>
+              <DayStepperInput
+                value={toDay}
+                onChange={setToDay}
+                label="Ngày kết thúc"
+                hint="Ngày cuối cùng của kỳ lương"
+              />
             </div>
 
-            <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-              Ví dụ: kỳ 04/2026 = {periodExample(fromDay, toDay)}
-            </p>
+            <div
+              className="flex items-center gap-2 rounded-lg px-3 py-2.5"
+              style={{
+                background: 'color-mix(in srgb, var(--theme-brand-primary) 6%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--theme-brand-primary) 15%, transparent)',
+              }}
+            >
+              <Calendar className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--theme-brand-primary)', opacity: 0.7 }} />
+              <span className="text-xs font-medium" style={{ color: 'var(--theme-text-secondary)' }}>
+                Ví dụ: kỳ 04/2026 = {periodExample(fromDay, toDay)}
+              </span>
+            </div>
 
             {/* Warning when dirty */}
             {dirty && (
