@@ -1,28 +1,21 @@
 import { useState, useMemo, useCallback } from 'react'
-import { Building2, Plus, Phone, MapPin, User, AlertTriangle } from 'lucide-react'
+import { Building2, Plus, AlertTriangle, X } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button, Input, Label } from '@/components/ui'
 import { AccountantPageShell } from '@/components/shared/AccountantPageShell'
-import { EntityTable, type EntityColumn } from '@/components/shared/EntityTable'
+import { PulseHint } from '@/components/shared/PulseHint'
 import { InfoTip } from '@/components/shared/InfoTip'
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
+import { useQueryClient } from '@tanstack/react-query'
 import { fuzzyMatch } from '@/lib/search-utils'
 import type { Client } from '@/data/domain'
 
 const VN_PHONE_RE = /^(0|\+?84)[35789]\d{8}$/
 const VN_TAX_RE = /^\d{10}(\d{3})?$/
-
 const EMPTY_FORM = { name: '', type: 'company' as const, phone: '', taxCode: '', address: '', contactPerson: '' }
 
-function ClientFormDialog({
-  open, onClose, onSave, title, initial, saving,
-}: {
-  open: boolean
-  onClose: () => void
-  onSave: (data: typeof EMPTY_FORM) => void
-  title: string
-  initial?: Partial<typeof EMPTY_FORM>
-  saving?: boolean
+function ClientFormDialog({ open, onClose, onSave, title, initial, saving }: {
+  open: boolean; onClose: () => void; onSave: (data: typeof EMPTY_FORM) => void; title: string; initial?: Partial<typeof EMPTY_FORM>; saving?: boolean
 }) {
   const [form, setForm] = useState({ ...EMPTY_FORM, ...initial })
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -98,6 +91,79 @@ function ClientFormDialog({
   )
 }
 
+function ClientDetailDialog({ client, onClose, onEdit, onDelete }: { client: Client; onClose: () => void; onEdit: () => void; onDelete: () => void }) {
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent hideCloseButton className="p-0 gap-0">
+        <DialogHeader className="sr-only"><DialogTitle>{client.name}</DialogTitle></DialogHeader>
+        <div className="flex items-center justify-between" style={{ padding: '12px 16px', borderBottom: '0.5px solid var(--theme-border-light)' }}>
+          <span className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>{client.name}</span>
+          <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 2, display: 'flex', color: 'var(--theme-text-muted)' }} aria-label="Đóng">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="divide-y" style={{ borderColor: 'var(--theme-border-light)' }}>
+          {([
+            ['Loại', client.type === 'company' ? 'Công ty' : 'Cá nhân'],
+            ['SĐT', client.phone],
+            ['MST', client.taxCode],
+            ['Địa chỉ', client.address],
+            ['Liên hệ', client.contactPerson],
+          ] as [string, string | null | undefined][]).map(([label, val]) => (
+            <div key={label} className="flex items-start gap-3" style={{ padding: '10px 16px' }}>
+              <span className="text-[10px] font-bold uppercase tracking-wider w-14 shrink-0 pt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{label}</span>
+              <span className="text-sm" style={{ color: val ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}>{val || '—'}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ padding: '10px 16px 14px', borderTop: '0.5px solid var(--theme-border-light)', display: 'flex', gap: 8 }}>
+          <button onClick={onDelete} className="text-sm font-medium" style={{ flex: 1, padding: 9, borderRadius: 8, border: '0.5px solid var(--theme-border-light)', background: 'transparent', color: 'var(--theme-status-error)', cursor: 'pointer' }}>Xoá</button>
+          <button onClick={onEdit} className="text-sm font-medium" style={{ flex: 1, padding: 9, borderRadius: 8, border: '0.5px solid var(--theme-border-light)', background: 'transparent', color: 'var(--theme-text-secondary)', cursor: 'pointer' }}>Sửa</button>
+          <button onClick={onClose} className="text-sm font-medium" style={{ flex: 1, padding: 9, borderRadius: 8, border: '0.5px solid var(--theme-border-light)', background: 'transparent', color: 'var(--theme-text-secondary)', cursor: 'pointer' }}>Đóng</button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function ClientRow({ client, onOpenDetail }: { client: Client; onOpenDetail: () => void }) {
+  const initials = client.name.slice(0, 2).toUpperCase()
+
+  return (
+    <tr
+      onClick={onOpenDetail}
+      style={{ borderBottom: '1px solid var(--theme-border-light)', cursor: 'pointer' }}
+      className="transition-colors"
+      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)'}
+      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+    >
+      <td className="px-4 py-2.5">
+        <div className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold select-none shrink-0"
+          style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 12%, transparent)', color: 'var(--theme-brand-primary)' }}>
+          {initials}
+        </div>
+      </td>
+      <td className="px-4 py-2.5">
+        <span className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>{client.name}</span>
+      </td>
+      <td className="px-4 py-2.5">
+        <span className="text-sm" style={{ color: client.phone ? 'var(--theme-text-secondary)' : 'var(--theme-text-muted)' }}>{client.phone || '—'}</span>
+      </td>
+      <td className="px-4 py-2.5">
+        <span className="text-sm" style={{ color: client.address ? 'var(--theme-text-secondary)' : 'var(--theme-text-muted)' }}>{client.address || '—'}</span>
+      </td>
+      <td className="px-4 py-2.5">
+        <span className="text-sm" style={{ color: client.contactPerson ? 'var(--theme-text-secondary)' : 'var(--theme-text-muted)' }}>{client.contactPerson || '—'}</span>
+      </td>
+      <td className="px-4 py-2.5">
+        <span className="text-xs font-mono-num" style={{ color: client.taxCode ? 'var(--theme-text-secondary)' : 'var(--theme-text-muted)' }}>
+          {client.taxCode || '—'}
+        </span>
+      </td>
+    </tr>
+  )
+}
+
 export function ClientsPage() {
   const toast = useToast()
   const { data: clients = [], isLoading } = useClients()
@@ -145,42 +211,6 @@ export function ClientsPage() {
     })
   }, [deleteTarget, deleteClient, toast])
 
-  const columns: EntityColumn<Client>[] = useMemo(() => [
-    {
-      key: 'name', header: 'Tên chủ hàng', className: '2fr',
-      render: (p) => (
-        <div className="min-w-0">
-          <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{p.name}</p>
-          {p.taxCode && <p className="text-xs mt-0.5 font-mono-num" style={{ color: 'var(--theme-text-muted)' }}>MST: {p.taxCode}</p>}
-        </div>
-      ),
-    },
-    {
-      key: 'phone', header: 'Điện thoại', className: '1fr',
-      render: (p) => (
-        <span className="flex items-center gap-1.5 text-sm" style={{ color: p.phone ? 'var(--theme-text-secondary)' : 'var(--theme-text-muted)' }}>
-          {p.phone ? <><Phone size={13} className="shrink-0" style={{ opacity: 0.5 }} />{p.phone}</> : '—'}
-        </span>
-      ),
-    },
-    {
-      key: 'address', header: 'Địa chỉ', className: '1.5fr',
-      render: (p) => (
-        <span className="flex items-start gap-1.5 text-sm truncate" style={{ color: p.address ? 'var(--theme-text-secondary)' : 'var(--theme-text-muted)' }}>
-          {p.address ? <><MapPin size={13} className="shrink-0 mt-0.5" style={{ opacity: 0.5 }} /><span className="line-clamp-1">{p.address}</span></> : '—'}
-        </span>
-      ),
-    },
-    {
-      key: 'contact', header: 'Liên hệ', className: '1fr',
-      render: (p) => (
-        <span className="flex items-center gap-1.5 text-sm" style={{ color: p.contactPerson ? 'var(--theme-text-secondary)' : 'var(--theme-text-muted)' }}>
-          {p.contactPerson ? <><User size={13} className="shrink-0" style={{ opacity: 0.5 }} />{p.contactPerson}</> : '—'}
-        </span>
-      ),
-    },
-  ], [])
-
   return (
     <>
       <AccountantPageShell
@@ -197,65 +227,57 @@ export function ClientsPage() {
         addIcon={Plus}
         addHintKey="clients-add"
       >
-        <EntityTable<Client>
-          columns={columns}
-          data={filtered}
-          onRowClick={setDetailTarget}
-          rowKey={p => p.id}
-          sectionTitle="Danh sách chủ hàng"
-          sectionIcon={Building2}
-          sectionRight={<span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{filtered.length} chủ hàng</span>}
-          emptyIcon={Building2}
-          emptyText="Chưa có chủ hàng nào."
-          emptyAddLabel="Thêm chủ hàng"
-          onEmptyAdd={() => setShowCreate(true)}
-          emptyHintKey="clients-add-empty"
-          loading={isLoading}
-        />
-      </AccountantPageShell>
-
-      {/* Detail dialog */}
-      <Dialog open={!!detailTarget} onOpenChange={() => setDetailTarget(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>{detailTarget?.name}</DialogTitle></DialogHeader>
-          {detailTarget && (
-            <div className="divide-y" style={{ borderColor: 'var(--theme-border-light)' }}>
-              <div className="py-2.5 flex items-center gap-3">
-                <span className="text-[10px] font-bold uppercase tracking-wider w-20 shrink-0" style={{ color: 'var(--theme-text-muted)' }}>Loại</span>
-                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
-                  style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}>
-                  {detailTarget.type === 'company' ? 'Công ty' : 'Cá nhân'}
-                </span>
+        <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', boxShadow: '0 0 0 1px rgba(9,9,11,0.03), 0 1px 3px rgba(9,9,11,0.06)' }}>
+          {isLoading ? (
+            <div className="p-5 space-y-3">
+              {[...Array(4)].map((_, i) => <div key={i} className="h-10 rounded animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full" style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)' }}>
+                <Building2 className="h-5 w-5" style={{ color: 'var(--theme-brand-primary)' }} />
               </div>
-              <div className="py-2.5 flex items-center gap-3">
-                <span className="text-[10px] font-bold uppercase tracking-wider w-20 shrink-0" style={{ color: 'var(--theme-text-muted)' }}>SĐT</span>
-                <span className="text-sm" style={{ color: detailTarget.phone ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}>{detailTarget.phone || '—'}</span>
-              </div>
-              <div className="py-2.5 flex items-center gap-3">
-                <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider w-20 shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
-                  MST <InfoTip text="Mã số thuế — in trên hoá đơn VAT" />
-                </span>
-                <span className="text-sm font-mono-num" style={{ color: detailTarget.taxCode ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}>{detailTarget.taxCode || '—'}</span>
-              </div>
-              <div className="py-2.5 flex items-start gap-3">
-                <span className="text-[10px] font-bold uppercase tracking-wider w-20 shrink-0 mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>Địa chỉ</span>
-                <span className="text-sm" style={{ color: detailTarget.address ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}>{detailTarget.address || '—'}</span>
-              </div>
-              <div className="py-2.5 flex items-center gap-3">
-                <span className="text-[10px] font-bold uppercase tracking-wider w-20 shrink-0" style={{ color: 'var(--theme-text-muted)' }}>Liên hệ</span>
-                <span className="text-sm" style={{ color: detailTarget.contactPerson ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}>{detailTarget.contactPerson || '—'}</span>
-              </div>
+              <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có chủ hàng nào.</p>
+              <PulseHint hintKey="clients-add-empty">
+                <button onClick={() => setShowCreate(true)} className="btn-primary text-xs mt-1">
+                  <Plus size={14} strokeWidth={2.25} />
+                  <span>Thêm chủ hàng</span>
+                </button>
+              </PulseHint>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider w-10" style={{ color: 'var(--theme-text-muted)' }}></th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Tên chủ hàng</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>SĐT</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Địa chỉ</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Liên hệ</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>MST</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(c => (
+                    <ClientRow key={c.id} client={c} onOpenDetail={() => setDetailTarget(c)} />
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setDeleteTarget(detailTarget); setDetailTarget(null) }} className="flex-1" style={{ color: 'var(--theme-status-error)' }}>Xoá</Button>
-            <Button variant="outline" onClick={() => { setEditTarget(detailTarget); setDetailTarget(null) }} className="flex-1">Sửa</Button>
-            <Button variant="outline" onClick={() => setDetailTarget(null)} className="flex-1">Đóng</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </AccountantPageShell>
 
-      {/* Delete confirm */}
+      {detailTarget && (
+        <ClientDetailDialog
+          client={detailTarget}
+          onClose={() => setDetailTarget(null)}
+          onEdit={() => { setEditTarget(detailTarget); setDetailTarget(null) }}
+          onDelete={() => { setDeleteTarget(detailTarget); setDetailTarget(null) }}
+        />
+      )}
+
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Xoá chủ hàng?</DialogTitle></DialogHeader>
@@ -273,10 +295,7 @@ export function ClientsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Create */}
       <ClientFormDialog open={showCreate} onClose={() => setShowCreate(false)} onSave={handleCreate} title="Thêm chủ hàng" saving={createClient.isPending} />
-
-      {/* Edit */}
       <ClientFormDialog
         open={!!editTarget}
         onClose={() => setEditTarget(null)}

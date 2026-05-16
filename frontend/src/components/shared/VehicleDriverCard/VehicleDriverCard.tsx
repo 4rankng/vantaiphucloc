@@ -1,5 +1,4 @@
 import { User, X, Plus } from 'lucide-react'
-import { DashboardSectionHeader } from '@/components/shared/DashboardSectionHeader'
 
 interface VehicleDriver {
   id: number
@@ -28,7 +27,7 @@ export function VehicleDriverCard({
         boxShadow: '0 0 0 1px rgba(9,9,11,0.02), 0 1px 2px rgba(9,9,11,0.04)',
       }}
     >
-      <div className="px-4 pt-3.5 pb-2" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
+      <div className="px-4 pt-3.5 pb-2">
         <span
           className="inline-flex items-center rounded-md border px-2.5 py-1 text-[12px] font-bold tracking-wider"
           style={{
@@ -41,11 +40,11 @@ export function VehicleDriverCard({
         </span>
       </div>
 
-      <div className="divide-y" style={{ borderColor: 'var(--theme-border-light)' }}>
+      <div className="px-4 pb-1">
         {drivers.map(d => (
           <div
             key={d.id}
-            className="flex items-center gap-2.5 px-4 py-2.5"
+            className="flex items-center gap-2.5 py-2"
           >
             <div
               className="flex h-6 w-6 items-center justify-center rounded-lg"
@@ -65,16 +64,10 @@ export function VehicleDriverCard({
             {onRemoveDriver && (
               <button
                 onClick={() => onRemoveDriver(d.id)}
-                className="flex h-5 w-5 items-center justify-center rounded transition-colors"
+                className="flex h-5 w-5 items-center justify-center rounded transition-colors hover:bg-[var(--theme-status-error)]"
                 style={{ color: 'var(--theme-text-muted)' }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.background = 'var(--theme-status-error)'
-                  ;(e.currentTarget as HTMLElement).style.color = '#fff'
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.background = 'transparent'
-                  ;(e.currentTarget as HTMLElement).style.color = 'var(--theme-text-muted)'
-                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#fff' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--theme-text-muted)' }}
                 title="Gỡ lái xe"
               >
                 <X className="h-3 w-3" />
@@ -85,7 +78,7 @@ export function VehicleDriverCard({
       </div>
 
       {onAddDriver && (
-        <div className="px-4 py-2" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
+        <div className="px-4 pb-3 pt-0.5">
           <button
             onClick={onAddDriver}
             className="flex items-center gap-1.5 text-xs font-medium transition-colors"

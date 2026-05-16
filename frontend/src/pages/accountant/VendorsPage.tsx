@@ -1,12 +1,13 @@
 import { useState, useMemo, useCallback } from 'react'
-import { Truck, Plus, Phone, MapPin, User, AlertTriangle, Calendar, FileDown } from 'lucide-react'
+import { Truck, Plus, AlertTriangle, Calendar, FileDown } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button, Input, Label } from '@/components/ui'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/Sheet'
 import { AccountantPageShell } from '@/components/shared/AccountantPageShell'
-import { EntityTable, type EntityColumn } from '@/components/shared/EntityTable'
+import { PulseHint } from '@/components/shared/PulseHint'
 import { InfoTip } from '@/components/shared/InfoTip'
 import { useVendors, useCreateVendor, useUpdateVendor, useDeleteVendor, useVendorSummary, useExportVendorTrips } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
+import { useQueryClient } from '@tanstack/react-query'
 import { fuzzyMatch } from '@/lib/search-utils'
 import { formatCurrency } from '@/data/domain'
 import type { Vendor } from '@/data/domain'
@@ -16,12 +17,7 @@ const VN_TAX_RE = /^\d{10}(\d{3})?$/
 const EMPTY_FORM = { name: '', type: 'company' as const, phone: '', taxCode: '', address: '', contactPerson: '' }
 
 function VendorFormDialog({ open, onClose, onSave, title, initial, saving }: {
-  open: boolean
-  onClose: () => void
-  onSave: (data: typeof EMPTY_FORM) => void
-  title: string
-  initial?: Partial<typeof EMPTY_FORM>
-  saving?: boolean
+  open: boolean; onClose: () => void; onSave: (data: typeof EMPTY_FORM) => void; title: string; initial?: Partial<typeof EMPTY_FORM>; saving?: boolean
 }) {
   const [form, setForm] = useState({ ...EMPTY_FORM, ...initial })
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -145,7 +141,6 @@ function VendorDetailSheet({ vendor, onClose, onEdit, onDelete }: { vendor: Vend
           </div>
         ) : (
           <div className="divide-y" style={{ borderColor: 'var(--theme-border-light)' }}>
-            {/* Section 1: Vendor Info */}
             <div className="px-4 py-3 space-y-2">
               <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Thông tin</p>
               <div className="space-y-1.5">
@@ -168,7 +163,6 @@ function VendorDetailSheet({ vendor, onClose, onEdit, onDelete }: { vendor: Vend
               </div>
             </div>
 
-            {/* Section 2: KPI Stats */}
             {summary?.stats && (
               <div className="px-4 py-3">
                 <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--theme-text-muted)' }}>Thống kê</p>
@@ -187,7 +181,6 @@ function VendorDetailSheet({ vendor, onClose, onEdit, onDelete }: { vendor: Vend
               </div>
             )}
 
-            {/* Section 3: External Drivers */}
             {summary?.drivers && summary.drivers.length > 0 && (
               <div className="px-4 py-3">
                 <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--theme-text-muted)' }}>Lái xe của nhà thầu</p>
@@ -206,7 +199,6 @@ function VendorDetailSheet({ vendor, onClose, onEdit, onDelete }: { vendor: Vend
               </div>
             )}
 
-            {/* Section 4: Reconciliation History */}
             {summary?.reconciliations && summary.reconciliations.length > 0 && (
               <div className="px-4 py-3">
                 <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--theme-text-muted)' }}>Lịch sử đối soát</p>
@@ -231,7 +223,6 @@ function VendorDetailSheet({ vendor, onClose, onEdit, onDelete }: { vendor: Vend
           </div>
         )}
 
-        {/* Footer */}
         <div className="px-4 py-3 flex gap-2" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
           <Button variant="outline" onClick={handleExport} disabled={exportTrips.isPending} className="flex-1 gap-1.5 text-xs">
             <FileDown size={14} />Xuất đối soát
@@ -240,6 +231,44 @@ function VendorDetailSheet({ vendor, onClose, onEdit, onDelete }: { vendor: Vend
         </div>
       </SheetContent>
     </Sheet>
+  )
+}
+
+function VendorRow({ vendor, onOpenDetail }: { vendor: Vendor; onOpenDetail: () => void }) {
+  const initials = vendor.name.slice(0, 2).toUpperCase()
+
+  return (
+    <tr
+      onClick={onOpenDetail}
+      style={{ borderBottom: '1px solid var(--theme-border-light)', cursor: 'pointer' }}
+      className="transition-colors"
+      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)'}
+      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+    >
+      <td className="px-4 py-2.5">
+        <div className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold select-none shrink-0"
+          style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 12%, transparent)', color: 'var(--theme-brand-primary)' }}>
+          {initials}
+        </div>
+      </td>
+      <td className="px-4 py-2.5">
+        <span className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>{vendor.name}</span>
+      </td>
+      <td className="px-4 py-2.5">
+        <span className="text-sm" style={{ color: vendor.phone ? 'var(--theme-text-secondary)' : 'var(--theme-text-muted)' }}>{vendor.phone || '—'}</span>
+      </td>
+      <td className="px-4 py-2.5">
+        <span className="text-sm" style={{ color: vendor.address ? 'var(--theme-text-secondary)' : 'var(--theme-text-muted)' }}>{vendor.address || '—'}</span>
+      </td>
+      <td className="px-4 py-2.5">
+        <span className="text-sm" style={{ color: vendor.contactPerson ? 'var(--theme-text-secondary)' : 'var(--theme-text-muted)' }}>{vendor.contactPerson || '—'}</span>
+      </td>
+      <td className="px-4 py-2.5">
+        <span className="text-xs font-mono-num" style={{ color: vendor.taxCode ? 'var(--theme-text-secondary)' : 'var(--theme-text-muted)' }}>
+          {vendor.taxCode || '—'}
+        </span>
+      </td>
+    </tr>
   )
 }
 
@@ -285,42 +314,6 @@ export function VendorsPage() {
     })
   }, [deleteTarget, deleteVendor, toast])
 
-  const columns: EntityColumn<Vendor>[] = useMemo(() => [
-    {
-      key: 'name', header: 'Tên nhà thầu', className: '2fr',
-      render: (p) => (
-        <div className="min-w-0">
-          <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{p.name}</p>
-          {p.taxCode && <p className="text-xs mt-0.5 font-mono-num" style={{ color: 'var(--theme-text-muted)' }}>MST: {p.taxCode}</p>}
-        </div>
-      ),
-    },
-    {
-      key: 'phone', header: 'Điện thoại', className: '1fr',
-      render: (p) => (
-        <span className="flex items-center gap-1.5 text-sm" style={{ color: p.phone ? 'var(--theme-text-secondary)' : 'var(--theme-text-muted)' }}>
-          {p.phone ? <><Phone size={13} className="shrink-0" style={{ opacity: 0.5 }} />{p.phone}</> : '—'}
-        </span>
-      ),
-    },
-    {
-      key: 'address', header: 'Địa chỉ', className: '1.5fr',
-      render: (p) => (
-        <span className="flex items-start gap-1.5 text-sm truncate" style={{ color: p.address ? 'var(--theme-text-secondary)' : 'var(--theme-text-muted)' }}>
-          {p.address ? <><MapPin size={13} className="shrink-0 mt-0.5" style={{ opacity: 0.5 }} /><span className="line-clamp-1">{p.address}</span></> : '—'}
-        </span>
-      ),
-    },
-    {
-      key: 'contact', header: 'Liên hệ', className: '1fr',
-      render: (p) => (
-        <span className="flex items-center gap-1.5 text-sm" style={{ color: p.contactPerson ? 'var(--theme-text-secondary)' : 'var(--theme-text-muted)' }}>
-          {p.contactPerson ? <><User size={13} className="shrink-0" style={{ opacity: 0.5 }} />{p.contactPerson}</> : '—'}
-        </span>
-      ),
-    },
-  ], [])
-
   return (
     <>
       <AccountantPageShell
@@ -337,24 +330,48 @@ export function VendorsPage() {
         addIcon={Plus}
         addHintKey="vendors-add"
       >
-        <EntityTable<Vendor>
-          columns={columns}
-          data={filtered}
-          onRowClick={setDetailTarget}
-          rowKey={p => p.id}
-          sectionTitle="Danh sách nhà thầu"
-          sectionIcon={Truck}
-          sectionRight={<span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{filtered.length} nhà thầu</span>}
-          emptyIcon={Truck}
-          emptyText="Chưa có nhà thầu nào."
-          emptyAddLabel="Thêm nhà thầu"
-          onEmptyAdd={() => setShowCreate(true)}
-          emptyHintKey="vendors-add-empty"
-          loading={isLoading}
-        />
+        <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', boxShadow: '0 0 0 1px rgba(9,9,11,0.03), 0 1px 3px rgba(9,9,11,0.06)' }}>
+          {isLoading ? (
+            <div className="p-5 space-y-3">
+              {[...Array(4)].map((_, i) => <div key={i} className="h-10 rounded animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full" style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)' }}>
+                <Truck className="h-5 w-5" style={{ color: 'var(--theme-brand-primary)' }} />
+              </div>
+              <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có nhà thầu nào.</p>
+              <PulseHint hintKey="vendors-add-empty">
+                <button onClick={() => setShowCreate(true)} className="btn-primary text-xs mt-1">
+                  <Plus size={14} strokeWidth={2.25} />
+                  <span>Thêm nhà thầu</span>
+                </button>
+              </PulseHint>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider w-10" style={{ color: 'var(--theme-text-muted)' }}></th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Tên nhà thầu</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>SĐT</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Địa chỉ</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Liên hệ</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>MST</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(v => (
+                    <VendorRow key={v.id} vendor={v} onOpenDetail={() => setDetailTarget(v)} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </AccountantPageShell>
 
-      {/* Detail sheet */}
       {detailTarget && (
         <VendorDetailSheet
           vendor={detailTarget}
@@ -364,7 +381,6 @@ export function VendorsPage() {
         />
       )}
 
-      {/* Delete confirm */}
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Xoá nhà thầu?</DialogTitle></DialogHeader>

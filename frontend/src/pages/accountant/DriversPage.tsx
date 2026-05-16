@@ -113,101 +113,45 @@ export function DriversPage() {
   )
 }
 
-function InlineCell({ value, onSave, placeholder, type }: { value: string; onSave: (v: string) => void; placeholder?: string; type?: 'text' | 'tel' }) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(value)
-  const ref = useRef<HTMLInputElement>(null)
-
-  useEffect(() => { if (editing) { ref.current?.focus(); ref.current?.select() } }, [editing])
-  useEffect(() => { setDraft(value) }, [value])
-
-  const save = () => {
-    setEditing(false)
-    if (draft !== value) onSave(draft)
-  }
-
-  if (editing) {
-    return (
-      <input
-        ref={ref}
-        value={draft}
-        onChange={e => setDraft(e.target.value)}
-        onBlur={save}
-        onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') { setDraft(value); setEditing(false) } }}
-        placeholder={placeholder}
-        type={type}
-        className="w-full border-none bg-transparent text-sm font-medium outline-none p-0"
-        style={{ color: 'var(--theme-text-primary)' }}
-      />
-    )
-  }
-
-  return (
-    <button
-      onClick={() => setEditing(true)}
-      className="w-full text-left text-sm font-medium rounded px-1 -mx-1 py-0.5 transition-colors"
-      style={{ color: value ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)', background: 'transparent' }}
-      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)'}
-      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-    >
-      {value || placeholder || '—'}
-    </button>
-  )
-}
-
 function DriverRow({ driver, onOpenDetail }: { driver: Driver; onOpenDetail: () => void }) {
-  const toast = useToast()
-  const qc = useQueryClient()
-  const updateDriver = useUpdateDriver()
   const salary = useDriverBaseSalaryForm({ driverId: driver.id })
 
   const initials = (driver.fullName ?? driver.username).slice(0, 2).toUpperCase()
-
-  const handleSave = async (field: 'fullName' | 'phone', value: string) => {
-    try {
-      await updateDriver.mutateAsync({ id: driver.id, data: { [field]: value } })
-      qc.invalidateQueries({ queryKey: ['drivers'] })
-      toast.success('Đã cập nhật')
-    } catch {
-      toast.error('Không thể cập nhật')
-    }
-  }
-
   const currentSalary = salary.currentRate
   const salaryDisplay = currentSalary ? formatCurrency(currentSalary.baseSalary) : '—'
   const salaryFrom = currentSalary?.effectiveFrom ?? ''
 
   return (
     <tr
-      style={{ borderBottom: '1px solid var(--theme-border-light)' }}
+      onClick={onOpenDetail}
+      style={{ borderBottom: '1px solid var(--theme-border-light)', cursor: 'pointer' }}
       className="transition-colors"
       onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)'}
       onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
     >
-      <td className="px-4 py-2.5" onClick={onOpenDetail} style={{ cursor: 'pointer' }}>
+      <td className="px-4 py-2.5">
         <div className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold select-none shrink-0"
           style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 12%, transparent)', color: 'var(--theme-brand-primary)' }}>
           {initials}
         </div>
       </td>
       <td className="px-4 py-2.5">
-        <InlineCell value={driver.fullName ?? ''} onSave={v => handleSave('fullName', v)} placeholder="Họ tên" />
+        <span className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>{driver.fullName || driver.username}</span>
       </td>
       <td className="px-4 py-2.5">
-        <InlineCell value={driver.phone ?? ''} onSave={v => handleSave('phone', v)} placeholder="SĐT" type="tel" />
+        <span className="text-sm" style={{ color: driver.phone ? 'var(--theme-text-secondary)' : 'var(--theme-text-muted)' }}>{driver.phone || '—'}</span>
       </td>
-      <td className="px-4 py-2.5" onClick={onOpenDetail} style={{ cursor: 'pointer' }}>
+      <td className="px-4 py-2.5">
         <span className="text-sm" style={{ color: driver.vehiclePlate ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)', letterSpacing: '0.04em' }}>
           {driver.vehiclePlate || '—'}
         </span>
       </td>
-      <td className="px-4 py-2.5 text-right" onClick={onOpenDetail} style={{ cursor: 'pointer' }}>
+      <td className="px-4 py-2.5 text-right">
         <span className="text-sm font-semibold tabular-nums" style={{ color: currentSalary ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}>
           {salaryDisplay}
         </span>
-        {currentSalary && <span className="text-xs ml-1" style={{ color: 'var(--theme-text-muted)' }}>đ</span>}
       </td>
-      <td className="px-4 py-2.5" onClick={onOpenDetail} style={{ cursor: 'pointer' }}>
+      <td className="px-4 py-2.5">
         <span className="text-xs" style={{ color: salaryFrom ? 'var(--theme-text-secondary)' : 'var(--theme-text-muted)' }}>
           {salaryFrom || '—'}
         </span>
@@ -423,7 +367,7 @@ function DriverDetailDialog({ driver, onClose }: { driver: Driver; onClose: () =
               <span style={{ ...inputStyle, width: '100%', minWidth: 0 }}>
                 {salary.currentRate ? formatCurrency(salary.currentRate.baseSalary) : 'Chưa thiết lập'}
               </span>
-              {salary.currentRate && <span style={{ fontSize: 12, color: 'var(--theme-text-muted)', flexShrink: 0 }}>đ</span>}
+              {salary.currentRate && <span style={{ fontSize: 12, color: 'var(--theme-text-muted)', flexShrink: 0 }}></span>}
             </div>
           </div>
         </div>
@@ -447,7 +391,7 @@ function DriverDetailDialog({ driver, onClose }: { driver: Driver; onClose: () =
             <div className="rounded-lg" style={{ background: 'var(--theme-bg-tertiary)', padding: '8px 12px' }}>
               {salary.history.slice(0, 4).map((s, idx) => (
                 <div key={s.id} className="flex items-center justify-between" style={{ paddingTop: idx > 0 ? 6 : 0 }}>
-                  <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--theme-text-primary)' }}>{formatCurrency(s.baseSalary)} đ</span>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--theme-text-primary)' }}>{formatCurrency(s.baseSalary)}</span>
                   <div className="flex items-center gap-[5px]">
                     <span style={{ fontSize: 12, color: 'var(--theme-text-muted)' }}>từ {s.effectiveFrom}</span>
                   </div>
