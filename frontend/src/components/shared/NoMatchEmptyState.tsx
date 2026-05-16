@@ -1,5 +1,4 @@
 import { useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { MapPin, Calendar, Users, Box, X } from 'lucide-react'
 import { Button } from '@/components/ui'
 import type { AutoMatchRejectionReasonFE } from '@/services/api/tripOrders.api'
@@ -31,8 +30,6 @@ const REASON_META: Record<string, { icon: React.ElementType; suggestion: string;
 }
 
 export function NoMatchEmptyState({ scanned, reasons, onClose }: NoMatchEmptyStateProps) {
-  const navigate = useNavigate()
-
   const sortedReasons = useMemo(() =>
     [...reasons].sort((a, b) => b.count - a.count),
     [reasons],
@@ -67,7 +64,7 @@ export function NoMatchEmptyState({ scanned, reasons, onClose }: NoMatchEmptySta
   const primaryLabel = isDateTop ? 'Kiểm tra ngày đi' : 'Quản lý địa điểm'
   const primaryAction = isDateTop
     ? () => onClose()
-    : () => { onClose(); navigate('/accountant/settings/locations') }
+    : () => onClose()
 
   return (
     <div className="space-y-4">

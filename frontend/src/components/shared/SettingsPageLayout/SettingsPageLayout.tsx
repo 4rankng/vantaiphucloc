@@ -1,6 +1,4 @@
 import type { ReactNode, ElementType } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ChevronLeft } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 
 interface SettingsPageLayoutProps {
@@ -10,6 +8,7 @@ interface SettingsPageLayoutProps {
   iconColor?: string
   actions?: ReactNode
   children: ReactNode
+  breadcrumb?: ReactNode
 }
 
 export function SettingsPageLayout({
@@ -18,9 +17,8 @@ export function SettingsPageLayout({
   icon,
   actions,
   children,
+  breadcrumb,
 }: SettingsPageLayoutProps) {
-  const navigate = useNavigate()
-
   return (
     <div className="space-y-5">
       <PageHeader
@@ -28,15 +26,7 @@ export function SettingsPageLayout({
         subtitle={subtitle}
         lucideIcon={icon}
         actions={actions}
-        breadcrumbs={
-          <button
-            onClick={() => navigate('/accountant/settings')}
-            className="flex items-center gap-1 text-sm"
-            style={{ color: 'var(--theme-text-muted)' }}
-          >
-            <ChevronLeft size={14} /> Cài đặt
-          </button>
-        }
+        breadcrumbs={breadcrumb}
       />
       {children}
     </div>

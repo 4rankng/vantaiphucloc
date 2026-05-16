@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import {
   useMonthlyPnL,
   useVehiclePnL,
@@ -244,7 +243,6 @@ function SortTh({
 // ─── Desktop dashboard ────────────────────────────────────────────────────────
 
 function DesktopDashboard() {
-  const navigate = useNavigate()
   const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
 
   // Previous month dates for delta computation
@@ -329,7 +327,7 @@ function DesktopDashboard() {
           color="emerald"
           sublabel={`Tháng ${pad(month)}/${year}`}
           trend={revenueDelta != null ? { value: `${Math.abs(revenueDelta)}%`, positive: revenueDelta >= 0 } : undefined}
-          onClick={() => navigate('/accountant/trips')}
+
         />
         <KpiHeroCard
           label="Chi phí"
@@ -339,7 +337,7 @@ function DesktopDashboard() {
           color="rose"
           sublabel="Lương + Xe + CP Chung"
           trend={chiPhiDelta != null ? { value: `${Math.abs(chiPhiDelta)}%`, positive: chiPhiDelta <= 0 } : undefined}
-          onClick={() => navigate('/accountant/revenue-profit')}
+
         />
         <KpiHeroCard
           label="Lãi ròng"
@@ -349,7 +347,7 @@ function DesktopDashboard() {
           color="blue"
           sublabel={bienLai != null ? `Biên lãi ${bienLai.toFixed(1)}%` : `Tháng ${pad(month)}/${year}`}
           trend={laiDelta != null ? { value: `${Math.abs(laiDelta)}%`, positive: laiDelta >= 0 } : undefined}
-          onClick={() => navigate('/accountant/revenue-profit')}
+
         />
       </div>
 
@@ -392,9 +390,8 @@ function DesktopDashboard() {
                     return (
                       <tr
                         key={row.vehicleId}
-                        className="transition-colors cursor-pointer"
+                        className="transition-colors"
                         style={{ borderBottom: i < sortedVehicleRows.length - 1 ? '1px solid var(--theme-border-light)' : 'none' }}
-                        onClick={() => navigate(`/accountant/vehicle-expenses?vehicleId=${row.vehicleId}`)}
                         onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)')}
                         onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
                       >
@@ -410,15 +407,15 @@ function DesktopDashboard() {
                             {row.plate}
                           </span>
                         </td>
-                        <td className="px-3 py-2.5 text-right text-sm font-semibold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>
+                        <td className="px-3 py-2.5 text-right text-xs font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
                           {fmt(row.revenue)}
                         </td>
-                        <td className="px-3 py-2.5 text-right text-sm font-semibold tabular-nums" style={{ color: 'var(--theme-status-error)' }}>
+                        <td className="px-3 py-2.5 text-right text-xs font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--theme-status-error)' }}>
                           {fmt(totalCp)}
                         </td>
                         <td className="px-3 py-2.5">
                           <div className="flex items-center justify-end gap-2">
-                            <span className="text-sm font-extrabold tabular-nums" style={{ color: isProfit ? 'var(--theme-status-success)' : 'var(--theme-status-error)' }}>
+                            <span className="text-xs font-extrabold tabular-nums whitespace-nowrap" style={{ color: isProfit ? 'var(--theme-status-success)' : 'var(--theme-status-error)' }}>
                               {isProfit ? '+' : ''}{fmt(row.loiNhuan)}
                             </span>
                             {marginPct != null && (
@@ -515,12 +512,11 @@ function DesktopDashboard() {
               {pendingTrips.length === 0 ? (
                 <EmptyState icon={CheckCircle2} text="Không có chuyến chờ phân bổ" />
               ) : (
-                pendingTrips.slice(0, 8).map((trip, i) => (
+                pendingTrips.map((trip, i) => (
                   <PendingTripRow
                     key={trip.id}
                     trip={trip}
                     isFirst={i === 0}
-                    onClick={() => navigate(`/accountant/trip/${trip.id}`)}
                   />
                 ))
               )}
@@ -574,6 +570,33 @@ function MobileDashboard() {
   const dayBars      = dailyStats?.buckets ?? []
   const pendingRevenue = useMemo(() => pendingTrips.reduce((s, t) => s + tripRevenue(t), 0), [pendingTrips])
 
+  // Vehicle table sort (same as desktop)
+  const [vehicleSort, setVehicleSort] = useState<{ col: VehicleSortCol; dir: SortDir }>({ col: 'revenue', dir: 'desc' })
+  function toggleVehicleSort(col: VehicleSortCol) {
+    setVehicleSort(prev => prev.col === col
+      ? { col, dir: prev.dir === 'desc' ? 'asc' : 'desc' }
+      : { col, dir: 'desc' })
+  }
+  const sortedVehicleRows = useMemo(() => {
+    const rows = vehiclePnl?.rows ?? []
+    return [...rows].sort((a, b) => {
+      const aCp = (a.cpXe?.total ?? 0) + (a.cpChungAllocated ?? 0) + (a.cpLuongSanLuong ?? 0) + (a.cpLuongCoBan ?? 0)
+      const bCp = (b.cpXe?.total ?? 0) + (b.cpChungAllocated ?? 0) + (b.cpLuongSanLuong ?? 0) + (b.cpLuongCoBan ?? 0)
+      const aMargin = a.revenue > 0 ? a.loiNhuan / a.revenue : -Infinity
+      const bMargin = b.revenue > 0 ? b.loiNhuan / b.revenue : -Infinity
+      const map: Record<VehicleSortCol, number | string> = {
+        plate: a.plate, revenue: a.revenue, totalCp: aCp, profit: a.loiNhuan, margin: aMargin,
+      }
+      const mapB: Record<VehicleSortCol, number | string> = {
+        plate: b.plate, revenue: b.revenue, totalCp: bCp, profit: b.loiNhuan, margin: bMargin,
+      }
+      const av = map[vehicleSort.col]
+      const bv = mapB[vehicleSort.col]
+      const cmp = typeof av === 'string' ? (av as string).localeCompare(bv as string) : (av as number) - (bv as number)
+      return vehicleSort.dir === 'asc' ? cmp : -cmp
+    })
+  }, [vehiclePnl?.rows, vehicleSort])
+
   return (
     <div className="space-y-4 pb-8">
       <div className="flex items-center justify-between">
@@ -590,7 +613,7 @@ function MobileDashboard() {
           color="emerald"
           sublabel={`Tháng ${pad(month)}/${year}`}
           trend={revenueDelta != null ? { value: `${Math.abs(revenueDelta)}%`, positive: revenueDelta >= 0 } : undefined}
-          onClick={() => navigate('/accountant/trips')}
+
         />
         <KpiHeroCard
           label="Chi phí"
@@ -600,7 +623,7 @@ function MobileDashboard() {
           color="rose"
           sublabel="Lương + Xe + CP Chung"
           trend={chiPhiDelta != null ? { value: `${Math.abs(chiPhiDelta)}%`, positive: chiPhiDelta <= 0 } : undefined}
-          onClick={() => navigate('/accountant/revenue-profit')}
+
         />
         <KpiHeroCard
           label="Lãi ròng"
@@ -610,9 +633,85 @@ function MobileDashboard() {
           color="blue"
           sublabel={bienLai != null ? `Biên lãi ${bienLai.toFixed(1)}%` : `Tháng ${pad(month)}/${year}`}
           trend={laiDelta != null ? { value: `${Math.abs(laiDelta)}%`, positive: laiDelta >= 0 } : undefined}
-          onClick={() => navigate('/accountant/revenue-profit')}
+
         />
       </div>
+
+      {/* Vehicle P&L table (same as desktop, full-width + horizontal scroll on narrow) */}
+      <DashboardCard>
+        <div className="px-5 pt-4 pb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
+          <DashboardSectionHeader
+            title="Doanh thu & Chi phí theo xe"
+            icon={Truck}
+            right={
+              vehiclePnl?.rows?.length
+                ? <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{vehiclePnl.rows.length} xe</span>
+                : undefined
+            }
+          />
+        </div>
+        {!vehiclePnl || !vehiclePnl.rows?.length ? (
+          <EmptyState icon={Truck} text="Chưa có dữ liệu xe trong tháng này" />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: 'var(--theme-bg-primary)', borderBottom: '1px solid var(--theme-border-light)' }}>
+                  <SortTh label="Biển số" col="plate" sort={vehicleSort} onSort={toggleVehicleSort} align="left" />
+                  <SortTh label="Doanh thu" col="revenue" sort={vehicleSort} onSort={toggleVehicleSort} />
+                  <SortTh label="Chi phí" col="totalCp" sort={vehicleSort} onSort={toggleVehicleSort} />
+                  <SortTh label="Lãi" col="profit" sort={vehicleSort} onSort={toggleVehicleSort} />
+                </tr>
+              </thead>
+              <tbody>
+                {sortedVehicleRows.map((row, i) => {
+                  const totalCp = (row.cpXe?.total ?? 0) + (row.cpChungAllocated ?? 0) + (row.cpLuongSanLuong ?? 0) + (row.cpLuongCoBan ?? 0)
+                  const isProfit = row.loiNhuan >= 0
+                  const marginPct = row.revenue > 0 ? (row.loiNhuan / row.revenue) * 100 : null
+                  return (
+                    <tr
+                      key={row.vehicleId}
+                      className="transition-colors"
+                      style={{ borderBottom: i < sortedVehicleRows.length - 1 ? '1px solid var(--theme-border-light)' : 'none' }}
+                      onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)')}
+                      onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
+                    >
+                      <td className="px-3 py-2.5">
+                        <span className="inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-bold tracking-wider"
+                          style={{ background: 'var(--theme-bg-tertiary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}>
+                          {row.plate}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-xs font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
+                        {fmt(row.revenue)}
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-xs font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--theme-status-error)' }}>
+                        {fmt(totalCp)}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-xs font-extrabold tabular-nums whitespace-nowrap" style={{ color: isProfit ? 'var(--theme-status-success)' : 'var(--theme-status-error)' }}>
+                            {isProfit ? '+' : ''}{fmt(row.loiNhuan)}
+                          </span>
+                          {marginPct != null && (
+                            <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums"
+                              style={{
+                                background: isProfit ? 'color-mix(in srgb, var(--theme-status-success) 12%, transparent)' : 'color-mix(in srgb, var(--theme-status-error) 12%, transparent)',
+                                color: isProfit ? 'var(--theme-status-success)' : 'var(--theme-status-error)',
+                              }}>
+                              {marginPct.toFixed(0)}%
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </DashboardCard>
 
       {/* Bar chart */}
       <DashboardCard>
@@ -661,7 +760,7 @@ function MobileDashboard() {
       <DashboardCard>
         <div className="px-5 pt-4 pb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
           <DashboardSectionHeader
-            title="Doanh thu chờ phân bổ"
+            title="Chờ phân bổ"
             icon={Clock}
             right={
               pendingTrips.length > 0 ? (
@@ -676,16 +775,15 @@ function MobileDashboard() {
           />
         </div>
 
-        <div style={{ minHeight: '120px' }}>
+        <div>
           {pendingTrips.length === 0 ? (
             <EmptyState icon={CheckCircle2} text="Không có chuyến chờ phân bổ" />
           ) : (
-            pendingTrips.slice(0, 5).map((trip, i) => (
+            pendingTrips.map((trip, i) => (
               <PendingTripRow
                 key={trip.id}
                 trip={trip}
                 isFirst={i === 0}
-                onClick={() => navigate(`/accountant/trip/${trip.id}`)}
               />
             ))
           )}

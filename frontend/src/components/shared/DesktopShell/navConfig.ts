@@ -18,12 +18,6 @@ export const DRIVER_NAV: NavItem[] = [
 
 export const ACCOUNTANT_NAV: NavItem[] = [
   { path: '/accountant', label: 'Trang chủ', icon: Home, exact: true, section: 'main' },
-  { path: '/accountant/partners', label: 'Đối tác', icon: Users, section: 'main' },
-  { path: '/accountant/routes', label: 'Cung đường', icon: Route, section: 'main' },
-  { path: '/accountant/work-orders', label: 'Đối soát', icon: Briefcase, section: 'main' },
-  { path: '/accountant/trips', label: 'Chuyến', icon: Truck, section: 'main' },
-  { path: '/accountant/pricing', label: 'Bảng giá', icon: DollarSign, section: 'main' },
-  { path: '/accountant/salary-setup', label: 'Kỳ lương', icon: FileText, section: 'admin' },
 ]
 
 export const DIRECTOR_NAV: NavItem[] = [

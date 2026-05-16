@@ -201,13 +201,6 @@ const NavGroup = ({ label, groupKey, items, isCollapsed, isExpanded, onToggle, o
 
 const ACCOUNTANT_MENU: MenuItem[] = [
   { title: 'Tổng quan', icon: Home, path: '/accountant', end: true, group: 'top' },
-  { title: 'Thông báo', icon: BellIcon, path: '/accountant/notifications', group: 'top' },
-  { title: 'Chuyến', icon: Truck, path: '/accountant/trips', group: 'hang-hoa' },
-  { title: 'Đối soát tài xế', icon: ClipboardList, path: '/accountant/work-orders', group: 'hang-hoa' },
-  { title: 'Bảng giá', icon: Receipt, path: '/accountant/pricing', group: 'danh-muc' },
-  { title: 'Đối tác', icon: Handshake, path: '/accountant/partners', group: 'danh-muc' },
-  { title: 'Cung đường', icon: Route, path: '/accountant/routes', group: 'danh-muc' },
-  { title: 'Thiết lập kỳ lương', icon: Settings, path: '/accountant/salary-setup', group: 'tai-chinh' },
 ]
 
 const DIRECTOR_MENU: MenuItem[] = [
@@ -231,9 +224,6 @@ interface MenuGroup {
 
 const ACCOUNTANT_GROUPS: MenuGroup[] = [
   { key: 'top', label: null },
-  { key: 'hang-hoa', label: 'Hàng hóa' },
-  { key: 'danh-muc', label: 'Danh mục' },
-  { key: 'tai-chinh', label: 'Tài chính' },
 ]
 
 const DIRECTOR_GROUPS: MenuGroup[] = [

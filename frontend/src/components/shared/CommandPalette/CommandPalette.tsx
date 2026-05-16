@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Search, ArrowRight, FileText, Users, MapPin, Tag, Wallet,
-  Plus, LayoutDashboard, Briefcase, X,
+  Search, ArrowRight,
+  LayoutDashboard, X,
 } from 'lucide-react'
 
 export interface CommandItem {
@@ -36,69 +36,6 @@ const DEFAULT_COMMANDS: CommandItem[] = [
     href: '/accountant',
     keywords: ['dashboard', 'tong quan', 'home'],
     category: 'Navigation',
-  },
-  {
-    id: 'trips',
-    label: 'Đơn hàng',
-    description: 'Quản lý đơn hàng',
-    icon: <FileText className="h-4 w-4" />,
-    href: '/accountant/trips',
-    keywords: ['lenh', 'trip', 'order'],
-    category: 'Navigation',
-  },
-  {
-    id: 'work-orders',
-    label: 'Đối soát',
-    description: 'Đối soát phiếu công',
-    icon: <Briefcase className="h-4 w-4" />,
-    href: '/accountant/work-orders',
-    keywords: ['doi soat', 'work order', 'phieu'],
-    category: 'Navigation',
-  },
-  {
-    id: 'partners',
-    label: 'Đối tác',
-    description: 'Quản lý đối tác vận tải',
-    icon: <Users className="h-4 w-4" />,
-    href: '/accountant/partners',
-    keywords: ['doi tac', 'partner', 'vendor'],
-    category: 'Navigation',
-  },
-  {
-    id: 'routes',
-    label: 'Cung đường',
-    description: 'Quản lý tuyến đường',
-    icon: <MapPin className="h-4 w-4" />,
-    href: '/accountant/routes',
-    keywords: ['cung duong', 'route', 'tuyen'],
-    category: 'Navigation',
-  },
-  {
-    id: 'pricing',
-    label: 'Bảng giá',
-    description: 'Quản lý bảng giá khách hàng',
-    icon: <Tag className="h-4 w-4" />,
-    href: '/accountant/pricing',
-    keywords: ['bang gia', 'price', 'pricing'],
-    category: 'Navigation',
-  },
-  {
-    id: 'salary-setup',
-    label: 'Kỳ lương',
-    description: 'Cấu hình kỳ lương tài xế',
-    icon: <Wallet className="h-4 w-4" />,
-    href: '/accountant/salary-setup',
-    keywords: ['ky luong', 'salary', 'luong'],
-    category: 'Navigation',
-  },
-  {
-    id: 'create-trip',
-    label: 'Tạo đơn mới',
-    description: 'Tạo đơn hàng mới',
-    icon: <Plus className="h-4 w-4" />,
-    href: '/accountant/create-trip',
-    keywords: ['tao lenh', 'create', 'new'],
-    category: 'Actions',
   },
 ]
 

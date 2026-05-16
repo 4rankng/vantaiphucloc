@@ -75,30 +75,33 @@ export function KpiHeroCard({
         boxShadow: '0 0 0 1px rgba(9,9,11,0.03), 0 1px 3px rgba(9,9,11,0.06), 0 4px 16px -4px rgba(9,9,11,0.06)',
       }}
     >
-      {/* Single-row layout: icon | label+sublabel | value+pill */}
+      {/* Single-row: [icon+label] ··· [value+pill] — value wraps to next row when card is narrow */}
       <div className="flex items-center gap-3 px-4 py-3.5 flex-wrap">
-        <div
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]"
-          style={{ background: c.iconBg }}
-        >
-          <Icon className="h-4.5 w-4.5" style={{ color: c.iconText }} />
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <p
-            className="text-[10px] font-bold uppercase tracking-widest leading-tight"
-            style={{ color: 'var(--theme-text-muted)' }}
+        {/* icon + label grouped so they always move together */}
+        <div className="flex items-center gap-2.5 shrink min-w-0">
+          <div
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]"
+            style={{ background: c.iconBg }}
           >
-            {label}
-          </p>
-          {sublabel && (
-            <p className="text-[10px] mt-0.5 leading-tight" style={{ color: 'var(--theme-text-muted)' }}>
-              {sublabel}
+            <Icon className="h-4.5 w-4.5" style={{ color: c.iconText }} />
+          </div>
+          <div className="min-w-0">
+            <p
+              className="text-[10px] font-bold uppercase tracking-widest leading-tight"
+              style={{ color: 'var(--theme-text-muted)' }}
+            >
+              {label}
             </p>
-          )}
+            {sublabel && (
+              <p className="text-[10px] mt-0.5 leading-tight" style={{ color: 'var(--theme-text-muted)' }}>
+                {sublabel}
+              </p>
+            )}
+          </div>
         </div>
 
-        <div className="flex items-baseline gap-2 flex-wrap justify-end shrink-0">
+        {/* value + pill: ml-auto pushes right; wraps to its own row when card is too narrow */}
+        <div className="flex items-baseline gap-2 flex-wrap ml-auto shrink-0">
           <p
             className="font-black tabular-nums leading-none tracking-tight text-[18px]"
             style={{ color: 'var(--theme-text-primary)' }}
