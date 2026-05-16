@@ -206,13 +206,14 @@ export function useWorkOrder(id: number) {
   })
 }
 
-export function useTripOrders(filters?: { clientId?: number; driverId?: number; status?: TripOrder['status']; dateFrom?: string; dateTo?: string }) {
+export function useTripOrders(filters?: { clientId?: number; driverId?: number; status?: TripOrder['status']; dateFrom?: string; dateTo?: string; pageSize?: number }) {
   const flatFilters: Record<string, string> = {}
   if (filters?.clientId) flatFilters.clientId = String(filters.clientId)
   if (filters?.driverId) flatFilters.driverId = String(filters.driverId)
   if (filters?.status) flatFilters.status = filters.status
   if (filters?.dateFrom) flatFilters.dateFrom = filters.dateFrom
   if (filters?.dateTo) flatFilters.dateTo = filters.dateTo
+  if (filters?.pageSize) flatFilters.pageSize = String(filters.pageSize)
 
   return useQuery({
     queryKey: queryKeys.tripOrdersFiltered(Object.keys(flatFilters).length > 0 ? flatFilters : undefined),
@@ -932,9 +933,20 @@ export function useUploadCustomerResponse() {
 
 export function useVehiclePnL(dateFrom: string, dateTo: string, vehicleId?: number) {
   return useQuery({
-    queryKey: queryKeys.vehiclePnL(dateFrom, dateTo, vehicleId),
+    queryKey: ['vehicle-pnl', dateFrom, dateTo, vehicleId],
     queryFn: async () => {
       const res = await apiClient.getVehiclePnL(dateFrom, dateTo, vehicleId)
+      return res.success ? res.data : null
+    },
+    enabled: !!dateFrom && !!dateTo,
+  })
+}
+
+export function useTripDailyStats(dateFrom: string, dateTo: string) {
+  return useQuery({
+    queryKey: ['trip-daily-stats', dateFrom, dateTo],
+    queryFn: async () => {
+      const res = await apiClient.getTripDailyStats(dateFrom, dateTo)
       return res.success ? res.data : null
     },
     enabled: !!dateFrom && !!dateTo,

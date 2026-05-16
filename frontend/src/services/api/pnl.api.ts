@@ -2,7 +2,7 @@
  * Monthly P&L (doanh thu & lãi) API.
  *
  * Revenue = Σ (TripOrder.unit_price × container_count) over MATCHED TOs
- * Profit  = revenue − (productivity + allowance + base salary)
+ * Profit  = revenue − (productivity + allowance + base salary + vehicle expenses + cp chung)
  */
 
 import { api } from './client'
@@ -23,6 +23,8 @@ export interface MonthlyPnL {
   totalProductivitySalary: number
   totalAllowance: number
   totalBaseSalary: number
+  totalVehicleExpenses: number
+  totalCpChung: number
   profit: number
   matchedTripCount: number
   partnerBreakdown: PartnerRevenueBreakdown[]
@@ -39,6 +41,7 @@ export interface VehiclePnLRow {
   plate: string
   revenue: number
   cpXe: VehicleExpenseSummary
+  cpChungAllocated: number
   cpLuongSanLuong: number
   cpLuongCoBan: number
   loiNhuan: number
@@ -67,6 +70,36 @@ export async function getVehiclePnL(
       },
     })
     return ok(toCamel<VehiclePnLResponse>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export interface TripDayBucket {
+  day: number
+  matched: number
+  pending: number
+}
+
+export interface TripDailyStats {
+  dateFrom: string
+  dateTo: string
+  total: number
+  matched: number
+  pending: number
+  matchRate: number | null
+  buckets: TripDayBucket[]
+}
+
+export async function getTripDailyStats(
+  dateFrom: string,
+  dateTo: string,
+): Promise<ApiResponse<TripDailyStats>> {
+  try {
+    const res = await api.get('/dashboard/trip-daily-stats', {
+      params: { date_from: dateFrom, date_to: dateTo },
+    })
+    return ok(toCamel<TripDailyStats>(res.data))
   } catch (err) {
     return fail(err)
   }

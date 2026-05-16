@@ -1,21 +1,27 @@
-"""Dev seed using real operational data from Phuc Loc's April 2026 Shipside billing.
+"""Dev seed with realistic operational data for Feb–May 2026.
 
 Usage:
     cd backend && python -m app.seed_dev
 
-Reads ``docs/real-life-data/trips_shipside_t4_26.json`` (414 real container
-trips) and populates every table with production-like data.
+Generates production-like data spanning 4 months with realistic P&L:
+  - ~70-90 trips/vehicle/month (2-3 container moves/day)
+  - 3 clients: HAIAN (main), GLORY, CONSCIENCE
+  - 12 routes across 7 port/depot locations
+  - Per-trip driver salary + allowance + monthly base salary
+  - Vehicle expenses: fuel, repairs, general overhead
 
 Run ``alembic upgrade head`` first on a fresh database.
 """
 
 import asyncio
+import calendar
 import json
+import unicodedata
 from datetime import date, datetime, timezone
 from pathlib import Path
 from random import Random
 
-from sqlalchemy import select, text
+from sqlalchemy import delete, select, text
 
 from app.database import async_session
 from app.models.base import User
@@ -42,34 +48,62 @@ _REAL_DATA_PATH = (
     / "docs" / "real-life-data" / "trips_shipside_t4_26.json"
 )
 
+MONTHS = [
+    (2026, 2),
+    (2026, 3),
+    (2026, 4),
+    (2026, 5),
+]
+
+rng = Random(42)
+
+
+def _remove_diacritics(s: str) -> str:
+    s = s.replace("đ", "d").replace("Đ", "D")
+    nfkd = unicodedata.normalize("NFKD", s)
+    return "".join(c for c in nfkd if not unicodedata.combining(c))
+
+
+def _name_to_username(full_name: str) -> str:
+    parts = _remove_diacritics(full_name).lower().split()
+    if len(parts) >= 3:
+        return parts[-1] + parts[0][0] + parts[1][0]
+    elif len(parts) == 2:
+        return parts[-1] + parts[0][0]
+    return parts[0]
+
+
 SEED_USERS = [
     {"phone": "0000000000", "username": "admin", "password": "admin123", "role": "superadmin", "full_name": "Super Admin"},
     {"phone": "0000000001", "username": "giamdoc", "password": "admin123", "role": "director", "full_name": "Giám Đốc Test"},
     {"phone": "0000000002", "username": "ketoan", "password": "admin123", "role": "accountant", "full_name": "Kế Toán Test"},
 ]
 
-# Each vehicle can have 1-2 drivers (PRIMARY + optional SECONDARY).
-# Some plates share a second driver to demonstrate the 1:N relationship.
 DRIVER_VEHICLES = {
-    "15C09877": {"full_name": "Nguyễn Văn Tám", "phone": "0901001001", "secondary": None},
-    "15C15033": {"full_name": "Trần Minh Đức", "phone": "0902002002", "secondary": "15H07788"},
-    "15C17301": {"full_name": "Lê Quang Anh", "phone": "0903003003", "secondary": None},
-    "15C17442": {"full_name": "Phạm Văn Hùng", "phone": "0904004004", "secondary": "15H07644"},
-    "15C30649": {"full_name": "Hoàng Đức Thắng", "phone": "0905005005", "secondary": None},
-    "15H06892": {"full_name": "Vũ Đình Nam", "phone": "0906006006", "secondary": None},
-    "15H07135": {"full_name": "Đỗ Quang Hải", "phone": "0907007007", "secondary": None},
-    "15H07524": {"full_name": "Bùi Thanh Sơn", "phone": "0908008008", "secondary": "15H08574"},
-    "15H07644": {"full_name": "Ngô Minh Tuấn", "phone": "0909009009", "secondary": None},
-    "15H07788": {"full_name": "Dương Văn Thành", "phone": "0910101001", "secondary": None},
-    "15H08574": {"full_name": "Lý Hoàng Long", "phone": "0911111002", "secondary": None},
-    "15H12925": {"full_name": "Trịnh Đức Minh", "phone": "0912122003", "secondary": None},
-    "15H15378": {"full_name": "Cao Văn Lượng", "phone": "0913133004", "secondary": None},
-    "15H17403": {"full_name": "Đinh Công Phú", "phone": "0914144005", "secondary": None},
-    "15H17712": {"full_name": "Mai Văn Bình", "phone": "0915155006", "secondary": None},
-    "15H18552": {"full_name": "Tạ Quang Vinh", "phone": "0916166007", "secondary": None},
-    "15H18753": {"full_name": "Chu Đức Anh", "phone": "0917177008", "secondary": None},
-    "15H20645": {"full_name": "Lâm Thanh Tùng", "phone": "0918188009", "secondary": None},
+    "15C09877": {"full_name": "Nguyễn Văn Tám", "phone": "0901001001", "secondary": None, "base_salary": 5000000},
+    "15C15033": {"full_name": "Trần Minh Đức", "phone": "0902002002", "secondary": "15H07788", "base_salary": 5500000},
+    "15C17301": {"full_name": "Lê Quang Anh", "phone": "0903003003", "secondary": None, "base_salary": 4500000},
+    "15C17442": {"full_name": "Phạm Văn Hùng", "phone": "0904004004", "secondary": "15H07644", "base_salary": 5500000},
+    "15C30649": {"full_name": "Hoàng Đức Thắng", "phone": "0905005005", "secondary": None, "base_salary": 5000000},
+    "15H06892": {"full_name": "Vũ Đình Nam", "phone": "0906006006", "secondary": None, "base_salary": 4500000},
+    "15H07135": {"full_name": "Đỗ Quang Hải", "phone": "0907007007", "secondary": None, "base_salary": 5000000},
+    "15H07524": {"full_name": "Bùi Thanh Sơn", "phone": "0908008008", "secondary": "15H08574", "base_salary": 5500000},
+    "15H07644": {"full_name": "Ngô Minh Tuấn", "phone": "0909009009", "secondary": None, "base_salary": 4500000},
+    "15H07788": {"full_name": "Dương Văn Thành", "phone": "0910101001", "secondary": None, "base_salary": 5000000},
+    "15H08574": {"full_name": "Lý Hoàng Long", "phone": "0911111002", "secondary": None, "base_salary": 4500000},
+    "15H12925": {"full_name": "Trịnh Đức Minh", "phone": "0912122003", "secondary": None, "base_salary": 5000000},
+    "15H15378": {"full_name": "Cao Văn Lượng", "phone": "0913133004", "secondary": None, "base_salary": 5000000},
+    "15H17403": {"full_name": "Đinh Công Phú", "phone": "0914144005", "secondary": None, "base_salary": 4500000},
+    "15H17712": {"full_name": "Mai Văn Bình", "phone": "0915155006", "secondary": None, "base_salary": 5000000},
+    "15H18552": {"full_name": "Tạ Quang Vinh", "phone": "0916166007", "secondary": None, "base_salary": 5000000},
+    "15H18753": {"full_name": "Chu Đức Anh", "phone": "0917177008", "secondary": None, "base_salary": 5500000},
+    "15H20645": {"full_name": "Lâm Thanh Tùng", "phone": "0918188009", "secondary": None, "base_salary": 5000000},
 }
+
+EXTRA_DRIVERS = [
+    {"username": "taixe", "full_name": "Phùng Tài Xế", "phone": "0920002001", "plate": "15C09877", "base_salary": 4500000},
+    {"username": "laixe", "full_name": "Trần Lái Xe", "phone": "0920002002", "plate": "15C15033", "base_salary": 4500000},
+]
 
 SEED_LOCATIONS = [
     {"name": "HẢI AN", "lat": 20.8515, "lng": 106.7538},
@@ -129,103 +163,188 @@ SEED_PARTNERS = [
     },
 ]
 
-REAL_PRICING = {
-    ("NHĐV", "HẢI AN", "F20"): {"unit_price": 386100, "driver_salary": 150000, "allowance": 50000},
-    ("NHĐV", "HẢI AN", "F40"): {"unit_price": 448500, "driver_salary": 180000, "allowance": 70000},
-    ("HẢI AN", "NHĐV", "F20"): {"unit_price": 386100, "driver_salary": 150000, "allowance": 50000},
-    ("HẢI AN", "NHĐV", "F40"): {"unit_price": 448500, "driver_salary": 180000, "allowance": 70000},
-    ("NHĐV", "VIP_GREEN", "F20"): {"unit_price": 400000, "driver_salary": 155000, "allowance": 50000},
-    ("NHĐV", "VIP_GREEN", "F40"): {"unit_price": 465000, "driver_salary": 185000, "allowance": 70000},
-    ("VIP_GREEN", "NHĐV", "F20"): {"unit_price": 400000, "driver_salary": 155000, "allowance": 50000},
-    ("VIP_GREEN", "NHĐV", "F40"): {"unit_price": 465000, "driver_salary": 185000, "allowance": 70000},
-    ("HẢI AN", "GREEN_PORT", "F20"): {"unit_price": 420000, "driver_salary": 160000, "allowance": 55000},
-    ("HẢI AN", "GREEN_PORT", "F40"): {"unit_price": 490000, "driver_salary": 190000, "allowance": 75000},
+ALL_PRICING = {
+    "HAIAN": {
+        ("NHĐV", "HẢI AN", "F20"): {"unit_price": 386100, "driver_salary": 150000, "allowance": 50000},
+        ("NHĐV", "HẢI AN", "F40"): {"unit_price": 448500, "driver_salary": 180000, "allowance": 70000},
+        ("HẢI AN", "NHĐV", "F20"): {"unit_price": 386100, "driver_salary": 150000, "allowance": 50000},
+        ("HẢI AN", "NHĐV", "F40"): {"unit_price": 448500, "driver_salary": 180000, "allowance": 70000},
+        ("NHĐV", "VIP GREEN", "F20"): {"unit_price": 400000, "driver_salary": 155000, "allowance": 50000},
+        ("NHĐV", "VIP GREEN", "F40"): {"unit_price": 465000, "driver_salary": 185000, "allowance": 70000},
+        ("VIP GREEN", "NHĐV", "F20"): {"unit_price": 400000, "driver_salary": 155000, "allowance": 50000},
+        ("VIP GREEN", "NHĐV", "F40"): {"unit_price": 465000, "driver_salary": 185000, "allowance": 70000},
+        ("HẢI AN", "GREEN PORT", "F20"): {"unit_price": 420000, "driver_salary": 160000, "allowance": 55000},
+        ("HẢI AN", "GREEN PORT", "F40"): {"unit_price": 490000, "driver_salary": 190000, "allowance": 75000},
+        ("GREEN PORT", "HẢI AN", "F20"): {"unit_price": 420000, "driver_salary": 160000, "allowance": 55000},
+        ("GREEN PORT", "HẢI AN", "F40"): {"unit_price": 490000, "driver_salary": 190000, "allowance": 75000},
+        ("NHĐV", "ĐÌNH VŨ", "F20"): {"unit_price": 370000, "driver_salary": 145000, "allowance": 45000},
+        ("NHĐV", "ĐÌNH VŨ", "F40"): {"unit_price": 430000, "driver_salary": 175000, "allowance": 65000},
+        ("ĐÌNH VŨ", "NHĐV", "F20"): {"unit_price": 370000, "driver_salary": 145000, "allowance": 45000},
+        ("ĐÌNH VŨ", "NHĐV", "F40"): {"unit_price": 430000, "driver_salary": 175000, "allowance": 65000},
+        ("HẢI AN", "CHU VĂN AN", "F20"): {"unit_price": 395000, "driver_salary": 152000, "allowance": 48000},
+        ("HẢI AN", "CHU VĂN AN", "F40"): {"unit_price": 458000, "driver_salary": 182000, "allowance": 68000},
+        ("CHU VĂN AN", "HẢI AN", "F20"): {"unit_price": 395000, "driver_salary": 152000, "allowance": 48000},
+        ("CHU VĂN AN", "HẢI AN", "F40"): {"unit_price": 458000, "driver_salary": 182000, "allowance": 68000},
+        ("NHĐV", "NAM ĐỊNH VỤ", "F20"): {"unit_price": 375000, "driver_salary": 148000, "allowance": 46000},
+        ("NHĐV", "NAM ĐỊNH VỤ", "F40"): {"unit_price": 435000, "driver_salary": 178000, "allowance": 66000},
+        ("NAM ĐỊNH VỤ", "NHĐV", "F20"): {"unit_price": 375000, "driver_salary": 148000, "allowance": 46000},
+        ("NAM ĐỊNH VỤ", "NHĐV", "F40"): {"unit_price": 435000, "driver_salary": 178000, "allowance": 66000},
+    },
+    "GLORY": {
+        ("NHĐV", "HẢI AN", "F20"): {"unit_price": 410000, "driver_salary": 155000, "allowance": 52000},
+        ("NHĐV", "HẢI AN", "F40"): {"unit_price": 475000, "driver_salary": 185000, "allowance": 72000},
+        ("HẢI AN", "NHĐV", "F20"): {"unit_price": 410000, "driver_salary": 155000, "allowance": 52000},
+        ("HẢI AN", "NHĐV", "F40"): {"unit_price": 475000, "driver_salary": 185000, "allowance": 72000},
+        ("NHĐV", "VIP GREEN", "F20"): {"unit_price": 425000, "driver_salary": 160000, "allowance": 52000},
+        ("NHĐV", "VIP GREEN", "F40"): {"unit_price": 495000, "driver_salary": 190000, "allowance": 72000},
+        ("VIP GREEN", "NHĐV", "F20"): {"unit_price": 425000, "driver_salary": 160000, "allowance": 52000},
+        ("VIP GREEN", "NHĐV", "F40"): {"unit_price": 495000, "driver_salary": 190000, "allowance": 72000},
+        ("HẢI AN", "GREEN PORT", "F20"): {"unit_price": 445000, "driver_salary": 165000, "allowance": 57000},
+        ("HẢI AN", "GREEN PORT", "F40"): {"unit_price": 518000, "driver_salary": 195000, "allowance": 77000},
+        ("NHĐV", "ĐÌNH VŨ", "F20"): {"unit_price": 395000, "driver_salary": 150000, "allowance": 47000},
+        ("NHĐV", "ĐÌNH VŨ", "F40"): {"unit_price": 458000, "driver_salary": 180000, "allowance": 67000},
+        ("HẢI AN", "CHU VĂN AN", "F20"): {"unit_price": 420000, "driver_salary": 157000, "allowance": 50000},
+        ("HẢI AN", "CHU VĂN AN", "F40"): {"unit_price": 485000, "driver_salary": 187000, "allowance": 70000},
+    },
+    "CONSCIENCE": {
+        ("NHĐV", "HẢI AN", "F20"): {"unit_price": 395000, "driver_salary": 152000, "allowance": 48000},
+        ("NHĐV", "HẢI AN", "F40"): {"unit_price": 458000, "driver_salary": 182000, "allowance": 68000},
+        ("HẢI AN", "NHĐV", "F20"): {"unit_price": 395000, "driver_salary": 152000, "allowance": 48000},
+        ("HẢI AN", "NHĐV", "F40"): {"unit_price": 458000, "driver_salary": 182000, "allowance": 68000},
+        ("NHĐV", "VIP GREEN", "F20"): {"unit_price": 410000, "driver_salary": 157000, "allowance": 48000},
+        ("NHĐV", "VIP GREEN", "F40"): {"unit_price": 478000, "driver_salary": 187000, "allowance": 68000},
+        ("HẢI AN", "GREEN PORT", "F20"): {"unit_price": 430000, "driver_salary": 162000, "allowance": 53000},
+        ("HẢI AN", "GREEN PORT", "F40"): {"unit_price": 500000, "driver_salary": 192000, "allowance": 73000},
+        ("NHĐV", "ĐÌNH VŨ", "F20"): {"unit_price": 380000, "driver_salary": 147000, "allowance": 44000},
+        ("NHĐV", "ĐÌNH VŨ", "F40"): {"unit_price": 442000, "driver_salary": 177000, "allowance": 64000},
+    },
 }
 
-VEHICLE_EXPENSES = {
-    "15C09877": [
-        {"category": "XANG_DAU", "amount": 4500000, "description": "Xăng dầu T4/2026"},
-        {"category": "SUA_CHUA", "amount": 1200000, "description": "Thay lốp xe"},
-    ],
-    "15C15033": [
-        {"category": "XANG_DAU", "amount": 5200000, "description": "Xăng dầu T4/2026"},
-    ],
-    "15C17301": [
-        {"category": "XANG_DAU", "amount": 4100000, "description": "Xăng dầu T4/2026"},
-        {"category": "SUA_CHUA", "amount": 3500000, "description": "Sửa chữa phanh"},
-    ],
-    "15C17442": [
-        {"category": "XANG_DAU", "amount": 4800000, "description": "Xăng dầu T4/2026"},
-        {"category": "KHAC", "amount": 500000, "description": "Rửa xe, bảo dưỡng nhẹ"},
-    ],
-    "15C30649": [
-        {"category": "XANG_DAU", "amount": 3900000, "description": "Xăng dầu T4/2026"},
-    ],
-    "15H06892": [
-        {"category": "XANG_DAU", "amount": 4600000, "description": "Xăng dầu T4/2026"},
-        {"category": "SUA_CHUA", "amount": 2800000, "description": "Thay nhớt + lọc gió"},
-    ],
-    "15H07135": [
-        {"category": "XANG_DAU", "amount": 4300000, "description": "Xăng dầu T4/2026"},
-    ],
-    "15H07524": [
-        {"category": "XANG_DAU", "amount": 5100000, "description": "Xăng dầu T4/2026"},
-        {"category": "KHAC", "amount": 300000, "description": "Phí cầu đường"},
-    ],
-    "15H07644": [
-        {"category": "XANG_DAU", "amount": 4400000, "description": "Xăng dầu T4/2026"},
-    ],
-    "15H07788": [
-        {"category": "XANG_DAU", "amount": 4700000, "description": "Xăng dầu T4/2026"},
-        {"category": "SUA_CHUA", "amount": 1500000, "description": "Sửa chữa gầm xe"},
-    ],
-    "15H08574": [
-        {"category": "XANG_DAU", "amount": 4200000, "description": "Xăng dầu T4/2026"},
-    ],
-    "15H12925": [
-        {"category": "XANG_DAU", "amount": 4000000, "description": "Xăng dầu T4/2026"},
-        {"category": "SUA_CHUA", "amount": 900000, "description": "Thay ắc quy"},
-    ],
-    "15H15378": [
-        {"category": "XANG_DAU", "amount": 4500000, "description": "Xăng dầu T4/2026"},
-    ],
-    "15H17403": [
-        {"category": "XANG_DAU", "amount": 3800000, "description": "Xăng dầu T4/2026"},
-    ],
-    "15H17712": [
-        {"category": "XANG_DAU", "amount": 4900000, "description": "Xăng dầu T4/2026"},
-        {"category": "KHAC", "amount": 400000, "description": "Phí kiểm định"},
-    ],
-    "15H18552": [
-        {"category": "XANG_DAU", "amount": 4100000, "description": "Xăng dầu T4/2026"},
-    ],
-    "15H18753": [
-        {"category": "XANG_DAU", "amount": 4600000, "description": "Xăng dầu T4/2026"},
-        {"category": "SUA_CHUA", "amount": 2000000, "description": "Thay lốp + cán chỉnh"},
-    ],
-    "15H20645": [
-        {"category": "XANG_DAU", "amount": 4300000, "description": "Xăng dầu T4/2026"},
-    ],
-}
+ROUTES = [
+    ("NHĐV", "HẢI AN"),
+    ("HẢI AN", "NHĐV"),
+    ("NHĐV", "VIP GREEN"),
+    ("VIP GREEN", "NHĐV"),
+    ("HẢI AN", "GREEN PORT"),
+    ("GREEN PORT", "HẢI AN"),
+    ("NHĐV", "ĐÌNH VŨ"),
+    ("ĐÌNH VŨ", "NHĐV"),
+    ("HẢI AN", "CHU VĂN AN"),
+    ("CHU VĂN AN", "HẢI AN"),
+    ("NHĐV", "NAM ĐỊNH VỤ"),
+    ("NAM ĐỊNH VỤ", "NHĐV"),
+]
 
-GENERAL_OVERHEAD = [
-    {"category": "CHUNG", "amount": 15000000, "description": "Bảo hiểm xe tháng 4/2026"},
-    {"category": "CHUNG", "amount": 8000000, "description": "Phí bãi đậu xe tháng 4/2026"},
-    {"category": "CHUNG", "amount": 5000000, "description": "Chi phí quản lý bãi"},
+CLIENT_WEIGHTS = {"HAIAN": 65, "GLORY": 22, "CONSCIENCE": 13}
+CLIENT_KEYS = list(CLIENT_WEIGHTS.keys())
+CLIENT_W = list(CLIENT_WEIGHTS.values())
+
+VESSELS = [
+    "HAIAN ALFA 073N", "HAIAN LINK V.138S", "HAIAN BETA 062S",
+    "HAIAN EXPRESS 251N", "HAIAN GLOBAL 045S", "HAIAN PIONEER 112N",
+    "GLORY SHANGHAI 2612N", "CONSCIENCE 2615N",
+    "HAIAN ALPHA 085S", "HAIAN NEPTUNE 201N", "GLORY PACIFIC 310S",
+]
+
+_CONTAINER_PREFIXES = [
+    "HACU", "NSSU", "FBLU", "MSCU", "CSLU", "TCLU", "EISU", "OOLU",
+    "NYKU", "KKTU", "YMMU", "APLU", "CMAU", "HLXU", "ONEU",
 ]
 
 
-def _load_trips() -> list[dict]:
-    with open(_REAL_DATA_PATH) as f:
-        return json.load(f)
+def _rand_container() -> str:
+    return f"{rng.choice(_CONTAINER_PREFIXES)}{rng.randint(1000000, 9999999)}"
+
+
+def _generate_trips_for_month(year: int, month: int, plates: list[str]) -> list[dict]:
+    days_in_month = calendar.monthrange(year, month)[1]
+    num_vehicles = len(plates)
+    total_trips = num_vehicles * rng.randint(72, 88)
+    trips = []
+    for _ in range(total_trips):
+        day = rng.randint(1, days_in_month)
+        pickup, dropoff = rng.choice(ROUTES)
+        size = rng.choices([20, 40], weights=[75, 25])[0]
+        wt = f"F{size}"
+        client_code = rng.choices(CLIENT_KEYS, weights=CLIENT_W)[0]
+        pricing_for_client = ALL_PRICING.get(client_code, {})
+        prices = pricing_for_client.get((pickup, dropoff, wt))
+        if prices:
+            unit_price = prices["unit_price"]
+        else:
+            fallback = ALL_PRICING["HAIAN"].get((pickup, dropoff, wt))
+            unit_price = fallback["unit_price"] if fallback else 400000
+        trips.append({
+            "container": _rand_container(),
+            "size": size,
+            "vessel": rng.choice(VESSELS),
+            "pickup": pickup,
+            "dropoff": dropoff,
+            "plate": rng.choice(plates),
+            "unit_price": unit_price,
+            "trip_date": f"{year}-{month:02d}-{day:02d}",
+            "client_code": client_code,
+        })
+    return trips
+
+
+def _load_all_trips() -> list[dict]:
+    all_trips: list[dict] = []
+    real_april: list[dict] = []
+    if _REAL_DATA_PATH.exists():
+        with open(_REAL_DATA_PATH) as f:
+            real_april = json.load(f)
+        for t in real_april:
+            t["client_code"] = "HAIAN"
+        print(f"  Loaded {len(real_april)} real April trips from {_REAL_DATA_PATH.name}")
+
+    plates = sorted(DRIVER_VEHICLES.keys())
+
+    for year, month in MONTHS:
+        synthetic = _generate_trips_for_month(year, month, plates)
+        if year == 2026 and month == 4 and real_april:
+            all_trips.extend(real_april)
+            print(f"  April: {len(real_april)} real + {len(synthetic)} synthetic")
+        all_trips.extend(synthetic)
+        print(f"  Generated {len(synthetic)} synthetic trips for {year}-{month:02d}")
+
+    all_trips.sort(key=lambda t: t["trip_date"])
+    return all_trips
+
+
+GENERAL_OVERHEAD_TEMPLATE = [
+    {"category": "CHUNG", "amount_range": (8000000, 12000000), "desc_tpl": "Bảo hiểm xe tháng {m}/2026"},
+    {"category": "CHUNG", "amount_range": (5000000, 8000000), "desc_tpl": "Phí bãi đậu xe tháng {m}/2026"},
+    {"category": "CHUNG", "amount_range": (2000000, 5000000), "desc_tpl": "Chi phí quản lý bãi tháng {m}/2026"},
+]
+
+
+async def _clear_operational_data(db) -> None:
+    print("\n=== Clearing existing operational data ===")
+    for table in [
+        "reconciliations",
+        "work_order_containers",
+        "work_orders",
+        "trip_order_containers",
+        "trip_orders",
+        "vehicle_expenses",
+        "driver_salary_configs",
+        "pricing_lines",
+        "pricings",
+    ]:
+        result = await db.execute(text(f"DELETE FROM {table}"))
+        if result.rowcount:
+            print(f"  Cleared {result.rowcount} rows from {table}")
+    await db.flush()
 
 
 async def seed_dev() -> None:
-    trips = _load_trips()
-    print(f"Loaded {len(trips)} real trips from {_REAL_DATA_PATH.name}")
-    rng = Random(42)
+    trips = _load_all_trips()
+    print(f"\nTotal trips to seed: {len(trips)}")
 
     async with async_session() as db:
+        await _clear_operational_data(db)
+
         # ── 1. Staff users ──────────────────────────────────────────────
         print("\n=== Seeding Staff Users ===")
         user_map: dict[str, User] = {}
@@ -242,17 +361,21 @@ async def seed_dev() -> None:
                 await db.flush()
                 print(f"  + {u['role']} ({u['username']})")
             else:
-                print(f"  = {u['username']}")
+                existing.phone = u["phone"]
+                existing.full_name = u.get("full_name")
+                existing.hashed_password = hash_password(u["password"])
+                existing.role = u["role"]
+                existing.is_active = True
+                print(f"  = {u['username']} (updated)")
             user_map[u["username"]] = existing
 
-        # ── 2. Drivers + vehicles (segregated) ────────────────────────
-        print("\n=== Seeding Drivers & Vehicles (segregated) ===")
+        # ── 2. Drivers + vehicles ──────────────────────────────────────
+        print("\n=== Seeding Drivers & Vehicles ===")
         driver_map: dict[str, User] = {}
         vehicle_map: dict[str, Vehicle] = {}
 
-        # Create driver users first
         for plate, info in DRIVER_VEHICLES.items():
-            uname = f"driver_{plate.replace('-', '').lower()}"
+            uname = _name_to_username(info["full_name"])
             result = await db.execute(select(User).where(User.username == uname))
             drv = result.scalars().first()
             if drv is None:
@@ -263,10 +386,33 @@ async def seed_dev() -> None:
                 )
                 db.add(drv)
                 await db.flush()
-                print(f"  + driver: {info['full_name']} ({plate})")
+                print(f"  + driver: {info['full_name']} → {uname} ({plate})")
+            else:
+                drv.phone = info["phone"]
+                drv.full_name = info["full_name"]
+                drv.is_active = True
+                print(f"  = driver: {uname} ({plate}) — updated")
             driver_map[plate] = drv
 
-        # Create vehicles WITHOUT driver_id (relationship via VehicleDriver only)
+        for ed in EXTRA_DRIVERS:
+            result = await db.execute(select(User).where(User.username == ed["username"]))
+            drv = result.scalars().first()
+            if drv is None:
+                drv = User(
+                    phone=ed["phone"], username=ed["username"],
+                    hashed_password=hash_password("admin123"),
+                    role="driver", is_active=True, full_name=ed["full_name"],
+                )
+                db.add(drv)
+                await db.flush()
+                print(f"  + driver: {ed['full_name']} → {ed['username']}")
+            else:
+                drv.phone = ed["phone"]
+                drv.full_name = ed["full_name"]
+                drv.is_active = True
+                print(f"  = driver: {ed['username']} — updated")
+            driver_map[ed["username"]] = drv
+
         for plate in DRIVER_VEHICLES:
             result = await db.execute(select(Vehicle).where(Vehicle.plate == plate))
             veh = result.scalars().first()
@@ -279,48 +425,41 @@ async def seed_dev() -> None:
 
         await db.commit()
 
-        # ── 3. VehicleDrivers (1:N via junction table) ─────────────────
-        print("\n=== Creating VehicleDriver records (1:N) ===")
+        # ── 3. VehicleDrivers ──────────────────────────────────────────
+        print("\n=== Creating VehicleDriver records ===")
+        await db.execute(delete(VehicleDriver))
+        await db.flush()
         vd_count = 0
+
         for plate, info in DRIVER_VEHICLES.items():
             primary_drv = driver_map[plate]
             veh = vehicle_map[plate]
-
-            existing = (await db.execute(
-                select(VehicleDriver).where(
-                    VehicleDriver.vehicle_id == veh.id,
-                    VehicleDriver.driver_id == primary_drv.id,
-                    VehicleDriver.role == "PRIMARY",
-                )
-            )).scalar_one_or_none()
-            if existing is None:
+            db.add(VehicleDriver(
+                vehicle_id=veh.id, driver_id=primary_drv.id,
+                role="PRIMARY", effective_from=date(2026, 1, 1), is_active=True,
+            ))
+            vd_count += 1
+            if info.get("secondary"):
+                sec_drv = driver_map[info["secondary"]]
                 db.add(VehicleDriver(
-                    vehicle_id=veh.id, driver_id=primary_drv.id,
-                    role="PRIMARY", effective_from=date(2026, 1, 1), is_active=True,
+                    vehicle_id=veh.id, driver_id=sec_drv.id,
+                    role="SECONDARY", effective_from=date(2026, 3, 1), is_active=True,
                 ))
                 vd_count += 1
+                print(f"  + SECONDARY: {sec_drv.full_name} → {plate}")
 
-            # Add SECONDARY driver if configured
-            if info.get("secondary"):
-                sec_plate = info["secondary"]
-                sec_drv = driver_map[sec_plate]
-                existing_sec = (await db.execute(
-                    select(VehicleDriver).where(
-                        VehicleDriver.vehicle_id == veh.id,
-                        VehicleDriver.driver_id == sec_drv.id,
-                        VehicleDriver.role == "SECONDARY",
-                    )
-                )).scalar_one_or_none()
-                if existing_sec is None:
-                    db.add(VehicleDriver(
-                        vehicle_id=veh.id, driver_id=sec_drv.id,
-                        role="SECONDARY", effective_from=date(2026, 3, 1), is_active=True,
-                    ))
-                    vd_count += 1
-                    print(f"  + SECONDARY: {sec_drv.full_name} → {plate}")
+        for ed in EXTRA_DRIVERS:
+            veh = vehicle_map[ed["plate"]]
+            drv = driver_map[ed["username"]]
+            db.add(VehicleDriver(
+                vehicle_id=veh.id, driver_id=drv.id,
+                role="SECONDARY", effective_from=date(2026, 2, 1), is_active=True,
+            ))
+            vd_count += 1
+            print(f"  + SECONDARY: {drv.full_name} ({ed['username']}) → {ed['plate']}")
 
         await db.flush()
-        print(f"  Created {vd_count} vehicle-driver links (some 1:N with SECONDARY)")
+        print(f"  Created {vd_count} vehicle-driver links")
         await db.commit()
 
         # ── 4. Locations ────────────────────────────────────────────────
@@ -371,223 +510,283 @@ async def seed_dev() -> None:
                 print(f"  + {key}={value}")
         await db.commit()
 
-        # ── 7. Pricings ────────────────────────────────────────────────
+        # ── 7. Pricings (all clients) ──────────────────────────────────
         print("\n=== Seeding Pricings ===")
-        client = partner_map["HAIAN"]
         pricing_map: dict[tuple, Pricing] = {}
 
-        for (pickup_name, dropoff_name, work_type), prices in REAL_PRICING.items():
-            pickup_loc = loc_map.get(pickup_name)
-            dropoff_loc = loc_map.get(dropoff_name)
-            if not pickup_loc or not dropoff_loc:
-                continue
-            result = await db.execute(
-                select(Pricing).where(
-                    Pricing.client_id == client.id,
-                    Pricing.work_type == work_type,
-                    Pricing.pickup_location_id == pickup_loc.id,
-                    Pricing.dropoff_location_id == dropoff_loc.id,
+        for client_code, routes in ALL_PRICING.items():
+            client = partner_map[client_code]
+            for (pickup_name, dropoff_name, work_type), prices in routes.items():
+                pickup_loc = loc_map.get(pickup_name)
+                dropoff_loc = loc_map.get(dropoff_name)
+                if not pickup_loc or not dropoff_loc:
+                    continue
+                result = await db.execute(
+                    select(Pricing).where(
+                        Pricing.client_id == client.id,
+                        Pricing.work_type == work_type,
+                        Pricing.pickup_location_id == pickup_loc.id,
+                        Pricing.dropoff_location_id == dropoff_loc.id,
+                    )
                 )
-            )
-            pricing = result.scalars().first()
-            if pricing is None:
-                pricing = Pricing(
-                    client_id=client.id, work_type=work_type,
-                    pickup_location_id=pickup_loc.id,
-                    dropoff_location_id=dropoff_loc.id,
-                    is_active=True,
-                )
-                db.add(pricing)
-                await db.flush()
-                db.add(PricingLine(
-                    pricing_id=pricing.id, quantity=1,
-                    unit_price=prices["unit_price"],
-                    driver_salary=prices["driver_salary"],
-                    allowance=prices["allowance"],
-                ))
-                await db.flush()
-                print(f"  + {pickup_name}→{dropoff_name} {work_type}: {prices['unit_price']:,}")
-            pricing_map[(pickup_name, dropoff_name, work_type)] = pricing
+                pricing = result.scalars().first()
+                if pricing is None:
+                    pricing = Pricing(
+                        client_id=client.id, work_type=work_type,
+                        pickup_location_id=pickup_loc.id,
+                        dropoff_location_id=dropoff_loc.id,
+                        is_active=True,
+                    )
+                    db.add(pricing)
+                    await db.flush()
+                    db.add(PricingLine(
+                        pricing_id=pricing.id, quantity=1,
+                        unit_price=prices["unit_price"],
+                        driver_salary=prices["driver_salary"],
+                        allowance=prices["allowance"],
+                    ))
+                    await db.flush()
+                    print(f"  + {client_code}: {pickup_name}→{dropoff_name} {work_type}: {prices['unit_price']:,}")
+                pricing_map[(client_code, pickup_name, dropoff_name, work_type)] = pricing
         await db.commit()
 
-        # ── 8. WorkOrders from real data ────────────────────────────────
-        print("\n=== Creating WorkOrders ===")
+        # ── 8. WorkOrders + TripOrders + Reconciliations ───────────────
+        print("\n=== Creating WorkOrders, TripOrders, Reconciliations ===")
         ketoan = user_map["ketoan"]
+        all_wos: list[WorkOrder] = []
+        all_tos: list[TripOrder] = []
+        wo_code_idx = 1001
+        to_code_idx = 2001
+        plates_list = sorted(DRIVER_VEHICLES.keys())
+        skipped = 0
 
-        existing_wo_count = (await db.execute(
-            select(WorkOrder).where(WorkOrder.code == f"W{1001:06d}")
-        )).scalar_one_or_none()
-        if existing_wo_count is not None:
-            # Work orders already seeded — load them
-            all_wos = list((await db.execute(
-                select(WorkOrder).order_by(WorkOrder.id)
-            )).scalars().all())
-            print(f"  = {len(all_wos)} work orders already exist, skipping")
-        else:
-            all_wos = []
-            for idx, trip in enumerate(trips):
-                pickup = trip["pickup"]
-                dropoff = trip["dropoff"]
-                wt = f"F{trip['size']}"
-                plate = trip["plate"]
-                prices = REAL_PRICING.get((pickup, dropoff, wt), {})
-                pricing = pricing_map.get((pickup, dropoff, wt))
-                trip_date = date.fromisoformat(trip["trip_date"]) if trip["trip_date"] else date(2026, 4, 1)
+        for trip in trips:
+            pickup = trip["pickup"]
+            dropoff = trip["dropoff"]
+            wt = f"F{trip['size']}"
+            plate = trip["plate"]
+            client_code = trip.get("client_code", "HAIAN")
 
-                wo = WorkOrder(
-                    client_id=client.id,
-                    code=f"W{1001 + idx:06d}",
-                    pickup_location_id=loc_map[pickup].id,
-                    dropoff_location_id=loc_map[dropoff].id,
-                    driver_id=driver_map[plate].id,
-                    vehicle_id=vehicle_map[plate].id,
-                    vessel=f"{trip.get('vessel', '')} {trip.get('voyage', '')}".strip() or None,
-                    unit_price=trip["unit_price"],
-                    driver_salary=prices.get("driver_salary", 150000),
-                    allowance=prices.get("allowance", 50000),
-                    pricing_id=pricing.id if pricing else None,
-                    status="MATCHED",
-                    trip_date=trip_date,
-                )
-                db.add(wo)
-                all_wos.append(wo)
+            if pickup not in loc_map or dropoff not in loc_map:
+                skipped += 1
+                continue
 
-            await db.flush()
-            print(f"  Created {len(all_wos)} work orders")
+            client = partner_map[client_code]
+            client_pricing = ALL_PRICING.get(client_code, {})
+            prices = client_pricing.get((pickup, dropoff, wt))
+            if not prices:
+                prices = ALL_PRICING["HAIAN"].get((pickup, dropoff, wt), {})
+            pricing = pricing_map.get((client_code, pickup, dropoff, wt))
+            trip_date = date.fromisoformat(trip["trip_date"]) if trip["trip_date"] else date(2026, 4, 1)
 
-            for i, wo in enumerate(all_wos):
-                db.add(WorkOrderContainer(
-                    work_order_id=wo.id,
-                    container_number=trips[i]["container"],
-                    work_type=f"F{trips[i]['size']}",
-                ))
-            await db.flush()
-            print(f"  Created {len(all_wos)} work order containers")
+            drv_plate = plate if plate in driver_map else rng.choice(plates_list)
+            drv = driver_map.get(drv_plate)
+            if drv is None:
+                drv = driver_map[rng.choice(plates_list)]
+            veh = vehicle_map.get(drv_plate)
+            if veh is None:
+                veh = vehicle_map[rng.choice(plates_list)]
 
-        # ── 9. TripOrders (client-side mirror) ─────────────────────────
-        print("\n=== Creating TripOrders ===")
-        existing_to_count = (await db.execute(
-            select(TripOrder).where(TripOrder.code == f"T{2001:06d}")
-        )).scalar_one_or_none()
-        if existing_to_count is not None:
-            all_tos = list((await db.execute(
-                select(TripOrder).order_by(TripOrder.id)
-            )).scalars().all())
-            print(f"  = {len(all_tos)} trip orders already exist, skipping")
-        else:
-            all_tos = []
-            for idx, trip in enumerate(trips):
-                pickup = trip["pickup"]
-                dropoff = trip["dropoff"]
-                wt = f"F{trip['size']}"
-                prices = REAL_PRICING.get((pickup, dropoff, wt), {})
-                pricing = pricing_map.get((pickup, dropoff, wt))
-                trip_date = date.fromisoformat(trip["trip_date"]) if trip["trip_date"] else date(2026, 4, 1)
+            wo = WorkOrder(
+                client_id=client.id,
+                code=f"W{wo_code_idx:06d}",
+                pickup_location_id=loc_map[pickup].id,
+                dropoff_location_id=loc_map[dropoff].id,
+                driver_id=drv.id,
+                vehicle_id=veh.id,
+                vessel=trip.get("vessel", ""),
+                unit_price=trip["unit_price"],
+                driver_salary=prices.get("driver_salary", 150000),
+                allowance=prices.get("allowance", 50000),
+                pricing_id=pricing.id if pricing else None,
+                status="MATCHED",
+                trip_date=trip_date,
+            )
+            db.add(wo)
+            all_wos.append(wo)
+            wo_code_idx += 1
+
+            to = TripOrder(
+                trip_date=trip_date,
+                client_id=client.id,
+                code=f"T{to_code_idx:06d}",
+                pickup_location_id=loc_map[pickup].id,
+                dropoff_location_id=loc_map[dropoff].id,
+                pricing_id=pricing.id if pricing else None,
+                unit_price=trip["unit_price"],
+                driver_salary=prices.get("driver_salary", 150000),
+                allowance=prices.get("allowance", 50000),
+                status="MATCHED",
+                pickup_raw=pickup, dropoff_raw=dropoff,
+                location_review_needed=False,
+            )
+            db.add(to)
+            all_tos.append(to)
+            to_code_idx += 1
+
+        await db.flush()
+        if skipped:
+            print(f"  Skipped {skipped} trips (missing locations)")
+        print(f"  Created {len(all_wos)} work orders + {len(all_tos)} trip orders")
+
+        for i, wo in enumerate(all_wos):
+            db.add(WorkOrderContainer(
+                work_order_id=wo.id,
+                container_number=trips[i]["container"],
+                work_type=f"F{trips[i]['size']}",
+            ))
+        for idx, to in enumerate(all_tos):
+            db.add(TripOrderContainer(
+                trip_order_id=to.id,
+                container_number=trips[idx]["container"],
+                work_type=f"F{trips[idx]['size']}",
+                container_size=str(trips[idx]["size"]),
+                freight_kind="F",
+            ))
+        await db.flush()
+        print(f"  Created {len(all_wos)} WO containers + {len(all_tos)} TO containers")
+
+        for i in range(min(len(all_wos), len(all_tos))):
+            wo = all_wos[i]
+            to = all_tos[i]
+            db.add(Reconciliation(
+                trip_order_id=to.id,
+                work_order_id=wo.id,
+                match_score=1.0,
+                matched_by=ketoan.id,
+                matched_at=datetime(
+                    wo.trip_date.year, wo.trip_date.month,
+                    min(28, wo.trip_date.day + 2), tzinfo=timezone.utc,
+                ),
+                is_active=True,
+            ))
+        await db.flush()
+        print(f"  Created {min(len(all_wos), len(all_tos))} reconciliations")
+
+        # ── 8b. PENDING trip orders (unmatched, for dashboard "Chờ phân bổ") ──
+        print("\n=== Creating PENDING trip orders ===")
+        pending_count = 0
+        for year, month in MONTHS:
+            n_pending = rng.randint(8, 18)
+            import calendar
+            days_in_month = calendar.monthrange(year, month)[1]
+            for _ in range(n_pending):
+                pickup, dropoff = rng.choice(ROUTES)
+                size = rng.choices([20, 40], weights=[75, 25])[0]
+                wt = f"F{size}"
+                client_code = rng.choices(CLIENT_KEYS, weights=CLIENT_W)[0]
+                client = partner_map[client_code]
+                client_pricing = ALL_PRICING.get(client_code, {})
+                prices = client_pricing.get((pickup, dropoff, wt))
+                if not prices:
+                    prices = ALL_PRICING["HAIAN"].get((pickup, dropoff, wt), {})
+                unit_price = prices.get("unit_price", 400000) if prices else 400000
+                trip_date = date(year, month, rng.randint(1, days_in_month))
 
                 to = TripOrder(
                     trip_date=trip_date,
                     client_id=client.id,
-                    code=f"T{2001 + idx:06d}",
+                    code=f"T{to_code_idx:06d}",
                     pickup_location_id=loc_map[pickup].id,
                     dropoff_location_id=loc_map[dropoff].id,
-                    pricing_id=pricing.id if pricing else None,
-                    unit_price=trip["unit_price"],
+                    unit_price=unit_price,
                     driver_salary=prices.get("driver_salary", 150000),
                     allowance=prices.get("allowance", 50000),
-                    status="MATCHED",
+                    status="PENDING",
                     pickup_raw=pickup, dropoff_raw=dropoff,
                     location_review_needed=False,
                 )
                 db.add(to)
-                all_tos.append(to)
-
-            await db.flush()
-            print(f"  Created {len(all_tos)} trip orders")
-
-            for idx, to in enumerate(all_tos):
+                await db.flush()
                 db.add(TripOrderContainer(
                     trip_order_id=to.id,
-                    container_number=trips[idx]["container"],
-                    work_type=f"F{trips[idx]['size']}",
-                    container_size=str(trips[idx]["size"]),
+                    container_number=_rand_container(),
+                    work_type=wt,
+                    container_size=str(size),
                     freight_kind="F",
                 ))
-            await db.flush()
-            print(f"  Created {len(all_tos)} trip order containers")
-
-        # ── 10. Reconciliations ────────────────────────────────────────
-        print("\n=== Creating Reconciliations ===")
-        existing_recon = (await db.execute(text("SELECT count(*) FROM reconciliations"))).scalar()
-        if existing_recon > 0:
-            print(f"  = {existing_recon} reconciliations already exist, skipping")
-        else:
-            for i in range(min(len(all_wos), len(all_tos))):
-                db.add(Reconciliation(
-                    trip_order_id=all_tos[i].id,
-                    work_order_id=all_wos[i].id,
-                    match_score=1.0,
-                    matched_by=ketoan.id,
-                    matched_at=datetime(2026, 4, 30, tzinfo=timezone.utc),
-                    is_active=True,
-                ))
+                to_code_idx += 1
+                pending_count += 1
         await db.flush()
-        print(f"  Created {len(all_wos)} reconciliation links")
+        print(f"  Created {pending_count} PENDING trip orders")
 
-        # ── 11. Vehicle Expenses (CP Xe) ───────────────────────────────
-        print("\n=== Seeding Vehicle Expenses ===")
+        # ── 9. Vehicle Expenses (all 4 months) ─────────────────────────
+        print("\n=== Seeding Vehicle Expenses (Feb–May) ===")
         expense_count = 0
-        for plate, expenses in VEHICLE_EXPENSES.items():
-            veh = vehicle_map[plate]
-            for exp in expenses:
+        for year, month in MONTHS:
+            for plate, veh in vehicle_map.items():
+                fuel = rng.randint(3500000, 5000000)
                 db.add(VehicleExpense(
-                    vehicle_id=veh.id,
-                    category=exp["category"],
-                    amount=exp["amount"],
-                    expense_date=date(2026, 4, rng.randint(1, 28)),
-                    description=exp["description"],
+                    vehicle_id=veh.id, category="XANG_DAU",
+                    amount=fuel, expense_date=date(year, month, rng.randint(1, 28)),
+                    description=f"Xăng dầu T{month}/{year}",
                     created_by=ketoan.id,
                 ))
                 expense_count += 1
-        for exp in GENERAL_OVERHEAD:
-            db.add(VehicleExpense(
-                vehicle_id=None,
-                category=exp["category"],
-                amount=exp["amount"],
-                expense_date=date(2026, 4, 15),
-                description=exp["description"],
-                created_by=ketoan.id,
-            ))
-            expense_count += 1
+
+                if rng.random() < 0.25:
+                    repair = rng.randint(500000, 2500000)
+                    db.add(VehicleExpense(
+                        vehicle_id=veh.id, category="SUA_CHUA",
+                        amount=repair, expense_date=date(year, month, rng.randint(1, 28)),
+                        description=rng.choice([
+                            "Thay lốp xe", "Sửa chữa phanh",
+                            "Thay nhớt + lọc gió", "Sửa chữa gầm xe",
+                            "Thay ắc quy", "Cán chỉnh lốp",
+                        ]),
+                        created_by=ketoan.id,
+                    ))
+                    expense_count += 1
+
+            for tmpl in GENERAL_OVERHEAD_TEMPLATE:
+                amount = rng.randint(*tmpl["amount_range"])
+                db.add(VehicleExpense(
+                    vehicle_id=None, category=tmpl["category"],
+                    amount=amount, expense_date=date(year, month, 15),
+                    description=tmpl["desc_tpl"].format(m=month),
+                    created_by=ketoan.id,
+                ))
+                expense_count += 1
+
         await db.flush()
         print(f"  Created {expense_count} vehicle expense records")
         await db.commit()
 
-        # ── 12. Driver Salary Configs ──────────────────────────────────
+        # ── 10. Driver Salary Configs ──────────────────────────────────
         print("\n=== Seeding Driver Salary Configs ===")
         salary_count = 0
         for plate, info in DRIVER_VEHICLES.items():
             drv = driver_map[plate]
-            result = await db.execute(
-                select(DriverSalaryConfig).where(DriverSalaryConfig.driver_id == drv.id)
-            )
-            if result.scalars().first() is None:
-                base = rng.randint(6, 9) * 1000000  # 6M-9M VND
-                db.add(DriverSalaryConfig(
-                    driver_id=drv.id,
-                    base_salary=base,
-                    effective_from=date(2026, 1, 1),
-                    note=f"Lương cơ bản {base // 1000000}TR/tháng",
-                    created_by=ketoan.id,
-                ))
-                salary_count += 1
+            base = info.get("base_salary", 5000000)
+            db.add(DriverSalaryConfig(
+                driver_id=drv.id,
+                base_salary=base,
+                effective_from=date(2026, 1, 1),
+                note=f"Lương cơ bản {base // 1000000}TR/tháng",
+                created_by=ketoan.id,
+            ))
+            salary_count += 1
+
+        for ed in EXTRA_DRIVERS:
+            drv = driver_map[ed["username"]]
+            base = ed.get("base_salary", 4500000)
+            db.add(DriverSalaryConfig(
+                driver_id=drv.id,
+                base_salary=base,
+                effective_from=date(2026, 1, 1),
+                note=f"Lương cơ bản {base // 1000000}TR/tháng",
+                created_by=ketoan.id,
+            ))
+            salary_count += 1
+
         await db.flush()
         print(f"  Created {salary_count} driver salary config records")
         await db.commit()
 
         # ── Summary ─────────────────────────────────────────────────────
-        print("\n" + "=" * 50)
-        print("SEED COMPLETE — Real operational data (April 2026)")
-        print("=" * 50)
+        print("\n" + "=" * 60)
+        print("SEED COMPLETE — Realistic P&L data (Feb–May 2026)")
+        print("=" * 60)
         for t in [
             "users", "vehicles", "vehicle_drivers", "locations", "partners",
             "settings", "pricings", "pricing_lines",
@@ -598,15 +797,36 @@ async def seed_dev() -> None:
             cnt = (await db.execute(text(f"SELECT count(*) FROM {t}"))).scalar()
             print(f"  {t:30s} {cnt:>5d} rows")
 
+        trip_date_counts: dict[str, int] = {}
+        for trip in trips:
+            ym = trip["trip_date"][:7]
+            trip_date_counts[ym] = trip_date_counts.get(ym, 0) + 1
+        print("\nTrips by month:")
+        for ym in sorted(trip_date_counts):
+            avg = trip_date_counts[ym] // len(DRIVER_VEHICLES)
+            print(f"  {ym}: {trip_date_counts[ym]} trips (~{avg}/vehicle)")
+
+        client_counts: dict[str, int] = {}
+        for trip in trips:
+            cc = trip.get("client_code", "HAIAN")
+            client_counts[cc] = client_counts.get(cc, 0) + 1
+        print("\nTrips by client:")
+        for cc in sorted(client_counts):
+            print(f"  {cc}: {client_counts[cc]} trips ({client_counts[cc] * 100 // len(trips)}%)")
+
         print("\nLogin credentials:")
         print("  admin    / admin123  (superadmin)")
         print("  giamdoc  / admin123  (director)")
         print("  ketoan   / admin123  (accountant)")
-        print("  driver_* / admin123  (18 drivers)")
-        print("\nVehicle-Driver assignments (1:N):")
+        print("  taixe    / admin123  (driver)")
+        print("  laixe    / admin123  (driver)")
+        print("\nDriver usernames (name → username):")
         for plate, info in DRIVER_VEHICLES.items():
-            sec = f" + SECONDARY ({info['secondary']})" if info.get("secondary") else ""
-            print(f"  {plate}: PRIMARY {info['full_name']}{sec}")
+            uname = _name_to_username(info["full_name"])
+            sec = f" +2nd" if info.get("secondary") else ""
+            print(f"  {info['full_name']:25s} → {uname:10s} ({base // 1000000}TR{sec})")
+        for ed in EXTRA_DRIVERS:
+            print(f"  {ed['full_name']:25s} → {ed['username']}")
 
 
 if __name__ == "__main__":
