@@ -28,6 +28,7 @@ class SalaryStatus(StrEnum):
 class VehicleExpenseCategory(StrEnum):
     XANG_DAU = "XANG_DAU"   # Fuel
     SUA_CHUA = "SUA_CHUA"   # Repairs
+    KHAC = "KHAC"           # Other
     CHUNG = "CHUNG"         # General overhead (not tied to a specific vehicle)
 
 

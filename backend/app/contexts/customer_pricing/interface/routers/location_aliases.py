@@ -115,7 +115,7 @@ async def create_alias(
         alias=body.alias[:255],
         alias_normalized=norm,
         source="manual",
-        status="PENDING",
+        status="CONFIRMED",
         created_by_id=current_user.id,
     )
     db.add(orm)

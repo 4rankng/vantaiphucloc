@@ -101,5 +101,8 @@ allow(user, "read", "Audit") if role_allow(user, "accountant");
 
 # ── Dashboard & Drivers — any authenticated user ──────────────────
 
+allow(user, "create", "Driver") if role_allow(user, "accountant");
+allow(user, "update", "Driver") if role_allow(user, "accountant");
+
 allow(_user, "read", "Dashboard");
 allow(_user, "read_list", "Driver");
