@@ -149,6 +149,7 @@ export const apiClient = {
   // Drivers
   getDrivers: driversApi.getDrivers,
   createDriver: driversApi.createDriver,
+  updateDriver: driversApi.updateDriver,
 
   // Dashboard & Notifications
   getDashboardSummary: dashboardApi.getDashboardSummary,
