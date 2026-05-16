@@ -419,7 +419,7 @@ async def get_vehicle_pnl(
         .where(
             VehicleExpense.expense_date >= df,
             VehicleExpense.expense_date <= dt,
-            VehicleExpense.category.in_(["XANG_DAU", "SUA_CHUA", "CHUNG"]),
+            VehicleExpense.category.in_(["XANG_DAU", "SUA_CHUA", "KHAC", "CHUNG"]),
         )
         .group_by(VehicleExpense.vehicle_id, VehicleExpense.category)
     )).all()

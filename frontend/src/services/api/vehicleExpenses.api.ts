@@ -11,11 +11,12 @@ import { api } from './client'
 import { toCamel, ok, fail } from './utils'
 import type { ApiResponse } from '@/data/domain'
 
-export type VehicleExpenseCategory = 'XANG_DAU' | 'SUA_CHUA' | 'CHUNG'
+export type VehicleExpenseCategory = 'XANG_DAU' | 'SUA_CHUA' | 'KHAC' | 'CHUNG'
 
 export const EXPENSE_CATEGORY_LABELS: Record<VehicleExpenseCategory, string> = {
   XANG_DAU: 'Xăng dầu',
   SUA_CHUA: 'Sửa chữa',
+  KHAC: 'Khác',
   CHUNG: 'Chi phí chung',
 }
 

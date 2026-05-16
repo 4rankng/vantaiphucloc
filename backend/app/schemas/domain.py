@@ -918,12 +918,12 @@ class ContainerOCRResponse(BaseModel):
 # VehicleExpense (CP Xe)
 # ---------------------------------------------------------------------------
 
-VEHICLE_EXPENSE_CATEGORIES = {"XANG_DAU", "SUA_CHUA", "CHUNG"}
+VEHICLE_EXPENSE_CATEGORIES = {"XANG_DAU", "SUA_CHUA", "KHAC", "CHUNG"}
 
 
 class VehicleExpenseCreate(BaseModel):
     vehicle_id: int | None = None  # null for CHUNG (general overhead)
-    category: str = Field(..., pattern="^(XANG_DAU|SUA_CHUA|CHUNG)$")
+    category: str = Field(..., pattern="^(XANG_DAU|SUA_CHUA|KHAC|CHUNG)$")
     amount: int = Field(..., gt=0, description="Amount in VND")
     expense_date: date
     description: str | None = Field(default=None, max_length=500)
@@ -932,7 +932,7 @@ class VehicleExpenseCreate(BaseModel):
 
 class VehicleExpenseUpdate(BaseModel):
     vehicle_id: int | None = None
-    category: str | None = Field(default=None, pattern="^(XANG_DAU|SUA_CHUA|CHUNG)$")
+    category: str | None = Field(default=None, pattern="^(XANG_DAU|SUA_CHUA|KHAC|CHUNG)$")
     amount: int | None = Field(default=None, gt=0)
     expense_date: date | None = None
     description: str | None = Field(default=None, max_length=500)

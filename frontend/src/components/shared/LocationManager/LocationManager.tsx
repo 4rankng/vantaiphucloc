@@ -76,6 +76,7 @@ export function LocationManager({ search, compact }: LocationManagerProps) {
     try {
       await api.put(`/locations/${locationId}`, { name: newName })
       await api.post('/location-aliases', { location_id: locationId, alias: oldName, source: 'manual' })
+      await api.post(`/location-aliases/${aliasId}/reject`)
       await fetchAliases(locationId)
       qc.invalidateQueries({ queryKey: ['locations'] })
       toast.success(`Đã đặt "${newName}" làm tên chính`)
@@ -138,7 +139,7 @@ export function LocationManager({ search, compact }: LocationManagerProps) {
   }
 
   const confirmedAliases = (selectedLocation
-    ? (aliasData[selectedLocation.id] ?? []).filter(a => a.status !== 'REJECTED' && a.status !== 'MERGED' && a.status !== 'PENDING')
+    ? (aliasData[selectedLocation.id] ?? []).filter(a => a.status !== 'REJECTED' && a.status !== 'MERGED')
     : []
   ).map(a => ({ id: a.id, alias: a.alias }))
 
@@ -174,7 +175,7 @@ export function LocationManager({ search, compact }: LocationManagerProps) {
         ) : (
           <div className="py-1">
             {filtered.map((loc: Loc) => {
-              const aliasCount = (aliasData[loc.id] ?? []).filter(a => a.status !== 'REJECTED' && a.status !== 'MERGED' && a.status !== 'PENDING').length
+              const aliasCount = (aliasData[loc.id] ?? []).filter(a => a.status !== 'REJECTED' && a.status !== 'MERGED').length
               return (
                 <button
                   key={loc.id}
