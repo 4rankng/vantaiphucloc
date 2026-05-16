@@ -2,17 +2,15 @@
  * API client barrel — re-exports from per-domain modules.
  *
  * Usage:  import { apiClient } from '@/services/api'
- *         apiClient.getPartners()
- *
- * The `apiClient` object gathers all methods so existing call-sites
- * (apiClient.getXxx / apiClient.createXxx) keep working unchanged.
+ *         apiClient.getClients()
  */
 
 // Shared utilities — also available for direct import
 export { toCamel, toSnake, ok, fail, isNetworkError } from './utils'
 
 // Domain modules
-import * as partnersApi from './partners.api'
+import * as clientsApi from './clients.api'
+import * as vendorsApi from './vendors.api'
 import * as routesApi from './routes.api'
 import * as locationsApi from './locations.api'
 import * as locationAliasesApi from './locationAliases.api'
@@ -28,26 +26,23 @@ import * as importsApi from './imports.api'
 import * as auditApi from './audit.api'
 import * as pnlApi from './pnl.api'
 import * as vehicleExpensesApi from './vehicleExpenses.api'
+import * as vehiclesApi from './vehicles.api'
 import * as reconciliationImportsApi from './reconciliationImports.api'
+import * as vehicleDriversApi from './vehicleDrivers.api'
 
 export const apiClient = {
-  // Partners (replaces Clients + Vendors)
-  getPartners: partnersApi.getPartners,
-  createPartner: partnersApi.createPartner,
-  updatePartner: partnersApi.updatePartner,
-  deletePartner: partnersApi.deletePartner,
+  // Clients
+  getClients: clientsApi.getClients,
+  createClient: clientsApi.createClient,
+  updateClient: clientsApi.updateClient,
+  deleteClient: clientsApi.deleteClient,
 
-  // Clients (backward compat — delegates to partners)
-  getClients: partnersApi.getPartners,
-  createClient: partnersApi.createPartner,
-  updateClient: partnersApi.updatePartner,
-  deleteClient: partnersApi.deletePartner,
-
-  // Vendors (backward compat — delegates to partners)
-  getVendors: partnersApi.getPartners,
-  createVendor: partnersApi.createPartner,
-  updateVendor: partnersApi.updatePartner,
-  deleteVendor: partnersApi.deletePartner,
+  // Vendors
+  getVendors: vendorsApi.getVendors,
+  createVendor: vendorsApi.createVendor,
+  updateVendor: vendorsApi.updateVendor,
+  deleteVendor: vendorsApi.deleteVendor,
+  getVendorSummary: vendorsApi.getVendorSummary,
 
   // Routes (DEPRECATED — returns empty)
   getRoutes: routesApi.getRoutes,
@@ -133,6 +128,15 @@ export const apiClient = {
   createVehicleExpense: vehicleExpensesApi.createVehicleExpense,
   updateVehicleExpense: vehicleExpensesApi.updateVehicleExpense,
   deleteVehicleExpense: vehicleExpensesApi.deleteVehicleExpense,
+
+  // Vehicles
+  getVehicles: vehiclesApi.getVehicles,
+
+  // Vehicle Drivers
+  getVehicleDrivers: vehicleDriversApi.getVehicleDrivers,
+  addVehicleDriver: vehicleDriversApi.addVehicleDriver,
+  removeVehicleDriver: vehicleDriversApi.removeVehicleDriver,
+  createVehicle: vehicleDriversApi.createVehicle,
 
   // Customer reconciliation imports
   previewReconciliationImport: reconciliationImportsApi.previewReconciliationImport,

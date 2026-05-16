@@ -48,9 +48,9 @@ from app.contexts.operations.infrastructure.repositories import (
 @pytest.fixture
 async def fixtures(db_session):
     """Insert a Partner + 2 Locations so use cases can satisfy FKs."""
-    from app.models.domain import Location, Partner
+    from app.models.domain import Location, Client
 
-    partner = Partner(name="Acme", partner_type="client", phone="0900111", is_active=True)
+    partner = Client(name="Acme", phone="0900111", is_active=True)
     pickup = Location(name="Cảng Cát Lái", is_active=True)
     dropoff = Location(name="KCN Long Hậu", is_active=True)
     db_session.add_all([partner, pickup, dropoff])

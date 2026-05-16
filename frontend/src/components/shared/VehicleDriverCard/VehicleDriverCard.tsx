@@ -4,7 +4,6 @@ import { DashboardSectionHeader } from '@/components/shared/DashboardSectionHead
 interface VehicleDriver {
   id: number
   driverName: string
-  role: 'PRIMARY' | 'SECONDARY'
 }
 
 interface VehicleDriverCardProps {
@@ -58,15 +57,10 @@ export function VehicleDriverCard({
             </div>
             <span className="text-sm flex-1" style={{ color: 'var(--theme-text-primary)' }}>{d.driverName}</span>
             <span
-              className="text-[10px] font-semibold rounded-full px-1.5 py-0.5"
-              style={{
-                background: d.role === 'PRIMARY'
-                  ? 'color-mix(in srgb, var(--theme-status-success) 10%, transparent)'
-                  : 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)',
-                color: d.role === 'PRIMARY' ? 'var(--theme-status-success)' : 'var(--theme-brand-primary)',
-              }}
+              className="text-[10px] font-medium"
+              style={{ color: 'var(--theme-text-muted)' }}
             >
-              {d.role === 'PRIMARY' ? 'Chính' : 'Phụ'}
+              lái xe
             </span>
             {onRemoveDriver && (
               <button

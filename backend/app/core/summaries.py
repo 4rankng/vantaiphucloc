@@ -14,7 +14,7 @@ from sqlalchemy import select as sa_select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.base import User
-from app.models.domain import Location, Partner, Vehicle, VehicleDriver
+from app.models.domain import Location, Client, Vehicle, VehicleDriver
 from app.schemas.domain import (
     DriverSummaryOut,
     LocationSummaryOut,
@@ -29,7 +29,7 @@ async def load_partner_summaries(
     ids = {i for i in client_ids if i is not None}
     if not ids:
         return {}
-    res = await db.execute(sa_select(Partner).where(Partner.id.in_(ids)))
+    res = await db.execute(sa_select(Client).where(Client.id.in_(ids)))
     return {
         p.id: PartnerSummaryOut(id=p.id, code=p.code, name=p.name)
         for p in res.scalars().all()
@@ -63,7 +63,6 @@ async def load_driver_summaries(
         .where(
             VehicleDriver.driver_id.in_(ids),
             VehicleDriver.is_active == True,  # noqa: E712
-            VehicleDriver.role == "PRIMARY",
         )
     )).all()
     vehicle_ids = {vid for _, vid in vd_rows}

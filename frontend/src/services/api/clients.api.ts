@@ -1,10 +1,44 @@
-// DEPRECATED: Client + Vendor merged into Partner.
-// This file re-exports from partners.api.ts for backward compatibility.
-// Update imports to use partners.api.ts directly.
+import { api } from './client'
+import { toCamel, toSnake, ok, fail, isNetworkError, unwrapList } from './utils'
+import { setCache, getCache } from '@/lib/offline-db'
+import type { Client, ApiResponse } from '@/data/domain'
 
-export {
-  getPartners as getClients,
-  createPartner as createClient,
-  updatePartner as updateClient,
-  deletePartner as deleteClient,
-} from './partners.api'
+export async function getClients(): Promise<ApiResponse<Client[]>> {
+  try {
+    const res = await api.get('/clients')
+    const data = toCamel<Client[]>(unwrapList(res.data))
+    await setCache('clients', data)
+    return ok(data)
+  } catch (err) {
+    const cached = await getCache<Client[]>('clients')
+    if (isNetworkError(err) && cached) return ok(cached)
+    return fail(err)
+  }
+}
+
+export async function createClient(data: Omit<Client, 'id' | 'createdAt' | 'updatedAt'> & { type?: 'company' | 'individual' }): Promise<ApiResponse<Client>> {
+  try {
+    const res = await api.post('/clients', toSnake(data))
+    return ok(toCamel<Client>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export async function updateClient(id: number, data: Partial<Client>): Promise<ApiResponse<Client>> {
+  try {
+    const res = await api.put(`/clients/${id}`, toSnake(data))
+    return ok(toCamel<Client>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export async function deleteClient(id: number, reason = 'Xoá chủ hàng'): Promise<ApiResponse<{ success: boolean }>> {
+  try {
+    await api.delete(`/clients/${id}`, { data: { reason } })
+    return ok({ success: true })
+  } catch (err) {
+    return fail(err)
+  }
+}

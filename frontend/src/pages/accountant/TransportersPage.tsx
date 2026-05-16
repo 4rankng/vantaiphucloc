@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Truck, MapPin, DollarSign, Plus, X, Loader2 } from 'lucide-react'
+import { Truck, MapPin, DollarSign, Plus, X, User } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button, Input, Label } from '@/components/ui'
 import { AccountantPageShell } from '@/components/shared/AccountantPageShell'
 import { DashboardSectionHeader } from '@/components/shared/DashboardSectionHeader'
@@ -7,58 +7,28 @@ import { VehicleDriverCard } from '@/components/shared/VehicleDriverCard'
 import { AliasManager } from '@/components/shared/AliasManager'
 import { InfoTip } from '@/components/shared/InfoTip'
 import { PulseHint } from '@/components/shared/PulseHint'
-import { useLocations, useCreateLocation, useUpdateLocation, useDeleteLocation, useVehicleExpenses, useCreateVehicleExpense, useSalaryConfig } from '@/hooks/use-queries'
+import { useLocations, useCreateLocation, useUpdateLocation, useDeleteLocation, useVehicleExpenses, useCreateVehicleExpense, useSalaryConfig, useDrivers, useVehicles, useVehicleDrivers, useAddVehicleDriver, useRemoveVehicleDriver, useCreateVehicle } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { api } from '@/services/api/client'
 import { toCamel } from '@/services/api/utils'
 import { formatCurrency } from '@/data/domain'
 import type { Driver, Location as Loc, LocationAlias } from '@/data/domain'
 import type { VehicleExpenseCategory } from '@/services/api/vehicleExpenses.api'
 
-// ─── Vehicle-Driver API (not yet in service layer) ────────────────────
-interface VehicleDriverRow {
-  id: number
-  vehicleId: number
-  vehiclePlate: string
-  driverId: number
-  driverName: string
-  role: 'PRIMARY' | 'SECONDARY'
-}
-
 interface VehicleGroup {
   vehicleId: number
   plate: string
-  drivers: VehicleDriverRow[]
+  drivers: { id: number; driverId: number; driverName: string }[]
 }
 
-async function fetchVehicleDrivers(): Promise<VehicleGroup[]> {
-  const res = await api.get('/vehicle-drivers', { params: { active_only: true } })
-  const rows: VehicleDriverRow[] = (res.data?.items ?? res.data ?? []).map((r: Record<string, unknown>) => toCamel<VehicleDriverRow>(r))
+function groupByVehicle(rows: { id: number; vehicleId: number; vehiclePlate: string; driverId: number; driverName: string }[]): VehicleGroup[] {
   const map = new Map<number, VehicleGroup>()
   for (const r of rows) {
     if (!map.has(r.vehicleId)) map.set(r.vehicleId, { vehicleId: r.vehicleId, plate: r.vehiclePlate, drivers: [] })
-    map.get(r.vehicleId)!.drivers.push(r)
+    map.get(r.vehicleId)!.drivers.push({ id: r.id, driverId: r.driverId, driverName: r.driverName })
   }
   return [...map.values()]
-}
-
-async function fetchDrivers(): Promise<Driver[]> {
-  const res = await api.get('/drivers')
-  return (res.data?.items ?? res.data ?? []).map((r: Record<string, unknown>) => toCamel<Driver>(r))
-}
-
-async function addVehicleDriver(vehicleId: number, driverId: number, role: string) {
-  await api.post('/vehicle-drivers', { vehicle_id: vehicleId, driver_id: driverId, role })
-}
-
-async function removeVehicleDriver(id: number) {
-  await api.delete(`/vehicle-drivers/${id}`)
-}
-
-async function createVehicle(plate: string) {
-  const res = await api.post('/drivers/0/vehicle', { plate }) // hack: use any endpoint that creates vehicle
-  return res.data
 }
 
 async function fetchLocationAliases(locationId: number): Promise<LocationAlias[]> {
@@ -81,54 +51,41 @@ async function rejectAlias(id: number) {
 // ─── Tab 1: Xe ────────────────────────────────────────────────────────
 function VehiclesTab() {
   const toast = useToast()
-  const qc = useQueryClient()
-  const { data: groups = [], isLoading } = useQuery({ queryKey: ['vehicle-drivers'], queryFn: fetchVehicleDrivers })
-  const { data: drivers = [] } = useQuery({ queryKey: ['drivers-list'], queryFn: fetchDrivers })
+  const { data: vdRows = [], isLoading } = useVehicleDrivers()
+  const { data: driversList = [] } = useDrivers()
+  const addDriver = useAddVehicleDriver()
+  const removeDriver = useRemoveVehicleDriver()
+  const createVehicle = useCreateVehicle()
+
+  const groups = groupByVehicle(vdRows)
 
   const [showAddVehicle, setShowAddVehicle] = useState(false)
   const [newPlate, setNewPlate] = useState('')
   const [addingDriverFor, setAddingDriverFor] = useState<number | null>(null)
   const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null)
-  const [selectedRole, setSelectedRole] = useState<'PRIMARY' | 'SECONDARY'>('PRIMARY')
 
-  const handleAddVehicle = async () => {
+  const handleAddVehicle = () => {
     if (!newPlate.trim()) return
-    try {
-      // Create by assigning a temp driver, backend creates vehicle
-      await api.post('/vehicles', { plate: newPlate.trim() })
-      toast.success('Đã thêm xe')
-      setNewPlate('')
-      setShowAddVehicle(false)
-      qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
-    } catch {
-      toast.error('Không thể thêm xe')
-    }
+    createVehicle.mutate(newPlate.trim().toUpperCase(), {
+      onSuccess: () => { toast.success('Đã thêm xe'); setNewPlate(''); setShowAddVehicle(false) },
+      onError: () => toast.error('Không thể thêm xe'),
+    })
   }
 
-  const handleAddDriver = async () => {
+  const handleAddDriver = () => {
     if (!addingDriverFor || !selectedDriverId) return
-    try {
-      await addVehicleDriver(addingDriverFor, selectedDriverId, selectedRole)
-      toast.success('Đã thêm lái xe')
-      setAddingDriverFor(null)
-      setSelectedDriverId(null)
-      qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
-    } catch {
-      toast.error('Không thể thêm lái xe')
-    }
+    addDriver.mutate({ vehicleId: addingDriverFor, driverId: selectedDriverId }, {
+      onSuccess: () => { toast.success('Đã thêm lái xe'); setAddingDriverFor(null); setSelectedDriverId(null) },
+      onError: () => toast.error('Không thể thêm lái xe'),
+    })
   }
 
-  const handleRemoveDriver = async (vdId: number) => {
-    try {
-      await removeVehicleDriver(vdId)
-      toast.success('Đã gỡ lái xe')
-      qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
-    } catch {
-      toast.error('Không thể gỡ lái xe')
-    }
+  const handleRemoveDriver = (vdId: number) => {
+    removeDriver.mutate(vdId, {
+      onSuccess: () => toast.success('Đã gỡ lái xe'),
+      onError: () => toast.error('Không thể gỡ lái xe'),
+    })
   }
-
-  const unassignedDrivers = drivers.filter(d => !groups.some(g => g.drivers.some(vd => vd.driverId === d.id)))
 
   return (
     <div className="space-y-3">
@@ -198,29 +155,63 @@ function VehiclesTab() {
       <Dialog open={addingDriverFor !== null} onOpenChange={() => setAddingDriverFor(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Thêm lái xe</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Chọn lái xe</Label>
-              <select
-                value={selectedDriverId ?? ''}
-                onChange={e => setSelectedDriverId(Number(e.target.value) || null)}
-                className="w-full rounded-md border px-3 py-2 text-sm"
-                style={{ background: 'var(--theme-bg-primary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
-              >
-                <option value="">— Chọn lái xe —</option>
-                {drivers.map(d => <option key={d.id} value={d.id}>{d.fullName ?? d.username} {d.vehiclePlate ? `(${d.vehiclePlate})` : ''}</option>)}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Vai trò</Label>
-              <div className="flex gap-2">
-                {(['PRIMARY', 'SECONDARY'] as const).map(r => (
-                  <button key={r} type="button" onClick={() => setSelectedRole(r)} className="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors"
-                    style={{ background: selectedRole === r ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)', color: selectedRole === r ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)' }}>
-                    {r === 'PRIMARY' ? 'Chính' : 'Phụ'}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Chọn lái xe</Label>
+            <div
+              className="max-h-52 overflow-y-auto rounded-lg border"
+              style={{ borderColor: 'var(--theme-border-default)' }}
+            >
+              {driversList.length === 0 ? (
+                <div className="flex items-center justify-center py-8">
+                  <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có lái xe nào</p>
+                </div>
+              ) : (
+                driversList.map((d: Driver, i: number) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => setSelectedDriverId(d.id)}
+                    className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors"
+                    style={{
+                      borderBottom: i < driversList.length - 1 ? '1px solid var(--theme-border-light)' : 'none',
+                      background: selectedDriverId === d.id
+                        ? 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)'
+                        : 'transparent',
+                    }}
+                  >
+                    <div
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg"
+                      style={{
+                        background: selectedDriverId === d.id
+                          ? 'var(--theme-brand-primary)'
+                          : 'color-mix(in srgb, var(--theme-brand-primary) 6%, transparent)',
+                      }}
+                    >
+                      <User
+                        className="h-3 w-3"
+                        style={{
+                          color: selectedDriverId === d.id ? 'var(--theme-text-on-brand)' : 'var(--theme-brand-primary)',
+                          opacity: selectedDriverId === d.id ? 1 : 0.7,
+                        }}
+                      />
+                    </div>
+                    <span className="flex-1 text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
+                      {d.fullName ?? d.username}
+                    </span>
+                    {d.vehiclePlate && (
+                      <span
+                        className="rounded border px-1.5 py-0.5 text-[10px] font-bold tracking-wider"
+                        style={{ background: 'var(--theme-bg-tertiary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-muted)' }}
+                      >
+                        {d.vehiclePlate}
+                      </span>
+                    )}
+                    {selectedDriverId === d.id && (
+                      <div className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: 'var(--theme-brand-primary)' }} />
+                    )}
                   </button>
-                ))}
-              </div>
+                ))
+              )}
             </div>
           </div>
           <DialogFooter>
@@ -292,7 +283,6 @@ function LocationsTab() {
     if (!alias) return
     const loc = locations.find((l: Loc) => l.id === locationId)
     if (!loc) return
-    // Swap: alias becomes the new name, old name becomes an alias
     const oldName = loc.name
     const newName = alias.alias
     updateLocation.mutate({ id: locationId, name: newName }, {
@@ -308,6 +298,7 @@ function LocationsTab() {
 
   return (
     <div className="space-y-3">
+      {/* Toolbar above the card */}
       <div className="flex items-center gap-3">
         <div className="flex-1">
           <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm địa điểm..." className="text-sm" />
@@ -320,7 +311,14 @@ function LocationsTab() {
         </PulseHint>
       </div>
 
-      <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', boxShadow: '0 0 0 1px rgba(9,9,11,0.03), 0 1px 3px rgba(9,9,11,0.06)' }}>
+      <div
+        className="rounded-xl border overflow-hidden"
+        style={{
+          background: 'var(--theme-bg-secondary)',
+          borderColor: 'var(--theme-border-default)',
+          boxShadow: '0 0 0 1px rgba(9,9,11,0.03), 0 1px 3px rgba(9,9,11,0.06), 0 4px 16px -4px rgba(9,9,11,0.05)',
+        }}
+      >
         {isLoading ? (
           <div className="p-5 space-y-4">
             {[...Array(4)].map((_, i) => <div key={i} className="h-10 rounded animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}

@@ -107,8 +107,8 @@ async def test_nearby_trip_id_pins_pickup_and_dropoff_to_top(
     even if they are far away from the GPS point."""
     headers = await make_auth_headers("driver")
     locs = three_geo_locations
-    partner = Partner(
-        code="ACME", name="Acme", partner_type="client", phone="0900",
+    partner = Client(
+        code="ACME", name="Acme", phone="0900",
         is_active=True,
     )
     db_session.add(partner)

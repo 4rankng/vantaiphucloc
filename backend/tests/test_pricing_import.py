@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy import select
 
-from app.models.domain import Partner, Pricing, PricingLine
+from app.models.domain import Client, Pricing, PricingLine
 from app.contexts.customer_pricing.infrastructure.pricing_import import (
     PricingPreview,
     SUPPORTED_FORMATS,
@@ -142,10 +142,9 @@ def test_supported_formats_set():
 @pytest.mark.asyncio
 class TestCommitTariffRows:
     async def _seed_partner(self, db_session):
-        partner = Partner(
+        partner = Client(
             code="ACME",
             name="Acme",
-            partner_type="client",
             phone="0900",
             is_active=True,
         )

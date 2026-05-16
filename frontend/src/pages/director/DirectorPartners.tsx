@@ -11,33 +11,31 @@ import { CreateClientDialog } from '@/components/shared/CreateClientDialog'
 import { CreateVendorDialog } from '@/components/shared/CreateVendorDialog'
 import { fuzzyMatch } from '@/lib/search-utils'
 import {
-  usePartners, useCreatePartner, useDeletePartner,
+  useClients, useVendors, useCreateClient, useCreateVendor, useDeleteClient, useDeleteVendor,
 } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { useIsMobile } from '@/hooks/use-mobile'
-import type { Partner } from '@/data/domain'
+import type { Client, Vendor } from '@/data/domain'
 
 type PartnerFilter = 'ALL' | 'client' | 'vendor'
 
-function toPartnerRow(p: Partner): PartnerRow {
-  return {
-    id: p.id,
-    name: p.name,
-    partnerType: p.partnerType === 'vendor' ? 'vendor' : 'client',
-    type: 'company',
-    phone: p.phone ?? '',
-    taxCode: p.taxCode ?? '',
-    address: p.address ?? '',
-    contactPerson: p.contactPerson ?? '',
-  }
+function toClientRow(c: Client): PartnerRow {
+  return { id: c.id, name: c.name, partnerType: 'client', type: 'company', phone: c.phone ?? '', taxCode: c.taxCode ?? '', address: c.address ?? '', contactPerson: c.contactPerson ?? '' }
+}
+
+function toVendorRow(v: Vendor): PartnerRow {
+  return { id: v.id, name: v.name, partnerType: 'vendor', type: 'company', phone: v.phone ?? '', taxCode: v.taxCode ?? '', address: v.address ?? '', contactPerson: v.contactPerson ?? '' }
 }
 
 export function DirectorPartners() {
   const toast = useToast()
   const isMobile = useIsMobile()
-  const { data: partners = [], isLoading: partnersLoading } = usePartners()
-  const createPartner = useCreatePartner()
-  const deletePartner = useDeletePartner()
+  const { data: clients = [], isLoading: clientsLoading } = useClients()
+  const { data: vendors = [], isLoading: vendorsLoading } = useVendors()
+  const createClient = useCreateClient()
+  const createVendor = useCreateVendor()
+  const deleteClient = useDeleteClient()
+  const deleteVendor = useDeleteVendor()
 
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<PartnerFilter>('ALL')
@@ -45,10 +43,13 @@ export function DirectorPartners() {
   const [deleteConfirm, setDeleteConfirm] = useState<PartnerRow | null>(null)
   const [createType, setCreateType] = useState<'client' | 'vendor' | null>(null)
 
-  const allPartners = useMemo(() => partners.map(toPartnerRow), [partners])
+  const allRows = useMemo(() => [
+    ...clients.map(toClientRow),
+    ...vendors.map(toVendorRow),
+  ], [clients, vendors])
 
   const filtered = useMemo(() => {
-    let list = allPartners
+    let list = allRows
     if (filter === 'client') list = list.filter(p => p.partnerType === 'client')
     if (filter === 'vendor') list = list.filter(p => p.partnerType === 'vendor')
     if (search.trim()) {
@@ -62,17 +63,18 @@ export function DirectorPartners() {
       )
     }
     return list
-  }, [allPartners, filter, search])
+  }, [allRows, filter, search])
 
   const counts = useMemo(() => ({
-    ALL: allPartners.length,
-    client: allPartners.filter(p => p.partnerType === 'client').length,
-    vendor: allPartners.filter(p => p.partnerType === 'vendor').length,
-  }), [allPartners])
+    ALL: allRows.length,
+    client: allRows.filter(p => p.partnerType === 'client').length,
+    vendor: allRows.filter(p => p.partnerType === 'vendor').length,
+  }), [allRows])
 
   const handleDelete = useCallback(() => {
     if (!deleteConfirm) return
-    deletePartner.mutate(deleteConfirm.id, {
+    const mutate = deleteConfirm.partnerType === 'vendor' ? deleteVendor : deleteClient
+    mutate.mutate(deleteConfirm.id, {
       onSuccess: () => {
         toast.success('Đã xoá')
         setDeleteConfirm(null)
@@ -83,9 +85,9 @@ export function DirectorPartners() {
         toast.error('Không thể xoá', detail ?? `${deleteConfirm.name} có dữ liệu liên quan, không thể xoá.`)
       },
     })
-  }, [deleteConfirm, deletePartner, toast])
+  }, [deleteConfirm, deleteClient, deleteVendor, toast])
 
-  const loading = partnersLoading
+  const loading = clientsLoading || vendorsLoading
 
   return (
     <div className="space-y-4">
@@ -206,7 +208,7 @@ export function DirectorPartners() {
         open={createType === 'client'}
         onClose={() => setCreateType(null)}
         onConfirm={async (data) => {
-          createPartner.mutate(data, {
+          createClient.mutate(data, {
             onSuccess: () => {
               toast.success('Đã thêm khách hàng')
               setCreateType(null)

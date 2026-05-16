@@ -1,12 +1,10 @@
-import { useState, useMemo } from 'react'
-import { Car, Plus, ChevronRight, Wallet } from 'lucide-react'
+import { useState, useMemo, useRef, useEffect } from 'react'
+import { Car, Plus, Wallet, Phone, X } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button, Input, Label } from '@/components/ui'
 import { AccountantPageShell } from '@/components/shared/AccountantPageShell'
-import { DashboardSectionHeader } from '@/components/shared/DashboardSectionHeader'
 import { PulseHint } from '@/components/shared/PulseHint'
 import { InfoTip } from '@/components/shared/InfoTip'
-import { InlineEditable } from '@/components/shared/InlineEditable'
-import { useDrivers, useCreateDriver, useUpdateDriver } from '@/hooks/use-queries'
+import { useDrivers, useCreateDriver, useUpdateDriver, useVehicles } from '@/hooks/use-queries'
 import { useDriverBaseSalaryForm } from '@/components/payroll/useDriverBaseSalaryForm'
 import { useToast } from '@/components/atoms/Toast'
 import { useQueryClient } from '@tanstack/react-query'
@@ -67,62 +65,43 @@ export function DriversPage() {
         addIcon={Plus}
         addHintKey="drivers-add"
       >
-        <div className="space-y-2">
+        <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', boxShadow: '0 0 0 1px rgba(9,9,11,0.03), 0 1px 3px rgba(9,9,11,0.06)' }}>
           {isLoading ? (
-            <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', boxShadow: '0 0 0 1px rgba(9,9,11,0.03), 0 1px 3px rgba(9,9,11,0.06)' }}>
-              <div className="px-5 pt-4 pb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
-                <DashboardSectionHeader title="Danh sách lái xe" icon={Car} />
-              </div>
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4 px-5 py-3.5 animate-pulse" style={{ borderBottom: i < 3 ? '1px solid var(--theme-border-light)' : 'none' }}>
-                  <div className="h-4 w-32 rounded" style={{ background: 'var(--theme-bg-tertiary)' }} />
-                  <div className="h-4 w-20 rounded" style={{ background: 'var(--theme-bg-tertiary)' }} />
-                </div>
-              ))}
+            <div className="p-5 space-y-3">
+              {[...Array(4)].map((_, i) => <div key={i} className="h-10 rounded animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}
             </div>
           ) : filtered.length === 0 ? (
-            <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', boxShadow: '0 0 0 1px rgba(9,9,11,0.03), 0 1px 3px rgba(9,9,11,0.06)' }}>
-              <div className="flex flex-col items-center justify-center py-12 gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full" style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)' }}>
-                  <Car className="h-5 w-5" style={{ color: 'var(--theme-brand-primary)' }} />
-                </div>
-                <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có lái xe nào.</p>
-                <PulseHint hintKey="drivers-add-empty">
-                  <button onClick={() => setShowCreate(true)} className="btn-primary text-xs mt-1">
-                    <Plus size={14} strokeWidth={2.25} />
-                    <span>Thêm lái xe</span>
-                  </button>
-                </PulseHint>
+            <div className="flex flex-col items-center justify-center py-12 gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full" style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)' }}>
+                <Car className="h-5 w-5" style={{ color: 'var(--theme-brand-primary)' }} />
               </div>
+              <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có lái xe nào.</p>
+              <PulseHint hintKey="drivers-add-empty">
+                <button onClick={() => setShowCreate(true)} className="btn-primary text-xs mt-1">
+                  <Plus size={14} strokeWidth={2.25} />
+                  <span>Thêm lái xe</span>
+                </button>
+              </PulseHint>
             </div>
           ) : (
-            <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', boxShadow: '0 0 0 1px rgba(9,9,11,0.03), 0 1px 3px rgba(9,9,11,0.06), 0 4px 16px -4px rgba(9,9,11,0.05)' }}>
-              <div className="px-5 pt-4 pb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
-                <DashboardSectionHeader title="Danh sách lái xe" icon={Car}
-                  right={<span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{filtered.length} lái xe</span>} />
-              </div>
-              {filtered.map((d, i) => (
-                <button
-                  key={d.id}
-                  onClick={() => setDetailTarget(d)}
-                  className="flex w-full items-center gap-3 px-5 py-3.5 text-left transition-colors"
-                  style={{ borderBottom: i < filtered.length - 1 ? '1px solid var(--theme-border-light)' : 'none' }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)'}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-                >
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 6%, transparent)' }}>
-                    <Car className="h-3.5 w-3.5" style={{ color: 'var(--theme-brand-primary)', opacity: 0.7 }} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold truncate" style={{ color: 'var(--theme-text-primary)' }}>{d.fullName ?? d.username}</p>
-                    <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--theme-text-muted)' }}>
-                      {d.vehiclePlate && <span className="mr-2">{d.vehiclePlate}</span>}
-                      {d.phone && <span>{d.phone}</span>}
-                    </p>
-                  </div>
-                  <ChevronRight className="h-4 w-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
-                </button>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider w-10" style={{ color: 'var(--theme-text-muted)' }}></th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Họ tên</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>SĐT</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Biển số xe</th>
+                    <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Lương cơ bản</th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Từ ngày</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(d => (
+                    <DriverRow key={d.id} driver={d} onOpenDetail={() => setDetailTarget(d)} />
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -134,31 +113,173 @@ export function DriversPage() {
   )
 }
 
-function DriverDetailDialog({ driver, onClose }: { driver: Driver; onClose: () => void }) {
-  const qc = useQueryClient()
+function InlineCell({ value, onSave, placeholder, type }: { value: string; onSave: (v: string) => void; placeholder?: string; type?: 'text' | 'tel' }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(value)
+  const ref = useRef<HTMLInputElement>(null)
+
+  useEffect(() => { if (editing) { ref.current?.focus(); ref.current?.select() } }, [editing])
+  useEffect(() => { setDraft(value) }, [value])
+
+  const save = () => {
+    setEditing(false)
+    if (draft !== value) onSave(draft)
+  }
+
+  if (editing) {
+    return (
+      <input
+        ref={ref}
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onBlur={save}
+        onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') { setDraft(value); setEditing(false) } }}
+        placeholder={placeholder}
+        type={type}
+        className="w-full border-none bg-transparent text-sm font-medium outline-none p-0"
+        style={{ color: 'var(--theme-text-primary)' }}
+      />
+    )
+  }
+
+  return (
+    <button
+      onClick={() => setEditing(true)}
+      className="w-full text-left text-sm font-medium rounded px-1 -mx-1 py-0.5 transition-colors"
+      style={{ color: value ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)', background: 'transparent' }}
+      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)'}
+      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+    >
+      {value || placeholder || '—'}
+    </button>
+  )
+}
+
+function DriverRow({ driver, onOpenDetail }: { driver: Driver; onOpenDetail: () => void }) {
   const toast = useToast()
+  const qc = useQueryClient()
   const updateDriver = useUpdateDriver()
   const salary = useDriverBaseSalaryForm({ driverId: driver.id })
-  const [showSalaryForm, setShowSalaryForm] = useState(false)
 
   const initials = (driver.fullName ?? driver.username).slice(0, 2).toUpperCase()
 
-  const handleField = async (field: 'fullName' | 'phone' | 'username', value: string) => {
+  const handleSave = async (field: 'fullName' | 'phone', value: string) => {
     try {
       await updateDriver.mutateAsync({ id: driver.id, data: { [field]: value } })
+      qc.invalidateQueries({ queryKey: ['drivers'] })
       toast.success('Đã cập nhật')
     } catch {
       toast.error('Không thể cập nhật')
     }
   }
 
-  const handleVehicleChange = async (newPlate: string) => {
+  const currentSalary = salary.currentRate
+  const salaryDisplay = currentSalary ? formatCurrency(currentSalary.baseSalary) : '—'
+  const salaryFrom = currentSalary?.effectiveFrom ?? ''
+
+  return (
+    <tr
+      style={{ borderBottom: '1px solid var(--theme-border-light)' }}
+      className="transition-colors"
+      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)'}
+      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+    >
+      <td className="px-4 py-2.5" onClick={onOpenDetail} style={{ cursor: 'pointer' }}>
+        <div className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-bold select-none shrink-0"
+          style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 12%, transparent)', color: 'var(--theme-brand-primary)' }}>
+          {initials}
+        </div>
+      </td>
+      <td className="px-4 py-2.5">
+        <InlineCell value={driver.fullName ?? ''} onSave={v => handleSave('fullName', v)} placeholder="Họ tên" />
+      </td>
+      <td className="px-4 py-2.5">
+        <InlineCell value={driver.phone ?? ''} onSave={v => handleSave('phone', v)} placeholder="SĐT" type="tel" />
+      </td>
+      <td className="px-4 py-2.5" onClick={onOpenDetail} style={{ cursor: 'pointer' }}>
+        <span className="text-sm" style={{ color: driver.vehiclePlate ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)', letterSpacing: '0.04em' }}>
+          {driver.vehiclePlate || '—'}
+        </span>
+      </td>
+      <td className="px-4 py-2.5 text-right" onClick={onOpenDetail} style={{ cursor: 'pointer' }}>
+        <span className="text-sm font-semibold tabular-nums" style={{ color: currentSalary ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}>
+          {salaryDisplay}
+        </span>
+        {currentSalary && <span className="text-xs ml-1" style={{ color: 'var(--theme-text-muted)' }}>đ</span>}
+      </td>
+      <td className="px-4 py-2.5" onClick={onOpenDetail} style={{ cursor: 'pointer' }}>
+        <span className="text-xs" style={{ color: salaryFrom ? 'var(--theme-text-secondary)' : 'var(--theme-text-muted)' }}>
+          {salaryFrom || '—'}
+        </span>
+      </td>
+    </tr>
+  )
+}
+
+function DriverDetailDialog({ driver, onClose }: { driver: Driver; onClose: () => void }) {
+  const qc = useQueryClient()
+  const toast = useToast()
+  const updateDriver = useUpdateDriver()
+  const salary = useDriverBaseSalaryForm({ driverId: driver.id })
+  const { data: vehicles = [] } = useVehicles()
+  const [showSalaryForm, setShowSalaryForm] = useState(true)
+  const [showNewVehicle, setShowNewVehicle] = useState(false)
+  const [newPlate, setNewPlate] = useState('')
+  const [salaryDirty, setSalaryDirty] = useState(false)
+  const salaryPrefilled = useRef(false)
+
+  useEffect(() => {
+    if (salaryPrefilled.current || !salary.currentRate) return
+    salaryPrefilled.current = true
+    salary.setBaseSalary(String(salary.currentRate.baseSalary))
+    salary.setEffectiveFrom(salary.currentRate.effectiveFrom)
+  }, [salary.currentRate])
+
+  const [fullName, setFullName] = useState(driver.fullName ?? '')
+  const [username, setUsername] = useState(driver.username)
+  const [phone, setPhone] = useState(driver.phone ?? '')
+  const [selectedPlate, setSelectedPlate] = useState(driver.vehiclePlate ?? '')
+
+  const initials = (driver.fullName ?? driver.username).slice(0, 2).toUpperCase()
+  const hasChanges =
+    fullName !== (driver.fullName ?? '') ||
+    username !== driver.username ||
+    phone !== (driver.phone ?? '') ||
+    selectedPlate !== (driver.vehiclePlate ?? '')
+
+  const handleSave = async () => {
     try {
-      await assignVehicle(driver.id, newPlate.trim())
-      toast.success('Đã đổi xe')
+      const updates: Record<string, string> = {}
+      if (fullName !== (driver.fullName ?? '')) updates.full_name = fullName
+      if (username !== driver.username) updates.username = username
+      if (phone !== (driver.phone ?? '')) updates.phone = phone
+      if (Object.keys(updates).length > 0) {
+        await updateDriver.mutateAsync({ id: driver.id, data: updates })
+      }
+      if (selectedPlate !== (driver.vehiclePlate ?? '') && selectedPlate) {
+        await api.put(`/drivers/${driver.id}/vehicle`, { plate: selectedPlate })
+      }
       qc.invalidateQueries({ queryKey: ['drivers'] })
+      qc.invalidateQueries({ queryKey: ['vehicles'] })
+      toast.success('Đã lưu thay đổi')
+      onClose()
     } catch {
-      toast.error('Không thể đổi xe')
+      toast.error('Không thể lưu')
+    }
+  }
+
+  const handleCreateVehicle = async () => {
+    if (!newPlate.trim()) return
+    try {
+      await api.post('/vehicles', { plate: newPlate.trim().toUpperCase() })
+      const plate = newPlate.trim().toUpperCase()
+      setSelectedPlate(plate)
+      setNewPlate('')
+      setShowNewVehicle(false)
+      qc.invalidateQueries({ queryKey: ['vehicles'] })
+      toast.success('Đã tạo xe mới')
+    } catch {
+      toast.error('Không thể tạo xe')
     }
   }
 
@@ -167,168 +288,240 @@ function DriverDetailDialog({ driver, onClose }: { driver: Driver; onClose: () =
     setShowSalaryForm(false)
   }
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    border: 'none',
+    background: 'transparent',
+    fontSize: '13px',
+    fontWeight: 500,
+    color: 'var(--theme-text-primary)',
+    padding: 0,
+    outline: 'none',
+    fontFamily: 'inherit',
+  }
+
+  const cellStyle: React.CSSProperties = {
+    padding: '10px 16px',
+    borderRight: `0.5px solid var(--theme-border-light)`,
+  }
+
+  const cellStyleLast: React.CSSProperties = {
+    padding: '10px 16px',
+  }
+
+  const labelRow = (icon: React.ReactNode, label: string) => (
+    <div className="flex items-center gap-[5px]" style={{ marginBottom: 3 }}>
+      {icon}
+      <p style={{ fontSize: 10, color: 'var(--theme-text-muted)', margin: 0, letterSpacing: '0.04em' }}>{label}</p>
+    </div>
+  )
+
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent>
-        {/* SR-only title for accessibility */}
+      <DialogContent hideCloseButton className="p-0 gap-0">
         <DialogHeader className="sr-only">
           <DialogTitle>{driver.fullName ?? driver.username}</DialogTitle>
         </DialogHeader>
 
-        {/* Visual header: avatar + name + username */}
-        <div className="flex items-center gap-3 pb-4" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
+        {/* Header */}
+        <div className="flex items-center justify-between" style={{ padding: '12px 16px', borderBottom: '0.5px solid var(--theme-border-light)' }}>
+          <span className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Thông tin tài xế</span>
+          <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: 'var(--theme-text-muted)' }} aria-label="Đóng">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Avatar + Full Name row */}
+        <div style={{ padding: '12px 16px', borderBottom: '0.5px solid var(--theme-border-light)', display: 'flex', alignItems: 'center', gap: 12 }}>
           <div
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold select-none"
-            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+            className="shrink-0"
+            style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--theme-brand-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
-            {initials}
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--theme-text-on-brand)' }}>{initials}</span>
           </div>
-          <div className="min-w-0 flex-1">
-            <InlineEditable
-              display={
-                <span className="text-base font-bold leading-tight" style={{ color: 'var(--theme-text-primary)' }}>
-                  {driver.fullName || driver.username}
-                </span>
-              }
-              value={driver.fullName ?? ''}
-              onSave={v => handleField('fullName', v)}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 10, color: 'var(--theme-text-muted)', margin: '0 0 2px', letterSpacing: '0.04em' }}>HỌ VÀ TÊN</p>
+            <input
+              value={fullName}
+              onChange={e => setFullName(e.target.value)}
               placeholder="Họ và tên"
-              editLabel="Sửa họ tên"
-            />
-            <InlineEditable
-              display={
-                <span className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>
-                  @{driver.username}
-                </span>
-              }
-              value={driver.username}
-              onSave={v => handleField('username', v)}
-              placeholder="tên đăng nhập"
-              editLabel="Sửa tên đăng nhập"
+              style={inputStyle}
             />
           </div>
         </div>
 
-        <div className="divide-y" style={{ borderColor: 'var(--theme-border-light)' }}>
-          {/* Vehicle */}
-          <div className="py-3 space-y-1">
-            <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Xe đang lái</p>
-            <InlineEditable
-              display={
-                <span className="text-sm font-semibold" style={{ color: driver.vehiclePlate ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}>
-                  {driver.vehiclePlate ?? 'Chưa gán xe'}
-                </span>
-              }
-              value={driver.vehiclePlate ?? ''}
-              onSave={handleVehicleChange}
-              placeholder="Biển số xe"
-              editLabel="Nhấn để đổi xe"
+        {/* 2-col grid: Username | Vehicle */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', borderBottom: '0.5px solid var(--theme-border-light)' }}>
+          <div className="cell" style={cellStyle}>
+            {labelRow(<Phone size={13} style={{ color: 'var(--theme-text-muted)' }} />, 'TÊN ĐĂNG NHẬP')}
+            <input
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              placeholder="@username"
+              style={inputStyle}
             />
           </div>
-
-          {/* Phone */}
-          <div className="py-3 space-y-1">
-            <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Số điện thoại</p>
-            <InlineEditable
-              display={
-                <span className="text-sm font-medium" style={{ color: driver.phone ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}>
-                  {driver.phone || '—'}
-                </span>
-              }
-              value={driver.phone ?? ''}
-              onSave={v => handleField('phone', v)}
-              placeholder="0912345678"
-              editLabel="Sửa số điện thoại"
-            />
-          </div>
-
-          {/* Base salary */}
-          <div className="py-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>
-                <Wallet size={11} style={{ opacity: 0.6 }} />
-                Lương cơ bản
-                <InfoTip text="Mức lương cố định hàng tháng, không bao gồm doanh thu chuyến" />
-              </p>
-              {!showSalaryForm && (
+          <div className="cell" style={cellStyleLast}>
+            <div className="flex items-center justify-between" style={{ marginBottom: 3 }}>
+              {labelRow(<Car size={13} style={{ color: 'var(--theme-text-muted)' }} />, 'XE ĐANG LÁI')}
+              {!showNewVehicle && (
                 <button
-                  onClick={() => setShowSalaryForm(true)}
-                  className="text-xs font-medium transition-opacity"
-                  style={{ color: 'var(--theme-brand-primary)' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '0.75' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '1' }}
+                  onClick={() => setShowNewVehicle(true)}
+                  className="text-[11px] font-medium"
+                  style={{ color: 'var(--theme-brand-primary)', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}
                 >
-                  + Điều chỉnh
+                  +
                 </button>
               )}
             </div>
-
-            <p className="text-base font-bold tabular-nums" style={{ color: salary.currentRate ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}>
-              {salary.currentRate ? formatCurrency(salary.currentRate.baseSalary) : 'Chưa thiết lập'}
-            </p>
-
-            {salary.history.length > 0 && (
-              <div className="rounded-lg overflow-hidden" style={{ border: '1px solid var(--theme-border-light)' }}>
-                {salary.history.slice(0, 4).map((s, idx) => (
-                  <div key={s.id}
-                    className="flex items-center justify-between px-3 py-2 text-xs tabular-nums"
-                    style={{
-                      borderBottom: idx < Math.min(salary.history.length, 4) - 1 ? '1px solid var(--theme-border-light)' : 'none',
-                      background: idx === 0 ? 'color-mix(in srgb, var(--theme-brand-primary) 4%, transparent)' : 'transparent',
-                    }}>
-                    <span className="font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(s.baseSalary)}</span>
-                    <span style={{ color: 'var(--theme-text-muted)' }}>từ {s.effectiveFrom}</span>
-                  </div>
-                ))}
+            {showNewVehicle ? (
+              <div className="flex items-center gap-1">
+                <input
+                  value={newPlate}
+                  onChange={e => setNewPlate(e.target.value)}
+                  placeholder="15C-12345"
+                  autoFocus
+                  onKeyDown={e => { if (e.key === 'Enter') handleCreateVehicle(); if (e.key === 'Escape') { setShowNewVehicle(false); setNewPlate('') } }}
+                  style={{ ...inputStyle, flex: 1, minWidth: 0 }}
+                />
+                <button onClick={handleCreateVehicle} disabled={!newPlate.trim()}
+                  className="text-[11px] font-medium px-1.5 py-0.5 rounded"
+                  style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)', border: 'none', cursor: 'pointer' }}>
+                  Tạo
+                </button>
               </div>
-            )}
-
-            {showSalaryForm && (
-              <div className="space-y-2 mt-1">
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>
-                      Số tiền (VNĐ)
-                    </label>
-                    <Input
-                      inputMode="numeric"
-                      value={salary.fields.baseSalary}
-                      onChange={e => salary.setBaseSalary(e.target.value)}
-                      placeholder="8.000.000"
-                      className="h-9 text-sm font-mono"
-                      autoFocus
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>
-                      Hiệu lực từ
-                    </label>
-                    <Input
-                      type="date"
-                      value={salary.fields.effectiveFrom}
-                      onChange={e => salary.setEffectiveFrom(e.target.value)}
-                      className="h-9 text-sm font-mono"
-                    />
-                  </div>
-                </div>
-                {salary.error && (
-                  <p className="text-xs" style={{ color: 'var(--theme-status-error)' }} role="alert">{salary.error}</p>
-                )}
-                <div className="flex justify-end gap-2">
-                  <Button size="sm" variant="outline" onClick={() => { setShowSalaryForm(false); salary.reset() }}>Huỷ</Button>
-                  <Button size="sm" onClick={handleSalarySubmit} disabled={!salary.fields.baseSalary || salary.submitting}
-                    style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-                    {salary.submitting ? 'Đang lưu…' : 'Lưu'}
-                  </Button>
-                </div>
-              </div>
+            ) : (
+              <select
+                value={selectedPlate}
+                onChange={e => setSelectedPlate(e.target.value)}
+                style={{ ...inputStyle, cursor: 'pointer', letterSpacing: '0.04em' }}
+              >
+                <option value="">{driver.vehiclePlate || 'Chưa gán xe'}</option>
+                {vehicles
+                  .filter(v => v.plate !== driver.vehiclePlate)
+                  .map(v => <option key={v.id} value={v.plate}>{v.plate}</option>)}
+              </select>
             )}
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} className="flex-1">Đóng</Button>
-        </DialogFooter>
+        {/* 2-col grid: Phone | Base Salary */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', borderBottom: '0.5px solid var(--theme-border-light)' }}>
+          <div className="cell" style={cellStyle}>
+            {labelRow(<Phone size={13} style={{ color: 'var(--theme-text-muted)' }} />, 'SỐ ĐIỆN THOẠI')}
+            <input
+              type="tel"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              placeholder="0912345678"
+              style={inputStyle}
+            />
+          </div>
+          <div className="cell" style={cellStyleLast}>
+            {labelRow(<Wallet size={13} style={{ color: 'var(--theme-text-muted)' }} />, 'LƯƠNG CƠ BẢN')}
+            <div className="flex items-baseline gap-[3px]">
+              <span style={{ ...inputStyle, width: '100%', minWidth: 0 }}>
+                {salary.currentRate ? formatCurrency(salary.currentRate.baseSalary) : 'Chưa thiết lập'}
+              </span>
+              {salary.currentRate && <span style={{ fontSize: 12, color: 'var(--theme-text-muted)', flexShrink: 0 }}>đ</span>}
+            </div>
+          </div>
+        </div>
+
+        {/* Salary history */}
+        <div style={{ padding: '10px 16px 12px' }}>
+          <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
+            <span style={{ fontSize: 10, color: 'var(--theme-text-muted)', letterSpacing: '0.04em' }}>LỊCH SỬ LƯƠNG</span>
+            {!showSalaryForm && (
+              <button
+                onClick={() => setShowSalaryForm(true)}
+                className="text-xs font-medium"
+                style={{ color: 'var(--theme-brand-primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+              >
+                + Điều chỉnh
+              </button>
+            )}
+          </div>
+
+          {salary.history.length > 0 && !showSalaryForm && (
+            <div className="rounded-lg" style={{ background: 'var(--theme-bg-tertiary)', padding: '8px 12px' }}>
+              {salary.history.slice(0, 4).map((s, idx) => (
+                <div key={s.id} className="flex items-center justify-between" style={{ paddingTop: idx > 0 ? 6 : 0 }}>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--theme-text-primary)' }}>{formatCurrency(s.baseSalary)} đ</span>
+                  <div className="flex items-center gap-[5px]">
+                    <span style={{ fontSize: 12, color: 'var(--theme-text-muted)' }}>từ {s.effectiveFrom}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {showSalaryForm && (
+            <div className="space-y-2 mt-1">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Số tiền (VNĐ)</label>
+                  <Input
+                    inputMode="numeric"
+                    value={salary.fields.baseSalary}
+                    onChange={e => {
+                      const prev = salary.fields.baseSalary
+                      salary.setBaseSalary(e.target.value)
+                      if (salary.currentRate) {
+                        const prevClean = prev.replace(/[^0-9]/g, '')
+                        const nextClean = e.target.value.replace(/[^0-9]/g, '')
+                        const orig = String(salary.currentRate.baseSalary)
+                        setSalaryDirty(nextClean !== orig && nextClean !== '')
+                      }
+                    }}
+                    placeholder="8.000.000"
+                    className="h-9 text-sm font-mono"
+                    autoFocus
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Hiệu lực từ</label>
+                  <Input
+                    type="date"
+                    value={salary.fields.effectiveFrom}
+                    onChange={e => { salary.setEffectiveFrom(e.target.value); setSalaryDirty(false) }}
+                    className="h-9 text-sm font-mono"
+                    style={salaryDirty ? { borderColor: '#f97316', borderWidth: 2 } : undefined}
+                  />
+                  {salaryDirty && (
+                    <p className="text-[11px] font-medium" style={{ color: '#f97316' }}>Chọn ngày hiệu lực mới</p>
+                  )}
+                </div>
+              </div>
+              {salary.error && <p className="text-xs" style={{ color: 'var(--theme-status-error)' }} role="alert">{salary.error}</p>}
+              <div className="flex justify-end gap-2">
+                <Button size="sm" variant="outline" onClick={() => { setShowSalaryForm(false); salary.reset(); setSalaryDirty(false) }}>Huỷ</Button>
+                <Button size="sm" onClick={handleSalarySubmit} disabled={!salary.fields.baseSalary || salary.submitting} style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+                  {salary.submitting ? 'Đang lưu…' : 'Lưu'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '10px 16px 14px', borderTop: '0.5px solid var(--theme-border-light)', display: 'flex', gap: 8 }}>
+          <button
+            onClick={onClose}
+            className="text-sm font-medium"
+            style={{ flex: 1, padding: 9, borderRadius: 'var(--border-radius-md, 8px)', border: '0.5px solid var(--theme-border-light)', background: 'transparent', color: 'var(--theme-text-secondary)', cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            Đóng
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={updateDriver.isPending || !hasChanges}
+            className="text-sm font-medium"
+            style={{ flex: 2, padding: 9, borderRadius: 'var(--border-radius-md, 8px)', border: 'none', background: hasChanges ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)', color: hasChanges ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)', cursor: hasChanges ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}
+          >
+            {updateDriver.isPending ? 'Đang lưu…' : 'Lưu thay đổi'}
+          </button>
+        </div>
       </DialogContent>
     </Dialog>
   )

@@ -5,7 +5,7 @@ from __future__ import annotations
 from app.models.domain import (
     Location as LocationORM,
     LocationAlias as LocationAliasORM,
-    Partner as PartnerORM,
+    Client as ClientORM,
     Pricing as PricingORM,
     PricingLine as PricingLineORM,
 )
@@ -13,7 +13,7 @@ from app.models.domain import (
 __all__ = [
     "LocationORM",
     "LocationAliasORM",
-    "PartnerORM",
+    "ClientORM",
     "PricingORM",
     "PricingLineORM",
 ]

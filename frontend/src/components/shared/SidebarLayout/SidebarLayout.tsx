@@ -142,6 +142,7 @@ function resolvePathTitle(role: string, pathname: string): string {
   const map: Record<string, string> = {
     'users': 'Quản lý tài khoản',
     'partners': 'Đối tác',
+    'clients': 'Khách hàng',
     'routes': 'Cung đường',
     'pricings': 'Bảng giá',
     'trips': 'Chuyến/Lệnh',

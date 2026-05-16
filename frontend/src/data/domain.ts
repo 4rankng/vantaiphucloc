@@ -1,7 +1,6 @@
 export type Role = 'superadmin' | 'director' | 'accountant' | 'driver'
 export type TrailerType = '20FT' | '40FT'
 export type JobStatus = 'DRAFT' | 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
-export type PartnerType = 'client' | 'vendor'
 export type WorkType = 'E20' | 'E40' | 'F20' | 'F40'
 export type WorkOrderStatus = 'PENDING' | 'MATCHED'
 export type TripOrderStatus = 'PENDING' | 'MATCHED'
@@ -55,11 +54,10 @@ export interface Vehicle {
   updatedAt: string
 }
 
-export interface Partner {
+export interface Client {
   id: number
   code?: string
   name: string
-  partnerType: PartnerType
   taxCode?: string
   address?: string
   phone?: string
@@ -67,9 +65,44 @@ export interface Partner {
   isActive?: boolean
   createdAt?: string
   updatedAt?: string
-  /** Frontend-only display field: 'company' | 'individual'.
-   *  Not stored in the backend — derived from the partner name heuristic. */
   type?: 'company' | 'individual'
+}
+
+export interface Vendor {
+  id: number
+  code?: string
+  name: string
+  taxCode?: string
+  address?: string
+  phone?: string
+  contactPerson?: string
+  isActive?: boolean
+  createdAt?: string
+  updatedAt?: string
+  type?: 'company' | 'individual'
+}
+
+export interface VendorSummary {
+  vendor: Pick<Vendor, 'id' | 'name' | 'phone' | 'taxCode' | 'address' | 'contactPerson'>
+  stats: {
+    tripCount: number
+    containerCount: number
+    totalPaid: number
+    totalAmount: number
+  }
+  drivers: Array<{
+    plate: string
+    tripCount: number
+    containerCount: number
+    totalPaid: number
+  }>
+  reconciliations: Array<{
+    importId: number
+    periodFrom: string
+    periodTo: string
+    containerCount: number
+    status: string
+  }>
 }
 
 // TODO: Add when job management feature is implemented
@@ -139,7 +172,7 @@ export interface WorkOrder {
   id: number
   code?: string
   containers: ContainerItem[]
-  partner: PartnerSummary
+  client: PartnerSummary
   pickupLocation: LocationSummary
   dropoffLocation: LocationSummary
   driver?: DriverSummary | null
@@ -174,7 +207,7 @@ export interface PricingLine {
 
 export interface Pricing {
   id: number
-  partner: PartnerSummary
+  client: PartnerSummary
   workType: WorkType
   pickupLocation: LocationSummary
   dropoffLocation: LocationSummary
@@ -193,7 +226,7 @@ export interface TripOrder {
   id: number
   code?: string
   tripDate: string
-  partner: PartnerSummary
+  client: PartnerSummary
   pickupLocation: LocationSummary
   dropoffLocation: LocationSummary
   containers: TripOrderContainerItem[]

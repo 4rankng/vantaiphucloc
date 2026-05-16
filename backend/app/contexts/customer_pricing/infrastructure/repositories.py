@@ -29,10 +29,10 @@ from app.contexts.customer_pricing.domain.value_objects import (
 )
 from app.contexts.customer_pricing.infrastructure.mappers import (
     alias_to_orm,
+    client_to_domain,
+    client_to_orm,
     location_to_domain,
     location_to_orm,
-    partner_to_domain,
-    partner_to_orm,
     pricing_line_to_orm,
     pricing_to_domain,
     pricing_to_orm,
@@ -40,7 +40,7 @@ from app.contexts.customer_pricing.infrastructure.mappers import (
 from app.contexts.customer_pricing.infrastructure.orm import (
     LocationAliasORM,
     LocationORM,
-    PartnerORM,
+    ClientORM,
     PricingLineORM,
     PricingORM,
 )
@@ -49,27 +49,27 @@ from app.contexts.customer_pricing.infrastructure.orm import (
 # -- Partner ---------------------------------------------------------
 
 
-class SqlPartnerRepository(PartnerRepository):
+class SqlClientRepository(PartnerRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
     async def get_by_id(self, pid: PartnerId) -> Partner | None:
         orm = (await self.session.execute(
-            select(PartnerORM).where(PartnerORM.id == int(pid))
+            select(ClientORM).where(ClientORM.id == int(pid))
         )).scalar_one_or_none()
-        return partner_to_domain(orm) if orm else None
+        return client_to_domain(orm) if orm else None
 
     async def find_by_code(self, code: str) -> Partner | None:
         orm = (await self.session.execute(
-            select(PartnerORM).where(PartnerORM.code == code)
+            select(ClientORM).where(ClientORM.code == code)
         )).scalar_one_or_none()
-        return partner_to_domain(orm) if orm else None
+        return client_to_domain(orm) if orm else None
 
     async def find_by_name(self, name: str) -> Partner | None:
         orm = (await self.session.execute(
-            select(PartnerORM).where(PartnerORM.name == name)
+            select(ClientORM).where(ClientORM.name == name)
         )).scalar_one_or_none()
-        return partner_to_domain(orm) if orm else None
+        return client_to_domain(orm) if orm else None
 
     async def list(
         self,
@@ -79,31 +79,29 @@ class SqlPartnerRepository(PartnerRepository):
         partner_type: str | None = None,
         active_only: bool = True,
     ) -> tuple[Sequence[Partner], int]:
-        q = select(PartnerORM)
+        q = select(ClientORM)
         if active_only:
-            q = q.where(PartnerORM.is_active.is_(True))
-        if partner_type is not None:
-            q = q.where(PartnerORM.partner_type == partner_type)
+            q = q.where(ClientORM.is_active.is_(True))
         total = await self.session.scalar(
             select(func.count()).select_from(q.subquery())
         ) or 0
-        q = q.order_by(PartnerORM.name.asc()).offset(offset).limit(limit)
+        q = q.order_by(ClientORM.name.asc()).offset(offset).limit(limit)
         rows = list((await self.session.execute(q)).scalars().all())
-        return [partner_to_domain(r) for r in rows], int(total)
+        return [client_to_domain(r) for r in rows], int(total)
 
     async def add(self, p: Partner) -> Partner:
-        orm = partner_to_orm(p)
+        orm = client_to_orm(p)
         self.session.add(orm)
         await self.session.flush()
-        return partner_to_domain(orm)
+        return client_to_domain(orm)
 
     async def save(self, p: Partner) -> Partner:
         existing = (await self.session.execute(
-            select(PartnerORM).where(PartnerORM.id == int(p.id))
+            select(ClientORM).where(ClientORM.id == int(p.id))
         )).scalar_one()
-        partner_to_orm(p, existing)
+        client_to_orm(p, existing)
         await self.session.flush()
-        return partner_to_domain(existing)
+        return client_to_domain(existing)
 
 
 # -- Location --------------------------------------------------------

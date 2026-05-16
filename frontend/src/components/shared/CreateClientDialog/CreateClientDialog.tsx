@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button, Input, Label } from '@/components/ui'
-import type { Partner } from '@/data/domain'
+import type { Client } from '@/data/domain'
 
-type ClientFormData = Omit<Partner, 'id' | 'createdAt' | 'updatedAt'>
+type ClientFormData = Omit<Client, 'id' | 'createdAt' | 'updatedAt'>
 
 interface CreateClientDialogProps {
   open: boolean

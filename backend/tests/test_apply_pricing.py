@@ -23,8 +23,8 @@ from app.models.enums import TripOrderStatus
 @pytest.fixture
 async def seeded_world(db_session):
     """One partner, two locations, one pricing rule."""
-    partner = Partner(
-        code="ACME", name="Acme", partner_type="client",
+    partner = Client(
+        code="ACME", name="Acme",
         phone="0900", is_active=True,
     )
     pickup = Location(name="Cảng A", is_active=True, pending_geocode=True)

@@ -19,7 +19,7 @@ from app.contexts.customer_pricing.domain.value_objects import (
 from app.contexts.customer_pricing.infrastructure.orm import (
     LocationAliasORM,
     LocationORM,
-    PartnerORM,
+    ClientORM,
     PricingLineORM,
     PricingORM,
 )
@@ -28,11 +28,11 @@ from app.contexts.customer_pricing.infrastructure.orm import (
 # -- Partner ---------------------------------------------------------
 
 
-def partner_to_domain(orm: PartnerORM) -> Partner:
+def client_to_domain(orm: ClientORM) -> "Partner":
     return Partner(
         id=PartnerId(orm.id) if orm.id is not None else None,
         name=orm.name,
-        partner_type=orm.partner_type,
+        partner_type="client",
         code=orm.code,
         phone=orm.phone,
         tax_code=orm.tax_code,
@@ -44,13 +44,12 @@ def partner_to_domain(orm: PartnerORM) -> Partner:
     )
 
 
-def partner_to_orm(p: Partner, orm: PartnerORM | None = None) -> PartnerORM:
+def client_to_orm(p: "Partner", orm: ClientORM | None = None) -> ClientORM:
     if orm is None:
-        orm = PartnerORM()
+        orm = ClientORM()
     if p.id is not None:
         orm.id = int(p.id)
     orm.name = p.name
-    orm.partner_type = p.partner_type
     orm.code = p.code
     orm.phone = p.phone
     orm.tax_code = p.tax_code

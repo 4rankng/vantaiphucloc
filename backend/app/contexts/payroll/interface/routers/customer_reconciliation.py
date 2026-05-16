@@ -212,7 +212,7 @@ async def update_row_verdict(
 
 @router.post("/upload-response", response_model=CustomerReconciliationImportOut, status_code=201)
 async def upload_customer_response(
-    client_id: int = Query(..., description="Partner (khách hàng) ID"),
+    client_id: int = Query(..., description="Client (khách hàng) ID"),
     period_start: str = Query(..., description="From date (YYYY-MM-DD)"),
     period_end: str = Query(..., description="To date (YYYY-MM-DD)"),
     file: UploadFile = File(...),

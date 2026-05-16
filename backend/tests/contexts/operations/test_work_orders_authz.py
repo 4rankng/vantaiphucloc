@@ -11,7 +11,7 @@ import pytest
 
 from app.core.security import hash_password
 from app.models.base import User
-from app.models.domain import Location, Partner
+from app.models.domain import Location, Client
 
 
 async def _seed_two_drivers_with_wos(db_session, async_client):
@@ -19,7 +19,7 @@ async def _seed_two_drivers_with_wos(db_session, async_client):
 
     Returns (driver_a_headers, driver_b_headers, wo_a_id, wo_b_id).
     """
-    partner = Partner(name="Acme", partner_type="client", phone="0900111", is_active=True)
+    partner = Client(name="Acme", phone="0900111", is_active=True)
     pickup = Location(name="Cảng Cát Lái", is_active=True)
     dropoff = Location(name="KCN Long Hậu", is_active=True)
     drv_a = User(

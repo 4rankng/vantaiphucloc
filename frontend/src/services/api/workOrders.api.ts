@@ -5,7 +5,7 @@ import { offlineQueue } from '@/lib/offline-queue'
 import type { WorkOrder, ContainerItem, ApiResponse } from '@/data/domain'
 
 export interface SuggestedRoute {
-  partner: { id: number; code: string | null; name: string }
+  client: { id: number; code: string | null; name: string }
   pickupLocation: { id: number; name: string }
   dropoffLocation: { id: number; name: string }
   frequency: number
@@ -108,7 +108,7 @@ export async function createWorkOrder(
       return ok({
         id: -Date.now(),
         containers: data.containers,
-        partner: { id: data.clientId, name: '', code: null },
+        client: { id: data.clientId, name: '', code: null },
         pickupLocation: { id: data.pickupLocationId, name: '' },
         dropoffLocation: { id: data.dropoffLocationId, name: '' },
         driver: { id: data.driverId, name: '' },

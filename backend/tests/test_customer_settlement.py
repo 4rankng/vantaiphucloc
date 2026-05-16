@@ -133,10 +133,9 @@ def test_settlement_period_january_crosses_year():
 
 @pytest.mark.asyncio
 async def test_load_settlement_data_aggregates_routes(db_session):
-    partner = Partner(
+    partner = Client(
         code="PAN",
         name="CÔNG TY TNHH PAN HẢI AN",
-        partner_type="client",
         phone="0225",
         tax_code="0201815115",
         address="Lô KB5, KCN Nam Đình Vũ, Hải An, Hải Phòng",
@@ -201,10 +200,9 @@ async def test_load_settlement_data_aggregates_routes(db_session):
 
 @pytest.mark.asyncio
 async def test_generate_workbook_produces_two_sheets_with_data(db_session):
-    partner = Partner(
+    partner = Client(
         code="PAN",
         name="CÔNG TY TNHH PAN HẢI AN",
-        partner_type="client",
         phone="0225",
         tax_code="0201815115",
         address="Hải Phòng",
@@ -260,10 +258,9 @@ async def test_generate_workbook_produces_two_sheets_with_data(db_session):
 
 @pytest.mark.asyncio
 async def test_workbook_with_no_trips_is_still_valid(db_session):
-    partner = Partner(
+    partner = Client(
         code="PAN",
-        name="PAN HẢI AN",
-        partner_type="client",
+        name="CÔNG TY TNHH PAN HẢI AN",
         phone="0225",
         is_active=True,
     )

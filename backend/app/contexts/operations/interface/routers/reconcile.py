@@ -418,7 +418,7 @@ async def get_linked_trip_orders(
 @router.post("/upload-excel")
 async def upload_customer_excel(
     file: UploadFile = File(...),
-    client_id: int = Query(..., description="Partner ID for reconciliation"),
+    client_id: int = Query(..., description="Client ID for reconciliation"),
     date_from: str | None = Query(None, description="Filter from date (YYYY-MM-DD)"),
     date_to: str | None = Query(None, description="Filter to date (YYYY-MM-DD)"),
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
@@ -972,7 +972,7 @@ async def bulk_match(
 
 @router.get("/export-excel")
 async def export_reconciliation_excel(
-    client_id: int = Query(..., description="Partner ID"),
+    client_id: int = Query(..., description="Client ID"),
     date_from: str | None = Query(None, description="Filter from date (YYYY-MM-DD)"),
     date_to: str | None = Query(None, description="Filter to date (YYYY-MM-DD)"),
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
@@ -985,7 +985,7 @@ async def export_reconciliation_excel(
         db=db, client_id=client_id, date_from=date_from, date_to=date_to,
     )
 
-    filename = f"reconciliation_partner_{client_id}"
+    filename = f"reconciliation_client_{client_id}"
     if date_from:
         filename += f"_{date_from}"
     if date_to:

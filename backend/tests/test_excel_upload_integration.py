@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from app.models.domain import Location, Partner
+from app.models.domain import Location, Client
 
 
 # ---------------------------------------------------------------------------
@@ -43,7 +43,7 @@ def sample_files():
 
 @pytest.fixture
 async def seeded_partner(db_session):
-    partner = Partner(name="Test Shipping", partner_type="client")
+    partner = Client(name="Test Shipping", )
     db_session.add(partner)
     await db_session.flush()
     return partner

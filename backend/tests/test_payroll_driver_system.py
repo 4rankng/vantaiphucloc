@@ -30,7 +30,7 @@ pytestmark = pytest.mark.asyncio
 
 
 async def _seed_partner_locations_driver(db_session):
-    partner = Partner(name="ACME Co.", partner_type="client", is_active=True)
+    partner = Client(name="ACME Co.", is_active=True)
     pickup = Location(name="Cảng Cát Lái", is_active=True)
     dropoff = Location(name="KCN Long Hậu", is_active=True)
     driver = User(
@@ -390,8 +390,8 @@ async def test_monthly_pnl_partner_breakdown_sorted_by_revenue(
     headers, _ = await _accountant_headers(db_session, async_client)
 
     # Two partners, partner B has higher revenue
-    partner_a = Partner(name="A Corp", partner_type="client", is_active=True)
-    partner_b = Partner(name="B Corp", partner_type="client", is_active=True)
+    partner_a = Client(name="A Corp", is_active=True)
+    partner_b = Client(name="B Corp", is_active=True)
     db_session.add_all([partner_a, partner_b])
     await db_session.commit()
 

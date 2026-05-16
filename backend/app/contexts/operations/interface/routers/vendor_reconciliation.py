@@ -25,7 +25,7 @@ from typing import Any
 from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import require_roles
@@ -40,7 +40,8 @@ from app.utils.excel_utils import (
 )
 from app.models.domain import (
     Location,
-    Partner,
+    Client,
+    Vendor,
     Vehicle,
     VehicleDriver,
     VendorReconciliationImport,
@@ -213,7 +214,7 @@ class OurOnlyRowOut(BaseModel):
 
 @router.get("/export")
 async def export_vendor_trips(
-    vendor_id: int = Query(..., description="Partner (nhà xe) ID"),
+    vendor_id: int = Query(..., description="Vendor (nhà xe) ID"),
     date_from: date = Query(..., description="From date (YYYY-MM-DD)"),
     date_to: date = Query(..., description="To date (YYYY-MM-DD)"),
     db: AsyncSession = Depends(get_db),
@@ -232,9 +233,9 @@ async def export_vendor_trips(
 
     # Validate vendor
     vendor = (
-        await db.execute(select(Partner).where(Partner.id == vendor_id))
+        await db.execute(select(Vendor).where(Vendor.id == vendor_id))
     ).scalar_one_or_none()
-    if vendor is None or vendor.partner_type != "vendor":
+    if vendor is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy nhà xe.")
 
     # Load WorkOrders for this vendor in the period
@@ -281,7 +282,6 @@ async def export_vendor_trips(
             .where(
                 VehicleDriver.driver_id.in_(driver_ids),
                 VehicleDriver.is_active == True,  # noqa: E712
-                VehicleDriver.role == "PRIMARY",
                 Vehicle.is_active == True,  # noqa: E712
             )
         )
@@ -478,9 +478,9 @@ async def upload_vendor_excel(
         raise HTTPException(status_code=400, detail="Tệp tải lên rỗng.")
 
     vendor = (
-        await db.execute(select(Partner).where(Partner.id == vendor_id))
+        await db.execute(select(Vendor).where(Vendor.id == vendor_id))
     ).scalar_one_or_none()
-    if vendor is None or vendor.partner_type != "vendor":
+    if vendor is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy nhà xe.")
 
     try:
@@ -621,7 +621,7 @@ async def list_imports(
     partners_map: dict[int, str] = {}
     if client_ids:
         partners = (
-            await db.execute(select(Partner).where(Partner.id.in_(client_ids)))
+            await db.execute(select(Vendor).where(Vendor.id.in_(client_ids)))
         ).scalars().all()
         partners_map = {p.id: p.name for p in partners}
 
@@ -663,7 +663,7 @@ async def get_import(
         raise HTTPException(status_code=404, detail="Không tìm thấy import.")
 
     vendor = (
-        await db.execute(select(Partner).where(Partner.id == imp.vendor_id))
+        await db.execute(select(Vendor).where(Vendor.id == imp.vendor_id))
     ).scalar_one_or_none()
 
     rows = (
@@ -873,3 +873,118 @@ async def discard_import(
         )
     imp.status = "DISCARDED"
     await db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Vendor summary endpoint (mounted at /vendors/{vendor_id}/summary)
+# ---------------------------------------------------------------------------
+
+# NOTE: This router is mounted at /vendor-reconciliation, so the full path is
+# /vendor-reconciliation/vendors/{vendor_id}/summary.  A separate router with
+# prefix="" could be used, but co-locating is simpler for now.
+
+
+@router.get("/vendors/{vendor_id}/summary")
+async def vendor_summary(
+    vendor_id: int,
+    date_from: date | None = Query(None),
+    date_to: date | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_roles("accountant", "superadmin")),
+):
+    vendor = (
+        await db.execute(
+            select(Vendor).where(
+                Vendor.id == vendor_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if vendor is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy nhà xe.")
+
+    wo_q = select(WorkOrder).where(WorkOrder.vendor_id == vendor_id)
+    if date_from is not None:
+        wo_q = wo_q.where(WorkOrder.trip_date >= date_from)
+    if date_to is not None:
+        wo_q = wo_q.where(WorkOrder.trip_date <= date_to)
+    work_orders = (await db.execute(wo_q)).scalars().all()
+    wo_ids = [wo.id for wo in work_orders]
+
+    container_map: dict[int, int] = {}
+    if wo_ids:
+        cont_rows = (
+            await db.execute(
+                select(
+                    WorkOrderContainer.work_order_id,
+                    func.count(WorkOrderContainer.id),
+                )
+                .where(WorkOrderContainer.work_order_id.in_(wo_ids))
+                .group_by(WorkOrderContainer.work_order_id)
+            )
+        ).all()
+        container_map = dict(cont_rows)
+
+    trip_count = len(work_orders)
+    container_count = sum(container_map.values())
+    total_paid = sum(wo.driver_salary or 0 for wo in work_orders)
+    total_amount = sum(wo.unit_price or 0 for wo in work_orders)
+
+    plate_groups: dict[str, list[WorkOrder]] = {}
+    for wo in work_orders:
+        plate = wo.vehicle_external_plate
+        if not plate:
+            continue
+        plate_groups.setdefault(plate, []).append(wo)
+
+    drivers = []
+    for plate, wos in sorted(plate_groups.items()):
+        plate_wo_ids = {wo.id for wo in wos}
+        plate_containers = sum(container_map.get(wid, 0) for wid in plate_wo_ids)
+        plate_paid = sum(wo.driver_salary or 0 for wo in wos)
+        drivers.append(
+            {
+                "plate": plate,
+                "tripCount": len(wos),
+                "containerCount": plate_containers,
+                "totalPaid": plate_paid,
+            }
+        )
+
+    recon_imports = (
+        await db.execute(
+            select(VendorReconciliationImport)
+            .where(VendorReconciliationImport.vendor_id == vendor_id)
+            .order_by(VendorReconciliationImport.uploaded_at.desc())
+            .limit(20)
+        )
+    ).scalars().all()
+
+    reconciliations = [
+        {
+            "importId": imp.id,
+            "periodFrom": imp.period_from,
+            "periodTo": imp.period_to,
+            "containerCount": (imp.totals or {}).get("total", 0),
+            "status": imp.status,
+        }
+        for imp in recon_imports
+    ]
+
+    return {
+        "vendor": {
+            "id": vendor.id,
+            "name": vendor.name,
+            "phone": vendor.phone,
+            "taxCode": vendor.tax_code,
+            "address": vendor.address,
+            "contactPerson": vendor.contact_person,
+        },
+        "stats": {
+            "tripCount": trip_count,
+            "containerCount": container_count,
+            "totalPaid": total_paid,
+            "totalAmount": total_amount,
+        },
+        "drivers": drivers,
+        "reconciliations": reconciliations,
+    }

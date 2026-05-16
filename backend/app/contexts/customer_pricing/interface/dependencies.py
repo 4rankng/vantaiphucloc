@@ -31,7 +31,7 @@ from app.contexts.customer_pricing.domain.repositories import (
 )
 from app.contexts.customer_pricing.infrastructure.repositories import (
     SqlLocationRepository,
-    SqlPartnerRepository,
+    SqlClientRepository,
     SqlPricingRepository,
 )
 from app.database import get_db
@@ -43,7 +43,7 @@ from app.database import get_db
 def get_partner_repository(
     db: AsyncSession = Depends(get_db),
 ) -> PartnerRepository:
-    return SqlPartnerRepository(db)
+    return SqlClientRepository(db)
 
 
 def get_location_repository(

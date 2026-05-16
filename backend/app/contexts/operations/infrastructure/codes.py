@@ -15,7 +15,7 @@ import re
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.domain import Partner, WorkOrder, TripOrder
+from app.models.domain import Client, WorkOrder, TripOrder
 
 _LOCK_NS = 7
 
@@ -44,7 +44,7 @@ def _extract_max_seq(codes: list[str]) -> int:
 
 async def _partner_prefix(db: AsyncSession, client_id: int, fallback_char: str) -> str:
     res = await db.execute(
-        select(Partner.code, Partner.name).where(Partner.id == client_id)
+        select(Client.code, Client.name).where(Client.id == client_id)
     )
     row = res.one_or_none()
     if not row:

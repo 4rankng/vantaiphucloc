@@ -1,13 +1,15 @@
 import { useState, useMemo, useCallback } from 'react'
-import { Truck, Plus, Phone, MapPin, User, AlertTriangle } from 'lucide-react'
+import { Truck, Plus, Phone, MapPin, User, AlertTriangle, Calendar, FileDown } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button, Input, Label } from '@/components/ui'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/Sheet'
 import { AccountantPageShell } from '@/components/shared/AccountantPageShell'
 import { EntityTable, type EntityColumn } from '@/components/shared/EntityTable'
 import { InfoTip } from '@/components/shared/InfoTip'
-import { usePartners, useCreatePartner, useUpdatePartner, useDeletePartner } from '@/hooks/use-queries'
+import { useVendors, useCreateVendor, useUpdateVendor, useDeleteVendor, useVendorSummary, useExportVendorTrips } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { fuzzyMatch } from '@/lib/search-utils'
-import type { Partner } from '@/data/domain'
+import { formatCurrency } from '@/data/domain'
+import type { Vendor } from '@/data/domain'
 
 const VN_PHONE_RE = /^(0|\+?84)[35789]\d{8}$/
 const VN_TAX_RE = /^\d{10}(\d{3})?$/
@@ -96,20 +98,163 @@ function VendorFormDialog({ open, onClose, onSave, title, initial, saving }: {
   )
 }
 
+function statusBadge(status: string) {
+  const colors: Record<string, { bg: string; color: string }> = {
+    APPLIED: { bg: 'color-mix(in srgb, var(--theme-status-success) 12%, transparent)', color: 'var(--theme-status-success)' },
+    PENDING_REVIEW: { bg: 'color-mix(in srgb, var(--theme-status-warning) 12%, transparent)', color: 'var(--theme-status-warning)' },
+    DISCARDED: { bg: 'color-mix(in srgb, var(--theme-text-muted) 12%, transparent)', color: 'var(--theme-text-muted)' },
+  }
+  const c = colors[status] ?? colors.PENDING_REVIEW
+  const labels: Record<string, string> = { APPLIED: 'Đã áp dụng', PENDING_REVIEW: 'Chờ duyệt', DISCARDED: 'Đã huỷ' }
+  return (
+    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium" style={{ background: c.bg, color: c.color }}>
+      {labels[status] ?? status}
+    </span>
+  )
+}
+
+function VendorDetailSheet({ vendor, onClose, onEdit, onDelete }: { vendor: Vendor; onClose: () => void; onEdit: () => void; onDelete: () => void }) {
+  const { data: summary, isLoading } = useVendorSummary(vendor.id)
+  const exportTrips = useExportVendorTrips()
+  const toast = useToast()
+
+  const handleExport = () => {
+    const now = new Date()
+    const dateFrom = `${now.getFullYear()}-${String(now.getMonth()).padStart(2, '0')}-26`
+    const dateTo = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-25`
+    exportTrips.mutate({ vendorId: vendor.id, dateFrom, dateTo }, {
+      onSuccess: () => toast.success('Đã tải file đối soát'),
+      onError: () => toast.error('Không thể xuất file'),
+    })
+  }
+
+  return (
+    <Sheet open onOpenChange={onClose}>
+      <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto p-0">
+        <SheetHeader className="px-4 pt-4 pb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
+          <div className="flex items-center justify-between">
+            <SheetTitle className="text-sm">{vendor.name}</SheetTitle>
+            <button onClick={onClose} className="p-1 rounded-md" style={{ color: 'var(--theme-text-muted)' }}>✕</button>
+          </div>
+          {vendor.taxCode && <SheetDescription className="text-xs font-mono-num">MST: {vendor.taxCode}</SheetDescription>}
+        </SheetHeader>
+
+        {isLoading ? (
+          <div className="p-4 space-y-3">
+            {[...Array(4)].map((_, i) => <div key={i} className="h-10 rounded animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}
+          </div>
+        ) : (
+          <div className="divide-y" style={{ borderColor: 'var(--theme-border-light)' }}>
+            {/* Section 1: Vendor Info */}
+            <div className="px-4 py-3 space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Thông tin</p>
+              <div className="space-y-1.5">
+                {[
+                  ['Loại', vendor.type === 'company' ? 'Công ty' : 'Cá nhân'],
+                  ['SĐT', vendor.phone],
+                  ['MST', vendor.taxCode],
+                  ['Địa chỉ', vendor.address],
+                  ['Liên hệ', vendor.contactPerson],
+                ].map(([label, val]) => (
+                  <div key={label as string} className="flex items-start gap-3">
+                    <span className="text-[10px] uppercase tracking-wider w-14 shrink-0 pt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{label}</span>
+                    <span className="text-sm" style={{ color: val ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}>{val || '—'}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button onClick={onEdit} className="text-xs font-medium px-2 py-1 rounded-md" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}>Sửa</button>
+                <button onClick={onDelete} className="text-xs font-medium px-2 py-1 rounded-md" style={{ color: 'var(--theme-status-error)' }}>Xoá</button>
+              </div>
+            </div>
+
+            {/* Section 2: KPI Stats */}
+            {summary?.stats && (
+              <div className="px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--theme-text-muted)' }}>Thống kê</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { label: 'Chuyến', value: String(summary.stats.tripCount) },
+                    { label: 'Cont', value: String(summary.stats.containerCount) },
+                    { label: 'Đã TT', value: formatCurrency(summary.stats.totalPaid) },
+                  ].map(kpi => (
+                    <div key={kpi.label} className="rounded-lg p-2 text-center" style={{ background: 'var(--theme-bg-tertiary)' }}>
+                      <p className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>{kpi.value}</p>
+                      <p className="text-[10px]" style={{ color: 'var(--theme-text-muted)' }}>{kpi.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Section 3: External Drivers */}
+            {summary?.drivers && summary.drivers.length > 0 && (
+              <div className="px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--theme-text-muted)' }}>Lái xe của nhà thầu</p>
+                <div className="space-y-1.5">
+                  {summary.drivers.map(d => (
+                    <div key={d.plate} className="flex items-center justify-between rounded-lg px-3 py-2" style={{ background: 'var(--theme-bg-tertiary)' }}>
+                      <span className="inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-bold tracking-wider"
+                        style={{ borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}>{d.plate}</span>
+                      <div className="flex items-center gap-3 text-xs tabular-nums" style={{ color: 'var(--theme-text-muted)' }}>
+                        <span>{d.tripCount} chuyến</span>
+                        <span className="font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(d.totalPaid)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Section 4: Reconciliation History */}
+            {summary?.reconciliations && summary.reconciliations.length > 0 && (
+              <div className="px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--theme-text-muted)' }}>Lịch sử đối soát</p>
+                <div className="space-y-1.5">
+                  {summary.reconciliations.map(r => (
+                    <div key={r.importId} className="flex items-center justify-between rounded-lg px-3 py-2" style={{ background: 'var(--theme-bg-tertiary)' }}>
+                      <div className="flex items-center gap-2">
+                        <Calendar size={12} style={{ color: 'var(--theme-text-muted)' }} />
+                        <span className="text-xs" style={{ color: 'var(--theme-text-secondary)' }}>
+                          {r.periodFrom} → {r.periodTo}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs tabular-nums" style={{ color: 'var(--theme-text-muted)' }}>{r.containerCount} cont</span>
+                        {statusBadge(r.status)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="px-4 py-3 flex gap-2" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
+          <Button variant="outline" onClick={handleExport} disabled={exportTrips.isPending} className="flex-1 gap-1.5 text-xs">
+            <FileDown size={14} />Xuất đối soát
+          </Button>
+          <Button variant="outline" onClick={onClose} className="flex-1 text-xs">Đóng</Button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
 export function VendorsPage() {
   const toast = useToast()
-  const { data: partners = [], isLoading } = usePartners({ partnerType: 'vendor' })
-  const createPartner = useCreatePartner()
-  const updatePartner = useUpdatePartner()
-  const deletePartner = useDeletePartner()
+  const { data: vendors = [], isLoading } = useVendors()
+  const createVendor = useCreateVendor()
+  const updateVendor = useUpdateVendor()
+  const deleteVendor = useDeleteVendor()
 
   const [search, setSearch] = useState('')
   const [showCreate, setShowCreate] = useState(false)
-  const [editTarget, setEditTarget] = useState<Partner | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<Partner | null>(null)
-  const [detailTarget, setDetailTarget] = useState<Partner | null>(null)
-
-  const vendors = useMemo(() => partners.filter(p => p.partnerType === 'vendor'), [partners])
+  const [editTarget, setEditTarget] = useState<Vendor | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Vendor | null>(null)
+  const [detailTarget, setDetailTarget] = useState<Vendor | null>(null)
 
   const filtered = useMemo(() => {
     if (!search.trim()) return vendors
@@ -118,29 +263,29 @@ export function VendorsPage() {
   }, [vendors, search])
 
   const handleCreate = useCallback((data: typeof EMPTY_FORM) => {
-    createPartner.mutate({ ...data, partnerType: 'vendor' }, {
+    createVendor.mutate(data, {
       onSuccess: () => { toast.success('Đã thêm nhà thầu'); setShowCreate(false) },
       onError: () => toast.error('Không thể thêm nhà thầu'),
     })
-  }, [createPartner, toast])
+  }, [createVendor, toast])
 
   const handleUpdate = useCallback((data: typeof EMPTY_FORM) => {
     if (!editTarget) return
-    updatePartner.mutate({ id: editTarget.id, ...data }, {
+    updateVendor.mutate({ id: editTarget.id, data }, {
       onSuccess: () => { toast.success('Đã cập nhật'); setEditTarget(null) },
       onError: () => toast.error('Không thể cập nhật'),
     })
-  }, [editTarget, updatePartner, toast])
+  }, [editTarget, updateVendor, toast])
 
   const handleDelete = useCallback(() => {
     if (!deleteTarget) return
-    deletePartner.mutate(deleteTarget.id, {
+    deleteVendor.mutate(deleteTarget.id, {
       onSuccess: () => { toast.success('Đã xoá'); setDeleteTarget(null); setDetailTarget(null) },
       onError: () => toast.error('Không thể xoá'),
     })
-  }, [deleteTarget, deletePartner, toast])
+  }, [deleteTarget, deleteVendor, toast])
 
-  const columns: EntityColumn<Partner>[] = useMemo(() => [
+  const columns: EntityColumn<Vendor>[] = useMemo(() => [
     {
       key: 'name', header: 'Tên nhà thầu', className: '2fr',
       render: (p) => (
@@ -192,7 +337,7 @@ export function VendorsPage() {
         addIcon={Plus}
         addHintKey="vendors-add"
       >
-        <EntityTable<Partner>
+        <EntityTable<Vendor>
           columns={columns}
           data={filtered}
           onRowClick={setDetailTarget}
@@ -209,46 +354,15 @@ export function VendorsPage() {
         />
       </AccountantPageShell>
 
-      {/* Detail dialog */}
-      <Dialog open={!!detailTarget} onOpenChange={() => setDetailTarget(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>{detailTarget?.name}</DialogTitle></DialogHeader>
-          {detailTarget && (
-            <div className="divide-y" style={{ borderColor: 'var(--theme-border-light)' }}>
-              <div className="py-2.5 flex items-center gap-3">
-                <span className="text-[10px] font-bold uppercase tracking-wider w-20 shrink-0" style={{ color: 'var(--theme-text-muted)' }}>Loại</span>
-                <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
-                  style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}>
-                  {detailTarget.type === 'company' ? 'Công ty' : 'Cá nhân'}
-                </span>
-              </div>
-              <div className="py-2.5 flex items-center gap-3">
-                <span className="text-[10px] font-bold uppercase tracking-wider w-20 shrink-0" style={{ color: 'var(--theme-text-muted)' }}>SĐT</span>
-                <span className="text-sm" style={{ color: detailTarget.phone ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}>{detailTarget.phone || '—'}</span>
-              </div>
-              <div className="py-2.5 flex items-center gap-3">
-                <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider w-20 shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
-                  MST <InfoTip text="Mã số thuế — in trên hoá đơn VAT" />
-                </span>
-                <span className="text-sm font-mono-num" style={{ color: detailTarget.taxCode ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}>{detailTarget.taxCode || '—'}</span>
-              </div>
-              <div className="py-2.5 flex items-start gap-3">
-                <span className="text-[10px] font-bold uppercase tracking-wider w-20 shrink-0 mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>Địa chỉ</span>
-                <span className="text-sm" style={{ color: detailTarget.address ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}>{detailTarget.address || '—'}</span>
-              </div>
-              <div className="py-2.5 flex items-center gap-3">
-                <span className="text-[10px] font-bold uppercase tracking-wider w-20 shrink-0" style={{ color: 'var(--theme-text-muted)' }}>Liên hệ</span>
-                <span className="text-sm" style={{ color: detailTarget.contactPerson ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}>{detailTarget.contactPerson || '—'}</span>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setDeleteTarget(detailTarget); setDetailTarget(null) }} className="flex-1" style={{ color: 'var(--theme-status-error)' }}>Xoá</Button>
-            <Button variant="outline" onClick={() => { setEditTarget(detailTarget); setDetailTarget(null) }} className="flex-1">Sửa</Button>
-            <Button variant="outline" onClick={() => setDetailTarget(null)} className="flex-1">Đóng</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Detail sheet */}
+      {detailTarget && (
+        <VendorDetailSheet
+          vendor={detailTarget}
+          onClose={() => setDetailTarget(null)}
+          onEdit={() => { setEditTarget(detailTarget); setDetailTarget(null) }}
+          onDelete={() => { setDeleteTarget(detailTarget); setDetailTarget(null) }}
+        />
+      )}
 
       {/* Delete confirm */}
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
@@ -268,13 +382,13 @@ export function VendorsPage() {
         </DialogContent>
       </Dialog>
 
-      <VendorFormDialog open={showCreate} onClose={() => setShowCreate(false)} onSave={handleCreate} title="Thêm nhà thầu" saving={createPartner.isPending} />
+      <VendorFormDialog open={showCreate} onClose={() => setShowCreate(false)} onSave={handleCreate} title="Thêm nhà thầu" saving={createVendor.isPending} />
       <VendorFormDialog
         open={!!editTarget}
         onClose={() => setEditTarget(null)}
         onSave={handleUpdate}
         title="Cập nhật nhà thầu"
-        saving={updatePartner.isPending}
+        saving={updateVendor.isPending}
         initial={editTarget ? { name: editTarget.name, type: editTarget.type ?? 'company', phone: editTarget.phone ?? '', taxCode: editTarget.taxCode ?? '', address: editTarget.address ?? '', contactPerson: editTarget.contactPerson ?? '' } : undefined}
       />
     </>
