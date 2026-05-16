@@ -654,6 +654,15 @@ export function useCreateDriver() {
   })
 }
 
+export function useUpdateDriver() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<{ fullName: string; phone: string; username: string }> }) =>
+      apiClient.updateDriver(id, data).then(unwrap),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.drivers }) },
+  })
+}
+
 export function useCreateUser() {
   const qc = useQueryClient()
   return useMutation({

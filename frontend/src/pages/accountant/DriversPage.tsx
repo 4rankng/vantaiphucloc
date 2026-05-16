@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react'
-import { Car, Plus, Phone, ChevronRight, Wallet } from 'lucide-react'
+import { Car, Plus, ChevronRight, Wallet } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button, Input, Label } from '@/components/ui'
 import { AccountantPageShell } from '@/components/shared/AccountantPageShell'
 import { DashboardSectionHeader } from '@/components/shared/DashboardSectionHeader'
 import { PulseHint } from '@/components/shared/PulseHint'
 import { InfoTip } from '@/components/shared/InfoTip'
 import { InlineEditable } from '@/components/shared/InlineEditable'
-import { useDrivers, useCreateDriver } from '@/hooks/use-queries'
+import { useDrivers, useCreateDriver, useUpdateDriver } from '@/hooks/use-queries'
 import { useDriverBaseSalaryForm } from '@/components/payroll/useDriverBaseSalaryForm'
 import { useToast } from '@/components/atoms/Toast'
 import { useQueryClient } from '@tanstack/react-query'
@@ -137,8 +137,20 @@ export function DriversPage() {
 function DriverDetailDialog({ driver, onClose }: { driver: Driver; onClose: () => void }) {
   const qc = useQueryClient()
   const toast = useToast()
+  const updateDriver = useUpdateDriver()
   const salary = useDriverBaseSalaryForm({ driverId: driver.id })
   const [showSalaryForm, setShowSalaryForm] = useState(false)
+
+  const initials = (driver.fullName ?? driver.username).slice(0, 2).toUpperCase()
+
+  const handleField = async (field: 'fullName' | 'phone' | 'username', value: string) => {
+    try {
+      await updateDriver.mutateAsync({ id: driver.id, data: { [field]: value } })
+      toast.success('Đã cập nhật')
+    } catch {
+      toast.error('Không thể cập nhật')
+    }
+  }
 
   const handleVehicleChange = async (newPlate: string) => {
     try {
@@ -158,9 +170,46 @@ function DriverDetailDialog({ driver, onClose }: { driver: Driver; onClose: () =
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent>
-        <DialogHeader><DialogTitle>{driver.fullName ?? driver.username}</DialogTitle></DialogHeader>
-        <div className="divide-y" style={{ borderColor: 'var(--theme-border-light)' }}>
+        {/* SR-only title for accessibility */}
+        <DialogHeader className="sr-only">
+          <DialogTitle>{driver.fullName ?? driver.username}</DialogTitle>
+        </DialogHeader>
 
+        {/* Visual header: avatar + name + username */}
+        <div className="flex items-center gap-3 pb-4" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
+          <div
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold select-none"
+            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
+          >
+            {initials}
+          </div>
+          <div className="min-w-0 flex-1">
+            <InlineEditable
+              display={
+                <span className="text-base font-bold leading-tight" style={{ color: 'var(--theme-text-primary)' }}>
+                  {driver.fullName || driver.username}
+                </span>
+              }
+              value={driver.fullName ?? ''}
+              onSave={v => handleField('fullName', v)}
+              placeholder="Họ và tên"
+              editLabel="Sửa họ tên"
+            />
+            <InlineEditable
+              display={
+                <span className="text-xs font-mono" style={{ color: 'var(--theme-text-muted)' }}>
+                  @{driver.username}
+                </span>
+              }
+              value={driver.username}
+              onSave={v => handleField('username', v)}
+              placeholder="tên đăng nhập"
+              editLabel="Sửa tên đăng nhập"
+            />
+          </div>
+        </div>
+
+        <div className="divide-y" style={{ borderColor: 'var(--theme-border-light)' }}>
           {/* Vehicle */}
           <div className="py-3 space-y-1">
             <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Xe đang lái</p>
@@ -178,11 +227,19 @@ function DriverDetailDialog({ driver, onClose }: { driver: Driver; onClose: () =
           </div>
 
           {/* Phone */}
-          <div className="py-3 flex items-center gap-2">
-            <Phone size={14} style={{ color: 'var(--theme-text-muted)' }} />
-            <span className="text-sm" style={{ color: driver.phone ? 'var(--theme-text-secondary)' : 'var(--theme-text-muted)' }}>
-              {driver.phone || '—'}
-            </span>
+          <div className="py-3 space-y-1">
+            <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Số điện thoại</p>
+            <InlineEditable
+              display={
+                <span className="text-sm font-medium" style={{ color: driver.phone ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}>
+                  {driver.phone || '—'}
+                </span>
+              }
+              value={driver.phone ?? ''}
+              onSave={v => handleField('phone', v)}
+              placeholder="0912345678"
+              editLabel="Sửa số điện thoại"
+            />
           </div>
 
           {/* Base salary */}
