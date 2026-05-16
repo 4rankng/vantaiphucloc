@@ -1,0 +1,1 @@
+export { InlineEditable } from './InlineEditable'
