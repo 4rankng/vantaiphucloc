@@ -25,7 +25,6 @@ export function LocationManager({ search, compact }: LocationManagerProps) {
   const [aliasData, setAliasData] = useState<Record<number, LocationAlias[]>>({})
   const [editingPrimary, setEditingPrimary] = useState(false)
   const [primaryValue, setPrimaryValue] = useState('')
-  const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [newLocationName, setNewLocationName] = useState('')
   const [creating, setCreating] = useState(false)
 
@@ -104,7 +103,6 @@ export function LocationManager({ search, compact }: LocationManagerProps) {
       await createLocation.mutateAsync({ name: trimmed })
       toast.success('Đã thêm địa điểm')
       setNewLocationName('')
-      setShowCreateDialog(false)
     } catch {
       toast.error('Không thể thêm địa điểm')
     } finally {
@@ -149,13 +147,35 @@ export function LocationManager({ search, compact }: LocationManagerProps) {
       <div className={`${compact ? 'w-full' : 'w-[280px] shrink-0 border-r'} overflow-y-auto`} style={{ borderColor: compact ? 'transparent' : 'var(--theme-border-light)', background: compact ? 'transparent' : 'var(--theme-bg-primary)' }}>
         {!compact && (
           <div className="sticky top-0 z-10 backdrop-blur-sm px-4 py-3 border-b" style={{ borderColor: 'var(--theme-border-light)', background: 'color-mix(in srgb, var(--theme-bg-primary) 90%, transparent)' }}>
-            <button
-              onClick={() => setShowCreateDialog(true)}
-              className="w-full btn-primary text-xs flex items-center justify-center gap-1.5"
-            >
-              <Plus size={14} strokeWidth={2.25} />
-              Thêm địa điểm
-            </button>
+            <div className="flex items-center gap-1.5">
+              <input
+                value={newLocationName}
+                onChange={e => setNewLocationName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleCreateLocation(); if (e.key === 'Escape') { setNewLocationName('') } }}
+                placeholder="Thêm địa điểm..."
+                className="flex-1 rounded-md border px-2.5 py-1.5 text-xs outline-none"
+                style={{
+                  background: 'var(--theme-bg-secondary)',
+                  borderColor: 'var(--theme-border-default)',
+                  color: 'var(--theme-text-primary)',
+                  height: 28,
+                }}
+                onFocus={e => { (e.target as HTMLElement).style.borderColor = 'var(--theme-brand-primary)' }}
+                onBlur={e => { (e.target as HTMLElement).style.borderColor = 'var(--theme-border-default)' }}
+              />
+              <button
+                onClick={handleCreateLocation}
+                disabled={!newLocationName.trim() || creating}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-opacity"
+                style={{
+                  background: newLocationName.trim() ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
+                  color: newLocationName.trim() ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)',
+                  opacity: (!newLocationName.trim() || creating) ? 0.4 : 1,
+                }}
+              >
+                {creating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />}
+              </button>
+            </div>
           </div>
         )}
 
@@ -317,47 +337,6 @@ export function LocationManager({ search, compact }: LocationManagerProps) {
       ) : (
         <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', boxShadow: '0 0 0 1px rgba(9,9,11,0.03), 0 1px 3px rgba(9,9,11,0.06), 0 4px 16px -4px rgba(9,9,11,0.05)' }}>
           {innerContent}
-        </div>
-      )}
-
-      {/* Create location dialog */}
-      {showCreateDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setShowCreateDialog(false)} />
-          <div className="relative z-10 w-full max-w-sm rounded-xl border p-5 shadow-xl" style={{ background: 'var(--theme-bg-primary)', borderColor: 'var(--theme-border-default)' }}>
-            <h3 className="text-sm font-bold mb-4" style={{ color: 'var(--theme-text-primary)' }}>Thêm địa điểm mới</h3>
-            <input
-              value={newLocationName}
-              onChange={e => setNewLocationName(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleCreateLocation(); if (e.key === 'Escape') setShowCreateDialog(false) }}
-              placeholder="VD: HẢI AN, NHĐV..."
-              autoFocus
-              className="w-full rounded-md border px-3 py-2 text-sm outline-none mb-4"
-              style={{
-                background: 'var(--theme-bg-secondary)',
-                borderColor: 'var(--theme-brand-primary)',
-                color: 'var(--theme-text-primary)',
-              }}
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowCreateDialog(false)}
-                className="flex-1 py-2 rounded-lg text-xs font-medium"
-                style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }}
-              >
-                Huỷ
-              </button>
-              <button
-                onClick={handleCreateLocation}
-                disabled={!newLocationName.trim() || creating}
-                className="flex-1 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5"
-                style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)', opacity: (!newLocationName.trim() || creating) ? 0.5 : 1 }}
-              >
-                {creating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-                Thêm
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </>
