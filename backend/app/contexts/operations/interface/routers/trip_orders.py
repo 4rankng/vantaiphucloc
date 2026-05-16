@@ -415,7 +415,7 @@ async def list_trip_orders(
     date_to: date | None = None,
     unpriced: bool | None = None,
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=200),
+    page_size: int = Query(50, ge=1, le=5000),
     current_user: User = Depends(require_permission("read", "TripOrder")),
     use_case: ListTripOrders = Depends(get_list_trip_orders),
 ):

@@ -718,6 +718,8 @@ class MonthlyPnLOut(BaseModel):
     total_productivity_salary: int
     total_allowance: int
     total_base_salary: int
+    total_vehicle_expenses: int = 0
+    total_cp_chung: int = 0
     profit: int
     matched_trip_count: int
     partner_breakdown: list[PartnerRevenueBreakdownOut]
@@ -1005,18 +1007,35 @@ class VehiclePnLRow(BaseModel):
     plate: str
     revenue: int                          # Σ TripOrder.unit_price for matched TOs linked to this vehicle
     cp_xe: VehicleExpenseSummary          # Vehicle-specific expenses (excl. CHUNG)
+    cp_chung_allocated: int = 0           # Proportional share of CHUNG overhead (by trip count)
     cp_luong_san_luong: int               # Σ WorkOrder.driver_salary + allowance
     cp_luong_co_ban: int                  # Base salary for drivers on this vehicle
-    loi_nhuan: int                        # revenue − all costs (excl. CHUNG allocation)
+    loi_nhuan: int                        # revenue − all costs (incl. CHUNG allocation)
 
 
 class VehiclePnLResponse(BaseModel):
     date_from: date
     date_to: date
     rows: list[VehiclePnLRow]
-    cp_chung: int                         # General overhead total (CHUNG category)
+    cp_chung: int                         # General overhead total (for reference; allocated into rows)
     total_revenue: int
-    total_profit: int                     # Sum of row profits − cp_chung
+    total_profit: int                     # Sum of row profits (CHUNG already allocated)
+
+
+class TripDayBucket(BaseModel):
+    day: int
+    matched: int = 0
+    pending: int = 0
+
+
+class TripDailyStatsOut(BaseModel):
+    date_from: date
+    date_to: date
+    total: int = 0
+    matched: int = 0
+    pending: int = 0
+    match_rate: float | None = None
+    buckets: list[TripDayBucket] = []
 
 
 # ---------------------------------------------------------------------------

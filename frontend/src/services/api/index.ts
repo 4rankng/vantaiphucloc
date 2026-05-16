@@ -126,6 +126,7 @@ export const apiClient = {
   // Monthly P&L
   getMonthlyPnL: pnlApi.getMonthlyPnL,
   getVehiclePnL: pnlApi.getVehiclePnL,
+  getTripDailyStats: pnlApi.getTripDailyStats,
 
   // Vehicle expenses (CP Xe)
   listVehicleExpenses: vehicleExpensesApi.listVehicleExpenses,
@@ -196,6 +197,8 @@ export type {
   VehiclePnLRow,
   VehiclePnLResponse,
   VehicleExpenseSummary,
+  TripDailyStats,
+  TripDayBucket,
 } from './pnl.api'
 export type {
   VehicleExpense,
