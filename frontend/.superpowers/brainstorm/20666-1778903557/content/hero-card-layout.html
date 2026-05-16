@@ -1,0 +1,127 @@
+<h2>How should the KPI hero cards look?</h2>
+<p class="subtitle">The current cards truncate labels ("DOANH ...", "LƯƠNG TÀI..."). Two fixes — pick your preferred layout.</p>
+
+<style>
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 20px; }
+
+  /* Shared card shell */
+  .hero-shell { border-radius: 12px; overflow: hidden; }
+  .hero-shell .mockup-label { padding: 14px 16px 12px; }
+  .hero-shell h3 { margin: 0 0 4px; font-size: 15px; }
+  .hero-shell p { margin: 0; font-size: 12px; opacity: .7; line-height: 1.5; }
+
+  /* Card chrome */
+  .kpi-demo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 20px; background: #f0f4f7; border-radius: 12px 12px 0 0; }
+  .kpi-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04); }
+
+  /* Layout A1 — current style, just fixed */
+  .a1 .row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .a1 .icon-box { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+  .a1 .text { min-width: 0; flex: 1; }
+  .a1 .kpi-label { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .a1 .kpi-value { font-size: 16px; font-weight: 900; color: #0f172a; letter-spacing: -.5px; margin-top: 6px; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .a1 .kpi-sub { font-size: 10px; color: #94a3b8; margin-top: 4px; }
+
+  /* Layout A2 — stacked, more room */
+  .a2 .icon-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .a2 .icon-box { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+  .a2 .kpi-label { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .07em; line-height: 1.3; }
+  .a2 .kpi-sub-inline { font-size: 9px; color: #94a3b8; margin-top: 1px; }
+  .a2 .kpi-value { font-size: 17px; font-weight: 900; color: #0f172a; letter-spacing: -.6px; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .option-wrap { border-radius: 12px; overflow: hidden; border: 2px solid transparent; cursor: pointer; transition: all .2s; }
+  .option-wrap:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+  .option-wrap.selected { border-color: #7c6ef7; box-shadow: 0 0 0 4px rgba(124,110,247,.25); }
+  .mockup-label { background: #fff; padding: 14px 16px 12px; border-top: 1px solid #e8ecf0; }
+  .mockup-label h3 { margin: 0 0 4px; font-size: 15px; color: #0f172a; }
+  .mockup-label p { margin: 0; font-size: 12px; color: #64748b; line-height: 1.5; }
+
+  .badge-fix { display: inline-block; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; border-radius: 20px; font-size: 10px; font-weight: 600; padding: 2px 8px; margin-top: 6px; }
+  .badge-change { display: inline-block; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; border-radius: 20px; font-size: 10px; font-weight: 600; padding: 2px 8px; margin-top: 6px; }
+</style>
+
+<div class="split">
+
+  <!-- Option A1: Current layout, labels fixed by being smaller/smarter -->
+  <div class="option-wrap" data-choice="a1" onclick="toggleSelect(this)">
+    <div class="kpi-demo a1">
+      <div class="kpi-card a1">
+        <div class="row">
+          <div class="icon-box" style="background:#f0fdf4"><span style="color:#16a34a">📈</span></div>
+          <div class="text">
+            <div class="kpi-label">Doanh thu</div>
+          </div>
+        </div>
+        <div class="kpi-value">168,831,000 đ</div>
+        <div class="kpi-sub">Tháng 05/2026</div>
+      </div>
+      <div class="kpi-card a1">
+        <div class="row">
+          <div class="icon-box" style="background:#eff6ff"><span style="color:#2563eb">💼</span></div>
+          <div class="text">
+            <div class="kpi-label">Lương tài xế</div>
+          </div>
+        </div>
+        <div class="kpi-value">7,980,000 đ</div>
+        <div class="kpi-sub">Tháng 05/2026</div>
+      </div>
+      <div class="kpi-card a1">
+        <div class="row">
+          <div class="icon-box" style="background:#fffbeb"><span style="color:#d97706">⚠️</span></div>
+          <div class="text">
+            <div class="kpi-label">Chưa ghép</div>
+          </div>
+        </div>
+        <div class="kpi-value">0</div>
+        <div class="kpi-sub">Tất cả đã khớp</div>
+      </div>
+    </div>
+    <div class="mockup-label">
+      <h3>A1 — Keep current shape</h3>
+      <p>Icon top-left, label right of it, big value below. Fix truncation by letting the label wrap to 2 lines if needed. Minimal structural change.</p>
+      <span class="badge-fix">Minimal change</span>
+    </div>
+  </div>
+
+  <!-- Option A2: Icon + label on same row (more scannable) -->
+  <div class="option-wrap" data-choice="a2" onclick="toggleSelect(this)">
+    <div class="kpi-demo a2">
+      <div class="kpi-card a2">
+        <div class="icon-row">
+          <div class="icon-box" style="background:#f0fdf4"><span style="color:#16a34a">📈</span></div>
+          <div>
+            <div class="kpi-label">Doanh thu</div>
+            <div class="kpi-sub-inline">Tháng 05/2026</div>
+          </div>
+        </div>
+        <div class="kpi-value">168,831,000 đ</div>
+      </div>
+      <div class="kpi-card a2">
+        <div class="icon-row">
+          <div class="icon-box" style="background:#eff6ff"><span style="color:#2563eb">💼</span></div>
+          <div>
+            <div class="kpi-label">Lương tài xế</div>
+            <div class="kpi-sub-inline">Tháng 05/2026</div>
+          </div>
+        </div>
+        <div class="kpi-value">7,980,000 đ</div>
+      </div>
+      <div class="kpi-card a2">
+        <div class="icon-row">
+          <div class="icon-box" style="background:#fffbeb"><span style="color:#d97706">⚠️</span></div>
+          <div>
+            <div class="kpi-label">Chưa ghép</div>
+            <div class="kpi-sub-inline" style="color:#16a34a">Tất cả đã khớp</div>
+          </div>
+        </div>
+        <div class="kpi-value">0</div>
+      </div>
+    </div>
+    <div class="mockup-label">
+      <h3>A2 — Icon + label side-by-side</h3>
+      <p>Icon and label on the same row (label never truncates), sublabel next to label, big value below. Cleaner visual hierarchy, more modern feel.</p>
+      <span class="badge-change">Recommended</span>
+    </div>
+  </div>
+
+</div>

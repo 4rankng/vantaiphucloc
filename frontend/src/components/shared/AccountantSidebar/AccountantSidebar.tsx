@@ -29,13 +29,34 @@ export interface SidebarItem {
   badge?: number
 }
 
-const ACCOUNTANT_NAV_ITEMS: SidebarItem[] = [
-  { label: 'Tổng quan', href: '/accountant', icon: LayoutDashboard },
-  { label: 'Đơn hàng', href: '/accountant/trips', icon: FileText },
-  { label: 'Đối soát', href: '/accountant/reconciliation', icon: Briefcase },
-  { label: 'Doanh thu & Lãi', href: '/accountant/revenue-profit', icon: DollarSign },
-  { label: 'Chi phí xe', href: '/accountant/vehicle-expenses', icon: Car },
-  { label: 'Cài đặt', href: '/accountant/settings', icon: Settings },
+interface SidebarSection {
+  /** Section label shown when expanded. `null` = ungrouped (no label, no divider above). */
+  label: string | null
+  items: SidebarItem[]
+}
+
+const ACCOUNTANT_NAV_SECTIONS: SidebarSection[] = [
+  {
+    label: null,
+    items: [
+      { label: 'Tổng quan', href: '/accountant', icon: LayoutDashboard },
+      { label: 'Đơn hàng', href: '/accountant/trips', icon: FileText },
+    ],
+  },
+  {
+    label: 'TÀI CHÍNH',
+    items: [
+      { label: 'Đối soát', href: '/accountant/reconciliation', icon: Briefcase },
+      { label: 'Doanh thu & Lãi', href: '/accountant/revenue-profit', icon: DollarSign },
+      { label: 'Chi phí xe', href: '/accountant/vehicle-expenses', icon: Car },
+    ],
+  },
+  {
+    label: 'HỆ THỐNG',
+    items: [
+      { label: 'Cài đặt', href: '/accountant/settings', icon: Settings },
+    ],
+  },
 ]
 
 export interface AccountantSidebarProps {
@@ -71,7 +92,11 @@ export function AccountantSidebar({
   const { user, logout } = useAuth()
   const unread = useUnreadCount()
 
-  const navItems = items ?? ACCOUNTANT_NAV_ITEMS
+  // When an external `items` override is provided, render as a single ungrouped section
+  // (preserves the existing flat-list contract for any caller passing custom items).
+  const sections: SidebarSection[] = items
+    ? [{ label: null, items }]
+    : ACCOUNTANT_NAV_SECTIONS
 
   const isActive = useCallback(
     (href: string) => {
@@ -111,61 +136,103 @@ export function AccountantSidebar({
       </div>
 
       {/* Navigation */}
-      <nav className={`flex-1 px-2 ${collapsed ? 'pt-3' : 'pt-1'} overflow-y-auto sidebar-scroll space-y-0.5`}>
-        {navItems.map((item) => {
-          const Icon = item.icon
-          const active = isActive(item.href)
-          const badge = badges[item.href]
-
+      <nav className={`flex-1 px-2 ${collapsed ? 'pt-3' : 'pt-1'} overflow-y-auto sidebar-scroll`}>
+        {sections.map((section, sectionIdx) => {
+          // Collapsed: render an invisible divider between sections to preserve grouping rhythm.
+          // Expanded: render a hairline rule above sections that follow another (skip the first).
+          const needsDivider = sectionIdx > 0
           return (
-            <NavLink
-              key={item.href}
-              to={item.href}
-              aria-current={active ? 'page' : undefined}
-              className={`group relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-colors duration-120 ${
-                collapsed ? 'justify-center' : ''
-              }`}
-              style={{
-                background: active ? 'var(--theme-sidebar-active)' : 'transparent',
-                color: active ? 'var(--theme-sidebar-active-text)' : 'var(--theme-sidebar-text)',
-              }}
-              onMouseEnter={(e) => {
-                if (!active) {
-                  ;(e.currentTarget as HTMLElement).style.background = 'var(--theme-sidebar-hover)'
-                  ;(e.currentTarget as HTMLElement).style.color = 'var(--theme-sidebar-active-text)'
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!active) {
-                  ;(e.currentTarget as HTMLElement).style.background = 'transparent'
-                  ;(e.currentTarget as HTMLElement).style.color = 'var(--theme-sidebar-text)'
-                }
-              }}
-              title={collapsed ? item.label : undefined}
+            <div
+              key={section.label ?? `section-${sectionIdx}`}
+              className={sectionIdx === 0 ? '' : collapsed ? 'mt-2' : 'mt-1'}
             >
-              {/* Active accent — subtle 2px left bar */}
-              {active && !collapsed && (
-                <span
+              {needsDivider && !collapsed && (
+                <div
                   aria-hidden
-                  className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-[2px] rounded-r"
-                  style={{ background: 'var(--theme-brand-primary)' }}
+                  className="mx-2.5 my-2 h-px"
+                  style={{
+                    background: 'var(--theme-sidebar-border)',
+                    opacity: 0.4,
+                  }}
                 />
               )}
-              <Icon className="h-[16px] w-[16px] shrink-0" strokeWidth={active ? 2.25 : 1.75} />
-              {!collapsed && (
-                <>
-                  <span className="flex-1 truncate tracking-tight">{item.label}</span>
-                  {badge && badge > 0 && (
-                    <span
-                      className="shrink-0 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-semibold"
-                      style={{ background: 'var(--theme-status-error)', color: '#fff' }}
-                    >
-                      {badge > 99 ? '99+' : badge}
-                    </span>
-                  )}
-                </>
+              {needsDivider && collapsed && (
+                <div
+                  aria-hidden
+                  className="mx-3 mb-2 h-px"
+                  style={{
+                    background: 'var(--theme-sidebar-border)',
+                    opacity: 0.4,
+                  }}
+                />
               )}
-            </NavLink>
+              {section.label && !collapsed && (
+                <p
+                  className="px-3 py-2 pt-3 text-[10px] font-semibold uppercase tracking-[0.12em] leading-none select-none"
+                  style={{ color: 'var(--theme-sidebar-text-muted)' }}
+                >
+                  {section.label}
+                </p>
+              )}
+              <div className="space-y-0.5">
+                {section.items.map((item) => {
+                  const Icon = item.icon
+                  const active = isActive(item.href)
+                  const badge = badges[item.href]
+
+                  return (
+                    <NavLink
+                      key={item.href}
+                      to={item.href}
+                      aria-current={active ? 'page' : undefined}
+                      className={`group relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-colors duration-120 ${
+                        collapsed ? 'justify-center' : ''
+                      }`}
+                      style={{
+                        background: active ? 'var(--theme-sidebar-active)' : 'transparent',
+                        color: active ? 'var(--theme-sidebar-active-text)' : 'var(--theme-sidebar-text)',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!active) {
+                          ;(e.currentTarget as HTMLElement).style.background = 'var(--theme-sidebar-hover)'
+                          ;(e.currentTarget as HTMLElement).style.color = 'var(--theme-sidebar-active-text)'
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!active) {
+                          ;(e.currentTarget as HTMLElement).style.background = 'transparent'
+                          ;(e.currentTarget as HTMLElement).style.color = 'var(--theme-sidebar-text)'
+                        }
+                      }}
+                      title={collapsed ? item.label : undefined}
+                    >
+                      {/* Active accent — subtle 2px left bar */}
+                      {active && !collapsed && (
+                        <span
+                          aria-hidden
+                          className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-[2px] rounded-r"
+                          style={{ background: 'var(--theme-brand-primary)' }}
+                        />
+                      )}
+                      <Icon className="h-[16px] w-[16px] shrink-0" strokeWidth={active ? 2.25 : 1.75} />
+                      {!collapsed && (
+                        <>
+                          <span className="flex-1 truncate tracking-tight">{item.label}</span>
+                          {badge && badge > 0 && (
+                            <span
+                              className="shrink-0 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-semibold"
+                              style={{ background: 'var(--theme-status-error)', color: '#fff' }}
+                            >
+                              {badge > 99 ? '99+' : badge}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </NavLink>
+                  )
+                })}
+              </div>
+            </div>
           )
         })}
       </nav>

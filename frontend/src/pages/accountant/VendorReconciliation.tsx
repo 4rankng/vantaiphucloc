@@ -13,7 +13,7 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import {
   Upload, FileSpreadsheet, X, CheckCircle2, AlertTriangle,
   ChevronDown, ChevronRight, Loader2, Trash2, Check,
-  Download, FileUp, History, Filter,
+  Download, FileUp, History, Filter, GitMerge,
 } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { useToast } from '@/components/atoms/Toast'
@@ -103,7 +103,7 @@ function Toolbar({
       <div className="flex flex-col lg:flex-row lg:items-end gap-3">
         {/* Vendor selector */}
         <div className="space-y-1 lg:w-56 flex-shrink-0">
-          <label className="text-xs font-medium" style={{ color: 'var(--theme-text-secondary)' }}>
+          <label className="typo-form-label">
             <Filter className="h-3 w-3 inline mr-1" />Nhà xe
           </label>
           <select
@@ -126,7 +126,7 @@ function Toolbar({
         {/* Period */}
         <div className="flex items-end gap-2 flex-shrink-0">
           <div className="space-y-1">
-            <label className="text-xs font-medium" style={{ color: 'var(--theme-text-secondary)' }}>
+            <label className="typo-form-label">
               Từ ngày
             </label>
             <input
@@ -143,7 +143,7 @@ function Toolbar({
           </div>
           <span className="text-xs mb-2" style={{ color: 'var(--theme-text-muted)' }}>→</span>
           <div className="space-y-1">
-            <label className="text-xs font-medium" style={{ color: 'var(--theme-text-secondary)' }}>
+            <label className="typo-form-label">
               Đến ngày
             </label>
             <input
@@ -165,13 +165,8 @@ function Toolbar({
           <Button
             onClick={onExport}
             disabled={exporting || !vendorId || !periodFrom || !periodTo}
-            className="h-9 px-3 text-xs font-semibold rounded-lg"
-            style={{
-              background: 'transparent',
-              border: '1px solid var(--theme-brand-primary)',
-              color: 'var(--theme-brand-primary)',
-              opacity: (!vendorId || !periodFrom || !periodTo) ? 0.5 : 1,
-            }}
+            className="btn-secondary h-9 px-3 text-xs"
+            style={{ borderColor: 'var(--theme-brand-primary)', color: 'var(--theme-brand-primary)' }}
           >
             {exporting ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
@@ -182,24 +177,15 @@ function Toolbar({
           </Button>
           <Button
             onClick={onToggleUpload}
-            className="h-9 px-3 text-xs font-semibold rounded-lg"
-            style={{
-              background: showUpload ? 'var(--theme-brand-primary)' : 'transparent',
-              border: '1px solid var(--theme-brand-primary)',
-              color: showUpload ? 'var(--theme-text-on-brand)' : 'var(--theme-brand-primary)',
-            }}
+            className={`btn-primary h-9 px-3 text-xs ${showUpload ? 'opacity-90 ring-2 ring-offset-1 ring-[var(--theme-brand-primary)]' : ''}`}
           >
             <FileUp className="h-3.5 w-3.5 mr-1.5" />
             Tải file từ nhà xe
           </Button>
           <Button
             onClick={onToggleHistory}
-            className="h-9 px-3 text-xs font-semibold rounded-lg"
-            style={{
-              background: showHistory ? 'var(--theme-bg-tertiary)' : 'transparent',
-              border: '1px solid var(--theme-border-default)',
-              color: 'var(--theme-text-secondary)',
-            }}
+            className="btn-secondary h-9 px-3 text-xs"
+            style={{ background: showHistory ? 'var(--theme-bg-tertiary)' : 'transparent' }}
           >
             <History className="h-3.5 w-3.5 mr-1.5" />
             Lịch sử đối soát
@@ -818,13 +804,23 @@ export function VendorReconciliation() {
   return (
     <div className="space-y-4">
       {/* Page title */}
-      <div>
-        <h1 className="text-lg font-bold" style={{ color: 'var(--theme-text-primary)' }}>
-          Đối soát nhà xe
-        </h1>
-        <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-secondary)' }}>
-          So sánh file nhà xe gửi với phiếu làm việc của bên mình · Xuất báo cáo gửi nhà xe
-        </p>
+      <div
+        className="page-header-band rounded-xl px-5 py-5 flex items-center gap-4"
+        style={{ border: '1px solid color-mix(in srgb, var(--theme-brand-primary) 10%, var(--theme-border-default))' }}
+      >
+        <div
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
+          style={{
+            background: 'var(--theme-brand-primary-light)',
+            boxShadow: '0 0 0 1px color-mix(in srgb, var(--theme-brand-primary) 18%, transparent)',
+          }}
+        >
+          <GitMerge className="h-6 w-6" style={{ color: 'var(--theme-brand-primary)' }} />
+        </div>
+        <div>
+          <h1 className="typo-display">Đối soát nhà xe</h1>
+          <p className="typo-body-sm mt-0.5">So sánh file nhà xe gửi với phiếu làm việc · Xuất báo cáo gửi nhà xe</p>
+        </div>
       </div>
 
       {/* Toolbar */}

@@ -1,5 +1,5 @@
 import { useLocation, useNavigate, Outlet } from 'react-router-dom'
-import { Settings, Wallet, Tag, Users, UserCog, Truck, MapPin } from 'lucide-react'
+import { Settings, Wallet, Tag, Users, UserCog, Truck, MapPin, ChevronRight } from 'lucide-react'
 
 type SettingSection = {
   key: string
@@ -40,7 +40,7 @@ function SettingCard({ section }: { section: SettingSection }) {
   return (
     <button
       onClick={() => navigate(section.path)}
-      className="card-interactive p-4 flex items-start gap-4 text-left"
+      className="card-interactive p-4 flex items-center gap-4 text-left w-full"
     >
       <div
         className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0"
@@ -48,10 +48,11 @@ function SettingCard({ section }: { section: SettingSection }) {
       >
         <Icon className="h-5 w-5" style={{ color: section.color }} />
       </div>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{section.label}</p>
         <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{section.desc}</p>
       </div>
+      <ChevronRight className="h-4 w-4 shrink-0" style={{ color: 'var(--theme-text-muted)' }} />
     </button>
   )
 }
@@ -66,10 +67,17 @@ export function AccountantSettings() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
+      {/* Page header with gradient band */}
+      <div
+        className="page-header-band rounded-xl px-5 py-5 flex items-center gap-4"
+        style={{ border: '1px solid color-mix(in srgb, var(--theme-brand-primary) 10%, var(--theme-border-default))' }}
+      >
         <div
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
-          style={{ background: 'var(--theme-brand-primary-light)' }}
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
+          style={{
+            background: 'var(--theme-brand-primary-light)',
+            boxShadow: '0 0 0 1px color-mix(in srgb, var(--theme-brand-primary) 18%, transparent)',
+          }}
         >
           <Settings className="h-6 w-6" style={{ color: 'var(--theme-brand-primary)' }} />
         </div>
@@ -79,9 +87,14 @@ export function AccountantSettings() {
         </div>
       </div>
 
-      {SECTION_GROUPS.map(group => (
-        <section key={group.title}>
-          <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--theme-text-muted)' }}>{group.title}</p>
+      {SECTION_GROUPS.map((group, groupIdx) => (
+        <section key={group.title} className={groupIdx > 0 ? 'pt-2' : ''}>
+          <div className="flex items-center gap-3 mb-3">
+            <p className="text-[11px] font-bold uppercase tracking-[0.08em]" style={{ color: 'var(--theme-text-muted)' }}>
+              {group.title}
+            </p>
+            <div className="flex-1 h-px" style={{ background: 'var(--theme-border-default)' }} />
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {group.items.map(section => (
               <SettingCard key={section.key} section={section} />

@@ -153,7 +153,7 @@ function StatCard({
 
       {/* ── Row 2: value ─── */}
       <p
-        className="font-bold leading-none tabular-nums text-[22px] lg:text-[26px] tracking-tight mb-2.5"
+        className="font-bold leading-none tabular-nums text-[16px] lg:text-[20px] tracking-tight mb-2.5"
         style={{ color: valueColor ?? 'var(--theme-text-primary, var(--fg-1))' }}
       >
         {value}

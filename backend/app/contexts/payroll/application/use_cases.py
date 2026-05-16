@@ -220,6 +220,8 @@ class MonthlyPnLDTO:
     total_productivity_salary: int  # Σ WorkOrder.driver_salary
     total_allowance: int            # Σ WorkOrder.allowance
     total_base_salary: int          # Σ effective base salary per driver
+    total_vehicle_expenses: int     # XANG_DAU + SUA_CHUA
+    total_cp_chung: int             # CHUNG category (general overhead)
     profit: int                     # revenue − all salary costs
     matched_trip_count: int
     partner_breakdown: list[PartnerRevenueBreakdownDTO]
@@ -239,7 +241,7 @@ class GetMonthlyPnL:
         the period, take the rate effective at ``end_date``. Drivers
         without a base salary configured contribute 0.
 
-    Profit = revenue − (productivity + allowance + base).
+    Profit = revenue − (productivity + allowance + base + vehicle_expenses + cp_chung).
     """
 
     def __init__(
@@ -359,7 +361,34 @@ class GetMonthlyPnL:
             for did in driver_ids
         )
 
-        profit = revenue - (total_productivity + total_allowance + total_base_salary)
+        # ---- Vehicle expenses in period ----
+        from app.models.domain import VehicleExpense  # local import avoids cycles
+
+        ve_rows = (
+            await self.session.execute(
+                select(
+                    VehicleExpense.category,
+                    func.coalesce(func.sum(VehicleExpense.amount), 0),
+                ).where(
+                    VehicleExpense.expense_date >= start_date,
+                    VehicleExpense.expense_date <= end_date,
+                )
+                .group_by(VehicleExpense.category)
+            )
+        ).all()
+        total_vehicle_expenses = 0
+        total_cp_chung = 0
+        for cat, total_amt in ve_rows:
+            amt = int(total_amt or 0)
+            if cat == "CHUNG":
+                total_cp_chung = amt
+            elif cat in ("XANG_DAU", "SUA_CHUA"):
+                total_vehicle_expenses += amt
+
+        profit = revenue - (
+            total_productivity + total_allowance + total_base_salary
+            + total_vehicle_expenses + total_cp_chung
+        )
 
         return MonthlyPnLDTO(
             start_date=start_date,
@@ -368,6 +397,8 @@ class GetMonthlyPnL:
             total_productivity_salary=total_productivity,
             total_allowance=total_allowance,
             total_base_salary=total_base_salary,
+            total_vehicle_expenses=total_vehicle_expenses,
+            total_cp_chung=total_cp_chung,
             profit=profit,
             matched_trip_count=matched_trip_count,
             partner_breakdown=partner_breakdown,
