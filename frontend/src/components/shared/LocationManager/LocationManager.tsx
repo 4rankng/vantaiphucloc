@@ -10,9 +10,10 @@ import type { Location as Loc, LocationAlias } from '@/data/domain'
 
 interface LocationManagerProps {
   search?: string
+  compact?: boolean
 }
 
-export function LocationManager({ search }: LocationManagerProps) {
+export function LocationManager({ search, compact }: LocationManagerProps) {
   const toast = useToast()
   const qc = useQueryClient()
   const { data: locations = [], isLoading } = useLocations()
@@ -141,11 +142,11 @@ export function LocationManager({ search }: LocationManagerProps) {
     : []
   ).map(a => ({ id: a.id, alias: a.alias }))
 
-  return (
-    <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', boxShadow: '0 0 0 1px rgba(9,9,11,0.03), 0 1px 3px rgba(9,9,11,0.06), 0 4px 16px -4px rgba(9,9,11,0.05)' }}>
-      <div className="flex h-[600px]">
-        {/* Left panel: Location list */}
-        <div className="w-[280px] shrink-0 border-r overflow-y-auto" style={{ borderColor: 'var(--theme-border-light)', background: 'var(--theme-bg-primary)' }}>
+  const innerContent = (
+    <div className="flex" style={{ height: compact ? '100%' : 600 }}>
+      {/* Left panel: Location list */}
+      <div className={`${compact ? 'w-full' : 'w-[280px] shrink-0 border-r'} overflow-y-auto`} style={{ borderColor: compact ? 'transparent' : 'var(--theme-border-light)', background: compact ? 'transparent' : 'var(--theme-bg-primary)' }}>
+        {!compact && (
           <div className="sticky top-0 z-10 backdrop-blur-sm px-4 py-3 border-b" style={{ borderColor: 'var(--theme-border-light)', background: 'color-mix(in srgb, var(--theme-bg-primary) 90%, transparent)' }}>
             <button
               onClick={() => setShowCreateDialog(true)}
@@ -155,65 +156,66 @@ export function LocationManager({ search }: LocationManagerProps) {
               Thêm địa điểm
             </button>
           </div>
+        )}
 
-          {isLoading ? (
-            <div className="p-4 space-y-2">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="h-8 rounded animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 px-4 gap-2">
-              <MapPin className="h-5 w-5" style={{ color: 'var(--theme-text-muted)' }} />
-              <p className="text-xs text-center" style={{ color: 'var(--theme-text-muted)' }}>
-                {search ? 'Không tìm thấy địa điểm nào' : 'Chưa có địa điểm'}
-              </p>
-            </div>
-          ) : (
-            <div className="py-1">
-              {filtered.map((loc: Loc) => {
-                const aliasCount = (aliasData[loc.id] ?? []).filter(a => a.status !== 'REJECTED' && a.status !== 'MERGED' && a.status !== 'PENDING').length
-                return (
-                  <button
-                    key={loc.id}
-                    onClick={() => setSelectedId(loc.id)}
-                    className="w-full px-4 py-2.5 text-left transition-colors flex items-center gap-2"
-                    style={{
-                      background: selectedId === loc.id ? 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)' : 'transparent',
-                    }}
-                    onMouseEnter={e => {
-                      if (selectedId !== loc.id) (e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)'
-                    }}
-                    onMouseLeave={e => {
-                      if (selectedId !== loc.id) (e.currentTarget as HTMLElement).style.background = 'transparent'
-                    }}
-                  >
-                    <div className="h-5 w-5 shrink-0 flex items-center justify-center rounded" style={{
-                      background: selectedId === loc.id ? 'var(--theme-brand-primary)' : 'color-mix(in srgb, var(--theme-brand-primary) 6%, transparent)',
-                    }}>
-                      <div
-                        className="h-1.5 w-1.5 rounded-full"
-                        style={{ background: selectedId === loc.id ? 'var(--theme-text-on-brand)' : 'var(--theme-brand-primary)' }}
-                      />
-                    </div>
-                    <span className="flex-1 text-sm font-medium truncate" style={{ color: selectedId === loc.id ? 'var(--theme-brand-primary)' : 'var(--theme-text-primary)' }}>
-                      {loc.name}
-                    </span>
-                    {aliasCount > 0 && (
-                      <span className="text-[10px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>{aliasCount}</span>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-          )}
-        </div>
+        {isLoading ? (
+          <div className="p-4 space-y-2">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-8 rounded animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 px-4 gap-2">
+            <MapPin className="h-5 w-5" style={{ color: 'var(--theme-text-muted)' }} />
+            <p className="text-xs text-center" style={{ color: 'var(--theme-text-muted)' }}>
+              {search ? 'Không tìm thấy địa điểm nào' : 'Chưa có địa điểm'}
+            </p>
+          </div>
+        ) : (
+          <div className="py-1">
+            {filtered.map((loc: Loc) => {
+              const aliasCount = (aliasData[loc.id] ?? []).filter(a => a.status !== 'REJECTED' && a.status !== 'MERGED' && a.status !== 'PENDING').length
+              return (
+                <button
+                  key={loc.id}
+                  onClick={() => setSelectedId(loc.id)}
+                  className="w-full px-4 py-2.5 text-left transition-colors flex items-center gap-2"
+                  style={{
+                    background: selectedId === loc.id ? 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)' : 'transparent',
+                  }}
+                  onMouseEnter={e => {
+                    if (selectedId !== loc.id) (e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)'
+                  }}
+                  onMouseLeave={e => {
+                    if (selectedId !== loc.id) (e.currentTarget as HTMLElement).style.background = 'transparent'
+                  }}
+                >
+                  <div className="h-5 w-5 shrink-0 flex items-center justify-center rounded" style={{
+                    background: selectedId === loc.id ? 'var(--theme-brand-primary)' : 'color-mix(in srgb, var(--theme-brand-primary) 6%, transparent)',
+                  }}>
+                    <div
+                      className="h-1.5 w-1.5 rounded-full"
+                      style={{ background: selectedId === loc.id ? 'var(--theme-text-on-brand)' : 'var(--theme-brand-primary)' }}
+                    />
+                  </div>
+                  <span className="flex-1 text-sm font-medium truncate" style={{ color: selectedId === loc.id ? 'var(--theme-brand-primary)' : 'var(--theme-text-primary)' }}>
+                    {loc.name}
+                  </span>
+                  {aliasCount > 0 && (
+                    <span className="text-[10px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>{aliasCount}</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
 
-        {/* Right panel: Detail */}
+      {/* Right panel: Detail — only show in non-compact mode */}
+      {!compact && (
         <div className="flex-1 overflow-y-auto">
           {selectedLocation ? (
             <div className="p-5 space-y-6">
-              {/* Primary name section */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>
@@ -272,7 +274,6 @@ export function LocationManager({ search }: LocationManagerProps) {
                 )}
               </div>
 
-              {/* Aliases section */}
               <AliasManager
                 aliases={confirmedAliases}
                 onAddAlias={(alias) => handleAddAlias(selectedLocation.id, alias)}
@@ -280,7 +281,6 @@ export function LocationManager({ search }: LocationManagerProps) {
                 onDeleteAlias={(id) => handleDeleteAlias(selectedLocation.id, id)}
               />
 
-              {/* Delete location */}
               <div className="pt-4 border-t" style={{ borderColor: 'var(--theme-border-light)' }}>
                 <button
                   onClick={handleDeleteLocation}
@@ -305,7 +305,19 @@ export function LocationManager({ search }: LocationManagerProps) {
             </div>
           )}
         </div>
-      </div>
+      )}
+    </div>
+  )
+
+  return (
+    <>
+      {compact ? (
+        innerContent
+      ) : (
+        <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', boxShadow: '0 0 0 1px rgba(9,9,11,0.03), 0 1px 3px rgba(9,9,11,0.06), 0 4px 16px -4px rgba(9,9,11,0.05)' }}>
+          {innerContent}
+        </div>
+      )}
 
       {/* Create location dialog */}
       {showCreateDialog && (
@@ -347,6 +359,6 @@ export function LocationManager({ search }: LocationManagerProps) {
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }

@@ -41,11 +41,11 @@ export function PulseHint({
         >
           <span
             className="absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping"
-            style={{ background: 'var(--theme-brand-primary)' }}
+            style={{ background: '#f97316' }}
           />
           <span
             className="relative inline-flex h-2.5 w-2.5 rounded-full"
-            style={{ background: 'var(--theme-brand-primary)' }}
+            style={{ background: '#f97316' }}
           />
         </span>
       )}
