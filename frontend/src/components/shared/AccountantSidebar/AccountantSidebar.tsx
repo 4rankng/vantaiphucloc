@@ -7,6 +7,11 @@ import {
   Bell,
   UserCircle,
   ChevronLeft,
+  Building2,
+  Truck,
+  Car,
+  Container,
+  Calendar,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUnreadCount } from '@/components/shared/NotificationPanel/NotificationPanel'
@@ -35,6 +40,21 @@ const ACCOUNTANT_NAV_SECTIONS: SidebarSection[] = [
     label: null,
     items: [
       { label: 'Tổng quan', href: '/accountant', icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: 'Quản lý',
+    items: [
+      { label: 'Chủ hàng', href: '/accountant/clients', icon: Building2 },
+      { label: 'Nhà thầu', href: '/accountant/vendors', icon: Truck },
+      { label: 'Lái xe', href: '/accountant/drivers', icon: Car },
+      { label: 'Vận tải', href: '/accountant/transporters', icon: Container },
+    ],
+  },
+  {
+    label: 'Cài đặt',
+    items: [
+      { label: 'Thiết lập', href: '/accountant/settings', icon: Calendar },
     ],
   },
 ]
