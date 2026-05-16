@@ -228,23 +228,42 @@ function DriverDetailDialog({ driver, onClose }: { driver: Driver; onClose: () =
 
             {showSalaryForm && (
               <div className="space-y-2 mt-1">
-                <div className="flex items-center gap-2">
-                  <Input
-                    value={salary.fields.baseSalary}
-                    onChange={e => salary.setBaseSalary(e.target.value)}
-                    placeholder="Số tiền (VNĐ)"
-                    className="text-sm flex-1"
-                    autoFocus
-                  />
-                  <Button size="sm" onClick={handleSalarySubmit} disabled={!salary.fields.baseSalary || salary.submitting}
-                    style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
-                    Lưu
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => { setShowSalaryForm(false); salary.reset() }}>Huỷ</Button>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>
+                      Số tiền (VNĐ)
+                    </label>
+                    <Input
+                      inputMode="numeric"
+                      value={salary.fields.baseSalary}
+                      onChange={e => salary.setBaseSalary(e.target.value)}
+                      placeholder="8.000.000"
+                      className="h-9 text-sm font-mono"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>
+                      Hiệu lực từ
+                    </label>
+                    <Input
+                      type="date"
+                      value={salary.fields.effectiveFrom}
+                      onChange={e => salary.setEffectiveFrom(e.target.value)}
+                      className="h-9 text-sm font-mono"
+                    />
+                  </div>
                 </div>
                 {salary.error && (
-                  <p className="text-xs" style={{ color: 'var(--theme-status-error)' }}>{salary.error}</p>
+                  <p className="text-xs" style={{ color: 'var(--theme-status-error)' }} role="alert">{salary.error}</p>
                 )}
+                <div className="flex justify-end gap-2">
+                  <Button size="sm" variant="outline" onClick={() => { setShowSalaryForm(false); salary.reset() }}>Huỷ</Button>
+                  <Button size="sm" onClick={handleSalarySubmit} disabled={!salary.fields.baseSalary || salary.submitting}
+                    style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+                    {salary.submitting ? 'Đang lưu…' : 'Lưu'}
+                  </Button>
+                </div>
               </div>
             )}
           </div>
