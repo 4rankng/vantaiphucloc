@@ -1,13 +1,14 @@
 import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { GitMerge, Users, Truck } from 'lucide-react'
 import { WorkOrderList } from '@/pages/accountant/WorkOrderList'
 import { CustomerReconciliation } from '@/pages/accountant/CustomerReconciliation'
 import { VendorReconciliation } from '@/pages/accountant/VendorReconciliation'
 
 const TABS = [
-  { key: 'match', label: 'Khớp chuyến' },
-  { key: 'customer', label: 'Đối soát KH' },
-  { key: 'vendor', label: 'Đối soát nhà xe' },
+  { key: 'match', label: 'Khớp chuyến', icon: GitMerge },
+  { key: 'customer', label: 'Đối soát KH', icon: Users },
+  { key: 'vendor', label: 'Đối soát nhà xe', icon: Truck },
 ] as const
 
 type TabKey = (typeof TABS)[number]['key']
@@ -29,30 +30,44 @@ export function ReconciliationPage() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Tab bar */}
+      {/* Tab bar — elevated section header */}
       <div
+        role="tablist"
+        aria-label="Đối soát"
         className="flex shrink-0 border-b overflow-x-auto"
-        style={{ borderColor: 'var(--theme-border, #e5e7eb)' }}
+        style={{
+          background: 'var(--theme-bg-secondary)',
+          borderColor: 'var(--theme-border-default)',
+        }}
       >
         {TABS.map((tab) => {
           const active = tab.key === activeTab
+          const Icon = tab.icon
           return (
             <button
               key={tab.key}
               type="button"
+              role="tab"
+              aria-selected={active}
               onClick={() => setTab(tab.key)}
-              className="relative px-4 py-2.5 text-[13px] font-medium whitespace-nowrap transition-colors duration-150"
+              className="relative inline-flex items-center gap-1.5 px-4 py-3 text-[13px] font-medium whitespace-nowrap transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-offset-0"
               style={{
                 color: active
-                  ? 'var(--theme-brand-primary, #2563eb)'
-                  : 'var(--theme-text-muted, #6b7280)',
+                  ? 'var(--theme-brand-primary)'
+                  : 'var(--theme-text-muted)',
               }}
             >
-              {tab.label}
+              <Icon
+                size={14}
+                strokeWidth={active ? 2.25 : 1.75}
+                aria-hidden
+              />
+              <span className="tracking-tight">{tab.label}</span>
               {active && (
                 <span
-                  className="absolute bottom-0 left-2 right-2 h-[2px] rounded-t"
-                  style={{ background: 'var(--theme-brand-primary, #2563eb)' }}
+                  aria-hidden
+                  className="absolute bottom-0 left-0 right-0 h-[2px]"
+                  style={{ background: 'var(--theme-brand-primary)' }}
                 />
               )}
             </button>
@@ -61,7 +76,7 @@ export function ReconciliationPage() {
       </div>
 
       {/* Tab content */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 py-5">
         {activeTab === 'match' && <WorkOrderList />}
         {activeTab === 'customer' && <CustomerReconciliation />}
         {activeTab === 'vendor' && <VendorReconciliation />}

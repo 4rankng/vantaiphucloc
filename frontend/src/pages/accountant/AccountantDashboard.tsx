@@ -552,8 +552,9 @@ function MobileDashboard() {
   const prevDateFrom = `${prevYear}-${pad(prevMonth)}-01`
   const prevDateTo   = `${prevYear}-${pad(prevMonth)}-${pad(daysInMonth(prevYear, prevMonth))}`
 
-  const { data: pnl }     = useMonthlyPnL(dateFrom, dateTo)
-  const { data: prevPnl } = useMonthlyPnL(prevDateFrom, prevDateTo)
+  const { data: pnl }        = useMonthlyPnL(dateFrom, dateTo)
+  const { data: prevPnl }    = useMonthlyPnL(prevDateFrom, prevDateTo)
+  const { data: vehiclePnl } = useVehiclePnL(dateFrom, dateTo)
   const { data: dailyStats } = useTripDailyStats(dateFrom, dateTo)
   const { data: pendingTrips = [] } = useTripOrders({ dateFrom, dateTo, status: 'PENDING', pageSize: 200 })
 

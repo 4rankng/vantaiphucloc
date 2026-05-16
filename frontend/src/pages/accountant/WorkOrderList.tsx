@@ -1,10 +1,11 @@
 import { useMemo, useState, useRef, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Upload, FileSpreadsheet, X, Sparkles, ArrowLeft, Bot } from 'lucide-react'
+import { Upload, FileSpreadsheet, X, Sparkles, ArrowLeft, Bot, ChevronDown } from 'lucide-react'
 import {
   Button,
   Dialog, DialogContent, DialogHeader, DialogTitle,
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/Sheet'
 import { FilterToolbar } from '@/components/shared/FilterToolbar'
@@ -387,43 +388,50 @@ export function WorkOrderList() {
   // ── Header actions ──
   const headerActions = (
     <div className="flex items-center gap-2">
-      <Button
+      {/* Primary: Auto-match */}
+      <button
         onClick={handleAutoMatch}
         disabled={autoMatching}
-        className="h-8 gap-1.5 text-[11px] font-semibold rounded-lg"
-        style={{ background: 'var(--theme-status-success)', color: '#fff' }}
+        className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg text-[13px] font-semibold transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
+        style={{ background: 'var(--theme-brand-primary)', color: '#fff' }}
       >
         <Sparkles className="h-3.5 w-3.5" />
         {autoMatching ? 'Đang ghép...' : 'Tự động ghép'}
-      </Button>
-      <Button
-        onClick={() => setImportOpen(true)}
-        className="h-8 gap-1.5 text-[11px] font-semibold rounded-lg"
-        style={{ background: 'transparent', border: '1px solid var(--theme-brand-primary)', color: 'var(--theme-brand-primary)' }}
-      >
-        <FileSpreadsheet className="h-3.5 w-3.5" />
-        Nhập đơn
-      </Button>
+      </button>
+
+      {/* Secondary: Import actions grouped in dropdown */}
       <input ref={bulkFileRef} type="file" accept=".xlsx,.xls" onChange={handleBulkImport} className="hidden" />
-      <Button
-        onClick={() => bulkFileRef.current?.click()}
-        disabled={bulkImporting}
-        className="h-8 gap-1.5 text-[11px] font-semibold rounded-lg"
-        style={{ background: 'transparent', border: '1px solid var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
-      >
-        <Upload className="h-3.5 w-3.5" />
-        {bulkImporting ? 'Đang nhập...' : 'Tải file PLV'}
-      </Button>
       <input ref={aiFileRef} type="file" accept=".xlsx,.xls" onChange={handleAIParse} className="hidden" />
-      <Button
-        onClick={() => aiFileRef.current?.click()}
-        disabled={aiParsing}
-        className="h-8 gap-1.5 text-[11px] font-semibold rounded-lg"
-        style={{ background: 'transparent', border: '1px solid var(--theme-brand-primary)', color: 'var(--theme-brand-primary)' }}
-      >
-        <Bot className="h-3.5 w-3.5" />
-        {aiParsing ? 'Đang phân tích...' : '🤖 Phân tích AI'}
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-[13px] font-semibold border transition-all hover:opacity-90"
+            style={{
+              background: 'var(--theme-bg-secondary)',
+              borderColor: 'var(--theme-border-default)',
+              color: 'var(--theme-text-primary)',
+            }}
+          >
+            <Upload className="h-3.5 w-3.5" />
+            Nhập
+            <ChevronDown className="h-3 w-3 ml-0.5" style={{ color: 'var(--theme-text-muted)' }} />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuItem onClick={() => setImportOpen(true)}>
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Nhập đơn (khách hàng)
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => bulkFileRef.current?.click()} disabled={bulkImporting}>
+            <Upload className="mr-2 h-4 w-4" />
+            {bulkImporting ? 'Đang nhập...' : 'Tải file PLV'}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => aiFileRef.current?.click()} disabled={aiParsing}>
+            <Bot className="mr-2 h-4 w-4" />
+            {aiParsing ? 'Đang phân tích...' : 'Phân tích AI'}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   )
 
@@ -431,7 +439,13 @@ export function WorkOrderList() {
   if (isMobile) {
     return (
       <div className="space-y-3">
-        <div className="flex justify-end">{headerActions}</div>
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="typo-h2">Khớp chuyến</h2>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>Tháng {month}/{year}</p>
+          </div>
+          {headerActions}
+        </div>
         {filterBar}
 
         <div className="card overflow-hidden">
@@ -471,7 +485,15 @@ export function WorkOrderList() {
   // ── Desktop: master-detail 2-column ──
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">{headerActions}</div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="typo-h2">Khớp chuyến</h2>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+            Tháng {month}/{year} · {workOrders.filter(w => w.status === 'MATCHED' || w.status === 'COMPLETED').length}/{workOrders.length} đã khớp
+          </p>
+        </div>
+        {headerActions}
+      </div>
 
       <div className="card overflow-hidden">
         {filterBar}

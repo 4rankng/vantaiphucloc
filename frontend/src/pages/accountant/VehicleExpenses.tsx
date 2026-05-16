@@ -220,47 +220,76 @@ export function VehicleExpenses() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      {/* Unified header: title + month navigator + save action */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h1 className="typo-display">Chi phí xe</h1>
           <p className="typo-body-sm mt-1" style={{ color: 'var(--theme-text-muted)' }}>
             Nhập chi phí theo tháng cho từng xe
           </p>
         </div>
-      </div>
 
-      {/* Month navigator */}
-      <div
-        className="flex items-center gap-3 rounded-xl px-4 py-3"
-        style={{ background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)' }}
-      >
-        <button
-          onClick={() => { setMonthKey(prevMonth(monthKey)); setDraft({}) }}
-          className="p-1.5 rounded-lg"
-          style={{ color: 'var(--theme-text-muted)' }}
-        >
-          <ChevronLeft size={18} />
-        </button>
-        <span className="text-sm font-bold min-w-[120px] text-center" style={{ color: 'var(--theme-text-primary)' }}>
-          {monthLabel(monthKey)}
-        </span>
-        <button
-          onClick={() => { setMonthKey(nextMonth(monthKey)); setDraft({}) }}
-          className="p-1.5 rounded-lg"
-          style={{ color: 'var(--theme-text-muted)' }}
-        >
-          <ChevronRight size={18} />
-        </button>
-        {monthKey !== toMonthKey(new Date()) && (
-          <button
-            onClick={() => { setMonthKey(toMonthKey(new Date())); setDraft({}) }}
-            className="text-xs font-medium px-2 py-1 rounded-md"
-            style={{ color: 'var(--theme-brand-primary)', background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)' }}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Month navigator */}
+          <div
+            className="flex items-center rounded-lg overflow-hidden"
+            style={{
+              background: 'var(--theme-bg-secondary)',
+              border: '1px solid var(--theme-border-default)',
+            }}
           >
-            Tháng này
-          </button>
-        )}
+            <button
+              type="button"
+              onClick={() => { setMonthKey(prevMonth(monthKey)); setDraft({}) }}
+              className="h-9 w-9 flex items-center justify-center transition-colors hover:bg-[var(--theme-bg-tertiary)]"
+              style={{ color: 'var(--theme-text-muted)' }}
+              aria-label="Tháng trước"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span
+              className="text-[13px] font-semibold min-w-[112px] text-center tabular-nums"
+              style={{ color: 'var(--theme-text-primary)' }}
+            >
+              {monthLabel(monthKey)}
+            </span>
+            <button
+              type="button"
+              onClick={() => { setMonthKey(nextMonth(monthKey)); setDraft({}) }}
+              className="h-9 w-9 flex items-center justify-center transition-colors hover:bg-[var(--theme-bg-tertiary)]"
+              style={{ color: 'var(--theme-text-muted)' }}
+              aria-label="Tháng sau"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+
+          {monthKey !== toMonthKey(new Date()) && (
+            <button
+              type="button"
+              onClick={() => { setMonthKey(toMonthKey(new Date())); setDraft({}) }}
+              className="h-9 px-3 text-[12px] font-medium rounded-lg transition-colors"
+              style={{
+                color: 'var(--theme-brand-primary)',
+                background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)',
+              }}
+            >
+              Tháng này
+            </button>
+          )}
+
+          {hasChanges && (
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="btn-primary flex items-center gap-1.5 h-9"
+            >
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              <span>{saving ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {isLoading ? (
@@ -396,32 +425,20 @@ export function VehicleExpenses() {
             </table>
           </div>
 
-          {/* Footer: total + save */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div>
-                <p className="text-[10px] uppercase font-semibold" style={{ color: 'var(--theme-text-muted)' }}>Tổng CP xe</p>
-                <p className="font-mono-num font-bold text-sm" style={{ color: 'var(--theme-status-error)' }}>
-                  {formatCurrencyFull(totals.XANG_DAU + totals.SUA_CHUA)}
-                </p>
-              </div>
-              <div>
-                <p className="text-[10px] uppercase font-semibold" style={{ color: 'var(--theme-text-muted)' }}>CP Chung</p>
-                <p className="font-mono-num font-bold text-sm" style={{ color: 'var(--theme-status-error)' }}>
-                  {formatCurrencyFull(totals.CHUNG)}
-                </p>
-              </div>
+          {/* Footer: totals summary */}
+          <div className="flex items-center gap-6">
+            <div>
+              <p className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Tổng CP xe</p>
+              <p className="font-mono-num font-bold text-sm" style={{ color: 'var(--theme-status-error)' }}>
+                {formatCurrencyFull(totals.XANG_DAU + totals.SUA_CHUA)}
+              </p>
             </div>
-            {hasChanges && (
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="btn-primary flex items-center gap-2"
-              >
-                {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                {saving ? 'Đang lưu...' : 'Lưu chi phí'}
-              </button>
-            )}
+            <div>
+              <p className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>CP Chung</p>
+              <p className="font-mono-num font-bold text-sm" style={{ color: 'var(--theme-status-error)' }}>
+                {formatCurrencyFull(totals.CHUNG)}
+              </p>
+            </div>
           </div>
         </>
       )}

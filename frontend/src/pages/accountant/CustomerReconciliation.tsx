@@ -41,7 +41,21 @@ export function CustomerReconciliation() {
 
       {/* Upload form */}
       <section className="card p-4 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        {/* Section header */}
+        <div className="flex items-center gap-3 pb-1" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
+          <div
+            className="flex h-8 w-8 items-center justify-center rounded-lg shrink-0"
+            style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)' }}
+          >
+            <FileUp className="h-4 w-4" style={{ color: 'var(--theme-brand-primary)' }} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Nhập kết quả đối soát</p>
+            <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>Tải file phản hồi từ khách hoặc dán dữ liệu thủ công</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="space-y-1.5">
             <label className="typo-form-label" htmlFor="recon-partner">
               Khách hàng
@@ -94,33 +108,27 @@ export function CustomerReconciliation() {
               className="h-10 text-sm font-mono"
             />
           </div>
-        </div>
 
-        <div className="space-y-1.5">
-          <label className="typo-form-label" htmlFor="recon-filename">
-            Tên file gốc (tùy chọn)
-          </label>
-          <Input
-            id="recon-filename"
-            value={r.fields.filename}
-            onChange={(e) => r.setFilename(e.target.value)}
-            placeholder="VD: doisoat-thang5.xlsx"
-            className="h-10 text-sm"
-          />
+          <div className="space-y-1.5">
+            <label className="typo-form-label" htmlFor="recon-filename">
+              Tên file gốc (tùy chọn)
+            </label>
+            <Input
+              id="recon-filename"
+              value={r.fields.filename}
+              onChange={(e) => r.setFilename(e.target.value)}
+              placeholder="VD: doisoat-thang5.xlsx"
+              className="h-10 text-sm"
+            />
+          </div>
         </div>
 
         <div className="space-y-1.5">
           <label className="typo-form-label" htmlFor="recon-rows">
             Dữ liệu đối soát
           </label>
-          <p
-            className="text-xs"
-            style={{ color: 'var(--theme-text-muted)' }}
-          >
-            Dán mỗi dòng theo format:{' '}
-            <code className="text-[11px] px-1 py-0.5 rounded bg-[var(--theme-bg-tertiary)]">
-              container, YYYY-MM-DD, KHỚP|TỪ_CHỐI|KHÔNG_RÕ, ghi chú
-            </code>
+          <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
+            Mỗi dòng: <code className="text-[11px] px-1.5 py-0.5 rounded-md font-mono" style={{ background: 'var(--theme-bg-tertiary)', border: '1px solid var(--theme-border-default)', color: 'var(--theme-text-primary)' }}>container, YYYY-MM-DD, KHỚP|TỪ_CHỐI|KHÔNG_RÕ, ghi chú</code>
           </p>
           <textarea
             id="recon-rows"
@@ -139,47 +147,38 @@ export function CustomerReconciliation() {
           />
         </div>
 
-        <div className="flex flex-wrap gap-2 justify-end">
-          <Button
-            type="button"
-            onClick={r.reset}
-            className="btn-secondary h-9 px-4 text-sm"
-          >
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          {/* Left: destructive */}
+          <Button type="button" onClick={r.reset} className="btn-secondary h-9 px-4 text-sm">
             Xóa
           </Button>
-          <Button
-            type="button"
-            onClick={r.handleExport}
-            className="btn-secondary h-9 px-4 text-sm"
-          >
-            <Download className="w-3.5 h-3.5 mr-1.5" />
-            Xuất báo cáo cho khách
-          </Button>
-          <Button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={r.isUploading}
-            className="btn-secondary h-9 px-4 text-sm"
-          >
-            <FileUp className="w-3.5 h-3.5 mr-1.5" />
-            {r.isUploading ? 'Đang tải…' : 'Tải file phản hồi từ khách'}
-          </Button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,.xls"
-            className="hidden"
-            onChange={onFileChange}
-          />
-          <Button
-            type="button"
-            onClick={r.handlePreview}
-            disabled={r.isPreviewing}
-            className="btn-primary h-9 px-4 text-sm"
-          >
-            <Search className="w-3.5 h-3.5 mr-1.5" />
-            {r.isPreviewing ? 'Đang phân tích…' : 'Phân tích & lưu'}
-          </Button>
+
+          {/* Right: primaries */}
+          <div className="ml-auto flex items-center gap-2">
+            <Button type="button" onClick={r.handleExport} className="btn-secondary h-9 px-4 text-sm">
+              <Download className="w-3.5 h-3.5 mr-1.5" />
+              Xuất báo cáo
+            </Button>
+            <Button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={r.isUploading}
+              className="btn-secondary h-9 px-4 text-sm"
+            >
+              <FileUp className="w-3.5 h-3.5 mr-1.5" />
+              {r.isUploading ? 'Đang tải…' : 'Tải file từ khách'}
+            </Button>
+            <input ref={fileInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={onFileChange} />
+            <Button
+              type="button"
+              onClick={r.handlePreview}
+              disabled={r.isPreviewing}
+              className="btn-primary h-9 px-4 text-sm"
+            >
+              <Search className="w-3.5 h-3.5 mr-1.5" />
+              {r.isPreviewing ? 'Đang phân tích…' : 'Phân tích & lưu'}
+            </Button>
+          </div>
         </div>
       </section>
 

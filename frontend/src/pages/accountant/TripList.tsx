@@ -154,57 +154,57 @@ export function TripList() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="typo-display">Đơn hàng</h1>
-            <p className="typo-body-sm mt-0.5">Tháng {month}/{year}</p>
+            <p className="typo-body-sm mt-0.5">
+              Tháng {month}/{year} · <span style={{ color: 'var(--theme-status-warning)' }}>{stats.pending} chờ ghép</span> · <span style={{ color: 'var(--theme-status-success)' }}>{stats.matched} đã khớp</span>
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
           </div>
         </div>
 
-        {/* KPI + import button row */}
-        <div className="flex items-center gap-3">
-          <div className="flex gap-3">
+        {/* Action buttons row */}
+        <div className="flex items-center justify-between">
+          {/* Quick filter stat pills */}
+          <div className="flex gap-2">
             <button
               onClick={() => setStatusFilter(statusFilter === 'PENDING' ? 'ALL' : 'PENDING')}
-              className="card p-4 flex items-center gap-3 text-left transition hover:shadow-md active:scale-[0.98]"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90 active:scale-[0.98]"
               style={{
-                borderWidth: statusFilter === 'PENDING' ? 2 : 1,
-                borderColor: statusFilter === 'PENDING' ? 'var(--theme-status-warning)' : 'var(--theme-border-default)',
+                background: statusFilter === 'PENDING'
+                  ? 'color-mix(in srgb, var(--theme-status-warning) 15%, transparent)'
+                  : 'var(--theme-bg-secondary)',
+                border: `1.5px solid ${statusFilter === 'PENDING' ? 'var(--theme-status-warning)' : 'var(--theme-border-default)'}`,
+                color: 'var(--theme-status-warning)',
               }}
             >
-              <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'color-mix(in srgb, var(--theme-status-warning) 12%, transparent)' }}>
-                <Clock className="h-5 w-5" style={{ color: 'var(--theme-status-warning)' }} />
-              </div>
-              <div>
-                <p className="text-xl font-bold leading-none" style={{ color: 'var(--theme-status-warning)' }}>{stats.pending}</p>
-                <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Chờ ghép</p>
-              </div>
+              <Clock className="h-4 w-4" />
+              <span className="font-bold">{stats.pending}</span>
+              <span className="text-xs font-medium" style={{ color: 'var(--theme-text-muted)' }}>chờ ghép</span>
             </button>
             <button
               onClick={() => setStatusFilter(statusFilter === 'MATCHED' ? 'ALL' : 'MATCHED')}
-              className="card p-4 flex items-center gap-3 text-left transition hover:shadow-md active:scale-[0.98]"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition hover:opacity-90 active:scale-[0.98]"
               style={{
-                borderWidth: statusFilter === 'MATCHED' ? 2 : 1,
-                borderColor: statusFilter === 'MATCHED' ? 'var(--theme-status-success)' : 'var(--theme-border-default)',
+                background: statusFilter === 'MATCHED'
+                  ? 'color-mix(in srgb, var(--theme-status-success) 12%, transparent)'
+                  : 'var(--theme-bg-secondary)',
+                border: `1.5px solid ${statusFilter === 'MATCHED' ? 'var(--theme-status-success)' : 'var(--theme-border-default)'}`,
+                color: 'var(--theme-status-success)',
               }}
             >
-              <div className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'color-mix(in srgb, var(--theme-status-success) 12%, transparent)' }}>
-                <CheckCircle2 className="h-5 w-5" style={{ color: 'var(--theme-status-success)' }} />
-              </div>
-              <div>
-                <p className="text-xl font-bold leading-none" style={{ color: 'var(--theme-status-success)' }}>{stats.matched}</p>
-                <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>Đã khớp</p>
-              </div>
+              <CheckCircle2 className="h-4 w-4" />
+              <span className="font-bold">{stats.matched}</span>
+              <span className="text-xs font-medium" style={{ color: 'var(--theme-text-muted)' }}>đã khớp</span>
             </button>
           </div>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <Button onClick={handleExport} className="btn-ghost h-9 px-3 text-xs font-semibold">
               <Download className="w-3.5 h-3.5 mr-1" /> Xuất đối soát
             </Button>
             <button
               onClick={() => navigate('/accountant/import-orders')}
-              className="flex items-center gap-1.5 h-9 px-4 rounded-lg text-sm font-semibold transition hover:opacity-90 active:scale-[0.98]"
-              style={{ background: 'var(--theme-brand-primary)', color: '#fff' }}
+              className="btn-primary"
             >
               <Upload className="w-4 h-4" />
               Nhập đơn

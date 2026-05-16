@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>New Dashboard v3</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Be Vietnam Pro", system-ui, sans-serif;
+    background: #1a1c2e;
+    color: #09090b;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 24px 48px;
+    gap: 20px;
+  }
+  .outer-title { color: #fff; font-size: 20px; font-weight: 800; letter-spacing: -.4px; margin: 4px 0 2px; }
+  .outer-sub { color: rgba(255,255,255,.45); font-size: 12px; }
+
+  .app-shell {
+    display: flex;
+    width: 100%;
+    max-width: 1100px;
+    height: 780px;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 32px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.07);
+  }
+
+  /* Sidebar */
+  .sidebar { width: 220px; flex-shrink: 0; background: #047857; display: flex; flex-direction: column; }
+  .sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 56px; border-bottom: 1px solid rgba(255,255,255,.1); flex-shrink: 0; }
+  .brand-logo { width: 28px; height: 28px; border-radius: 7px; background: linear-gradient(135deg,#22c55e,#15803d); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+  .brand-name { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: -.2px; }
+  .nav { flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+  .nav-item { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 7px; font-size: 13px; font-weight: 500; color: rgba(236,253,245,.65); position: relative; }
+  .nav-item.active { background: rgba(255,255,255,.15); color: #fff; font-weight: 600; }
+  .nav-item.active::before { content:''; position:absolute; left:0; top:50%; transform:translateY(-50%); width:2.5px; height:16px; border-radius:0 2px 2px 0; background:#4ade80; }
+  .nav-dot { width: 15px; height: 15px; border-radius: 3px; background: currentColor; opacity: .45; flex-shrink: 0; }
+  .nav-item.active .nav-dot { opacity: 1; background: #4ade80; }
+  .sidebar-art { padding: 8px 12px 4px; flex-shrink: 0; }
+  .sidebar-footer { border-top: 1px solid rgba(255,255,255,.1); padding: 10px; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .avatar { width: 28px; height: 28px; border-radius: 50%; background: #059669; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; flex-shrink: 0; }
+
+  /* Content */
+  .content { flex: 1; min-width: 0; background: #FAFAFA; overflow-y: auto; padding: 22px 26px; display: flex; flex-direction: column; gap: 16px; }
+
+  /* Page header */
+  .page-header { display: flex; align-items: flex-start; justify-content: space-between; }
+  .page-header h1 { font-size: 22px; font-weight: 800; letter-spacing: -.5px; color: #09090b; }
+  .page-header .sub { font-size: 12px; color: #a1a1aa; margin-top: 3px; }
+  .month-nav { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid #e4e4e7; border-radius: 8px; padding: 7px 14px; font-size: 12px; font-weight: 700; color: #09090b; box-shadow: 0 1px 2px rgba(9,9,11,.04); flex-shrink: 0; }
+  .month-nav .ch { color: #a1a1aa; font-size: 14px; }
+  .mnav-inner { text-align: center; }
+  .mnav-sub { font-size: 10px; color: #a1a1aa; font-weight: 400; }
+
+  /* KPI trio */
+  .kpi-trio { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+  .kpi-card { background: #fff; border: 1px solid #e4e4e7; border-radius: 12px; padding: 16px; box-shadow: 0 0 0 1px rgba(9,9,11,.03), 0 1px 3px rgba(9,9,11,.06), 0 4px 16px -4px rgba(9,9,11,.06); cursor: pointer; transition: box-shadow .2s, transform .15s; }
+  .kpi-card:hover { box-shadow: 0 0 0 1px rgba(9,9,11,.05), 0 2px 6px rgba(9,9,11,.08), 0 8px 24px -4px rgba(9,9,11,.1); transform: translateY(-1px); }
+  .kpi-top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .kpi-icon { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .kpi-meta { min-width: 0; }
+  .kpi-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #a1a1aa; }
+  .kpi-sub { font-size: 10px; color: #a1a1aa; margin-top: 1px; }
+  .kpi-value { font-size: 19px; font-weight: 900; color: #09090b; letter-spacing: -.6px; line-height: 1; }
+  .kpi-value.profit { color: #059669; }
+  .kpi-value.expense { color: #dc2626; }
+  .kpi-delta { display: inline-flex; align-items: center; gap: 3px; border-radius: 999px; padding: 2px 7px; margin-top: 7px; font-size: 10px; font-weight: 600; }
+
+  /* Vehicle table */
+  .vehicle-card { background: #fff; border: 1px solid #e4e4e7; border-radius: 12px; overflow: hidden; box-shadow: 0 0 0 1px rgba(9,9,11,.02), 0 1px 3px rgba(9,9,11,.05), 0 4px 16px -4px rgba(9,9,11,.05); }
+  .card-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px 12px; border-bottom: 1px solid #f4f4f5; }
+  .card-title-row { display: flex; align-items: center; gap: 8px; }
+  .card-icon { width: 28px; height: 28px; border-radius: 7px; background: rgba(5,150,105,.07); border: 1px solid rgba(5,150,105,.14); display: flex; align-items: center; justify-content: center; font-size: 13px; }
+  .card-title { font-size: 13px; font-weight: 700; color: #09090b; letter-spacing: -.2px; }
+  .card-sub { font-size: 11px; color: #a1a1aa; }
+  .veh-table { width: 100%; border-collapse: collapse; }
+  .veh-table th { text-align: left; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #a1a1aa; padding: 9px 18px; border-bottom: 1px solid #f4f4f5; background: #fafafa; }
+  .veh-table th.right, .veh-table td.right { text-align: right; }
+  .veh-table td { padding: 10px 18px; font-size: 13px; color: #09090b; border-bottom: 1px solid #f4f4f5; }
+  .veh-table tr:last-child td { border-bottom: none; }
+  .veh-table tr:hover td { background: #fafafa; }
+  .plate-badge { display: inline-flex; align-items: center; background: #f4f4f5; border: 1px solid #e4e4e7; border-radius: 5px; padding: 2px 7px; font-size: 11px; font-weight: 700; letter-spacing: .05em; color: #09090b; }
+  .veh-revenue { font-weight: 700; }
+  .veh-expense { color: #dc2626; font-weight: 600; }
+  .veh-profit { font-weight: 800; }
+  .veh-profit.pos { color: #059669; }
+  .veh-profit.neg { color: #dc2626; }
+  .veh-bar-bg { background: #f4f4f5; border-radius: 99px; height: 5px; overflow: hidden; width: 80px; }
+  .veh-bar-fill { height: 5px; border-radius: 99px; background: #059669; }
+  .veh-bar-fill.neg { background: #dc2626; }
+
+  /* Bottom two-col */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* Doanh thu chờ phân bổ */
+  .pending-card { background: #fff; border: 1px solid #e4e4e7; border-radius: 12px; overflow: hidden; box-shadow: 0 0 0 1px rgba(9,9,11,.02), 0 1px 3px rgba(9,9,11,.05), 0 4px 16px -4px rgba(9,9,11,.05); display: flex; flex-direction: column; }
+  .pending-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 12px; border-bottom: 1px solid #f4f4f5; }
+  .pending-icon { width: 28px; height: 28px; border-radius: 7px; background: rgba(180,83,9,.07); border: 1px solid rgba(180,83,9,.14); display: flex; align-items: center; justify-content: center; font-size: 13px; }
+  .pending-badge { background: #fffbeb; border: 1px solid #fde68a; border-radius: 999px; font-size: 10px; font-weight: 700; color: #b45309; padding: 2px 8px; }
+  .pending-row { display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-bottom: 1px solid #f4f4f5; }
+  .pending-row:last-of-type { border-bottom: none; }
+  .pending-mono { width: 32px; height: 32px; border-radius: 7px; background: #fffbeb; border: 1px solid #fde68a; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: #b45309; flex-shrink: 0; }
+  .pending-body { min-width: 0; flex: 1; }
+  .pending-partner { font-size: 12px; font-weight: 700; color: #09090b; }
+  .pending-route { font-size: 10px; color: #a1a1aa; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pending-amount { font-size: 12px; font-weight: 800; color: #b45309; flex-shrink: 0; }
+  .pending-foot { padding: 10px 16px; border-top: 1px solid #f4f4f5; display: flex; align-items: center; justify-content: space-between; background: #fffbeb; margin-top: auto; }
+  .pending-foot-label { font-size: 11px; color: #92400e; font-weight: 500; }
+  .pending-foot-total { font-size: 14px; font-weight: 900; color: #b45309; letter-spacing: -.3px; }
+
+  /* Trip activity chart */
+  .chart-card { background: #fff; border: 1px solid #e4e4e7; border-radius: 12px; overflow: hidden; box-shadow: 0 0 0 1px rgba(9,9,11,.02), 0 1px 3px rgba(9,9,11,.05), 0 4px 16px -4px rgba(9,9,11,.05); display: flex; flex-direction: column; }
+  .chart-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 12px; border-bottom: 1px solid #f4f4f5; }
+  .chart-legend { display: flex; align-items: center; gap: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #71717a; font-weight: 500; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+  .chart-body { flex: 1; padding: 14px 16px 10px; display: flex; flex-direction: column; }
+
+  /* Bar chart */
+  .bar-chart { flex: 1; display: flex; align-items: flex-end; gap: 3px; min-height: 110px; }
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 0; }
+  .bar-stack { width: 100%; display: flex; flex-direction: column; gap: 1px; }
+  .bar-seg { width: 100%; border-radius: 2px 2px 0 0; min-height: 3px; transition: opacity .15s; }
+  .bar-seg:hover { opacity: .8; }
+  .bar-seg.matched { background: #059669; border-radius: 2px 2px 0 0; }
+  .bar-seg.pending { background: #f59e0b; border-radius: 0; }
+  .bar-seg.matched:last-child, .bar-seg.pending:last-child { border-radius: 2px 2px 0 0; }
+  /* When pending is on top */
+  .bar-stack .pending { border-radius: 2px 2px 0 0; }
+  .bar-stack .matched { border-radius: 0; }
+  .bar-stack .matched:first-child:last-child { border-radius: 2px 2px 0 0; }
+
+  .bar-label { font-size: 8px; color: #a1a1aa; margin-top: 5px; white-space: nowrap; }
+  .x-axis { display: flex; gap: 3px; margin-top: 2px; }
+  .x-label { flex: 1; text-align: center; font-size: 8px; color: #d4d4d8; }
+
+  .chart-footer { padding: 10px 16px; border-top: 1px solid #f4f4f5; display: flex; align-items: center; justify-content: space-between; }
+  .chart-footer-stat { text-align: center; }
+  .chart-footer-val { font-size: 14px; font-weight: 800; color: #09090b; }
+  .chart-footer-lbl { font-size: 10px; color: #a1a1aa; margin-top: 1px; }
+  .chart-divider { width: 1px; height: 28px; background: #f4f4f5; }
+</style>
+</head>
+<body>
+
+<div class="outer-title">Dashboard v3 — with trip activity chart</div>
+<div class="outer-sub">Bar chart: chuyến mỗi ngày · xanh = đã ghép · vàng = chờ phân bổ</div>
+
+<div class="app-shell">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo">🚛</div>
+      <span class="brand-name">TTransport</span>
+    </div>
+    <div class="nav">
+      <div class="nav-item active"><div class="nav-dot"></div> Tổng quan</div>
+      <div class="nav-item"><div class="nav-dot"></div> Đơn hàng</div>
+      <div class="nav-item"><div class="nav-dot"></div> Đối soát</div>
+      <div class="nav-item"><div class="nav-dot"></div> Doanh thu & Lãi</div>
+      <div class="nav-item"><div class="nav-dot"></div> Chi phí xe</div>
+      <div class="nav-item"><div class="nav-dot"></div> Cài đặt</div>
+    </div>
+    <div class="sidebar-art">
+      <svg viewBox="0 0 200 68" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+        <circle cx="18" cy="10" r="1" fill="white" fill-opacity=".5"/>
+        <circle cx="120" cy="9" r="1.1" fill="white" fill-opacity=".55"/>
+        <path d="M0 32 Q50 22 100 28 Q150 34 200 24 L200 36 L0 36 Z" fill="white" fill-opacity=".05"/>
+        <rect x="0" y="36" width="200" height="32" fill="white" fill-opacity=".05" rx="2"/>
+        <g stroke="white" stroke-width="2" stroke-linecap="round" stroke-opacity=".25">
+          <line x1="0" y1="52" x2="22" y2="52"/><line x1="34" y1="52" x2="56" y2="52"/>
+          <line x1="68" y1="52" x2="90" y2="52"/><line x1="102" y1="52" x2="124" y2="52"/>
+        </g>
+        <g transform="translate(18 37)">
+          <rect x="0" y="2" width="62" height="26" rx="2.5" fill="white" fill-opacity=".12"/>
+          <path d="M62 6 L80 6 Q84 6 84 10 L84 28 L62 28 Z" fill="white" fill-opacity=".16"/>
+          <circle cx="15" cy="31" r="5.5" fill="white" fill-opacity=".18"/>
+          <circle cx="68" cy="31" r="5.5" fill="white" fill-opacity=".18"/>
+        </g>
+      </svg>
+    </div>
+    <div class="sidebar-footer">
+      <div class="avatar">K</div>
+      <div>
+        <div style="font-size:12px;font-weight:600;color:#fff">Kế Toán Test</div>
+        <div style="font-size:10px;color:rgba(236,253,245,.5)">Kế toán</div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Content -->
+  <main class="content">
+
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <h1>Tổng quan</h1>
+        <div class="sub">Bảng điều khiển kế toán & vận tải</div>
+      </div>
+      <div class="month-nav">
+        <span class="ch">‹</span>
+        <div class="mnav-inner">
+          <div>Tháng 05/2026</div>
+          <div class="mnav-sub">01/05 → 31/05</div>
+        </div>
+        <span class="ch">›</span>
+      </div>
+    </div>
+
+    <!-- KPI trio -->
+    <div class="kpi-trio">
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <div class="kpi-icon" style="background:#f0fdf4">📈</div>
+          <div class="kpi-meta">
+            <div class="kpi-label">Doanh thu</div>
+            <div class="kpi-sub">Tháng 05/2026</div>
+          </div>
+        </div>
+        <div class="kpi-value">168.831.000 đ</div>
+        <div class="kpi-delta" style="background:rgba(5,150,105,.1);color:#059669">↑ +12% so với tháng trước</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <div class="kpi-icon" style="background:#fef2f2">💸</div>
+          <div class="kpi-meta">
+            <div class="kpi-label">Chi phí</div>
+            <div class="kpi-sub">Lương + Xe + CP Chung</div>
+          </div>
+        </div>
+        <div class="kpi-value expense">142.000.000 đ</div>
+        <div class="kpi-delta" style="background:rgba(220,38,38,.08);color:#dc2626">↑ +5% so với tháng trước</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <div class="kpi-icon" style="background:#eff6ff">💰</div>
+          <div class="kpi-meta">
+            <div class="kpi-label">Lãi ròng</div>
+            <div class="kpi-sub">Doanh thu − Chi phí</div>
+          </div>
+        </div>
+        <div class="kpi-value profit">26.831.000 đ</div>
+        <div class="kpi-delta" style="background:rgba(5,150,105,.1);color:#059669">Biên lãi 15.9%</div>
+      </div>
+    </div>
+
+    <!-- Vehicle PnL table -->
+    <div class="vehicle-card">
+      <div class="card-head">
+        <div class="card-title-row">
+          <div class="card-icon">🚚</div>
+          <div>
+            <div class="card-title">Doanh thu & Chi phí theo xe</div>
+            <div class="card-sub">5 xe hoạt động trong tháng</div>
+          </div>
+        </div>
+        <div style="font-size:11px;font-weight:600;color:#059669;cursor:pointer">Xem chi tiết →</div>
+      </div>
+      <table class="veh-table">
+        <thead>
+          <tr>
+            <th>Biển số</th>
+            <th class="right">Doanh thu</th>
+            <th class="right">Chi phí</th>
+            <th class="right">Lãi</th>
+            <th style="width:90px">Hiệu suất</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="plate-badge">51C-123.45</span></td>
+            <td class="right veh-revenue">52.400.000</td>
+            <td class="right veh-expense">38.200.000</td>
+            <td class="right veh-profit pos">+14.200.000</td>
+            <td><div class="veh-bar-bg"><div class="veh-bar-fill" style="width:72%"></div></div></td>
+          </tr>
+          <tr>
+            <td><span class="plate-badge">51D-456.78</span></td>
+            <td class="right veh-revenue">41.200.000</td>
+            <td class="right veh-expense">32.100.000</td>
+            <td class="right veh-profit pos">+9.100.000</td>
+            <td><div class="veh-bar-bg"><div class="veh-bar-fill" style="width:55%"></div></div></td>
+          </tr>
+          <tr>
+            <td><span class="plate-badge">50A-789.01</span></td>
+            <td class="right veh-revenue">38.600.000</td>
+            <td class="right veh-expense">31.400.000</td>
+            <td class="right veh-profit pos">+7.200.000</td>
+            <td><div class="veh-bar-bg"><div class="veh-bar-fill" style="width:45%"></div></div></td>
+          </tr>
+          <tr>
+            <td><span class="plate-badge">51G-234.56</span></td>
+            <td class="right veh-revenue">22.100.000</td>
+            <td class="right veh-expense">24.800.000</td>
+            <td class="right veh-profit neg">−2.700.000</td>
+            <td><div class="veh-bar-bg"><div class="veh-bar-fill neg" style="width:30%"></div></div></td>
+          </tr>
+          <tr>
+            <td><span class="plate-badge">51H-345.67</span></td>
+            <td class="right veh-revenue">14.531.000</td>
+            <td class="right veh-expense">15.500.000</td>
+            <td class="right veh-profit neg">−969.000</td>
+            <td><div class="veh-bar-bg"><div class="veh-bar-fill neg" style="width:18%"></div></div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Bottom row: pending + chart -->
+    <div class="two-col">
+
+      <!-- Doanh thu chờ phân bổ -->
+      <div class="pending-card">
+        <div class="pending-head">
+          <div class="card-title-row">
+            <div class="pending-icon">⏳</div>
+            <div>
+              <div class="card-title">Doanh thu chờ phân bổ</div>
+              <div class="card-sub">Chuyến chưa ghép xe</div>
+            </div>
+          </div>
+          <span class="pending-badge">3 chuyến</span>
+        </div>
+        <div class="pending-row">
+          <div class="pending-mono">TV</div>
+          <div class="pending-body">
+            <div class="pending-partner">Công ty TV Logistics</div>
+            <div class="pending-route">Cảng Cát Lái → KCN Long An · Hàng đông lạnh</div>
+          </div>
+          <div class="pending-amount">8.500.000 đ</div>
+        </div>
+        <div class="pending-row">
+          <div class="pending-mono">PL</div>
+          <div class="pending-body">
+            <div class="pending-partner">Phúc Lộc Transport</div>
+            <div class="pending-route">Bình Dương → Vũng Tàu · Container 20'</div>
+          </div>
+          <div class="pending-amount">6.200.000 đ</div>
+        </div>
+        <div class="pending-row">
+          <div class="pending-mono">MT</div>
+          <div class="pending-body">
+            <div class="pending-partner">Minh Trường Co.</div>
+            <div class="pending-route">Cảng Hiệp Phước → Đồng Nai</div>
+          </div>
+          <div class="pending-amount">4.800.000 đ</div>
+        </div>
+        <div class="pending-foot">
+          <span class="pending-foot-label">Tổng chờ phân bổ</span>
+          <span class="pending-foot-total">19.500.000 đ</span>
+        </div>
+      </div>
+
+      <!-- Trip activity chart -->
+      <div class="chart-card">
+        <div class="chart-head">
+          <div class="card-title-row">
+            <div class="card-icon">📊</div>
+            <div>
+              <div class="card-title">Chuyến theo ngày</div>
+              <div class="card-sub">Tháng 05/2026</div>
+            </div>
+          </div>
+          <div class="chart-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#059669"></div> Đã ghép</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div> Chờ phân bổ</div>
+          </div>
+        </div>
+
+        <div class="chart-body">
+          <!-- Stacked bar chart: days 1-22, each bar = matched (green, bottom) + pending (amber, top) -->
+          <!-- Max total = 6 trips/day → scale bars to 100px height -->
+          <div class="bar-chart" id="barChart"></div>
+          <div class="x-axis" id="xAxis"></div>
+        </div>
+
+        <div class="chart-footer">
+          <div class="chart-footer-stat">
+            <div class="chart-footer-val" style="color:#059669">18</div>
+            <div class="chart-footer-lbl">Đã ghép</div>
+          </div>
+          <div class="chart-divider"></div>
+          <div class="chart-footer-stat">
+            <div class="chart-footer-val" style="color:#f59e0b">3</div>
+            <div class="chart-footer-lbl">Chờ phân bổ</div>
+          </div>
+          <div class="chart-divider"></div>
+          <div class="chart-footer-stat">
+            <div class="chart-footer-val">21</div>
+            <div class="chart-footer-lbl">Tổng chuyến</div>
+          </div>
+          <div class="chart-divider"></div>
+          <div class="chart-footer-stat">
+            <div class="chart-footer-val" style="font-size:12px">86%</div>
+            <div class="chart-footer-lbl">Đã phân bổ</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+// Generate the bar chart from data
+const data = [
+  // [day, matched, pending]
+  [1,2,0],[2,0,0],[3,1,0],[4,3,0],[5,1,1],[6,0,0],[7,2,0],
+  [8,1,0],[9,0,0],[10,2,0],[11,1,0],[12,3,0],[13,0,0],[14,1,0],
+  [15,2,1],[16,0,0],[17,1,0],[18,2,0],[19,0,0],[20,1,0],[21,0,1],[22,0,0],
+];
+
+const MAX_TRIPS = 4; // normalise bars
+const BAR_HEIGHT = 100; // px
+
+const chart = document.getElementById('barChart');
+const xAxis = document.getElementById('xAxis');
+
+data.forEach(([day, matched, pending]) => {
+  const col = document.createElement('div');
+  col.className = 'bar-col';
+
+  const stack = document.createElement('div');
+  stack.className = 'bar-stack';
+  stack.style.width = '100%';
+
+  const total = matched + pending;
+  if (total > 0) {
+    // Pending on top (amber)
+    if (pending > 0) {
+      const seg = document.createElement('div');
+      seg.className = 'bar-seg pending';
+      seg.style.height = Math.max(6, (pending / MAX_TRIPS) * BAR_HEIGHT) + 'px';
+      stack.appendChild(seg);
+    }
+    // Matched on bottom (green)
+    if (matched > 0) {
+      const seg = document.createElement('div');
+      seg.className = 'bar-seg matched';
+      seg.style.height = Math.max(6, (matched / MAX_TRIPS) * BAR_HEIGHT) + 'px';
+      stack.appendChild(seg);
+    }
+  } else {
+    // Empty day — tiny placeholder
+    const seg = document.createElement('div');
+    seg.style.height = '3px';
+    seg.style.background = '#f4f4f5';
+    seg.style.borderRadius = '2px';
+    stack.appendChild(seg);
+  }
+
+  col.appendChild(stack);
+  chart.appendChild(col);
+
+  // X-axis label (every 3 days)
+  const lbl = document.createElement('div');
+  lbl.className = 'x-label';
+  lbl.textContent = day % 3 === 1 ? day : '';
+  xAxis.appendChild(lbl);
+});
+</script>
+
+</body>
+</html>

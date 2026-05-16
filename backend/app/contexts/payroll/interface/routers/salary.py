@@ -224,6 +224,8 @@ async def get_monthly_pnl_endpoint(
         total_productivity_salary=dto.total_productivity_salary,
         total_allowance=dto.total_allowance,
         total_base_salary=dto.total_base_salary,
+        total_vehicle_expenses=dto.total_vehicle_expenses,
+        total_cp_chung=dto.total_cp_chung,
         profit=dto.profit,
         matched_trip_count=dto.matched_trip_count,
         partner_breakdown=[
