@@ -540,7 +540,6 @@ function DesktopDashboard() {
 // ─── Mobile dashboard ─────────────────────────────────────────────────────────
 
 function MobileDashboard() {
-  const navigate = useNavigate()
   const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
 
   const prevMonth    = month === 1 ? 12 : month - 1

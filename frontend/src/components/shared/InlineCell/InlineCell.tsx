@@ -1,49 +1,50 @@
-import { useRef, useEffect } from 'react'
-import { Input } from '@/components/ui'
+import { useState, useRef, useEffect } from 'react'
 
 interface InlineCellProps {
-  value: number | string
-  onChange: (value: number) => void
-  type?: 'number' | 'text'
-  editing: boolean
-  display?: string
-  className?: string
-  inputClassName?: string
+  value: string
+  onSave: (v: string) => void
+  placeholder?: string
+  type?: 'text' | 'tel'
 }
 
-export function InlineCell({
-  value,
-  onChange,
-  type = 'number',
-  editing,
-  display,
-  className = '',
-  inputClassName = '',
-}: InlineCellProps) {
+export function InlineCell({ value, onSave, placeholder, type }: InlineCellProps) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(value)
   const ref = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    if (editing && ref.current) ref.current.select()
-  }, [editing])
+  useEffect(() => { if (editing) { ref.current?.focus(); ref.current?.select() } }, [editing])
+  useEffect(() => { setDraft(value) }, [value])
 
-  if (!editing) {
+  const save = () => {
+    setEditing(false)
+    if (draft !== value) onSave(draft)
+  }
+
+  if (editing) {
     return (
-      <span className={`tabular-nums ${className}`}>
-        {display ?? value}
-      </span>
+      <input
+        ref={ref}
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onBlur={save}
+        onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') { setDraft(value); setEditing(false) } }}
+        placeholder={placeholder}
+        type={type}
+        className="w-full border-none bg-transparent text-sm font-medium outline-none p-0"
+        style={{ color: 'var(--theme-text-primary)' }}
+      />
     )
   }
 
   return (
-    <Input
-      ref={ref}
-      type={type}
-      min={0}
-      value={value || ''}
-      onChange={e => onChange(Math.max(0, Number(e.target.value)))}
-      placeholder="0"
-      className={`text-xs font-mono h-7 px-1.5 ${inputClassName}`}
-      onKeyDown={e => e.stopPropagation()}
-    />
+    <button
+      onClick={() => setEditing(true)}
+      className="w-full text-left text-sm font-medium rounded px-1 -mx-1 py-0.5 transition-colors"
+      style={{ color: value ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)', background: 'transparent' }}
+      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)'}
+      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+    >
+      {value || placeholder || '—'}
+    </button>
   )
 }
