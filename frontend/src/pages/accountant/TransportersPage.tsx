@@ -1,19 +1,19 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
-import { Truck, Plus, User, Search, TrendingDown, Users, MapPin } from 'lucide-react'
+import { Truck, Plus, User, Search, MapPin } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button, Input, Label } from '@/components/ui'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog/ConfirmDialog'
 import { PulseHint } from '@/components/shared/PulseHint'
 import { LocationManager } from '@/components/shared/LocationManager'
 import { DashboardSectionHeader } from '@/components/shared/DashboardSectionHeader'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
-import { KpiHeroCard } from '@/components/shared/KpiHeroCard'
+import { StatBreakdownCard } from '@/components/shared/StatBreakdownCard'
 import {
   useVehicleExpenses, useCreateVehicleExpense, useUpdateVehicleExpense,
   useSalaryConfig, useDrivers, useVehicleDrivers, useAddVehicleDriver,
   useRemoveVehicleDriver, useCreateVehicle,
 } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
-import { formatCurrency } from '@/data/domain'
+import { formatCurrency, compactCurrency } from '@/data/domain'
 import type { Driver } from '@/data/domain'
 import type { VehicleExpenseCategory, VehicleExpense } from '@/services/api/vehicleExpenses.api'
 import { EXPENSE_CATEGORY_LABELS } from '@/services/api/vehicleExpenses.api'
@@ -275,30 +275,22 @@ export function TransportersPage() {
       </div>
 
       {/* ── KPI row ── */}
-      <div className="grid grid-cols-3 gap-3">
-        <KpiHeroCard
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <StatBreakdownCard
           label="Xe vận tải"
-          value={groups.length}
-          formattedValue={String(groups.length)}
-          icon={Truck}
-          color="blue"
-          sublabel={`${assignedDrivers} lái xe đang gắn`}
+          total={groups.length}
+          items={[
+            { label: 'Đã gắn lái xe', value: assignedDrivers },
+            { label: 'Lái xe chưa gắn', value: driversList.length - assignedDrivers },
+          ]}
         />
-        <KpiHeroCard
+        <StatBreakdownCard
           label="Tổng chi phí"
-          value={grandTotal}
-          formattedValue={grandTotal > 0 ? formatCurrency(grandTotal) : '0đ'}
-          icon={TrendingDown}
-          color="rose"
-          sublabel={`Kỳ ${String(fromDay).padStart(2, '0')}/${String(month.month).padStart(2, '0')} → ${String(toDay).padStart(2, '0')}/${String(endMonth).padStart(2, '0')}`}
-        />
-        <KpiHeroCard
-          label="Lái xe"
-          value={driversList.length}
-          formattedValue={String(driversList.length)}
-          icon={Users}
-          color="emerald"
-          sublabel={assignedDrivers < driversList.length ? `${driversList.length - assignedDrivers} chưa gắn xe` : 'Tất cả đã gắn xe'}
+          total={compactCurrency(grandTotal)}
+          items={VEHICLE_CATEGORIES.map(cat => ({
+            label: EXPENSE_CATEGORY_LABELS[cat],
+            value: compactCurrency(catTotals[cat] ?? 0),
+          }))}
         />
       </div>
 
@@ -360,14 +352,14 @@ export function TransportersPage() {
               <table className="w-full [&_td]:align-middle" style={{ borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: 'var(--theme-bg-primary)', borderBottom: '1px solid var(--theme-border-light)' }}>
-                    <th className="px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)', width: 140 }}>Biển số</th>
-                    <th className="px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Lái xe</th>
+                    <th className="px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)', width: 140 }}>Biển số</th>
+                    <th className="px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Lái xe</th>
                     {VEHICLE_CATEGORIES.map(cat => (
-                      <th key={cat} className="px-3 py-2.5 text-right text-xs font-bold uppercase tracking-wider" style={{ color: CATEGORY_COLORS[cat], width: 130 }}>
+                      <th key={cat} className="px-3 py-2.5 text-right text-[11px] font-bold uppercase tracking-wider" style={{ color: CATEGORY_COLORS[cat], width: 130 }}>
                         {EXPENSE_CATEGORY_LABELS[cat]}
                       </th>
                     ))}
-                    <th className="px-3 py-2.5 text-right text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-primary)', width: 130 }}>Tổng CP</th>
+                    <th className="px-3 py-2.5 text-right text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-primary)', width: 130 }}>Tổng CP</th>
                   </tr>
                 </thead>
                 <tbody>

@@ -1,12 +1,12 @@
 import { useState, useMemo, useCallback } from 'react'
-import { Building2, Plus, AlertTriangle, X, Search, User } from 'lucide-react'
+import { Building2, Plus, AlertTriangle, X, Search } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button } from '@/components/ui'
 import { Sheet, SheetContent } from '@/components/ui/Sheet'
 import { EntityDetailSheet } from '@/components/shared/EntityDetailSheet/EntityDetailSheet'
+import { StatBreakdownCard } from '@/components/shared/StatBreakdownCard'
 import { DashboardCard } from '@/components/shared/DashboardCard/DashboardCard'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { DashboardSectionHeader } from '@/components/shared/DashboardSectionHeader'
-import { KpiHeroCard } from '@/components/shared/KpiHeroCard'
 import { PulseHint } from '@/components/shared/PulseHint'
 import { InfoTip } from '@/components/shared/InfoTip'
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/use-queries'
@@ -154,19 +154,19 @@ function ClientRow({ client, onOpenDetail, isLast }: { client: Client; onOpenDet
         </div>
       </td>
       <td className="px-3 py-2.5">
-        <span className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{client.name}</span>
+        <span className="text-[13px] font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{client.name}</span>
       </td>
       <td className="px-3 py-2.5">
-        <span className="text-sm" style={{ color: 'var(--theme-text-secondary)' }}>{client.phone || '—'}</span>
+        <span className="text-[13px] font-normal" style={{ color: 'var(--theme-text-secondary)' }}>{client.phone || '—'}</span>
       </td>
       <td className="px-3 py-2.5">
-        <span className="text-sm line-clamp-1" style={{ color: 'var(--theme-text-secondary)' }}>{client.address || '—'}</span>
+        <span className="text-[13px] font-normal line-clamp-1" style={{ color: 'var(--theme-text-secondary)' }}>{client.address || '—'}</span>
       </td>
       <td className="px-3 py-2.5">
-        <span className="text-sm" style={{ color: 'var(--theme-text-secondary)' }}>{client.contactPerson || '—'}</span>
+        <span className="text-[13px] font-normal" style={{ color: 'var(--theme-text-secondary)' }}>{client.contactPerson || '—'}</span>
       </td>
       <td className="px-3 py-2.5">
-        <span className="text-xs font-medium tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{client.taxCode || '—'}</span>
+        <span className="text-[13px] font-medium tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{client.taxCode || '—'}</span>
       </td>
     </tr>
   )
@@ -241,28 +241,14 @@ export function ClientsPage() {
       </div>
 
       {/* ── KPI row ── */}
-      <div className="grid grid-cols-3 gap-3">
-        <KpiHeroCard
+      <div className="grid grid-cols-1 w-full md:max-w-[360px]">
+        <StatBreakdownCard
           label="Tổng chủ hàng"
-          value={clients.length}
-          formattedValue={String(clients.length)}
-          icon={Building2}
-          color="blue"
-        />
-        <KpiHeroCard
-          label="Công ty"
-          value={companyCount}
-          formattedValue={String(companyCount)}
-          icon={Building2}
-          color="emerald"
-          sublabel={clients.length > 0 ? `${Math.round((companyCount / clients.length) * 100)}% tổng chủ hàng` : undefined}
-        />
-        <KpiHeroCard
-          label="Cá nhân"
-          value={individualCount}
-          formattedValue={String(individualCount)}
-          icon={User}
-          color="amber"
+          total={clients.length}
+          items={[
+            { label: 'Công ty', value: companyCount },
+            { label: 'Cá nhân', value: individualCount },
+          ]}
         />
       </div>
 
@@ -307,11 +293,11 @@ export function ClientsPage() {
               <thead>
                 <tr style={{ background: 'var(--theme-bg-primary)', borderBottom: '1px solid var(--theme-border-light)' }}>
                   <th className="px-3 py-2.5 w-12"></th>
-                  <th className="px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Tên chủ hàng</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>SĐT</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Địa chỉ</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Liên hệ</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>MST</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Tên chủ hàng</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>SĐT</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Địa chỉ</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Liên hệ</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>MST</th>
                 </tr>
               </thead>
               <tbody>

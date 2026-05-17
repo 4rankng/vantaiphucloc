@@ -228,7 +228,7 @@ function SortTh({
   return (
     <th
       onClick={() => onSort(col)}
-      className={`py-2.5 px-3 text-xs font-bold uppercase tracking-wider cursor-pointer select-none whitespace-nowrap ${align === 'right' ? 'text-right' : 'text-left'}`}
+      className={`py-2.5 px-3 text-[11px] font-bold uppercase tracking-wider cursor-pointer select-none whitespace-nowrap ${align === 'right' ? 'text-right' : 'text-left'}`}
       style={{ color: active ? 'var(--theme-brand-primary)' : 'var(--theme-text-muted)' }}
     >
       <span className={`inline-flex items-center gap-1 ${align === 'right' ? 'justify-end' : ''}`}>
@@ -407,15 +407,15 @@ function DesktopDashboard() {
                             {row.plate}
                           </span>
                         </td>
-                        <td className="px-3 py-2.5 text-right text-xs font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
+                        <td className="px-3 py-2.5 text-right text-[13px] font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
                           {fmt(row.revenue)}
                         </td>
-                        <td className="px-3 py-2.5 text-right text-xs font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--theme-status-error)' }}>
+                        <td className="px-3 py-2.5 text-right text-[13px] font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--theme-status-error)' }}>
                           {fmt(totalCp)}
                         </td>
                         <td className="px-3 py-2.5">
                           <div className="flex items-center justify-end gap-2">
-                            <span className="text-xs font-extrabold tabular-nums whitespace-nowrap" style={{ color: isProfit ? 'var(--theme-status-success)' : 'var(--theme-status-error)' }}>
+                            <span className="text-[13px] font-bold tabular-nums whitespace-nowrap" style={{ color: isProfit ? 'var(--theme-status-success)' : 'var(--theme-status-error)' }}>
                               {isProfit ? '+' : ''}{fmt(row.loiNhuan)}
                             </span>
                             {marginPct != null && (
@@ -482,7 +482,7 @@ function DesktopDashboard() {
                   className="py-2.5 text-center"
                   style={{ borderLeft: i > 0 ? '1px solid var(--theme-border-light)' : 'none' }}
                 >
-                  <div className="text-sm font-extrabold tabular-nums" style={{ color: s.color }}>{s.value}</div>
+                  <div className="text-[13px] font-bold tabular-nums" style={{ color: s.color }}>{s.value}</div>
                   <div className="text-[10px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{s.label}</div>
                 </div>
               ))}
@@ -681,15 +681,15 @@ function MobileDashboard() {
                           {row.plate}
                         </span>
                       </td>
-                      <td className="px-3 py-2.5 text-right text-xs font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
+                      <td className="px-3 py-2.5 text-right text-[13px] font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
                         {fmt(row.revenue)}
                       </td>
-                      <td className="px-3 py-2.5 text-right text-xs font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--theme-status-error)' }}>
+                      <td className="px-3 py-2.5 text-right text-[13px] font-semibold tabular-nums whitespace-nowrap" style={{ color: 'var(--theme-status-error)' }}>
                         {fmt(totalCp)}
                       </td>
                       <td className="px-3 py-2.5">
                         <div className="flex items-center justify-end gap-2">
-                          <span className="text-xs font-extrabold tabular-nums whitespace-nowrap" style={{ color: isProfit ? 'var(--theme-status-success)' : 'var(--theme-status-error)' }}>
+                          <span className="text-[13px] font-bold tabular-nums whitespace-nowrap" style={{ color: isProfit ? 'var(--theme-status-success)' : 'var(--theme-status-error)' }}>
                             {isProfit ? '+' : ''}{fmt(row.loiNhuan)}
                           </span>
                           {marginPct != null && (
@@ -749,7 +749,7 @@ function MobileDashboard() {
               className="py-2.5 text-center"
               style={{ borderLeft: i > 0 ? '1px solid var(--theme-border-light)' : 'none' }}
             >
-              <div className="text-sm font-extrabold tabular-nums" style={{ color: s.color }}>{s.value}</div>
+              <div className="text-[13px] font-bold tabular-nums" style={{ color: s.color }}>{s.value}</div>
               <div className="text-[10px] mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{s.label}</div>
             </div>
           ))}
