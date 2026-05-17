@@ -1,6 +1,8 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { Car, Plus, Wallet, Phone, X } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button, Input, Label } from '@/components/ui'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, Button, Input } from '@/components/ui'
+import { Sheet, SheetContent } from '@/components/ui/Sheet'
+import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
 import { AccountantPageShell } from '@/components/shared/AccountantPageShell'
 import { PulseHint } from '@/components/shared/PulseHint'
 import { InfoTip } from '@/components/shared/InfoTip'
@@ -16,6 +18,34 @@ import { api } from '@/services/api/client'
 async function assignVehicle(driverId: number, plate: string) {
   await api.put(`/drivers/${driverId}/vehicle`, { plate })
 }
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  border: 'none',
+  background: 'transparent',
+  fontSize: '13px',
+  fontWeight: 500,
+  color: 'var(--theme-text-primary)',
+  padding: 0,
+  outline: 'none',
+  fontFamily: 'inherit',
+}
+
+const cellStyle: React.CSSProperties = {
+  padding: '10px 16px',
+  borderRight: `0.5px solid var(--theme-border-light)`,
+}
+
+const cellStyleLast: React.CSSProperties = {
+  padding: '10px 16px',
+}
+
+const labelRow = (icon: React.ReactNode, label: string) => (
+  <div className="flex items-center gap-[5px]" style={{ marginBottom: 3 }}>
+    {icon}
+    <p style={{ fontSize: 10, color: 'var(--theme-text-muted)', margin: 0, letterSpacing: '0.04em' }}>{label}</p>
+  </div>
+)
 
 export function DriversPage() {
   const toast = useToast()
@@ -231,34 +261,6 @@ function DriverDetailDialog({ driver, onClose }: { driver: Driver; onClose: () =
     await salary.submit()
     setShowSalaryForm(false)
   }
-
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    border: 'none',
-    background: 'transparent',
-    fontSize: '13px',
-    fontWeight: 500,
-    color: 'var(--theme-text-primary)',
-    padding: 0,
-    outline: 'none',
-    fontFamily: 'inherit',
-  }
-
-  const cellStyle: React.CSSProperties = {
-    padding: '10px 16px',
-    borderRight: `0.5px solid var(--theme-border-light)`,
-  }
-
-  const cellStyleLast: React.CSSProperties = {
-    padding: '10px 16px',
-  }
-
-  const labelRow = (icon: React.ReactNode, label: string) => (
-    <div className="flex items-center gap-[5px]" style={{ marginBottom: 3 }}>
-      {icon}
-      <p style={{ fontSize: 10, color: 'var(--theme-text-muted)', margin: 0, letterSpacing: '0.04em' }}>{label}</p>
-    </div>
-  )
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -479,48 +481,84 @@ function CreateDriverDialog({ open, onClose, onSave }: {
   const [form, setForm] = useState({ username: '', fullName: '', phone: '', plate: '' })
   const update = <K extends keyof typeof form>(k: K, v: typeof form[K]) => setForm(p => ({ ...p, [k]: v }))
 
+  const { data: vehicles = [] } = useVehicles()
+  const [plateInput, setPlateInput] = useState('')
+  const showCreatePlate = plateInput.trim() && !vehicles.some(v => v.plate.toLowerCase() === plateInput.toLowerCase().trim())
+
   const handleSave = () => {
     if (!form.username.trim()) return
-    onSave({ ...form, username: form.username.trim(), fullName: form.fullName.trim() })
+    onSave({ ...form, plate: plateInput.trim() || form.plate.trim() })
     setForm({ username: '', fullName: '', phone: '', plate: '' })
+    setPlateInput('')
   }
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Thêm lái xe</DialogTitle></DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label className="flex items-center gap-1 text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-              Tên đăng nhập <span style={{ color: 'var(--theme-status-error)' }}>*</span>
-              <InfoTip text="Dùng để đăng nhập app lái xe. Không thể thay đổi sau khi tạo." />
-            </Label>
-            <Input value={form.username} onChange={e => update('username', e.target.value)} placeholder="taixe1" className="text-sm" autoFocus />
+    <Sheet open={open} onOpenChange={onClose}>
+      <SheetContent side="right" className="p-0 gap-0" style={{ width: '100%', maxWidth: 440, border: 'none' }}>
+        <div className="flex items-center justify-between" style={{ padding: '10px 16px', borderBottom: '0.5px solid var(--theme-border-light)' }}>
+          <span className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Thêm lái xe</span>
+          <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: 'var(--theme-text-muted)' }} aria-label="Đóng">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* 2-col grid: Username | Full Name */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', borderBottom: '0.5px solid var(--theme-border-light)' }}>
+          <div style={cellStyle}>
+            <p style={{ fontSize: 10, color: 'var(--theme-text-muted)', margin: '0 0 3px', letterSpacing: '0.04em' }}>TÊN ĐĂNG NHẬP</p>
+            <input
+              value={form.username}
+              onChange={e => update('username', e.target.value)}
+              placeholder="taixe1"
+              style={inputStyle}
+              autoFocus
+            />
           </div>
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Họ tên</Label>
-            <Input value={form.fullName} onChange={e => update('fullName', e.target.value)} placeholder="Nguyễn Văn A" className="text-sm" />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>SĐT</Label>
-            <Input value={form.phone} onChange={e => update('phone', e.target.value)} placeholder="0912345678" className="text-sm" />
-          </div>
-          <div className="space-y-2">
-            <Label className="flex items-center gap-1 text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-              Biển số xe
-              <InfoTip text="Có thể gán thêm xe sau trong phần Vận tải" />
-            </Label>
-            <Input value={form.plate} onChange={e => update('plate', e.target.value)} placeholder="15C-12345" className="text-sm" />
+          <div style={cellStyleLast}>
+            <p style={{ fontSize: 10, color: 'var(--theme-text-muted)', margin: '0 0 3px', letterSpacing: '0.04em' }}>HỌ VÀ TÊN</p>
+            <input
+              value={form.fullName}
+              onChange={e => update('fullName', e.target.value)}
+              placeholder="Nguyễn Văn A"
+              style={inputStyle}
+            />
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} className="flex-1">Huỷ</Button>
-          <Button onClick={handleSave} disabled={!form.username.trim()} className="flex-1"
+
+        {/* 2-col grid: Phone | Plate */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', borderBottom: '0.5px solid var(--theme-border-light)' }}>
+          <div style={cellStyle}>
+            <p style={{ fontSize: 10, color: 'var(--theme-text-muted)', margin: '0 0 3px', letterSpacing: '0.04em' }}>SĐT</p>
+            <input
+              type="tel"
+              value={form.phone}
+              onChange={e => update('phone', e.target.value)}
+              placeholder="0912345678"
+              style={inputStyle}
+            />
+          </div>
+          <div style={cellStyleLast}>
+            <p style={{ fontSize: 10, color: 'var(--theme-text-muted)', margin: '0 0 3px', letterSpacing: '0.04em' }}>BIỂN SỐ XE</p>
+            <InlineSelect
+              placeholder="Chọn hoặc nhập"
+              value={form.plate}
+              options={vehicles.map(v => ({ value: v.plate, label: v.plate }))}
+              onChange={v => update('plate', v)}
+              onInputChange={v => setPlateInput(v)}
+              onCreateNew={showCreatePlate ? () => update('plate', plateInput.trim()) : undefined}
+              createNewLabel={showCreatePlate ? `Tạo mới "${plateInput.trim()}"` : undefined}
+            />
+          </div>
+        </div>
+
+        <div style={{ padding: '10px 16px', display: 'flex', gap: 8 }}>
+          <Button variant="outline" onClick={onClose} className="flex-1 text-sm h-9">Huỷ</Button>
+          <Button onClick={handleSave} disabled={!form.username.trim()} className="flex-1 text-sm h-9"
             style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
             Xác nhận
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </SheetContent>
+    </Sheet>
   )
 }

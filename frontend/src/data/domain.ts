@@ -1,5 +1,4 @@
 export type Role = 'superadmin' | 'director' | 'accountant' | 'driver'
-export type TrailerType = '20FT' | '40FT'
 export type JobStatus = 'DRAFT' | 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 export type WorkType = 'E20' | 'E40' | 'F20' | 'F40'
 export type WorkOrderStatus = 'PENDING' | 'MATCHED'
@@ -374,14 +373,6 @@ export interface AutoMatchConfirmResponse {
   durationMs: number
 }
 
-// Legacy aliases
-export interface AutoMatchResult {
-  workOrderId: number
-  tripOrderId: number
-  score: number
-  matchedFields: string[]
-}
-
 export interface BulkMatchPair {
   workOrderId: number
   tripOrderId: number
@@ -456,8 +447,6 @@ export interface Location {
   updatedAt: string
 }
 
-export type LocationAliasStatus = 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'MERGED'
-
 export interface LocationAlias {
   id: number
   locationId: number
@@ -465,13 +454,6 @@ export interface LocationAlias {
   alias: string
   aliasNormalized: string
   source: string
-  status: LocationAliasStatus
-  confirmedById?: number | null
-  confirmedAt?: string | null
-  rejectedById?: number | null
-  rejectedAt?: string | null
-  mergeTargetLocationId?: number | null
-  note?: string | null
   createdAt: string
   createdById?: number | null
 }
@@ -481,23 +463,6 @@ export interface MergeLocationsResponse {
   targetLocationId: number
   aliasesMoved: number
   fkUpdates: Record<string, number>
-}
-
-export interface Setting {
-  key: string
-  value: string
-  updatedAt: string
-}
-
-export interface DriverEarnings {
-  driverId: number
-  driverName: string | null
-  startDate: string
-  endDate: string
-  matchedOrderCount: number
-  totalSalary: number
-  totalAllowance: number
-  totalEarnings: number
 }
 
 export function formatCurrency(amount: number | undefined | null): string {
@@ -510,13 +475,6 @@ export function formatCurrency(amount: number | undefined | null): string {
 export { formatCurrency as formatCurrencyFull }
 export { formatCurrency as formatCurrencyShort }
 
-export function getContainerBadgeColor(type: TrailerType): string {
-  switch (type) {
-    case '20FT': return 'bg-blue-100 text-blue-700'
-    case '40FT': return 'bg-emerald-100 text-emerald-700'
-  }
-}
-
 export function getJobStatusBadge(status: JobStatus): { variant: 'default'|'success'|'warning'|'danger'|'info'|'neutral'; label: string } {
   switch (status) {
     case 'DRAFT': return { variant: 'neutral', label: 'Nháp' }
@@ -527,13 +485,6 @@ export function getJobStatusBadge(status: JobStatus): { variant: 'default'|'succ
   }
 }
 
-export function getWorkOrderStatusBadge(status: WorkOrderStatus): { variant: 'default'|'success'|'warning'|'danger'|'info'|'neutral'; label: string } {
-  switch (status) {
-    case 'PENDING': return { variant: 'warning', label: 'Chờ ghép' }
-    case 'MATCHED': return { variant: 'success', label: 'Đã khớp' }
-  }
-}
-
 export function getTripOrderStatusBadge(status: TripOrderStatus): { variant: 'default'|'success'|'warning'|'danger'|'info'|'neutral'; label: string } {
   switch (status) {
     case 'PENDING': return { variant: 'warning', label: 'Chờ ghép' }
@@ -541,6 +492,4 @@ export function getTripOrderStatusBadge(status: TripOrderStatus): { variant: 'de
   }
 }
 
-export function getSalaryStatusBadge(status: string): { variant: 'default'|'success'|'warning'|'danger'|'info'|'neutral'; label: string } {
-  return { variant: 'neutral', label: status }
-}
+

@@ -193,15 +193,10 @@ class LocationResolverService:
         *,
         source: ResolverSource,
         user_id: int | None,
-        confirmed_alias: bool = False,
     ) -> ResolveResult:
         """Look up a name; if no match, create a new Location. Always
         records the raw input as a `location_alias` row (so the next
         import sees an exact-alias match).
-
-        - `confirmed_alias=True` means the accountant confirmed the
-          fuzzy/new mapping in the UI → store with `<source>_confirmed`
-          source. Otherwise `<source>_pending`.
         """
         result = await self.find_match(raw_name)
 
@@ -241,21 +236,19 @@ class LocationResolverService:
         if norm and norm != canonical_norm:
             already = await self._alias_by_normalized(norm)
             if already is None:
-                alias_source = self._alias_source_for(source, result.match_kind, confirmed_alias)
-                alias_status = "CONFIRMED" if confirmed_alias else "PENDING"
+                alias_source = self._alias_source_for(source, result.match_kind)
                 self.db.add(LocationAlias(
                     location_id=result.location.id,
                     alias=raw_name.strip()[:255],
                     alias_normalized=norm,
                     source=alias_source,
-                    status=alias_status,
                     created_by_id=user_id,
                 ))
                 await self.db.flush()
                 self._all_aliases = None
 
         # If we auto-linked via fuzzy, mark the Location for admin review.
-        if result.match_kind == MatchKind.FUZZY_AUTO and not confirmed_alias:
+        if result.match_kind == MatchKind.FUZZY_AUTO:
             result.location.location_review_needed = True
             await self.db.flush()
 
@@ -338,12 +331,8 @@ class LocationResolverService:
     def _alias_source_for(
         source: ResolverSource,
         kind: MatchKind,
-        confirmed: bool,
     ) -> str:
-        if confirmed:
-            return f"{source.value}_confirmed"
-        # Auto-created or fuzzy-linked without confirmation → pending
-        return f"{source.value}_pending"
+        return f"{source.value}_auto"
 
 
 # ---------------------------------------------------------------------------

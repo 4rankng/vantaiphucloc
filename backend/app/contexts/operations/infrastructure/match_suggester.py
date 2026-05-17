@@ -84,14 +84,13 @@ MIN_MATCH_THRESHOLD = 2.0 / 5.0
 
 
 async def _load_alias_groups(db: AsyncSession) -> dict[int, set[int]]:
-    """Build equivalence sets from CONFIRMED aliases.
+    """Build equivalence sets from aliases.
 
     Returns: {location_id: {itself + equivalent location_ids}}
-    Two locations are equivalent if they share a confirmed alias.
+    Two locations are equivalent if they share an alias.
     """
     rows = (await db.execute(
         select(LocationAlias.location_id, LocationAlias.alias_normalized)
-        .where(LocationAlias.status == "CONFIRMED")
     )).all()
 
     # Build alias_text → {location_ids} reverse index

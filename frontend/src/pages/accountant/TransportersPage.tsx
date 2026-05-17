@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { Truck, Plus, User, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button, Input, Label } from '@/components/ui'
 import { AccountantPageShell } from '@/components/shared/AccountantPageShell'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog/ConfirmDialog'
 import { PulseHint } from '@/components/shared/PulseHint'
 import { LocationManager } from '@/components/shared/LocationManager'
 import {
@@ -142,7 +143,7 @@ function VehicleExpensesTab({
   isLoading: boolean
   onAddVehicle: () => void
   onAddDriver: (vehicleId: number) => void
-  onRemoveDriver: (vdId: number) => void
+  onRemoveDriver: (vdId: number, driverName: string) => void
 }) {
   if (isLoading) {
     return (
@@ -230,7 +231,7 @@ function VehicleExpensesTab({
                           <User className="h-3 w-3" />
                           {d.driverName}
                           <button
-                            onClick={() => onRemoveDriver(d.id)}
+                            onClick={() => onRemoveDriver(d.id, d.driverName)}
                             className="flex h-4 w-4 items-center justify-center rounded-full transition-opacity opacity-30 hover:opacity-100"
                             style={{ color: 'var(--theme-status-error)' }}
                             title="Gỡ lái xe"
@@ -394,9 +395,14 @@ export function TransportersPage() {
     })
   }
 
-  const handleRemoveDriver = (vdId: number) => {
-    removeDriver.mutate(vdId, {
-      onSuccess: () => toast.success('Đã gỡ lái xe'),
+  const handleRemoveDriver = (vdId: number, driverName: string) => {
+    setRemoveDriverTarget({ vdId, name: driverName })
+  }
+
+  const confirmRemoveDriver = () => {
+    if (!removeDriverTarget) return
+    removeDriver.mutate(removeDriverTarget.vdId, {
+      onSuccess: () => { toast.success('Đã gỡ lái xe'); setRemoveDriverTarget(null) },
       onError: () => toast.error('Không thể gỡ lái xe'),
     })
   }
@@ -414,6 +420,7 @@ export function TransportersPage() {
 
   const [activeTab, setActiveTab] = useState<Tab>('fleet')
   const [locationSearch, setLocationSearch] = useState('')
+  const [removeDriverTarget, setRemoveDriverTarget] = useState<{ vdId: number; name: string } | null>(null)
 
   return (
     <AccountantPageShell title="Vận tải" subtitle="Quản lý xe, lái xe, địa điểm và chi phí" icon={Truck}>
@@ -530,7 +537,9 @@ export function TransportersPage() {
         )}
 
         {activeTab === 'locations' && (
-          <LocationManager search={locationSearch} />
+          <div className="card-shell">
+            <LocationManager search={locationSearch} />
+          </div>
         )}
 
       </div>
@@ -622,6 +631,16 @@ export function TransportersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!removeDriverTarget}
+        onClose={() => setRemoveDriverTarget(null)}
+        onConfirm={confirmRemoveDriver}
+        title="Gỡ lái xe"
+        description={`Gỡ "${removeDriverTarget?.name}" khỏi xe này?`}
+        confirmLabel="Gỡ"
+        variant="warning"
+      />
     </AccountantPageShell>
   )
 }

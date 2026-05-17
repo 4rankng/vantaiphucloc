@@ -201,13 +201,6 @@ class LocationAlias(Base):
     alias = Column(String(255), nullable=False)
     alias_normalized = Column(String(255), nullable=False, unique=True)
     source = Column(String(30), nullable=False, index=True)
-    status = Column(String(20), nullable=False, default="PENDING", index=True)
-    confirmed_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    confirmed_at = Column(DateTime(timezone=True), nullable=True)
-    rejected_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    rejected_at = Column(DateTime(timezone=True), nullable=True)
-    merge_target_location_id = Column(Integer, ForeignKey("locations.id"), nullable=True)
-    note = Column(String(500), nullable=True)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 

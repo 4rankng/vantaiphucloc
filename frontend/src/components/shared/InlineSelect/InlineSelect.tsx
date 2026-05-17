@@ -14,12 +14,14 @@ interface InlineSelectProps {
   value: string
   options: InlineSelectOption[]
   onChange: (value: string) => void
+  /** Fires when user types in the search input */
+  onInputChange?: (value: string) => void
   /** When provided, shows a "+ Tạo mới" footer button in the dropdown */
   onCreateNew?: () => void
   createNewLabel?: string
 }
 
-export function InlineSelect({ placeholder, value, options, onChange, onCreateNew, createNewLabel = 'Tạo mới' }: InlineSelectProps) {
+export function InlineSelect({ placeholder, value, options, onChange, onInputChange, onCreateNew, createNewLabel = 'Tạo mới' }: InlineSelectProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
@@ -40,6 +42,12 @@ export function InlineSelect({ placeholder, value, options, onChange, onCreateNe
       requestAnimationFrame(() => searchRef.current?.focus())
     }
   }, [])
+
+  const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value
+    setQuery(val)
+    onInputChange?.(val)
+  }
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
@@ -74,7 +82,7 @@ export function InlineSelect({ placeholder, value, options, onChange, onCreateNe
           <input
             ref={searchRef}
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={handleQueryChange}
             placeholder="Tìm kiếm..."
             className="flex-1 h-10 bg-transparent text-sm outline-none"
             style={{ color: 'var(--theme-text-primary)' }}

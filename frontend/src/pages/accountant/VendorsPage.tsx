@@ -1,13 +1,12 @@
 import { useState, useMemo, useCallback } from 'react'
-import { Truck, Plus, AlertTriangle, Calendar, FileDown } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button, Input, Label } from '@/components/ui'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/Sheet'
+import { Truck, Plus, AlertTriangle, Calendar, FileDown, X } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
+import { Sheet, SheetContent } from '@/components/ui/Sheet'
 import { AccountantPageShell } from '@/components/shared/AccountantPageShell'
 import { PulseHint } from '@/components/shared/PulseHint'
 import { InfoTip } from '@/components/shared/InfoTip'
 import { useVendors, useCreateVendor, useUpdateVendor, useDeleteVendor, useVendorSummary, useExportVendorTrips } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
-import { useQueryClient } from '@tanstack/react-query'
 import { fuzzyMatch } from '@/lib/search-utils'
 import { formatCurrency } from '@/data/domain'
 import type { Vendor } from '@/data/domain'
@@ -15,6 +14,13 @@ import type { Vendor } from '@/data/domain'
 const VN_PHONE_RE = /^(0|\+?84)[35789]\d{8}$/
 const VN_TAX_RE = /^\d{10}(\d{3})?$/
 const EMPTY_FORM = { name: '', type: 'company' as const, phone: '', taxCode: '', address: '', contactPerson: '' }
+
+const inputStyle: React.CSSProperties = {
+  width: '100%', border: 'none', background: 'transparent', fontSize: '13px', fontWeight: 500,
+  color: 'var(--theme-text-primary)', padding: 0, outline: 'none', fontFamily: 'inherit',
+}
+const cellStyle: React.CSSProperties = { padding: '10px 16px', borderRight: '0.5px solid var(--theme-border-light)' }
+const cellStyleLast: React.CSSProperties = { padding: '10px 16px' }
 
 function VendorFormDialog({ open, onClose, onSave, title, initial, saving }: {
   open: boolean; onClose: () => void; onSave: (data: typeof EMPTY_FORM) => void; title: string; initial?: Partial<typeof EMPTY_FORM>; saving?: boolean
@@ -37,60 +43,69 @@ function VendorFormDialog({ open, onClose, onSave, title, initial, saving }: {
   }
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-              Tên nhà thầu <span style={{ color: 'var(--theme-status-error)' }}>*</span>
-            </Label>
-            <Input value={form.name} onChange={e => updateField('name', e.target.value)} placeholder="Tên nhà thầu" className="text-sm" autoFocus />
+    <Sheet open={open} onOpenChange={onClose}>
+      <SheetContent side="right" className="p-0 gap-0" style={{ width: '100%', maxWidth: 480, border: 'none' }}>
+        <div className="flex items-center justify-between" style={{ padding: '10px 16px', borderBottom: '0.5px solid var(--theme-border-light)' }}>
+          <span className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>{title}</span>
+          <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: 'var(--theme-text-muted)' }} aria-label="Đóng">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', borderBottom: '0.5px solid var(--theme-border-light)' }}>
+          <div style={cellStyle}>
+            <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--theme-text-muted)' }}>Tên nhà thầu <span style={{ color: 'var(--theme-status-error)' }}>*</span></p>
+            <input value={form.name} onChange={e => updateField('name', e.target.value)} placeholder="Tên nhà thầu" style={inputStyle} autoFocus />
           </div>
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Loại</Label>
-            <div className="flex gap-2">
+          <div style={cellStyleLast}>
+            <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--theme-text-muted)' }}>Loại</p>
+            <div className="flex gap-1">
               {(['company', 'individual'] as const).map(t => (
                 <button key={t} type="button" onClick={() => updateField('type', t)}
-                  className="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors"
-                  style={{ background: form.type === t ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)', color: form.type === t ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)' }}>
-                  {t === 'company' ? 'Công ty' : 'Cá nhân'}
-                </button>
+                  className="flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                  style={{ background: form.type === t ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)', color: form.type === t ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)' }}
+                >{t === 'company' ? 'Công ty' : 'Cá nhân'}</button>
               ))}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Điện thoại</Label>
-              <Input value={form.phone} onChange={e => updateField('phone', e.target.value)} placeholder="0901234567" className="text-sm" />
-              {errors.phone && <p className="text-xs" style={{ color: 'var(--theme-status-error)' }}>{errors.phone}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1 text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-                Mã số thuế <InfoTip text="10 hoặc 13 chữ số, in trên hoá đơn VAT" />
-              </Label>
-              <Input value={form.taxCode} onChange={e => updateField('taxCode', e.target.value)} placeholder="0123456789" className="text-sm" />
-              {errors.taxCode && <p className="text-xs" style={{ color: 'var(--theme-status-error)' }}>{errors.taxCode}</p>}
-            </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', borderBottom: '0.5px solid var(--theme-border-light)' }}>
+          <div style={cellStyle}>
+            <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--theme-text-muted)' }}>Điện thoại</p>
+            <input type="tel" value={form.phone} onChange={e => updateField('phone', e.target.value)} placeholder="0901234567" style={inputStyle} />
+            {errors.phone && <p className="text-[10px] mt-0.5" style={{ color: 'var(--theme-status-error)' }}>{errors.phone}</p>}
           </div>
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Địa chỉ</Label>
-            <Input value={form.address} onChange={e => updateField('address', e.target.value)} placeholder="Địa chỉ" className="text-sm" />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Người liên hệ</Label>
-            <Input value={form.contactPerson} onChange={e => updateField('contactPerson', e.target.value)} placeholder="Họ tên người liên hệ" className="text-sm" />
+          <div style={cellStyleLast}>
+            <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--theme-text-muted)' }}>Mã số thuế <InfoTip text="10 hoặc 13 chữ số" /></p>
+            <input value={form.taxCode} onChange={e => updateField('taxCode', e.target.value)} placeholder="0123456789" style={inputStyle} />
+            {errors.taxCode && <p className="text-[10px] mt-0.5" style={{ color: 'var(--theme-status-error)' }}>{errors.taxCode}</p>}
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} className="flex-1">Huỷ</Button>
-          <Button onClick={handleSave} disabled={!form.name.trim() || saving} className="flex-1"
+
+        <div style={{ borderBottom: '0.5px solid var(--theme-border-light)' }}>
+          <div style={{ padding: '10px 16px' }}>
+            <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--theme-text-muted)' }}>Địa chỉ</p>
+            <input value={form.address} onChange={e => updateField('address', e.target.value)} placeholder="Địa chỉ" style={inputStyle} />
+          </div>
+        </div>
+
+        <div style={{ borderBottom: '0.5px solid var(--theme-border-light)' }}>
+          <div style={{ padding: '10px 16px' }}>
+            <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--theme-text-muted)' }}>Người liên hệ</p>
+            <input value={form.contactPerson} onChange={e => updateField('contactPerson', e.target.value)} placeholder="Họ tên người liên hệ" style={inputStyle} />
+          </div>
+        </div>
+
+        <div style={{ padding: '10px 16px', display: 'flex', gap: 8 }}>
+          <Button variant="outline" onClick={onClose} className="flex-1 text-sm h-9">Huỷ</Button>
+          <Button onClick={handleSave} disabled={!form.name.trim() || saving} className="flex-1 text-sm h-9"
             style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
             {saving ? 'Đang lưu...' : 'Xác nhận'}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </SheetContent>
+    </Sheet>
   )
 }
 
@@ -109,10 +124,53 @@ function statusBadge(status: string) {
   )
 }
 
-function VendorDetailSheet({ vendor, onClose, onEdit, onDelete }: { vendor: Vendor; onClose: () => void; onEdit: () => void; onDelete: () => void }) {
+function VendorDetailSheet({ vendor, onClose, onDelete }: { vendor: Vendor; onClose: () => void; onDelete: () => void }) {
   const { data: summary, isLoading } = useVendorSummary(vendor.id)
   const exportTrips = useExportVendorTrips()
   const toast = useToast()
+  const [isEditing, setIsEditing] = useState(false)
+  const [form, setForm] = useState({
+    name: vendor.name,
+    type: vendor.type ?? 'company',
+    phone: vendor.phone ?? '',
+    taxCode: vendor.taxCode ?? '',
+    address: vendor.address ?? '',
+    contactPerson: vendor.contactPerson ?? '',
+  })
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const updateVendor = useUpdateVendor()
+  const [saving, setSaving] = useState(false)
+
+  const updateField = <K extends keyof typeof form>(key: K, value: typeof form[K]) => {
+    setForm(prev => ({ ...prev, [key]: value }))
+    setErrors(prev => { const n = { ...prev }; delete n[key]; return n })
+  }
+
+  const handleSave = () => {
+    if (!form.name.trim()) return
+    const errs: Record<string, string> = {}
+    if (form.phone && !VN_PHONE_RE.test(form.phone.replace(/[\s-]/g, ''))) errs.phone = 'SĐT không hợp lệ'
+    if (form.taxCode && !VN_TAX_RE.test(form.taxCode)) errs.taxCode = 'MST phải 10 hoặc 13 chữ số'
+    if (Object.keys(errs).length > 0) { setErrors(errs); return }
+    setSaving(true)
+    updateVendor.mutate({ id: vendor.id, data: { ...form, name: form.name.trim() } }, {
+      onSuccess: () => { toast.success('Đã cập nhật'); setIsEditing(false); setSaving(false) },
+      onError: () => { toast.error('Không thể cập nhật'); setSaving(false) },
+    })
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditing(false)
+    setForm({
+      name: vendor.name,
+      type: vendor.type ?? 'company',
+      phone: vendor.phone ?? '',
+      taxCode: vendor.taxCode ?? '',
+      address: vendor.address ?? '',
+      contactPerson: vendor.contactPerson ?? '',
+    })
+    setErrors({})
+  }
 
   const handleExport = () => {
     const now = new Date()
@@ -123,6 +181,14 @@ function VendorDetailSheet({ vendor, onClose, onEdit, onDelete }: { vendor: Vend
       onError: () => toast.error('Không thể xuất file'),
     })
   }
+
+  const infoRows: [string, string, string][] = [
+    ['Loại', 'type', vendor.type === 'company' ? 'Công ty' : 'Cá nhân'],
+    ['SĐT', 'phone', vendor.phone],
+    ['MST', 'taxCode', vendor.taxCode],
+    ['Địa chỉ', 'address', vendor.address],
+    ['Liên hệ', 'contactPerson', vendor.contactPerson],
+  ]
 
   return (
     <Sheet open onOpenChange={onClose}>
@@ -135,7 +201,7 @@ function VendorDetailSheet({ vendor, onClose, onEdit, onDelete }: { vendor: Vend
           {vendor.taxCode && <SheetDescription className="text-xs font-mono-num">MST: {vendor.taxCode}</SheetDescription>}
         </SheetHeader>
 
-        {isLoading ? (
+        {isLoading && !isEditing ? (
           <div className="p-4 space-y-3">
             {[...Array(4)].map((_, i) => <div key={i} className="h-10 rounded animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}
           </div>
@@ -143,27 +209,69 @@ function VendorDetailSheet({ vendor, onClose, onEdit, onDelete }: { vendor: Vend
           <div className="divide-y" style={{ borderColor: 'var(--theme-border-light)' }}>
             <div className="px-4 py-3 space-y-2">
               <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Thông tin</p>
-              <div className="space-y-1.5">
-                {[
-                  ['Loại', vendor.type === 'company' ? 'Công ty' : 'Cá nhân'],
-                  ['SĐT', vendor.phone],
-                  ['MST', vendor.taxCode],
-                  ['Địa chỉ', vendor.address],
-                  ['Liên hệ', vendor.contactPerson],
-                ].map(([label, val]) => (
-                  <div key={label as string} className="flex items-start gap-3">
-                    <span className="text-[10px] uppercase tracking-wider w-14 shrink-0 pt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{label}</span>
-                    <span className="text-sm" style={{ color: val ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}>{val || '—'}</span>
+
+              {isEditing && (
+                <div className="space-y-2">
+                  <div className="flex items-start gap-3">
+                    <span className="text-[10px] uppercase tracking-wider w-14 shrink-0 pt-2" style={{ color: 'var(--theme-text-muted)' }}>Tên</span>
+                    <div className="flex-1">
+                      <Input value={form.name} onChange={e => updateField('name', e.target.value)} placeholder="Tên nhà thầu" className="text-sm h-7" autoFocus />
+                    </div>
                   </div>
-                ))}
-              </div>
-              <div className="flex gap-2 pt-1">
-                <button onClick={onEdit} className="text-xs font-medium px-2 py-1 rounded-md" style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}>Sửa</button>
-                <button onClick={onDelete} className="text-xs font-medium px-2 py-1 rounded-md" style={{ color: 'var(--theme-status-error)' }}>Xoá</button>
-              </div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-[10px] uppercase tracking-wider w-14 shrink-0 pt-2" style={{ color: 'var(--theme-text-muted)' }}>Loại</span>
+                    <div className="flex gap-1.5 flex-1">
+                      {(['company', 'individual'] as const).map(t => (
+                        <button key={t} type="button" onClick={() => updateField('type', t)}
+                          className="flex-1 py-1.5 px-2 rounded-md text-xs font-medium transition-colors"
+                          style={{ background: form.type === t ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)', color: form.type === t ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)' }}>
+                          {t === 'company' ? 'Công ty' : 'Cá nhân'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-[10px] uppercase tracking-wider w-14 shrink-0 pt-2" style={{ color: 'var(--theme-text-muted)' }}>SĐT</span>
+                    <div className="flex-1">
+                      <Input value={form.phone} onChange={e => updateField('phone', e.target.value)} placeholder="0901234567" className="text-sm h-7" />
+                      {errors.phone && <p className="text-[10px] mt-0.5" style={{ color: 'var(--theme-status-error)' }}>{errors.phone}</p>}
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-[10px] uppercase tracking-wider w-14 shrink-0 pt-2" style={{ color: 'var(--theme-text-muted)' }}>MST</span>
+                    <div className="flex-1">
+                      <Input value={form.taxCode} onChange={e => updateField('taxCode', e.target.value)} placeholder="0123456789" className="text-sm h-7" />
+                      {errors.taxCode && <p className="text-[10px] mt-0.5" style={{ color: 'var(--theme-status-error)' }}>{errors.taxCode}</p>}
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-[10px] uppercase tracking-wider w-14 shrink-0 pt-2" style={{ color: 'var(--theme-text-muted)' }}>Địa chỉ</span>
+                    <div className="flex-1">
+                      <Input value={form.address} onChange={e => updateField('address', e.target.value)} placeholder="Địa chỉ" className="text-sm h-7" />
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-[10px] uppercase tracking-wider w-14 shrink-0 pt-2" style={{ color: 'var(--theme-text-muted)' }}>Liên hệ</span>
+                    <div className="flex-1">
+                      <Input value={form.contactPerson} onChange={e => updateField('contactPerson', e.target.value)} placeholder="Họ tên người liên hệ" className="text-sm h-7" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!isEditing && (
+                <div className="space-y-1.5">
+                  {infoRows.map(([label, _key, val]) => (
+                    <div key={label} className="flex items-start gap-3">
+                      <span className="text-[10px] uppercase tracking-wider w-14 shrink-0 pt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{label}</span>
+                      <span className="text-sm" style={{ color: val ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)' }}>{val || '—'}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {summary?.stats && (
+            {!isEditing && summary?.stats && (
               <div className="px-4 py-3">
                 <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--theme-text-muted)' }}>Thống kê</p>
                 <div className="grid grid-cols-3 gap-2">
@@ -181,7 +289,7 @@ function VendorDetailSheet({ vendor, onClose, onEdit, onDelete }: { vendor: Vend
               </div>
             )}
 
-            {summary?.drivers && summary.drivers.length > 0 && (
+            {!isEditing && summary?.drivers && summary.drivers.length > 0 && (
               <div className="px-4 py-3">
                 <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--theme-text-muted)' }}>Lái xe của nhà thầu</p>
                 <div className="space-y-1.5">
@@ -199,7 +307,7 @@ function VendorDetailSheet({ vendor, onClose, onEdit, onDelete }: { vendor: Vend
               </div>
             )}
 
-            {summary?.reconciliations && summary.reconciliations.length > 0 && (
+            {!isEditing && summary?.reconciliations && summary.reconciliations.length > 0 && (
               <div className="px-4 py-3">
                 <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--theme-text-muted)' }}>Lịch sử đối soát</p>
                 <div className="space-y-1.5">
@@ -224,10 +332,24 @@ function VendorDetailSheet({ vendor, onClose, onEdit, onDelete }: { vendor: Vend
         )}
 
         <div className="px-4 py-3 flex gap-2" style={{ borderTop: '1px solid var(--theme-border-light)' }}>
-          <Button variant="outline" onClick={handleExport} disabled={exportTrips.isPending} className="flex-1 gap-1.5 text-xs">
-            <FileDown size={14} />Xuất đối soát
-          </Button>
-          <Button variant="outline" onClick={onClose} className="flex-1 text-xs">Đóng</Button>
+          {isEditing ? (
+            <>
+              <Button variant="outline" onClick={handleCancelEdit} className="flex-1 text-xs">Huỷ</Button>
+              <Button onClick={handleSave} disabled={!form.name.trim() || saving} className="flex-1 text-xs"
+                style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+                {saving ? 'Đang lưu...' : 'Lưu'}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={handleExport} disabled={exportTrips.isPending} className="flex-1 gap-1.5 text-xs">
+                <FileDown size={14} />Xuất đối soát
+              </Button>
+              <Button variant="outline" onClick={() => setIsEditing(true)} className="flex-1 text-xs">Sửa</Button>
+              <Button variant="outline" onClick={onDelete} className="flex-1 text-xs" style={{ color: 'var(--theme-status-error)' }}>Xoá</Button>
+              <Button variant="outline" onClick={onClose} className="flex-1 text-xs">Đóng</Button>
+            </>
+          )}
         </div>
       </SheetContent>
     </Sheet>
@@ -276,12 +398,10 @@ export function VendorsPage() {
   const toast = useToast()
   const { data: vendors = [], isLoading } = useVendors()
   const createVendor = useCreateVendor()
-  const updateVendor = useUpdateVendor()
   const deleteVendor = useDeleteVendor()
 
   const [search, setSearch] = useState('')
   const [showCreate, setShowCreate] = useState(false)
-  const [editTarget, setEditTarget] = useState<Vendor | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Vendor | null>(null)
   const [detailTarget, setDetailTarget] = useState<Vendor | null>(null)
 
@@ -297,14 +417,6 @@ export function VendorsPage() {
       onError: () => toast.error('Không thể thêm nhà thầu'),
     })
   }, [createVendor, toast])
-
-  const handleUpdate = useCallback((data: typeof EMPTY_FORM) => {
-    if (!editTarget) return
-    updateVendor.mutate({ id: editTarget.id, data }, {
-      onSuccess: () => { toast.success('Đã cập nhật'); setEditTarget(null) },
-      onError: () => toast.error('Không thể cập nhật'),
-    })
-  }, [editTarget, updateVendor, toast])
 
   const handleDelete = useCallback(() => {
     if (!deleteTarget) return
@@ -376,7 +488,6 @@ export function VendorsPage() {
         <VendorDetailSheet
           vendor={detailTarget}
           onClose={() => setDetailTarget(null)}
-          onEdit={() => { setEditTarget(detailTarget); setDetailTarget(null) }}
           onDelete={() => { setDeleteTarget(detailTarget); setDetailTarget(null) }}
         />
       )}
@@ -399,14 +510,7 @@ export function VendorsPage() {
       </Dialog>
 
       <VendorFormDialog open={showCreate} onClose={() => setShowCreate(false)} onSave={handleCreate} title="Thêm nhà thầu" saving={createVendor.isPending} />
-      <VendorFormDialog
-        open={!!editTarget}
-        onClose={() => setEditTarget(null)}
-        onSave={handleUpdate}
-        title="Cập nhật nhà thầu"
-        saving={updateVendor.isPending}
-        initial={editTarget ? { name: editTarget.name, type: editTarget.type ?? 'company', phone: editTarget.phone ?? '', taxCode: editTarget.taxCode ?? '', address: editTarget.address ?? '', contactPerson: editTarget.contactPerson ?? '' } : undefined}
-      />
+
     </>
   )
 }
