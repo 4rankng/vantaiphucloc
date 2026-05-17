@@ -59,6 +59,7 @@ Thumbs.db
 # Tool / editor / AI config
 .claude/
 .crush/
+crush.json
 .github/
 .kiro/
 .superpowers/

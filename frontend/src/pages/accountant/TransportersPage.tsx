@@ -566,7 +566,6 @@ export function TransportersPage() {
               onClick={handleAddVehicle}
               disabled={!newPlate.trim()}
               className="flex-1"
-              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
             >
               Thêm
             </Button>
@@ -624,7 +623,6 @@ export function TransportersPage() {
               onClick={handleAddDriver}
               disabled={!selectedDriverId}
               className="flex-1"
-              style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
             >
               Thêm
             </Button>

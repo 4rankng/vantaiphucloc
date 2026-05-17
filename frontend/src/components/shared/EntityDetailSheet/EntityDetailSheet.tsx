@@ -1,6 +1,5 @@
 import { X } from 'lucide-react'
 import { Sheet, SheetContent } from '@/components/ui/Sheet'
-import { Button } from '@/components/ui'
 
 interface Field {
   label: string
@@ -11,7 +10,9 @@ interface EntityDetailSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   title: string
+  subtitle?: string
   fields: Field[]
+  children?: React.ReactNode
   actions?: React.ReactNode
   maxWidth?: number
 }
@@ -20,7 +21,9 @@ export function EntityDetailSheet({
   open,
   onOpenChange,
   title,
+  subtitle,
   fields,
+  children,
   actions,
   maxWidth = 360,
 }: EntityDetailSheetProps) {
@@ -35,9 +38,14 @@ export function EntityDetailSheet({
           className="flex items-center justify-between"
           style={{ padding: '10px 16px', borderBottom: '0.5px solid var(--theme-border-light)' }}
         >
-          <span className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
-            {title}
-          </span>
+          <div>
+            <span className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
+              {title}
+            </span>
+            {subtitle && (
+              <p className="text-xs font-mono-num mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{subtitle}</p>
+            )}
+          </div>
           <button
             onClick={() => onOpenChange(false)}
             style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: 'var(--theme-text-muted)' }}
@@ -111,6 +119,8 @@ export function EntityDetailSheet({
             </p>
           </div>
         ))}
+
+        {children}
 
         {actions && (
           <div

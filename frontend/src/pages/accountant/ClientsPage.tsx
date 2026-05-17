@@ -100,8 +100,7 @@ function ClientFormDialog({ open, onClose, onSave, title, initial, saving }: {
 
         <div style={{ padding: '10px 16px', display: 'flex', gap: 8 }}>
           <Button variant="outline" onClick={onClose} className="flex-1 text-sm h-9">Huỷ</Button>
-          <Button onClick={handleSave} disabled={!form.name.trim() || saving} className="flex-1 text-sm h-9"
-            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+          <Button onClick={handleSave} disabled={!form.name.trim() || saving} className="flex-1 text-sm h-9">
             {saving ? 'Đang lưu...' : 'Xác nhận'}
           </Button>
         </div>
@@ -121,27 +120,9 @@ function ClientDetailDialog({ client, onClose, onEdit, onDelete }: { client: Cli
 
   const actions = (
     <>
-      <button
-        onClick={onDelete}
-        className="text-sm font-medium"
-        style={{ flex: 1, padding: 9, borderRadius: 8, border: '0.5px solid var(--theme-border-light)', background: 'transparent', color: 'var(--theme-status-error)', cursor: 'pointer' }}
-      >
-        Xoá
-      </button>
-      <button
-        onClick={onEdit}
-        className="text-sm font-medium"
-        style={{ flex: 1, padding: 9, borderRadius: 8, border: '0.5px solid var(--theme-border-light)', background: 'transparent', color: 'var(--theme-text-secondary)', cursor: 'pointer' }}
-      >
-        Sửa
-      </button>
-      <button
-        onClick={onClose}
-        className="text-sm font-medium"
-        style={{ flex: 1, padding: 9, borderRadius: 8, border: '0.5px solid var(--theme-border-light)', background: 'transparent', color: 'var(--theme-text-secondary)', cursor: 'pointer' }}
-      >
-        Đóng
-      </button>
+      <Button variant="danger" onClick={onDelete} className="flex-1 text-sm h-9">Xoá</Button>
+      <Button onClick={onEdit} className="flex-1 text-sm h-9">Sửa</Button>
+      <Button variant="outline" onClick={onClose} className="flex-1 text-sm h-9">Đóng</Button>
     </>
   )
 
@@ -300,11 +281,11 @@ export function ClientsPage() {
         </div>
       </AccountantPageShell>
 
-      {detailTarget && (
+      {detailTarget && !editTarget && (
         <ClientDetailDialog
           client={detailTarget}
           onClose={() => setDetailTarget(null)}
-          onEdit={() => { setEditTarget(detailTarget); setDetailTarget(null) }}
+          onEdit={() => setEditTarget(detailTarget)}
           onDelete={() => { setDeleteTarget(detailTarget); setDetailTarget(null) }}
         />
       )}
@@ -321,7 +302,7 @@ export function ClientsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteTarget(null)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleDelete} className="flex-1" style={{ background: 'var(--theme-status-error)', color: '#fff' }}>Xoá</Button>
+            <Button variant="destructive" onClick={handleDelete} className="flex-1">Xoá</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
