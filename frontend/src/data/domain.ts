@@ -470,6 +470,13 @@ export function formatCurrency(amount: number | undefined | null): string {
   return amount.toLocaleString('vi-VN') + ' ₫'
 }
 
+export function compactCurrency(amount: number | undefined | null): string {
+  if (amount == null) return '—'
+  if (Math.abs(amount) >= 1_000_000) return (amount / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M ₫'
+  if (Math.abs(amount) >= 1_000) return (amount / 1_000).toFixed(1).replace(/\.0$/, '') + 'K ₫'
+  return amount.toLocaleString('vi-VN') + ' ₫'
+}
+
 // formatCurrencyFull and formatCurrencyShort removed — identical to formatCurrency
 // Use formatCurrency everywhere instead.
 export { formatCurrency as formatCurrencyFull }

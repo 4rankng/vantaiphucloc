@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react'
-import { Car, Plus, X, Search, Users, Truck, UserX } from 'lucide-react'
+import { Car, Plus, X, Search, Users } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { Sheet, SheetContent } from '@/components/ui/Sheet'
 import { EntityDetailSheet } from '@/components/shared/EntityDetailSheet/EntityDetailSheet'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { PulseHint } from '@/components/shared/PulseHint'
 import { DashboardSectionHeader } from '@/components/shared/DashboardSectionHeader'
-import { KpiHeroCard } from '@/components/shared/KpiHeroCard'
+import { StatBreakdownCard } from '@/components/shared/StatBreakdownCard'
 import { useDrivers, useCreateDriver, useUpdateDriver, useVehicles } from '@/hooks/use-queries'
 import { useDriverBaseSalaryForm } from '@/components/payroll/useDriverBaseSalaryForm'
 import { useToast } from '@/components/atoms/Toast'
@@ -56,10 +56,10 @@ function DriverRow({ driver, onOpenDetail, isLast }: { driver: Driver; onOpenDet
         </div>
       </td>
       <td className="px-3 py-2.5">
-        <span className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{driver.fullName || driver.username}</span>
+        <span className="text-[13px] font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{driver.fullName || driver.username}</span>
       </td>
       <td className="px-3 py-2.5">
-        <span className="text-sm" style={{ color: 'var(--theme-text-secondary)' }}>{driver.phone || '—'}</span>
+        <span className="text-[13px] font-normal" style={{ color: 'var(--theme-text-secondary)' }}>{driver.phone || '—'}</span>
       </td>
       <td className="px-3 py-2.5">
         {driver.vehiclePlate ? (
@@ -69,13 +69,13 @@ function DriverRow({ driver, onOpenDetail, isLast }: { driver: Driver; onOpenDet
           >
             {driver.vehiclePlate}
           </span>
-        ) : <span className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>—</span>}
+        ) : <span className="text-[13px] font-normal" style={{ color: 'var(--theme-text-muted)' }}>—</span>}
       </td>
       <td className="px-3 py-2.5 text-right">
-        <span className="text-xs font-extrabold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{salaryDisplay}</span>
+        <span className="text-[13px] font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{salaryDisplay}</span>
       </td>
       <td className="px-3 py-2.5">
-        <span className="text-xs tabular-nums" style={{ color: 'var(--theme-text-secondary)' }}>{salaryFrom || '—'}</span>
+        <span className="text-[13px] font-normal tabular-nums" style={{ color: 'var(--theme-text-secondary)' }}>{salaryFrom || '—'}</span>
       </td>
     </tr>
   )
@@ -260,29 +260,14 @@ export function DriversPage() {
       </div>
 
       {/* ── KPI row ── */}
-      <div className="grid grid-cols-3 gap-3">
-        <KpiHeroCard
+      <div className="grid grid-cols-1 w-full md:max-w-[360px]">
+        <StatBreakdownCard
           label="Tổng lái xe"
-          value={drivers.length}
-          formattedValue={String(drivers.length)}
-          icon={Users}
-          color="blue"
-        />
-        <KpiHeroCard
-          label="Đã gắn xe"
-          value={assignedCount}
-          formattedValue={String(assignedCount)}
-          icon={Truck}
-          color="emerald"
-          sublabel={drivers.length > 0 ? `${Math.round((assignedCount / drivers.length) * 100)}% tổng lái xe` : undefined}
-        />
-        <KpiHeroCard
-          label="Chưa gắn xe"
-          value={unassignedCount}
-          formattedValue={String(unassignedCount)}
-          icon={UserX}
-          color="amber"
-          sublabel="Cần phân bổ xe"
+          total={drivers.length}
+          items={[
+            { label: 'Đã gắn xe', value: assignedCount },
+            { label: 'Chưa gắn xe', value: unassignedCount },
+          ]}
         />
       </div>
 
@@ -327,11 +312,11 @@ export function DriversPage() {
               <thead>
                 <tr style={{ background: 'var(--theme-bg-primary)', borderBottom: '1px solid var(--theme-border-light)' }}>
                   <th className="px-3 py-2.5 w-12"></th>
-                  <th className="px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Họ tên</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>SĐT</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Biển số</th>
-                  <th className="px-3 py-2.5 text-right text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Lương cơ bản</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Từ ngày</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Họ tên</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>SĐT</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Biển số</th>
+                  <th className="px-3 py-2.5 text-right text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Lương cơ bản</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Từ ngày</th>
                 </tr>
               </thead>
               <tbody>

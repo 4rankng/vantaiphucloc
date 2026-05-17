@@ -1,10 +1,10 @@
 import { useState, useMemo, useCallback } from 'react'
-import { Truck, Plus, AlertTriangle, X, Search, Building2, User } from 'lucide-react'
+import { Truck, Plus, AlertTriangle, X, Search } from 'lucide-react'
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Sheet, SheetContent } from '@/components/ui/Sheet'
 import { EntityDetailSheet } from '@/components/shared/EntityDetailSheet/EntityDetailSheet'
 import { DashboardSectionHeader } from '@/components/shared/DashboardSectionHeader'
-import { KpiHeroCard } from '@/components/shared/KpiHeroCard'
+import { StatBreakdownCard } from '@/components/shared/StatBreakdownCard'
 import { PulseHint } from '@/components/shared/PulseHint'
 import { InfoTip } from '@/components/shared/InfoTip'
 import { useVendors, useCreateVendor, useUpdateVendor, useDeleteVendor } from '@/hooks/use-queries'
@@ -156,19 +156,19 @@ function VendorRow({ vendor, onOpenDetail, isLast }: { vendor: Vendor; onOpenDet
         </div>
       </td>
       <td className="px-3 py-2.5">
-        <span className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{vendor.name}</span>
+        <span className="text-[13px] font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{vendor.name}</span>
       </td>
       <td className="px-3 py-2.5">
-        <span className="text-sm" style={{ color: 'var(--theme-text-secondary)' }}>{vendor.phone || '—'}</span>
+        <span className="text-[13px] font-normal" style={{ color: 'var(--theme-text-secondary)' }}>{vendor.phone || '—'}</span>
       </td>
       <td className="px-3 py-2.5">
-        <span className="text-sm line-clamp-1" style={{ color: 'var(--theme-text-secondary)' }}>{vendor.address || '—'}</span>
+        <span className="text-[13px] font-normal line-clamp-1" style={{ color: 'var(--theme-text-secondary)' }}>{vendor.address || '—'}</span>
       </td>
       <td className="px-3 py-2.5">
-        <span className="text-sm" style={{ color: 'var(--theme-text-secondary)' }}>{vendor.contactPerson || '—'}</span>
+        <span className="text-[13px] font-normal" style={{ color: 'var(--theme-text-secondary)' }}>{vendor.contactPerson || '—'}</span>
       </td>
       <td className="px-3 py-2.5">
-        <span className="text-xs font-medium tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{vendor.taxCode || '—'}</span>
+        <span className="text-[13px] font-medium tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{vendor.taxCode || '—'}</span>
       </td>
     </tr>
   )
@@ -238,28 +238,14 @@ export function VendorsPage() {
       </div>
 
       {/* ── KPI row ── */}
-      <div className="grid grid-cols-3 gap-3">
-        <KpiHeroCard
+      <div className="grid grid-cols-1 w-full md:max-w-[360px]">
+        <StatBreakdownCard
           label="Tổng nhà thầu"
-          value={vendors.length}
-          formattedValue={String(vendors.length)}
-          icon={Truck}
-          color="blue"
-        />
-        <KpiHeroCard
-          label="Công ty"
-          value={companyCount}
-          formattedValue={String(companyCount)}
-          icon={Building2}
-          color="emerald"
-          sublabel={vendors.length > 0 ? `${Math.round((companyCount / vendors.length) * 100)}% tổng nhà thầu` : undefined}
-        />
-        <KpiHeroCard
-          label="Cá nhân"
-          value={individualCount}
-          formattedValue={String(individualCount)}
-          icon={User}
-          color="amber"
+          total={vendors.length}
+          items={[
+            { label: 'Công ty', value: companyCount },
+            { label: 'Cá nhân', value: individualCount },
+          ]}
         />
       </div>
 
@@ -304,11 +290,11 @@ export function VendorsPage() {
               <thead>
                 <tr style={{ background: 'var(--theme-bg-primary)', borderBottom: '1px solid var(--theme-border-light)' }}>
                   <th className="px-3 py-2.5 w-12"></th>
-                  <th className="px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Tên nhà thầu</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>SĐT</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Địa chỉ</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Liên hệ</th>
-                  <th className="px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>MST</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Tên nhà thầu</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>SĐT</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Địa chỉ</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Liên hệ</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>MST</th>
                 </tr>
               </thead>
               <tbody>
