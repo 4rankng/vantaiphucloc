@@ -12,6 +12,7 @@ import {
   Car,
   Container,
   Calendar,
+  ClipboardCheck,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUnreadCount } from '@/components/shared/NotificationPanel/NotificationPanel'
@@ -49,6 +50,12 @@ const ACCOUNTANT_NAV_SECTIONS: SidebarSection[] = [
       { label: 'Nhà thầu', href: '/accountant/vendors', icon: Truck },
       { label: 'Lái xe', href: '/accountant/drivers', icon: Car },
       { label: 'Vận tải', href: '/accountant/transporters', icon: Container },
+    ],
+  },
+  {
+    label: 'Nghiệp vụ',
+    items: [
+      { label: 'Đối soát', href: '/accountant/doi-soat', icon: ClipboardCheck },
     ],
   },
   {
