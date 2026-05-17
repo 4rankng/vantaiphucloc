@@ -67,6 +67,7 @@ export function createAppRouter() {
             { path: 'vendors',               element: ebc('AccountantVendors', h(Lazy, { component: R.AccountantVendors })) },
             { path: 'drivers',               element: ebc('AccountantDrivers', h(Lazy, { component: R.AccountantDrivers })) },
             { path: 'transporters',          element: ebc('AccountantTransporters', h(Lazy, { component: R.AccountantTransporters })) },
+            { path: 'doi-soat',              element: ebc('AccountantDoiSoat', h(Lazy, { component: R.AccountantDoiSoat })) },
             { path: 'settings',              element: ebc('AccountantSettings', h(Lazy, { component: R.AccountantSettings })) },
             { path: 'profile',               element: ebc('Profile', h(Lazy, { component: R.Profile })) },
             { path: '*',                     element: ebc('NotFound', h(Lazy, { component: R.NotFound })) },

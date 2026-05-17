@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
+import { useMonthParams } from './use-month-params'
 import { Truck, Plus, User, Search, MapPin } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button, Input, Label } from '@/components/ui'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog/ConfirmDialog'
@@ -13,7 +14,7 @@ import {
   useRemoveVehicleDriver, useCreateVehicle,
 } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
-import { formatCurrency, compactCurrency } from '@/data/domain'
+import { formatCurrency } from '@/data/domain'
 import type { Driver } from '@/data/domain'
 import type { VehicleExpenseCategory, VehicleExpense } from '@/services/api/vehicleExpenses.api'
 import { EXPENSE_CATEGORY_LABELS } from '@/services/api/vehicleExpenses.api'
@@ -148,14 +149,11 @@ export function TransportersPage() {
   const fromDay = salaryConfig?.fromDay ?? 26
   const toDay = salaryConfig?.toDay ?? 25
 
-  const [month, setMonth] = useState(() => {
-    const now = new Date()
-    return { year: now.getFullYear(), month: now.getMonth() + 1 }
-  })
+  const { year: monthYear, month: monthMonth, onPrev, onNext } = useMonthParams()
 
-  const periodStart = `${month.year}-${String(month.month).padStart(2, '0')}-${String(fromDay).padStart(2, '0')}`
-  const endMonth = fromDay > toDay ? (month.month === 12 ? 1 : month.month + 1) : month.month
-  const endYear = fromDay > toDay ? (month.month === 12 ? month.year + 1 : month.year) : month.year
+  const periodStart = `${monthYear}-${String(monthMonth).padStart(2, '0')}-${String(fromDay).padStart(2, '0')}`
+  const endMonth = fromDay > toDay ? (monthMonth === 12 ? 1 : monthMonth + 1) : monthMonth
+  const endYear = fromDay > toDay ? (monthMonth === 12 ? monthYear + 1 : monthYear) : monthYear
   const periodEnd = `${endYear}-${String(endMonth).padStart(2, '0')}-${String(toDay).padStart(2, '0')}`
 
   const { data: expensePage, isLoading: expenseLoading } = useVehicleExpenses({ dateFrom: periodStart, dateTo: periodEnd, pageSize: 200 })
@@ -179,6 +177,8 @@ export function TransportersPage() {
     for (const g of groups) for (const d of g.drivers) set.add(d.driverId)
     return set.size
   }, [groups])
+
+  const multiDriverVehicles = useMemo(() => groups.filter(g => g.drivers.length > 1).length, [groups])
 
   const [editingCell, setEditingCell] = useState<string | null>(null)
 
@@ -238,19 +238,8 @@ export function TransportersPage() {
     })
   }
 
-  const prevMonth = () => setMonth(p => {
-    const m = p.month === 1 ? 12 : p.month - 1
-    const y = p.month === 1 ? p.year - 1 : p.year
-    return { year: y, month: m }
-  })
-  const nextMonth = () => setMonth(p => {
-    const m = p.month === 12 ? 1 : p.month + 1
-    const y = p.month === 12 ? p.year + 1 : p.year
-    return { year: y, month: m }
-  })
-
   const isLoading = vdLoading || expenseLoading
-  const periodStartDate = new Date(month.year, month.month - 1, fromDay)
+  const periodStartDate = new Date(monthYear, monthMonth - 1, fromDay)
   const periodEndDate = new Date(endYear, endMonth - 1, toDay)
 
   return (
@@ -265,10 +254,10 @@ export function TransportersPage() {
           </p>
         </div>
         <MonthNavigator
-          year={month.year}
-          month={month.month}
-          onPrev={prevMonth}
-          onNext={nextMonth}
+          year={monthYear}
+          month={monthMonth}
+          onPrev={onPrev}
+          onNext={onNext}
           periodStart={periodStartDate}
           periodEnd={periodEndDate}
         />
@@ -280,16 +269,17 @@ export function TransportersPage() {
           label="Xe vận tải"
           total={groups.length}
           items={[
-            { label: 'Đã gắn lái xe', value: assignedDrivers },
-            { label: 'Lái xe chưa gắn', value: driversList.length - assignedDrivers },
+            { label: 'Có lái xe', value: assignedDrivers },
+            { label: 'Thiếu lái xe', value: driversList.length - assignedDrivers },
+            { label: 'Xe nhiều tài', value: multiDriverVehicles },
           ]}
         />
         <StatBreakdownCard
           label="Tổng chi phí"
-          total={compactCurrency(grandTotal)}
+          total={formatCurrency(grandTotal)}
           items={VEHICLE_CATEGORIES.map(cat => ({
             label: EXPENSE_CATEGORY_LABELS[cat],
-            value: compactCurrency(catTotals[cat] ?? 0),
+            value: formatCurrency(catTotals[cat] ?? 0),
           }))}
         />
       </div>
