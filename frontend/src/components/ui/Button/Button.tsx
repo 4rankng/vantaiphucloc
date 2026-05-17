@@ -9,10 +9,12 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "text-white shadow-sm active:scale-[0.98]",
-        destructive: "bg-red-600 text-white shadow-sm hover:bg-red-700",
+        default: "shadow-sm active:scale-[0.98]",
+        destructive: "shadow-sm active:scale-[0.98]",
         outline: "border bg-transparent shadow-sm hover:bg-[var(--theme-bg-tertiary)]",
+        danger: "border bg-transparent shadow-sm hover:bg-[color-mix(in_srgb,var(--theme-status-error)_8%,transparent)]",
         secondary: "shadow-sm hover:bg-[var(--theme-bg-tertiary)]",
+        muted: "shadow-sm",
         ghost: "hover:bg-[var(--theme-bg-tertiary)]",
         link: "underline-offset-4 hover:underline",
         gold: "shadow-sm font-semibold active:scale-[0.98]",
@@ -37,27 +39,22 @@ export interface ButtonProps
   asChild?: boolean
 }
 
+const themeMap: Record<string, React.CSSProperties> = {
+  default: { background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' },
+  destructive: { background: 'var(--theme-status-error)', color: '#fff' },
+  outline: { borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' },
+  danger: { borderColor: 'var(--theme-status-error)', color: 'var(--theme-status-error)' },
+  secondary: { background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' },
+  muted: { background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' },
+  ghost: { color: 'var(--theme-text-primary)' },
+  link: { color: 'var(--theme-brand-primary)' },
+  gold: { background: 'var(--theme-brand-secondary)', color: 'var(--theme-text-inverse)' },
+}
+
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, style, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
-    const themeStyle = (() => {
-      switch (variant) {
-        case 'default':
-          return { background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }
-        case 'outline':
-          return { borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }
-        case 'secondary':
-          return { background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-primary)' }
-        case 'ghost':
-          return { color: 'var(--theme-text-primary)' }
-        case 'link':
-          return { color: 'var(--theme-brand-primary)' }
-        case 'gold':
-          return { background: 'var(--theme-brand-secondary)', color: 'var(--theme-text-inverse)' }
-        default:
-          return {}
-      }
-    })()
+    const themeStyle = themeMap[variant ?? 'default'] ?? {}
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}

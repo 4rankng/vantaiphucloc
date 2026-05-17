@@ -442,7 +442,7 @@ function DriverDetailDialog({ driver, onClose }: { driver: Driver; onClose: () =
               {salary.error && <p className="text-xs" style={{ color: 'var(--theme-status-error)' }} role="alert">{salary.error}</p>}
               <div className="flex justify-end gap-2">
                 <Button size="sm" variant="outline" onClick={() => { setShowSalaryForm(false); salary.reset(); setSalaryDirty(false) }}>Huỷ</Button>
-                <Button size="sm" onClick={handleSalarySubmit} disabled={!salary.fields.baseSalary || salary.submitting} style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+                <Button size="sm" variant={hasChanges ? 'default' : 'muted'} onClick={handleSalarySubmit} disabled={!salary.fields.baseSalary || salary.submitting}>
                   {salary.submitting ? 'Đang lưu…' : 'Lưu'}
                 </Button>
               </div>
@@ -452,21 +452,12 @@ function DriverDetailDialog({ driver, onClose }: { driver: Driver; onClose: () =
 
         {/* Footer */}
         <div style={{ padding: '10px 16px 14px', borderTop: '0.5px solid var(--theme-border-light)', display: 'flex', gap: 8 }}>
-          <button
-            onClick={onClose}
-            className="text-sm font-medium"
-            style={{ flex: 1, padding: 9, borderRadius: 'var(--border-radius-md, 8px)', border: '0.5px solid var(--theme-border-light)', background: 'transparent', color: 'var(--theme-text-secondary)', cursor: 'pointer', fontFamily: 'inherit' }}
-          >
+          <Button variant="outline" onClick={onClose} className="flex-1 text-sm h-9">
             Đóng
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={updateDriver.isPending || !hasChanges}
-            className="text-sm font-medium"
-            style={{ flex: 2, padding: 9, borderRadius: 'var(--border-radius-md, 8px)', border: 'none', background: hasChanges ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)', color: hasChanges ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)', cursor: hasChanges ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}
-          >
+          </Button>
+          <Button variant={hasChanges ? 'default' : 'muted'} onClick={handleSave} disabled={updateDriver.isPending || !hasChanges} className="flex-[2] text-sm h-9">
             {updateDriver.isPending ? 'Đang lưu…' : 'Lưu thay đổi'}
-          </button>
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -553,8 +544,7 @@ function CreateDriverDialog({ open, onClose, onSave }: {
 
         <div style={{ padding: '10px 16px', display: 'flex', gap: 8 }}>
           <Button variant="outline" onClick={onClose} className="flex-1 text-sm h-9">Huỷ</Button>
-          <Button onClick={handleSave} disabled={!form.username.trim()} className="flex-1 text-sm h-9"
-            style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}>
+          <Button onClick={handleSave} disabled={!form.username.trim()} className="flex-1 text-sm h-9">
             Xác nhận
           </Button>
         </div>
