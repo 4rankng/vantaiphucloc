@@ -55,8 +55,12 @@ dist/
 # OS
 .DS_Store
 Thumbs.db
-.kiro
-.claude
-.superpowers
-heartbeat*.json
+
+# Tool / editor / AI config
+.claude/
+.crush/
+.github/
+.kiro/
 .superpowers/
+graphify-out/
+heartbeat*.json
