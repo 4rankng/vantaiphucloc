@@ -228,7 +228,7 @@ function SortTh({
   return (
     <th
       onClick={() => onSort(col)}
-      className={`py-2.5 px-3 text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none whitespace-nowrap ${align === 'right' ? 'text-right' : 'text-left'}`}
+      className={`py-2.5 px-3 text-xs font-bold uppercase tracking-wider cursor-pointer select-none whitespace-nowrap ${align === 'right' ? 'text-right' : 'text-left'}`}
       style={{ color: active ? 'var(--theme-brand-primary)' : 'var(--theme-text-muted)' }}
     >
       <span className={`inline-flex items-center gap-1 ${align === 'right' ? 'justify-end' : ''}`}>
@@ -372,7 +372,7 @@ function DesktopDashboard() {
             <EmptyState icon={Truck} text="Chưa có dữ liệu xe trong tháng này" />
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+              <table className="w-full [&_td]:align-middle" style={{ borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: 'var(--theme-bg-primary)', borderBottom: '1px solid var(--theme-border-light)' }}>
                     <SortTh label="Biển số" col="plate" sort={vehicleSort} onSort={toggleVehicleSort} align="left" />
@@ -653,7 +653,7 @@ function MobileDashboard() {
           <EmptyState icon={Truck} text="Chưa có dữ liệu xe trong tháng này" />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+            <table className="w-full [&_td]:align-middle" style={{ borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: 'var(--theme-bg-primary)', borderBottom: '1px solid var(--theme-border-light)' }}>
                   <SortTh label="Biển số" col="plate" sort={vehicleSort} onSort={toggleVehicleSort} align="left" />

@@ -87,13 +87,13 @@ export function KpiHeroCard({
           </div>
           <div className="min-w-0">
             <p
-              className="text-[10px] font-bold uppercase tracking-widest leading-tight"
+              className="text-xs font-semibold uppercase tracking-widest leading-tight"
               style={{ color: 'var(--theme-text-muted)' }}
             >
               {label}
             </p>
             {sublabel && (
-              <p className="text-[10px] mt-0.5 leading-tight" style={{ color: 'var(--theme-text-muted)' }}>
+              <p className="text-[11px] mt-0.5 leading-tight" style={{ color: 'var(--theme-text-muted)' }}>
                 {sublabel}
               </p>
             )}
@@ -103,7 +103,7 @@ export function KpiHeroCard({
         {/* value + pill: ml-auto pushes right; wraps to its own row when card is too narrow */}
         <div className="flex items-baseline gap-2 flex-wrap ml-auto shrink-0">
           <p
-            className="font-black tabular-nums leading-none tracking-tight text-[18px]"
+            className="font-bold tabular-nums leading-none tracking-tight text-[22px]"
             style={{ color: 'var(--theme-text-primary)' }}
           >
             {displayValue}

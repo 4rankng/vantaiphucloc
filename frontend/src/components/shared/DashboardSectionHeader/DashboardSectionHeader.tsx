@@ -34,7 +34,7 @@ export function DashboardSectionHeader({
         )}
         <div>
           <h2
-            className="text-sm font-semibold tracking-wide"
+            className="text-base font-semibold tracking-wide"
             style={{ color: 'var(--theme-text-primary)' }}
           >
             {title}

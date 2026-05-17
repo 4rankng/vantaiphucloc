@@ -1,10 +1,12 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
-import { Truck, Plus, User, ChevronLeft, ChevronRight, Search } from 'lucide-react'
+import { Truck, Plus, User, Search, TrendingDown, Users, MapPin } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button, Input, Label } from '@/components/ui'
-import { AccountantPageShell } from '@/components/shared/AccountantPageShell'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog/ConfirmDialog'
 import { PulseHint } from '@/components/shared/PulseHint'
 import { LocationManager } from '@/components/shared/LocationManager'
+import { DashboardSectionHeader } from '@/components/shared/DashboardSectionHeader'
+import { MonthNavigator } from '@/components/shared/MonthNavigator'
+import { KpiHeroCard } from '@/components/shared/KpiHeroCard'
 import {
   useVehicleExpenses, useCreateVehicleExpense, useUpdateVehicleExpense,
   useSalaryConfig, useDrivers, useVehicleDrivers, useAddVehicleDriver,
@@ -51,6 +53,9 @@ function buildExpenseLookup(expenses: VehicleExpense[]): Map<string, VehicleExpe
   }
   return map
 }
+
+import { DashboardCard } from '@/components/shared/DashboardCard/DashboardCard'
+import { EmptyState } from '@/components/shared/EmptyState'
 
 // ─── Editable Cell ────────────────────────────────────────────────────────────
 
@@ -116,187 +121,6 @@ function EditableCell({
   )
 }
 
-// ─── Vehicle & Expense Tab ────────────────────────────────────────────────────
-
-function VehicleExpensesTab({
-  groups,
-  expenseLookup,
-  catTotals,
-  periodStart,
-  periodEnd,
-  editingCell,
-  setEditingCell,
-  onCellSave,
-  isLoading,
-  onAddVehicle,
-  onAddDriver,
-  onRemoveDriver,
-}: {
-  groups: VehicleGroup[]
-  expenseLookup: Map<string, VehicleExpense>
-  catTotals: Record<VehicleExpenseCategory, number>
-  periodStart: string
-  periodEnd: string
-  editingCell: string | null
-  setEditingCell: (key: string | null) => void
-  onCellSave: (plate: string, category: VehicleExpenseCategory, raw: string) => void
-  isLoading: boolean
-  onAddVehicle: () => void
-  onAddDriver: (vehicleId: number) => void
-  onRemoveDriver: (vdId: number, driverName: string) => void
-}) {
-  if (isLoading) {
-    return (
-      <div className="p-6 space-y-3">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-12 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
-        ))}
-      </div>
-    )
-  }
-
-  if (groups.length === 0) {
-    return (
-      <div className="flex flex-col items-center py-20 gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full" style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)' }}>
-          <Truck className="h-6 w-6" style={{ color: 'var(--theme-brand-primary)' }} />
-        </div>
-        <p className="text-sm font-medium" style={{ color: 'var(--theme-text-secondary)' }}>Chưa có xe nào</p>
-        <PulseHint hintKey="vehicles-add-empty">
-          <button onClick={onAddVehicle} className="btn-primary text-xs mt-1">
-            <Plus size={14} strokeWidth={2.25} /><span>Thêm xe đầu tiên</span>
-          </button>
-        </PulseHint>
-      </div>
-    )
-  }
-
-  const grandTotal = VEHICLE_CATEGORIES.reduce((s, cat) => s + (catTotals[cat] ?? 0), 0)
-
-  return (
-    <>
-      <div className="overflow-x-auto">
-        <table className="w-full" style={{ borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: 'var(--theme-bg-tertiary)', borderBottom: '2px solid var(--theme-border-default)' }}>
-              <th className="px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)', width: 140 }}>Biển số</th>
-              <th className="px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Lái xe</th>
-              {VEHICLE_CATEGORIES.map(cat => (
-                <th key={cat} className="px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider" style={{ color: CATEGORY_COLORS[cat], width: 130 }}>
-                  {EXPENSE_CATEGORY_LABELS[cat]}
-                </th>
-              ))}
-              <th className="px-5 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--theme-text-primary)', width: 130 }}>Tổng CP</th>
-            </tr>
-          </thead>
-          <tbody>
-            {groups.map((g, i) => {
-              const rowTotal = VEHICLE_CATEGORIES.reduce(
-                (s, cat) => s + (expenseLookup.get(`${g.plate}:${cat}`)?.amount ?? 0),
-                0,
-              )
-              return (
-                <tr
-                  key={g.vehicleId}
-                  style={{
-                    borderBottom: i < groups.length - 1 ? '1px solid var(--theme-border-light)' : 'none',
-                    background: i % 2 === 1 ? 'var(--theme-bg-tertiary)' : 'transparent',
-                  }}
-                >
-                  <td className="px-5 py-3">
-                    <span
-                      className="inline-flex items-center rounded px-2.5 py-1 tabular-nums"
-                      style={{
-                        background: 'linear-gradient(180deg, #f8f8f8 0%, #e0e0e0 100%)',
-                        border: '1.5px solid #bbb',
-                        color: '#222',
-                        fontSize: 13,
-                        fontWeight: 700,
-                        letterSpacing: '0.08em',
-                        fontFamily: 'var(--theme-font-mono, monospace)',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.08)',
-                      }}
-                    >
-                      {g.plate}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {g.drivers.map(d => (
-                        <span
-                          key={d.id}
-                          className="inline-flex items-center gap-1 rounded-full pl-1.5 pr-2 py-0.5 text-xs font-semibold"
-                          style={{ background: 'var(--theme-status-success-light)', border: '1.5px solid var(--theme-status-success)', color: 'var(--theme-status-success-text)' }}
-                        >
-                          <User className="h-3 w-3" />
-                          {d.driverName}
-                          <button
-                            onClick={() => onRemoveDriver(d.id, d.driverName)}
-                            className="flex h-4 w-4 items-center justify-center rounded-full transition-opacity opacity-30 hover:opacity-100"
-                            style={{ color: 'var(--theme-status-error)' }}
-                            title="Gỡ lái xe"
-                          >
-                            <span className="text-[10px] leading-none">×</span>
-                          </button>
-                        </span>
-                      ))}
-                      <button
-                        onClick={() => onAddDriver(g.vehicleId)}
-                        className="inline-flex items-center justify-center rounded-full text-[11px] font-semibold transition-colors"
-                        style={{
-                          color: 'var(--theme-text-muted)',
-                          background: 'transparent',
-                          border: '1.5px dashed var(--theme-border-default)',
-                          width: 24,
-                          height: 24,
-                        }}
-                      >
-                        <Plus className="h-3 w-3" />
-                      </button>
-                    </div>
-                  </td>
-                  {VEHICLE_CATEGORIES.map(cat => {
-                    const key = `${g.plate}:${cat}`
-                    const amount = expenseLookup.get(key)?.amount ?? 0
-                    return (
-                      <td key={cat} className="px-1 py-2">
-                        <EditableCell
-                          amount={amount}
-                          isEditing={editingCell === key}
-                          onStartEdit={() => setEditingCell(key)}
-                          onSave={raw => onCellSave(g.plate, cat, raw)}
-                          onCancel={() => setEditingCell(null)}
-                        />
-                      </td>
-                    )
-                  })}
-                  <td className="px-5 py-3 text-right tabular-nums whitespace-nowrap" style={{ color: 'var(--theme-text-primary)', fontSize: 13, fontWeight: 700 }}>
-                    {rowTotal > 0 ? formatCurrency(rowTotal) : '—'}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-          <tfoot>
-            <tr style={{ borderTop: '2px solid var(--theme-brand-primary)', background: 'color-mix(in srgb, var(--theme-brand-primary) 6%, transparent)' }}>
-              <td className="px-5 py-3" style={{ fontSize: 12, fontWeight: 700, color: 'var(--theme-brand-primary)' }}>TỔNG</td>
-              <td className="px-5 py-3" />
-              {VEHICLE_CATEGORIES.map(cat => (
-                <td key={cat} className="px-3 py-3 text-right tabular-nums whitespace-nowrap" style={{ fontSize: 13, fontWeight: 700, color: CATEGORY_COLORS[cat] }}>
-                  {(catTotals[cat] ?? 0) > 0 ? formatCurrency(catTotals[cat]) : '—'}
-                </td>
-              ))}
-              <td className="px-5 py-3 text-right tabular-nums whitespace-nowrap" style={{ fontSize: 15, fontWeight: 900, color: 'var(--theme-brand-primary)' }}>
-                {grandTotal > 0 ? formatCurrency(grandTotal) : '—'}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    </>
-  )
-}
-
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 type Tab = 'fleet' | 'locations'
@@ -348,6 +172,14 @@ export function TransportersPage() {
     return totals
   }, [expenses])
 
+  const grandTotal = VEHICLE_CATEGORIES.reduce((s, cat) => s + (catTotals[cat] ?? 0), 0)
+
+  const assignedDrivers = useMemo(() => {
+    const set = new Set<number>()
+    for (const g of groups) for (const d of g.drivers) set.add(d.driverId)
+    return set.size
+  }, [groups])
+
   const [editingCell, setEditingCell] = useState<string | null>(null)
 
   const handleCellSave = useCallback(
@@ -378,6 +210,9 @@ export function TransportersPage() {
   const [newPlate, setNewPlate] = useState('')
   const [addingDriverFor, setAddingDriverFor] = useState<number | null>(null)
   const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null)
+  const [activeTab, setActiveTab] = useState<Tab>('fleet')
+  const [locationSearch, setLocationSearch] = useState('')
+  const [removeDriverTarget, setRemoveDriverTarget] = useState<{ vdId: number; name: string } | null>(null)
 
   const handleAddVehicle = () => {
     if (!newPlate.trim()) return
@@ -393,10 +228,6 @@ export function TransportersPage() {
       onSuccess: () => { toast.success('Đã thêm lái xe'); setAddingDriverFor(null); setSelectedDriverId(null) },
       onError: () => toast.error('Không thể thêm lái xe'),
     })
-  }
-
-  const handleRemoveDriver = (vdId: number, driverName: string) => {
-    setRemoveDriverTarget({ vdId, name: driverName })
   }
 
   const confirmRemoveDriver = () => {
@@ -418,133 +249,240 @@ export function TransportersPage() {
     return { year: y, month: m }
   })
 
-  const [activeTab, setActiveTab] = useState<Tab>('fleet')
-  const [locationSearch, setLocationSearch] = useState('')
-  const [removeDriverTarget, setRemoveDriverTarget] = useState<{ vdId: number; name: string } | null>(null)
+  const isLoading = vdLoading || expenseLoading
+  const periodStartDate = new Date(month.year, month.month - 1, fromDay)
+  const periodEndDate = new Date(endYear, endMonth - 1, toDay)
 
   return (
-    <AccountantPageShell title="Vận tải" subtitle="Quản lý xe, lái xe, địa điểm và chi phí" icon={Truck}>
-      <div className="space-y-4">
+    <div className="space-y-5 animate-fade-in">
 
-        {/* ── Tab navigation + per-tab actions ─────────────────── */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="tab-row">
-            <button className={activeTab === 'fleet' ? 'active' : ''} onClick={() => setActiveTab('fleet')}>
-              Xe & Chi phí
-            </button>
-            <button className={activeTab === 'locations' ? 'active' : ''} onClick={() => setActiveTab('locations')}>
-              Địa điểm
-            </button>
-          </div>
-
-          {activeTab === 'fleet' && (
-            <div className="flex-1 flex items-center justify-center">
-              <span className="tabular-nums" style={{ fontSize: 15, fontWeight: 700, color: 'var(--theme-text-primary)' }}>
-                Kỳ lương {fromDay}/{String(month.month).padStart(2, '0')} → {toDay}/{String(endMonth).padStart(2, '0')}
-              </span>
-            </div>
-          )}
-
-          {activeTab === 'fleet' && (
-            <div className="flex items-center gap-3">
-              <div className="flex items-center" style={{ gap: 1 }}>
-                <button
-                  onClick={prevMonth}
-                  className="flex h-8 w-8 items-center justify-center transition-colors"
-                  style={{
-                    background: 'var(--theme-bg-tertiary)',
-                    color: 'var(--theme-text-secondary)',
-                    border: '2px solid var(--theme-border-default)',
-                    borderRadius: '8px 0 0 8px',
-                  }}
-                >
-                  <ChevronLeft className="h-4 w-4" strokeWidth={2.5} />
-                </button>
-                <div
-                  className="flex items-center tabular-nums"
-                  style={{
-                    height: 32,
-                    padding: '0 14px',
-                    background: 'var(--theme-bg-secondary)',
-                    border: '2px solid var(--theme-border-default)',
-                    borderLeft: 'none',
-                    borderRight: 'none',
-                    color: 'var(--theme-text-primary)',
-                    fontSize: 13,
-                    fontWeight: 700,
-                    letterSpacing: '0.02em',
-                    minWidth: 76,
-                    justifyContent: 'center',
-                  }}
-                >
-                  {String(month.month).padStart(2, '0')}/{month.year}
-                </div>
-                <button
-                  onClick={nextMonth}
-                  className="flex h-8 w-8 items-center justify-center transition-colors"
-                  style={{
-                    background: 'var(--theme-bg-tertiary)',
-                    color: 'var(--theme-text-secondary)',
-                    border: '2px solid var(--theme-border-default)',
-                    borderRadius: '0 8px 8px 0',
-                  }}
-                >
-                  <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
-                </button>
-              </div>
-              <PulseHint hintKey="vehicles-add">
-                <button onClick={() => setShowAddVehicle(true)} className="btn-primary text-xs">
-                  <Plus size={14} strokeWidth={2.25} /><span>Thêm xe</span>
-                </button>
-              </PulseHint>
-            </div>
-          )}
-
-          {activeTab === 'locations' && (
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" style={{ color: 'var(--theme-text-muted)' }} />
-              <input
-                value={locationSearch}
-                onChange={e => setLocationSearch(e.target.value)}
-                placeholder="Tìm địa điểm..."
-                className="h-8 rounded-lg border pl-8 pr-3 text-sm outline-none transition-colors"
-                style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)', width: 200 }}
-                onFocus={e => { (e.target as HTMLElement).style.borderColor = 'var(--theme-brand-primary)' }}
-                onBlur={e => { (e.target as HTMLElement).style.borderColor = 'var(--theme-border-default)' }}
-              />
-            </div>
-          )}
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="typo-display" style={{ color: 'var(--theme-text-primary)' }}>Vận tải</h1>
+          <p className="typo-body-sm mt-1" style={{ color: 'var(--theme-text-muted)' }}>
+            Quản lý xe, lái xe, chi phí & địa điểm
+          </p>
         </div>
+        <MonthNavigator
+          year={month.year}
+          month={month.month}
+          onPrev={prevMonth}
+          onNext={nextMonth}
+          periodStart={periodStartDate}
+          periodEnd={periodEndDate}
+        />
+      </div>
 
-        {/* ── Tab content ──────────────────────────────────────── */}
+      {/* ── KPI row ── */}
+      <div className="grid grid-cols-3 gap-3">
+        <KpiHeroCard
+          label="Xe vận tải"
+          value={groups.length}
+          formattedValue={String(groups.length)}
+          icon={Truck}
+          color="blue"
+          sublabel={`${assignedDrivers} lái xe đang gắn`}
+        />
+        <KpiHeroCard
+          label="Tổng chi phí"
+          value={grandTotal}
+          formattedValue={grandTotal > 0 ? formatCurrency(grandTotal) : '0đ'}
+          icon={TrendingDown}
+          color="rose"
+          sublabel={`Kỳ ${String(fromDay).padStart(2, '0')}/${String(month.month).padStart(2, '0')} → ${String(toDay).padStart(2, '0')}/${String(endMonth).padStart(2, '0')}`}
+        />
+        <KpiHeroCard
+          label="Lái xe"
+          value={driversList.length}
+          formattedValue={String(driversList.length)}
+          icon={Users}
+          color="emerald"
+          sublabel={assignedDrivers < driversList.length ? `${driversList.length - assignedDrivers} chưa gắn xe` : 'Tất cả đã gắn xe'}
+        />
+      </div>
+
+      {/* ── Tab navigation ── */}
+      <div className="flex items-center justify-between">
+        <div className="tab-row">
+          <button className={activeTab === 'fleet' ? 'active' : ''} onClick={() => setActiveTab('fleet')}>
+            Xe & Chi phí
+          </button>
+          <button className={activeTab === 'locations' ? 'active' : ''} onClick={() => setActiveTab('locations')}>
+            Địa điểm
+          </button>
+        </div>
         {activeTab === 'fleet' && (
-          <div className="card-shell">
-            <VehicleExpensesTab
-              groups={groups}
-              expenseLookup={expenseLookup}
-              catTotals={catTotals}
-              periodStart={periodStart}
-              periodEnd={periodEnd}
-              editingCell={editingCell}
-              setEditingCell={setEditingCell}
-              onCellSave={handleCellSave}
-              isLoading={vdLoading || expenseLoading}
-              onAddVehicle={() => setShowAddVehicle(true)}
-              onAddDriver={vId => { setAddingDriverFor(vId); setSelectedDriverId(null) }}
-              onRemoveDriver={handleRemoveDriver}
+          <PulseHint hintKey="vehicles-add">
+            <button onClick={() => setShowAddVehicle(true)} className="btn-primary text-xs">
+              <Plus size={14} strokeWidth={2.25} /><span>Thêm xe</span>
+            </button>
+          </PulseHint>
+        )}
+        {activeTab === 'locations' && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" style={{ color: 'var(--theme-text-muted)' }} />
+            <input
+              value={locationSearch}
+              onChange={e => setLocationSearch(e.target.value)}
+              placeholder="Tìm địa điểm..."
+              className="search-pill h-9 w-64"
             />
           </div>
         )}
-
-        {activeTab === 'locations' && (
-          <div className="card-shell">
-            <LocationManager search={locationSearch} />
-          </div>
-        )}
-
       </div>
 
-      {/* ── Dialogs ──────────────────────────────────────────────── */}
+      {/* ── Fleet tab ── */}
+      {activeTab === 'fleet' && (
+        <DashboardCard>
+          <div className="px-5 pt-4 pb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
+            <DashboardSectionHeader
+              title="Chi phí xe theo kỳ lương"
+              icon={Truck}
+              right={
+                groups.length > 0
+                  ? <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{groups.length} xe</span>
+                  : undefined
+              }
+            />
+          </div>
+
+          {isLoading ? (
+            <div className="p-6 space-y-3">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-12 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+              ))}
+            </div>
+          ) : groups.length === 0 ? (
+            <EmptyState icon={<Truck className="h-5 w-5" />} title="Chưa có xe nào" compact />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full [&_td]:align-middle" style={{ borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: 'var(--theme-bg-primary)', borderBottom: '1px solid var(--theme-border-light)' }}>
+                    <th className="px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)', width: 140 }}>Biển số</th>
+                    <th className="px-3 py-2.5 text-left text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Lái xe</th>
+                    {VEHICLE_CATEGORIES.map(cat => (
+                      <th key={cat} className="px-3 py-2.5 text-right text-xs font-bold uppercase tracking-wider" style={{ color: CATEGORY_COLORS[cat], width: 130 }}>
+                        {EXPENSE_CATEGORY_LABELS[cat]}
+                      </th>
+                    ))}
+                    <th className="px-3 py-2.5 text-right text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-primary)', width: 130 }}>Tổng CP</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {groups.map((g, i) => {
+                    const rowTotal = VEHICLE_CATEGORIES.reduce(
+                      (s, cat) => s + (expenseLookup.get(`${g.plate}:${cat}`)?.amount ?? 0),
+                      0,
+                    )
+                    return (
+                      <tr
+                        key={g.vehicleId}
+                        className="transition-colors"
+                        style={{ borderBottom: i < groups.length - 1 ? '1px solid var(--theme-border-light)' : 'none' }}
+                        onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)')}
+                        onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
+                      >
+                        <td className="px-3 py-2.5">
+                          <span
+                            className="inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-bold tracking-wider"
+                            style={{ background: 'var(--theme-bg-tertiary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
+                          >
+                            {g.plate}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {g.drivers.map(d => (
+                              <span
+                                key={d.id}
+                                className="inline-flex items-center gap-1 rounded-full pl-1.5 pr-2 py-0.5 text-xs font-semibold"
+                                style={{ background: 'color-mix(in srgb, var(--theme-status-success) 10%, transparent)', color: 'var(--theme-status-success)' }}
+                              >
+                                <User className="h-3 w-3" />
+                                {d.driverName}
+                                <button
+                                  onClick={() => setRemoveDriverTarget({ vdId: d.id, name: d.driverName })}
+                                  className="flex h-4 w-4 items-center justify-center rounded-full transition-opacity opacity-30 hover:opacity-100"
+                                  style={{ color: 'var(--theme-status-error)' }}
+                                  title="Gỡ lái xe"
+                                >
+                                  <span className="text-[10px] leading-none">×</span>
+                                </button>
+                              </span>
+                            ))}
+                            <button
+                              onClick={() => { setAddingDriverFor(g.vehicleId); setSelectedDriverId(null) }}
+                              className="inline-flex items-center justify-center rounded-full transition-colors"
+                              style={{
+                                color: 'var(--theme-text-muted)',
+                                background: 'transparent',
+                                border: '1.5px dashed var(--theme-border-default)',
+                                width: 24,
+                                height: 24,
+                              }}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </div>
+                        </td>
+                        {VEHICLE_CATEGORIES.map(cat => {
+                          const key = `${g.plate}:${cat}`
+                          const amount = expenseLookup.get(key)?.amount ?? 0
+                          return (
+                            <td key={cat} className="px-1 py-2">
+                              <EditableCell
+                                amount={amount}
+                                isEditing={editingCell === key}
+                                onStartEdit={() => setEditingCell(key)}
+                                onSave={raw => handleCellSave(g.plate, cat, raw)}
+                                onCancel={() => setEditingCell(null)}
+                              />
+                            </td>
+                          )
+                        })}
+                        <td className="px-3 py-2.5 text-right text-xs font-extrabold tabular-nums whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
+                          {rowTotal > 0 ? formatCurrency(rowTotal) : '—'}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr style={{ borderTop: '2px solid var(--theme-brand-primary)', background: 'color-mix(in srgb, var(--theme-brand-primary) 6%, transparent)' }}>
+                    <td className="px-3 py-3" style={{ fontSize: 12, fontWeight: 700, color: 'var(--theme-brand-primary)' }}>TỔNG</td>
+                    <td className="px-3 py-3" />
+                    {VEHICLE_CATEGORIES.map(cat => (
+                      <td key={cat} className="px-3 py-3 text-right tabular-nums whitespace-nowrap" style={{ fontSize: 13, fontWeight: 700, color: CATEGORY_COLORS[cat] }}>
+                        {(catTotals[cat] ?? 0) > 0 ? formatCurrency(catTotals[cat]) : '—'}
+                      </td>
+                    ))}
+                    <td className="px-3 py-3 text-right tabular-nums whitespace-nowrap" style={{ fontSize: 15, fontWeight: 900, color: 'var(--theme-brand-primary)' }}>
+                      {grandTotal > 0 ? formatCurrency(grandTotal) : '—'}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+        </DashboardCard>
+      )}
+
+      {/* ── Locations tab ── */}
+      {activeTab === 'locations' && (
+        <DashboardCard>
+          <div className="px-5 pt-4 pb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
+            <DashboardSectionHeader
+              title="Quản lý địa điểm"
+              icon={MapPin}
+            />
+          </div>
+          <LocationManager search={locationSearch} />
+        </DashboardCard>
+      )}
+
+      {/* ── Dialogs ── */}
 
       <Dialog open={showAddVehicle} onOpenChange={() => setShowAddVehicle(false)}>
         <DialogContent>
@@ -562,13 +500,7 @@ export function TransportersPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAddVehicle(false)} className="flex-1">Huỷ</Button>
-            <Button
-              onClick={handleAddVehicle}
-              disabled={!newPlate.trim()}
-              className="flex-1"
-            >
-              Thêm
-            </Button>
+            <Button onClick={handleAddVehicle} disabled={!newPlate.trim()} className="flex-1">Thêm</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -619,13 +551,7 @@ export function TransportersPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddingDriverFor(null)} className="flex-1">Huỷ</Button>
-            <Button
-              onClick={handleAddDriver}
-              disabled={!selectedDriverId}
-              className="flex-1"
-            >
-              Thêm
-            </Button>
+            <Button onClick={handleAddDriver} disabled={!selectedDriverId} className="flex-1">Thêm</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -639,6 +565,6 @@ export function TransportersPage() {
         confirmLabel="Gỡ"
         variant="warning"
       />
-    </AccountantPageShell>
+    </div>
   )
 }

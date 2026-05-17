@@ -36,31 +36,32 @@ export function EntityDetailSheet({
       >
         <div
           className="flex items-center justify-between"
-          style={{ padding: '10px 16px', borderBottom: '0.5px solid var(--theme-border-light)' }}
+          style={{ padding: '14px 20px', borderBottom: '0.5px solid var(--theme-border-light)' }}
         >
           <div>
-            <span className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
+            <span className="text-[15px] font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
               {title}
             </span>
             {subtitle && (
-              <p className="text-xs font-mono-num mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>{subtitle}</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)', fontFeatureSettings: "'tnum'" }}>{subtitle}</p>
             )}
           </div>
           <button
             onClick={() => onOpenChange(false)}
-            style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: 'var(--theme-text-muted)' }}
+            className="flex items-center justify-center rounded-lg transition-colors hover:bg-[var(--theme-bg-tertiary)]"
+            style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 4, color: 'var(--theme-text-muted)' }}
             aria-label="Đóng"
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', borderBottom: '0.5px solid var(--theme-border-light)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
           {fields.slice(0, 4).map((field, idx) => (
             <div
               key={field.label}
               style={{
-                padding: '10px 16px',
+                padding: '12px 20px',
                 borderRight: idx % 2 === 0 ? '0.5px solid var(--theme-border-light)' : 'none',
                 borderBottom: '0.5px solid var(--theme-border-light)',
               }}
@@ -69,15 +70,16 @@ export function EntityDetailSheet({
                 style={{
                   fontSize: 10,
                   color: 'var(--theme-text-muted)',
-                  margin: '0 0 3px',
-                  letterSpacing: '0.04em',
+                  margin: '0 0 4px',
+                  letterSpacing: '0.05em',
                   textTransform: 'uppercase',
+                  fontWeight: 600,
                 }}
               >
                 {field.label}
               </p>
               <p
-                className="text-sm"
+                className="text-[13px]"
                 style={{
                   color: field.value ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)',
                   fontWeight: 500,
@@ -93,7 +95,7 @@ export function EntityDetailSheet({
           <div
             key={field.label}
             style={{
-              padding: '10px 16px',
+              padding: '12px 20px',
               borderBottom: idx < fields.slice(4).length - 1 ? '0.5px solid var(--theme-border-light)' : 'none',
             }}
           >
@@ -101,15 +103,16 @@ export function EntityDetailSheet({
               style={{
                 fontSize: 10,
                 color: 'var(--theme-text-muted)',
-                margin: '0 0 3px',
-                letterSpacing: '0.04em',
+                margin: '0 0 4px',
+                letterSpacing: '0.05em',
                 textTransform: 'uppercase',
+                fontWeight: 600,
               }}
             >
               {field.label}
             </p>
             <p
-              className="text-sm"
+              className="text-[13px]"
               style={{
                 color: field.value ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)',
                 fontWeight: 500,
@@ -125,10 +128,11 @@ export function EntityDetailSheet({
         {actions && (
           <div
             style={{
-              padding: '10px 16px',
+              padding: '14px 20px',
               borderTop: '0.5px solid var(--theme-border-light)',
               display: 'flex',
               gap: 8,
+              alignItems: 'center',
             }}
           >
             {actions}
