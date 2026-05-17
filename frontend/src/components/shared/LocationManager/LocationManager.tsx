@@ -1,19 +1,18 @@
-import { useState, useEffect, useCallback } from 'react'
-import { MapPin, Plus, Edit2, Check, X, Loader2, Trash2, Star } from 'lucide-react'
-import { AliasManager } from '@/components/shared/AliasManager'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Plus, Check, X, Loader2, Star, Trash2 } from 'lucide-react'
 import { useLocations, useCreateLocation, useUpdateLocation, useDeleteLocation } from '@/hooks/use-queries'
 import { api } from '@/services/api/client'
 import { toCamel } from '@/services/api/utils'
 import { useToast } from '@/components/atoms/Toast'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog/ConfirmDialog'
 import { useQueryClient } from '@tanstack/react-query'
 import type { Location as Loc, LocationAlias } from '@/data/domain'
 
 interface LocationManagerProps {
   search?: string
-  compact?: boolean
 }
 
-export function LocationManager({ search, compact }: LocationManagerProps) {
+export function LocationManager({ search }: LocationManagerProps) {
   const toast = useToast()
   const qc = useQueryClient()
   const { data: locations = [], isLoading } = useLocations()
@@ -21,25 +20,50 @@ export function LocationManager({ search, compact }: LocationManagerProps) {
   const updateLocation = useUpdateLocation()
   const deleteLocation = useDeleteLocation()
 
-  const [selectedId, setSelectedId] = useState<number | null>(null)
   const [aliasData, setAliasData] = useState<Record<number, LocationAlias[]>>({})
-  const [editingPrimary, setEditingPrimary] = useState(false)
-  const [primaryValue, setPrimaryValue] = useState('')
+  const [editingKey, setEditingKey] = useState<string | null>(null)
+  const [editValue, setEditValue] = useState('')
+  const [pendingAction, setPendingAction] = useState<string | null>(null)
+  const [addingAliasFor, setAddingAliasFor] = useState<number | null>(null)
+  const [newAliasValue, setNewAliasValue] = useState('')
   const [newLocationName, setNewLocationName] = useState('')
-  const [creating, setCreating] = useState(false)
+  const editInputRef = useRef<HTMLInputElement>(null)
+  const aliasInputRef = useRef<HTMLInputElement>(null)
+  const [confirmTarget, setConfirmTarget] = useState<{
+    type: 'alias' | 'location'
+    locationId: number
+    aliasId?: number
+    label: string
+  } | null>(null)
 
   const filtered = search?.trim()
-    ? locations.filter((l: Loc) => l.name.toLowerCase().includes(search.toLowerCase()))
+    ? locations.filter((l: Loc) => {
+        const q = search.toLowerCase()
+        if (l.name.toLowerCase().includes(q)) return true
+        const aliases = aliasData[l.id] ?? []
+        return aliases.some(a => a.alias.toLowerCase().includes(q))
+      })
     : locations
 
-  const selectedLocation = locations.find((l: Loc) => l.id === selectedId) ?? null
-
   useEffect(() => {
-    filtered.slice(0, 30).forEach((l: Loc) => {
+    filtered.forEach((l: Loc) => {
       if (aliasData[l.id]) return
       fetchAliases(l.id)
     })
   }, [filtered])
+
+  useEffect(() => {
+    if (editingKey && editInputRef.current) {
+      editInputRef.current.focus()
+      editInputRef.current.select()
+    }
+  }, [editingKey])
+
+  useEffect(() => {
+    if (addingAliasFor !== null && aliasInputRef.current) {
+      aliasInputRef.current.focus()
+    }
+  }, [addingAliasFor])
 
   const fetchAliases = async (locationId: number) => {
     try {
@@ -51,294 +75,401 @@ export function LocationManager({ search, compact }: LocationManagerProps) {
     }
   }
 
-  const handleAddAlias = useCallback(async (locationId: number, alias: string) => {
-    try {
-      await api.post('/location-aliases', { location_id: locationId, alias, source: 'manual' })
-      await fetchAliases(locationId)
-      toast.success('Đã thêm tên phụ')
-    } catch {
-      toast.error('Không thể thêm tên phụ')
-    }
-  }, [toast])
-
-  const handlePromoteAlias = useCallback(async (locationId: number, aliasId: number) => {
-    const aliases = aliasData[locationId] ?? []
-    const alias = aliases.find(a => a.id === aliasId)
-    if (!alias) return
-
+  const getAliases = useCallback((locationId: number) => {
     const loc = locations.find((l: Loc) => l.id === locationId)
-    if (!loc) return
-
-    const oldName = loc.name
-    const newName = alias.alias
-
-    try {
-      await api.put(`/locations/${locationId}`, { name: newName })
-      await api.post('/location-aliases', { location_id: locationId, alias: oldName, source: 'manual' })
-      await api.post(`/location-aliases/${aliasId}/reject`)
-      await fetchAliases(locationId)
-      qc.invalidateQueries({ queryKey: ['locations'] })
-      toast.success(`Đã đặt "${newName}" làm tên chính`)
-    } catch {
-      toast.error('Không thể đổi tên chính')
-    }
-  }, [aliasData, locations, qc, toast])
-
-  const handleDeleteAlias = useCallback(async (locationId: number, aliasId: number) => {
-    try {
-      await api.post(`/location-aliases/${aliasId}/reject`)
-      await fetchAliases(locationId)
-      toast.success('Đã xoá tên phụ')
-    } catch {
-      toast.error('Không thể xoá tên phụ')
-    }
-  }, [toast])
+    return (aliasData[locationId] ?? [])
+      .filter(a => !loc || a.alias !== loc.name)
+  }, [aliasData, locations])
 
   const handleCreateLocation = async () => {
     const trimmed = newLocationName.trim()
     if (!trimmed) return
-
-    setCreating(true)
     try {
       await createLocation.mutateAsync({ name: trimmed })
       toast.success('Đã thêm địa điểm')
       setNewLocationName('')
     } catch {
       toast.error('Không thể thêm địa điểm')
-    } finally {
-      setCreating(false)
     }
   }
 
-  const handleUpdatePrimary = async () => {
-    if (!selectedLocation || !primaryValue.trim()) return
+  const handleUpdatePrimary = async (locationId: number) => {
+    const trimmed = editValue.trim()
+    if (!trimmed) { setEditingKey(null); return }
+    const loc = locations.find((l: Loc) => l.id === locationId)
+    if (!loc || trimmed === loc.name) { setEditingKey(null); return }
 
     try {
-      await updateLocation.mutateAsync({ id: selectedLocation.id, data: { name: primaryValue.trim() } })
-      setEditingPrimary(false)
+      await updateLocation.mutateAsync({ id: locationId, data: { name: trimmed } })
       toast.success('Đã cập nhật tên chính')
+      setEditingKey(null)
     } catch {
       toast.error('Không thể cập nhật tên chính')
     }
   }
 
-  const handleDeleteLocation = async () => {
-    if (!selectedLocation) return
-
-    if (!confirm(`Xoá địa điểm "${selectedLocation.name}"? Hành động này không thể hoàn tác.`)) return
-
+  const handleAddAlias = async (locationId: number) => {
+    const trimmed = newAliasValue.trim()
+    if (!trimmed) return
+    const actionKey = `add-alias-${locationId}`
+    setPendingAction(actionKey)
     try {
-      await deleteLocation.mutateAsync(selectedLocation.id)
-      setSelectedId(null)
-      toast.success('Đã xoá địa điểm')
+      await api.post('/location-aliases', { location_id: locationId, alias: trimmed, source: 'manual' })
+      await fetchAliases(locationId)
+      toast.success('Đã thêm tên phụ')
+      setNewAliasValue('')
+      setAddingAliasFor(null)
     } catch {
-      toast.error('Không thể xoá địa điểm')
+      toast.error('Không thể thêm tên phụ')
+    } finally {
+      setPendingAction(null)
     }
   }
 
-  const confirmedAliases = (selectedLocation
-    ? (aliasData[selectedLocation.id] ?? []).filter(a => a.status !== 'REJECTED' && a.status !== 'MERGED')
-    : []
-  ).map(a => ({ id: a.id, alias: a.alias }))
+  const handlePromoteAlias = async (locationId: number, aliasId: number) => {
+    const aliases = aliasData[locationId] ?? []
+    const alias = aliases.find(a => a.id === aliasId)
+    if (!alias) return
 
-  const innerContent = (
-    <div className="flex" style={{ height: compact ? '100%' : 600 }}>
-      {/* Left panel: Location list */}
-      <div className={`${compact ? 'w-full' : 'w-[280px] shrink-0 border-r'} overflow-y-auto`} style={{ borderColor: compact ? 'transparent' : 'var(--theme-border-light)', background: compact ? 'transparent' : 'var(--theme-bg-primary)' }}>
-        {!compact && (
-          <div className="sticky top-0 z-10 backdrop-blur-sm px-4 py-3 border-b" style={{ borderColor: 'var(--theme-border-light)', background: 'color-mix(in srgb, var(--theme-bg-primary) 90%, transparent)' }}>
-            <div className="flex items-center gap-1.5">
-              <input
-                value={newLocationName}
-                onChange={e => setNewLocationName(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleCreateLocation(); if (e.key === 'Escape') { setNewLocationName('') } }}
-                placeholder="Thêm địa điểm..."
-                className="flex-1 rounded-md border px-2.5 py-1.5 text-xs outline-none"
-                style={{
-                  background: 'var(--theme-bg-secondary)',
-                  borderColor: 'var(--theme-border-default)',
-                  color: 'var(--theme-text-primary)',
-                  height: 28,
-                }}
-                onFocus={e => { (e.target as HTMLElement).style.borderColor = 'var(--theme-brand-primary)' }}
-                onBlur={e => { (e.target as HTMLElement).style.borderColor = 'var(--theme-border-default)' }}
-              />
-              <button
-                onClick={handleCreateLocation}
-                disabled={!newLocationName.trim() || creating}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-opacity"
-                style={{
-                  background: newLocationName.trim() ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
-                  color: newLocationName.trim() ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)',
-                  opacity: (!newLocationName.trim() || creating) ? 0.4 : 1,
-                }}
-              >
-                {creating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />}
-              </button>
-            </div>
-          </div>
-        )}
+    const actionKey = `promote-${aliasId}`
+    setPendingAction(actionKey)
+    try {
+      await api.post(`/location-aliases/${aliasId}/promote`)
+      await qc.refetchQueries({ queryKey: ['locations'] })
+      await fetchAliases(locationId)
+      toast.success(`Đã đặt "${alias.alias}" làm tên chính`)
+    } catch (err: any) {
+      const msg = err?.response?.data?.detail ?? 'Không thể đổi tên chính'
+      toast.error(msg)
+    } finally {
+      setPendingAction(null)
+    }
+  }
 
-        {isLoading ? (
-          <div className="p-4 space-y-2">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-8 rounded animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 px-4 gap-2">
-            <MapPin className="h-5 w-5" style={{ color: 'var(--theme-text-muted)' }} />
-            <p className="text-xs text-center" style={{ color: 'var(--theme-text-muted)' }}>
-              {search ? 'Không tìm thấy địa điểm nào' : 'Chưa có địa điểm'}
-            </p>
-          </div>
-        ) : (
-          <div className="py-1">
-            {filtered.map((loc: Loc) => {
-              const aliasCount = (aliasData[loc.id] ?? []).filter(a => a.status !== 'REJECTED' && a.status !== 'MERGED').length
-              return (
-                <button
-                  key={loc.id}
-                  onClick={() => setSelectedId(loc.id)}
-                  className="w-full px-4 py-2.5 text-left transition-colors flex items-center gap-2"
-                  style={{
-                    background: selectedId === loc.id ? 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)' : 'transparent',
-                  }}
-                  onMouseEnter={e => {
-                    if (selectedId !== loc.id) (e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)'
-                  }}
-                  onMouseLeave={e => {
-                    if (selectedId !== loc.id) (e.currentTarget as HTMLElement).style.background = 'transparent'
-                  }}
-                >
-                  <div className="h-5 w-5 shrink-0 flex items-center justify-center rounded" style={{
-                    background: selectedId === loc.id ? 'var(--theme-brand-primary)' : 'color-mix(in srgb, var(--theme-brand-primary) 6%, transparent)',
-                  }}>
-                    <div
-                      className="h-1.5 w-1.5 rounded-full"
-                      style={{ background: selectedId === loc.id ? 'var(--theme-text-on-brand)' : 'var(--theme-brand-primary)' }}
-                    />
-                  </div>
-                  <span className="flex-1 text-sm font-medium truncate" style={{ color: selectedId === loc.id ? 'var(--theme-brand-primary)' : 'var(--theme-text-primary)' }}>
-                    {loc.name}
-                  </span>
-                  {aliasCount > 0 && (
-                    <span className="text-[10px] font-medium" style={{ color: 'var(--theme-text-muted)' }}>{aliasCount}</span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-        )}
+  const handleDeleteAlias = (locationId: number, aliasId: number) => {
+    const aliases = aliasData[locationId] ?? []
+    const alias = aliases.find(a => a.id === aliasId)
+    if (!alias) return
+    setConfirmTarget({ type: 'alias', locationId, aliasId, label: alias.alias })
+  }
+
+  const confirmDeleteAlias = async () => {
+    if (!confirmTarget || confirmTarget.type !== 'alias' || !confirmTarget.aliasId) return
+    const actionKey = `del-alias-${confirmTarget.aliasId}`
+    setPendingAction(actionKey)
+    try {
+      await api.delete(`/location-aliases/${confirmTarget.aliasId}`)
+      await fetchAliases(confirmTarget.locationId)
+      toast.success('Đã xoá tên phụ')
+    } catch {
+      toast.error('Không thể xoá tên phụ')
+    } finally {
+      setPendingAction(null)
+      setConfirmTarget(null)
+    }
+  }
+
+  const handleDeleteLocation = (locationId: number) => {
+    const loc = locations.find((l: Loc) => l.id === locationId)
+    if (!loc) return
+    setConfirmTarget({ type: 'location', locationId, label: loc.name })
+  }
+
+  const confirmDeleteLocation = async () => {
+    if (!confirmTarget || confirmTarget.type !== 'location') return
+    try {
+      await deleteLocation.mutateAsync(confirmTarget.locationId)
+      toast.success('Đã xoá địa điểm')
+    } catch {
+      toast.error('Không thể xoá địa điểm')
+    } finally {
+      setConfirmTarget(null)
+    }
+  }
+
+  // ─── Loading / Empty ─────────────────────────────────────────────────
+
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-3">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="h-10 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
+        ))}
       </div>
+    )
+  }
 
-      {/* Right panel: Detail — only show in non-compact mode */}
-      {!compact && (
-        <div className="flex-1 overflow-y-auto">
-          {selectedLocation ? (
-            <div className="p-5 space-y-6">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>
-                    Tên chính
-                  </p>
-                  <button
-                    onClick={() => { setPrimaryValue(selectedLocation.name); setEditingPrimary(true) }}
-                    className="shrink-0 inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium transition-colors"
-                    style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
-                  >
-                    <Edit2 className="h-2.5 w-2.5" />
-                    Đổi tên
-                  </button>
-                </div>
+  if (locations.length === 0 && !newLocationName) {
+    return (
+      <div className="flex flex-col items-center py-16 gap-3">
+        <p className="text-sm font-medium" style={{ color: 'var(--theme-text-muted)' }}>Chưa có địa điểm nào</p>
+        <InlineCreate
+          value={newLocationName}
+          onChange={setNewLocationName}
+          onSubmit={handleCreateLocation}
+          placeholder="Nhập tên địa điểm đầu tiên..."
+        />
+      </div>
+    )
+  }
 
-                {editingPrimary ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      value={primaryValue}
-                      onChange={e => setPrimaryValue(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') handleUpdatePrimary(); if (e.key === 'Escape') { setEditingPrimary(false); setPrimaryValue('') } }}
-                      autoFocus
-                      className="flex-1 rounded-md border px-3 py-2 text-sm font-semibold outline-none"
-                      style={{
-                        background: 'var(--theme-bg-primary)',
-                        borderColor: 'var(--theme-brand-primary)',
-                        color: 'var(--theme-text-primary)',
-                      }}
-                    />
-                    <button
-                      onClick={handleUpdatePrimary}
-                      disabled={!primaryValue.trim() || updateLocation.isPending}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md"
-                      style={{ background: 'var(--theme-status-success)', color: '#fff' }}
-                    >
-                      {updateLocation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                    </button>
-                    <button
-                      onClick={() => { setEditingPrimary(false); setPrimaryValue('') }}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md"
-                      style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg" style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 6%, transparent)' }}>
-                      <MapPin className="h-5 w-5" style={{ color: 'var(--theme-brand-primary)', opacity: 0.7 }} />
-                    </div>
-                    <div className="flex items-center gap-1.5 rounded-md px-2.5 py-1" style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)' }}>
-                      <Star className="h-3 w-3" fill="currentColor" style={{ color: 'var(--theme-brand-primary)' }} />
-                      <span className="text-sm font-bold" style={{ color: 'var(--theme-brand-primary)' }}>{selectedLocation.name}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <AliasManager
-                aliases={confirmedAliases}
-                onAddAlias={(alias) => handleAddAlias(selectedLocation.id, alias)}
-                onPromoteAlias={(id) => handlePromoteAlias(selectedLocation.id, id)}
-                onDeleteAlias={(id) => handleDeleteAlias(selectedLocation.id, id)}
-              />
-
-              <div className="pt-4 border-t" style={{ borderColor: 'var(--theme-border-light)' }}>
-                <button
-                  onClick={handleDeleteLocation}
-                  disabled={deleteLocation.isPending}
-                  className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium text-red-600 transition-colors"
-                  style={{ background: 'color-mix(in srgb, #ef4444 8%, transparent)' }}
-                >
-                  {deleteLocation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-                  Xoá địa điểm này
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="h-full flex flex-col items-center justify-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full" style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 6%, transparent)' }}>
-                <MapPin className="h-6 w-6" style={{ color: 'var(--theme-brand-primary)', opacity: 0.5 }} />
-              </div>
-              <div className="text-center">
-                <p className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>Chọn địa điểm</p>
-                <p className="text-xs mt-1" style={{ color: 'var(--theme-text-muted)' }}>hoặc tạo địa điểm mới để bắt đầu</p>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
+  // ─── Table ───────────────────────────────────────────────────────────
 
   return (
-    <>
-      {compact ? (
-        innerContent
-      ) : (
-        <div className="rounded-xl border overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', boxShadow: '0 0 0 1px rgba(9,9,11,0.03), 0 1px 3px rgba(9,9,11,0.06), 0 4px 16px -4px rgba(9,9,11,0.05)' }}>
-          {innerContent}
-        </div>
-      )}
-    </>
+    <div className="overflow-x-auto">
+      <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+        <thead>
+          <tr style={{ background: 'var(--theme-bg-tertiary)', borderBottom: '2px solid var(--theme-border-default)' }}>
+            <th className="px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)', width: 220 }}>Tên chính</th>
+            <th className="px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Tên phụ</th>
+            <th className="px-5 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)', width: 52 }} />
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colSpan={3} className="px-5 py-1.5" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
+              <span style={{ fontSize: 11, color: 'var(--theme-text-muted)' }}>
+                Nhấp tên để sửa ·{' '}
+                <Star className="inline h-2.5 w-2.5" style={{ color: 'var(--theme-brand-primary)', verticalAlign: -1 }} />{' '}
+                đặt tên phụ thành chính ·{' '}
+                <Plus className="inline h-2.5 w-2.5" style={{ verticalAlign: -1 }} />{' '}
+                thêm tên phụ
+              </span>
+            </td>
+          </tr>
+          {filtered.map((loc: Loc, i: number) => {
+            const aliases = getAliases(loc.id)
+            const isEditing = editingKey === `primary-${loc.id}`
+            const isAddingAlias = addingAliasFor === loc.id
+
+            return (
+              <tr
+                key={loc.id}
+                style={{
+                  borderBottom: i < filtered.length - 1 ? '1px solid var(--theme-border-light)' : 'none',
+                  background: i % 2 === 1 ? 'var(--theme-bg-tertiary)' : 'transparent',
+                }}
+              >
+                {/* Tên chính */}
+                <td className="px-5 py-3">
+                  {isEditing ? (
+                    <InlineInput
+                      value={editValue}
+                      onChange={setEditValue}
+                      onSubmit={() => handleUpdatePrimary(loc.id)}
+                      onCancel={() => { setEditingKey(null); setEditValue('') }}
+                      inputRef={editInputRef}
+                    />
+                  ) : (
+                    <button
+                      onClick={() => { setEditingKey(`primary-${loc.id}`); setEditValue(loc.name) }}
+                      className="text-left rounded px-1 py-0.5 transition-colors cursor-pointer"
+                      title="Click để sửa"
+                    >
+                      <span className="text-[13px] font-bold" style={{ color: 'var(--theme-text-primary)' }}>{loc.name}</span>
+                    </button>
+                  )}
+                </td>
+
+                {/* Tên phụ — all aliases as pills on same row */}
+                <td className="px-5 py-3">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {aliases.map(a => {
+                      const isBusy = pendingAction === `promote-${a.id}` || pendingAction === `del-alias-${a.id}`
+                      return (
+                        <span
+                          key={a.id}
+                          className="group inline-flex items-center gap-1 rounded-full pl-2 pr-1 py-0.5"
+                          style={{ background: 'var(--theme-bg-tertiary)', border: '1px solid var(--theme-border-default)' }}
+                        >
+                          <span className="text-[12px] font-medium" style={{ color: 'var(--theme-text-secondary)' }}>{a.alias}</span>
+                          <button
+                            onClick={() => handlePromoteAlias(loc.id, a.id)}
+                            disabled={isBusy}
+                            className="flex h-5 w-5 items-center justify-center rounded-full transition-colors"
+                            style={{ color: 'var(--theme-brand-primary)' }}
+                            title="Đặt làm tên chính"
+                          >
+                            {pendingAction === `promote-${a.id}` ? <Loader2 className="h-3 w-3 animate-spin" /> : <Star className="h-3 w-3" />}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteAlias(loc.id, a.id)}
+                            disabled={isBusy}
+                            className="flex h-5 w-5 items-center justify-center rounded-full transition-colors"
+                            style={{ color: 'var(--theme-text-muted)' }}
+                            title="Xoá tên phụ"
+                          >
+                            {pendingAction === `del-alias-${a.id}` ? <Loader2 className="h-3 w-3 animate-spin" /> : <X className="h-3 w-3" />}
+                          </button>
+                        </span>
+                      )
+                    })}
+
+                    {isAddingAlias ? (
+                      <InlineInput
+                        value={newAliasValue}
+                        onChange={setNewAliasValue}
+                        onSubmit={() => handleAddAlias(loc.id)}
+                        onCancel={() => { setAddingAliasFor(null); setNewAliasValue('') }}
+                        inputRef={aliasInputRef}
+                        placeholder="Tên phụ..."
+                        compact
+                      />
+                    ) : (
+                      <button
+                        onClick={() => { setAddingAliasFor(loc.id); setNewAliasValue('') }}
+                        className="inline-flex items-center justify-center rounded-full transition-colors"
+                        style={{ border: '1.5px dashed var(--theme-border-default)', color: 'var(--theme-text-muted)', width: 24, height: 24 }}
+                        title="Thêm tên phụ"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                </td>
+
+                {/* Delete location */}
+                <td className="px-3 py-3 text-right">
+                  <button
+                    onClick={() => handleDeleteLocation(loc.id)}
+                    disabled={deleteLocation.isPending}
+                    className="flex h-7 w-7 items-center justify-center rounded-md transition-colors"
+                    style={{ color: 'var(--theme-text-muted)' }}
+                    title="Xoá địa điểm"
+                  >
+                    {deleteLocation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                  </button>
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+        <tfoot>
+          <tr style={{ borderTop: '2px solid var(--theme-border-default)', background: 'var(--theme-bg-tertiary)' }}>
+            <td colSpan={3} className="px-3 py-2.5">
+              <InlineCreate
+                value={newLocationName}
+                onChange={setNewLocationName}
+                onSubmit={handleCreateLocation}
+                placeholder="Thêm địa điểm..."
+              />
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <ConfirmDialog
+        open={!!confirmTarget}
+        onClose={() => setConfirmTarget(null)}
+        onConfirm={confirmTarget?.type === 'alias' ? confirmDeleteAlias : confirmDeleteLocation}
+        title={confirmTarget?.type === 'alias' ? 'Xoá tên phụ' : 'Xoá địa điểm'}
+        description={
+          confirmTarget?.type === 'alias'
+            ? `Xoá tên phụ "${confirmTarget.label}"? Hành động này không thể hoàn tác.`
+            : `Xoá địa điểm "${confirmTarget?.label}" và tất cả tên phụ? Hành động này không thể hoàn tác.`
+        }
+        confirmLabel="Xoá"
+        variant="danger"
+      />
+    </div>
+  )
+}
+
+// ─── Sub-components ────────────────────────────────────────────────────
+
+function InlineInput({
+  value, onChange, onSubmit, onCancel, placeholder, inputRef, isLoading, compact,
+}: {
+  value: string
+  onChange: (v: string) => void
+  onSubmit: () => void
+  onCancel: () => void
+  placeholder?: string
+  inputRef?: React.RefObject<HTMLInputElement | null>
+  isLoading?: boolean
+  compact?: boolean
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      <input
+        ref={inputRef}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') onSubmit(); if (e.key === 'Escape') onCancel() }}
+        placeholder={placeholder}
+        autoFocus
+        className="rounded-md border px-2 py-1 outline-none"
+        style={{
+          background: 'var(--theme-bg-primary)',
+          borderColor: 'var(--theme-brand-primary)',
+          color: 'var(--theme-text-primary)',
+          boxShadow: '0 0 0 2px color-mix(in srgb, var(--theme-brand-primary) 12%, transparent)',
+          fontSize: compact ? 12 : 13,
+          width: compact ? 100 : 120,
+        }}
+      />
+      <button
+        onClick={onSubmit}
+        disabled={!value.trim() || isLoading}
+        className="flex shrink-0 items-center justify-center rounded-md transition-opacity"
+        style={{
+          background: 'var(--theme-brand-primary)',
+          color: 'var(--theme-text-on-brand)',
+          width: 24,
+          height: 24,
+          opacity: !value.trim() ? 0.4 : 1,
+        }}
+      >
+        {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+      </button>
+      <button
+        onClick={onCancel}
+        className="flex shrink-0 items-center justify-center rounded-md"
+        style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)', width: 24, height: 24 }}
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </div>
+  )
+}
+
+function InlineCreate({
+  value, onChange, onSubmit, placeholder,
+}: {
+  value: string
+  onChange: (v: string) => void
+  onSubmit: () => void
+  placeholder: string
+}) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') onSubmit(); if (e.key === 'Escape') onChange('') }}
+        placeholder={placeholder}
+        className="flex-1 rounded-md border px-2.5 py-1.5 text-xs outline-none"
+        style={{
+          background: 'var(--theme-bg-secondary)',
+          borderColor: 'var(--theme-border-default)',
+          color: 'var(--theme-text-primary)',
+        }}
+        onFocus={e => { (e.target as HTMLElement).style.borderColor = 'var(--theme-brand-primary)' }}
+        onBlur={e => { (e.target as HTMLElement).style.borderColor = 'var(--theme-border-default)' }}
+      />
+      <button
+        onClick={onSubmit}
+        disabled={!value.trim()}
+        className="flex h-7 items-center gap-1 rounded-md px-3 text-[11px] font-semibold transition-opacity"
+        style={{
+          background: value.trim() ? 'var(--theme-brand-primary)' : 'var(--theme-bg-tertiary)',
+          color: value.trim() ? 'var(--theme-text-on-brand)' : 'var(--theme-text-muted)',
+          opacity: value.trim() ? 1 : 0.4,
+        }}
+      >
+        <Plus className="h-3 w-3" strokeWidth={2.5} />
+        Thêm
+      </button>
+    </div>
   )
 }

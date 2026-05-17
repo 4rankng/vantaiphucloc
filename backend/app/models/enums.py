@@ -12,13 +12,6 @@ from app.contexts.operations.domain.value_objects import (  # noqa: F401
 # Keep WorkType alias here for backward compat — it was already identical.
 
 
-class LocationAliasStatus(StrEnum):
-    PENDING = "PENDING"
-    CONFIRMED = "CONFIRMED"
-    REJECTED = "REJECTED"
-    MERGED = "MERGED"
-
-
 class SalaryStatus(StrEnum):
     OPEN = "OPEN"
     CALCULATED = "CALCULATED"

@@ -388,7 +388,7 @@ class BulkImportService:
         # Load existing locations and aliases for matching
         locations = (await self.session.execute(select(Location))).scalars().all()
         aliases = (await self.session.execute(
-            select(LocationAlias).where(LocationAlias.status == "CONFIRMED")
+            select(LocationAlias)
         )).scalars().all()
 
         # Build lookup: normalized_name → location_id
