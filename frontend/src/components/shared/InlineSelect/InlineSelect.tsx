@@ -39,9 +39,10 @@ export function InlineSelect({ placeholder, value, options, onChange, onInputCha
     setOpen(nextOpen)
     if (nextOpen) {
       setQuery('')
+      onInputChange?.('')
       requestAnimationFrame(() => searchRef.current?.focus())
     }
-  }, [])
+  }, [onInputChange])
 
   const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
