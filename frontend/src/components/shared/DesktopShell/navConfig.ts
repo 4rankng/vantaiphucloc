@@ -10,7 +10,7 @@ export interface NavItem {
 
 export const DRIVER_NAV: NavItem[] = [
   { path: '/driver', label: 'Trang chủ', icon: Home, exact: true, section: 'main' },
-  { path: '/driver/work-orders/new', label: 'Tạo chuyến', icon: Plus, section: 'main' },
+  { path: '/driver/delivered-trips/new', label: 'Tạo chuyến', icon: Plus, section: 'main' },
   { path: '/driver/history', label: 'Lịch sử', icon: Clock, section: 'main' },
   { path: '/driver/notifications', label: 'Thông báo', icon: Bell, section: 'main' },
   { path: '/driver/profile', label: 'Hồ sơ', icon: User, section: 'admin' },

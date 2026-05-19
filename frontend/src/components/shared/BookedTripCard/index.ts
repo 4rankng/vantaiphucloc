@@ -1,0 +1,1 @@
+export { BookedTripCard } from './BookedTripCard'

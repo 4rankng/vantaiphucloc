@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.domain import Client, Reconciliation, TripOrder, TripOrderContainer, Vehicle, VehicleDriver, VehicleExpense, WorkOrder
+from app.models.domain import Client, Reconciliation, BookedTrip, BookedTripContainer, Vehicle, VehicleDriver, VehicleExpense, DeliveredTrip
 from app.models.base import User
 from app.core.deps import get_current_user, require_permission
 from app.core.worker import get_arq_pool
@@ -51,39 +51,39 @@ async def get_dashboard_summary(
         except ValueError:
             pass
 
-    # Revenue: sum of unit_price per trip (no stored revenue column)
-    revenue_query = select(func.coalesce(func.sum(TripOrder.unit_price), 0))
+    # Revenue: sum of revenue per trip (no stored revenue column)
+    revenue_query = select(func.coalesce(func.sum(BookedTrip.revenue), 0))
     if parsed_from:
-        revenue_query = revenue_query.where(TripOrder.created_at >= parsed_from)
+        revenue_query = revenue_query.where(BookedTrip.created_at >= parsed_from)
     if parsed_to:
-        revenue_query = revenue_query.where(TripOrder.created_at < parsed_to + timedelta(days=1))
+        revenue_query = revenue_query.where(BookedTrip.created_at < parsed_to + timedelta(days=1))
     revenue_q = await db.execute(revenue_query)
     total_revenue = revenue_q.scalar() or 0
 
     # Expense: sum of (driver_salary + allowance) per work order
-    expense_query = select(func.coalesce(func.sum(WorkOrder.driver_salary + WorkOrder.allowance), 0))
+    expense_query = select(func.coalesce(func.sum(DeliveredTrip.driver_salary + DeliveredTrip.allowance), 0))
     if parsed_from:
-        expense_query = expense_query.where(WorkOrder.created_at >= parsed_from)
+        expense_query = expense_query.where(DeliveredTrip.created_at >= parsed_from)
     if parsed_to:
-        expense_query = expense_query.where(WorkOrder.created_at < parsed_to + timedelta(days=1))
+        expense_query = expense_query.where(DeliveredTrip.created_at < parsed_to + timedelta(days=1))
     expense_q = await db.execute(expense_query)
     total_expense = expense_q.scalar() or 0
 
-    trip_count_query = select(func.count(TripOrder.id))
+    trip_count_query = select(func.count(BookedTrip.id))
     if parsed_from:
-        trip_count_query = trip_count_query.where(TripOrder.created_at >= parsed_from)
+        trip_count_query = trip_count_query.where(BookedTrip.created_at >= parsed_from)
     if parsed_to:
-        trip_count_query = trip_count_query.where(TripOrder.created_at < parsed_to + timedelta(days=1))
+        trip_count_query = trip_count_query.where(BookedTrip.created_at < parsed_to + timedelta(days=1))
     trip_count_q = await db.execute(trip_count_query)
     trip_count = trip_count_q.scalar() or 0
 
-    active_query = select(func.count(TripOrder.id)).where(
-        TripOrder.status == "PENDING"
+    active_query = select(func.count(BookedTrip.id)).where(
+        BookedTrip.status == "PENDING"
     )
     if parsed_from:
-        active_query = active_query.where(TripOrder.created_at >= parsed_from)
+        active_query = active_query.where(BookedTrip.created_at >= parsed_from)
     if parsed_to:
-        active_query = active_query.where(TripOrder.created_at < parsed_to + timedelta(days=1))
+        active_query = active_query.where(BookedTrip.created_at < parsed_to + timedelta(days=1))
     active_q = await db.execute(active_query)
     active_trips = active_q.scalar() or 0
 
@@ -99,8 +99,8 @@ async def get_dashboard_summary(
             User.id.label("driver_id"),
             User.username.label("driver_name"),
             Vehicle.plate.label("tractor_plate"),
-            func.count(WorkOrder.id).label("total_jobs"),
-            func.coalesce(func.sum(WorkOrder.driver_salary + WorkOrder.allowance), 0).label("total_salary"),
+            func.count(DeliveredTrip.id).label("total_jobs"),
+            func.coalesce(func.sum(DeliveredTrip.driver_salary + DeliveredTrip.allowance), 0).label("total_salary"),
         )
         .join(
             VehicleDriver,
@@ -108,8 +108,8 @@ async def get_dashboard_summary(
             isouter=True,
         )
         .join(Vehicle, Vehicle.id == VehicleDriver.vehicle_id, isouter=True)
-        .join(WorkOrder, WorkOrder.driver_id == User.id)
-        .where(WorkOrder.status == "MATCHED")
+        .join(DeliveredTrip, DeliveredTrip.driver_id == User.id)
+        .where(DeliveredTrip.status == "MATCHED")
         .group_by(User.id, User.username, Vehicle.plate)
     )
     driver_salary_summary = [
@@ -124,18 +124,18 @@ async def get_dashboard_summary(
     ]
 
     unmatched_q = await db.execute(
-        select(func.count(WorkOrder.id)).where(
-            ~WorkOrder.id.in_(
-                select(Reconciliation.work_order_id).where(
+        select(func.count(DeliveredTrip.id)).where(
+            ~DeliveredTrip.id.in_(
+                select(Reconciliation.delivered_trip_id).where(
                     Reconciliation.is_active == True  # noqa: E712
                 )
             )
         )
     )
-    unmatched_work_order_count = unmatched_q.scalar() or 0
+    unmatched_delivered_trip_count = unmatched_q.scalar() or 0
 
     pending_q = await db.execute(
-        select(func.count(TripOrder.id)).where(TripOrder.status == "PENDING")
+        select(func.count(BookedTrip.id)).where(BookedTrip.status == "PENDING")
     )
     pending_trip_count = pending_q.scalar() or 0
 
@@ -146,7 +146,7 @@ async def get_dashboard_summary(
         active_trips=active_trips,
         outstanding_debt=outstanding_debt,
         driver_salary_summary=driver_salary_summary,
-        unmatched_work_order_count=unmatched_work_order_count,
+        unmatched_delivered_trip_count=unmatched_delivered_trip_count,
         pending_trip_count=pending_trip_count,
     )
 
@@ -192,17 +192,17 @@ async def get_kpi_trends(
             return d.date()
         return d  # already date
 
-    # ── 2. WorkOrder per-day expression ──────────────────────────────────────
+    # ── 2. DeliveredTrip per-day expression ──────────────────────────────────────
     # Use explicit trip_date when set, else fall back to created_at's date.
-    wo_day = func.coalesce(WorkOrder.trip_date, func.date(WorkOrder.created_at))
+    wo_day = func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
 
     # ── 3. Unmatched work orders (PENDING, dated in window) ──────────────────
     wo_pending_rows = (await db.execute(
-        select(wo_day.label("d"), func.count(WorkOrder.id))
+        select(wo_day.label("d"), func.count(DeliveredTrip.id))
         .where(
             wo_day >= start_date,
             wo_day <= parsed_end,
-            WorkOrder.status == "PENDING",
+            DeliveredTrip.status == "PENDING",
         )
         .group_by(wo_day)
     )).all()
@@ -210,13 +210,13 @@ async def get_kpi_trends(
 
     # ── 4. Pending trips (PENDING, trip_date in window) ──────────────────────
     trip_pending_rows = (await db.execute(
-        select(TripOrder.trip_date.label("d"), func.count(TripOrder.id))
+        select(BookedTrip.trip_date.label("d"), func.count(BookedTrip.id))
         .where(
-            TripOrder.trip_date >= start_date,
-            TripOrder.trip_date <= parsed_end,
-            TripOrder.status == "PENDING",
+            BookedTrip.trip_date >= start_date,
+            BookedTrip.trip_date <= parsed_end,
+            BookedTrip.status == "PENDING",
         )
-        .group_by(TripOrder.trip_date)
+        .group_by(BookedTrip.trip_date)
     )).all()
     trip_pending_map: dict = {_normalize(r[0]): int(r[1]) for r in trip_pending_rows}
 
@@ -224,12 +224,12 @@ async def get_kpi_trends(
     salary_rows = (await db.execute(
         select(
             wo_day.label("d"),
-            func.coalesce(func.sum(WorkOrder.driver_salary + WorkOrder.allowance), 0),
+            func.coalesce(func.sum(DeliveredTrip.driver_salary + DeliveredTrip.allowance), 0),
         )
         .where(
             wo_day >= start_date,
             wo_day <= parsed_end,
-            WorkOrder.status == "MATCHED",
+            DeliveredTrip.status == "MATCHED",
         )
         .group_by(wo_day)
     )).all()
@@ -238,14 +238,14 @@ async def get_kpi_trends(
     # ── 6. Revenue per day (all trips dated in window) ───────────────────────
     revenue_rows = (await db.execute(
         select(
-            TripOrder.trip_date.label("d"),
-            func.coalesce(func.sum(TripOrder.unit_price), 0),
+            BookedTrip.trip_date.label("d"),
+            func.coalesce(func.sum(BookedTrip.revenue), 0),
         )
         .where(
-            TripOrder.trip_date >= start_date,
-            TripOrder.trip_date <= parsed_end,
+            BookedTrip.trip_date >= start_date,
+            BookedTrip.trip_date <= parsed_end,
         )
-        .group_by(TripOrder.trip_date)
+        .group_by(BookedTrip.trip_date)
     )).all()
     revenue_map: dict = {_normalize(r[0]): int(r[1] or 0) for r in revenue_rows}
 
@@ -274,12 +274,12 @@ async def get_kpi_trends(
         end_date=parsed_end,
         days=days,
         labels=[d.isoformat() for d in labels],
-        unmatched_work_orders=unmatched_series,
+        unmatched_delivered_trips=unmatched_series,
         pending_trips=pending_series,
         driver_salary=salary_series,
         revenue=revenue_series,
         deltas=KpiTrendDeltas(
-            unmatched_work_orders=_delta_pct(unmatched_series),
+            unmatched_delivered_trips=_delta_pct(unmatched_series),
             pending_trips=_delta_pct(pending_series),
             driver_salary=_delta_pct(salary_series),
             revenue=_delta_pct(revenue_series),
@@ -298,15 +298,15 @@ async def get_vehicle_pnl(
     """Per-vehicle P&L: Doanh thu − Chi phí = Lợi nhuận.
 
     For each vehicle returns:
-      - Doanh thu: SUM(TripOrder.unit_price × container_count) for MATCHED TOs
-        whose reconciled WorkOrder has this vehicle_id.  The container count is
-        taken from TripOrderContainer rows linked to each TripOrder.
+      - Doanh thu: SUM(BookedTrip.revenue × container_count) for MATCHED TOs
+        whose reconciled DeliveredTrip has this vehicle_id.  The container count is
+        taken from BookedTripContainer rows linked to each BookedTrip.
       - CP Xe: vehicle_expenses subtotals (XANG_DAU, SUA_CHUA).
-      - CP Lương sản lượng: SUM(WorkOrder.driver_salary + allowance) for WOs
+      - CP Lương sản lượng: SUM(DeliveredTrip.driver_salary + allowance) for WOs
         on this vehicle.
       - CP Lương cơ bản: effective base salary × period for drivers attached to
         this vehicle via vehicle_drivers.
-      - CP Chung: total CHUNG expenses allocated proportionally by trip count.
+      - CP Xe: per-vehicle expenses (XANG_DAU, SUA_CHUA, TIEN_LUAT, KHAC).
     """
     from datetime import datetime as _dt
     from app.contexts.payroll.infrastructure.repositories import SqlDriverSalaryConfigRepository
@@ -326,60 +326,60 @@ async def get_vehicle_pnl(
     veh_rows = (await db.execute(veh_q)).all()
     vehicles: dict[int, str] = {r[0]: r[1] for r in veh_rows}
 
-    # ── 2. Revenue per vehicle via Reconciliation → WorkOrder.vehicle_id ────
-    # MATCHED TripOrders whose reconciliation links a WorkOrder with a known vehicle_id.
+    # ── 2. Revenue per vehicle via Reconciliation → DeliveredTrip.vehicle_id ────
+    # MATCHED BookedTrips whose reconciliation links a DeliveredTrip with a known vehicle_id.
     recon_rows = (await db.execute(
         select(
-            Reconciliation.trip_order_id,
-            WorkOrder.vehicle_id,
+            Reconciliation.booked_trip_id,
+            DeliveredTrip.vehicle_id,
         )
-        .join(WorkOrder, WorkOrder.id == Reconciliation.work_order_id)
+        .join(DeliveredTrip, DeliveredTrip.id == Reconciliation.delivered_trip_id)
         .where(
             Reconciliation.is_active == True,  # noqa: E712
-            WorkOrder.vehicle_id.in_(list(vehicles.keys())),
+            DeliveredTrip.vehicle_id.in_(list(vehicles.keys())),
         )
     )).all()
 
-    # trip_order_id → vehicle_id (one WO per recon)
+    # booked_trip_id → vehicle_id (one WO per recon)
     to_vehicle: dict[int, int] = {r[0]: r[1] for r in recon_rows if r[1]}
 
     # Fetch matched TOs in period with container counts
     to_rows = (await db.execute(
         select(
-            TripOrder.id,
-            TripOrder.unit_price,
-            func.count(TripOrderContainer.id),
+            BookedTrip.id,
+            BookedTrip.revenue,
+            func.count(BookedTripContainer.id),
         )
-        .join(TripOrderContainer, TripOrderContainer.trip_order_id == TripOrder.id, isouter=True)
+        .join(BookedTripContainer, BookedTripContainer.booked_trip_id == BookedTrip.id, isouter=True)
         .where(
-            TripOrder.status == "MATCHED",
-            TripOrder.trip_date >= df,
-            TripOrder.trip_date <= dt,
-            TripOrder.id.in_(list(to_vehicle.keys())),
+            BookedTrip.status == "MATCHED",
+            BookedTrip.trip_date >= df,
+            BookedTrip.trip_date <= dt,
+            BookedTrip.id.in_(list(to_vehicle.keys())),
         )
-        .group_by(TripOrder.id, TripOrder.unit_price)
+        .group_by(BookedTrip.id, BookedTrip.revenue)
     )).all()
 
     revenue_by_vehicle: dict[int, int] = {}
-    for to_id, unit_price, container_count in to_rows:
+    for to_id, revenue, container_count in to_rows:
         vid = to_vehicle.get(to_id)
         if vid:
-            revenue_by_vehicle[vid] = revenue_by_vehicle.get(vid, 0) + int(unit_price or 0) * int(container_count or 0)
+            revenue_by_vehicle[vid] = revenue_by_vehicle.get(vid, 0) + int(revenue or 0) * int(container_count or 0)
 
     # ── 3. CP Lương sản lượng per vehicle ───────────────────────────────────
     wo_salary_rows = (await db.execute(
         select(
-            WorkOrder.vehicle_id,
-            func.coalesce(func.sum(WorkOrder.driver_salary), 0),
-            func.coalesce(func.sum(WorkOrder.allowance), 0),
+            DeliveredTrip.vehicle_id,
+            func.coalesce(func.sum(DeliveredTrip.driver_salary), 0),
+            func.coalesce(func.sum(DeliveredTrip.allowance), 0),
         )
         .where(
-            WorkOrder.status == "MATCHED",
-            WorkOrder.vehicle_id.in_(list(vehicles.keys())),
-            func.coalesce(WorkOrder.trip_date, func.date(WorkOrder.created_at)) >= df,
-            func.coalesce(WorkOrder.trip_date, func.date(WorkOrder.created_at)) <= dt,
+            DeliveredTrip.status == "MATCHED",
+            DeliveredTrip.vehicle_id.in_(list(vehicles.keys())),
+            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= df,
+            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= dt,
         )
-        .group_by(WorkOrder.vehicle_id)
+        .group_by(DeliveredTrip.vehicle_id)
     )).all()
 
     salary_by_vehicle: dict[int, int] = {}
@@ -390,16 +390,16 @@ async def get_vehicle_pnl(
     # ── 3b. Trip count per vehicle for CP Chung allocation ─────────
     wo_count_rows = (await db.execute(
         select(
-            WorkOrder.vehicle_id,
-            func.count(WorkOrder.id),
+            DeliveredTrip.vehicle_id,
+            func.count(DeliveredTrip.id),
         )
         .where(
-            WorkOrder.status == "MATCHED",
-            WorkOrder.vehicle_id.in_(list(vehicles.keys())),
-            func.coalesce(WorkOrder.trip_date, func.date(WorkOrder.created_at)) >= df,
-            func.coalesce(WorkOrder.trip_date, func.date(WorkOrder.created_at)) <= dt,
+            DeliveredTrip.status == "MATCHED",
+            DeliveredTrip.vehicle_id.in_(list(vehicles.keys())),
+            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= df,
+            func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= dt,
         )
-        .group_by(WorkOrder.vehicle_id)
+        .group_by(DeliveredTrip.vehicle_id)
     )).all()
 
     trip_count_by_vehicle: dict[int, int] = {}
@@ -419,19 +419,16 @@ async def get_vehicle_pnl(
         .where(
             VehicleExpense.expense_date >= df,
             VehicleExpense.expense_date <= dt,
-            VehicleExpense.category.in_(["XANG_DAU", "SUA_CHUA", "KHAC", "CHUNG"]),
+            VehicleExpense.category.in_(["XANG_DAU", "SUA_CHUA", "TIEN_LUAT", "KHAC"]),
         )
         .group_by(VehicleExpense.vehicle_id, VehicleExpense.category)
     )).all()
 
     cp_xe_by_vehicle: dict[int, dict[str, int]] = {}
-    cp_chung_total = 0
     for vid, cat, total_amt in expense_rows:
         amt = int(total_amt or 0)
-        if cat == "CHUNG":
-            cp_chung_total += amt
-        elif vid and vid in vehicles:
-            slot = cp_xe_by_vehicle.setdefault(vid, {"XANG_DAU": 0, "SUA_CHUA": 0})
+        if vid and vid in vehicles:
+            slot = cp_xe_by_vehicle.setdefault(vid, {"XANG_DAU": 0, "SUA_CHUA": 0, "TIEN_LUAT": 0, "KHAC": 0})
             slot[cat] = slot.get(cat, 0) + amt
 
     # ── 5. CP Lương cơ bản: drivers attached to each vehicle via vehicle_drivers
@@ -464,7 +461,6 @@ async def get_vehicle_pnl(
     rows: list[VehiclePnLRow] = []
     total_revenue = 0
     sum_row_profits = 0
-    allocated_chung = 0
 
     for vid, plate in sorted(vehicles.items(), key=lambda x: x[1]):
         rev = revenue_by_vehicle.get(vid, 0)
@@ -474,22 +470,16 @@ async def get_vehicle_pnl(
         xe_summary = VehicleExpenseSummary(
             xang_dau=xe_cats.get("XANG_DAU", 0),
             sua_chua=xe_cats.get("SUA_CHUA", 0),
-            total=xe_cats.get("XANG_DAU", 0) + xe_cats.get("SUA_CHUA", 0),
+            tien_luat=xe_cats.get("TIEN_LUAT", 0),
+            khac=xe_cats.get("KHAC", 0),
+            total=sum(xe_cats.values()),
         )
-        # Allocate CP Chung proportionally by trip count
-        vehicle_trips = trip_count_by_vehicle.get(vid, 0)
-        if total_trips > 0 and vehicle_trips > 0:
-            chung_share = cp_chung_total * vehicle_trips // total_trips
-        else:
-            chung_share = 0
-        allocated_chung += chung_share
-        loi_nhuan = rev - (xe_summary.total + chung_share + sal + base)
+        loi_nhuan = rev - (xe_summary.total + sal + base)
         rows.append(VehiclePnLRow(
             vehicle_id=vid,
             plate=plate,
             revenue=rev,
             cp_xe=xe_summary,
-            cp_chung_allocated=chung_share,
             cp_luong_san_luong=sal,
             cp_luong_co_ban=base,
             loi_nhuan=loi_nhuan,
@@ -497,26 +487,12 @@ async def get_vehicle_pnl(
         total_revenue += rev
         sum_row_profits += loi_nhuan
 
-    # Distribute rounding remainder to the vehicle with most trips
-    if cp_chung_total > 0 and allocated_chung != cp_chung_total and total_trips > 0:
-        remainder = cp_chung_total - allocated_chung
-        # Find vehicle with most trips
-        max_vid = max(trip_count_by_vehicle, key=trip_count_by_vehicle.get, default=None)
-        if max_vid is not None:
-            for row in rows:
-                if row.vehicle_id == max_vid:
-                    row.cp_chung_allocated += remainder
-                    row.loi_nhuan -= remainder
-                    sum_row_profits -= remainder
-                    break
-
     total_profit = sum_row_profits
 
     return VehiclePnLResponse(
         date_from=df,
         date_to=dt,
         rows=rows,
-        cp_chung=cp_chung_total,
         total_revenue=total_revenue,
         total_profit=total_profit,
     )
@@ -532,7 +508,7 @@ async def get_trip_daily_stats(
     """Lightweight daily trip aggregation for the dashboard bar chart.
 
     Returns matched/pending counts per day of month without fetching
-    full trip-order objects.  ~10x faster than fetching all trips.
+    full booked-trip objects.  ~10x faster than fetching all trips.
     """
     import calendar as _cal
 
@@ -545,15 +521,15 @@ async def get_trip_daily_stats(
 
     rows = (await db.execute(
         select(
-            TripOrder.trip_date,
-            TripOrder.status,
-            func.count(TripOrder.id),
+            BookedTrip.trip_date,
+            BookedTrip.status,
+            func.count(BookedTrip.id),
         )
         .where(
-            TripOrder.trip_date >= df,
-            TripOrder.trip_date <= dt,
+            BookedTrip.trip_date >= df,
+            BookedTrip.trip_date <= dt,
         )
-        .group_by(TripOrder.trip_date, TripOrder.status)
+        .group_by(BookedTrip.trip_date, BookedTrip.status)
     )).all()
 
     day_map: dict[int, dict[str, int]] = {}

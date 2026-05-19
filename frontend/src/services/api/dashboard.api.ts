@@ -26,7 +26,7 @@ export interface DashboardSummary {
   activeTrips: number
   outstandingDebt: number
   driverSalarySummary: DriverSalarySummary[]
-  unmatchedWorkOrderCount: number
+  unmatchedDeliveredTripCount: number
   pendingTripCount: number
   monthlyRevenue: { month: string; revenue: number; expense: number }[]
   alerts: unknown[]
@@ -55,7 +55,7 @@ export async function getDashboardSummary(dateFrom?: string, dateTo?: string): P
 // ─── KPI Trends ─────────────────────────────────────────────────────────────
 
 export interface KpiTrendDeltas {
-  unmatchedWorkOrders: number
+  unmatchedDeliveredTrips: number
   pendingTrips: number
   driverSalary: number
   revenue: number
@@ -65,7 +65,7 @@ export interface KpiTrends {
   endDate: string
   days: number
   labels: string[]
-  unmatchedWorkOrders: number[]
+  unmatchedDeliveredTrips: number[]
   pendingTrips: number[]
   driverSalary: number[]
   revenue: number[]

@@ -5,8 +5,8 @@ import {
   Calendar, Activity, User,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { getTripOrderStatusBadge } from '@/data/domain'
-import { useTripOrders } from '@/hooks/use-queries'
+import { getBookedTripStatusBadge } from '@/data/domain'
+import { useBookedTrips } from '@/hooks/use-queries'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { BrandIcon } from '@/components/atoms/BrandIcon'
 import { BarChartWidget } from '@/components/shared/Charts'
@@ -152,11 +152,13 @@ function StatCard({ label, value, icon, trend, tone, sparkData, loading }: StatC
 
 export function DirectorDashboard() {
   const navigate = useNavigate()
-  const { data: trips = [], isLoading: loading } = useTripOrders()
+  const { data: trips = [], isLoading: loading } = useBookedTrips()
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([])
+  const [financialLogs, setFinancialLogs] = useState<AuditLogEntry[]>([])
 
   useEffect(() => {
     let cancelled = false
+    // General activity
     getAuditLogs({ pageSize: 12 }).then(data => {
       if (!cancelled) {
         const deduped: typeof data.items = []
@@ -172,6 +174,15 @@ export function DirectorDashboard() {
         setAuditLogs(deduped.slice(0, 8))
       }
     }).catch(() => {})
+
+    // Financial fluctuations (last 24h)
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    getAuditLogs({ pageSize: 10, isFinancial: true, createdAfter: yesterday }).then(data => {
+      if (!cancelled) {
+        setFinancialLogs(data.items)
+      }
+    }).catch(() => {})
+
     return () => { cancelled = true }
   }, [])
 
@@ -422,10 +433,10 @@ export function DirectorDashboard() {
           ) : (
             <div>
               {recentTrips.map((t, i) => {
-                const badge = getTripOrderStatusBadge(t.status)
+                const badge = getBookedTripStatusBadge(t.status)
                 const date = new Date(t.tripDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
                 const route = [t.pickupLocation?.name, t.dropoffLocation?.name].filter(Boolean).join(' → ')
-                const tripWorkType = t.containers[0]?.workType
+                const tripContType = t.containers[0]?.contType
                 const partnerMonogram = monogram(t.partner.name)
 
                 return (
@@ -470,12 +481,12 @@ export function DirectorDashboard() {
                     {/* Right side: date + type tag */}
                     <div className="shrink-0 text-right">
                       <div className="text-xs tabular-nums" style={{ color: 'var(--theme-text-muted)' }}>{date}</div>
-                      {tripWorkType && (
+                      {tripContType && (
                         <span
                           className="mt-1 inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded-full"
                           style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-secondary)' }}
                         >
-                          {tripWorkType}
+                          {tripContType}
                         </span>
                       )}
                     </div>
@@ -516,6 +527,82 @@ export function DirectorDashboard() {
           <BarChartWidget data={barData} height={240} options={barOptions} />
         </div>
       </div>
+
+      {/* Financial Fluctuations (24h) */}
+      {financialLogs.length > 0 && (
+        <div
+          className="overflow-hidden mb-6"
+          style={{
+            background: 'var(--theme-bg-secondary)',
+            border: '1px solid color-mix(in srgb, var(--theme-brand-primary) 20%, var(--theme-border-default))',
+            borderRadius: 'var(--theme-radius-lg, 10px)',
+            boxShadow: 'var(--theme-shadow-card)',
+          }}
+        >
+          <div
+            className="flex items-center justify-between px-5 py-3.5"
+            style={{ 
+              borderBottom: '1px solid var(--theme-border-light)',
+              background: 'color-mix(in srgb, var(--theme-brand-primary) 4%, transparent)'
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" style={{ color: 'var(--theme-brand-primary)' }} />
+              <h3 className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+                Biến động tài chính (24h)
+              </h3>
+            </div>
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style={{ background: 'var(--theme-brand-primary)', color: 'white' }}>
+              Mới
+            </span>
+          </div>
+          <div>
+            {financialLogs.map(log => {
+              const time = new Date(log.createdAt)
+              const timeStr = time.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+              const activityText = formatActivityEntry(log.action, log.tableName)
+              const changes = formatFinancialChange(log)
+
+              return (
+                <div
+                  key={log.id}
+                  className="flex items-start gap-3 px-5 py-3"
+                  style={{ borderTop: '1px solid var(--theme-border-light)' }}
+                >
+                  <div
+                    className="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg mt-0.5"
+                    style={{ background: 'var(--theme-brand-primary-light)', width: 30, height: 30 }}
+                  >
+                    <DollarSign className="h-3.5 w-3.5" style={{ color: 'var(--theme-brand-primary)' }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] leading-snug" style={{ color: 'var(--theme-text-primary)' }}>
+                      <span className="font-semibold">Kế toán</span>{' '}
+                      <span>đã {activityText}</span>
+                      <span className="font-mono text-xs" style={{ color: 'var(--theme-text-muted)' }}> #{log.recordId}</span>
+                    </p>
+                    {changes && (
+                      <div className="mt-1.5 flex flex-wrap gap-2">
+                        {changes.map((c, ci) => (
+                          <div key={ci} className="inline-flex items-center gap-1.5 text-[11px] bg-white border rounded-md px-2 py-1">
+                            <span className="font-medium text-slate-500">{c.label}:</span>
+                            <span className="line-through text-slate-400">{compact(c.old)}</span>
+                            <ArrowUpRight className="h-2.5 w-2.5 text-slate-300" />
+                            <span className="font-bold text-emerald-600">{compact(c.new)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-[11px] tabular-nums whitespace-nowrap shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
+                    {timeStr}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Activity feed */}
       <div
@@ -659,4 +746,35 @@ function formatActivityEntry(action: string, tableName: string): string {
     return tableMap[tableName] ?? tableMap['_default'] ?? `${action.toLowerCase()} ${tableName}`
   }
   return `${action.toLowerCase()} ${tableName.replace(/_/g, ' ')}`
+}
+
+function formatFinancialChange(log: AuditLogEntry): { label: string; old: number; new: number }[] | null {
+  if (log.action !== 'UPDATE') return null
+  try {
+    const oldVal = JSON.parse(log.oldValue || '{}')
+    const newVal = JSON.parse(log.newValue || '{}')
+    const out: { label: string; old: number; new: number }[] = []
+
+    const fieldMap: Record<string, string> = {
+      revenue: 'Doanh thu',
+      unit_price: 'Đơn giá',
+      unitPrice: 'Đơn giá',
+      driver_salary: 'Lương LX',
+      driverSalary: 'Lương LX',
+      allowance: 'Phụ cấp',
+    }
+
+    for (const [field, label] of Object.entries(fieldMap)) {
+      if (newVal[field] !== undefined && oldVal[field] !== newVal[field]) {
+        out.push({
+          label,
+          old: Number(oldVal[field] || 0),
+          new: Number(newVal[field] || 0),
+        })
+      }
+    }
+    return out.length > 0 ? out : null
+  } catch {
+    return null
+  }
 }

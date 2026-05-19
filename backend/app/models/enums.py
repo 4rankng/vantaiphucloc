@@ -4,12 +4,10 @@ from enum import StrEnum
 
 # Re-export from value_objects (single source of truth)
 from app.contexts.operations.domain.value_objects import (  # noqa: F401
-    TripOrderStatus,
-    WorkOrderStatus,
+    BookedTripStatus,
+    DeliveredTripStatus,
     WorkType,
 )
-
-# Keep WorkType alias here for backward compat — it was already identical.
 
 
 class SalaryStatus(StrEnum):
@@ -21,8 +19,8 @@ class SalaryStatus(StrEnum):
 class VehicleExpenseCategory(StrEnum):
     XANG_DAU = "XANG_DAU"   # Fuel
     SUA_CHUA = "SUA_CHUA"   # Repairs
+    TIEN_LUAT = "TIEN_LUAT" # Law/Permits
     KHAC = "KHAC"           # Other
-    CHUNG = "CHUNG"         # General overhead (not tied to a specific vehicle)
 
 
 class OperationType(StrEnum):

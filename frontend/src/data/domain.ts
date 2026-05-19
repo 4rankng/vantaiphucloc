@@ -1,21 +1,23 @@
 export type Role = 'superadmin' | 'director' | 'accountant' | 'driver'
 export type JobStatus = 'DRAFT' | 'PLANNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
-export type WorkType = 'E20' | 'E40' | 'F20' | 'F40'
-export type WorkOrderStatus = 'PENDING' | 'MATCHED'
-export type TripOrderStatus = 'PENDING' | 'MATCHED'
+export type ContType = 'E20' | 'E40' | 'F20' | 'F40'
+export type DeliveredTripStatus = 'PENDING' | 'MATCHED' | 'COMPLETED' | 'CANCELLED'
+export type BookedTripStatus = 'DRAFT' | 'PENDING' | 'MATCHED' | 'COMPLETED' | 'CONFIRMED' | 'CANCELLED'
 
 export interface ContainerItem {
+  id: number
   containerNumber: string
-  workType: WorkType
-  photoUrl: string
+  contType: ContType
+  photoUrl?: string | null
   photoLat?: number | null
   photoLng?: number | null
   photoTimestamp?: string | null
+  photoAddress?: string | null
 }
 
-export const WORK_TYPES: WorkType[] = ['E20', 'E40', 'F20', 'F40']
+export const CONT_TYPES: ContType[] = ['E20', 'E40', 'F20', 'F40']
 
-export const WORK_TYPE_LABELS: Record<WorkType, string> = {
+export const CONT_TYPE_LABELS: Record<ContType, string> = {
   E20: 'E20 (Container rỗng 20ft)',
   E40: 'E40 (Container rỗng 40ft)',
   F20: 'F20 (Container hàng 20ft)',
@@ -167,34 +169,32 @@ export const OPERATION_TYPE_OPTIONS: { value: OperationType; label: string }[] =
     ([value, label]) => ({ value, label }),
   )
 
-export interface WorkOrder {
+export interface DeliveredTrip {
   id: number
-  code?: string
   containers: ContainerItem[]
   client: PartnerSummary
   pickupLocation: LocationSummary
   dropoffLocation: LocationSummary
   driver?: DriverSummary | null
   vendorId?: number | null
-  vehicleExternalPlate?: string | null
-  vehicleId?: number | null
+  vehicle?: VehicleSummary | null
   vessel?: string | null
   operationType?: OperationType | null
-  gpsLat: number
-  gpsLng: number
-  gpsAddress?: string
-  unitPrice: number
+  workType?: string | null
+  gpsLat?: number | null
+  gpsLng?: number | null
+  gpsAddress?: string | null
+  revenue: number
   driverSalary: number
   allowance: number
-  pricingId?: number
-  /** Explicit trip execution date (YYYY-MM-DD). Falls back to createdAt if absent. */
   tripDate?: string | null
   createdAt: string
-  status: WorkOrderStatus
+  updatedAt: string
+  status: DeliveredTripStatus
   matchedTripCount?: number
-  /** True when created offline, not yet synced to server */
   pendingSync?: boolean
 }
+
 
 export interface PricingLine {
   id?: number
@@ -207,7 +207,7 @@ export interface PricingLine {
 export interface Pricing {
   id: number
   client: PartnerSummary
-  workType: WorkType
+  workType: ContType
   pickupLocation: LocationSummary
   dropoffLocation: LocationSummary
   operationType?: OperationType | null
@@ -216,27 +216,28 @@ export interface Pricing {
   updatedAt: string
 }
 
-export interface TripOrderContainerItem {
+export interface BookedTripContainerItem {
+  id: number
   containerNumber: string
-  workType: WorkType
+  contType: ContType
 }
 
-export interface TripOrder {
+export interface BookedTrip {
   id: number
-  code?: string
   tripDate: string
   client: PartnerSummary
   pickupLocation: LocationSummary
   dropoffLocation: LocationSummary
-  containers: TripOrderContainerItem[]
-  pricingId: number
-  unitPrice: number
-  driverSalary: number
-  allowance: number
-  matchedWorkOrderIds: number[]
-  status: TripOrderStatus
+  containers: BookedTripContainerItem[]
+  operationType?: OperationType | null
+  workType?: string | null
+  revenue: number
+  matchedDeliveredTripIds: number[]
+  status: BookedTripStatus
   createdAt: string
+  updatedAt: string
 }
+
 
 export interface ApiResponse<T> {
   data: T
@@ -252,13 +253,13 @@ export interface CriterionBreakdown {
   name: string
   label: string
   match: boolean
-  woValue: string | null
-  toValue: string | null
+  deliveredTripValue: string | null
+  bookedTripValue: string | null
   fuzzy?: boolean
 }
 
 export interface MatchSuggestion {
-  tripOrder: TripOrder
+  bookedTrip: BookedTrip
   containerId: number
   confidence: MatchConfidence
   matchedFields: string[]
@@ -270,12 +271,12 @@ export interface MatchSuggestion {
 }
 
 export interface SuggestMatchesResponse {
-  workOrderId: number
+  deliveredTripId: number
   suggestions: MatchSuggestion[]
 }
 
 export interface WOSuggestion {
-  workOrder: WorkOrder
+  deliveredTrip: DeliveredTrip
   confidence: MatchConfidence
   matchedFields: string[]
   score: number
@@ -286,14 +287,14 @@ export interface WOSuggestion {
 }
 
 export interface SuggestWosResponse {
-  tripOrderId: number
+  bookedTripId: number
   suggestions: WOSuggestion[]
 }
 
 // ─── Match Scores (lightweight for master list) ────────────────────────────────
 
-export interface WorkOrderMatchScore {
-  workOrderId: number
+export interface DeliveredTripMatchScore {
+  deliveredTripId: number
   bestScore: number
   bestMatchScore: number
   maxScore: number
@@ -301,7 +302,7 @@ export interface WorkOrderMatchScore {
 }
 
 export interface MatchScoresResponse {
-  scores: WorkOrderMatchScore[]
+  scores: DeliveredTripMatchScore[]
 }
 
 // ─── Auto-match (preview + confirm) ────────────────────────────────────
@@ -312,7 +313,7 @@ export interface AutoMatchCriterion {
   match: boolean
 }
 
-export interface AutoMatchWorkOrderRef {
+export interface AutoMatchDeliveredTripRef {
   id: number
   code: string | null
   plate: string | null
@@ -320,27 +321,27 @@ export interface AutoMatchWorkOrderRef {
   clientName: string | null
 }
 
-export interface AutoMatchTripOrderRef {
+export interface AutoMatchBookedTripRef {
   id: number
   code: string | null
   clientName: string | null
-  containers: TripOrderContainerItem[]
+  containers: BookedTripContainerItem[]
 }
 
 export interface AutoMatchCandidate {
-  workOrderId: number
-  tripOrderId: number
+  deliveredTripId: number
+  bookedTripId: number
   score: number
   matchScore: number
   maxScore: number
   matchedFields: string[]
   criteria: AutoMatchCriterion[]
   suggestedDefault: boolean
-  workOrderRef: AutoMatchWorkOrderRef | null
-  tripOrderRef: AutoMatchTripOrderRef | null
+  deliveredTripRef: AutoMatchDeliveredTripRef | null
+  bookedTripRef: AutoMatchBookedTripRef | null
 }
 
-export interface UnmatchedWorkOrderRef {
+export interface UnmatchedDeliveredTripRef {
   id: number
   code: string | null
   plate: string | null
@@ -348,21 +349,21 @@ export interface UnmatchedWorkOrderRef {
 }
 
 export interface AutoMatchPreviewResponse {
-  scannedWorkOrderCount: number
+  scannedDeliveredTripCount: number
   skippedAlreadyMatched: number
   candidates: AutoMatchCandidate[]
-  unmatchedWorkOrderRefs: UnmatchedWorkOrderRef[]
+  unmatchedDeliveredTripRefs: UnmatchedDeliveredTripRef[]
   errors: string[]
 }
 
 export interface AutoMatchConfirmPair {
-  workOrderId: number
-  tripOrderId: number
+  deliveredTripId: number
+  bookedTripId: number
 }
 
 export interface AutoMatchConfirmResult {
-  workOrderId: number
-  tripOrderId: number
+  deliveredTripId: number
+  bookedTripId: number
   success: boolean
   error: string | null
 }
@@ -374,13 +375,13 @@ export interface AutoMatchConfirmResponse {
 }
 
 export interface BulkMatchPair {
-  workOrderId: number
-  tripOrderId: number
+  deliveredTripId: number
+  bookedTripId: number
 }
 
 export interface BulkMatchResult {
-  workOrderId: number
-  tripOrderId: number
+  deliveredTripId: number
+  bookedTripId: number
   success: boolean
   error: string | null
 }
@@ -390,27 +391,27 @@ export interface BulkMatchResponse {
   errors: string[]
 }
 
-// ─── Batch Match for WO (1 WO → N TripOrders) ──────────────────────────────────────
+// ─── Batch Match for WO (1 WO → N BookedTrips) ──────────────────────────────────────
 
 export interface BatchMatchForWOResult {
-  tripOrderId: number
+  bookedTripId: number
   success: boolean
   error: string | null
 }
 
 export interface BatchMatchForWOResponse {
-  workOrderId: number
+  deliveredTripId: number
   results: BatchMatchForWOResult[]
 }
 
 export interface BatchMatchForTOResult {
-  workOrderId: number
+  deliveredTripId: number
   success: boolean
   error: string | null
 }
 
 export interface BatchMatchForTOResponse {
-  tripOrderId: number
+  bookedTripId: number
   results: BatchMatchForTOResult[]
 }
 
@@ -419,8 +420,8 @@ export interface BatchMatchForTOResponse {
 export interface ReconciliationResult {
   containerNumber: string
   normalizedNumber: string
-  workOrderId?: number
-  tripOrderId?: number
+  deliveredTripId?: number
+  bookedTripId?: number
   status: 'confirmed' | 'pending' | 'rejected'
   isDuplicate: boolean
   matchType: 'exact' | 'partial' | 'none'
@@ -492,10 +493,14 @@ export function getJobStatusBadge(status: JobStatus): { variant: 'default'|'succ
   }
 }
 
-export function getTripOrderStatusBadge(status: TripOrderStatus): { variant: 'default'|'success'|'warning'|'danger'|'info'|'neutral'; label: string } {
+export function getBookedTripStatusBadge(status: BookedTripStatus): { variant: 'default'|'success'|'warning'|'danger'|'info'|'neutral'; label: string } {
   switch (status) {
+    case 'DRAFT': return { variant: 'neutral', label: 'Nháp' }
     case 'PENDING': return { variant: 'warning', label: 'Chờ ghép' }
     case 'MATCHED': return { variant: 'success', label: 'Đã khớp' }
+    case 'COMPLETED': return { variant: 'success', label: 'Hoàn thành' }
+    case 'CONFIRMED': return { variant: 'info', label: 'Đã duyệt' }
+    case 'CANCELLED': return { variant: 'danger', label: 'Huỷ' }
   }
 }
 

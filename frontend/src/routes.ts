@@ -12,8 +12,8 @@ export const SuperAdminLayout = lazy(() => import('@/components/shared/SuperAdmi
 
 // ─── Driver pages ─────────────────────────────────────────────────────────────
 export const DriverHome           = lazy(() => import('@/pages/driver/DriverHome').then(m => ({ default: m.DriverHome })))
-export const CreateWorkOrder      = lazy(() => import('@/pages/driver/CreateWorkOrder').then(m => ({ default: m.CreateWorkOrder })))
-export const EditWorkOrder        = lazy(() => import('@/pages/driver/EditWorkOrder').then(m => ({ default: m.EditWorkOrder })))
+export const CreateDeliveredTrip      = lazy(() => import('@/pages/driver/CreateDeliveredTrip').then(m => ({ default: m.CreateDeliveredTrip })))
+export const EditDeliveredTrip        = lazy(() => import('@/pages/driver/EditDeliveredTrip').then(m => ({ default: m.EditDeliveredTrip })))
 export const DriverHistory        = lazy(() => import('@/pages/driver/DriverHistory').then(m => ({ default: m.DriverHistory })))
 export const DriverNotifications  = lazy(() => import('@/pages/driver/DriverNotifications').then(m => ({ default: m.DriverNotifications })))
 export const JobDetail            = lazy(() => import('@/pages/driver/JobDetail').then(m => ({ default: m.JobDetail })))

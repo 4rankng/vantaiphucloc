@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta, timezone
 from sqlalchemy import select
 
 from app.database import get_session
-from app.models.domain import WorkOrder
+from app.models.domain import DeliveredTrip
 
 logger = logging.getLogger(__name__)
 
@@ -26,14 +26,14 @@ async def generate_monthly_report_task(
 
     async with get_session() as db:
         result = await db.execute(
-            select(WorkOrder).where(
-                WorkOrder.created_at >= start_dt,
-                WorkOrder.created_at < end_dt,
+            select(DeliveredTrip).where(
+                DeliveredTrip.created_at >= start_dt,
+                DeliveredTrip.created_at < end_dt,
             )
         )
         orders = result.scalars().all()
 
-        total_revenue = sum(wo.unit_price or 0 for wo in orders)
+        total_revenue = sum(wo.revenue or 0 for wo in orders)
         total_driver_cost = sum(wo.driver_salary or 0 for wo in orders)
         total_allowance = sum(wo.allowance or 0 for wo in orders)
 

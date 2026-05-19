@@ -21,17 +21,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.drop_index('ix_location_aliases_status', table_name='location_aliases')
-    op.drop_constraint('fk_location_aliases_rejected_by_id', 'location_aliases', type_='foreignkey')
-    op.drop_constraint('fk_location_aliases_confirmed_by_id', 'location_aliases', type_='foreignkey')
-    op.drop_constraint('fk_location_aliases_merge_target', 'location_aliases', type_='foreignkey')
-    op.drop_column('location_aliases', 'status')
-    op.drop_column('location_aliases', 'note')
-    op.drop_column('location_aliases', 'merge_target_location_id')
-    op.drop_column('location_aliases', 'rejected_by_id')
-    op.drop_column('location_aliases', 'confirmed_by_id')
-    op.drop_column('location_aliases', 'rejected_at')
-    op.drop_column('location_aliases', 'confirmed_at')
+    pass
 
 
 def downgrade() -> None:

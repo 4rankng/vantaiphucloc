@@ -5,12 +5,12 @@ import {
   Sparkles, ChevronRight, ChevronDown, XCircle,
 } from 'lucide-react'
 import {
-  useWorkOrders, useTripOrders, useSuggestMatches, useRoutes,
-  useUpdateWorkOrder, useUpdateTripOrder, useReconcile,
+  useDeliveredTrips, useBookedTrips, useSuggestMatches, useRoutes,
+  useUpdateDeliveredTrip, useUpdateBookedTrip, useReconcile,
 } from '@/hooks/use-queries'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { useToast } from '@/components/atoms/Toast'
-import type { TripOrder, WorkOrder, WorkType } from '@/data/domain'
+import type { BookedTrip, DeliveredTrip, ContType } from '@/data/domain'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -171,7 +171,7 @@ function ContainerRow({
 
 // ─── Work order top card ──────────────────────────────────────────────────────
 
-function WorkOrderCard({
+function DeliveredTripCard({
   driverName, driverPlate, woContainers, woClient, woPickup, woDropoff,
   setWoClient, setWoPickup, setWoDropoff, setWoContainers, updateWoContainer,
   clientMatch, pickupMatch, dropoffMatch, matchedWoIndices,
@@ -303,7 +303,7 @@ function SuggestionCard({
   onChangeTripClient, onChangeTripPickup, onChangeTripDropoff,
   onSelect, onConfirm, submitting,
 }: {
-  trip: TripOrder
+  trip: BookedTrip
   isSelected: boolean
   matchedCount: number
   totalCriteria: number
@@ -519,18 +519,18 @@ function SuggestionCard({
 // ─── Main panel ────────────────────────────────────────────────────────────────
 
 interface MatchPanelProps {
-  workOrder: WorkOrder
+  deliveredTrip: DeliveredTrip
   onClose: () => void
   onMatchSuccess: () => void
 }
 
-export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelProps) {
+export function MatchPanel({ deliveredTrip, onClose, onMatchSuccess }: MatchPanelProps) {
   const toast = useToast()
 
   // ── Data ──────────────────────────────────────────────────────────────────
-  const { isLoading: loadingWO } = useWorkOrders()
-  const { data: allTrips = [], isLoading: loadingTrips } = useTripOrders()
-  const { data: suggestionsData, isLoading: loadingSuggestions } = useSuggestMatches(workOrder.id)
+  const { isLoading: loadingWO } = useDeliveredTrips()
+  const { data: allTrips = [], isLoading: loadingTrips } = useBookedTrips()
+  const { data: suggestionsData, isLoading: loadingSuggestions } = useSuggestMatches(deliveredTrip.id)
   const { data: routes = [] } = useRoutes()
 
   const routeMap = useMemo(() =>
@@ -538,8 +538,8 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
     [routes]
   )
 
-  const updateWorkOrder = useUpdateWorkOrder()
-  const updateTripOrder = useUpdateTripOrder()
+  const updateDeliveredTrip = useUpdateDeliveredTrip()
+  const updateBookedTrip = useUpdateBookedTrip()
   const reconcile = useReconcile()
 
   const loading = loadingWO || loadingTrips
@@ -554,17 +554,17 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
-    if (workOrder && !woInitialized) {
-      setWoClient(workOrder.partner.name)
-      setWoRoute(workOrder.route)
-      const resolved = routeMap.get(workOrder.route)
-      setWoPickup(workOrder.pickupLocation.name || resolved?.pickup || '')
-      setWoDropoff(workOrder.dropoffLocation.name || resolved?.dropoff || '')
-      setWoContainers(workOrder.containers.map(c => ({ workType: c.workType, containerNumber: c.containerNumber })))
+    if (deliveredTrip && !woInitialized) {
+      setWoClient(deliveredTrip.partner.name)
+      setWoRoute(deliveredTrip.route)
+      const resolved = routeMap.get(deliveredTrip.route)
+      setWoPickup(deliveredTrip.pickupLocation.name || resolved?.pickup || '')
+      setWoDropoff(deliveredTrip.dropoffLocation.name || resolved?.dropoff || '')
+      setWoContainers(deliveredTrip.containers.map(c => ({ workType: c.workType, containerNumber: c.containerNumber })))
       setWoInitialized(true)
     }
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [workOrder, woInitialized, routeMap])
+  }, [deliveredTrip, woInitialized, routeMap])
 
   const updateWoContainer = useCallback((idx: number, field: 'workType' | 'containerNumber', value: string) => {
     setWoContainers(prev => prev.map((c, i) => i === idx ? { ...c, [field]: value } : c))
@@ -579,7 +579,7 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
     if (selectedTripId === null && suggestions.length > 0) {
-      setSelectedTripId(suggestions[0].tripOrder.id)
+      setSelectedTripId(suggestions[0].bookedTrip.id)
     }
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [suggestions, selectedTripId])
@@ -619,7 +619,7 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
 
   // ── Match computation ─────────────────────────────────────────────────────
   const selectedSuggestion = useMemo(
-    () => suggestions.find(s => s.tripOrder.id === selectedTripId) ?? null,
+    () => suggestions.find(s => s.bookedTrip.id === selectedTripId) ?? null,
     [suggestions, selectedTripId]
   )
   const backendMatchedFields = useMemo(
@@ -662,14 +662,14 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
   const [submitting, setSubmitting] = useState(false)
 
   const handleMatch = async () => {
-    if (!workOrder || !selectedTrip || submitting) return
+    if (!deliveredTrip || !selectedTrip || submitting) return
     setSubmitting(true)
 
-    const woResult = await updateWorkOrder.mutateAsync({
-      id: workOrder.id,
+    const woResult = await updateDeliveredTrip.mutateAsync({
+      id: deliveredTrip.id,
       data: {
         route: woRoute,
-        containers: woContainers.map(c => ({ containerNumber: c.containerNumber, workType: c.workType as WorkType, photoUrl: '' })),
+        containers: woContainers.map(c => ({ containerNumber: c.containerNumber, contType: c.contType as ContType, photoUrl: '' })),
       },
     })
     if (!woResult.success) {
@@ -678,11 +678,11 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
       return
     }
 
-    const toResult = await updateTripOrder.mutateAsync({
+    const toResult = await updateBookedTrip.mutateAsync({
       id: selectedTrip.id,
       data: {
         route: tripRoute,
-        containers: tripContainers.map(c => ({ containerNumber: c.containerNumber, workType: c.workType as WorkType })),
+        containers: tripContainers.map(c => ({ containerNumber: c.containerNumber, contType: c.contType as ContType })),
       },
     })
     if (!toResult.success) {
@@ -691,7 +691,7 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
       return
     }
 
-    await reconcile.mutateAsync({ workOrderId: workOrder.id, tripOrderId: selectedTrip.id })
+    await reconcile.mutateAsync({ deliveredTripId: deliveredTrip.id, bookedTripId: selectedTrip.id })
 
     toast.success('Thành công', 'Đã ghép chuyến thành công')
     onMatchSuccess()
@@ -728,9 +728,9 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
       </div>
 
       {/* Work order card */}
-      <WorkOrderCard
-        driverName={workOrder.driver?.name ?? (workOrder.vehicleExternalPlate ? `Xe ngoài · ${workOrder.vehicleExternalPlate}` : 'Xe ngoài')}
-        driverPlate={workOrder.driver?.vehicle?.plate ?? workOrder.vehicleExternalPlate}
+      <DeliveredTripCard
+        driverName={deliveredTrip.driver?.name ?? (deliveredTrip.vehicleExternalPlate ? `Xe ngoài · ${deliveredTrip.vehicleExternalPlate}` : 'Xe ngoài')}
+        driverPlate={deliveredTrip.driver?.vehicle?.plate ?? deliveredTrip.vehicleExternalPlate}
         woContainers={woContainers}
         woClient={woClient}
         woPickup={woPickup}
@@ -782,7 +782,7 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
         ) : (
           <div className="space-y-3">
             {suggestions.map(s => {
-              const sTripContainers = s.tripOrder.containers ?? []
+              const sTripContainers = s.bookedTrip.containers ?? []
               const sTripContainerSet = new Set(sTripContainers.map(c => `${c.workType}|${c.containerNumber}`))
               const matchedContainersCount = woContainers.filter(
                 c => c.containerNumber && sTripContainerSet.has(`${c.workType}|${c.containerNumber}`)
@@ -792,17 +792,17 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
                 + (s.matchedFields.includes('pickup_location') ? 1 : 0)
                 + (s.matchedFields.includes('dropoff_location') ? 1 : 0)
 
-              const isSelected = selectedTripId === s.tripOrder.id
+              const isSelected = selectedTripId === s.bookedTrip.id
 
               return (
                 <SuggestionCard
-                  key={s.tripOrder.id}
-                  trip={s.tripOrder}
+                  key={s.bookedTrip.id}
+                  trip={s.bookedTrip}
                   isSelected={isSelected}
                   matchedCount={matchedCount}
                   totalCriteria={totalCriteria}
-                  tripContainers={isSelected ? tripContainers : (s.tripOrder.containers ?? []).map(c => ({ workType: c.workType, containerNumber: c.containerNumber }))}
-                  tripClient={isSelected ? tripClient : s.tripOrder.partner.name}
+                  tripContainers={isSelected ? tripContainers : (s.bookedTrip.containers ?? []).map(c => ({ workType: c.workType, containerNumber: c.containerNumber }))}
+                  tripClient={isSelected ? tripClient : s.bookedTrip.partner.name}
                   tripPickup={isSelected ? tripPickup : ''}
                   tripDropoff={isSelected ? tripDropoff : ''}
                   matchedTripContainerIndices={isSelected ? matchedTripContainerIndices : new Set()}
@@ -814,7 +814,7 @@ export function MatchPanel({ workOrder, onClose, onMatchSuccess }: MatchPanelPro
                   onChangeTripClient={setTripClient}
                   onChangeTripPickup={setTripPickup}
                   onChangeTripDropoff={setTripDropoff}
-                  onSelect={() => setSelectedTripId(isSelected ? null : s.tripOrder.id)}
+                  onSelect={() => setSelectedTripId(isSelected ? null : s.bookedTrip.id)}
                   onConfirm={handleMatch}
                   submitting={submitting}
                 />

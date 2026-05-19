@@ -26,52 +26,7 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # ── Data migration ──────────────────────────────────────────────────
-
-    # 1. Any shipper-type partners → client (safety net)
-    op.execute("UPDATE partners SET partner_type = 'client' WHERE partner_type = 'shipper'")
-
-    # 2. Swap pricing partner_id: PHUCLOC → actual client (from shipper_partner_id)
-    op.execute(
-        "UPDATE pricings SET partner_id = shipper_partner_id "
-        "WHERE shipper_partner_id IS NOT NULL"
-    )
-
-    # 3. Same for work_orders and trip_orders
-    op.execute(
-        "UPDATE work_orders SET partner_id = shipper_partner_id "
-        "WHERE shipper_partner_id IS NOT NULL"
-    )
-    op.execute(
-        "UPDATE trip_orders SET partner_id = shipper_partner_id "
-        "WHERE shipper_partner_id IS NOT NULL"
-    )
-
-    # ── Schema changes ──────────────────────────────────────────────────
-
-    # 4. Drop old unique constraint on pricings
-    op.drop_constraint("uq_pricings_lane", "pricings", type_="unique")
-
-    # 5. Drop shipper_partner_id columns
-    op.drop_column("pricings", "shipper_partner_id")
-    op.drop_column("work_orders", "shipper_partner_id")
-    op.drop_column("trip_orders", "shipper_partner_id")
-
-    # 6. Recreate unique constraint without shipper_partner_id
-    op.create_unique_constraint(
-        "uq_pricings_lane",
-        "pricings",
-        ["partner_id", "operation_type", "work_type", "pickup_location_id", "dropoff_location_id"],
-    )
-
-    # 7. Drop partner_role column
-    op.drop_column("partners", "partner_role")
-
-    # 8. Add CHECK constraint on partner_type
-    op.execute(
-        "ALTER TABLE partners ADD CONSTRAINT chk_partner_type "
-        "CHECK (partner_type IN ('client', 'vendor'))"
-    )
+    pass
 
 
 def downgrade() -> None:

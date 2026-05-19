@@ -4,7 +4,7 @@
  * Workflow:
  *   1. Frontend (or future Excel parser) produces `ParsedRow[]` from the
  *      customer's reply file.
- *   2. POST /preview persists rows + resolves each to a TripOrder id by
+ *   2. POST /preview persists rows + resolves each to a BookedTrip id by
  *      (client_id, container_number, trip_date).
  *   3. POST /{id}/commit marks the import as APPLIED.
  */
@@ -40,7 +40,7 @@ export interface ReconciliationRow {
   tripDate: string | null
   customerStatus: CustomerVerdict
   customerNote: string | null
-  resolvedTripOrderId: number | null
+  resolvedBookedTripId: number | null
   applyStatus: RowApplyStatus
   applyMessage: string | null
   diffClassification: DiffClassification
@@ -181,5 +181,5 @@ export function getExportDoiSoatUrl(
   dateTo: string,
 ): string {
   const base = import.meta.env.VITE_API_BASE || '/api/v1'
-  return `${base}/trip-orders/export-doi-soat?client_id=${clientId}&date_from=${dateFrom}&date_to=${dateTo}`
+  return `${base}/booked-trips/export-doi-soat?client_id=${clientId}&date_from=${dateFrom}&date_to=${dateTo}`
 }

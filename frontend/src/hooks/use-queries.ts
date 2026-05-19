@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
-import { searchTripOrders } from '@/services/api/tripOrders.api'
-import type { ApiResponse, Pricing, WorkOrder, TripOrder, WorkType, Client, Vendor, VendorSummary, BulkMatchPair } from '@/data/domain'
+import { searchBookedTrips } from '@/services/api/bookedTrips.api'
+import type { ApiResponse, Pricing, DeliveredTrip, BookedTrip, ContType, Client, Vendor, VendorSummary, BulkMatchPair } from '@/data/domain'
 import type { DriverEarnings } from '@/services/api/salary.api'
 import type { VehicleExpenseCategory } from '@/services/api/vehicleExpenses.api'
 import type { Vehicle } from '@/services/api/vehicles.api'
@@ -23,19 +23,22 @@ function unwrap<T>(res: ApiResponse<T>): T {
 }
 import type { RouteCreatePayload, RouteUpdatePayload } from '@/services/api/routes.api'
 import type { PricingCreatePayload, PricingUpdatePayload } from '@/services/api/pricings.api'
-import type { WorkOrderCreatePayload, WorkOrderUpdatePayload } from '@/services/api/workOrders.api'
-import type { TripOrderCreatePayload, TripOrderUpdatePayload } from '@/services/api/tripOrders.api'
+import type { DeliveredTripCreatePayload, DeliveredTripUpdatePayload } from '@/services/api/deliveredTrips.api'
+import type { BookedTripCreatePayload, BookedTripUpdatePayload } from '@/services/api/bookedTrips.api'
+import type { PricingFormat, PricingCommitRequest } from '@/services/api/imports.api'
 
 export type {
   PricingCreatePayload,
   PricingUpdatePayload,
   RouteCreatePayload,
   RouteUpdatePayload,
-  WorkOrderCreatePayload,
-  WorkOrderUpdatePayload,
-  TripOrderCreatePayload,
-  TripOrderUpdatePayload,
+  DeliveredTripCreatePayload,
+  DeliveredTripUpdatePayload,
+  BookedTripCreatePayload,
+  BookedTripUpdatePayload,
   DriverEarnings,
+  PricingFormat,
+  PricingCommitRequest,
 }
 import type { UserAccount, UserProfile } from '@/services/api/users.api'
 
@@ -52,15 +55,15 @@ export const queryKeys = {
   routes: ['routes'] as const,
   locations: ['locations'] as const,
   pricings: ['pricings'] as const,
-  pricingsFiltered: (filters?: { clientId?: number; workType?: WorkType }) =>
+  pricingsFiltered: (filters?: { clientId?: number; workType?: ContType }) =>
     ['pricings', filters] as const,
-  workOrders: ['work-orders'] as const,
-  workOrder: (id: number) => ['work-orders', id] as const,
-  workOrdersFiltered: (filters?: Record<string, string>) =>
-    ['work-orders', filters] as const,
-  tripOrders: ['trip-orders'] as const,
-  tripOrdersFiltered: (filters?: Record<string, string>) =>
-    ['trip-orders', filters] as const,
+  deliveredTrips: ['delivered-trips'] as const,
+  deliveredTrip: (id: number) => ['delivered-trips', id] as const,
+  deliveredTripsFiltered: (filters?: Record<string, string>) =>
+    ['delivered-trips', filters] as const,
+  bookedTrips: ['booked-trips'] as const,
+  bookedTripsFiltered: (filters?: Record<string, string>) =>
+    ['booked-trips', filters] as const,
   driverEarnings: (driverId: number, startDate: string, endDate: string) =>
     ['driver-earnings', driverId, startDate, endDate] as const,
   myEarnings: (startDate: string, endDate: string) =>
@@ -160,7 +163,7 @@ export function useDeleteLocation() {
   })
 }
 
-export function usePricings(filters?: { clientId?: number; workType?: WorkType; route?: string; pickupLocationId?: number; dropoffLocationId?: number }) {
+export function usePricings(filters?: { clientId?: number; workType?: ContType; route?: string; pickupLocationId?: number; dropoffLocationId?: number }) {
   return useQuery({
     queryKey: queryKeys.pricingsFiltered(filters),
     queryFn: async () => {
@@ -170,7 +173,7 @@ export function usePricings(filters?: { clientId?: number; workType?: WorkType; 
   })
 }
 
-export function useWorkOrders(filters?: { driverId?: number; dateFrom?: string; dateTo?: string; status?: WorkOrder['status'] }) {
+export function useDeliveredTrips(filters?: { driverId?: number; dateFrom?: string; dateTo?: string; status?: DeliveredTrip['status'] }) {
   const flatFilters: Record<string, string> = {}
   if (filters?.driverId) flatFilters.driverId = String(filters.driverId)
   if (filters?.dateFrom) flatFilters.dateFrom = filters.dateFrom
@@ -178,26 +181,26 @@ export function useWorkOrders(filters?: { driverId?: number; dateFrom?: string; 
   if (filters?.status) flatFilters.status = filters.status
 
   return useQuery({
-    queryKey: queryKeys.workOrdersFiltered(Object.keys(flatFilters).length > 0 ? flatFilters : undefined),
+    queryKey: queryKeys.deliveredTripsFiltered(Object.keys(flatFilters).length > 0 ? flatFilters : undefined),
     queryFn: async () => {
-      const res = await apiClient.getWorkOrders(filters)
+      const res = await apiClient.getDeliveredTrips(filters)
       return res.success ? res.data : []
     },
   })
 }
 
-export function useWorkOrder(id: number) {
+export function useDeliveredTrip(id: number) {
   return useQuery({
-    queryKey: queryKeys.workOrder(id),
+    queryKey: queryKeys.deliveredTrip(id),
     queryFn: async () => {
-      const res = await apiClient.getWorkOrder(id)
+      const res = await apiClient.getDeliveredTrip(id)
       return res.success ? res.data : null
     },
     enabled: !!id,
   })
 }
 
-export function useTripOrders(filters?: { clientId?: number; driverId?: number; status?: TripOrder['status']; dateFrom?: string; dateTo?: string; pageSize?: number }) {
+export function useBookedTrips(filters?: { clientId?: number; driverId?: number; status?: BookedTrip['status']; dateFrom?: string; dateTo?: string; pageSize?: number }) {
   const flatFilters: Record<string, string> = {}
   if (filters?.clientId) flatFilters.clientId = String(filters.clientId)
   if (filters?.driverId) flatFilters.driverId = String(filters.driverId)
@@ -207,9 +210,9 @@ export function useTripOrders(filters?: { clientId?: number; driverId?: number; 
   if (filters?.pageSize) flatFilters.pageSize = String(filters.pageSize)
 
   return useQuery({
-    queryKey: queryKeys.tripOrdersFiltered(Object.keys(flatFilters).length > 0 ? flatFilters : undefined),
+    queryKey: queryKeys.bookedTripsFiltered(Object.keys(flatFilters).length > 0 ? flatFilters : undefined),
     queryFn: async () => {
-      const res = await apiClient.getTripOrders(filters)
+      const res = await apiClient.getBookedTrips(filters)
       return res.success ? res.data : []
     },
   })
@@ -367,25 +370,25 @@ export function useSalaryConfig() {
   })
 }
 
-export function useSuggestMatches(workOrderId: number | null) {
+export function useSuggestMatches(deliveredTripId: number | null) {
   return useQuery({
-    queryKey: queryKeys.suggestMatches(workOrderId!),
+    queryKey: queryKeys.suggestMatches(deliveredTripId!),
     queryFn: async () => {
-      const res = await apiClient.suggestMatches(workOrderId!)
+      const res = await apiClient.suggestMatches(deliveredTripId!)
       return res.success ? res.data : null
     },
-    enabled: workOrderId !== null,
+    enabled: deliveredTripId !== null,
   })
 }
 
-export function useSuggestWosForTrip(tripOrderId: number | null) {
+export function useSuggestWosForTrip(bookedTripId: number | null) {
   return useQuery({
-    queryKey: queryKeys.suggestWos(tripOrderId!),
+    queryKey: queryKeys.suggestWos(bookedTripId!),
     queryFn: async () => {
-      const res = await apiClient.suggestWosForTrip(tripOrderId!)
+      const res = await apiClient.suggestWosForTrip(bookedTripId!)
       return res.success ? res.data : null
     },
-    enabled: tripOrderId !== null,
+    enabled: bookedTripId !== null,
   })
 }
 
@@ -516,43 +519,60 @@ export function useDeletePricing() {
   })
 }
 
-export function useCreateWorkOrder() {
-  const qc = useQueryClient()
+export function usePreviewPricing() {
   return useMutation({
-    mutationFn: (data: Parameters<typeof apiClient.createWorkOrder>[0]) => apiClient.createWorkOrder(data).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['work-orders'] }) },
+    mutationFn: (args: { file: File; format?: PricingFormat; clientId?: number }) =>
+      apiClient.previewCustomerPricing(args),
   })
 }
 
-export function useUpdateWorkOrder() {
+export function useCommitPricing() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: WorkOrderUpdatePayload }) => apiClient.updateWorkOrder(id, data).then(unwrap),
+    mutationFn: (body: PricingCommitRequest) => apiClient.commitCustomerPricing(body),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['work-orders'] })
+      qc.invalidateQueries({ queryKey: ['pricings'] })
+    },
+  })
+}
+
+export function useCreateDeliveredTrip() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: Parameters<typeof apiClient.createDeliveredTrip>[0]) => apiClient.createDeliveredTrip(data).then(unwrap),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['delivered-trips'] }) },
+  })
+}
+
+export function useUpdateDeliveredTrip() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: DeliveredTripUpdatePayload }) => apiClient.updateDeliveredTrip(id, data).then(unwrap),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
       qc.invalidateQueries({ queryKey: ['suggest-matches'] })
       qc.invalidateQueries({ queryKey: ['suggest-wos'] })
     },
   })
 }
 
-export function useCreateTripOrder() {
+export function useCreateBookedTrip() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: TripOrderCreatePayload) => apiClient.createTripOrder(data).then(unwrap),
+    mutationFn: (data: BookedTripCreatePayload) => apiClient.createBookedTrip(data).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['trip-orders'] })
-      qc.invalidateQueries({ queryKey: ['work-orders'] })
+      qc.invalidateQueries({ queryKey: ['booked-trips'] })
+      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
     },
   })
 }
 
-export function useUpdateTripOrder() {
+export function useUpdateBookedTrip() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: TripOrderUpdatePayload }) => apiClient.updateTripOrder(id, data).then(unwrap),
+    mutationFn: ({ id, data }: { id: number; data: BookedTripUpdatePayload }) => apiClient.updateBookedTrip(id, data).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['trip-orders'] })
+      qc.invalidateQueries({ queryKey: ['booked-trips'] })
       qc.invalidateQueries({ queryKey: ['suggest-matches'] })
       qc.invalidateQueries({ queryKey: ['suggest-wos'] })
     },
@@ -562,11 +582,11 @@ export function useUpdateTripOrder() {
 export function useReconcile() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ workOrderId, tripOrderId }: { workOrderId: number; tripOrderId: number }) =>
-      apiClient.reconcile(workOrderId, tripOrderId).then(unwrap),
+    mutationFn: ({ deliveredTripId, bookedTripId }: { deliveredTripId: number; bookedTripId: number }) =>
+      apiClient.reconcile(deliveredTripId, bookedTripId).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['trip-orders'] })
-      qc.invalidateQueries({ queryKey: ['work-orders'] })
+      qc.invalidateQueries({ queryKey: ['booked-trips'] })
+      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
     },
   })
 }
@@ -574,8 +594,8 @@ export function useReconcile() {
 export function useToggleTripConfirmation() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (tripOrderId: number) => apiClient.toggleTripConfirmation(tripOrderId).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['trip-orders'] }) },
+    mutationFn: (bookedTripId: number) => apiClient.toggleTripConfirmation(bookedTripId).then(unwrap),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['booked-trips'] }) },
   })
 }
 
@@ -596,8 +616,8 @@ export function useBulkImportAndMatch() {
     mutationFn: ({ file, clientId }: { file: File; clientId?: number }) =>
       apiClient.bulkImportAndMatch(file, clientId).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['work-orders'] })
-      qc.invalidateQueries({ queryKey: ['trip-orders'] })
+      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['booked-trips'] })
     },
   })
 }
@@ -619,18 +639,18 @@ export function useExportReconciliationExcel() {
   })
 }
 
-export function useImportTripOrders() {
+export function useImportBookedTrips() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (file: File) => apiClient.importTripOrders(file),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['trip-orders'] }) },
+    mutationFn: (file: File) => apiClient.importBookedTrips(file),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['booked-trips'] }) },
   })
 }
 
-export function useExportTripOrdersExcel() {
+export function useExportBookedTripsExcel() {
   return useMutation({
     mutationFn: (filters?: { dateFrom?: string; dateTo?: string; status?: string }) =>
-      apiClient.exportTripOrdersExcel(filters),
+      apiClient.exportBookedTripsExcel(filters),
   })
 }
 
@@ -641,10 +661,10 @@ export function useExportDoiSoatExcel() {
   })
 }
 
-export function useExportWorkOrdersExcel() {
+export function useExportDeliveredTripsExcel() {
   return useMutation({
     mutationFn: (filters?: { dateFrom?: string; dateTo?: string; status?: string }) =>
-      apiClient.exportWorkOrdersExcel(filters),
+      apiClient.exportDeliveredTripsExcel(filters),
   })
 }
 
@@ -739,11 +759,11 @@ export function useChangePassword() {
 export function useUnmatch() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ workOrderId, tripOrderId, reason }: { workOrderId: number; tripOrderId: number; reason: string }) =>
-      apiClient.unmatch(workOrderId, tripOrderId, reason).then(unwrap),
+    mutationFn: ({ deliveredTripId, bookedTripId, reason }: { deliveredTripId: number; bookedTripId: number; reason: string }) =>
+      apiClient.unmatch(deliveredTripId, bookedTripId, reason).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.tripOrders })
-      qc.invalidateQueries({ queryKey: queryKeys.workOrders })
+      qc.invalidateQueries({ queryKey: queryKeys.bookedTrips })
+      qc.invalidateQueries({ queryKey: queryKeys.deliveredTrips })
     },
   })
 }
@@ -768,11 +788,11 @@ export function useAutoMatch() {
 export function useAutoMatchConfirm() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (pairs: { workOrderId: number; tripOrderId: number }[]) =>
+    mutationFn: (pairs: { deliveredTripId: number; bookedTripId: number }[]) =>
       apiClient.autoMatchConfirm(pairs).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.workOrders })
-      qc.invalidateQueries({ queryKey: queryKeys.tripOrders })
+      qc.invalidateQueries({ queryKey: queryKeys.deliveredTrips })
+      qc.invalidateQueries({ queryKey: queryKeys.bookedTrips })
     },
   })
 }
@@ -793,8 +813,8 @@ export function useBulkMatch() {
   return useMutation({
     mutationFn: (pairs: BulkMatchPair[]) => apiClient.bulkMatch(pairs).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.workOrders })
-      qc.invalidateQueries({ queryKey: queryKeys.tripOrders })
+      qc.invalidateQueries({ queryKey: queryKeys.deliveredTrips })
+      qc.invalidateQueries({ queryKey: queryKeys.bookedTrips })
     },
   })
 }
@@ -802,11 +822,11 @@ export function useBulkMatch() {
 export function useBatchReconcileForWO() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ workOrderId, tripOrderIds }: { workOrderId: number; tripOrderIds: number[] }) =>
-      apiClient.batchReconcileForWO(workOrderId, tripOrderIds).then(unwrap),
+    mutationFn: ({ deliveredTripId, bookedTripIds }: { deliveredTripId: number; bookedTripIds: number[] }) =>
+      apiClient.batchReconcileForWO(deliveredTripId, bookedTripIds).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.workOrders })
-      qc.invalidateQueries({ queryKey: queryKeys.tripOrders })
+      qc.invalidateQueries({ queryKey: queryKeys.deliveredTrips })
+      qc.invalidateQueries({ queryKey: queryKeys.bookedTrips })
     },
   })
 }
@@ -814,23 +834,23 @@ export function useBatchReconcileForWO() {
 export function useBatchReconcileForTO() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ tripOrderId, workOrderIds }: { tripOrderId: number; workOrderIds: number[] }) =>
-      apiClient.batchReconcileForTO(tripOrderId, workOrderIds).then(unwrap),
+    mutationFn: ({ bookedTripId, deliveredTripIds }: { bookedTripId: number; deliveredTripIds: number[] }) =>
+      apiClient.batchReconcileForTO(bookedTripId, deliveredTripIds).then(unwrap),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.workOrders })
-      qc.invalidateQueries({ queryKey: queryKeys.tripOrders })
+      qc.invalidateQueries({ queryKey: queryKeys.deliveredTrips })
+      qc.invalidateQueries({ queryKey: queryKeys.bookedTrips })
     },
   })
 }
 
-export function useSearchTripOrders(q: string, workOrderId: number | null) {
+export function useSearchBookedTrips(q: string, deliveredTripId: number | null) {
   return useQuery({
-    queryKey: ['trip-orders-search', q, workOrderId],
+    queryKey: ['booked-trips-search', q, deliveredTripId],
     queryFn: async () => {
-      const res = await searchTripOrders(q, workOrderId!)
+      const res = await searchBookedTrips(q, deliveredTripId!)
       return res.success ? res.data : null
     },
-    enabled: !!workOrderId && q.trim().length >= 2,
+    enabled: !!deliveredTripId && q.trim().length >= 2,
   })
 }
 

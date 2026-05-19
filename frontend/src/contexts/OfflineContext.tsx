@@ -104,18 +104,18 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
       const queue = await getQueue()
       if (abort.signal.aborted) return { synced: 0, failed: 0 }
 
-      const workOrderPosts = queue.filter(a => a.endpoint === '/api/v1/work-orders' && a.method === 'POST')
-      const otherActions = queue.filter(a => !(a.endpoint === '/api/v1/work-orders' && a.method === 'POST'))
+      const deliveredTripPosts = queue.filter(a => a.endpoint === '/api/v1/delivered-trips' && a.method === 'POST')
+      const otherActions = queue.filter(a => !(a.endpoint === '/api/v1/delivered-trips' && a.method === 'POST'))
 
       let totalSynced = 0
       let totalFailed = 0
       const totalItems = queue.length
       setSyncProgress({ total: totalItems, synced: 0, failed: 0 })
 
-      // Phase 1: batch sync work-order POSTs in chunks
-      for (let chunk = 0; chunk < workOrderPosts.length; chunk += BATCH_SIZE) {
+      // Phase 1: batch sync delivered-trip POSTs in chunks
+      for (let chunk = 0; chunk < deliveredTripPosts.length; chunk += BATCH_SIZE) {
         if (abort.signal.aborted) break
-        const batch = workOrderPosts.slice(chunk, chunk + BATCH_SIZE)
+        const batch = deliveredTripPosts.slice(chunk, chunk + BATCH_SIZE)
         const result = await syncBatchChunk(batch, abort.signal)
         totalSynced += result.synced
         totalFailed += result.failed
@@ -188,7 +188,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   )
 }
 
-/** Sync a chunk of work-order POSTs via the batch endpoint. */
+/** Sync a chunk of delivered-trip POSTs via the batch endpoint. */
 async function syncBatchChunk(
   actions: QueuedAction[],
   signal: AbortSignal,
@@ -199,7 +199,7 @@ async function syncBatchChunk(
   try {
     if (signal.aborted) return { synced: 0, failed: 0 }
 
-    const res = await fetch('/api/v1/work-orders/batch', {
+    const res = await fetch('/api/v1/delivered-trips/batch', {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ items: actions.map(a => a.body) }),

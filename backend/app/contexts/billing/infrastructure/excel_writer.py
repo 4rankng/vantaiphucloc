@@ -114,11 +114,11 @@ def _write_sl_sheet(wb: openpyxl.Workbook, data: SettlementStatement, sheet_name
         ws.cell(row=row, column=3, value=line.client_code).alignment = _CENTER
         ws.cell(row=row, column=4, value=line.container_number).alignment = _CENTER
 
-        wt = line.work_type
-        ws.cell(row=row, column=5, value=1 if wt == "F20" else None).alignment = _CENTER
-        ws.cell(row=row, column=6, value=1 if wt == "F40" else None).alignment = _CENTER
-        ws.cell(row=row, column=7, value=1 if wt == "E20" else None).alignment = _CENTER
-        ws.cell(row=row, column=8, value=1 if wt == "E40" else None).alignment = _CENTER
+        ct = line.cont_type
+        ws.cell(row=row, column=5, value=1 if ct == "F20" else None).alignment = _CENTER
+        ws.cell(row=row, column=6, value=1 if ct == "F40" else None).alignment = _CENTER
+        ws.cell(row=row, column=7, value=1 if ct == "E20" else None).alignment = _CENTER
+        ws.cell(row=row, column=8, value=1 if ct == "E40" else None).alignment = _CENTER
 
         ws.cell(row=row, column=9, value=line.tractor_plate).alignment = _CENTER
         ws.cell(row=row, column=10, value=line.vessel).alignment = _CENTER

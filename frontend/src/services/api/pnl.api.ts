@@ -1,8 +1,8 @@
 /**
  * Monthly P&L (doanh thu & lãi) API.
  *
- * Revenue = Σ (TripOrder.unit_price × container_count) over MATCHED TOs
- * Profit  = revenue − (productivity + allowance + base salary + vehicle expenses + cp chung)
+ * Revenue = Σ (BookedTrip.unit_price × container_count) over MATCHED TOs
+ * Profit  = revenue − (productivity + allowance + base salary + vehicle expenses)
  */
 
 import { api } from './client'
@@ -24,7 +24,6 @@ export interface MonthlyPnL {
   totalAllowance: number
   totalBaseSalary: number
   totalVehicleExpenses: number
-  totalCpChung: number
   profit: number
   matchedTripCount: number
   partnerBreakdown: PartnerRevenueBreakdown[]
@@ -33,6 +32,8 @@ export interface MonthlyPnL {
 export interface VehicleExpenseSummary {
   xangDau: number
   suaChua: number
+  tienLuat: number
+  khac: number
   total: number
 }
 
@@ -41,7 +42,6 @@ export interface VehiclePnLRow {
   plate: string
   revenue: number
   cpXe: VehicleExpenseSummary
-  cpChungAllocated: number
   cpLuongSanLuong: number
   cpLuongCoBan: number
   loiNhuan: number
@@ -51,7 +51,6 @@ export interface VehiclePnLResponse {
   dateFrom: string
   dateTo: string
   rows: VehiclePnLRow[]
-  cpChung: number
   totalRevenue: number
   totalProfit: number
 }

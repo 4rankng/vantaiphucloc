@@ -214,6 +214,7 @@ export interface PricingPreviewRow {
   dropoff_location: string
   work_type: string
   unit_price: number
+  old_unit_price?: number | null
   quantity: number
   driver_salary: number
   allowance: number
@@ -250,10 +251,12 @@ export interface PricingCommitResponse {
 export async function previewCustomerPricing(args: {
   file: File
   format?: PricingFormat
+  clientId?: number
 }): Promise<PricingPreviewResponse> {
   const fd = new FormData()
   fd.append('file', args.file)
   if (args.format) fd.append('format', args.format)
+  if (args.clientId) fd.append('client_id', String(args.clientId))
   const res = await api.post('/imports/customer-pricing/preview', fd, {
     headers: { 'Content-Type': 'multipart/form-data' },
   })

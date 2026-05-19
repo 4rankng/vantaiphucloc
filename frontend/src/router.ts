@@ -48,8 +48,8 @@ export function createAppRouter() {
           element: h(Lazy, { component: R.DriverLayout }),
           children: [
             { index: true,               element: ebc('DriverHome', h(Lazy, { component: R.DriverHome })) },
-            { path: 'work-orders/new',       element: ebc('CreateWorkOrder', h(Lazy, { component: R.CreateWorkOrder })) },
-            { path: 'work-orders/:jobId/edit', element: ebc('EditWorkOrder', h(Lazy, { component: R.EditWorkOrder })) },
+            { path: 'delivered-trips/new',       element: ebc('CreateDeliveredTrip', h(Lazy, { component: R.CreateDeliveredTrip })) },
+            { path: 'delivered-trips/:jobId/edit', element: ebc('EditDeliveredTrip', h(Lazy, { component: R.EditDeliveredTrip })) },
             { path: 'history',           element: ebc('DriverHistory', h(Lazy, { component: R.DriverHistory })) },
             { path: 'notifications',     element: ebc('Notifications', h(Lazy, { component: R.DriverNotifications })) },
             { path: 'job/:jobId',        element: ebc('JobDetail', h(Lazy, { component: R.JobDetail })) },

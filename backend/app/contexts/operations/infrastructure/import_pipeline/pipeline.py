@@ -522,7 +522,7 @@ def _build_preview_from_extracted(
 class TripGroup:
     """A set of `ParsedRow`-like dicts that share a strong grouping signal
     (same tractor plate, same trip date, same dropoff). Becomes one
-    `TripOrder` with N `TripContainer` children.
+    `BookedTrip` with N `TripContainer` children.
     """
     trip_date: str
     pickup_location: str

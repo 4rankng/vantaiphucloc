@@ -3,14 +3,14 @@ import { MapPin, Calendar, Building2, Route as RouteIcon, Camera, X, Pencil } fr
 import { useParams, useNavigate } from 'react-router-dom'
 import { InfoRow } from '@/components/shared/InfoRow'
 import { formatCurrencyFull } from '@/data/domain'
-import { useWorkOrder } from '@/hooks/use-queries'
+import { useDeliveredTrip } from '@/hooks/use-queries'
 import { resolveRoute } from '@/lib/route-utils'
 
 export function JobDetail() {
   const { jobId: jobIdStr } = useParams<{ jobId: string }>()
   const navigate = useNavigate()
   const jobId = Number(jobIdStr)
-  const { data: job = null, isLoading: loading } = useWorkOrder(jobId)
+  const { data: job = null, isLoading: loading } = useDeliveredTrip(jobId)
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
 
   if (loading) {
@@ -163,7 +163,7 @@ export function JobDetail() {
       {/* Edit button for PENDING orders */}
       {job.status === 'PENDING' && (
         <button
-          onClick={() => navigate(`/driver/work-orders/${job.id}/edit`)}
+          onClick={() => navigate(`/driver/delivered-trips/${job.id}/edit`)}
           className="w-full h-12 rounded-lg text-base font-bold flex items-center justify-center gap-2 touch-manipulation transition-all active:scale-[0.98]"
           style={{ background: 'var(--theme-brand-primary)', color: 'var(--theme-text-on-brand)' }}
         >

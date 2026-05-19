@@ -1,14 +1,10 @@
-"""Domain exceptions for the Operations context.
-
-Translation to HTTP responses lives in `interface/error_translation.py`
-once the interface layer lands.
-"""
+"""Domain exceptions for the Operations context."""
 
 from __future__ import annotations
 
 from app.contexts.operations.domain.value_objects import (
-    TripOrderStatus,
-    WorkOrderStatus,
+    BookedTripStatus,
+    DeliveredTripStatus,
 )
 
 
@@ -26,7 +22,7 @@ class NotFound(OperationsError):
 
 
 class AlreadyExists(OperationsError):
-    """Uniqueness violation (e.g., duplicate TripOrder code)."""
+    """Uniqueness violation."""
 
     def __init__(self, kind: str, key: object) -> None:
         super().__init__(f"{kind} already exists: {key!r}")
@@ -41,8 +37,8 @@ class InvalidStateTransition(OperationsError):
         self,
         *,
         kind: str,
-        current: TripOrderStatus | WorkOrderStatus | str,
-        attempted: TripOrderStatus | WorkOrderStatus | str,
+        current: BookedTripStatus | DeliveredTripStatus | str,
+        attempted: BookedTripStatus | DeliveredTripStatus | str,
     ) -> None:
         super().__init__(
             f"{kind}: invalid transition {current!s} → {attempted!s}"
@@ -61,10 +57,3 @@ class ContainerCountInvalid(OperationsError):
         )
         self.work_type = work_type
         self.count = count
-
-
-class TripOrderLocked(OperationsError):
-    """Cannot modify a locked TripOrder."""
-
-    def __init__(self, msg: str = "TripOrder is locked") -> None:
-        super().__init__(msg)

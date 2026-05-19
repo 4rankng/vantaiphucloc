@@ -26,9 +26,10 @@ from app.contexts.billing.infrastructure.settlement_loader import (
     _split_unit_price_per_container,
 )
 from app.models.domain import (
+    Client,
     Partner,
-    TripOrder,
-    TripOrderContainer,
+    BookedTrip,
+    BookedTripContainer,
 )
 from app.utils.number_to_words_vi import number_to_vietnamese_words
 
@@ -39,10 +40,10 @@ def settlement_period_for(year: int, month: int):
     return p.start, p.end
 
 
-async def load_settlement_data(db_session, partner_id, period_start, period_end):
+async def load_settlement_data(db_session, client_id, period_start, period_end):
     loader = SqlSettlementDataLoader(db_session)
     return await loader.load(
-        partner_id=partner_id,
+        client_id=client_id,
         period=SettlementPeriod(start=period_start, end=period_end),
     )
 
@@ -78,11 +79,11 @@ def test_number_to_words_billion_range():
 # Per-container price split
 # ---------------------------------------------------------------------------
 
-def _fake_container(idx: int, work_type: str = "F20") -> TripOrderContainer:
-    c = TripOrderContainer(
-        trip_order_id=1,
+def _fake_container(idx: int, cont_type: str = "F20") -> BookedTripContainer:
+    c = BookedTripContainer(
+        booked_trip_id=1,
         container_number=f"TEST{idx:07d}",
-        work_type=work_type,
+        cont_type=cont_type,
     )
     c.id = idx
     return c
@@ -150,37 +151,35 @@ async def test_load_settlement_data_aggregates_routes(db_session):
     db_session.add_all([pickup, dropoff])
     await db_session.flush()
 
-    t1 = TripOrder(
+    t1 = BookedTrip(
         trip_date=date(2026, 4, 1),
-        partner_id=partner.id,
+        client_id=partner.id,
         pickup_location_id=pickup.id,
         dropoff_location_id=dropoff.id,
-        unit_price=1_309_742,
-        driver_salary=400_000,
-        allowance=0,
+        work_type="F20",
+        revenue=1_309_742,
         status="PENDING",
     )
     db_session.add(t1)
     await db_session.flush()
     db_session.add_all([
-        TripOrderContainer(trip_order_id=t1.id, container_number="TEST0000001", work_type="F20"),
-        TripOrderContainer(trip_order_id=t1.id, container_number="TEST0000002", work_type="F20"),
+        BookedTripContainer(booked_trip_id=t1.id, container_number="TEST0000001", cont_type="F20"),
+        BookedTripContainer(booked_trip_id=t1.id, container_number="TEST0000002", cont_type="F20"),
     ])
 
-    t2 = TripOrder(
+    t2 = BookedTrip(
         trip_date=date(2026, 4, 2),
-        partner_id=partner.id,
+        client_id=partner.id,
         pickup_location_id=pickup.id,
         dropoff_location_id=dropoff.id,
-        unit_price=681_050,
-        driver_salary=420_000,
-        allowance=0,
+        work_type="F40",
+        revenue=681_050,
         status="PENDING",
     )
     db_session.add(t2)
     await db_session.flush()
     db_session.add(
-        TripOrderContainer(trip_order_id=t2.id, container_number="TEST0000003", work_type="F40")
+        BookedTripContainer(booked_trip_id=t2.id, container_number="TEST0000003", cont_type="F40")
     )
     await db_session.flush()
 
@@ -217,20 +216,19 @@ async def test_generate_workbook_produces_two_sheets_with_data(db_session):
     db_session.add_all([pickup, dropoff])
     await db_session.flush()
 
-    trip = TripOrder(
+    trip = BookedTrip(
         trip_date=date(2026, 4, 10),
-        partner_id=partner.id,
+        client_id=partner.id,
         pickup_location_id=pickup.id,
         dropoff_location_id=dropoff.id,
-        unit_price=654_871,
-        driver_salary=400_000,
-        allowance=0,
+        work_type="F20",
+        revenue=654_871,
         status="PENDING",
     )
     db_session.add(trip)
     await db_session.flush()
     db_session.add(
-        TripOrderContainer(trip_order_id=trip.id, container_number="HACU1234567", work_type="F20")
+        BookedTripContainer(booked_trip_id=trip.id, container_number="HACU1234567", cont_type="F20")
     )
     await db_session.flush()
 

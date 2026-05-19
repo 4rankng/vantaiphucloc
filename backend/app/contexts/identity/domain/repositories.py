@@ -53,7 +53,7 @@ class UserRepository(ABC):
         """Persist changes to an existing user."""
 
     @abstractmethod
-    async def has_active_unmatched_work_orders(self, user_id: UserId) -> bool:
+    async def has_active_unmatched_delivered_trips(self, user_id: UserId) -> bool:
         """Check if a driver has active work orders (cross-context read).
 
         Returning bool keeps the Operations context's data shape opaque to

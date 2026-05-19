@@ -1,8 +1,4 @@
-"""Repository ABCs for the Operations context.
-
-Use cases depend on these — concrete impls live in
-`infrastructure/repositories.py` and use SQLAlchemy.
-"""
+"""Repository ABCs for the Operations context."""
 
 from __future__ import annotations
 
@@ -10,21 +6,18 @@ from abc import ABC, abstractmethod
 from datetime import date
 from typing import Sequence
 
-from app.contexts.operations.domain.entities import TripOrder, WorkOrder
+from app.contexts.operations.domain.entities import BookedTrip, DeliveredTrip
 from app.contexts.operations.domain.value_objects import (
-    TripOrderId,
-    TripOrderStatus,
-    WorkOrderId,
-    WorkOrderStatus,
+    BookedTripId,
+    BookedTripStatus,
+    DeliveredTripId,
+    DeliveredTripStatus,
 )
 
 
-class TripOrderRepository(ABC):
+class BookedTripRepository(ABC):
     @abstractmethod
-    async def get_by_id(self, tid: TripOrderId) -> TripOrder | None: ...
-
-    @abstractmethod
-    async def find_by_code(self, code: str) -> TripOrder | None: ...
+    async def get_by_id(self, tid: BookedTripId) -> BookedTrip | None: ...
 
     @abstractmethod
     async def list(
@@ -33,11 +26,11 @@ class TripOrderRepository(ABC):
         offset: int,
         limit: int,
         client_id: int | None = None,
-        status: TripOrderStatus | None = None,
+        status: BookedTripStatus | None = None,
         trip_date_from: date | None = None,
         trip_date_to: date | None = None,
         unpriced_only: bool = False,
-    ) -> tuple[Sequence[TripOrder], int]: ...
+    ) -> tuple[Sequence[BookedTrip], int]: ...
 
     @abstractmethod
     async def find_duplicate(
@@ -46,26 +39,21 @@ class TripOrderRepository(ABC):
         client_id: int,
         trip_date: date,
         container_number: str,
-    ) -> TripOrder | None:
-        """Idempotency check used by the customer-Excel import:
-        `(client_id, trip_date, container_number)`."""
+    ) -> BookedTrip | None: ...
 
     @abstractmethod
-    async def add(self, t: TripOrder) -> TripOrder: ...
+    async def add(self, t: BookedTrip) -> BookedTrip: ...
 
     @abstractmethod
-    async def save(self, t: TripOrder) -> TripOrder: ...
+    async def save(self, t: BookedTrip) -> BookedTrip: ...
 
     @abstractmethod
-    async def delete(self, tid: TripOrderId) -> None: ...
+    async def delete(self, tid: BookedTripId) -> None: ...
 
 
-class WorkOrderRepository(ABC):
+class DeliveredTripRepository(ABC):
     @abstractmethod
-    async def get_by_id(self, wid: WorkOrderId) -> WorkOrder | None: ...
-
-    @abstractmethod
-    async def find_by_code(self, code: str) -> WorkOrder | None: ...
+    async def get_by_id(self, wid: DeliveredTripId) -> DeliveredTrip | None: ...
 
     @abstractmethod
     async def list(
@@ -77,21 +65,21 @@ class WorkOrderRepository(ABC):
         driver_id: int | None = None,
         date_from: date | None = None,
         date_to: date | None = None,
-        status: WorkOrderStatus | None = None,
-    ) -> tuple[Sequence[WorkOrder], int]: ...
+        status: DeliveredTripStatus | None = None,
+    ) -> tuple[Sequence[DeliveredTrip], int]: ...
 
     @abstractmethod
     async def list_by_ids(
-        self, ids: Sequence[WorkOrderId]
-    ) -> Sequence[WorkOrder]: ...
+        self, ids: Sequence[DeliveredTripId]
+    ) -> Sequence[DeliveredTrip]: ...
 
     @abstractmethod
-    async def add(self, w: WorkOrder) -> WorkOrder: ...
+    async def add(self, w: DeliveredTrip) -> DeliveredTrip: ...
 
     @abstractmethod
-    async def save(self, w: WorkOrder) -> WorkOrder: ...
+    async def save(self, w: DeliveredTrip) -> DeliveredTrip: ...
 
     @abstractmethod
     async def set_status_bulk(
-        self, ids: Sequence[WorkOrderId], status: WorkOrderStatus
+        self, ids: Sequence[DeliveredTripId], status: DeliveredTripStatus
     ) -> None: ...

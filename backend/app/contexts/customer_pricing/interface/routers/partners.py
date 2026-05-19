@@ -171,7 +171,7 @@ async def delete_client(
     from sqlalchemy import text
     db = use_case.session
     has_wo = (await db.execute(
-        text("SELECT 1 FROM work_orders WHERE client_id = :pid LIMIT 1"),
+        text("SELECT 1 FROM delivered_trips WHERE client_id = :pid LIMIT 1"),
         {"pid": partner_id},
     )).scalar()
     if has_wo:
@@ -180,7 +180,7 @@ async def delete_client(
             detail="Cannot delete client with associated work orders",
         )
     has_to = (await db.execute(
-        text("SELECT 1 FROM trip_orders WHERE client_id = :pid LIMIT 1"),
+        text("SELECT 1 FROM booked_trips WHERE client_id = :pid LIMIT 1"),
         {"pid": partner_id},
     )).scalar()
     if has_to:

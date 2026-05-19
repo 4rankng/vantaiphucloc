@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.domain import WorkOrder, WorkOrderContainer, TripOrder, TripOrderContainer, Client, PricingLine, Vehicle, VehicleDriver
+from app.models.domain import DeliveredTrip, DeliveredTripContainer, BookedTrip, BookedTripContainer, Client, PricingLine, Vehicle, VehicleDriver
 from app.utils.iso6346 import normalize_container_number, validate_container_number
 
 _logger = logging.getLogger(__name__)
@@ -22,15 +22,15 @@ class ReconciliationResult:
         self,
         container_number: str,
         normalized_number: str,
-        work_order_id: int | None = None,
-        trip_order_id: int | None = None,
+        delivered_trip_id: int | None = None,
+        booked_trip_id: int | None = None,
         status: str = "pending",
         match_type: str = "none",
     ):
         self.container_number = container_number
         self.normalized_number = normalized_number
-        self.work_order_id = work_order_id
-        self.trip_order_id = trip_order_id
+        self.delivered_trip_id = delivered_trip_id
+        self.booked_trip_id = booked_trip_id
         self.status = status  # "confirmed" | "pending" | "rejected"
         self.is_duplicate = False
         self.match_type = match_type  # "exact" | "partial" | "none"
@@ -39,8 +39,8 @@ class ReconciliationResult:
         return {
             "container_number": self.container_number,
             "normalized_number": self.normalized_number,
-            "work_order_id": self.work_order_id,
-            "trip_order_id": self.trip_order_id,
+            "delivered_trip_id": self.delivered_trip_id,
+            "booked_trip_id": self.booked_trip_id,
             "status": self.status,
             "is_duplicate": self.is_duplicate,
             "match_type": self.match_type,
@@ -115,31 +115,31 @@ async def compare_with_system_records(
             })
 
     # Query work orders for this partner
-    wo_query = select(WorkOrder).where(WorkOrder.client_id == client_id)
+    wo_query = select(DeliveredTrip).where(DeliveredTrip.client_id == client_id)
     if date_from:
-        wo_query = wo_query.where(WorkOrder.created_at >= date_from)
+        wo_query = wo_query.where(DeliveredTrip.created_at >= date_from)
     if date_to:
-        wo_query = wo_query.where(WorkOrder.created_at <= date_to)
+        wo_query = wo_query.where(DeliveredTrip.created_at <= date_to)
 
     wo_result = await db.execute(wo_query)
-    work_orders = wo_result.scalars().all()
+    delivered_trips = wo_result.scalars().all()
 
     # Query trip orders for this partner
-    to_query = select(TripOrder).where(TripOrder.client_id == client_id)
+    to_query = select(BookedTrip).where(BookedTrip.client_id == client_id)
     if date_from:
-        to_query = to_query.where(TripOrder.trip_date >= date_from)
+        to_query = to_query.where(BookedTrip.trip_date >= date_from)
     if date_to:
-        to_query = to_query.where(TripOrder.trip_date <= date_to)
+        to_query = to_query.where(BookedTrip.trip_date <= date_to)
 
     to_result = await db.execute(to_query)
-    trip_orders = to_result.scalars().all()
+    booked_trips = to_result.scalars().all()
 
     # Load containers for all work orders
-    wo_ids = [wo.id for wo in work_orders]
+    wo_ids = [wo.id for wo in delivered_trips]
     if wo_ids:
         wo_cont_result = await db.execute(
-            select(WorkOrderContainer).where(
-                WorkOrderContainer.work_order_id.in_(wo_ids)
+            select(DeliveredTripContainer).where(
+                DeliveredTripContainer.delivered_trip_id.in_(wo_ids)
             )
         )
         wo_containers = wo_cont_result.scalars().all()
@@ -150,14 +150,14 @@ async def compare_with_system_records(
             normalized = normalize_container_number(wc.container_number)
             if normalized not in wo_container_map:
                 wo_container_map[normalized] = []
-            wo_container_map[normalized].append(wc.work_order_id)
+            wo_container_map[normalized].append(wc.delivered_trip_id)
 
     # Load containers for all trip orders
-    to_ids = [to.id for to in trip_orders]
+    to_ids = [to.id for to in booked_trips]
     if to_ids:
         to_cont_result = await db.execute(
-            select(TripOrderContainer).where(
-                TripOrderContainer.trip_order_id.in_(to_ids)
+            select(BookedTripContainer).where(
+                BookedTripContainer.booked_trip_id.in_(to_ids)
             )
         )
         to_containers = to_cont_result.scalars().all()
@@ -168,7 +168,7 @@ async def compare_with_system_records(
             normalized = normalize_container_number(tc.container_number)
             if normalized not in to_container_map:
                 to_container_map[normalized] = []
-            to_container_map[normalized].append(tc.trip_order_id)
+            to_container_map[normalized].append(tc.booked_trip_id)
 
     # Compare Excel containers with system records
     # Build digits-only lookup for partial matching
@@ -216,8 +216,8 @@ async def compare_with_system_records(
 
         if wo_ids or to_ids:
             result.is_duplicate = True
-            result.work_order_id = wo_ids[0] if wo_ids else None
-            result.trip_order_id = to_ids[0] if to_ids else None
+            result.delivered_trip_id = wo_ids[0] if wo_ids else None
+            result.booked_trip_id = to_ids[0] if to_ids else None
             if wo_ids and to_ids:
                 result.status = "confirmed"
 
@@ -279,54 +279,54 @@ async def generate_reconciliation_excel(
         cell.alignment = header_alignment
 
     # Query data
-    wo_query = select(WorkOrder).where(WorkOrder.client_id == client_id)
+    wo_query = select(DeliveredTrip).where(DeliveredTrip.client_id == client_id)
     if date_from:
-        wo_query = wo_query.where(WorkOrder.created_at >= date_from)
+        wo_query = wo_query.where(DeliveredTrip.created_at >= date_from)
     if date_to:
-        wo_query = wo_query.where(WorkOrder.created_at <= date_to)
+        wo_query = wo_query.where(DeliveredTrip.created_at <= date_to)
 
     wo_result = await db.execute(wo_query)
-    work_orders = wo_result.scalars().all()
+    delivered_trips = wo_result.scalars().all()
 
-    wo_ids = [wo.id for wo in work_orders]
+    wo_ids = [wo.id for wo in delivered_trips]
     if wo_ids:
         wo_cont_result = await db.execute(
-            select(WorkOrderContainer).where(
-                WorkOrderContainer.work_order_id.in_(wo_ids)
+            select(DeliveredTripContainer).where(
+                DeliveredTripContainer.delivered_trip_id.in_(wo_ids)
             )
         )
         wo_containers = wo_cont_result.scalars().all()
 
         # Group containers by work order
-        wo_cont_map: dict[int, list[WorkOrderContainer]] = {}
+        wo_cont_map: dict[int, list[DeliveredTripContainer]] = {}
         for wc in wo_containers:
-            if wc.work_order_id not in wo_cont_map:
-                wo_cont_map[wc.work_order_id] = []
-            wo_cont_map[wc.work_order_id].append(wc)
+            if wc.delivered_trip_id not in wo_cont_map:
+                wo_cont_map[wc.delivered_trip_id] = []
+            wo_cont_map[wc.delivered_trip_id].append(wc)
 
         # Check for matched trip orders
         to_result = await db.execute(
-            select(TripOrder).where(TripOrder.client_id == client_id)
+            select(BookedTrip).where(BookedTrip.client_id == client_id)
         )
-        trip_orders = to_result.scalars().all()
+        booked_trips = to_result.scalars().all()
 
-        to_map: dict[int, TripOrder] = {to.id: to for to in trip_orders}
+        to_map: dict[int, BookedTrip] = {to.id: to for to in booked_trips}
 
         # Query Reconciliation table for matches
         from app.models.domain import Reconciliation as ReconciliationModel
         join_result = await db.execute(
             select(ReconciliationModel).where(
-                ReconciliationModel.work_order_id.in_(wo_ids),
+                ReconciliationModel.delivered_trip_id.in_(wo_ids),
                 ReconciliationModel.is_active == True,  # noqa: E712
             )
         )
         joins = join_result.scalars().all()
 
-        wo_to_map: dict[int, int] = {j.work_order_id: j.trip_order_id for j in joins}
+        wo_to_map: dict[int, int] = {j.delivered_trip_id: j.booked_trip_id for j in joins}
 
         # Add data rows
         row_num = 2
-        for wo in work_orders:
+        for wo in delivered_trips:
             containers = wo_cont_map.get(wo.id, [])
             for wc in containers:
                 to_id = wo_to_map.get(wo.id)
@@ -405,8 +405,8 @@ _TRIP_IMPORT_COLUMNS = {
     "loai": "work_type",
     "work_type": "work_type",
     "loai_cont": "work_type",
-    "don_gia": "unit_price",
-    "unit_price": "unit_price",
+    "don_gia": "revenue",
+    "revenue": "revenue",
     "luong_tx": "driver_salary",
     "driver_salary": "driver_salary",
     "phu_cap": "allowance",
@@ -422,7 +422,7 @@ def _normalize_trip_import_header(header: str) -> str:
     return _TRIP_IMPORT_COLUMNS.get(normalized, normalized)
 
 
-async def parse_trip_order_excel(file_content: bytes) -> list[dict[str, Any]]:
+async def parse_booked_trip_excel(file_content: bytes) -> list[dict[str, Any]]:
     """Parse Excel file for batch trip order import.
 
     Expected columns (Vietnamese or English):
@@ -431,7 +431,7 @@ async def parse_trip_order_excel(file_content: bytes) -> list[dict[str, Any]]:
     - pickup_location (Điểm lấy) + dropoff_location (Điểm trả) or route (Cung đường)
     - container_number (Số cont/Container)
     - work_type (Loại/Loại cont) — E20/E40/F20/F40
-    - unit_price (Đơn giá) — optional
+    - revenue (Đơn giá) — optional
     - driver_salary (Lương TX) — optional
     - allowance (Phụ cấp) — optional
     """
@@ -461,7 +461,7 @@ async def parse_trip_order_excel(file_content: bytes) -> list[dict[str, Any]]:
     return results
 
 
-async def import_trip_orders(
+async def import_booked_trips(
     db: AsyncSession,
     rows: list[dict[str, Any]],
     user_id: int,
@@ -541,7 +541,7 @@ async def import_trip_orders(
         container_count = sum(1 for c in containers_data if c["work_type"] == work_type) or 1
 
         # Try auto-pricing
-        unit_price = int(first_row.get("unit_price") or 0)
+        revenue = int(first_row.get("revenue") or 0)
         driver_salary = int(first_row.get("driver_salary") or 0)
         allowance = int(first_row.get("allowance") or 0)
         pricing_id = None
@@ -565,37 +565,37 @@ async def import_trip_orders(
             errors.append(f"Nhóm {key}: pickup/dropoff không có")
             continue
 
-        if not unit_price:
+        if not revenue:
             tiered = await find_tiered_pricing(
                 db, client_id=partner.id, work_type=work_type,
                 quantity=container_count,
                 pickup_location_id=pickup_id, dropoff_location_id=dropoff_id,
             )
             if tiered:
-                unit_price = tiered.unit_price
+                revenue = tiered.revenue
                 driver_salary = tiered.driver_salary
                 allowance = tiered.allowance
                 pricing_id = tiered.pricing.id
 
         trip_date_val = date_type.fromisoformat(str(trip_date)) if isinstance(trip_date, str) else trip_date
 
-        trip_order = TripOrder(
+        booked_trip = BookedTrip(
             trip_date=trip_date_val,
             client_id=partner.id,
             pickup_location_id=pickup_id,
             dropoff_location_id=dropoff_id,
             pricing_id=pricing_id,
-            unit_price=unit_price,
+            revenue=revenue,
             driver_salary=driver_salary,
             allowance=allowance,
             status="PENDING",
         )
-        db.add(trip_order)
+        db.add(booked_trip)
         await db.flush()
 
         for c in containers_data:
-            db.add(TripOrderContainer(
-                trip_order_id=trip_order.id,
+            db.add(BookedTripContainer(
+                booked_trip_id=booked_trip.id,
                 container_number=c["container_number"],
                 work_type=c["work_type"],
             ))
@@ -606,7 +606,7 @@ async def import_trip_orders(
     return {"created": created, "errors": errors, "warnings": warnings}
 
 
-def generate_trip_order_template() -> bytes:
+def generate_booked_trip_template() -> bytes:
     """Generate a blank Excel template for trip order import."""
     headers = [
         "Ngày", "Mã KH", "Điểm lấy", "Điểm trả",
@@ -638,7 +638,7 @@ def generate_trip_order_template() -> bytes:
 # Excel Export for Work Orders, Trip Orders, Salary
 # ---------------------------------------------------------------------------
 
-async def generate_work_orders_excel(
+async def generate_delivered_trips_excel(
     db: AsyncSession,
     date_from: str | None = None,
     date_to: str | None = None,
@@ -648,37 +648,37 @@ async def generate_work_orders_excel(
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment
 
-    query = select(WorkOrder).order_by(WorkOrder.id.desc())
+    query = select(DeliveredTrip).order_by(DeliveredTrip.id.desc())
     if date_from:
-        query = query.where(WorkOrder.created_at >= date_from)
+        query = query.where(DeliveredTrip.created_at >= date_from)
     if date_to:
-        query = query.where(WorkOrder.created_at <= date_to)
+        query = query.where(DeliveredTrip.created_at <= date_to)
     if status:
-        query = query.where(WorkOrder.status == status)
+        query = query.where(DeliveredTrip.status == status)
 
     result = await db.execute(query)
-    work_orders = result.scalars().all()
+    delivered_trips = result.scalars().all()
 
-    wo_ids = [wo.id for wo in work_orders]
-    containers_map: dict[int, list[WorkOrderContainer]] = {}
+    wo_ids = [wo.id for wo in delivered_trips]
+    containers_map: dict[int, list[DeliveredTripContainer]] = {}
     if wo_ids:
         cont_result = await db.execute(
-            select(WorkOrderContainer).where(WorkOrderContainer.work_order_id.in_(wo_ids))
+            select(DeliveredTripContainer).where(DeliveredTripContainer.delivered_trip_id.in_(wo_ids))
         )
         for c in cont_result.scalars().all():
-            containers_map.setdefault(c.work_order_id, []).append(c)
+            containers_map.setdefault(c.delivered_trip_id, []).append(c)
 
     # Resolve display names via JOIN (denormalized cols dropped).
     from app.models.domain import Client, Location, Vehicle
     from app.models.base import User as _User
-    client_ids = {wo.client_id for wo in work_orders}
-    driver_ids = {wo.driver_id for wo in work_orders}
-    loc_ids = {wo.pickup_location_id for wo in work_orders} | {wo.dropoff_location_id for wo in work_orders}
+    client_ids = {wo.client_id for wo in delivered_trips}
+    driver_ids = {wo.driver_id for wo in delivered_trips}
+    loc_ids = {wo.pickup_location_id for wo in delivered_trips} | {wo.dropoff_location_id for wo in delivered_trips}
     loc_ids.discard(None)
     partner_name_by_id = {c.id: c.name for c in (await db.execute(select(Client).where(Client.id.in_(client_ids)))).scalars().all()} if client_ids else {}
     driver_name_by_id = {u.id: (u.full_name or u.username) for u in (await db.execute(select(_User).where(_User.id.in_(driver_ids)))).scalars().all()} if driver_ids else {}
     loc_name_by_id = {l.id: l.name for l in (await db.execute(select(Location).where(Location.id.in_(loc_ids)))).scalars().all()} if loc_ids else {}
-    vehicle_ids = {wo.vehicle_id for wo in work_orders if wo.vehicle_id}
+    vehicle_ids = {wo.vehicle_id for wo in delivered_trips if wo.vehicle_id}
     vehicle_by_id = {v.id: v for v in (await db.execute(select(Vehicle).where(Vehicle.id.in_(vehicle_ids)))).scalars().all()} if vehicle_ids else {}
 
     wb = openpyxl.Workbook()
@@ -697,7 +697,7 @@ async def generate_work_orders_excel(
         cell.alignment = Alignment(horizontal="center")
 
     status_labels = {"PENDING": "Chờ ghép", "MATCHED": "Đã đối soát"}
-    for wo in work_orders:
+    for wo in delivered_trips:
         containers = containers_map.get(wo.id, [])
         plate = vehicle_by_id.get(wo.vehicle_id).plate if wo.vehicle_id and wo.vehicle_id in vehicle_by_id else ""
         for c in containers:
@@ -707,7 +707,7 @@ async def generate_work_orders_excel(
                 loc_name_by_id.get(wo.dropoff_location_id, ""),
                 driver_name_by_id.get(wo.driver_id, ""), plate,
                 wo.vessel or "",
-                c.container_number, c.work_type,
+                c.container_number, c.cont_type,
                 wo.driver_salary, wo.allowance, wo.driver_salary + wo.allowance,
                 status_labels.get(wo.status, wo.status),
                 wo.created_at.date() if wo.created_at else "",
@@ -724,7 +724,7 @@ async def generate_work_orders_excel(
     return buf.getvalue()
 
 
-async def generate_trip_orders_excel(
+async def generate_booked_trips_excel(
     db: AsyncSession,
     date_from: str | None = None,
     date_to: str | None = None,
@@ -739,32 +739,32 @@ async def generate_trip_orders_excel(
     import openpyxl
     from openpyxl.styles import Font, PatternFill, Alignment
 
-    query = select(TripOrder).order_by(TripOrder.id.desc())
+    query = select(BookedTrip).order_by(BookedTrip.id.desc())
     if client_id:
-        query = query.where(TripOrder.client_id == client_id)
+        query = query.where(BookedTrip.client_id == client_id)
     if date_from:
-        query = query.where(TripOrder.trip_date >= date_from)
+        query = query.where(BookedTrip.trip_date >= date_from)
     if date_to:
-        query = query.where(TripOrder.trip_date <= date_to)
+        query = query.where(BookedTrip.trip_date <= date_to)
     if status:
-        query = query.where(TripOrder.status == status)
+        query = query.where(BookedTrip.status == status)
 
     result = await db.execute(query)
-    trip_orders = result.scalars().all()
+    booked_trips = result.scalars().all()
 
-    to_ids = [to.id for to in trip_orders]
-    containers_map: dict[int, list[TripOrderContainer]] = {}
+    to_ids = [to.id for to in booked_trips]
+    containers_map: dict[int, list[BookedTripContainer]] = {}
     if to_ids:
         cont_result = await db.execute(
-            select(TripOrderContainer).where(TripOrderContainer.trip_order_id.in_(to_ids))
+            select(BookedTripContainer).where(BookedTripContainer.booked_trip_id.in_(to_ids))
         )
         for c in cont_result.scalars().all():
-            containers_map.setdefault(c.trip_order_id, []).append(c)
+            containers_map.setdefault(c.booked_trip_id, []).append(c)
 
     # Resolve display names via JOIN.
     from app.models.domain import Client, Location
-    client_ids = {to.client_id for to in trip_orders}
-    loc_ids = {to.pickup_location_id for to in trip_orders} | {to.dropoff_location_id for to in trip_orders}
+    client_ids = {to.client_id for to in booked_trips}
+    loc_ids = {to.pickup_location_id for to in booked_trips} | {to.dropoff_location_id for to in booked_trips}
     loc_ids.discard(None)
     partner_name_by_id = {c.id: c.name for c in (await db.execute(select(Client).where(Client.id.in_(client_ids)))).scalars().all()} if client_ids else {}
     loc_name_by_id = {l.id: l.name for l in (await db.execute(select(Location).where(Location.id.in_(loc_ids)))).scalars().all()} if loc_ids else {}
@@ -784,8 +784,8 @@ async def generate_trip_orders_excel(
         from app.models.domain import Reconciliation
         if to_ids:
             recon_result = await db.execute(
-                select(Reconciliation.trip_order_id).where(
-                    Reconciliation.trip_order_id.in_(to_ids),
+                select(Reconciliation.booked_trip_id).where(
+                    Reconciliation.booked_trip_id.in_(to_ids),
                     Reconciliation.is_active == True,  # noqa: E712
                 )
             )
@@ -799,8 +799,8 @@ async def generate_trip_orders_excel(
         if to_ids:
             # Get driver_ids from work orders linked via reconciliation
             recon_wo_result = await db.execute(
-                select(Reconciliation.work_order_id, Reconciliation.trip_order_id).where(
-                    Reconciliation.trip_order_id.in_(to_ids),
+                select(Reconciliation.delivered_trip_id, Reconciliation.booked_trip_id).where(
+                    Reconciliation.booked_trip_id.in_(to_ids),
                     Reconciliation.is_active == True,  # noqa: E712
                 )
             )
@@ -809,7 +809,7 @@ async def generate_trip_orders_excel(
 
             if wo_ids:
                 wo_result = await db.execute(
-                    select(WorkOrder.id, WorkOrder.driver_id, WorkOrder.vessel).where(WorkOrder.id.in_(wo_ids))
+                    select(DeliveredTrip.id, DeliveredTrip.driver_id, DeliveredTrip.vessel).where(DeliveredTrip.id.in_(wo_ids))
                 )
                 wo_driver_map = {r[0]: r[1] for r in wo_result.all()}
                 wo_vessel_map = {r[0]: (r[2] or "") for r in wo_result.all()}
@@ -858,7 +858,7 @@ async def generate_trip_orders_excel(
 
     if client_id:
         stt = 0
-        for to in trip_orders:
+        for to in booked_trips:
             containers = containers_map.get(to.id, [])
             pickup = loc_name_by_id.get(to.pickup_location_id, "")
             dropoff = loc_name_by_id.get(to.dropoff_location_id, "")
@@ -875,10 +875,10 @@ async def generate_trip_orders_excel(
                     plate,
                     vessel_map.get(to.id, ""),
                     match_status,
-                    to.unit_price or "",
+                    to.revenue or "",
                 ])
     else:
-        for to in trip_orders:
+        for to in booked_trips:
             containers = containers_map.get(to.id, [])
             for c in containers:
                 ws.append([
@@ -886,8 +886,8 @@ async def generate_trip_orders_excel(
                     partner_name_by_id.get(to.client_id, ""),
                     loc_name_by_id.get(to.pickup_location_id, ""),
                     loc_name_by_id.get(to.dropoff_location_id, ""),
-                    c.container_number, c.work_type,
-                    to.unit_price, to.driver_salary, to.allowance,
+                    c.container_number, c.cont_type,
+                    to.revenue, to.revenue, 0,
                     status_labels.get(to.status, to.status),
                 ])
 
@@ -935,29 +935,29 @@ async def generate_doi_soat_excel(
     dt = date_type.fromisoformat(date_to)
 
     # ── 2. Load MATCHED trip orders ───────────────────────────────────────────
-    to_query = select(TripOrder).where(
-        TripOrder.client_id == client_id,
-        TripOrder.trip_date >= df,
-        TripOrder.trip_date <= dt,
-        TripOrder.status == "MATCHED",
-    ).order_by(TripOrder.trip_date, TripOrder.id)
+    to_query = select(BookedTrip).where(
+        BookedTrip.client_id == client_id,
+        BookedTrip.trip_date >= df,
+        BookedTrip.trip_date <= dt,
+        BookedTrip.status == "MATCHED",
+    ).order_by(BookedTrip.trip_date, BookedTrip.id)
     to_result = await db.execute(to_query)
-    trip_orders = to_result.scalars().all()
+    booked_trips = to_result.scalars().all()
 
-    to_ids = [to.id for to in trip_orders]
+    to_ids = [to.id for to in booked_trips]
 
     # ── 3. Load containers ───────────────────────────────────────────────────
-    containers_map: dict[int, list[TripOrderContainer]] = {}
+    containers_map: dict[int, list[BookedTripContainer]] = {}
     if to_ids:
         cont_result = await db.execute(
-            select(TripOrderContainer).where(TripOrderContainer.trip_order_id.in_(to_ids))
+            select(BookedTripContainer).where(BookedTripContainer.booked_trip_id.in_(to_ids))
         )
         for c in cont_result.scalars().all():
-            containers_map.setdefault(c.trip_order_id, []).append(c)
+            containers_map.setdefault(c.booked_trip_id, []).append(c)
 
     # ── 4. Load location names ───────────────────────────────────────────────
     loc_ids: set[int] = set()
-    for to in trip_orders:
+    for to in booked_trips:
         if to.pickup_location_id:
             loc_ids.add(to.pickup_location_id)
         if to.dropoff_location_id:
@@ -967,7 +967,7 @@ async def generate_doi_soat_excel(
         loc_result = await db.execute(select(Location).where(Location.id.in_(loc_ids)))
         loc_name_by_id = {loc.id: loc.name for loc in loc_result.scalars().all()}
 
-    # ── 5. Load plate + vessel + operation_type via Reconciliation → WorkOrder ─
+    # ── 5. Load plate + vessel + operation_type via Reconciliation → DeliveredTrip ─
     plate_map: dict[int, str] = {}   # to_id -> plate string
     vessel_map: dict[int, str] = {}  # to_id -> vessel string
     op_type_map: dict[int, str] = {} # to_id -> operation_type label
@@ -977,13 +977,13 @@ async def generate_doi_soat_excel(
         "LAY_VO_HA_HANG": "Lấy vỏ hạ hàng",
         "CHAY_SA_LAN": "Chạy sà lan",
         "DONG_KHO": "Đóng kho",
-        "CHUNG": "Chi phí chung",
+        "TIEN_LUAT": "Tiền luật",
     }
 
     if to_ids:
         recon_result = await db.execute(
-            select(Reconciliation.work_order_id, Reconciliation.trip_order_id).where(
-                Reconciliation.trip_order_id.in_(to_ids),
+            select(Reconciliation.delivered_trip_id, Reconciliation.booked_trip_id).where(
+                Reconciliation.booked_trip_id.in_(to_ids),
                 Reconciliation.is_active == True,  # noqa: E712
             )
         )
@@ -993,10 +993,10 @@ async def generate_doi_soat_excel(
         if wo_ids:
             wo_result = await db.execute(
                 select(
-                    WorkOrder.id, WorkOrder.driver_id, WorkOrder.vessel,
-                    WorkOrder.vendor_id, WorkOrder.vehicle_external_plate,
-                    WorkOrder.operation_type,
-                ).where(WorkOrder.id.in_(wo_ids))
+                    DeliveredTrip.id, DeliveredTrip.driver_id, DeliveredTrip.vessel,
+                    DeliveredTrip.vendor_id,
+                    DeliveredTrip.operation_type,
+                ).where(DeliveredTrip.id.in_(wo_ids))
             )
             wo_rows = wo_result.all()
             wo_driver_map   = {r[0]: r[1] for r in wo_rows}
@@ -1108,14 +1108,14 @@ async def generate_doi_soat_excel(
     type_count: dict[str, int] = {}
     total_amount = 0
 
-    for row_idx, to in enumerate(trip_orders):
+    for row_idx, to in enumerate(booked_trips):
         containers = containers_map.get(to.id, [])
         pickup  = loc_name_by_id.get(to.pickup_location_id or 0, "")
         dropoff = loc_name_by_id.get(to.dropoff_location_id or 0, "")
         plate   = plate_map.get(to.id, "")
         vessel  = vessel_map.get(to.id, "")
         op_type = op_type_map.get(to.id, "")
-        unit_price = to.unit_price or 0
+        revenue = to.revenue or 0
         trip_date_str = to.trip_date.strftime("%d/%m/%Y") if to.trip_date else ""
 
         # Fill colour alternates every trip (not every row) for readability
@@ -1124,13 +1124,13 @@ async def generate_doi_soat_excel(
 
         for c in containers:
             stt += 1
-            wt_label = WORK_TYPE_FULL.get(c.work_type or "", c.work_type or "")
+            wt_label = WORK_TYPE_FULL.get(c.cont_type or "", c.cont_type or "")
             type_count[wt_label] = type_count.get(wt_label, 0) + 1
-            total_amount += unit_price
+            total_amount += revenue
 
             data_row = [
                 stt, to.id, trip_date_str, c.container_number, wt_label,
-                pickup, dropoff, op_type, plate, vessel, unit_price or "",
+                pickup, dropoff, op_type, plate, vessel, revenue or "",
                 "", "",  # Xác nhận KH, Ghi chú KH — empty for customer to fill
             ]
             ws.append(data_row)
@@ -1145,7 +1145,7 @@ async def generate_doi_soat_excel(
                     cell.alignment = Alignment(horizontal="center", vertical="center")
                 if col_num == 2:  # Mã chuyến
                     cell.alignment = Alignment(horizontal="center", vertical="center")
-                if col_num == 11 and unit_price:  # Đơn giá
+                if col_num == 11 and revenue:  # Đơn giá
                     cell.number_format = '#,##0'
                     cell.alignment = Alignment(horizontal="right", vertical="center")
             ws.row_dimensions[data_row_num].height = 18
@@ -1332,30 +1332,30 @@ async def generate_salary_excel(
 
     # Find matched work orders in the date range
     result = await db.execute(
-        select(WorkOrder).where(
-            WorkOrder.status == "MATCHED",
-        ).order_by(WorkOrder.driver_id)
+        select(DeliveredTrip).where(
+            DeliveredTrip.status == "MATCHED",
+        ).order_by(DeliveredTrip.driver_id)
     )
     all_matched = result.scalars().all()
 
     # Filter by reconciliations and trip order date range
-    # Get work order IDs that have active reconciliations with trip_orders in the date range
+    # Get work order IDs that have active reconciliations with booked_trips in the date range
     matched_wo_ids = {wo.id for wo in all_matched}
     driver_earnings: dict[int, dict] = {}
 
     if matched_wo_ids:
         recon_result = await db.execute(
-            select(Reconciliation, TripOrder).join(
-                TripOrder, TripOrder.id == Reconciliation.trip_order_id
+            select(Reconciliation, BookedTrip).join(
+                BookedTrip, BookedTrip.id == Reconciliation.booked_trip_id
             ).where(
-                Reconciliation.work_order_id.in_(matched_wo_ids),
+                Reconciliation.delivered_trip_id.in_(matched_wo_ids),
                 Reconciliation.is_active == True,  # noqa: E712
-                TripOrder.trip_date >= start_dt,
-                TripOrder.trip_date <= end_dt,
+                BookedTrip.trip_date >= start_dt,
+                BookedTrip.trip_date <= end_dt,
             )
         )
         for recon, trip in recon_result.all():
-            wo = next((w for w in all_matched if w.id == recon.work_order_id), None)
+            wo = next((w for w in all_matched if w.id == recon.delivered_trip_id), None)
             if wo is None:
                 continue
             if wo.driver_id not in driver_earnings:

@@ -8,7 +8,7 @@ Generates production-like data spanning 4 months with realistic P&L:
   - 3 clients: HAIAN (main), GLORY, CONSCIENCE
   - 12 routes across 7 port/depot locations
   - Per-trip driver salary + allowance + monthly base salary
-  - Vehicle expenses: fuel, repairs, general overhead
+  - Vehicle expenses: fuel, repairs, law/permits, other
 
 Run ``alembic upgrade head`` first on a fresh database.
 """
@@ -33,14 +33,14 @@ from app.models.domain import (
     PricingLine,
     Reconciliation,
     Setting,
-    TripOrder,
-    TripOrderContainer,
+    BookedTrip,
+    BookedTripContainer,
     Vehicle,
     Vendor,
     VehicleDriver,
     VehicleExpense,
-    WorkOrder,
-    WorkOrderContainer,
+    DeliveredTrip,
+    DeliveredTripContainer,
 )
 from app.core.security import hash_password
 
@@ -311,21 +311,20 @@ def _load_all_trips() -> list[dict]:
     return all_trips
 
 
-GENERAL_OVERHEAD_TEMPLATE = [
-    {"category": "CHUNG", "amount_range": (8000000, 12000000), "desc_tpl": "Bảo hiểm xe tháng {m}/2026"},
-    {"category": "CHUNG", "amount_range": (5000000, 8000000), "desc_tpl": "Phí bãi đậu xe tháng {m}/2026"},
-    {"category": "CHUNG", "amount_range": (2000000, 5000000), "desc_tpl": "Chi phí quản lý bãi tháng {m}/2026"},
+TIEN_LUAT_DESCRIPTIONS = [
+    "Phí đường bộ", "Tiền luật giao thông",
+    "Phí cầu đường", "Phí trọng lượng",
 ]
 
 
 async def _clear_operational_data(db) -> None:
     print("\n=== Clearing existing operational data ===")
     for table in [
-        "reconciliations",
-        "work_order_containers",
-        "work_orders",
-        "trip_order_containers",
-        "trip_orders",
+        "matched_trips",
+        "delivered_trip_containers",
+        "delivered_trips",
+        "booked_trip_containers",
+        "booked_trips",
         "vehicle_expenses",
         "driver_salary_configs",
         "pricing_lines",
@@ -435,14 +434,14 @@ async def seed_dev() -> None:
             veh = vehicle_map[plate]
             db.add(VehicleDriver(
                 vehicle_id=veh.id, driver_id=primary_drv.id,
-                role="PRIMARY", effective_from=date(2026, 1, 1), is_active=True,
+                effective_from=date(2026, 1, 1), is_active=True,
             ))
             vd_count += 1
             if info.get("secondary"):
                 sec_drv = driver_map[info["secondary"]]
                 db.add(VehicleDriver(
                     vehicle_id=veh.id, driver_id=sec_drv.id,
-                    role="SECONDARY", effective_from=date(2026, 3, 1), is_active=True,
+                    effective_from=date(2026, 3, 1), is_active=True,
                 ))
                 vd_count += 1
                 print(f"  + SECONDARY: {sec_drv.full_name} → {plate}")
@@ -452,7 +451,7 @@ async def seed_dev() -> None:
             drv = driver_map[ed["username"]]
             db.add(VehicleDriver(
                 vehicle_id=veh.id, driver_id=drv.id,
-                role="SECONDARY", effective_from=date(2026, 2, 1), is_active=True,
+                effective_from=date(2026, 2, 1), is_active=True,
             ))
             vd_count += 1
             print(f"  + SECONDARY: {drv.full_name} ({ed['username']}) → {ed['plate']}")
@@ -564,11 +563,11 @@ async def seed_dev() -> None:
                 pricing_map[(client_code, pickup_name, dropoff_name, work_type)] = pricing
         await db.commit()
 
-        # ── 8. WorkOrders + TripOrders + Reconciliations ───────────────
-        print("\n=== Creating WorkOrders, TripOrders, Reconciliations ===")
+        # ── 8. DeliveredTrips + BookedTrips + Reconciliations ───────────────
+        print("\n=== Creating DeliveredTrips, BookedTrips, Reconciliations ===")
         ketoan = user_map["ketoan"]
-        all_wos: list[WorkOrder] = []
-        all_tos: list[TripOrder] = []
+        all_wos: list[DeliveredTrip] = []
+        all_tos: list[BookedTrip] = []
         wo_code_idx = 1001
         to_code_idx = 2001
         plates_list = sorted(DRIVER_VEHICLES.keys())
@@ -601,18 +600,17 @@ async def seed_dev() -> None:
             if veh is None:
                 veh = vehicle_map[rng.choice(plates_list)]
 
-            wo = WorkOrder(
+            wo = DeliveredTrip(
                 client_id=client.id,
-                code=f"W{wo_code_idx:06d}",
                 pickup_location_id=loc_map[pickup].id,
                 dropoff_location_id=loc_map[dropoff].id,
                 driver_id=drv.id,
                 vehicle_id=veh.id,
                 vessel=trip.get("vessel", ""),
-                unit_price=trip["unit_price"],
+                work_type=wt,
+                revenue=trip["unit_price"],
                 driver_salary=prices.get("driver_salary", 150000),
                 allowance=prices.get("allowance", 50000),
-                pricing_id=pricing.id if pricing else None,
                 status="MATCHED",
                 trip_date=trip_date,
             )
@@ -620,19 +618,14 @@ async def seed_dev() -> None:
             all_wos.append(wo)
             wo_code_idx += 1
 
-            to = TripOrder(
+            to = BookedTrip(
                 trip_date=trip_date,
                 client_id=client.id,
-                code=f"T{to_code_idx:06d}",
                 pickup_location_id=loc_map[pickup].id,
                 dropoff_location_id=loc_map[dropoff].id,
-                pricing_id=pricing.id if pricing else None,
-                unit_price=trip["unit_price"],
-                driver_salary=prices.get("driver_salary", 150000),
-                allowance=prices.get("allowance", 50000),
+                work_type=wt,
+                revenue=trip["unit_price"],
                 status="MATCHED",
-                pickup_raw=pickup, dropoff_raw=dropoff,
-                location_review_needed=False,
             )
             db.add(to)
             all_tos.append(to)
@@ -644,18 +637,16 @@ async def seed_dev() -> None:
         print(f"  Created {len(all_wos)} work orders + {len(all_tos)} trip orders")
 
         for i, wo in enumerate(all_wos):
-            db.add(WorkOrderContainer(
-                work_order_id=wo.id,
+            db.add(DeliveredTripContainer(
+                delivered_trip_id=wo.id,
                 container_number=trips[i]["container"],
-                work_type=f"F{trips[i]['size']}",
+                cont_type=f"F{trips[i]['size']}",
             ))
         for idx, to in enumerate(all_tos):
-            db.add(TripOrderContainer(
-                trip_order_id=to.id,
+            db.add(BookedTripContainer(
+                booked_trip_id=to.id,
                 container_number=trips[idx]["container"],
-                work_type=f"F{trips[idx]['size']}",
-                container_size=str(trips[idx]["size"]),
-                freight_kind="F",
+                cont_type=f"F{trips[idx]['size']}",
             ))
         await db.flush()
         print(f"  Created {len(all_wos)} WO containers + {len(all_tos)} TO containers")
@@ -664,8 +655,8 @@ async def seed_dev() -> None:
             wo = all_wos[i]
             to = all_tos[i]
             db.add(Reconciliation(
-                trip_order_id=to.id,
-                work_order_id=wo.id,
+                booked_trip_id=to.id,
+                delivered_trip_id=wo.id,
                 match_score=1.0,
                 matched_by=ketoan.id,
                 matched_at=datetime(
@@ -697,27 +688,21 @@ async def seed_dev() -> None:
                 unit_price = prices.get("unit_price", 400000) if prices else 400000
                 trip_date = date(year, month, rng.randint(1, days_in_month))
 
-                to = TripOrder(
+                to = BookedTrip(
                     trip_date=trip_date,
                     client_id=client.id,
-                    code=f"T{to_code_idx:06d}",
                     pickup_location_id=loc_map[pickup].id,
                     dropoff_location_id=loc_map[dropoff].id,
-                    unit_price=unit_price,
-                    driver_salary=prices.get("driver_salary", 150000),
-                    allowance=prices.get("allowance", 50000),
+                    work_type=wt,
+                    revenue=unit_price,
                     status="PENDING",
-                    pickup_raw=pickup, dropoff_raw=dropoff,
-                    location_review_needed=False,
                 )
                 db.add(to)
                 await db.flush()
-                db.add(TripOrderContainer(
-                    trip_order_id=to.id,
+                db.add(BookedTripContainer(
+                    booked_trip_id=to.id,
                     container_number=_rand_container(),
-                    work_type=wt,
-                    container_size=str(size),
-                    freight_kind="F",
+                    cont_type=wt,
                 ))
                 to_code_idx += 1
                 pending_count += 1
@@ -752,15 +737,15 @@ async def seed_dev() -> None:
                     ))
                     expense_count += 1
 
-            for tmpl in GENERAL_OVERHEAD_TEMPLATE:
-                amount = rng.randint(*tmpl["amount_range"])
-                db.add(VehicleExpense(
-                    vehicle_id=None, category=tmpl["category"],
-                    amount=amount, expense_date=date(year, month, 15),
-                    description=tmpl["desc_tpl"].format(m=month),
-                    created_by=ketoan.id,
-                ))
-                expense_count += 1
+                if rng.random() < 0.3:
+                    law = rng.randint(300000, 1500000)
+                    db.add(VehicleExpense(
+                        vehicle_id=veh.id, category="TIEN_LUAT",
+                        amount=law, expense_date=date(year, month, rng.randint(1, 28)),
+                        description=rng.choice(TIEN_LUAT_DESCRIPTIONS) + f" T{month}/{year}",
+                        created_by=ketoan.id,
+                    ))
+                    expense_count += 1
 
         await db.flush()
         print(f"  Created {expense_count} vehicle expense records")
@@ -802,10 +787,10 @@ async def seed_dev() -> None:
         print("SEED COMPLETE — Realistic P&L data (Feb–May 2026)")
         print("=" * 60)
         for t in [
-            "users", "vehicles", "vehicle_drivers", "locations", "partners",
+            "users", "vehicles", "vehicle_drivers", "locations", "clients", "vendors",
             "settings", "pricings", "pricing_lines",
-            "work_orders", "work_order_containers",
-            "trip_orders", "trip_order_containers", "reconciliations",
+            "delivered_trips", "delivered_trip_containers",
+            "booked_trips", "booked_trip_containers", "matched_trips",
             "vehicle_expenses", "driver_salary_configs",
         ]:
             cnt = (await db.execute(text(f"SELECT count(*) FROM {t}"))).scalar()

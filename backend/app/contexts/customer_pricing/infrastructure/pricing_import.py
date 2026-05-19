@@ -50,6 +50,7 @@ class TariffRow:
     driver_salary: int = 0
     allowance: int = 0
     note: str = ""
+    old_unit_price: int | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -57,6 +58,7 @@ class TariffRow:
             "dropoff_location": self.dropoff_raw,
             "work_type": self.work_type,
             "unit_price": self.unit_price,
+            "old_unit_price": self.old_unit_price,
             "quantity": self.quantity,
             "driver_salary": self.driver_salary,
             "allowance": self.allowance,
@@ -388,11 +390,14 @@ async def _location_count(db: AsyncSession) -> int:
 
 
 async def resolve_preview_locations(
-    db: AsyncSession, rows: Iterable[TariffRow]
+    db: AsyncSession, rows: Sequence[TariffRow], client_id: int | None = None
 ) -> dict[str, dict]:
     """Run the resolver in find-only mode for every unique pickup/dropoff
     string. Returns the same shape as the orders import preview so the
     frontend can render the (có sẵn) / (gợi ý) / (mới) badges identically.
+
+    If client_id is provided, also attempts to look up existing unit prices
+    for the matched locations to populate old_unit_price on the rows.
     """
     resolver = LocationResolverService(db)
     seen: set[str] = set()
@@ -401,10 +406,10 @@ async def resolve_preview_locations(
             if raw and raw.strip():
                 seen.add(raw.strip())
 
-    out: dict[str, dict] = {}
+    location_map: dict[str, dict] = {}
     for raw in seen:
         result = await resolver.find_match(raw)
-        out[raw] = {
+        location_map[raw] = {
             "raw": raw,
             "match_kind": result.match_kind.value,
             "location_id": result.location.id if result.location else None,
@@ -415,4 +420,34 @@ async def resolve_preview_locations(
                 for s in result.suggestions
             ],
         }
-    return out
+
+    # If we have a client, look up existing prices to show Old vs New
+    if client_id and rows:
+        from app.models.domain import Pricing, PricingLine
+
+        for row in rows:
+            pickup_data = location_map.get(row.pickup_raw)
+            dropoff_data = location_map.get(row.dropoff_raw)
+            if not pickup_data or not dropoff_data:
+                continue
+            
+            p_id = pickup_data.get("location_id")
+            d_id = dropoff_data.get("location_id")
+            if not p_id or not d_id:
+                continue
+
+            existing = (await db.execute(
+                select(PricingLine.unit_price)
+                .join(Pricing)
+                .where(
+                    Pricing.client_id == client_id,
+                    Pricing.pickup_location_id == p_id,
+                    Pricing.dropoff_location_id == d_id,
+                    Pricing.work_type == row.work_type,
+                    PricingLine.quantity == row.quantity
+                )
+            )).scalar_one_or_none()
+            if existing is not None:
+                row.old_unit_price = int(existing)
+
+    return location_map

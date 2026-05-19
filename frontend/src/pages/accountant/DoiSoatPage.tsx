@@ -7,12 +7,12 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { DashboardCard } from '@/components/shared/DashboardCard/DashboardCard'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { useMonthParams } from './use-month-params'
-import { useTripOrders } from '@/hooks/use-queries'
-import { formatCurrency, getTripOrderStatusBadge } from '@/data/domain'
+import { useBookedTrips } from '@/hooks/use-queries'
+import { formatCurrency, getBookedTripStatusBadge } from '@/data/domain'
 import { fuzzyMatch } from '@/lib/search-utils'
-import type { TripOrder } from '@/data/domain'
+import type { BookedTrip } from '@/data/domain'
 
-function tripRevenue(t: TripOrder): number {
+function tripRevenue(t: BookedTrip): number {
   return (t.unitPrice ?? 0) * Math.max(1, t.containers.length)
 }
 
@@ -26,7 +26,7 @@ export function DoiSoatPage() {
   const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
   const [search, setSearch] = useState('')
 
-  const { data: trips = [], isLoading } = useTripOrders({ dateFrom, dateTo, pageSize: 500 })
+  const { data: trips = [], isLoading } = useBookedTrips({ dateFrom, dateTo, pageSize: 500 })
 
   const filtered = useMemo(() => {
     const q = search.trim()
@@ -127,7 +127,7 @@ export function DoiSoatPage() {
               </thead>
               <tbody>
                 {filtered.map((t, i) => {
-                  const badge = getTripOrderStatusBadge(t.status)
+                  const badge = getBookedTripStatusBadge(t.status)
                   const rev = tripRevenue(t)
                   return (
                     <tr

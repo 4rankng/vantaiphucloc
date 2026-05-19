@@ -7,12 +7,12 @@ import { SuccessOverlay } from '@/components/shared/SuccessOverlay'
 import { RecentTripSuggestions } from '@/components/shared/RecentTripSuggestions'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { LocationSelect } from '@/components/shared/LocationSelect/LocationSelect'
-import { useCreateWorkOrder } from './useCreateWorkOrder'
+import { useCreateDeliveredTrip } from './useCreateDeliveredTrip'
 import { useToast } from '@/components/atoms/Toast'
-import type { WorkOrder } from '@/data/domain'
+import type { DeliveredTrip } from '@/data/domain'
 import { OPERATION_TYPE_OPTIONS } from '@/data/domain'
 
-export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: WorkOrder | null }) {
+export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliveredTrip?: DeliveredTrip | null }) {
   const {
     isEdit,
     clients, recentOrders,
@@ -26,7 +26,7 @@ export function CreateWorkOrder({ existingWorkOrder }: { existingWorkOrder?: Wor
     updateContainer, addContainer, removeContainer,
     handleRecentTripSelect,
     onRequestSubmit, confirmSubmit, setSummaryOpen,
-  } = useCreateWorkOrder(existingWorkOrder)
+  } = useCreateDeliveredTrip(existingDeliveredTrip)
 
   const navigate = useNavigate()
   const toast = useToast()

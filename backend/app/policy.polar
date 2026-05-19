@@ -12,31 +12,27 @@ role_allow(user, "accountant") if user.role = "director";
 role_allow(user, "driver") if user.role = "director";
 role_allow(user, "driver") if user.role = "accountant";
 
-# ── Work Orders ───────────────────────────────────────────────────
+# ── Delivered Trips (formerly Work Orders) ────────────────────────
 
-allow(user, "create", "WorkOrder") if role_allow(user, "driver");
-allow(user, "batch_create", "WorkOrder") if role_allow(user, "driver");
-allow(user, "read", "WorkOrder") if role_allow(user, "driver");
-allow(user, "read_list", "WorkOrder") if role_allow(user, "driver");
-allow(user, "update", "WorkOrder") if role_allow(user, "accountant");
-allow(user, "update", work_order: WorkOrder) if
-    role_allow(user, "driver") and user.id = work_order.driver_id;
-allow(user, "export", "WorkOrder") if role_allow(user, "accountant");
-allow(user, "cancel", "WorkOrder") if role_allow(user, "accountant");
-allow(user, "cancel", work_order: WorkOrder) if
-    role_allow(user, "driver") and user.id = work_order.driver_id;
+allow(user, "create", "DeliveredTrip") if role_allow(user, "driver");
+allow(user, "batch_create", "DeliveredTrip") if role_allow(user, "driver");
+allow(user, "read", "DeliveredTrip") if role_allow(user, "driver");
+allow(user, "read_list", "DeliveredTrip") if role_allow(user, "driver");
+allow(user, "update", "DeliveredTrip") if role_allow(user, "accountant");
+allow(user, "export", "DeliveredTrip") if role_allow(user, "accountant");
+allow(user, "cancel", "DeliveredTrip") if role_allow(user, "accountant");
 
-# ── Trip Orders ───────────────────────────────────────────────────
+# ── Booked Trips (formerly Trip Orders) ──────────────────────────
 
-allow(user, "create", "TripOrder") if role_allow(user, "accountant");
-allow(user, "read", "TripOrder") if role_allow(user, "driver");
-allow(user, "read_list", "TripOrder") if role_allow(user, "driver");
-allow(user, "update", "TripOrder") if role_allow(user, "accountant");
-allow(user, "cancel", "TripOrder") if role_allow(user, "accountant");
-allow(user, "confirm", "TripOrder") if role_allow(user, "accountant");
-allow(user, "import", "TripOrder") if role_allow(user, "accountant");
-allow(user, "export", "TripOrder") if role_allow(user, "accountant");
-allow(user, "download_template", "TripOrder") if role_allow(user, "accountant");
+allow(user, "create", "BookedTrip") if role_allow(user, "accountant");
+allow(user, "read", "BookedTrip") if role_allow(user, "driver");
+allow(user, "read_list", "BookedTrip") if role_allow(user, "driver");
+allow(user, "update", "BookedTrip") if role_allow(user, "accountant");
+allow(user, "cancel", "BookedTrip") if role_allow(user, "accountant");
+allow(user, "confirm", "BookedTrip") if role_allow(user, "accountant");
+allow(user, "import", "BookedTrip") if role_allow(user, "accountant");
+allow(user, "export", "BookedTrip") if role_allow(user, "accountant");
+allow(user, "download_template", "BookedTrip") if role_allow(user, "accountant");
 
 # ── Reconciliation ────────────────────────────────────────────────
 

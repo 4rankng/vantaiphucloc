@@ -1,10 +1,10 @@
 import { api } from './client'
 import { toCamel, toSnake, ok, fail, unwrapList } from './utils'
-import type { Pricing, PricingLine, ApiResponse, WorkType } from '@/data/domain'
+import type { Pricing, PricingLine, ApiResponse, ContType } from '@/data/domain'
 
 export interface PricingCreatePayload {
   clientId: number
-  workType: WorkType
+  workType: ContType
   pickupLocationId: number
   dropoffLocationId: number
   lines: PricingLine[]
@@ -13,7 +13,7 @@ export interface PricingCreatePayload {
 
 export interface PricingUpdatePayload {
   clientId?: number
-  workType?: WorkType
+  workType?: ContType
   pickupLocationId?: number
   dropoffLocationId?: number
   lines?: PricingLine[]
@@ -21,7 +21,7 @@ export interface PricingUpdatePayload {
 }
 
 export async function getPricings(
-  filters?: { clientId?: number; workType?: WorkType; pickupLocationId?: number; dropoffLocationId?: number },
+  filters?: { clientId?: number; workType?: ContType; pickupLocationId?: number; dropoffLocationId?: number },
 ): Promise<ApiResponse<Pricing[]>> {
   try {
     const params: Record<string, string> = {}

@@ -1,9 +1,9 @@
-"""Read-side helpers for the TripOrder ↔ WorkOrder reconciliation.
+"""Read-side helpers for the BookedTrip ↔ DeliveredTrip reconciliation.
 
 Reconciliation use cases need to ask:
-  - is this TripOrder already linked to anything?
-  - which link row points at this WorkOrder / TripOrder id?
-  - how many TripOrders are linked to this WorkOrder? (multi-container)
+  - is this BookedTrip already linked to anything?
+  - which link row points at this DeliveredTrip / BookedTrip id?
+  - how many BookedTrips are linked to this DeliveredTrip? (multi-container)
 
 Those are pure infrastructure concerns — keeping them out of the
 application layer means the use case body stays free of select()
@@ -18,12 +18,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.contexts.operations.infrastructure.orm import ReconciliationORM
 
 
-async def trip_order_has_link(
-    session: AsyncSession, trip_order_id: int
+async def booked_trip_has_link(
+    session: AsyncSession, booked_trip_id: int
 ) -> bool:
     res = await session.execute(
         select(ReconciliationORM).where(
-            ReconciliationORM.trip_order_id == trip_order_id,
+            ReconciliationORM.booked_trip_id == booked_trip_id,
             ReconciliationORM.is_active == True,  # noqa: E712
         )
     )
@@ -33,16 +33,16 @@ async def trip_order_has_link(
 async def find_link(
     session: AsyncSession,
     *,
-    work_order_id: int | None = None,
-    trip_order_id: int | None = None,
+    delivered_trip_id: int | None = None,
+    booked_trip_id: int | None = None,
 ) -> ReconciliationORM | None:
     q = select(ReconciliationORM).where(
         ReconciliationORM.is_active == True,  # noqa: E712
     )
-    if work_order_id is not None:
-        q = q.where(ReconciliationORM.work_order_id == work_order_id)
-    if trip_order_id is not None:
-        q = q.where(ReconciliationORM.trip_order_id == trip_order_id)
+    if delivered_trip_id is not None:
+        q = q.where(ReconciliationORM.delivered_trip_id == delivered_trip_id)
+    if booked_trip_id is not None:
+        q = q.where(ReconciliationORM.booked_trip_id == booked_trip_id)
     # Use scalars().first() instead of scalar_one_or_none() to avoid
     # MultipleResultsFound when a WO has multiple active links.
     res = await session.execute(q)
@@ -50,11 +50,11 @@ async def find_link(
 
 
 async def find_all_links_for_wo(
-    session: AsyncSession, work_order_id: int
+    session: AsyncSession, delivered_trip_id: int
 ) -> list[ReconciliationORM]:
     res = await session.execute(
         select(ReconciliationORM).where(
-            ReconciliationORM.work_order_id == work_order_id,
+            ReconciliationORM.delivered_trip_id == delivered_trip_id,
             ReconciliationORM.is_active == True,  # noqa: E712
         )
     )
@@ -62,25 +62,25 @@ async def find_all_links_for_wo(
 
 
 async def count_links_for_wo(
-    session: AsyncSession, work_order_id: int
+    session: AsyncSession, delivered_trip_id: int
 ) -> int:
     from sqlalchemy import func
     res = await session.execute(
         select(func.count()).select_from(ReconciliationORM).where(
-            ReconciliationORM.work_order_id == work_order_id,
+            ReconciliationORM.delivered_trip_id == delivered_trip_id,
             ReconciliationORM.is_active == True,  # noqa: E712
         )
     )
     return res.scalar_one()
 
 
-async def work_order_has_link(
-    session: AsyncSession, work_order_id: int
+async def delivered_trip_has_link(
+    session: AsyncSession, delivered_trip_id: int
 ) -> bool:
-    """Check if a WorkOrder has any active reconciliation link."""
+    """Check if a DeliveredTrip has any active reconciliation link."""
     res = await session.execute(
         select(ReconciliationORM).where(
-            ReconciliationORM.work_order_id == work_order_id,
+            ReconciliationORM.delivered_trip_id == delivered_trip_id,
             ReconciliationORM.is_active == True,  # noqa: E712
         )
     )
@@ -88,13 +88,13 @@ async def work_order_has_link(
 
 
 async def count_links_for_to(
-    session: AsyncSession, trip_order_id: int
+    session: AsyncSession, booked_trip_id: int
 ) -> int:
-    """Count active reconciliations for a TripOrder (TO-centric capacity)."""
+    """Count active reconciliations for a BookedTrip (TO-centric capacity)."""
     from sqlalchemy import func
     res = await session.execute(
         select(func.count()).select_from(ReconciliationORM).where(
-            ReconciliationORM.trip_order_id == trip_order_id,
+            ReconciliationORM.booked_trip_id == booked_trip_id,
             ReconciliationORM.is_active == True,  # noqa: E712
         )
     )
@@ -102,12 +102,12 @@ async def count_links_for_to(
 
 
 async def find_all_links_for_to(
-    session: AsyncSession, trip_order_id: int
+    session: AsyncSession, booked_trip_id: int
 ) -> list[ReconciliationORM]:
-    """Return all active reconciliation links for a TripOrder."""
+    """Return all active reconciliation links for a BookedTrip."""
     res = await session.execute(
         select(ReconciliationORM).where(
-            ReconciliationORM.trip_order_id == trip_order_id,
+            ReconciliationORM.booked_trip_id == booked_trip_id,
             ReconciliationORM.is_active == True,  # noqa: E712
         )
     )

@@ -1,18 +1,18 @@
 import { CheckCircle } from 'lucide-react'
-import { WORK_TYPES, type WorkType } from '@/data/domain'
+import { CONT_TYPES, type ContType } from '@/data/domain'
 import { hapticTap } from '@/lib/haptic'
 import { playTick } from '@/lib/sound'
 
 interface ContainerTypeGridProps {
-  value: WorkType
-  onChange: (type: WorkType) => void
+  value: ContType
+  onChange: (type: ContType) => void
   error?: boolean
   /** 'row' = single row (default), 'grid2x2' = 2×2 grid */
   layout?: 'row' | 'grid2x2'
 }
 
 export function ContainerTypeGrid({ value, onChange, error, layout = 'row' }: ContainerTypeGridProps) {
-  const handleSelect = (wt: WorkType) => {
+  const handleSelect = (wt: ContType) => {
     if (wt === value) return
     hapticTap()
     playTick()
@@ -21,7 +21,7 @@ export function ContainerTypeGrid({ value, onChange, error, layout = 'row' }: Co
 
   return (
     <div className={layout === 'grid2x2' ? 'grid grid-cols-2 gap-2' : 'flex gap-2'}>
-      {WORK_TYPES.map(wt => {
+      {CONT_TYPES.map(wt => {
         const selected = value === wt
         return (
           <button

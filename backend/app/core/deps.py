@@ -86,7 +86,7 @@ def require_permission(action: str, resource: str):
 
     Usage:
         async def endpoint(
-            user: User = Depends(require_permission("create", "WorkOrder")),
+            user: User = Depends(require_permission("create", "DeliveredTrip")),
         ):
             ...
     """

@@ -12,11 +12,12 @@ import pytest
 from sqlalchemy import select
 
 from app.models.domain import (
+    Client,
     Location,
     Partner,
-    TripOrder,
+    BookedTrip,
 )
-from app.models.enums import TripOrderStatus
+from app.models.enums import BookedTripStatus
 
 
 HAIPHONG = (20.8449, 106.6881)        # base point — Hải Phòng port
@@ -113,15 +114,14 @@ async def test_nearby_trip_id_pins_pickup_and_dropoff_to_top(
     )
     db_session.add(partner)
     await db_session.flush()
-    trip = TripOrder(
+    trip = BookedTrip(
         trip_date=date(2026, 5, 1),
-        partner_id=partner.id,
+        client_id=partner.id,
         pickup_location_id=locs["far"].id,
         dropoff_location_id=locs["near"].id,
-        unit_price=0,
-        driver_salary=0,
-        allowance=0,
-        status=TripOrderStatus.DRAFT.value,
+        work_type="F20",
+        revenue=0,
+        status=BookedTripStatus.DRAFT.value,
     )
     db_session.add(trip)
     await db_session.commit()

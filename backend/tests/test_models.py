@@ -12,9 +12,9 @@ from app.models.domain import (
     Partner,
     Pricing,
     PricingLine,
-    WorkOrder,
-    WorkOrderContainer,
-    TripOrder,
+    DeliveredTrip,
+    DeliveredTripContainer,
+    BookedTrip,
     Reconciliation,
 )
 
@@ -52,14 +52,14 @@ class TestMonetaryFieldsAreInteger:
             f"PricingLine.{field} should be Integer, got {type(col.type).__name__}"
         )
 
-    @pytest.mark.parametrize("field", ["unit_price", "driver_salary", "allowance"])
-    def test_work_order_monetary_fields(self, field):
-        col = _col(WorkOrder, field)
+    @pytest.mark.parametrize("field", ["revenue", "driver_salary", "allowance"])
+    def test_delivered_trip_monetary_fields(self, field):
+        col = _col(DeliveredTrip, field)
         assert isinstance(col.type, Integer)
 
-    @pytest.mark.parametrize("field", ["unit_price", "driver_salary", "allowance"])
-    def test_trip_order_monetary_fields(self, field):
-        col = _col(TripOrder, field)
+    @pytest.mark.parametrize("field", ["revenue"])
+    def test_booked_trip_monetary_fields(self, field):
+        col = _col(BookedTrip, field)
         assert isinstance(col.type, Integer)
 
 
@@ -99,23 +99,23 @@ class TestCascadeDeleteConstraints:
         col = _col(PricingLine, "pricing_id")
         assert _fk_target(col) == "pricings.id"
 
-    def test_work_order_container_work_order_id_cascade(self):
-        col = _col(WorkOrderContainer, "work_order_id")
+    def test_delivered_trip_container_delivered_trip_id_cascade(self):
+        col = _col(DeliveredTripContainer, "delivered_trip_id")
         ondelete = _fk_ondelete(col)
         assert ondelete is not None and ondelete.upper() == "CASCADE"
 
-    def test_work_order_container_references_work_orders(self):
-        col = _col(WorkOrderContainer, "work_order_id")
-        assert _fk_target(col) == "work_orders.id"
+    def test_delivered_trip_container_references_delivered_trips(self):
+        col = _col(DeliveredTripContainer, "delivered_trip_id")
+        assert _fk_target(col) == "delivered_trips.id"
 
-    def test_reconciliation_trip_order_id_cascade(self):
-        col = _col(Reconciliation, "trip_order_id")
+    def test_reconciliation_booked_trip_id_cascade(self):
+        col = _col(Reconciliation, "booked_trip_id")
         ondelete = _fk_ondelete(col)
         assert ondelete is not None and ondelete.upper() == "CASCADE"
 
-    def test_reconciliation_references_trip_orders(self):
-        col = _col(Reconciliation, "trip_order_id")
-        assert _fk_target(col) == "trip_orders.id"
+    def test_reconciliation_references_booked_trips(self):
+        col = _col(Reconciliation, "booked_trip_id")
+        assert _fk_target(col) == "booked_trips.id"
 
 
 # ---------------------------------------------------------------------------
@@ -124,14 +124,11 @@ class TestCascadeDeleteConstraints:
 
 class TestColumnNullability:
 
-    def test_work_order_unit_price_not_nullable(self):
-        assert _col(WorkOrder, "unit_price").nullable is False
+    def test_delivered_trip_revenue_not_nullable(self):
+        assert _col(DeliveredTrip, "revenue").nullable is False
 
-    def test_trip_order_unit_price_not_nullable(self):
-        assert _col(TripOrder, "unit_price").nullable is False
+    def test_booked_trip_revenue_not_nullable(self):
+        assert _col(BookedTrip, "revenue").nullable is False
 
     def test_partner_name_not_nullable(self):
         assert _col(Partner, "name").nullable is False
-
-    def test_partner_partner_type_not_nullable(self):
-        assert _col(Partner, "partner_type").nullable is False

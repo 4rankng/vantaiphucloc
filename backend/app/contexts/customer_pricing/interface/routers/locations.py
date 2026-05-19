@@ -58,7 +58,7 @@ from app.core.deps import get_current_user, require_permission
 from app.core.redis import get_redis
 from app.database import get_db
 from app.models.base import User
-from app.models.domain import TripOrder
+from app.models.domain import BookedTrip
 from app.schemas.base import PaginatedResponse
 
 
@@ -203,7 +203,7 @@ async def nearby_locations(
     pinned_ids: list[int] = []
     if trip_id is not None:
         trip = (await db.execute(
-            select(TripOrder).where(TripOrder.id == trip_id)
+            select(BookedTrip).where(BookedTrip.id == trip_id)
         )).scalar_one_or_none()
         if trip is not None:
             if trip.pickup_location_id:

@@ -83,7 +83,7 @@ def _pricing_with_tiers(*tiers: tuple[int, int]) -> Pricing:
     """tiers = (quantity, unit_price), e.g. (1, 2_000_000)."""
     p = Pricing(
         id=PricingId(1),
-        partner_id=PartnerId(1),
+        client_id=PartnerId(1),
         work_type="F20",
         pickup_location_id=LocationId(10),
         dropoff_location_id=LocationId(20),
@@ -128,7 +128,7 @@ def test_pricing_upsert_line_appends_new_quantity():
 
 def test_pricing_normalizes_work_type_at_construction():
     p = Pricing(
-        id=None, partner_id=PartnerId(1), work_type=" f40 ",
+        id=None, client_id=PartnerId(1), work_type=" f40 ",
         pickup_location_id=LocationId(1), dropoff_location_id=LocationId(2),
     )
     assert p.work_type == "F40"
@@ -137,6 +137,6 @@ def test_pricing_normalizes_work_type_at_construction():
 def test_pricing_construction_rejects_unknown_work_type():
     with pytest.raises(ValueError):
         Pricing(
-            id=None, partner_id=PartnerId(1), work_type="X10",
+            id=None, client_id=PartnerId(1), work_type="X10",
             pickup_location_id=LocationId(1), dropoff_location_id=LocationId(2),
         )

@@ -30,7 +30,7 @@ export interface VendorReconRow {
   tripDate: string | null
   vendorAmount: number | null
   matchStatus: VendorRowMatchStatus
-  matchedWorkOrderId: number | null
+  matchedDeliveredTripId: number | null
   reviewerNote: string | null
 }
 
@@ -70,7 +70,7 @@ export interface UploadResult {
 export interface RowUpdatePayload {
   matchStatus?: VendorRowMatchStatus
   reviewerNote?: string | null
-  matchedWorkOrderId?: number | null
+  matchedDeliveredTripId?: number | null
   vendorAmount?: number | null
 }
 
@@ -151,7 +151,7 @@ export async function updateVendorReconRow(
     const body: Record<string, unknown> = {}
     if (payload.matchStatus !== undefined) body.match_status = payload.matchStatus
     if (payload.reviewerNote !== undefined) body.reviewer_note = payload.reviewerNote
-    if (payload.matchedWorkOrderId !== undefined) body.matched_work_order_id = payload.matchedWorkOrderId
+    if (payload.matchedDeliveredTripId !== undefined) body.matched_work_order_id = payload.matchedDeliveredTripId
     if (payload.vendorAmount !== undefined) body.vendor_amount = payload.vendorAmount
     const res = await api.patch(`/vendor-reconciliation/${importId}/rows/${rowId}`, body)
     return ok(toCamel<Partial<VendorReconRow>>(res.data))

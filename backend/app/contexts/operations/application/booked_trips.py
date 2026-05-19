@@ -1,4 +1,4 @@
-"""TripOrder use cases.
+"""BookedTrip use cases.
 
 Each use case is a callable class that depends on the domain repository
 and (when persistence happens) the AsyncSession for transaction control.
@@ -16,23 +16,23 @@ from app.contexts.operations.application.dto import (
     ImportCommitResult,
     ImportTripRow,
     TripContainerInput,
-    TripOrderCreateInput,
-    TripOrderListFilters,
-    TripOrderUpdateInput,
+    BookedTripCreateInput,
+    BookedTripListFilters,
+    BookedTripUpdateInput,
 )
-from app.contexts.operations.domain.entities import TripOrder
+from app.contexts.operations.domain.entities import BookedTrip
 from app.contexts.operations.domain.exceptions import (
     InvalidStateTransition,
     NotFound,
 )
 from app.contexts.operations.domain.repositories import (
-    TripOrderRepository,
-    WorkOrderRepository,
+    BookedTripRepository,
+    DeliveredTripRepository,
 )
 from app.contexts.operations.domain.value_objects import (
-    TripOrderId,
-    TripOrderStatus,
-    WorkOrderStatus,
+    BookedTripId,
+    BookedTripStatus,
+    DeliveredTripStatus,
     normalize_work_type,
 )
 from app.utils.iso6346 import normalize_container_number
@@ -42,49 +42,42 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _add_containers(t: TripOrder, containers: list[TripContainerInput]) -> None:
+def _add_containers(t: BookedTrip, containers: list[TripContainerInput]) -> None:
     for c in containers:
         t.add_container(
             container_number=normalize_container_number(c.container_number),
-            work_type=c.work_type,
-            container_size=c.container_size,
-            container_type=c.container_type,
-            freight_kind=c.freight_kind,
-            gross_weight_kg=c.gross_weight_kg,
-            seal_no=c.seal_no,
-            commodity=c.commodity,
-            container_metadata=c.container_metadata,
+            cont_type=c.cont_type,
         )
 
 
 # ── Reads ────────────────────────────────────────────────────────
 
 
-class GetTripOrder:
-    def __init__(self, repo: TripOrderRepository) -> None:
+class GetBookedTrip:
+    def __init__(self, repo: BookedTripRepository) -> None:
         self.repo = repo
 
-    async def __call__(self, tid: int) -> TripOrder:
-        t = await self.repo.get_by_id(TripOrderId(tid))
+    async def __call__(self, tid: int) -> BookedTrip:
+        t = await self.repo.get_by_id(BookedTripId(tid))
         if t is None:
-            raise NotFound("TripOrder", tid)
+            raise NotFound("BookedTrip", tid)
         return t
 
 
-class ListTripOrders:
-    def __init__(self, repo: TripOrderRepository) -> None:
+class ListBookedTrips:
+    def __init__(self, repo: BookedTripRepository) -> None:
         self.repo = repo
 
     async def __call__(
-        self, filters: TripOrderListFilters
-    ) -> tuple[list[TripOrder], int]:
+        self, filters: BookedTripListFilters
+    ) -> tuple[list[BookedTrip], int]:
         offset = (filters.page - 1) * filters.page_size
         unpriced_only = filters.unpriced is True
         items, total = await self.repo.list(
             offset=offset,
             limit=filters.page_size,
             client_id=filters.client_id,
-            status=TripOrderStatus(filters.status) if filters.status else None,
+            status=DeliveredTripStatus(filters.status) if filters.status else None,
             trip_date_from=filters.date_from,
             trip_date_to=filters.date_to,
             unpriced_only=unpriced_only,
@@ -92,45 +85,38 @@ class ListTripOrders:
         # `unpriced=False` filter (priced-only) — applied here since the
         # repo signature only encodes `unpriced_only`.
         if filters.unpriced is False:
-            items = [t for t in items if (t.unit_price or 0) > 0]
+            items = [t for t in items if (t.revenue or 0) > 0]
         return list(items), total
 
 
 # ── Writes ───────────────────────────────────────────────────────
 
 
-class CreateTripOrder:
-    """Create a TripOrder from API input. Applies tiered pricing if the
+class CreateBookedTrip:
+    """Create a BookedTrip from API input. Applies tiered pricing if the
     partner has a matching pricing rule for the work_type + quantity."""
 
     def __init__(
         self,
-        repo: TripOrderRepository,
-        wo_repo: WorkOrderRepository,
+        repo: BookedTripRepository,
+        wo_repo: DeliveredTripRepository,
         session: AsyncSession,
     ) -> None:
         self.repo = repo
         self.wo_repo = wo_repo
         self.session = session
 
-    async def __call__(self, data: TripOrderCreateInput) -> TripOrder:
-        from sqlalchemy.exc import IntegrityError
-
-        from app.contexts.customer_pricing.infrastructure.pricing_lookup import (
-            find_tiered_pricing,
-        )
-        from app.contexts.operations.infrastructure.codes import generate_trip_order_code
-
-        unit_price = int(data.unit_price or 0)
-        driver_salary = int(data.driver_salary or 0)
-        allowance = int(data.allowance or 0)
-        pricing_id = data.pricing_id
+    async def __call__(self, data: BookedTripCreateInput) -> BookedTrip:
+        revenue = int(data.revenue or 0)
 
         if data.containers:
-            wt = normalize_work_type(data.containers[0].work_type)
+            from app.contexts.customer_pricing.infrastructure.pricing_lookup import (
+                find_tiered_pricing,
+            )
+            wt = normalize_work_type(data.containers[0].cont_type)
             count = sum(
                 1 for c in data.containers
-                if normalize_work_type(c.work_type) == wt
+                if normalize_work_type(c.cont_type) == wt
             ) or 1
             tiered = await find_tiered_pricing(
                 self.session,
@@ -141,56 +127,41 @@ class CreateTripOrder:
                 dropoff_location_id=data.dropoff_location_id,
             )
             if tiered:
-                unit_price = tiered.unit_price
-                driver_salary = tiered.driver_salary
-                allowance = tiered.allowance
-                pricing_id = tiered.pricing.id
+                revenue = tiered.revenue
 
-        for _attempt in range(3):
-            t = TripOrder(
-                id=None,
-                trip_date=data.trip_date,
-                client_id=data.client_id,
-                pickup_location_id=data.pickup_location_id,
-                dropoff_location_id=data.dropoff_location_id,
-                unit_price=unit_price,
-                driver_salary=driver_salary,
-                allowance=allowance,
-                pricing_id=pricing_id,
-                status=TripOrderStatus.DRAFT if (unit_price == 0 and driver_salary == 0) else TripOrderStatus.PENDING,
-                matched_work_order_ids=list(data.matched_work_order_ids or []),
-            )
-            _add_containers(t, data.containers)
-
-            saved = await self.repo.add(t)
-            saved.code = await generate_trip_order_code(self.session, data.client_id)
-            try:
-                saved = await self.repo.save(saved)
-
-                for wo_id in saved.matched_work_order_ids:
-                    wo = await self.wo_repo.get_by_id(wo_id)  # type: ignore[arg-type]
-                    if wo is not None and wo.status == WorkOrderStatus.PENDING:
-                        wo.match()
-                        await self.wo_repo.save(wo)
-
-                await self.session.commit()
-                return saved
-            except IntegrityError:
-                await self.session.rollback()
-                await self.session.begin()
-
-        raise RuntimeError(
-            f"Failed to generate unique TripOrder code after 3 attempts for client_id={data.client_id}"
+        from app.contexts.operations.domain.value_objects import BookedTripStatus
+        t = BookedTrip(
+            id=None,
+            trip_date=data.trip_date,
+            client_id=data.client_id,
+            pickup_location_id=data.pickup_location_id,
+            dropoff_location_id=data.dropoff_location_id,
+            revenue=revenue,
+            status=BookedTripStatus.DRAFT if revenue == 0 else BookedTripStatus.PENDING,
+            matched_delivered_trip_ids=list(data.matched_delivered_trip_ids or []),
         )
+        _add_containers(t, data.containers)
+
+        saved = await self.repo.add(t)
+        saved = await self.repo.save(saved)
+
+        for wo_id in saved.matched_delivered_trip_ids:
+            wo = await self.wo_repo.get_by_id(wo_id)  # type: ignore[arg-type]
+            if wo is not None and wo.status == DeliveredTripStatus.PENDING:
+                wo.match()
+                await self.wo_repo.save(wo)
+
+        await self.session.commit()
+        return saved
 
 
-class UpdateTripOrder:
+class UpdateBookedTrip:
     """Apply field updates, replace containers/links, propagate WO status."""
 
     def __init__(
         self,
-        repo: TripOrderRepository,
-        wo_repo: WorkOrderRepository,
+        repo: BookedTripRepository,
+        wo_repo: DeliveredTripRepository,
         session: AsyncSession,
     ) -> None:
         self.repo = repo
@@ -198,11 +169,11 @@ class UpdateTripOrder:
         self.session = session
 
     async def __call__(
-        self, tid: int, data: TripOrderUpdateInput
-    ) -> TripOrder:
-        t = await self.repo.get_by_id(TripOrderId(tid))
+        self, tid: int, data: BookedTripUpdateInput
+    ) -> BookedTrip:
+        t = await self.repo.get_by_id(BookedTripId(tid))
         if t is None:
-            raise NotFound("TripOrder", tid)
+            raise NotFound("BookedTrip", tid)
 
         # Scalar fields
         if data.trip_date is not None:
@@ -213,10 +184,8 @@ class UpdateTripOrder:
             t.pickup_location_id = data.pickup_location_id
         if data.dropoff_location_id is not None:
             t.dropoff_location_id = data.dropoff_location_id
-        if data.pricing_id is not None:
-            t.pricing_id = data.pricing_id
-        if data.unit_price is not None:
-            t.unit_price = int(data.unit_price)
+        if data.revenue is not None:
+            t.revenue = int(data.revenue)
         if data.driver_salary is not None:
             t.driver_salary = int(data.driver_salary)
         if data.allowance is not None:
@@ -231,11 +200,11 @@ class UpdateTripOrder:
             _add_containers(t, data.containers)
 
         # Matched WO ids — diff and update WO statuses
-        old_matched = set(t.matched_work_order_ids)
+        old_matched = set(t.matched_delivered_trip_ids)
         new_matched: set[int] | None = None
-        if data.matched_work_order_ids is not None:
-            new_matched = {int(i) for i in data.matched_work_order_ids}
-            t.matched_work_order_ids = sorted(new_matched)
+        if data.matched_delivered_trip_ids is not None:
+            new_matched = {int(i) for i in data.matched_delivered_trip_ids}
+            t.matched_delivered_trip_ids = sorted(new_matched)
 
         await self.repo.save(t)
 
@@ -244,44 +213,44 @@ class UpdateTripOrder:
             added = new_matched - old_matched
             for wo_id in removed:
                 wo = await self.wo_repo.get_by_id(wo_id)  # type: ignore[arg-type]
-                if wo is not None and wo.status == WorkOrderStatus.MATCHED:
+                if wo is not None and wo.status == DeliveredTripStatus.MATCHED:
                     wo.unmatch()
                     await self.wo_repo.save(wo)
             for wo_id in added:
                 wo = await self.wo_repo.get_by_id(wo_id)  # type: ignore[arg-type]
-                if wo is not None and wo.status == WorkOrderStatus.PENDING:
+                if wo is not None and wo.status == DeliveredTripStatus.PENDING:
                     wo.match()
                     await self.wo_repo.save(wo)
 
         await self.session.commit()
-        return await self.repo.get_by_id(TripOrderId(tid))
+        return await self.repo.get_by_id(BookedTripId(tid))
 
 
-class DeleteTripOrder:
+class DeleteBookedTrip:
     def __init__(
         self,
-        repo: TripOrderRepository,
+        repo: BookedTripRepository,
         session: AsyncSession,
     ) -> None:
         self.repo = repo
         self.session = session
 
     async def __call__(self, tid: int) -> None:
-        t = await self.repo.get_by_id(TripOrderId(tid))
+        t = await self.repo.get_by_id(BookedTripId(tid))
         if t is None:
-            raise NotFound("TripOrder", tid)
-        await self.repo.delete(TripOrderId(tid))
+            raise NotFound("BookedTrip", tid)
+        await self.repo.delete(BookedTripId(tid))
         await self.session.commit()
 
 
 # ── Bulk import + apply pricing ──────────────────────────────────
 
 
-class CreateTripOrderFromImport:
-    """Create TripOrders from the partner-Excel import pipeline.
+class CreateBookedTripFromImport:
+    """Create BookedTrips from the partner-Excel import pipeline.
 
     Groups rows by (trip_date + dropoff + tractor/partner-ref) so a
-    truck running multiple containers becomes one TripOrder with N
+    truck running multiple containers becomes one BookedTrip with N
     TripContainer rows. Pricing is intentionally NOT applied here -- the
     accountant prices the trip later via Apply Pricing or manually, so
     every imported trip starts in PENDING.
@@ -293,7 +262,7 @@ class CreateTripOrderFromImport:
 
     def __init__(
         self,
-        repo: TripOrderRepository,
+        repo: BookedTripRepository,
         session: AsyncSession,
     ) -> None:
         self.repo = repo
@@ -311,8 +280,8 @@ class CreateTripOrderFromImport:
             find_duplicate_trip,
         )
         from app.models.domain import (
-            TripOrder as TripOrderORM,
-            TripOrderContainer as TripOrderContainerORM,
+            BookedTrip as BookedTripORM,
+            BookedTripContainer as BookedTripContainerORM,
         )
 
         partner = await fetch_client(self.session, data.client_id)
@@ -412,19 +381,14 @@ class CreateTripOrderFromImport:
                     )
                     continue
 
-                trip = TripOrderORM(
+                trip = BookedTripORM(
                     trip_date=trip_date,
                     client_id=partner.id,
-                    pickup_raw=pickup or None,
-                    dropoff_raw=dropoff or None,
                     pickup_location_id=pickup_loc.id,
                     dropoff_location_id=dropoff_loc.id,
-                    pricing_id=None,
-                    unit_price=0,
-                    driver_salary=0,
-                    allowance=0,
-                    status=TripOrderStatus.PENDING.value,
-                    location_review_needed=review_needed,
+                    revenue=0,
+                    work_type=work_type,
+                    status=DeliveredTripStatus.PENDING.value,
                 )
                 if review_needed:
                     locations_review_flagged += 1
@@ -433,17 +397,10 @@ class CreateTripOrderFromImport:
                 created_trip_ids.append(trip.id)
 
                 for v in new_rows:
-                    self.session.add(TripOrderContainerORM(
-                        trip_order_id=trip.id,
+                    self.session.add(BookedTripContainerORM(
+                        booked_trip_id=trip.id,
                         container_number=v.get("container_no") or "",
-                        work_type=v.get("work_type") or work_type,
-                        container_size=v.get("container_size") or None,
-                        container_type=v.get("container_type") or None,
-                        freight_kind=v.get("freight_kind") or None,
-                        gross_weight_kg=_to_float(v.get("gross_weight_kg")),
-                        seal_no=v.get("seal_no") or None,
-                        commodity=v.get("commodity") or None,
-                        container_metadata=_extract_metadata(v),
+                        cont_type=v.get("work_type") or work_type,
                     ))
                     containers_created += 1
 
@@ -471,7 +428,7 @@ class CreateTripOrderFromImport:
 
 
 class ApplyPricingToTrips:
-    """Bulk-apply tiered pricing to a set of TripOrders.
+    """Bulk-apply tiered pricing to a set of BookedTrips.
 
     `skip_already_priced=True` makes the call idempotent — re-running
     the same set is a no-op for trips already priced.
@@ -505,7 +462,7 @@ class ApplyPricingToTrips:
         priced = 0
         unpriced_ids: list[int] = []
         for trip in rows:
-            if skip_already_priced and trip.unit_price and trip.unit_price > 0:
+            if skip_already_priced and trip.revenue and trip.revenue > 0:
                 priced += 1
                 continue
             cont_count = (
@@ -528,10 +485,7 @@ class ApplyPricingToTrips:
             if tiered is None:
                 unpriced_ids.append(trip.id)
                 continue
-            trip.unit_price = tiered.unit_price
-            trip.driver_salary = tiered.driver_salary
-            trip.allowance = tiered.allowance
-            trip.pricing_id = tiered.pricing.id
+            trip.revenue = tiered.revenue
             priced += 1
 
         await self.session.commit()
@@ -599,51 +553,53 @@ def trip_row_from_dict(d: dict) -> ImportTripRow:
     )
 
 
-class CancelTripOrder:
-    """Cancel a TripOrder. Blocked when locked."""
+class CancelBookedTrip:
+    """Cancel a BookedTrip."""
 
-    def __init__(self, to_repo: TripOrderRepository, session: AsyncSession) -> None:
+    def __init__(self, to_repo: BookedTripRepository, session: AsyncSession) -> None:
         self.to_repo = to_repo
         self.session = session
 
-    async def __call__(self, trip_order_id: int) -> TripOrder:
-        to = await self.to_repo.get_by_id(trip_order_id)
+    async def __call__(self, booked_trip_id: int) -> BookedTrip:
+        from app.contexts.operations.domain.value_objects import BookedTripStatus
+        to = await self.to_repo.get_by_id(booked_trip_id)
         if to is None:
-            raise NotFound("TripOrder", trip_order_id)
-        to.cancel()
+            raise NotFound("BookedTrip", booked_trip_id)
+        to.status = BookedTripStatus.CANCELLED
         await self.to_repo.save(to)
+        await self.session.commit()
         return to
 
 
-class ConfirmTripOrder:
-    """Confirm a TripOrder — permanent, flips to CONFIRMED status.
-    Also completes any matched WorkOrders."""
+class ConfirmBookedTrip:
+    """Confirm a BookedTrip — permanent, flips to CONFIRMED status.
+    Also completes any matched DeliveredTrips."""
 
     def __init__(
         self,
-        to_repo: TripOrderRepository,
-        wo_repo: WorkOrderRepository,
+        to_repo: BookedTripRepository,
+        wo_repo: DeliveredTripRepository,
         session: AsyncSession,
     ) -> None:
         self.to_repo = to_repo
         self.wo_repo = wo_repo
         self.session = session
 
-    async def __call__(self, trip_order_id: int, *, user_id: int = 0) -> TripOrder:
-        from app.contexts.operations.domain.value_objects import WorkOrderStatus
+    async def __call__(self, booked_trip_id: int, *, user_id: int = 0) -> BookedTrip:
+        from app.contexts.operations.domain.value_objects import BookedTripStatus, DeliveredTripStatus
 
-        to = await self.to_repo.get_by_id(trip_order_id)
+        to = await self.to_repo.get_by_id(booked_trip_id)
         if to is None:
-            raise NotFound("TripOrder", trip_order_id)
-        to.lock(user_id=user_id)
-        to.confirm(user_id=user_id)
+            raise NotFound("BookedTrip", booked_trip_id)
+        to.status = BookedTripStatus.CONFIRMED
         await self.to_repo.save(to)
 
-        # Complete all matched WorkOrders
-        for wo_id in to.matched_work_order_ids:
+        # Complete all matched DeliveredTrips
+        for wo_id in to.matched_delivered_trip_ids:
             wo = await self.wo_repo.get_by_id(wo_id)
             if wo is not None:
-                wo.status = WorkOrderStatus.COMPLETED
+                wo.status = DeliveredTripStatus.COMPLETED
                 await self.wo_repo.save(wo)
 
+        await self.session.commit()
         return to

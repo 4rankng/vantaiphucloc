@@ -125,16 +125,16 @@ class SqlUserRepository(UserRepository):
         await self._session.flush()
         return user_orm_to_entity(orm)
 
-    async def has_active_unmatched_work_orders(self, user_id: UserId) -> bool:
+    async def has_active_unmatched_delivered_trips(self, user_id: UserId) -> bool:
         # Cross-context read by raw SQL — keeps Operations import out of
         # this file's signature surface. We import the ORM lazily so the
         # Identity domain is unaffected.
-        from app.models.domain import WorkOrder  # noqa: WPS433 (lazy)
+        from app.models.domain import DeliveredTrip  # noqa: WPS433 (lazy)
 
         result = await self._session.execute(
-            select(func.count(WorkOrder.id))
-            .where(WorkOrder.driver_id == int(user_id))
-            .where(WorkOrder.status != "MATCHED")
+            select(func.count(DeliveredTrip.id))
+            .where(DeliveredTrip.driver_id == int(user_id))
+            .where(DeliveredTrip.status != "MATCHED")
         )
         return (result.scalar() or 0) > 0
 

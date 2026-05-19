@@ -1,6 +1,6 @@
-"""HTTP-level driver isolation tests on work-orders read endpoints.
+"""HTTP-level driver isolation tests on delivered-trips read endpoints.
 
-A driver must only ever see their own WorkOrders, regardless of any
+A driver must only ever see their own DeliveredTrips, regardless of any
 caller-supplied driver_id filter. Cross-driver GET must surface as 404
 to avoid leaking the existence of another driver's record.
 """
@@ -15,7 +15,7 @@ from app.models.domain import Location, Client
 
 
 async def _seed_two_drivers_with_wos(db_session, async_client):
-    """Create driver A + driver B, each owning one WorkOrder.
+    """Create driver A + driver B, each owning one DeliveredTrip.
 
     Returns (driver_a_headers, driver_b_headers, wo_a_id, wo_b_id).
     """
@@ -36,35 +36,35 @@ async def _seed_two_drivers_with_wos(db_session, async_client):
     await db_session.commit()
 
     from app.contexts.operations.application.dto import (
-        WorkOrderContainerInput, WorkOrderCreateInput,
+        DeliveredTripContainerInput, DeliveredTripCreateInput,
     )
-    from app.contexts.operations.application.work_orders import (
-        CreateWorkOrder, CurrentUserContext,
+    from app.contexts.operations.application.delivered_trips import (
+        CreateDeliveredTrip, CurrentUserContext,
     )
     from app.contexts.operations.infrastructure.repositories import (
-        SqlWorkOrderRepository,
+        SqlDeliveredTripRepository,
     )
 
-    repo = SqlWorkOrderRepository(db_session)
-    create = CreateWorkOrder(repo, db_session)
+    repo = SqlDeliveredTripRepository(db_session)
+    create = CreateDeliveredTrip(repo, db_session)
 
     wo_a = await create(
-        WorkOrderCreateInput(
+        DeliveredTripCreateInput(
             partner_id=partner.id,
             pickup_location_id=pickup.id, dropoff_location_id=dropoff.id,
             driver_id=drv_a.id,
-            containers=[WorkOrderContainerInput(
+            containers=[DeliveredTripContainerInput(
                 container_number="ABCU0000104", work_type="F20",
             )],
         ),
         CurrentUserContext(id=99, role="superadmin"),
     )
     wo_b = await create(
-        WorkOrderCreateInput(
+        DeliveredTripCreateInput(
             partner_id=partner.id,
             pickup_location_id=pickup.id, dropoff_location_id=dropoff.id,
             driver_id=drv_b.id,
-            containers=[WorkOrderContainerInput(
+            containers=[DeliveredTripContainerInput(
                 container_number="EFGU0000100", work_type="F40",
             )],
         ),
@@ -98,7 +98,7 @@ async def test_driver_listing_with_other_driver_filter_returns_only_own(
     # Driver A asks for driver B's WOs explicitly — server must override
     # the filter back to A and return only A's WO.
     res = await async_client.get(
-        f"/api/v1/work-orders?driver_id={wo_b_id}",
+        f"/api/v1/delivered-trips?driver_id={wo_b_id}",
         headers=a_headers,
     )
     assert res.status_code == 200, res.text
@@ -109,7 +109,7 @@ async def test_driver_listing_with_other_driver_filter_returns_only_own(
 
 
 @pytest.mark.asyncio
-async def test_driver_get_other_driver_work_order_returns_404(
+async def test_driver_get_other_driver_delivered_trip_returns_404(
     db_session, async_client,
 ):
     a_headers, _b_headers, _wo_a_id, wo_b_id = (
@@ -117,7 +117,7 @@ async def test_driver_get_other_driver_work_order_returns_404(
     )
 
     res = await async_client.get(
-        f"/api/v1/work-orders/{wo_b_id}",
+        f"/api/v1/delivered-trips/{wo_b_id}",
         headers=a_headers,
     )
     assert res.status_code == 404, res.text

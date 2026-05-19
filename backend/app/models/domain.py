@@ -81,21 +81,15 @@ class VehicleDriver(Base):
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
     )
 
-    __table_args__ = (
-        Index("ix_vehicle_drivers_vehicle_id", "vehicle_id"),
-        Index("ix_vehicle_drivers_driver_id", "driver_id"),
-    )
-
 
 # ---------------------------------------------------------------------------
-# VehicleExpense — CP Xe (xăng dầu, sửa chữa, khác, chung)
+# VehicleExpense — CP Xe (xăng dầu, sửa chữa, tiền luật, khác)
 # ---------------------------------------------------------------------------
 
 class VehicleExpense(AuditableMixin, Base):
-    """Records a vehicle cost item for P&L calculations.
+    """Records a per-vehicle cost item for P&L calculations.
 
-    ``vehicle_id=NULL`` for category=CHUNG (general overhead not tied to a
-    specific truck). All monetary amounts are Integer VND.
+    All monetary amounts are Integer VND.
     """
 
     __tablename__ = "vehicle_expenses"
@@ -104,7 +98,7 @@ class VehicleExpense(AuditableMixin, Base):
     vehicle_id = Column(Integer, ForeignKey("vehicles.id", ondelete="SET NULL"),
                         nullable=True, index=True)
     category = Column(String(20), nullable=False, index=True)
-    # XANG_DAU | SUA_CHUA | CHUNG
+    # XANG_DAU | SUA_CHUA | TIEN_LUAT | KHAC
     amount = Column(Integer, nullable=False)   # VND
     expense_date = Column(Date, nullable=False, index=True)
     description = Column(String(500), nullable=True)
@@ -250,56 +244,54 @@ class PricingLine(Base):
 
 
 # ---------------------------------------------------------------------------
-# WorkOrder (driver trip — created by driver app)
+# DeliveredTrip (driver trip — created by driver app)
 # ---------------------------------------------------------------------------
 
-class WorkOrder(AuditableMixin, Base):
-    __tablename__ = "work_orders"
+class DeliveredTrip(AuditableMixin, Base):
+    __tablename__ = "delivered_trips"
 
     id = Column(Integer, primary_key=True, index=True)
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
-    code = Column(String(20), nullable=True, unique=True, index=True)
     pickup_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
     dropoff_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
     driver_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     vehicle_id = Column(Integer, ForeignKey("vehicles.id"), nullable=True, index=True)
     vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=True, index=True)
-    vehicle_external_plate = Column(String(20), nullable=True)   # vendor plate (free text)
     vessel = Column(String(100), nullable=True)
-    operation_type = Column(String(20), nullable=True, index=True)  # XUAT_NHAP_TAU|CHUYEN_BAI|LAY_VO_HA_HANG|CHAY_SA_LAN|DONG_KHO
+    operation_type = Column(String(20), nullable=True, index=True)
+    work_type = Column(String(10), nullable=False)
     gps_lat = Column(Float, nullable=True)
     gps_lng = Column(Float, nullable=True)
     gps_address = Column(String(500), nullable=True)
-    unit_price = Column(Integer, nullable=False, default=0)       # VND
-    driver_salary = Column(Integer, nullable=False, default=0)    # VND
-    allowance = Column(Integer, nullable=False, default=0)        # VND
-    pricing_id = Column(Integer, ForeignKey("pricings.id"), nullable=True)
-    trip_date = Column(Date, nullable=True)  # explicit trip execution date; falls back to created_at date
-    status = Column(String(20), nullable=False, default="PENDING")  # PENDING | MATCHED
+    revenue = Column(Integer, nullable=False, default=0)
+    driver_salary = Column(Integer, nullable=False, default=0)
+    allowance = Column(Integer, nullable=False, default=0)
+    trip_date = Column(Date, nullable=True)
+    status = Column(String(20), nullable=False, default="PENDING")
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
     )
 
     __table_args__ = (
-        Index("ix_work_orders_driver_id_status", "driver_id", "status"),
-        Index("ix_work_orders_status", "status"),
-        Index("ix_work_orders_created_at", "created_at"),
+        Index("ix_delivered_trips_driver_id_status", "driver_id", "status"),
+        Index("ix_delivered_trips_status", "status"),
+        Index("ix_delivered_trips_created_at", "created_at"),
     )
 
 
-class WorkOrderContainer(Base):
-    __tablename__ = "work_order_containers"
+class DeliveredTripContainer(Base):
+    __tablename__ = "delivered_trip_containers"
 
     id = Column(Integer, primary_key=True, index=True)
-    work_order_id = Column(
+    delivered_trip_id = Column(
         Integer,
-        ForeignKey("work_orders.id", ondelete="CASCADE"),
+        ForeignKey("delivered_trips.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     container_number = Column(String(50), nullable=False, index=True)
-    work_type = Column(String(10), nullable=False)     # E20 | E40 | F20 | F40
+    cont_type = Column(String(10), nullable=False)
     photo_url = Column(String(1000), nullable=True)
     photo_lat = Column(Float, nullable=True)
     photo_lng = Column(Float, nullable=True)
@@ -308,114 +300,64 @@ class WorkOrderContainer(Base):
 
 
 # ---------------------------------------------------------------------------
-# TripOrder (customer order — from Excel import or manual entry)
+# BookedTrip (customer order — from Excel import or manual entry)
 # ---------------------------------------------------------------------------
 
-class TripOrder(AuditableMixin, Base):
-    __tablename__ = "trip_orders"
+class BookedTrip(AuditableMixin, Base):
+    __tablename__ = "booked_trips"
 
     id = Column(Integer, primary_key=True, index=True)
     trip_date = Column(Date, nullable=False)
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
-    code = Column(String(20), nullable=True, unique=True, index=True)
     pickup_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
     dropoff_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
-    pricing_id = Column(Integer, ForeignKey("pricings.id"), nullable=True)
-    operation_type = Column(String(20), nullable=True, index=True)  # XUAT_NHAP_TAU|CHUYEN_BAI|LAY_VO_HA_HANG|CHAY_SA_LAN|DONG_KHO
-    unit_price = Column(Integer, nullable=False, default=0)       # VND
-    driver_salary = Column(Integer, nullable=False, default=0)    # VND
-    allowance = Column(Integer, nullable=False, default=0)        # VND
-    status = Column(String(20), nullable=False, default="PENDING")  # PENDING | MATCHED
-    pickup_raw = Column(String(500), nullable=True)
-    dropoff_raw = Column(String(500), nullable=True)
-    location_review_needed = Column(Boolean, nullable=False, default=False)
+    operation_type = Column(String(20), nullable=True, index=True)
+    work_type = Column(String(10), nullable=False)
+    revenue = Column(Integer, nullable=False, default=0)
+    status = Column(String(20), nullable=False, default="PENDING")
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
     )
 
     __table_args__ = (
-        Index("ix_trip_orders_status", "status"),
-        Index("ix_trip_orders_trip_date", "trip_date"),
-        Index("ix_trip_orders_client_id_trip_date", "client_id", "trip_date"),
+        Index("ix_booked_trips_status", "status"),
+        Index("ix_booked_trips_trip_date", "trip_date"),
+        Index("ix_booked_trips_client_id_trip_date", "client_id", "trip_date"),
     )
 
 
-class TripOrderContainer(Base):
-    __tablename__ = "trip_order_containers"
+class BookedTripContainer(Base):
+    __tablename__ = "booked_trip_containers"
 
     id = Column(Integer, primary_key=True, index=True)
-    trip_order_id = Column(
+    booked_trip_id = Column(
         Integer,
-        ForeignKey("trip_orders.id", ondelete="CASCADE"),
+        ForeignKey("booked_trips.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     container_number = Column(String(50), nullable=False, index=True)
-    work_type = Column(String(10), nullable=False)
-    container_size = Column(String(10), nullable=True)
-    container_type = Column(String(20), nullable=True)
-    freight_kind = Column(String(2), nullable=True)
-    gross_weight_kg = Column(Float, nullable=True)
-    seal_no = Column(String(80), nullable=True)
-    commodity = Column(String(500), nullable=True)
-    container_metadata = Column(JSON_TYPE, nullable=True)
-
-
-class TripContainerPhoto(Base):
-    __tablename__ = "trip_container_photos"
-
-    id = Column(Integer, primary_key=True, index=True)
-    trip_container_id = Column(
-        Integer,
-        ForeignKey("trip_order_containers.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    kind = Column(String(20), nullable=False, index=True)
-    file_url = Column(String(1000), nullable=False)
-    caption = Column(String(500), nullable=True)
-    uploaded_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
-    uploaded_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    cont_type = Column(String(10), nullable=False)
 
 
 # ---------------------------------------------------------------------------
-# TripOrder <-> WorkOrder join table (many-to-many)
-# ---------------------------------------------------------------------------
-
-class TripOrderWorkOrder(Base):
-    __tablename__ = "trip_order_work_orders"
-
-    trip_order_id = Column(
-        Integer,
-        ForeignKey("trip_orders.id", ondelete="CASCADE"),
-        primary_key=True,
-    )
-    work_order_id = Column(
-        Integer,
-        ForeignKey("work_orders.id", ondelete="CASCADE"),
-        primary_key=True,
-    )
-
-
-# ---------------------------------------------------------------------------
-# Reconciliation (enriched join table)
+# MatchedTrips (enriched join table — formerly Reconciliation)
 # ---------------------------------------------------------------------------
 
 class Reconciliation(AuditableMixin, Base):
-    __tablename__ = "reconciliations"
+    __tablename__ = "matched_trips"
 
     id = Column(Integer, primary_key=True, index=True)
-    trip_order_id = Column(
+    booked_trip_id = Column(
         Integer,
-        ForeignKey("trip_orders.id", ondelete="CASCADE"),
+        ForeignKey("booked_trips.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    work_order_id = Column(
+    delivered_trip_id = Column(
         Integer,
-        ForeignKey("work_orders.id", ondelete="CASCADE"),
+        ForeignKey("delivered_trips.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
@@ -429,7 +371,7 @@ class Reconciliation(AuditableMixin, Base):
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
     __table_args__ = (
-        UniqueConstraint("trip_order_id", "work_order_id", "is_active",
+        UniqueConstraint("booked_trip_id", "delivered_trip_id", "is_active",
                          name="uq_reconciliations_active"),
     )
 
@@ -577,10 +519,10 @@ class CustomerReconciliationRow(Base):
     # Customer's verdict on this row.
     customer_status = Column(String(20), nullable=False)  # MATCHED | REJECTED | UNKNOWN
     customer_note = Column(String(500), nullable=True)
-    # Resolved against our TripOrder table (nullable when no match found).
-    resolved_trip_order_id = Column(
+    # Resolved against our BookedTrip table (nullable when no match found).
+    resolved_booked_trip_id = Column(
         Integer,
-        ForeignKey("trip_orders.id"),
+        ForeignKey("booked_trips.id"),
         nullable=True,
         index=True,
     )
@@ -603,7 +545,7 @@ class VendorReconciliationImport(Base):
 
     The vendor sends a monthly Excel listing containers they ran on
     Phúc Lộc's behalf.  We parse it into rows and compare against our
-    WorkOrders (vendor_id == this vendor, period in range).
+    DeliveredTrips (vendor_id == this vendor, period in range).
     After review the import is APPLIED — vendor_amount lands on matched WOs.
     """
 
@@ -653,9 +595,9 @@ class VendorReconciliationRow(Base):
     vendor_amount = Column(Integer, nullable=True)     # VND, nullable until confirmed
     # MATCHED | VENDOR_ONLY | OUR_ONLY | DISPUTED | IGNORED
     match_status = Column(String(20), nullable=False, default="VENDOR_ONLY", index=True)
-    matched_work_order_id = Column(
+    matched_delivered_trip_id = Column(
         Integer,
-        ForeignKey("work_orders.id"),
+        ForeignKey("delivered_trips.id"),
         nullable=True,
         index=True,
     )

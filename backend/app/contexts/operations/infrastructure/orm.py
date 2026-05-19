@@ -8,18 +8,16 @@ from __future__ import annotations
 
 from app.models.domain import (
     Reconciliation as ReconciliationORM,
-    TripContainerPhoto as TripContainerPhotoORM,
-    TripOrder as TripOrderORM,
-    TripOrderContainer as TripOrderContainerORM,
-    WorkOrder as WorkOrderORM,
-    WorkOrderContainer as WorkOrderContainerORM,
+    BookedTrip as BookedTripORM,
+    BookedTripContainer as BookedTripContainerORM,
+    DeliveredTrip as DeliveredTripORM,
+    DeliveredTripContainer as DeliveredTripContainerORM,
 )
 
 __all__ = [
     "ReconciliationORM",
-    "TripContainerPhotoORM",
-    "TripOrderORM",
-    "TripOrderContainerORM",
-    "WorkOrderORM",
-    "WorkOrderContainerORM",
+    "BookedTripORM",
+    "BookedTripContainerORM",
+    "DeliveredTripORM",
+    "DeliveredTripContainerORM",
 ]

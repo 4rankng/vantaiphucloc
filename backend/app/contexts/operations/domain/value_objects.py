@@ -8,30 +8,28 @@ from typing import NewType
 
 # ── Identifiers ─────────────────────────────────────────────────
 
-
-TripOrderId = NewType("TripOrderId", int)
-TripOrderContainerId = NewType("TripOrderContainerId", int)
-TripContainerPhotoId = NewType("TripContainerPhotoId", int)
-WorkOrderId = NewType("WorkOrderId", int)
-WorkOrderContainerId = NewType("WorkOrderContainerId", int)
+BookedTripId = NewType("BookedTripId", int)
+BookedTripContainerId = NewType("BookedTripContainerId", int)
+DeliveredTripId = NewType("DeliveredTripId", int)
+DeliveredTripContainerId = NewType("DeliveredTripContainerId", int)
 
 
 # ── Status enums ────────────────────────────────────────────────
 
 
-class WorkOrderStatus(StrEnum):
-    PENDING = "PENDING"
-    MATCHED = "MATCHED"
-    COMPLETED = "COMPLETED"
-    CANCELLED = "CANCELLED"
-
-
-class TripOrderStatus(StrEnum):
+class BookedTripStatus(StrEnum):
     DRAFT = "DRAFT"
     PENDING = "PENDING"
     MATCHED = "MATCHED"
     COMPLETED = "COMPLETED"
     CONFIRMED = "CONFIRMED"
+    CANCELLED = "CANCELLED"
+
+
+class DeliveredTripStatus(StrEnum):
+    PENDING = "PENDING"
+    MATCHED = "MATCHED"
+    COMPLETED = "COMPLETED"
     CANCELLED = "CANCELLED"
 
 
@@ -41,11 +39,6 @@ class WorkType(StrEnum):
     F20 = "F20"
     F40 = "F40"
 
-
-# Photo "kind" labels for `trip_container_photos.kind` — open set;
-# we keep it typed loosely so the driver app can extend without a
-# schema migration.
-PhotoKind = str  # "pickup" | "dropoff" | "seal" | "eir" | "other" …
 
 # VND amounts (no decimals).
 Money = int

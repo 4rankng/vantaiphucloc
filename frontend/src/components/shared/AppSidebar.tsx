@@ -211,7 +211,7 @@ const DIRECTOR_MENU: MenuItem[] = [
 
 const DRIVER_MENU: MenuItem[] = [
   { title: 'Trang chủ', icon: Home, path: '/driver', end: true, group: 'top' },
-  { title: 'Tạo chuyến', icon: Plus, path: '/driver/work-orders/new', group: 'hang-hoa' },
+  { title: 'Tạo chuyến', icon: Plus, path: '/driver/delivered-trips/new', group: 'hang-hoa' },
   { title: 'Lịch sử', icon: History, path: '/driver/history', group: 'hang-hoa' },
   { title: 'Thông báo', icon: BellIcon, path: '/driver/notifications', group: 'top' },
   { title: 'Hồ sơ', icon: Users, path: '/driver/profile', group: 'top' },

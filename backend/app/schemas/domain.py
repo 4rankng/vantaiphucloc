@@ -23,14 +23,20 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 # Status Enums
 # ---------------------------------------------------------------------------
 
-class WorkOrderStatus(str, Enum):
+class BookedTripStatus(str, Enum):
+    DRAFT = "DRAFT"
     PENDING = "PENDING"
     MATCHED = "MATCHED"
+    COMPLETED = "COMPLETED"
+    CONFIRMED = "CONFIRMED"
+    CANCELLED = "CANCELLED"
 
 
-class TripOrderStatus(str, Enum):
+class DeliveredTripStatus(str, Enum):
     PENDING = "PENDING"
     MATCHED = "MATCHED"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
 
 
 # ---------------------------------------------------------------------------
@@ -303,12 +309,12 @@ class PricingOut(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# WorkOrder (driver trip)
+# DeliveredTrip (driver trip)
 # ---------------------------------------------------------------------------
 
 class ContainerCreate(BaseModel):
     container_number: str
-    work_type: str
+    cont_type: str
     photo_url: str | None = None
     photo_lat: float | None = None
     photo_lng: float | None = None
@@ -318,8 +324,8 @@ class ContainerCreate(BaseModel):
 class ContainerOut(BaseModel):
     id: int
     container_number: str
-    work_type: str
-    photo_url: str | None
+    cont_type: str
+    photo_url: str | None = None
     photo_lat: float | None = None
     photo_lng: float | None = None
     photo_timestamp: datetime | None = None
@@ -328,70 +334,68 @@ class ContainerOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class WorkOrderCreate(BaseModel):
+class DeliveredTripCreate(BaseModel):
     containers: list[ContainerCreate]
     client_id: int
     pickup_location_id: int
     dropoff_location_id: int
-    driver_id: int | None = None             # required unless vendor_client_id is set
-    vendor_client_id: int | None = None     # xe ngoài: external transport company
-    vehicle_external_plate: str | None = None  # vendor plate (free text)
+    driver_id: int | None = None
+    vendor_id: int | None = None
     vehicle_id: int | None = None
     vessel: str | None = None
-    operation_type: str | None = None   # XUAT_NHAP_TAU | CHUYEN_BAI | LAY_VO_HA_HANG | CHAY_SA_LAN | DONG_KHO
+    operation_type: str | None = None
+    work_type: str = ""
     gps_lat: float | None = None
     gps_lng: float | None = None
-    trip_date: date | None = None  # explicit trip execution date; defaults to today if not provided
+    trip_date: date | None = None
 
     @model_validator(mode="after")
-    def _check_driver_xor_vendor(self) -> "WorkOrderCreate":
+    def _check_driver_xor_vendor(self) -> "DeliveredTripCreate":
         has_driver = self.driver_id is not None
-        has_vendor = self.vendor_client_id is not None
-        if has_driver == has_vendor:  # both set or both missing
+        has_vendor = self.vendor_id is not None
+        if has_driver == has_vendor:
             raise ValueError(
-                "Exactly one of driver_id or vendor_client_id must be provided."
+                "Exactly one of driver_id or vendor_id must be provided."
             )
         return self
 
 
-class WorkOrderUpdate(BaseModel):
+class DeliveredTripUpdate(BaseModel):
     containers: list[ContainerCreate] | None = None
     client_id: int | None = None
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
     driver_id: int | None = None
-    vendor_client_id: int | None = None
-    vehicle_external_plate: str | None = None
+    vendor_id: int | None = None
     vehicle_id: int | None = None
     vessel: str | None = None
     operation_type: str | None = None
+    work_type: str | None = None
     gps_lat: float | None = None
     gps_lng: float | None = None
-    unit_price: int | None = None
+    revenue: int | None = None
     driver_salary: int | None = None
     allowance: int | None = None
     status: str | None = None
 
 
-class WorkOrderOut(BaseModel):
+class DeliveredTripOut(BaseModel):
     id: int
     partner: PartnerSummaryOut
-    code: str | None = None
     pickup_location: LocationSummaryOut
     dropoff_location: LocationSummaryOut
     driver: DriverSummaryOut | None = None
-    vendor_client_id: int | None = None
-    vehicle_external_plate: str | None = None
+    vendor_id: int | None = None
     vehicle: VehicleSummaryOut | None = None
     vessel: str | None = None
     operation_type: str | None = None
+    work_type: str = ""
     gps_lat: float | None
     gps_lng: float | None
     gps_address: str | None
-    unit_price: int
+    revenue: int
     driver_salary: int
     allowance: int
-    pricing_id: int | None
     trip_date: date | None = None
     status: str
     containers: list[ContainerOut] = []
@@ -403,92 +407,63 @@ class WorkOrderOut(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# TripOrder (customer order from Excel)
+# BookedTrip (customer order from Excel)
 # ---------------------------------------------------------------------------
 
-class TripContainerPhotoOut(BaseModel):
-    id: int
-    kind: str
-    file_url: str
-    caption: str | None = None
-    uploaded_at: datetime
-    uploaded_by: int | None = None
-
-    model_config = ConfigDict(from_attributes=True)
+class BookedTripContainerPhotoOut(BaseModel):
+    pass  # removed
 
 
 class TripContainerCreate(BaseModel):
     container_number: str
-    work_type: str
-    container_size: str | None = None
-    container_type: str | None = None
-    freight_kind: str | None = None
-    gross_weight_kg: float | None = None
-    seal_no: str | None = None
-    commodity: str | None = None
-    container_metadata: dict | None = None
+    cont_type: str
 
 
 class TripContainerOut(BaseModel):
     id: int
     container_number: str
-    work_type: str
-    container_size: str | None = None
-    container_type: str | None = None
-    freight_kind: str | None = None
-    gross_weight_kg: float | None = None
-    seal_no: str | None = None
-    commodity: str | None = None
-    container_metadata: dict | None = None
-    photos: list[TripContainerPhotoOut] = []
+    cont_type: str
 
     model_config = ConfigDict(from_attributes=True)
 
 
-class TripOrderCreate(BaseModel):
+class BookedTripCreate(BaseModel):
     trip_date: date
     client_id: int
     pickup_location_id: int
     dropoff_location_id: int
     containers: list[TripContainerCreate] = []
-    pricing_id: int | None = None
-    operation_type: str | None = None  # XUAT_NHAP_TAU | CHUYEN_BAI | LAY_VO_HA_HANG | CHAY_SA_LAN | DONG_KHO
-    unit_price: int = Field(ge=0)
-    driver_salary: int = Field(ge=0)
-    allowance: int = Field(ge=0)
-    matched_work_order_ids: list[int] = []
+    operation_type: str | None = None
+    work_type: str = ""
+    revenue: int = Field(ge=0, default=0)
+    matched_delivered_trip_ids: list[int] = []
 
 
-class TripOrderUpdate(BaseModel):
+class BookedTripUpdate(BaseModel):
     trip_date: date | None = None
     client_id: int | None = None
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
     containers: list[TripContainerCreate] | None = None
-    pricing_id: int | None = None
     operation_type: str | None = None
-    unit_price: int | None = None
-    driver_salary: int | None = None
-    allowance: int | None = None
+    work_type: str | None = None
+    revenue: int | None = None
     status: str | None = None
-    matched_work_order_ids: list[int] | None = None
+    matched_delivered_trip_ids: list[int] | None = None
 
 
-class TripOrderOut(BaseModel):
+class BookedTripOut(BaseModel):
     id: int
     trip_date: date
     partner: PartnerSummaryOut
-    code: str | None = None
     pickup_location: LocationSummaryOut
     dropoff_location: LocationSummaryOut
     containers: list[TripContainerOut] = []
-    pricing_id: int | None
     operation_type: str | None = None
-    unit_price: int
-    driver_salary: int
-    allowance: int
+    work_type: str = ""
+    revenue: int
     status: str
-    matched_work_order_ids: list[int] = []
+    matched_delivered_trip_ids: list[int] = []
     created_at: datetime
     updated_at: datetime
 
@@ -501,8 +476,8 @@ class TripOrderOut(BaseModel):
 
 class ReconciliationOut(BaseModel):
     id: int
-    trip_order_id: int
-    work_order_id: int
+    booked_trip_id: int
+    delivered_trip_id: int
     match_score: float
     matched_by: int
     matched_at: datetime
@@ -516,8 +491,8 @@ class ReconciliationOut(BaseModel):
 
 
 class ReconcileRequest(BaseModel):
-    work_order_id: int
-    trip_order_id: int
+    delivered_trip_id: int
+    booked_trip_id: int
     reason: str | None = None
 
 
@@ -531,7 +506,7 @@ class CriterionBreakdown(BaseModel):
 
 
 class MatchSuggestion(BaseModel):
-    trip_order: TripOrderOut
+    booked_trip: BookedTripOut
     container_id: int
     confidence: Literal["full", "partial", "none"]
     matched_fields: list[str]
@@ -543,12 +518,12 @@ class MatchSuggestion(BaseModel):
 
 
 class SuggestMatchesResponse(BaseModel):
-    work_order_id: int
+    delivered_trip_id: int
     suggestions: list[MatchSuggestion]
 
 
 class WOSuggestion(BaseModel):
-    work_order: WorkOrderOut
+    delivered_trip: DeliveredTripOut
     confidence: Literal["full", "partial", "none"]
     matched_fields: list[str]
     score: float
@@ -559,7 +534,7 @@ class WOSuggestion(BaseModel):
 
 
 class SuggestWosResponse(BaseModel):
-    trip_order_id: int
+    booked_trip_id: int
     suggestions: list[WOSuggestion]
 
 
@@ -567,8 +542,8 @@ class SuggestWosResponse(BaseModel):
 # Match scores (lightweight — for master list)
 # ---------------------------------------------------------------------------
 
-class WorkOrderMatchScore(BaseModel):
-    work_order_id: int
+class DeliveredTripMatchScore(BaseModel):
+    delivered_trip_id: int
     best_score: float
     best_match_score: int
     max_score: int = 5
@@ -576,7 +551,7 @@ class WorkOrderMatchScore(BaseModel):
 
 
 class MatchScoresResponse(BaseModel):
-    scores: list[WorkOrderMatchScore]
+    scores: list[DeliveredTripMatchScore]
 
 
 # ---------------------------------------------------------------------------
@@ -584,8 +559,8 @@ class MatchScoresResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 class BulkMatchPair(BaseModel):
-    work_order_id: int
-    trip_order_id: int
+    delivered_trip_id: int
+    booked_trip_id: int
 
 
 class BulkMatchRequest(BaseModel):
@@ -593,8 +568,8 @@ class BulkMatchRequest(BaseModel):
 
 
 class BulkMatchResult(BaseModel):
-    work_order_id: int
-    trip_order_id: int
+    delivered_trip_id: int
+    booked_trip_id: int
     success: bool
     error: str | None = None
 
@@ -619,37 +594,34 @@ class AutoMatchCriterion(BaseModel):
     match: bool
 
 
-class AutoMatchWorkOrderRef(BaseModel):
+class AutoMatchDeliveredTripRef(BaseModel):
     id: int
-    code: str | None = None
     plate: str | None = None
     date: str | None = None
     client_name: str | None = None
 
 
-class AutoMatchTripOrderRef(BaseModel):
+class AutoMatchBookedTripRef(BaseModel):
     id: int
-    code: str | None = None
     client_name: str | None = None
     containers: list[TripContainerOut] = []
 
 
 class AutoMatchCandidate(BaseModel):
-    work_order_id: int
-    trip_order_id: int
+    delivered_trip_id: int
+    booked_trip_id: int
     score: float
     match_score: int
     max_score: int = 5
     matched_fields: list[str]
     criteria: list[AutoMatchCriterion] = []
     suggested_default: bool = False
-    work_order_ref: AutoMatchWorkOrderRef | None = None
-    trip_order_ref: AutoMatchTripOrderRef | None = None
+    delivered_trip_ref: AutoMatchDeliveredTripRef | None = None
+    booked_trip_ref: AutoMatchBookedTripRef | None = None
 
 
-class UnmatchedWorkOrderRef(BaseModel):
+class UnmatchedDeliveredTripRef(BaseModel):
     id: int
-    code: str | None = None
     plate: str | None = None
     date: str | None = None
 
@@ -665,18 +637,18 @@ class AutoMatchStats(BaseModel):
 
 
 class AutoMatchResponse(BaseModel):
-    scanned_work_order_count: int = 0
+    scanned_delivered_trip_count: int = 0
     skipped_already_matched: int = 0
     candidates: list[AutoMatchCandidate] = []
-    unmatched_work_order_refs: list[UnmatchedWorkOrderRef] = []
+    unmatched_delivered_trip_refs: list[UnmatchedDeliveredTripRef] = []
     errors: list[str] = []
     stats: AutoMatchStats = AutoMatchStats()
 
 
 # Legacy aliases for backward compat (old response shape)
 class AutoMatchResult(BaseModel):
-    work_order_id: int
-    trip_order_id: int
+    delivered_trip_id: int
+    booked_trip_id: int
     score: float
     matched_fields: list[str]
 
@@ -686,8 +658,8 @@ class AutoMatchConfirmRequest(BaseModel):
 
 
 class AutoMatchConfirmResult(BaseModel):
-    work_order_id: int
-    trip_order_id: int
+    delivered_trip_id: int
+    booked_trip_id: int
     success: bool
     error: str | None = None
 
@@ -699,7 +671,7 @@ class AutoMatchConfirmResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Salary / Driver Earnings (calculated on-the-fly from matched work_orders)
+# Salary / Driver Earnings (calculated on-the-fly from matched delivered_trips)
 # ---------------------------------------------------------------------------
 
 class DriverEarningsOut(BaseModel):
@@ -752,7 +724,6 @@ class MonthlyPnLOut(BaseModel):
     total_allowance: int
     total_base_salary: int
     total_vehicle_expenses: int = 0
-    total_cp_chung: int = 0
     profit: int
     matched_trip_count: int
     partner_breakdown: list[PartnerRevenueBreakdownOut]
@@ -790,7 +761,7 @@ class CustomerReconciliationRowOut(BaseModel):
     trip_date: date | None = None
     customer_status: str
     customer_note: str | None = None
-    resolved_trip_order_id: int | None = None
+    resolved_booked_trip_id: int | None = None
     apply_status: str
     apply_message: str | None = None
     diff_classification: str | None = None
@@ -875,11 +846,11 @@ class SalaryCalculateAsyncResponse(BaseModel):
 # Batch work orders (offline sync)
 # ---------------------------------------------------------------------------
 
-class BatchWorkOrderCreate(BaseModel):
-    items: list[WorkOrderCreate] = Field(..., max_length=50)
+class BatchDeliveredTripCreate(BaseModel):
+    items: list[DeliveredTripCreate] = Field(..., max_length=50)
 
 
-class BatchWorkOrderResult(BaseModel):
+class BatchDeliveredTripResult(BaseModel):
     index: int
     id: int | None = None
     success: bool
@@ -907,12 +878,12 @@ class ContainerOCRResponse(BaseModel):
 # VehicleExpense (CP Xe)
 # ---------------------------------------------------------------------------
 
-VEHICLE_EXPENSE_CATEGORIES = {"XANG_DAU", "SUA_CHUA", "KHAC", "CHUNG"}
+VEHICLE_EXPENSE_CATEGORIES = {"XANG_DAU", "SUA_CHUA", "TIEN_LUAT", "KHAC"}
 
 
 class VehicleExpenseCreate(BaseModel):
-    vehicle_id: int | None = None  # null for CHUNG (general overhead)
-    category: str = Field(..., pattern="^(XANG_DAU|SUA_CHUA|KHAC|CHUNG)$")
+    vehicle_id: int
+    category: str = Field(..., pattern="^(XANG_DAU|SUA_CHUA|TIEN_LUAT|KHAC)$")
     amount: int = Field(..., gt=0, description="Amount in VND")
     expense_date: date
     description: str | None = Field(default=None, max_length=500)
@@ -921,7 +892,7 @@ class VehicleExpenseCreate(BaseModel):
 
 class VehicleExpenseUpdate(BaseModel):
     vehicle_id: int | None = None
-    category: str | None = Field(default=None, pattern="^(XANG_DAU|SUA_CHUA|KHAC|CHUNG)$")
+    category: str | None = Field(default=None, pattern="^(XANG_DAU|SUA_CHUA|TIEN_LUAT|KHAC)$")
     amount: int | None = Field(default=None, gt=0)
     expense_date: date | None = None
     description: str | None = Field(default=None, max_length=500)
@@ -930,7 +901,7 @@ class VehicleExpenseUpdate(BaseModel):
 
 class VehicleExpenseOut(BaseModel):
     id: int
-    vehicle_id: int | None
+    vehicle_id: int
     vehicle_plate: str | None = None
     category: str
     amount: int
@@ -987,13 +958,13 @@ class DashboardSummaryOut(BaseModel):
     active_trips: int
     outstanding_debt: int
     driver_salary_summary: list[DriverSalarySummaryItem] = []
-    unmatched_work_order_count: int = 0
+    unmatched_delivered_trip_count: int = 0
     pending_trip_count: int = 0
 
 
 class KpiTrendDeltas(BaseModel):
     """Percent change comparing the second half of the window vs the first half."""
-    unmatched_work_orders: float = 0.0
+    unmatched_delivered_trips: float = 0.0
     pending_trips: float = 0.0
     driver_salary: float = 0.0
     revenue: float = 0.0
@@ -1005,15 +976,15 @@ class KpiTrendsOut(BaseModel):
     Each series is aligned to ``labels`` (ISO YYYY-MM-DD) and represents the
     activity that occurred on that day:
 
-    - ``unmatched_work_orders``: count of WorkOrders dated that day still PENDING
-    - ``pending_trips``: count of TripOrders dated that day still PENDING
+    - ``unmatched_delivered_trips``: count of DeliveredTrips dated that day still PENDING
+    - ``pending_trips``: count of BookedTrips dated that day still PENDING
     - ``driver_salary``: SUM(driver_salary + allowance) for MATCHED WOs that day
-    - ``revenue``: SUM(TripOrder.unit_price) for trips dated that day
+    - ``revenue``: SUM(BookedTrip.revenue) for trips dated that day
     """
     end_date: date
     days: int
     labels: list[str]
-    unmatched_work_orders: list[int]
+    unmatched_delivered_trips: list[int]
     pending_trips: list[int]
     driver_salary: list[int]
     revenue: list[int]
@@ -1029,6 +1000,8 @@ class VehicleExpenseSummary(BaseModel):
     """Expense subtotals by category for one vehicle."""
     xang_dau: int = 0    # Fuel
     sua_chua: int = 0    # Repairs
+    tien_luat: int = 0   # Law/Permits
+    khac: int = 0        # Others
     total: int = 0
 
 
@@ -1036,21 +1009,19 @@ class VehiclePnLRow(BaseModel):
     """P&L breakdown for a single vehicle in a period."""
     vehicle_id: int
     plate: str
-    revenue: int                          # Σ TripOrder.unit_price for matched TOs linked to this vehicle
-    cp_xe: VehicleExpenseSummary          # Vehicle-specific expenses (excl. CHUNG)
-    cp_chung_allocated: int = 0           # Proportional share of CHUNG overhead (by trip count)
-    cp_luong_san_luong: int               # Σ WorkOrder.driver_salary + allowance
+    revenue: int                          # Σ BookedTrip.revenue for matched TOs linked to this vehicle
+    cp_xe: VehicleExpenseSummary          # Vehicle-specific expenses
+    cp_luong_san_luong: int               # Σ DeliveredTrip.driver_salary + allowance
     cp_luong_co_ban: int                  # Base salary for drivers on this vehicle
-    loi_nhuan: int                        # revenue − all costs (incl. CHUNG allocation)
+    loi_nhuan: int                        # revenue − all costs
 
 
 class VehiclePnLResponse(BaseModel):
     date_from: date
     date_to: date
     rows: list[VehiclePnLRow]
-    cp_chung: int                         # General overhead total (for reference; allocated into rows)
     total_revenue: int
-    total_profit: int                     # Sum of row profits (CHUNG already allocated)
+    total_profit: int
 
 
 class TripDayBucket(BaseModel):
@@ -1079,23 +1050,23 @@ class CancelRequest(BaseModel):
 
 class UnmatchRequest(BaseModel):
     reason: str = Field(..., min_length=1, description="Required reason for unmatching")
-    work_order_id: int
-    trip_order_id: int
+    delivered_trip_id: int
+    booked_trip_id: int
 
 
 class BatchMatchForWORequest(BaseModel):
-    work_order_id: int
-    trip_order_ids: list[int] = Field(..., min_length=1)
+    delivered_trip_id: int
+    booked_trip_ids: list[int] = Field(..., min_length=1)
 
 
 class BatchMatchForWOResult(BaseModel):
-    trip_order_id: int
+    booked_trip_id: int
     success: bool
     error: str | None = None
 
 
 class BatchMatchForWOResponse(BaseModel):
-    work_order_id: int
+    delivered_trip_id: int
     results: list[BatchMatchForWOResult]
 
 
@@ -1104,22 +1075,22 @@ class SoftDeleteRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Batch match for TO (1 TO → N WorkOrders) — TO-centric model
+# Batch match for TO (1 TO → N DeliveredTrips) — TO-centric model
 # ---------------------------------------------------------------------------
 
 class BatchMatchForTORequest(BaseModel):
-    trip_order_id: int
-    work_order_ids: list[int] = Field(..., min_length=1)
+    booked_trip_id: int
+    delivered_trip_ids: list[int] = Field(..., min_length=1)
 
 
 class BatchMatchForTOResult(BaseModel):
-    work_order_id: int
+    delivered_trip_id: int
     success: bool
     error: str | None = None
 
 
 class BatchMatchForTOResponse(BaseModel):
-    trip_order_id: int
+    booked_trip_id: int
     results: list[BatchMatchForTOResult]
 
 

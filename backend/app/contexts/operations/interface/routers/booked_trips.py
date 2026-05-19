@@ -1,6 +1,6 @@
-"""TripOrder HTTP endpoints.
+"""BookedTrip HTTP endpoints.
 
-Wires use cases to the same `/trip-orders` URL paths the legacy router
+Wires use cases to the same `/booked-trips` URL paths the legacy router
 served, so the frontend keeps working unchanged.
 """
 
@@ -15,26 +15,25 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Upl
 from fastapi.responses import StreamingResponse
 
 from app.contexts.operations.application import (
-    CreateTripOrder,
-    DeleteTripOrder,
-    GetTripOrder,
-    ListTripOrders,
-    UpdateTripOrder,
+    CreateBookedTrip,
+    DeleteBookedTrip,
+    GetBookedTrip,
+    ListBookedTrips,
+    UpdateBookedTrip,
 )
 from app.contexts.operations.application.dto import (
     TripContainerInput,
-    TripOrderCreateInput,
-    TripOrderListFilters,
-    TripOrderUpdateInput,
+    BookedTripCreateInput,
+    BookedTripListFilters,
+    BookedTripUpdateInput,
 )
-from app.contexts.operations.domain.entities import TripOrder
+from app.contexts.operations.domain.entities import BookedTrip
 from app.contexts.operations.interface.dependencies import (
-    get_create_trip_order,
-    get_delete_trip_order,
-    get_get_trip_order,
-    get_get_work_order,
-    get_list_trip_orders,
-    get_update_trip_order,
+    get_create_booked_trip,
+    get_delete_booked_trip,
+    get_get_booked_trip,
+    get_list_booked_trips,
+    get_update_booked_trip,
 )
 from app.contexts.operations.interface.error_translation import translate
 from app.core.audit_context import set_audit_reason
@@ -44,10 +43,10 @@ from app.schemas.base import PaginatedResponse
 from app.schemas.domain import (
     CancelRequest,
     TripContainerOut,
-    TripContainerPhotoOut,
-    TripOrderCreate,
-    TripOrderOut,
-    TripOrderUpdate,
+    
+    BookedTripCreate,
+    BookedTripOut,
+    BookedTripUpdate,
 )
 from app.core.summaries import (
     get_partner_summary,
@@ -66,56 +65,36 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
-def _trip_to_out(t: TripOrder, partners, locations) -> TripOrderOut:
-    return TripOrderOut(
+def _trip_to_out(t: BookedTrip, partners, locations) -> BookedTripOut:
+    return BookedTripOut(
         id=int(t.id),  # type: ignore[arg-type]
         trip_date=t.trip_date,
         partner=get_partner_summary(partners, t.client_id),
-        code=t.code,
         pickup_location=get_location_summary(locations, t.pickup_location_id),
         dropoff_location=get_location_summary(locations, t.dropoff_location_id),
         containers=[
             TripContainerOut(
                 id=int(c.id),  # type: ignore[arg-type]
                 container_number=c.container_number,
-                work_type=c.work_type,
-                container_size=c.container_size,
-                container_type=c.container_type,
-                freight_kind=c.freight_kind,
-                gross_weight_kg=c.gross_weight_kg,
-                seal_no=c.seal_no,
-                commodity=c.commodity,
-                container_metadata=c.container_metadata,
-                photos=[
-                    TripContainerPhotoOut(
-                        id=int(p.id),  # type: ignore[arg-type]
-                        kind=p.kind,
-                        file_url=p.file_url,
-                        caption=p.caption,
-                        uploaded_at=p.uploaded_at,
-                        uploaded_by=p.uploaded_by,
-                    )
-                    for p in c.photos
-                ],
+                cont_type=c.cont_type,
             )
             for c in t.containers
         ],
-        pricing_id=t.pricing_id,
-        unit_price=t.unit_price,
-        driver_salary=t.driver_salary,
-        allowance=t.allowance,
+        operation_type=t.operation_type,
+        work_type=t.work_type,
+        revenue=t.revenue,
         status=t.status,
-        matched_work_order_ids=list(t.matched_work_order_ids),
+        matched_delivered_trip_ids=list(t.matched_delivered_trip_ids),
         created_at=t.created_at,
         updated_at=t.updated_at,
     )
 
 
-async def _load_one(session, t: TripOrder) -> TripOrderOut:
+async def _load_one(session, t: BookedTrip) -> BookedTripOut:
     return (await _load_many(session, [t]))[0]
 
 
-async def _load_many(session, trips: list[TripOrder]) -> list[TripOrderOut]:
+async def _load_many(session, trips: list[BookedTrip]) -> list[BookedTripOut]:
     if not trips:
         return []
     partners = await load_partner_summaries(
@@ -140,14 +119,7 @@ def _container_inputs(items) -> list[TripContainerInput]:
                 raise HTTPException(status_code=422, detail=f"Số container không hợp lệ '{cn}': {err}")
         results.append(TripContainerInput(
             container_number=c.container_number,
-            work_type=c.work_type,
-            container_size=c.container_size,
-            container_type=c.container_type,
-            freight_kind=c.freight_kind,
-            gross_weight_kg=c.gross_weight_kg,
-            seal_no=c.seal_no,
-            commodity=c.commodity,
-            container_metadata=c.container_metadata,
+            cont_type=c.cont_type,
         ))
     return results
 
@@ -157,39 +129,36 @@ def _container_inputs(items) -> list[TripContainerInput]:
 # ---------------------------------------------------------------------------
 
 
-@router.post("/trip-orders", response_model=TripOrderOut, status_code=201)
-async def create_trip_order(
-    body: TripOrderCreate,
+@router.post("/booked-trips", response_model=BookedTripOut, status_code=201)
+async def create_booked_trip(
+    body: BookedTripCreate,
     request: Request,
-    current_user: User = Depends(require_permission("read", "TripOrder")),
-    use_case: CreateTripOrder = Depends(get_create_trip_order),
+    current_user: User = Depends(require_permission("read", "BookedTrip")),
+    use_case: CreateBookedTrip = Depends(get_create_booked_trip),
 ):
     try:
-        t = await use_case(TripOrderCreateInput(
+        t = await use_case(BookedTripCreateInput(
             trip_date=body.trip_date,
             client_id=body.client_id,
             pickup_location_id=body.pickup_location_id,
             dropoff_location_id=body.dropoff_location_id,
             containers=_container_inputs(body.containers),
-            pricing_id=body.pricing_id,
-            unit_price=body.unit_price,
-            driver_salary=body.driver_salary,
-            allowance=body.allowance,
-            matched_work_order_ids=body.matched_work_order_ids,
+            revenue=body.revenue,
+            matched_delivered_trip_ids=body.matched_delivered_trip_ids,
         ))
     except Exception as exc:
         raise translate(exc)
     return await _load_one(use_case.session, t)
 
 
-@router.get("/trip-orders/search")
-async def search_trip_orders(
+@router.get("/booked-trips/search")
+async def search_booked_trips(
     q: str = Query("", description="Search query (container, customer, code, route)"),
-    work_order_id: int = Query(..., description="Work order ID for computing match scores"),
+    delivered_trip_id: int = Query(..., description="Work order ID for computing match scores"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=50),
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
-    use_case: GetWorkOrder = Depends(get_get_work_order),
+    use_case: GetBookedTrip = Depends(get_get_booked_trip),
 ):
     """Manual search for trip orders — bypasses match suggester threshold.
 
@@ -200,10 +169,10 @@ async def search_trip_orders(
     """
     from sqlalchemy import select as sa_select, or_ as sa_or, func
     from app.models.domain import (
-        WorkOrder as WorkOrderORM,
-        TripOrder as TripOrderORM,
-        TripOrderContainer as TOCORM,
-        WorkOrderContainer as WOCORM,
+        DeliveredTrip as DeliveredTripORM,
+        BookedTrip as BookedTripORM,
+        BookedTripContainer as TOCORM,
+        DeliveredTripContainer as WOCORM,
         Reconciliation,
     )
     from app.contexts.operations.infrastructure.match_suggester import (
@@ -224,14 +193,14 @@ async def search_trip_orders(
 
     # Load the work order
     wo = (await db.execute(
-        sa_select(WorkOrderORM).where(WorkOrderORM.id == work_order_id)
+        sa_select(DeliveredTripORM).where(DeliveredTripORM.id == delivered_trip_id)
     )).scalar_one_or_none()
     if wo is None:
-        raise HTTPException(status_code=404, detail="WorkOrder not found")
+        raise HTTPException(status_code=404, detail="DeliveredTrip not found")
 
     # Base query: PENDING or DRAFT trip orders
-    query = sa_select(TripOrderORM).where(
-        TripOrderORM.status.in_(["PENDING", "DRAFT"]),
+    query = sa_select(BookedTripORM).where(
+        BookedTripORM.status.in_(["PENDING", "DRAFT"]),
     )
 
     # If there's a search query, filter by it
@@ -239,7 +208,7 @@ async def search_trip_orders(
         term = f"%{q.strip()}%"
         # Subquery for container number match
         container_subquery = (
-            sa_select(TOCORM.trip_order_id)
+            sa_select(TOCORM.booked_trip_id)
             .where(TOCORM.container_number.ilike(term))
         )
         # Subquery for partner name match
@@ -250,19 +219,18 @@ async def search_trip_orders(
         )
         query = query.where(
             sa_or(
-                TripOrderORM.code.ilike(term),
-                TripOrderORM.id.in_(container_subquery),
-                TripOrderORM.client_id.in_(partner_subquery),
+                BookedTripORM.id.in_(container_subquery),
+                BookedTripORM.client_id.in_(partner_subquery),
                 # Date search: allow YYYY-MM-DD or DD/MM/YYYY patterns
-                TripOrderORM.trip_date.cast(str).ilike(term),
+                BookedTripORM.trip_date.cast(str).ilike(term),
             )
         )
 
     # Exclude trip orders already linked to this WO
     linked_to_ids = {
         r[0] for r in (await db.execute(
-            sa_select(Reconciliation.trip_order_id).where(
-                Reconciliation.work_order_id == work_order_id,
+            sa_select(Reconciliation.booked_trip_id).where(
+                Reconciliation.delivered_trip_id == delivered_trip_id,
                 Reconciliation.is_active == True,  # noqa: E712
             )
         )).all()
@@ -298,7 +266,7 @@ async def search_trip_orders(
 
     # Load WO containers for scoring
     wo_cont_rows = (await db.execute(
-        sa_select(WOCORM).where(WOCORM.work_order_id == wo.id)
+        sa_select(WOCORM).where(WOCORM.delivered_trip_id == wo.id)
     )).scalars().all()
     wo_container_numbers = {
         normalize_container_number(c.container_number)
@@ -314,11 +282,11 @@ async def search_trip_orders(
     # Load TO containers
     to_ids = [t.id for t in page_trips]
     to_cont_rows = (await db.execute(
-        sa_select(TOCORM).where(TOCORM.trip_order_id.in_(to_ids))
+        sa_select(TOCORM).where(TOCORM.booked_trip_id.in_(to_ids))
     )).scalars().all()
     to_containers_map: dict[int, list] = {}
     for c in to_cont_rows:
-        to_containers_map.setdefault(c.trip_order_id, []).append(c)
+        to_containers_map.setdefault(c.booked_trip_id, []).append(c)
 
     results = []
     for t in page_trips:
@@ -388,7 +356,7 @@ async def search_trip_orders(
         )
 
         results.append({
-            "trip_order": to_out.model_dump(),
+            "booked_trip": to_out.model_dump(),
             "container_id": to_containers_map.get(t.id, [None])[0].id if to_containers_map.get(t.id) else 0,
             "confidence": "full" if match_score >= 4 else ("partial" if match_score >= 3 else "none"),
             "matched_fields": matched_fields,
@@ -407,8 +375,8 @@ async def search_trip_orders(
     }
 
 
-@router.get("/trip-orders", response_model=PaginatedResponse[TripOrderOut])
-async def list_trip_orders(
+@router.get("/booked-trips", response_model=PaginatedResponse[BookedTripOut])
+async def list_booked_trips(
     client_id: int | None = None,
     status: str | None = None,
     date_from: date | None = None,
@@ -416,70 +384,70 @@ async def list_trip_orders(
     unpriced: bool | None = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=5000),
-    current_user: User = Depends(require_permission("read", "TripOrder")),
-    use_case: ListTripOrders = Depends(get_list_trip_orders),
+    current_user: User = Depends(require_permission("read", "BookedTrip")),
+    use_case: ListBookedTrips = Depends(get_list_booked_trips),
 ):
-    items, total = await use_case(TripOrderListFilters(
+    items, total = await use_case(BookedTripListFilters(
         page=page, page_size=page_size,
         client_id=client_id, status=status,
         date_from=date_from, date_to=date_to,
         unpriced=unpriced,
     ))
     out = await _load_many(use_case.repo.session, items)  # type: ignore[attr-defined]
-    return PaginatedResponse[TripOrderOut](
+    return PaginatedResponse[BookedTripOut](
         items=out, total=total, page=page, page_size=page_size,
         total_pages=math.ceil(total / page_size) if total > 0 else 0,
     )
 
 
-@router.get("/trip-orders/template")
-async def download_trip_order_template(
-    current_user: User = Depends(require_permission("create", "TripOrder")),
+@router.get("/booked-trips/template")
+async def download_booked_trip_template(
+    current_user: User = Depends(require_permission("create", "BookedTrip")),
 ):
-    from app.contexts.operations.infrastructure.excel import generate_trip_order_template
-    content = generate_trip_order_template()
+    from app.contexts.operations.infrastructure.excel import generate_booked_trip_template
+    content = generate_booked_trip_template()
     return StreamingResponse(
         io.BytesIO(content),
         media_type=(
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         ),
         headers={
-            "Content-Disposition": "attachment; filename=trip_order_template.xlsx"
+            "Content-Disposition": "attachment; filename=booked_trip_template.xlsx"
         },
     )
 
 
-@router.post("/trip-orders/import", status_code=200)
-async def import_trip_orders_excel(
+@router.post("/booked-trips/import", status_code=200)
+async def import_booked_trips_excel(
     file: UploadFile = File(...),
-    current_user: User = Depends(require_permission("create", "TripOrder")),
-    use_case: GetTripOrder = Depends(get_get_trip_order),
+    current_user: User = Depends(require_permission("create", "BookedTrip")),
+    use_case: GetBookedTrip = Depends(get_get_booked_trip),
 ):
-    """Legacy plain-Excel TripOrder import. Distinct from the partner-Excel
+    """Legacy plain-Excel BookedTrip import. Distinct from the partner-Excel
     import pipeline at `/imports/partner-excel/*`."""
-    from app.contexts.operations.infrastructure.excel import import_trip_orders, parse_trip_order_excel
+    from app.contexts.operations.infrastructure.excel import import_booked_trips, parse_booked_trip_excel
     content = await file.read()
-    rows = await parse_trip_order_excel(content)
+    rows = await parse_booked_trip_excel(content)
     if not rows:
         raise HTTPException(
             status_code=400, detail="File Excel trong hoac khong dung dinh dang"
         )
     session = use_case.repo.session  # type: ignore[attr-defined]
-    return await import_trip_orders(session, rows, current_user.id)
+    return await import_booked_trips(session, rows, current_user.id)
 
 
-@router.get("/trip-orders/export")
-async def export_trip_orders_excel(
+@router.get("/booked-trips/export")
+async def export_booked_trips_excel(
     date_from: date | None = None,
     date_to: date | None = None,
     status: str | None = None,
     client_id: int | None = None,
-    current_user: User = Depends(require_permission("create", "TripOrder")),
-    use_case: GetTripOrder = Depends(get_get_trip_order),
+    current_user: User = Depends(require_permission("create", "BookedTrip")),
+    use_case: GetBookedTrip = Depends(get_get_booked_trip),
 ):
-    from app.contexts.operations.infrastructure.excel import generate_trip_orders_excel
+    from app.contexts.operations.infrastructure.excel import generate_booked_trips_excel
     session = use_case.repo.session  # type: ignore[attr-defined]
-    content, partner_name = await generate_trip_orders_excel(
+    content, partner_name = await generate_booked_trips_excel(
         session,
         date_from=date_from.isoformat() if date_from else None,
         date_to=date_to.isoformat() if date_to else None,
@@ -491,7 +459,7 @@ async def export_trip_orders_excel(
         slug = slugify_vi(partner_name)
         filename = f"chuyen_khach_hang_{slug}_{date.today().isoformat()}.xlsx"
     else:
-        filename = "trip_orders.xlsx"
+        filename = "booked_trips.xlsx"
     return StreamingResponse(
         io.BytesIO(content),
         media_type=(
@@ -501,19 +469,19 @@ async def export_trip_orders_excel(
     )
 
 
-@router.get("/trip-orders/distinct-partners")
+@router.get("/booked-trips/distinct-partners")
 async def get_distinct_trip_partners(
     date_from: date | None = None,
     date_to: date | None = None,
-    current_user: User = Depends(require_permission("read", "TripOrder")),
-    use_case: ListTripOrders = Depends(get_list_trip_orders),
+    current_user: User = Depends(require_permission("read", "BookedTrip")),
+    use_case: ListBookedTrips = Depends(get_list_booked_trips),
 ):
     """Return distinct partners that have trip orders in the given date range.
     Used by the Xuất đối soát dialog to populate the customer dropdown."""
     from sqlalchemy import text
     session = use_case.repo.session  # type: ignore[attr-defined]
     sql = "SELECT DISTINCT p.id, p.name FROM partners p " \
-          "JOIN trip_orders t ON t.client_id = p.id " \
+          "JOIN booked_trips t ON t.client_id = p.id " \
           "WHERE p.is_active = true"
     params = {}
     if date_from:
@@ -527,13 +495,13 @@ async def get_distinct_trip_partners(
     return [{"id": r.id, "name": r.name} for r in rows]
 
 
-@router.get("/trip-orders/export-doi-soat")
+@router.get("/booked-trips/export-doi-soat")
 async def export_doi_soat_excel(
     client_id: int = Query(..., description="Partner (khách hàng) ID"),
     date_from: date = Query(..., description="From date (YYYY-MM-DD)"),
     date_to: date = Query(..., description="To date (YYYY-MM-DD)"),
-    current_user: User = Depends(require_permission("create", "TripOrder")),
-    use_case: GetTripOrder = Depends(get_get_trip_order),
+    current_user: User = Depends(require_permission("create", "BookedTrip")),
+    use_case: GetBookedTrip = Depends(get_get_booked_trip),
 ):
     from app.contexts.operations.infrastructure.excel import generate_doi_soat_excel
     from app.utils.text import slugify_vi
@@ -555,26 +523,26 @@ async def export_doi_soat_excel(
     )
 
 
-@router.get("/trip-orders/{trip_order_id}", response_model=TripOrderOut)
-async def get_trip_order(
-    trip_order_id: int,
-    current_user: User = Depends(require_permission("read", "TripOrder")),
-    use_case: GetTripOrder = Depends(get_get_trip_order),
+@router.get("/booked-trips/{booked_trip_id}", response_model=BookedTripOut)
+async def get_booked_trip(
+    booked_trip_id: int,
+    current_user: User = Depends(require_permission("read", "BookedTrip")),
+    use_case: GetBookedTrip = Depends(get_get_booked_trip),
 ):
     try:
-        t = await use_case(trip_order_id)
+        t = await use_case(booked_trip_id)
     except Exception as exc:
         raise translate(exc)
     return await _load_one(use_case.repo.session, t)  # type: ignore[attr-defined]
 
 
-@router.put("/trip-orders/{trip_order_id}", response_model=TripOrderOut)
-async def update_trip_order(
-    trip_order_id: int,
-    body: TripOrderUpdate,
+@router.put("/booked-trips/{booked_trip_id}", response_model=BookedTripOut)
+async def update_booked_trip(
+    booked_trip_id: int,
+    body: BookedTripUpdate,
     request: Request,
-    current_user: User = Depends(require_permission("read", "TripOrder")),
-    use_case: UpdateTripOrder = Depends(get_update_trip_order),
+    current_user: User = Depends(require_permission("read", "BookedTrip")),
+    use_case: UpdateBookedTrip = Depends(get_update_booked_trip),
 ):
     containers_input = (
         _container_inputs(body.containers) if body.containers is not None
@@ -582,18 +550,15 @@ async def update_trip_order(
     )
 
     try:
-        t = await use_case(trip_order_id, TripOrderUpdateInput(
+        t = await use_case(booked_trip_id, BookedTripUpdateInput(
             trip_date=body.trip_date,
             client_id=body.client_id,
             pickup_location_id=body.pickup_location_id,
             dropoff_location_id=body.dropoff_location_id,
             containers=containers_input,
-            pricing_id=body.pricing_id,
-            unit_price=body.unit_price,
-            driver_salary=body.driver_salary,
-            allowance=body.allowance,
+            revenue=body.revenue,
             status=body.status,
-            matched_work_order_ids=body.matched_work_order_ids,
+            matched_delivered_trip_ids=body.matched_delivered_trip_ids,
         ))
     except Exception as exc:
         raise translate(exc)
@@ -601,17 +566,17 @@ async def update_trip_order(
     return await _load_one(use_case.session, t)
 
 
-@router.delete("/trip-orders/{trip_order_id}", status_code=204)
-async def delete_trip_order(
-    trip_order_id: int,
+@router.delete("/booked-trips/{booked_trip_id}", status_code=204)
+async def delete_booked_trip(
+    booked_trip_id: int,
     body: CancelRequest,
     request: Request,
-    current_user: User = Depends(require_permission("read", "TripOrder")),
-    use_case: DeleteTripOrder = Depends(get_delete_trip_order),
+    current_user: User = Depends(require_permission("read", "BookedTrip")),
+    use_case: DeleteBookedTrip = Depends(get_delete_booked_trip),
 ):
     set_audit_reason(body.reason)
     try:
-        await use_case(trip_order_id)
+        await use_case(booked_trip_id)
     except Exception as exc:
         raise translate(exc)
     return None

@@ -3,7 +3,7 @@ import { CheckCircle2, ArrowLeftRight, Pencil } from 'lucide-react'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { ContEditPanel } from '@/components/shared/ContEditPanel'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/Popover/Popover'
-import type { WorkType } from '@/data/domain'
+import type { ContType } from '@/data/domain'
 
 interface ContEntry { type: string; number: string }
 
@@ -44,7 +44,7 @@ export function ContCompareRow({ left, right, leftLabel, rightLabel, matched, on
               <p className="text-xs font-medium mb-1" style={{ color }}>{sideLabel ?? defaultLabel}</p>
               {containers.map((c, i) => (
                 <div key={i} className="flex items-center gap-1 mb-0.5">
-                  <ContBadge type={c.type as WorkType} />
+                  <ContBadge type={c.type as ContType} />
                   <span className="text-sm font-mono font-medium" style={{ color: 'var(--theme-text-primary)' }}>{c.number}</span>
                 </div>
               ))}
@@ -63,7 +63,7 @@ export function ContCompareRow({ left, right, leftLabel, rightLabel, matched, on
         <p className="text-xs font-medium mb-1" style={{ color }}>{sideLabel ?? defaultLabel}</p>
         {containers.map((c, i) => (
           <div key={i} className="flex items-center gap-1 mb-0.5">
-            <ContBadge type={c.type as WorkType} />
+            <ContBadge type={c.type as ContType} />
             <span className="text-sm font-mono font-medium" style={{ color: 'var(--theme-text-primary)' }}>{c.number}</span>
           </div>
         ))}

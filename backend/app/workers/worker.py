@@ -9,7 +9,7 @@ from app.config import settings
 
 from app.workers.tasks.salary import calculate_salary_task
 from app.workers.tasks.notifications import send_notification_task
-from app.workers.tasks.geocoding import geocode_container_task, geocode_work_order_task
+from app.workers.tasks.geocoding import geocode_container_task, geocode_delivered_trip_task
 from app.workers.tasks.reports import generate_monthly_report_task
 from app.workers.tasks.earning_sync import sync_wo_earning_on_to_update
 
@@ -22,7 +22,7 @@ class WorkerSettings:
         send_notification_task,
         generate_monthly_report_task,
         geocode_container_task,
-        geocode_work_order_task,
+        geocode_delivered_trip_task,
         sync_wo_earning_on_to_update,
     ]
     cron_jobs = [

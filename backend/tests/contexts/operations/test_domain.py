@@ -6,26 +6,26 @@ from datetime import date
 
 import pytest
 
-from app.contexts.operations.domain.entities import TripOrder, WorkOrder
+from app.contexts.operations.domain.entities import BookedTrip, DeliveredTrip
 from app.contexts.operations.domain.exceptions import (
     ContainerCountInvalid,
     InvalidStateTransition,
-    TripOrderLocked,
+    BookedTripLocked,
 )
 from app.contexts.operations.domain.value_objects import (
-    TripOrderId,
-    TripOrderStatus,
-    WorkOrderId,
-    WorkOrderStatus,
+    BookedTripId,
+    BookedTripStatus,
+    DeliveredTripId,
+    DeliveredTripStatus,
 )
 
 
-# ── TripOrder ────────────────────────────────────────────────────
+# ── BookedTrip ────────────────────────────────────────────────────
 
 
-def _make_trip(*, status: str = TripOrderStatus.PENDING, id_: int | None = 1) -> TripOrder:
-    return TripOrder(
-        id=TripOrderId(id_) if id_ is not None else None,
+def _make_trip(*, status: str = BookedTripStatus.PENDING, id_: int | None = 1) -> BookedTrip:
+    return BookedTrip(
+        id=BookedTripId(id_) if id_ is not None else None,
         trip_date=date(2026, 5, 5),
         partner_id=10,
         pickup_location_id=100,
@@ -36,37 +36,37 @@ def _make_trip(*, status: str = TripOrderStatus.PENDING, id_: int | None = 1) ->
 
 def test_trip_match_and_unmatch() -> None:
     t = _make_trip()
-    assert t.status == TripOrderStatus.PENDING
+    assert t.status == BookedTripStatus.PENDING
     t.match()
-    assert t.status == TripOrderStatus.MATCHED
+    assert t.status == BookedTripStatus.MATCHED
     t.unmatch()
-    assert t.status == TripOrderStatus.PENDING
+    assert t.status == BookedTripStatus.PENDING
 
 
 def test_trip_match_idempotent() -> None:
     t = _make_trip()
     t.match()
     t.match()  # no-op
-    assert t.status == TripOrderStatus.MATCHED
+    assert t.status == BookedTripStatus.MATCHED
 
 
 def test_trip_unmatch_from_pending_is_noop() -> None:
     t = _make_trip()
     t.unmatch()  # idempotent — PENDING is fine
-    assert t.status == TripOrderStatus.PENDING
+    assert t.status == BookedTripStatus.PENDING
 
 
 def test_trip_locked_blocks_cancel() -> None:
     t = _make_trip()
     t.lock(user_id=42)
-    with pytest.raises(TripOrderLocked):
+    with pytest.raises(BookedTripLocked):
         t.cancel()
 
 
 def test_trip_cancel_sets_status() -> None:
     t = _make_trip()
     t.cancel()
-    assert t.status == TripOrderStatus.CANCELLED
+    assert t.status == BookedTripStatus.CANCELLED
 
 
 def test_trip_add_container_enforces_same_work_type() -> None:
@@ -104,19 +104,19 @@ def test_trip_apply_pricing_snapshot() -> None:
     assert t.pricing_id == 99
 
 
-def test_trip_link_unlink_work_orders_idempotent() -> None:
+def test_trip_link_unlink_delivered_trips_idempotent() -> None:
     t = _make_trip()
-    t.link_work_order(7)
-    t.link_work_order(7)
-    assert t.matched_work_order_ids == [7]
-    t.unlink_work_order(7)
-    assert t.matched_work_order_ids == []
-    t.unlink_work_order(7)  # idempotent
+    t.link_delivered_trip(7)
+    t.link_delivered_trip(7)
+    assert t.matched_delivered_trip_ids == [7]
+    t.unlink_delivered_trip(7)
+    assert t.matched_delivered_trip_ids == []
+    t.unlink_delivered_trip(7)  # idempotent
 
 
 def test_trip_confirm_requires_lock() -> None:
     t = _make_trip()
-    with pytest.raises(TripOrderLocked):
+    with pytest.raises(BookedTripLocked):
         t.confirm(user_id=33)
     t.lock(user_id=42)
     t.confirm(user_id=33)
@@ -124,12 +124,12 @@ def test_trip_confirm_requires_lock() -> None:
     assert t.confirmed_by == 33
 
 
-# ── WorkOrder ────────────────────────────────────────────────────
+# ── DeliveredTrip ────────────────────────────────────────────────────
 
 
-def _make_wo(*, status: str = WorkOrderStatus.PENDING, id_: int | None = 1) -> WorkOrder:
-    return WorkOrder(
-        id=WorkOrderId(id_) if id_ is not None else None,
+def _make_wo(*, status: str = DeliveredTripStatus.PENDING, id_: int | None = 1) -> DeliveredTrip:
+    return DeliveredTrip(
+        id=DeliveredTripId(id_) if id_ is not None else None,
         partner_id=10,
         pickup_location_id=100,
         dropoff_location_id=200,
@@ -141,19 +141,19 @@ def _make_wo(*, status: str = WorkOrderStatus.PENDING, id_: int | None = 1) -> W
 def test_wo_pending_to_matched() -> None:
     w = _make_wo()
     w.match()
-    assert w.status == WorkOrderStatus.MATCHED
+    assert w.status == DeliveredTripStatus.MATCHED
 
 
 def test_wo_match_idempotent() -> None:
     w = _make_wo()
     w.match()
     w.match()  # no-op
-    assert w.status == WorkOrderStatus.MATCHED
+    assert w.status == DeliveredTripStatus.MATCHED
 
 
 def test_wo_invalid_match_from_completed() -> None:
     w = _make_wo()
-    w.status = WorkOrderStatus.COMPLETED
+    w.status = DeliveredTripStatus.COMPLETED
     with pytest.raises(InvalidStateTransition):
         w.match()
 
@@ -175,4 +175,4 @@ def test_wo_unmatch_only_from_matched() -> None:
         w.unmatch()
     w.match()
     w.unmatch()
-    assert w.status == WorkOrderStatus.PENDING
+    assert w.status == DeliveredTripStatus.PENDING

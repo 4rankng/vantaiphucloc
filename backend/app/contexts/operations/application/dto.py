@@ -1,8 +1,4 @@
-"""Plain dataclasses used at the application boundary for Operations.
-
-Distinct from interface schemas (Pydantic) and domain entities
-(business invariants).
-"""
+"""Plain dataclasses used at the application boundary for Operations."""
 
 from __future__ import annotations
 
@@ -10,53 +6,44 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 
 
-# ── TripOrder ────────────────────────────────────────────────────
+# ── BookedTrip ────────────────────────────────────────────────────
 
 
 @dataclass
 class TripContainerInput:
     container_number: str
-    work_type: str
-    container_size: str | None = None
-    container_type: str | None = None
-    freight_kind: str | None = None
-    gross_weight_kg: float | None = None
-    seal_no: str | None = None
-    commodity: str | None = None
-    container_metadata: dict | None = None
+    cont_type: str
 
 
 @dataclass
-class TripOrderCreateInput:
+class BookedTripCreateInput:
     trip_date: date
     client_id: int
     pickup_location_id: int
     dropoff_location_id: int
+    operation_type: str | None = None
+    work_type: str = ""
+    revenue: int = 0
     containers: list[TripContainerInput] = field(default_factory=list)
-    pricing_id: int | None = None
-    unit_price: int = 0
-    driver_salary: int = 0
-    allowance: int = 0
-    matched_work_order_ids: list[int] = field(default_factory=list)
+    matched_delivered_trip_ids: list[int] = field(default_factory=list)
 
 
 @dataclass
-class TripOrderUpdateInput:
+class BookedTripUpdateInput:
     trip_date: date | None = None
     client_id: int | None = None
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
+    operation_type: str | None = None
+    work_type: str | None = None
+    revenue: int | None = None
     containers: list[TripContainerInput] | None = None
-    pricing_id: int | None = None
-    unit_price: int | None = None
-    driver_salary: int | None = None
-    allowance: int | None = None
     status: str | None = None
-    matched_work_order_ids: list[int] | None = None
+    matched_delivered_trip_ids: list[int] | None = None
 
 
 @dataclass
-class TripOrderListFilters:
+class BookedTripListFilters:
     page: int = 1
     page_size: int = 50
     client_id: int | None = None
@@ -70,13 +57,8 @@ class TripOrderListFilters:
 class ImportTripRow:
     """One row from the customer-Excel import pipeline, post-mapping."""
     container_no: str
-    container_size: str = ""
-    freight_kind: str = ""
+    cont_type: str = ""
     work_type: str = ""
-    container_type_iso: str = ""
-    gross_weight_kg: float | None = None
-    seal_no: str = ""
-    commodity: str = ""
     pickup_location: str = ""
     dropoff_location: str = ""
     trip_date: date | None = None
@@ -106,13 +88,13 @@ class ImportCommitResult:
     created_trip_ids: list[int] = field(default_factory=list)
 
 
-# ── WorkOrder ────────────────────────────────────────────────────
+# ── DeliveredTrip ────────────────────────────────────────────────────
 
 
 @dataclass
-class WorkOrderContainerInput:
+class DeliveredTripContainerInput:
     container_number: str
-    work_type: str
+    cont_type: str
     photo_url: str | None = None
     photo_lat: float | None = None
     photo_lng: float | None = None
@@ -120,44 +102,44 @@ class WorkOrderContainerInput:
 
 
 @dataclass
-class WorkOrderCreateInput:
+class DeliveredTripCreateInput:
     client_id: int
     pickup_location_id: int
     dropoff_location_id: int
     driver_id: int | None = None
     vendor_id: int | None = None
-    vehicle_external_plate: str | None = None
     vehicle_id: int | None = None
     vessel: str | None = None
     operation_type: str | None = None
-    containers: list[WorkOrderContainerInput] = field(default_factory=list)
+    work_type: str = ""
+    containers: list[DeliveredTripContainerInput] = field(default_factory=list)
     gps_lat: float | None = None
     gps_lng: float | None = None
     trip_date: date | None = None
 
 
 @dataclass
-class WorkOrderUpdateInput:
+class DeliveredTripUpdateInput:
     client_id: int | None = None
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
     driver_id: int | None = None
     vendor_id: int | None = None
-    vehicle_external_plate: str | None = None
     vehicle_id: int | None = None
     vessel: str | None = None
     operation_type: str | None = None
-    containers: list[WorkOrderContainerInput] | None = None
+    work_type: str | None = None
+    containers: list[DeliveredTripContainerInput] | None = None
     gps_lat: float | None = None
     gps_lng: float | None = None
-    unit_price: int | None = None
+    revenue: int | None = None
     driver_salary: int | None = None
     allowance: int | None = None
     status: str | None = None
 
 
 @dataclass
-class WorkOrderListFilters:
+class DeliveredTripListFilters:
     page: int = 1
     page_size: int = 50
     driver_id: int | None = None
@@ -171,8 +153,8 @@ class WorkOrderListFilters:
 
 @dataclass
 class ReconcileInput:
-    work_order_id: int
-    trip_order_id: int
+    delivered_trip_id: int
+    booked_trip_id: int
     user_id: int
 
 
@@ -180,5 +162,5 @@ class ReconcileInput:
 class UnmatchInput:
     user_id: int
     reason: str
-    work_order_id: int
-    trip_order_id: int
+    delivered_trip_id: int
+    booked_trip_id: int

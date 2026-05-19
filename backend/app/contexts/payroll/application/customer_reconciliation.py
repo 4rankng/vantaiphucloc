@@ -3,9 +3,9 @@
 Workflow:
   1. **Parse (external)** — the frontend or a future Excel parser converts
      a customer-provided file into ``CustomerReconciliationRowInput`` rows.
-  2. **Preview** — for each row, look up the matching ``TripOrder`` by
+  2. **Preview** — for each row, look up the matching ``BookedTrip`` by
      ``(client_id, container_number, trip_date)``. Persist the import
-     plus all rows with ``resolved_trip_order_id`` filled in. Status =
+     plus all rows with ``resolved_booked_trip_id`` filled in. Status =
      ``PARSED``. Each row is classified via ``diff_classification``.
   3. **Commit** — mark the import as ``APPLIED``. No operational state
      mutation happens here yet: the accountant treats the import as a
@@ -25,8 +25,8 @@ from app.models.domain import (
     CustomerReconciliationImport,
     CustomerReconciliationRow,
     Client,
-    TripOrder,
-    TripOrderContainer,
+    BookedTrip,
+    BookedTripContainer,
 )
 
 
@@ -90,7 +90,7 @@ class ResolvedRowDTO:
     trip_date: date | None
     customer_status: str
     customer_note: str | None
-    resolved_trip_order_id: int | None
+    resolved_booked_trip_id: int | None
     apply_status: str
     apply_message: str | None
     diff_classification: str | None = None
@@ -125,7 +125,7 @@ class ImportDTO:
     rows: list[ResolvedRowDTO] = field(default_factory=list)
 
 
-async def _resolve_trip_order_id(
+async def _resolve_booked_trip_id(
     session: AsyncSession,
     *,
     client_id: int,
@@ -140,41 +140,41 @@ async def _resolve_trip_order_id(
         return None
 
     stmt = (
-        select(TripOrder.id)
+        select(BookedTrip.id)
         .join(
-            TripOrderContainer,
-            TripOrderContainer.trip_order_id == TripOrder.id,
+            BookedTripContainer,
+            BookedTripContainer.booked_trip_id == BookedTrip.id,
         )
         .where(
-            TripOrder.client_id == client_id,
-            TripOrderContainer.container_number == container_number,
+            BookedTrip.client_id == client_id,
+            BookedTripContainer.container_number == container_number,
         )
     )
     if trip_date is not None:
-        stmt = stmt.where(TripOrder.trip_date == trip_date)
+        stmt = stmt.where(BookedTrip.trip_date == trip_date)
     stmt = stmt.limit(1)
 
     return (await session.execute(stmt)).scalars().first()
 
 
-async def _load_trip_order_amount(session: AsyncSession, trip_order_id: int) -> int | None:
-    """Get unit_price for a trip order."""
-    to = await session.get(TripOrder, trip_order_id)
+async def _load_booked_trip_amount(session: AsyncSession, booked_trip_id: int) -> int | None:
+    """Get revenue for a trip order."""
+    to = await session.get(BookedTrip, booked_trip_id)
     if to is None:
         return None
-    return to.unit_price
+    return to.revenue
 
 
 def _classify_diff(
     customer_status: str,
-    resolved_trip_order_id: int | None,
+    resolved_booked_trip_id: int | None,
     customer_amount: int | None,
     our_amount: int | None,
 ) -> str:
     """Classify a row's diff status."""
     if customer_status == "REJECTED":
         return "rejected"
-    if resolved_trip_order_id is None:
+    if resolved_booked_trip_id is None:
         return "added"
     # Check amount change
     if customer_amount is not None and our_amount is not None and customer_amount != our_amount:
@@ -221,7 +221,7 @@ class PreviewCustomerReconciliationImport:
         matched_to_ids: set[int] = set()
 
         for r in payload.rows:
-            resolved_id = await _resolve_trip_order_id(
+            resolved_id = await _resolve_booked_trip_id(
                 self.session,
                 client_id=payload.client_id,
                 container_number=r.container_number,
@@ -234,7 +234,7 @@ class PreviewCustomerReconciliationImport:
             # Load our amount for the matched trip
             our_amount = None
             if resolved_id is not None:
-                our_amount = await _load_trip_order_amount(self.session, resolved_id)
+                our_amount = await _load_booked_trip_amount(self.session, resolved_id)
 
             if r.customer_status == "MATCHED":
                 summary.matched += 1
@@ -264,7 +264,7 @@ class PreviewCustomerReconciliationImport:
                 trip_date=r.trip_date,
                 customer_status=r.customer_status,
                 customer_note=r.customer_note,
-                resolved_trip_order_id=resolved_id,
+                resolved_booked_trip_id=resolved_id,
                 apply_status=apply_status,
                 apply_message=apply_message,
                 diff_classification=diff_class,
@@ -276,12 +276,12 @@ class PreviewCustomerReconciliationImport:
 
         # Detect missing trips: our MATCHED trips not acknowledged by customer
         all_trips_stmt = (
-            select(TripOrder)
+            select(BookedTrip)
             .where(
-                TripOrder.client_id == payload.client_id,
-                TripOrder.trip_date >= payload.period_start,
-                TripOrder.trip_date <= payload.period_end,
-                TripOrder.status == "MATCHED",
+                BookedTrip.client_id == payload.client_id,
+                BookedTrip.trip_date >= payload.period_start,
+                BookedTrip.trip_date <= payload.period_end,
+                BookedTrip.status == "MATCHED",
             )
         )
         all_trips = (await self.session.execute(all_trips_stmt)).scalars().all()
@@ -292,8 +292,8 @@ class PreviewCustomerReconciliationImport:
                 continue
             # Get container for this trip
             cont_stmt = (
-                select(TripOrderContainer.container_number)
-                .where(TripOrderContainer.trip_order_id == to.id)
+                select(BookedTripContainer.container_number)
+                .where(BookedTripContainer.booked_trip_id == to.id)
                 .limit(1)
             )
             cont_result = (await self.session.execute(cont_stmt)).scalar_one_or_none()
@@ -304,11 +304,11 @@ class PreviewCustomerReconciliationImport:
                 trip_date=to.trip_date,
                 customer_status="UNKNOWN",
                 customer_note="Chuyến không có trong file khách hàng",
-                resolved_trip_order_id=to.id,
+                resolved_booked_trip_id=to.id,
                 apply_status="PENDING",
                 apply_message="Missing from customer response",
                 diff_classification="missing",
-                our_amount=to.unit_price,
+                our_amount=to.revenue,
             )
             self.session.add(row)
             missing_rows.append(row)
@@ -353,7 +353,7 @@ class PreviewCustomerReconciliationImport:
                     trip_date=row.trip_date,
                     customer_status=row.customer_status,
                     customer_note=row.customer_note,
-                    resolved_trip_order_id=row.resolved_trip_order_id,
+                    resolved_booked_trip_id=row.resolved_booked_trip_id,
                     apply_status=row.apply_status,
                     apply_message=row.apply_message,
                     diff_classification=row.diff_classification,
@@ -487,7 +487,7 @@ async def _load_import_dto(session: AsyncSession, import_id: int) -> ImportDTO:
                 trip_date=r.trip_date,
                 customer_status=r.customer_status,
                 customer_note=r.customer_note,
-                resolved_trip_order_id=r.resolved_trip_order_id,
+                resolved_booked_trip_id=r.resolved_booked_trip_id,
                 apply_status=r.apply_status,
                 apply_message=r.apply_message,
                 diff_classification=r.diff_classification,

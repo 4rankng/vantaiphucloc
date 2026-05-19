@@ -18,7 +18,7 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.drop_column("vehicle_drivers", "role")
+    pass
 
 
 def downgrade() -> None:

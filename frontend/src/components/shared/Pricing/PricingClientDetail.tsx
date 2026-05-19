@@ -15,7 +15,7 @@ import {
   type OperationType,
   type Pricing,
   type PricingLine,
-  type WorkType,
+  type ContType,
 } from '@/data/domain'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { InlineCell } from '@/components/shared/InlineCell'
@@ -26,8 +26,8 @@ import { PricingForm } from './PricingForm'
 import { Plus, Pencil, Trash2, ChevronLeft, X, Check } from 'lucide-react'
 
 /** Column order for the table */
-const COL_ORDER: WorkType[] = ['F20', 'F40', 'E20', 'E40']
-const COL_LABELS: Record<WorkType, string> = {
+const COL_ORDER: ContType[] = ['F20', 'F40', 'E20', 'E40']
+const COL_LABELS: Record<ContType, string> = {
   F20: 'Hàng 20ft',
   F40: 'Hàng 40ft',
   E20: 'Rỗng 20ft',
@@ -78,7 +78,7 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
       pickup: string
       dropoff: string
       operationType: OperationType | null
-      workTypeMap: Map<WorkType, Pricing>
+      workTypeMap: Map<ContType, Pricing>
     }>()
     pricings.forEach(p => {
       const opType = (p.operationType ?? null) as OperationType | null

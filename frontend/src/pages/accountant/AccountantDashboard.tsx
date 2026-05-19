@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import {
   useMonthlyPnL,
   useVehiclePnL,
-  useTripOrders,
+  useBookedTrips,
   useTripDailyStats,
 } from '@/hooks/use-queries'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -10,7 +10,7 @@ import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { KpiHeroCard } from '@/components/shared/KpiHeroCard'
 import { DashboardSectionHeader } from '@/components/shared/DashboardSectionHeader'
 import { useMonthParams } from './use-month-params'
-import { formatCurrencyFull as fmt, type TripOrder } from '@/data/domain'
+import { formatCurrencyFull as fmt, type BookedTrip } from '@/data/domain'
 import { resolveRoute } from '@/lib/route-utils'
 import type { MonthlyPnL } from '@/services/api/pnl.api'
 import {
@@ -49,7 +49,7 @@ function computeDelta(current: number, prev: number): number | null {
   return Math.round(((current - prev) / Math.abs(prev)) * 100)
 }
 
-function tripRevenue(t: TripOrder): number {
+function tripRevenue(t: BookedTrip): number {
   return (t.unitPrice ?? 0) * Math.max(1, t.containers.length)
 }
 
@@ -168,7 +168,7 @@ function PendingTripRow({
   onClick,
   isFirst,
 }: {
-  trip: TripOrder
+  trip: BookedTrip
   onClick: () => void
   isFirst: boolean
 }) {
@@ -255,7 +255,7 @@ function DesktopDashboard() {
   const { data: prevPnl }    = useMonthlyPnL(prevDateFrom, prevDateTo)
   const { data: vehiclePnl } = useVehiclePnL(dateFrom, dateTo)
   const { data: dailyStats } = useTripDailyStats(dateFrom, dateTo)
-  const { data: pendingTrips = [] } = useTripOrders({ dateFrom, dateTo, status: 'PENDING', pageSize: 200 })
+  const { data: pendingTrips = [] } = useBookedTrips({ dateFrom, dateTo, status: 'PENDING', pageSize: 200 })
 
   // KPI values
   const revenue  = pnl?.revenue ?? 0
@@ -286,8 +286,8 @@ function DesktopDashboard() {
   const sortedVehicleRows = useMemo(() => {
     const rows = vehiclePnl?.rows ?? []
     return [...rows].sort((a, b) => {
-      const aCp = (a.cpXe?.total ?? 0) + (a.cpChungAllocated ?? 0) + (a.cpLuongSanLuong ?? 0) + (a.cpLuongCoBan ?? 0)
-      const bCp = (b.cpXe?.total ?? 0) + (b.cpChungAllocated ?? 0) + (b.cpLuongSanLuong ?? 0) + (b.cpLuongCoBan ?? 0)
+      const aCp = (a.cpXe?.total ?? 0) + (a.cpLuongSanLuong ?? 0) + (a.cpLuongCoBan ?? 0)
+      const bCp = (b.cpXe?.total ?? 0) + (b.cpLuongSanLuong ?? 0) + (b.cpLuongCoBan ?? 0)
       const aMargin = a.revenue > 0 ? a.loiNhuan / a.revenue : -Infinity
       const bMargin = b.revenue > 0 ? b.loiNhuan / b.revenue : -Infinity
       const map: Record<VehicleSortCol, number | string> = {
@@ -383,7 +383,7 @@ function DesktopDashboard() {
                 </thead>
                 <tbody>
                   {sortedVehicleRows.map((row, i) => {
-                    const totalCp = (row.cpXe?.total ?? 0) + (row.cpChungAllocated ?? 0) + (row.cpLuongSanLuong ?? 0) + (row.cpLuongCoBan ?? 0)
+                    const totalCp = (row.cpXe?.total ?? 0) + (row.cpLuongSanLuong ?? 0) + (row.cpLuongCoBan ?? 0)
                     const isProfit = row.loiNhuan >= 0
                     const marginPct = row.revenue > 0 ? (row.loiNhuan / row.revenue) * 100 : null
 
@@ -551,7 +551,7 @@ function MobileDashboard() {
   const { data: prevPnl }    = useMonthlyPnL(prevDateFrom, prevDateTo)
   const { data: vehiclePnl } = useVehiclePnL(dateFrom, dateTo)
   const { data: dailyStats } = useTripDailyStats(dateFrom, dateTo)
-  const { data: pendingTrips = [] } = useTripOrders({ dateFrom, dateTo, status: 'PENDING', pageSize: 200 })
+  const { data: pendingTrips = [] } = useBookedTrips({ dateFrom, dateTo, status: 'PENDING', pageSize: 200 })
 
   const revenue  = pnl?.revenue ?? 0
   const chiPhi   = sumChiPhi(pnl)
@@ -579,8 +579,8 @@ function MobileDashboard() {
   const sortedVehicleRows = useMemo(() => {
     const rows = vehiclePnl?.rows ?? []
     return [...rows].sort((a, b) => {
-      const aCp = (a.cpXe?.total ?? 0) + (a.cpChungAllocated ?? 0) + (a.cpLuongSanLuong ?? 0) + (a.cpLuongCoBan ?? 0)
-      const bCp = (b.cpXe?.total ?? 0) + (b.cpChungAllocated ?? 0) + (b.cpLuongSanLuong ?? 0) + (b.cpLuongCoBan ?? 0)
+      const aCp = (a.cpXe?.total ?? 0) + (a.cpLuongSanLuong ?? 0) + (a.cpLuongCoBan ?? 0)
+      const bCp = (b.cpXe?.total ?? 0) + (b.cpLuongSanLuong ?? 0) + (b.cpLuongCoBan ?? 0)
       const aMargin = a.revenue > 0 ? a.loiNhuan / a.revenue : -Infinity
       const bMargin = b.revenue > 0 ? b.loiNhuan / b.revenue : -Infinity
       const map: Record<VehicleSortCol, number | string> = {
@@ -664,7 +664,7 @@ function MobileDashboard() {
               </thead>
               <tbody>
                 {sortedVehicleRows.map((row, i) => {
-                  const totalCp = (row.cpXe?.total ?? 0) + (row.cpChungAllocated ?? 0) + (row.cpLuongSanLuong ?? 0) + (row.cpLuongCoBan ?? 0)
+                  const totalCp = (row.cpXe?.total ?? 0) + (row.cpLuongSanLuong ?? 0) + (row.cpLuongCoBan ?? 0)
                   const isProfit = row.loiNhuan >= 0
                   const marginPct = row.revenue > 0 ? (row.loiNhuan / row.revenue) * 100 : null
                   return (

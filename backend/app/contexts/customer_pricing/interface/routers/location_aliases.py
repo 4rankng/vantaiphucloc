@@ -12,8 +12,8 @@ from app.database import get_db
 from app.models.base import User
 from app.models.domain import (
     Pricing,
-    TripOrder,
-    WorkOrder,
+    BookedTrip,
+    DeliveredTrip,
 )
 from app.schemas.domain import (
     CreateAliasRequest,
@@ -194,10 +194,10 @@ async def merge_locations(
     # Bulk-update FK references
     fk_updates: dict[str, int] = {}
     for table, col in [
-        (WorkOrder, "pickup_location_id"),
-        (WorkOrder, "dropoff_location_id"),
-        (TripOrder, "pickup_location_id"),
-        (TripOrder, "dropoff_location_id"),
+        (DeliveredTrip, "pickup_location_id"),
+        (DeliveredTrip, "dropoff_location_id"),
+        (BookedTrip, "pickup_location_id"),
+        (BookedTrip, "dropoff_location_id"),
         (Pricing, "pickup_location_id"),
         (Pricing, "dropoff_location_id"),
     ]:

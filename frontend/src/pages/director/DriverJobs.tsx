@@ -2,12 +2,12 @@ import { useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { formatCurrencyFull as formatCurrency } from '@/data/domain'
 import { BackButton } from '@/components/shared/BackButton'
-import { useWorkOrders } from '@/hooks/use-queries'
+import { useDeliveredTrips } from '@/hooks/use-queries'
 
 export function DriverJobs() {
   const { driverId: driverIdStr } = useParams<{ driverId: string }>()
   const driverId = Number(driverIdStr)
-  const { data: jobs = [] } = useWorkOrders({ driverId })
+  const { data: jobs = [] } = useDeliveredTrips({ driverId })
 
   const totalEarning = useMemo(() => jobs.reduce((s, j) => s + j.driverSalary, 0), [jobs])
 

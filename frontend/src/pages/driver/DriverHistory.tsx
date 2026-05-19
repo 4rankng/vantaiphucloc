@@ -4,8 +4,8 @@ import { Camera } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { formatCurrencyFull } from '@/data/domain'
 import { FilterPills } from '@/components/shared/FilterPills'
-import { WorkOrderCard } from '@/components/shared/WorkOrderCard'
-import { useWorkOrders } from '@/hooks/use-queries'
+import { DeliveredTripCard } from '@/components/shared/DeliveredTripCard'
+import { useDeliveredTrips } from '@/hooks/use-queries'
 
 type FilterValue = 'ALL' | 'PENDING'
 
@@ -17,18 +17,18 @@ const FILTER_OPTIONS: { value: FilterValue; label: string }[] = [
 export function DriverHistory() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { data: workOrders = [], isLoading: loading } = useWorkOrders({ driverId: user!.id })
+  const { data: deliveredTrips = [], isLoading: loading } = useDeliveredTrips({ driverId: user!.id })
   const [filter, setFilter] = useState<FilterValue>('ALL')
 
   const filtered = useMemo(() =>
-    filter === 'ALL' ? workOrders : workOrders.filter(w => w.status === filter),
-    [workOrders, filter],
+    filter === 'ALL' ? deliveredTrips : deliveredTrips.filter(w => w.status === filter),
+    [deliveredTrips, filter],
   )
 
   const counts: Record<FilterValue, number> = useMemo(() => ({
-    ALL: workOrders.length,
-    PENDING: workOrders.filter(w => w.status === 'PENDING').length,
-  }), [workOrders])
+    ALL: deliveredTrips.length,
+    PENDING: deliveredTrips.filter(w => w.status === 'PENDING').length,
+  }), [deliveredTrips])
 
   const totalEarnings = useMemo(() =>
     filtered.reduce((sum, w) => sum + w.driverSalary, 0),
@@ -79,7 +79,7 @@ export function DriverHistory() {
           </div>
         ) : (
           filtered.map(wo => (
-            <WorkOrderCard key={wo.id} variant="driver" data={wo} onClick={() => navigate(`/driver/work-orders/${wo.id}`)} />
+            <DeliveredTripCard key={wo.id} variant="driver" data={wo} onClick={() => navigate(`/driver/delivered-trips/${wo.id}`)} />
           ))
         )}
       </div>

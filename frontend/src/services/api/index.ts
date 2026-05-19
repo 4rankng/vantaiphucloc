@@ -15,8 +15,8 @@ import * as routesApi from './routes.api'
 import * as locationsApi from './locations.api'
 import * as locationAliasesApi from './locationAliases.api'
 import * as pricingsApi from './pricings.api'
-import * as workOrdersApi from './workOrders.api'
-import * as tripOrdersApi from './tripOrders.api'
+import * as deliveredTripsApi from './deliveredTrips.api'
+import * as bookedTripsApi from './bookedTrips.api'
 import * as salaryApi from './salary.api'
 import * as driversApi from './drivers.api'
 import * as dashboardApi from './dashboard.api'
@@ -71,39 +71,39 @@ export const apiClient = {
   deletePricing: pricingsApi.deletePricing,
 
   // Work Orders
-  getWorkOrder: workOrdersApi.getWorkOrder,
-  getWorkOrders: workOrdersApi.getWorkOrders,
-  createWorkOrder: workOrdersApi.createWorkOrder,
-  updateWorkOrder: workOrdersApi.updateWorkOrder,
-  ocrContainer: workOrdersApi.ocrContainer,
-  validateContainer: workOrdersApi.validateContainer,
-  getSuggestedRoutes: workOrdersApi.getSuggestedRoutes,
-  bulkImportAndMatch: workOrdersApi.bulkImportAndMatch,
-  aiParsePreview: workOrdersApi.aiParsePreview,
+  getDeliveredTrip: deliveredTripsApi.getDeliveredTrip,
+  getDeliveredTrips: deliveredTripsApi.getDeliveredTrips,
+  createDeliveredTrip: deliveredTripsApi.createDeliveredTrip,
+  updateDeliveredTrip: deliveredTripsApi.updateDeliveredTrip,
+  ocrContainer: deliveredTripsApi.ocrContainer,
+  validateContainer: deliveredTripsApi.validateContainer,
+  getSuggestedRoutes: deliveredTripsApi.getSuggestedRoutes,
+  bulkImportAndMatch: deliveredTripsApi.bulkImportAndMatch,
+  aiParsePreview: deliveredTripsApi.aiParsePreview,
 
   // Trip Orders
-  getTripOrders: tripOrdersApi.getTripOrders,
-  createTripOrder: tripOrdersApi.createTripOrder,
-  updateTripOrder: tripOrdersApi.updateTripOrder,
-  reconcile: tripOrdersApi.reconcile,
-  unmatch: tripOrdersApi.unmatch,
-  suggestMatches: tripOrdersApi.suggestMatches,
-  suggestWosForTrip: tripOrdersApi.suggestWosForTrip,
-  toggleTripConfirmation: tripOrdersApi.toggleTripConfirmation,
-  uploadCustomerExcel: tripOrdersApi.uploadCustomerExcel,
-  getDistinctTripPartners: tripOrdersApi.getDistinctTripPartners,
-  exportReconciliationExcel: tripOrdersApi.exportReconciliationExcel,
-  exportDoiSoatExcel: tripOrdersApi.exportDoiSoatExcel,
-  importTripOrders: tripOrdersApi.importTripOrders,
-  exportTripOrdersExcel: tripOrdersApi.exportTripOrdersExcel,
-  autoMatch: tripOrdersApi.autoMatch,
-  autoMatchPreview: tripOrdersApi.autoMatchPreview,
-  autoMatchConfirm: tripOrdersApi.autoMatchConfirm,
-  getMatchScores: tripOrdersApi.getMatchScores,
-  bulkMatch: tripOrdersApi.bulkMatch,
-  batchReconcileForWO: tripOrdersApi.batchReconcileForWO,
-  batchReconcileForTO: tripOrdersApi.batchReconcileForTO,
-  searchTripOrders: tripOrdersApi.searchTripOrders,
+  getBookedTrips: bookedTripsApi.getBookedTrips,
+  createBookedTrip: bookedTripsApi.createBookedTrip,
+  updateBookedTrip: bookedTripsApi.updateBookedTrip,
+  reconcile: bookedTripsApi.reconcile,
+  unmatch: bookedTripsApi.unmatch,
+  suggestMatches: bookedTripsApi.suggestMatches,
+  suggestWosForTrip: bookedTripsApi.suggestWosForTrip,
+  toggleTripConfirmation: bookedTripsApi.toggleTripConfirmation,
+  uploadCustomerExcel: bookedTripsApi.uploadCustomerExcel,
+  getDistinctTripPartners: bookedTripsApi.getDistinctTripPartners,
+  exportReconciliationExcel: bookedTripsApi.exportReconciliationExcel,
+  exportDoiSoatExcel: bookedTripsApi.exportDoiSoatExcel,
+  importBookedTrips: bookedTripsApi.importBookedTrips,
+  exportBookedTripsExcel: bookedTripsApi.exportBookedTripsExcel,
+  autoMatch: bookedTripsApi.autoMatch,
+  autoMatchPreview: bookedTripsApi.autoMatchPreview,
+  autoMatchConfirm: bookedTripsApi.autoMatchConfirm,
+  getMatchScores: bookedTripsApi.getMatchScores,
+  bulkMatch: bookedTripsApi.bulkMatch,
+  batchReconcileForWO: bookedTripsApi.batchReconcileForWO,
+  batchReconcileForTO: bookedTripsApi.batchReconcileForTO,
+  searchBookedTrips: bookedTripsApi.searchBookedTrips,
 
   // Salary
   calculateSalary: salaryApi.calculateSalary,
@@ -147,7 +147,7 @@ export const apiClient = {
   getExportDoiSoatUrl: reconciliationImportsApi.getExportDoiSoatUrl,
 
   // Work Order Export
-  exportWorkOrdersExcel: workOrdersApi.exportWorkOrdersExcel,
+  exportDeliveredTripsExcel: deliveredTripsApi.exportDeliveredTripsExcel,
 
   // Drivers
   getDrivers: driversApi.getDrivers,

@@ -109,10 +109,10 @@ class SqlClientRepository(PartnerRepository):
 
 class SqlLocationRepository(LocationRepository):
     _EXTERNAL_REFS = (
-        ("work_orders", "pickup_location_id"),
-        ("work_orders", "dropoff_location_id"),
-        ("trip_orders", "pickup_location_id"),
-        ("trip_orders", "dropoff_location_id"),
+        ("delivered_trips", "pickup_location_id"),
+        ("delivered_trips", "dropoff_location_id"),
+        ("booked_trips", "pickup_location_id"),
+        ("booked_trips", "dropoff_location_id"),
         ("pricings", "pickup_location_id"),
         ("pricings", "dropoff_location_id"),
     )

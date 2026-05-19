@@ -1,4 +1,4 @@
-"""WorkOrder use cases."""
+"""DeliveredTrip use cases."""
 
 from __future__ import annotations
 
@@ -9,20 +9,20 @@ from datetime import date, datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contexts.operations.application.dto import (
-    WorkOrderContainerInput,
-    WorkOrderCreateInput,
-    WorkOrderListFilters,
-    WorkOrderUpdateInput,
+    DeliveredTripContainerInput,
+    DeliveredTripCreateInput,
+    DeliveredTripListFilters,
+    DeliveredTripUpdateInput,
 )
-from app.contexts.operations.domain.entities import WorkOrder
+from app.contexts.operations.domain.entities import DeliveredTrip
 from app.contexts.operations.domain.exceptions import (
     InvalidStateTransition,
     NotFound,
 )
-from app.contexts.operations.domain.repositories import WorkOrderRepository
+from app.contexts.operations.domain.repositories import DeliveredTripRepository
 from app.contexts.operations.domain.value_objects import (
-    WorkOrderId,
-    WorkOrderStatus,
+    DeliveredTripId,
+    DeliveredTripStatus,
     normalize_work_type,
 )
 from app.utils.iso6346 import (
@@ -35,7 +35,7 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _validate_containers(containers: list[WorkOrderContainerInput]) -> None:
+def _validate_containers(containers: list[DeliveredTripContainerInput]) -> None:
     for c in containers:
         valid, error = validate_container_number(c.container_number)
         if not valid:
@@ -45,7 +45,7 @@ def _validate_containers(containers: list[WorkOrderContainerInput]) -> None:
 
 
 async def _add_containers(
-    w: WorkOrder, containers: list[WorkOrderContainerInput]
+    w: DeliveredTrip, containers: list[DeliveredTripContainerInput]
 ) -> None:
     from app.contexts.operations.infrastructure.photo_storage import save_base64_photo
 
@@ -55,7 +55,7 @@ async def _add_containers(
             photo_url = await asyncio.to_thread(save_base64_photo, photo_url)
         w.add_container(
             container_number=normalize_container_number(c.container_number),
-            work_type=c.work_type,
+            cont_type=c.cont_type,
             photo_url=photo_url,
             photo_lat=c.photo_lat,
             photo_lng=c.photo_lng,
@@ -66,24 +66,24 @@ async def _add_containers(
 # ── Reads ────────────────────────────────────────────────────────
 
 
-class GetWorkOrder:
-    def __init__(self, repo: WorkOrderRepository) -> None:
+class GetDeliveredTrip:
+    def __init__(self, repo: DeliveredTripRepository) -> None:
         self.repo = repo
 
-    async def __call__(self, wid: int) -> WorkOrder:
-        w = await self.repo.get_by_id(WorkOrderId(wid))
+    async def __call__(self, wid: int) -> DeliveredTrip:
+        w = await self.repo.get_by_id(DeliveredTripId(wid))
         if w is None:
-            raise NotFound("WorkOrder", wid)
+            raise NotFound("DeliveredTrip", wid)
         return w
 
 
-class ListWorkOrders:
-    def __init__(self, repo: WorkOrderRepository) -> None:
+class ListDeliveredTrips:
+    def __init__(self, repo: DeliveredTripRepository) -> None:
         self.repo = repo
 
     async def __call__(
-        self, filters: WorkOrderListFilters
-    ) -> tuple[list[WorkOrder], int]:
+        self, filters: DeliveredTripListFilters
+    ) -> tuple[list[DeliveredTrip], int]:
         offset = (filters.page - 1) * filters.page_size
         items, total = await self.repo.list(
             offset=offset,
@@ -92,7 +92,7 @@ class ListWorkOrders:
             date_from=filters.date_from,
             date_to=filters.date_to,
             status=(
-                WorkOrderStatus(filters.status) if filters.status else None
+                DeliveredTripStatus(filters.status) if filters.status else None
             ),
         )
         return list(items), total
@@ -109,31 +109,22 @@ class CurrentUserContext:
     role: str
 
 
-class CreateWorkOrder:
+class CreateDeliveredTrip:
     def __init__(
         self,
-        repo: WorkOrderRepository,
+        repo: DeliveredTripRepository,
         session: AsyncSession,
     ) -> None:
         self.repo = repo
         self.session = session
 
     async def __call__(
-        self, data: WorkOrderCreateInput, user: CurrentUserContext
-    ) -> WorkOrder:
-        from sqlalchemy.exc import IntegrityError
-
-        from app.contexts.customer_pricing.infrastructure.pricing_lookup import (
-            find_pricing,
-        )
-        from app.contexts.operations.infrastructure.codes import (
-            generate_work_order_code,
-        )
-
+        self, data: DeliveredTripCreateInput, user: CurrentUserContext
+    ) -> DeliveredTrip:
         _validate_containers(data.containers)
 
         first = data.containers[0] if data.containers else None
-        work_type = first.work_type if first else ""
+        work_type = first.cont_type if first else ""
 
         # Drivers always create for themselves; accountants/admins specify driver_id or vendor
         driver_id = user.id if user.role == "driver" else data.driver_id
@@ -142,59 +133,38 @@ class CreateWorkOrder:
             None if (data.gps_lat and data.gps_lng) else "Khong xac dinh"
         )
 
-        for _attempt in range(3):
-            pricing = await find_pricing(
-                self.session,
-                client_id=data.client_id,
-                work_type=work_type,
-                pickup_location_id=data.pickup_location_id,
-                dropoff_location_id=data.dropoff_location_id,
-
-                operation_type=data.operation_type,
-            )
-
-            w = WorkOrder(
-                id=None,
-                client_id=data.client_id,
-                pickup_location_id=data.pickup_location_id,
-                dropoff_location_id=data.dropoff_location_id,
-                driver_id=driver_id,
-                vendor_id=data.vendor_id,
-                vehicle_external_plate=data.vehicle_external_plate,
-                vehicle_id=data.vehicle_id,
-                vessel=data.vessel,
-                operation_type=data.operation_type,
-
-                unit_price=0,
-                driver_salary=0,
-                allowance=0,
-                gps_lat=data.gps_lat,
-                gps_lng=data.gps_lng,
-                gps_address=gps_address,
-                pricing_id=pricing.id if pricing else None,
-                trip_date=data.trip_date if data.trip_date else date.today(),
-                status=WorkOrderStatus.PENDING,
-            )
-            await _add_containers(w, data.containers)
-
-            saved = await self.repo.add(w)
-            saved.code = await generate_work_order_code(self.session, data.client_id)
-            try:
-                saved = await self.repo.save(saved)
-                await self.session.commit()
-                return saved
-            except IntegrityError:
-                await self.session.rollback()
-                await self.session.begin()
-        raise RuntimeError(
-            f"Failed to generate unique WorkOrder code after 3 attempts for client_id={data.client_id}"
+        w = DeliveredTrip(
+            id=None,
+            client_id=data.client_id,
+            pickup_location_id=data.pickup_location_id,
+            dropoff_location_id=data.dropoff_location_id,
+            driver_id=driver_id,
+            vendor_id=data.vendor_id,
+            vehicle_id=data.vehicle_id,
+            vessel=data.vessel,
+            operation_type=data.operation_type,
+            work_type=work_type,
+            revenue=0,
+            driver_salary=0,
+            allowance=0,
+            gps_lat=data.gps_lat,
+            gps_lng=data.gps_lng,
+            gps_address=gps_address,
+            trip_date=data.trip_date if data.trip_date else date.today(),
+            status=DeliveredTripStatus.PENDING,
         )
+        await _add_containers(w, data.containers)
+
+        saved = await self.repo.add(w)
+        saved = await self.repo.save(saved)
+        await self.session.commit()
+        return saved
 
 
-class UpdateWorkOrder:
+class UpdateDeliveredTrip:
     def __init__(
         self,
-        repo: WorkOrderRepository,
+        repo: DeliveredTripRepository,
         session: AsyncSession,
     ) -> None:
         self.repo = repo
@@ -203,21 +173,21 @@ class UpdateWorkOrder:
     async def __call__(
         self,
         wid: int,
-        data: WorkOrderUpdateInput,
+        data: DeliveredTripUpdateInput,
         user: CurrentUserContext,
-    ) -> WorkOrder:
-        w = await self.repo.get_by_id(WorkOrderId(wid))
+    ) -> DeliveredTrip:
+        w = await self.repo.get_by_id(DeliveredTripId(wid))
         if w is None:
-            raise NotFound("WorkOrder", wid)
+            raise NotFound("DeliveredTrip", wid)
 
         if user.role == "driver":
             if w.driver_id != user.id:
                 raise PermissionError(
                     "You can only update your own work orders"
                 )
-            if w.status != WorkOrderStatus.PENDING:
+            if w.status != DeliveredTripStatus.PENDING:
                 raise InvalidStateTransition(
-                    kind="WorkOrder",
+                    kind="DeliveredTrip",
                     current=w.status,
                     attempted="update",
                 )
@@ -226,7 +196,7 @@ class UpdateWorkOrder:
 
         # Strip salary fields for drivers
         if user.role == "driver":
-            data.unit_price = None
+            data.revenue = None
             data.driver_salary = None
             data.allowance = None
             data.status = None
@@ -247,14 +217,12 @@ class UpdateWorkOrder:
             w.operation_type = data.operation_type
         if data.vendor_id is not None:
             w.vendor_id = data.vendor_id
-        if data.vehicle_external_plate is not None:
-            w.vehicle_external_plate = data.vehicle_external_plate
         if data.gps_lat is not None:
             w.gps_lat = data.gps_lat
         if data.gps_lng is not None:
             w.gps_lng = data.gps_lng
-        if data.unit_price is not None:
-            w.unit_price = int(data.unit_price)
+        if data.revenue is not None:
+            w.revenue = int(data.revenue)
         if data.driver_salary is not None:
             w.driver_salary = int(data.driver_salary)
         if data.allowance is not None:
@@ -269,16 +237,16 @@ class UpdateWorkOrder:
 
         await self.repo.save(w)
         await self.session.commit()
-        return await self.repo.get_by_id(WorkOrderId(wid))
+        return await self.repo.get_by_id(DeliveredTripId(wid))
 
 
-class BatchCreateWorkOrders:
-    """Create N WorkOrders, each in its own savepoint so partial
+class BatchCreateDeliveredTrips:
+    """Create N DeliveredTrips, each in its own savepoint so partial
     failures don't roll back the whole batch."""
 
     def __init__(
         self,
-        repo: WorkOrderRepository,
+        repo: DeliveredTripRepository,
         session: AsyncSession,
     ) -> None:
         self.repo = repo
@@ -286,15 +254,10 @@ class BatchCreateWorkOrders:
 
     async def __call__(
         self,
-        items: list[WorkOrderCreateInput],
+        items: list[DeliveredTripCreateInput],
         user: CurrentUserContext,
     ) -> list[tuple[int, int | None, str | None]]:
         """Returns [(index, created_id_or_None, error_or_None)] for each item."""
-        from app.contexts.customer_pricing.infrastructure.pricing_lookup import (
-            find_pricing,
-        )
-        from app.contexts.operations.infrastructure.codes import generate_work_order_code
-
         results: list[tuple[int, int | None, str | None]] = []
         async with self.session.begin():
             for i, item in enumerate(items):
@@ -302,48 +265,34 @@ class BatchCreateWorkOrders:
                     try:
                         _validate_containers(item.containers)
                         first = item.containers[0] if item.containers else None
-                        work_type = first.work_type if first else ""
+                        work_type = first.cont_type if first else ""
                         driver_id = (
                             user.id if user.role == "driver" else item.driver_id
-                        )
-                        pricing = await find_pricing(
-                            self.session,
-                            client_id=item.client_id,
-                            work_type=work_type,
-                            pickup_location_id=item.pickup_location_id,
-                            dropoff_location_id=item.dropoff_location_id,
-
-                            operation_type=item.operation_type,
                         )
                         gps_address = (
                             None if (item.gps_lat and item.gps_lng)
                             else "Khong xac dinh"
                         )
-                        w = WorkOrder(
+                        w = DeliveredTrip(
                             id=None,
                             client_id=item.client_id,
                             pickup_location_id=item.pickup_location_id,
                             dropoff_location_id=item.dropoff_location_id,
                             driver_id=driver_id,
                             vendor_id=item.vendor_id,
-                            vehicle_external_plate=item.vehicle_external_plate,
                             vehicle_id=item.vehicle_id,
                             vessel=item.vessel,
                             operation_type=item.operation_type,
-
-                            unit_price=0, driver_salary=0,
+                            work_type=work_type,
+                            revenue=0, driver_salary=0,
                             allowance=0,
                             gps_lat=item.gps_lat,
                             gps_lng=item.gps_lng,
                             gps_address=gps_address,
-                            pricing_id=pricing.id if pricing else None,
-                            status=WorkOrderStatus.PENDING,
+                            status=DeliveredTripStatus.PENDING,
                         )
                         await _add_containers(w, item.containers)
                         saved = await self.repo.add(w)
-                        saved.code = await generate_work_order_code(
-                            self.session, item.client_id
-                        )
                         saved = await self.repo.save(saved)
                         results.append((i, int(saved.id) if saved.id else None, None))
                     except Exception as exc:

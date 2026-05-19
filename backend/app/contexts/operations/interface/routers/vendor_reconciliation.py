@@ -46,8 +46,8 @@ from app.models.domain import (
     VehicleDriver,
     VendorReconciliationImport,
     VendorReconciliationRow,
-    WorkOrder,
-    WorkOrderContainer,
+    DeliveredTrip,
+    DeliveredTripContainer,
 )
 
 _logger = logging.getLogger(__name__)
@@ -167,7 +167,7 @@ class VendorReconRowOut(BaseModel):
     trip_date: date | None
     vendor_amount: int | None
     match_status: str
-    matched_work_order_id: int | None
+    matched_delivered_trip_id: int | None
     reviewer_note: str | None
 
 
@@ -191,7 +191,7 @@ class VendorReconImportOut(BaseModel):
 class RowUpdateBody(BaseModel):
     match_status: str | None = None
     reviewer_note: str | None = None
-    matched_work_order_id: int | None = None
+    matched_delivered_trip_id: int | None = None
     vendor_amount: int | None = None
 
 
@@ -201,7 +201,7 @@ class ApplyResponse(BaseModel):
 
 
 class OurOnlyRowOut(BaseModel):
-    work_order_id: int
+    delivered_trip_id: int
     container_number: str
     trip_date: date | None
     vehicle_plate: str | None
@@ -220,7 +220,7 @@ async def export_vendor_trips(
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(require_roles("accountant", "superadmin")),
 ):
-    """Export our WorkOrders for a specific vendor as Excel.
+    """Export our DeliveredTrips for a specific vendor as Excel.
 
     This generates a đối soát report (our trips) that can be sent to the vendor
     for review — Mode 4a flow.
@@ -238,31 +238,31 @@ async def export_vendor_trips(
     if vendor is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy nhà xe.")
 
-    # Load WorkOrders for this vendor in the period
+    # Load DeliveredTrips for this vendor in the period
     wo_result = await db.execute(
-        select(WorkOrder).where(
-            WorkOrder.vendor_id == vendor_id,
-            WorkOrder.trip_date >= date_from,
-            WorkOrder.trip_date <= date_to,
-        ).order_by(WorkOrder.trip_date, WorkOrder.id)
+        select(DeliveredTrip).where(
+            DeliveredTrip.vendor_id == vendor_id,
+            DeliveredTrip.trip_date >= date_from,
+            DeliveredTrip.trip_date <= date_to,
+        ).order_by(DeliveredTrip.trip_date, DeliveredTrip.id)
     )
-    work_orders = wo_result.scalars().all()
-    wo_ids = [wo.id for wo in work_orders]
+    delivered_trips = wo_result.scalars().all()
+    wo_ids = [wo.id for wo in delivered_trips]
 
     # Load containers
     containers_map: dict[int, list] = {}
     if wo_ids:
         cont_result = await db.execute(
-            select(WorkOrderContainer).where(
-                WorkOrderContainer.work_order_id.in_(wo_ids)
+            select(DeliveredTripContainer).where(
+                DeliveredTripContainer.delivered_trip_id.in_(wo_ids)
             )
         )
         for c in cont_result.scalars().all():
-            containers_map.setdefault(c.work_order_id, []).append(c)
+            containers_map.setdefault(c.delivered_trip_id, []).append(c)
 
     # Load location names
     loc_ids: set[int] = set()
-    for wo in work_orders:
+    for wo in delivered_trips:
         if wo.pickup_location_id:
             loc_ids.add(wo.pickup_location_id)
         if wo.dropoff_location_id:
@@ -273,7 +273,7 @@ async def export_vendor_trips(
         loc_name_by_id = {loc.id: loc.name for loc in loc_result.scalars().all()}
 
     # Load vehicle plates via VehicleDriver
-    driver_ids = [wo.driver_id for wo in work_orders if wo.driver_id]
+    driver_ids = [wo.driver_id for wo in delivered_trips if wo.driver_id]
     driver_plate_map: dict[int, str] = {}
     if driver_ids:
         v_result = await db.execute(
@@ -362,14 +362,14 @@ async def export_vendor_trips(
     type_count: dict[str, int] = {}
     total_amount = 0
 
-    for row_idx, wo in enumerate(work_orders):
+    for row_idx, wo in enumerate(delivered_trips):
         containers = containers_map.get(wo.id, [])
         pickup = loc_name_by_id.get(wo.pickup_location_id or 0, "")
         dropoff = loc_name_by_id.get(wo.dropoff_location_id or 0, "")
-        plate = wo.vehicle_external_plate or driver_plate_map.get(wo.driver_id or 0, "")
+        plate = driver_plate_map.get(wo.driver_id or 0, "")
         vessel = wo.vessel or ""
         op_type = _op_labels.get(wo.operation_type or "", wo.operation_type or "")
-        unit_price = wo.unit_price or 0
+        revenue = wo.revenue or 0
         trip_date_str = wo.trip_date.strftime("%d/%m/%Y") if wo.trip_date else ""
 
         fill_color = _white if row_idx % 2 == 0 else _grey_row
@@ -379,11 +379,11 @@ async def export_vendor_trips(
             stt += 1
             wt_label = WORK_TYPE_FULL.get(c.work_type or "", c.work_type or "")
             type_count[wt_label] = type_count.get(wt_label, 0) + 1
-            total_amount += unit_price
+            total_amount += revenue
 
             data_row = [
-                stt, wo.code or wo.id, trip_date_str, c.container_number, wt_label,
-                pickup, dropoff, op_type, plate, vessel, unit_price or "", "",
+                stt, wo.id, trip_date_str, c.container_number, wt_label,
+                pickup, dropoff, op_type, plate, vessel, revenue or "", "",
             ]
             ws.append(data_row)
             data_row_num = ws.max_row
@@ -395,7 +395,7 @@ async def export_vendor_trips(
                 cell.alignment = Alignment(vertical="center")
                 if col_num in (1, 2):
                     cell.alignment = Alignment(horizontal="center", vertical="center")
-                if col_num == 11 and unit_price:
+                if col_num == 11 and revenue:
                     cell.number_format = '#,##0'
                     cell.alignment = Alignment(horizontal="right", vertical="center")
             ws.row_dimensions[data_row_num].height = 18
@@ -496,16 +496,16 @@ async def upload_vendor_excel(
                    "Hãy kiểm tra định dạng file (cần có cột số cont dạng ABCU1234567).",
         )
 
-    # Auto-match each row against WorkOrders for this vendor in this period
+    # Auto-match each row against DeliveredTrips for this vendor in this period
     wo_by_container: dict[str, int] = {}
     wo_rows = (
         await db.execute(
-            select(WorkOrderContainer.container_number, WorkOrderContainer.work_order_id)
-            .join(WorkOrder, WorkOrder.id == WorkOrderContainer.work_order_id)
+            select(DeliveredTripContainer.container_number, DeliveredTripContainer.delivered_trip_id)
+            .join(DeliveredTrip, DeliveredTrip.id == DeliveredTripContainer.delivered_trip_id)
             .where(
-                WorkOrder.vendor_id == vendor_id,
-                WorkOrder.trip_date >= period_from,
-                WorkOrder.trip_date <= period_to,
+                DeliveredTrip.vendor_id == vendor_id,
+                DeliveredTrip.trip_date >= period_from,
+                DeliveredTrip.trip_date <= period_to,
             )
         )
     ).all()
@@ -544,7 +544,7 @@ async def upload_vendor_excel(
                 trip_date=trip_date_val,
                 vendor_amount=r["vendor_amount"],
                 match_status=status,
-                matched_work_order_id=wo_id,
+                matched_delivered_trip_id=wo_id,
             )
         )
 
@@ -561,7 +561,7 @@ async def upload_vendor_excel(
                     trip_date=None,
                     vendor_amount=None,
                     match_status="OUR_ONLY",
-                    matched_work_order_id=wo_id,
+                    matched_delivered_trip_id=wo_id,
                 )
             )
             our_only_count += 1
@@ -698,7 +698,7 @@ async def get_import(
                 "trip_date": r.trip_date,
                 "vendor_amount": r.vendor_amount,
                 "match_status": r.match_status,
-                "matched_work_order_id": r.matched_work_order_id,
+                "matched_delivered_trip_id": r.matched_delivered_trip_id,
                 "reviewer_note": r.reviewer_note,
             }
             for r in rows
@@ -736,8 +736,8 @@ async def update_row(
         row.match_status = body.match_status
     if body.reviewer_note is not None:
         row.reviewer_note = body.reviewer_note
-    if body.matched_work_order_id is not None:
-        row.matched_work_order_id = body.matched_work_order_id
+    if body.matched_delivered_trip_id is not None:
+        row.matched_delivered_trip_id = body.matched_delivered_trip_id
     if body.vendor_amount is not None:
         row.vendor_amount = body.vendor_amount
 
@@ -786,7 +786,7 @@ async def update_row(
         "id": row.id,
         "match_status": row.match_status,
         "reviewer_note": row.reviewer_note,
-        "matched_work_order_id": row.matched_work_order_id,
+        "matched_delivered_trip_id": row.matched_delivered_trip_id,
         "vendor_amount": row.vendor_amount,
     }
 
@@ -797,7 +797,7 @@ async def apply_import(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_roles("accountant", "superadmin")),
 ):
-    """Apply the import: write vendor_amount back to matched WorkOrders.
+    """Apply the import: write vendor_amount back to matched DeliveredTrips.
 
     Only MATCHED rows with a vendor_amount are written.  Idempotent (re-apply
     overwrites the previously written amount).  Marks the import as APPLIED.
@@ -826,18 +826,18 @@ async def apply_import(
     applied = 0
     skipped = 0
     for row in rows:
-        if row.matched_work_order_id is None or row.vendor_amount is None:
+        if row.matched_delivered_trip_id is None or row.vendor_amount is None:
             skipped += 1
             continue
         wo = (
             await db.execute(
-                select(WorkOrder).where(WorkOrder.id == row.matched_work_order_id)
+                select(DeliveredTrip).where(DeliveredTrip.id == row.matched_delivered_trip_id)
             )
         ).scalar_one_or_none()
         if wo is None:
             skipped += 1
             continue
-        # Store vendor cost on the WorkOrder's driver_salary field as vendor cost proxy.
+        # Store vendor cost on the DeliveredTrip's driver_salary field as vendor cost proxy.
         # TODO: When a dedicated VendorInvoiceLine table exists, write there instead.
         wo.driver_salary = row.vendor_amount
         applied += 1
@@ -902,36 +902,36 @@ async def vendor_summary(
     if vendor is None:
         raise HTTPException(status_code=404, detail="Không tìm thấy nhà xe.")
 
-    wo_q = select(WorkOrder).where(WorkOrder.vendor_id == vendor_id)
+    wo_q = select(DeliveredTrip).where(DeliveredTrip.vendor_id == vendor_id)
     if date_from is not None:
-        wo_q = wo_q.where(WorkOrder.trip_date >= date_from)
+        wo_q = wo_q.where(DeliveredTrip.trip_date >= date_from)
     if date_to is not None:
-        wo_q = wo_q.where(WorkOrder.trip_date <= date_to)
-    work_orders = (await db.execute(wo_q)).scalars().all()
-    wo_ids = [wo.id for wo in work_orders]
+        wo_q = wo_q.where(DeliveredTrip.trip_date <= date_to)
+    delivered_trips = (await db.execute(wo_q)).scalars().all()
+    wo_ids = [wo.id for wo in delivered_trips]
 
     container_map: dict[int, int] = {}
     if wo_ids:
         cont_rows = (
             await db.execute(
                 select(
-                    WorkOrderContainer.work_order_id,
-                    func.count(WorkOrderContainer.id),
+                    DeliveredTripContainer.delivered_trip_id,
+                    func.count(DeliveredTripContainer.id),
                 )
-                .where(WorkOrderContainer.work_order_id.in_(wo_ids))
-                .group_by(WorkOrderContainer.work_order_id)
+                .where(DeliveredTripContainer.delivered_trip_id.in_(wo_ids))
+                .group_by(DeliveredTripContainer.delivered_trip_id)
             )
         ).all()
         container_map = dict(cont_rows)
 
-    trip_count = len(work_orders)
+    trip_count = len(delivered_trips)
     container_count = sum(container_map.values())
-    total_paid = sum(wo.driver_salary or 0 for wo in work_orders)
-    total_amount = sum(wo.unit_price or 0 for wo in work_orders)
+    total_paid = sum(wo.driver_salary or 0 for wo in delivered_trips)
+    total_amount = sum(wo.revenue or 0 for wo in delivered_trips)
 
-    plate_groups: dict[str, list[WorkOrder]] = {}
-    for wo in work_orders:
-        plate = wo.vehicle_external_plate
+    plate_groups: dict[str, list[DeliveredTrip]] = {}
+    for wo in delivered_trips:
+        plate = None
         if not plate:
             continue
         plate_groups.setdefault(plate, []).append(wo)
@@ -986,5 +986,5 @@ async def vendor_summary(
             "totalAmount": total_amount,
         },
         "drivers": drivers,
-        "reconciliations": reconciliations,
+        "matched_trips": reconciliations,
     }

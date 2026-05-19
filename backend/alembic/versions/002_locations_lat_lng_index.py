@@ -22,12 +22,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.create_index(
-        "ix_locations_lat_lng",
-        "locations",
-        ["lat", "lng"],
-        unique=False,
-    )
+    pass
 
 
 def downgrade() -> None:

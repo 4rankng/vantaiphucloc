@@ -38,13 +38,13 @@ function groupByVehicle(
   return [...map.values()]
 }
 
-const VEHICLE_CATEGORIES: VehicleExpenseCategory[] = ['XANG_DAU', 'SUA_CHUA', 'KHAC']
+const VEHICLE_CATEGORIES: VehicleExpenseCategory[] = ['XANG_DAU', 'SUA_CHUA', 'TIEN_LUAT', 'KHAC']
 
 const CATEGORY_COLORS: Record<VehicleExpenseCategory, string> = {
   XANG_DAU: 'var(--theme-status-warning-text)',
   SUA_CHUA: 'var(--theme-status-success-text)',
-  KHAC: 'var(--theme-status-info-text)',
-  CHUNG: 'var(--theme-text-muted)',
+  TIEN_LUAT: 'var(--theme-status-info-text)',
+  KHAC: 'var(--theme-text-muted)',
 }
 
 function buildExpenseLookup(expenses: VehicleExpense[]): Map<string, VehicleExpense> {
@@ -161,7 +161,7 @@ export function TransportersPage() {
   const expenseLookup = useMemo(() => buildExpenseLookup(expenses), [expenses])
 
   const catTotals = useMemo(() => {
-    const totals: Record<VehicleExpenseCategory, number> = { XANG_DAU: 0, SUA_CHUA: 0, KHAC: 0, CHUNG: 0 }
+    const totals: Record<VehicleExpenseCategory, number> = { XANG_DAU: 0, SUA_CHUA: 0, TIEN_LUAT: 0, KHAC: 0 }
     for (const e of expenses) {
       if (VEHICLE_CATEGORIES.includes(e.category)) {
         totals[e.category] = (totals[e.category] ?? 0) + e.amount

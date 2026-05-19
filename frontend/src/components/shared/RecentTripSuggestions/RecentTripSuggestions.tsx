@@ -1,5 +1,5 @@
 import { Check, TrendingUp, Clock, Star } from 'lucide-react'
-import type { SuggestedRoute } from '@/services/api/workOrders.api'
+import type { SuggestedRoute } from '@/services/api/deliveredTrips.api'
 
 interface RecentTripSuggestionsProps {
   suggestions: SuggestedRoute[]

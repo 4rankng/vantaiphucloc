@@ -1,11 +1,11 @@
 import { useParams } from 'react-router-dom'
-import { CreateWorkOrder } from './CreateWorkOrder'
-import { useWorkOrder } from '@/hooks/use-queries'
+import { CreateDeliveredTrip } from './CreateDeliveredTrip'
+import { useDeliveredTrip } from '@/hooks/use-queries'
 
-export function EditWorkOrder() {
+export function EditDeliveredTrip() {
   const { jobId: jobIdStr } = useParams<{ jobId: string }>()
   const jobId = Number(jobIdStr)
-  const { data: workOrder = null, isLoading: loading } = useWorkOrder(jobId)
+  const { data: deliveredTrip = null, isLoading: loading } = useDeliveredTrip(jobId)
 
   if (loading) {
     return (
@@ -16,7 +16,7 @@ export function EditWorkOrder() {
     )
   }
 
-  if (!workOrder) {
+  if (!deliveredTrip) {
     return (
       <div className="p-4 text-center py-12" style={{ color: 'var(--theme-text-muted)' }}>
         <p className="text-sm">Không tìm thấy chuyến</p>
@@ -24,7 +24,7 @@ export function EditWorkOrder() {
     )
   }
 
-  if (workOrder.status !== 'PENDING') {
+  if (deliveredTrip.status !== 'PENDING') {
     return (
       <div className="p-4 text-center py-12" style={{ color: 'var(--theme-text-muted)' }}>
         <p className="text-sm">Chỉ có thể sửa chuyến chưa đối soát</p>
@@ -32,5 +32,5 @@ export function EditWorkOrder() {
     )
   }
 
-  return <CreateWorkOrder existingWorkOrder={workOrder} />
+  return <CreateDeliveredTrip existingDeliveredTrip={deliveredTrip} />
 }

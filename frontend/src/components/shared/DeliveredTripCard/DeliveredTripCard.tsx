@@ -1,28 +1,28 @@
 import { Clock, CheckCircle, Lock } from 'lucide-react'
-import { formatCurrencyFull, type WorkOrder } from '@/data/domain'
+import { formatCurrencyFull, type DeliveredTrip } from '@/data/domain'
 import { formatDate } from '@/lib/format'
 import { resolveRoute } from '@/lib/route-utils'
 
 type CardVariant = 'driver' | 'accountant'
 
-interface WorkOrderCardBaseProps {
-  data: WorkOrder
+interface DeliveredTripCardBaseProps {
+  data: DeliveredTrip
   variant?: CardVariant
 }
 
-interface DriverVariantProps extends WorkOrderCardBaseProps {
+interface DriverVariantProps extends DeliveredTripCardBaseProps {
   variant: 'driver'
   onClick: () => void
 }
 
-interface AccountantVariantProps extends WorkOrderCardBaseProps {
+interface AccountantVariantProps extends DeliveredTripCardBaseProps {
   variant?: 'accountant'
   onClick?: never
 }
 
-type WorkOrderCardProps = DriverVariantProps | AccountantVariantProps
+type DeliveredTripCardProps = DriverVariantProps | AccountantVariantProps
 
-export function WorkOrderCard(props: WorkOrderCardProps) {
+export function DeliveredTripCard(props: DeliveredTripCardProps) {
   const { data: wo, variant = 'accountant' } = props
   if (variant === 'driver') {
     return <DriverCard wo={wo} onClick={(props as DriverVariantProps).onClick} />
@@ -42,7 +42,7 @@ function fmtDate(iso: string): string {
   return `${day} · ${time}`
 }
 
-function ContainerList({ wo }: { wo: WorkOrder }) {
+function ContainerList({ wo }: { wo: DeliveredTrip }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {wo.containers.map((c, i) => (
@@ -62,7 +62,7 @@ function ContainerList({ wo }: { wo: WorkOrder }) {
   )
 }
 
-function StatusPill({ status, variant, compact = false }: { status: WorkOrder['status']; variant: 'driver' | 'accountant'; compact?: boolean }) {
+function StatusPill({ status, variant, compact = false }: { status: DeliveredTrip['status']; variant: 'driver' | 'accountant'; compact?: boolean }) {
   const padding = compact ? 'px-2 py-0.5' : 'px-2.5 py-1'
   const iconSize = compact ? 'w-2.5 h-2.5' : 'w-3 h-3'
   if (status === 'PENDING') {
@@ -99,7 +99,7 @@ function StatusPill({ status, variant, compact = false }: { status: WorkOrder['s
 }
 
 /**
- * Driver work-order card — 3-row layout per spec.
+ * Driver delivered-trip card — 3-row layout per spec.
  *
  *   ┌────────────────────────────────────────────────────────┐
  *   │ Hapag-Lloyd Việt Nam                  +450.000 đ       │  ← line 1
@@ -112,7 +112,7 @@ function StatusPill({ status, variant, compact = false }: { status: WorkOrder['s
  *
  * Whole card is the tap target → opens detail page.
  */
-function DriverCard({ wo, onClick }: { wo: WorkOrder; onClick: () => void }) {
+function DriverCard({ wo, onClick }: { wo: DeliveredTrip; onClick: () => void }) {
   const hasEarning = wo.driverSalary > 0
   const pickup = wo.pickupLocation?.name || ''
   const dropoff = wo.dropoffLocation?.name || ''
@@ -173,7 +173,7 @@ function DriverCard({ wo, onClick }: { wo: WorkOrder; onClick: () => void }) {
   )
 }
 
-function AccountantCard({ wo }: { wo: WorkOrder }) {
+function AccountantCard({ wo }: { wo: DeliveredTrip }) {
   return (
     <div
       className="rounded-lg border p-4"

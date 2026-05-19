@@ -4,7 +4,8 @@ import { usePricings, useClients, useCreatePricing, useCreateClient, type Pricin
 import { EmptyState } from '@/components/shared/EmptyState'
 import { CreateClientDialog } from '@/components/shared/CreateClientDialog'
 import { PricingForm } from './PricingForm'
-import { Plus } from 'lucide-react'
+import { PricingImportDialog } from './PricingImportDialog'
+import { Plus, FileSpreadsheet } from 'lucide-react'
 
 interface Props {
   basePath: string
@@ -18,6 +19,7 @@ export function PricingClientCards({ basePath }: Props) {
   const createClient = useCreateClient()
 
   const [showForm, setShowForm] = useState(false)
+  const [showImport, setShowImport] = useState(false)
   const [createClientOpen, setCreateClientOpen] = useState(false)
   const [search, setSearch] = useState('')
 
@@ -62,7 +64,10 @@ export function PricingClientCards({ basePath }: Props) {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          <button className="btn-secondary" disabled>
+            <FileSpreadsheet size={16} /> <span className="hidden sm:inline">Nạp Excel</span>
+          </button>
           <button className="btn-primary" disabled>
             <Plus size={16} /> <span className="hidden sm:inline">Thêm bảng giá</span>
           </button>
@@ -84,6 +89,9 @@ export function PricingClientCards({ basePath }: Props) {
             className="search-pill flex-1 max-w-xs"
           />
         )}
+        <button onClick={() => setShowImport(true)} className="btn-secondary shrink-0">
+          <FileSpreadsheet size={16} strokeWidth={2.25} /> <span className="hidden sm:inline">Nạp Excel</span>
+        </button>
         <button onClick={() => setShowForm(true)} className="btn-primary shrink-0">
           <Plus size={16} strokeWidth={2.25} /> <span className="hidden sm:inline">Thêm mức giá</span>
         </button>
@@ -96,6 +104,14 @@ export function PricingClientCards({ basePath }: Props) {
           onSaveComplete={handleSaveComplete}
           onCancel={() => setShowForm(false)}
           onCreateClient={() => setCreateClientOpen(true)}
+        />
+      )}
+
+      {showImport && (
+        <PricingImportDialog
+          open={showImport}
+          onClose={() => setShowImport(false)}
+          clients={clients}
         />
       )}
 

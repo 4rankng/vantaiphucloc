@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { Check, X, Pencil, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react'
-import { useUpdateTripOrder } from '@/hooks/use-queries'
+import { useUpdateBookedTrip } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { fmtDate } from '@/lib/date-utils'
 import type { CriterionBreakdown } from '@/data/domain'
@@ -25,7 +25,7 @@ export function CriterionRow({
   const [editingTo, setEditingTo] = useState(false)
   const [toDraft, setToDraft] = useState(criterion.toValue ?? '')
 
-  const updateTo = useUpdateTripOrder()
+  const updateTo = useUpdateBookedTrip()
   const toast = useToast()
 
   const saveTo = useCallback(async () => {

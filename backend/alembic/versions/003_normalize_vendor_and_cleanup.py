@@ -19,12 +19,7 @@ depends_on: str | None = None
 
 
 def upgrade() -> None:
-    op.execute(
-        "UPDATE users SET vendor = 'Vận Tải Phúc Lộc' WHERE vendor = 'Phúc Lộc'"
-    )
-    op.execute(
-        "DELETE FROM clients WHERE name LIKE 'Test %Audit%'"
-    )
+    pass
 
 
 def downgrade() -> None:

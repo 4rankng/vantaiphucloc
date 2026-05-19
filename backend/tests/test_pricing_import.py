@@ -170,7 +170,7 @@ class TestCommitTariffRows:
         assert result.lines_created == 1
 
         pricing = (await db_session.execute(select(Pricing))).scalar_one()
-        assert pricing.partner_id == partner.id
+        assert pricing.client_id == partner.id
         assert pricing.work_type == "F20"
 
         line = (await db_session.execute(select(PricingLine))).scalar_one()

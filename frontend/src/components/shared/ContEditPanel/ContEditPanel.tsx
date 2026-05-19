@@ -1,6 +1,6 @@
 import { X, Plus } from 'lucide-react'
-import { WORK_TYPES } from '@/data/domain'
-import type { WorkType } from '@/data/domain'
+import { CONT_TYPES } from '@/data/domain'
+import type { ContType } from '@/data/domain'
 import { ContBadge } from '@/components/shared/ContBadge'
 
 interface ContEntry { type: string; number: string }
@@ -23,11 +23,11 @@ export function ContEditPanel({ containers, onChange, accentColor }: {
             )}
           </div>
           <div className="flex flex-wrap gap-1">
-            {WORK_TYPES.map(w => (
+            {CONT_TYPES.map(w => (
               <button key={w} onClick={() => onChange(containers.map((c2, j) => j === i ? { ...c2, type: w } : c2))}
                 className="px-2 py-1 rounded-md text-xs font-bold touch-manipulation transition-colors"
                 style={{ background: c.type === w ? (accentColor ?? 'var(--theme-brand-primary)') : 'var(--theme-bg-tertiary)', color: c.type === w ? 'var(--theme-text-on-brand)' : 'var(--theme-text-primary)' }}>
-                <ContBadge type={w as WorkType} />
+                <ContBadge type={w as ContType} />
               </button>
             ))}
           </div>

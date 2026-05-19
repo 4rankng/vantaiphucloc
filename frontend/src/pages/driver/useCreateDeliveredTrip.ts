@@ -5,11 +5,11 @@ import { useOffline } from '@/contexts/OfflineContext'
 import { apiClient } from '@/services/api'
 import { useLocations } from '@/hooks/use-queries'
 import type { PhotoMeta } from '@/components/shared/ContainerScanner'
-import type { Client, WorkType, WorkOrder } from '@/data/domain'
+import type { Client, ContType, DeliveredTrip } from '@/data/domain'
 
 export interface ContainerForm {
   containerNumber: string
-  workType: WorkType
+  workType: ContType
   photoTaken: boolean
   photoDataUrl?: string
   photoLat?: number | null
@@ -31,7 +31,7 @@ function validateContainerFormat(num: string): string | null {
   return null
 }
 
-function woToContainers(wo: WorkOrder): ContainerForm[] {
+function woToContainers(wo: DeliveredTrip): ContainerForm[] {
   return wo.containers.map(c => ({
     containerNumber: c.containerNumber,
     workType: c.workType,
@@ -44,26 +44,26 @@ function woToContainers(wo: WorkOrder): ContainerForm[] {
   }))
 }
 
-export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
+export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | null) {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { isOnline } = useOffline()
-  const isEdit = !!existingWorkOrder
+  const isEdit = !!existingDeliveredTrip
 
   // Reference data
   const [clients, setClients] = useState<Client[]>([])
-  const [recentOrders, setRecentOrders] = useState<WorkOrder[]>([])
+  const [recentOrders, setRecentOrders] = useState<DeliveredTrip[]>([])
   const { data: locations = [] } = useLocations()
 
   // Form state — pre-populate from existing WO when editing
   const [containers, setContainers] = useState<ContainerForm[]>(
-    existingWorkOrder ? woToContainers(existingWorkOrder) : [{ ...EMPTY_CONT }],
+    existingDeliveredTrip ? woToContainers(existingDeliveredTrip) : [{ ...EMPTY_CONT }],
   )
-  const [clientId, setClientId] = useState(existingWorkOrder ? String(existingWorkOrder.partner.id) : '')
-  const [vessel, setVessel] = useState(existingWorkOrder?.vessel ?? '')
-  const [operationType, setOperationType] = useState<string>(existingWorkOrder?.operationType ?? '')
-  const [pickupLocation, setPickupLocation] = useState(existingWorkOrder?.pickupLocation.name ?? '')
-  const [dropoffLocation, setDropoffLocation] = useState(existingWorkOrder?.dropoffLocation.name ?? '')
+  const [clientId, setClientId] = useState(existingDeliveredTrip ? String(existingDeliveredTrip.partner.id) : '')
+  const [vessel, setVessel] = useState(existingDeliveredTrip?.vessel ?? '')
+  const [operationType, setOperationType] = useState<string>(existingDeliveredTrip?.operationType ?? '')
+  const [pickupLocation, setPickupLocation] = useState(existingDeliveredTrip?.pickupLocation.name ?? '')
+  const [dropoffLocation, setDropoffLocation] = useState(existingDeliveredTrip?.dropoffLocation.name ?? '')
   const [selectedTripId, setSelectedTripId] = useState<number | null>(null)
 
   // UI state
@@ -299,8 +299,8 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
         return
       }
 
-      if (isEdit && existingWorkOrder) {
-        await apiClient.updateWorkOrder(existingWorkOrder.id, {
+      if (isEdit && existingDeliveredTrip) {
+        await apiClient.updateDeliveredTrip(existingDeliveredTrip.id, {
           containers: containerItems,
           clientId: Number(clientId),
           pickupLocationId: pickupId,
@@ -318,7 +318,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
           )
         })
 
-        await apiClient.createWorkOrder({
+        await apiClient.createDeliveredTrip({
           containers: containerItems,
           clientId: Number(clientId),
           pickupLocationId: pickupId,
@@ -340,7 +340,7 @@ export function useCreateWorkOrder(existingWorkOrder?: WorkOrder | null) {
       console.error('Submit failed:', err)
       setSubmitting(false)
     }
-  }, [containers, clientId, vessel, operationType, pickupLocation, dropoffLocation, locations, user, navigate, isEdit, existingWorkOrder])
+  }, [containers, clientId, vessel, operationType, pickupLocation, dropoffLocation, locations, user, navigate, isEdit, existingDeliveredTrip])
 
   // Summary data for dialog
   const summaryContainers = useMemo(() =>

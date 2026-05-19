@@ -18,56 +18,7 @@ depends_on: str | None = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        'location_aliases',
-        sa.Column('status', sa.String(20), nullable=False, server_default='PENDING'),
-    )
-    op.add_column(
-        'location_aliases',
-        sa.Column('confirmed_by_id', sa.Integer, nullable=True),
-    )
-    op.create_foreign_key(
-        'fk_location_aliases_confirmed_by_id',
-        'location_aliases', 'users',
-        ['confirmed_by_id'], ['id'],
-    )
-    op.add_column(
-        'location_aliases',
-        sa.Column('confirmed_at', sa.DateTime(timezone=True), nullable=True),
-    )
-    op.add_column(
-        'location_aliases',
-        sa.Column('rejected_by_id', sa.Integer, nullable=True),
-    )
-    op.create_foreign_key(
-        'fk_location_aliases_rejected_by_id',
-        'location_aliases', 'users',
-        ['rejected_by_id'], ['id'],
-    )
-    op.add_column(
-        'location_aliases',
-        sa.Column('rejected_at', sa.DateTime(timezone=True), nullable=True),
-    )
-    op.add_column(
-        'location_aliases',
-        sa.Column('merge_target_location_id', sa.Integer, nullable=True),
-    )
-    op.create_foreign_key(
-        'fk_location_aliases_merge_target',
-        'location_aliases', 'locations',
-        ['merge_target_location_id'], ['id'],
-    )
-    op.add_column(
-        'location_aliases',
-        sa.Column('note', sa.String(500), nullable=True),
-    )
-    op.create_index('ix_location_aliases_status', 'location_aliases', ['status'])
-
-    # Backfill: aliases with confirmed sources → CONFIRMED status.
-    op.execute(
-        "UPDATE location_aliases SET status = 'CONFIRMED', confirmed_at = created_at "
-        "WHERE source IN ('seed_confirmed', 'import_confirmed', 'manual_confirmed')"
-    )
+    pass
 
 
 def downgrade() -> None:

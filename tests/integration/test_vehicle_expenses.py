@@ -3,8 +3,7 @@
 Tests:
   - CRUD: create, list, get, update, delete
   - Category enum enforcement (only valid categories accepted)
-  - CHUNG category must not have vehicle_id
-  - Non-CHUNG categories require vehicle_id
+  - All categories require vehicle_id
 """
 
 import pytest
@@ -15,9 +14,9 @@ class TestVehicleExpenses:
     """CRUD for /vehicle-expenses."""
 
     def _payload(self, plate: str | None, category: str = "XANG_DAU", amount: int = 500_000) -> dict:
-        """Build a minimal valid create payload. plate=None → CHUNG."""
+        """Build a minimal valid create payload."""
         return {
-            "vehicle_id": None,  # will be overridden by the fixture if needed
+            "vehicle_id": 1,  # seeded vehicle
             "category": category,
             "amount": amount,
             "expense_date": date.today().isoformat(),
@@ -38,19 +37,26 @@ class TestVehicleExpenses:
         )
         assert res.status_code == 422, f"Expected 422, got {res.status_code}: {res.text}"
 
-    def test_create_chung_must_not_have_vehicle_id(self, api_client, accountant_headers):
-        """CHUNG with an explicit vehicle_id must fail with 422."""
+    def test_create_tien_luat_with_vehicle_id(self, api_client, accountant_headers):
+        """TIEN_LUAT with vehicle_id must succeed."""
         res = api_client.post(
             "/vehicle-expenses",
             headers=accountant_headers,
             json={
-                "vehicle_id": 999,
-                "category": "CHUNG",
+                "vehicle_id": 1,
+                "category": "TIEN_LUAT",
                 "amount": 1_000_000,
                 "expense_date": date.today().isoformat(),
             },
         )
-        assert res.status_code == 422, f"Expected 422, got {res.status_code}: {res.text}"
+        assert res.status_code == 201, f"Expected 201, got {res.status_code}: {res.text}"
+        body = res.json()
+        assert body["category"] == "TIEN_LUAT"
+        assert body["vehicle_id"] == 1
+        assert body["amount"] == 1_000_000
+
+        # Cleanup
+        api_client.delete(f"/vehicle-expenses/{body['id']}", headers=accountant_headers)
 
     def test_invalid_category_rejected(self, api_client, accountant_headers):
         """Unknown category strings must be rejected at schema validation."""
@@ -65,27 +71,20 @@ class TestVehicleExpenses:
         )
         assert res.status_code == 422, f"Expected 422, got {res.status_code}: {res.text}"
 
-    def test_create_chung_expense(self, api_client, accountant_headers):
-        """CHUNG (general overhead) must be creatable without vehicle_id."""
+    def test_create_expense_without_vehicle_id_fails(self, api_client, accountant_headers):
+        """Any category without vehicle_id must fail with 422."""
         res = api_client.post(
             "/vehicle-expenses",
             headers=accountant_headers,
             json={
                 "vehicle_id": None,
-                "category": "CHUNG",
+                "category": "XANG_DAU",
                 "amount": 2_000_000,
                 "expense_date": date.today().isoformat(),
-                "description": "Văn phòng phí tháng 5",
+                "description": "No vehicle test",
             },
         )
-        assert res.status_code == 201, f"Expected 201: {res.text}"
-        body = res.json()
-        assert body["category"] == "CHUNG"
-        assert body["vehicle_id"] is None
-        assert body["amount"] == 2_000_000
-
-        # Cleanup
-        api_client.delete(f"/vehicle-expenses/{body['id']}", headers=accountant_headers)
+        assert res.status_code == 422, f"Expected 422: {res.text}"
 
     def test_list_returns_created_expense(self, api_client, accountant_headers):
         """Created expenses appear in the list endpoint."""
@@ -94,8 +93,8 @@ class TestVehicleExpenses:
             "/vehicle-expenses",
             headers=accountant_headers,
             json={
-                "vehicle_id": None,
-                "category": "CHUNG",
+                "vehicle_id": 1,
+                "category": "KHAC",
                 "amount": 300_000,
                 "expense_date": date.today().isoformat(),
                 "description": "List test",
@@ -119,8 +118,8 @@ class TestVehicleExpenses:
             "/vehicle-expenses",
             headers=accountant_headers,
             json={
-                "vehicle_id": None,
-                "category": "CHUNG",
+                "vehicle_id": 1,
+                "category": "XANG_DAU",
                 "amount": 750_000,
                 "expense_date": date.today().isoformat(),
             },
@@ -142,8 +141,8 @@ class TestVehicleExpenses:
             "/vehicle-expenses",
             headers=accountant_headers,
             json={
-                "vehicle_id": None,
-                "category": "CHUNG",
+                "vehicle_id": 1,
+                "category": "SUA_CHUA",
                 "amount": 100_000,
                 "expense_date": date.today().isoformat(),
             },
@@ -168,8 +167,8 @@ class TestVehicleExpenses:
             "/vehicle-expenses",
             headers=accountant_headers,
             json={
-                "vehicle_id": None,
-                "category": "CHUNG",
+                "vehicle_id": 1,
+                "category": "TIEN_LUAT",
                 "amount": 50_000,
                 "expense_date": date.today().isoformat(),
             },
@@ -189,8 +188,8 @@ class TestVehicleExpenses:
             "/vehicle-expenses",
             headers=accountant_headers,
             json={
-                "vehicle_id": None,
-                "category": "CHUNG",
+                "vehicle_id": 1,
+                "category": "TIEN_LUAT",
                 "amount": 111_000,
                 "expense_date": date.today().isoformat(),
                 "description": "Category filter test",
@@ -203,11 +202,11 @@ class TestVehicleExpenses:
             list_res = api_client.get(
                 "/vehicle-expenses",
                 headers=accountant_headers,
-                params={"category": "CHUNG"},
+                params={"category": "TIEN_LUAT"},
             )
             assert list_res.status_code == 200, list_res.text
             for item in list_res.json()["items"]:
-                assert item["category"] == "CHUNG", f"Unexpected category: {item['category']}"
+                assert item["category"] == "TIEN_LUAT", f"Unexpected category: {item['category']}"
         finally:
             api_client.delete(f"/vehicle-expenses/{expense_id}", headers=accountant_headers)
 
@@ -221,8 +220,8 @@ class TestVehicleExpenses:
             "/vehicle-expenses",
             headers=accountant_headers,
             json={
-                "vehicle_id": None,
-                "category": "CHUNG",
+                "vehicle_id": 1,
+                "category": "KHAC",
                 "amount": 222_000,
                 "expense_date": two_days_ago,
             },
@@ -249,8 +248,8 @@ class TestVehicleExpenses:
             "/vehicle-expenses",
             headers=driver_headers,
             json={
-                "vehicle_id": None,
-                "category": "CHUNG",
+                "vehicle_id": 1,
+                "category": "XANG_DAU",
                 "amount": 100_000,
                 "expense_date": date.today().isoformat(),
             },
@@ -273,7 +272,6 @@ class TestVehiclePnL:
         assert res.status_code == 200, f"Expected 200: {res.text}"
         body = res.json()
         assert "rows" in body
-        assert "cp_chung" in body
         assert "total_revenue" in body
         assert "total_profit" in body
         assert isinstance(body["rows"], list)

@@ -2,27 +2,28 @@
  * Vehicle Expense (CP Xe) API.
  *
  * Categories:
- *   XANG_DAU — Fuel
- *   SUA_CHUA — Repairs / maintenance
- *   CHUNG    — General overhead (not tied to a specific vehicle)
+ *   XANG_DAU  — Fuel
+ *   SUA_CHUA  — Repairs / maintenance
+ *   TIEN_LUAT — Law / Permits
+ *   KHAC      — Other
  */
 
 import { api } from './client'
 import { toCamel, ok, fail } from './utils'
 import type { ApiResponse } from '@/data/domain'
 
-export type VehicleExpenseCategory = 'XANG_DAU' | 'SUA_CHUA' | 'KHAC' | 'CHUNG'
+export type VehicleExpenseCategory = 'XANG_DAU' | 'SUA_CHUA' | 'TIEN_LUAT' | 'KHAC'
 
 export const EXPENSE_CATEGORY_LABELS: Record<VehicleExpenseCategory, string> = {
   XANG_DAU: 'Xăng dầu',
   SUA_CHUA: 'Sửa chữa',
+  TIEN_LUAT: 'Tiền luật',
   KHAC: 'Khác',
-  CHUNG: 'Chi phí chung',
 }
 
 export interface VehicleExpense {
   id: number
-  vehicleId: number | null
+  vehicleId: number
   vehiclePlate: string | null
   category: VehicleExpenseCategory
   amount: number
@@ -35,7 +36,7 @@ export interface VehicleExpense {
 }
 
 export interface VehicleExpenseCreate {
-  vehicleId?: number | null
+  vehicleId: number
   category: VehicleExpenseCategory
   amount: number
   expenseDate: string

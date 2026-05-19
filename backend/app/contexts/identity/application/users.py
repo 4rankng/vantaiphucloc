@@ -133,7 +133,7 @@ class DeleteUser:
         if actor_role is UserRole.DIRECTOR and user.is_superadmin:
             raise PermissionDenied("Directors cannot delete superadmin users")
         if user.is_driver:
-            blocked = await self._users.has_active_unmatched_work_orders(UserId(user_id))
+            blocked = await self._users.has_active_unmatched_delivered_trips(UserId(user_id))
             if blocked:
                 raise PermissionDenied(
                     "Cannot deactivate driver with active (unmatched) work orders"

@@ -1,14 +1,14 @@
 import { AlertTriangle } from 'lucide-react'
 import { fmtDate } from '@/lib/date-utils'
 import { CriterionRow, scoreColor } from './CriterionRow'
-import type { CriterionBreakdown, WorkOrder, TripOrder } from '@/data/domain'
+import type { CriterionBreakdown, DeliveredTrip, BookedTrip } from '@/data/domain'
 
 interface MatchCardProps {
   matchScore: number
   maxScore: number
   criteria: CriterionBreakdown[]
-  tripOrder: TripOrder
-  workOrder: WorkOrder
+  bookedTrip: BookedTrip
+  deliveredTrip: DeliveredTrip
   onConfirm: () => void
   submitting: boolean
   onEdited: () => void
@@ -16,7 +16,7 @@ interface MatchCardProps {
 }
 
 export function MatchCard({
-  matchScore, maxScore, criteria, tripOrder,
+  matchScore, maxScore, criteria, bookedTrip,
   onEdited,
   matchWarnings,
 }: MatchCardProps) {
@@ -44,14 +44,14 @@ export function MatchCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-              {tripOrder.partner?.name || '—'}
+              {bookedTrip.partner?.name || '—'}
             </span>
             <span className="text-[11px]" style={{ color: 'var(--theme-text-muted)' }}>
-              {fmtDate(tripOrder.tripDate)}
+              {fmtDate(bookedTrip.tripDate)}
             </span>
           </div>
           <div className="flex items-center gap-1.5 mt-0.5">
-            {tripOrder.containers.slice(0, 3).map((c, i) => (
+            {bookedTrip.containers.slice(0, 3).map((c, i) => (
               <span key={i} className="text-[10px] font-mono" style={{ color: 'var(--theme-text-secondary)' }}>
                 {c.containerNumber || c.workType}
               </span>
@@ -82,7 +82,7 @@ export function MatchCard({
           <CriterionRow
             key={c.name}
             criterion={c}
-            toId={tripOrder.id}
+            toId={bookedTrip.id}
             onEdited={onEdited}
           />
         ))}

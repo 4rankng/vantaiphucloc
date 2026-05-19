@@ -1,7 +1,7 @@
 """Salary calculation task.
 
 SalaryPeriod has been removed — earnings are now calculated on-the-fly
-from matched work_orders. This task is kept as a no-op placeholder
+from matched delivered_trips. This task is kept as a no-op placeholder
 to avoid breaking arq worker registration until all references are cleaned up.
 """
 

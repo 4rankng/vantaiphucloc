@@ -17,13 +17,14 @@ import pytest
 from app.core.security import hash_password
 from app.models.base import User
 from app.models.domain import (
+    Client,
     Location,
     Partner,
-    TripOrder,
-    TripOrderContainer,
+    BookedTrip,
+    BookedTripContainer,
     Vehicle,
-    WorkOrder,
-    WorkOrderContainer,
+    DeliveredTrip,
+    DeliveredTripContainer,
 )
 
 pytestmark = pytest.mark.asyncio
@@ -206,30 +207,31 @@ async def test_driver_earnings_base_salary_is_zero_when_unconfigured(
 async def _create_matched_trip(
     db_session,
     *,
-    partner_id: int,
+    client_id: int,
     pickup_id: int,
     dropoff_id: int,
     trip_date: date,
-    unit_price: int,
+    revenue: int,
     container_numbers: list[str],
-    work_type: str = "F20",
+    cont_type: str = "F20",
 ):
-    to = TripOrder(
-        partner_id=partner_id,
+    to = BookedTrip(
+        client_id=client_id,
         pickup_location_id=pickup_id,
         dropoff_location_id=dropoff_id,
         trip_date=trip_date,
-        unit_price=unit_price,
+        work_type=cont_type,
+        revenue=revenue,
         status="MATCHED",
     )
     db_session.add(to)
     await db_session.flush()
     for cn in container_numbers:
         db_session.add(
-            TripOrderContainer(
-                trip_order_id=to.id,
+            BookedTripContainer(
+                booked_trip_id=to.id,
                 container_number=cn,
-                work_type=work_type,
+                cont_type=cont_type,
             )
         )
     await db_session.commit()
@@ -239,22 +241,25 @@ async def _create_matched_trip(
 async def _create_matched_wo(
     db_session,
     *,
-    partner_id: int,
+    client_id: int,
     pickup_id: int,
     dropoff_id: int,
     driver_id: int,
     trip_date: date,
     driver_salary: int,
     allowance: int,
+    revenue: int = 0,
     container_number: str,
-    work_type: str = "F20",
+    cont_type: str = "F20",
 ):
-    wo = WorkOrder(
-        partner_id=partner_id,
+    wo = DeliveredTrip(
+        client_id=client_id,
         pickup_location_id=pickup_id,
         dropoff_location_id=dropoff_id,
         driver_id=driver_id,
         trip_date=trip_date,
+        work_type=cont_type,
+        revenue=revenue,
         driver_salary=driver_salary,
         allowance=allowance,
         status="MATCHED",
@@ -262,8 +267,8 @@ async def _create_matched_wo(
     db_session.add(wo)
     await db_session.flush()
     db_session.add(
-        WorkOrderContainer(
-            work_order_id=wo.id, container_number=container_number, work_type=work_type
+        DeliveredTripContainer(
+            delivered_trip_id=wo.id, container_number=container_number, cont_type=cont_type
         )
     )
     await db_session.commit()
@@ -278,39 +283,39 @@ async def test_monthly_pnl_revenue_uses_unit_price_times_container_count(
     )
     headers, _ = await _accountant_headers(db_session, async_client)
 
-    # 2 containers × 5,000,000 + 1 container × 3,000,000 = 13,000,000
+    # 5,000,000 + 3,000,000 = 8,000,000
     await _create_matched_trip(
         db_session,
-        partner_id=partner.id,
+        client_id=partner.id,
         pickup_id=pickup.id,
         dropoff_id=dropoff.id,
         trip_date=date(2026, 5, 5),
-        unit_price=5_000_000,
+        revenue=5_000_000,
         container_numbers=["ABCU1000001", "ABCU1000002"],
     )
     await _create_matched_trip(
         db_session,
-        partner_id=partner.id,
+        client_id=partner.id,
         pickup_id=pickup.id,
         dropoff_id=dropoff.id,
         trip_date=date(2026, 5, 10),
-        unit_price=3_000_000,
+        revenue=3_000_000,
         container_numbers=["ABCU1000003"],
     )
     # A PENDING TO must not contribute
     await _create_matched_trip(
         db_session,
-        partner_id=partner.id,
+        client_id=partner.id,
         pickup_id=pickup.id,
         dropoff_id=dropoff.id,
         trip_date=date(2026, 5, 12),
-        unit_price=9_999_999,
+        revenue=9_999_999,
         container_numbers=["ABCU1000099"],
     )
     pending_to = (
         await db_session.execute(
-            __import__("sqlalchemy").select(TripOrder).where(
-                TripOrder.unit_price == 9_999_999
+            __import__("sqlalchemy").select(BookedTrip).where(
+                BookedTrip.revenue == 9_999_999
             )
         )
     ).scalar_one()
@@ -324,10 +329,10 @@ async def test_monthly_pnl_revenue_uses_unit_price_times_container_count(
     )
     assert res.status_code == 200, res.text
     body = res.json()
-    assert body["revenue"] == 13_000_000
+    assert body["revenue"] == 8_000_000
     assert body["matched_trip_count"] == 2
     assert len(body["partner_breakdown"]) == 1
-    assert body["partner_breakdown"][0]["revenue"] == 13_000_000
+    assert body["partner_breakdown"][0]["revenue"] == 8_000_000
 
 
 async def test_monthly_pnl_subtracts_base_productivity_allowance(
@@ -341,18 +346,18 @@ async def test_monthly_pnl_subtracts_base_productivity_allowance(
     # Revenue: 1 container × 10M
     await _create_matched_trip(
         db_session,
-        partner_id=partner.id,
+        client_id=partner.id,
         pickup_id=pickup.id,
         dropoff_id=dropoff.id,
         trip_date=date(2026, 5, 10),
-        unit_price=10_000_000,
+        revenue=10_000_000,
         container_numbers=["XYZU2000001"],
     )
 
     # Driver had a MATCHED WO with 2M productivity + 200k allowance
     await _create_matched_wo(
         db_session,
-        partner_id=partner.id,
+        client_id=partner.id,
         pickup_id=pickup.id,
         dropoff_id=dropoff.id,
         driver_id=driver.id,
@@ -397,20 +402,20 @@ async def test_monthly_pnl_partner_breakdown_sorted_by_revenue(
 
     await _create_matched_trip(
         db_session,
-        partner_id=partner_a.id,
+        client_id=partner_a.id,
         pickup_id=pickup.id,
         dropoff_id=dropoff.id,
         trip_date=date(2026, 5, 5),
-        unit_price=2_000_000,
+        revenue=2_000_000,
         container_numbers=["AAAU0000001"],
     )
     await _create_matched_trip(
         db_session,
-        partner_id=partner_b.id,
+        client_id=partner_b.id,
         pickup_id=pickup.id,
         dropoff_id=dropoff.id,
         trip_date=date(2026, 5, 8),
-        unit_price=5_000_000,
+        revenue=5_000_000,
         container_numbers=["BBBU0000001", "BBBU0000002"],
     )
 
@@ -422,7 +427,7 @@ async def test_monthly_pnl_partner_breakdown_sorted_by_revenue(
     body = res.json()
     names = [p["partner_name"] for p in body["partner_breakdown"]]
     assert names == ["B Corp", "A Corp"]
-    assert body["partner_breakdown"][0]["revenue"] == 10_000_000
+    assert body["partner_breakdown"][0]["revenue"] == 5_000_000
     assert body["partner_breakdown"][1]["revenue"] == 2_000_000
 
 
@@ -431,21 +436,21 @@ async def test_monthly_pnl_partner_breakdown_sorted_by_revenue(
 # ---------------------------------------------------------------------------
 
 
-async def _seed_trip_for_recon(db_session, partner_id, pickup_id, dropoff_id):
-    """Create one TripOrder we can resolve against in recon tests."""
+async def _seed_trip_for_recon(db_session, client_id, pickup_id, dropoff_id):
+    """Create one BookedTrip we can resolve against in recon tests."""
     to = await _create_matched_trip(
         db_session,
-        partner_id=partner_id,
+        client_id=client_id,
         pickup_id=pickup_id,
         dropoff_id=dropoff_id,
         trip_date=date(2026, 5, 10),
-        unit_price=5_000_000,
+        revenue=5_000_000,
         container_numbers=["HLBU1234567"],
     )
     return to
 
 
-async def test_customer_recon_preview_resolves_rows_against_trip_orders(
+async def test_customer_recon_preview_resolves_rows_against_booked_trips(
     db_session, async_client
 ):
     partner, pickup, dropoff, _ = await _seed_partner_locations_driver(db_session)
@@ -455,7 +460,7 @@ async def test_customer_recon_preview_resolves_rows_against_trip_orders(
     res = await async_client.post(
         "/api/v1/reconcile/customer-files/preview",
         json={
-            "partner_id": partner.id,
+            "client_id": partner.id,
             "period_start": "2026-05-01",
             "period_end": "2026-05-31",
             "source_filename": "khachA-thang5.xlsx",
@@ -488,10 +493,10 @@ async def test_customer_recon_preview_resolves_rows_against_trip_orders(
     rows = body["rows"]
     assert len(rows) == 2
     resolved = next(r for r in rows if r["container_number"] == "HLBU1234567")
-    assert resolved["resolved_trip_order_id"] == to.id
+    assert resolved["resolved_booked_trip_id"] == to.id
     assert resolved["apply_status"] == "PENDING"
     unresolved = next(r for r in rows if r["container_number"] == "UNKNOWN9999")
-    assert unresolved["resolved_trip_order_id"] is None
+    assert unresolved["resolved_booked_trip_id"] is None
     assert unresolved["apply_status"] == "UNRESOLVED"
 
 
@@ -504,7 +509,7 @@ async def test_customer_recon_preview_rejects_invalid_status(
     res = await async_client.post(
         "/api/v1/reconcile/customer-files/preview",
         json={
-            "partner_id": partner.id,
+            "client_id": partner.id,
             "period_start": "2026-05-01",
             "period_end": "2026-05-31",
             "rows": [
@@ -529,7 +534,7 @@ async def test_customer_recon_commit_marks_import_applied(
     res = await async_client.post(
         "/api/v1/reconcile/customer-files/preview",
         json={
-            "partner_id": partner.id,
+            "client_id": partner.id,
             "period_start": "2026-05-01",
             "period_end": "2026-05-31",
             "rows": [
@@ -572,7 +577,7 @@ async def test_customer_recon_list_and_get(db_session, async_client):
         await async_client.post(
             "/api/v1/reconcile/customer-files/preview",
             json={
-                "partner_id": partner.id,
+                "client_id": partner.id,
                 "period_start": "2026-05-01",
                 "period_end": "2026-05-31",
                 "source_filename": fname,

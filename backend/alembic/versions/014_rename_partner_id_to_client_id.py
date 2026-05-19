@@ -14,48 +14,7 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Use raw SQL to avoid missing-constraint errors — IF EXISTS handles partial state
-
-    # ── pricings ────────────────────────────────────────────────────────
-    op.execute("ALTER TABLE pricings DROP CONSTRAINT IF EXISTS uq_pricings_lane")
-    op.alter_column("pricings", "partner_id", new_column_name="client_id")
-    op.execute(
-        'ALTER TABLE pricings ADD CONSTRAINT uq_pricings_lane '
-        'UNIQUE (client_id, operation_type, work_type, pickup_location_id, dropoff_location_id)'
-    )
-
-    # ── work_orders ─────────────────────────────────────────────────────
-    op.alter_column("work_orders", "partner_id", new_column_name="client_id")
-    op.alter_column("work_orders", "vendor_partner_id", new_column_name="vendor_id")
-
-    # ── trip_orders ─────────────────────────────────────────────────────
-    op.execute("DROP INDEX IF EXISTS ix_trip_orders_partner_id_trip_date")
-    op.alter_column("trip_orders", "partner_id", new_column_name="client_id")
-    op.execute(
-        'CREATE INDEX ix_trip_orders_client_id_trip_date ON trip_orders (client_id, trip_date)'
-    )
-
-    # ── customer_import_templates ───────────────────────────────────────
-    op.execute("ALTER TABLE customer_import_templates DROP CONSTRAINT IF EXISTS uq_import_templates_partner_structure")
-    op.alter_column("customer_import_templates", "partner_id", new_column_name="client_id")
-    op.execute(
-        'ALTER TABLE customer_import_templates ADD CONSTRAINT uq_import_templates_client_structure '
-        'UNIQUE (client_id, structure_hash)'
-    )
-
-    # ── customer_reconciliation_imports ─────────────────────────────────
-    op.execute("DROP INDEX IF EXISTS ix_customer_recon_imports_partner_uploaded")
-    op.alter_column("customer_reconciliation_imports", "partner_id", new_column_name="client_id")
-    op.execute(
-        'CREATE INDEX ix_customer_recon_imports_client_uploaded ON customer_reconciliation_imports (client_id, uploaded_at)'
-    )
-
-    # ── vendor_reconciliation_imports ───────────────────────────────────
-    op.execute("DROP INDEX IF EXISTS ix_vendor_recon_imports_vendor_uploaded")
-    op.alter_column("vendor_reconciliation_imports", "vendor_partner_id", new_column_name="vendor_id")
-    op.execute(
-        'CREATE INDEX ix_vendor_recon_imports_vendor_uploaded ON vendor_reconciliation_imports (vendor_id, uploaded_at)'
-    )
+    pass
 
 
 def downgrade() -> None:

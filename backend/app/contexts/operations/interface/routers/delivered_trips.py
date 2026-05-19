@@ -1,4 +1,4 @@
-"""WorkOrder HTTP endpoints."""
+"""DeliveredTrip HTTP endpoints."""
 
 from __future__ import annotations
 
@@ -13,27 +13,27 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.contexts.operations.application import (
-    BatchCreateWorkOrders,
-    CreateWorkOrder,
+    BatchCreateDeliveredTrips,
+    CreateDeliveredTrip,
     CurrentUserContext,
-    GetWorkOrder,
-    ListWorkOrders,
-    UpdateWorkOrder,
+    GetDeliveredTrip,
+    ListDeliveredTrips,
+    UpdateDeliveredTrip,
 )
 from app.contexts.operations.application.dto import (
-    WorkOrderContainerInput,
-    WorkOrderCreateInput,
-    WorkOrderListFilters,
-    WorkOrderUpdateInput,
+    DeliveredTripContainerInput,
+    DeliveredTripCreateInput,
+    DeliveredTripListFilters,
+    DeliveredTripUpdateInput,
 )
-from app.contexts.operations.domain.entities import WorkOrder
-from app.contexts.operations.domain.value_objects import WorkOrderStatus
+from app.contexts.operations.domain.entities import DeliveredTrip
+from app.contexts.operations.domain.value_objects import DeliveredTripStatus
 from app.contexts.operations.interface.dependencies import (
-    get_batch_create_work_orders,
-    get_create_work_order,
-    get_get_work_order,
-    get_list_work_orders,
-    get_update_work_order,
+    get_batch_create_delivered_trips,
+    get_create_delivered_trip,
+    get_get_delivered_trip,
+    get_list_delivered_trips,
+    get_update_delivered_trip,
 )
 from app.contexts.operations.interface.error_translation import translate
 from app.core.audit_context import set_audit_reason
@@ -44,15 +44,15 @@ from app.schemas.base import PaginatedResponse
 from app.database import get_db
 from app.schemas.domain import (
     AIParsePreviewResponse,
-    BatchWorkOrderCreate,
-    BatchWorkOrderResult,
+    BatchDeliveredTripCreate,
+    BatchDeliveredTripResult,
     BulkImportAndMatchResult,
     ContainerOCRRequest,
     ContainerOCRResponse,
     ContainerOut,
-    WorkOrderCreate,
-    WorkOrderOut,
-    WorkOrderUpdate,
+    DeliveredTripCreate,
+    DeliveredTripOut,
+    DeliveredTripUpdate,
 )
 from app.core.summaries import (
     get_driver_summary,
@@ -76,28 +76,30 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
-def _wo_to_out(w: WorkOrder, partners, drivers, locations, matched_trip_count: int = 0) -> WorkOrderOut:
-    return WorkOrderOut(
+def _wo_to_out(w: DeliveredTrip, partners, drivers, locations, matched_trip_count: int = 0) -> DeliveredTripOut:
+    return DeliveredTripOut(
         id=int(w.id),  # type: ignore[arg-type]
         partner=get_partner_summary(partners, w.client_id),
-        code=w.code,
         pickup_location=get_location_summary(locations, w.pickup_location_id),
         dropoff_location=get_location_summary(locations, w.dropoff_location_id),
         driver=get_driver_summary(drivers, w.driver_id),
+        vendor_id=w.vendor_id,
+        vessel=w.vessel,
+        operation_type=w.operation_type,
+        work_type=w.work_type,
         gps_lat=w.gps_lat,
         gps_lng=w.gps_lng,
         gps_address=w.gps_address,
-        unit_price=w.unit_price,
+        revenue=w.revenue,
         driver_salary=w.driver_salary,
         allowance=w.allowance,
-        pricing_id=w.pricing_id,
         trip_date=w.trip_date,
         status=w.status,
         containers=[
             ContainerOut(
                 id=int(c.id),  # type: ignore[arg-type]
                 container_number=c.container_number,
-                work_type=c.work_type,
+                cont_type=c.cont_type,
                 photo_url=c.photo_url,
                 photo_lat=c.photo_lat,
                 photo_lng=c.photo_lng,
@@ -112,11 +114,11 @@ def _wo_to_out(w: WorkOrder, partners, drivers, locations, matched_trip_count: i
     )
 
 
-async def _load_one(session, w: WorkOrder) -> WorkOrderOut:
+async def _load_one(session, w: DeliveredTrip) -> DeliveredTripOut:
     return (await _load_many(session, [w]))[0]
 
 
-async def _load_many(session, wos: list[WorkOrder]) -> list[WorkOrderOut]:
+async def _load_many(session, wos: list[DeliveredTrip]) -> list[DeliveredTripOut]:
     if not wos:
         return []
     partners = await load_partner_summaries(session, {w.client_id for w in wos})
@@ -133,12 +135,12 @@ async def _load_many(session, wos: list[WorkOrder]) -> list[WorkOrderOut]:
     link_counts: dict[int, int] = {}
     if wo_ids:
         rows = (await session.execute(
-            sa_select(Reconciliation.work_order_id, func.count())
+            sa_select(Reconciliation.delivered_trip_id, func.count())
             .where(
-                Reconciliation.work_order_id.in_(wo_ids),
+                Reconciliation.delivered_trip_id.in_(wo_ids),
                 Reconciliation.is_active == True,  # noqa: E712
             )
-            .group_by(Reconciliation.work_order_id)
+            .group_by(Reconciliation.delivered_trip_id)
         )).all()
         link_counts = {r[0]: r[1] for r in rows}
 
@@ -148,12 +150,12 @@ async def _load_many(session, wos: list[WorkOrder]) -> list[WorkOrderOut]:
     ]
 
 
-def _hide_salary_fields(wo_out: WorkOrderOut) -> None:
+def _hide_salary_fields(wo_out: DeliveredTripOut) -> None:
     wo_out.driver_salary = 0
     wo_out.allowance = 0
 
 
-def _hide_vessel_field(wo_out: WorkOrderOut) -> None:
+def _hide_vessel_field(wo_out: DeliveredTripOut) -> None:
     """Mask vessel from accountant views while the trip is PENDING.
 
     Số tàu is driver-only knowledge during transport; accountant should
@@ -162,11 +164,11 @@ def _hide_vessel_field(wo_out: WorkOrderOut) -> None:
     wo_out.vessel = None
 
 
-def _container_inputs(items) -> list[WorkOrderContainerInput]:
+def _container_inputs(items) -> list[DeliveredTripContainerInput]:
     return [
-        WorkOrderContainerInput(
+        DeliveredTripContainerInput(
             container_number=c.container_number,
-            work_type=c.work_type,
+            cont_type=c.cont_type,
             photo_url=c.photo_url,
             photo_lat=c.photo_lat,
             photo_lng=c.photo_lng,
@@ -180,25 +182,25 @@ def _user_ctx(u: User) -> CurrentUserContext:
     return CurrentUserContext(id=u.id, role=u.role)
 
 
-async def _enqueue_geocode(work_order_id: int, lat: float, lng: float) -> None:
+async def _enqueue_geocode(delivered_trip_id: int, lat: float, lng: float) -> None:
     try:
         from app.workers import enqueue
         await enqueue(
-            "geocode_work_order_task",
-            work_order_id=work_order_id, lat=lat, lng=lng,
+            "geocode_delivered_trip_task",
+            delivered_trip_id=delivered_trip_id, lat=lat, lng=lng,
         )
     except Exception:
-        _logger.warning("Failed to enqueue geocode for WO#%s", work_order_id)
+        _logger.warning("Failed to enqueue geocode for WO#%s", delivered_trip_id)
 
 
-async def _enqueue_notification(w: WorkOrder) -> None:
+async def _enqueue_notification(w: DeliveredTrip) -> None:
     try:
         from app.workers import enqueue
         await enqueue(
             "send_notification_task",
             user_id=None,
             title="Phieu lam viec moi",
-            message=f"{w.code or w.id} da duoc tao (driver_id={w.driver_id})",
+            message=f"{w.id} da duoc tao (driver_id={w.driver_id})",
             channel="in_app",
         )
     except Exception:
@@ -210,7 +212,7 @@ async def _enqueue_notification(w: WorkOrder) -> None:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/work-orders/validate-container")
+@router.get("/delivered-trips/validate-container")
 async def validate_container(
     container_number: str = Query(..., description="Container number to validate"),
     current_user: User = Depends(get_current_user),
@@ -224,25 +226,23 @@ async def validate_container(
     }
 
 
-@router.post("/work-orders", response_model=WorkOrderOut, status_code=201)
-async def create_work_order_endpoint(
-    body: WorkOrderCreate,
-    current_user: User = Depends(require_permission("create", "WorkOrder")),
-    use_case: CreateWorkOrder = Depends(get_create_work_order),
+@router.post("/delivered-trips", response_model=DeliveredTripOut, status_code=201)
+async def create_delivered_trip_endpoint(
+    body: DeliveredTripCreate,
+    current_user: User = Depends(require_permission("create", "DeliveredTrip")),
+    use_case: CreateDeliveredTrip = Depends(get_create_delivered_trip),
 ):
     try:
         w = await use_case(
-            WorkOrderCreateInput(
+            DeliveredTripCreateInput(
                 client_id=body.client_id,
                 pickup_location_id=body.pickup_location_id,
                 dropoff_location_id=body.dropoff_location_id,
                 driver_id=body.driver_id,
                 vendor_id=body.vendor_id,
-                vehicle_external_plate=body.vehicle_external_plate,
                 vehicle_id=body.vehicle_id,
                 vessel=body.vessel,
                 operation_type=body.operation_type,
-
                 containers=_container_inputs(body.containers),
                 gps_lat=body.gps_lat,
                 gps_lng=body.gps_lng,
@@ -260,8 +260,8 @@ async def create_work_order_endpoint(
     return await _load_one(use_case.session, w)
 
 
-@router.get("/work-orders", response_model=PaginatedResponse[WorkOrderOut])
-async def list_work_orders(
+@router.get("/delivered-trips", response_model=PaginatedResponse[DeliveredTripOut])
+async def list_delivered_trips(
     driver_id: int | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
@@ -269,12 +269,12 @@ async def list_work_orders(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     current_user: User = Depends(get_current_user),
-    use_case: ListWorkOrders = Depends(get_list_work_orders),
+    use_case: ListDeliveredTrips = Depends(get_list_delivered_trips),
 ):
     if current_user.role == "driver":
         driver_id = current_user.id
 
-    items, total = await use_case(WorkOrderListFilters(
+    items, total = await use_case(DeliveredTripListFilters(
         page=page, page_size=page_size,
         driver_id=driver_id,
         date_from=date_from, date_to=date_to, status=status,
@@ -283,30 +283,30 @@ async def list_work_orders(
 
     if current_user.role == "driver":
         for i, w in enumerate(items):
-            if w.status == WorkOrderStatus.PENDING:
+            if w.status == DeliveredTripStatus.PENDING:
                 _hide_salary_fields(out[i])
     elif current_user.role == "accountant":
         for i, w in enumerate(items):
-            if w.status == WorkOrderStatus.PENDING:
+            if w.status == DeliveredTripStatus.PENDING:
                 _hide_vessel_field(out[i])
 
-    return PaginatedResponse[WorkOrderOut](
+    return PaginatedResponse[DeliveredTripOut](
         items=out, total=total, page=page, page_size=page_size,
         total_pages=math.ceil(total / page_size) if total > 0 else 0,
     )
 
 
-@router.get("/work-orders/export")
-async def export_work_orders_excel(
+@router.get("/delivered-trips/export")
+async def export_delivered_trips_excel(
     date_from: date | None = None,
     date_to: date | None = None,
     status: str | None = None,
-    current_user: User = Depends(require_permission("export", "WorkOrder")),
-    use_case: GetWorkOrder = Depends(get_get_work_order),
+    current_user: User = Depends(require_permission("export", "DeliveredTrip")),
+    use_case: GetDeliveredTrip = Depends(get_get_delivered_trip),
 ):
-    from app.contexts.operations.infrastructure.excel import generate_work_orders_excel
+    from app.contexts.operations.infrastructure.excel import generate_delivered_trips_excel
     session = use_case.repo.session  # type: ignore[attr-defined]
-    content = await generate_work_orders_excel(
+    content = await generate_delivered_trips_excel(
         session,
         date_from=date_from.isoformat() if date_from else None,
         date_to=date_to.isoformat() if date_to else None,
@@ -317,18 +317,18 @@ async def export_work_orders_excel(
         media_type=(
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         ),
-        headers={"Content-Disposition": "attachment; filename=work_orders.xlsx"},
+        headers={"Content-Disposition": "attachment; filename=delivered_trips.xlsx"},
     )
 
 
-@router.post("/work-orders/batch", status_code=207)
-async def batch_create_work_orders(
-    body: BatchWorkOrderCreate,
-    current_user: User = Depends(require_permission("create", "WorkOrder")),
-    use_case: BatchCreateWorkOrders = Depends(get_batch_create_work_orders),
+@router.post("/delivered-trips/batch", status_code=207)
+async def batch_create_delivered_trips(
+    body: BatchDeliveredTripCreate,
+    current_user: User = Depends(require_permission("create", "DeliveredTrip")),
+    use_case: BatchCreateDeliveredTrips = Depends(get_batch_create_delivered_trips),
 ):
     items_input = [
-        WorkOrderCreateInput(
+        DeliveredTripCreateInput(
             client_id=item.client_id,
             pickup_location_id=item.pickup_location_id,
             dropoff_location_id=item.dropoff_location_id,
@@ -342,7 +342,7 @@ async def batch_create_work_orders(
     ]
     raw = await use_case(items_input, _user_ctx(current_user))
     results = [
-        BatchWorkOrderResult(
+        BatchDeliveredTripResult(
             index=i,
             id=wo_id,
             success=err is None,
@@ -357,7 +357,7 @@ async def batch_create_work_orders(
     return results
 
 
-@router.post("/work-orders/ocr-container", response_model=ContainerOCRResponse)
+@router.post("/delivered-trips/ocr-container", response_model=ContainerOCRResponse)
 async def ocr_container_number(
     body: ContainerOCRRequest,
     current_user: User = Depends(get_current_user),
@@ -402,34 +402,34 @@ async def ocr_container_number(
     return ContainerOCRResponse(**result)
 
 
-@router.get("/work-orders/{work_order_id:int}", response_model=WorkOrderOut)
-async def get_work_order(
-    work_order_id: int,
+@router.get("/delivered-trips/{delivered_trip_id:int}", response_model=DeliveredTripOut)
+async def get_delivered_trip(
+    delivered_trip_id: int,
     current_user: User = Depends(get_current_user),
-    use_case: GetWorkOrder = Depends(get_get_work_order),
+    use_case: GetDeliveredTrip = Depends(get_get_delivered_trip),
 ):
     try:
-        w = await use_case(work_order_id)
+        w = await use_case(delivered_trip_id)
     except Exception as exc:
         raise translate(exc)
     # Drivers can only access their own work orders; mask others as 404
     # to avoid leaking existence to a horizontally-scoped caller.
     if current_user.role == "driver" and w.driver_id != current_user.id:
         from app.contexts.operations.domain.exceptions import NotFound
-        raise translate(NotFound("WorkOrder", work_order_id))
+        raise translate(NotFound("DeliveredTrip", delivered_trip_id))
     out = await _load_one(use_case.repo.session, w)  # type: ignore[attr-defined]
-    if current_user.role == "driver" and w.status == WorkOrderStatus.PENDING:
+    if current_user.role == "driver" and w.status == DeliveredTripStatus.PENDING:
         _hide_salary_fields(out)
-    elif current_user.role == "accountant" and w.status == WorkOrderStatus.PENDING:
+    elif current_user.role == "accountant" and w.status == DeliveredTripStatus.PENDING:
         _hide_vessel_field(out)
     return out
 
 
-@router.post("/work-orders/bulk-import-and-match", response_model=BulkImportAndMatchResult, status_code=201)
+@router.post("/delivered-trips/bulk-import-and-match", response_model=BulkImportAndMatchResult, status_code=201)
 async def bulk_import_and_match(
     file: UploadFile = File(...),
     client_id: int | None = Form(None),
-    current_user: User = Depends(require_permission("create", "WorkOrder")),
+    current_user: User = Depends(require_permission("create", "DeliveredTrip")),
     db: AsyncSession = Depends(get_db),
 ):
     """Import work orders from Excel and auto-match against trip orders.
@@ -473,13 +473,13 @@ async def bulk_import_and_match(
     )
 
 
-@router.put("/work-orders/{work_order_id:int}", response_model=WorkOrderOut)
-async def update_work_order(
-    work_order_id: int,
-    body: WorkOrderUpdate,
+@router.put("/delivered-trips/{delivered_trip_id:int}", response_model=DeliveredTripOut)
+async def update_delivered_trip(
+    delivered_trip_id: int,
+    body: DeliveredTripUpdate,
     request: Request,
     current_user: User = Depends(get_current_user),
-    use_case: UpdateWorkOrder = Depends(get_update_work_order),
+    use_case: UpdateDeliveredTrip = Depends(get_update_delivered_trip),
 ):
     containers_input = (
         _container_inputs(body.containers) if body.containers is not None
@@ -487,22 +487,20 @@ async def update_work_order(
     )
     try:
         w = await use_case(
-            work_order_id,
-            WorkOrderUpdateInput(
+            delivered_trip_id,
+            DeliveredTripUpdateInput(
                 client_id=body.client_id,
                 pickup_location_id=body.pickup_location_id,
                 dropoff_location_id=body.dropoff_location_id,
                 driver_id=body.driver_id,
                 vendor_id=body.vendor_id,
-                vehicle_external_plate=body.vehicle_external_plate,
                 vehicle_id=body.vehicle_id,
                 vessel=body.vessel,
                 operation_type=body.operation_type,
-
                 containers=containers_input,
                 gps_lat=body.gps_lat,
                 gps_lng=body.gps_lng,
-                unit_price=body.unit_price,
+                revenue=body.revenue,
                 driver_salary=body.driver_salary,
                 allowance=body.allowance,
                 status=body.status,
@@ -514,7 +512,7 @@ async def update_work_order(
     try:
         return await _load_one(use_case.session, w)
     except Exception as exc:
-        _logger.exception("Failed to load WO#%s after update", work_order_id)
+        _logger.exception("Failed to load WO#%s after update", delivered_trip_id)
         raise translate(exc)
 
 
@@ -522,11 +520,11 @@ async def update_work_order(
 # AI Parse Preview
 # ---------------------------------------------------------------------------
 
-@router.post("/work-orders/ai-parse-preview", response_model=AIParsePreviewResponse)
+@router.post("/delivered-trips/ai-parse-preview", response_model=AIParsePreviewResponse)
 async def ai_parse_preview(
     file: UploadFile = File(...),
     source_id: str | None = Form(None),
-    current_user: User = Depends(require_permission("create", "WorkOrder")),
+    current_user: User = Depends(require_permission("create", "DeliveredTrip")),
 ):
     """AI-powered file parsing for arbitrary-format input files.
 

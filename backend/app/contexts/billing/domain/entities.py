@@ -16,8 +16,8 @@ from app.contexts.billing.domain.value_objects import (
 class SettlementStatement:
     """The BK SL aggregate.
 
-    Built from operations data (TripOrders + containers + matched
-    work-orders) for one customer over one period. VAT and totals are
+    Built from operations data (BookedTrips + containers + matched
+    delivered-trips) for one customer over one period. VAT and totals are
     computed from the route_summary at read-time — they are not stored.
     """
 

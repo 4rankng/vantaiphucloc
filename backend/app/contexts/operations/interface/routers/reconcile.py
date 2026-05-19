@@ -17,10 +17,10 @@ from fastapi import (
 )
 
 from app.contexts.operations.application import (
-    GetTripOrder,
-    GetWorkOrder,
-    MatchTripToWorkOrder,
-    UnmatchTripFromWorkOrder,
+    GetBookedTrip,
+    GetDeliveredTrip,
+    MatchTripToDeliveredTrip,
+    UnmatchTripFromDeliveredTrip,
 )
 from app.contexts.operations.application.dto import (
     ReconcileInput,
@@ -31,19 +31,19 @@ from app.contexts.operations.infrastructure.match_suggester import (
     suggest_wo_matches,
 )
 from app.contexts.operations.interface.dependencies import (
-    get_get_trip_order,
-    get_get_work_order,
-    get_match_trip_to_work_order,
-    get_unmatch_trip_from_work_order,
+    get_get_booked_trip,
+    get_get_delivered_trip,
+    get_match_booked_to_delivered_trip,
+    get_unmatch_booked_from_delivered_trip,
 )
 from app.contexts.operations.interface.error_translation import translate
-from app.contexts.operations.interface.routers.trip_orders import (
+from app.contexts.operations.interface.routers.booked_trips import (
     _load_one as _load_trip_one,
 )
 from app.core.audit_context import set_audit_reason
 from app.core.deps import require_permission
 from app.models.base import User
-from app.models.domain import TripOrder as TripOrderORM, TripOrderContainer, WorkOrder as WorkOrderORM
+from app.models.domain import BookedTrip as BookedTripORM, BookedTripContainer, DeliveredTrip as DeliveredTripORM
 from app.schemas.domain import (
     AutoMatchCandidate,
     AutoMatchConfirmRequest,
@@ -52,8 +52,8 @@ from app.schemas.domain import (
     AutoMatchRequest,
     AutoMatchResponse,
     AutoMatchResult,
-    AutoMatchWorkOrderRef,
-    AutoMatchTripOrderRef,
+    AutoMatchDeliveredTripRef,
+    AutoMatchBookedTripRef,
     AutoMatchCriterion,
     BatchMatchForTORequest,
     BatchMatchForTOResponse,
@@ -68,10 +68,10 @@ from app.schemas.domain import (
     ReconcileRequest,
     SuggestMatchesResponse,
     SuggestWosResponse,
-    TripOrderOut,
-    UnmatchedWorkOrderRef,
+    BookedTripOut,
+    UnmatchedDeliveredTripRef,
     UnmatchRequest,
-    WorkOrderMatchScore,
+    DeliveredTripMatchScore,
 )
 from app.core.audit import log_action
 
@@ -80,23 +80,23 @@ _logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post("/reconcile", response_model=TripOrderOut)
+@router.post("/reconcile", response_model=BookedTripOut)
 async def reconcile(
     body: ReconcileRequest,
     request: Request,
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
-    use_case: MatchTripToWorkOrder = Depends(get_match_trip_to_work_order),
+    use_case: MatchTripToDeliveredTrip = Depends(get_match_booked_to_delivered_trip),
 ):
     try:
         to = await use_case(ReconcileInput(
-            work_order_id=body.work_order_id,
-            trip_order_id=body.trip_order_id,
+            delivered_trip_id=body.delivered_trip_id,
+            booked_trip_id=body.booked_trip_id,
             user_id=current_user.id,
         ))
     except Exception as exc:
         _logger.exception(
             "Reconcile failed: WO#%s ↔ TO#%s",
-            body.work_order_id, body.trip_order_id,
+            body.delivered_trip_id, body.booked_trip_id,
         )
         raise translate(exc)
 
@@ -104,25 +104,25 @@ async def reconcile(
     try:
         await log_action(
             db, user_id=current_user.id, action="MATCH",
-            table_name="reconciliations",
+            table_name="matched_trips",
             record_id=int(to.id),  # type: ignore[arg-type]
             new_value={
-                "work_order_id": body.work_order_id,
-                "trip_order_id": body.trip_order_id,
+                "delivered_trip_id": body.delivered_trip_id,
+                "booked_trip_id": body.booked_trip_id,
             },
             request=request,
         )
         await db.commit()
     except Exception:
         _logger.exception("Audit log failed after reconcile WO#%s ↔ TO#%s",
-                          body.work_order_id, body.trip_order_id)
+                          body.delivered_trip_id, body.booked_trip_id)
         # Match already succeeded; commit without audit log.
         try:
             await db.commit()
         except Exception:
             pass
 
-    # Salary is calculated on-the-fly from matched WorkOrder earnings,
+    # Salary is calculated on-the-fly from matched DeliveredTrip earnings,
     # not materialised at match time. No post-match recalc needed.
 
     try:
@@ -130,7 +130,7 @@ async def reconcile(
     except Exception as exc:
         _logger.exception(
             "Failed to load TO#%s after reconcile with WO#%s",
-            body.trip_order_id, body.work_order_id,
+            body.booked_trip_id, body.delivered_trip_id,
         )
         raise translate(exc)
 
@@ -140,9 +140,9 @@ async def batch_reconcile_for_wo(
     body: BatchMatchForWORequest,
     request: Request,
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
-    match_use_case: MatchTripToWorkOrder = Depends(get_match_trip_to_work_order),
+    match_use_case: MatchTripToDeliveredTrip = Depends(get_match_booked_to_delivered_trip),
 ):
-    """Match one WorkOrder with multiple TripOrders in a single call.
+    """Match one DeliveredTrip with multiple BookedTrips in a single call.
 
     NOTE: In the TO-centric model, this endpoint is kept for backward
     compatibility but each call is validated: a WO can only match 1 TO.
@@ -151,50 +151,50 @@ async def batch_reconcile_for_wo(
     db = match_use_case.session
     results: list[BatchMatchForWOResult] = []
 
-    for to_id in body.trip_order_ids:
+    for to_id in body.booked_trip_ids:
         try:
             to = await match_use_case(ReconcileInput(
-                work_order_id=body.work_order_id,
-                trip_order_id=to_id,
+                delivered_trip_id=body.delivered_trip_id,
+                booked_trip_id=to_id,
                 user_id=current_user.id,
             ))
             try:
                 await log_action(
                     db, user_id=current_user.id, action="BATCH_MATCH_WO",
-                    table_name="reconciliations",
+                    table_name="matched_trips",
                     record_id=int(to.id),  # type: ignore[arg-type]
                     new_value={
-                        "work_order_id": body.work_order_id,
-                        "trip_order_id": to_id,
+                        "delivered_trip_id": body.delivered_trip_id,
+                        "booked_trip_id": to_id,
                     },
                     request=request,
                 )
             except Exception:
                 _logger.exception("Audit log failed for batch match WO#%s ↔ TO#%s",
-                                  body.work_order_id, to_id)
+                                  body.delivered_trip_id, to_id)
             results.append(BatchMatchForWOResult(
-                trip_order_id=to_id, success=True,
+                booked_trip_id=to_id, success=True,
             ))
         except Exception as exc:
             results.append(BatchMatchForWOResult(
-                trip_order_id=to_id, success=False, error=str(exc),
+                booked_trip_id=to_id, success=False, error=str(exc),
             ))
 
     success_count = sum(1 for r in results if r.success)
     fail_count = len(results) - success_count
     _logger.info(
         "Batch match WO#%s: %d/%d succeeded",
-        body.work_order_id, success_count, len(results),
+        body.delivered_trip_id, success_count, len(results),
     )
 
     try:
         await db.commit()
     except Exception:
-        _logger.exception("Commit failed after batch match for WO#%s", body.work_order_id)
+        _logger.exception("Commit failed after batch match for WO#%s", body.delivered_trip_id)
         raise
 
     return BatchMatchForWOResponse(
-        work_order_id=body.work_order_id, results=results,
+        delivered_trip_id=body.delivered_trip_id, results=results,
     )
 
 
@@ -203,11 +203,11 @@ async def batch_reconcile_for_to(
     body: BatchMatchForTORequest,
     request: Request,
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
-    match_use_case: MatchTripToWorkOrder = Depends(get_match_trip_to_work_order),
+    match_use_case: MatchTripToDeliveredTrip = Depends(get_match_booked_to_delivered_trip),
 ):
-    """Match multiple WorkOrders to a single TripOrder (TO-centric model).
+    """Match multiple DeliveredTrips to a single BookedTrip (TO-centric model).
 
-    Validates: len(work_order_ids) <= TripOrder.container_count - already_matched.
+    Validates: len(delivered_trip_ids) <= BookedTrip.container_count - already_matched.
     """
     from app.contexts.operations.infrastructure.link_queries import (
         count_links_for_to,
@@ -216,17 +216,17 @@ async def batch_reconcile_for_to(
 
     db = match_use_case.session
 
-    # Fetch the TripOrder to check capacity
+    # Fetch the BookedTrip to check capacity
     to_orm = (await db.execute(
-        sa_select(TripOrderORM).where(TripOrderORM.id == body.trip_order_id)
+        sa_select(BookedTripORM).where(BookedTripORM.id == body.booked_trip_id)
     )).scalar_one_or_none()
     if to_orm is None:
-        raise HTTPException(status_code=404, detail="TripOrder not found")
+        raise HTTPException(status_code=404, detail="BookedTrip not found")
 
     # Load TO containers
     to_containers = (await db.execute(
-        sa_select(TripOrderContainer).where(
-            TripOrderContainer.trip_order_id == body.trip_order_id
+        sa_select(BookedTripContainer).where(
+            BookedTripContainer.booked_trip_id == body.booked_trip_id
         )
     )).scalars().all()
     container_count = len(to_containers)
@@ -237,63 +237,63 @@ async def batch_reconcile_for_to(
         )
 
     # Check capacity
-    already_matched = await count_links_for_to(db, body.trip_order_id)
+    already_matched = await count_links_for_to(db, body.booked_trip_id)
     remaining_capacity = container_count - already_matched
-    if len(body.work_order_ids) > remaining_capacity:
+    if len(body.delivered_trip_ids) > remaining_capacity:
         raise HTTPException(
             status_code=422,
             detail=(
-                f"Số đơn hàng ({len(body.work_order_ids)}) vượt quá số container "
+                f"Số đơn hàng ({len(body.delivered_trip_ids)}) vượt quá số container "
                 f"còn trống của chuyến (tối đa: {remaining_capacity}, "
                 f"tổng container: {container_count}, đã ghép: {already_matched})"
             ),
         )
 
     results: list[BatchMatchForTOResult] = []
-    for wo_id in body.work_order_ids:
+    for wo_id in body.delivered_trip_ids:
         try:
             to = await match_use_case(ReconcileInput(
-                work_order_id=wo_id,
-                trip_order_id=body.trip_order_id,
+                delivered_trip_id=wo_id,
+                booked_trip_id=body.booked_trip_id,
                 user_id=current_user.id,
             ))
             try:
                 await log_action(
                     db, user_id=current_user.id, action="BATCH_MATCH_TO",
-                    table_name="reconciliations",
+                    table_name="matched_trips",
                     record_id=int(to.id),  # type: ignore[arg-type]
                     new_value={
-                        "work_order_id": wo_id,
-                        "trip_order_id": body.trip_order_id,
+                        "delivered_trip_id": wo_id,
+                        "booked_trip_id": body.booked_trip_id,
                     },
                     request=request,
                 )
             except Exception:
                 _logger.exception("Audit log failed for batch match TO#%s ↔ WO#%s",
-                                  body.trip_order_id, wo_id)
+                                  body.booked_trip_id, wo_id)
             results.append(BatchMatchForTOResult(
-                work_order_id=wo_id, success=True,
+                delivered_trip_id=wo_id, success=True,
             ))
         except Exception as exc:
             results.append(BatchMatchForTOResult(
-                work_order_id=wo_id, success=False, error=str(exc),
+                delivered_trip_id=wo_id, success=False, error=str(exc),
             ))
 
     success_count = sum(1 for r in results if r.success)
     fail_count = len(results) - success_count
     _logger.info(
         "Batch match TO#%s: %d/%d succeeded",
-        body.trip_order_id, success_count, len(results),
+        body.booked_trip_id, success_count, len(results),
     )
 
     try:
         await db.commit()
     except Exception:
-        _logger.exception("Commit failed after batch match for TO#%s", body.trip_order_id)
+        _logger.exception("Commit failed after batch match for TO#%s", body.booked_trip_id)
         raise
 
     return BatchMatchForTOResponse(
-        trip_order_id=body.trip_order_id, results=results,
+        booked_trip_id=body.booked_trip_id, results=results,
     )
 
 
@@ -302,15 +302,15 @@ async def unmatch(
     body: UnmatchRequest,
     request: Request,
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
-    use_case: UnmatchTripFromWorkOrder = Depends(get_unmatch_trip_from_work_order),
+    use_case: UnmatchTripFromDeliveredTrip = Depends(get_unmatch_booked_from_delivered_trip),
 ):
     set_audit_reason(body.reason)
     try:
         to, wo = await use_case(UnmatchInput(
             user_id=current_user.id,
             reason=body.reason,
-            work_order_id=body.work_order_id,
-            trip_order_id=body.trip_order_id,
+            delivered_trip_id=body.delivered_trip_id,
+            booked_trip_id=body.booked_trip_id,
         ))
     except Exception as exc:
         raise translate(exc)
@@ -319,19 +319,19 @@ async def unmatch(
     try:
         await log_action(
             db, user_id=current_user.id, action="UNMATCH",
-            table_name="reconciliations",
+            table_name="matched_trips",
             record_id=int(to.id),  # type: ignore[arg-type]
             reason=body.reason,
             old_value={
-                "work_order_id": int(wo.id),  # type: ignore[arg-type]
-                "trip_order_id": int(to.id),  # type: ignore[arg-type]
+                "delivered_trip_id": int(wo.id),  # type: ignore[arg-type]
+                "booked_trip_id": int(to.id),  # type: ignore[arg-type]
             },
             request=request,
         )
         await db.commit()
     except Exception:
         _logger.exception("Audit log failed after unmatch WO#%s ↔ TO#%s",
-                          body.work_order_id, body.trip_order_id)
+                          body.delivered_trip_id, body.booked_trip_id)
         try:
             await db.commit()
         except Exception:
@@ -343,54 +343,54 @@ async def unmatch(
 
 
 @router.get(
-    "/suggest-matches/{work_order_id:int}",
+    "/suggest-matches/{delivered_trip_id:int}",
     response_model=SuggestMatchesResponse,
 )
 async def suggest_matches(
-    work_order_id: int,
+    delivered_trip_id: int,
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
-    use_case: GetWorkOrder = Depends(get_get_work_order),
+    use_case: GetDeliveredTrip = Depends(get_get_delivered_trip),
 ):
     db = use_case.repo.session  # type: ignore[attr-defined]
     from sqlalchemy import select
     wo = (await db.execute(
-        select(WorkOrderORM).where(WorkOrderORM.id == work_order_id)
+        select(DeliveredTripORM).where(DeliveredTripORM.id == delivered_trip_id)
     )).scalar_one_or_none()
     if wo is None:
-        raise HTTPException(status_code=404, detail="WorkOrder not found")
+        raise HTTPException(status_code=404, detail="DeliveredTrip not found")
     suggestions = await suggest_trip_matches(db, wo)
     return SuggestMatchesResponse(
-        work_order_id=work_order_id, suggestions=suggestions,
+        delivered_trip_id=delivered_trip_id, suggestions=suggestions,
     )
 
 
-@router.get("/suggest-wos/{trip_order_id}", response_model=SuggestWosResponse)
+@router.get("/suggest-wos/{booked_trip_id}", response_model=SuggestWosResponse)
 async def suggest_wos(
-    trip_order_id: int,
+    booked_trip_id: int,
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
-    use_case: GetTripOrder = Depends(get_get_trip_order),
+    use_case: GetBookedTrip = Depends(get_get_booked_trip),
 ):
     db = use_case.repo.session  # type: ignore[attr-defined]
     from sqlalchemy import select
     to = (await db.execute(
-        select(TripOrderORM).where(TripOrderORM.id == trip_order_id)
+        select(BookedTripORM).where(BookedTripORM.id == booked_trip_id)
     )).scalar_one_or_none()
     if to is None:
-        raise HTTPException(status_code=404, detail="TripOrder not found")
+        raise HTTPException(status_code=404, detail="BookedTrip not found")
     suggestions = await suggest_wo_matches(db, to)
     return SuggestWosResponse(
-        trip_order_id=trip_order_id, suggestions=suggestions,
+        booked_trip_id=booked_trip_id, suggestions=suggestions,
     )
 
 
-@router.get("/reconcile/links/{work_order_id}")
-async def get_linked_trip_orders(
-    work_order_id: int,
+@router.get("/reconcile/links/{delivered_trip_id}")
+async def get_linked_booked_trips(
+    delivered_trip_id: int,
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
-    use_case: GetWorkOrder = Depends(get_get_work_order),
-    to_use_case: GetTripOrder = Depends(get_get_trip_order),
+    use_case: GetDeliveredTrip = Depends(get_get_delivered_trip),
+    to_use_case: GetBookedTrip = Depends(get_get_booked_trip),
 ):
-    """Return all TripOrders linked to a WorkOrder via active reconciliations."""
+    """Return all BookedTrips linked to a DeliveredTrip via active reconciliations."""
     from app.contexts.operations.infrastructure.link_queries import (
         find_all_links_for_wo,
     )
@@ -398,12 +398,12 @@ async def get_linked_trip_orders(
 
     db = use_case.repo.session  # type: ignore[attr-defined]
 
-    links = await find_all_links_for_wo(db, work_order_id)
-    to_ids = [link.trip_order_id for link in links]
+    links = await find_all_links_for_wo(db, delivered_trip_id)
+    to_ids = [link.booked_trip_id for link in links]
     if not to_ids:
-        return {"work_order_id": work_order_id, "trip_orders": []}
+        return {"delivered_trip_id": delivered_trip_id, "booked_trips": []}
 
-    from app.contexts.operations.interface.routers.trip_orders import (
+    from app.contexts.operations.interface.routers.booked_trips import (
         _load_one as _load_trip_one,
     )
     to_session = to_use_case.repo.session  # type: ignore[attr-defined]
@@ -412,7 +412,7 @@ async def get_linked_trip_orders(
         t = await to_use_case(to_id)
         out = await _load_trip_one(to_session, t)
         result.append(out)
-    return {"work_order_id": work_order_id, "trip_orders": result}
+    return {"delivered_trip_id": delivered_trip_id, "booked_trips": result}
 
 
 @router.post("/upload-excel")
@@ -422,7 +422,7 @@ async def upload_customer_excel(
     date_from: str | None = Query(None, description="Filter from date (YYYY-MM-DD)"),
     date_to: str | None = Query(None, description="Filter to date (YYYY-MM-DD)"),
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
-    use_case: GetWorkOrder = Depends(get_get_work_order),
+    use_case: GetDeliveredTrip = Depends(get_get_delivered_trip),
 ):
     from app.contexts.operations.infrastructure.excel import (
         compare_with_system_records,
@@ -463,7 +463,7 @@ async def auto_match(
     body: AutoMatchRequest,
     request: Request,
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
-    wo_use_case: GetWorkOrder = Depends(get_get_work_order),
+    wo_use_case: GetDeliveredTrip = Depends(get_get_delivered_trip),
 ):
     """Auto-match preview: returns candidates WITHOUT committing.
 
@@ -473,13 +473,13 @@ async def auto_match(
     """
     from datetime import date as date_type
     from sqlalchemy import select as sa_select
-    from app.models.domain import WorkOrder as WO, Reconciliation
+    from app.models.domain import DeliveredTrip as WO, Reconciliation
     from app.schemas.domain import (
         AutoMatchCandidate,
         AutoMatchCriterion,
-        AutoMatchWorkOrderRef,
-        AutoMatchTripOrderRef,
-        UnmatchedWorkOrderRef,
+        AutoMatchDeliveredTripRef,
+        AutoMatchBookedTripRef,
+        UnmatchedDeliveredTripRef,
         AutoMatchStats,
         AutoMatchRejectionReason,
     )
@@ -503,33 +503,33 @@ async def auto_match(
     if date_to:
         wo_query = wo_query.where(WO.created_at < date_to)
 
-    work_orders = list((await db.execute(wo_query)).scalars().all())
+    delivered_trips = list((await db.execute(wo_query)).scalars().all())
 
     matched_to_ids = set(
         r[0] for r in (await db.execute(
-            sa_select(Reconciliation.trip_order_id).where(
+            sa_select(Reconciliation.booked_trip_id).where(
                 Reconciliation.is_active == True  # noqa: E712
             )
         )).all()
     )
 
     candidates: list[AutoMatchCandidate] = []
-    unmatched_refs: list[UnmatchedWorkOrderRef] = []
+    unmatched_refs: list[UnmatchedDeliveredTripRef] = []
     unmatched_wos: list[WO] = []
     skipped = 0
     errors: list[str] = []
 
     # Preload helpers for building refs
-    for wo in work_orders:
+    for wo in delivered_trips:
         try:
             suggestions = await suggest_trip_matches(db, wo)
             # Filter out already-matched trip orders
-            suggestions = [s for s in suggestions if s.trip_order.id not in matched_to_ids]
+            suggestions = [s for s in suggestions if s.booked_trip.id not in matched_to_ids]
             if not suggestions:
                 # Check if WO has any active link already
                 has_link = (await db.execute(
                     sa_select(Reconciliation.id).where(
-                        Reconciliation.work_order_id == wo.id,
+                        Reconciliation.delivered_trip_id == wo.id,
                         Reconciliation.is_active == True,  # noqa: E712
                     )
                 )).scalar_one_or_none()
@@ -537,19 +537,18 @@ async def auto_match(
                     skipped += 1
                 else:
                     unmatched_wos.append(wo)
-                    unmatched_refs.append(UnmatchedWorkOrderRef(
+                    unmatched_refs.append(UnmatchedDeliveredTripRef(
                         id=wo.id,
-                        code=wo.code,
                         plate=None,  # populated below if needed
                         date=wo.created_at.date().isoformat() if wo.created_at else None,
                     ))
                 continue
 
             # Build refs for this WO
-            client_ids_set = {s.trip_order.client_id for s in suggestions} | {wo.client_id}
+            client_ids_set = {s.booked_trip.client_id for s in suggestions} | {wo.client_id}
             location_ids_set = set()
             for s in suggestions:
-                location_ids_set |= {s.trip_order.pickup_location.id, s.trip_order.dropoff_location.id}
+                location_ids_set |= {s.booked_trip.pickup_location.id, s.booked_trip.dropoff_location.id}
             location_ids_set |= {wo.pickup_location_id, wo.dropoff_location_id}
 
             partners_map = await load_partner_summaries(db, client_ids_set)
@@ -560,9 +559,8 @@ async def auto_match(
             wo_pickup = get_location_summary(locations_map, wo.pickup_location_id)
             wo_dropoff = get_location_summary(locations_map, wo.dropoff_location_id)
             wo_driver = get_driver_summary(drivers_map, wo.driver_id)
-            wo_ref = AutoMatchWorkOrderRef(
+            wo_ref = AutoMatchDeliveredTripRef(
                 id=wo.id,
-                code=wo.code,
                 plate=wo_driver.vehicle.plate if wo_driver and wo_driver.vehicle else None,
                 date=wo.created_at.date().isoformat() if wo.created_at else None,
                 client_name=wo_partner.name,
@@ -571,14 +569,13 @@ async def auto_match(
             for s in suggestions:
                 if s.score < 0.5:
                     continue  # skip below-threshold
-                to_partner = get_partner_summary(partners_map, s.trip_order.partner.id)
-                to_pickup = get_location_summary(locations_map, s.trip_order.pickup_location.id)
-                to_dropoff = get_location_summary(locations_map, s.trip_order.dropoff_location.id)
-                to_ref = AutoMatchTripOrderRef(
-                    id=s.trip_order.id,
-                    code=s.trip_order.code,
+                to_partner = get_partner_summary(partners_map, s.booked_trip.partner.id)
+                to_pickup = get_location_summary(locations_map, s.booked_trip.pickup_location.id)
+                to_dropoff = get_location_summary(locations_map, s.booked_trip.dropoff_location.id)
+                to_ref = AutoMatchBookedTripRef(
+                    id=s.booked_trip.id,
                     client_name=to_partner.name,
-                    containers=list(s.trip_order.containers or []),
+                    containers=list(s.booked_trip.containers or []),
                 )
 
                 criteria = [
@@ -587,16 +584,16 @@ async def auto_match(
                 ]
 
                 candidates.append(AutoMatchCandidate(
-                    work_order_id=wo.id,
-                    trip_order_id=s.trip_order.id,
+                    delivered_trip_id=wo.id,
+                    booked_trip_id=s.booked_trip.id,
                     score=s.score,
                     match_score=s.match_score,
                     max_score=s.max_score,
                     matched_fields=s.matched_fields,
                     criteria=criteria,
                     suggested_default=s.score >= (4.0 / 5.0),
-                    work_order_ref=wo_ref,
-                    trip_order_ref=to_ref,
+                    delivered_trip_ref=wo_ref,
+                    booked_trip_ref=to_ref,
                 ))
 
         except Exception as exc:
@@ -605,7 +602,7 @@ async def auto_match(
     # ── Compute rejection breakdown (trip-based: why trips don't match WOs) ──
     stats = AutoMatchStats()
     if unmatched_wos:
-        from app.models.domain import TripOrder as TORM, TripOrderContainer as TOC, WorkOrderContainer as WOC
+        from app.models.domain import BookedTrip as TORM, BookedTripContainer as TOC, DeliveredTripContainer as WOC
         from app.contexts.operations.infrastructure.match_suggester import (
             _load_alias_groups, _locations_match,
         )
@@ -622,8 +619,8 @@ async def auto_match(
             wo_dates = {wo.created_at.date() for wo in unmatched_wos if wo.created_at}
 
             wo_cont_rows = (await db.execute(
-                sa_select(WOC.work_order_id, WOC.container_number)
-                .where(WOC.work_order_id.in_([wo.id for wo in unmatched_wos]))
+                sa_select(WOC.delivered_trip_id, WOC.container_number)
+                .where(WOC.delivered_trip_id.in_([wo.id for wo in unmatched_wos]))
             )).all()
             wo_container_map: dict[int, set[str]] = {}
             for wid, cn in wo_cont_rows:
@@ -635,7 +632,7 @@ async def auto_match(
             wo_dropoff_ids = {wo.dropoff_location_id for wo in unmatched_wos if wo.dropoff_location_id}
 
             to_cont_rows = (await db.execute(
-                sa_select(TOC.trip_order_id, TOC.container_number)
+                sa_select(TOC.booked_trip_id, TOC.container_number)
             )).all()
             to_container_map: dict[int, set[str]] = {}
             for tid, cn in to_cont_rows:
@@ -690,10 +687,10 @@ async def auto_match(
             ])
 
     return AutoMatchResponse(
-        scanned_work_order_count=len(work_orders),
+        scanned_delivered_trip_count=len(delivered_trips),
         skipped_already_matched=skipped,
         candidates=candidates,
-        unmatched_work_order_refs=unmatched_refs,
+        unmatched_delivered_trip_refs=unmatched_refs,
         errors=errors,
         stats=stats,
     )
@@ -704,7 +701,7 @@ async def auto_match_confirm(
     body: AutoMatchConfirmRequest,
     request: Request,
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
-    match_use_case: MatchTripToWorkOrder = Depends(get_match_trip_to_work_order),
+    match_use_case: MatchTripToDeliveredTrip = Depends(get_match_booked_to_delivered_trip),
 ):
     """Confirm selected auto-match pairs — only commits user-reviewed pairs.
 
@@ -728,11 +725,11 @@ async def auto_match_confirm(
     for pair in body.pairs:
         try:
             # Idempotency check
-            existing = await find_link(db, pair.work_order_id, pair.trip_order_id)
+            existing = await find_link(db, pair.delivered_trip_id, pair.booked_trip_id)
             if existing:
                 failed.append(AutoMatchConfirmResult(
-                    work_order_id=pair.work_order_id,
-                    trip_order_id=pair.trip_order_id,
+                    delivered_trip_id=pair.delivered_trip_id,
+                    booked_trip_id=pair.booked_trip_id,
                     success=False,
                     error="Đã ghép trước đó",
                 ))
@@ -740,20 +737,20 @@ async def auto_match_confirm(
 
             # Validate WO is still PENDING
             wo = (await db.execute(
-                sa_select(WorkOrderORM).where(WorkOrderORM.id == pair.work_order_id)
+                sa_select(DeliveredTripORM).where(DeliveredTripORM.id == pair.delivered_trip_id)
             )).scalar_one_or_none()
             if wo is None:
                 failed.append(AutoMatchConfirmResult(
-                    work_order_id=pair.work_order_id,
-                    trip_order_id=pair.trip_order_id,
+                    delivered_trip_id=pair.delivered_trip_id,
+                    booked_trip_id=pair.booked_trip_id,
                     success=False,
                     error="Phiếu chuyến không tồn tại",
                 ))
                 continue
             if wo.status != "PENDING":
                 failed.append(AutoMatchConfirmResult(
-                    work_order_id=pair.work_order_id,
-                    trip_order_id=pair.trip_order_id,
+                    delivered_trip_id=pair.delivered_trip_id,
+                    booked_trip_id=pair.booked_trip_id,
                     success=False,
                     error=f"Phiếu chuyến đã ở trạng thái {wo.status}",
                 ))
@@ -761,36 +758,36 @@ async def auto_match_confirm(
 
             # Validate TO capacity
             to_orm = (await db.execute(
-                sa_select(TripOrderORM).where(TripOrderORM.id == pair.trip_order_id)
+                sa_select(BookedTripORM).where(BookedTripORM.id == pair.booked_trip_id)
             )).scalar_one_or_none()
             if to_orm is None:
                 failed.append(AutoMatchConfirmResult(
-                    work_order_id=pair.work_order_id,
-                    trip_order_id=pair.trip_order_id,
+                    delivered_trip_id=pair.delivered_trip_id,
+                    booked_trip_id=pair.booked_trip_id,
                     success=False,
                     error="Đơn hàng không tồn tại",
                 ))
                 continue
 
             to_containers = (await db.execute(
-                sa_select(TripOrderContainer).where(
-                    TripOrderContainer.trip_order_id == pair.trip_order_id
+                sa_select(BookedTripContainer).where(
+                    BookedTripContainer.booked_trip_id == pair.booked_trip_id
                 )
             )).scalars().all()
             container_count = len(to_containers)
-            already_linked = await count_links_for_to(db, pair.trip_order_id)
+            already_linked = await count_links_for_to(db, pair.booked_trip_id)
             if container_count == 0:
                 failed.append(AutoMatchConfirmResult(
-                    work_order_id=pair.work_order_id,
-                    trip_order_id=pair.trip_order_id,
+                    delivered_trip_id=pair.delivered_trip_id,
+                    booked_trip_id=pair.booked_trip_id,
                     success=False,
                     error="Đơn hàng chưa có container",
                 ))
                 continue
             if already_linked >= container_count:
                 failed.append(AutoMatchConfirmResult(
-                    work_order_id=pair.work_order_id,
-                    trip_order_id=pair.trip_order_id,
+                    delivered_trip_id=pair.delivered_trip_id,
+                    booked_trip_id=pair.booked_trip_id,
                     success=False,
                     error="Đơn hàng đã hết sức chứa",
                 ))
@@ -798,29 +795,29 @@ async def auto_match_confirm(
 
             # Perform the match
             to = await match_use_case(ReconcileInput(
-                work_order_id=pair.work_order_id,
-                trip_order_id=pair.trip_order_id,
+                delivered_trip_id=pair.delivered_trip_id,
+                booked_trip_id=pair.booked_trip_id,
                 user_id=current_user.id,
             ))
             await log_action(
                 db, user_id=current_user.id, action="AUTO_MATCH_CONFIRM",
-                table_name="reconciliations",
+                table_name="matched_trips",
                 record_id=int(to.id),  # type: ignore[arg-type]
                 new_value={
-                    "work_order_id": pair.work_order_id,
-                    "trip_order_id": pair.trip_order_id,
+                    "delivered_trip_id": pair.delivered_trip_id,
+                    "booked_trip_id": pair.booked_trip_id,
                 },
                 request=request,
             )
             matched.append(AutoMatchConfirmResult(
-                work_order_id=pair.work_order_id,
-                trip_order_id=pair.trip_order_id,
+                delivered_trip_id=pair.delivered_trip_id,
+                booked_trip_id=pair.booked_trip_id,
                 success=True,
             ))
         except Exception as exc:
             failed.append(AutoMatchConfirmResult(
-                work_order_id=pair.work_order_id,
-                trip_order_id=pair.trip_order_id,
+                delivered_trip_id=pair.delivered_trip_id,
+                booked_trip_id=pair.booked_trip_id,
                 success=False,
                 error=str(exc),
             ))
@@ -853,7 +850,7 @@ async def match_scores(
     date_from: str | None = Query(None),
     date_to: str | None = Query(None),
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
-    use_case: GetWorkOrder = Depends(get_get_work_order),
+    use_case: GetDeliveredTrip = Depends(get_get_delivered_trip),
 ):
     """Return the best match score for each PENDING work order.
 
@@ -862,7 +859,7 @@ async def match_scores(
     """
     from datetime import date as date_type
     from sqlalchemy import select as sa_select
-    from app.models.domain import WorkOrder as WO, Reconciliation
+    from app.models.domain import DeliveredTrip as WO, Reconciliation
 
     db = use_case.repo.session  # type: ignore[attr-defined]
 
@@ -875,23 +872,23 @@ async def match_scores(
     if dt:
         wo_query = wo_query.where(WO.created_at < dt)
 
-    work_orders = list((await db.execute(wo_query)).scalars().all())
-    scores: list[WorkOrderMatchScore] = []
+    delivered_trips = list((await db.execute(wo_query)).scalars().all())
+    scores: list[DeliveredTripMatchScore] = []
 
-    for wo in work_orders:
+    for wo in delivered_trips:
         suggestions = await suggest_trip_matches(db, wo)
         if suggestions:
             best = suggestions[0]
-            scores.append(WorkOrderMatchScore(
-                work_order_id=wo.id,
+            scores.append(DeliveredTripMatchScore(
+                delivered_trip_id=wo.id,
                 best_score=best.score,
                 best_match_score=best.match_score,
                 max_score=best.max_score,
                 suggestion_count=len(suggestions),
             ))
         else:
-            scores.append(WorkOrderMatchScore(
-                work_order_id=wo.id,
+            scores.append(DeliveredTripMatchScore(
+                delivered_trip_id=wo.id,
                 best_score=0.0,
                 best_match_score=0,
             ))
@@ -904,7 +901,7 @@ async def bulk_match(
     body: BulkMatchRequest,
     request: Request,
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
-    match_use_case: MatchTripToWorkOrder = Depends(get_match_trip_to_work_order),
+    match_use_case: MatchTripToDeliveredTrip = Depends(get_match_booked_to_delivered_trip),
 ):
     """Bulk-match pairs of work orders with trip orders.
 
@@ -919,39 +916,39 @@ async def bulk_match(
             # Verify full match score
             from sqlalchemy import select as sa_select
             wo = (await db.execute(
-                sa_select(WorkOrderORM).where(WorkOrderORM.id == pair.work_order_id)
+                sa_select(DeliveredTripORM).where(DeliveredTripORM.id == pair.delivered_trip_id)
             )).scalar_one_or_none()
             if wo is None:
-                errors.append(f"WorkOrder #{pair.work_order_id} not found")
+                errors.append(f"DeliveredTrip #{pair.delivered_trip_id} not found")
                 continue
 
             suggestions = await suggest_trip_matches(db, wo)
-            matching = [s for s in suggestions if s.trip_order.id == pair.trip_order_id]
+            matching = [s for s in suggestions if s.booked_trip.id == pair.booked_trip_id]
             if not matching:
                 errors.append(
-                    f"TO #{pair.trip_order_id} not a suggestion for WO #{pair.work_order_id}"
+                    f"TO #{pair.booked_trip_id} not a suggestion for WO #{pair.delivered_trip_id}"
                 )
                 continue
             if matching[0].score < 1.0:
                 errors.append(
-                    f"WO #{pair.work_order_id} → TO #{pair.trip_order_id}: "
+                    f"WO #{pair.delivered_trip_id} → TO #{pair.booked_trip_id}: "
                     f"score {matching[0].match_score}/{matching[0].max_score}, "
                     f"only full matches (5/5) allowed"
                 )
                 continue
 
             to = await match_use_case(ReconcileInput(
-                work_order_id=pair.work_order_id,
-                trip_order_id=pair.trip_order_id,
+                delivered_trip_id=pair.delivered_trip_id,
+                booked_trip_id=pair.booked_trip_id,
                 user_id=current_user.id,
             ))
             await log_action(
                 db, user_id=current_user.id, action="BULK_MATCH",
-                table_name="reconciliations",
+                table_name="matched_trips",
                 record_id=int(to.id),  # type: ignore[arg-type]
                 new_value={
-                    "work_order_id": pair.work_order_id,
-                    "trip_order_id": pair.trip_order_id,
+                    "delivered_trip_id": pair.delivered_trip_id,
+                    "booked_trip_id": pair.booked_trip_id,
                 },
                 request=request,
             )
@@ -960,12 +957,12 @@ async def bulk_match(
             # Salary is calculated on-the-fly; no post-match recalc needed.
 
             matched.append(BulkMatchResult(
-                work_order_id=pair.work_order_id,
-                trip_order_id=pair.trip_order_id,
+                delivered_trip_id=pair.delivered_trip_id,
+                booked_trip_id=pair.booked_trip_id,
                 success=True,
             ))
         except Exception as exc:
-            errors.append(f"WO #{pair.work_order_id} → TO #{pair.trip_order_id}: {exc}")
+            errors.append(f"WO #{pair.delivered_trip_id} → TO #{pair.booked_trip_id}: {exc}")
 
     return BulkMatchResponse(matched=matched, errors=errors)
 
@@ -976,7 +973,7 @@ async def export_reconciliation_excel(
     date_from: str | None = Query(None, description="Filter from date (YYYY-MM-DD)"),
     date_to: str | None = Query(None, description="Filter to date (YYYY-MM-DD)"),
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
-    use_case: GetWorkOrder = Depends(get_get_work_order),
+    use_case: GetDeliveredTrip = Depends(get_get_delivered_trip),
 ):
     from app.contexts.operations.infrastructure.excel import generate_reconciliation_excel
 

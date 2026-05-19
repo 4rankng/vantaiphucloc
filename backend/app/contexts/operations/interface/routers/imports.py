@@ -7,7 +7,7 @@ Two-stage flow per upload:
      plus a per-string LocationResolver "find" result for the UI.
 
   2. `POST /imports/customer-excel/commit` — JSON body with confirmed
-     rows. Hands rows to `CreateTripOrderFromImport`. Idempotent on
+     rows. Hands rows to `CreateBookedTripFromImport`. Idempotent on
      `(client_id, trip_date, container_number)`.
 
 The `customer-pricing` (bảng giá) preview/commit + `apply-pricing`
@@ -38,14 +38,14 @@ from app.contexts.customer_pricing.infrastructure.location_resolver import (
     LocationResolverService,
     ResolverSource,
 )
-from app.contexts.operations.application import CreateTripOrderFromImport
+from app.contexts.operations.application import CreateBookedTripFromImport
 from app.contexts.operations.application.dto import (
     ImportCommitInput,
     ImportTripRow,
 )
 from app.contexts.operations.interface.dependencies import (
     get_apply_pricing_to_trips,
-    get_create_trip_order_from_import,
+    get_create_booked_trip_from_import,
 )
 from app.contexts.operations.interface.error_translation import translate
 from app.core.deps import require_roles
@@ -318,8 +318,8 @@ async def commit_customer_excel(
     body: CommitRequest = Body(...),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_roles("accountant", "superadmin")),
-    use_case: CreateTripOrderFromImport = Depends(
-        get_create_trip_order_from_import
+    use_case: CreateBookedTripFromImport = Depends(
+        get_create_booked_trip_from_import
     ),
 ):
     if not body.rows:
@@ -403,7 +403,7 @@ async def commit_customer_excel(
 
 class ApplyPricingRequest(BaseModel):
     client_id: int
-    trip_order_ids: list[int] | None = None
+    booked_trip_ids: list[int] | None = None
 
 
 class ApplyPricingResponse(BaseModel):
@@ -432,7 +432,7 @@ async def apply_pricing(
     /imports/customer-excel/apply-pricing for the trip-id-only shape."""
     priced, unpriced_ids = await use_case(
         client_id=body.client_id,
-        trip_ids=body.trip_order_ids,
+        trip_ids=body.booked_trip_ids,
         skip_already_priced=False,
     )
     return ApplyPricingResponse(
@@ -451,7 +451,7 @@ async def apply_pricing_to_trip_ids(
     _user: User = Depends(require_roles("accountant", "superadmin")),
 ):
     """Bulk-apply pricing to a specific list of trip ids. Idempotent —
-    trips with unit_price > 0 are counted as already priced and not
+    trips with revenue > 0 are counted as already priced and not
     re-touched."""
     if not body.trip_ids:
         return ApplyPricingByIdsResponse(priced=0, unpriced=0, unpriced_trip_ids=[])
@@ -499,7 +499,7 @@ class PricingPreviewRowDto(BaseModel):
     pickup_location: str
     dropoff_location: str
     work_type: str
-    unit_price: int
+    revenue: int
     quantity: int = 1
     driver_salary: int = 0
     allowance: int = 0
@@ -526,6 +526,7 @@ class PricingCommitResponse(BaseModel):
 async def preview_customer_pricing(
     file: UploadFile = File(...),
     format: str | None = Form(None),
+    client_id: int | None = Form(None),
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(require_roles("accountant", "superadmin")),
 ):
@@ -565,7 +566,7 @@ async def preview_customer_pricing(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    location_resolutions = await resolve_preview_locations(db, preview.rows)
+    location_resolutions = await resolve_preview_locations(db, preview.rows, client_id=client_id)
     payload = preview.to_dict()
     payload["filename"] = file.filename
     payload["location_resolutions"] = location_resolutions
@@ -594,7 +595,7 @@ async def commit_customer_pricing(
             pickup_raw=r.pickup_location,
             dropoff_raw=r.dropoff_location,
             work_type=r.work_type,
-            unit_price=r.unit_price,
+            revenue=r.revenue,
             quantity=r.quantity,
             driver_salary=r.driver_salary,
             allowance=r.allowance,

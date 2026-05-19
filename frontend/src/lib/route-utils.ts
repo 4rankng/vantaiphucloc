@@ -1,6 +1,6 @@
-import type { WorkOrder, TripOrder } from '@/data/domain'
+import type { DeliveredTrip, BookedTrip } from '@/data/domain'
 
-type RouteEntity = WorkOrder | TripOrder
+type RouteEntity = DeliveredTrip | BookedTrip
 
 export function resolveRoute(wo: RouteEntity): string {
   const from = wo.pickupLocation?.name || ''

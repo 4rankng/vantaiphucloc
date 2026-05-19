@@ -1,8 +1,8 @@
 """Bulk import work orders from Excel and auto-match against trip orders.
 
 Parses an Excel file (.xlsx) with flexible column detection, creates
-WorkOrder + WorkOrderContainer rows, then runs matching against existing
-unmatched TripOrders using the match_suggester scoring logic.
+DeliveredTrip + DeliveredTripContainer rows, then runs matching against existing
+unmatched BookedTrips using the match_suggester scoring logic.
 """
 
 from __future__ import annotations
@@ -24,10 +24,10 @@ from app.models.domain import (
     LocationAlias,
     Client,
     Reconciliation,
-    TripOrder,
-    TripOrderContainer,
-    WorkOrder,
-    WorkOrderContainer,
+    BookedTrip,
+    BookedTripContainer,
+    DeliveredTrip,
+    DeliveredTripContainer,
 )
 from app.utils.excel_utils import (
     CONTAINER_RE,
@@ -126,7 +126,7 @@ class BulkImportResult:
 
 
 class BulkImportService:
-    """Parse Excel file, create WorkOrders, auto-match against TripOrders."""
+    """Parse Excel file, create DeliveredTrips, auto-match against BookedTrips."""
 
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -172,19 +172,19 @@ class BulkImportService:
         # Resolve locations for all rows
         await self._resolve_locations_for_rows(valid_rows)
 
-        # Create WorkOrders
+        # Create DeliveredTrips
         created_wo_ids: list[int] = []
         create_errors: list[str] = []
         details: list[dict] = []
 
         for row in valid_rows:
             try:
-                wo_id = await self._create_work_order(row, resolved_client_id, user_id)
+                wo_id = await self._create_delivered_trip(row, resolved_client_id, user_id)
                 created_wo_ids.append(wo_id)
                 details.append({
                     "row": row.row_number,
                     "container": row.container_number,
-                    "work_order_id": wo_id,
+                    "delivered_trip_id": wo_id,
                     "status": "created",
                 })
             except Exception as exc:
@@ -199,7 +199,7 @@ class BulkImportService:
 
         await self.session.flush()
 
-        # Auto-match created WOs against existing TripOrders
+        # Auto-match created WOs against existing BookedTrips
         matched, warnings, unmatched = await self._auto_match(created_wo_ids, user_id or 0)
 
         await self.session.commit()
@@ -418,10 +418,10 @@ class BulkImportService:
             r._pickup_location_id = resolved.get(r.pickup_location or "", None)  # type: ignore[attr-defined]
             r._dropoff_location_id = resolved.get(r.dropoff_location or "", None)  # type: ignore[attr-defined]
 
-    async def _create_work_order(
+    async def _create_delivered_trip(
         self, row: ImportRow, client_id: int, user_id: int | None,
     ) -> int:
-        """Create a WorkOrder + WorkOrderContainer from an ImportRow."""
+        """Create a DeliveredTrip + DeliveredTripContainer from an ImportRow."""
         pickup_id = getattr(row, "_pickup_location_id", None)
         dropoff_id = getattr(row, "_dropoff_location_id", None)
 
@@ -432,20 +432,12 @@ class BulkImportService:
                 f"trong hệ thống"
             )
 
-        # Generate code
-        wo_count = (
-            await self.session.execute(
-                select(func.count()).select_from(WorkOrder)
-            )
-        ).scalar() or 0
-        code = f"PLV{wo_count + 1:06d}"
-
-        wo = WorkOrder(
+        wo = DeliveredTrip(
             client_id=client_id,
-            code=code,
             pickup_location_id=pickup_id,
             dropoff_location_id=dropoff_id,
             driver_id=None,  # Will be assigned later
+            work_type=row.work_type or "E20",
             trip_date=row.trip_date,
             status="PENDING",
             vessel=row.notes if row.notes and ("tau" in row.notes.lower() or "tàu" in row.notes.lower()) else None,
@@ -453,10 +445,10 @@ class BulkImportService:
         self.session.add(wo)
         await self.session.flush()
 
-        container = WorkOrderContainer(
-            work_order_id=wo.id,
+        container = DeliveredTripContainer(
+            delivered_trip_id=wo.id,
             container_number=row.container_number or "",
-            work_type=row.work_type or "E20",
+            cont_type=row.work_type or "E20",
         )
         self.session.add(container)
         await self.session.flush()
@@ -470,7 +462,7 @@ class BulkImportService:
     async def _auto_match(
         self, wo_ids: list[int], user_id: int,
     ) -> tuple[int, int, int]:
-        """Match newly created WOs against existing unmatched TripOrders.
+        """Match newly created WOs against existing unmatched BookedTrips.
 
         Returns (matched, warnings, unmatched) counts.
         Uses the same scoring logic as match_suggester.
@@ -488,13 +480,13 @@ class BulkImportService:
 
         # Load created WOs with their containers
         wos = (await self.session.execute(
-            select(WorkOrder).where(WorkOrder.id.in_(wo_ids))
+            select(DeliveredTrip).where(DeliveredTrip.id.in_(wo_ids))
         )).scalars().all()
 
         wo_container_map: dict[int, list[str]] = {}
         wo_cont_rows = (await self.session.execute(
-            select(WorkOrderContainer.work_order_id, WorkOrderContainer.container_number)
-            .where(WorkOrderContainer.work_order_id.in_(wo_ids))
+            select(DeliveredTripContainer.delivered_trip_id, DeliveredTripContainer.container_number)
+            .where(DeliveredTripContainer.delivered_trip_id.in_(wo_ids))
         )).all()
         for wo_id, cn in wo_cont_rows:
             wo_container_map.setdefault(wo_id, []).append(
@@ -504,7 +496,7 @@ class BulkImportService:
         # Get all active reconciliation links (already matched WOs)
         already_linked = set(
             r[0] for r in (await self.session.execute(
-                select(Reconciliation.work_order_id).where(
+                select(Reconciliation.delivered_trip_id).where(
                     Reconciliation.is_active == True  # noqa: E712
                 )
             )).all()
@@ -529,17 +521,17 @@ class BulkImportService:
 
             wo_date = wo.trip_date or (wo.created_at.date() if wo.created_at else None)
 
-            # Find candidate TripOrders
+            # Find candidate BookedTrips
             container_subquery = (
-                select(TripOrderContainer.trip_order_id)
-                .where(TripOrderContainer.container_number.in_(wo_cn_set))
+                select(BookedTripContainer.booked_trip_id)
+                .where(BookedTripContainer.container_number.in_(wo_cn_set))
             )
             candidates = list((await self.session.execute(
-                select(TripOrder).where(
-                    TripOrder.status.in_(["PENDING", "MATCHED"]),
+                select(BookedTrip).where(
+                    BookedTrip.status.in_(["PENDING", "MATCHED"]),
                     or_(
-                        TripOrder.client_id == wo.client_id,
-                        TripOrder.id.in_(container_subquery),
+                        BookedTrip.client_id == wo.client_id,
+                        BookedTrip.id.in_(container_subquery),
                     ),
                 )
             )).scalars().all())
@@ -551,27 +543,27 @@ class BulkImportService:
             # Load TO containers and link counts
             to_ids = [t.id for t in candidates]
             to_cont_rows = (await self.session.execute(
-                select(TripOrderContainer)
-                .where(TripOrderContainer.trip_order_id.in_(to_ids))
+                select(BookedTripContainer)
+                .where(BookedTripContainer.booked_trip_id.in_(to_ids))
             )).scalars().all()
-            to_containers: dict[int, list[TripOrderContainer]] = defaultdict(list)
+            to_containers: dict[int, list[BookedTripContainer]] = defaultdict(list)
             for c in to_cont_rows:
-                to_containers[c.trip_order_id].append(c)
+                to_containers[c.booked_trip_id].append(c)
 
             # Count active links per TO
             link_counts: dict[int, int] = {}
             if to_ids:
                 link_rows = (await self.session.execute(
-                    select(Reconciliation.trip_order_id, func.count())
+                    select(Reconciliation.booked_trip_id, func.count())
                     .where(
-                        Reconciliation.trip_order_id.in_(to_ids),
+                        Reconciliation.booked_trip_id.in_(to_ids),
                         Reconciliation.is_active == True,  # noqa: E712
-                    ).group_by(Reconciliation.trip_order_id)
+                    ).group_by(Reconciliation.booked_trip_id)
                 )).all()
                 link_counts = {r[0]: r[1] for r in link_rows}
 
             # Score each candidate TO
-            best_to: TripOrder | None = None
+            best_to: BookedTrip | None = None
             best_score = 0.0
             best_container_id: int | None = None
 
@@ -607,12 +599,12 @@ class BulkImportService:
         return matched, warnings, unmatched
 
     async def _used_container_ids(
-        self, to_id: int, to_conts: list[TripOrderContainer], link_count: int,
+        self, to_id: int, to_conts: list[BookedTripContainer], link_count: int,
     ) -> set[int]:
         """Get IDs of TO containers already used by active reconciliations."""
         recons = (await self.session.execute(
-            select(Reconciliation.work_order_id).where(
-                Reconciliation.trip_order_id == to_id,
+            select(Reconciliation.delivered_trip_id).where(
+                Reconciliation.booked_trip_id == to_id,
                 Reconciliation.is_active == True,  # noqa: E712
             )
         )).all()
@@ -622,8 +614,8 @@ class BulkImportService:
 
         wo_ids = [r[0] for r in recons]
         wo_conts = (await self.session.execute(
-            select(WorkOrderContainer)
-            .where(WorkOrderContainer.work_order_id.in_(wo_ids))
+            select(DeliveredTripContainer)
+            .where(DeliveredTripContainer.delivered_trip_id.in_(wo_ids))
         )).scalars().all()
 
         used: set[int] = set()
@@ -642,11 +634,11 @@ class BulkImportService:
 
     def _score_match(
         self,
-        wo: WorkOrder,
+        wo: DeliveredTrip,
         wo_cn_set: set[str],
         wo_date: date | None,
-        to: TripOrder,
-        to_cont: TripOrderContainer,
+        to: BookedTrip,
+        to_cont: BookedTripContainer,
         alias_groups: dict[int, set[int]],
     ) -> float:
         """Score a (WO, TO container) match. Same logic as match_suggester."""
@@ -685,30 +677,22 @@ class BulkImportService:
         return score
 
     async def _create_match(
-        self, wo: WorkOrder, to: TripOrder, score: float, user_id: int,
+        self, wo: DeliveredTrip, to: BookedTrip, score: float, user_id: int,
     ) -> None:
         """Create a reconciliation link between WO and TO."""
-        from app.contexts.operations.domain.value_objects import WorkOrderStatus, TripOrderStatus
+        from app.contexts.operations.domain.value_objects import DeliveredTripStatus, BookedTripStatus
 
-        # Update WO status and pricing
-        wo.status = WorkOrderStatus.MATCHED.value
-        wo.is_locked = True
-        wo.apply_pricing_snapshot(
-            unit_price=to.unit_price,
-            driver_salary=to.driver_salary,
-            allowance=to.allowance,
-            pricing_id=to.pricing_id,
-        )
+        # Update WO status
+        wo.status = DeliveredTripStatus.MATCHED.value
 
         # Update TO status
-        if to.status == TripOrderStatus.PENDING.value:
-            to.status = TripOrderStatus.MATCHED.value
-        to.is_locked = True
+        if to.status == BookedTripStatus.PENDING.value:
+            to.status = BookedTripStatus.MATCHED.value
 
         # Create reconciliation link
         recon = Reconciliation(
-            trip_order_id=to.id,
-            work_order_id=wo.id,
+            booked_trip_id=to.id,
+            delivered_trip_id=wo.id,
             match_score=score,
             matched_by=user_id,
             is_active=True,

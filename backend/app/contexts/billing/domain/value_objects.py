@@ -38,12 +38,13 @@ class TripLine:
     trip_date: date
     client_code: str
     container_number: str
-    work_type: str          # F20 | F40 | E20 | E40
+    cont_type: str          # F20 | F40 | E20 | E40
+    work_type: str          # tác nghiệp: XUẤT/NHẬP TÀU, CHUYỂN BÃI, etc.
     tractor_plate: str      # may be ""
     pickup_location: str
     dropoff_location: str
     unit_price: int
-    vessel: str = ""         # ship/vessel name from WorkOrder
+    vessel: str = ""         # ship/vessel name from DeliveredTrip
 
 
 @dataclass

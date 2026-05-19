@@ -1,8 +1,8 @@
 import { api } from './client'
 import { toCamel, toSnake, ok, fail, unwrapList } from './utils'
 import type {
-  TripOrder,
-  TripOrderContainerItem,
+  BookedTrip,
+  BookedTripContainerItem,
   ApiResponse,
   SuggestMatchesResponse,
   SuggestWosResponse,
@@ -14,46 +14,46 @@ import type {
   BatchMatchForTOResponse,
 } from '@/data/domain'
 
-interface TripOrderFilters {
+interface BookedTripFilters {
   clientId?: number
-  status?: TripOrder['status']
+  status?: BookedTrip['status']
   dateFrom?: string
   dateTo?: string
   unpriced?: boolean
   pageSize?: number
 }
 
-export interface TripOrderCreatePayload {
+export interface BookedTripCreatePayload {
   tripDate: string
   clientId: number
   pickupLocationId: number
   dropoffLocationId: number
-  containers: TripOrderContainerItem[]
+  containers: BookedTripContainerItem[]
   pricingId?: number | null
   unitPrice: number
   driverSalary: number
   allowance: number
   revenue: number
-  matchedWorkOrderIds?: number[]
+  matchedDeliveredTripIds?: number[]
 }
 
-export interface TripOrderUpdatePayload {
+export interface BookedTripUpdatePayload {
   tripDate?: string
   clientId?: number
   pickupLocationId?: number
   dropoffLocationId?: number
-  containers?: TripOrderContainerItem[]
+  containers?: BookedTripContainerItem[]
   pricingId?: number | null
   unitPrice?: number
   driverSalary?: number
   allowance?: number
   revenue?: number
-  status?: TripOrder['status']
+  status?: BookedTrip['status']
   isConfirmed?: boolean
-  matchedWorkOrderIds?: number[]
+  matchedDeliveredTripIds?: number[]
 }
 
-export async function getTripOrders(filters?: TripOrderFilters): Promise<ApiResponse<TripOrder[]>> {
+export async function getBookedTrips(filters?: BookedTripFilters): Promise<ApiResponse<BookedTrip[]>> {
   try {
     const params: Record<string, string> = {}
     if (filters?.clientId) params.client_id = String(filters.clientId)
@@ -62,57 +62,57 @@ export async function getTripOrders(filters?: TripOrderFilters): Promise<ApiResp
     if (filters?.dateTo) params.date_to = filters.dateTo
     if (filters?.unpriced !== undefined) params.unpriced = String(filters.unpriced)
     if (filters?.pageSize) params.page_size = String(filters.pageSize)
-    const res = await api.get('/trip-orders', { params })
-    return ok(toCamel<TripOrder[]>(unwrapList(res.data)))
+    const res = await api.get('/booked-trips', { params })
+    return ok(toCamel<BookedTrip[]>(unwrapList(res.data)))
   } catch (err) {
     return fail(err)
   }
 }
 
-export async function createTripOrder(
-  data: TripOrderCreatePayload,
-): Promise<ApiResponse<TripOrder>> {
+export async function createBookedTrip(
+  data: BookedTripCreatePayload,
+): Promise<ApiResponse<BookedTrip>> {
   try {
-    const res = await api.post('/trip-orders', toSnake(data))
-    return ok(toCamel<TripOrder>(res.data))
+    const res = await api.post('/booked-trips', toSnake(data))
+    return ok(toCamel<BookedTrip>(res.data))
   } catch (err) {
     return fail(err)
   }
 }
 
-export async function updateTripOrder(id: number, data: TripOrderUpdatePayload): Promise<ApiResponse<TripOrder>> {
+export async function updateBookedTrip(id: number, data: BookedTripUpdatePayload): Promise<ApiResponse<BookedTrip>> {
   try {
-    const res = await api.put(`/trip-orders/${id}`, toSnake(data))
-    return ok(toCamel<TripOrder>(res.data))
+    const res = await api.put(`/booked-trips/${id}`, toSnake(data))
+    return ok(toCamel<BookedTrip>(res.data))
   } catch (err) {
     return fail(err)
   }
 }
 
 export async function reconcile(
-  workOrderId: number,
-  tripOrderId: number,
-): Promise<ApiResponse<TripOrder>> {
+  deliveredTripId: number,
+  bookedTripId: number,
+): Promise<ApiResponse<BookedTrip>> {
   try {
     const res = await api.post('/reconcile', {
-      work_order_id: workOrderId,
-      trip_order_id: tripOrderId,
+      work_order_id: deliveredTripId,
+      trip_order_id: bookedTripId,
     })
-    return ok(toCamel<TripOrder>(res.data))
+    return ok(toCamel<BookedTrip>(res.data))
   } catch (err) {
     return fail(err)
   }
 }
 
 export async function unmatch(
-  workOrderId: number,
-  tripOrderId: number,
+  deliveredTripId: number,
+  bookedTripId: number,
   reason: string,
 ): Promise<ApiResponse<{ success: boolean; message: string }>> {
   try {
     const res = await api.post('/reconcile/unmatch', {
-      work_order_id: workOrderId,
-      trip_order_id: tripOrderId,
+      work_order_id: deliveredTripId,
+      trip_order_id: bookedTripId,
       reason,
     })
     return ok(res.data)
@@ -122,10 +122,10 @@ export async function unmatch(
 }
 
 export async function suggestMatches(
-  workOrderId: number,
+  deliveredTripId: number,
 ): Promise<ApiResponse<SuggestMatchesResponse>> {
   try {
-    const res = await api.get(`/suggest-matches/${workOrderId}`)
+    const res = await api.get(`/suggest-matches/${deliveredTripId}`)
     return ok(toCamel<SuggestMatchesResponse>(res.data))
   } catch (err) {
     return fail(err)
@@ -133,10 +133,10 @@ export async function suggestMatches(
 }
 
 export async function suggestWosForTrip(
-  tripOrderId: number,
+  bookedTripId: number,
 ): Promise<ApiResponse<SuggestWosResponse>> {
   try {
-    const res = await api.get(`/suggest-wos/${tripOrderId}`)
+    const res = await api.get(`/suggest-wos/${bookedTripId}`)
     return ok(toCamel<SuggestWosResponse>(res.data))
   } catch (err) {
     return fail(err)
@@ -144,11 +144,11 @@ export async function suggestWosForTrip(
 }
 
 export async function toggleTripConfirmation(
-  tripOrderId: number,
-): Promise<ApiResponse<TripOrder>> {
+  bookedTripId: number,
+): Promise<ApiResponse<BookedTrip>> {
   try {
-    const res = await api.put(`/trip-orders/${tripOrderId}/confirm`)
-    return ok(toCamel<TripOrder>(res.data))
+    const res = await api.put(`/booked-trips/${bookedTripId}/confirm`)
+    return ok(toCamel<BookedTrip>(res.data))
   } catch (err) {
     return fail(err)
   }
@@ -199,11 +199,11 @@ export interface ImportResult {
   errors: string[]
 }
 
-export async function importTripOrders(file: File): Promise<ApiResponse<ImportResult>> {
+export async function importBookedTrips(file: File): Promise<ApiResponse<ImportResult>> {
   try {
     const formData = new FormData()
     formData.append('file', file)
-    const res = await api.post('/trip-orders/import', formData, {
+    const res = await api.post('/booked-trips/import', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     return ok(toCamel<ImportResult>(res.data))
@@ -212,7 +212,7 @@ export async function importTripOrders(file: File): Promise<ApiResponse<ImportRe
   }
 }
 
-export async function exportTripOrdersExcel(filters?: {
+export async function exportBookedTripsExcel(filters?: {
   dateFrom?: string; dateTo?: string; status?: string; clientId?: number
 }): Promise<Blob> {
   const params = new URLSearchParams()
@@ -220,12 +220,12 @@ export async function exportTripOrdersExcel(filters?: {
   if (filters?.dateTo) params.append('date_to', filters.dateTo)
   if (filters?.status) params.append('status', filters.status)
   if (filters?.clientId) params.append('client_id', String(filters.clientId))
-  const res = await api.get(`/trip-orders/export?${params.toString()}`, { responseType: 'blob' })
+  const res = await api.get(`/booked-trips/export?${params.toString()}`, { responseType: 'blob' })
   return res.data
 }
 
-export async function downloadTripOrderTemplate(): Promise<Blob> {
-  const res = await api.get('/trip-orders/template', { responseType: 'blob' })
+export async function downloadBookedTripTemplate(): Promise<Blob> {
+  const res = await api.get('/booked-trips/template', { responseType: 'blob' })
   return res.data
 }
 
@@ -240,7 +240,7 @@ export async function exportDoiSoatExcel(
   params.append('client_id', String(clientId))
   params.append('date_from', dateFrom)
   params.append('date_to', dateTo)
-  const res = await api.get(`/trip-orders/export-doi-soat?${params.toString()}`, {
+  const res = await api.get(`/booked-trips/export-doi-soat?${params.toString()}`, {
     responseType: 'blob',
   })
   return res.data
@@ -255,26 +255,26 @@ export interface AutoMatchCriterionFE {
 }
 
 export interface AutoMatchCandidateFE {
-  workOrderId: number
-  tripOrderId: number
+  deliveredTripId: number
+  bookedTripId: number
   score: number
   matchScore: number
   maxScore: number
   matchedFields: string[]
   criteria: AutoMatchCriterionFE[]
   suggestedDefault: boolean
-  workOrderRef: {
+  deliveredTripRef: {
     id: number
     code: string | null
     plate: string | null
     date: string | null
     clientName: string | null
   } | null
-  tripOrderRef: {
+  bookedTripRef: {
     id: number
     code: string | null
     clientName: string | null
-    containers: TripOrderContainerItem[]
+    containers: BookedTripContainerItem[]
   } | null
 }
 
@@ -289,17 +289,17 @@ export interface AutoMatchStatsFE {
 }
 
 export interface AutoMatchPreviewResponseFE {
-  scannedWorkOrderCount: number
+  scannedDeliveredTripCount: number
   skippedAlreadyMatched: number
   candidates: AutoMatchCandidateFE[]
-  unmatchedWorkOrderRefs: { id: number; code: string | null; plate: string | null; date: string | null }[]
+  unmatchedDeliveredTripRefs: { id: number; code: string | null; plate: string | null; date: string | null }[]
   errors: string[]
   stats: AutoMatchStatsFE
 }
 
 export interface AutoMatchConfirmResultFE {
-  workOrderId: number
-  tripOrderId: number
+  deliveredTripId: number
+  bookedTripId: number
   success: boolean
   error: string | null
 }
@@ -326,11 +326,11 @@ export async function autoMatchPreview(
 }
 
 export async function autoMatchConfirm(
-  pairs: { workOrderId: number; tripOrderId: number }[],
+  pairs: { deliveredTripId: number; bookedTripId: number }[],
 ): Promise<ApiResponse<AutoMatchConfirmResponseFE>> {
   try {
     const res = await api.post('/reconcile/auto-match/confirm', {
-      pairs: pairs.map(p => ({ work_order_id: p.workOrderId, trip_order_id: p.tripOrderId })),
+      pairs: pairs.map(p => ({ work_order_id: p.deliveredTripId, trip_order_id: p.bookedTripId })),
     })
     return ok(toCamel<AutoMatchConfirmResponseFE>(res.data))
   } catch (err) {
@@ -367,7 +367,7 @@ export async function bulkMatch(
 ): Promise<ApiResponse<BulkMatchResponse>> {
   try {
     const res = await api.post('/reconcile/bulk-match', {
-      pairs: pairs.map(p => ({ work_order_id: p.workOrderId, trip_order_id: p.tripOrderId })),
+      pairs: pairs.map(p => ({ work_order_id: p.deliveredTripId, trip_order_id: p.bookedTripId })),
     })
     return ok(toCamel<BulkMatchResponse>(res.data))
   } catch (err) {
@@ -375,16 +375,16 @@ export async function bulkMatch(
   }
 }
 
-// ── Batch Match for WO (1 WO → N TripOrders) ─────────────────────
+// ── Batch Match for WO (1 WO → N BookedTrips) ─────────────────────
 
 export async function batchReconcileForWO(
-  workOrderId: number,
-  tripOrderIds: number[],
+  deliveredTripId: number,
+  bookedTripIds: number[],
 ): Promise<ApiResponse<BatchMatchForWOResponse>> {
   try {
     const res = await api.post('/reconcile/batch-for-wo', {
-      work_order_id: workOrderId,
-      trip_order_ids: tripOrderIds,
+      work_order_id: deliveredTripId,
+      trip_order_ids: bookedTripIds,
     })
     return ok(toCamel<BatchMatchForWOResponse>(res.data))
   } catch (err) {
@@ -392,16 +392,16 @@ export async function batchReconcileForWO(
   }
 }
 
-// ── Batch Match for TO (1 TO → N WorkOrders) ─────────────────────
+// ── Batch Match for TO (1 TO → N DeliveredTrips) ─────────────────────
 
 export async function batchReconcileForTO(
-  tripOrderId: number,
-  workOrderIds: number[],
+  bookedTripId: number,
+  deliveredTripIds: number[],
 ): Promise<ApiResponse<BatchMatchForTOResponse>> {
   try {
     const res = await api.post('/reconcile/batch-for-to', {
-      trip_order_id: tripOrderId,
-      work_order_ids: workOrderIds,
+      trip_order_id: bookedTripId,
+      work_order_ids: deliveredTripIds,
     })
     return ok(toCamel<BatchMatchForTOResponse>(res.data))
   } catch (err) {
@@ -412,7 +412,7 @@ export async function batchReconcileForTO(
 // ── Manual search (bypasses match suggester threshold) ────────────────
 
 export interface SearchResultItem {
-  tripOrder: TripOrder
+  bookedTrip: BookedTrip
   containerId: number
   confidence: 'full' | 'partial' | 'none'
   matchedFields: string[]
@@ -422,7 +422,7 @@ export interface SearchResultItem {
   criteria: { name: string; label: string; match: boolean; woValue: string; toValue: string }[]
 }
 
-export interface SearchTripOrdersResponse {
+export interface SearchBookedTripsResponse {
   items: SearchResultItem[]
   total: number
   page: number
@@ -430,23 +430,23 @@ export interface SearchTripOrdersResponse {
   totalPages: number
 }
 
-export async function searchTripOrders(
+export async function searchBookedTrips(
   q: string,
-  workOrderId: number,
+  deliveredTripId: number,
   page = 1,
   pageSize = 20,
-): Promise<ApiResponse<SearchTripOrdersResponse>> {
+): Promise<ApiResponse<SearchBookedTripsResponse>> {
   try {
-    const res = await api.get('/trip-orders/search', {
-      params: { q, work_order_id: workOrderId, page, page_size: pageSize },
+    const res = await api.get('/booked-trips/search', {
+      params: { q, work_order_id: deliveredTripId, page, page_size: pageSize },
     })
-    return ok(toCamel<SearchTripOrdersResponse>(res.data))
+    return ok(toCamel<SearchBookedTripsResponse>(res.data))
   } catch (err) {
     return fail(err)
   }
 }
 
 export async function getDistinctTripPartners(params?: { dateFrom?: string; dateTo?: string }): Promise<{ id: number; name: string }[]> {
-  const res = await api.get('/trip-orders/distinct-partners', { params: toSnake(params ?? {}) })
+  const res = await api.get('/booked-trips/distinct-partners', { params: toSnake(params ?? {}) })
   return res.data
 }

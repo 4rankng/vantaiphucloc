@@ -80,12 +80,12 @@ class Policy:
             if m:
                 rules.append(_Rule(action=m.group(2), resource=m.group(3), min_role=m.group(4)))
                 continue
-            # allow(user, "update", work_order: WorkOrder) if role_allow(...) and user.id = work_order.driver_id
+            # allow(user, "update", delivered_trip: DeliveredTrip) if role_allow(...) and user.id = delivered_trip.driver_id
             m = _ALLOW_OWNER_RE.match(line)
             if m:
                 rules.append(_Rule(
                     action=m.group(1),
-                    resource="WorkOrder",
+                    resource="DeliveredTrip",
                     min_role=m.group(2),
                     owner_check=f"{m.group(3)}={m.group(4)}",
                 ))

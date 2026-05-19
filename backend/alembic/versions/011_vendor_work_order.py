@@ -22,32 +22,7 @@ depends_on = None
 
 
 def upgrade() -> None:
-    conn = op.get_bind()
-    from sqlalchemy import inspect
-    insp = inspect(conn)
-
-    wo_cols = {c["name"] for c in insp.get_columns("work_orders")}
-
-    # Make driver_id nullable
-    op.alter_column("work_orders", "driver_id", nullable=True)
-
-    if "vendor_partner_id" not in wo_cols:
-        op.add_column(
-            "work_orders",
-            sa.Column(
-                "vendor_partner_id",
-                sa.Integer(),
-                sa.ForeignKey("partners.id"),
-                nullable=True,
-            ),
-        )
-        op.create_index("ix_work_orders_vendor_partner_id", "work_orders", ["vendor_partner_id"])
-
-    if "vehicle_external_plate" not in wo_cols:
-        op.add_column(
-            "work_orders",
-            sa.Column("vehicle_external_plate", sa.String(20), nullable=True),
-        )
+    pass
 
 
 def downgrade() -> None:

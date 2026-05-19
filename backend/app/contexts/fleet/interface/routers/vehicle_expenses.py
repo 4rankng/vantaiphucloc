@@ -1,10 +1,10 @@
 """Vehicle expense (CP Xe) CRUD endpoints.
 
 Categories:
-  XANG_DAU — Fuel costs
-  SUA_CHUA — Repair / maintenance
-  KHAC     — Other vehicle-specific costs  (DEPRECATED — removed)
-  CHUNG    — General overhead (vehicle_id = NULL)
+  XANG_DAU  — Fuel costs
+  SUA_CHUA  — Repair / maintenance
+  TIEN_LUAT — Law / Permits
+  KHAC      — Other vehicle-specific costs
 
 Expenses feed into the per-vehicle P&L report.
 """
@@ -109,17 +109,6 @@ async def create_vehicle_expense(
     current_user: User = Depends(require_permission("calculate", "Salary")),
     db: AsyncSession = Depends(get_db),
 ):
-    # Validate: CHUNG must have no vehicle_id; others should have one
-    if body.category == "CHUNG" and body.vehicle_id is not None:
-        raise HTTPException(
-            status_code=422,
-            detail="Category CHUNG (general overhead) must not be linked to a specific vehicle.",
-        )
-    if body.category != "CHUNG" and body.vehicle_id is None:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Category {body.category} requires a vehicle_id.",
-        )
     if body.vehicle_id is not None:
         v = (
             await db.execute(select(Vehicle).where(Vehicle.id == body.vehicle_id))

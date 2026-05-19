@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useUpdateWorkOrder, useUpdateTripOrder, useSuggestMatches } from '@/hooks/use-queries'
+import { useUpdateDeliveredTrip, useUpdateBookedTrip, useSuggestMatches } from '@/hooks/use-queries'
 import { EditDialog } from '@/components/shared/EditDialog'
 import { formatDate } from '@/lib/format'
 import { Input } from '@/components/ui'
@@ -8,14 +8,14 @@ import { resolveRoute } from '@/lib/route-utils'
 import {
   AlertTriangle, Car, Calendar, Pencil, CheckCircle2,
 } from 'lucide-react'
-import type { WorkOrder, TripOrder } from '@/data/domain'
+import type { DeliveredTrip, BookedTrip } from '@/data/domain'
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 function ChuyenCard({
   wo, isSelected, onClick, onEdit,
 }: {
-  wo: WorkOrder
+  wo: DeliveredTrip
   isSelected?: boolean
   onClick: () => void
   onEdit: (e: React.MouseEvent) => void
@@ -90,7 +90,7 @@ function ChuyenCard({
 function DonHangCard({
   trip, matchScore, matchConfidence, onEdit, onNavigate,
 }: {
-  trip: TripOrder
+  trip: BookedTrip
   matchScore?: number
   matchConfidence?: 'full' | 'partial' | 'none'
   onEdit: (e: React.MouseEvent) => void
@@ -223,27 +223,27 @@ function EmptyState({
 // ─── Main component ──────────────────────────────────────────────────────────
 
 export function MatchSuggestionPanel({
-  workOrders,
+  deliveredTrips,
   trips,
   onNavigate,
 }: {
-  workOrders: WorkOrder[]
-  trips: TripOrder[]
+  deliveredTrips: DeliveredTrip[]
+  trips: BookedTrip[]
   onNavigate: (woId: number) => void
 }) {
-  const updateWO = useUpdateWorkOrder()
-  const updateTrip = useUpdateTripOrder()
+  const updateWO = useUpdateDeliveredTrip()
+  const updateTrip = useUpdateBookedTrip()
 
   const [selectedWoId, setSelectedWoId] = useState<number | null>(null)
 
   // Edit state — work order
-  const [editWO, setEditWO] = useState<WorkOrder | null>(null)
+  const [editWO, setEditWO] = useState<DeliveredTrip | null>(null)
   const [woClient, setWoClient] = useState('')
   const [woRoute, setWoRoute] = useState('')
   const [woDriver, setWoDriver] = useState('')
 
   // Edit state — trip order
-  const [editTrip, setEditTrip] = useState<TripOrder | null>(null)
+  const [editTrip, setEditTrip] = useState<BookedTrip | null>(null)
   const [tripClient, setTripClient] = useState('')
   const [tripRoute, setTripRoute] = useState('')
 
@@ -253,7 +253,7 @@ export function MatchSuggestionPanel({
     const map = new Map<number, { score: number; confidence: 'full' | 'partial' | 'none' }>()
     if (suggestData?.suggestions) {
       for (const s of suggestData.suggestions) {
-        map.set(s.tripOrder.id, {
+        map.set(s.bookedTrip.id, {
           score: Math.min(100, Math.round((s.score ?? 0) * 100)),
           confidence: s.confidence,
         })
@@ -266,7 +266,7 @@ export function MatchSuggestionPanel({
     if (backendMatchMap.size > 0) return backendMatchMap
     if (!selectedWoId) return new Map<number, { score: number; confidence: 'full' | 'partial' | 'none' }>()
 
-    const wo = workOrders.find(w => w.id === selectedWoId)
+    const wo = deliveredTrips.find(w => w.id === selectedWoId)
     if (!wo) return new Map()
 
     const map = new Map<number, { score: number; confidence: 'full' | 'partial' | 'none' }>()
@@ -299,7 +299,7 @@ export function MatchSuggestionPanel({
       }
     }
     return map
-  }, [selectedWoId, workOrders, trips, backendMatchMap])
+  }, [selectedWoId, deliveredTrips, trips, backendMatchMap])
 
   const sortedTrips = useMemo(() => {
     return [...trips].sort((a, b) => {
@@ -309,7 +309,7 @@ export function MatchSuggestionPanel({
     })
   }, [trips, tripMatchMap])
 
-  const openEditWO = (e: React.MouseEvent, wo: WorkOrder) => {
+  const openEditWO = (e: React.MouseEvent, wo: DeliveredTrip) => {
     e.stopPropagation()
     setWoClient(wo.partner.name)
     setWoRoute(wo.route)
@@ -323,7 +323,7 @@ export function MatchSuggestionPanel({
     setEditWO(null)
   }
 
-  const openEditTrip = (e: React.MouseEvent, trip: TripOrder) => {
+  const openEditTrip = (e: React.MouseEvent, trip: BookedTrip) => {
     e.stopPropagation()
     setTripClient(trip.partner.name)
     setTripRoute(trip.route)
@@ -336,7 +336,7 @@ export function MatchSuggestionPanel({
     setEditTrip(null)
   }
 
-  if (workOrders.length === 0 && trips.length === 0) {
+  if (deliveredTrips.length === 0 && trips.length === 0) {
     return <EmptyState icon={CheckCircle2} text="Tất cả phiếu đã ghép" />
   }
 
@@ -353,14 +353,14 @@ export function MatchSuggestionPanel({
             style={{ borderBottom: '1px solid var(--theme-border-light)', background: 'var(--theme-bg-tertiary)' }}
           >
             <p className="typo-label">
-              Chuyến đã đi ({workOrders.length})
+              Chuyến đã đi ({deliveredTrips.length})
             </p>
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-2">
-            {workOrders.length === 0 ? (
+            {deliveredTrips.length === 0 ? (
               <p className="text-xs text-center py-6" style={{ color: 'var(--theme-text-muted)' }}>Không có chuyến</p>
             ) : (
-              workOrders.map(wo => (
+              deliveredTrips.map(wo => (
                 <ChuyenCard
                   key={wo.id}
                   wo={wo}
@@ -370,7 +370,7 @@ export function MatchSuggestionPanel({
                 />
               ))
             )}
-            {workOrders.length > 0 && !selectedWoId && (
+            {deliveredTrips.length > 0 && !selectedWoId && (
               <p className="text-[11px] text-center pt-1 pb-2" style={{ color: 'var(--theme-text-muted)' }}>
                 ☝️ Nhấn vào chuyến để tìm gợi ý
               </p>

@@ -3,7 +3,7 @@ location string into a Location row.
 
 Used from BOTH:
 - the customer-Excel import commit endpoint, and
-- the TripOrder (đơn hàng) create/update endpoints
+- the BookedTrip (đơn hàng) create/update endpoints
 
 so the same resolution rules apply everywhere a location string can
 arrive. Hits the lookup chain:

@@ -1,4 +1,4 @@
-"""Suggestion algorithm for matching WorkOrders ↔ TripOrders.
+"""Suggestion algorithm for matching DeliveredTrips ↔ BookedTrips.
 
 Five matching criteria, each weighted 1/5:
 
@@ -31,19 +31,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.domain import (
     LocationAlias,
     Reconciliation,
-    TripOrder,
-    TripOrderContainer,
-    WorkOrder,
-    WorkOrderContainer,
+    BookedTrip,
+    BookedTripContainer,
+    DeliveredTrip,
+    DeliveredTripContainer,
 )
 from app.schemas.domain import (
     ContainerOut,
     CriterionBreakdown,
     MatchSuggestion,
     TripContainerOut,
-    TripOrderOut,
+    BookedTripOut,
     WOSuggestion,
-    WorkOrderOut,
+    DeliveredTripOut,
 )
 from app.core.summaries import (
     get_partner_summary,
@@ -58,7 +58,7 @@ from app.utils.fuzzy import fuzzy_match_container
 from app.utils.fuzzy_thresholds import get_thresholds
 
 
-def _get_wo_date(wo: WorkOrder):
+def _get_wo_date(wo: DeliveredTrip):
     """Return trip_date if set, otherwise created_at.date(). Mirrors the
     COALESCE(trip_date, DATE(created_at)) pattern used in salary queries."""
     if getattr(wo, "trip_date", None):
@@ -209,9 +209,9 @@ def _format_containers(items) -> str | None:
 
 
 async def suggest_trip_matches(
-    db: AsyncSession, work_order: WorkOrder
+    db: AsyncSession, delivered_trip: DeliveredTrip
 ) -> list[MatchSuggestion]:
-    """Find candidate TripOrders for *work_order*.
+    """Find candidate BookedTrips for *delivered_trip*.
 
     TO-centric: a TO with N containers can match N WOs. We find TOs that:
     1. Share container numbers with this WO (or share partner)
@@ -221,14 +221,14 @@ async def suggest_trip_matches(
     Per-container expansion: a TO with K available containers (after
     excluding those already linked to other WOs) emits K independent
     ``MatchSuggestion`` entries — each carrying exactly one container in
-    ``trip_order.containers``. The ``container_number`` criterion and
-    match score are recomputed per (work_order, trip_order, container)
+    ``booked_trip.containers``. The ``container_number`` criterion and
+    match score are recomputed per (delivered_trip, booked_trip, container)
     tuple, so the UI can render one row per container and the user can
     pick which specific container of the TO this trip is fulfilling.
     """
     wo_containers = (await db.execute(
-        select(WorkOrderContainer.container_number)
-        .where(WorkOrderContainer.work_order_id == work_order.id)
+        select(DeliveredTripContainer.container_number)
+        .where(DeliveredTripContainer.delivered_trip_id == delivered_trip.id)
     )).all()
     wo_container_numbers = {
         normalize_container_number(row[0])
@@ -240,26 +240,26 @@ async def suggest_trip_matches(
     # WO should not already be matched
     already_linked = (await db.execute(
         select(Reconciliation.id).where(
-            Reconciliation.work_order_id == work_order.id,
+            Reconciliation.delivered_trip_id == delivered_trip.id,
             Reconciliation.is_active == True,  # noqa: E712
         )
     )).scalar_one_or_none()
     if already_linked is not None:
         return []
 
-    wo_date = _get_wo_date(work_order)
+    wo_date = _get_wo_date(delivered_trip)
 
     # Find TOs that share container numbers with this WO
     container_subquery = (
-        select(TripOrderContainer.trip_order_id)
-        .where(TripOrderContainer.container_number.in_(wo_container_numbers))
+        select(BookedTripContainer.booked_trip_id)
+        .where(BookedTripContainer.container_number.in_(wo_container_numbers))
     )
     # TOs that are PENDING or MATCHED (have capacity for more WOs)
-    query = select(TripOrder).where(
-        TripOrder.status.in_(["PENDING", "MATCHED"]),
+    query = select(BookedTrip).where(
+        BookedTrip.status.in_(["PENDING", "MATCHED"]),
         or_(
-            TripOrder.client_id == work_order.client_id,
-            TripOrder.id.in_(container_subquery),
+            BookedTrip.client_id == delivered_trip.client_id,
+            BookedTrip.id.in_(container_subquery),
         ),
     )
     candidates = list((await db.execute(query)).scalars().all())
@@ -274,22 +274,22 @@ async def suggest_trip_matches(
         from sqlalchemy import func
         link_rows = (await db.execute(
             select(
-                Reconciliation.trip_order_id,
+                Reconciliation.booked_trip_id,
                 func.count(),
             ).where(
-                Reconciliation.trip_order_id.in_(to_ids),
+                Reconciliation.booked_trip_id.in_(to_ids),
                 Reconciliation.is_active == True,  # noqa: E712
-            ).group_by(Reconciliation.trip_order_id)
+            ).group_by(Reconciliation.booked_trip_id)
         )).all()
         link_counts = {r[0]: r[1] for r in link_rows}
 
     cont_result = await db.execute(
-        select(TripOrderContainer)
-        .where(TripOrderContainer.trip_order_id.in_(to_ids))
+        select(BookedTripContainer)
+        .where(BookedTripContainer.booked_trip_id.in_(to_ids))
     )
-    to_containers: dict[int, list[TripOrderContainer]] = defaultdict(list)
+    to_containers: dict[int, list[BookedTripContainer]] = defaultdict(list)
     for c in cont_result.scalars().all():
-        to_containers[c.trip_order_id].append(c)
+        to_containers[c.booked_trip_id].append(c)
 
     # Filter out TOs at full capacity
     candidates = [
@@ -297,29 +297,29 @@ async def suggest_trip_matches(
         if link_counts.get(to.id, 0) < len(to_containers.get(to.id, []))
     ]
 
-    client_ids = {to.client_id for to in candidates} | {work_order.client_id}
+    client_ids = {to.client_id for to in candidates} | {delivered_trip.client_id}
     location_ids = (
         {to.pickup_location_id for to in candidates}
         | {to.dropoff_location_id for to in candidates}
-        | {work_order.pickup_location_id, work_order.dropoff_location_id}
+        | {delivered_trip.pickup_location_id, delivered_trip.dropoff_location_id}
     )
     partners = await load_partner_summaries(db, client_ids)
     locations = await load_location_summaries(db, location_ids)
     alias_groups = await _load_alias_groups(db)
 
-    wo_client_name = get_partner_summary(partners, work_order.client_id).name
+    wo_client_name = get_partner_summary(partners, delivered_trip.client_id).name
     wo_pickup_name = get_location_summary(
-        locations, work_order.pickup_location_id,
+        locations, delivered_trip.pickup_location_id,
     ).name
     wo_dropoff_name = get_location_summary(
-        locations, work_order.dropoff_location_id,
+        locations, delivered_trip.dropoff_location_id,
     ).name
-    # WorkOrder containers come back from the join above as raw rows of
+    # DeliveredTrip containers come back from the join above as raw rows of
     # `container_number` only — re-load with full ORM objects for the
     # criteria breakdown so we can show work_type alongside the number.
     wo_full_containers = (await db.execute(
-        select(WorkOrderContainer)
-        .where(WorkOrderContainer.work_order_id == work_order.id)
+        select(DeliveredTripContainer)
+        .where(DeliveredTripContainer.delivered_trip_id == delivered_trip.id)
     )).scalars().all()
     wo_containers_str = _format_containers(wo_full_containers)
     wo_date_str = wo_date.isoformat() if wo_date else None
@@ -355,11 +355,11 @@ async def suggest_trip_matches(
         # UI renders independent rows for each container.
         for container in available_containers:
             matched_fields, score = _score_to_container_against_wo(
-                to, container, wo_container_numbers, wo_date, work_order,
+                to, container, wo_container_numbers, wo_date, delivered_trip,
                 alias_groups,
             )
-            to_out = TripOrderOut(
-                id=to.id, code=to.code, trip_date=to.trip_date,
+            to_out = BookedTripOut(
+                id=to.id, trip_date=to.trip_date,
                 partner=get_partner_summary(partners, to.client_id),
                 pickup_location=get_location_summary(
                     locations, to.pickup_location_id,
@@ -367,13 +367,12 @@ async def suggest_trip_matches(
                 dropoff_location=get_location_summary(
                     locations, to.dropoff_location_id,
                 ),
+                operation_type=to.operation_type,
+                work_type=to.work_type,
                 containers=[TripContainerOut.model_validate(container)],
-                pricing_id=to.pricing_id,
-                unit_price=to.unit_price,
-                driver_salary=to.driver_salary,
-                allowance=to.allowance,
+                revenue=to.revenue,
                 status=to.status,
-                matched_work_order_ids=[],
+                matched_delivered_trip_ids=[],
                 created_at=to.created_at,
                 updated_at=to.updated_at,
             )
@@ -396,7 +395,7 @@ async def suggest_trip_matches(
                 for c in criteria if c.fuzzy
             ]
             suggestions.append(MatchSuggestion(
-                trip_order=to_out,
+                booked_trip=to_out,
                 container_id=container.id,
                 confidence=_confidence(score),
                 matched_fields=matched_fields,
@@ -412,12 +411,12 @@ async def suggest_trip_matches(
 
 
 async def suggest_wo_matches(
-    db: AsyncSession, trip_order: TripOrder
+    db: AsyncSession, booked_trip: BookedTrip
 ) -> list[WOSuggestion]:
-    """Find candidate WorkOrders for *trip_order*."""
+    """Find candidate DeliveredTrips for *booked_trip*."""
     to_containers = (await db.execute(
-        select(TripOrderContainer.container_number)
-        .where(TripOrderContainer.trip_order_id == trip_order.id)
+        select(BookedTripContainer.container_number)
+        .where(BookedTripContainer.booked_trip_id == booked_trip.id)
     )).all()
     to_container_numbers = {
         normalize_container_number(row[0])
@@ -428,19 +427,19 @@ async def suggest_wo_matches(
 
     # Find WOs that share container numbers with this TO
     container_subquery = (
-        select(WorkOrderContainer.work_order_id)
-        .where(WorkOrderContainer.container_number.in_(to_container_numbers))
+        select(DeliveredTripContainer.delivered_trip_id)
+        .where(DeliveredTripContainer.container_number.in_(to_container_numbers))
     )
     # Exclude WOs that are already matched (have active reconciliation)
-    already_matched_wos = select(Reconciliation.work_order_id).where(
+    already_matched_wos = select(Reconciliation.delivered_trip_id).where(
         Reconciliation.is_active == True,  # noqa: E712
     )
-    query = select(WorkOrder).where(
-        WorkOrder.status == "PENDING",
-        ~WorkOrder.id.in_(already_matched_wos),
+    query = select(DeliveredTrip).where(
+        DeliveredTrip.status == "PENDING",
+        ~DeliveredTrip.id.in_(already_matched_wos),
         or_(
-            WorkOrder.client_id == trip_order.client_id,
-            WorkOrder.id.in_(container_subquery),
+            DeliveredTrip.client_id == booked_trip.client_id,
+            DeliveredTrip.id.in_(container_subquery),
         ),
     )
     candidates = list((await db.execute(query)).scalars().all())
@@ -449,59 +448,62 @@ async def suggest_wo_matches(
 
     wo_ids = [wo.id for wo in candidates]
     cont_result = await db.execute(
-        select(WorkOrderContainer)
-        .where(WorkOrderContainer.work_order_id.in_(wo_ids))
+        select(DeliveredTripContainer)
+        .where(DeliveredTripContainer.delivered_trip_id.in_(wo_ids))
     )
-    wo_containers: dict[int, list[WorkOrderContainer]] = defaultdict(list)
+    wo_containers: dict[int, list[DeliveredTripContainer]] = defaultdict(list)
     for c in cont_result.scalars().all():
-        wo_containers[c.work_order_id].append(c)
+        wo_containers[c.delivered_trip_id].append(c)
 
-    client_ids = {wo.client_id for wo in candidates} | {trip_order.client_id}
+    client_ids = {wo.client_id for wo in candidates} | {booked_trip.client_id}
     drivers = await load_driver_summaries(db, {wo.driver_id for wo in candidates})
     location_ids = (
         {wo.pickup_location_id for wo in candidates}
         | {wo.dropoff_location_id for wo in candidates}
-        | {trip_order.pickup_location_id, trip_order.dropoff_location_id}
+        | {booked_trip.pickup_location_id, booked_trip.dropoff_location_id}
     )
     partners = await load_partner_summaries(db, client_ids)
     locations = await load_location_summaries(db, location_ids)
     alias_groups = await _load_alias_groups(db)
 
-    to_client_name = get_partner_summary(partners, trip_order.client_id).name
+    to_client_name = get_partner_summary(partners, booked_trip.client_id).name
     to_pickup_name = get_location_summary(
-        locations, trip_order.pickup_location_id,
+        locations, booked_trip.pickup_location_id,
     ).name
     to_dropoff_name = get_location_summary(
-        locations, trip_order.dropoff_location_id,
+        locations, booked_trip.dropoff_location_id,
     ).name
     to_full_containers = (await db.execute(
-        select(TripOrderContainer)
-        .where(TripOrderContainer.trip_order_id == trip_order.id)
+        select(BookedTripContainer)
+        .where(BookedTripContainer.booked_trip_id == booked_trip.id)
     )).scalars().all()
     to_containers_str = _format_containers(to_full_containers)
-    to_date_str = trip_order.trip_date.isoformat() if trip_order.trip_date else None
+    to_date_str = booked_trip.trip_date.isoformat() if booked_trip.trip_date else None
 
     suggestions: list[WOSuggestion] = []
     for wo in candidates:
         matched_fields, score = _score_wo_against_to(
             wo, wo_containers.get(wo.id, []),
-            to_container_numbers, trip_order,
+            to_container_numbers, booked_trip,
             alias_groups,
         )
-        wo_out = WorkOrderOut(
+        wo_out = DeliveredTripOut(
             id=wo.id,
-            code=wo.code,
             partner=get_partner_summary(partners, wo.client_id),
             pickup_location=get_location_summary(locations, wo.pickup_location_id),
             dropoff_location=get_location_summary(locations, wo.dropoff_location_id),
             driver=get_driver_summary(drivers, wo.driver_id),
+            vendor_id=wo.vendor_id,
+            vessel=wo.vessel,
+            operation_type=wo.operation_type,
+            work_type=wo.work_type,
             gps_lat=wo.gps_lat,
             gps_lng=wo.gps_lng,
             gps_address=wo.gps_address,
-            unit_price=wo.unit_price,
+            revenue=wo.revenue,
             driver_salary=wo.driver_salary,
             allowance=wo.allowance,
-            pricing_id=wo.pricing_id,
+            trip_date=wo.trip_date,
             status=wo.status,
             containers=[
                 ContainerOut.model_validate(c)
@@ -535,7 +537,7 @@ async def suggest_wo_matches(
             for c in criteria if c.fuzzy
         ]
         suggestions.append(WOSuggestion(
-            work_order=wo_out,
+            delivered_trip=wo_out,
             confidence=_confidence(score),
             matched_fields=matched_fields,
             score=score,
@@ -550,11 +552,11 @@ async def suggest_wo_matches(
 
 
 def _score_to_container_against_wo(
-    to: TripOrder,
-    container: TripOrderContainer,
+    to: BookedTrip,
+    container: BookedTripContainer,
     wo_container_numbers: set[str],
     wo_date,
-    work_order: WorkOrder,
+    delivered_trip: DeliveredTrip,
     alias_groups: dict[int, set[int]] | None = None,
 ) -> tuple[list[str], float]:
     """Score a single TO container against a work order."""
@@ -569,7 +571,7 @@ def _score_to_container_against_wo(
         # Fuzzy container match (Levenshtein ≤ 1)
         fuzzy_matched = False
         if cn:
-            thresholds = get_thresholds(work_order.client_id)
+            thresholds = get_thresholds(delivered_trip.client_id)
             for wo_cn in wo_container_numbers:
                 is_match, is_fuzzy = fuzzy_match_container(cn, wo_cn, threshold=thresholds.container)
                 if is_match and is_fuzzy:
@@ -588,13 +590,13 @@ def _score_to_container_against_wo(
         matched_fields.append("date")
         score += WEIGHTS["date"]
     ag = alias_groups or {}
-    if _locations_match(work_order.pickup_location_id, to.pickup_location_id, ag):
+    if _locations_match(delivered_trip.pickup_location_id, to.pickup_location_id, ag):
         matched_fields.append("pickup_location")
         score += WEIGHTS["pickup_location"]
-    if _locations_match(work_order.dropoff_location_id, to.dropoff_location_id, ag):
+    if _locations_match(delivered_trip.dropoff_location_id, to.dropoff_location_id, ag):
         matched_fields.append("dropoff_location")
         score += WEIGHTS["dropoff_location"]
-    if to.client_id == work_order.client_id:
+    if to.client_id == delivered_trip.client_id:
         matched_fields.append("client")
         score += WEIGHTS["client"]
 
@@ -604,7 +606,7 @@ def _score_to_container_against_wo(
 async def _used_container_ids_for_tos(
     db: AsyncSession,
     to_ids: list[int],
-    to_containers: dict[int, list[TripOrderContainer]],
+    to_containers: dict[int, list[BookedTripContainer]],
     link_counts: dict[int, int],
 ) -> dict[int, set[int]]:
     """Determine which TO containers are already 'used' by active reconciliations.
@@ -622,10 +624,10 @@ async def _used_container_ids_for_tos(
     # Get active reconciliations for these TOs
     recon_rows = (await db.execute(
         select(
-            Reconciliation.trip_order_id,
-            Reconciliation.work_order_id,
+            Reconciliation.booked_trip_id,
+            Reconciliation.delivered_trip_id,
         ).where(
-            Reconciliation.trip_order_id.in_(to_ids),
+            Reconciliation.booked_trip_id.in_(to_ids),
             Reconciliation.is_active == True,  # noqa: E712
         )
     )).all()
@@ -634,23 +636,23 @@ async def _used_container_ids_for_tos(
         return {tid: set() for tid in to_ids}
 
     # Load WO containers for the linked WOs
-    wo_ids = list({r.work_order_id for r in recon_rows})
+    wo_ids = list({r.delivered_trip_id for r in recon_rows})
     wo_cont_rows = (await db.execute(
-        select(WorkOrderContainer)
-        .where(WorkOrderContainer.work_order_id.in_(wo_ids))
+        select(DeliveredTripContainer)
+        .where(DeliveredTripContainer.delivered_trip_id.in_(wo_ids))
     )).scalars().all()
-    wo_containers_by_wo: dict[int, list[WorkOrderContainer]] = defaultdict(list)
+    wo_containers_by_wo: dict[int, list[DeliveredTripContainer]] = defaultdict(list)
     for c in wo_cont_rows:
-        wo_containers_by_wo[c.work_order_id].append(c)
+        wo_containers_by_wo[c.delivered_trip_id].append(c)
 
     result: dict[int, set[int]] = {}
     for to_id in to_ids:
-        recons_for_to = [r for r in recon_rows if r.trip_order_id == to_id]
+        recons_for_to = [r for r in recon_rows if r.booked_trip_id == to_id]
         used: set[int] = set()
         to_conts = to_containers.get(to_id, [])
 
         for recon in recons_for_to:
-            wo_conts = wo_containers_by_wo.get(recon.work_order_id, [])
+            wo_conts = wo_containers_by_wo.get(recon.delivered_trip_id, [])
             matched_in_this_link = False
             for wo_c in wo_conts:
                 wo_cn = normalize_container_number(wo_c.container_number) if wo_c.container_number else None
@@ -680,10 +682,10 @@ async def _used_container_ids_for_tos(
 
 
 def _score_wo_against_to(
-    wo: WorkOrder,
-    wo_containers: Sequence[WorkOrderContainer],
+    wo: DeliveredTrip,
+    wo_containers: Sequence[DeliveredTripContainer],
     to_container_numbers: set[str],
-    trip_order: TripOrder,
+    booked_trip: BookedTrip,
     alias_groups: dict[int, set[int]] | None = None,
 ) -> tuple[list[str], float]:
     matched_fields: list[str] = []
@@ -699,7 +701,7 @@ def _score_wo_against_to(
     else:
         # Fuzzy container match (Levenshtein ≤ 1)
         fuzzy_matched = False
-        thresholds = get_thresholds(work_order.client_id)
+        thresholds = get_thresholds(delivered_trip.client_id)
         for to_cn in to_container_numbers:
             for wo_cn in wo_cn_set:
                 is_match, is_fuzzy = fuzzy_match_container(to_cn, wo_cn, threshold=thresholds.container)
@@ -718,17 +720,17 @@ def _score_wo_against_to(
                 score += WEIGHTS["container_number"] * 0.5
 
     wo_date = _get_wo_date(wo)
-    if wo_date and trip_order.trip_date == wo_date:
+    if wo_date and booked_trip.trip_date == wo_date:
         matched_fields.append("date")
         score += WEIGHTS["date"]
     ag = alias_groups or {}
-    if _locations_match(wo.pickup_location_id, trip_order.pickup_location_id, ag):
+    if _locations_match(wo.pickup_location_id, booked_trip.pickup_location_id, ag):
         matched_fields.append("pickup_location")
         score += WEIGHTS["pickup_location"]
-    if _locations_match(wo.dropoff_location_id, trip_order.dropoff_location_id, ag):
+    if _locations_match(wo.dropoff_location_id, booked_trip.dropoff_location_id, ag):
         matched_fields.append("dropoff_location")
         score += WEIGHTS["dropoff_location"]
-    if wo.client_id == trip_order.client_id:
+    if wo.client_id == booked_trip.client_id:
         matched_fields.append("client")
         score += WEIGHTS["client"]
 

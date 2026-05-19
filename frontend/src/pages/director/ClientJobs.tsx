@@ -2,20 +2,20 @@ import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { formatCurrencyFull as formatCurrency } from '@/data/domain'
 import { BackButton } from '@/components/shared/BackButton'
-import { useWorkOrders, useClients, usePricings } from '@/hooks/use-queries'
+import { useDeliveredTrips, useClients, usePricings } from '@/hooks/use-queries'
 
 export function ClientJobs() {
   const { clientId: clientIdStr } = useParams<{ clientId: string }>()
   const clientId = Number(clientIdStr)
   const [showPricing, setShowPricing] = useState(false)
 
-  const { data: allWorkOrders = [] } = useWorkOrders()
+  const { data: allDeliveredTrips = [] } = useDeliveredTrips()
   const { data: clients = [] } = useClients()
   const { data: pricings = [] } = usePricings({ clientId })
 
   const jobs = useMemo(
-    () => allWorkOrders.filter(j => j.partner.id === clientId),
-    [allWorkOrders, clientId],
+    () => allDeliveredTrips.filter(j => j.partner.id === clientId),
+    [allDeliveredTrips, clientId],
   )
 
   const clientName = useMemo(

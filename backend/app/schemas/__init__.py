@@ -2,8 +2,8 @@ from .base import LoginRequest, TokenResponse, UserOut, LoginResponse, UserCreat
 from .domain import (  # noqa: F401
     PartnerCreate, PartnerUpdate, PartnerOut, PartnerSummaryOut,
     PricingLineCreate, PricingLineOut, PricingCreate, PricingUpdate, PricingOut,
-    ContainerCreate, ContainerOut, WorkOrderCreate, WorkOrderUpdate, WorkOrderOut,
-    TripOrderCreate, TripOrderUpdate, TripOrderOut,
+    ContainerCreate, ContainerOut, DeliveredTripCreate, DeliveredTripUpdate, DeliveredTripOut,
+    BookedTripCreate, BookedTripUpdate, BookedTripOut,
     ReconcileRequest,
     DriverEarningsOut,
     SalaryConfigOut, SalaryConfigUpdate,

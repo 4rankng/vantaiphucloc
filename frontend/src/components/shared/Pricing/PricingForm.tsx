@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { type Pricing, type PricingLine, type WorkType, OPERATION_TYPE_LABELS, type OperationType } from '@/data/domain'
+import { type Pricing, type PricingLine, type ContType, OPERATION_TYPE_LABELS, type OperationType } from '@/data/domain'
 import { useLocations } from '@/hooks/use-queries'
 import type { PricingCreatePayload } from '@/services/api/pricings.api'
 import { Label } from '@/components/ui'
@@ -16,8 +16,8 @@ const OPERATION_TYPE_OPTIONS = [
 ]
 
 /** Grid order: full containers first, then empty */
-const GRID_ORDER: WorkType[] = ['F20', 'F40', 'E20', 'E40']
-const WORK_TYPE_LABELS: Record<WorkType, string> = {
+const GRID_ORDER: ContType[] = ['F20', 'F40', 'E20', 'E40']
+const CONT_TYPE_LABELS_SHORT: Record<ContType, string> = {
   F20: 'Hàng 20ft',
   F40: 'Hàng 40ft',
   E20: 'Rỗng 20ft',
@@ -25,7 +25,7 @@ const WORK_TYPE_LABELS: Record<WorkType, string> = {
 }
 
 /** One line editor per work type */
-interface WorkTypeLine {
+interface ContTypeLine {
   enabled: boolean
   lines: PricingLine[]
 }
@@ -43,8 +43,8 @@ interface Props {
   onCreateClient: () => void
 }
 
-function initWorkTypeLines(initial?: Pricing): Record<WorkType, WorkTypeLine> {
-  const result: Record<WorkType, WorkTypeLine> = {
+function initContTypeLines(initial?: Pricing): Record<ContType, ContTypeLine> {
+  const result: Record<ContType, ContTypeLine> = {
     F20: { enabled: false, lines: [{ quantity: 1, unitPrice: 0, driverSalary: 0, allowance: 0 }] },
     F40: { enabled: false, lines: [{ quantity: 1, unitPrice: 0, driverSalary: 0, allowance: 0 }] },
     E20: { enabled: false, lines: [{ quantity: 1, unitPrice: 0, driverSalary: 0, allowance: 0 }] },
@@ -179,30 +179,30 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onSaveCo
   const [pickupLocationName, setPickupLocationName] = useState(initial?.pickupLocation.name ?? '')
   const [dropoffLocationName, setDropoffLocationName] = useState(initial?.dropoffLocation.name ?? '')
   const [operationType, setOperationType] = useState(initial?.operationType ?? '')
-  const [workTypeLines, setWorkTypeLines] = useState<Record<WorkType, WorkTypeLine>>(() => initWorkTypeLines(initial))
+  const [workTypeLines, setContTypeLines] = useState<Record<ContType, ContTypeLine>>(() => initContTypeLines(initial))
 
   const clientOptions = useMemo(
     () => clients.map(c => ({ value: String(c.id), label: c.name })),
     [clients],
   )
 
-  const toggleWorkType = (wt: WorkType) => {
-    setWorkTypeLines(prev => ({
+  const toggleContType = (wt: ContType) => {
+    setContTypeLines(prev => ({
       ...prev,
       [wt]: { ...prev[wt], enabled: !prev[wt].enabled },
     }))
   }
 
-  const updateWorkTypeLines = (wt: WorkType, lines: PricingLine[]) => {
-    setWorkTypeLines(prev => ({
+  const updateContTypeLines = (wt: ContType, lines: PricingLine[]) => {
+    setContTypeLines(prev => ({
       ...prev,
       [wt]: { ...prev[wt], lines },
     }))
   }
 
   /** Collect all enabled work types in grid order */
-  const enabledWorkTypes = GRID_ORDER.filter(wt => workTypeLines[wt].enabled)
-  const hasAnyEnabled = enabledWorkTypes.length > 0
+  const enabledContTypes = GRID_ORDER.filter(wt => workTypeLines[wt].enabled)
+  const hasAnyEnabled = enabledContTypes.length > 0
 
   /** Save all enabled work types (one API call each via parent) */
   const handleSubmit = () => {
@@ -229,7 +229,7 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onSaveCo
     }
 
     // When creating, call onSave for each enabled work type
-    enabledWorkTypes.forEach(wt => {
+    enabledContTypes.forEach(wt => {
       onSave({
         clientId: Number(clientId),
         workType: wt,
@@ -353,7 +353,7 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onSaveCo
                 >
                   {/* Toggle header */}
                   <button
-                    onClick={() => toggleWorkType(wt)}
+                    onClick={() => toggleContType(wt)}
                     className="flex items-center gap-2 w-full text-left mb-3"
                   >
                     <span
@@ -371,7 +371,7 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onSaveCo
                     </span>
                     <ContBadge type={wt} />
                     <span className="typo-body-sm font-medium" style={{ color: 'var(--theme-text-secondary)' }}>
-                      {WORK_TYPE_LABELS[wt]}
+                      {CONT_TYPE_LABELS_SHORT[wt]}
                     </span>
                   </button>
 
@@ -379,7 +379,7 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onSaveCo
                   {wtData.enabled && (
                     <MiniLineEditor
                       lines={wtData.lines}
-                      onChange={newLines => updateWorkTypeLines(wt, newLines)}
+                      onChange={newLines => updateContTypeLines(wt, newLines)}
                     />
                   )}
                 </div>

@@ -1,5 +1,5 @@
 """Integration tests for the bulk apply-pricing endpoint and the
-`unpriced` filter on the trip-orders list endpoint.
+`unpriced` filter on the booked-trips list endpoint.
 """
 
 from __future__ import annotations
@@ -14,10 +14,10 @@ from app.models.domain import (
     Partner,
     Pricing,
     PricingLine,
-    TripOrder,
-    TripOrderContainer,
+    BookedTrip,
+    BookedTripContainer,
 )
-from app.models.enums import TripOrderStatus
+from app.models.enums import BookedTripStatus
 
 
 @pytest.fixture
@@ -58,7 +58,7 @@ async def seeded_world(db_session):
 
 
 async def _make_trip(db, world, *, work_type="F20", unit_price=0):
-    trip = TripOrder(
+    trip = BookedTrip(
         trip_date=date(2026, 4, 15),
         partner_id=world["partner"].id,
         pickup_location_id=world["pickup"].id,
@@ -66,12 +66,12 @@ async def _make_trip(db, world, *, work_type="F20", unit_price=0):
         unit_price=unit_price,
         driver_salary=0,
         allowance=0,
-        status=TripOrderStatus.DRAFT.value,
+        status=BookedTripStatus.DRAFT.value,
     )
     db.add(trip)
     await db.flush()
-    db.add(TripOrderContainer(
-        trip_order_id=trip.id,
+    db.add(BookedTripContainer(
+        booked_trip_id=trip.id,
         container_number="ABCU0000001",
         work_type=work_type,
         container_size="20",
@@ -102,7 +102,7 @@ async def test_apply_pricing_to_trip_ids_prices_unpriced_trips(
 
     # Trip is now priced
     refreshed = (await db_session.execute(
-        select(TripOrder).where(TripOrder.id == trip.id)
+        select(BookedTrip).where(BookedTrip.id == trip.id)
     )).scalar_one()
     assert refreshed.unit_price == 1_500_000
     assert refreshed.driver_salary == 300_000
@@ -130,7 +130,7 @@ async def test_apply_pricing_idempotent_on_already_priced(
     assert body["unpriced"] == 0
 
     refreshed = (await db_session.execute(
-        select(TripOrder).where(TripOrder.id == trip.id)
+        select(BookedTrip).where(BookedTrip.id == trip.id)
     )).scalar_one()
     assert refreshed.unit_price == 999_000  # untouched
 
@@ -185,11 +185,11 @@ async def test_apply_pricing_requires_accountant(
     assert res.status_code == 403
 
 
-# ── unpriced filter on trip-orders list ────────────────────────────
+# ── unpriced filter on booked-trips list ────────────────────────────
 
 
 @pytest.mark.asyncio
-async def test_trip_orders_list_unpriced_filter(
+async def test_booked_trips_list_unpriced_filter(
     db_session, seeded_world, async_client, make_auth_headers,
 ):
     headers = await make_auth_headers("accountant")
@@ -199,7 +199,7 @@ async def test_trip_orders_list_unpriced_filter(
 
     # unpriced=true → only the trip with unit_price=0
     res = await async_client.get(
-        "/api/v1/trip-orders?unpriced=true", headers=headers,
+        "/api/v1/booked-trips?unpriced=true", headers=headers,
     )
     assert res.status_code == 200
     ids = {item["id"] for item in res.json()["items"]}
@@ -208,7 +208,7 @@ async def test_trip_orders_list_unpriced_filter(
 
     # unpriced=false → only the priced trip
     res = await async_client.get(
-        "/api/v1/trip-orders?unpriced=false", headers=headers,
+        "/api/v1/booked-trips?unpriced=false", headers=headers,
     )
     assert res.status_code == 200
     ids = {item["id"] for item in res.json()["items"]}

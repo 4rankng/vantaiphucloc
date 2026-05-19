@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { MapPin, Calendar, Users, Box, X } from 'lucide-react'
 import { Button } from '@/components/ui'
-import type { AutoMatchRejectionReasonFE } from '@/services/api/tripOrders.api'
+import type { AutoMatchRejectionReasonFE } from '@/services/api/bookedTrips.api'
 
 interface NoMatchEmptyStateProps {
   scanned: number

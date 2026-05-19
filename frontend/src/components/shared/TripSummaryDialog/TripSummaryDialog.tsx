@@ -5,7 +5,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/Dialog'
-import type { WorkType } from '@/data/domain'
+import type { ContType } from '@/data/domain'
 import { hapticSuccess } from '@/lib/haptic'
 import { playTick } from '@/lib/sound'
 
@@ -13,7 +13,7 @@ interface TripSummaryDialogProps {
   open: boolean
   onConfirm: () => void
   onClose: () => void
-  containers: Array<{ number: string; type: WorkType }>
+  containers: Array<{ number: string; type: ContType }>
   clientName: string
   vessel?: string
   pickupLocation: string

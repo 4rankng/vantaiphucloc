@@ -25,16 +25,16 @@ from app.models.domain import (
     Location,
     Client,
     Reconciliation,
-    TripOrder,
-    TripOrderContainer,
+    BookedTrip,
+    BookedTripContainer,
     Vehicle,
-    WorkOrder,
+    DeliveredTrip,
 )
 
 
 def _split_unit_price_per_container(
     trip_unit_price: int,
-    containers: list[TripOrderContainer],
+    containers: list[BookedTripContainer],
 ) -> dict[int, int]:
     n = len(containers)
     if n == 0:
@@ -60,11 +60,11 @@ def _aggregate_routes(lines: Iterable[TripLine]) -> list[RouteSummary]:
                 dropoff_location=line.dropoff_location,
             )
             bucket[key] = s
-        if line.work_type == "F20":
+        if line.cont_type == "F20":
             s.f20_count += 1
-        elif line.work_type == "F40":
+        elif line.cont_type == "F40":
             s.f40_count += 1
-        elif line.work_type in ("E20", "E40"):
+        elif line.cont_type in ("E20", "E40"):
             s.empty_count += 1
         s.total_amount += line.unit_price
     return sorted(
@@ -98,14 +98,14 @@ class SqlSettlementDataLoader(SettlementDataLoader):
         )
 
         trip_query = (
-            select(TripOrder)
-            .where(TripOrder.client_id == client_id)
-            .where(TripOrder.trip_date >= period.start)
-            .where(TripOrder.trip_date <= period.end)
-            .where(TripOrder.status != "CANCELLED")
-            .order_by(TripOrder.trip_date.asc(), TripOrder.id.asc())
+            select(BookedTrip)
+            .where(BookedTrip.client_id == client_id)
+            .where(BookedTrip.trip_date >= period.start)
+            .where(BookedTrip.trip_date <= period.end)
+            .where(BookedTrip.status != "CANCELLED")
+            .order_by(BookedTrip.trip_date.asc(), BookedTrip.id.asc())
         )
-        trips: list[TripOrder] = (
+        trips: list[BookedTrip] = (
             await self.session.execute(trip_query)
         ).scalars().all()
 
@@ -126,32 +126,32 @@ class SqlSettlementDataLoader(SettlementDataLoader):
                 name_by_loc_id[loc.id] = loc.name
 
         cont_res = await self.session.execute(
-            select(TripOrderContainer).where(
-                TripOrderContainer.trip_order_id.in_(trip_ids)
+            select(BookedTripContainer).where(
+                BookedTripContainer.booked_trip_id.in_(trip_ids)
             )
         )
-        containers_by_trip: dict[int, list[TripOrderContainer]] = {}
+        containers_by_trip: dict[int, list[BookedTripContainer]] = {}
         for c in cont_res.scalars().all():
-            containers_by_trip.setdefault(c.trip_order_id, []).append(c)
+            containers_by_trip.setdefault(c.booked_trip_id, []).append(c)
 
         # Active reconciliations for these trips
         join_res = await self.session.execute(
             select(Reconciliation).where(
-                Reconciliation.trip_order_id.in_(trip_ids),
+                Reconciliation.booked_trip_id.in_(trip_ids),
                 Reconciliation.is_active == True,  # noqa: E712
             )
         )
         join_rows = list(join_res.scalars().all())
-        wo_ids = list({r.work_order_id for r in join_rows})
+        wo_ids = list({r.delivered_trip_id for r in join_rows})
 
         # Get plates via Vehicle table
         plate_by_wo: dict[int, str] = {}
         if wo_ids:
             wo_res = await self.session.execute(
-                select(WorkOrder).where(WorkOrder.id.in_(wo_ids))
+                select(DeliveredTrip).where(DeliveredTrip.id.in_(wo_ids))
             )
-            work_orders = {wo.id: wo for wo in wo_res.scalars().all()}
-            vehicle_ids = list({wo.vehicle_id for wo in work_orders.values() if wo.vehicle_id})
+            delivered_trips = {wo.id: wo for wo in wo_res.scalars().all()}
+            vehicle_ids = list({wo.vehicle_id for wo in delivered_trips.values() if wo.vehicle_id})
             vehicle_plate_map: dict[int, str] = {}
             if vehicle_ids:
                 v_res = await self.session.execute(
@@ -159,22 +159,22 @@ class SqlSettlementDataLoader(SettlementDataLoader):
                 )
                 for v in v_res.scalars().all():
                     vehicle_plate_map[v.id] = v.plate
-            for wo_id, wo in work_orders.items():
+            for wo_id, wo in delivered_trips.items():
                 plate = vehicle_plate_map.get(wo.vehicle_id, "") if wo.vehicle_id else ""
                 plate_by_wo[wo_id] = plate
 
-        # Build vessel map from WorkOrders
-        vessel_by_wo: dict[int, str] = {wo_id: (wo.vessel or "") for wo_id, wo in work_orders.items()} if wo_ids else {}
+        # Build vessel map from DeliveredTrips
+        vessel_by_wo: dict[int, str] = {wo_id: (wo.vessel or "") for wo_id, wo in delivered_trips.items()} if wo_ids else {}
 
         plates_by_trip: dict[int, list[str]] = {}
         vessels_by_trip: dict[int, list[str]] = {}
         for r in join_rows:
-            plate = plate_by_wo.get(r.work_order_id, "")
+            plate = plate_by_wo.get(r.delivered_trip_id, "")
             if plate:
-                plates_by_trip.setdefault(r.trip_order_id, []).append(plate)
-            vessel = vessel_by_wo.get(r.work_order_id, "")
+                plates_by_trip.setdefault(r.booked_trip_id, []).append(plate)
+            vessel = vessel_by_wo.get(r.delivered_trip_id, "")
             if vessel:
-                vessels_by_trip.setdefault(r.trip_order_id, []).append(vessel)
+                vessels_by_trip.setdefault(r.booked_trip_id, []).append(vessel)
 
         client_code = (partner.code or "").strip() or partner.name
 
@@ -183,7 +183,7 @@ class SqlSettlementDataLoader(SettlementDataLoader):
             conts = containers_by_trip.get(trip.id, [])
             if not conts:
                 continue
-            prices = _split_unit_price_per_container(trip.unit_price, conts)
+            prices = _split_unit_price_per_container(trip.revenue, conts)
             plates = plates_by_trip.get(trip.id, [])
             plate_str = ", ".join(sorted(set(plates))) if plates else ""
             vessels = vessels_by_trip.get(trip.id, [])
@@ -194,7 +194,8 @@ class SqlSettlementDataLoader(SettlementDataLoader):
                         trip_date=trip.trip_date,
                         client_code=client_code,
                         container_number=c.container_number,
-                        work_type=(c.work_type or "").upper(),
+                        cont_type=(c.cont_type or "").upper(),
+                        work_type=(trip.work_type or "").upper(),
                         tractor_plate=plate_str,
                         vessel=vessel_str,
                         pickup_location=name_by_loc_id.get(

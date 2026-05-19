@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_current_user
 from app.database import async_session
 from app.models.base import User
-from app.models.domain import WorkOrder as WorkOrderORM
+from app.models.domain import DeliveredTrip as DeliveredTripORM
 
 router = APIRouter(prefix="/drivers", tags=["drivers"])
 
@@ -104,7 +104,7 @@ _DRIVER_ROUTES_SQL = text("""
         dl.name AS dropoff_location_name,
         COUNT(*) AS frequency,
         MAX(wo.created_at) AS last_used
-    FROM work_orders wo
+    FROM delivered_trips wo
     JOIN partners p ON p.id = wo.client_id
     JOIN locations pl ON pl.id = wo.pickup_location_id
     JOIN locations dl ON dl.id = wo.dropoff_location_id
@@ -128,7 +128,7 @@ _GLOBAL_POPULAR_SQL = text("""
         dl.name AS dropoff_location_name,
         COUNT(*) AS frequency,
         MAX(wo.created_at) AS last_used
-    FROM work_orders wo
+    FROM delivered_trips wo
     JOIN partners p ON p.id = wo.client_id
     JOIN locations pl ON pl.id = wo.pickup_location_id
     JOIN locations dl ON dl.id = wo.dropoff_location_id

@@ -4,9 +4,9 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { formatCurrencyFull } from '@/data/domain'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
-import { WorkOrderCard } from '@/components/shared/WorkOrderCard'
+import { DeliveredTripCard } from '@/components/shared/DeliveredTripCard'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
-import { useMyEarnings, useSalaryConfig, useWorkOrders } from '@/hooks/use-queries'
+import { useMyEarnings, useSalaryConfig, useDeliveredTrips } from '@/hooks/use-queries'
 import { getSalaryPeriodDates, dayBefore, dayAfter, toISODate } from '@/utils/salaryPeriod'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { formatDate } from '@/lib/format'
@@ -25,7 +25,7 @@ export function DriverHome() {
 function DesktopDriverHome() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { data: workOrders = [], isLoading: loading } = useWorkOrders({ driverId: Number(user!.id) })
+  const { data: deliveredTrips = [], isLoading: loading } = useDeliveredTrips({ driverId: Number(user!.id) })
 
   const { data: config } = useSalaryConfig()
   const now = new Date()
@@ -55,11 +55,11 @@ function DesktopDriverHome() {
   const periodJobs = useMemo(() => {
     const startDate = toISODate(currentPeriod.startDate)
     const endDate = toISODate(currentPeriod.endDate)
-    return workOrders.filter(w => {
+    return deliveredTrips.filter(w => {
       const d = (w.tripDate ?? w.createdAt.slice(0, 10))
       return d >= startDate && d <= endDate
     })
-  }, [workOrders, currentPeriod])
+  }, [deliveredTrips, currentPeriod])
 
   const matchedCount = useMemo(() =>
     periodJobs.filter(w => w.status === 'MATCHED' || w.status === 'COMPLETED').length,
@@ -140,7 +140,7 @@ function DesktopDriverHome() {
             <p>{sortedJobs.length} chuyến trong kỳ</p>
           </div>
           <button
-            onClick={() => navigate('/driver/work-orders/new')}
+            onClick={() => navigate('/driver/delivered-trips/new')}
             className="btn-primary-template"
           >
             <Plus size={14} /> Tạo chuyến
@@ -209,7 +209,7 @@ function DesktopDriverHome() {
 function MobileDriverHome() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { data: workOrders = [], isLoading: loading } = useWorkOrders({ driverId: Number(user!.id) })
+  const { data: deliveredTrips = [], isLoading: loading } = useDeliveredTrips({ driverId: Number(user!.id) })
   const [filter, setFilter] = useState<FilterTab>('all')
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
@@ -254,11 +254,11 @@ function MobileDriverHome() {
   const periodJobs = useMemo(() => {
     const startDate = toISODate(currentPeriod.startDate)
     const endDate = toISODate(currentPeriod.endDate)
-    return workOrders.filter(w => {
+    return deliveredTrips.filter(w => {
       const d = (w.tripDate ?? w.createdAt.slice(0, 10))
       return d >= startDate && d <= endDate
     })
-  }, [workOrders, currentPeriod])
+  }, [deliveredTrips, currentPeriod])
 
   // Trips that match BOTH the period and the active list filter — used by the list.
   const filteredJobs = useMemo(() => {
@@ -424,7 +424,7 @@ function MobileDriverHome() {
           <>
             <div className="space-y-2.5">
               {visibleJobs.map(job => (
-                <WorkOrderCard
+                <DeliveredTripCard
                   key={job.id}
                   variant="driver"
                   data={job}
@@ -444,7 +444,7 @@ function MobileDriverHome() {
         )}
       </div>
 
-      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => navigate('/driver/work-orders/new')} label="Tạo chuyến" />
+      <FloatingActionButton icon={<Plus className="w-6 h-6" />} onClick={() => navigate('/driver/delivered-trips/new')} label="Tạo chuyến" />
 
       <div className="h-20" />
     </div>

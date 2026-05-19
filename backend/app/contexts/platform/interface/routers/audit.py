@@ -1,7 +1,9 @@
 import math
+import json
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -10,7 +12,6 @@ from app.models.base import User
 from app.schemas.base import PaginatedResponse
 from app.core.deps import require_permission
 from pydantic import BaseModel, ConfigDict
-from datetime import datetime
 
 
 class AuditLogOut(BaseModel):
@@ -36,6 +37,8 @@ async def list_audit_logs(
     page_size: int = Query(50, ge=1, le=200),
     table_name: str | None = Query(None),
     action: str | None = Query(None),
+    is_financial: bool = Query(False),
+    created_after: datetime | None = Query(None),
     current_user: User = Depends(require_permission("read", "Audit")),
     db: AsyncSession = Depends(get_db),
 ):
@@ -48,6 +51,14 @@ async def list_audit_logs(
     if action:
         q = q.where(AuditLog.action == action)
         count_q = count_q.where(AuditLog.action == action)
+    if created_after:
+        q = q.where(AuditLog.created_at >= created_after)
+        count_q = count_q.where(AuditLog.created_at >= created_after)
+
+    if is_financial:
+        financial_tables = ["booked_trips", "pricing_lines", "delivered_trips"]
+        q = q.where(AuditLog.table_name.in_(financial_tables))
+        count_q = count_q.where(AuditLog.table_name.in_(financial_tables))
 
     total = (await db.execute(count_q)).scalar() or 0
 
@@ -56,7 +67,11 @@ async def list_audit_logs(
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
-    items = [AuditLogOut.model_validate(row) for row in result.scalars().all()]
+    rows = result.scalars().all()
+    
+    # Optional post-filtering for financial if we want to be strict about field names
+    # For now, filtering by table is a good enough proxy and efficient.
+    items = [AuditLogOut.model_validate(row) for row in rows]
 
     return PaginatedResponse[AuditLogOut](
         items=items,

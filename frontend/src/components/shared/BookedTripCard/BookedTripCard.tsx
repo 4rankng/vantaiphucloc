@@ -2,10 +2,10 @@ import { RouteDisplay } from '@/components/shared/RouteDisplay'
 import { ContBadge } from '@/components/shared/ContBadge'
 import { formatDate } from '@/lib/format'
 import { CheckCircle2, Lock } from 'lucide-react'
-import type { TripOrder } from '@/data/domain'
+import type { BookedTrip } from '@/data/domain'
 
-interface TripOrderCardProps {
-  trip: TripOrder
+interface BookedTripCardProps {
+  trip: BookedTrip
   onClick?: () => void
 }
 
@@ -17,7 +17,7 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }
   CANCELLED: { label: 'Đã huỷ',       bg: 'var(--theme-status-error-light)',    color: 'var(--theme-status-error)'   },
 }
 
-export function TripOrderCard({ trip, onClick }: TripOrderCardProps) {
+export function BookedTripCard({ trip, onClick }: BookedTripCardProps) {
   const statusCfg = STATUS_CONFIG[trip.status] ?? STATUS_CONFIG.DRAFT
   const isLocked = trip.status === 'MATCHED'
 

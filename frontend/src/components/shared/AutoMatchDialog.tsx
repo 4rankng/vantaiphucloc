@@ -4,7 +4,7 @@ import { Button } from '@/components/ui'
 import { useAutoMatchConfirm } from '@/hooks/use-queries'
 import { CheckCircle2, Sparkles, Loader2 } from 'lucide-react'
 import { useToast } from '@/components/atoms/Toast'
-import type { AutoMatchPreviewResponseFE, AutoMatchCandidateFE } from '@/services/api/tripOrders.api'
+import type { AutoMatchPreviewResponseFE, AutoMatchCandidateFE } from '@/services/api/bookedTrips.api'
 import { NoMatchEmptyState } from '@/components/shared/NoMatchEmptyState'
 
 interface AutoMatchDialogProps {
@@ -42,8 +42,8 @@ export function AutoMatchDialog({ open, onClose, result }: AutoMatchDialogProps)
 
   const handleConfirm = () => {
     const pairs = autoMatched.map(c => ({
-      workOrderId: c.workOrderId,
-      tripOrderId: c.tripOrderId,
+      deliveredTripId: c.deliveredTripId,
+      bookedTripId: c.bookedTripId,
     }))
 
     confirmPairs(pairs, {
@@ -94,7 +94,7 @@ export function AutoMatchDialog({ open, onClose, result }: AutoMatchDialogProps)
             </>
           ) : (
             <NoMatchEmptyState
-              scanned={result.scannedWorkOrderCount}
+              scanned={result.scannedDeliveredTripCount}
               reasons={result.stats?.reasons ?? []}
               onClose={onClose}
             />
@@ -130,16 +130,16 @@ export function AutoMatchDialog({ open, onClose, result }: AutoMatchDialogProps)
 }
 
 function CandidateRow({ candidate }: { candidate: AutoMatchCandidateFE }) {
-  const woRef = candidate.workOrderRef
-  const toRef = candidate.tripOrderRef
+  const woRef = candidate.deliveredTripRef
+  const toRef = candidate.bookedTripRef
 
   const woLabel = woRef
     ? `Phiếu #${woRef.id}${woRef.plate ? ` · ${woRef.plate}` : ''}${woRef.clientName ? ` · ${woRef.clientName}` : ''}`
-    : `Phiếu #${candidate.workOrderId}`
+    : `Phiếu #${candidate.deliveredTripId}`
 
   const toLabel = toRef
     ? `Đơn #${toRef.id}${toRef.clientName ? ` · ${toRef.clientName}` : ''}`
-    : `Đơn #${candidate.tripOrderId}`
+    : `Đơn #${candidate.bookedTripId}`
 
   return (
     <div className="p-2 rounded-lg" style={{ background: 'var(--theme-bg-tertiary)' }}>

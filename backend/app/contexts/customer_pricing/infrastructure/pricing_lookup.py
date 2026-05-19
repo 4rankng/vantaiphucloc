@@ -1,6 +1,6 @@
 """Pricing lookup helpers -- read-only.
 
-Used by Operations (work-order / trip-order creation, bulk apply-pricing,
+Used by Operations (delivered-trip / booked-trip creation, bulk apply-pricing,
 imports) to auto-fill `unit_price`, `driver_salary`, and `allowance` from
 the matching Pricing + PricingLine. Lookup is FK-only -- callers can pass
 `pickup_location_id`/`dropoff_location_id` directly, or pass name strings

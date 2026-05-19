@@ -2,7 +2,7 @@ import { api } from './client'
 import { toCamel, toSnake, ok, fail, isNetworkError, unwrapList } from './utils'
 import { setCache, getCache } from '@/lib/offline-db'
 import { offlineQueue } from '@/lib/offline-queue'
-import type { WorkOrder, ContainerItem, ApiResponse } from '@/data/domain'
+import type { DeliveredTrip, ContainerItem, ApiResponse } from '@/data/domain'
 
 export interface SuggestedRoute {
   client: { id: number; code: string | null; name: string }
@@ -14,14 +14,14 @@ export interface SuggestedRoute {
   source: 'frequent' | 'recent' | 'popular'
 }
 
-interface WorkOrderFilters {
+interface DeliveredTripFilters {
   driverId?: number
   dateFrom?: string
   dateTo?: string
-  status?: WorkOrder['status']
+  status?: DeliveredTrip['status']
 }
 
-export interface WorkOrderCreatePayload {
+export interface DeliveredTripCreatePayload {
   containers: ContainerItem[]
   clientId: number
   pickupLocationId: number
@@ -35,7 +35,7 @@ export interface WorkOrderCreatePayload {
   gpsLng?: number | null
 }
 
-export interface WorkOrderUpdatePayload {
+export interface DeliveredTripUpdatePayload {
   containers?: ContainerItem[]
   clientId?: number
   pickupLocationId?: number
@@ -51,46 +51,46 @@ export interface WorkOrderUpdatePayload {
   driverSalary?: number
   allowance?: number
   earning?: number
-  status?: WorkOrder['status']
+  status?: DeliveredTrip['status']
 }
 
-export async function getWorkOrder(id: number): Promise<ApiResponse<WorkOrder>> {
+export async function getDeliveredTrip(id: number): Promise<ApiResponse<DeliveredTrip>> {
   try {
-    const res = await api.get(`/work-orders/${id}`)
-    return ok(toCamel<WorkOrder>(res.data))
+    const res = await api.get(`/delivered-trips/${id}`)
+    return ok(toCamel<DeliveredTrip>(res.data))
   } catch (err) {
     return fail(err)
   }
 }
 
-export async function getWorkOrders(filters?: WorkOrderFilters): Promise<ApiResponse<WorkOrder[]>> {
-  const cacheKey = `work-orders:${filters?.driverId || ''}:${filters?.status || ''}`
+export async function getDeliveredTrips(filters?: DeliveredTripFilters): Promise<ApiResponse<DeliveredTrip[]>> {
+  const cacheKey = `delivered-trips:${filters?.driverId || ''}:${filters?.status || ''}`
   try {
     const params: Record<string, string> = {}
     if (filters?.driverId) params.driver_id = String(filters.driverId)
     if (filters?.dateFrom) params.date_from = filters.dateFrom
     if (filters?.dateTo) params.date_to = filters.dateTo
     if (filters?.status) params.status = filters.status
-    const res = await api.get('/work-orders', { params })
-    const data = toCamel<WorkOrder[]>(unwrapList(res.data))
+    const res = await api.get('/delivered-trips', { params })
+    const data = toCamel<DeliveredTrip[]>(unwrapList(res.data))
     await setCache(cacheKey, data)
     return ok(data)
   } catch (err) {
-    const cached = await getCache<WorkOrder[]>(cacheKey)
+    const cached = await getCache<DeliveredTrip[]>(cacheKey)
     if (isNetworkError(err) && cached) return ok(cached)
     return fail(err)
   }
 }
 
-export async function createWorkOrder(
-  data: WorkOrderCreatePayload,
-): Promise<ApiResponse<WorkOrder>> {
+export async function createDeliveredTrip(
+  data: DeliveredTripCreatePayload,
+): Promise<ApiResponse<DeliveredTrip>> {
   const snakeBody = toSnake(data)
   try {
-    const res = await api.post('/work-orders', snakeBody)
-    const wo = toCamel<WorkOrder>(res.data)
-    const cacheKey = `work-orders:${data.driverId || ''}:${data.clientId || ''}`
-    const cached = await getCache<WorkOrder[]>(cacheKey)
+    const res = await api.post('/delivered-trips', snakeBody)
+    const wo = toCamel<DeliveredTrip>(res.data)
+    const cacheKey = `delivered-trips:${data.driverId || ''}:${data.clientId || ''}`
+    const cached = await getCache<DeliveredTrip[]>(cacheKey)
     if (cached) {
       await setCache(cacheKey, [wo, ...cached])
     }
@@ -98,7 +98,7 @@ export async function createWorkOrder(
   } catch (err) {
     if (isNetworkError(err)) {
       await offlineQueue.enqueue({
-        endpoint: '/api/v1/work-orders',
+        endpoint: '/api/v1/delivered-trips',
         method: 'POST',
         body: snakeBody,
       })
@@ -123,7 +123,7 @@ export async function createWorkOrder(
         createdAt: new Date().toISOString(),
         status: 'PENDING',
         pendingSync: true,
-      } satisfies WorkOrder)
+      } satisfies DeliveredTrip)
     }
     return fail(err)
   }
@@ -139,7 +139,7 @@ export interface OCRContainerResponse {
 export async function ocrContainer(imageDataUrl: string, containerIndex: number): Promise<OCRContainerResponse> {
   // Strip data URI prefix: "data:image/jpeg;base64," → raw base64
   const base64 = imageDataUrl.replace(/^data:[^;]+;base64,/, '')
-  const res = await api.post('/work-orders/ocr-container', {
+  const res = await api.post('/delivered-trips/ocr-container', {
     image_data: base64,
     mime_type: 'image/jpeg',
     container_index: containerIndex,
@@ -152,10 +152,10 @@ export async function ocrContainer(imageDataUrl: string, containerIndex: number)
   }
 }
 
-export async function updateWorkOrder(id: number, data: WorkOrderUpdatePayload): Promise<ApiResponse<WorkOrder>> {
+export async function updateDeliveredTrip(id: number, data: DeliveredTripUpdatePayload): Promise<ApiResponse<DeliveredTrip>> {
   try {
-    const res = await api.put(`/work-orders/${id}`, toSnake(data))
-    return ok(toCamel<WorkOrder>(res.data))
+    const res = await api.put(`/delivered-trips/${id}`, toSnake(data))
+    return ok(toCamel<DeliveredTrip>(res.data))
   } catch (err) {
     return fail(err)
   }
@@ -163,7 +163,7 @@ export async function updateWorkOrder(id: number, data: WorkOrderUpdatePayload):
 
 export async function validateContainer(containerNumber: string): Promise<ApiResponse<{ valid: boolean; error?: string }>> {
   try {
-    const res = await api.get('/work-orders/validate-container', {
+    const res = await api.get('/delivered-trips/validate-container', {
       params: { container_number: containerNumber },
     })
     return ok({ valid: res.data.valid, error: res.data.error })
@@ -172,14 +172,14 @@ export async function validateContainer(containerNumber: string): Promise<ApiRes
   }
 }
 
-export async function exportWorkOrdersExcel(filters?: {
+export async function exportDeliveredTripsExcel(filters?: {
   dateFrom?: string; dateTo?: string; status?: string
 }): Promise<Blob> {
   const params = new URLSearchParams()
   if (filters?.dateFrom) params.append('date_from', filters.dateFrom)
   if (filters?.dateTo) params.append('date_to', filters.dateTo)
   if (filters?.status) params.append('status', filters.status)
-  const res = await api.get(`/work-orders/export?${params.toString()}`, { responseType: 'blob' })
+  const res = await api.get(`/delivered-trips/export?${params.toString()}`, { responseType: 'blob' })
   return res.data
 }
 
@@ -217,7 +217,7 @@ export async function bulkImportAndMatch(file: File, clientId?: number): Promise
     formData.append('file', file)
     if (clientId) formData.append('client_id', String(clientId))
 
-    const res = await api.post('/work-orders/bulk-import-and-match', formData, {
+    const res = await api.post('/delivered-trips/bulk-import-and-match', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     return ok(toCamel<BulkImportAndMatchResult>(res.data))
@@ -262,7 +262,7 @@ export async function aiParsePreview(file: File, sourceId?: string): Promise<Api
     formData.append('file', file)
     if (sourceId) formData.append('source_id', sourceId)
 
-    const res = await api.post('/work-orders/ai-parse-preview', formData, {
+    const res = await api.post('/delivered-trips/ai-parse-preview', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     return ok(toCamel<AIParsePreviewResult>(res.data))

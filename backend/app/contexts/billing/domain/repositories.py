@@ -11,7 +11,7 @@ from app.contexts.billing.domain.value_objects import SettlementPeriod
 class SettlementDataLoader(ABC):
     """Builds a `SettlementStatement` for one (client, period).
 
-    Cross-context read: needs trip orders + containers + matched work-orders +
+    Cross-context read: needs trip orders + containers + matched delivered-trips +
     location names + client master. The implementation lives in the billing
     infrastructure layer and queries the relevant ORM tables directly.
     """

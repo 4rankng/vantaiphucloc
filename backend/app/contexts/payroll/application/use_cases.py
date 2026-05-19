@@ -21,7 +21,7 @@ from app.contexts.payroll.domain.repositories import (
     DriverSalaryConfigRepository,
     SettingsRepository,
 )
-from app.models.domain import TripOrder, TripOrderContainer, WorkOrder
+from app.models.domain import BookedTrip, BookedTripContainer, DeliveredTrip
 from app.models.base import User
 
 _logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ DEFAULTS: dict[str, str] = {
 class GetDriverEarnings:
     """Calculate driver earnings on-the-fly from MATCHED work orders.
 
-    Cross-context read: queries WorkOrder rows from Operations and User
+    Cross-context read: queries DeliveredTrip rows from Operations and User
     from Identity directly at the ORM level. Base salary is layered on
     top via :class:`DriverSalaryConfigRepository` (latest rate effective
     at *end_date*).
@@ -57,14 +57,14 @@ class GetDriverEarnings:
         row = (
             await self.session.execute(
                 select(
-                    func.count(WorkOrder.id),
-                    func.coalesce(func.sum(WorkOrder.driver_salary), 0),
-                    func.coalesce(func.sum(WorkOrder.allowance), 0),
+                    func.count(DeliveredTrip.id),
+                    func.coalesce(func.sum(DeliveredTrip.driver_salary), 0),
+                    func.coalesce(func.sum(DeliveredTrip.allowance), 0),
                 ).where(
-                    WorkOrder.driver_id == driver_id,
-                    WorkOrder.status == "MATCHED",
-                    func.coalesce(WorkOrder.trip_date, func.date(WorkOrder.created_at)) >= start_date,
-                    func.coalesce(WorkOrder.trip_date, func.date(WorkOrder.created_at)) <= end_date,
+                    DeliveredTrip.driver_id == driver_id,
+                    DeliveredTrip.status == "MATCHED",
+                    func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= start_date,
+                    func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= end_date,
                 )
             )
         ).one()
@@ -217,12 +217,11 @@ class MonthlyPnLDTO:
     start_date: date
     end_date: date
     revenue: int
-    total_productivity_salary: int  # Σ WorkOrder.driver_salary
-    total_allowance: int            # Σ WorkOrder.allowance
+    total_productivity_salary: int  # Σ DeliveredTrip.driver_salary
+    total_allowance: int            # Σ DeliveredTrip.allowance
     total_base_salary: int          # Σ effective base salary per driver
-    total_vehicle_expenses: int     # XANG_DAU + SUA_CHUA
-    total_cp_chung: int             # CHUNG category (general overhead)
-    profit: int                     # revenue − all salary costs
+    total_vehicle_expenses: int     # Fuel + Repairs + Law + Other
+    profit: int                     # revenue − all costs
     matched_trip_count: int
     partner_breakdown: list[PartnerRevenueBreakdownDTO]
 
@@ -230,18 +229,18 @@ class MonthlyPnLDTO:
 class GetMonthlyPnL:
     """Compute revenue, total wages, and profit for an accounting period.
 
-    Revenue counts every MATCHED ``TripOrder`` whose ``trip_date`` falls
+    Revenue counts every MATCHED ``BookedTrip`` whose ``trip_date`` falls
     within ``[start_date, end_date]``. Each trip contributes
-    ``unit_price × number_of_containers`` to revenue.
+    its ``revenue`` field.
 
-    Costs are summed across all WorkOrders matched in the period:
-      * productivity salary (``WorkOrder.driver_salary``)
-      * allowance (``WorkOrder.allowance``)
-      * base salary — for every driver who has any MATCHED WorkOrder in
+    Costs are summed across all DeliveredTrips matched in the period:
+      * productivity salary (``DeliveredTrip.driver_salary``)
+      * allowance (``DeliveredTrip.allowance``)
+      * base salary — for every driver who has any MATCHED DeliveredTrip in
         the period, take the rate effective at ``end_date``. Drivers
         without a base salary configured contribute 0.
 
-    Profit = revenue − (productivity + allowance + base + vehicle_expenses + cp_chung).
+    Profit = revenue − (productivity + allowance + base + vehicle_expenses).
     """
 
     def __init__(
@@ -255,34 +254,33 @@ class GetMonthlyPnL:
     async def __call__(
         self, *, start_date: date, end_date: date
     ) -> MonthlyPnLDTO:
-        # ---- Revenue: Σ unit_price × container_count over MATCHED TOs ----
-        # We compute container counts per TO first, then multiply.
+        # ---- Revenue: Σ revenue over MATCHED TOs ----
         per_to_rows = (
             await self.session.execute(
                 select(
-                    TripOrder.id,
-                    TripOrder.client_id,
-                    TripOrder.unit_price,
-                    func.count(TripOrderContainer.id),
+                    BookedTrip.id,
+                    BookedTrip.client_id,
+                    BookedTrip.revenue,
+                    func.count(BookedTripContainer.id),
                 )
                 .join(
-                    TripOrderContainer,
-                    TripOrderContainer.trip_order_id == TripOrder.id,
+                    BookedTripContainer,
+                    BookedTripContainer.booked_trip_id == BookedTrip.id,
                     isouter=True,
                 )
                 .where(
-                    TripOrder.status == "MATCHED",
-                    TripOrder.trip_date >= start_date,
-                    TripOrder.trip_date <= end_date,
+                    BookedTrip.status == "MATCHED",
+                    BookedTrip.trip_date >= start_date,
+                    BookedTrip.trip_date <= end_date,
                 )
-                .group_by(TripOrder.id, TripOrder.client_id, TripOrder.unit_price)
+                .group_by(BookedTrip.id, BookedTrip.client_id, BookedTrip.revenue)
             )
         ).all()
 
         revenue = 0
         per_partner: dict[int, dict] = {}
-        for to_id, client_id, unit_price, container_count in per_to_rows:
-            line = int(unit_price or 0) * int(container_count or 0)
+        for to_id, client_id, to_revenue, container_count in per_to_rows:
+            line = int(to_revenue or 0)
             revenue += line
             slot = per_partner.setdefault(
                 client_id,
@@ -323,13 +321,13 @@ class GetMonthlyPnL:
         wage_row = (
             await self.session.execute(
                 select(
-                    func.coalesce(func.sum(WorkOrder.driver_salary), 0),
-                    func.coalesce(func.sum(WorkOrder.allowance), 0),
+                    func.coalesce(func.sum(DeliveredTrip.driver_salary), 0),
+                    func.coalesce(func.sum(DeliveredTrip.allowance), 0),
                 ).where(
-                    WorkOrder.status == "MATCHED",
-                    func.coalesce(WorkOrder.trip_date, func.date(WorkOrder.created_at))
+                    DeliveredTrip.status == "MATCHED",
+                    func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
                     >= start_date,
-                    func.coalesce(WorkOrder.trip_date, func.date(WorkOrder.created_at))
+                    func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
                     <= end_date,
                 )
             )
@@ -340,12 +338,12 @@ class GetMonthlyPnL:
         # ---- Base salary: distinct drivers with MATCHED WOs in period ----
         driver_id_rows = (
             await self.session.execute(
-                select(WorkOrder.driver_id)
+                select(DeliveredTrip.driver_id)
                 .where(
-                    WorkOrder.status == "MATCHED",
-                    func.coalesce(WorkOrder.trip_date, func.date(WorkOrder.created_at))
+                    DeliveredTrip.status == "MATCHED",
+                    func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
                     >= start_date,
-                    func.coalesce(WorkOrder.trip_date, func.date(WorkOrder.created_at))
+                    func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
                     <= end_date,
                 )
                 .distinct()
@@ -367,27 +365,18 @@ class GetMonthlyPnL:
         ve_rows = (
             await self.session.execute(
                 select(
-                    VehicleExpense.category,
                     func.coalesce(func.sum(VehicleExpense.amount), 0),
                 ).where(
                     VehicleExpense.expense_date >= start_date,
                     VehicleExpense.expense_date <= end_date,
                 )
-                .group_by(VehicleExpense.category)
             )
-        ).all()
-        total_vehicle_expenses = 0
-        total_cp_chung = 0
-        for cat, total_amt in ve_rows:
-            amt = int(total_amt or 0)
-            if cat == "CHUNG":
-                total_cp_chung = amt
-            elif cat in ("XANG_DAU", "SUA_CHUA"):
-                total_vehicle_expenses += amt
+        ).one()
+        total_vehicle_expenses = int(ve_rows[0] or 0)
 
         profit = revenue - (
             total_productivity + total_allowance + total_base_salary
-            + total_vehicle_expenses + total_cp_chung
+            + total_vehicle_expenses
         )
 
         return MonthlyPnLDTO(
@@ -398,7 +387,6 @@ class GetMonthlyPnL:
             total_allowance=total_allowance,
             total_base_salary=total_base_salary,
             total_vehicle_expenses=total_vehicle_expenses,
-            total_cp_chung=total_cp_chung,
             profit=profit,
             matched_trip_count=matched_trip_count,
             partner_breakdown=partner_breakdown,

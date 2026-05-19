@@ -6,6 +6,6 @@ from app.models.domain import (
     DriverSalaryConfig as DriverSalaryConfigORM,
 )
 from app.models.domain import Setting as SettingORM
-from app.models.domain import WorkOrder as WorkOrderORM
+from app.models.domain import DeliveredTrip as DeliveredTripORM
 
-__all__ = ["DriverSalaryConfigORM", "SettingORM", "WorkOrderORM"]
+__all__ = ["DriverSalaryConfigORM", "SettingORM", "DeliveredTripORM"]

@@ -214,7 +214,7 @@ SKIP_PATTERNS: tuple[str, ...] = (
     "sales", "mkt", "sales/mkt", "sales mkt",
     # Vessel admin
     "flag", "shipping agent",
-    # Reefer config (we don't track reefer setpoints on TripOrder)
+    # Reefer config (we don't track reefer setpoints on BookedTrip)
     "class", "temperature", "temp", "nhiet do", "nhiệt độ", "reefer",
     "do am", "độ ẩm", "thong gio", "thông gió",
     # Voyage / flight number
