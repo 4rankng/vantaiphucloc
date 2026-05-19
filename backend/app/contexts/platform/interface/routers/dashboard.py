@@ -87,9 +87,15 @@ async def get_dashboard_summary(
     active_q = await db.execute(active_query)
     active_trips = active_q.scalar() or 0
 
-    # outstanding_debt: compute from order totals at read time (TODO)
-
-    outstanding_debt = 0
+    # outstanding_debt: confirmed receivables (matched/confirmed/completed booked trips)
+    debt_query = select(func.coalesce(func.sum(BookedTrip.revenue), 0)).where(
+        BookedTrip.status.in_(["MATCHED", "CONFIRMED", "COMPLETED"])
+    )
+    if parsed_from:
+        debt_query = debt_query.where(BookedTrip.created_at >= parsed_from)
+    if parsed_to:
+        debt_query = debt_query.where(BookedTrip.created_at < parsed_to + timedelta(days=1))
+    outstanding_debt = (await db.execute(debt_query)).scalar() or 0
 
     # Use vehicle_drivers join for plate lookup so multi-driver vehicles
     # show the correct plate per driver. Falls back to NULL plate gracefully

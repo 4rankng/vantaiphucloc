@@ -45,6 +45,7 @@ class Vehicle(AuditableMixin, Base):
     id = Column(Integer, primary_key=True, index=True)
     plate = Column(String(20), nullable=False, unique=True, index=True)
     driver_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=True, index=True)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(

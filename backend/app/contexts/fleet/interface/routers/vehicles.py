@@ -18,6 +18,7 @@ router = APIRouter()
 
 class VehicleCreateIn(BaseModel):
     plate: str = Field(..., min_length=4, max_length=20)
+    vendor_id: int | None = None
 
 
 @router.get("/vehicles", response_model=list[VehicleOut])
@@ -46,7 +47,7 @@ async def create_vehicle(
     )).scalar_one_or_none()
     if existing:
         return existing
-    vehicle = Vehicle(plate=plate, is_active=True)
+    vehicle = Vehicle(plate=plate, is_active=True, vendor_id=body.vendor_id)
     db.add(vehicle)
     await db.flush()
     await db.refresh(vehicle)

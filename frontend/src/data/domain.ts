@@ -50,6 +50,7 @@ export interface Vehicle {
   id: number
   plate: string
   driverId?: number | null
+  vendorId?: number | null
   isActive: boolean
   createdAt: string
   updatedAt: string

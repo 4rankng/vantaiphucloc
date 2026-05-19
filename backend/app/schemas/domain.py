@@ -138,12 +138,14 @@ PartnerSummaryOut = ClientSummaryOut
 class VehicleCreate(BaseModel):
     plate: str
     driver_id: int | None = None
+    vendor_id: int | None = None
 
 
 class VehicleOut(BaseModel):
     id: int
     plate: str
     driver_id: int | None = None
+    vendor_id: int | None = None
     is_active: bool = True
     created_at: datetime
     updated_at: datetime
