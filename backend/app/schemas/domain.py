@@ -461,6 +461,7 @@ class BookedTripOut(BaseModel):
     pickup_location: LocationSummaryOut
     dropoff_location: LocationSummaryOut
     containers: list[TripContainerOut] = []
+    vessel: str | None = None
     operation_type: str | None = None
     work_type: str = ""
     revenue: int

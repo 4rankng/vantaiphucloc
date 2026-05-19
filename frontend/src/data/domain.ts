@@ -226,10 +226,11 @@ export interface BookedTripContainerItem {
 export interface BookedTrip {
   id: number
   tripDate: string
-  client: PartnerSummary
+  partner: PartnerSummary
   pickupLocation: LocationSummary
   dropoffLocation: LocationSummary
   containers: BookedTripContainerItem[]
+  vessel: string | null
   operationType?: OperationType | null
   workType?: string | null
   revenue: number

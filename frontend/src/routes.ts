@@ -27,6 +27,12 @@ export const AccountantDrivers    = lazy(() => import('@/pages/accountant/Driver
 export const AccountantTransporters = lazy(() => import('@/pages/accountant/TransportersPage').then(m => ({ default: m.TransportersPage })))
 export const AccountantSettings   = lazy(() => import('@/pages/accountant/SettingsPage').then(m => ({ default: m.SettingsPage })))
 export const AccountantDoiSoat    = lazy(() => import('@/pages/accountant/DoiSoatPage').then(m => ({ default: m.DoiSoatPage })))
+export const AccountantExcelImport = lazy(() => import('@/pages/accountant/ExcelImportPage').then(m => ({ default: m.ExcelImportPage })))
+export const AccountantExpenses   = lazy(() => import('@/pages/accountant/VehicleExpensesPage').then(m => ({ default: m.VehicleExpensesPage })))
+export const AccountantSalary     = lazy(() => import('@/pages/accountant/SalaryPage').then(m => ({ default: m.SalaryPage })))
+export const AccountantPnL        = lazy(() => import('@/pages/accountant/PnLPage').then(m => ({ default: m.PnLPage })))
+export const AccountantSettlement = lazy(() => import('@/pages/accountant/SettlementPage').then(m => ({ default: m.SettlementPage })))
+export const AccountantLocations  = lazy(() => import('@/pages/accountant/LocationAliasesPage').then(m => ({ default: m.LocationAliasesPage })))
 
 
 // ─── Director pages ───────────────────────────────────────────────────────────

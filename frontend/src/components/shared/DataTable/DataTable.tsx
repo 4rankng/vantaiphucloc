@@ -1,103 +1,133 @@
-'use client'
+import { Fragment, type ReactNode } from 'react'
+import type { Column, ColumnAlign } from './columns'
 
-import { cn } from '@/lib/utils'
-
-interface Column<T> {
-  key: string
-  header: string
-  render?: (row: T, index: number) => React.ReactNode
-  align?: 'left' | 'center' | 'right'
-  width?: string
-}
-
-interface DataTableProps<T> {
+export interface DataTableProps<T> {
   columns: Column<T>[]
-  data: T[]
-  onRowClick?: (row: T) => void
-  emptyMessage?: string
+  rows: T[]
+  rowKey: (row: T, index: number) => string | number
+  /** Loading state — renders skeleton rows. */
+  isLoading?: boolean
+  /** Number of skeleton rows when loading. Defaults to 5. */
+  loadingRows?: number
+  /** Rendered when not loading and rows.length === 0. */
+  empty?: ReactNode
+  /** Optional footer row (e.g. totals). Rendered inside <tfoot>. */
+  footer?: ReactNode
+  /** Per-row click handler. When set, rows show cursor:pointer. */
+  onRowClick?: (row: T, index: number) => void
+  /** Per-row selected state. Adds accent-soft background. */
+  isSelected?: (row: T, index: number) => boolean
+  /** When provided, returning non-null inserts an expansion row below the data row. */
+  renderExpanded?: (row: T, index: number) => ReactNode | null
+  /** Minimum table width before horizontal scroll kicks in. Defaults to 900. */
+  minWidth?: number
+  /** Extra wrapper class. */
   className?: string
-  compact?: boolean
 }
 
-export function DataTable<T extends Record<string, unknown>>({
+const ALIGN_CLASS: Record<ColumnAlign, string> = {
+  left: 'text-left',
+  right: 'text-right',
+  center: 'text-center',
+}
+
+const HIDE_CLASS: Record<NonNullable<Column<unknown>['hideBelow']>, string> = {
+  md: 'hidden md:table-cell',
+  lg: 'hidden lg:table-cell',
+}
+
+export function DataTable<T>({
   columns,
-  data,
+  rows,
+  rowKey,
+  isLoading = false,
+  loadingRows = 5,
+  empty,
+  footer,
   onRowClick,
-  emptyMessage = 'Không có dữ liệu',
-  className,
-  compact = false,
+  isSelected,
+  renderExpanded,
+  minWidth = 900,
+  className = '',
 }: DataTableProps<T>) {
-  const headerPad = compact ? 'px-3 py-2.5' : 'px-5 py-3'
-  const cellPad = compact ? 'px-3 py-2.5' : 'px-5 py-3.5'
+  if (isLoading) {
+    return (
+      <div className={`p-6 space-y-3 ${className}`}>
+        {Array.from({ length: loadingRows }).map((_, i) => (
+          <div
+            key={i}
+            className="h-10 rounded-lg animate-pulse"
+            style={{ background: 'var(--surface-3)' }}
+          />
+        ))}
+      </div>
+    )
+  }
+
+  if (rows.length === 0 && empty) {
+    return <div className={className}>{empty}</div>
+  }
 
   return (
-    <div className={cn(
-      'rounded-[var(--theme-radius-lg,10px)] border border-[var(--theme-border-default)]',
-      'bg-[var(--theme-bg-secondary)] overflow-hidden',
-      'shadow-[var(--theme-shadow-card,0_1px_0_rgba(9,9,11,0.02))]',
-      className,
-    )}>
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--theme-border-light, var(--theme-border-default))' }}>
-              {columns.map(col => (
+    <div className={`nepo-table-scroll overflow-x-auto ${className}`}>
+      <table
+        className="nepo-table w-full"
+        style={{ minWidth: `${minWidth}px`, borderCollapse: 'collapse' }}
+      >
+        <thead>
+          <tr>
+            {columns.map((col) => {
+              const align = col.align ?? 'left'
+              const hide = col.hideBelow ? HIDE_CLASS[col.hideBelow] : ''
+              return (
                 <th
                   key={col.key}
-                  className={cn(
-                    headerPad,
-                    'text-[11px] font-semibold uppercase tracking-wider whitespace-nowrap',
-                    col.align === 'center' && 'text-center',
-                    col.align === 'right' && 'text-right',
-                  )}
-                  style={{
-                    color: 'var(--theme-text-muted)',
-                    ...(col.width ? { width: col.width } : {}),
-                  }}
+                  className={`${ALIGN_CLASS[align]} ${hide} ${col.headerClassName ?? ''} ${col.sticky ? 'nepo-th-sticky' : ''}`}
+                  style={col.width ? { width: typeof col.width === 'number' ? `${col.width}px` : col.width } : undefined}
                 >
                   {col.header}
                 </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.length === 0 ? (
-              <tr>
-                <td colSpan={columns.length} className={cn(cellPad, 'text-center text-sm py-16')} style={{ color: 'var(--theme-text-muted)' }}>
-                  {emptyMessage}
-                </td>
-              </tr>
-            ) : (
-              data.map((row, i) => (
+              )
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => {
+            const key = rowKey(row, i)
+            const selected = isSelected?.(row, i) ?? false
+            const expanded = renderExpanded?.(row, i) ?? null
+            return (
+              <Fragment key={key}>
                 <tr
-                  key={i}
-                  onClick={() => onRowClick?.(row)}
-                  className={cn(
-                    'transition-colors',
-                    onRowClick && 'cursor-pointer hover:bg-[var(--theme-bg-tertiary)]',
-                  )}
-                  style={{ borderBottom: '1px solid var(--theme-border-light, var(--theme-border-default))' }}
+                  className={`${selected ? 'is-selected' : ''} ${onRowClick ? 'cursor-pointer' : ''}`}
+                  onClick={onRowClick ? () => onRowClick(row, i) : undefined}
                 >
-                  {columns.map(col => (
-                    <td
-                      key={col.key}
-                      className={cn(
-                        cellPad,
-                        'text-[13px]',
-                        col.align === 'center' && 'text-center',
-                        col.align === 'right' && 'text-right',
-                      )}
-                      style={{ color: 'var(--theme-text-secondary)' }}
-                    >
-                      {col.render ? col.render(row, i) : String(row[col.key] ?? '')}
-                    </td>
-                  ))}
+                  {columns.map((col) => {
+                    const align = col.align ?? 'left'
+                    const hide = col.hideBelow ? HIDE_CLASS[col.hideBelow] : ''
+                    return (
+                      <td
+                        key={col.key}
+                        className={`${ALIGN_CLASS[align]} ${hide} ${col.cellClassName ?? ''} ${col.sticky ? 'nepo-td-sticky' : ''}`}
+                      >
+                        {col.render(row, i)}
+                      </td>
+                    )
+                  })}
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+                {expanded && (
+                  <tr className="nepo-tr-expanded">
+                    <td colSpan={columns.length} className="!p-0">
+                      {expanded}
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            )
+          })}
+        </tbody>
+        {footer && <tfoot className="nepo-tfoot">{footer}</tfoot>}
+      </table>
     </div>
   )
 }

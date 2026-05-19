@@ -80,6 +80,7 @@ def _trip_to_out(t: BookedTrip, partners, locations) -> BookedTripOut:
             )
             for c in t.containers
         ],
+        vessel=t.vessel,
         operation_type=t.operation_type,
         work_type=t.work_type,
         revenue=t.revenue,

@@ -312,6 +312,7 @@ class BookedTrip(AuditableMixin, Base):
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
     pickup_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
     dropoff_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
+    vessel = Column(String(100), nullable=True)
     operation_type = Column(String(20), nullable=True, index=True)
     work_type = Column(String(10), nullable=False)
     revenue = Column(Integer, nullable=False, default=0)

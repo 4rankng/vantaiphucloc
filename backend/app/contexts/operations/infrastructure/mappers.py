@@ -70,6 +70,7 @@ def booked_trip_to_domain(
         work_type=orm.work_type,
         revenue=int(orm.revenue or 0),
         status=orm.status,
+        vessel=orm.vessel,
         created_at=orm.created_at,
         updated_at=orm.updated_at,
         containers=container_entities,
@@ -93,6 +94,7 @@ def booked_trip_to_orm(
     orm.work_type = t.work_type
     orm.revenue = int(t.revenue)
     orm.status = str(t.status)
+    orm.vessel = t.vessel
     return orm
 
 

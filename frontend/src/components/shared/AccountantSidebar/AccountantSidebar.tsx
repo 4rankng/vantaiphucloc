@@ -13,6 +13,12 @@ import {
   Container,
   Calendar,
   ClipboardCheck,
+  Upload,
+  Fuel,
+  Wallet,
+  TrendingUp,
+  FileSpreadsheet,
+  MapPin,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUnreadCount } from '@/components/shared/NotificationPanel/NotificationPanel'
@@ -56,12 +62,23 @@ const ACCOUNTANT_NAV_SECTIONS: SidebarSection[] = [
     label: 'Nghiệp vụ',
     items: [
       { label: 'Đối soát', href: '/accountant/doi-soat', icon: ClipboardCheck },
+      { label: 'Nhập Excel', href: '/accountant/import', icon: Upload },
     ],
   },
   {
-    label: 'Cài đặt',
+    label: 'Tài chính',
     items: [
-      { label: 'Thiết lập', href: '/accountant/settings', icon: Calendar },
+      { label: 'Chi phí xe', href: '/accountant/expenses', icon: Fuel },
+      { label: 'Lương', href: '/accountant/salary', icon: Wallet },
+      { label: 'P&L', href: '/accountant/pnl', icon: TrendingUp },
+      { label: 'Xuất đối soát', href: '/accountant/settlement', icon: FileSpreadsheet },
+    ],
+  },
+  {
+    label: 'Hệ thống',
+    items: [
+      { label: 'Địa điểm', href: '/accountant/locations', icon: MapPin },
+      { label: 'Thiết lập', href: '/accountant/settings', icon: Settings },
     ],
   },
 ]
@@ -99,8 +116,6 @@ export function AccountantSidebar({
   const { user, logout } = useAuth()
   const unread = useUnreadCount()
 
-  // When an external `items` override is provided, render as a single ungrouped section
-  // (preserves the existing flat-list contract for any caller passing custom items).
   const sections: SidebarSection[] = items
     ? [{ label: null, items }]
     : ACCOUNTANT_NAV_SECTIONS
@@ -118,135 +133,95 @@ export function AccountantSidebar({
     navigate('/')
   }, [logout, navigate])
 
+  const brandInitial = (user?.name ?? 'N').charAt(0).toUpperCase()
+
   return (
     <aside
       className={`${forceVisible ? 'flex' : 'hidden lg:flex'} flex-col shrink-0 h-full transition-[width] duration-200 relative ${
-        collapsed ? 'w-[64px]' : 'w-[232px]'
+        collapsed ? 'w-[64px]' : 'w-[248px]'
       }`}
       style={{
         background: 'var(--theme-sidebar)',
-        borderRight: '1px solid var(--theme-sidebar-border)',
       }}
     >
       {/* Brand area */}
-      <div
-        className="flex items-center gap-2.5 px-4"
-        style={{
-          height: '56px',
-          borderBottom: '1px solid var(--theme-sidebar-border)',
-        }}
-      >
-        <img src="/logo.avif" alt="" className="h-7 w-7 object-contain rounded-md shrink-0" />
+      <div className="flex items-center gap-2.5 px-5 pt-5 pb-4 shrink-0">
+        <div className="nepo-sidebar-brand-mark">
+          <img
+            src="/logo.avif"
+            alt="TTransport"
+            className="h-7 w-7 object-contain"
+            style={{ borderRadius: 6 }}
+          />
+        </div>
         {!collapsed && (
-          <p className="text-[13px] font-semibold text-white leading-tight truncate tracking-tight">TTransport</p>
+          <p className="text-[16px] font-bold text-white leading-tight truncate" style={{ letterSpacing: '-0.02em' }}>
+            TTransport
+          </p>
         )}
       </div>
 
       {/* Navigation */}
-      <nav className={`flex-1 px-2 ${collapsed ? 'pt-3' : 'pt-1'} overflow-y-auto sidebar-scroll`}>
-        {sections.map((section, sectionIdx) => {
-          // Collapsed: render an invisible divider between sections to preserve grouping rhythm.
-          // Expanded: render a hairline rule above sections that follow another (skip the first).
-          const needsDivider = sectionIdx > 0
-          return (
-            <div
-              key={section.label ?? `section-${sectionIdx}`}
-              className={sectionIdx === 0 ? '' : collapsed ? 'mt-2' : 'mt-1'}
-            >
-              {needsDivider && !collapsed && (
-                <div
-                  aria-hidden
-                  className="mx-2.5 my-2 h-px"
-                  style={{
-                    background: 'var(--theme-sidebar-border)',
-                    opacity: 0.4,
-                  }}
-                />
-              )}
-              {needsDivider && collapsed && (
-                <div
-                  aria-hidden
-                  className="mx-3 mb-2 h-px"
-                  style={{
-                    background: 'var(--theme-sidebar-border)',
-                    opacity: 0.4,
-                  }}
-                />
-              )}
-              {section.label && !collapsed && (
-                <p
-                  className="px-3 py-2 pt-3 text-[10px] font-semibold uppercase tracking-[0.12em] leading-none select-none"
-                  style={{ color: 'var(--theme-sidebar-text-muted)' }}
-                >
-                  {section.label}
-                </p>
-              )}
-              <div className="space-y-0.5">
-                {section.items.map((item) => {
-                  const Icon = item.icon
-                  const active = isActive(item.href)
-                  const badge = badges[item.href]
+      <nav className="flex-1 px-3 pb-3 overflow-y-auto sidebar-scroll">
+        {sections.map((section, sectionIdx) => (
+          <div key={section.label ?? `section-${sectionIdx}`}>
+            {section.label && !collapsed && (
+              <p className="nepo-sidebar-section-label px-3 mt-4 mb-1.5">
+                {section.label}
+              </p>
+            )}
+            {section.label && collapsed && sectionIdx > 0 && (
+              <div
+                aria-hidden
+                className="mx-3 my-2 h-px"
+                style={{ background: 'var(--sb-line)' }}
+              />
+            )}
+            <div className="space-y-[2px]">
+              {section.items.map((item) => {
+                const Icon = item.icon
+                const active = isActive(item.href)
+                const badge = badges[item.href]
 
-                  return (
-                    <NavLink
-                      key={item.href}
-                      to={item.href}
-                      aria-current={active ? 'page' : undefined}
-                      className={`group relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-colors duration-120 ${
-                        collapsed ? 'justify-center' : ''
-                      }`}
-                      style={{
-                        background: active ? 'var(--theme-sidebar-active)' : 'transparent',
-                        color: active ? 'var(--theme-sidebar-active-text)' : 'var(--theme-sidebar-text)',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!active) {
-                          ;(e.currentTarget as HTMLElement).style.background = 'var(--theme-sidebar-hover)'
-                          ;(e.currentTarget as HTMLElement).style.color = 'var(--theme-sidebar-active-text)'
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!active) {
-                          ;(e.currentTarget as HTMLElement).style.background = 'transparent'
-                          ;(e.currentTarget as HTMLElement).style.color = 'var(--theme-sidebar-text)'
-                        }
-                      }}
-                      title={collapsed ? item.label : undefined}
-                    >
-                      {/* Active accent — subtle 2px left bar */}
-                      {active && !collapsed && (
-                        <span
-                          aria-hidden
-                          className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-[2px] rounded-r"
-                          style={{ background: 'var(--theme-brand-primary)' }}
-                        />
-                      )}
-                      <Icon className="h-[16px] w-[16px] shrink-0" strokeWidth={active ? 2.25 : 1.75} />
-                      {!collapsed && (
-                        <>
-                          <span className="flex-1 truncate tracking-tight">{item.label}</span>
-                          {badge && badge > 0 && (
-                            <span
-                              className="shrink-0 flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-semibold"
-                              style={{ background: 'var(--theme-status-error)', color: '#fff' }}
-                            >
-                              {badge > 99 ? '99+' : badge}
-                            </span>
-                          )}
-                        </>
-                      )}
-                    </NavLink>
-                  )
-                })}
-              </div>
+                return (
+                  <NavLink
+                    key={item.href}
+                    to={item.href}
+                    aria-current={active ? 'page' : undefined}
+                    className={`nepo-nav-item ${active ? 'is-active' : ''} flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] ${
+                      collapsed ? 'justify-center' : ''
+                    }`}
+                    title={collapsed ? item.label : undefined}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" strokeWidth={2} />
+                    {!collapsed && (
+                      <>
+                        <span className="flex-1 truncate" style={{ letterSpacing: '-0.005em' }}>{item.label}</span>
+                        {badge && badge > 0 ? (
+                          <span
+                            className="shrink-0 flex h-[18px] min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold"
+                            style={{
+                              background: '#FFFFFF',
+                              color: 'var(--accent)',
+                              fontFamily: 'var(--theme-font-mono)',
+                            }}
+                          >
+                            {badge > 99 ? '99+' : badge}
+                          </span>
+                        ) : null}
+                      </>
+                    )}
+                  </NavLink>
+                )
+              })}
             </div>
-          )
-        })}
+          </div>
+        ))}
       </nav>
 
-      {/* ── Sidebar art — road transport motif ── */}
+      {/* ── Sidebar art — road transport motif (desaturated) ── */}
       {!collapsed && (
-        <div className="sidebar-art shrink-0 px-3 pb-2">
+        <div className="sidebar-art shrink-0 px-3 pb-2" style={{ opacity: 0.35 }}>
           <svg
             viewBox="0 0 200 68"
             fill="none"
@@ -254,19 +229,14 @@ export function AccountantSidebar({
             aria-hidden="true"
             style={{ width: '100%', display: 'block' }}
           >
-            {/* Stars */}
             <circle cx="18"  cy="10" r="1"   fill="white" fillOpacity="0.5"/>
             <circle cx="60"  cy="6"  r="0.8" fill="white" fillOpacity="0.4"/>
             <circle cx="120" cy="9"  r="1.1" fill="white" fillOpacity="0.55"/>
             <circle cx="170" cy="5"  r="0.9" fill="white" fillOpacity="0.4"/>
             <circle cx="190" cy="14" r="0.8" fill="white" fillOpacity="0.35"/>
             <circle cx="88"  cy="18" r="0.7" fill="white" fillOpacity="0.3"/>
-            {/* Horizon hill */}
-            <path d="M0 32 Q50 22 100 28 Q150 34 200 24 L200 36 L0 36 Z"
-                  fill="white" fillOpacity="0.05"/>
-            {/* Road surface */}
+            <path d="M0 32 Q50 22 100 28 Q150 34 200 24 L200 36 L0 36 Z" fill="white" fillOpacity="0.05"/>
             <rect x="0" y="36" width="200" height="32" fill="white" fillOpacity="0.05" rx="2"/>
-            {/* Road center dashes */}
             <g stroke="white" strokeWidth="2" strokeLinecap="round" strokeOpacity="0.25">
               <line x1="0"   y1="52" x2="22"  y2="52"/>
               <line x1="34"  y1="52" x2="56"  y2="52"/>
@@ -275,9 +245,7 @@ export function AccountantSidebar({
               <line x1="136" y1="52" x2="158" y2="52"/>
               <line x1="170" y1="52" x2="192" y2="52"/>
             </g>
-            {/* Road edges */}
             <line x1="0" y1="36" x2="200" y2="36" stroke="white" strokeWidth="1" strokeOpacity="0.12"/>
-            {/* Truck body */}
             <g transform="translate(18 37)">
               <rect x="0" y="2" width="62" height="26" rx="2.5" fill="white" fillOpacity="0.12"/>
               <rect x="0" y="2" width="62" height="4"  rx="2" fill="white" fillOpacity="0.08"/>
@@ -289,14 +257,12 @@ export function AccountantSidebar({
               <circle cx="68"  cy="31" r="5.5" fill="white" fillOpacity="0.18"/>
               <circle cx="68"  cy="31" r="2.2" fill="white" fillOpacity="0.1"/>
             </g>
-            {/* Distant truck (right) */}
             <g transform="translate(130 41)" opacity="0.55">
               <rect x="0" y="1" width="36" height="16" rx="2" fill="white" fillOpacity="0.1"/>
               <path d="M36 3 L48 3 Q51 3 51 6 L51 17 L36 17 Z" fill="white" fillOpacity="0.13"/>
               <circle cx="8"  cy="19" r="3.5" fill="white" fillOpacity="0.14"/>
               <circle cx="42" cy="19" r="3.5" fill="white" fillOpacity="0.14"/>
             </g>
-            {/* Motion streaks */}
             <g stroke="white" strokeLinecap="round" strokeOpacity="0.1">
               <line x1="0"  y1="44" x2="14" y2="44" strokeWidth="2"/>
               <line x1="0"  y1="49" x2="10" y2="49" strokeWidth="1.5"/>
@@ -307,57 +273,55 @@ export function AccountantSidebar({
       )}
 
       {/* Footer — user menu */}
-      <div style={{ borderTop: '1px solid var(--theme-sidebar-border)' }} className="p-2 shrink-0">
+      <div style={{ borderTop: '1px solid var(--sb-line)' }} className="p-3 shrink-0">
         {collapsed ? (
           <button
             type="button"
             onClick={handleLogout}
-            className="h-8 w-8 flex items-center justify-center mx-auto rounded-md transition-colors duration-150"
-            style={{ color: 'var(--theme-sidebar-text-muted)' }}
-            onMouseEnter={(e) => {
-              ;(e.currentTarget as HTMLElement).style.background = 'var(--theme-sidebar-hover)'
-              ;(e.currentTarget as HTMLElement).style.color = '#fff'
-            }}
-            onMouseLeave={(e) => {
-              ;(e.currentTarget as HTMLElement).style.background = 'transparent'
-              ;(e.currentTarget as HTMLElement).style.color = 'var(--theme-sidebar-text-muted)'
-            }}
+            className="nepo-sidebar-footer-btn h-9 w-9 flex items-center justify-center mx-auto rounded-lg"
             aria-label="Đăng xuất"
           >
             <LogOut className="w-4 h-4 shrink-0" />
           </button>
         ) : (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="relative flex-1 min-w-0 flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors duration-150 cursor-pointer outline-none"
-                  onMouseEnter={(e) => {
-                    ;(e.currentTarget as HTMLElement).style.background = 'var(--theme-sidebar-hover)'
-                  }}
-                  onMouseLeave={(e) => {
-                    ;(e.currentTarget as HTMLElement).style.background = 'transparent'
-                  }}
+                  className="nepo-sidebar-footer-btn relative flex-1 min-w-0 flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer outline-none"
                 >
-                  {/* Avatar circle */}
                   <div
-                    className="h-7 w-7 shrink-0 flex items-center justify-center rounded-full text-[11px] font-semibold"
+                    className="h-8 w-8 shrink-0 flex items-center justify-center rounded-full text-[12px] font-semibold"
                     style={{
-                      background: 'var(--theme-brand-primary)',
+                      background: 'linear-gradient(135deg, #6E9DCB, #3D6FA3)',
                       color: '#fff',
                     }}
                   >
-                    {(user?.name || user?.username || '?').charAt(0).toUpperCase()}
+                    {brandInitial}
                   </div>
                   <div className="flex flex-col min-w-0 flex-1 text-left">
-                    <span className="text-[12px] font-medium truncate leading-tight" style={{ color: 'var(--theme-sidebar-active-text)' }}>{user?.name || user?.username}</span>
-                    <span className="text-[10px] truncate leading-tight" style={{ color: 'var(--theme-sidebar-text-muted)' }}>
-                      {user?.role === 'accountant' ? 'Kế toán' : user?.role === 'director' ? 'Giám đốc' : user?.role === 'superadmin' ? 'Quản trị' : user?.role}
+                    <span className="text-[13px] font-semibold truncate leading-tight" style={{ color: '#FFFFFF' }}>
+                      {user?.name ?? 'Người dùng'}
+                    </span>
+                    <span
+                      className="text-[11px] truncate leading-tight"
+                      style={{ color: 'var(--sb-text-muted)', fontFamily: 'var(--theme-font-mono)' }}
+                    >
+                      {user?.role === 'accountant'
+                        ? 'Kế toán'
+                        : user?.role === 'director'
+                          ? 'Giám đốc'
+                          : user?.role === 'superadmin'
+                            ? 'Quản trị'
+                            : user?.role}
                     </span>
                   </div>
                   {unread > 0 && (
-                    <span className="absolute -top-1 -right-1 h-3.5 min-w-3.5 flex items-center justify-center px-1 text-[9px] font-semibold rounded-full" style={{ background: 'var(--theme-status-error)', color: '#fff' }}>
+                    <span
+                      className="absolute -top-1 -right-1 h-4 min-w-[16px] flex items-center justify-center px-1 text-[9px] font-bold rounded-full"
+                      style={{ background: 'var(--theme-status-error)', color: '#fff' }}
+                    >
                       {unread > 99 ? '99+' : unread}
                     </span>
                   )}
@@ -382,16 +346,7 @@ export function AccountantSidebar({
             <button
               type="button"
               onClick={handleLogout}
-              className="h-8 w-8 flex items-center justify-center rounded-md transition-colors duration-150 shrink-0"
-              style={{ color: 'var(--theme-sidebar-text-muted)' }}
-              onMouseEnter={(e) => {
-                ;(e.currentTarget as HTMLElement).style.background = 'var(--theme-sidebar-hover)'
-                ;(e.currentTarget as HTMLElement).style.color = '#fff'
-              }}
-              onMouseLeave={(e) => {
-                ;(e.currentTarget as HTMLElement).style.background = 'transparent'
-                ;(e.currentTarget as HTMLElement).style.color = 'var(--theme-sidebar-text-muted)'
-              }}
+              className="nepo-sidebar-footer-btn h-9 w-9 flex items-center justify-center rounded-lg shrink-0"
               aria-label="Đăng xuất"
             >
               <LogOut className="w-4 h-4 shrink-0" />
@@ -400,7 +355,7 @@ export function AccountantSidebar({
         )}
       </div>
 
-      {/* Collapse / expand toggle — on the right edge, desktop only */}
+      {/* Collapse / expand toggle */}
       {onToggle && (
         <button
           type="button"
@@ -409,8 +364,8 @@ export function AccountantSidebar({
           className="absolute top-[44px] -right-3 z-10 w-6 h-6 flex items-center justify-center rounded-full transition-colors hover:brightness-110"
           style={{
             background: 'var(--theme-sidebar)',
-            border: '1px solid var(--theme-sidebar-border)',
-            color: 'var(--theme-sidebar-text-muted)',
+            border: '1px solid var(--sb-line)',
+            color: 'var(--sb-text-muted)',
           }}
         >
           <ChevronLeft

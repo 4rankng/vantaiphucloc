@@ -5,34 +5,34 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] text-[13px] font-medium leading-none tracking-[-0.01em] transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-40 select-none antialiased",
+  "inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-lg text-[13px] font-semibold leading-none transition-[background,border-color,color,transform,box-shadow] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--theme-brand-primary)] disabled:pointer-events-none disabled:opacity-50 select-none antialiased",
   {
     variants: {
       variant: {
         default:
-          "shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_2px_6px_rgba(0,0,0,0.12)] active:scale-[0.97] active:shadow-[0_1px_1px_rgba(0,0,0,0.04)]",
+          "shadow-[0_4px_10px_-3px_rgba(0,177,79,0.32)] active:translate-y-[1px]",
         destructive:
-          "border border-transparent shadow-[0_1px_3px_rgba(0,0,0,0.06)] hover:shadow-[0_2px_6px_rgba(0,0,0,0.1)] active:scale-[0.97]",
+          "active:translate-y-[1px]",
         outline:
-          "border bg-transparent hover:bg-[var(--theme-bg-tertiary)] active:scale-[0.97]",
+          "border active:translate-y-[1px]",
         danger:
-          "border bg-transparent hover:bg-[color-mix(in_srgb,var(--theme-status-error)_5%,transparent)] active:scale-[0.97]",
+          "border active:translate-y-[1px]",
         secondary:
-          "hover:bg-[var(--theme-bg-tertiary)] active:scale-[0.97]",
+          "active:translate-y-[1px]",
         muted:
-          "active:scale-[0.97]",
+          "active:translate-y-[1px]",
         ghost:
-          "hover:bg-[var(--theme-bg-tertiary)] active:scale-[0.97]",
+          "active:translate-y-[1px]",
         link:
           "underline-offset-4 hover:underline",
         gold:
-          "shadow-[0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[0_2px_6px_rgba(0,0,0,0.12)] active:scale-[0.97]",
+          "shadow-[0_4px_10px_-3px_rgba(0,177,79,0.32)] active:translate-y-[1px]",
       },
       size: {
-        default: "h-8 px-3.5 py-0",
-        sm: "h-7 px-2.5 text-[12px]",
-        lg: "h-9 px-5",
-        icon: "h-8 w-8",
+        default: "h-9 px-3.5 py-0",
+        sm: "h-7 px-2.5 text-[12px] gap-1.5",
+        lg: "h-10 px-5",
+        icon: "h-9 w-9",
         "icon-sm": "h-7 w-7",
       },
     },
@@ -55,34 +55,38 @@ const themeMap: Record<string, React.CSSProperties> = {
     color: 'var(--theme-text-on-brand)',
   },
   destructive: {
-    background: 'color-mix(in srgb, var(--theme-status-error) 90%, var(--theme-status-error))',
+    background: 'var(--theme-status-error)',
     color: '#fff',
   },
   outline: {
-    borderColor: 'var(--theme-border-default)',
-    color: 'var(--theme-text-secondary)',
+    background: 'var(--theme-bg-secondary)',
+    borderColor: 'var(--line-2)',
+    color: 'var(--theme-text-primary)',
   },
   danger: {
-    borderColor: 'color-mix(in srgb, var(--theme-status-error) 25%, transparent)',
+    background: 'var(--theme-bg-secondary)',
+    borderColor: 'var(--danger-soft)',
     color: 'var(--theme-status-error)',
   },
   secondary: {
-    background: 'var(--theme-bg-tertiary)',
-    color: 'var(--theme-text-secondary)',
+    background: 'var(--theme-bg-secondary)',
+    color: 'var(--theme-text-primary)',
+    border: '1px solid var(--line-2)',
   },
   muted: {
     background: 'var(--theme-bg-tertiary)',
-    color: 'var(--theme-text-muted)',
+    color: 'var(--theme-text-secondary)',
   },
   ghost: {
     color: 'var(--theme-text-secondary)',
+    background: 'transparent',
   },
   link: {
     color: 'var(--theme-brand-primary)',
   },
   gold: {
-    background: 'var(--theme-brand-secondary)',
-    color: 'var(--theme-text-inverse)',
+    background: 'var(--theme-brand-primary)',
+    color: 'var(--theme-text-on-brand)',
   },
 }
 
@@ -92,7 +96,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const themeStyle = themeMap[variant ?? 'default'] ?? {}
     return (
       <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
+        className={cn(buttonVariants({ variant, size, className }), `nepo-btn-${variant ?? 'default'}`)}
         style={{ ...themeStyle, ...style }}
         ref={ref}
         {...props}

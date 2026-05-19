@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
 import { searchBookedTrips } from '@/services/api/bookedTrips.api'
-import type { ApiResponse, Pricing, DeliveredTrip, BookedTrip, ContType, Client, Vendor, VendorSummary, BulkMatchPair } from '@/data/domain'
+import type { ApiResponse, Pricing, DeliveredTrip, BookedTrip, ContType, Client, Vendor, VendorSummary, BulkMatchPair, LocationAlias, MergeLocationsResponse } from '@/data/domain'
 import type { DriverEarnings } from '@/services/api/salary.api'
 import type { VehicleExpenseCategory } from '@/services/api/vehicleExpenses.api'
 import type { Vehicle } from '@/services/api/vehicles.api'
@@ -1151,6 +1151,72 @@ export function useExportVendorTrips() {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
+    },
+  })
+}
+
+// ── Location Aliases ──────────────────────────────────────────────────────────
+
+export function useLocationAliases(locationId?: number) {
+  return useQuery({
+    queryKey: ['location-aliases', locationId ?? 'all'],
+    queryFn: async () => {
+      const res = await apiClient.listAliases(locationId ? { locationId } : undefined)
+      return res.success ? res.data : []
+    },
+  })
+}
+
+export function useCreateAlias() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ locationId, alias }: { locationId: number; alias: string }) =>
+      apiClient.createAlias(locationId, alias).then(unwrap),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['location-aliases'] }) },
+  })
+}
+
+export function usePromoteAlias() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (aliasId: number) =>
+      apiClient.confirmAlias(aliasId).then(unwrap),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['location-aliases'] })
+      qc.invalidateQueries({ queryKey: queryKeys.locations })
+    },
+  })
+}
+
+export function useDeleteAlias() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (aliasId: number) => {
+      const res = await apiClient.rejectAlias(aliasId)
+      return unwrap(res)
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['location-aliases'] }) },
+  })
+}
+
+export function useMergeLocations() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ sourceLocationId, targetLocationId }: { sourceLocationId: number; targetLocationId: number }) =>
+      apiClient.mergeLocations(sourceLocationId, targetLocationId).then(unwrap),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['location-aliases'] })
+      qc.invalidateQueries({ queryKey: queryKeys.locations })
+    },
+  })
+}
+
+export function usePendingReviewLocations() {
+  return useQuery({
+    queryKey: ['pending-review-locations'],
+    queryFn: async () => {
+      const res = await apiClient.getPendingReviewLocations()
+      return res.success ? res.data : []
     },
   })
 }

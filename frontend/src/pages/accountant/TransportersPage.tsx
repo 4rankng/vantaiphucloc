@@ -1,13 +1,15 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useMonthParams } from './use-month-params'
-import { Truck, Plus, User, Search, MapPin } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button, Input, Label } from '@/components/ui'
+import { Truck, Plus, User, X, MapPin, Users, Coins, Wrench, Scale, MoreHorizontal } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog/ConfirmDialog'
-import { PulseHint } from '@/components/shared/PulseHint'
 import { LocationManager } from '@/components/shared/LocationManager'
-import { DashboardSectionHeader } from '@/components/shared/DashboardSectionHeader'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
-import { StatBreakdownCard } from '@/components/shared/StatBreakdownCard'
+import { Panel } from '@/components/shared/Panel'
+import { KpiHeroCard } from '@/components/shared/KpiHeroCard'
+import { Plate } from '@/components/shared/Plate'
+import { Toolbar, ToolbarSearch, ToolbarSpacer } from '@/components/shared/Toolbar'
+import { EmptyState } from '@/components/shared/EmptyState'
 import {
   useVehicleExpenses, useCreateVehicleExpense, useUpdateVehicleExpense,
   useSalaryConfig, useDrivers, useVehicleDrivers, useAddVehicleDriver,
@@ -18,8 +20,6 @@ import { formatCurrency } from '@/data/domain'
 import type { Driver } from '@/data/domain'
 import type { VehicleExpenseCategory, VehicleExpense } from '@/services/api/vehicleExpenses.api'
 import { EXPENSE_CATEGORY_LABELS } from '@/services/api/vehicleExpenses.api'
-
-// ─── Types & helpers ─────────────────────────────────────────────────────────
 
 interface VehicleGroup {
   vehicleId: number
@@ -32,7 +32,9 @@ function groupByVehicle(
 ): VehicleGroup[] {
   const map = new Map<number, VehicleGroup>()
   for (const r of rows) {
-    if (!map.has(r.vehicleId)) map.set(r.vehicleId, { vehicleId: r.vehicleId, plate: r.vehiclePlate, drivers: [] })
+    if (!map.has(r.vehicleId)) {
+      map.set(r.vehicleId, { vehicleId: r.vehicleId, plate: r.vehiclePlate, drivers: [] })
+    }
     map.get(r.vehicleId)!.drivers.push({ id: r.id, driverId: r.driverId, driverName: r.driverName })
   }
   return [...map.values()]
@@ -40,11 +42,11 @@ function groupByVehicle(
 
 const VEHICLE_CATEGORIES: VehicleExpenseCategory[] = ['XANG_DAU', 'SUA_CHUA', 'TIEN_LUAT', 'KHAC']
 
-const CATEGORY_COLORS: Record<VehicleExpenseCategory, string> = {
-  XANG_DAU: 'var(--theme-status-warning-text)',
-  SUA_CHUA: 'var(--theme-status-success-text)',
-  TIEN_LUAT: 'var(--theme-status-info-text)',
-  KHAC: 'var(--theme-text-muted)',
+const CATEGORY_ICON: Record<VehicleExpenseCategory, typeof Coins> = {
+  XANG_DAU: Coins,
+  SUA_CHUA: Wrench,
+  TIEN_LUAT: Scale,
+  KHAC: MoreHorizontal,
 }
 
 function buildExpenseLookup(expenses: VehicleExpense[]): Map<string, VehicleExpense> {
@@ -54,9 +56,6 @@ function buildExpenseLookup(expenses: VehicleExpense[]): Map<string, VehicleExpe
   }
   return map
 }
-
-import { DashboardCard } from '@/components/shared/DashboardCard/DashboardCard'
-import { EmptyState } from '@/components/shared/EmptyState'
 
 // ─── Editable Cell ────────────────────────────────────────────────────────────
 
@@ -96,14 +95,17 @@ function EditableCell({
           if (e.key === 'Escape') onCancel()
         }}
         onBlur={() => onSave(draft)}
-        className="w-full text-right tabular-nums rounded px-2 py-1 outline-none"
+        className="w-full text-right tabular-nums outline-none"
         style={{
-          background: 'var(--theme-bg-primary)',
-          border: '1px solid var(--theme-brand-primary)',
-          boxShadow: '0 0 0 2px color-mix(in srgb, var(--theme-brand-primary) 15%, transparent)',
-          color: 'var(--theme-text-primary)',
+          background: 'var(--surface)',
+          border: '1px solid var(--accent)',
+          boxShadow: '0 0 0 3px var(--accent-soft)',
+          color: 'var(--ink)',
           fontSize: 13,
-          fontWeight: 500,
+          fontWeight: 600,
+          fontFamily: 'var(--theme-font-mono)',
+          padding: '6px 10px',
+          borderRadius: 'var(--r-sm)',
         }}
         autoFocus
       />
@@ -112,17 +114,25 @@ function EditableCell({
 
   return (
     <button
+      type="button"
       onClick={onStartEdit}
-      className="w-full text-right tabular-nums rounded px-2 py-1 transition-colors cursor-pointer"
-      style={{ color: amount > 0 ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)', fontSize: 13, fontWeight: 500 }}
-      title={amount > 0 ? `${formatCurrency(amount)} — click để sửa` : 'Click để thêm'}
+      className="nepo-editable-cell"
+      title={amount > 0 ? `${formatCurrency(amount)} — nhấn để sửa` : 'Nhấn để thêm'}
     >
-      {amount > 0 ? formatCurrency(amount) : '—'}
+      <span
+        className="tabular-nums"
+        style={{
+          color: amount > 0 ? 'var(--ink)' : 'var(--ink-3)',
+          fontFamily: 'var(--theme-font-mono)',
+          fontSize: 13,
+          fontWeight: amount > 0 ? 600 : 400,
+        }}
+      >
+        {amount > 0 ? formatCurrency(amount) : '—'}
+      </span>
     </button>
   )
 }
-
-// ─── Main Page ────────────────────────────────────────────────────────────────
 
 type Tab = 'fleet' | 'locations'
 
@@ -196,7 +206,12 @@ export function TransportersPage() {
           onError: () => toast.error('Không thể cập nhật'),
         })
       } else {
-        const vehicleId = plateToVehicleId.get(plate) ?? null
+        const vehicleId = plateToVehicleId.get(plate)
+        if (!vehicleId) {
+          toast.error('Không tìm thấy xe')
+          setEditingCell(null)
+          return
+        }
         createExpense.mutate({ vehicleId, category, amount, expenseDate: periodStart }, {
           onSuccess: () => { toast.success('Đã thêm chi phí'); setEditingCell(null) },
           onError: () => toast.error('Không thể thêm chi phí'),
@@ -243,14 +258,12 @@ export function TransportersPage() {
   const periodEndDate = new Date(endYear, endMonth - 1, toDay)
 
   return (
-    <div className="space-y-5 animate-fade-in">
-
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="typo-display" style={{ color: 'var(--theme-text-primary)' }}>Vận tải</h1>
-          <p className="typo-body-sm mt-1" style={{ color: 'var(--theme-text-muted)' }}>
-            Quản lý xe, lái xe, chi phí & địa điểm
+    <div className="space-y-6 animate-fade-in">
+      <header className="flex items-start justify-between gap-5 flex-wrap">
+        <div className="min-w-0">
+          <h1 className="typo-display">Vận tải</h1>
+          <p className="typo-body-sm mt-1.5">
+            Quản lý xe, lái xe, chi phí theo kỳ lương và địa điểm
           </p>
         </div>
         <MonthNavigator
@@ -261,241 +274,237 @@ export function TransportersPage() {
           periodStart={periodStartDate}
           periodEnd={periodEndDate}
         />
-      </div>
+      </header>
 
-      {/* ── KPI row ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <StatBreakdownCard
+      <div className="grid grid-cols-3 gap-3">
+        <KpiHeroCard
           label="Xe vận tải"
-          total={groups.length}
-          items={[
-            { label: 'Có lái xe', value: assignedDrivers },
-            { label: 'Thiếu lái xe', value: driversList.length - assignedDrivers },
-            { label: 'Xe nhiều tài', value: multiDriverVehicles },
-          ]}
+          value={groups.length}
+          icon={Truck}
+          color="blue"
+          sublabel={multiDriverVehicles > 0 ? `${multiDriverVehicles} xe nhiều tài` : undefined}
         />
-        <StatBreakdownCard
-          label="Tổng chi phí"
-          total={formatCurrency(grandTotal)}
-          items={VEHICLE_CATEGORIES.map(cat => ({
-            label: EXPENSE_CATEGORY_LABELS[cat],
-            value: formatCurrency(catTotals[cat] ?? 0),
-          }))}
+        <KpiHeroCard
+          label="Lái xe"
+          value={assignedDrivers}
+          icon={Users}
+          color="emerald"
+          sublabel={`${Math.max(0, driversList.length - assignedDrivers)} chưa gán`}
+        />
+        <KpiHeroCard
+          label="Chi phí kỳ"
+          formattedValue={formatCurrency(grandTotal)}
+          value={grandTotal}
+          icon={Coins}
+          color="amber"
+          sublabel={`Sửa chữa: ${formatCurrency(catTotals.SUA_CHUA ?? 0)}`}
         />
       </div>
 
-      {/* ── Tab navigation ── */}
-      <div className="flex items-center justify-between">
-        <div className="tab-row">
-          <button className={activeTab === 'fleet' ? 'active' : ''} onClick={() => setActiveTab('fleet')}>
-            Xe & Chi phí
-          </button>
-          <button className={activeTab === 'locations' ? 'active' : ''} onClick={() => setActiveTab('locations')}>
-            Địa điểm
-          </button>
-        </div>
-        {activeTab === 'fleet' && (
-          <PulseHint hintKey="vehicles-add">
-            <button onClick={() => setShowAddVehicle(true)} className="btn-primary text-xs">
-              <Plus size={14} strokeWidth={2.25} /><span>Thêm xe</span>
-            </button>
-          </PulseHint>
-        )}
-        {activeTab === 'locations' && (
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" style={{ color: 'var(--theme-text-muted)' }} />
-            <input
-              value={locationSearch}
-              onChange={e => setLocationSearch(e.target.value)}
-              placeholder="Tìm địa điểm..."
-              className="search-pill h-9 w-64"
-            />
-          </div>
-        )}
-      </div>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as Tab)}>
+        <TabsList variant="underline">
+          <TabsTrigger value="fleet">
+            <Truck className="h-3.5 w-3.5 mr-1.5" /> Xe &amp; chi phí
+          </TabsTrigger>
+          <TabsTrigger value="locations">
+            <MapPin className="h-3.5 w-3.5 mr-1.5" /> Địa điểm
+          </TabsTrigger>
+        </TabsList>
 
-      {/* ── Fleet tab ── */}
-      {activeTab === 'fleet' && (
-        <DashboardCard>
-          <div className="px-5 pt-4 pb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
-            <DashboardSectionHeader
-              title="Chi phí xe theo kỳ lương"
-              icon={Truck}
-              right={
-                groups.length > 0
-                  ? <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{groups.length} xe</span>
-                  : undefined
-              }
-            />
-          </div>
-
-          {isLoading ? (
-            <div className="p-6 space-y-3">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-12 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />
-              ))}
-            </div>
-          ) : groups.length === 0 ? (
-            <EmptyState icon={<Truck className="h-5 w-5" />} title="Chưa có xe nào" compact />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full [&_td]:align-middle" style={{ borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ background: 'var(--theme-bg-primary)', borderBottom: '1px solid var(--theme-border-light)' }}>
-                    <th className="px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)', width: 140 }}>Biển số</th>
-                    <th className="px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Lái xe</th>
-                    {VEHICLE_CATEGORIES.map(cat => (
-                      <th key={cat} className="px-3 py-2.5 text-right text-[11px] font-bold uppercase tracking-wider" style={{ color: CATEGORY_COLORS[cat], width: 130 }}>
-                        {EXPENSE_CATEGORY_LABELS[cat]}
-                      </th>
-                    ))}
-                    <th className="px-3 py-2.5 text-right text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-primary)', width: 130 }}>Tổng CP</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {groups.map((g, i) => {
-                    const rowTotal = VEHICLE_CATEGORIES.reduce(
-                      (s, cat) => s + (expenseLookup.get(`${g.plate}:${cat}`)?.amount ?? 0),
-                      0,
-                    )
-                    return (
-                      <tr
-                        key={g.vehicleId}
-                        className="transition-colors"
-                        style={{ borderBottom: i < groups.length - 1 ? '1px solid var(--theme-border-light)' : 'none' }}
-                        onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)')}
-                        onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
-                      >
-                        <td className="px-3 py-2.5">
-                          <span
-                            className="inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-bold tracking-wider"
-                            style={{ background: 'var(--theme-bg-tertiary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
-                          >
-                            {g.plate}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            {g.drivers.map(d => (
-                              <span
-                                key={d.id}
-                                className="inline-flex items-center gap-1 rounded-full pl-1.5 pr-2 py-0.5 text-xs font-semibold"
-                                style={{ background: 'color-mix(in srgb, var(--theme-status-success) 10%, transparent)', color: 'var(--theme-status-success)' }}
-                              >
-                                <User className="h-3 w-3" />
-                                {d.driverName}
-                                <button
-                                  onClick={() => setRemoveDriverTarget({ vdId: d.id, name: d.driverName })}
-                                  className="flex h-4 w-4 items-center justify-center rounded-full transition-opacity opacity-30 hover:opacity-100"
-                                  style={{ color: 'var(--theme-status-error)' }}
-                                  title="Gỡ lái xe"
+        <TabsContent value="fleet" className="mt-5">
+          <Panel
+            title="Chi phí xe theo kỳ lương"
+            subtitle={`${groups.length} xe · ${periodStart} → ${periodEnd}`}
+            actions={
+              <Button variant="default" onClick={() => setShowAddVehicle(true)}>
+                <Plus className="h-4 w-4" />
+                Thêm xe
+              </Button>
+            }
+            flush
+          >
+            {isLoading ? (
+              <div className="p-6 space-y-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="h-12 rounded-lg animate-pulse" style={{ background: 'var(--surface-3)' }} />
+                ))}
+              </div>
+            ) : groups.length === 0 ? (
+              <div className="py-10">
+                <EmptyState icon={<Truck className="h-5 w-5" />} title="Chưa có xe nào" compact />
+              </div>
+            ) : (
+              <div className="nepo-table-scroll overflow-x-auto">
+                <table className="nepo-table w-full" style={{ minWidth: 980, borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th className="text-left" style={{ width: 130 }}>Biển số</th>
+                      <th className="text-left">Lái xe</th>
+                      {VEHICLE_CATEGORIES.map(cat => {
+                        const Icon = CATEGORY_ICON[cat]
+                        return (
+                          <th key={cat} className="text-right" style={{ width: 140 }}>
+                            <span className="inline-flex items-center gap-1 justify-end">
+                              <Icon className="h-3 w-3" />
+                              {EXPENSE_CATEGORY_LABELS[cat]}
+                            </span>
+                          </th>
+                        )
+                      })}
+                      <th className="text-right" style={{ width: 140 }}>Tổng CP</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {groups.map((g) => {
+                      const rowTotal = VEHICLE_CATEGORIES.reduce(
+                        (s, cat) => s + (expenseLookup.get(`${g.plate}:${cat}`)?.amount ?? 0),
+                        0,
+                      )
+                      return (
+                        <tr key={g.vehicleId}>
+                          <td>
+                            <Plate>{g.plate}</Plate>
+                          </td>
+                          <td>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {g.drivers.map(d => (
+                                <span
+                                  key={d.id}
+                                  className="nepo-driver-chip"
                                 >
-                                  <span className="text-[10px] leading-none">×</span>
-                                </button>
-                              </span>
-                            ))}
-                            <button
-                              onClick={() => { setAddingDriverFor(g.vehicleId); setSelectedDriverId(null) }}
-                              className="inline-flex items-center justify-center rounded-full transition-colors"
+                                  <User className="h-3 w-3" />
+                                  <span className="truncate max-w-[140px]">{d.driverName}</span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setRemoveDriverTarget({ vdId: d.id, name: d.driverName })
+                                    }}
+                                    className="nepo-driver-chip__x"
+                                    aria-label="Gỡ lái xe"
+                                    title="Gỡ lái xe"
+                                  >
+                                    <X className="h-2.5 w-2.5" />
+                                  </button>
+                                </span>
+                              ))}
+                              <button
+                                type="button"
+                                onClick={() => { setAddingDriverFor(g.vehicleId); setSelectedDriverId(null) }}
+                                className="nepo-driver-chip-add"
+                                aria-label="Thêm lái xe"
+                                title="Thêm lái xe"
+                              >
+                                <Plus className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </td>
+                          {VEHICLE_CATEGORIES.map(cat => {
+                            const key = `${g.plate}:${cat}`
+                            const amount = expenseLookup.get(key)?.amount ?? 0
+                            return (
+                              <td key={cat} className="text-right" style={{ padding: '8px 6px' }}>
+                                <EditableCell
+                                  amount={amount}
+                                  isEditing={editingCell === key}
+                                  onStartEdit={() => setEditingCell(key)}
+                                  onSave={raw => handleCellSave(g.plate, cat, raw)}
+                                  onCancel={() => setEditingCell(null)}
+                                />
+                              </td>
+                            )
+                          })}
+                          <td className="text-right">
+                            <span
+                              className="tabular-nums font-bold"
                               style={{
-                                color: 'var(--theme-text-muted)',
-                                background: 'transparent',
-                                border: '1.5px dashed var(--theme-border-default)',
-                                width: 24,
-                                height: 24,
+                                color: rowTotal > 0 ? 'var(--ink)' : 'var(--ink-3)',
+                                fontFamily: 'var(--theme-font-mono)',
                               }}
                             >
-                              <Plus className="h-3 w-3" />
-                            </button>
-                          </div>
-                        </td>
-                        {VEHICLE_CATEGORIES.map(cat => {
-                          const key = `${g.plate}:${cat}`
-                          const amount = expenseLookup.get(key)?.amount ?? 0
-                          return (
-                            <td key={cat} className="px-1 py-2">
-                              <EditableCell
-                                amount={amount}
-                                isEditing={editingCell === key}
-                                onStartEdit={() => setEditingCell(key)}
-                                onSave={raw => handleCellSave(g.plate, cat, raw)}
-                                onCancel={() => setEditingCell(null)}
-                              />
-                            </td>
-                          )
-                        })}
-                        <td className="px-3 py-2.5 text-right text-xs font-extrabold tabular-nums whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
-                          {rowTotal > 0 ? formatCurrency(rowTotal) : '—'}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr style={{ borderTop: '2px solid var(--theme-brand-primary)', background: 'color-mix(in srgb, var(--theme-brand-primary) 6%, transparent)' }}>
-                    <td className="px-3 py-3" style={{ fontSize: 12, fontWeight: 700, color: 'var(--theme-brand-primary)' }}>TỔNG</td>
-                    <td className="px-3 py-3" />
-                    {VEHICLE_CATEGORIES.map(cat => (
-                      <td key={cat} className="px-3 py-3 text-right tabular-nums whitespace-nowrap" style={{ fontSize: 13, fontWeight: 700, color: CATEGORY_COLORS[cat] }}>
-                        {(catTotals[cat] ?? 0) > 0 ? formatCurrency(catTotals[cat]) : '—'}
+                              {rowTotal > 0 ? formatCurrency(rowTotal) : '—'}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                  <tfoot className="nepo-tfoot">
+                    <tr>
+                      <td>
+                        <span className="font-bold" style={{ color: 'var(--ink)' }}>TỔNG</span>
                       </td>
-                    ))}
-                    <td className="px-3 py-3 text-right tabular-nums whitespace-nowrap" style={{ fontSize: 15, fontWeight: 900, color: 'var(--theme-brand-primary)' }}>
-                      {grandTotal > 0 ? formatCurrency(grandTotal) : '—'}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          )}
-        </DashboardCard>
-      )}
+                      <td />
+                      {VEHICLE_CATEGORIES.map(cat => (
+                        <td key={cat} className="text-right tabular-nums" style={{ fontFamily: 'var(--theme-font-mono)', color: 'var(--ink-2)' }}>
+                          {(catTotals[cat] ?? 0) > 0 ? formatCurrency(catTotals[cat]) : '—'}
+                        </td>
+                      ))}
+                      <td className="text-right tabular-nums font-bold" style={{ fontFamily: 'var(--theme-font-mono)', color: 'var(--accent)' }}>
+                        {grandTotal > 0 ? formatCurrency(grandTotal) : '—'}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+          </Panel>
+        </TabsContent>
 
-      {/* ── Locations tab ── */}
-      {activeTab === 'locations' && (
-        <DashboardCard>
-          <div className="px-5 pt-4 pb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
-            <DashboardSectionHeader
-              title="Quản lý địa điểm"
-              icon={MapPin}
-            />
-          </div>
-          <LocationManager search={locationSearch} />
-        </DashboardCard>
-      )}
+        <TabsContent value="locations" className="mt-5">
+          <Panel title="Quản lý địa điểm" subtitle="Danh sách địa điểm và các alias đã ghi nhận" flush>
+            <Toolbar bordered>
+              <ToolbarSpacer />
+              <ToolbarSearch
+                value={locationSearch}
+                onChange={setLocationSearch}
+                placeholder="Tìm địa điểm..."
+                width={280}
+              />
+            </Toolbar>
+            <LocationManager search={locationSearch} />
+          </Panel>
+        </TabsContent>
+      </Tabs>
 
-      {/* ── Dialogs ── */}
-
+      {/* ── Add Vehicle Dialog ── */}
       <Dialog open={showAddVehicle} onOpenChange={() => setShowAddVehicle(false)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Thêm xe mới</DialogTitle></DialogHeader>
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Biển số</Label>
-            <Input
-              value={newPlate}
-              onChange={e => setNewPlate(e.target.value)}
-              placeholder="15C-12345"
-              className="text-sm"
-              autoFocus
-              onKeyDown={e => { if (e.key === 'Enter') handleAddVehicle() }}
-            />
+          <div className="space-y-3 mt-2">
+            <div>
+              <label className="nepo-field-label" htmlFor="new-plate">Biển số</label>
+              <input
+                id="new-plate"
+                value={newPlate}
+                onChange={e => setNewPlate(e.target.value)}
+                placeholder="15C-12345"
+                className="nepo-input"
+                autoFocus
+                onKeyDown={e => { if (e.key === 'Enter') handleAddVehicle() }}
+              />
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddVehicle(false)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleAddVehicle} disabled={!newPlate.trim()} className="flex-1">Thêm</Button>
+            <Button variant="ghost" onClick={() => setShowAddVehicle(false)}>Huỷ</Button>
+            <Button variant="default" onClick={handleAddVehicle} disabled={!newPlate.trim()}>Thêm xe</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* ── Add Driver Dialog ── */}
       <Dialog open={addingDriverFor !== null} onOpenChange={() => setAddingDriverFor(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Thêm lái xe</DialogTitle></DialogHeader>
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Chọn lái xe</Label>
-            <div className="max-h-52 overflow-y-auto rounded-lg border" style={{ borderColor: 'var(--theme-border-default)' }}>
+          <div className="space-y-2 mt-2">
+            <label className="nepo-field-label">Chọn lái xe</label>
+            <div
+              className="max-h-64 overflow-y-auto"
+              style={{ border: '1px solid var(--line)', borderRadius: 'var(--r-sm)' }}
+            >
               {driversList.length === 0 ? (
                 <div className="flex items-center justify-center py-8">
-                  <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>Chưa có lái xe nào</p>
+                  <p className="text-[13px]" style={{ color: 'var(--ink-3)' }}>Chưa có lái xe nào</p>
                 </div>
               ) : (
                 driversList.map((d: Driver, i: number) => (
@@ -503,28 +512,26 @@ export function TransportersPage() {
                     key={d.id}
                     type="button"
                     onClick={() => setSelectedDriverId(d.id)}
-                    className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors"
+                    className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors"
                     style={{
-                      borderBottom: i < driversList.length - 1 ? '1px solid var(--theme-border-light)' : 'none',
-                      background: selectedDriverId === d.id ? 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)' : 'transparent',
+                      borderBottom: i < driversList.length - 1 ? '1px solid var(--line)' : 'none',
+                      background: selectedDriverId === d.id ? 'var(--accent-soft)' : 'transparent',
                     }}
                   >
                     <div
-                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg"
-                      style={{ background: selectedDriverId === d.id ? 'var(--theme-brand-primary)' : 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)' }}
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                      style={{
+                        background: selectedDriverId === d.id ? 'var(--accent)' : 'var(--surface-3)',
+                        color: selectedDriverId === d.id ? '#fff' : 'var(--ink-2)',
+                      }}
                     >
-                      <User className="h-3 w-3" style={{ color: selectedDriverId === d.id ? 'var(--theme-text-on-brand)' : 'var(--theme-brand-primary)' }} />
+                      <User className="h-3.5 w-3.5" />
                     </div>
-                    <span className="flex-1 text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>
+                    <span className="flex-1 text-[13.5px] font-medium" style={{ color: 'var(--ink)' }}>
                       {d.fullName ?? d.username}
                     </span>
                     {d.vehiclePlate && (
-                      <span
-                        className="rounded border px-1.5 py-0.5 text-[10px] font-bold tracking-wider"
-                        style={{ background: 'var(--theme-bg-tertiary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-muted)' }}
-                      >
-                        {d.vehiclePlate}
-                      </span>
+                      <Plate>{d.vehiclePlate}</Plate>
                     )}
                   </button>
                 ))
@@ -532,8 +539,8 @@ export function TransportersPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddingDriverFor(null)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleAddDriver} disabled={!selectedDriverId} className="flex-1">Thêm</Button>
+            <Button variant="ghost" onClick={() => setAddingDriverFor(null)}>Huỷ</Button>
+            <Button variant="default" onClick={handleAddDriver} disabled={!selectedDriverId}>Thêm lái xe</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

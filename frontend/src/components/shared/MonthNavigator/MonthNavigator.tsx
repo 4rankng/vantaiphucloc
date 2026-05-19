@@ -28,58 +28,79 @@ export function MonthNavigator({
 }: MonthNavigatorProps) {
   const mm = String(month).padStart(2, '0')
 
-  const rangeLabel =
+  const primaryLabel =
     periodStart && periodEnd
       ? `${formatDDMM(periodStart)} → ${formatDDMM(periodEnd)}`
-      : (() => {
-          const lastDay = getDaysInMonth(year, month)
-          return `01/${mm} → ${String(lastDay).padStart(2, '0')}/${mm}`
-        })()
+      : `Tháng ${mm}/${year}`
+
+  const rangeLabel = periodStart && periodEnd
+    ? null
+    : (() => {
+        const lastDay = getDaysInMonth(year, month)
+        return `01/${mm} → ${String(lastDay).padStart(2, '0')}/${mm}`
+      })()
 
   return (
     <div className="flex items-center gap-3">
-      {/* Navigator: chevron · title+range · chevron — tightly grouped */}
-      <div className="flex items-center gap-0.5">
+      <div
+        className="flex items-center gap-1"
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--line)',
+          borderRadius: 'var(--r)',
+          padding: '4px 6px',
+        }}
+      >
         <button
+          type="button"
           onClick={onPrev}
-          className="w-7 h-7 flex items-center justify-center rounded-md touch-manipulation transition-opacity hover:opacity-60 active:scale-90"
-          style={{ color: 'var(--theme-text-secondary)' }}
+          className="nepo-month-nav-btn"
           aria-label="Tháng trước"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
 
-        <div className="flex flex-col items-center gap-0">
+        <div className="flex flex-col items-center px-2.5 min-w-0">
           <span
-            className="text-sm font-bold tabular-nums leading-tight whitespace-nowrap"
-            style={{ color: 'var(--theme-text-primary)' }}
+            className="leading-tight whitespace-nowrap"
+            style={{
+              fontSize: '13px',
+              fontWeight: 600,
+              color: 'var(--ink)',
+              fontFamily: 'var(--theme-font-mono)',
+              letterSpacing: '-0.01em',
+            }}
           >
-            {periodStart && periodEnd
-              ? `${formatDDMM(periodStart)} → ${formatDDMM(periodEnd)}`
-              : `Tháng ${mm}/${year}`}
+            {primaryLabel}
           </span>
-          {periodStart && periodEnd ? null : (
-            <span className="typo-meta tabular-nums whitespace-nowrap leading-tight">
+          {rangeLabel && (
+            <span
+              className="leading-tight whitespace-nowrap"
+              style={{
+                fontSize: '10.5px',
+                color: 'var(--ink-3)',
+                fontFamily: 'var(--theme-font-mono)',
+              }}
+            >
               {rangeLabel}
             </span>
           )}
         </div>
 
         <button
+          type="button"
           onClick={onNext}
-          className="w-7 h-7 flex items-center justify-center rounded-md touch-manipulation transition-opacity hover:opacity-60 active:scale-90"
-          style={{ color: 'var(--theme-text-secondary)' }}
+          className="nepo-month-nav-btn"
           aria-label="Tháng sau"
         >
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Optional right label */}
       {rightLabel != null && (
         <span
           className="text-xs whitespace-nowrap"
-          style={{ color: 'var(--theme-text-muted)' }}
+          style={{ color: 'var(--ink-3)' }}
         >
           {rightLabel}
         </span>
