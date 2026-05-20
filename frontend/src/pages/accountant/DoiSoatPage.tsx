@@ -185,18 +185,7 @@ export function DoiSoatPage() {
         )
       },
     },
-    {
-      key: 'cont',
-      header: 'SL',
-      align: 'center',
-      width: 48,
-      hideBelow: 'md',
-      render: (t) => (
-        <span className="tabular-nums font-bold" style={{ color: 'var(--ink)' }}>
-          {t.containers.length}
-        </span>
-      ),
-    },
+
     {
       key: 'revenue',
       header: 'Doanh thu',

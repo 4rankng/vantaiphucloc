@@ -9,7 +9,6 @@ import {
   ChevronLeft,
   Building2,
   Truck,
-  Car,
   Container,
   Calendar,
   ClipboardCheck,
@@ -54,8 +53,7 @@ const ACCOUNTANT_NAV_SECTIONS: SidebarSection[] = [
     items: [
       { label: 'Chủ hàng', href: '/accountant/clients', icon: Building2 },
       { label: 'Nhà thầu', href: '/accountant/vendors', icon: Truck },
-      { label: 'Lái xe', href: '/accountant/drivers', icon: Car },
-      { label: 'Vận tải', href: '/accountant/transporters', icon: Container },
+      { label: 'Đội xe', href: '/accountant/transporters', icon: Container },
     ],
   },
   {
@@ -70,7 +68,7 @@ const ACCOUNTANT_NAV_SECTIONS: SidebarSection[] = [
     items: [
       { label: 'Chi phí xe', href: '/accountant/expenses', icon: Fuel },
       { label: 'Lương', href: '/accountant/salary', icon: Wallet },
-      { label: 'P&L', href: '/accountant/pnl', icon: TrendingUp },
+      { label: 'Báo cáo tài chính', href: '/accountant/pnl', icon: TrendingUp },
       { label: 'Xuất đối soát', href: '/accountant/settlement', icon: FileSpreadsheet },
     ],
   },
@@ -219,14 +217,17 @@ export function AccountantSidebar({
         ))}
       </nav>
 
-      {/* ── Sidebar art — road transport motif (desaturated) ── */}
+      {/* ── Sidebar art — road transport motif (background, no overlap) ── */}
       {!collapsed && (
-        <div className="sidebar-art shrink-0 px-3 pb-2" style={{ opacity: 0.35 }}>
+        <div
+          aria-hidden="true"
+          className="absolute bottom-[68px] left-0 right-0 px-4 pb-2 pointer-events-none"
+          style={{ opacity: 0.35 }}
+        >
           <svg
             viewBox="0 0 200 68"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
-            aria-hidden="true"
             style={{ width: '100%', display: 'block' }}
           >
             <circle cx="18"  cy="10" r="1"   fill="white" fillOpacity="0.5"/>

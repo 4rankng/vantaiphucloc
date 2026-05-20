@@ -154,7 +154,7 @@ export function PnLPage() {
     <div className="space-y-6 animate-fade-in">
       <header className="flex items-start justify-between gap-5 flex-wrap">
         <div className="min-w-0">
-          <h1 className="typo-display">Báo cáo P&L</h1>
+          <h1 className="typo-display">Báo cáo tài chính</h1>
           <p className="typo-body-sm mt-1.5">
             Doanh thu và lợi nhuận từng xe theo kỳ — đối chiếu chi phí xe, lương và biên lợi nhuận
           </p>

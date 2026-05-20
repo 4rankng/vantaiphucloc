@@ -65,3 +65,5 @@ crush.json
 .superpowers/
 graphify-out/
 heartbeat*.json
+.codegraph
+.opencode

@@ -65,7 +65,7 @@ export function createAppRouter() {
             { index: true,                   element: ebc('AccountantDashboard', h(Lazy, { component: R.AccountantDashboard })) },
             { path: 'clients',               element: ebc('AccountantClients', h(Lazy, { component: R.AccountantClients })) },
             { path: 'vendors',               element: ebc('AccountantVendors', h(Lazy, { component: R.AccountantVendors })) },
-            { path: 'drivers',               element: ebc('AccountantDrivers', h(Lazy, { component: R.AccountantDrivers })) },
+            { path: 'drivers',               element: h(Navigate, { to: '/accountant/transporters', replace: true }) },
             { path: 'transporters',          element: ebc('AccountantTransporters', h(Lazy, { component: R.AccountantTransporters })) },
             { path: 'doi-soat',              element: ebc('AccountantDoiSoat', h(Lazy, { component: R.AccountantDoiSoat })) },
             { path: 'import',                element: ebc('AccountantExcelImport', h(Lazy, { component: R.AccountantExcelImport })) },
