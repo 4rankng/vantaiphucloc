@@ -297,8 +297,22 @@ export function useRemoveVehicleDriver() {
 export function useCreateVehicle() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (plate: string) => {
-      const res = await apiClient.createVehicle(plate)
+    mutationFn: async ({ plate, vehicleType }: { plate: string; vehicleType?: string }) => {
+      const res = await apiClient.createVehicle(plate, vehicleType)
+      return unwrap(res)
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.vehicles() })
+      qc.invalidateQueries({ queryKey: queryKeys.vehicleDrivers })
+    },
+  })
+}
+
+export function useUpdateVehicle() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ vehicleId, data }: { vehicleId: number; data: { vehicleType?: string | null } }) => {
+      const res = await apiClient.updateVehicle(vehicleId, data)
       return unwrap(res)
     },
     onSuccess: () => {

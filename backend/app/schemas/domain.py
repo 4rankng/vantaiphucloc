@@ -144,6 +144,7 @@ class VehicleCreate(BaseModel):
 class VehicleOut(BaseModel):
     id: int
     plate: str
+    vehicle_type: str | None = None
     driver_id: int | None = None
     vendor_id: int | None = None
     is_active: bool = True

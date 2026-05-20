@@ -136,6 +136,7 @@ export const apiClient = {
   addVehicleDriver: vehicleDriversApi.addVehicleDriver,
   removeVehicleDriver: vehicleDriversApi.removeVehicleDriver,
   createVehicle: vehicleDriversApi.createVehicle,
+  updateVehicle: vehicleDriversApi.updateVehicle,
 
   // Customer reconciliation imports
   previewReconciliationImport: reconciliationImportsApi.previewReconciliationImport,

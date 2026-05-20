@@ -166,7 +166,7 @@ export function TransportersPage() {
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as Tab)}>
         <TabsList variant="underline">
           <TabsTrigger value="fleet">
-            <Truck className="h-3.5 w-3.5 mr-1.5" /> Xe
+            <Truck className="h-3.5 w-3.5 mr-1.5" /> Phương tiện
           </TabsTrigger>
           <TabsTrigger value="drivers">
             <Users className="h-3.5 w-3.5 mr-1.5" /> Lái xe
@@ -175,7 +175,7 @@ export function TransportersPage() {
 
         <TabsContent value="fleet" className="mt-5">
           <Panel
-            title="Danh sách xe"
+            title="Danh sách phương tiện"
             subtitle={`${groups.length} xe`}
             actions={
               <Button variant="default" onClick={() => setShowAddVehicle(true)}>

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,7 +18,13 @@ router = APIRouter()
 
 class VehicleCreateIn(BaseModel):
     plate: str = Field(..., min_length=4, max_length=20)
+    vehicle_type: str | None = None
     vendor_id: int | None = None
+
+
+class VehicleUpdateIn(BaseModel):
+    vehicle_type: str | None = None
+    is_active: bool | None = None
 
 
 @router.get("/vehicles", response_model=list[VehicleOut])
@@ -46,9 +52,39 @@ async def create_vehicle(
         select(Vehicle).where(Vehicle.plate == plate)
     )).scalar_one_or_none()
     if existing:
+        if body.vehicle_type and not existing.vehicle_type:
+            existing.vehicle_type = body.vehicle_type
+            await db.flush()
+            await db.refresh(existing)
         return existing
-    vehicle = Vehicle(plate=plate, is_active=True, vendor_id=body.vendor_id)
+    vehicle = Vehicle(
+        plate=plate,
+        is_active=True,
+        vehicle_type=body.vehicle_type,
+        vendor_id=body.vendor_id,
+    )
     db.add(vehicle)
+    await db.flush()
+    await db.refresh(vehicle)
+    return vehicle
+
+
+@router.patch("/vehicles/{vehicle_id}", response_model=VehicleOut)
+async def update_vehicle(
+    vehicle_id: int,
+    body: VehicleUpdateIn,
+    _current_user: User = Depends(require_permission("create", "Vehicle")),
+    db: AsyncSession = Depends(get_db),
+):
+    vehicle = (await db.execute(
+        select(Vehicle).where(Vehicle.id == vehicle_id)
+    )).scalar_one_or_none()
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+    if body.vehicle_type is not None:
+        vehicle.vehicle_type = body.vehicle_type
+    if body.is_active is not None:
+        vehicle.is_active = body.is_active
     await db.flush()
     await db.refresh(vehicle)
     return vehicle

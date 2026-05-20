@@ -37,10 +37,19 @@ export async function removeVehicleDriver(id: number): Promise<ApiResponse<void>
   }
 }
 
-export async function createVehicle(plate: string): Promise<ApiResponse<{ id: number; plate: string }>> {
+export async function createVehicle(plate: string, vehicleType?: string): Promise<ApiResponse<{ id: number; plate: string; vehicleType?: string | null }>> {
   try {
-    const res = await api.post('/vehicles', { plate })
-    return ok(toCamel<{ id: number; plate: string }>(res.data))
+    const res = await api.post('/vehicles', { plate, vehicle_type: vehicleType ?? null })
+    return ok(toCamel<{ id: number; plate: string; vehicleType?: string | null }>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export async function updateVehicle(vehicleId: number, data: { vehicleType?: string | null }): Promise<ApiResponse<{ id: number; plate: string; vehicleType?: string | null }>> {
+  try {
+    const res = await api.patch(`/vehicles/${vehicleId}`, { vehicle_type: data.vehicleType })
+    return ok(toCamel<{ id: number; plate: string; vehicleType?: string | null }>(res.data))
   } catch (err) {
     return fail(err)
   }
