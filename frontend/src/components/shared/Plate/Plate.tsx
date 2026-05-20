@@ -9,8 +9,9 @@ export function Plate({ children, className = '' }: PlateProps) {
     <span
       className={`inline-block rounded font-mono font-semibold text-[12.5px] ${className}`}
       style={{
-        background: 'var(--ink)',
-        color: '#FFFFFF',
+        background: 'var(--surface-3)',
+        color: 'var(--ink-2)',
+        border: '1px solid var(--line-2)',
         padding: '2px 6px',
       }}
     >

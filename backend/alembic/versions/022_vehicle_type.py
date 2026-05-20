@@ -1,10 +1,6 @@
-"""Add vehicle_type to vehicles table.
-
-Revision ID: 022_vehicle_type
-Revises: 021_booked_trip_vessel
-"""
-from alembic import op
-import sqlalchemy as sa
+# Migration removed — vehicle_type feature was not needed.
+# This file is kept as a placeholder so Alembic's revision chain stays intact.
+# The migration was never applied to any environment.
 
 revision = "022_vehicle_type"
 down_revision = "021_booked_trip_vessel"
@@ -13,11 +9,8 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "vehicles",
-        sa.Column("vehicle_type", sa.String(50), nullable=True),
-    )
+    pass
 
 
 def downgrade() -> None:
-    op.drop_column("vehicles", "vehicle_type")
+    pass
