@@ -624,8 +624,8 @@ export function useBulkImportAndMatch() {
 
 export function useAIParsePreview() {
   return useMutation({
-    mutationFn: ({ file, sourceId }: { file: File; sourceId?: string }) =>
-      apiClient.aiParsePreview(file, sourceId).then(unwrap),
+    mutationFn: ({ file }: { file: File }) =>
+      apiClient.aiParsePreview(file).then(unwrap),
   })
 }
 

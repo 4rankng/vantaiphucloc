@@ -1,12 +1,14 @@
 """AI file parsing pipeline orchestrator.
 
 Coordinates the 5 stages: Sniff → Cache → Apply → Cleanup → Preview
+Also provides template-based parsing for customer Excel files.
 """
 
 from __future__ import annotations
 
 import logging
 import re
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, BinaryIO
 
@@ -28,6 +30,126 @@ _logger = logging.getLogger(__name__)
 
 SAMPLE_ROWS = 20  # Rows to send to LLM for sniffing
 PREVIEW_ROWS = 20  # Rows to show in preview
+
+# ---------------------------------------------------------------------------
+# Template-based Excel parsing (no AI)
+# ---------------------------------------------------------------------------
+
+# Mapping from raw header text to display name.
+# None = skip column. Keys are stripped + uppercased for matching.
+_TEMPLATE_HEADER_MAP: dict[str, str | None] = {
+    "STT": None,
+    "NGÀY ĐI": "Ngày đi",
+    "CHỦ HÀNG": "Chủ hàng",
+    "SỐCONTAINER": "Số Cont",
+    "SỐ CONTAINER": "Số Cont",
+    "SỐ CONT": "Số Cont",
+    "F20'": "F20",
+    "F40'": "F40",
+    "E20'": "E20",
+    "E40'": "E40",
+    "SỐ XE CHẠY": "Số xe chạy",
+    "ĐIỂM ĐI": "Điểm đi",
+    "ĐIỂM ĐẾN": "Điểm đến",
+    "SỐ CHUYẾN": "Số chuyến",
+    "CƯỚC CHUYẾN": "Cước chuyến",
+    "CƯỚC\nCHUYẾN": "Cước chuyến",
+    "TỔNG TT": "Tổng TT",
+    "TÁC NGHIỆP": "Tác Nghiệp",
+    "GHI CHÚ": None,
+    "GHI\nCHÚ": None,
+}
+
+
+def _clean_value(val: str) -> str:
+    """Strip leading/trailing whitespace, dots, commas, semicolons."""
+    return re.sub(r'^[\s,.;:]+|[\s,.;:]+$', '', val)
+
+
+def _normalise_header(raw: str) -> str:
+    return re.sub(r"\s+", " ", raw.strip()).upper()
+
+
+@dataclass
+class TemplateParseResult:
+    filename: str
+    sheet_name: str
+    total_rows: int
+    columns: list[str]
+    rows: list[dict[str, Any]]
+
+
+def parse_template_excel(file: BinaryIO, filename: str) -> TemplateParseResult:
+    """Parse a customer-template Excel file (SL sheet, fixed column layout)."""
+    wb = load_workbook(file, read_only=True, data_only=True)
+
+    # Find the SL sheet
+    ws = None
+    for name in wb.sheetnames:
+        if name.strip().upper().startswith("SL"):
+            ws = wb[name]
+            break
+    if ws is None:
+        raise ValueError(
+            "Không tìm thấy sheet 'SL' trong file. "
+            "Vui lòng dùng file theo mẫu (sheet bắt đầu bằng 'SL')."
+        )
+
+    # Read all rows into lists
+    all_rows: list[list[Any]] = []
+    for row in ws.iter_rows(values_only=True):
+        all_rows.append(list(row))
+
+    # Header row is row index 9 (1-indexed row 10)
+    HEADER_IDX = 9
+    DATA_START = 11  # 1-indexed row 12
+
+    if len(all_rows) <= HEADER_IDX:
+        raise ValueError("File quá ngắn — không tìm thấy dòng tiêu đề.")
+
+    raw_headers = [_normalise_header(str(c)) if c is not None else "" for c in all_rows[HEADER_IDX]]
+
+    # Map column indices to display names
+    col_map: dict[int, str] = {}
+    for idx, raw_h in enumerate(raw_headers):
+        display = _TEMPLATE_HEADER_MAP.get(raw_h)
+        if display is None:
+            continue  # skip STT
+        col_map[idx] = display
+
+    columns = list(col_map.values())
+
+    # Parse data rows
+    rows: list[dict[str, Any]] = []
+    for row in all_rows[DATA_START:]:
+        # Stop at summary/end
+        first_val = row[0] if row else None
+        if first_val is None or str(first_val).strip() == "" or str(first_val).strip().upper().startswith("CỘNG"):
+            break
+
+        record: dict[str, Any] = {}
+        all_empty = True
+        for col_idx, display_name in col_map.items():
+            val = row[col_idx] if col_idx < len(row) else None
+            if isinstance(val, datetime):
+                val = val.strftime("%d/%m/%Y")
+            elif val is not None:
+                val = _clean_value(str(val)) or None
+            if val is not None:
+                all_empty = False
+            record[display_name] = val
+
+        if all_empty:
+            continue
+        rows.append(record)
+
+    return TemplateParseResult(
+        filename=filename,
+        sheet_name=ws.title,
+        total_rows=len(rows),
+        columns=columns,
+        rows=rows,
+    )
 
 
 async def parse_file(

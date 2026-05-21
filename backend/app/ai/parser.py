@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -116,21 +117,44 @@ Canonical fields:
 Sample data (first ~20 rows):
 {table}
 
-Respond with ONLY a JSON object (no markdown, no explanation):
-{{
-  "header_row": <0-indexed row number where headers are>,
-  "mapping": {{<column_index>: "<canonical_field_name>", ...}},
-  "confidence": <0.0-1.0 overall confidence>
-}}
+OUTPUT FORMAT — respond with ONLY raw JSON, no markdown fences, no explanation:
+{{"header_row": 0, "mapping": {{0: "date", 1: "route_from"}}, "confidence": 0.9}}
 
 Rules:
 - Only map columns you are confident about. Skip uncertain columns.
 - Column indices are 0-based.
 - If a field doesn't exist in the data, don't include it.
-- Vietnamese column headers are common (ngày, chuyến, container, tiền, etc.)
+- Vietnamese headers are common: ngày→date, từ/điểm đi→route_from, đến/điểm đến→route_to, container→container_number, loại→container_type, tiền/cước/amount→amount, khách→customer_name, nhà xe/nhà thầu→vendor_name, tài xế/lái xe→driver_name, biển số→vehicle_plate, ghi chú→notes
 - Amount columns might have currency suffixes (VND, đ, etc.)
 - Date formats vary: DD/MM/YYYY, YYYY-MM-DD, DD-MM-YY, etc.
 """
+
+
+def _extract_json(text: str) -> dict:
+    """Extract first JSON object from LLM response, tolerating fences and surrounding text."""
+    # Try to find a JSON object using brace matching
+    # First attempt: strip code fences
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+        if cleaned.endswith("```"):
+            cleaned = cleaned[:-3]
+        cleaned = cleaned.strip()
+
+    # Find the first { ... } block
+    start = cleaned.find("{")
+    if start == -1:
+        raise ValueError("No JSON object found in response")
+    depth = 0
+    for i in range(start, len(cleaned)):
+        if cleaned[i] == "{":
+            depth += 1
+        elif cleaned[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return json.loads(cleaned[start : i + 1])
+    # Fallback: parse from first { to end
+    return json.loads(cleaned[start:])
 
 
 async def sniff_columns(sample_rows: list[list[str]], source_id: str | None = None) -> ColumnMapping:
@@ -147,17 +171,9 @@ async def sniff_columns(sample_rows: list[list[str]], source_id: str | None = No
 
     response = await call_gemini(prompt)
 
-    # Parse JSON from response
+    # Parse JSON from response — robust extraction
     try:
-        # Strip markdown code fences if present
-        cleaned = response.strip()
-        if cleaned.startswith("```"):
-            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
-            if cleaned.endswith("```"):
-                cleaned = cleaned[:-3]
-            cleaned = cleaned.strip()
-
-        data = json.loads(cleaned)
+        data = _extract_json(response)
         return ColumnMapping(
             header_row=data.get("header_row", 0),
             mapping={int(k): v for k, v in data.get("mapping", {}).items()},

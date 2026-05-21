@@ -43,7 +43,7 @@ from app.models.base import User
 from app.schemas.base import PaginatedResponse
 from app.database import get_db
 from app.schemas.domain import (
-    AIParsePreviewResponse,
+    TemplateParseResponse,
     BatchDeliveredTripCreate,
     BatchDeliveredTripResult,
     BulkImportAndMatchResult,
@@ -517,19 +517,16 @@ async def update_delivered_trip(
 
 
 # ---------------------------------------------------------------------------
-# AI Parse Preview
+# Template Excel Parse Preview
 # ---------------------------------------------------------------------------
 
-@router.post("/delivered-trips/ai-parse-preview", response_model=AIParsePreviewResponse)
+@router.post("/delivered-trips/ai-parse-preview", response_model=TemplateParseResponse)
 async def ai_parse_preview(
     file: UploadFile = File(...),
-    source_id: str | None = Form(None),
     current_user: User = Depends(require_permission("create", "DeliveredTrip")),
 ):
-    """AI-powered file parsing for arbitrary-format input files.
-
-    Stage 1-5 pipeline: Sniff → Cache → Apply → Cleanup → Preview.
-    Returns parsed rows with confidence scores for accountant review.
+    """Parse a customer-template Excel file (SL sheet, fixed column layout).
+    Returns rows with Vietnamese column names for accountant review.
     Does NOT commit to DB — user must confirm via bulk-import-and-match.
     """
     if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
@@ -539,47 +536,20 @@ async def ai_parse_preview(
     contents = await file.read()
 
     try:
-        from app.ai.pipeline import parse_file as ai_parse_file
-        from app.ai.parser import ParsedCell
-
-        result = await ai_parse_file(
-            file=io.BytesIO(contents),
-            filename=file.filename,
-            source_id=source_id,
-        )
+        from app.ai.pipeline import parse_template_excel
+        result = parse_template_excel(io.BytesIO(contents), file.filename)
     except ValueError as e:
         from fastapi import HTTPException
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        _logger.exception("AI parse failed: %s", e)
+        _logger.exception("Excel parse failed: %s", e)
         from fastapi import HTTPException
-        raise HTTPException(status_code=500, detail=f"AI parsing failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Lỗi đọc file Excel: {e}")
 
-    from app.schemas.domain import AIParsedCell as SchemaCell, AIParsedRow as SchemaRow
-
-    return AIParsePreviewResponse(
-        filename=file.filename,
-        column_mapping=result.column_mapping.mapping,
-        mapping_confidence=result.column_mapping.confidence,
-        header_row=result.column_mapping.header_row,
-        cached_mapping=result.cached_mapping,
+    return TemplateParseResponse(
+        filename=result.filename,
+        sheet_name=result.sheet_name,
         total_rows=result.total_rows,
-        cost_estimate_usd=round(result.sniff_cost_estimate, 4),
-        rows=[
-            SchemaRow(
-                row_number=r.row_number,
-                cells={
-                    k: SchemaCell(
-                        value=v.value,
-                        confidence=v.confidence,
-                        original_value=v.original_value,
-                        cleaned=v.cleaned,
-                    )
-                    for k, v in r.cells.items()
-                },
-                source_row_ref=r.source_row_ref,
-                parse_error=r.parse_error,
-            )
-            for r in result.rows[:100]
-        ],
+        columns=result.columns,
+        rows=result.rows,
     )

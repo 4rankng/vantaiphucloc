@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2, ArrowRight, X, Sparkles, ArrowLeft,
+  Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2, ArrowRight, X, ArrowLeft,
 } from 'lucide-react'
 import { Panel } from '@/components/shared/Panel'
 import { StepIndicator } from '@/components/shared/StepIndicator'
@@ -72,6 +72,7 @@ export function ExcelImportPage() {
   const [file, setFile] = useState<File | null>(null)
   const [clientId, setClientId] = useState<string>('')
   const [previewData, setPreviewData] = useState<PreviewRow[]>([])
+  const [previewColumns, setPreviewColumns] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const dropRef = useRef<HTMLDivElement>(null)
@@ -93,13 +94,8 @@ export function ExcelImportPage() {
       { file },
       {
         onSuccess: (data) => {
-          if (data && typeof data === 'object' && 'rows' in data) {
-            setPreviewData(((data as unknown) as { rows: PreviewRow[] }).rows ?? [])
-          } else if (Array.isArray(data)) {
-            setPreviewData(data as PreviewRow[])
-          } else {
-            setPreviewData([data as unknown as PreviewRow])
-          }
+          setPreviewColumns(data.columns ?? [])
+          setPreviewData(data.rows ?? [])
           setStep('preview')
         },
         onError: (err) => {
@@ -126,6 +122,7 @@ export function ExcelImportPage() {
     setFile(null)
     setClientId('')
     setPreviewData([])
+    setPreviewColumns([])
     setError(null)
     if (fileRef.current) fileRef.current.value = ''
   }
@@ -145,7 +142,7 @@ export function ExcelImportPage() {
     handleFileSelect(f ?? null)
   }
 
-  const previewCols = previewData.length > 0 ? Object.keys(previewData[0]).slice(0, 8) : []
+  const previewCols = previewColumns.length > 0 ? previewColumns : []
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -157,7 +154,7 @@ export function ExcelImportPage() {
         </LinkButton>
         <h1 className="typo-display mt-2">Nhập Excel</h1>
         <p className="typo-body-sm mt-1">
-          Nhập chuyến từ Excel của chủ hàng — AI sẽ tự phân tích cột và đề xuất ghép nối
+          Nhập chuyến từ Excel của chủ hàng
         </p>
       </header>
 
@@ -189,44 +186,29 @@ export function ExcelImportPage() {
 
               <div className="space-y-1.5">
                 <label className="nepo-field-label">File Excel</label>
-                {file && (
-                  <div className="mb-2">
-                    <FilePreviewChip
-                      file={file}
-                      onRemove={() => { setFile(null); if (fileRef.current) fileRef.current.value = '' }}
-                    />
+                {file ? (
+                  <FilePreviewChip
+                    file={file}
+                    onRemove={() => { setFile(null); if (fileRef.current) fileRef.current.value = '' }}
+                  />
+                ) : (
+                  <div
+                    ref={dropRef}
+                    onClick={() => fileRef.current?.click()}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    className="nepo-dropzone"
+                  >
+                    <Upload className="h-8 w-8 mb-2" style={{ color: 'var(--ink-3)' }} strokeWidth={1.5} />
+                    <p className="text-[14px] font-semibold m-0" style={{ color: 'var(--ink)' }}>
+                      Kéo & thả file vào đây
+                    </p>
+                    <p className="text-[12px] m-0 mt-1" style={{ color: 'var(--ink-3)' }}>
+                      hoặc nhấn để chọn từ máy
+                    </p>
                   </div>
                 )}
-                <div
-                  ref={dropRef}
-                  onClick={() => fileRef.current?.click()}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  className={`nepo-dropzone ${file ? 'has-file' : ''}`}
-                >
-                  {file ? (
-                    <p className="text-[13px] font-medium m-0" style={{ color: 'var(--accent)' }}>
-                      Thay file khác
-                    </p>
-                  ) : (
-                    <>
-                      <Upload className="h-8 w-8 mb-2" style={{ color: 'var(--ink-3)' }} strokeWidth={1.5} />
-                      <p className="text-[14px] font-semibold m-0" style={{ color: 'var(--ink)' }}>
-                        Kéo & thả file vào đây
-                      </p>
-                      <p className="text-[12px] m-0 mt-1" style={{ color: 'var(--ink-3)' }}>
-                        hoặc nhấn để chọn từ máy
-                      </p>
-                      <div className="flex items-center gap-1 mt-3">
-                        <Sparkles className="h-3 w-3" style={{ color: 'var(--accent)' }} />
-                        <span className="text-[11px] font-medium" style={{ color: 'var(--accent)' }}>
-                          AI tự phân tích cột và đề xuất ghép nối
-                        </span>
-                      </div>
-                    </>
-                  )}
-                </div>
                 <input
                   ref={fileRef}
                   type="file"
@@ -325,7 +307,7 @@ export function ExcelImportPage() {
                 Dữ liệu sẽ được nhập và tự động ghép với chuyến đã đi
               </span>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" onClick={() => { setStep('upload'); setPreviewData([]) }}>
+                <Button variant="ghost" onClick={() => { setStep('upload'); setPreviewData([]); setPreviewColumns([]) }}>
                   Quay lại
                 </Button>
                 <Button variant="default" onClick={handleImport} disabled={bulkImport.isPending}>

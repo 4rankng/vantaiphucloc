@@ -228,44 +228,26 @@ export async function bulkImportAndMatch(file: File, clientId?: number): Promise
 
 
 // ---------------------------------------------------------------------------
-// AI Parse Preview
+// Template Excel Parse
 // ---------------------------------------------------------------------------
 
-export interface AIParsedCell {
-  value: any
-  confidence: number
-  originalValue?: any
-  cleaned: boolean
-}
-
-export interface AIParsedRow {
-  rowNumber: number
-  cells: Record<string, AIParsedCell>
-  sourceRowRef: string
-  parseError?: string
-}
-
-export interface AIParsePreviewResult {
+export interface TemplateParseResult {
   filename: string
-  columnMapping: Record<number, string>
-  mappingConfidence: number
-  headerRow: number
-  cachedMapping: boolean
+  sheetName: string
   totalRows: number
-  costEstimateUsd: number
-  rows: AIParsedRow[]
+  columns: string[]
+  rows: Record<string, any>[]
 }
 
-export async function aiParsePreview(file: File, sourceId?: string): Promise<ApiResponse<AIParsePreviewResult>> {
+export async function aiParsePreview(file: File): Promise<ApiResponse<TemplateParseResult>> {
   try {
     const formData = new FormData()
     formData.append('file', file)
-    if (sourceId) formData.append('source_id', sourceId)
 
     const res = await api.post('/delivered-trips/ai-parse-preview', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
-    return ok(toCamel<AIParsePreviewResult>(res.data))
+    return ok(toCamel<TemplateParseResult>(res.data))
   } catch (err) {
     return fail(err)
   }

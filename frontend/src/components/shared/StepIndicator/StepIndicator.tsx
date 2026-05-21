@@ -67,11 +67,10 @@ export function StepIndicator({ steps, current, className = '' }: StepIndicatorP
             {!isLast && (
               <div
                 aria-hidden
-                className="shrink-0 mt-3.5 mx-2"
+                className="shrink-0 mt-3.5"
                 style={{
                   height: 2,
-                  flex: 1,
-                  minWidth: 16,
+                  width: 28,
                   background: isComplete ? 'var(--accent)' : 'var(--line)',
                   borderRadius: 2,
                   transition: 'background 0.18s ease',

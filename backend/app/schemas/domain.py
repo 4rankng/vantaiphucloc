@@ -1111,29 +1111,12 @@ class BulkImportAndMatchResult(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# AI Parse Preview
+# Template Excel Parse
 # ---------------------------------------------------------------------------
 
-class AIParsedCell(BaseModel):
-    value: Any = None
-    confidence: float
-    original_value: Any = None
-    cleaned: bool = False
-
-
-class AIParsedRow(BaseModel):
-    row_number: int
-    cells: dict[str, AIParsedCell]
-    source_row_ref: str
-    parse_error: str | None = None
-
-
-class AIParsePreviewResponse(BaseModel):
+class TemplateParseResponse(BaseModel):
     filename: str
-    column_mapping: dict[int, str]
-    mapping_confidence: float
-    header_row: int
-    cached_mapping: bool
+    sheet_name: str
     total_rows: int
-    cost_estimate_usd: float
-    rows: list[AIParsedRow]
+    columns: list[str]
+    rows: list[dict[str, Any]]

@@ -52,15 +52,13 @@ const ACCOUNTANT_NAV_SECTIONS: SidebarSection[] = [
     label: 'Quản lý',
     items: [
       { label: 'Chủ hàng', href: '/accountant/clients', icon: Building2 },
-      { label: 'Nhà thầu', href: '/accountant/vendors', icon: Truck },
-      { label: 'Đội xe', href: '/accountant/transporters', icon: Container },
+      { label: 'Vận tải', href: '/accountant/transporters', icon: Container },
     ],
   },
   {
     label: 'Nghiệp vụ',
     items: [
       { label: 'Đối soát', href: '/accountant/doi-soat', icon: ClipboardCheck },
-      { label: 'Nhập Excel', href: '/accountant/import', icon: Upload },
     ],
   },
   {

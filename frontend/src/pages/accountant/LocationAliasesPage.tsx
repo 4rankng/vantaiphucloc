@@ -1,12 +1,10 @@
-import { useState, useMemo, useCallback, useEffect } from 'react'
-import { MapPin, Plus, AlertTriangle, X, Search, Merge, ArrowUp, Trash2 } from 'lucide-react'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { MapPin, Plus, AlertTriangle, Search, Merge, ArrowUp, Trash2 } from 'lucide-react'
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
-import { Sheet, SheetContent } from '@/components/ui/Sheet'
-import { StatBreakdownCard } from '@/components/shared/StatBreakdownCard'
-import { DashboardCard } from '@/components/shared/DashboardCard/DashboardCard'
+import { Panel } from '@/components/shared/Panel'
+import { Drawer } from '@/components/shared/Drawer'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog/ConfirmDialog'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { DashboardSectionHeader } from '@/components/shared/DashboardSectionHeader'
-import { PulseHint } from '@/components/shared/PulseHint'
 import { useToast } from '@/components/atoms/Toast'
 import {
   useLocations,
@@ -22,20 +20,104 @@ import {
 import { fuzzyMatch } from '@/lib/search-utils'
 import type { Location, LocationAlias } from '@/data/domain'
 
-const inputStyle: React.CSSProperties = {
-  width: '100%', border: 'none', background: 'transparent', fontSize: '13px', fontWeight: 500,
-  color: 'var(--theme-text-primary)', padding: 0, outline: 'none', fontFamily: 'inherit',
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const BATCH = 15
+
+// ─── Infinite scroll hook ─────────────────────────────────────────────────────
+
+function useInfiniteScroll(onLoadMore: () => void) {
+  const sentinelRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) onLoadMore() },
+      { threshold: 0.1 },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [onLoadMore])
+
+  return sentinelRef
 }
 
-const selectStyle: React.CSSProperties = {
-  width: '100%', background: 'var(--theme-bg-secondary)', border: '1px solid var(--theme-border-default)',
-  borderRadius: 8, padding: '10px 12px', fontSize: '13px', fontWeight: 500,
-  color: 'var(--theme-text-primary)', outline: 'none',
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function StatPill({ count, label, accent }: { count: number; label: string; accent?: boolean }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-medium"
+      style={{
+        background: accent ? 'var(--accent-soft)' : 'var(--surface-3)',
+        color: accent ? 'var(--accent)' : 'var(--ink-2)',
+      }}
+    >
+      <span className="tabular-nums font-bold" style={{ color: accent ? 'var(--accent)' : 'var(--ink)' }}>{count}</span>
+      {label}
+    </span>
+  )
 }
 
-// ─── Create / Edit Sheet ────────────────────────────────────────────
+function SectionHeader({ icon, title, count, action }: {
+  icon: React.ReactNode
+  title: string
+  count: number
+  action?: React.ReactNode
+}) {
+  return (
+    <div className="flex items-center gap-2 mb-3">
+      <span style={{ color: 'var(--ink-2)' }}>{icon}</span>
+      <h2 className="text-[15px] font-bold" style={{ color: 'var(--ink)', letterSpacing: '-0.01em' }}>
+        {title}
+      </h2>
+      <span
+        className="tabular-nums text-[11.5px] font-semibold rounded-full px-2 py-0.5"
+        style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}
+      >
+        {count}
+      </span>
+      {action && <div style={{ marginLeft: 'auto' }}>{action}</div>}
+    </div>
+  )
+}
 
-function LocationFormSheet({ open, onClose, onSave, title, initialName = '', saving }: {
+function SearchInput({ value, onChange, placeholder }: {
+  value: string; onChange: (v: string) => void; placeholder: string
+}) {
+  return (
+    <div className="relative" style={{ width: 220, flexShrink: 0 }}>
+      <Search
+        className="absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none"
+        style={{ left: 10, color: 'var(--ink-3)' }}
+      />
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="nepo-input text-[13px]"
+        style={{ paddingLeft: 32 }}
+      />
+    </div>
+  )
+}
+
+function LoadMoreSentinel({ sentinelRef, hasMore }: {
+  sentinelRef: React.RefObject<HTMLDivElement>
+  hasMore: boolean
+}) {
+  if (!hasMore) return null
+  return (
+    <div ref={sentinelRef} className="flex justify-center py-3">
+      <span className="text-[12px]" style={{ color: 'var(--ink-3)' }}>Đang tải…</span>
+    </div>
+  )
+}
+
+// ─── Create / Edit drawer ────────────────────────────────────────────
+
+function LocationFormDrawer({ open, onClose, onSave, title, initialName = '', saving }: {
   open: boolean; onClose: () => void; onSave: (name: string) => void
   title: string; initialName?: string; saving?: boolean
 }) {
@@ -43,39 +125,39 @@ function LocationFormSheet({ open, onClose, onSave, title, initialName = '', sav
   useEffect(() => { if (open) setName(initialName) }, [open, initialName])
 
   return (
-    <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent side="right" className="p-0 gap-0" style={{ width: '100%', maxWidth: 400, border: 'none' }}>
-        <div className="flex items-center justify-between" style={{ padding: '10px 16px', borderBottom: '0.5px solid var(--theme-border-light)' }}>
-          <span className="text-sm font-medium" style={{ color: 'var(--theme-text-primary)' }}>{title}</span>
-          <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: 'var(--theme-text-muted)' }} aria-label="Đóng"><X size={18} /></button>
-        </div>
-        <div style={{ padding: '10px 16px', borderBottom: '0.5px solid var(--theme-border-light)' }}>
-          <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: 'var(--theme-text-muted)' }}>
-            Tên địa điểm <span style={{ color: 'var(--theme-status-error)' }}>*</span>
-          </p>
-          <input
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="Nhập tên địa điểm"
-            style={inputStyle}
-            autoFocus
-            onKeyDown={e => { if (e.key === 'Enter' && name.trim()) onSave(name.trim()) }}
-          />
-        </div>
-        <div style={{ padding: '10px 16px', display: 'flex', gap: 8 }}>
-          <Button variant="outline" onClick={onClose} className="flex-1">Huỷ</Button>
-          <Button onClick={() => onSave(name.trim())} disabled={!name.trim() || saving} className="flex-1">
+    <Drawer open={open} onOpenChange={(o) => { if (!o) onClose() }}
+      breadcrumb="Địa điểm" title={title}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>Huỷ</Button>
+          <Button variant="default" onClick={() => onSave(name.trim())}
+            disabled={!name.trim() || !!saving}>
             {saving ? 'Đang lưu...' : 'Xác nhận'}
           </Button>
-        </div>
-      </SheetContent>
-    </Sheet>
+        </>
+      }
+    >
+      <div>
+        <label className="nepo-field-label" htmlFor="loc-name">
+          Tên địa điểm <span style={{ color: 'var(--accent)' }}>*</span>
+        </label>
+        <input
+          id="loc-name"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="Nhập tên địa điểm"
+          className="nepo-input"
+          autoFocus
+          onKeyDown={e => { if (e.key === 'Enter' && name.trim()) onSave(name.trim()) }}
+        />
+      </div>
+    </Drawer>
   )
 }
 
-// ─── Detail Sheet ───────────────────────────────────────────────────
+// ─── Detail drawer ────────────────────────────────────────────────────────────
 
-function LocationDetailSheet({
+function LocationDetailDrawer({
   location, aliases, onClose, onEdit, onDelete, onPromoteAlias, onDeleteAlias, onAddAlias, promoting, addingAlias,
 }: {
   location: Location; aliases: LocationAlias[]; onClose: () => void; onEdit: () => void; onDelete: () => void
@@ -91,97 +173,78 @@ function LocationDetailSheet({
   }, [newAlias, onAddAlias])
 
   return (
-    <Sheet open onOpenChange={o => { if (!o) onClose() }}>
-      <SheetContent side="right" className="p-0 gap-0" style={{ width: '100%', maxWidth: 440, border: 'none' }}>
-        {/* Header */}
-        <div className="flex items-center justify-between" style={{ padding: '14px 20px', borderBottom: '0.5px solid var(--theme-border-light)' }}>
-          <div>
-            <span className="text-[15px] font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{location.name}</span>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)', fontFeatureSettings: "'tnum'" }}>
-              {aliases.length} tên phụ
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="flex items-center justify-center rounded-lg transition-colors hover:bg-[var(--theme-bg-tertiary)]"
-            style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 4, color: 'var(--theme-text-muted)' }}
-            aria-label="Đóng"
+    <Drawer open onOpenChange={(o) => { if (!o) onClose() }}
+      breadcrumb="Địa điểm" title={location.name} meta={aliases.length > 0 ? `${aliases.length} tên phụ` : undefined}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onDelete}
+            style={{ color: 'var(--accent)', marginRight: 'auto' }}>Xoá</Button>
+          <Button variant="ghost" onClick={onClose}>Đóng</Button>
+          <Button variant="default" onClick={onEdit}>Sửa tên</Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        {aliases.length === 0 && (
+          <p className="text-[13px] py-2" style={{ color: 'var(--ink-3)' }}>Chưa có tên phụ nào.</p>
+        )}
+        {aliases.map(a => (
+          <div
+            key={a.id}
+            className="flex items-center justify-between gap-2 py-2.5"
+            style={{ borderBottom: '1px solid var(--line)' }}
           >
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* Alias list */}
-        <div className="flex-1 overflow-y-auto">
-          {aliases.length === 0 && (
-            <p className="text-[13px] px-5 py-4" style={{ color: 'var(--theme-text-muted)' }}>Chưa có tên phụ nào.</p>
-          )}
-          {aliases.map(a => (
-            <div
-              key={a.id}
-              className="flex items-center justify-between gap-2"
-              style={{ padding: '10px 20px', borderBottom: '0.5px solid var(--theme-border-light)' }}
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="text-[13px] font-medium truncate" style={{ color: 'var(--theme-text-primary)' }}>{a.alias}</span>
-                {a.source && (
-                  <span className="text-[10px] uppercase font-semibold shrink-0 px-1.5 py-0.5 rounded" style={{ color: 'var(--theme-text-muted)', background: 'var(--theme-bg-tertiary)' }}>
-                    {a.source}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-0.5 shrink-0">
-                <button
-                  onClick={() => onPromoteAlias(a.id)}
-                  disabled={promoting}
-                  className="flex h-7 w-7 items-center justify-center rounded-md transition-colors"
-                  style={{ color: 'var(--theme-brand-primary)' }}
-                  title="Đặt làm tên chính"
-                >
-                  <ArrowUp className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  onClick={() => onDeleteAlias(a.id)}
-                  className="flex h-7 w-7 items-center justify-center rounded-md transition-colors"
-                  style={{ color: 'var(--theme-text-muted)' }}
-                  title="Xoá tên phụ"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </button>
-              </div>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-[13px] font-medium truncate" style={{ color: 'var(--ink)' }}>{a.alias}</span>
+              {a.source && (
+                <span className="text-[10px] uppercase font-semibold shrink-0 px-1.5 py-0.5 rounded"
+                  style={{ color: 'var(--ink-3)', background: 'var(--surface-3)' }}>
+                  {a.source}
+                </span>
+              )}
             </div>
-          ))}
-
-          {/* Add alias */}
-          <div className="flex items-center gap-2" style={{ padding: '12px 20px' }}>
-            <input
-              value={newAlias}
-              onChange={e => setNewAlias(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') setNewAlias('') }}
-              placeholder="Thêm tên phụ..."
-              className="flex-1 rounded-md border px-2.5 py-1.5 text-[13px] outline-none"
-              style={{ background: 'var(--theme-bg-secondary)', borderColor: 'var(--theme-border-default)', color: 'var(--theme-text-primary)' }}
-            />
-            <Button size="sm" onClick={handleAdd} disabled={!newAlias.trim() || addingAlias}>
-              <Plus className="h-3.5 w-3.5" />
-              Thêm
-            </Button>
+            <div className="flex items-center gap-0.5 shrink-0">
+              <button
+                onClick={() => onPromoteAlias(a.id)}
+                disabled={promoting}
+                className="flex h-7 w-7 items-center justify-center rounded-md transition-colors"
+                style={{ color: 'var(--accent)' }}
+                title="Đặt làm tên chính"
+              >
+                <ArrowUp className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => onDeleteAlias(a.id)}
+                className="flex h-7 w-7 items-center justify-center rounded-md transition-colors"
+                style={{ color: 'var(--ink-3)' }}
+                title="Xoá tên phụ"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
           </div>
-        </div>
+        ))}
 
-        {/* Footer */}
-        <div style={{ padding: '14px 20px', borderTop: '0.5px solid var(--theme-border-light)', display: 'flex', gap: 8, alignItems: 'center' }}>
-          <Button variant="danger" onClick={onDelete} className="text-[12px] h-7 px-2 border-0 bg-transparent shadow-none">Xoá</Button>
-          <div className="flex-1" />
-          <Button variant="outline" onClick={onClose} className="text-[12px] h-7">Đóng</Button>
-          <Button onClick={onEdit} className="text-[12px] h-7">Sửa tên</Button>
+        {/* Add alias */}
+        <div className="flex items-center gap-2 pt-3 mt-2" style={{ borderTop: '1px solid var(--line)' }}>
+          <input
+            value={newAlias}
+            onChange={e => setNewAlias(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') setNewAlias('') }}
+            placeholder="Thêm tên phụ..."
+            className="nepo-input flex-1"
+          />
+          <Button size="sm" onClick={handleAdd} disabled={!newAlias.trim() || addingAlias}>
+            <Plus className="h-3.5 w-3.5" />
+            Thêm
+          </Button>
         </div>
-      </SheetContent>
-    </Sheet>
+      </div>
+    </Drawer>
   )
 }
 
-// ─── Merge Dialog ───────────────────────────────────────────────────
+// ─── Merge Dialog ────────────────────────────────────────────────────
 
 function MergeDialog({ open, onClose, locations, onMerge, merging }: {
   open: boolean; onClose: () => void; locations: Location[]
@@ -201,28 +264,29 @@ function MergeDialog({ open, onClose, locations, onMerge, merging }: {
       <DialogContent>
         <DialogHeader><DialogTitle>Gộp địa điểm trùng</DialogTitle></DialogHeader>
 
-        <div className="flex items-start gap-3 rounded-lg px-3 py-2.5" style={{ background: 'color-mix(in srgb, var(--theme-status-warning, #F59E0B) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--theme-status-warning, #F59E0B) 15%, transparent)' }}>
-          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'var(--theme-status-warning, #F59E0B)' }} />
-          <p className="text-sm" style={{ color: 'var(--theme-text-secondary)' }}>
+        <div className="flex items-start gap-3 rounded-lg px-3 py-2.5"
+          style={{ background: 'var(--warning-soft)', border: '1px solid var(--warning)' }}>
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'var(--warning)' }} />
+          <p className="text-sm" style={{ color: 'var(--ink-2)' }}>
             Thao tác không thể hoàn tác. Toàn bộ tên phụ và tham chiếu sẽ chuyển sang đích.
           </p>
         </div>
 
         <div className="space-y-3 pt-1">
           <div>
-            <label className="text-[10px] uppercase tracking-wider font-semibold block mb-1.5" style={{ color: 'var(--theme-text-muted)' }}>
-              Địa điểm nguồn <span style={{ color: 'var(--theme-text-muted)' }}>(sẽ bị gộp)</span>
+            <label className="nepo-field-label">
+              Địa điểm nguồn <span style={{ color: 'var(--ink-3)' }}>(sẽ bị gộp)</span>
             </label>
-            <select value={source} onChange={e => setSource(Number(e.target.value) || '')} style={selectStyle}>
+            <select value={source} onChange={e => setSource(Number(e.target.value) || '')} className="nepo-select">
               <option value="">— Chọn địa điểm —</option>
               {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-[10px] uppercase tracking-wider font-semibold block mb-1.5" style={{ color: 'var(--theme-text-muted)' }}>
-              Địa điểm đích <span style={{ color: 'var(--theme-text-muted)' }}>(giữ lại)</span>
+            <label className="nepo-field-label">
+              Địa điểm đích <span style={{ color: 'var(--ink-3)' }}>(giữ lại)</span>
             </label>
-            <select value={target} onChange={e => setTarget(Number(e.target.value) || '')} style={selectStyle}>
+            <select value={target} onChange={e => setTarget(Number(e.target.value) || '')} className="nepo-select">
               <option value="">— Chọn địa điểm —</option>
               {locations.filter(l => l.id !== source).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
             </select>
@@ -230,11 +294,10 @@ function MergeDialog({ open, onClose, locations, onMerge, merging }: {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>Huỷ</Button>
-          <Button
+          <Button variant="ghost" onClick={handleClose}>Huỷ</Button>
+          <Button variant="default"
             onClick={() => { if (source && target && source !== target) onMerge(source, target) }}
-            disabled={merging || !source || !target || source === target}
-          >
+            disabled={merging || !source || !target || source === target}>
             <Merge className="h-4 w-4" />
             {merging ? 'Đang gộp...' : 'Gộp địa điểm'}
           </Button>
@@ -244,49 +307,37 @@ function MergeDialog({ open, onClose, locations, onMerge, merging }: {
   )
 }
 
-// ─── Table Row ──────────────────────────────────────────────────────
+// ─── Table Row ─────────────────────────────────────────────────────────────────
 
-function LocationRow({ location, aliasCount, onOpenDetail, isLast }: {
-  location: Location; aliasCount: number; onOpenDetail: () => void; isLast: boolean
+function LocationRow({ location, aliasCount, onOpenDetail }: {
+  location: Location; aliasCount: number; onOpenDetail: () => void
 }) {
   const initial = location.name.charAt(0).toUpperCase()
 
   return (
-    <tr
-      onClick={onOpenDetail}
-      className="transition-colors cursor-pointer"
-      style={{ borderBottom: isLast ? 'none' : '1px solid var(--theme-border-light)' }}
-      onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)')}
-      onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
-    >
-      <td className="px-3 py-2.5 w-12">
-        <div
-          className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold"
-          style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)', color: 'var(--theme-brand-primary)' }}
-        >
+    <tr onClick={onOpenDetail} className="cursor-pointer">
+      <td>
+        <div className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold"
+          style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
           {initial}
         </div>
       </td>
-      <td className="px-3 py-2.5">
-        <span className="text-[13px] font-semibold" style={{ color: 'var(--theme-text-primary)' }}>{location.name}</span>
-      </td>
-      <td className="px-3 py-2.5 text-right">
+      <td><span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{location.name}</span></td>
+      <td className="text-right">
         {aliasCount > 0 ? (
-          <span
-            className="text-[12px] font-medium px-2 py-0.5 rounded-full"
-            style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 8%, transparent)', color: 'var(--theme-brand-primary)' }}
-          >
+          <span className="text-[12px] font-medium px-2 py-0.5 rounded-full"
+            style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
             {aliasCount}
           </span>
         ) : (
-          <span className="text-[12px]" style={{ color: 'var(--theme-text-muted)' }}>—</span>
+          <span className="text-[12px]" style={{ color: 'var(--ink-3)' }}>—</span>
         )}
       </td>
     </tr>
   )
 }
 
-// ─── Main Page ──────────────────────────────────────────────────────
+// ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export function LocationAliasesPage() {
   const toast = useToast()
@@ -307,6 +358,10 @@ export function LocationAliasesPage() {
   const [deleteTarget, setDeleteTarget] = useState<Location | null>(null)
   const [mergeOpen, setMergeOpen] = useState(false)
 
+  // Infinite scroll
+  const [limit, setLimit] = useState(BATCH)
+  useEffect(() => { setLimit(BATCH) }, [search]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const aliasesByLoc = useMemo(() => {
     const m = new Map<number, LocationAlias[]>()
     for (const a of aliases) {
@@ -325,6 +380,11 @@ export function LocationAliasesPage() {
       return (aliasesByLoc.get(l.id) ?? []).some(a => a.alias.toLowerCase().includes(q))
     })
   }, [locations, search, aliasesByLoc])
+
+  const visible = useMemo(() => filtered.slice(0, limit), [filtered, limit])
+  const hasMore = limit < filtered.length
+  const loadMore = useCallback(() => setLimit(n => n + BATCH), [])
+  const sentinel = useInfiniteScroll(loadMore)
 
   const handleCreate = useCallback((name: string) => {
     createLocation.mutate({ name }, {
@@ -381,101 +441,88 @@ export function LocationAliasesPage() {
   }, [mergeLocations, toast])
 
   return (
-    <div className="space-y-5 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="typo-display" style={{ color: 'var(--theme-text-primary)' }}>Địa điểm</h1>
-          <p className="typo-body-sm mt-1" style={{ color: 'var(--theme-text-muted)' }}>Quản lý địa điểm và tên phụ</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {locations.length >= 2 && (
-            <Button variant="outline" onClick={() => setMergeOpen(true)}>
-              <Merge className="h-3.5 w-3.5" />
-              Gộp
+    <div className="space-y-6 animate-fade-in">
+
+      {/* ── Header ── */}
+      <header>
+        <h1 className="typo-display">Địa điểm</h1>
+        <p className="typo-body-sm mt-1" style={{ color: 'var(--ink-3)' }}>Quản lý địa điểm và tên phụ</p>
+        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+          <StatPill count={locations.length} label=" địa điểm" accent />
+          <StatPill count={aliases.length} label=" tên phụ" />
+          <div style={{ marginLeft: 'auto' }} className="flex items-center gap-2">
+            {locations.length >= 2 && (
+              <Button variant="ghost" onClick={() => setMergeOpen(true)}>
+                <Merge className="h-4 w-4" /> Gộp
+              </Button>
+            )}
+            <Button variant="default" onClick={() => setShowCreate(true)}>
+              <Plus className="h-4 w-4" /> Thêm
             </Button>
-          )}
-          <PulseHint hintKey="locations-add">
-            <button onClick={() => setShowCreate(true)} className="btn-primary">
-              <Plus size={16} strokeWidth={2.25} /><span>Thêm</span>
-            </button>
-          </PulseHint>
+          </div>
         </div>
-      </div>
+      </header>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 w-full md:max-w-[360px]">
-        <StatBreakdownCard
-          label="Tổng địa điểm"
-          total={locations.length}
-          items={[{ label: 'Tên phụ', value: aliases.length }]}
+      {/* ── Table section ── */}
+      <section>
+        <SectionHeader
+          icon={<MapPin className="h-4 w-4" />}
+          title="Danh sách địa điểm"
+          count={filtered.length}
+          action={<SearchInput value={search} onChange={setSearch} placeholder="Tìm địa điểm, tên phụ…" />}
         />
-      </div>
-
-      {/* Table */}
-      <DashboardCard>
-        <div className="px-5 pt-4 pb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
-          <DashboardSectionHeader
-            title="Danh sách địa điểm"
-            icon={MapPin}
-            right={
-              <div className="flex items-center gap-3">
-                {filtered.length !== locations.length && (
-                  <span className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>{filtered.length}/{locations.length}</span>
-                )}
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" style={{ color: 'var(--theme-text-muted)' }} />
-                  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm địa điểm, tên phụ..." className="search-pill h-8 w-56" />
-                </div>
+        <Panel flush>
+          {isLoading ? (
+            <div className="p-6 space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-12 rounded-lg animate-pulse" style={{ background: 'var(--surface-3)' }} />
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-10">
+              <EmptyState
+                icon={<MapPin className="h-5 w-5" />}
+                title={search.trim() ? 'Không tìm thấy địa điểm' : 'Chưa có địa điểm nào'}
+                compact
+                action={!search.trim() ? (
+                  <button onClick={() => setShowCreate(true)} className="btn-primary text-xs">
+                    <Plus size={14} strokeWidth={2.25} /><span>Thêm địa điểm</span>
+                  </button>
+                ) : undefined}
+              />
+            </div>
+          ) : (
+            <>
+              <div className="nepo-table-scroll overflow-x-auto">
+                <table className="nepo-table w-full" style={{ minWidth: 400 }}>
+                  <thead>
+                    <tr>
+                      <th style={{ width: 48 }} />
+                      <th className="text-left">Tên địa điểm</th>
+                      <th className="text-right">Tên phụ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visible.map(loc => (
+                      <LocationRow
+                        key={loc.id}
+                        location={loc}
+                        aliasCount={aliasesByLoc.get(loc.id)?.length ?? 0}
+                        onOpenDetail={() => setDetailTarget(loc)}
+                      />
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            }
-          />
-        </div>
+              <LoadMoreSentinel sentinelRef={sentinel} hasMore={hasMore} />
+            </>
+          )}
+        </Panel>
+      </section>
 
-        {isLoading ? (
-          <div className="p-6 space-y-3">
-            {[...Array(4)].map((_, i) => <div key={i} className="h-12 rounded-lg animate-pulse" style={{ background: 'var(--theme-bg-tertiary)' }} />)}
-          </div>
-        ) : filtered.length === 0 ? (
-          <EmptyState
-            icon={<MapPin className="h-5 w-5" />}
-            title={search.trim() ? 'Không tìm thấy địa điểm' : 'Chưa có địa điểm nào'}
-            compact
-            action={!search.trim() ? (
-              <button onClick={() => setShowCreate(true)} className="btn-primary text-xs">
-                <Plus size={14} strokeWidth={2.25} /><span>Thêm địa điểm</span>
-              </button>
-            ) : undefined}
-          />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full [&_td]:align-middle" style={{ borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: 'var(--theme-bg-primary)', borderBottom: '1px solid var(--theme-border-light)' }}>
-                  <th className="px-3 py-2.5 w-12"></th>
-                  <th className="px-3 py-2.5 text-left text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Tên địa điểm</th>
-                  <th className="px-3 py-2.5 text-right text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--theme-text-muted)' }}>Tên phụ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((loc, i) => (
-                  <LocationRow
-                    key={loc.id}
-                    location={loc}
-                    aliasCount={aliasesByLoc.get(loc.id)?.length ?? 0}
-                    onOpenDetail={() => setDetailTarget(loc)}
-                    isLast={i === filtered.length - 1}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </DashboardCard>
-
-      {/* Detail sheet */}
+      {/* ── Detail drawer ── */}
       {detailTarget && !editTarget && (
-        <LocationDetailSheet
+        <LocationDetailDrawer
           location={detailTarget}
           aliases={aliasesByLoc.get(detailTarget.id) ?? []}
           onClose={() => setDetailTarget(null)}
@@ -489,28 +536,30 @@ export function LocationAliasesPage() {
         />
       )}
 
-      {/* Delete dialog */}
-      <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Xoá địa điểm?</DialogTitle></DialogHeader>
-          <div className="flex items-start gap-3 rounded-lg px-3 py-2.5" style={{ background: 'color-mix(in srgb, var(--theme-status-error) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--theme-status-error) 15%, transparent)' }}>
-            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'var(--theme-status-error)' }} />
-            <p className="text-sm" style={{ color: 'var(--theme-text-secondary)' }}>
-              <strong style={{ color: 'var(--theme-text-primary)' }}>{deleteTarget?.name}</strong> sẽ bị xoá vĩnh viễn cùng tất cả tên phụ.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleDelete} variant="destructive" className="flex-1">Xoá</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* ── Delete confirmation ── */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Xoá địa điểm"
+        description={`"${deleteTarget?.name}" sẽ bị xoá vĩnh viễn cùng tất cả tên phụ.`}
+        confirmLabel="Xoá"
+        variant="warning"
+      />
 
-      {/* Create / Edit sheets */}
-      <LocationFormSheet open={showCreate} onClose={() => setShowCreate(false)} onSave={handleCreate} title="Thêm địa điểm" saving={createLocation.isPending} />
-      <LocationFormSheet key={editTarget?.id ?? 'none'} open={!!editTarget} onClose={() => setEditTarget(null)} onSave={handleUpdate} title="Sửa tên địa điểm" initialName={editTarget?.name} saving={updateLocation.isPending} />
+      {/* ── Form drawers ── */}
+      <LocationFormDrawer open={showCreate} onClose={() => setShowCreate(false)} onSave={handleCreate} title="Thêm địa điểm" saving={createLocation.isPending} />
+      <LocationFormDrawer
+        key={editTarget?.id ?? 'none'}
+        open={!!editTarget}
+        onClose={() => setEditTarget(null)}
+        onSave={handleUpdate}
+        title="Sửa tên địa điểm"
+        initialName={editTarget?.name}
+        saving={updateLocation.isPending}
+      />
 
-      {/* Merge dialog */}
+      {/* ── Merge dialog ── */}
       <MergeDialog open={mergeOpen} onClose={() => setMergeOpen(false)} locations={locations} onMerge={handleMerge} merging={mergeLocations.isPending} />
     </div>
   )

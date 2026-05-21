@@ -64,11 +64,11 @@ export function createAppRouter() {
           children: [
             { index: true,                   element: ebc('AccountantDashboard', h(Lazy, { component: R.AccountantDashboard })) },
             { path: 'clients',               element: ebc('AccountantClients', h(Lazy, { component: R.AccountantClients })) },
-            { path: 'vendors',               element: ebc('AccountantVendors', h(Lazy, { component: R.AccountantVendors })) },
+            { path: 'vendors',               element: h(Navigate, { to: '/accountant/transporters?tab=nha-thau', replace: true }) },
             { path: 'drivers',               element: h(Navigate, { to: '/accountant/transporters', replace: true }) },
             { path: 'transporters',          element: ebc('AccountantTransporters', h(Lazy, { component: R.AccountantTransporters })) },
             { path: 'doi-soat',              element: ebc('AccountantDoiSoat', h(Lazy, { component: R.AccountantDoiSoat })) },
-            { path: 'import',                element: ebc('AccountantExcelImport', h(Lazy, { component: R.AccountantExcelImport })) },
+            { path: 'import',                element: h(Navigate, { to: '/accountant/doi-soat', replace: true }) },
             { path: 'expenses',              element: ebc('AccountantExpenses', h(Lazy, { component: R.AccountantExpenses })) },
             { path: 'salary',                element: ebc('AccountantSalary', h(Lazy, { component: R.AccountantSalary })) },
             { path: 'pnl',                   element: ebc('AccountantPnL', h(Lazy, { component: R.AccountantPnL })) },
