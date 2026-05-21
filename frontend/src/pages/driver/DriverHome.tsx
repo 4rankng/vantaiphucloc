@@ -12,6 +12,7 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import { formatDate } from '@/lib/format'
 import { resolveRoute } from '@/lib/route-utils'
 import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
+import { LiveDot } from '@/components/shared/Decoration'
 
 const PAGE_SIZE = 10
 
@@ -342,7 +343,8 @@ function MobileDriverHome() {
           <circle cx="82"  cy="48" r="8" fill="#059669"/>
         </svg>
 
-        <div className="flex-1 min-w-0 flex items-center justify-center py-3 px-2">
+        <div className="flex-1 min-w-0 flex items-center justify-center py-3 px-2 gap-2">
+          <LiveDot active={true} />
           <MonthNavigator
             year={displayYear}
             month={displayMonth}

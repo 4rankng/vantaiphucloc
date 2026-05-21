@@ -558,6 +558,7 @@ async def update_booked_trip(
             dropoff_location_id=body.dropoff_location_id,
             containers=containers_input,
             vessel=body.vessel,
+            vehicle_plate=body.vehicle_plate,
             operation_type=body.operation_type,
             revenue=body.revenue,
             status=body.status,

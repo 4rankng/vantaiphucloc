@@ -1,7 +1,10 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
-import { Car, Plus, Search, Check, X } from 'lucide-react'
+import { Car, Plus } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { Panel } from '@/components/shared/Panel'
+import { useInfiniteScroll, LoadMoreSentinel, SearchInput, FieldActions } from '@/components/shared/ListUtils'
+import { TableSkeleton } from '@/components/shared/TableSkeleton/TableSkeleton'
+import { StatPill } from '@/components/shared/StatPill'
 import { Drawer } from '@/components/shared/Drawer'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { InlineSelect } from '@/components/shared/InlineSelect'
@@ -29,92 +32,6 @@ type DriverFormData = {
 }
 
 type FocusableField = 'fullName' | 'phone' | 'plate' | null
-
-// ─── Infinite scroll hook ─────────────────────────────────────────────────────
-
-function useInfiniteScroll(onLoadMore: () => void) {
-  const sentinelRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const el = sentinelRef.current
-    if (!el) return
-    const observer = new IntersectionObserver(
-      (entries) => { if (entries[0].isIntersecting) onLoadMore() },
-      { threshold: 0.1 },
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [onLoadMore])
-  return sentinelRef
-}
-
-// ─── Shared sub-components ────────────────────────────────────────────────────
-
-function StatPill({ count, label, accent }: { count: number; label: string; accent?: boolean }) {
-  return (
-    <span
-      className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-medium"
-      style={{
-        background: accent ? 'var(--accent-soft)' : 'var(--surface-3)',
-        color: accent ? 'var(--accent)' : 'var(--ink-2)',
-      }}
-    >
-      <span className="tabular-nums font-bold" style={{ color: accent ? 'var(--accent)' : 'var(--ink)' }}>{count}</span>
-      {label}
-    </span>
-  )
-}
-
-function SearchInput({ value, onChange, placeholder }: {
-  value: string; onChange: (v: string) => void; placeholder: string
-}) {
-  return (
-    <div className="relative" style={{ flex: 1, maxWidth: 360 }}>
-      <Search className="absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" style={{ left: 10, color: 'var(--ink-3)' }} />
-      <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="nepo-input text-[13px]" style={{ paddingLeft: 32 }} />
-    </div>
-  )
-}
-
-function LoadMoreSentinel({ sentinelRef, hasMore }: {
-  sentinelRef: React.RefObject<HTMLDivElement>; hasMore: boolean
-}) {
-  if (!hasMore) return null
-  return (
-    <div ref={sentinelRef} className="flex justify-center py-3">
-      <span className="text-[12px]" style={{ color: 'var(--ink-3)' }}>Đang tải…</span>
-    </div>
-  )
-}
-
-// ─── Inline save/cancel icons ─────────────────────────────────────────────────
-
-function FieldActions({ onSave, onCancel, saving }: {
-  onSave: () => void; onCancel: () => void; saving?: boolean
-}) {
-  return (
-    <div className="flex flex-col gap-0.5 ml-1 shrink-0">
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); onSave() }}
-        disabled={saving}
-        className="flex items-center justify-center rounded"
-        style={{ width: 20, height: 20, background: 'var(--accent)', color: '#fff', opacity: saving ? 0.5 : 1 }}
-        title="Lưu"
-      >
-        <Check className="h-2.5 w-2.5" strokeWidth={3} />
-      </button>
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); onCancel() }}
-        className="flex items-center justify-center rounded"
-        style={{ width: 20, height: 20, background: 'var(--surface-3)', color: 'var(--ink-2)' }}
-        title="Huỷ"
-      >
-        <X className="h-2.5 w-2.5" strokeWidth={3} />
-      </button>
-    </div>
-  )
-}
 
 // ─── Inline edit row ──────────────────────────────────────────────────────────
 
@@ -433,11 +350,7 @@ export function DriversPage() {
         </div>
         <Panel flush>
           {isLoading ? (
-            <div className="p-6 space-y-3">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-12 rounded-lg animate-pulse" style={{ background: 'var(--surface-3)' }} />
-              ))}
-            </div>
+            <TableSkeleton />
           ) : filtered.length === 0 ? (
             <div className="py-10">
               <EmptyState

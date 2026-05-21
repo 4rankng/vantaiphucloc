@@ -35,6 +35,7 @@ class BookedTripUpdateInput:
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
     vessel: str | None = None
+    vehicle_plate: str | None = None
     operation_type: str | None = None
     work_type: str | None = None
     revenue: int | None = None

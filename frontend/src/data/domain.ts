@@ -232,6 +232,7 @@ export interface BookedTrip {
   dropoffLocation: LocationSummary
   containers: BookedTripContainerItem[]
   vessel: string | null
+  vehiclePlate?: string | null
   operationType?: OperationType | null
   workType?: string | null
   revenue: number

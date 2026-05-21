@@ -10,6 +10,7 @@ import {
 import { Panel } from '@/components/shared/Panel'
 import { Plate } from '@/components/shared/Plate'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { TableSkeleton } from '@/components/shared/TableSkeleton/TableSkeleton'
 import { Drawer } from '@/components/shared/Drawer'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import {
@@ -242,11 +243,7 @@ function FleetSection() {
           </div>
           <Panel flush>
             {vdLoading ? (
-              <div className="p-6 space-y-3">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="h-12 rounded-lg animate-pulse" style={{ background: 'var(--surface-3)' }} />
-                ))}
-              </div>
+              <TableSkeleton />
             ) : filteredGroups.length === 0 ? (
               <div className="py-10">
                 <EmptyState icon={<Truck className="h-5 w-5" />} title={fleetSearch ? 'Không tìm thấy xe nào' : 'Chưa có xe nào'} compact />
@@ -317,11 +314,7 @@ function FleetSection() {
           </div>
           <Panel flush>
             {driversLoading ? (
-              <div className="p-6 space-y-3">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="h-12 rounded-lg animate-pulse" style={{ background: 'var(--surface-3)' }} />
-                ))}
-              </div>
+              <TableSkeleton />
             ) : filteredDrivers.length === 0 ? (
               <div className="py-10">
                 <EmptyState icon={<Users className="h-5 w-5" />} title={driverSearch.trim() ? 'Không tìm thấy lái xe' : 'Chưa có lái xe nào'} compact />

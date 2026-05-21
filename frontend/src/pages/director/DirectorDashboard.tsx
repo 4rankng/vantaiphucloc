@@ -10,6 +10,7 @@ import { useBookedTrips } from '@/hooks/use-queries'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { BrandIcon } from '@/components/atoms/BrandIcon'
 import { BarChartWidget } from '@/components/shared/Charts'
+import { Reveal, RevealList, SectionRouteDecoration } from '@/components/shared/Reveal'
 import type { AuditLogEntry } from '@/services/api/audit.api'
 import { getAuditLogs } from '@/services/api/audit.api'
 import { SparklineChart } from '@/components/shared/SparklineChart'
@@ -344,51 +345,53 @@ export function DirectorDashboard() {
       </div>
 
       {/* KPI grid */}
-      <section className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-        <StatCard
-          label="Tổng chuyến"
-          value={requestedThisMonth.toLocaleString('vi-VN')}
-          icon={<Truck className="h-4.5 w-4.5" />}
-          trend={delta(requestedThisMonth, prevRequested)}
-          tone="primary"
-          sparkData={delta(requestedThisMonth, prevRequested)?.startsWith('+') !== false ? sparkUp : sparkDown}
-          loading={loading}
-        />
-        <StatCard
-          label="Đã khớp"
-          value={String(completedThisMonth)}
-          icon={<CheckCircle2 className="h-4.5 w-4.5" />}
-          trend={delta(completedThisMonth, prevCompleted)}
-          tone="success"
-          sparkData={sparkUp}
-          loading={loading}
-        />
-        <StatCard
-          label="Chờ xử lý"
-          value={String(pendingThisMonth)}
-          icon={<AlertCircle className="h-4.5 w-4.5" />}
-          trend={delta(pendingThisMonth, prevPending)}
-          tone="warning"
-          sparkData={delta(pendingThisMonth, prevPending)?.startsWith('+') ? sparkDown : sparkUp}
-          loading={loading}
-        />
-        <StatCard
-          label="Doanh thu"
-          value={compact(revenueThisMonth) + ' ₫'}
-          icon={<DollarSign className="h-4.5 w-4.5" />}
-          trend={delta(revenueThisMonth, prevRevenue)}
-          tone="info"
-          sparkData={sparkUp}
-          loading={loading}
-        />
-      </section>
+      <RevealList stagger={70} threshold={0.08}>
+        <section className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+          <StatCard
+            label="Tổng chuyến"
+            value={requestedThisMonth.toLocaleString('vi-VN')}
+            icon={<Truck className="h-4.5 w-4.5" />}
+            trend={delta(requestedThisMonth, prevRequested)}
+            tone="primary"
+            sparkData={delta(requestedThisMonth, prevRequested)?.startsWith('+') !== false ? sparkUp : sparkDown}
+            loading={loading}
+          />
+          <StatCard
+            label="Đã khớp"
+            value={String(completedThisMonth)}
+            icon={<CheckCircle2 className="h-4.5 w-4.5" />}
+            trend={delta(completedThisMonth, prevCompleted)}
+            tone="success"
+            sparkData={sparkUp}
+            loading={loading}
+          />
+          <StatCard
+            label="Chờ xử lý"
+            value={String(pendingThisMonth)}
+            icon={<AlertCircle className="h-4.5 w-4.5" />}
+            trend={delta(pendingThisMonth, prevPending)}
+            tone="warning"
+            sparkData={delta(pendingThisMonth, prevPending)?.startsWith('+') ? sparkDown : sparkUp}
+            loading={loading}
+          />
+          <StatCard
+            label="Doanh thu"
+            value={compact(revenueThisMonth) + ' ₫'}
+            icon={<DollarSign className="h-4.5 w-4.5" />}
+            trend={delta(revenueThisMonth, prevRevenue)}
+            tone="info"
+            sparkData={sparkUp}
+            loading={loading}
+          />
+        </section>
+      </RevealList>
 
       {/* Main grid: recent trips + chart */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_380px]">
 
         {/* Recent trip orders */}
         <div
-          className="overflow-hidden"
+          className="overflow-hidden relative"
           style={{
             background: 'var(--theme-bg-secondary)',
             border: '1px solid var(--theme-border-default)',
@@ -397,16 +400,18 @@ export function DirectorDashboard() {
           }}
         >
           <div
-            className="flex items-center justify-between px-5 py-4"
+            className="flex items-center justify-between px-5 py-4 relative"
             style={{ borderBottom: '1px solid var(--theme-border-light)' }}
           >
-            <div>
-              <h3 className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
-                Lệnh vận chuyển gần đây
-              </h3>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-                {recentTrips.length} lệnh mới nhất
-              </p>
+            <div className="flex items-center gap-3">
+              <div>
+                <h3 className="text-sm font-bold" style={{ color: 'var(--theme-text-primary)' }}>
+                  Lệnh vận chuyển gần đây
+                </h3>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
+                  {recentTrips.length} lệnh mới nhất
+                </p>
+              </div>
             </div>
             <button
               onClick={() => navigate('/director/trips')}
@@ -416,6 +421,8 @@ export function DirectorDashboard() {
               Xem tất cả
               <ArrowUpRight className="h-3 w-3" />
             </button>
+            {/* Subtle route decoration */}
+            <SectionRouteDecoration className="absolute top-2 right-24 opacity-40" />
           </div>
 
           {loading ? (

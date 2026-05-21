@@ -44,6 +44,7 @@ export interface BookedTripUpdatePayload {
   dropoffLocationId?: number
   containers?: BookedTripContainerItem[]
   vessel?: string | null
+  vehiclePlate?: string | null
   operationType?: string | null
   pricingId?: number | null
   unitPrice?: number

@@ -2,16 +2,16 @@ import { useMemo, useState } from 'react'
 import {
   useMonthlyPnL,
   useVehiclePnL,
-  useBookedTrips,
+  useDeliveredTrips,
   useTripDailyStats,
 } from '@/hooks/use-queries'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { KpiHeroCard } from '@/components/shared/KpiHeroCard'
 import { DashboardSectionHeader } from '@/components/shared/DashboardSectionHeader'
+import { RevealList } from '@/components/shared/Reveal'
 import { useMonthParams } from './use-month-params'
-import { formatCurrencyFull as fmt, type BookedTrip } from '@/data/domain'
-import { resolveRoute } from '@/lib/route-utils'
+import { formatCurrencyFull as fmt, type DeliveredTrip } from '@/data/domain'
 import type { MonthlyPnL } from '@/services/api/pnl.api'
 import {
   CheckCircle2, DollarSign, Clock, TrendingUp,
@@ -29,12 +29,6 @@ function daysInMonth(y: number, m: number): number {
   return new Date(y, m, 0).getDate()
 }
 
-function monogram(name: string): string {
-  const parts = name.trim().split(/\s+/)
-  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-  return name.slice(0, 2).toUpperCase()
-}
-
 function sumChiPhi(p: MonthlyPnL | null | undefined): number {
   if (!p) return 0
   return (p.totalProductivitySalary ?? 0)
@@ -49,8 +43,10 @@ function computeDelta(current: number, prev: number): number | null {
   return Math.round(((current - prev) / Math.abs(prev)) * 100)
 }
 
-function tripRevenue(t: BookedTrip): number {
-  return (t.unitPrice ?? 0) * Math.max(1, t.containers.length)
+function formatTripDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return ''
+  const [, m, d] = dateStr.split('-')
+  return d && m ? `${d}/${m}` : dateStr
 }
 
 // ─── Subcomponents ────────────────────────────────────────────────────────────
@@ -161,51 +157,50 @@ function TripBarChart({
   )
 }
 
-// ─── Pending trip row ─────────────────────────────────────────────────────────
+// ─── Unmatched delivered trip row ─────────────────────────────────────────────
 
-function PendingTripRow({
+function UnmatchedTripRow({
   trip,
-  onClick,
   isFirst,
 }: {
-  trip: BookedTrip
-  onClick: () => void
+  trip: DeliveredTrip
   isFirst: boolean
 }) {
-  const mono = monogram(trip.client.name)
+  const container = trip.containers?.[0]
+  const route = [trip.pickupLocation?.name, trip.dropoffLocation?.name].filter(Boolean).join(' → ')
+
   return (
-    <button
-      onClick={onClick}
-      className="flex w-full items-center gap-3 px-5 py-3 text-left transition"
-      style={{
-        borderTop: isFirst ? 'none' : '1px solid var(--theme-border-light)',
-        background: 'transparent',
-      }}
-      onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)')}
-      onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = 'transparent')}
+    <div
+      className="flex w-full items-center gap-3 px-5 py-3"
+      style={{ borderTop: isFirst ? 'none' : '1px solid var(--theme-border-light)' }}
     >
-      <div
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold"
-        style={{
-          background: 'var(--theme-status-warning-light)',
-          color: 'var(--theme-status-warning)',
-          border: '1px solid color-mix(in srgb, var(--theme-status-warning) 20%, transparent)',
-        }}
-      >
-        {mono}
-      </div>
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-bold truncate" style={{ color: 'var(--theme-text-primary)' }}>
-          {trip.client.name}
+        <div className="flex items-center gap-2">
+          {container?.containerNumber && (
+            <span
+              className="text-xs font-mono font-semibold shrink-0"
+              style={{ color: 'var(--theme-text-primary)' }}
+            >
+              {container.containerNumber}
+            </span>
+          )}
+          {container?.contType && (
+            <span
+              className="text-[10px] font-bold px-1 py-0.5 rounded shrink-0"
+              style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
+            >
+              {container.contType}
+            </span>
+          )}
         </div>
         <div className="text-xs mt-0.5 truncate" style={{ color: 'var(--theme-text-secondary)' }}>
-          {resolveRoute(trip)}
+          {route || '—'}
         </div>
       </div>
-      <div className="text-sm font-extrabold tabular-nums shrink-0" style={{ color: 'var(--theme-status-warning)' }}>
-        {fmt(tripRevenue(trip))}
+      <div className="text-xs tabular-nums shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
+        {formatTripDate(trip.tripDate)}
       </div>
-    </button>
+    </div>
   )
 }
 
@@ -255,7 +250,7 @@ function DesktopDashboard() {
   const { data: prevPnl }    = useMonthlyPnL(prevDateFrom, prevDateTo)
   const { data: vehiclePnl } = useVehiclePnL(dateFrom, dateTo)
   const { data: dailyStats } = useTripDailyStats(dateFrom, dateTo)
-  const { data: pendingTrips = [] } = useBookedTrips({ dateFrom, dateTo, status: 'PENDING', pageSize: 200 })
+  const { data: unmatchedTrips = [] } = useDeliveredTrips({ dateFrom, dateTo, status: 'PENDING' })
 
   // KPI values
   const revenue  = pnl?.revenue ?? 0
@@ -274,7 +269,6 @@ function DesktopDashboard() {
   const totalCount   = dailyStats?.total ?? 0
   const matchRate    = dailyStats?.matchRate ?? null
   const dayBars      = dailyStats?.buckets ?? []
-  const pendingRevenue = useMemo(() => pendingTrips.reduce((s, t) => s + tripRevenue(t), 0), [pendingTrips])
 
   // Vehicle table sort
   const [vehicleSort, setVehicleSort] = useState<{ col: VehicleSortCol; dir: SortDir }>({ col: 'revenue', dir: 'desc' })
@@ -318,38 +312,40 @@ function DesktopDashboard() {
       </div>
 
       {/* ── KPI trio: Doanh thu · Chi phí · Lãi ── */}
-      <div className="grid grid-cols-3 gap-3">
-        <KpiHeroCard
-          label="Doanh thu"
-          value={revenue}
-          formattedValue={fmt(revenue)}
-          icon={TrendingUp}
-          color="emerald"
-          sublabel={`Tháng ${pad(month)}/${year}`}
-          trend={revenueDelta != null ? { value: `${Math.abs(revenueDelta)}%`, positive: revenueDelta >= 0 } : undefined}
+      <RevealList stagger={70} threshold={0.08}>
+        <div className="grid grid-cols-3 gap-3">
+          <KpiHeroCard
+            label="Doanh thu"
+            value={revenue}
+            formattedValue={fmt(revenue)}
+            icon={TrendingUp}
+            color="emerald"
+            sublabel={`Tháng ${pad(month)}/${year}`}
+            trend={revenueDelta != null ? { value: `${Math.abs(revenueDelta)}%`, positive: revenueDelta >= 0 } : undefined}
 
-        />
-        <KpiHeroCard
-          label="Chi phí"
-          value={chiPhi}
-          formattedValue={fmt(chiPhi)}
-          icon={TrendingDown}
-          color="rose"
-          sublabel="Lương + Xe + CP Chung"
-          trend={chiPhiDelta != null ? { value: `${Math.abs(chiPhiDelta)}%`, positive: chiPhiDelta <= 0 } : undefined}
+          />
+          <KpiHeroCard
+            label="Chi phí"
+            value={chiPhi}
+            formattedValue={fmt(chiPhi)}
+            icon={TrendingDown}
+            color="rose"
+            sublabel="Lương + Xe + CP Chung"
+            trend={chiPhiDelta != null ? { value: `${Math.abs(chiPhiDelta)}%`, positive: chiPhiDelta <= 0 } : undefined}
 
-        />
-        <KpiHeroCard
-          label="Lãi ròng"
-          value={laiRong}
-          formattedValue={fmt(laiRong)}
-          icon={DollarSign}
-          color="blue"
-          sublabel={bienLai != null ? `Biên lãi ${bienLai.toFixed(1)}%` : `Tháng ${pad(month)}/${year}`}
-          trend={laiDelta != null ? { value: `${Math.abs(laiDelta)}%`, positive: laiDelta >= 0 } : undefined}
+          />
+          <KpiHeroCard
+            label="Lãi ròng"
+            value={laiRong}
+            formattedValue={fmt(laiRong)}
+            icon={DollarSign}
+            color="blue"
+            sublabel={bienLai != null ? `Biên lãi ${bienLai.toFixed(1)}%` : `Tháng ${pad(month)}/${year}`}
+            trend={laiDelta != null ? { value: `${Math.abs(laiDelta)}%`, positive: laiDelta >= 0 } : undefined}
 
-        />
-      </div>
+          />
+        </div>
+      </RevealList>
 
       {/* ── Masonry 2-col: vehicle table left, chart + pending right ── */}
       <div className="grid grid-cols-[1fr_340px] gap-4 items-start">
@@ -489,19 +485,19 @@ function DesktopDashboard() {
             </div>
           </DashboardCard>
 
-          {/* Doanh thu chờ phân bổ */}
+          {/* Chuyến chưa ghép */}
           <DashboardCard>
             <div className="px-4 pt-4 pb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
               <DashboardSectionHeader
-                title="Chờ phân bổ"
+                title="Chưa ghép"
                 icon={Clock}
                 right={
-                  pendingTrips.length > 0 ? (
+                  unmatchedTrips.length > 0 ? (
                     <span
                       className="flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold"
                       style={{ background: 'var(--theme-status-warning)', color: '#fff' }}
                     >
-                      {pendingTrips.length}
+                      {unmatchedTrips.length}
                     </span>
                   ) : undefined
                 }
@@ -509,25 +505,17 @@ function DesktopDashboard() {
             </div>
 
             <div>
-              {pendingTrips.length === 0 ? (
-                <EmptyState icon={CheckCircle2} text="Không có chuyến chờ phân bổ" />
+              {unmatchedTrips.length === 0 ? (
+                <EmptyState icon={CheckCircle2} text="Không có chuyến chưa ghép" />
               ) : (
-                pendingTrips.map((trip, i) => (
-                  <PendingTripRow
+                unmatchedTrips.map((trip, i) => (
+                  <UnmatchedTripRow
                     key={trip.id}
                     trip={trip}
                     isFirst={i === 0}
                   />
                 ))
               )}
-            </div>
-
-            <div
-              className="flex items-center justify-between px-4 py-2.5"
-              style={{ borderTop: '1px solid var(--theme-border-light)', background: 'var(--theme-status-warning-light)' }}
-            >
-              <span className="text-xs font-medium" style={{ color: 'var(--theme-status-warning-text)' }}>Tổng chờ phân bổ</span>
-              <span className="text-sm font-extrabold tabular-nums" style={{ color: 'var(--theme-status-warning)' }}>{fmt(pendingRevenue)}</span>
             </div>
           </DashboardCard>
 
@@ -551,7 +539,7 @@ function MobileDashboard() {
   const { data: prevPnl }    = useMonthlyPnL(prevDateFrom, prevDateTo)
   const { data: vehiclePnl } = useVehiclePnL(dateFrom, dateTo)
   const { data: dailyStats } = useTripDailyStats(dateFrom, dateTo)
-  const { data: pendingTrips = [] } = useBookedTrips({ dateFrom, dateTo, status: 'PENDING', pageSize: 200 })
+  const { data: unmatchedTrips = [] } = useDeliveredTrips({ dateFrom, dateTo, status: 'PENDING' })
 
   const revenue  = pnl?.revenue ?? 0
   const chiPhi   = sumChiPhi(pnl)
@@ -567,7 +555,6 @@ function MobileDashboard() {
   const totalCount   = dailyStats?.total ?? 0
   const matchRate    = dailyStats?.matchRate ?? null
   const dayBars      = dailyStats?.buckets ?? []
-  const pendingRevenue = useMemo(() => pendingTrips.reduce((s, t) => s + tripRevenue(t), 0), [pendingTrips])
 
   // Vehicle table sort (same as desktop)
   const [vehicleSort, setVehicleSort] = useState<{ col: VehicleSortCol; dir: SortDir }>({ col: 'revenue', dir: 'desc' })
@@ -759,15 +746,15 @@ function MobileDashboard() {
       <DashboardCard>
         <div className="px-5 pt-4 pb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
           <DashboardSectionHeader
-            title="Chờ phân bổ"
+            title="Chưa ghép"
             icon={Clock}
             right={
-              pendingTrips.length > 0 ? (
+              unmatchedTrips.length > 0 ? (
                 <span
                   className="flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold"
                   style={{ background: 'var(--theme-status-warning)', color: '#fff' }}
                 >
-                  {pendingTrips.length}
+                  {unmatchedTrips.length}
                 </span>
               ) : undefined
             }
@@ -775,29 +762,17 @@ function MobileDashboard() {
         </div>
 
         <div>
-          {pendingTrips.length === 0 ? (
-            <EmptyState icon={CheckCircle2} text="Không có chuyến chờ phân bổ" />
+          {unmatchedTrips.length === 0 ? (
+            <EmptyState icon={CheckCircle2} text="Không có chuyến chưa ghép" />
           ) : (
-            pendingTrips.map((trip, i) => (
-              <PendingTripRow
+            unmatchedTrips.map((trip, i) => (
+              <UnmatchedTripRow
                 key={trip.id}
                 trip={trip}
                 isFirst={i === 0}
               />
             ))
           )}
-        </div>
-
-        <div
-          className="flex items-center justify-between px-5 py-3"
-          style={{ borderTop: '1px solid var(--theme-border-light)', background: 'var(--theme-status-warning-light)' }}
-        >
-          <span className="text-xs font-medium" style={{ color: 'var(--theme-status-warning-text)' }}>
-            Tổng chờ phân bổ
-          </span>
-          <span className="text-sm font-extrabold tabular-nums" style={{ color: 'var(--theme-status-warning)' }}>
-            {fmt(pendingRevenue)}
-          </span>
         </div>
       </DashboardCard>
     </div>

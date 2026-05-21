@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" fill="none" role="img" aria-label="">
+  <defs>
+    <radialGradient id="dmb-a" cx="30%" cy="28%" r="58%">
+      <stop offset="0%"  stop-color="#A7F3D0" stop-opacity="0.55"/>
+      <stop offset="60%" stop-color="#D1FAE5" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#ECFDF5" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="dmb-b" cx="78%" cy="72%" r="55%">
+      <stop offset="0%"  stop-color="#059669" stop-opacity="0.28"/>
+      <stop offset="55%" stop-color="#10B981" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#10B981" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="dmb-c" cx="55%" cy="55%" r="48%">
+      <stop offset="0%"  stop-color="#FFFFFF" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="600" height="600" fill="url(#dmb-a)"/>
+  <rect width="600" height="600" fill="url(#dmb-b)"/>
+  <ellipse cx="300" cy="300" rx="220" ry="180" fill="url(#dmb-c)"/>
+</svg>

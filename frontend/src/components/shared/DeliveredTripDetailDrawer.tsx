@@ -587,83 +587,17 @@ export function DeliveredTripDetailDrawer({
                   <p className="text-[12px] m-0" style={{ color: 'var(--ink-3)' }}>
                     {suggestions.length} chuyến đặt trước phù hợp
                   </p>
-                  {suggestions.map((s) => {
-                    const bt = s.bookedTrip
-                    const pct = s.maxScore > 0 ? Math.round((s.matchScore / s.maxScore) * 100) : 0
-                    const isMatching = matchingId === bt.id && reconcile.isPending
-                    return (
-                      <div
-                        key={`${bt.id}-${s.containerId}`}
-                        className="flex items-center justify-between gap-3 px-3.5 py-3"
-                        style={{
-                          background: 'var(--surface)',
-                          border: '1px solid var(--line)',
-                          borderRadius: 'var(--r-sm)',
-                        }}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div
-                            className="grid"
-                            style={{ gridTemplateColumns: '1fr 1fr', gap: '4px 16px' }}
-                          >
-                            {s.criteria.map((c) => {
-                              const color = c.match
-                                ? c.fuzzy
-                                  ? 'var(--warning)'
-                                  : 'var(--success)'
-                                : 'var(--ink-4)'
-                              const value = c.woValue ?? c.toValue
-                              return (
-                                <div
-                                  key={c.name}
-                                  className="flex items-baseline gap-1 min-w-0 text-[12px]"
-                                >
-                                  <span
-                                    className="shrink-0 text-[10px] font-semibold leading-none"
-                                    style={{ color }}
-                                  >
-                                    {c.match ? '✓' : '✕'}
-                                  </span>
-                                  <span className="shrink-0" style={{ color: 'var(--ink-3)' }}>
-                                    {c.label}:
-                                  </span>
-                                  {c.match ? (
-                                    <span className="truncate" style={{ color }}>
-                                      {value ?? '—'}
-                                    </span>
-                                  ) : (
-                                    <span className="truncate flex items-baseline gap-0.5">
-                                      {c.woValue && c.toValue && c.woValue !== c.toValue ? (
-                                        <>
-                                          <span style={{ color: 'var(--ink-3)' }}>{c.woValue}</span>
-                                          <span style={{ color: 'var(--ink-4)', fontSize: 10 }}>≠</span>
-                                          <span style={{ color: 'var(--ink-3)' }}>{c.toValue}</span>
-                                        </>
-                                      ) : (
-                                        <span style={{ color: 'var(--ink-4)' }}>{value ?? '—'}</span>
-                                      )}
-                                    </span>
-                                  )}
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                        <Button
-                          variant={pct >= 80 ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => handleMatch(bt.id)}
-                          disabled={isMatching}
-                          style={{ flexShrink: 0 }}
-                        >
-                          {isMatching ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : null}
-                          Ghép
-                        </Button>
-                      </div>
-                    )
-                  })}
+                  {suggestions.map((s) => (
+                    <SuggestionCard
+                      key={`${s.bookedTrip.id}-${s.containerId}`}
+                      suggestion={s}
+                      isMatching={matchingId === s.bookedTrip.id && reconcile.isPending}
+                      onMatch={() => handleMatch(s.bookedTrip.id)}
+                      updateBookedTrip={updateBookedTrip}
+                      clients={clients}
+                      locations={locations}
+                    />
+                  ))}
                 </div>
               )}
             </div>
@@ -671,6 +605,176 @@ export function DeliveredTripDetailDrawer({
         </div>
       </Drawer>
     </>
+  )
+}
+
+// ─── Suggestion card with editable booked trip fields ────────────────────────
+
+type UpdateBookedTripFn = {
+  mutate: (args: { id: number; data: import('@/services/api/bookedTrips.api').BookedTripUpdatePayload }) => void
+  mutateAsync: (args: { id: number; data: import('@/services/api/bookedTrips.api').BookedTripUpdatePayload }) => Promise<BookedTrip>
+}
+
+function SuggestionCard({
+  suggestion: s,
+  isMatching,
+  onMatch,
+  updateBookedTrip: _update,
+  clients,
+  locations,
+}: {
+  suggestion: import('@/data/domain').MatchSuggestion
+  isMatching: boolean
+  onMatch: () => void
+  updateBookedTrip: UpdateBookedTripFn
+  clients: import('@/data/domain').Client[]
+  locations: import('@/data/domain').Location[]
+}) {
+  const [bt, setBt] = useState(s.bookedTrip)
+  const pct = s.maxScore > 0 ? Math.round((s.matchScore / s.maxScore) * 100) : 0
+
+  const save = async (data: import('@/services/api/bookedTrips.api').BookedTripUpdatePayload) => {
+    const updated = await _update.mutateAsync({ id: bt.id, data })
+    setBt(updated)
+  }
+
+  // Derive current display value for each criterion from local bt state
+  const localValue = (name: string): string | null | undefined => {
+    switch (name) {
+      case 'container_number': return bt.containers?.[0]?.containerNumber
+      case 'pickup_location':  return bt.pickupLocation?.name
+      case 'dropoff_location': return bt.dropoffLocation?.name
+      case 'work_type':        return bt.containers?.[0]?.contType
+      case 'vessel':           return bt.vessel
+      case 'vehicle_plate':    return bt.vehiclePlate
+      case 'operation_type':   return bt.operationType
+        ? (OPERATION_TYPE_LABELS[bt.operationType as OperationType] ?? bt.operationType)
+        : null
+      case 'client':           return bt.client?.name
+      default:                 return null
+    }
+  }
+
+  return (
+    <div
+      className="flex items-center justify-between gap-3 px-3.5 py-3"
+      style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--line)',
+        borderRadius: 'var(--r-sm)',
+      }}
+    >
+      <div className="flex-1 min-w-0">
+        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '4px 16px' }}>
+          {s.criteria.map((c) => {
+            const matchColor = c.match
+              ? c.fuzzy ? 'var(--warning)' : 'var(--success)'
+              : 'var(--ink-4)'
+            const current = localValue(c.name)
+
+            const editControl = () => {
+              switch (c.name) {
+                case 'vessel':
+                  return (
+                    <InlineEditable
+                      display={<span style={{ color: current ? matchColor : 'var(--ink-4)' }}>{current ?? '—'}</span>}
+                      value={bt.vessel ?? ''}
+                      placeholder="Số tàu"
+                      onSave={(v) => save({ vessel: v || null })}
+                    />
+                  )
+                case 'pickup_location':
+                  return (
+                    <InlineSelect
+                      value={bt.pickupLocation?.id ?? null}
+                      displayValue={current}
+                      options={locations.map((l) => ({ value: l.id, label: l.name }))}
+                      onChange={(id) => save({ pickupLocationId: id as number })}
+                    />
+                  )
+                case 'dropoff_location':
+                  return (
+                    <InlineSelect
+                      value={bt.dropoffLocation?.id ?? null}
+                      displayValue={current}
+                      options={locations.map((l) => ({ value: l.id, label: l.name }))}
+                      onChange={(id) => save({ dropoffLocationId: id as number })}
+                    />
+                  )
+                case 'work_type':
+                  return (
+                    <InlineSelect
+                      value={bt.containers?.[0]?.contType ?? null}
+                      displayValue={current}
+                      options={CONT_TYPES.map((t) => ({ value: t, label: t }))}
+                      onChange={(v) => {
+                        const containers = bt.containers?.map((c, i) =>
+                          i === 0 ? { ...c, contType: v as ContType } : c,
+                        )
+                        if (containers) save({ containers })
+                      }}
+                    />
+                  )
+                case 'operation_type':
+                  return (
+                    <InlineSelect
+                      value={bt.operationType ?? null}
+                      displayValue={current}
+                      options={OPERATION_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                      onChange={(v) => save({ operationType: v as OperationType })}
+                    />
+                  )
+                case 'client':
+                  return (
+                    <InlineSelect
+                      value={bt.client?.id ?? null}
+                      displayValue={current}
+                      options={clients.map((c) => ({ value: c.id, label: c.name }))}
+                      onChange={(id) => save({ clientId: id as number })}
+                    />
+                  )
+                case 'vehicle_plate':
+                  return (
+                    <InlineEditable
+                      display={<span style={{ color: current ? matchColor : 'var(--ink-4)' }}>{current ?? '—'}</span>}
+                      value={bt.vehiclePlate ?? ''}
+                      placeholder="Biển số xe"
+                      onSave={(v) => save({ vehiclePlate: v || null })}
+                    />
+                  )
+                default:
+                  // Read-only (container_number)
+                  return (
+                    <span className="truncate" style={{ color: current ? matchColor : 'var(--ink-4)' }}>
+                      {current ?? '—'}
+                    </span>
+                  )
+              }
+            }
+
+            return (
+              <div key={c.name} className="flex items-center gap-1 min-w-0 text-[12px]">
+                <span className="shrink-0 text-[10px] font-semibold leading-none" style={{ color: matchColor }}>
+                  {c.match ? '✓' : '✕'}
+                </span>
+                <span className="shrink-0" style={{ color: 'var(--ink-3)' }}>{c.label}:</span>
+                <div className="min-w-0 flex-1">{editControl()}</div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+      <Button
+        variant={pct >= 80 ? 'default' : 'outline'}
+        size="sm"
+        onClick={onMatch}
+        disabled={isMatching}
+        style={{ flexShrink: 0 }}
+      >
+        {isMatching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+        Ghép
+      </Button>
+    </div>
   )
 }
 

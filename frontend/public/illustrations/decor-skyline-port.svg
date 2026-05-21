@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 180" fill="none" role="img" aria-label="">
+  <defs>
+    <linearGradient id="dsp-fade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#065F46" stop-opacity="0"/>
+      <stop offset="8%"   stop-color="#065F46" stop-opacity="0.75"/>
+      <stop offset="92%"  stop-color="#065F46" stop-opacity="0.75"/>
+      <stop offset="100%" stop-color="#065F46" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="dsp-water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#A7F3D0" stop-opacity="0.0"/>
+      <stop offset="100%" stop-color="#A7F3D0" stop-opacity="0.45"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Horizon water wash -->
+  <rect x="0" y="140" width="1200" height="40" fill="url(#dsp-water)"/>
+  <!-- Horizon line -->
+  <line x1="0" y1="140" x2="1200" y2="140" stroke="url(#dsp-fade)" stroke-width="1"/>
+
+  <!-- Distant containers (rows) -->
+  <g class="decor-fade-up" style="--decor-delay:120ms" fill="#10B981" fill-opacity="0.18">
+    <rect x="60"  y="120" width="56" height="20" rx="1.5"/>
+    <rect x="120" y="120" width="56" height="20" rx="1.5"/>
+    <rect x="180" y="120" width="56" height="20" rx="1.5"/>
+    <rect x="80"  y="108" width="56" height="12" rx="1.5" fill-opacity="0.22"/>
+    <rect x="140" y="108" width="56" height="12" rx="1.5" fill-opacity="0.22"/>
+
+    <rect x="940"  y="120" width="56" height="20" rx="1.5"/>
+    <rect x="1000" y="120" width="56" height="20" rx="1.5"/>
+    <rect x="1060" y="120" width="56" height="20" rx="1.5"/>
+    <rect x="970"  y="108" width="56" height="12" rx="1.5" fill-opacity="0.22"/>
+  </g>
+
+  <!-- Gantry cranes -->
+  <g stroke="#065F46" stroke-width="1.6" stroke-opacity="0.55" stroke-linecap="round" fill="none" class="decor-fade-up" style="--decor-delay:240ms">
+    <!-- Crane left -->
+    <path d="M270 140 L270 60 L420 60 L420 140"/>
+    <line x1="240" y1="60" x2="460" y2="60"/>
+    <line x1="345" y1="60" x2="345" y2="78"/>
+    <rect x="338" y="78" width="14" height="10" fill="#065F46" fill-opacity="0.35" stroke="none"/>
+
+    <!-- Crane center -->
+    <path d="M580 140 L580 48 L740 48 L740 140"/>
+    <line x1="550" y1="48" x2="780" y2="48"/>
+    <line x1="660" y1="48" x2="660" y2="70"/>
+    <rect x="653" y="70" width="14" height="10" fill="#065F46" fill-opacity="0.35" stroke="none"/>
+
+    <!-- Crane right -->
+    <path d="M860 140 L860 64 L990 64 L990 140"/>
+    <line x1="830" y1="64" x2="1020" y2="64" />
+    <line x1="925" y1="64" x2="925" y2="80"/>
+    <rect x="918" y="80" width="14" height="10" fill="#065F46" fill-opacity="0.35" stroke="none"/>
+  </g>
+
+  <!-- Subtle ship silhouette -->
+  <g class="decor-fade-up" style="--decor-delay:360ms" fill="#065F46" fill-opacity="0.22">
+    <path d="M460 140 L820 140 L800 130 L480 130 Z"/>
+    <rect x="630" y="118" width="10" height="12" fill-opacity="0.35"/>
+  </g>
+
+  <!-- Faint cloud ticks -->
+  <g stroke="#10B981" stroke-opacity="0.18" stroke-width="1.2" stroke-linecap="round">
+    <line x1="120" y1="36" x2="160" y2="36"/>
+    <line x1="540" y1="22" x2="600" y2="22"/>
+    <line x1="900" y1="32" x2="960" y2="32"/>
+  </g>
+</svg>

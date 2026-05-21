@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 80" fill="none" role="img" aria-label="" preserveAspectRatio="none">
+  <defs>
+    <linearGradient id="dwd-g" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#10B981" stop-opacity="0"/>
+      <stop offset="50%"  stop-color="#10B981" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#10B981" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <path d="M0 50 C 240 10, 480 90, 720 50 S 1200 10, 1440 50 L 1440 80 L 0 80 Z"
+        fill="url(#dwd-g)"/>
+  <path d="M0 50 C 240 10, 480 90, 720 50 S 1200 10, 1440 50"
+        stroke="#10B981" stroke-opacity="0.32" stroke-width="1.2"
+        class="decor-path-draw" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1"/>
+</svg>

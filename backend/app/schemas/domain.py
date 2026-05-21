@@ -436,6 +436,8 @@ class BookedTripCreate(BaseModel):
     pickup_location_id: int
     dropoff_location_id: int
     containers: list[TripContainerCreate] = []
+    vessel: str | None = None
+    vehicle_plate: str | None = None
     operation_type: str | None = None
     work_type: str = ""
     revenue: int = Field(ge=0, default=0)
@@ -449,6 +451,7 @@ class BookedTripUpdate(BaseModel):
     dropoff_location_id: int | None = None
     containers: list[TripContainerCreate] | None = None
     vessel: str | None = None
+    vehicle_plate: str | None = None
     operation_type: str | None = None
     work_type: str | None = None
     revenue: int | None = None
@@ -464,6 +467,7 @@ class BookedTripOut(BaseModel):
     dropoff_location: LocationSummaryOut
     containers: list[TripContainerOut] = []
     vessel: str | None = None
+    vehicle_plate: str | None = None
     operation_type: str | None = None
     work_type: str = ""
     revenue: int

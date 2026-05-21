@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
-import { Plus, Building2, Trash2, AlertTriangle } from 'lucide-react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button } from '@/components/ui'
+import { Plus, Building2, Trash2 } from 'lucide-react'
+import { Button } from '@/components/ui'
+import { DangerConfirmDialog } from '@/components/shared/DangerConfirmDialog/DangerConfirmDialog'
 import { Panel } from '@/components/shared/Panel'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Drawer } from '@/components/shared/Drawer'
@@ -14,6 +15,8 @@ import { useToast } from '@/components/atoms/Toast'
 import type { Vendor } from '@/data/domain'
 import { fuzzyMatch } from '@/lib/search-utils'
 import { StatPill } from './StatPill'
+import { useInlineEditForm } from '@/components/shared/useInlineEditForm'
+import { TableSkeleton } from '@/components/shared/TableSkeleton/TableSkeleton'
 import { useInfiniteScroll, LoadMoreSentinel, SearchInput, FieldActions } from './ListUtils'
 
 const BATCH = 15
@@ -108,11 +111,7 @@ export function VendorManagementDrawer({ open, onClose }: { open: boolean; onClo
 
           <Panel flush>
             {isLoading ? (
-              <div className="p-6 space-y-3">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="h-12 rounded-lg animate-pulse" style={{ background: 'var(--surface-3)' }} />
-                ))}
-              </div>
+              <TableSkeleton />
             ) : filtered.length === 0 && editingId !== 'new' ? (
               <div className="py-10">
                 <EmptyState
@@ -186,27 +185,14 @@ export function VendorManagementDrawer({ open, onClose }: { open: boolean; onClo
         </div>
       </Drawer>
 
-      <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Xoá nhà thầu?</DialogTitle></DialogHeader>
-          <div
-            className="flex items-start gap-3 rounded-lg px-3 py-2.5"
-            style={{
-              background: 'color-mix(in srgb, var(--status-error, #e53) 8%, transparent)',
-              border: '1px solid color-mix(in srgb, var(--status-error, #e53) 15%, transparent)',
-            }}
-          >
-            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'var(--status-error, #e53)' }} />
-            <p className="text-sm" style={{ color: 'var(--ink-2)' }}>
-              <strong style={{ color: 'var(--ink)' }}>{deleteTarget?.name}</strong> sẽ bị xoá vĩnh viễn và không thể khôi phục.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)} className="flex-1">Huỷ</Button>
-            <Button onClick={handleDelete} variant="destructive" className="flex-1">Xoá</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DangerConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Xoá nhà thầu?"
+        entityName={deleteTarget?.name ?? ''}
+        loading={deleteVendor.isPending}
+      />
     </>
   )
 }
@@ -218,9 +204,6 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
   saving?: boolean
   initialFocus?: VendorFocusableField
 }) {
-  const [form, setForm] = useState<VendorFormData>(initial)
-  const [errors, setErrors] = useState<Record<string, string>>({})
-
   const refs: Record<Exclude<VendorFocusableField, null>, React.RefObject<HTMLInputElement | null>> = {
     name: useRef<HTMLInputElement>(null),
     phone: useRef<HTMLInputElement>(null),
@@ -229,35 +212,19 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
     contactPerson: useRef<HTMLInputElement>(null),
   }
 
-  const isDirty = (key: keyof VendorFormData) => form[key] !== initial[key]
-  const anyDirty = (Object.keys(form) as (keyof VendorFormData)[]).some(k => isDirty(k))
-
-  const set = <K extends keyof VendorFormData>(key: K, val: VendorFormData[K]) => {
-    setForm(prev => ({ ...prev, [key]: val }))
-    setErrors(prev => { const n = { ...prev }; delete n[key]; return n })
-  }
-
-  const validate = () => {
-    const errs: Record<string, string> = {}
-    if (!form.name.trim()) errs.name = 'Bắt buộc'
-    if (form.taxCode && !VN_TAX_RE.test(form.taxCode)) errs.taxCode = 'MST không hợp lệ'
-    return errs
-  }
-
-  const handleSave = useCallback(() => {
-    const errs = validate()
-    if (Object.keys(errs).length > 0) { setErrors(errs); return }
-    onSave({ ...form, name: form.name.trim() })
-  }, [form, onSave])
-
-  useEffect(() => {
-    if (initialFocus) refs[initialFocus]?.current?.focus()
-  }, []) 
-
-  const handleInputKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') { e.stopPropagation(); onCancel() }
-    if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); handleSave() }
-  }, [onCancel, handleSave])
+  const { form, errors, set, isDirty, anyDirty, handleSave, inputProps } = useInlineEditForm<VendorFormData>({
+    initial,
+    validate: (f) => {
+      const errs: Record<string, string> = {}
+      if (!f.name.trim()) errs.name = 'Bắt buộc'
+      if (f.taxCode && !VN_TAX_RE.test(f.taxCode)) errs.taxCode = 'MST không hợp lệ'
+      return errs
+    },
+    onSave: (f) => onSave({ ...f, name: f.name.trim() }),
+    onCancel,
+    focusRef: initialFocus ? refs[initialFocus] : undefined,
+    globalKeyboard: false,
+  })
 
   const actions = anyDirty ? <FieldActions onSave={handleSave} onCancel={onCancel} saving={saving} /> : null
 
@@ -269,7 +236,7 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
             <input ref={refs.name} className="nepo-input text-[12px]"
               style={{ width: '100%', borderColor: errors.name ? 'var(--status-error, #e53)' : undefined }}
               value={form.name} onChange={e => set('name', e.target.value)} placeholder="Tên nhà thầu *"
-              onKeyDown={handleInputKeyDown} />
+              {...inputProps} />
             {errors.name && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.name}</p>}
           </div>
           {isDirty('name') && actions}
@@ -293,7 +260,7 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
         <div className="flex items-center">
           <input ref={refs.phone} className="nepo-input text-[12px]" style={{ minWidth: 90, flex: 1 }}
             type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="SĐT"
-            onKeyDown={handleInputKeyDown} />
+            {...inputProps} />
           {isDirty('phone') && actions}
         </div>
       </td>
@@ -301,7 +268,7 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
         <div className="flex items-center">
           <input ref={refs.address} className="nepo-input text-[12px]" style={{ minWidth: 100, flex: 1 }}
             value={form.address} onChange={e => set('address', e.target.value)} placeholder="Địa chỉ"
-            onKeyDown={handleInputKeyDown} />
+            {...inputProps} />
           {isDirty('address') && actions}
         </div>
       </td>
@@ -309,7 +276,7 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
         <div className="flex items-center">
           <input ref={refs.contactPerson} className="nepo-input text-[12px]" style={{ minWidth: 80, flex: 1 }}
             value={form.contactPerson} onChange={e => set('contactPerson', e.target.value)} placeholder="Người liên hệ"
-            onKeyDown={handleInputKeyDown} />
+            {...inputProps} />
           {isDirty('contactPerson') && actions}
         </div>
       </td>
@@ -319,7 +286,7 @@ function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name
             <input ref={refs.taxCode} className="nepo-input text-[12px]"
               style={{ width: '100%', borderColor: errors.taxCode ? 'var(--status-error, #e53)' : undefined }}
               value={form.taxCode} onChange={e => set('taxCode', e.target.value)} placeholder="MST"
-              onKeyDown={handleInputKeyDown} />
+              {...inputProps} />
             {errors.taxCode && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.taxCode}</p>}
           </div>
           {isDirty('taxCode') && actions}

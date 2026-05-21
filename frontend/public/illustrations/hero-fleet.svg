@@ -1,0 +1,159 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 320" fill="none" role="img" aria-label="">
+  <defs>
+    <linearGradient id="hf-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#ECFDF5"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="hf-cab" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#059669"/>
+      <stop offset="100%" stop-color="#065F46"/>
+    </linearGradient>
+    <linearGradient id="hf-cont" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#F0FDF4"/>
+      <stop offset="100%" stop-color="#D1FAE5"/>
+    </linearGradient>
+    <linearGradient id="hf-route" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#059669" stop-opacity="0"/>
+      <stop offset="20%"  stop-color="#059669" stop-opacity="0.9"/>
+      <stop offset="80%"  stop-color="#059669" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#059669" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="hf-shadow" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#059669" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#059669" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="hf-drop" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#065F46" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <!-- Sky wash -->
+  <rect x="0" y="0" width="560" height="240" fill="url(#hf-sky)"/>
+
+  <!-- Map dot grid backdrop -->
+  <g fill="#059669" fill-opacity="0.10">
+    <g transform="translate(40 40)">
+      <circle cx="0"   cy="0"  r="1.2"/>
+      <circle cx="24"  cy="0"  r="1.2"/>
+      <circle cx="48"  cy="0"  r="1.2"/>
+      <circle cx="72"  cy="0"  r="1.2"/>
+      <circle cx="96"  cy="0"  r="1.2"/>
+      <circle cx="120" cy="0"  r="1.2"/>
+      <circle cx="144" cy="0"  r="1.2"/>
+      <circle cx="168" cy="0"  r="1.2"/>
+      <circle cx="192" cy="0"  r="1.2"/>
+      <circle cx="216" cy="0"  r="1.2"/>
+      <circle cx="240" cy="0"  r="1.2"/>
+      <circle cx="264" cy="0"  r="1.2"/>
+      <circle cx="288" cy="0"  r="1.2"/>
+      <circle cx="312" cy="0"  r="1.2"/>
+      <circle cx="336" cy="0"  r="1.2"/>
+      <circle cx="360" cy="0"  r="1.2"/>
+      <circle cx="384" cy="0"  r="1.2"/>
+      <circle cx="408" cy="0"  r="1.2"/>
+      <circle cx="432" cy="0"  r="1.2"/>
+      <circle cx="456" cy="0"  r="1.2"/>
+    </g>
+    <g transform="translate(40 70)" opacity="0.85">
+      <circle cx="12"  cy="0" r="1.2"/><circle cx="36"  cy="0" r="1.2"/>
+      <circle cx="60"  cy="0" r="1.2"/><circle cx="84"  cy="0" r="1.2"/>
+      <circle cx="108" cy="0" r="1.2"/><circle cx="132" cy="0" r="1.2"/>
+      <circle cx="156" cy="0" r="1.2"/><circle cx="180" cy="0" r="1.2"/>
+      <circle cx="204" cy="0" r="1.2"/><circle cx="228" cy="0" r="1.2"/>
+      <circle cx="252" cy="0" r="1.2"/><circle cx="276" cy="0" r="1.2"/>
+      <circle cx="300" cy="0" r="1.2"/><circle cx="324" cy="0" r="1.2"/>
+      <circle cx="348" cy="0" r="1.2"/><circle cx="372" cy="0" r="1.2"/>
+      <circle cx="396" cy="0" r="1.2"/><circle cx="420" cy="0" r="1.2"/>
+      <circle cx="444" cy="0" r="1.2"/><circle cx="468" cy="0" r="1.2"/>
+    </g>
+    <g transform="translate(40 100)" opacity="0.7">
+      <circle cx="0"   cy="0" r="1.2"/><circle cx="24"  cy="0" r="1.2"/>
+      <circle cx="48"  cy="0" r="1.2"/><circle cx="72"  cy="0" r="1.2"/>
+      <circle cx="96"  cy="0" r="1.2"/><circle cx="120" cy="0" r="1.2"/>
+      <circle cx="144" cy="0" r="1.2"/><circle cx="168" cy="0" r="1.2"/>
+      <circle cx="192" cy="0" r="1.2"/><circle cx="216" cy="0" r="1.2"/>
+      <circle cx="240" cy="0" r="1.2"/><circle cx="264" cy="0" r="1.2"/>
+      <circle cx="288" cy="0" r="1.2"/><circle cx="312" cy="0" r="1.2"/>
+      <circle cx="336" cy="0" r="1.2"/><circle cx="360" cy="0" r="1.2"/>
+      <circle cx="384" cy="0" r="1.2"/><circle cx="408" cy="0" r="1.2"/>
+      <circle cx="432" cy="0" r="1.2"/><circle cx="456" cy="0" r="1.2"/>
+    </g>
+  </g>
+
+  <!-- Route curve (drawn on reveal) -->
+  <path class="decor-path-draw" style="--decor-delay:120ms"
+        d="M 40 90 C 140 60, 200 160, 320 130 S 480 60, 520 80"
+        stroke="url(#hf-route)" stroke-width="2.4" stroke-linecap="round"
+        pathLength="1" stroke-dasharray="1" stroke-dashoffset="1" fill="none"/>
+
+  <!-- Origin city marker -->
+  <g class="decor-pop" style="--decor-delay:80ms" transform="translate(40 90)">
+    <circle r="8" fill="#FFFFFF" stroke="#059669" stroke-width="1.5"/>
+    <circle r="3" fill="#059669"/>
+  </g>
+  <!-- Mid checkpoint -->
+  <g class="decor-pop" style="--decor-delay:520ms" transform="translate(320 130)">
+    <circle r="6" fill="#ECFDF5" stroke="#10B981" stroke-width="1.4"/>
+    <circle r="2" fill="#10B981"/>
+  </g>
+  <!-- Destination flag -->
+  <g class="decor-pop" style="--decor-delay:780ms" transform="translate(520 80)">
+    <circle r="9" fill="#FFFFFF" stroke="#059669" stroke-width="1.6"/>
+    <path d="M -1.5 -5 L 4 -5 L 2 -2.5 L 4 0 L -1.5 0 Z" fill="#059669"/>
+    <line x1="-1.5" y1="-6" x2="-1.5" y2="4" stroke="#059669" stroke-width="1.2" stroke-linecap="round"/>
+  </g>
+
+  <!-- Ground ellipse -->
+  <ellipse cx="280" cy="252" rx="220" ry="10" fill="url(#hf-shadow)"/>
+
+  <!-- Truck (centered) -->
+  <g transform="translate(168 138)" filter="url(#hf-drop)" class="decor-fade-up" style="--decor-delay:300ms">
+    <!-- Chassis -->
+    <rect x="0" y="98" width="224" height="10" rx="3" fill="#D1FAE5" stroke="#059669" stroke-width="1.6"/>
+    <!-- Container -->
+    <rect x="0" y="14" width="148" height="92" rx="6" fill="url(#hf-cont)" stroke="#059669" stroke-width="2"/>
+    <rect x="2" y="16" width="144" height="6" rx="2" fill="#FFFFFF" fill-opacity="0.55"/>
+    <g stroke="#059669" stroke-width="0.7" stroke-opacity="0.22">
+      <line x1="36"  y1="22" x2="36"  y2="100"/>
+      <line x1="72"  y1="22" x2="72"  y2="100"/>
+      <line x1="108" y1="22" x2="108" y2="100"/>
+    </g>
+    <!-- Container label -->
+    <rect x="22" y="48" width="100" height="20" rx="3" fill="#FFFFFF" stroke="#059669" stroke-width="1" stroke-opacity="0.5"/>
+    <text x="72" y="62" text-anchor="middle" font-family="ui-sans-serif, system-ui" font-size="11" font-weight="600" fill="#065F46">VTPL · 40HC</text>
+
+    <!-- Cab -->
+    <path d="M150 24 L208 24 Q224 24 224 40 L224 106 L150 106 Z" fill="url(#hf-cab)"/>
+    <path d="M150 24 Q176 14 208 24" fill="#059669"/>
+    <path d="M156 32 L208 32 Q216 32 216 40 L216 70 L156 70 Z" fill="#ECFDF5" fill-opacity="0.92"/>
+    <line x1="159" y1="36" x2="170" y2="56" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-opacity="0.42"/>
+    <!-- Mirror -->
+    <rect x="146" y="36" width="6" height="11" rx="2" fill="#065F46"/>
+    <!-- Grille -->
+    <rect x="220" y="48" width="4" height="40" rx="1.2" fill="#065F46"/>
+    <!-- Headlight -->
+    <rect x="218" y="88" width="6" height="8" rx="1.4" fill="#FEF9C3" stroke="#D97706" stroke-width="0.6"/>
+  </g>
+
+  <!-- Wheels -->
+  <g class="decor-fade-up" style="--decor-delay:420ms">
+    <g transform="translate(202 252)">
+      <circle r="14" fill="#1F2937"/>
+      <circle r="9"  fill="#374151"/>
+      <circle r="5"  fill="#9CA3AF"/>
+      <circle r="2"  fill="#E5E7EB"/>
+    </g>
+    <g transform="translate(348 252)">
+      <circle r="14" fill="#1F2937"/>
+      <circle r="9"  fill="#374151"/>
+      <circle r="5"  fill="#9CA3AF"/>
+      <circle r="2"  fill="#E5E7EB"/>
+    </g>
+  </g>
+
+  <!-- Live pulse on origin -->
+  <g transform="translate(40 90)">
+    <circle r="14" fill="#10B981" fill-opacity="0.2" class="decor-pulse-ring"/>
+    <circle r="20" fill="#10B981" fill-opacity="0.12" class="decor-pulse-ring" style="--decor-delay:600ms"/>
+  </g>
+</svg>

@@ -186,6 +186,8 @@ class UpdateBookedTrip:
             t.dropoff_location_id = data.dropoff_location_id
         if data.vessel is not None:
             t.vessel = data.vessel
+        if data.vehicle_plate is not None:
+            t.vehicle_plate = data.vehicle_plate
         if data.operation_type is not None:
             t.operation_type = data.operation_type
         if data.revenue is not None:

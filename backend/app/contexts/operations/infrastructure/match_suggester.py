@@ -530,7 +530,7 @@ async def suggest_trip_matches(
                 wo_vessel=delivered_trip.vessel,
                 to_vessel=to.vessel,
                 wo_vehicle_plate=None,
-                to_vehicle_plate=None,
+                to_vehicle_plate=to.vehicle_plate,
                 wo_operation_type=delivered_trip.operation_type,
                 to_operation_type=to.operation_type,
             )
@@ -675,7 +675,7 @@ async def suggest_wo_matches(
             wo_vessel=wo.vessel,
             to_vessel=booked_trip.vessel,
             wo_vehicle_plate=None,
-            to_vehicle_plate=None,
+            to_vehicle_plate=booked_trip.vehicle_plate,
             wo_operation_type=wo.operation_type,
             to_operation_type=booked_trip.operation_type,
         )

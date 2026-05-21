@@ -79,3 +79,7 @@ export { PricingClientCards, PricingClientDetail, PricingForm, LineEditor } from
 export { TopNavBar } from './TopNavBar'
 export type { TopNavItem } from './TopNavBar'
 export { StatBreakdownCard } from './StatBreakdownCard'
+
+// ─── Decoration & reveal ────────────────────────────────────────────────────────
+export { Reveal, RevealList } from './Reveal'
+export { Decoration, HeroDecoration, SectionRouteDecoration, LiveDot } from './Decoration'
