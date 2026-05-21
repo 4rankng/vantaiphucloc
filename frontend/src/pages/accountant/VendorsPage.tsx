@@ -1,9 +1,8 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
-import { Truck, Plus, Search, Check, X, Trash2 } from 'lucide-react'
-import { Button } from '@/components/ui'
+import { Truck, Plus, Search, Check, X, Trash2, AlertTriangle } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button } from '@/components/ui'
 import { Panel } from '@/components/shared/Panel'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { ConfirmDialog } from '@/components/shared/ConfirmDialog/ConfirmDialog'
 import {
   useVendors,
   useCreateVendor,
@@ -72,7 +71,7 @@ function SearchInput({ value, onChange, placeholder }: {
   value: string; onChange: (v: string) => void; placeholder: string
 }) {
   return (
-    <div className="relative" style={{ width: 220, flexShrink: 0 }}>
+    <div className="relative" style={{ flex: 1, maxWidth: 360 }}>
       <Search className="absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" style={{ left: 10, color: 'var(--ink-3)' }} />
       <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="nepo-input text-[13px]" style={{ paddingLeft: 32 }} />
     </div>
@@ -494,15 +493,27 @@ export function VendorsPage() {
       </section>
 
       {/* ── Delete confirmation ── */}
-      <ConfirmDialog
-        open={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={handleDelete}
-        title="Xoá nhà thầu"
-        description={`"${deleteTarget?.name}" sẽ bị xoá vĩnh viễn và không thể khôi phục.`}
-        confirmLabel="Xoá"
-        variant="warning"
-      />
+      <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Xoá nhà thầu?</DialogTitle></DialogHeader>
+          <div
+            className="flex items-start gap-3 rounded-lg px-3 py-2.5"
+            style={{
+              background: 'color-mix(in srgb, var(--status-error, #e53) 8%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--status-error, #e53) 15%, transparent)',
+            }}
+          >
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'var(--status-error, #e53)' }} />
+            <p className="text-sm" style={{ color: 'var(--ink-2)' }}>
+              <strong style={{ color: 'var(--ink)' }}>{deleteTarget?.name}</strong> sẽ bị xoá vĩnh viễn và không thể khôi phục.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} className="flex-1">Huỷ</Button>
+            <Button onClick={handleDelete} variant="destructive" className="flex-1">Xoá</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

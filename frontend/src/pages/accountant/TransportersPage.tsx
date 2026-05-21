@@ -1,12 +1,15 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import {
-  Truck, Plus, User, X, Users, Search, Building2, Check, Trash2,
+  Truck, Plus, User, X, Search, Building2, Check, Trash2, AlertTriangle,
 } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
   Button,
 } from '@/components/ui'
-import { ConfirmDialog } from '@/components/shared/ConfirmDialog/ConfirmDialog'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Button,
+} from '@/components/ui'
 import { Panel } from '@/components/shared/Panel'
 import { Plate } from '@/components/shared/Plate'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -114,26 +117,11 @@ function StatPill({ count, label, accent }: { count: number; label: string; acce
   )
 }
 
-function SectionHeader({ icon, title, count, action }: {
-  icon: React.ReactNode; title: string; count: number; action?: React.ReactNode
-}) {
-  return (
-    <div className="flex items-center gap-2 mb-3">
-      <span style={{ color: 'var(--ink-2)' }}>{icon}</span>
-      <h2 className="text-[15px] font-bold" style={{ color: 'var(--ink)', letterSpacing: '-0.01em' }}>{title}</h2>
-      <span className="tabular-nums text-[11.5px] font-semibold rounded-full px-2 py-0.5" style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}>
-        {count}
-      </span>
-      {action && <div style={{ marginLeft: 'auto' }}>{action}</div>}
-    </div>
-  )
-}
-
 function SearchInput({ value, onChange, placeholder }: {
   value: string; onChange: (v: string) => void; placeholder: string
 }) {
   return (
-    <div className="relative" style={{ width: 220, flexShrink: 0 }}>
+    <div className="relative" style={{ flex: 1, maxWidth: 360 }}>
       <Search className="absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" style={{ left: 10, color: 'var(--ink-3)' }} />
       <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="nepo-input text-[13px]" style={{ paddingLeft: 32 }} />
     </div>
@@ -681,18 +669,11 @@ function FleetSection() {
 
         {/* Phương tiện */}
         <section>
-          <SectionHeader
-            icon={<Truck className="h-4 w-4" />}
-            title="Phương tiện"
-            count={filteredGroups.length}
-            action={
-              <Button variant="default" onClick={() => setShowAddVehicle(true)}>
-                <Plus className="h-4 w-4" /> Thêm xe
-              </Button>
-            }
-          />
-          <div className="mb-3">
+          <div className="flex items-center gap-2 mb-3">
             <SearchInput value={fleetSearch} onChange={setFleetSearch} placeholder="Tìm biển số, lái xe…" />
+            <Button variant="default" onClick={() => setShowAddVehicle(true)}>
+              <Plus className="h-4 w-4" /> Thêm xe
+            </Button>
           </div>
           <Panel flush>
             {vdLoading ? (
@@ -763,18 +744,11 @@ function FleetSection() {
 
         {/* Lái xe */}
         <section>
-          <SectionHeader
-            icon={<Users className="h-4 w-4" />}
-            title="Lái xe"
-            count={filteredDrivers.length}
-            action={
-              <Button variant="default" onClick={() => setShowCreateDriver(true)}>
-                <Plus className="h-4 w-4" /> Thêm lái xe
-              </Button>
-            }
-          />
-          <div className="mb-3">
+          <div className="flex items-center gap-2 mb-3">
             <SearchInput value={driverSearch} onChange={setDriverSearch} placeholder="Tìm tên, SĐT, biển số…" />
+            <Button variant="default" onClick={() => setShowCreateDriver(true)}>
+              <Plus className="h-4 w-4" /> Thêm lái xe
+            </Button>
           </div>
           <Panel flush>
             {driversLoading ? (
@@ -901,15 +875,27 @@ function FleetSection() {
         <DriverFormDrawer onSave={handleCreateDriver} onClose={() => setShowCreateDriver(false)} isPending={createDriver.isPending} />
       )}
 
-      <ConfirmDialog
-        open={!!removeDriverTarget}
-        onClose={() => setRemoveDriverTarget(null)}
-        onConfirm={confirmRemoveDriver}
-        title="Gỡ lái xe"
-        description={`Gỡ "${removeDriverTarget?.name}" khỏi xe này?`}
-        confirmLabel="Gỡ"
-        variant="warning"
-      />
+      <Dialog open={!!removeDriverTarget} onOpenChange={() => setRemoveDriverTarget(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Gỡ lái xe?</DialogTitle></DialogHeader>
+          <div
+            className="flex items-start gap-3 rounded-lg px-3 py-2.5"
+            style={{
+              background: 'color-mix(in srgb, var(--status-error, #e53) 8%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--status-error, #e53) 15%, transparent)',
+            }}
+          >
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'var(--status-error, #e53)' }} />
+            <p className="text-sm" style={{ color: 'var(--ink-2)' }}>
+              Gỡ <strong style={{ color: 'var(--ink)' }}>{removeDriverTarget?.name}</strong> khỏi xe này?
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRemoveDriverTarget(null)} className="flex-1">Huỷ</Button>
+            <Button onClick={confirmRemoveDriver} variant="destructive" className="flex-1">Gỡ</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -1076,15 +1062,27 @@ function VendorManagementDrawer({ open, onClose }: { open: boolean; onClose: () 
       </Drawer>
 
       {/* Delete confirmation rendered outside to avoid z-index stacking */}
-      <ConfirmDialog
-        open={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={handleDelete}
-        title="Xoá nhà thầu"
-        description={`"${deleteTarget?.name}" sẽ bị xoá vĩnh viễn và không thể khôi phục.`}
-        confirmLabel="Xoá"
-        variant="warning"
-      />
+      <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Xoá nhà thầu?</DialogTitle></DialogHeader>
+          <div
+            className="flex items-start gap-3 rounded-lg px-3 py-2.5"
+            style={{
+              background: 'color-mix(in srgb, var(--status-error, #e53) 8%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--status-error, #e53) 15%, transparent)',
+            }}
+          >
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'var(--status-error, #e53)' }} />
+            <p className="text-sm" style={{ color: 'var(--ink-2)' }}>
+              <strong style={{ color: 'var(--ink)' }}>{deleteTarget?.name}</strong> sẽ bị xoá vĩnh viễn và không thể khôi phục.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} className="flex-1">Huỷ</Button>
+            <Button onClick={handleDelete} variant="destructive" className="flex-1">Xoá</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
-import { Car, Plus, Users, Search, Check, X } from 'lucide-react'
+import { Car, Plus, Search, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { Panel } from '@/components/shared/Panel'
 import { Drawer } from '@/components/shared/Drawer'
@@ -64,26 +64,11 @@ function StatPill({ count, label, accent }: { count: number; label: string; acce
   )
 }
 
-function SectionHeader({ icon, title, count, action }: {
-  icon: React.ReactNode; title: string; count: number; action?: React.ReactNode
-}) {
-  return (
-    <div className="flex items-center gap-2 mb-3">
-      <span style={{ color: 'var(--ink-2)' }}>{icon}</span>
-      <h2 className="text-[15px] font-bold" style={{ color: 'var(--ink)', letterSpacing: '-0.01em' }}>{title}</h2>
-      <span className="tabular-nums text-[11.5px] font-semibold rounded-full px-2 py-0.5" style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}>
-        {count}
-      </span>
-      {action && <div style={{ marginLeft: 'auto' }}>{action}</div>}
-    </div>
-  )
-}
-
 function SearchInput({ value, onChange, placeholder }: {
   value: string; onChange: (v: string) => void; placeholder: string
 }) {
   return (
-    <div className="relative" style={{ width: 220, flexShrink: 0 }}>
+    <div className="relative" style={{ flex: 1, maxWidth: 360 }}>
       <Search className="absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" style={{ left: 10, color: 'var(--ink-3)' }} />
       <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="nepo-input text-[13px]" style={{ paddingLeft: 32 }} />
     </div>
@@ -440,18 +425,11 @@ export function DriversPage() {
 
       {/* ── Table section ── */}
       <section>
-        <SectionHeader
-          icon={<Users className="h-4 w-4" />}
-          title="Danh sách lái xe"
-          count={filtered.length}
-          action={
-            <Button variant="default" onClick={() => setShowCreate(true)}>
-              <Plus className="h-4 w-4" /> Thêm
-            </Button>
-          }
-        />
-        <div className="mb-3">
+        <div className="flex items-center gap-2 mb-3">
           <SearchInput value={search} onChange={setSearch} placeholder="Tìm tên, SĐT, xe…" />
+          <Button variant="default" onClick={() => setShowCreate(true)}>
+            <Plus className="h-4 w-4" /> Thêm
+          </Button>
         </div>
         <Panel flush>
           {isLoading ? (

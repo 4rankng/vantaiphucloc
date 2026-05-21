@@ -3,7 +3,6 @@ import { MapPin, Plus, AlertTriangle, Search, Merge, ArrowUp, Trash2, Check, X }
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Panel } from '@/components/shared/Panel'
 import { Drawer } from '@/components/shared/Drawer'
-import { ConfirmDialog } from '@/components/shared/ConfirmDialog/ConfirmDialog'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { useToast } from '@/components/atoms/Toast'
 import {
@@ -60,26 +59,11 @@ function StatPill({ count, label, accent }: { count: number; label: string; acce
   )
 }
 
-function SectionHeader({ icon, title, count, action }: {
-  icon: React.ReactNode; title: string; count: number; action?: React.ReactNode
-}) {
-  return (
-    <div className="flex items-center gap-2 mb-3">
-      <span style={{ color: 'var(--ink-2)' }}>{icon}</span>
-      <h2 className="text-[15px] font-bold" style={{ color: 'var(--ink)', letterSpacing: '-0.01em' }}>{title}</h2>
-      <span className="tabular-nums text-[11.5px] font-semibold rounded-full px-2 py-0.5" style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}>
-        {count}
-      </span>
-      {action && <div style={{ marginLeft: 'auto' }}>{action}</div>}
-    </div>
-  )
-}
-
 function SearchInput({ value, onChange, placeholder }: {
   value: string; onChange: (v: string) => void; placeholder: string
 }) {
   return (
-    <div className="relative" style={{ width: 220, flexShrink: 0 }}>
+    <div className="relative" style={{ flex: 1, maxWidth: 360 }}>
       <Search className="absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" style={{ left: 10, color: 'var(--ink-3)' }} />
       <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="nepo-input text-[13px]" style={{ paddingLeft: 32 }} />
     </div>
@@ -487,21 +471,18 @@ export function LocationAliasesPage() {
                 <Merge className="h-4 w-4" /> Gộp
               </Button>
             )}
-            <Button variant="default" onClick={() => setEditingId('new')}>
-              <Plus className="h-4 w-4" /> Thêm
-            </Button>
           </div>
         </div>
       </header>
 
       {/* ── Table section ── */}
       <section>
-        <SectionHeader
-          icon={<MapPin className="h-4 w-4" />}
-          title="Danh sách địa điểm"
-          count={filtered.length}
-          action={<SearchInput value={search} onChange={setSearch} placeholder="Tìm địa điểm, tên phụ…" />}
-        />
+        <div className="flex items-center gap-2 mb-3">
+          <SearchInput value={search} onChange={setSearch} placeholder="Tìm địa điểm, tên phụ…" />
+          <Button variant="default" onClick={() => setEditingId('new')}>
+            <Plus className="h-4 w-4" /> Thêm
+          </Button>
+        </div>
         <Panel flush>
           {isLoading ? (
             <div className="p-6 space-y-3">
@@ -586,15 +567,25 @@ export function LocationAliasesPage() {
       )}
 
       {/* ── Delete confirmation ── */}
-      <ConfirmDialog
-        open={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={handleDelete}
-        title="Xoá địa điểm"
-        description={`"${deleteTarget?.name}" sẽ bị xoá vĩnh viễn cùng tất cả tên phụ.`}
-        confirmLabel="Xoá"
-        variant="warning"
-      />
+      <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Xoá địa điểm?</DialogTitle></DialogHeader>
+          <div className="flex items-start gap-3 rounded-lg px-3 py-2.5"
+            style={{
+              background: 'color-mix(in srgb, var(--status-error, #e53) 8%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--status-error, #e53) 15%, transparent)',
+            }}>
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" style={{ color: 'var(--status-error, #e53)' }} />
+            <p className="text-sm" style={{ color: 'var(--ink-2)' }}>
+              <strong style={{ color: 'var(--ink)' }}>{deleteTarget?.name}</strong> sẽ bị xoá vĩnh viễn cùng tất cả tên phụ và không thể khôi phục.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} className="flex-1">Huỷ</Button>
+            <Button onClick={handleDelete} variant="destructive" className="flex-1">Xoá</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Merge dialog ── */}
       <MergeDialog open={mergeOpen} onClose={() => setMergeOpen(false)} locations={locations} onMerge={handleMerge} merging={mergeLocations.isPending} />
