@@ -205,9 +205,9 @@ class SetDriverBaseSalary:
 
 
 @dataclass
-class PartnerRevenueBreakdownDTO:
+class ClientRevenueBreakdownDTO:
     client_id: int
-    partner_name: str
+    client_name: str
     matched_trip_count: int
     revenue: int
 
@@ -223,7 +223,7 @@ class MonthlyPnLDTO:
     total_vehicle_expenses: int     # Fuel + Repairs + Law + Other
     profit: int                     # revenue − all costs
     matched_trip_count: int
-    partner_breakdown: list[PartnerRevenueBreakdownDTO]
+    partner_breakdown: list[ClientRevenueBreakdownDTO]
 
 
 class GetMonthlyPnL:
@@ -278,11 +278,11 @@ class GetMonthlyPnL:
         ).all()
 
         revenue = 0
-        per_partner: dict[int, dict] = {}
+        per_client: dict[int, dict] = {}
         for to_id, client_id, to_revenue, container_count in per_to_rows:
             line = int(to_revenue or 0)
             revenue += line
-            slot = per_partner.setdefault(
+            slot = per_client.setdefault(
                 client_id,
                 {"trip_count": 0, "revenue": 0},
             )
@@ -294,26 +294,26 @@ class GetMonthlyPnL:
         # Resolve partner names for the breakdown.
         from app.models.domain import Client
 
-        partner_rows = []
-        if per_partner:
-            partner_rows = (
+        client_rows = []
+        if per_client:
+            client_rows = (
                 await self.session.execute(
                     select(Client.id, Client.name).where(
-                        Client.id.in_(list(per_partner.keys()))
+                        Client.id.in_(list(per_client.keys()))
                     )
                 )
             ).all()
-        partner_names = {pid: pname for pid, pname in partner_rows}
+        client_names = {cid: cname for cid, cname in client_rows}
 
-        partner_breakdown = [
-            PartnerRevenueBreakdownDTO(
-                client_id=pid,
-                partner_name=partner_names.get(pid, f"#{pid}"),
+        client_breakdown = [
+            ClientRevenueBreakdownDTO(
+                client_id=cid,
+                client_name=client_names.get(cid, f"#{cid}"),
                 matched_trip_count=slot["trip_count"],
                 revenue=slot["revenue"],
             )
-            for pid, slot in sorted(
-                per_partner.items(), key=lambda kv: kv[1]["revenue"], reverse=True
+            for cid, slot in sorted(
+                per_client.items(), key=lambda kv: kv[1]["revenue"], reverse=True
             )
         ]
 
@@ -389,5 +389,5 @@ class GetMonthlyPnL:
             total_vehicle_expenses=total_vehicle_expenses,
             profit=profit,
             matched_trip_count=matched_trip_count,
-            partner_breakdown=partner_breakdown,
+            partner_breakdown=client_breakdown,
         )

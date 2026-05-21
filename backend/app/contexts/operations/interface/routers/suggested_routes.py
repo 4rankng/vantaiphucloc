@@ -31,8 +31,8 @@ router = APIRouter(prefix="/drivers", tags=["drivers"])
 class _RouteRow:
     """Internal representation of a suggested route."""
     client_id: int
-    partner_code: str | None
-    partner_name: str
+    client_code: str | None
+    client_name: str
     pickup_location_id: int
     pickup_location_name: str
     dropoff_location_id: int
@@ -49,10 +49,10 @@ class SuggestedRouteItem:
     @staticmethod
     def from_row(r: _RouteRow) -> dict:
         return {
-            "partner": {
+            "client": {
                 "id": r.client_id,
-                "code": r.partner_code,
-                "name": r.partner_name,
+                "code": r.client_code,
+                "name": r.client_name,
             },
             "pickupLocation": {
                 "id": r.pickup_location_id,
@@ -94,8 +94,8 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 _DRIVER_ROUTES_SQL = text("""
     SELECT
         p.id   AS client_id,
-        p.code AS partner_code,
-        p.name AS partner_name,
+        p.code AS client_code,
+        p.name AS client_name,
         pl.id  AS pickup_location_id,
         pl.name AS pickup_location_name,
         pl.lat AS pickup_lat,
@@ -118,8 +118,8 @@ _DRIVER_ROUTES_SQL = text("""
 _GLOBAL_POPULAR_SQL = text("""
     SELECT
         p.id   AS client_id,
-        p.code AS partner_code,
-        p.name AS partner_name,
+        p.code AS client_code,
+        p.name AS client_name,
         pl.id  AS pickup_location_id,
         pl.name AS pickup_location_name,
         pl.lat AS pickup_lat,
@@ -173,8 +173,8 @@ async def _compute_suggestions(
         source = "frequent" if freq >= 3 else "recent"
         results.append(_RouteRow(
             client_id=r.client_id,
-            partner_code=r.partner_code,
-            partner_name=r.partner_name,
+            client_code=r.client_code,
+            client_name=r.client_name,
             pickup_location_id=r.pickup_location_id,
             pickup_location_name=r.pickup_location_name,
             dropoff_location_id=r.dropoff_location_id,
@@ -220,8 +220,8 @@ async def _compute_suggestions(
 
         driver_results.append(_RouteRow(
             client_id=r.client_id,
-            partner_code=r.partner_code,
-            partner_name=r.partner_name,
+            client_code=r.client_code,
+            client_name=r.client_name,
             pickup_location_id=r.pickup_location_id,
             pickup_location_name=r.pickup_location_name,
             dropoff_location_id=r.dropoff_location_id,

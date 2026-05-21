@@ -45,9 +45,9 @@ from app.models.base import User
 from app.schemas.base import PaginatedResponse
 from app.core.summaries import (
     get_location_summary,
-    get_partner_summary,
+    get_client_summary,
     load_location_summaries,
-    load_partner_summaries,
+    load_client_summaries,
 )
 
 
@@ -57,7 +57,7 @@ router = APIRouter()
 async def _to_out(db: AsyncSession, pricings: list[Pricing]) -> list[PricingOut]:
     if not pricings:
         return []
-    partners = await load_partner_summaries(
+    partners = await load_client_summaries(
         db, {int(p.client_id) for p in pricings}
     )
     locations = await load_location_summaries(
@@ -68,7 +68,7 @@ async def _to_out(db: AsyncSession, pricings: list[Pricing]) -> list[PricingOut]
     return [
         PricingOut(
             id=int(p.id),
-            partner=get_partner_summary(partners, int(p.client_id)),
+            client=get_client_summary(partners, int(p.client_id)),
             operation_type=p.operation_type,
             work_type=p.work_type,
             pickup_location=get_location_summary(

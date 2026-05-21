@@ -172,7 +172,7 @@ function PendingTripRow({
   onClick: () => void
   isFirst: boolean
 }) {
-  const mono = monogram(trip.partner.name)
+  const mono = monogram(trip.client.name)
   return (
     <button
       onClick={onClick}
@@ -196,7 +196,7 @@ function PendingTripRow({
       </div>
       <div className="min-w-0 flex-1">
         <div className="text-sm font-bold truncate" style={{ color: 'var(--theme-text-primary)' }}>
-          {trip.partner.name}
+          {trip.client.name}
         </div>
         <div className="text-xs mt-0.5 truncate" style={{ color: 'var(--theme-text-secondary)' }}>
           {resolveRoute(trip)}

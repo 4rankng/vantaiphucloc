@@ -44,7 +44,7 @@ from app.schemas.domain import (
     DriverBaseSalarySet,
     DriverEarningsOut,
     MonthlyPnLOut,
-    PartnerRevenueBreakdownOut,
+    ClientRevenueBreakdownOut,
     SalaryCalculateAsyncResponse,
 )
 
@@ -227,13 +227,13 @@ async def get_monthly_pnl_endpoint(
         total_vehicle_expenses=dto.total_vehicle_expenses,
         profit=dto.profit,
         matched_trip_count=dto.matched_trip_count,
-        partner_breakdown=[
-            PartnerRevenueBreakdownOut(
+        client_breakdown=[
+            ClientRevenueBreakdownOut(
                 client_id=p.client_id,
-                partner_name=p.partner_name,
+                client_name=p.client_name,
                 matched_trip_count=p.matched_trip_count,
                 revenue=p.revenue,
             )
-            for p in dto.partner_breakdown
+            for p in dto.client_breakdown
         ],
     )

@@ -59,7 +59,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
   const [containers, setContainers] = useState<ContainerForm[]>(
     existingDeliveredTrip ? woToContainers(existingDeliveredTrip) : [{ ...EMPTY_CONT }],
   )
-  const [clientId, setClientId] = useState(existingDeliveredTrip ? String(existingDeliveredTrip.partner.id) : '')
+  const [clientId, setClientId] = useState(existingDeliveredTrip ? String(existingDeliveredTrip.client.id) : '')
   const [vessel, setVessel] = useState(existingDeliveredTrip?.vessel ?? '')
   const [operationType, setOperationType] = useState<string>(existingDeliveredTrip?.operationType ?? '')
   const [pickupLocation, setPickupLocation] = useState(existingDeliveredTrip?.pickupLocation.name ?? '')

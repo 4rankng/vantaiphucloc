@@ -174,7 +174,7 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onSaveCo
   const { data: locations = [] } = useLocations()
 
   const [clientId, setClientId] = useState(
-    String(lockedClientId ?? initial?.partner.id ?? ''),
+    String(lockedClientId ?? initial?.client.id ?? ''),
   )
   const [pickupLocationName, setPickupLocationName] = useState(initial?.pickupLocation.name ?? '')
   const [dropoffLocationName, setDropoffLocationName] = useState(initial?.dropoffLocation.name ?? '')

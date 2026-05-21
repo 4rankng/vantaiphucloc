@@ -176,13 +176,13 @@ function DesktopDriverHome() {
                     className="row-icon"
                     style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
                   >
-                    {wo.partner.code
-                      ? wo.partner.code.slice(0, 2).toUpperCase()
-                      : wo.partner.name.slice(0, 2).toUpperCase()}
+                    {wo.client.code
+                      ? wo.client.code.slice(0, 2).toUpperCase()
+                      : wo.client.name.slice(0, 2).toUpperCase()}
                   </div>
                   <div className="row-content">
                     <div className="row-headline">
-                      <strong>{wo.partner.name}</strong>
+                      <strong>{wo.client.name}</strong>
                       {isPending ? (
                         <StatusBadgePro variant="warning" label="Chờ ghép" size="sm" />
                       ) : isMatched ? (

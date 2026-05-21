@@ -49,9 +49,9 @@ from app.schemas.domain import (
     BookedTripUpdate,
 )
 from app.core.summaries import (
-    get_partner_summary,
+    get_client_summary,
     get_location_summary,
-    load_partner_summaries,
+    load_client_summaries,
     load_location_summaries,
 )
 
@@ -69,7 +69,7 @@ def _trip_to_out(t: BookedTrip, partners, locations) -> BookedTripOut:
     return BookedTripOut(
         id=int(t.id),  # type: ignore[arg-type]
         trip_date=t.trip_date,
-        partner=get_partner_summary(partners, t.client_id),
+        client=get_client_summary(partners, t.client_id),
         pickup_location=get_location_summary(locations, t.pickup_location_id),
         dropoff_location=get_location_summary(locations, t.dropoff_location_id),
         containers=[
@@ -98,7 +98,7 @@ async def _load_one(session, t: BookedTrip) -> BookedTripOut:
 async def _load_many(session, trips: list[BookedTrip]) -> list[BookedTripOut]:
     if not trips:
         return []
-    partners = await load_partner_summaries(
+    partners = await load_client_summaries(
         session, {t.client_id for t in trips}
     )
     locations = await load_location_summaries(
@@ -261,7 +261,7 @@ async def search_booked_trips(
         | {t.dropoff_location_id for t in page_trips}
         | {wo.pickup_location_id, wo.dropoff_location_id}
     )
-    partners = await load_partner_summaries(db, client_ids)
+    partners = await load_client_summaries(db, client_ids)
     locations = await load_location_summaries(db, location_ids)
     alias_groups = await _load_alias_groups(db)
 
@@ -274,7 +274,7 @@ async def search_booked_trips(
         for c in wo_cont_rows if c.container_number
     }
     wo_date = _get_wo_date(wo)
-    wo_client_name = get_partner_summary(partners, wo.client_id).name
+    wo_client_name = get_client_summary(partners, wo.client_id).name
     wo_pickup_name = get_location_summary(locations, wo.pickup_location_id).name
     wo_dropoff_name = get_location_summary(locations, wo.dropoff_location_id).name
     wo_containers_str = _format_containers(wo_cont_rows)
@@ -292,7 +292,7 @@ async def search_booked_trips(
     results = []
     for t in page_trips:
         # Compute match score against WO
-        to_client_name = get_partner_summary(partners, t.client_id).name
+        to_client_name = get_client_summary(partners, t.client_id).name
         to_pickup_name = get_location_summary(locations, t.pickup_location_id).name
         to_dropoff_name = get_location_summary(locations, t.dropoff_location_id).name
         to_date_str = t.trip_date.isoformat() if t.trip_date else None

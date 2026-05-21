@@ -126,7 +126,7 @@ export interface VendorSummary {
 // Domain DB stores only FKs; backend composes these via batch JOIN. See
 // BizLogic.md §4 for the rationale.
 
-export interface PartnerSummary {
+export interface ClientSummary {
   id: number
   code?: string | null
   name: string
@@ -173,7 +173,7 @@ export const OPERATION_TYPE_OPTIONS: { value: OperationType; label: string }[] =
 export interface DeliveredTrip {
   id: number
   containers: ContainerItem[]
-  client: PartnerSummary
+  client: ClientSummary
   pickupLocation: LocationSummary
   dropoffLocation: LocationSummary
   driver?: DriverSummary | null
@@ -208,7 +208,7 @@ export interface PricingLine {
 
 export interface Pricing {
   id: number
-  client: PartnerSummary
+  client: ClientSummary
   workType: ContType
   pickupLocation: LocationSummary
   dropoffLocation: LocationSummary
@@ -227,7 +227,7 @@ export interface BookedTripContainerItem {
 export interface BookedTrip {
   id: number
   tripDate: string
-  partner: PartnerSummary
+  client: ClientSummary
   pickupLocation: LocationSummary
   dropoffLocation: LocationSummary
   containers: BookedTripContainerItem[]

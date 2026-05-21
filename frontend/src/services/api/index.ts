@@ -195,7 +195,7 @@ export type {
 } from './salary.api'
 export type {
   MonthlyPnL,
-  PartnerRevenueBreakdown,
+  ClientRevenueBreakdown,
   VehiclePnLRow,
   VehiclePnLResponse,
   VehicleExpenseSummary,

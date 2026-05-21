@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { MapPin, Calendar, Building2, Route as RouteIcon, Camera, X, Pencil } from 'lucide-react'
+import { MapPin, Calendar, Building2, Route as RouteIcon, Camera, Pencil } from 'lucide-react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { InfoRow } from '@/components/shared/InfoRow'
+import { PhotoLightbox } from '@/components/shared/PhotoLightbox'
 import { formatCurrencyFull } from '@/data/domain'
 import { useDeliveredTrip } from '@/hooks/use-queries'
 import { resolveRoute } from '@/lib/route-utils'
@@ -50,28 +51,7 @@ export function JobDetail() {
       </button>
 
       {/* Fullscreen lightbox */}
-      {lightboxUrl && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ background: 'rgba(0,0,0,0.92)' }}
-          onClick={() => setLightboxUrl(null)}
-        >
-          <img
-            src={lightboxUrl}
-            alt="Ảnh container"
-            className="max-w-full max-h-full object-contain"
-            onClick={(e) => e.stopPropagation()}
-          />
-          <button
-            onClick={() => setLightboxUrl(null)}
-            className="absolute top-4 right-4 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold touch-manipulation"
-            style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', backdropFilter: 'blur(8px)' }}
-          >
-            <X className="w-4 h-4" />
-            Đóng
-          </button>
-        </div>
-      )}
+      <PhotoLightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />
 
     <div className="space-y-4 pb-20">
       {/* Photos */}
@@ -123,7 +103,7 @@ export function JobDetail() {
 
       {/* Trip info */}
       <div className="rounded-lg overflow-hidden" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)' }}>
-        <InfoRow icon={Building2} label="Khách hàng" value={job.partner.name} />
+        <InfoRow icon={Building2} label="Khách hàng" value={job.client.name} />
         <InfoRow icon={RouteIcon} label="Cung đường" value={resolveRoute(job)} />
         {(() => {
           const loc = job.gpsAddress ?? (job.gpsLat && job.gpsLng ? `${job.gpsLat}, ${job.gpsLng}` : null)

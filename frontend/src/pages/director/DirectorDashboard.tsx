@@ -437,7 +437,7 @@ export function DirectorDashboard() {
                 const date = new Date(t.tripDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
                 const route = [t.pickupLocation?.name, t.dropoffLocation?.name].filter(Boolean).join(' → ')
                 const tripContType = t.containers[0]?.contType
-                const partnerMonogram = monogram(t.partner.name)
+                const partnerMonogram = monogram(t.client.name)
 
                 return (
                   <button
@@ -469,7 +469,7 @@ export function DirectorDashboard() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-[13px] font-bold truncate" style={{ color: 'var(--theme-text-primary)' }}>
-                          {t.partner.name}
+                          {t.client.name}
                         </span>
                         <StatusBadge variant={badge.variant} label={badge.label} />
                       </div>

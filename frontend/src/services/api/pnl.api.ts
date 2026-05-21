@@ -9,7 +9,7 @@ import { api } from './client'
 import { toCamel, ok, fail } from './utils'
 import type { ApiResponse } from '@/data/domain'
 
-export interface PartnerRevenueBreakdown {
+export interface ClientRevenueBreakdown {
   clientId: number
   clientName: string
   matchedTripCount: number
@@ -26,7 +26,7 @@ export interface MonthlyPnL {
   totalVehicleExpenses: number
   profit: number
   matchedTripCount: number
-  partnerBreakdown: PartnerRevenueBreakdown[]
+  clientBreakdown: ClientRevenueBreakdown[]
 }
 
 export interface VehicleExpenseSummary {

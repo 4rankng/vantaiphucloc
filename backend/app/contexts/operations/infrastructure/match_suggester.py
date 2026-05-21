@@ -53,10 +53,10 @@ from app.schemas.domain import (
     DeliveredTripOut,
 )
 from app.core.summaries import (
-    get_partner_summary,
+    get_client_summary,
     get_driver_summary,
     get_location_summary,
-    load_partner_summaries,
+    load_client_summaries,
     load_driver_summaries,
     load_location_summaries,
 )
@@ -352,11 +352,11 @@ async def suggest_trip_matches(
         | {to.dropoff_location_id for to in candidates}
         | {delivered_trip.pickup_location_id, delivered_trip.dropoff_location_id}
     )
-    partners = await load_partner_summaries(db, client_ids)
+    partners = await load_client_summaries(db, client_ids)
     locations = await load_location_summaries(db, location_ids)
     alias_groups = await _load_alias_groups(db)
 
-    wo_client_name = get_partner_summary(partners, delivered_trip.client_id).name
+    wo_client_name = get_client_summary(partners, delivered_trip.client_id).name
     wo_pickup_name = get_location_summary(
         locations, delivered_trip.pickup_location_id,
     ).name
@@ -397,7 +397,7 @@ async def suggest_trip_matches(
         to_dropoff_name = get_location_summary(
             locations, to.dropoff_location_id,
         ).name
-        to_partner_name = get_partner_summary(partners, to.client_id).name
+        to_client_name = get_client_summary(partners, to.client_id).name
         # Emit one MatchSuggestion entry per available container so the
         # UI renders independent rows for each container.
         for container in available_containers:
@@ -407,7 +407,7 @@ async def suggest_trip_matches(
             )
             to_out = BookedTripOut(
                 id=to.id, trip_date=to.trip_date,
-                partner=get_partner_summary(partners, to.client_id),
+                client=get_client_summary(partners, to.client_id),
                 pickup_location=get_location_summary(
                     locations, to.pickup_location_id,
                 ),
@@ -426,7 +426,7 @@ async def suggest_trip_matches(
             criteria = _build_criteria(
                 matched_fields=matched_fields,
                 wo_client=wo_client_name,
-                to_client=to_partner_name,
+                to_client=to_client_name,
                 wo_pickup=wo_pickup_name,
                 to_pickup=to_pickup_name,
                 wo_dropoff=wo_dropoff_name,
@@ -513,11 +513,11 @@ async def suggest_wo_matches(
         | {wo.dropoff_location_id for wo in candidates}
         | {booked_trip.pickup_location_id, booked_trip.dropoff_location_id}
     )
-    partners = await load_partner_summaries(db, client_ids)
+    partners = await load_client_summaries(db, client_ids)
     locations = await load_location_summaries(db, location_ids)
     alias_groups = await _load_alias_groups(db)
 
-    to_client_name = get_partner_summary(partners, booked_trip.client_id).name
+    to_client_name = get_client_summary(partners, booked_trip.client_id).name
     to_pickup_name = get_location_summary(
         locations, booked_trip.pickup_location_id,
     ).name
@@ -539,7 +539,7 @@ async def suggest_wo_matches(
         )
         wo_out = DeliveredTripOut(
             id=wo.id,
-            partner=get_partner_summary(partners, wo.client_id),
+            client=get_client_summary(partners, wo.client_id),
             pickup_location=get_location_summary(locations, wo.pickup_location_id),
             dropoff_location=get_location_summary(locations, wo.dropoff_location_id),
             driver=get_driver_summary(drivers, wo.driver_id),
@@ -564,7 +564,7 @@ async def suggest_wo_matches(
         )
         criteria = _build_criteria(
             matched_fields=matched_fields,
-            wo_client=get_partner_summary(partners, wo.client_id).name,
+            wo_client=get_client_summary(partners, wo.client_id).name,
             to_client=to_client_name,
             wo_pickup=get_location_summary(
                 locations, wo.pickup_location_id,

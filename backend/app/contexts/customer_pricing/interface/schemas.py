@@ -14,7 +14,7 @@ from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.schemas.domain import (
     LocationSummaryOut,
-    PartnerSummaryOut,
+    ClientSummaryOut,
 )
 
 
@@ -191,7 +191,7 @@ class PricingUpdate(BaseModel):
 
 class PricingOut(BaseModel):
     id: int
-    partner: PartnerSummaryOut
+    client: ClientSummaryOut
     work_type: str
     pickup_location: LocationSummaryOut
     dropoff_location: LocationSummaryOut

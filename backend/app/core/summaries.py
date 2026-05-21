@@ -16,22 +16,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.base import User
 from app.models.domain import Location, Client, Vehicle, VehicleDriver
 from app.schemas.domain import (
+    ClientSummaryOut,
     DriverSummaryOut,
     LocationSummaryOut,
-    PartnerSummaryOut,
     VehicleSummaryOut,
 )
 
 
-async def load_partner_summaries(
+async def load_client_summaries(
     db: AsyncSession, client_ids: set[int] | list[int]
-) -> dict[int, PartnerSummaryOut]:
+) -> dict[int, ClientSummaryOut]:
     ids = {i for i in client_ids if i is not None}
     if not ids:
         return {}
     res = await db.execute(sa_select(Client).where(Client.id.in_(ids)))
     return {
-        p.id: PartnerSummaryOut(id=p.id, code=p.code, name=p.name)
+        p.id: ClientSummaryOut(id=p.id, code=p.code, name=p.name)
         for p in res.scalars().all()
     }
 
@@ -85,12 +85,12 @@ async def load_driver_summaries(
     }
 
 
-def get_partner_summary(
-    summaries: dict[int, PartnerSummaryOut], client_id: int
-) -> PartnerSummaryOut:
+def get_client_summary(
+    summaries: dict[int, ClientSummaryOut], client_id: int
+) -> ClientSummaryOut:
     """Return the summary or a placeholder if missing (e.g. soft-deleted)."""
     return summaries.get(
-        client_id, PartnerSummaryOut(id=client_id, code=None, name="(không rõ)")
+        client_id, ClientSummaryOut(id=client_id, code=None, name="(không rõ)")
     )
 
 
@@ -110,8 +110,7 @@ def get_driver_summary(
     )
 
 
-# ── Backward-compatible aliases (consumers still referencing old names) ──
+# ── Deprecated aliases ──
 
-# Some modules still import these names; they delegate to the partner versions.
-get_client_summary = get_partner_summary
-load_client_summaries = load_partner_summaries
+get_partner_summary = get_client_summary
+load_partner_summaries = load_client_summaries

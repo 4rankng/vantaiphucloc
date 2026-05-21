@@ -14,7 +14,7 @@ export function ClientJobs() {
   const { data: pricings = [] } = usePricings({ clientId })
 
   const jobs = useMemo(
-    () => allDeliveredTrips.filter(j => j.partner.id === clientId),
+    () => allDeliveredTrips.filter(j => j.client.id === clientId),
     [allDeliveredTrips, clientId],
   )
 

@@ -379,7 +379,7 @@ function SuggestionCard({
           </div>
 
           <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
-            <span className="font-medium">{trip.partner.name}</span>
+            <span className="font-medium">{trip.client.name}</span>
             {trip.pickupLocation?.name ? <span> · {trip.pickupLocation.name} → {trip.dropoffLocation?.name}</span> : null}
           </p>
         </div>
@@ -419,7 +419,7 @@ function SuggestionCard({
             )}
           </div>
           <p className="text-xs truncate" style={{ color: 'var(--theme-text-secondary)' }}>
-            <span className="font-medium">{trip.partner.name}</span>
+            <span className="font-medium">{trip.client.name}</span>
             {trip.pickupLocation?.name ? <span> · {trip.pickupLocation.name} → {trip.dropoffLocation?.name}</span> : null}
           </p>
         </div>
@@ -555,7 +555,7 @@ export function MatchPanel({ deliveredTrip, onClose, onMatchSuccess }: MatchPane
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
     if (deliveredTrip && !woInitialized) {
-      setWoClient(deliveredTrip.partner.name)
+      setWoClient(deliveredTrip.client.name)
       setWoRoute(deliveredTrip.route)
       const resolved = routeMap.get(deliveredTrip.route)
       setWoPickup(deliveredTrip.pickupLocation.name || resolved?.pickup || '')
@@ -600,7 +600,7 @@ export function MatchPanel({ deliveredTrip, onClose, onMatchSuccess }: MatchPane
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
     if (selectedTrip && selectedTrip.id !== tripInitKey) {
-      setTripClient(selectedTrip.partner.name)
+      setTripClient(selectedTrip.client.name)
       setTripRoute(selectedTrip.route)
       const resolved = routeMap.get(selectedTrip.route)
       setTripPickup(selectedTrip.pickupLocation.name || resolved?.pickup || '')
@@ -802,7 +802,7 @@ export function MatchPanel({ deliveredTrip, onClose, onMatchSuccess }: MatchPane
                   matchedCount={matchedCount}
                   totalCriteria={totalCriteria}
                   tripContainers={isSelected ? tripContainers : (s.bookedTrip.containers ?? []).map(c => ({ workType: c.workType, containerNumber: c.containerNumber }))}
-                  tripClient={isSelected ? tripClient : s.bookedTrip.partner.name}
+                  tripClient={isSelected ? tripClient : s.bookedTrip.client.name}
                   tripPickup={isSelected ? tripPickup : ''}
                   tripDropoff={isSelected ? tripDropoff : ''}
                   matchedTripContainerIndices={isSelected ? matchedTripContainerIndices : new Set()}

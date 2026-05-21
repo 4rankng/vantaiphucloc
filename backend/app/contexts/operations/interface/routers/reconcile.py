@@ -483,9 +483,9 @@ async def auto_match(
         AutoMatchRejectionReason,
     )
     from app.core.summaries import (
-        get_partner_summary,
+        get_client_summary,
         get_location_summary,
-        load_partner_summaries,
+        load_client_summaries,
         load_driver_summaries,
         load_location_summaries,
     )
@@ -550,11 +550,11 @@ async def auto_match(
                 location_ids_set |= {s.booked_trip.pickup_location.id, s.booked_trip.dropoff_location.id}
             location_ids_set |= {wo.pickup_location_id, wo.dropoff_location_id}
 
-            partners_map = await load_partner_summaries(db, client_ids_set)
+            partners_map = await load_client_summaries(db, client_ids_set)
             locations_map = await load_location_summaries(db, location_ids_set)
             drivers_map = await load_driver_summaries(db, {wo.driver_id})
 
-            wo_partner = get_partner_summary(partners_map, wo.client_id)
+            wo_partner = get_client_summary(partners_map, wo.client_id)
             wo_pickup = get_location_summary(locations_map, wo.pickup_location_id)
             wo_dropoff = get_location_summary(locations_map, wo.dropoff_location_id)
             wo_driver = get_driver_summary(drivers_map, wo.driver_id)
@@ -568,7 +568,7 @@ async def auto_match(
             for s in suggestions:
                 if s.score < 0.5:
                     continue  # skip below-threshold
-                to_partner = get_partner_summary(partners_map, s.booked_trip.partner.id)
+                to_partner = get_client_summary(partners_map, s.booked_trip.client.id)
                 to_pickup = get_location_summary(locations_map, s.booked_trip.pickup_location.id)
                 to_dropoff = get_location_summary(locations_map, s.booked_trip.dropoff_location.id)
                 to_ref = AutoMatchBookedTripRef(

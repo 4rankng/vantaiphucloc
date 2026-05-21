@@ -132,7 +132,7 @@ function DriverCard({ wo, onClick }: { wo: DeliveredTrip; onClick: () => void })
           className="text-[14px] font-semibold leading-snug truncate flex-1 min-w-0"
           style={{ color: 'var(--theme-text-primary)' }}
         >
-          {wo.partner.code ? `${wo.partner.code} · ${wo.partner.name}` : wo.partner.name}
+          {wo.client.code ? `${wo.client.code} · ${wo.client.name}` : wo.client.name}
         </p>
         {hasEarning ? (
           <span
@@ -192,7 +192,7 @@ function AccountantCard({ wo }: { wo: DeliveredTrip }) {
       </p>
 
       <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>
-        {wo.partner.code ? `${wo.partner.code} · ` : ''}{wo.partner.name}
+        {wo.client.code ? `${wo.client.code} · ` : ''}{wo.client.name}
       </p>
 
       <p className="text-xs mt-0.5" style={{ color: 'var(--theme-text-muted)' }}>

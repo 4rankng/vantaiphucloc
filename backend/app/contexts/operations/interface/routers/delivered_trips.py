@@ -57,10 +57,10 @@ from app.schemas.domain import (
 from app.core.summaries import (
     get_driver_summary,
     get_location_summary,
-    get_partner_summary,
+    get_client_summary,
     load_driver_summaries,
     load_location_summaries,
-    load_partner_summaries,
+    load_client_summaries,
 )
 from app.utils.iso6346 import normalize_container_number as _norm
 
@@ -79,7 +79,7 @@ router = APIRouter()
 def _wo_to_out(w: DeliveredTrip, partners, drivers, locations, matched_trip_count: int = 0, booked_trip_id: int | None = None) -> DeliveredTripOut:
     return DeliveredTripOut(
         id=int(w.id),  # type: ignore[arg-type]
-        partner=get_partner_summary(partners, w.client_id),
+        client=get_client_summary(partners, w.client_id),
         pickup_location=get_location_summary(locations, w.pickup_location_id),
         dropoff_location=get_location_summary(locations, w.dropoff_location_id),
         driver=get_driver_summary(drivers, w.driver_id),
@@ -122,7 +122,7 @@ async def _load_one(session, w: DeliveredTrip) -> DeliveredTripOut:
 async def _load_many(session, wos: list[DeliveredTrip]) -> list[DeliveredTripOut]:
     if not wos:
         return []
-    partners = await load_partner_summaries(session, {w.client_id for w in wos})
+    partners = await load_client_summaries(session, {w.client_id for w in wos})
     drivers = await load_driver_summaries(session, {w.driver_id for w in wos})
     locations = await load_location_summaries(
         session,

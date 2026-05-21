@@ -128,7 +128,7 @@ class VendorOut(BaseModel):
 PartnerCreate = ClientCreate
 PartnerUpdate = ClientUpdate
 PartnerOut = ClientOut
-PartnerSummaryOut = ClientSummaryOut
+# PartnerSummaryOut removed — use ClientSummaryOut directly
 
 
 # ---------------------------------------------------------------------------
@@ -297,7 +297,7 @@ class PricingUpdate(BaseModel):
 
 class PricingOut(BaseModel):
     id: int
-    partner: PartnerSummaryOut
+    client: ClientSummaryOut
     operation_type: str | None = None
     work_type: str
     pickup_location: LocationSummaryOut
@@ -383,7 +383,7 @@ class DeliveredTripUpdate(BaseModel):
 
 class DeliveredTripOut(BaseModel):
     id: int
-    partner: PartnerSummaryOut
+    client: ClientSummaryOut
     pickup_location: LocationSummaryOut
     dropoff_location: LocationSummaryOut
     driver: DriverSummaryOut | None = None
@@ -458,7 +458,7 @@ class BookedTripUpdate(BaseModel):
 class BookedTripOut(BaseModel):
     id: int
     trip_date: date
-    partner: PartnerSummaryOut
+    client: ClientSummaryOut
     pickup_location: LocationSummaryOut
     dropoff_location: LocationSummaryOut
     containers: list[TripContainerOut] = []
@@ -713,9 +713,9 @@ class DriverBaseSalarySet(BaseModel):
 # P&L dashboard (revenue & profit per accounting period)
 # ---------------------------------------------------------------------------
 
-class PartnerRevenueBreakdownOut(BaseModel):
+class ClientRevenueBreakdownOut(BaseModel):
     client_id: int
-    partner_name: str
+    client_name: str
     matched_trip_count: int
     revenue: int
 
@@ -730,7 +730,7 @@ class MonthlyPnLOut(BaseModel):
     total_vehicle_expenses: int = 0
     profit: int
     matched_trip_count: int
-    partner_breakdown: list[PartnerRevenueBreakdownOut]
+    client_breakdown: list[ClientRevenueBreakdownOut]
 
 
 # ---------------------------------------------------------------------------
@@ -776,7 +776,7 @@ class CustomerReconciliationRowOut(BaseModel):
 class CustomerReconciliationImportOut(BaseModel):
     id: int
     client_id: int
-    partner_name: str | None = None
+    client_name: str | None = None
     period_start: date
     period_end: date
     source_filename: str | None = None

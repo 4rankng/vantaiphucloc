@@ -42,7 +42,7 @@ def _dto_to_out(dto) -> CustomerReconciliationImportOut:
     return CustomerReconciliationImportOut(
         id=dto.id,
         client_id=dto.client_id,
-        partner_name=dto.partner_name,
+        client_name=dto.client_name,
         period_start=dto.period_start,
         period_end=dto.period_end,
         source_filename=dto.source_filename,

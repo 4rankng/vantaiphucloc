@@ -117,7 +117,7 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
       {
         id: pricing.id,
         data: {
-          clientId: pricing.partner.id,
+          clientId: pricing.client.id,
           workType: pricing.workType,
           pickupLocationId: pricing.pickupLocation.id,
           dropoffLocationId: pricing.dropoffLocation.id,
@@ -161,7 +161,7 @@ export function PricingClientDetail({ clientId, basePath }: Props) {
     )
   }
 
-  const clientName = clients.find(c => c.id === clientId)?.name ?? pricings[0]?.partner.name ?? ''
+  const clientName = clients.find(c => c.id === clientId)?.name ?? pricings[0]?.client.name ?? ''
 
   return (
     <div className="space-y-6">

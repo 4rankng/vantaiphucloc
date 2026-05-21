@@ -47,18 +47,18 @@ export function RecentTripSuggestions({
       {suggestions.map((route, idx) => {
         const pickup = route.pickupLocation?.name || ''
         const dropoff = route.dropoffLocation?.name || ''
-        const clientLabel = route.partner?.code || route.partner?.name || ''
+        const clientLabel = route.client?.code || route.client?.name || ''
         const isSelected = selectedTripId !== undefined && String(selectedTripId) === String(idx)
         const src = SOURCE_CONFIG[route.source] ?? SOURCE_CONFIG.recent
         const SrcIcon = src.icon
 
         return (
           <button
-            key={`${route.partner.id}-${route.pickupLocation.id}-${route.dropoffLocation.id}`}
+            key={`${route.client.id}-${route.pickupLocation.id}-${route.dropoffLocation.id}`}
             onClick={() => onSelect({
               tripId: idx,
-              clientId: String(route.partner.id),
-              clientName: route.partner.name,
+              clientId: String(route.client.id),
+              clientName: route.client.name,
               pickupLocation: pickup,
               dropoffLocation: dropoff,
             })}

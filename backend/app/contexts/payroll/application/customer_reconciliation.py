@@ -114,7 +114,7 @@ class ImportSummary:
 class ImportDTO:
     id: int
     client_id: int
-    partner_name: str | None
+    client_name: str | None
     period_start: date
     period_end: date
     source_filename: str | None
@@ -338,7 +338,7 @@ class PreviewCustomerReconciliationImport:
         return ImportDTO(
             id=imp.id,
             client_id=imp.client_id,
-            partner_name=partner.name,
+            client_name=partner.name,
             period_start=imp.period_start,
             period_end=imp.period_end,
             source_filename=imp.source_filename,
@@ -425,12 +425,12 @@ class ListCustomerReconciliationImports:
 
         rows = (await self.session.execute(stmt)).all()
         out: list[ImportDTO] = []
-        for imp, partner_name in rows:
+        for imp, client_name in rows:
             out.append(
                 ImportDTO(
                     id=imp.id,
                     client_id=imp.client_id,
-                    partner_name=partner_name,
+                    client_name=client_name,
                     period_start=imp.period_start,
                     period_end=imp.period_end,
                     source_filename=imp.source_filename,
@@ -472,7 +472,7 @@ async def _load_import_dto(session: AsyncSession, import_id: int) -> ImportDTO:
     return ImportDTO(
         id=imp.id,
         client_id=imp.client_id,
-        partner_name=partner.name if partner else None,
+        client_name=partner.name if partner else None,
         period_start=imp.period_start,
         period_end=imp.period_end,
         source_filename=imp.source_filename,
