@@ -1324,18 +1324,20 @@ function TripDetailDrawer({ trip, onClose }: { trip: DeliveredTrip; onClose: () 
                               </>
                             )}
                           </div>
-                          <div className="flex items-center gap-1.5 mt-1">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5">
                             {s.criteria.map((c) => (
                               <span
                                 key={c.name}
-                                title={`${c.label}: ${c.match ? 'Khớp' : 'Không khớp'}`}
-                                className="inline-block rounded-full"
+                                className="flex items-center gap-0.5 text-[10.5px]"
                                 style={{
-                                  width: 8,
-                                  height: 8,
-                                  background: c.match ? 'var(--success)' : c.fuzzy ? 'var(--warning)' : 'var(--surface-3)',
+                                  color: c.match
+                                    ? (c.fuzzy ? 'var(--warning)' : 'var(--success)')
+                                    : 'var(--ink-4)',
                                 }}
-                              />
+                              >
+                                {c.match ? '✓' : '–'}
+                                {c.label}
+                              </span>
                             ))}
                           </div>
                         </div>

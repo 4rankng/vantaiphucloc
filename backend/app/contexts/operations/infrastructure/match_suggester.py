@@ -313,19 +313,11 @@ async def suggest_trip_matches(
     # clients and client match is scored as a soft +6% on top.
     wo_digits = {re.sub(r'[^0-9]', '', cn) for cn in wo_container_numbers if cn}
 
-    # Exact container match subquery
+    # Phase 1: exact container match (all clients, fast indexed lookup)
     exact_subquery = (
         select(BookedTripContainer.booked_trip_id)
         .where(BookedTripContainer.container_number.in_(wo_container_numbers))
     )
-    # Digits-only partial match subquery (catches OCR typos in prefix letters)
-    digits_filters = [
-        BookedTripContainer.container_number.op('~')(r'[0-9]{4,}')  # has digits
-    ]
-    # We do digits matching in Python after fetch — SQL subquery just pre-filters
-    # to trips sharing the same client or exact container match, then Python
-    # applies the digit gate. This keeps the SQL simple and correct.
-    # TOs that are PENDING or MATCHED (have capacity for more WOs)
     query = select(BookedTrip).where(
         BookedTrip.status.in_(["PENDING", "MATCHED"]),
         BookedTrip.id.in_(exact_subquery),
@@ -342,39 +334,66 @@ async def suggest_trip_matches(
 
     candidates = list((await db.execute(query)).scalars().all())
 
-    # Expand to digits-only partial matches (same client, digit overlap)
-    # by running a second query for digit-matching TOs not already included.
+    # Phase 2: fuzzy container gate — allow 1-2 char edit distance (all clients).
+    #
+    # SQL pre-filter: TOs whose containers contain any of the WO digit sequences
+    # as a substring.  This catches letter-prefix OCR errors (MSCU→MSDU).
+    # Python post-filter: edit distance ≤ 2 catches single-digit errors too.
     if wo_digits:
         exact_ids = {c.id for c in candidates}
-        # Fetch containers for same-client TOs in date window to check digit overlap
-        digit_query = select(BookedTrip).where(
-            BookedTrip.status.in_(["PENDING", "MATCHED"]),
-            BookedTrip.client_id == delivered_trip.client_id,
-            ~BookedTrip.id.in_(list(exact_ids)) if exact_ids else True,  # type: ignore[arg-type]
-        )
-        if wo_date is not None:
-            digit_query = digit_query.where(
-                BookedTrip.trip_date >= wo_date - timedelta(days=30),
-                BookedTrip.trip_date <= wo_date + timedelta(days=30),
+
+        # Build digit-key set: full digit string + 6-char prefix (covers
+        # single-digit-off errors where the leading 6 digits still match).
+        digit_keys: set[str] = set()
+        for d in wo_digits:
+            if len(d) >= 4:
+                digit_keys.add(d)           # full, e.g. "1234567"
+            if len(d) >= 6:
+                digit_keys.add(d[:6])       # prefix, e.g. "123456"
+
+        if digit_keys:
+            digit_filters = [
+                BookedTripContainer.container_number.contains(dk)
+                for dk in digit_keys
+            ]
+            from sqlalchemy import or_ as _or
+            digit_subquery = (
+                select(BookedTripContainer.booked_trip_id)
+                .where(_or(*digit_filters))
             )
-        digit_candidates = list((await db.execute(digit_query)).scalars().all())
-        if digit_candidates:
-            dc_ids = [c.id for c in digit_candidates]
-            dc_containers = (await db.execute(
-                select(BookedTripContainer)
-                .where(BookedTripContainer.booked_trip_id.in_(dc_ids))
-            )).scalars().all()
-            dc_conts_by_trip: dict[int, list[BookedTripContainer]] = defaultdict(list)
-            for c in dc_containers:
-                dc_conts_by_trip[c.booked_trip_id].append(c)
-            for to in digit_candidates:
-                to_digits = {
-                    re.sub(r'[^0-9]', '', normalize_container_number(c.container_number) or '')
-                    for c in dc_conts_by_trip.get(to.id, [])
-                    if c.container_number
-                }
-                if to_digits & wo_digits:
-                    candidates.append(to)
+            fuzzy_query = select(BookedTrip).where(
+                BookedTrip.status.in_(["PENDING", "MATCHED"]),
+                BookedTrip.id.in_(digit_subquery),
+                ~BookedTrip.id.in_(list(exact_ids)) if exact_ids else True,  # type: ignore[arg-type]
+            )
+            if wo_date is not None:
+                fuzzy_query = fuzzy_query.where(
+                    BookedTrip.trip_date >= wo_date - timedelta(days=30),
+                    BookedTrip.trip_date <= wo_date + timedelta(days=30),
+                )
+            fuzzy_cands = list((await db.execute(fuzzy_query)).scalars().all())
+            if fuzzy_cands:
+                fc_ids = [c.id for c in fuzzy_cands]
+                fc_containers = (await db.execute(
+                    select(BookedTripContainer)
+                    .where(BookedTripContainer.booked_trip_id.in_(fc_ids))
+                )).scalars().all()
+                fc_conts_by_trip: dict[int, list[BookedTripContainer]] = defaultdict(list)
+                for c in fc_containers:
+                    fc_conts_by_trip[c.booked_trip_id].append(c)
+                for to in fuzzy_cands:
+                    for tc in fc_conts_by_trip.get(to.id, []):
+                        tc_norm = normalize_container_number(tc.container_number) if tc.container_number else None
+                        if not tc_norm:
+                            continue
+                        for wc in wo_container_numbers:
+                            dist = container_edit_distance(tc_norm, wc)
+                            if dist is not None and dist <= 2:
+                                candidates.append(to)
+                                break
+                        else:
+                            continue
+                        break
     if not candidates:
         return []
 
