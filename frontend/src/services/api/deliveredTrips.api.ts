@@ -231,12 +231,21 @@ export async function bulkImportAndMatch(file: File, clientId?: number): Promise
 // Template Excel Parse
 // ---------------------------------------------------------------------------
 
+export interface DuplicateGroup {
+  type: 'exact' | 'fuzzy' | 'digits'
+  rowIndices: number[]
+  containers: string[]
+  message: string
+}
+
 export interface TemplateParseResult {
   filename: string
   sheetName: string
   totalRows: number
   columns: string[]
   rows: Record<string, any>[]
+  duplicateGroups: DuplicateGroup[]
+  warnings: string[]
 }
 
 export async function aiParsePreview(file: File): Promise<ApiResponse<TemplateParseResult>> {
@@ -248,6 +257,22 @@ export async function aiParsePreview(file: File): Promise<ApiResponse<TemplatePa
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     return ok(toCamel<TemplateParseResult>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export async function updateContainerNumber(
+  tripId: number,
+  containerId: number,
+  containerNumber: string,
+): Promise<ApiResponse<ContainerItem>> {
+  try {
+    const res = await api.patch(
+      `/delivered-trips/${tripId}/containers/${containerId}`,
+      { container_number: containerNumber },
+    )
+    return ok(toCamel<ContainerItem>(res.data))
   } catch (err) {
     return fail(err)
   }

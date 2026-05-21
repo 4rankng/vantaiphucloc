@@ -11,7 +11,6 @@ interface CreateClientDialogProps {
   onConfirm: (data: ClientFormData) => Promise<void> | void
 }
 
-const VN_PHONE_RE = /^(0|\+?84)[35789]\d{8}$/
 const VN_TAX_RE = /^\d{10}(\d{3})?$/
 
 const EMPTY_FORM: ClientFormData = {
@@ -43,9 +42,6 @@ export function CreateClientDialog({ open, onClose, onConfirm }: CreateClientDia
 
   const handleConfirm = async () => {
     const errs: typeof errors = {}
-    if (form.phone && !VN_PHONE_RE.test(form.phone.replace(/[\s-]/g, ''))) {
-      errs.phone = 'SĐT không hợp lệ (VD: 0912345678)'
-    }
     if (form.taxCode && !VN_TAX_RE.test(form.taxCode)) {
       errs.taxCode = 'MST phải 10 hoặc 13 chữ số'
     }

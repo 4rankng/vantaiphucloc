@@ -3,7 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button, Input, Label } from '@/components/ui'
 import type { VendorFormData, VendorType } from '@/services/api/vendors.api'
 
-const VN_PHONE_RE = /^(0|\+?84)[35789]\d{8}$/
 const VN_TAX_RE = /^\d{10}(\d{3})?$/
 
 interface CreateVendorDialogProps {
@@ -40,9 +39,6 @@ export function CreateVendorDialog({ open, onClose, onConfirm }: CreateVendorDia
   const handleConfirm = async () => {
     if (!form.name.trim()) return
     const errs: Record<string, string> = {}
-    if (form.phone && !VN_PHONE_RE.test(form.phone.replace(/[\s-]/g, ''))) {
-      errs.phone = 'SĐT không hợp lệ (VD: 0912345678)'
-    }
     if (form.taxCode && !VN_TAX_RE.test(form.taxCode)) {
       errs.taxCode = 'MST phải 10 hoặc 13 chữ số'
     }

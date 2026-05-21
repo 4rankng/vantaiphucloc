@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import {
-  Truck, Plus, User, X, Users, Search, Building2,
+  Truck, Plus, User, X, Users, Search, Building2, Check, Trash2,
 } from 'lucide-react'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -12,7 +12,6 @@ import { Plate } from '@/components/shared/Plate'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Drawer } from '@/components/shared/Drawer'
 import { InlineSelect } from '@/components/shared/InlineSelect'
-import { InfoTip } from '@/components/shared/InfoTip'
 import {
   useDrivers,
   useVehicleDrivers,
@@ -36,9 +35,20 @@ import { fuzzyMatch } from '@/lib/search-utils'
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const BATCH = 15
-const VN_PHONE_RE = /^(0|\+?84)[35789]\d{8}$/
 const VN_TAX_RE = /^\d{10}(\d{3})?$/
-const EMPTY_VENDOR_FORM = { name: '', type: 'company' as const, phone: '', taxCode: '', address: '', contactPerson: '' }
+
+type DriverFormData = { fullName: string; phone: string; plate: string }
+type DriverFocusableField = 'fullName' | 'phone' | 'plate' | null
+
+type VendorFormData = {
+  name: string; type: 'company' | 'individual'
+  phone: string; taxCode: string; address: string; contactPerson: string
+}
+type VendorFocusableField = 'name' | 'phone' | 'taxCode' | 'address' | 'contactPerson' | null
+
+const EMPTY_VENDOR_FORM: VendorFormData = {
+  name: '', type: 'company', phone: '', taxCode: '', address: '', contactPerson: '',
+}
 
 // ─── Infinite scroll hook ─────────────────────────────────────────────────────
 
@@ -105,21 +115,13 @@ function StatPill({ count, label, accent }: { count: number; label: string; acce
 }
 
 function SectionHeader({ icon, title, count, action }: {
-  icon: React.ReactNode
-  title: string
-  count: number
-  action?: React.ReactNode
+  icon: React.ReactNode; title: string; count: number; action?: React.ReactNode
 }) {
   return (
     <div className="flex items-center gap-2 mb-3">
       <span style={{ color: 'var(--ink-2)' }}>{icon}</span>
-      <h2 className="text-[15px] font-bold" style={{ color: 'var(--ink)', letterSpacing: '-0.01em' }}>
-        {title}
-      </h2>
-      <span
-        className="tabular-nums text-[11.5px] font-semibold rounded-full px-2 py-0.5"
-        style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}
-      >
+      <h2 className="text-[15px] font-bold" style={{ color: 'var(--ink)', letterSpacing: '-0.01em' }}>{title}</h2>
+      <span className="tabular-nums text-[11.5px] font-semibold rounded-full px-2 py-0.5" style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}>
         {count}
       </span>
       {action && <div style={{ marginLeft: 'auto' }}>{action}</div>}
@@ -132,24 +134,14 @@ function SearchInput({ value, onChange, placeholder }: {
 }) {
   return (
     <div className="relative" style={{ width: 220, flexShrink: 0 }}>
-      <Search
-        className="absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none"
-        style={{ left: 10, color: 'var(--ink-3)' }}
-      />
-      <input
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="nepo-input text-[13px]"
-        style={{ paddingLeft: 32 }}
-      />
+      <Search className="absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" style={{ left: 10, color: 'var(--ink-3)' }} />
+      <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="nepo-input text-[13px]" style={{ paddingLeft: 32 }} />
     </div>
   )
 }
 
 function LoadMoreSentinel({ sentinelRef, hasMore }: {
-  sentinelRef: React.RefObject<HTMLDivElement>
-  hasMore: boolean
+  sentinelRef: React.RefObject<HTMLDivElement>; hasMore: boolean
 }) {
   if (!hasMore) return null
   return (
@@ -159,35 +151,147 @@ function LoadMoreSentinel({ sentinelRef, hasMore }: {
   )
 }
 
-// ─── Driver row ───────────────────────────────────────────────────────────────
+// ─── Inline save/cancel icons ─────────────────────────────────────────────────
 
-function DriverRow({ driver, vendorName, onOpenDetail }: { driver: Driver; vendorName?: string; onOpenDetail: () => void }) {
-  const initials = (driver.fullName ?? driver.username).slice(0, 2).toUpperCase()
+function FieldActions({ onSave, onCancel, saving }: {
+  onSave: () => void; onCancel: () => void; saving?: boolean
+}) {
   return (
-    <tr onClick={onOpenDetail} className="cursor-pointer">
-      <td>
-        <div className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold"
-          style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
-          {initials}
+    <div className="flex flex-col gap-0.5 ml-1 shrink-0">
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onSave() }}
+        disabled={saving}
+        className="flex items-center justify-center rounded"
+        style={{ width: 20, height: 20, background: 'var(--accent)', color: '#fff', opacity: saving ? 0.5 : 1 }}
+        title="Lưu"
+      >
+        <Check className="h-2.5 w-2.5" strokeWidth={3} />
+      </button>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onCancel() }}
+        className="flex items-center justify-center rounded"
+        style={{ width: 20, height: 20, background: 'var(--surface-3)', color: 'var(--ink-2)' }}
+        title="Huỷ"
+      >
+        <X className="h-2.5 w-2.5" strokeWidth={3} />
+      </button>
+    </div>
+  )
+}
+
+// ─── Driver inline edit row (for fleet section) ───────────────────────────────
+
+function DriverEditRow({ driver, vendorName, onSave, onCancel, saving, initialFocus, vehicles }: {
+  driver: Driver
+  vendorName?: string
+  onSave: (data: DriverFormData) => void
+  onCancel: () => void
+  saving?: boolean
+  initialFocus?: DriverFocusableField
+  vehicles: { id: number; plate: string }[]
+}) {
+  const initial: DriverFormData = {
+    fullName: driver.fullName ?? '',
+    phone: driver.phone ?? '',
+    plate: driver.vehiclePlate ?? '',
+  }
+  const [form, setForm] = useState<DriverFormData>(initial)
+  const [plateInput, setPlateInput] = useState('')
+  const fullNameRef = useRef<HTMLInputElement>(null)
+  const phoneRef = useRef<HTMLInputElement>(null)
+
+  const isDirty = (key: keyof DriverFormData) => form[key] !== initial[key]
+  const anyDirty = (Object.keys(form) as (keyof DriverFormData)[]).some(k => isDirty(k))
+  const set = <K extends keyof DriverFormData>(key: K, val: DriverFormData[K]) =>
+    setForm(prev => ({ ...prev, [key]: val }))
+
+  const handleSave = useCallback(() => { onSave(form) }, [form, onSave])
+
+  useEffect(() => {
+    if (initialFocus === 'fullName') fullNameRef.current?.focus()
+    else if (initialFocus === 'phone') phoneRef.current?.focus()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel()
+      if (e.key === 'Enter') { e.preventDefault(); handleSave() }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onCancel, handleSave])
+
+  const showCreatePlate = plateInput.trim() && !vehicles.some(v => v.plate.toLowerCase() === plateInput.toLowerCase().trim())
+  const actions = anyDirty ? <FieldActions onSave={handleSave} onCancel={onCancel} saving={saving} /> : null
+
+  return (
+    <tr style={{ background: 'var(--accent-soft)' }}>
+      <td style={{ padding: '5px 8px' }}>
+        <div className="flex items-center">
+          <input ref={fullNameRef} className="nepo-input text-[12px]" style={{ minWidth: 80, flex: 1 }}
+            value={form.fullName} onChange={e => set('fullName', e.target.value)} placeholder="Họ tên" />
+          {isDirty('fullName') && actions}
         </div>
       </td>
-      <td><span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{driver.fullName || driver.username}</span></td>
-      <td><span className="text-[13px]" style={{ color: 'var(--ink-2)' }}>{driver.phone || '—'}</span></td>
-      <td>
-        {driver.vehiclePlate
-          ? <Plate>{driver.vehiclePlate}</Plate>
-          : <span className="text-[13px]" style={{ color: 'var(--ink-3)' }}>—</span>}
+      <td style={{ padding: '5px 8px' }}>
+        <div className="flex items-center">
+          <input ref={phoneRef} className="nepo-input text-[12px]" style={{ minWidth: 90, flex: 1 }}
+            type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="SĐT" />
+          {isDirty('phone') && actions}
+        </div>
       </td>
-      <td>
-        <span className="text-[13px]" style={{ color: vendorName ? 'var(--ink-2)' : 'var(--ink-3)' }}>
-          {vendorName ?? '—'}
-        </span>
+      <td style={{ padding: '5px 8px' }}>
+        <div className="flex items-center gap-1">
+          <div style={{ flex: 1, minWidth: 100 }}>
+            <InlineSelect
+              placeholder="Chọn hoặc nhập"
+              value={form.plate}
+              options={vehicles.map(v => ({ value: v.plate, label: v.plate }))}
+              onChange={v => set('plate', v)}
+              onInputChange={v => setPlateInput(v)}
+              onCreateNew={showCreatePlate ? () => set('plate', plateInput.trim()) : undefined}
+              createNewLabel={showCreatePlate ? `Tạo mới "${plateInput.trim()}"` : undefined}
+            />
+          </div>
+          {isDirty('plate') && actions}
+        </div>
+      </td>
+      {/* Công ty — read only */}
+      <td style={{ padding: '5px 8px' }}>
+        <span className="text-[13px]" style={{ color: 'var(--ink-3)' }}>{vendorName ?? '—'}</span>
       </td>
     </tr>
   )
 }
 
-// ─── Driver form drawers ──────────────────────────────────────────────────────
+// ─── Driver row (read mode) ───────────────────────────────────────────────────
+
+function DriverRow({ driver, vendorName, onEdit }: {
+  driver: Driver; vendorName?: string; onEdit: (field: DriverFocusableField) => void
+}) {
+  return (
+    <tr className="cursor-pointer group">
+      <td onClick={() => onEdit('fullName')}>
+        <span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{driver.fullName || driver.username}</span>
+      </td>
+      <td onClick={() => onEdit('phone')}>
+        <span className="text-[13px]" style={{ color: 'var(--ink-2)' }}>{driver.phone || '—'}</span>
+      </td>
+      <td onClick={() => onEdit('plate')}>
+        {driver.vehiclePlate
+          ? <Plate>{driver.vehiclePlate}</Plate>
+          : <span className="text-[13px]" style={{ color: 'var(--ink-3)' }}>—</span>}
+      </td>
+      <td>
+        <span className="text-[13px]" style={{ color: vendorName ? 'var(--ink-2)' : 'var(--ink-3)' }}>{vendorName ?? '—'}</span>
+      </td>
+    </tr>
+  )
+}
+
+// ─── Driver create drawer ─────────────────────────────────────────────────────
 
 function DriverFormDrawer({ onSave, onClose, isPending }: {
   onSave: (data: { username: string; fullName: string; phone: string; plate: string }) => void
@@ -247,75 +351,172 @@ function DriverFormDrawer({ onSave, onClose, isPending }: {
   )
 }
 
-function DriverEditDrawer({ driver, onClose }: { driver: Driver; onClose: () => void }) {
-  const qc = useQueryClient()
-  const toast = useToast()
-  const updateDriverMutation = useUpdateDriver()
-  const { data: vehicles = [] } = useVehicles()
-  const [fullName, setFullName] = useState(driver.fullName ?? '')
-  const [username, setUsername] = useState(driver.username)
-  const [phone, setPhone] = useState(driver.phone ?? '')
-  const [selectedPlate, setSelectedPlate] = useState(driver.vehiclePlate ?? '')
-  const [plateInput, setPlateInput] = useState('')
-  const showCreatePlate = plateInput.trim() && !vehicles.some(v => v.plate.toLowerCase() === plateInput.toLowerCase().trim())
-  const hasChanges = fullName !== (driver.fullName ?? '') || username !== driver.username || phone !== (driver.phone ?? '') || selectedPlate !== (driver.vehiclePlate ?? '')
+// ─── Vendor inline edit row (for use inside VendorManagementDrawer) ───────────
 
-  const handleSave = async () => {
-    try {
-      const updates: Record<string, string> = {}
-      if (fullName !== (driver.fullName ?? '')) updates.full_name = fullName
-      if (username !== driver.username) updates.username = username
-      if (phone !== (driver.phone ?? '')) updates.phone = phone
-      if (Object.keys(updates).length > 0) await updateDriverMutation.mutateAsync({ id: driver.id, data: updates })
-      if (selectedPlate !== (driver.vehiclePlate ?? '') && selectedPlate) await api.put(`/drivers/${driver.id}/vehicle`, { plate: selectedPlate })
-      qc.invalidateQueries({ queryKey: ['drivers'] })
-      qc.invalidateQueries({ queryKey: ['vehicles'] })
-      toast.success('Đã lưu thay đổi')
-      onClose()
-    } catch { toast.error('Không thể lưu') }
+function VendorEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name' }: {
+  initial: VendorFormData
+  onSave: (data: VendorFormData) => void
+  onCancel: () => void
+  saving?: boolean
+  initialFocus?: VendorFocusableField
+}) {
+  const [form, setForm] = useState<VendorFormData>(initial)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const refs: Record<Exclude<VendorFocusableField, null>, React.RefObject<HTMLInputElement | null>> = {
+    name: useRef<HTMLInputElement>(null),
+    phone: useRef<HTMLInputElement>(null),
+    taxCode: useRef<HTMLInputElement>(null),
+    address: useRef<HTMLInputElement>(null),
+    contactPerson: useRef<HTMLInputElement>(null),
   }
 
+  const isDirty = (key: keyof VendorFormData) => form[key] !== initial[key]
+  const anyDirty = (Object.keys(form) as (keyof VendorFormData)[]).some(k => isDirty(k))
+
+  const set = <K extends keyof VendorFormData>(key: K, val: VendorFormData[K]) => {
+    setForm(prev => ({ ...prev, [key]: val }))
+    setErrors(prev => { const n = { ...prev }; delete n[key]; return n })
+  }
+
+  const validate = () => {
+    const errs: Record<string, string> = {}
+    if (!form.name.trim()) errs.name = 'Bắt buộc'
+    if (form.taxCode && !VN_TAX_RE.test(form.taxCode)) errs.taxCode = 'MST không hợp lệ'
+    return errs
+  }
+
+  const handleSave = useCallback(() => {
+    const errs = validate()
+    if (Object.keys(errs).length > 0) { setErrors(errs); return }
+    onSave({ ...form, name: form.name.trim() })
+  }, [form, onSave]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (initialFocus) refs[initialFocus]?.current?.focus()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Input-level keyboard handler (prevents the containing Drawer from closing on Escape)
+  const handleInputKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') { e.stopPropagation(); onCancel() }
+    if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); handleSave() }
+  }, [onCancel, handleSave])
+
+  const actions = anyDirty ? <FieldActions onSave={handleSave} onCancel={onCancel} saving={saving} /> : null
+
   return (
-    <Drawer open onOpenChange={(o) => { if (!o) onClose() }} breadcrumb="Đội xe" title="Sửa lái xe"
-      meta={driver.fullName ?? driver.username}
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>Huỷ</Button>
-          <Button variant="default" onClick={handleSave} disabled={updateDriverMutation.isPending || !hasChanges}>
-            {updateDriverMutation.isPending ? 'Đang lưu…' : 'Lưu thay đổi'}
-          </Button>
-        </>
-      }
-    >
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="nepo-field-label" htmlFor="edit-fullname">Họ và tên</label>
-            <input id="edit-fullname" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Nguyễn Văn A" className="nepo-input" autoFocus />
+    <tr style={{ background: 'var(--accent-soft)' }}>
+      {/* Tên */}
+      <td style={{ padding: '5px 8px' }}>
+        <div className="flex items-center">
+          <div style={{ flex: 1 }}>
+            <input ref={refs.name} className="nepo-input text-[12px]"
+              style={{ width: '100%', borderColor: errors.name ? 'var(--status-error, #e53)' : undefined }}
+              value={form.name} onChange={e => set('name', e.target.value)} placeholder="Tên nhà thầu *"
+              onKeyDown={handleInputKeyDown} />
+            {errors.name && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.name}</p>}
           </div>
-          <div>
-            <label className="nepo-field-label" htmlFor="edit-username">Tên đăng nhập</label>
-            <input id="edit-username" value={username} onChange={e => setUsername(e.target.value)} placeholder="taixe1" className="nepo-input" />
-          </div>
+          {isDirty('name') && actions}
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="nepo-field-label" htmlFor="edit-phone">Số điện thoại</label>
-            <input id="edit-phone" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="0912345678" className="nepo-input" />
+      </td>
+      {/* Loại */}
+      <td style={{ padding: '5px 8px' }}>
+        <div className="flex items-center gap-1">
+          <div className="flex gap-1" style={{ minWidth: 90 }}>
+            {(['company', 'individual'] as const).map(t => (
+              <button key={t} type="button" onClick={() => set('type', t)}
+                className="flex-1 rounded text-[11px] font-medium transition-colors"
+                style={{ padding: '3px 0', background: form.type === t ? 'var(--accent)' : 'var(--surface-3)', color: form.type === t ? '#fff' : 'var(--ink-2)' }}>
+                {t === 'company' ? 'Cty' : 'CN'}
+              </button>
+            ))}
           </div>
-          <div>
-            <label className="nepo-field-label" htmlFor="edit-plate">Biển số xe</label>
-            <InlineSelect
-              placeholder="Chọn hoặc nhập" value={selectedPlate}
-              options={vehicles.map(v => ({ value: v.plate, label: v.plate }))}
-              onChange={v => setSelectedPlate(v)} onInputChange={v => setPlateInput(v)}
-              onCreateNew={showCreatePlate ? () => setSelectedPlate(plateInput.trim()) : undefined}
-              createNewLabel={showCreatePlate ? `Tạo mới "${plateInput.trim()}"` : undefined}
-            />
-          </div>
+          {isDirty('type') && actions}
         </div>
-      </div>
-    </Drawer>
+      </td>
+      {/* SĐT */}
+      <td style={{ padding: '5px 8px' }}>
+        <div className="flex items-center">
+          <input ref={refs.phone} className="nepo-input text-[12px]" style={{ minWidth: 90, flex: 1 }}
+            type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="SĐT"
+            onKeyDown={handleInputKeyDown} />
+          {isDirty('phone') && actions}
+        </div>
+      </td>
+      {/* Địa chỉ */}
+      <td style={{ padding: '5px 8px' }}>
+        <div className="flex items-center">
+          <input ref={refs.address} className="nepo-input text-[12px]" style={{ minWidth: 100, flex: 1 }}
+            value={form.address} onChange={e => set('address', e.target.value)} placeholder="Địa chỉ"
+            onKeyDown={handleInputKeyDown} />
+          {isDirty('address') && actions}
+        </div>
+      </td>
+      {/* Liên hệ */}
+      <td style={{ padding: '5px 8px' }}>
+        <div className="flex items-center">
+          <input ref={refs.contactPerson} className="nepo-input text-[12px]" style={{ minWidth: 80, flex: 1 }}
+            value={form.contactPerson} onChange={e => set('contactPerson', e.target.value)} placeholder="Người liên hệ"
+            onKeyDown={handleInputKeyDown} />
+          {isDirty('contactPerson') && actions}
+        </div>
+      </td>
+      {/* MST */}
+      <td style={{ padding: '5px 8px' }}>
+        <div className="flex items-center">
+          <div style={{ flex: 1 }}>
+            <input ref={refs.taxCode} className="nepo-input text-[12px]"
+              style={{ width: '100%', borderColor: errors.taxCode ? 'var(--status-error, #e53)' : undefined }}
+              value={form.taxCode} onChange={e => set('taxCode', e.target.value)} placeholder="MST"
+              onKeyDown={handleInputKeyDown} />
+            {errors.taxCode && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.taxCode}</p>}
+          </div>
+          {isDirty('taxCode') && actions}
+        </div>
+      </td>
+      {/* Trash placeholder */}
+      <td style={{ width: 32 }} />
+    </tr>
+  )
+}
+
+// ─── Vendor row (read mode, for VendorManagementDrawer) ───────────────────────
+
+function VendorRow({ vendor, onEdit, onDelete }: {
+  vendor: Vendor; onEdit: (field: VendorFocusableField) => void; onDelete: () => void
+}) {
+  const cell = (field: VendorFocusableField) => (e: React.MouseEvent) => { e.stopPropagation(); onEdit(field) }
+  return (
+    <tr className="cursor-pointer group">
+      <td onClick={cell('name')}>
+        <span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{vendor.name}</span>
+      </td>
+      <td onClick={() => onEdit(null)}>
+        <span className="text-[12px] font-medium px-2 py-0.5 rounded-full"
+          style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}>
+          {vendor.type === 'company' ? 'Công ty' : 'Cá nhân'}
+        </span>
+      </td>
+      <td onClick={cell('phone')}>
+        <span className="text-[13px]" style={{ color: 'var(--ink-2)' }}>{vendor.phone || '—'}</span>
+      </td>
+      <td onClick={cell('address')}>
+        <span className="text-[13px]" style={{ color: 'var(--ink-2)', whiteSpace: 'normal', wordBreak: 'break-word', maxWidth: 180 }}>{vendor.address || '—'}</span>
+      </td>
+      <td onClick={cell('contactPerson')}>
+        <span className="text-[13px]" style={{ color: 'var(--ink-2)' }}>{vendor.contactPerson || '—'}</span>
+      </td>
+      <td onClick={cell('taxCode')}>
+        <span className="text-[13px] tabular-nums" style={{ color: 'var(--ink-2)' }}>{vendor.taxCode || '—'}</span>
+      </td>
+      <td style={{ width: 32 }}>
+        <button onClick={(e) => { e.stopPropagation(); onDelete() }}
+          className="opacity-0 group-hover:opacity-100 flex items-center justify-center rounded transition-opacity"
+          style={{ width: 24, height: 24, color: 'var(--ink-3)' }} title="Xoá">
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </td>
+    </tr>
   )
 }
 
@@ -334,10 +535,10 @@ function FleetSection() {
 
   const createVehicle = useCreateVehicle()
   const createDriver = useCreateDriver()
+  const updateDriver = useUpdateDriver()
   const addVehicleDriver = useAddVehicleDriver()
   const removeVehicleDriver = useRemoveVehicleDriver()
 
-  // Vendor lookup maps
   const vendorMap = useMemo(() => new Map(vendors.map(v => [v.id, v.name])), [vendors])
   const plateVendorMap = useMemo(() => {
     const m = new Map<string, number | null>()
@@ -368,10 +569,14 @@ function FleetSection() {
   const [showAddVehicle, setShowAddVehicle] = useState(false)
   const [newPlate, setNewPlate] = useState('')
   const [showCreateDriver, setShowCreateDriver] = useState(false)
-  const [editDriver, setEditDriver] = useState<Driver | null>(null)
   const [addingDriverFor, setAddingDriverFor] = useState<number | null>(null)
   const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null)
   const [removeDriverTarget, setRemoveDriverTarget] = useState<{ vdId: number; name: string } | null>(null)
+
+  // Inline driver editing
+  const [editingDriverId, setEditingDriverId] = useState<number | null>(null)
+  const [editingDriverField, setEditingDriverField] = useState<DriverFocusableField>(null)
+  const [savingDriver, setSavingDriver] = useState(false)
 
   const filteredGroups = useMemo(() => {
     const q = fleetSearch.trim()
@@ -390,9 +595,7 @@ function FleetSection() {
     const q = driverSearch.trim()
     if (!q) return driversList
     return driversList.filter(d =>
-      fuzzyMatch(d.fullName ?? d.username, q) ||
-      fuzzyMatch(d.phone ?? '', q) ||
-      fuzzyMatch(d.vehiclePlate ?? '', q),
+      fuzzyMatch(d.fullName ?? d.username, q) || fuzzyMatch(d.phone ?? '', q) || fuzzyMatch(d.vehiclePlate ?? '', q),
     )
   }, [driversList, driverSearch])
 
@@ -422,6 +625,29 @@ function FleetSection() {
       onError: () => toast.error('Không thể thêm lái xe'),
     })
   }
+
+  const handleUpdateDriver = useCallback(async (driver: Driver, data: DriverFormData) => {
+    setSavingDriver(true)
+    try {
+      const updates: Record<string, string> = {}
+      if (data.fullName !== (driver.fullName ?? '')) updates.full_name = data.fullName
+      if (data.phone !== (driver.phone ?? '')) updates.phone = data.phone
+      if (Object.keys(updates).length > 0) {
+        await updateDriver.mutateAsync({ id: driver.id, data: updates })
+      }
+      if (data.plate !== (driver.vehiclePlate ?? '') && data.plate) {
+        await api.put(`/drivers/${driver.id}/vehicle`, { plate: data.plate })
+      }
+      qc.invalidateQueries({ queryKey: ['drivers'] })
+      qc.invalidateQueries({ queryKey: ['vehicles'] })
+      toast.success('Đã lưu thay đổi')
+      setEditingDriverId(null)
+    } catch {
+      toast.error('Không thể lưu')
+    } finally {
+      setSavingDriver(false)
+    }
+  }, [updateDriver, qc, toast])
 
   const handleAddDriverToVehicle = () => {
     if (!addingDriverFor || !selectedDriverId) return
@@ -477,11 +703,7 @@ function FleetSection() {
               </div>
             ) : filteredGroups.length === 0 ? (
               <div className="py-10">
-                <EmptyState
-                  icon={<Truck className="h-5 w-5" />}
-                  title={fleetSearch ? 'Không tìm thấy xe nào' : 'Chưa có xe nào'}
-                  compact
-                />
+                <EmptyState icon={<Truck className="h-5 w-5" />} title={fleetSearch ? 'Không tìm thấy xe nào' : 'Chưa có xe nào'} compact />
               </div>
             ) : (
               <>
@@ -563,11 +785,7 @@ function FleetSection() {
               </div>
             ) : filteredDrivers.length === 0 ? (
               <div className="py-10">
-                <EmptyState
-                  icon={<Users className="h-5 w-5" />}
-                  title={driverSearch.trim() ? 'Không tìm thấy lái xe' : 'Chưa có lái xe nào'}
-                  compact
-                />
+                <EmptyState icon={<Users className="h-5 w-5" />} title={driverSearch.trim() ? 'Không tìm thấy lái xe' : 'Chưa có lái xe nào'} compact />
               </div>
             ) : (
               <>
@@ -575,7 +793,6 @@ function FleetSection() {
                   <table className="nepo-table w-full" style={{ minWidth: 420, borderCollapse: 'collapse' }}>
                     <thead>
                       <tr>
-                        <th style={{ width: 40 }} />
                         <th className="text-left">Họ tên</th>
                         <th className="text-left">SĐT</th>
                         <th className="text-left">Biển số</th>
@@ -586,8 +803,24 @@ function FleetSection() {
                       {visibleDrivers.map((d) => {
                         const vId = d.vehiclePlate ? (plateVendorMap.get(d.vehiclePlate) ?? null) : null
                         const vendorName = vId ? (vendorMap.get(vId) ?? undefined) : undefined
-                        return (
-                          <DriverRow key={d.id} driver={d} vendorName={vendorName} onOpenDetail={() => setEditDriver(d)} />
+                        return editingDriverId === d.id ? (
+                          <DriverEditRow
+                            key={d.id}
+                            driver={d}
+                            vendorName={vendorName}
+                            onSave={(data) => handleUpdateDriver(d, data)}
+                            onCancel={() => setEditingDriverId(null)}
+                            saving={savingDriver}
+                            initialFocus={editingDriverField}
+                            vehicles={vehicles}
+                          />
+                        ) : (
+                          <DriverRow
+                            key={d.id}
+                            driver={d}
+                            vendorName={vendorName}
+                            onEdit={(field) => { setEditingDriverId(d.id); setEditingDriverField(field) }}
+                          />
                         )
                       })}
                     </tbody>
@@ -663,12 +896,9 @@ function FleetSection() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Create / Edit Driver Drawers ── */}
+      {/* ── Create Driver Drawer ── */}
       {showCreateDriver && (
         <DriverFormDrawer onSave={handleCreateDriver} onClose={() => setShowCreateDriver(false)} isPending={createDriver.isPending} />
-      )}
-      {editDriver && (
-        <DriverEditDrawer driver={editDriver} onClose={() => setEditDriver(null)} />
       )}
 
       <ConfirmDialog
@@ -696,10 +926,9 @@ function VendorManagementDrawer({ open, onClose }: { open: boolean; onClose: () 
   const deleteVendor = useDeleteVendor()
 
   const [search, setSearch] = useState('')
-  const [showCreate, setShowCreate] = useState(false)
-  const [editTarget, setEditTarget] = useState<Vendor | null>(null)
+  const [editingId, setEditingId] = useState<number | 'new' | null>(null)
+  const [editingField, setEditingField] = useState<VendorFocusableField>(null)
   const [deleteTarget, setDeleteTarget] = useState<Vendor | null>(null)
-  const [detailTarget, setDetailTarget] = useState<Vendor | null>(null)
 
   const [limit, setLimit] = useState(BATCH)
   useEffect(() => { setLimit(BATCH) }, [search])
@@ -718,25 +947,24 @@ function VendorManagementDrawer({ open, onClose }: { open: boolean; onClose: () 
   const companyCount = vendors.filter(v => v.type === 'company').length
   const individualCount = vendors.filter(v => v.type !== 'company').length
 
-  const handleCreate = useCallback((data: typeof EMPTY_VENDOR_FORM) => {
+  const handleCreate = useCallback((data: VendorFormData) => {
     createVendor.mutate(data, {
-      onSuccess: () => { toast.success('Đã thêm nhà thầu'); setShowCreate(false) },
+      onSuccess: () => { toast.success('Đã thêm nhà thầu'); setEditingId(null) },
       onError: () => toast.error('Không thể thêm nhà thầu'),
     })
   }, [createVendor, toast])
 
-  const handleUpdate = useCallback((data: typeof EMPTY_VENDOR_FORM) => {
-    if (!editTarget) return
-    updateVendor.mutate({ id: editTarget.id, data }, {
-      onSuccess: () => { toast.success('Đã cập nhật'); setEditTarget(null) },
+  const handleUpdate = useCallback((id: number, data: VendorFormData) => {
+    updateVendor.mutate({ id, data }, {
+      onSuccess: () => { toast.success('Đã cập nhật'); setEditingId(null) },
       onError: () => toast.error('Không thể cập nhật'),
     })
-  }, [editTarget, updateVendor, toast])
+  }, [updateVendor, toast])
 
   const handleDelete = useCallback(() => {
     if (!deleteTarget) return
     deleteVendor.mutate(deleteTarget.id, {
-      onSuccess: () => { toast.success('Đã xoá'); setDeleteTarget(null); setDetailTarget(null) },
+      onSuccess: () => { toast.success('Đã xoá'); setDeleteTarget(null); setEditingId(null) },
       onError: () => toast.error('Không thể xoá'),
     })
   }, [deleteTarget, deleteVendor, toast])
@@ -756,7 +984,7 @@ function VendorManagementDrawer({ open, onClose }: { open: boolean; onClose: () 
               <StatPill count={companyCount} label=" công ty" />
               <StatPill count={individualCount} label=" cá nhân" />
             </div>
-            <Button variant="default" onClick={() => setShowCreate(true)}>
+            <Button variant="default" onClick={() => { setEditingId('new') }}>
               <Plus className="h-4 w-4" /> Thêm nhà thầu
             </Button>
           </div>
@@ -774,14 +1002,14 @@ function VendorManagementDrawer({ open, onClose }: { open: boolean; onClose: () 
                   <div key={i} className="h-12 rounded-lg animate-pulse" style={{ background: 'var(--surface-3)' }} />
                 ))}
               </div>
-            ) : filtered.length === 0 ? (
+            ) : filtered.length === 0 && editingId !== 'new' ? (
               <div className="py-10">
                 <EmptyState
                   icon={<Building2 className="h-5 w-5" />}
                   title={search.trim() ? 'Không tìm thấy nhà thầu' : 'Chưa có nhà thầu nào'}
                   compact
                   action={!search.trim() ? (
-                    <button onClick={() => setShowCreate(true)} className="btn-primary text-xs">
+                    <button onClick={() => setEditingId('new')} className="btn-primary text-xs">
                       <Plus size={14} strokeWidth={2.25} /><span>Thêm nhà thầu</span>
                     </button>
                   ) : undefined}
@@ -793,19 +1021,50 @@ function VendorManagementDrawer({ open, onClose }: { open: boolean; onClose: () 
                   <table className="nepo-table w-full" style={{ minWidth: 600, borderCollapse: 'collapse' }}>
                     <thead>
                       <tr>
-                        <th style={{ width: 48 }} />
                         <th className="text-left">Tên nhà thầu</th>
                         <th className="text-left">Loại</th>
                         <th className="text-left">SĐT</th>
                         <th className="text-left">Địa chỉ</th>
                         <th className="text-left">Liên hệ</th>
                         <th className="text-left">MST</th>
+                        <th style={{ width: 32 }} />
                       </tr>
                     </thead>
                     <tbody>
-                      {visible.map((v) => (
-                        <VendorRow key={v.id} vendor={v} onOpenDetail={() => setDetailTarget(v)} />
-                      ))}
+                      {editingId === 'new' && (
+                        <VendorEditRow
+                          initial={EMPTY_VENDOR_FORM}
+                          onSave={handleCreate}
+                          onCancel={() => setEditingId(null)}
+                          saving={createVendor.isPending}
+                        />
+                      )}
+                      {visible.map((v) =>
+                        editingId === v.id ? (
+                          <VendorEditRow
+                            key={v.id}
+                            initial={{
+                              name: v.name,
+                              type: v.type ?? 'company',
+                              phone: v.phone ?? '',
+                              taxCode: v.taxCode ?? '',
+                              address: v.address ?? '',
+                              contactPerson: v.contactPerson ?? '',
+                            }}
+                            onSave={(data) => handleUpdate(v.id, data)}
+                            onCancel={() => setEditingId(null)}
+                            saving={updateVendor.isPending}
+                            initialFocus={editingField}
+                          />
+                        ) : (
+                          <VendorRow
+                            key={v.id}
+                            vendor={v}
+                            onEdit={(field) => { setEditingId(v.id); setEditingField(field) }}
+                            onDelete={() => setDeleteTarget(v)}
+                          />
+                        )
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -816,16 +1075,7 @@ function VendorManagementDrawer({ open, onClose }: { open: boolean; onClose: () 
         </div>
       </Drawer>
 
-      {/* Sub-drawers rendered outside parent Drawer to avoid z-index stacking */}
-      {detailTarget && !editTarget && (
-        <VendorDetailDrawer
-          vendor={detailTarget}
-          onClose={() => setDetailTarget(null)}
-          onEdit={() => setEditTarget(detailTarget)}
-          onDelete={() => { setDeleteTarget(detailTarget); setDetailTarget(null) }}
-        />
-      )}
-
+      {/* Delete confirmation rendered outside to avoid z-index stacking */}
       <ConfirmDialog
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
@@ -835,200 +1085,7 @@ function VendorManagementDrawer({ open, onClose }: { open: boolean; onClose: () 
         confirmLabel="Xoá"
         variant="warning"
       />
-
-      <VendorFormDrawer open={showCreate} onClose={() => setShowCreate(false)} onSave={handleCreate}
-        title="Thêm nhà thầu đội xe" isPending={createVendor.isPending} />
-      <VendorFormDrawer
-        open={!!editTarget}
-        onClose={() => setEditTarget(null)}
-        onSave={handleUpdate}
-        title="Cập nhật nhà thầu"
-        isPending={updateVendor.isPending}
-        initial={editTarget ? {
-          name: editTarget.name,
-          type: editTarget.type ?? 'company',
-          phone: editTarget.phone ?? '',
-          taxCode: editTarget.taxCode ?? '',
-          address: editTarget.address ?? '',
-          contactPerson: editTarget.contactPerson ?? '',
-        } : undefined}
-      />
     </>
-  )
-}
-
-// ─── Vendor row ───────────────────────────────────────────────────────────────
-
-function VendorRow({ vendor, onOpenDetail }: { vendor: Vendor; onOpenDetail: () => void }) {
-  const initials = vendor.name.slice(0, 2).toUpperCase()
-  return (
-    <tr onClick={onOpenDetail} className="cursor-pointer">
-      <td>
-        <div className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold"
-          style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
-          {initials}
-        </div>
-      </td>
-      <td><span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{vendor.name}</span></td>
-      <td>
-        <span className="text-[12px] font-medium px-2 py-0.5 rounded-full"
-          style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}>
-          {vendor.type === 'company' ? 'Công ty' : 'Cá nhân'}
-        </span>
-      </td>
-      <td><span className="text-[13px]" style={{ color: 'var(--ink-2)' }}>{vendor.phone || '—'}</span></td>
-      <td><span className="text-[13px] line-clamp-1" style={{ color: 'var(--ink-2)' }}>{vendor.address || '—'}</span></td>
-      <td><span className="text-[13px]" style={{ color: 'var(--ink-2)' }}>{vendor.contactPerson || '—'}</span></td>
-      <td><span className="text-[13px] font-medium tabular-nums" style={{ color: 'var(--ink)' }}>{vendor.taxCode || '—'}</span></td>
-    </tr>
-  )
-}
-
-// ─── Vendor form drawer ───────────────────────────────────────────────────────
-
-function VendorFormDrawer({ open, onClose, onSave, title, initial, isPending }: {
-  open: boolean; onClose: () => void; onSave: (data: typeof EMPTY_VENDOR_FORM) => void
-  title: string; initial?: Partial<typeof EMPTY_VENDOR_FORM>; isPending?: boolean
-}) {
-  const [form, setForm] = useState({ ...EMPTY_VENDOR_FORM, ...initial })
-  const [errors, setErrors] = useState<Record<string, string>>({})
-
-  useEffect(() => { setForm({ ...EMPTY_VENDOR_FORM, ...initial }) }, [JSON.stringify(initial)]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const updateField = <K extends keyof typeof form>(key: K, value: typeof form[K]) => {
-    setForm(prev => ({ ...prev, [key]: value }))
-    setErrors(prev => { const n = { ...prev }; delete n[key]; return n })
-  }
-
-  const handleSave = () => {
-    if (!form.name.trim()) return
-    const errs: Record<string, string> = {}
-    if (form.phone && !VN_PHONE_RE.test(form.phone.replace(/[\s-]/g, ''))) errs.phone = 'SĐT không hợp lệ'
-    if (form.taxCode && !VN_TAX_RE.test(form.taxCode)) errs.taxCode = 'MST phải 10 hoặc 13 chữ số'
-    if (Object.keys(errs).length > 0) { setErrors(errs); return }
-    onSave({ ...form, name: form.name.trim() })
-  }
-
-  return (
-    <Drawer open={open} onOpenChange={(o) => { if (!o) onClose() }} breadcrumb="Nhà thầu đội xe" title={title}
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>Huỷ</Button>
-          <Button variant="default" onClick={handleSave} disabled={!form.name.trim() || !!isPending}>
-            {isPending ? 'Đang lưu...' : 'Xác nhận'}
-          </Button>
-        </>
-      }
-    >
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="nepo-field-label" htmlFor="vnd-name">
-              Tên nhà thầu <span style={{ color: 'var(--accent)' }}>*</span>
-            </label>
-            <input id="vnd-name" value={form.name} onChange={e => updateField('name', e.target.value)}
-              placeholder="Tên nhà thầu" className="nepo-input" autoFocus />
-          </div>
-          <div>
-            <label className="nepo-field-label">Loại</label>
-            <div className="flex gap-1">
-              {(['company', 'individual'] as const).map(t => (
-                <button key={t} type="button" onClick={() => updateField('type', t)}
-                  className="flex-1 py-2 rounded-lg text-xs font-medium transition-colors"
-                  style={{
-                    background: form.type === t ? 'var(--accent)' : 'var(--surface-3)',
-                    color: form.type === t ? '#fff' : 'var(--ink-2)',
-                  }}
-                >{t === 'company' ? 'Công ty' : 'Cá nhân'}</button>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="nepo-field-label" htmlFor="vnd-phone">Điện thoại</label>
-            <input id="vnd-phone" type="tel" value={form.phone} onChange={e => updateField('phone', e.target.value)}
-              placeholder="0901234567" className="nepo-input" />
-            {errors.phone && <p className="text-[11px] mt-1" style={{ color: 'var(--accent)' }}>{errors.phone}</p>}
-          </div>
-          <div>
-            <label className="nepo-field-label" htmlFor="vnd-tax">
-              Mã số thuế <InfoTip text="10 hoặc 13 chữ số" />
-            </label>
-            <input id="vnd-tax" value={form.taxCode} onChange={e => updateField('taxCode', e.target.value)}
-              placeholder="0123456789" className="nepo-input" />
-            {errors.taxCode && <p className="text-[11px] mt-1" style={{ color: 'var(--accent)' }}>{errors.taxCode}</p>}
-          </div>
-        </div>
-        <div>
-          <label className="nepo-field-label" htmlFor="vnd-addr">Địa chỉ</label>
-          <input id="vnd-addr" value={form.address} onChange={e => updateField('address', e.target.value)}
-            placeholder="Địa chỉ" className="nepo-input" />
-        </div>
-        <div>
-          <label className="nepo-field-label" htmlFor="vnd-contact">Người liên hệ</label>
-          <input id="vnd-contact" value={form.contactPerson} onChange={e => updateField('contactPerson', e.target.value)}
-            placeholder="Họ tên người liên hệ" className="nepo-input" />
-        </div>
-      </div>
-    </Drawer>
-  )
-}
-
-// ─── Vendor detail drawer ─────────────────────────────────────────────────────
-
-function VendorDetailDrawer({ vendor, onClose, onEdit, onDelete }: {
-  vendor: Vendor; onClose: () => void; onEdit: () => void; onDelete: () => void
-}) {
-  return (
-    <Drawer open onOpenChange={(o) => { if (!o) onClose() }}
-      breadcrumb="Nhà thầu đội xe" title={vendor.name} meta={vendor.taxCode || undefined}
-      footer={
-        <>
-          <Button variant="ghost" onClick={onDelete}
-            style={{ color: 'var(--accent)', marginRight: 'auto' }}>Xoá</Button>
-          <Button variant="ghost" onClick={onClose}>Đóng</Button>
-          <Button variant="default" onClick={onEdit}>Sửa</Button>
-        </>
-      }
-    >
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="nepo-field-label">Loại</label>
-            <p className="text-[13px]" style={{ color: 'var(--ink)' }}>
-              {vendor.type === 'company' ? 'Công ty' : 'Cá nhân'}
-            </p>
-          </div>
-          <div>
-            <label className="nepo-field-label">SĐT</label>
-            <p className="text-[13px]" style={{ color: vendor.phone ? 'var(--ink)' : 'var(--ink-3)' }}>
-              {vendor.phone || '—'}
-            </p>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="nepo-field-label">MST</label>
-            <p className="text-[13px]" style={{ color: vendor.taxCode ? 'var(--ink)' : 'var(--ink-3)' }}>
-              {vendor.taxCode || '—'}
-            </p>
-          </div>
-          <div>
-            <label className="nepo-field-label">Liên hệ</label>
-            <p className="text-[13px]" style={{ color: vendor.contactPerson ? 'var(--ink)' : 'var(--ink-3)' }}>
-              {vendor.contactPerson || '—'}
-            </p>
-          </div>
-        </div>
-        <div>
-          <label className="nepo-field-label">Địa chỉ</label>
-          <p className="text-[13px]" style={{ color: vendor.address ? 'var(--ink)' : 'var(--ink-3)' }}>
-            {vendor.address || '—'}
-          </p>
-        </div>
-      </div>
-    </Drawer>
   )
 }
 

@@ -39,18 +39,6 @@ class PartnerCreateBody(BaseModel):
             raise ValueError("Mã số thuế phải 10 hoặc 13 chữ số")
         return v
 
-    @field_validator("phone")
-    @classmethod
-    def validate_phone(cls, v: str | None) -> str | None:
-        if not v:
-            return v
-        import re
-        cleaned = re.sub(r"[\s\-]", "", v)
-        if cleaned and not re.match(r"^(0|\+?84)[35789]\d{8}$", cleaned):
-            raise ValueError("Số điện thoại không hợp lệ (VD: 0912345678)")
-        return v
-
-
 class PartnerUpdateBody(BaseModel):
     name: str | None = None
     code: str | None = None
@@ -69,18 +57,6 @@ class PartnerUpdateBody(BaseModel):
         if v and len(v) not in (10, 13):
             raise ValueError("Mã số thuế phải 10 hoặc 13 chữ số")
         return v
-
-    @field_validator("phone")
-    @classmethod
-    def validate_phone(cls, v: str | None) -> str | None:
-        if not v:
-            return v
-        import re
-        cleaned = re.sub(r"[\s\-]", "", v)
-        if cleaned and not re.match(r"^(0|\+?84)[35789]\d{8}$", cleaned):
-            raise ValueError("Số điện thoại không hợp lệ (VD: 0912345678)")
-        return v
-
 
 class PartnerOutBody(BaseModel):
     id: int

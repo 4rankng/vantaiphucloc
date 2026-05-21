@@ -11,6 +11,8 @@ import {
   FileSpreadsheet,
   Upload,
   X,
+  AlertTriangle,
+  Download,
 } from 'lucide-react'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { Panel } from '@/components/shared/Panel'
@@ -35,8 +37,11 @@ import {
   useBulkImportAndMatch,
   useAIParsePreview,
   useClients,
+  useUpdateContainerNumber,
+  useExportBookedTripsExcel,
 } from '@/hooks/use-queries'
 import type { AutoMatchCandidate, DeliveredTripMatchScore } from '@/data/domain'
+import type { DuplicateGroup } from '@/services/api/deliveredTrips.api'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -187,6 +192,9 @@ export function DoiSoatPage() {
   const [showImport, setShowImport] = useState(false)
   const [showUnmatchFor, setShowUnmatchFor] = useState<number | null>(null)
   const [unmatchReason, setUnmatchReason] = useState('')
+  const [editingContainer, setEditingContainer] = useState<{ tripId: number; containerId: number; value: string } | null>(null)
+  const updateContainer = useUpdateContainerNumber()
+  const exportExcel = useExportBookedTripsExcel()
 
   const { data: trips = [], isLoading } = useBookedTrips({ dateFrom, dateTo, pageSize: 500 })
   const { data: matchScoresData } = useMatchScores(dateFrom, dateTo)
@@ -291,14 +299,42 @@ export function DoiSoatPage() {
         if (!t.containers.length) return <span style={{ color: 'var(--ink-4)' }}>—</span>
         const first = t.containers[0]
         const more = t.containers.length - 1
+        const isEditing = editingContainer?.containerId === first.id
         return (
           <div className="flex items-center gap-1.5">
-            <span
-              className="tabular-nums whitespace-nowrap"
-              style={{ fontFamily: 'var(--theme-font-mono)', fontSize: 12, color: 'var(--ink)', fontWeight: 600 }}
-            >
-              {first.containerNumber}
-            </span>
+            {isEditing ? (
+              <input
+                autoFocus
+                defaultValue={first.containerNumber}
+                className="nepo-input"
+                style={{ width: 120, fontSize: 12, padding: '2px 6px', fontFamily: 'var(--theme-font-mono)' }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const val = (e.target as HTMLInputElement).value.trim().toUpperCase().replace(/[\s-]/g, '')
+                    if (val && val !== first.containerNumber) {
+                      updateContainer.mutate(
+                        { tripId: t.id, containerId: first.id, containerNumber: val },
+                        { onSettled: () => setEditingContainer(null) },
+                      )
+                    } else {
+                      setEditingContainer(null)
+                    }
+                  } else if (e.key === 'Escape') {
+                    setEditingContainer(null)
+                  }
+                }}
+                onBlur={() => setEditingContainer(null)}
+              />
+            ) : (
+              <span
+                className="tabular-nums whitespace-nowrap cursor-pointer"
+                style={{ fontFamily: 'var(--theme-font-mono)', fontSize: 12, color: 'var(--ink)', fontWeight: 600, textDecoration: 'underline dotted', textDecorationColor: 'var(--ink-3)', textUnderlineOffset: 3 }}
+                title="Nhấn để sửa số cont"
+                onClick={() => setEditingContainer({ tripId: t.id, containerId: first.id, value: first.containerNumber })}
+              >
+                {first.containerNumber}
+              </span>
+            )}
             <span
               className="text-[10.5px] uppercase font-semibold whitespace-nowrap"
               style={{
@@ -439,6 +475,17 @@ export function DoiSoatPage() {
           <Toolbar bordered>
             <StatusFilterTabs value={statusFilter} onChange={setStatusFilter} counts={statusCounts} />
             <ToolbarSpacer />
+            <Button
+              variant="ghost"
+              onClick={() => exportExcel.mutate(
+                { dateFrom, dateTo },
+                { onSuccess: (blob) => { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'doi-soat.xlsx'; a.click(); URL.revokeObjectURL(url) } },
+              )}
+              disabled={exportExcel.isPending}
+            >
+              {exportExcel.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+              Xuất Excel
+            </Button>
             <Button variant="outline" onClick={() => setShowImport(true)}>
               <FileSpreadsheet className="h-3.5 w-3.5" />
               Nhập Excel
@@ -689,6 +736,8 @@ function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
   const [clientId, setClientId] = useState('')
   const [previewData, setPreviewData] = useState<PreviewRow[]>([])
   const [previewColumns, setPreviewColumns] = useState<string[]>([])
+  const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([])
+  const [previewWarnings, setPreviewWarnings] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const dropRef = useRef<HTMLDivElement>(null)
@@ -722,8 +771,26 @@ function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
     setError(null)
     aiPreview.mutate({ file }, {
       onSuccess: (data) => {
-        setPreviewColumns((data as { columns?: string[] }).columns ?? [])
-        setPreviewData((data as { rows?: PreviewRow[] }).rows ?? [])
+        const cols = (data as { columns?: string[] }).columns ?? []
+        const rows = (data as { rows?: PreviewRow[] }).rows ?? []
+        const dups = (data as { duplicateGroups?: DuplicateGroup[] }).duplicateGroups ?? []
+        const warns = (data as { warnings?: string[] }).warnings ?? []
+        setPreviewColumns(cols)
+        setPreviewData(rows)
+        setDuplicateGroups(dups)
+        setPreviewWarnings(warns)
+        // Auto-detect client from "Chủ hàng" column
+        if (!clientId) {
+          const uniqueClients = [...new Set(rows.map(r => String(r['Chủ hàng'] ?? '').trim()).filter(Boolean))]
+          if (uniqueClients.length === 1) {
+            const code = uniqueClients[0].toUpperCase()
+            const match = clients.find(c =>
+              c.code?.toUpperCase() === code ||
+              c.name.toUpperCase().split(/\s+/)[0] === code
+            )
+            if (match) setClientId(String(match.id))
+          }
+        }
         setStep('preview')
       },
       onError: (err) => setError(err instanceof Error ? err.message : 'Lỗi khi phân tích file'),
@@ -748,11 +815,24 @@ function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
     setClientId('')
     setPreviewData([])
     setPreviewColumns([])
+    setDuplicateGroups([])
+    setPreviewWarnings([])
     setError(null)
     if (fileRef.current) fileRef.current.value = ''
   }
 
   const previewCols = previewColumns.length > 0 ? previewColumns : []
+
+  // Build a map of row index → duplicate type for highlighting
+  const duplicateRowMap = useMemo(() => {
+    const map = new Map<number, 'exact' | 'fuzzy' | 'digits'>()
+    for (const g of duplicateGroups) {
+      for (const idx of g.rowIndices) {
+        if (!map.has(idx)) map.set(idx, g.type)
+      }
+    }
+    return map
+  }, [duplicateGroups])
 
   const footer = step === 'upload' ? (
     <>
@@ -764,8 +844,25 @@ function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
     </>
   ) : step === 'preview' ? (
     <>
-      <Button variant="ghost" onClick={() => { setStep('upload'); setPreviewData([]) }}>Quay lại</Button>
-      <Button variant="default" onClick={handleImport} disabled={bulkImport.isPending}>
+      {clientId ? (
+        <span
+          className="text-[12px] font-medium px-2.5 py-1 rounded-full mr-auto"
+          style={{ background: 'var(--success-soft)', color: 'var(--success)' }}
+        >
+          {clients.find(c => String(c.id) === clientId)?.name ?? 'Chủ hàng'} ✓
+        </span>
+      ) : (
+        <InlineSelect
+          placeholder="Chọn chủ hàng"
+          value={clientId}
+          options={clients.map(c => ({ value: String(c.id), label: c.name }))}
+          onChange={setClientId}
+          className="mr-auto"
+          style={{ minWidth: 180, borderColor: 'var(--warning)' }}
+        />
+      )}
+      <Button variant="ghost" onClick={() => { setStep('upload'); setPreviewData([]); setPreviewColumns([]) }}>Quay lại</Button>
+      <Button variant="default" onClick={handleImport} disabled={bulkImport.isPending || !clientId}>
         {bulkImport.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
         {bulkImport.isPending ? 'Đang lưu...' : 'Lưu dữ liệu'}
       </Button>
@@ -794,20 +891,6 @@ function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
       {/* ── Upload step ── */}
       {step === 'upload' && (
         <div className="space-y-5">
-          {/* Client select */}
-          <div>
-            <label className="nepo-field-label">
-              Chủ hàng
-              <span className="ml-1 font-normal" style={{ color: 'var(--ink-3)' }}>(tùy chọn)</span>
-            </label>
-            <InlineSelect
-              placeholder="Chọn chủ hàng"
-              value={clientId}
-              options={clients.map(c => ({ value: String(c.id), label: c.name }))}
-              onChange={setClientId}
-            />
-          </div>
-
           {/* File area */}
           <div>
             <label className="nepo-field-label">File Excel</label>
@@ -892,6 +975,25 @@ function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
       {/* ── Preview step ── */}
       {step === 'preview' && (
         <div className="space-y-4">
+          {/* Duplicate warning banner */}
+          {previewWarnings.length > 0 && (
+            <div
+              className="flex items-start gap-2.5 px-3.5 py-3"
+              style={{ background: 'var(--warning-soft)', borderRadius: 'var(--r-sm)', color: 'var(--warning)', fontSize: 13 }}
+            >
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+              <div>
+                {previewWarnings.map((w, i) => <p key={i} className="m-0 font-semibold">{w}</p>)}
+                {duplicateGroups.length > 0 && (
+                  <ul className="m-0 mt-1.5 pl-4 space-y-0.5" style={{ listStyle: 'disc' }}>
+                    {duplicateGroups.map((g, i) => (
+                      <li key={i} className="text-[12px]" style={{ opacity: 0.9 }}>{g.message}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          )}
           {/* Summary row */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[13px] font-medium" style={{ color: 'var(--ink)' }}>
@@ -933,10 +1035,22 @@ function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {previewData.slice(0, 20).map((row, i) => (
-                    <tr key={i}>
+                  {previewData.slice(0, 20).map((row, i) => {
+                    const dupType = duplicateRowMap.get(i)
+                    const rowBg = dupType === 'exact'
+                      ? 'var(--danger-soft)'
+                      : dupType === 'fuzzy'
+                        ? 'var(--warning-soft)'
+                        : dupType === 'digits'
+                          ? 'color-mix(in srgb, var(--accent-soft) 60%, white)'
+                          : undefined
+                    return (
+                    <tr key={i} style={rowBg ? { background: rowBg } : undefined}>
                       <td>
-                        <span className="tabular-nums text-[12px]" style={{ color: 'var(--ink-3)' }}>{i + 1}</span>
+                        <span className="tabular-nums text-[12px]" style={{ color: 'var(--ink-3)' }}>
+                          {dupType ? <AlertTriangle className="inline h-3 w-3 mr-0.5" style={{ color: dupType === 'exact' ? 'var(--danger)' : 'var(--warning)' }} /> : null}
+                          {i + 1}
+                        </span>
                       </td>
                       {previewCols.map((key) => {
                         const val = row[key]
@@ -949,7 +1063,8 @@ function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
                         )
                       })}
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

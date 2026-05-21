@@ -80,6 +80,7 @@ export const apiClient = {
   getSuggestedRoutes: deliveredTripsApi.getSuggestedRoutes,
   bulkImportAndMatch: deliveredTripsApi.bulkImportAndMatch,
   aiParsePreview: deliveredTripsApi.aiParsePreview,
+  updateContainerNumber: deliveredTripsApi.updateContainerNumber,
 
   // Trip Orders
   getBookedTrips: bookedTripsApi.getBookedTrips,

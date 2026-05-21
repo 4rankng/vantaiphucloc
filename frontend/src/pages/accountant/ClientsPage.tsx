@@ -1,19 +1,28 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
-import { Building2, Plus, AlertTriangle, Search } from 'lucide-react'
+import { Building2, Plus, AlertTriangle, Search, Check, X, Trash2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Button } from '@/components/ui'
-import { EntityDetailSheet } from '@/components/shared/EntityDetailSheet/EntityDetailSheet'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Panel } from '@/components/shared/Panel'
-import { Drawer } from '@/components/shared/Drawer'
-import { InfoTip } from '@/components/shared/InfoTip'
 import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { fuzzyMatch } from '@/lib/search-utils'
 import type { Client } from '@/data/domain'
 
-const VN_PHONE_RE = /^(0|\+?84)[35789]\d{8}$/
 const VN_TAX_RE = /^\d{10}(\d{3})?$/
-const EMPTY_FORM = { name: '', type: 'company' as const, phone: '', taxCode: '', address: '', contactPerson: '' }
+
+type FormData = {
+  code: string
+  name: string
+  type: 'company' | 'individual'
+  phone: string
+  taxCode: string
+  address: string
+  contactPerson: string
+}
+
+const EMPTY_FORM: FormData = {
+  code: '', name: '', type: 'company', phone: '', taxCode: '', address: '', contactPerson: '',
+}
 
 const BATCH = 15
 
@@ -53,34 +62,11 @@ function StatPill({ count, label, accent }: { count: number; label: string; acce
   )
 }
 
-function SectionHeader({ icon, title, count, action }: {
-  icon: React.ReactNode
-  title: string
-  count: number
-  action?: React.ReactNode
-}) {
-  return (
-    <div className="flex items-center gap-2 mb-3">
-      <span style={{ color: 'var(--ink-2)' }}>{icon}</span>
-      <h2 className="text-[15px] font-bold" style={{ color: 'var(--ink)', letterSpacing: '-0.01em' }}>
-        {title}
-      </h2>
-      <span
-        className="tabular-nums text-[11.5px] font-semibold rounded-full px-2 py-0.5"
-        style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}
-      >
-        {count}
-      </span>
-      {action && <div style={{ marginLeft: 'auto' }}>{action}</div>}
-    </div>
-  )
-}
-
 function SearchInput({ value, onChange, placeholder }: {
   value: string; onChange: (v: string) => void; placeholder: string
 }) {
   return (
-    <div className="relative" style={{ width: 220, flexShrink: 0 }}>
+    <div className="relative" style={{ flex: 1, maxWidth: 360 }}>
       <Search
         className="absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none"
         style={{ left: 10, color: 'var(--ink-3)' }}
@@ -108,26 +94,234 @@ function LoadMoreSentinel({ sentinelRef, hasMore }: {
   )
 }
 
-// ─── Client row ───────────────────────────────────────────────────────────────
+// ─── Inline save/cancel icons (shown beside a changed field) ──────────────────
 
-function ClientRow({ client, onOpenDetail }: { client: Client; onOpenDetail: () => void }) {
-  const initials = client.name.slice(0, 2).toUpperCase()
-  const isCompany = client.type === 'company'
+function FieldActions({ onSave, onCancel, saving }: {
+  onSave: () => void
+  onCancel: () => void
+  saving?: boolean
+}) {
+  return (
+    <div className="flex flex-col gap-0.5 ml-1 shrink-0">
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onSave() }}
+        disabled={saving}
+        className="flex items-center justify-center rounded"
+        style={{
+          width: 20, height: 20,
+          background: 'var(--accent)',
+          color: '#fff',
+          opacity: saving ? 0.5 : 1,
+        }}
+        title="Lưu"
+      >
+        <Check className="h-2.5 w-2.5" strokeWidth={3} />
+      </button>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onCancel() }}
+        className="flex items-center justify-center rounded"
+        style={{ width: 20, height: 20, background: 'var(--surface-3)', color: 'var(--ink-2)' }}
+        title="Huỷ"
+      >
+        <X className="h-2.5 w-2.5" strokeWidth={3} />
+      </button>
+    </div>
+  )
+}
+
+// ─── Inline edit row ──────────────────────────────────────────────────────────
+
+type FocusableField = 'code' | 'name' | 'phone' | 'address' | 'taxCode' | null
+
+function ClientEditRow({ initial, onSave, onCancel, saving, initialFocus = 'name' }: {
+  initial: FormData
+  onSave: (data: FormData) => void
+  onCancel: () => void
+  saving?: boolean
+  initialFocus?: FocusableField
+}) {
+  const [form, setForm] = useState<FormData>(initial)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const refs: Record<Exclude<FocusableField, null>, React.RefObject<HTMLInputElement | null>> = {
+    code: useRef<HTMLInputElement>(null),
+    name: useRef<HTMLInputElement>(null),
+    phone: useRef<HTMLInputElement>(null),
+    address: useRef<HTMLInputElement>(null),
+    taxCode: useRef<HTMLInputElement>(null),
+  }
+
+  const isDirty = (key: keyof FormData) => form[key] !== initial[key]
+  const anyDirty = (Object.keys(form) as (keyof FormData)[]).some(k => isDirty(k))
+
+  const set = <K extends keyof FormData>(key: K, val: FormData[K]) => {
+    setForm(prev => ({ ...prev, [key]: val }))
+    setErrors(prev => { const n = { ...prev }; delete n[key]; return n })
+  }
+
+  const validate = () => {
+    const errs: Record<string, string> = {}
+    if (!form.name.trim()) errs.name = 'Bắt buộc'
+    if (form.taxCode && !VN_TAX_RE.test(form.taxCode)) errs.taxCode = 'MST không hợp lệ'
+    return errs
+  }
+
+  const handleSave = useCallback(() => {
+    const errs = validate()
+    if (Object.keys(errs).length > 0) { setErrors(errs); return }
+    onSave({ ...form, name: form.name.trim() })
+  }, [form, onSave]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (initialFocus) refs[initialFocus]?.current?.focus()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel()
+      if (e.key === 'Enter') { e.preventDefault(); handleSave() }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onCancel, handleSave])
+
+  const actions = anyDirty
+    ? <FieldActions onSave={handleSave} onCancel={onCancel} saving={saving} />
+    : null
 
   return (
-    <tr onClick={onOpenDetail} className="cursor-pointer">
-      <td style={{ width: 40 }}>
-        <div
-          className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold"
-          style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}
-        >
-          {initials}
+    <tr style={{ background: 'var(--accent-soft)' }}>
+      {/* Mã khách */}
+      <td style={{ padding: '5px 8px' }}>
+        <div className="flex items-center">
+          <input
+            ref={refs.code}
+            className="nepo-input text-[12px]"
+            style={{ minWidth: 60, flex: 1 }}
+            value={form.code}
+            onChange={e => set('code', e.target.value)}
+
+            placeholder="Mã KH"
+          />
+          {isDirty('code') && actions}
         </div>
       </td>
-      <td>
+      {/* Tên */}
+      <td style={{ padding: '5px 8px' }}>
+        <div className="flex items-center">
+          <div style={{ flex: 1 }}>
+            <input
+              ref={refs.name}
+              className="nepo-input text-[12px]"
+              style={{ width: '100%', borderColor: errors.name ? 'var(--status-error, #e53)' : undefined }}
+              value={form.name}
+              onChange={e => set('name', e.target.value)}
+  
+              placeholder="Tên chủ hàng *"
+            />
+            {errors.name && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.name}</p>}
+          </div>
+          {isDirty('name') && actions}
+        </div>
+      </td>
+      {/* Loại */}
+      <td style={{ padding: '5px 8px' }}>
+        <div className="flex items-center gap-1">
+          <div className="flex gap-1" style={{ minWidth: 90 }}>
+            {(['company', 'individual'] as const).map(t => (
+              <button
+                key={t} type="button"
+                onClick={() => set('type', t)}
+                className="flex-1 rounded text-[11px] font-medium transition-colors"
+                style={{
+                  padding: '3px 0',
+                  background: form.type === t ? 'var(--accent)' : 'var(--surface-3)',
+                  color: form.type === t ? '#fff' : 'var(--ink-2)',
+                }}
+              >
+                {t === 'company' ? 'Cty' : 'CN'}
+              </button>
+            ))}
+          </div>
+          {isDirty('type') && actions}
+        </div>
+      </td>
+      {/* SĐT */}
+      <td style={{ padding: '5px 8px' }}>
+        <div className="flex items-center">
+          <input
+            ref={refs.phone}
+            className="nepo-input text-[12px]"
+            style={{ minWidth: 90, flex: 1 }}
+            type="tel"
+            value={form.phone}
+            onChange={e => set('phone', e.target.value)}
+
+            placeholder="SĐT"
+          />
+          {isDirty('phone') && actions}
+        </div>
+      </td>
+      {/* Địa chỉ */}
+      <td style={{ padding: '5px 8px' }}>
+        <div className="flex items-center">
+          <input
+            ref={refs.address}
+            className="nepo-input text-[12px]"
+            style={{ minWidth: 100, flex: 1 }}
+            value={form.address}
+            onChange={e => set('address', e.target.value)}
+
+            placeholder="Địa chỉ"
+          />
+          {isDirty('address') && actions}
+        </div>
+      </td>
+      {/* MST */}
+      <td style={{ padding: '5px 8px' }}>
+        <div className="flex items-center">
+          <div style={{ flex: 1 }}>
+            <input
+              ref={refs.taxCode}
+              className="nepo-input text-[12px]"
+              style={{ width: '100%', borderColor: errors.taxCode ? 'var(--status-error, #e53)' : undefined }}
+              value={form.taxCode}
+              onChange={e => set('taxCode', e.target.value)}
+  
+              placeholder="MST"
+            />
+            {errors.taxCode && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.taxCode}</p>}
+          </div>
+          {isDirty('taxCode') && actions}
+        </div>
+      </td>
+      {/* Trash placeholder — keeps column width stable */}
+      <td style={{ width: 32 }} />
+    </tr>
+  )
+}
+
+// ─── Client row (read mode) ───────────────────────────────────────────────────
+
+function ClientRow({ client, onEdit, onDelete }: {
+  client: Client
+  onEdit: (field: FocusableField) => void
+  onDelete: () => void
+}) {
+  const isCompany = client.type === 'company'
+  const cell = (field: FocusableField) => (e: React.MouseEvent) => { e.stopPropagation(); onEdit(field) }
+
+  return (
+    <tr className="cursor-pointer group">
+      <td onClick={cell('code')}>
+        <span className="text-[13px] tabular-nums" style={{ color: 'var(--ink-2)' }}>{client.code || '—'}</span>
+      </td>
+      <td onClick={cell('name')}>
         <span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{client.name}</span>
       </td>
-      <td>
+      <td onClick={() => onEdit(null)}>
         <span
           className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
           style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}
@@ -135,193 +329,27 @@ function ClientRow({ client, onOpenDetail }: { client: Client; onOpenDetail: () 
           {isCompany ? 'Công ty' : 'Cá nhân'}
         </span>
       </td>
-      <td>
+      <td onClick={cell('phone')}>
         <span className="text-[13px]" style={{ color: 'var(--ink-2)' }}>{client.phone || '—'}</span>
       </td>
-      <td>
-        <span className="text-[13px] line-clamp-1" style={{ color: 'var(--ink-2)' }}>{client.address || '—'}</span>
+      <td onClick={cell('address')}>
+        <span className="text-[13px]" style={{ color: 'var(--ink-2)', whiteSpace: 'normal', wordBreak: 'break-word', maxWidth: 260 }}>{client.address || '—'}</span>
       </td>
-      <td>
+      <td onClick={cell('taxCode')}>
         <span className="text-[13px] tabular-nums" style={{ color: 'var(--ink-2)' }}>{client.taxCode || '—'}</span>
       </td>
+      {/* Trash — visible on row hover */}
+      <td style={{ width: 32 }}>
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete() }}
+          className="opacity-0 group-hover:opacity-100 flex items-center justify-center rounded transition-opacity"
+          style={{ width: 24, height: 24, color: 'var(--ink-3)' }}
+          title="Xoá"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </td>
     </tr>
-  )
-}
-
-// ─── Client detail ────────────────────────────────────────────────────────────
-
-function ClientDetailDialog({ client, onClose, onEdit, onDelete }: {
-  client: Client; onClose: () => void; onEdit: () => void; onDelete: () => void
-}) {
-  const fields = [
-    { label: 'Loại', value: client.type === 'company' ? 'Công ty' : 'Cá nhân' },
-    { label: 'SĐT', value: client.phone },
-    { label: 'MST', value: client.taxCode },
-    { label: 'Địa chỉ', value: client.address },
-    { label: 'Liên hệ', value: client.contactPerson },
-  ]
-
-  const actions = (
-    <>
-      <Button variant="danger" onClick={onDelete} className="text-[12px] h-7 px-2 border-0 bg-transparent shadow-none">Xoá</Button>
-      <div className="flex-1" />
-      <Button variant="outline" onClick={onClose} className="text-[12px] h-7">Đóng</Button>
-      <Button onClick={onEdit} className="text-[12px] h-7">Sửa</Button>
-    </>
-  )
-
-  return (
-    <EntityDetailSheet
-      open
-      onOpenChange={(open) => { if (!open) onClose() }}
-      title={client.name}
-      fields={fields}
-      actions={actions}
-      maxWidth={440}
-    />
-  )
-}
-
-// ─── Client form drawer ───────────────────────────────────────────────────────
-
-function ClientFormDrawer({ open, onClose, onSave, title, initial, saving }: {
-  open: boolean
-  onClose: () => void
-  onSave: (data: typeof EMPTY_FORM) => void
-  title: string
-  initial?: Partial<typeof EMPTY_FORM>
-  saving?: boolean
-}) {
-  const [form, setForm] = useState({ ...EMPTY_FORM, ...initial })
-  const [errors, setErrors] = useState<Record<string, string>>({})
-
-  // Sync initial when it changes (edit re-open)
-  useEffect(() => {
-    if (open) {
-      setForm({ ...EMPTY_FORM, ...initial })
-      setErrors({})
-    }
-  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const updateField = <K extends keyof typeof form>(key: K, value: typeof form[K]) => {
-    setForm(prev => ({ ...prev, [key]: value }))
-    setErrors(prev => { const n = { ...prev }; delete n[key]; return n })
-  }
-
-  const handleSave = () => {
-    if (!form.name.trim()) return
-    const errs: Record<string, string> = {}
-    if (form.phone && !VN_PHONE_RE.test(form.phone.replace(/[\s-]/g, ''))) errs.phone = 'SĐT không hợp lệ'
-    if (form.taxCode && !VN_TAX_RE.test(form.taxCode)) errs.taxCode = 'MST phải 10 hoặc 13 chữ số'
-    if (Object.keys(errs).length > 0) { setErrors(errs); return }
-    onSave({ ...form, name: form.name.trim() })
-  }
-
-  return (
-    <Drawer
-      open={open}
-      onOpenChange={(o) => { if (!o) onClose() }}
-      breadcrumb="Chủ hàng"
-      title={title}
-      width="480px"
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>Huỷ</Button>
-          <Button variant="default" onClick={handleSave} disabled={!form.name.trim() || saving}>
-            {saving ? 'Đang lưu...' : 'Xác nhận'}
-          </Button>
-        </>
-      }
-    >
-      <div className="space-y-4">
-        {/* Name + Type */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="nepo-field-label" htmlFor="client-name">
-              Tên chủ hàng <span style={{ color: 'var(--status-error, #e53)' }}>*</span>
-            </label>
-            <input
-              id="client-name"
-              value={form.name}
-              onChange={e => updateField('name', e.target.value)}
-              placeholder="Tên chủ hàng"
-              className="nepo-input"
-              autoFocus
-            />
-          </div>
-          <div>
-            <label className="nepo-field-label">Loại</label>
-            <div className="flex gap-1.5 mt-1">
-              {(['company', 'individual'] as const).map(t => (
-                <button
-                  key={t} type="button" onClick={() => updateField('type', t)}
-                  className="flex-1 py-1.5 rounded-lg text-[12px] font-medium transition-colors"
-                  style={{
-                    background: form.type === t ? 'var(--accent)' : 'var(--surface-3)',
-                    color: form.type === t ? '#fff' : 'var(--ink-2)',
-                  }}
-                >
-                  {t === 'company' ? 'Công ty' : 'Cá nhân'}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Phone + Tax code */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="nepo-field-label" htmlFor="client-phone">Điện thoại</label>
-            <input
-              id="client-phone"
-              type="tel"
-              value={form.phone}
-              onChange={e => updateField('phone', e.target.value)}
-              placeholder="0912345678"
-              className="nepo-input"
-            />
-            {errors.phone && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.phone}</p>}
-          </div>
-          <div>
-            <label className="nepo-field-label" htmlFor="client-tax">
-              Mã số thuế <InfoTip text="10 hoặc 13 chữ số" />
-            </label>
-            <input
-              id="client-tax"
-              value={form.taxCode}
-              onChange={e => updateField('taxCode', e.target.value)}
-              placeholder="0123456789"
-              className="nepo-input"
-            />
-            {errors.taxCode && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.taxCode}</p>}
-          </div>
-        </div>
-
-        {/* Address */}
-        <div>
-          <label className="nepo-field-label" htmlFor="client-address">Địa chỉ</label>
-          <input
-            id="client-address"
-            value={form.address}
-            onChange={e => updateField('address', e.target.value)}
-            placeholder="Địa chỉ"
-            className="nepo-input"
-          />
-        </div>
-
-        {/* Contact person */}
-        <div>
-          <label className="nepo-field-label" htmlFor="client-contact">Người liên hệ</label>
-          <input
-            id="client-contact"
-            value={form.contactPerson}
-            onChange={e => updateField('contactPerson', e.target.value)}
-            placeholder="Họ tên người liên hệ"
-            className="nepo-input"
-          />
-        </div>
-      </div>
-    </Drawer>
   )
 }
 
@@ -336,12 +364,10 @@ export function ClientsPage() {
 
   const [search, setSearch] = useState('')
   const [limit, setLimit] = useState(BATCH)
-  const [showCreate, setShowCreate] = useState(false)
-  const [editTarget, setEditTarget] = useState<Client | null>(null)
+  const [editingId, setEditingId] = useState<string | 'new' | null>(null)
+  const [editingField, setEditingField] = useState<FocusableField>(null)
   const [deleteTarget, setDeleteTarget] = useState<Client | null>(null)
-  const [detailTarget, setDetailTarget] = useState<Client | null>(null)
 
-  // Reset limit when search changes
   useEffect(() => { setLimit(BATCH) }, [search])
 
   const filtered = useMemo(() => {
@@ -360,25 +386,24 @@ export function ClientsPage() {
   const companyCount = clients.filter(c => c.type === 'company').length
   const individualCount = clients.filter(c => c.type !== 'company').length
 
-  const handleCreate = useCallback((data: typeof EMPTY_FORM) => {
+  const handleCreate = useCallback((data: FormData) => {
     createClient.mutate(data, {
-      onSuccess: () => { toast.success('Đã thêm chủ hàng'); setShowCreate(false) },
+      onSuccess: () => { toast.success('Đã thêm chủ hàng'); setEditingId(null) },
       onError: () => toast.error('Không thể thêm chủ hàng'),
     })
   }, [createClient, toast])
 
-  const handleUpdate = useCallback((data: typeof EMPTY_FORM) => {
-    if (!editTarget) return
-    updateClient.mutate({ id: editTarget.id, data }, {
-      onSuccess: () => { toast.success('Đã cập nhật'); setEditTarget(null) },
+  const handleUpdate = useCallback((id: string, data: FormData) => {
+    updateClient.mutate({ id, data }, {
+      onSuccess: () => { toast.success('Đã cập nhật'); setEditingId(null) },
       onError: () => toast.error('Không thể cập nhật'),
     })
-  }, [editTarget, updateClient, toast])
+  }, [updateClient, toast])
 
   const handleDelete = useCallback(() => {
     if (!deleteTarget) return
     deleteClient.mutate(deleteTarget.id, {
-      onSuccess: () => { toast.success('Đã xoá'); setDeleteTarget(null); setDetailTarget(null) },
+      onSuccess: () => { toast.success('Đã xoá'); setDeleteTarget(null); setEditingId(null) },
       onError: (err: unknown) => {
         const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
         toast.error('Không thể xoá', detail ?? `${deleteTarget.name} có dữ liệu liên quan.`)
@@ -401,19 +426,11 @@ export function ClientsPage() {
 
       {/* ── Section ── */}
       <section>
-        <SectionHeader
-          icon={<Building2 className="h-4 w-4" />}
-          title="Danh sách chủ hàng"
-          count={filtered.length}
-          action={
-            <Button variant="default" onClick={() => setShowCreate(true)}>
-              <Plus className="h-4 w-4" /> Thêm
-            </Button>
-          }
-        />
-
-        <div className="mb-3">
+        <div className="flex items-center gap-2 mb-3">
           <SearchInput value={search} onChange={setSearch} placeholder="Tìm tên, MST, SĐT…" />
+          <Button variant="default" onClick={() => { setEditingId('new'); setSearch('') }}>
+            <Plus className="h-4 w-4" /> Thêm
+          </Button>
         </div>
 
         <Panel flush>
@@ -423,14 +440,14 @@ export function ClientsPage() {
                 <div key={i} className="h-12 rounded-lg animate-pulse" style={{ background: 'var(--surface-3)' }} />
               ))}
             </div>
-          ) : filtered.length === 0 ? (
+          ) : filtered.length === 0 && editingId !== 'new' ? (
             <div className="py-10">
               <EmptyState
                 icon={<Building2 className="h-5 w-5" />}
                 title={search.trim() ? 'Không tìm thấy chủ hàng' : 'Chưa có chủ hàng nào'}
                 compact
                 action={!search.trim() ? (
-                  <button onClick={() => setShowCreate(true)} className="btn-primary text-xs">
+                  <button onClick={() => setEditingId('new')} className="btn-primary text-xs">
                     <Plus size={14} strokeWidth={2.25} /><span>Thêm chủ hàng</span>
                   </button>
                 ) : undefined}
@@ -439,21 +456,54 @@ export function ClientsPage() {
           ) : (
             <>
               <div className="nepo-table-scroll overflow-x-auto">
-                <table className="nepo-table w-full" style={{ minWidth: 560, borderCollapse: 'collapse' }}>
+                <table className="nepo-table w-full" style={{ minWidth: 640, borderCollapse: 'collapse' }}>
                   <thead>
                     <tr>
-                      <th style={{ width: 40 }} />
+                      <th className="text-left">Mã khách</th>
                       <th className="text-left">Tên chủ hàng</th>
                       <th className="text-left">Loại</th>
                       <th className="text-left">SĐT</th>
                       <th className="text-left">Địa chỉ</th>
                       <th className="text-left">MST</th>
+                      <th style={{ width: 32 }} />
                     </tr>
                   </thead>
                   <tbody>
-                    {visible.map((c) => (
-                      <ClientRow key={c.id} client={c} onOpenDetail={() => setDetailTarget(c)} />
-                    ))}
+                    {editingId === 'new' && (
+                      <ClientEditRow
+                        initial={EMPTY_FORM}
+                        onSave={handleCreate}
+                        onCancel={() => setEditingId(null)}
+                        saving={createClient.isPending}
+                      />
+                    )}
+                    {visible.map((c) =>
+                      editingId === c.id ? (
+                        <ClientEditRow
+                          key={c.id}
+                          initial={{
+                            code: c.code ?? '',
+                            name: c.name,
+                            type: c.type ?? 'company',
+                            phone: c.phone ?? '',
+                            taxCode: c.taxCode ?? '',
+                            address: c.address ?? '',
+                            contactPerson: c.contactPerson ?? '',
+                          }}
+                          onSave={(data) => handleUpdate(c.id, data)}
+                          onCancel={() => setEditingId(null)}
+                          saving={updateClient.isPending}
+                          initialFocus={editingField}
+                        />
+                      ) : (
+                        <ClientRow
+                          key={c.id}
+                          client={c}
+                          onEdit={(field) => { setEditingId(c.id); setEditingField(field) }}
+                          onDelete={() => setDeleteTarget(c)}
+                        />
+                      ),
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -463,17 +513,7 @@ export function ClientsPage() {
         </Panel>
       </section>
 
-      {/* ── Detail ── */}
-      {detailTarget && !editTarget && (
-        <ClientDetailDialog
-          client={detailTarget}
-          onClose={() => setDetailTarget(null)}
-          onEdit={() => { setEditTarget(detailTarget); setDetailTarget(null) }}
-          onDelete={() => { setDeleteTarget(detailTarget); setDetailTarget(null) }}
-        />
-      )}
-
-      {/* ── Delete dialog ── */}
+      {/* ── Delete confirmation ── */}
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Xoá chủ hàng?</DialogTitle></DialogHeader>
@@ -495,32 +535,6 @@ export function ClientsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* ── Create / Edit drawers ── */}
-      <ClientFormDrawer
-        open={showCreate}
-        onClose={() => setShowCreate(false)}
-        onSave={handleCreate}
-        title="Thêm chủ hàng"
-        saving={createClient.isPending}
-      />
-      <ClientFormDrawer
-        open={!!editTarget}
-        onClose={() => setEditTarget(null)}
-        onSave={handleUpdate}
-        title="Cập nhật chủ hàng"
-        saving={updateClient.isPending}
-        initial={editTarget
-          ? {
-              name: editTarget.name,
-              type: editTarget.type ?? 'company',
-              phone: editTarget.phone ?? '',
-              taxCode: editTarget.taxCode ?? '',
-              address: editTarget.address ?? '',
-              contactPerson: editTarget.contactPerson ?? '',
-            }
-          : undefined}
-      />
     </div>
   )
 }

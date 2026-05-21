@@ -668,6 +668,21 @@ export function useExportDeliveredTripsExcel() {
   })
 }
 
+export function useUpdateContainerNumber() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ tripId, containerId, containerNumber }: {
+      tripId: number
+      containerId: number
+      containerNumber: string
+    }) => apiClient.updateContainerNumber(tripId, containerId, containerNumber).then(unwrap),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['booked-trips'] })
+      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+    },
+  })
+}
+
 export function useSalaryDashboard(periodStart: string, periodEnd: string) {
   return useQuery({
     queryKey: ['salary-dashboard', periodStart, periodEnd],

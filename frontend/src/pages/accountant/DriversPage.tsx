@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
-import { Car, Plus, Users, Search } from 'lucide-react'
+import { Car, Plus, Users, Search, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { Panel } from '@/components/shared/Panel'
 import { Drawer } from '@/components/shared/Drawer'
@@ -22,11 +22,18 @@ async function assignVehicle(driverId: number, plate: string) {
 
 const BATCH = 15
 
+type DriverFormData = {
+  fullName: string
+  phone: string
+  plate: string
+}
+
+type FocusableField = 'fullName' | 'phone' | 'plate' | null
+
 // ─── Infinite scroll hook ─────────────────────────────────────────────────────
 
 function useInfiniteScroll(onLoadMore: () => void) {
   const sentinelRef = useRef<HTMLDivElement>(null)
-
   useEffect(() => {
     const el = sentinelRef.current
     if (!el) return
@@ -37,11 +44,10 @@ function useInfiniteScroll(onLoadMore: () => void) {
     observer.observe(el)
     return () => observer.disconnect()
   }, [onLoadMore])
-
   return sentinelRef
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Shared sub-components ────────────────────────────────────────────────────
 
 function StatPill({ count, label, accent }: { count: number; label: string; accent?: boolean }) {
   return (
@@ -59,21 +65,13 @@ function StatPill({ count, label, accent }: { count: number; label: string; acce
 }
 
 function SectionHeader({ icon, title, count, action }: {
-  icon: React.ReactNode
-  title: string
-  count: number
-  action?: React.ReactNode
+  icon: React.ReactNode; title: string; count: number; action?: React.ReactNode
 }) {
   return (
     <div className="flex items-center gap-2 mb-3">
       <span style={{ color: 'var(--ink-2)' }}>{icon}</span>
-      <h2 className="text-[15px] font-bold" style={{ color: 'var(--ink)', letterSpacing: '-0.01em' }}>
-        {title}
-      </h2>
-      <span
-        className="tabular-nums text-[11.5px] font-semibold rounded-full px-2 py-0.5"
-        style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}
-      >
+      <h2 className="text-[15px] font-bold" style={{ color: 'var(--ink)', letterSpacing: '-0.01em' }}>{title}</h2>
+      <span className="tabular-nums text-[11.5px] font-semibold rounded-full px-2 py-0.5" style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}>
         {count}
       </span>
       {action && <div style={{ marginLeft: 'auto' }}>{action}</div>}
@@ -86,24 +84,14 @@ function SearchInput({ value, onChange, placeholder }: {
 }) {
   return (
     <div className="relative" style={{ width: 220, flexShrink: 0 }}>
-      <Search
-        className="absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none"
-        style={{ left: 10, color: 'var(--ink-3)' }}
-      />
-      <input
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="nepo-input text-[13px]"
-        style={{ paddingLeft: 32 }}
-      />
+      <Search className="absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" style={{ left: 10, color: 'var(--ink-3)' }} />
+      <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="nepo-input text-[13px]" style={{ paddingLeft: 32 }} />
     </div>
   )
 }
 
 function LoadMoreSentinel({ sentinelRef, hasMore }: {
-  sentinelRef: React.RefObject<HTMLDivElement>
-  hasMore: boolean
+  sentinelRef: React.RefObject<HTMLDivElement>; hasMore: boolean
 }) {
   if (!hasMore) return null
   return (
@@ -113,26 +101,171 @@ function LoadMoreSentinel({ sentinelRef, hasMore }: {
   )
 }
 
-// ─── Driver row ───────────────────────────────────────────────────────────────
+// ─── Inline save/cancel icons ─────────────────────────────────────────────────
 
-function DriverRow({ driver, onOpenDetail }: { driver: Driver; onOpenDetail: () => void }) {
+function FieldActions({ onSave, onCancel, saving }: {
+  onSave: () => void; onCancel: () => void; saving?: boolean
+}) {
+  return (
+    <div className="flex flex-col gap-0.5 ml-1 shrink-0">
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onSave() }}
+        disabled={saving}
+        className="flex items-center justify-center rounded"
+        style={{ width: 20, height: 20, background: 'var(--accent)', color: '#fff', opacity: saving ? 0.5 : 1 }}
+        title="Lưu"
+      >
+        <Check className="h-2.5 w-2.5" strokeWidth={3} />
+      </button>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onCancel() }}
+        className="flex items-center justify-center rounded"
+        style={{ width: 20, height: 20, background: 'var(--surface-3)', color: 'var(--ink-2)' }}
+        title="Huỷ"
+      >
+        <X className="h-2.5 w-2.5" strokeWidth={3} />
+      </button>
+    </div>
+  )
+}
+
+// ─── Inline edit row ──────────────────────────────────────────────────────────
+
+function DriverEditRow({ driver, onSave, onCancel, saving, initialFocus, vehicles }: {
+  driver: Driver
+  onSave: (data: DriverFormData) => void
+  onCancel: () => void
+  saving?: boolean
+  initialFocus?: FocusableField
+  vehicles: { id: number; plate: string }[]
+}) {
   const salary = useDriverBaseSalaryForm({ driverId: driver.id })
-  const initials = (driver.fullName ?? driver.username).slice(0, 2).toUpperCase()
+  const currentSalary = salary.currentRate
+  const salaryDisplay = currentSalary ? formatCurrency(currentSalary.baseSalary) : '—'
+  const salaryFrom = currentSalary?.effectiveFrom ?? ''
+
+  const initial: DriverFormData = {
+    fullName: driver.fullName ?? '',
+    phone: driver.phone ?? '',
+    plate: driver.vehiclePlate ?? '',
+  }
+
+  const [form, setForm] = useState<DriverFormData>(initial)
+  const [plateInput, setPlateInput] = useState('')
+
+  const fullNameRef = useRef<HTMLInputElement>(null)
+  const phoneRef = useRef<HTMLInputElement>(null)
+
+  const isDirty = (key: keyof DriverFormData) => form[key] !== initial[key]
+  const anyDirty = (Object.keys(form) as (keyof DriverFormData)[]).some(k => isDirty(k))
+
+  const set = <K extends keyof DriverFormData>(key: K, val: DriverFormData[K]) =>
+    setForm(prev => ({ ...prev, [key]: val }))
+
+  const handleSave = useCallback(() => {
+    onSave(form)
+  }, [form, onSave])
+
+  useEffect(() => {
+    if (initialFocus === 'fullName') fullNameRef.current?.focus()
+    else if (initialFocus === 'phone') phoneRef.current?.focus()
+    // 'plate' — InlineSelect manages its own focus
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel()
+      if (e.key === 'Enter') { e.preventDefault(); handleSave() }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onCancel, handleSave])
+
+  const showCreatePlate = plateInput.trim() && !vehicles.some(v => v.plate.toLowerCase() === plateInput.toLowerCase().trim())
+  const actions = anyDirty ? <FieldActions onSave={handleSave} onCancel={onCancel} saving={saving} /> : null
+
+  return (
+    <tr style={{ background: 'var(--accent-soft)' }}>
+      {/* Họ tên */}
+      <td style={{ padding: '5px 8px' }}>
+        <div className="flex items-center">
+          <input
+            ref={fullNameRef}
+            className="nepo-input text-[12px]"
+            style={{ minWidth: 80, flex: 1 }}
+            value={form.fullName}
+            onChange={e => set('fullName', e.target.value)}
+            placeholder="Họ tên"
+          />
+          {isDirty('fullName') && actions}
+        </div>
+      </td>
+      {/* SĐT */}
+      <td style={{ padding: '5px 8px' }}>
+        <div className="flex items-center">
+          <input
+            ref={phoneRef}
+            className="nepo-input text-[12px]"
+            style={{ minWidth: 90, flex: 1 }}
+            type="tel"
+            value={form.phone}
+            onChange={e => set('phone', e.target.value)}
+            placeholder="SĐT"
+          />
+          {isDirty('phone') && actions}
+        </div>
+      </td>
+      {/* Biển số */}
+      <td style={{ padding: '5px 8px' }}>
+        <div className="flex items-center gap-1">
+          <div style={{ flex: 1, minWidth: 100 }}>
+            <InlineSelect
+              placeholder="Chọn hoặc nhập"
+              value={form.plate}
+              options={vehicles.map(v => ({ value: v.plate, label: v.plate }))}
+              onChange={v => set('plate', v)}
+              onInputChange={v => setPlateInput(v)}
+              onCreateNew={showCreatePlate ? () => set('plate', plateInput.trim()) : undefined}
+              createNewLabel={showCreatePlate ? `Tạo mới "${plateInput.trim()}"` : undefined}
+            />
+          </div>
+          {isDirty('plate') && actions}
+        </div>
+      </td>
+      {/* Lương cơ bản — read only */}
+      <td className="text-right" style={{ padding: '5px 8px' }}>
+        <span className="text-[13px] tabular-nums" style={{ color: 'var(--ink-3)' }}>{salaryDisplay}</span>
+      </td>
+      {/* Từ ngày — read only */}
+      <td style={{ padding: '5px 8px' }}>
+        <span className="text-[13px] tabular-nums" style={{ color: 'var(--ink-3)' }}>{salaryFrom || '—'}</span>
+      </td>
+    </tr>
+  )
+}
+
+// ─── Driver row (read mode) ───────────────────────────────────────────────────
+
+function DriverRow({ driver, onEdit }: {
+  driver: Driver
+  onEdit: (field: FocusableField) => void
+}) {
+  const salary = useDriverBaseSalaryForm({ driverId: driver.id })
   const currentSalary = salary.currentRate
   const salaryDisplay = currentSalary ? formatCurrency(currentSalary.baseSalary) : '—'
   const salaryFrom = currentSalary?.effectiveFrom ?? ''
 
   return (
-    <tr onClick={onOpenDetail} className="cursor-pointer">
-      <td>
-        <div className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold"
-          style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
-          {initials}
-        </div>
+    <tr className="cursor-pointer group">
+      <td onClick={() => onEdit('fullName')}>
+        <span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{driver.fullName || driver.username}</span>
       </td>
-      <td><span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{driver.fullName || driver.username}</span></td>
-      <td><span className="text-[13px]" style={{ color: 'var(--ink-2)' }}>{driver.phone || '—'}</span></td>
-      <td>
+      <td onClick={() => onEdit('phone')}>
+        <span className="text-[13px]" style={{ color: 'var(--ink-2)' }}>{driver.phone || '—'}</span>
+      </td>
+      <td onClick={() => onEdit('plate')}>
         {driver.vehiclePlate ? (
           <span
             className="inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-bold tracking-wider"
@@ -145,146 +278,15 @@ function DriverRow({ driver, onOpenDetail }: { driver: Driver; onOpenDetail: () 
       <td className="text-right">
         <span className="text-[13px] font-bold tabular-nums" style={{ color: 'var(--ink)' }}>{salaryDisplay}</span>
       </td>
-      <td><span className="text-[13px] tabular-nums" style={{ color: 'var(--ink-2)' }}>{salaryFrom || '—'}</span></td>
+      <td>
+        <span className="text-[13px] tabular-nums" style={{ color: 'var(--ink-2)' }}>{salaryFrom || '—'}</span>
+      </td>
     </tr>
   )
 }
 
-// ─── Detail drawer ────────────────────────────────────────────────────────────
-
-function DriverDetailDrawer({ driver, onClose, onEdit }: {
-  driver: Driver; onClose: () => void; onEdit: () => void
-}) {
-  const salary = useDriverBaseSalaryForm({ driverId: driver.id })
-
-  return (
-    <Drawer open onOpenChange={(o) => { if (!o) onClose() }}
-      breadcrumb="Lái xe" title={driver.fullName ?? driver.username} meta={driver.phone || undefined}
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>Đóng</Button>
-          <Button variant="default" onClick={onEdit}>Sửa</Button>
-        </>
-      }
-    >
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="nepo-field-label">Họ và tên</label>
-            <p className="text-[13px]" style={{ color: driver.fullName ? 'var(--ink)' : 'var(--ink-3)' }}>
-              {driver.fullName || '—'}
-            </p>
-          </div>
-          <div>
-            <label className="nepo-field-label">Tên đăng nhập</label>
-            <p className="text-[13px]" style={{ color: 'var(--ink)' }}>{driver.username}</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="nepo-field-label">Số điện thoại</label>
-            <p className="text-[13px]" style={{ color: driver.phone ? 'var(--ink)' : 'var(--ink-3)' }}>
-              {driver.phone || '—'}
-            </p>
-          </div>
-          <div>
-            <label className="nepo-field-label">Xe đang lái</label>
-            <p className="text-[13px]" style={{ color: driver.vehiclePlate ? 'var(--ink)' : 'var(--ink-3)' }}>
-              {driver.vehiclePlate || 'Chưa gán xe'}
-            </p>
-          </div>
-        </div>
-        <div>
-          <label className="nepo-field-label">Lương cơ bản</label>
-          <p className="text-[13px]" style={{ color: salary.currentRate ? 'var(--ink)' : 'var(--ink-3)' }}>
-            {salary.currentRate ? formatCurrency(salary.currentRate.baseSalary) : 'Chưa thiết lập'}
-          </p>
-        </div>
-      </div>
-    </Drawer>
-  )
-}
-
-// ─── Edit drawer ──────────────────────────────────────────────────────────────
-
-function DriverEditDrawer({ driver, onClose }: { driver: Driver; onClose: () => void }) {
-  const qc = useQueryClient()
-  const toast = useToast()
-  const updateDriver = useUpdateDriver()
-  const { data: vehicles = [] } = useVehicles()
-  const [fullName, setFullName] = useState(driver.fullName ?? '')
-  const [username, setUsername] = useState(driver.username)
-  const [phone, setPhone] = useState(driver.phone ?? '')
-  const [selectedPlate, setSelectedPlate] = useState(driver.vehiclePlate ?? '')
-  const [plateInput, setPlateInput] = useState('')
-  const showCreatePlate = plateInput.trim() && !vehicles.some(v => v.plate.toLowerCase() === plateInput.toLowerCase().trim())
-
-  const hasChanges = fullName !== (driver.fullName ?? '') || username !== driver.username || phone !== (driver.phone ?? '') || selectedPlate !== (driver.vehiclePlate ?? '')
-
-  const handleSave = async () => {
-    try {
-      const updates: Record<string, string> = {}
-      if (fullName !== (driver.fullName ?? '')) updates.full_name = fullName
-      if (username !== driver.username) updates.username = username
-      if (phone !== (driver.phone ?? '')) updates.phone = phone
-      if (Object.keys(updates).length > 0) await updateDriver.mutateAsync({ id: driver.id, data: updates })
-      if (selectedPlate !== (driver.vehiclePlate ?? '') && selectedPlate) await api.put(`/drivers/${driver.id}/vehicle`, { plate: selectedPlate })
-      qc.invalidateQueries({ queryKey: ['drivers'] }); qc.invalidateQueries({ queryKey: ['vehicles'] })
-      toast.success('Đã lưu thay đổi'); onClose()
-    } catch { toast.error('Không thể lưu') }
-  }
-
-  return (
-    <Drawer open onOpenChange={onClose}
-      breadcrumb="Lái xe" title="Sửa lái xe"
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>Huỷ</Button>
-          <Button variant="default" onClick={handleSave}
-            disabled={updateDriver.isPending || !hasChanges}>
-            {updateDriver.isPending ? 'Đang lưu…' : 'Lưu thay đổi'}
-          </Button>
-        </>
-      }
-    >
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="nepo-field-label" htmlFor="drv-fullname">Họ và tên</label>
-            <input id="drv-fullname" value={fullName} onChange={e => setFullName(e.target.value)}
-              placeholder="Nguyễn Văn A" className="nepo-input" autoFocus />
-          </div>
-          <div>
-            <label className="nepo-field-label" htmlFor="drv-username">Tên đăng nhập</label>
-            <input id="drv-username" value={username} onChange={e => setUsername(e.target.value)}
-              placeholder="taixe1" className="nepo-input" />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="nepo-field-label" htmlFor="drv-phone">Số điện thoại</label>
-            <input id="drv-phone" type="tel" value={phone} onChange={e => setPhone(e.target.value)}
-              placeholder="0912345678" className="nepo-input" />
-          </div>
-          <div>
-            <label className="nepo-field-label">Biển số xe</label>
-            <InlineSelect
-              placeholder="Chọn hoặc nhập"
-              value={selectedPlate}
-              options={vehicles.map(v => ({ value: v.plate, label: v.plate }))}
-              onChange={v => setSelectedPlate(v)}
-              onInputChange={v => setPlateInput(v)}
-              onCreateNew={showCreatePlate ? () => setSelectedPlate(plateInput.trim()) : undefined}
-              createNewLabel={showCreatePlate ? `Tạo mới "${plateInput.trim()}"` : undefined}
-            />
-          </div>
-        </div>
-      </div>
-    </Drawer>
-  )
-}
-
-// ─── Create drawer ────────────────────────────────────────────────────────────
+// ─── Create drawer ─────────────────────────────────────────────────────────────
+// (Kept because creating a driver requires a username field not shown in the table)
 
 function DriverFormDrawer({ open, onClose, onSave, saving }: {
   open: boolean; onClose: () => void; onSave: (data: { username: string; fullName: string; phone: string; plate: string }) => void; saving?: boolean
@@ -297,7 +299,8 @@ function DriverFormDrawer({ open, onClose, onSave, saving }: {
   const handleSave = () => {
     if (!form.username.trim()) return
     onSave({ ...form, plate: plateInput.trim() || form.plate.trim() })
-    setForm({ username: '', fullName: '', phone: '', plate: '' }); setPlateInput('')
+    setForm({ username: '', fullName: '', phone: '', plate: '' })
+    setPlateInput('')
   }
 
   return (
@@ -306,8 +309,7 @@ function DriverFormDrawer({ open, onClose, onSave, saving }: {
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>Huỷ</Button>
-          <Button variant="default" onClick={handleSave}
-            disabled={!form.username.trim() || !!saving}>
+          <Button variant="default" onClick={handleSave} disabled={!form.username.trim() || !!saving}>
             {saving ? 'Đang lưu...' : 'Xác nhận'}
           </Button>
         </>
@@ -358,12 +360,18 @@ function DriverFormDrawer({ open, onClose, onSave, saving }: {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export function DriversPage() {
-  const toast = useToast(); const qc = useQueryClient()
-  const { data: drivers = [], isLoading } = useDrivers(); const createDriver = useCreateDriver()
+  const toast = useToast()
+  const qc = useQueryClient()
+  const { data: drivers = [], isLoading } = useDrivers()
+  const { data: vehicles = [] } = useVehicles()
+  const createDriver = useCreateDriver()
+  const updateDriver = useUpdateDriver()
+
   const [search, setSearch] = useState('')
   const [showCreate, setShowCreate] = useState(false)
-  const [detailTarget, setDetailTarget] = useState<Driver | null>(null)
-  const [editTarget, setEditTarget] = useState<Driver | null>(null)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editingField, setEditingField] = useState<FocusableField>(null)
+  const [saving, setSaving] = useState(false)
 
   // Infinite scroll
   const [limit, setLimit] = useState(BATCH)
@@ -386,11 +394,36 @@ export function DriversPage() {
     createDriver.mutate({ username: data.username, fullName: data.fullName, phone: data.phone }, {
       onSuccess: async (newDriver) => {
         if (data.plate.trim() && newDriver?.id) try { await assignVehicle(newDriver.id, data.plate.trim()) } catch {}
-        toast.success('Đã thêm lái xe'); setShowCreate(false); qc.invalidateQueries({ queryKey: ['drivers'] })
+        toast.success('Đã thêm lái xe')
+        setShowCreate(false)
+        qc.invalidateQueries({ queryKey: ['drivers'] })
       },
       onError: () => toast.error('Không thể thêm lái xe'),
     })
   }, [createDriver, toast, qc])
+
+  const handleUpdate = useCallback(async (driver: Driver, data: DriverFormData) => {
+    setSaving(true)
+    try {
+      const updates: Record<string, string> = {}
+      if (data.fullName !== (driver.fullName ?? '')) updates.full_name = data.fullName
+      if (data.phone !== (driver.phone ?? '')) updates.phone = data.phone
+      if (Object.keys(updates).length > 0) {
+        await updateDriver.mutateAsync({ id: driver.id, data: updates })
+      }
+      if (data.plate !== (driver.vehiclePlate ?? '') && data.plate) {
+        await assignVehicle(driver.id, data.plate)
+      }
+      qc.invalidateQueries({ queryKey: ['drivers'] })
+      qc.invalidateQueries({ queryKey: ['vehicles'] })
+      toast.success('Đã lưu thay đổi')
+      setEditingId(null)
+    } catch {
+      toast.error('Không thể lưu')
+    } finally {
+      setSaving(false)
+    }
+  }, [updateDriver, qc, toast])
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -446,7 +479,6 @@ export function DriversPage() {
                 <table className="nepo-table w-full" style={{ minWidth: 600 }}>
                   <thead>
                     <tr>
-                      <th style={{ width: 48 }} />
                       <th className="text-left">Họ tên</th>
                       <th className="text-left">SĐT</th>
                       <th className="text-left">Biển số</th>
@@ -455,9 +487,25 @@ export function DriversPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {visible.map(d => (
-                      <DriverRow key={d.id} driver={d} onOpenDetail={() => setDetailTarget(d)} />
-                    ))}
+                    {visible.map(d =>
+                      editingId === d.id ? (
+                        <DriverEditRow
+                          key={d.id}
+                          driver={d}
+                          onSave={(data) => handleUpdate(d, data)}
+                          onCancel={() => setEditingId(null)}
+                          saving={saving}
+                          initialFocus={editingField}
+                          vehicles={vehicles}
+                        />
+                      ) : (
+                        <DriverRow
+                          key={d.id}
+                          driver={d}
+                          onEdit={(field) => { setEditingId(d.id); setEditingField(field) }}
+                        />
+                      )
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -467,20 +515,13 @@ export function DriversPage() {
         </Panel>
       </section>
 
-      {/* ── Detail drawer ── */}
-      {detailTarget && !editTarget && (
-        <DriverDetailDrawer
-          driver={detailTarget}
-          onClose={() => setDetailTarget(null)}
-          onEdit={() => setEditTarget(detailTarget)}
-        />
-      )}
-
-      {/* ── Form drawers ── */}
-      {editTarget && (
-        <DriverEditDrawer driver={editTarget} onClose={() => setEditTarget(null)} />
-      )}
-      <DriverFormDrawer open={showCreate} onClose={() => setShowCreate(false)} onSave={handleCreate} saving={createDriver.isPending} />
+      {/* ── Create drawer ── */}
+      <DriverFormDrawer
+        open={showCreate}
+        onClose={() => setShowCreate(false)}
+        onSave={handleCreate}
+        saving={createDriver.isPending}
+      />
     </div>
   )
 }

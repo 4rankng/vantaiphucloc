@@ -165,17 +165,24 @@ def _hide_vessel_field(wo_out: DeliveredTripOut) -> None:
 
 
 def _container_inputs(items) -> list[DeliveredTripContainerInput]:
-    return [
-        DeliveredTripContainerInput(
+    from fastapi import HTTPException
+    from app.utils.iso6346 import validate_container_number
+    results: list[DeliveredTripContainerInput] = []
+    for c in (items or []):
+        cn = (c.container_number or "").strip()
+        if cn:
+            is_valid, error_msg = validate_container_number(cn)
+            if not is_valid:
+                raise HTTPException(status_code=400, detail=f"Số cont '{cn}': {error_msg}")
+        results.append(DeliveredTripContainerInput(
             container_number=c.container_number,
             cont_type=c.cont_type,
             photo_url=c.photo_url,
             photo_lat=c.photo_lat,
             photo_lng=c.photo_lng,
             photo_timestamp=c.photo_timestamp,
-        )
-        for c in (items or [])
-    ]
+        ))
+    return results
 
 
 def _user_ctx(u: User) -> CurrentUserContext:
@@ -517,6 +524,55 @@ async def update_delivered_trip(
 
 
 # ---------------------------------------------------------------------------
+# Container number update (inline edit during reconciliation)
+# ---------------------------------------------------------------------------
+
+@router.patch("/delivered-trips/{delivered_trip_id:int}/containers/{container_id:int}", response_model=ContainerOut)
+async def update_container_number(
+    delivered_trip_id: int,
+    container_id: int,
+    body: dict,
+    current_user: User = Depends(require_permission("update", "DeliveredTrip")),
+    session: AsyncSession = Depends(get_db),
+):
+    from fastapi import HTTPException
+    from pydantic import BaseModel
+    from sqlalchemy import select
+
+    class ContainerNumberUpdate(BaseModel):
+        container_number: str
+
+    update = ContainerNumberUpdate(**body)
+    new_cn = update.container_number.strip().upper().replace(" ", "").replace("-", "")
+
+    # Validate ISO 6346
+    from app.utils.iso6346 import validate_container_number
+    is_valid, error_msg = validate_container_number(new_cn)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=error_msg)
+
+    from app.models.domain import DeliveredTripContainer
+    container = (await session.execute(
+        select(DeliveredTripContainer).where(
+            DeliveredTripContainer.id == container_id,
+            DeliveredTripContainer.delivered_trip_id == delivered_trip_id,
+        )
+    )).scalar_one_or_none()
+
+    if container is None:
+        raise HTTPException(status_code=404, detail="Không tìm thấy container")
+
+    container.container_number = new_cn
+    await session.commit()
+
+    return ContainerOut(
+        id=container.id,
+        container_number=container.container_number,
+        cont_type=container.cont_type,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Template Excel Parse Preview
 # ---------------------------------------------------------------------------
 
@@ -552,4 +608,9 @@ async def ai_parse_preview(
         total_rows=result.total_rows,
         columns=result.columns,
         rows=result.rows,
+        duplicate_groups=[
+            {"type": g.type, "row_indices": g.row_indices, "containers": g.containers, "message": g.message}
+            for g in (result.duplicate_groups or [])
+        ],
+        warnings=result.warnings or [],
     )

@@ -66,8 +66,130 @@ def _clean_value(val: str) -> str:
     return re.sub(r'^[\s,.;:]+|[\s,.;:]+$', '', val)
 
 
+def _levenshtein(s1: str, s2: str) -> int:
+    """Levenshtein edit distance between two strings."""
+    if len(s1) < len(s2):
+        return _levenshtein(s2, s1)
+    if not s2:
+        return len(s1)
+    prev = list(range(len(s2) + 1))
+    for i, c1 in enumerate(s1):
+        curr = [i + 1]
+        for j, c2 in enumerate(s2):
+            curr.append(min(prev[j + 1] + 1, curr[j] + 1, prev[j] + (c1 != c2)))
+        prev = curr
+    return prev[-1]
+
+
+def _extract_digits(s: str) -> str:
+    """Return only the digit characters from a string."""
+    return re.sub(r'[^0-9]', '', s)
+
+
+def _detect_duplicates(rows: list[dict[str, Any]], cont_key: str = "Số Cont") -> tuple[list[DuplicateGroup], list[str]]:
+    """Detect exact, fuzzy, and digits-only duplicate containers in parsed rows.
+
+    Returns (duplicate_groups, warnings).
+    """
+    groups: list[DuplicateGroup] = []
+    warnings: list[str] = []
+
+    # Build list of (index, container_number) pairs
+    indexed: list[tuple[int, str]] = []
+    for i, row in enumerate(rows):
+        cn = str(row.get(cont_key) or "").strip().upper().replace(" ", "").replace("-", "")
+        if cn:
+            indexed.append((i, cn))
+
+    if len(indexed) < 2:
+        return groups, warnings
+
+    # --- Exact duplicates ---
+    seen: dict[str, list[int]] = {}
+    for i, cn in indexed:
+        seen.setdefault(cn, []).append(i)
+    for cn, indices in seen.items():
+        if len(indices) > 1:
+            groups.append(DuplicateGroup(
+                type="exact",
+                row_indices=indices,
+                containers=[cn],
+                message=f"Cont {cn} xuất hiện {len(indices)} lần (dòng {', '.join(str(j + 1) for j in indices)})",
+            ))
+
+    # --- Fuzzy duplicates (Levenshtein ≤ 2) ---
+    exact_sets = {cn for cn, idx in seen.items() if len(idx) > 1}
+    fuzzy_visited: set[frozenset[int]] = set()
+    for a_i, (i_a, cn_a) in enumerate(indexed):
+        for b_i in range(a_i + 1, len(indexed)):
+            i_b, cn_b = indexed[b_i]
+            if cn_a == cn_b:
+                continue  # already flagged as exact
+            pair = frozenset({i_a, i_b})
+            if pair in fuzzy_visited:
+                continue
+            dist = _levenshtein(cn_a, cn_b)
+            if dist <= 2:
+                fuzzy_visited.add(pair)
+                groups.append(DuplicateGroup(
+                    type="fuzzy",
+                    row_indices=[i_a, i_b],
+                    containers=[cn_a, cn_b],
+                    message=f"Cont {cn_a} (dòng {i_a + 1}) gần giống {cn_b} (dòng {i_b + 1})",
+                ))
+
+    # --- Digits-only matches ---
+    digits_map: dict[str, list[tuple[int, str]]] = {}
+    for i, cn in indexed:
+        digits = _extract_digits(cn)
+        if digits:
+            digits_map.setdefault(digits, []).append((i, cn))
+    for digits, entries in digits_map.items():
+        if len(entries) < 2:
+            continue
+        unique_prefixes = {cn[:4] for _, cn in entries}
+        if len(unique_prefixes) < 2:
+            continue  # same owner code → already caught by exact/fuzzy
+        indices = [i for i, _ in entries]
+        containers = [cn for _, cn in entries]
+        pair_key = frozenset(indices)
+        if pair_key in fuzzy_visited:
+            continue  # already caught at fuzzy level
+        groups.append(DuplicateGroup(
+            type="digits",
+            row_indices=indices,
+            containers=containers,
+            message=f"Chỉ trùng phần số ({digits}): {', '.join(containers)}",
+        ))
+
+    # Build summary warnings
+    exact_count = sum(1 for g in groups if g.type == "exact")
+    fuzzy_count = sum(1 for g in groups if g.type == "fuzzy")
+    digits_count = sum(1 for g in groups if g.type == "digits")
+    parts: list[str] = []
+    if exact_count:
+        parts.append(f"{exact_count} nhóm cont trùng nhau")
+    if fuzzy_count:
+        parts.append(f"{fuzzy_count} nhóm cont gần giống nhau")
+    if digits_count:
+        parts.append(f"{digits_count} nhóm trùng phần số")
+    if parts:
+        warnings.append("Tìm thấy " + ", ".join(parts))
+
+    return groups, warnings
+
+
 def _normalise_header(raw: str) -> str:
     return re.sub(r"\s+", " ", raw.strip()).upper()
+
+
+@dataclass
+class DuplicateGroup:
+    """A cluster of rows with similar container numbers."""
+    type: str  # "exact" | "fuzzy" | "digits"
+    row_indices: list[int]  # 0-based index into rows list
+    containers: list[str]
+    message: str
 
 
 @dataclass
@@ -77,51 +199,70 @@ class TemplateParseResult:
     total_rows: int
     columns: list[str]
     rows: list[dict[str, Any]]
+    duplicate_groups: list[DuplicateGroup] | None = None
+    warnings: list[str] | None = None
+
+
+def _find_template_sheet(wb) -> tuple[Any, int, dict[int, str]] | None:
+    """Scan all sheets for the header row matching the template structure.
+
+    Returns (worksheet, header_idx, col_map) or None if no match.
+    """
+    # Key headers that MUST be present to identify the template
+    REQUIRED_HEADERS = {"NGÀY ĐI", "SỐCONTAINER", "SỐ CONTAINER", "SỐ CONT",
+                        "ĐIỂM ĐI", "ĐIỂM ĐẾN", "CƯỚC CHUYẾN"}
+
+    for name in wb.sheetnames:
+        ws = wb[name]
+        rows: list[list[Any]] = []
+        for row in ws.iter_rows(max_row=30, values_only=True):
+            rows.append(list(row))
+
+        for header_idx in range(min(len(rows), 20)):
+            raw_headers = [_normalise_header(str(c)) if c is not None else "" for c in rows[header_idx]]
+            # Check if enough required headers are present
+            matched_required = sum(1 for h in REQUIRED_HEADERS if h in raw_headers)
+            if matched_required < 3:
+                continue
+
+            # Build column map
+            col_map: dict[int, str] = {}
+            for idx, raw_h in enumerate(raw_headers):
+                display = _TEMPLATE_HEADER_MAP.get(raw_h)
+                if display is None:
+                    continue
+                col_map[idx] = display
+
+            if len(col_map) >= 5:
+                return ws, header_idx, col_map
+
+    return None
 
 
 def parse_template_excel(file: BinaryIO, filename: str) -> TemplateParseResult:
-    """Parse a customer-template Excel file (SL sheet, fixed column layout)."""
+    """Parse a customer-template Excel file by detecting the header structure."""
     wb = load_workbook(file, read_only=True, data_only=True)
 
-    # Find the SL sheet
-    ws = None
-    for name in wb.sheetnames:
-        if name.strip().upper().startswith("SL"):
-            ws = wb[name]
-            break
-    if ws is None:
+    result = _find_template_sheet(wb)
+    if result is None:
         raise ValueError(
-            "Không tìm thấy sheet 'SL' trong file. "
-            "Vui lòng dùng file theo mẫu (sheet bắt đầu bằng 'SL')."
+            "Không tìm thấy sheet hợp lệ trong file. "
+            "File phải có các cột: Ngày đi, Số Container, Điểm đi, Điểm đến, Cước chuyến..."
         )
 
-    # Read all rows into lists
+    ws, header_idx, col_map = result
+    columns = list(col_map.values())
+
+    # Read all rows from the matched sheet
     all_rows: list[list[Any]] = []
     for row in ws.iter_rows(values_only=True):
         all_rows.append(list(row))
 
-    # Header row is row index 9 (1-indexed row 10)
-    HEADER_IDX = 9
-    DATA_START = 11  # 1-indexed row 12
-
-    if len(all_rows) <= HEADER_IDX:
-        raise ValueError("File quá ngắn — không tìm thấy dòng tiêu đề.")
-
-    raw_headers = [_normalise_header(str(c)) if c is not None else "" for c in all_rows[HEADER_IDX]]
-
-    # Map column indices to display names
-    col_map: dict[int, str] = {}
-    for idx, raw_h in enumerate(raw_headers):
-        display = _TEMPLATE_HEADER_MAP.get(raw_h)
-        if display is None:
-            continue  # skip STT
-        col_map[idx] = display
-
-    columns = list(col_map.values())
+    data_start = header_idx + 2  # skip header row + summary row
 
     # Parse data rows
     rows: list[dict[str, Any]] = []
-    for row in all_rows[DATA_START:]:
+    for row in all_rows[data_start:]:
         # Stop at summary/end
         first_val = row[0] if row else None
         if first_val is None or str(first_val).strip() == "" or str(first_val).strip().upper().startswith("CỘNG"):
@@ -143,12 +284,17 @@ def parse_template_excel(file: BinaryIO, filename: str) -> TemplateParseResult:
             continue
         rows.append(record)
 
+    # Detect duplicate / near-duplicate containers
+    dup_groups, dup_warnings = _detect_duplicates(rows)
+
     return TemplateParseResult(
         filename=filename,
         sheet_name=ws.title,
         total_rows=len(rows),
         columns=columns,
         rows=rows,
+        duplicate_groups=dup_groups,
+        warnings=dup_warnings,
     )
 
 

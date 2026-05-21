@@ -1120,3 +1120,5 @@ class TemplateParseResponse(BaseModel):
     total_rows: int
     columns: list[str]
     rows: list[dict[str, Any]]
+    duplicate_groups: list[dict[str, Any]] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)

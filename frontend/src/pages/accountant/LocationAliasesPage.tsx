@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
-import { MapPin, Plus, AlertTriangle, Search, Merge, ArrowUp, Trash2 } from 'lucide-react'
+import { MapPin, Plus, AlertTriangle, Search, Merge, ArrowUp, Trash2, Check, X } from 'lucide-react'
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Panel } from '@/components/shared/Panel'
 import { Drawer } from '@/components/shared/Drawer'
@@ -24,11 +24,12 @@ import type { Location, LocationAlias } from '@/data/domain'
 
 const BATCH = 15
 
+type FocusableField = 'name' | null
+
 // ─── Infinite scroll hook ─────────────────────────────────────────────────────
 
 function useInfiniteScroll(onLoadMore: () => void) {
   const sentinelRef = useRef<HTMLDivElement>(null)
-
   useEffect(() => {
     const el = sentinelRef.current
     if (!el) return
@@ -39,11 +40,10 @@ function useInfiniteScroll(onLoadMore: () => void) {
     observer.observe(el)
     return () => observer.disconnect()
   }, [onLoadMore])
-
   return sentinelRef
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Shared sub-components ────────────────────────────────────────────────────
 
 function StatPill({ count, label, accent }: { count: number; label: string; accent?: boolean }) {
   return (
@@ -61,21 +61,13 @@ function StatPill({ count, label, accent }: { count: number; label: string; acce
 }
 
 function SectionHeader({ icon, title, count, action }: {
-  icon: React.ReactNode
-  title: string
-  count: number
-  action?: React.ReactNode
+  icon: React.ReactNode; title: string; count: number; action?: React.ReactNode
 }) {
   return (
     <div className="flex items-center gap-2 mb-3">
       <span style={{ color: 'var(--ink-2)' }}>{icon}</span>
-      <h2 className="text-[15px] font-bold" style={{ color: 'var(--ink)', letterSpacing: '-0.01em' }}>
-        {title}
-      </h2>
-      <span
-        className="tabular-nums text-[11.5px] font-semibold rounded-full px-2 py-0.5"
-        style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}
-      >
+      <h2 className="text-[15px] font-bold" style={{ color: 'var(--ink)', letterSpacing: '-0.01em' }}>{title}</h2>
+      <span className="tabular-nums text-[11.5px] font-semibold rounded-full px-2 py-0.5" style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}>
         {count}
       </span>
       {action && <div style={{ marginLeft: 'auto' }}>{action}</div>}
@@ -88,24 +80,14 @@ function SearchInput({ value, onChange, placeholder }: {
 }) {
   return (
     <div className="relative" style={{ width: 220, flexShrink: 0 }}>
-      <Search
-        className="absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none"
-        style={{ left: 10, color: 'var(--ink-3)' }}
-      />
-      <input
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="nepo-input text-[13px]"
-        style={{ paddingLeft: 32 }}
-      />
+      <Search className="absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" style={{ left: 10, color: 'var(--ink-3)' }} />
+      <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="nepo-input text-[13px]" style={{ paddingLeft: 32 }} />
     </div>
   )
 }
 
 function LoadMoreSentinel({ sentinelRef, hasMore }: {
-  sentinelRef: React.RefObject<HTMLDivElement>
-  hasMore: boolean
+  sentinelRef: React.RefObject<HTMLDivElement>; hasMore: boolean
 }) {
   if (!hasMore) return null
   return (
@@ -115,52 +97,144 @@ function LoadMoreSentinel({ sentinelRef, hasMore }: {
   )
 }
 
-// ─── Create / Edit drawer ────────────────────────────────────────────
+// ─── Inline save/cancel icons ─────────────────────────────────────────────────
 
-function LocationFormDrawer({ open, onClose, onSave, title, initialName = '', saving }: {
-  open: boolean; onClose: () => void; onSave: (name: string) => void
-  title: string; initialName?: string; saving?: boolean
+function FieldActions({ onSave, onCancel, saving }: {
+  onSave: () => void; onCancel: () => void; saving?: boolean
 }) {
-  const [name, setName] = useState(initialName)
-  useEffect(() => { if (open) setName(initialName) }, [open, initialName])
-
   return (
-    <Drawer open={open} onOpenChange={(o) => { if (!o) onClose() }}
-      breadcrumb="Địa điểm" title={title}
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>Huỷ</Button>
-          <Button variant="default" onClick={() => onSave(name.trim())}
-            disabled={!name.trim() || !!saving}>
-            {saving ? 'Đang lưu...' : 'Xác nhận'}
-          </Button>
-        </>
-      }
-    >
-      <div>
-        <label className="nepo-field-label" htmlFor="loc-name">
-          Tên địa điểm <span style={{ color: 'var(--accent)' }}>*</span>
-        </label>
-        <input
-          id="loc-name"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          placeholder="Nhập tên địa điểm"
-          className="nepo-input"
-          autoFocus
-          onKeyDown={e => { if (e.key === 'Enter' && name.trim()) onSave(name.trim()) }}
-        />
-      </div>
-    </Drawer>
+    <div className="flex flex-col gap-0.5 ml-1 shrink-0">
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onSave() }}
+        disabled={saving}
+        className="flex items-center justify-center rounded"
+        style={{ width: 20, height: 20, background: 'var(--accent)', color: '#fff', opacity: saving ? 0.5 : 1 }}
+        title="Lưu"
+      >
+        <Check className="h-2.5 w-2.5" strokeWidth={3} />
+      </button>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onCancel() }}
+        className="flex items-center justify-center rounded"
+        style={{ width: 20, height: 20, background: 'var(--surface-3)', color: 'var(--ink-2)' }}
+        title="Huỷ"
+      >
+        <X className="h-2.5 w-2.5" strokeWidth={3} />
+      </button>
+    </div>
   )
 }
 
-// ─── Detail drawer ────────────────────────────────────────────────────────────
+// ─── Inline edit row ──────────────────────────────────────────────────────────
+
+function LocationEditRow({ initialName, onSave, onCancel, saving }: {
+  initialName: string
+  onSave: (name: string) => void
+  onCancel: () => void
+  saving?: boolean
+}) {
+  const [name, setName] = useState(initialName)
+  const nameRef = useRef<HTMLInputElement>(null)
+
+  const isDirty = name !== initialName
+
+  const handleSave = useCallback(() => {
+    if (!name.trim()) return
+    onSave(name.trim())
+  }, [name, onSave])
+
+  useEffect(() => {
+    nameRef.current?.focus()
+  }, [])
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel()
+      if (e.key === 'Enter') { e.preventDefault(); handleSave() }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onCancel, handleSave])
+
+  const actions = isDirty ? <FieldActions onSave={handleSave} onCancel={onCancel} saving={saving} /> : null
+
+  return (
+    <tr style={{ background: 'var(--accent-soft)' }}>
+      {/* Tên địa điểm */}
+      <td style={{ padding: '5px 8px' }}>
+        <div className="flex items-center">
+          <input
+            ref={nameRef}
+            className="nepo-input text-[12px]"
+            style={{ flex: 1 }}
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="Tên địa điểm *"
+          />
+          {actions}
+        </div>
+      </td>
+      {/* Tên phụ placeholder */}
+      <td style={{ padding: '5px 8px' }} />
+      {/* Trash placeholder */}
+      <td style={{ width: 32 }} />
+    </tr>
+  )
+}
+
+// ─── Location row (read mode) ─────────────────────────────────────────────────
+
+function LocationRow({ location, aliasCount, onEdit, onOpenAliases, onDelete }: {
+  location: Location
+  aliasCount: number
+  onEdit: () => void
+  onOpenAliases: () => void
+  onDelete: () => void
+}) {
+  return (
+    <tr className="cursor-pointer group">
+      <td onClick={onEdit}>
+        <span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{location.name}</span>
+      </td>
+      <td>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onOpenAliases() }}
+          className="transition-opacity"
+          title="Quản lý tên phụ"
+        >
+          {aliasCount > 0 ? (
+            <span className="text-[12px] font-medium px-2 py-0.5 rounded-full hover:opacity-80"
+              style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
+              {aliasCount}
+            </span>
+          ) : (
+            <span className="text-[12px] hover:opacity-80" style={{ color: 'var(--ink-3)' }}>—</span>
+          )}
+        </button>
+      </td>
+      <td style={{ width: 32 }}>
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete() }}
+          className="opacity-0 group-hover:opacity-100 flex items-center justify-center rounded transition-opacity"
+          style={{ width: 24, height: 24, color: 'var(--ink-3)' }}
+          title="Xoá"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </td>
+    </tr>
+  )
+}
+
+// ─── Alias detail drawer ──────────────────────────────────────────────────────
 
 function LocationDetailDrawer({
-  location, aliases, onClose, onEdit, onDelete, onPromoteAlias, onDeleteAlias, onAddAlias, promoting, addingAlias,
+  location, aliases, onClose, onPromoteAlias, onDeleteAlias, onAddAlias, promoting, addingAlias,
 }: {
-  location: Location; aliases: LocationAlias[]; onClose: () => void; onEdit: () => void; onDelete: () => void
+  location: Location; aliases: LocationAlias[]; onClose: () => void
   onPromoteAlias: (id: number) => void; onDeleteAlias: (id: number) => void; onAddAlias: (alias: string) => void
   promoting: boolean; addingAlias: boolean
 }) {
@@ -175,14 +249,7 @@ function LocationDetailDrawer({
   return (
     <Drawer open onOpenChange={(o) => { if (!o) onClose() }}
       breadcrumb="Địa điểm" title={location.name} meta={aliases.length > 0 ? `${aliases.length} tên phụ` : undefined}
-      footer={
-        <>
-          <Button variant="ghost" onClick={onDelete}
-            style={{ color: 'var(--accent)', marginRight: 'auto' }}>Xoá</Button>
-          <Button variant="ghost" onClick={onClose}>Đóng</Button>
-          <Button variant="default" onClick={onEdit}>Sửa tên</Button>
-        </>
-      }
+      footer={<Button variant="ghost" onClick={onClose}>Đóng</Button>}
     >
       <div className="space-y-3">
         {aliases.length === 0 && (
@@ -244,7 +311,7 @@ function LocationDetailDrawer({
   )
 }
 
-// ─── Merge Dialog ────────────────────────────────────────────────────
+// ─── Merge Dialog ─────────────────────────────────────────────────────────────
 
 function MergeDialog({ open, onClose, locations, onMerge, merging }: {
   open: boolean; onClose: () => void; locations: Location[]
@@ -253,11 +320,7 @@ function MergeDialog({ open, onClose, locations, onMerge, merging }: {
   const [source, setSource] = useState<number | ''>('')
   const [target, setTarget] = useState<number | ''>('')
 
-  const handleClose = useCallback(() => {
-    setSource('')
-    setTarget('')
-    onClose()
-  }, [onClose])
+  const handleClose = useCallback(() => { setSource(''); setTarget(''); onClose() }, [onClose])
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -307,36 +370,6 @@ function MergeDialog({ open, onClose, locations, onMerge, merging }: {
   )
 }
 
-// ─── Table Row ─────────────────────────────────────────────────────────────────
-
-function LocationRow({ location, aliasCount, onOpenDetail }: {
-  location: Location; aliasCount: number; onOpenDetail: () => void
-}) {
-  const initial = location.name.charAt(0).toUpperCase()
-
-  return (
-    <tr onClick={onOpenDetail} className="cursor-pointer">
-      <td>
-        <div className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold"
-          style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
-          {initial}
-        </div>
-      </td>
-      <td><span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{location.name}</span></td>
-      <td className="text-right">
-        {aliasCount > 0 ? (
-          <span className="text-[12px] font-medium px-2 py-0.5 rounded-full"
-            style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
-            {aliasCount}
-          </span>
-        ) : (
-          <span className="text-[12px]" style={{ color: 'var(--ink-3)' }}>—</span>
-        )}
-      </td>
-    </tr>
-  )
-}
-
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export function LocationAliasesPage() {
@@ -352,9 +385,8 @@ export function LocationAliasesPage() {
   const mergeLocations = useMergeLocations()
 
   const [search, setSearch] = useState('')
-  const [showCreate, setShowCreate] = useState(false)
-  const [editTarget, setEditTarget] = useState<Location | null>(null)
-  const [detailTarget, setDetailTarget] = useState<Location | null>(null)
+  const [editingId, setEditingId] = useState<number | 'new' | null>(null)
+  const [aliasTarget, setAliasTarget] = useState<Location | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Location | null>(null)
   const [mergeOpen, setMergeOpen] = useState(false)
 
@@ -388,23 +420,22 @@ export function LocationAliasesPage() {
 
   const handleCreate = useCallback((name: string) => {
     createLocation.mutate({ name }, {
-      onSuccess: () => { toast.success('Đã thêm địa điểm'); setShowCreate(false) },
+      onSuccess: () => { toast.success('Đã thêm địa điểm'); setEditingId(null) },
       onError: () => toast.error('Không thể thêm địa điểm'),
     })
   }, [createLocation, toast])
 
-  const handleUpdate = useCallback((name: string) => {
-    if (!editTarget) return
-    updateLocation.mutate({ id: editTarget.id, data: { name } }, {
-      onSuccess: () => { toast.success('Đã cập nhật'); setEditTarget(null) },
+  const handleUpdate = useCallback((id: number, name: string) => {
+    updateLocation.mutate({ id, data: { name } }, {
+      onSuccess: () => { toast.success('Đã cập nhật'); setEditingId(null) },
       onError: () => toast.error('Không thể cập nhật'),
     })
-  }, [editTarget, updateLocation, toast])
+  }, [updateLocation, toast])
 
   const handleDelete = useCallback(() => {
     if (!deleteTarget) return
     deleteLocation.mutate(deleteTarget.id, {
-      onSuccess: () => { toast.success('Đã xoá'); setDeleteTarget(null); setDetailTarget(null) },
+      onSuccess: () => { toast.success('Đã xoá'); setDeleteTarget(null); setEditingId(null) },
       onError: () => toast.error('Không thể xoá địa điểm'),
     })
   }, [deleteTarget, deleteLocation, toast])
@@ -456,7 +487,7 @@ export function LocationAliasesPage() {
                 <Merge className="h-4 w-4" /> Gộp
               </Button>
             )}
-            <Button variant="default" onClick={() => setShowCreate(true)}>
+            <Button variant="default" onClick={() => setEditingId('new')}>
               <Plus className="h-4 w-4" /> Thêm
             </Button>
           </div>
@@ -478,14 +509,14 @@ export function LocationAliasesPage() {
                 <div key={i} className="h-12 rounded-lg animate-pulse" style={{ background: 'var(--surface-3)' }} />
               ))}
             </div>
-          ) : filtered.length === 0 ? (
+          ) : filtered.length === 0 && editingId !== 'new' ? (
             <div className="py-10">
               <EmptyState
                 icon={<MapPin className="h-5 w-5" />}
                 title={search.trim() ? 'Không tìm thấy địa điểm' : 'Chưa có địa điểm nào'}
                 compact
                 action={!search.trim() ? (
-                  <button onClick={() => setShowCreate(true)} className="btn-primary text-xs">
+                  <button onClick={() => setEditingId('new')} className="btn-primary text-xs">
                     <Plus size={14} strokeWidth={2.25} /><span>Thêm địa điểm</span>
                   </button>
                 ) : undefined}
@@ -497,20 +528,40 @@ export function LocationAliasesPage() {
                 <table className="nepo-table w-full" style={{ minWidth: 400 }}>
                   <thead>
                     <tr>
-                      <th style={{ width: 48 }} />
                       <th className="text-left">Tên địa điểm</th>
                       <th className="text-right">Tên phụ</th>
+                      <th style={{ width: 32 }} />
                     </tr>
                   </thead>
                   <tbody>
-                    {visible.map(loc => (
-                      <LocationRow
-                        key={loc.id}
-                        location={loc}
-                        aliasCount={aliasesByLoc.get(loc.id)?.length ?? 0}
-                        onOpenDetail={() => setDetailTarget(loc)}
+                    {editingId === 'new' && (
+                      <LocationEditRow
+                        initialName=""
+                        onSave={handleCreate}
+                        onCancel={() => setEditingId(null)}
+                        saving={createLocation.isPending}
                       />
-                    ))}
+                    )}
+                    {visible.map(loc =>
+                      editingId === loc.id ? (
+                        <LocationEditRow
+                          key={loc.id}
+                          initialName={loc.name}
+                          onSave={(name) => handleUpdate(loc.id, name)}
+                          onCancel={() => setEditingId(null)}
+                          saving={updateLocation.isPending}
+                        />
+                      ) : (
+                        <LocationRow
+                          key={loc.id}
+                          location={loc}
+                          aliasCount={aliasesByLoc.get(loc.id)?.length ?? 0}
+                          onEdit={() => setEditingId(loc.id)}
+                          onOpenAliases={() => setAliasTarget(loc)}
+                          onDelete={() => setDeleteTarget(loc)}
+                        />
+                      )
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -520,17 +571,15 @@ export function LocationAliasesPage() {
         </Panel>
       </section>
 
-      {/* ── Detail drawer ── */}
-      {detailTarget && !editTarget && (
+      {/* ── Alias detail drawer ── */}
+      {aliasTarget && (
         <LocationDetailDrawer
-          location={detailTarget}
-          aliases={aliasesByLoc.get(detailTarget.id) ?? []}
-          onClose={() => setDetailTarget(null)}
-          onEdit={() => { setEditTarget(detailTarget); setDetailTarget(null) }}
-          onDelete={() => { setDeleteTarget(detailTarget); setDetailTarget(null) }}
+          location={aliasTarget}
+          aliases={aliasesByLoc.get(aliasTarget.id) ?? []}
+          onClose={() => setAliasTarget(null)}
           onPromoteAlias={handlePromoteAlias}
           onDeleteAlias={handleDeleteAlias}
-          onAddAlias={(alias) => handleAddAlias(detailTarget.id, alias)}
+          onAddAlias={(alias) => handleAddAlias(aliasTarget.id, alias)}
           promoting={promoteAlias.isPending}
           addingAlias={createAlias.isPending}
         />
@@ -545,18 +594,6 @@ export function LocationAliasesPage() {
         description={`"${deleteTarget?.name}" sẽ bị xoá vĩnh viễn cùng tất cả tên phụ.`}
         confirmLabel="Xoá"
         variant="warning"
-      />
-
-      {/* ── Form drawers ── */}
-      <LocationFormDrawer open={showCreate} onClose={() => setShowCreate(false)} onSave={handleCreate} title="Thêm địa điểm" saving={createLocation.isPending} />
-      <LocationFormDrawer
-        key={editTarget?.id ?? 'none'}
-        open={!!editTarget}
-        onClose={() => setEditTarget(null)}
-        onSave={handleUpdate}
-        title="Sửa tên địa điểm"
-        initialName={editTarget?.name}
-        saving={updateLocation.isPending}
       />
 
       {/* ── Merge dialog ── */}
