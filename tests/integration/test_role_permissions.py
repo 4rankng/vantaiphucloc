@@ -75,7 +75,7 @@ class TestDriverPermissions:
         resp = api_client.post(
             "/reconcile",
             headers=driver_headers,
-            json={"work_order_id": 1, "trip_order_id": 1},
+            json={"delivered_trip_id": 1, "booked_trip_id": 1},
         )
         assert resp.status_code == 403
 

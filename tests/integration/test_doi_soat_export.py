@@ -94,14 +94,14 @@ class TestDoiSoatExport:
         resp1 = api_client.post(
             "/reconcile",
             headers=admin_headers,
-            json={"work_order_id": wo1["id"], "trip_order_id": to1["id"]},
+            json={"delivered_trip_id": wo1["id"], "booked_trip_id": to1["id"]},
         )
         assert resp1.status_code == 200, f"Match 1 failed: {resp1.text}"
 
         resp2 = api_client.post(
             "/reconcile",
             headers=admin_headers,
-            json={"work_order_id": wo2["id"], "trip_order_id": to2["id"]},
+            json={"delivered_trip_id": wo2["id"], "booked_trip_id": to2["id"]},
         )
         assert resp2.status_code == 200, f"Match 2 failed: {resp2.text}"
 

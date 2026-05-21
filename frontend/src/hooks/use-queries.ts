@@ -774,8 +774,8 @@ export function useChangePassword() {
 export function useUnmatch() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ deliveredTripId, bookedTripId, reason }: { deliveredTripId: number; bookedTripId: number; reason: string }) =>
-      apiClient.unmatch(deliveredTripId, bookedTripId, reason).then(unwrap),
+    mutationFn: ({ deliveredTripId, bookedTripId }: { deliveredTripId: number; bookedTripId: number }) =>
+      apiClient.unmatch(deliveredTripId, bookedTripId).then(unwrap),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.bookedTrips })
       qc.invalidateQueries({ queryKey: queryKeys.deliveredTrips })

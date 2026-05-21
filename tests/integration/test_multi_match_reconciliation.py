@@ -81,7 +81,7 @@ class TestTOCentricReconciliation:
         resp1 = api_client.post(
             "/reconcile",
             headers=admin_headers,
-            json={"work_order_id": wo1["id"], "trip_order_id": to1["id"]},
+            json={"delivered_trip_id": wo1["id"], "booked_trip_id": to1["id"]},
         )
         assert resp1.status_code == 200, f"First match failed: {resp1.text}"
 
@@ -95,7 +95,7 @@ class TestTOCentricReconciliation:
         resp2 = api_client.post(
             "/reconcile",
             headers=admin_headers,
-            json={"work_order_id": wo2["id"], "trip_order_id": to1["id"]},
+            json={"delivered_trip_id": wo2["id"], "booked_trip_id": to1["id"]},
         )
         assert resp2.status_code in (409, 422), (
             f"Second match should fail with capacity error: {resp2.text}"
@@ -146,13 +146,13 @@ class TestTOCentricReconciliation:
             "/reconcile/batch-for-to",
             headers=admin_headers,
             json={
-                "trip_order_id": to1["id"],
-                "work_order_ids": [wo1["id"], wo2["id"]],
+                "booked_trip_id": to1["id"],
+                "delivered_trip_ids": [wo1["id"], wo2["id"]],
             },
         )
         assert resp.status_code == 200, f"Batch match failed: {resp.text}"
         data = resp.json()
-        assert data["trip_order_id"] == to1["id"]
+        assert data["booked_trip_id"] == to1["id"]
         assert len(data["results"]) == 2
         assert all(r["success"] for r in data["results"]), f"Some matches failed: {data['results']}"
 
@@ -169,7 +169,7 @@ class TestTOCentricReconciliation:
         resp3 = api_client.post(
             "/reconcile",
             headers=admin_headers,
-            json={"work_order_id": wo3["id"], "trip_order_id": to1["id"]},
+            json={"delivered_trip_id": wo3["id"], "booked_trip_id": to1["id"]},
         )
         assert resp3.status_code in (409, 422), (
             f"3rd WO should be rejected: {resp3.text}"
@@ -219,7 +219,7 @@ class TestTOCentricReconciliation:
         batch_resp = api_client.post(
             "/reconcile/batch-for-to",
             headers=admin_headers,
-            json={"trip_order_id": to1["id"], "work_order_ids": [wo1["id"], wo2["id"]]},
+            json={"booked_trip_id": to1["id"], "delivered_trip_ids": [wo1["id"], wo2["id"]]},
         )
         assert batch_resp.status_code == 200
 
@@ -227,7 +227,6 @@ class TestTOCentricReconciliation:
         unmatch_resp = api_client.post(
             "/reconcile/unmatch",
             headers=admin_headers,
-            json={"work_order_id": wo1["id"], "trip_order_id": to1["id"], "reason": "AC3 test"},
         )
         assert unmatch_resp.status_code == 200, f"Unmatch failed: {unmatch_resp.text}"
 
@@ -243,7 +242,7 @@ class TestTOCentricReconciliation:
         match3_resp = api_client.post(
             "/reconcile",
             headers=admin_headers,
-            json={"work_order_id": wo3["id"], "trip_order_id": to1["id"]},
+            json={"delivered_trip_id": wo3["id"], "booked_trip_id": to1["id"]},
         )
         assert match3_resp.status_code == 200, f"3rd match after unmatch should succeed: {match3_resp.text}"
 
@@ -274,7 +273,7 @@ class TestTOCentricReconciliation:
         match_resp = api_client.post(
             "/reconcile",
             headers=admin_headers,
-            json={"work_order_id": wo1["id"], "trip_order_id": to1["id"]},
+            json={"delivered_trip_id": wo1["id"], "booked_trip_id": to1["id"]},
         )
         assert match_resp.status_code == 200
 
@@ -282,7 +281,6 @@ class TestTOCentricReconciliation:
         unmatch_resp = api_client.post(
             "/reconcile/unmatch",
             headers=admin_headers,
-            json={"work_order_id": wo1["id"], "trip_order_id": to1["id"], "reason": "AC4 last one"},
         )
         assert unmatch_resp.status_code == 200, f"Unmatch failed: {unmatch_resp.text}"
 
@@ -296,7 +294,7 @@ class TestTOCentricReconciliation:
         re_match = api_client.post(
             "/reconcile",
             headers=admin_headers,
-            json={"work_order_id": wo1["id"], "trip_order_id": to1["id"]},
+            json={"delivered_trip_id": wo1["id"], "booked_trip_id": to1["id"]},
         )
         assert re_match.status_code == 200, f"Re-match should succeed: {re_match.text}"
 
@@ -334,7 +332,7 @@ class TestTOCentricReconciliation:
         match_resp = api_client.post(
             "/reconcile",
             headers=admin_headers,
-            json={"work_order_id": wo1["id"], "trip_order_id": to1["id"]},
+            json={"delivered_trip_id": wo1["id"], "booked_trip_id": to1["id"]},
         )
         assert match_resp.status_code == 200
 
@@ -342,7 +340,7 @@ class TestTOCentricReconciliation:
         dup_resp = api_client.post(
             "/reconcile",
             headers=admin_headers,
-            json={"work_order_id": wo1["id"], "trip_order_id": to2["id"]},
+            json={"delivered_trip_id": wo1["id"], "booked_trip_id": to2["id"]},
         )
         assert dup_resp.status_code in (409, 422), (
             f"Already-matched WO should be rejected: {dup_resp.text}"
@@ -374,7 +372,7 @@ class TestTOCentricReconciliation:
         resp = api_client.post(
             "/reconcile",
             headers=admin_headers,
-            json={"work_order_id": wo1["id"], "trip_order_id": to1["id"]},
+            json={"delivered_trip_id": wo1["id"], "booked_trip_id": to1["id"]},
         )
         assert resp.status_code == 200
 
@@ -417,7 +415,7 @@ class TestTOCentricReconciliation:
         resp = api_client.post(
             "/reconcile",
             headers=admin_headers,
-            json={"work_order_id": wo1["id"], "trip_order_id": to1["id"]},
+            json={"delivered_trip_id": wo1["id"], "booked_trip_id": to1["id"]},
         )
         assert resp.status_code == 200
 
@@ -433,7 +431,6 @@ class TestTOCentricReconciliation:
         unmatch_resp = api_client.post(
             "/reconcile/unmatch",
             headers=admin_headers,
-            json={"work_order_id": wo1["id"], "trip_order_id": to1["id"], "reason": "AC7 pricing reset"},
         )
         assert unmatch_resp.status_code == 200
 
@@ -488,8 +485,8 @@ class TestTOCentricReconciliation:
             "/reconcile/batch-for-to",
             headers=admin_headers,
             json={
-                "trip_order_id": to1["id"],
-                "work_order_ids": [wo1["id"], wo2["id"], wo3["id"]],
+                "booked_trip_id": to1["id"],
+                "delivered_trip_ids": [wo1["id"], wo2["id"], wo3["id"]],
             },
         )
         assert resp.status_code == 422, (
@@ -533,8 +530,8 @@ class TestTOCentricReconciliation:
             "/reconcile/batch-for-to",
             headers=admin_headers,
             json={
-                "trip_order_id": to1["id"],
-                "work_order_ids": [wo1["id"], wo2["id"]],
+                "booked_trip_id": to1["id"],
+                "delivered_trip_ids": [wo1["id"], wo2["id"]],
             },
         )
         assert resp.status_code == 200, f"Batch match failed: {resp.text}"
@@ -546,13 +543,11 @@ class TestTOCentricReconciliation:
         unmatch1 = api_client.post(
             "/reconcile/unmatch",
             headers=admin_headers,
-            json={"work_order_id": wo1["id"], "trip_order_id": to1["id"], "reason": "cleanup"},
         )
         assert unmatch1.status_code == 200
         unmatch2 = api_client.post(
             "/reconcile/unmatch",
             headers=admin_headers,
-            json={"work_order_id": wo2["id"], "trip_order_id": to1["id"], "reason": "cleanup"},
         )
         assert unmatch2.status_code == 200
 
@@ -567,7 +562,7 @@ class TestTOCentricReconciliation:
     def test_unmatch_requires_both_ids(
         self, api_client, admin_headers, create_work_order, create_trip_order,
     ):
-        """Unmatch endpoint should require both work_order_id and trip_order_id."""
+        """Unmatch endpoint should require both delivered_trip_id and booked_trip_id."""
         wo = create_work_order()
         to = create_trip_order()
 
@@ -575,16 +570,15 @@ class TestTOCentricReconciliation:
         api_client.post(
             "/reconcile",
             headers=admin_headers,
-            json={"work_order_id": wo["id"], "trip_order_id": to["id"]},
+            json={"delivered_trip_id": wo["id"], "booked_trip_id": to["id"]},
         )
 
-        # Try unmatch without trip_order_id
+        # Try unmatch without booked_trip_id
         resp = api_client.post(
             "/reconcile/unmatch",
             headers=admin_headers,
-            json={"work_order_id": wo["id"], "reason": "missing trip_order_id"},
         )
-        assert resp.status_code == 422, f"Should require trip_order_id: {resp.text}"
+        assert resp.status_code == 422, f"Should require booked_trip_id: {resp.text}"
 
     # ── Matched WO not in PENDING pool ──────────────────────────────
 
@@ -613,7 +607,7 @@ class TestTOCentricReconciliation:
         match_resp = api_client.post(
             "/reconcile",
             headers=admin_headers,
-            json={"work_order_id": wo1["id"], "trip_order_id": to1["id"]},
+            json={"delivered_trip_id": wo1["id"], "booked_trip_id": to1["id"]},
         )
         assert match_resp.status_code == 200
 

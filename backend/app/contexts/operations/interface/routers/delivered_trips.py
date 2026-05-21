@@ -76,7 +76,7 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
-def _wo_to_out(w: DeliveredTrip, partners, drivers, locations, matched_trip_count: int = 0) -> DeliveredTripOut:
+def _wo_to_out(w: DeliveredTrip, partners, drivers, locations, matched_trip_count: int = 0, booked_trip_id: int | None = None) -> DeliveredTripOut:
     return DeliveredTripOut(
         id=int(w.id),  # type: ignore[arg-type]
         partner=get_partner_summary(partners, w.client_id),
@@ -109,6 +109,7 @@ def _wo_to_out(w: DeliveredTrip, partners, drivers, locations, matched_trip_coun
             for c in w.containers
         ],
         matched_trip_count=matched_trip_count,
+        booked_trip_id=booked_trip_id,
         created_at=w.created_at,
         updated_at=w.updated_at,
     )
@@ -133,6 +134,7 @@ async def _load_many(session, wos: list[DeliveredTrip]) -> list[DeliveredTripOut
     from app.models.domain import Reconciliation
     wo_ids = [int(w.id) for w in wos]  # type: ignore[arg-type]
     link_counts: dict[int, int] = {}
+    booked_ids: dict[int, int] = {}
     if wo_ids:
         rows = (await session.execute(
             sa_select(Reconciliation.delivered_trip_id, func.count())
@@ -144,8 +146,18 @@ async def _load_many(session, wos: list[DeliveredTrip]) -> list[DeliveredTripOut
         )).all()
         link_counts = {r[0]: r[1] for r in rows}
 
+        bt_rows = (await session.execute(
+            sa_select(Reconciliation.delivered_trip_id, Reconciliation.booked_trip_id)
+            .where(
+                Reconciliation.delivered_trip_id.in_(wo_ids),
+                Reconciliation.is_active == True,  # noqa: E712
+            )
+        )).all()
+        for wo_id, bt_id in bt_rows:
+            booked_ids.setdefault(wo_id, bt_id)
+
     return [
-        _wo_to_out(w, partners, drivers, locations, link_counts.get(int(w.id), 0))  # type: ignore[arg-type]
+        _wo_to_out(w, partners, drivers, locations, link_counts.get(int(w.id), 0), booked_ids.get(int(w.id)))  # type: ignore[arg-type]
         for w in wos
     ]
 

@@ -402,6 +402,7 @@ class DeliveredTripOut(BaseModel):
     status: str
     containers: list[ContainerOut] = []
     matched_trip_count: int = 0
+    booked_trip_id: int | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -1052,7 +1053,6 @@ class CancelRequest(BaseModel):
 
 
 class UnmatchRequest(BaseModel):
-    reason: str = Field(..., min_length=1, description="Required reason for unmatching")
     delivered_trip_id: int
     booked_trip_id: int
 

@@ -151,7 +151,7 @@ export async function updateVendorReconRow(
     const body: Record<string, unknown> = {}
     if (payload.matchStatus !== undefined) body.match_status = payload.matchStatus
     if (payload.reviewerNote !== undefined) body.reviewer_note = payload.reviewerNote
-    if (payload.matchedDeliveredTripId !== undefined) body.matched_work_order_id = payload.matchedDeliveredTripId
+    if (payload.matchedDeliveredTripId !== undefined) body.matched_delivered_trip_id = payload.matchedDeliveredTripId
     if (payload.vendorAmount !== undefined) body.vendor_amount = payload.vendorAmount
     const res = await api.patch(`/vendor-reconciliation/${importId}/rows/${rowId}`, body)
     return ok(toCamel<Partial<VendorReconRow>>(res.data))

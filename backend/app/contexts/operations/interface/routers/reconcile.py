@@ -304,11 +304,10 @@ async def unmatch(
     current_user: User = Depends(require_permission("reconcile", "Reconciliation")),
     use_case: UnmatchTripFromDeliveredTrip = Depends(get_unmatch_booked_from_delivered_trip),
 ):
-    set_audit_reason(body.reason)
+    set_audit_reason("unmatch")
     try:
         to, wo = await use_case(UnmatchInput(
             user_id=current_user.id,
-            reason=body.reason,
             delivered_trip_id=body.delivered_trip_id,
             booked_trip_id=body.booked_trip_id,
         ))
@@ -321,7 +320,7 @@ async def unmatch(
             db, user_id=current_user.id, action="UNMATCH",
             table_name="matched_trips",
             record_id=int(to.id),  # type: ignore[arg-type]
-            reason=body.reason,
+            reason="unmatch",
             old_value={
                 "delivered_trip_id": int(wo.id),  # type: ignore[arg-type]
                 "booked_trip_id": int(to.id),  # type: ignore[arg-type]

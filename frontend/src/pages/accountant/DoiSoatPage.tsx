@@ -197,8 +197,7 @@ export function DoiSoatPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [showAutoMatch, setShowAutoMatch] = useState(false)
   const [showImport, setShowImport] = useState(false)
-  const [showUnmatchFor, setShowUnmatchFor] = useState<number | null>(null)
-  const [unmatchReason, setUnmatchReason] = useState('')
+  const [confirmUnmatchId, setConfirmUnmatchId] = useState<number | null>(null)
   const [matchTarget, setMatchTarget] = useState<DeliveredTrip | null>(null)
 
   const exportExcel = useExportDeliveredTripsExcel()
@@ -329,7 +328,7 @@ export function DoiSoatPage() {
         t.vessel ? (
           <span className="inline-flex items-center gap-1.5 text-[12.5px]" style={{ color: 'var(--ink-2)' }}>
             <Ship className="h-3 w-3 shrink-0" style={{ color: 'var(--ink-3)' }} />
-            <span className="truncate" style={{ maxWidth: 110 }}>{t.vessel}</span>
+            <span>{t.vessel}</span>
           </span>
         ) : (
           <span style={{ color: 'var(--ink-4)' }}>—</span>
@@ -369,13 +368,44 @@ export function DoiSoatPage() {
       key: 'actions',
       header: '',
       align: 'right',
-      width: 48,
-      render: (t) => (
-        <div className="flex items-center justify-end gap-1">
-          {t.status === 'MATCHED' && (
+      width: 100,
+      render: (t) => {
+        if (t.status !== 'MATCHED') return null
+        const confirming = confirmUnmatchId === t.id
+        if (confirming) {
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  unmatchMutation.mutate(
+                    { deliveredTripId: t.id, bookedTripId: t.bookedTripId! },
+                    { onSuccess: () => setConfirmUnmatchId(null) },
+                  )
+                }}
+                disabled={unmatchMutation.isPending}
+                className="text-[11.5px] font-semibold px-2 py-1 rounded"
+                style={{ color: 'var(--danger)', background: 'var(--danger-soft)' }}
+              >
+                {unmatchMutation.isPending ? 'Đang xử lý...' : 'Xác nhận'}
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setConfirmUnmatchId(null) }}
+                className="text-[11.5px] font-medium px-2 py-1 rounded"
+                style={{ color: 'var(--ink-3)' }}
+              >
+                Huỷ
+              </button>
+            </div>
+          )
+        }
+        return (
+          <div className="flex items-center justify-end">
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); setShowUnmatchFor(t.id); setUnmatchReason('') }}
+              onClick={(e) => { e.stopPropagation(); setConfirmUnmatchId(t.id) }}
               className="nepo-row-action"
               aria-label="Bỏ ghép"
               title="Bỏ ghép"
@@ -383,9 +413,9 @@ export function DoiSoatPage() {
             >
               <Unlink className="h-3.5 w-3.5" />
             </button>
-          )}
-        </div>
-      ),
+          </div>
+        )
+      },
     },
   ]
 
@@ -501,24 +531,6 @@ export function DoiSoatPage() {
           dateFrom={dateFrom}
           dateTo={dateTo}
           onClose={() => setShowAutoMatch(false)}
-        />
-      )}
-
-      {showUnmatchFor && (
-        <UnmatchDrawer
-          deliveredTripId={showUnmatchFor}
-          reason={unmatchReason}
-          setReason={setUnmatchReason}
-          onConfirm={() => {
-            const trip = trips.find(t => t.id === showUnmatchFor)
-            if (!trip) return
-            unmatchMutation.mutate(
-              { deliveredTripId: trip.id, bookedTripId: showUnmatchFor, reason: unmatchReason },
-              { onSuccess: () => { setShowUnmatchFor(null); setUnmatchReason('') } },
-            )
-          }}
-          onClose={() => { setShowUnmatchFor(null); setUnmatchReason('') }}
-          isPending={unmatchMutation.isPending}
         />
       )}
 
@@ -1083,67 +1095,6 @@ function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
           </p>
         </div>
       )}
-    </Drawer>
-  )
-}
-
-// ─── Unmatch drawer ───────────────────────────────────────────────────────────
-
-function UnmatchDrawer({
-  deliveredTripId,
-  reason,
-  setReason,
-  onConfirm,
-  onClose,
-  isPending,
-}: {
-  deliveredTripId: number
-  reason: string
-  setReason: (r: string) => void
-  onConfirm: () => void
-  onClose: () => void
-  isPending: boolean
-}) {
-  return (
-    <Drawer
-      open
-      onOpenChange={(o) => { if (!o) onClose() }}
-      breadcrumb="Đối soát"
-      title="Bỏ ghép chuyến"
-      meta={`Chuyến #${deliveredTripId}`}
-      footer={
-        <>
-          <Button variant="ghost" onClick={onClose}>Huỷ</Button>
-          <Button variant="destructive" onClick={onConfirm} disabled={isPending}>
-            <Unlink className="h-4 w-4" />
-            {isPending ? 'Đang xử lý...' : 'Bỏ ghép'}
-          </Button>
-        </>
-      }
-    >
-      <div className="space-y-4">
-        <div
-          className="flex items-start gap-2.5 px-3.5 py-3"
-          style={{ background: 'var(--warning-soft)', borderRadius: 'var(--r-sm)', color: 'var(--warning)' }}
-        >
-          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-          <p className="text-[13px] m-0">
-            Bỏ ghép sẽ tách chuyến đã đi khỏi chuyến đặt trước này. Bạn có thể ghép lại sau.
-          </p>
-        </div>
-
-        <div>
-          <label className="nepo-field-label" htmlFor="unmatch-reason">Lý do bỏ ghép</label>
-          <input
-            id="unmatch-reason"
-            value={reason}
-            onChange={e => setReason(e.target.value)}
-            placeholder="Nhập lý do..."
-            className="nepo-input"
-            autoFocus
-          />
-        </div>
-      </div>
     </Drawer>
   )
 }

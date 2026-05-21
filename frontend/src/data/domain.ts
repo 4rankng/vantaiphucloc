@@ -193,6 +193,7 @@ export interface DeliveredTrip {
   updatedAt: string
   status: DeliveredTripStatus
   matchedTripCount?: number
+  bookedTripId?: number | null
   pendingSync?: boolean
 }
 

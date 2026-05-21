@@ -26,8 +26,8 @@ class TestStaleMatchedHeal:
 
         # Match them
         match_resp = api_client.post("/reconcile", json={
-            "work_order_id": wo["id"],
-            "trip_order_id": to_data["id"],
+            "delivered_trip_id": wo["id"],
+            "booked_trip_id": to_data["id"],
         }, headers=admin_headers)
         assert match_resp.status_code in (200, 201), f"Match failed: {match_resp.text}"
 
@@ -49,9 +49,8 @@ class TestStaleMatchedHeal:
 
         # Unmatch (this should set WO back to PENDING and deactivate link)
         unmatch_resp = api_client.post("/reconcile/unmatch", json={
-            "work_order_id": wo["id"],
-            "trip_order_id": to_data["id"],
-            "reason": "simulate stale state",
+            "delivered_trip_id": wo["id"],
+            "booked_trip_id": to_data["id"],
         }, headers=admin_headers)
         assert unmatch_resp.status_code == 200
 
@@ -95,9 +94,8 @@ class TestStaleMatchedHeal:
 
         # Unmatch to deactivate links
         unmatch_resp = api_client.post("/reconcile/unmatch", json={
-            "work_order_id": wo["id"],
-            "trip_order_id": to_data["id"],
-            "reason": "simulate stale",
+            "delivered_trip_id": wo["id"],
+            "booked_trip_id": to_data["id"],
         }, headers=admin_headers)
         assert unmatch_resp.status_code == 200
 
@@ -141,8 +139,7 @@ class TestStaleMatchedHeal:
 
         # Make WO1 stale: unmatch, then force status back to MATCHED
         api_client.post("/reconcile/unmatch", json={
-            "work_order_id": wo1["id"], "trip_order_id": to1["id"],
-            "reason": "simulate stale",
+            "delivered_trip_id": wo1["id"], "booked_trip_id": to1["id"],
         }, headers=admin_headers)
         api_client.put(f"/work-orders/{wo1['id']}", json={"status": "MATCHED"},
                        headers=admin_headers)
@@ -187,9 +184,8 @@ class TestStaleMatchedHeal:
 
         # Unmatch
         unmatch_resp = api_client.post("/reconcile/unmatch", json={
-            "work_order_id": wo["id"],
-            "trip_order_id": to_data["id"],
-            "reason": "normal unmatch flow",
+            "delivered_trip_id": wo["id"],
+            "booked_trip_id": to_data["id"],
         }, headers=admin_headers)
         assert unmatch_resp.status_code == 200
 

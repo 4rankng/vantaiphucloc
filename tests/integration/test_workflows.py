@@ -97,7 +97,7 @@ class TestFullFreightPipeline:
         match_resp = api_client.post(
             "/reconcile",
             headers=admin_headers,
-            json={"work_order_id": wo["id"], "trip_order_id": to["id"]},
+            json={"delivered_trip_id": wo["id"], "booked_trip_id": to["id"]},
         )
         assert match_resp.status_code == 200, f"Match failed: {match_resp.text}"
 
@@ -219,7 +219,7 @@ class TestReconciliationCycle:
         match = api_client.post(
             "/reconcile",
             headers=admin_headers,
-            json={"work_order_id": wo["id"], "trip_order_id": to["id"]},
+            json={"delivered_trip_id": wo["id"], "booked_trip_id": to["id"]},
         )
         assert match.status_code == 200, f"Match failed: {match.text}"
 
@@ -227,7 +227,6 @@ class TestReconciliationCycle:
         unmatch = api_client.post(
             "/reconcile/unmatch",
             headers=admin_headers,
-            json={"work_order_id": wo["id"], "trip_order_id": to["id"], "reason": "test cycle"},
         )
         assert unmatch.status_code == 200, f"Unmatch failed: {unmatch.text}"
 
@@ -241,7 +240,7 @@ class TestReconciliationCycle:
         bulk = api_client.post(
             "/reconcile/bulk-match",
             headers=admin_headers,
-            json={"pairs": [{"work_order_id": wo["id"], "trip_order_id": to["id"]}]},
+            json={"pairs": [{"delivered_trip_id": wo["id"], "booked_trip_id": to["id"]}]},
         )
         assert bulk.status_code == 200, f"Bulk re-match failed: {bulk.text}"
 
@@ -350,7 +349,6 @@ class TestPartnerCRUD:
         del_resp = api_client.request(
             "DELETE", f"/partners/{pid}",
             headers=admin_headers,
-            json={"reason": "CRUD test cleanup"},
         )
         assert del_resp.status_code in (200, 204)
 
@@ -485,7 +483,6 @@ class TestTripOrderCRUD:
         del_resp = api_client.request(
             "DELETE", f"/trip-orders/{tid}",
             headers=admin_headers,
-            json={"reason": "CRUD test cleanup"},
         )
         assert del_resp.status_code in (200, 204)
 
@@ -537,7 +534,7 @@ class TestMatchUnmatchWorkflow:
         match_resp = api_client.post(
             "/reconcile",
             headers=admin_headers,
-            json={"work_order_id": wo["id"], "trip_order_id": to["id"]},
+            json={"delivered_trip_id": wo["id"], "booked_trip_id": to["id"]},
         )
         assert match_resp.status_code == 200, f"Match failed: {match_resp.text}"
 
@@ -547,13 +544,12 @@ class TestMatchUnmatchWorkflow:
 
         to_check = api_client.get(f"/trip-orders/{to['id']}", headers=admin_headers)
         assert to_check.json()["status"] == "MATCHED"
-        assert wo["id"] in to_check.json().get("matched_work_order_ids", [])
+        assert wo["id"] in to_check.json().get("matched_delivered_trip_ids", [])
 
         # Unmatch
         unmatch_resp = api_client.post(
             "/reconcile/unmatch",
             headers=admin_headers,
-            json={"work_order_id": wo["id"], "trip_order_id": to["id"], "reason": "reverting"},
         )
         assert unmatch_resp.status_code == 200, f"Unmatch failed: {unmatch_resp.text}"
 

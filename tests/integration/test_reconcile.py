@@ -11,13 +11,13 @@ class TestReconcile:
         resp = api_client.post(
             "/reconcile",
             headers=admin_headers,
-            json={"work_order_id": wo["id"], "trip_order_id": to["id"]},
+            json={"delivered_trip_id": wo["id"], "booked_trip_id": to["id"]},
         )
         assert resp.status_code == 200, f"Match failed: {resp.text}"
         data = resp.json()
         # TO-centric: status should be MATCHED (not COMPLETED)
         assert data["status"] == "MATCHED", f"Expected MATCHED, got {data['status']}"
-        assert wo["id"] in data.get("matched_work_order_ids", [])
+        assert wo["id"] in data.get("matched_delivered_trip_ids", [])
 
     def test_reconcile_match_idempotent(self, api_client, admin_headers, create_work_order, create_trip_order):
         wo = create_work_order()
@@ -27,7 +27,7 @@ class TestReconcile:
         resp1 = api_client.post(
             "/reconcile",
             headers=admin_headers,
-            json={"work_order_id": wo["id"], "trip_order_id": to["id"]},
+            json={"delivered_trip_id": wo["id"], "booked_trip_id": to["id"]},
         )
         assert resp1.status_code == 200, f"First match failed: {resp1.text}"
 
@@ -35,7 +35,7 @@ class TestReconcile:
         resp2 = api_client.post(
             "/reconcile",
             headers=admin_headers,
-            json={"work_order_id": wo["id"], "trip_order_id": to["id"]},
+            json={"delivered_trip_id": wo["id"], "booked_trip_id": to["id"]},
         )
         assert resp2.status_code in (400, 409), f"Duplicate match should fail: {resp2.text}"
 
@@ -47,7 +47,7 @@ class TestReconcile:
         match = api_client.post(
             "/reconcile",
             headers=admin_headers,
-            json={"work_order_id": wo["id"], "trip_order_id": to["id"]},
+            json={"delivered_trip_id": wo["id"], "booked_trip_id": to["id"]},
         )
         assert match.status_code == 200, f"Match failed: {match.text}"
 
@@ -55,7 +55,6 @@ class TestReconcile:
         resp = api_client.post(
             "/reconcile/unmatch",
             headers=admin_headers,
-            json={"work_order_id": wo["id"], "trip_order_id": to["id"], "reason": "test unmatch"},
         )
         assert resp.status_code == 200, f"Unmatch failed: {resp.text}"
 
@@ -72,7 +71,7 @@ class TestReconcile:
         resp = api_client.get(f"/suggest-matches/{wo['id']}", headers=admin_headers)
         assert resp.status_code == 200
         data = resp.json()
-        assert "work_order_id" in data
+        assert "delivered_trip_id" in data
         assert "suggestions" in data
 
     def test_suggest_matches_nonexistent_wo(self, api_client, admin_headers):
@@ -84,7 +83,7 @@ class TestReconcile:
         resp = api_client.get(f"/suggest-wos/{to['id']}", headers=admin_headers)
         assert resp.status_code == 200
         data = resp.json()
-        assert "trip_order_id" in data
+        assert "booked_trip_id" in data
         assert "suggestions" in data
 
     def test_match_scores(self, api_client, admin_headers):
@@ -114,7 +113,7 @@ class TestReconcile:
         resp = api_client.post(
             "/reconcile/bulk-match",
             headers=admin_headers,
-            json={"pairs": [{"work_order_id": wo["id"], "trip_order_id": to["id"]}]},
+            json={"pairs": [{"delivered_trip_id": wo["id"], "booked_trip_id": to["id"]}]},
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -129,6 +128,6 @@ class TestReconcile:
         resp = api_client.post(
             "/reconcile",
             headers=driver_headers,
-            json={"work_order_id": 1, "trip_order_id": 1},
+            json={"delivered_trip_id": 1, "booked_trip_id": 1},
         )
         assert resp.status_code == 403

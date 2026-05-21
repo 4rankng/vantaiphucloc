@@ -161,6 +161,5 @@ class ReconcileInput:
 @dataclass
 class UnmatchInput:
     user_id: int
-    reason: str
     delivered_trip_id: int
     booked_trip_id: int

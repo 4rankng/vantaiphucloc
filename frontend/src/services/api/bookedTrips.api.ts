@@ -95,8 +95,8 @@ export async function reconcile(
 ): Promise<ApiResponse<BookedTrip>> {
   try {
     const res = await api.post('/reconcile', {
-      work_order_id: deliveredTripId,
-      trip_order_id: bookedTripId,
+      delivered_trip_id: deliveredTripId,
+      booked_trip_id: bookedTripId,
     })
     return ok(toCamel<BookedTrip>(res.data))
   } catch (err) {
@@ -107,13 +107,11 @@ export async function reconcile(
 export async function unmatch(
   deliveredTripId: number,
   bookedTripId: number,
-  reason: string,
 ): Promise<ApiResponse<{ success: boolean; message: string }>> {
   try {
     const res = await api.post('/reconcile/unmatch', {
-      work_order_id: deliveredTripId,
-      trip_order_id: bookedTripId,
-      reason,
+      delivered_trip_id: deliveredTripId,
+      booked_trip_id: bookedTripId,
     })
     return ok(res.data)
   } catch (err) {
@@ -330,7 +328,7 @@ export async function autoMatchConfirm(
 ): Promise<ApiResponse<AutoMatchConfirmResponseFE>> {
   try {
     const res = await api.post('/reconcile/auto-match/confirm', {
-      pairs: pairs.map(p => ({ work_order_id: p.deliveredTripId, trip_order_id: p.bookedTripId })),
+      pairs: pairs.map(p => ({ delivered_trip_id: p.deliveredTripId, booked_trip_id: p.bookedTripId })),
     })
     return ok(toCamel<AutoMatchConfirmResponseFE>(res.data))
   } catch (err) {
@@ -367,7 +365,7 @@ export async function bulkMatch(
 ): Promise<ApiResponse<BulkMatchResponse>> {
   try {
     const res = await api.post('/reconcile/bulk-match', {
-      pairs: pairs.map(p => ({ work_order_id: p.deliveredTripId, trip_order_id: p.bookedTripId })),
+      pairs: pairs.map(p => ({ delivered_trip_id: p.deliveredTripId, booked_trip_id: p.bookedTripId })),
     })
     return ok(toCamel<BulkMatchResponse>(res.data))
   } catch (err) {
@@ -383,8 +381,8 @@ export async function batchReconcileForWO(
 ): Promise<ApiResponse<BatchMatchForWOResponse>> {
   try {
     const res = await api.post('/reconcile/batch-for-wo', {
-      work_order_id: deliveredTripId,
-      trip_order_ids: bookedTripIds,
+      delivered_trip_id: deliveredTripId,
+      booked_trip_ids: bookedTripIds,
     })
     return ok(toCamel<BatchMatchForWOResponse>(res.data))
   } catch (err) {
@@ -400,8 +398,8 @@ export async function batchReconcileForTO(
 ): Promise<ApiResponse<BatchMatchForTOResponse>> {
   try {
     const res = await api.post('/reconcile/batch-for-to', {
-      trip_order_id: bookedTripId,
-      work_order_ids: deliveredTripIds,
+      booked_trip_id: bookedTripId,
+      delivered_trip_ids: deliveredTripIds,
     })
     return ok(toCamel<BatchMatchForTOResponse>(res.data))
   } catch (err) {
@@ -438,7 +436,7 @@ export async function searchBookedTrips(
 ): Promise<ApiResponse<SearchBookedTripsResponse>> {
   try {
     const res = await api.get('/booked-trips/search', {
-      params: { q, work_order_id: deliveredTripId, page, page_size: pageSize },
+      params: { q, delivered_trip_id: deliveredTripId, page, page_size: pageSize },
     })
     return ok(toCamel<SearchBookedTripsResponse>(res.data))
   } catch (err) {
