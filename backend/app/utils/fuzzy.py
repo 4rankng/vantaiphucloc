@@ -98,3 +98,21 @@ def fuzzy_match_container(
         return True, True
 
     return False, False
+
+
+def container_edit_distance(container_a: str, container_b: str) -> int | None:
+    """Return edit distance between two container numbers.
+
+    Returns None if either input is empty.
+    Both inputs should already be normalized (uppercase, no spaces).
+    """
+    if not container_a or not container_b:
+        return None
+
+    ca = container_a.upper().strip()
+    cb = container_b.upper().strip()
+
+    if ca == cb:
+        return 0
+
+    return levenshtein_distance(ca, cb)

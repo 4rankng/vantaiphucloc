@@ -472,11 +472,14 @@ class BulkImportService:
 
         from app.contexts.operations.infrastructure.match_suggester import (
             FULL_MATCH_THRESHOLD,
-            WEIGHTS,
             _load_alias_groups,
             _locations_match,
+            _effective_weights,
+            _CONTAINER_EXACT,
+            _CONTAINER_1CHAR,
+            _CONTAINER_2CHAR,
+            _CONTAINER_DIGITS_ONLY,
         )
-        from app.utils.fuzzy import fuzzy_match_container
 
         # Load created WOs with their containers
         wos = (await self.session.execute(
@@ -518,8 +521,6 @@ class BulkImportService:
             if not wo_cn_set:
                 unmatched += 1
                 continue
-
-            wo_date = wo.trip_date or (wo.created_at.date() if wo.created_at else None)
 
             # Find candidate BookedTrips
             container_subquery = (
@@ -580,7 +581,7 @@ class BulkImportService:
 
                 for cont in available:
                     score = self._score_match(
-                        wo, wo_cn_set, wo_date, to, cont, alias_groups,
+                        wo, wo_cn_set, to, cont, alias_groups,
                     )
                     if score > best_score:
                         best_score = score
@@ -636,43 +637,74 @@ class BulkImportService:
         self,
         wo: DeliveredTrip,
         wo_cn_set: set[str],
-        wo_date: date | None,
         to: BookedTrip,
         to_cont: BookedTripContainer,
         alias_groups: dict[int, set[int]],
     ) -> float:
-        """Score a (WO, TO container) match. Same logic as match_suggester."""
+        """Score a (WO, TO container) match using 7 criteria."""
         score = 0.0
 
-        # Container
+        # Determine NULL criteria for weight redistribution
+        vessel_missing = not (to.vessel or wo.vessel)
+        vehicle_missing = not (
+            getattr(to, "vehicle_plate", None) or getattr(wo, "vehicle_id", None)
+        )
+        work_type_missing = not (to.work_type or wo.work_type)
+
+        w = _effective_weights(
+            vessel_missing=vessel_missing,
+            vehicle_missing=vehicle_missing,
+            work_type_missing=work_type_missing,
+        )
+
+        # 1. Container — graduated scoring
         to_cn = normalize_container_number(to_cont.container_number) if to_cont.container_number else None
         if to_cn and to_cn in wo_cn_set:
-            score += WEIGHTS["container_number"]
-        else:
-            # Fuzzy check
-            from app.utils.fuzzy import fuzzy_match_container
-            if to_cn:
-                for wo_cn in wo_cn_set:
-                    is_match, is_fuzzy = fuzzy_match_container(to_cn, wo_cn, threshold=1)
-                    if is_match and is_fuzzy:
-                        score += WEIGHTS["container_number"] * 0.8
-                        break
+            score += w.get("container_number", 0) * _CONTAINER_EXACT
+        elif to_cn:
+            from app.utils.fuzzy import container_edit_distance
+            best_dist = None
+            for wo_cn in wo_cn_set:
+                dist = container_edit_distance(to_cn, wo_cn)
+                if dist is not None and (best_dist is None or dist < best_dist):
+                    best_dist = dist
+            if best_dist == 1:
+                score += w.get("container_number", 0) * _CONTAINER_1CHAR
+            elif best_dist == 2:
+                score += w.get("container_number", 0) * _CONTAINER_2CHAR
+            else:
+                to_digits = {re.sub(r'[^0-9]', '', cn) for cn in wo_cn_set if cn}
+                wo_digits = {re.sub(r'[^0-9]', '', to_cn)} if to_cn else set()
+                if to_digits & wo_digits:
+                    score += w.get("container_number", 0) * _CONTAINER_DIGITS_ONLY
 
-        # Date
-        if wo_date and to.trip_date == wo_date:
-            score += WEIGHTS["date"]
-
-        # Pickup location
+        # 2. Pickup location
         if _locations_match(wo.pickup_location_id, to.pickup_location_id, alias_groups):
-            score += WEIGHTS["pickup_location"]
+            score += w.get("pickup_location", 0)
 
-        # Dropoff location
+        # 3. Dropoff location
         if _locations_match(wo.dropoff_location_id, to.dropoff_location_id, alias_groups):
-            score += WEIGHTS["dropoff_location"]
+            score += w.get("dropoff_location", 0)
 
-        # Client
+        # 4. Container type (work_type)
+        if not work_type_missing:
+            if to.work_type and wo.work_type and to.work_type == wo.work_type:
+                score += w.get("work_type", 0)
+
+        # 5. Vessel
+        if not vessel_missing:
+            to_vessel = (to.vessel or "").upper().strip()
+            wo_vessel = (wo.vessel or "").upper().strip()
+            if to_vessel and wo_vessel:
+                if to_vessel == wo_vessel:
+                    score += w.get("vessel", 0)
+                elif to_vessel in wo_vessel or wo_vessel in to_vessel:
+                    score += w.get("vessel", 0) * 0.67
+
+        # 6. Vehicle plate — skip in bulk import (vehicle_id FK not easily accessible)
+        # 7. Client
         if wo.client_id == to.client_id:
-            score += WEIGHTS["client"]
+            score += w.get("client", 0)
 
         return score
 

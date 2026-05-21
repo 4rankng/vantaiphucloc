@@ -25,11 +25,11 @@ import { StepIndicator } from '@/components/shared/StepIndicator'
 import { InlineSelect } from '@/components/shared/InlineSelect'
 import { Button } from '@/components/ui'
 import { useMonthParams } from './use-month-params'
-import { formatCurrency, getBookedTripStatusBadge, compactCurrency } from '@/data/domain'
+import { formatCurrency, compactCurrency } from '@/data/domain'
 import { fuzzyMatch } from '@/lib/search-utils'
-import type { BookedTrip } from '@/data/domain'
+import type { DeliveredTrip, DeliveredTripStatus } from '@/data/domain'
 import {
-  useBookedTrips,
+  useDeliveredTrips,
   useMatchScores,
   useAutoMatch,
   useAutoMatchConfirm,
@@ -37,19 +37,17 @@ import {
   useBulkImportAndMatch,
   useAIParsePreview,
   useClients,
-  useUpdateContainerNumber,
-  useExportBookedTripsExcel,
+  useSuggestMatches,
+  useReconcile,
+  useExportDeliveredTripsExcel,
 } from '@/hooks/use-queries'
 import type { AutoMatchCandidate, DeliveredTripMatchScore } from '@/data/domain'
 import type { DuplicateGroup } from '@/services/api/deliveredTrips.api'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function tripRevenue(t: BookedTrip): number {
-  return t.revenue ?? 0
-}
-
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—'
   const [, m, d] = dateStr.split('-')
   if (!d) return dateStr
   return `${d}/${m}`
@@ -62,7 +60,16 @@ function scoreColor(score: number, max: number): string {
   return 'var(--danger)'
 }
 
-function statusVariant(badge: ReturnType<typeof getBookedTripStatusBadge>): PillVariant {
+function getDeliveredTripStatusBadge(status: DeliveredTripStatus): { variant: 'success' | 'warning' | 'danger' | 'info' | 'neutral'; label: string } {
+  switch (status) {
+    case 'PENDING': return { variant: 'warning', label: 'Chờ ghép' }
+    case 'MATCHED': return { variant: 'success', label: 'Đã ghép' }
+    case 'COMPLETED': return { variant: 'success', label: 'Hoàn thành' }
+    case 'CANCELLED': return { variant: 'danger', label: 'Huỷ' }
+  }
+}
+
+function statusVariant(badge: ReturnType<typeof getDeliveredTripStatusBadge>): PillVariant {
   switch (badge.variant) {
     case 'success': return 'success'
     case 'warning': return 'warn'
@@ -192,11 +199,11 @@ export function DoiSoatPage() {
   const [showImport, setShowImport] = useState(false)
   const [showUnmatchFor, setShowUnmatchFor] = useState<number | null>(null)
   const [unmatchReason, setUnmatchReason] = useState('')
-  const [editingContainer, setEditingContainer] = useState<{ tripId: number; containerId: number; value: string } | null>(null)
-  const updateContainer = useUpdateContainerNumber()
-  const exportExcel = useExportBookedTripsExcel()
+  const [matchTarget, setMatchTarget] = useState<DeliveredTrip | null>(null)
 
-  const { data: trips = [], isLoading } = useBookedTrips({ dateFrom, dateTo, pageSize: 500 })
+  const exportExcel = useExportDeliveredTripsExcel()
+
+  const { data: trips = [], isLoading } = useDeliveredTrips({ dateFrom, dateTo })
   const { data: matchScoresData } = useMatchScores(dateFrom, dateTo)
   const unmatchMutation = useUnmatch()
 
@@ -211,7 +218,7 @@ export function DoiSoatPage() {
   // Status counts
   const matchedCount = useMemo(() => trips.filter(t => t.status === 'MATCHED').length, [trips])
   const pendingCount = useMemo(() => trips.filter(t => t.status === 'PENDING').length, [trips])
-  const totalRevenue = useMemo(() => trips.reduce((sum, t) => sum + tripRevenue(t), 0), [trips])
+  const totalRevenue = useMemo(() => trips.reduce((sum, t) => sum + (t.revenue ?? 0), 0), [trips])
   const matchedPct = trips.length > 0 ? Math.round((matchedCount / trips.length) * 100) : 0
 
   const statusCounts: Record<StatusFilter, number> = {
@@ -232,10 +239,11 @@ export function DoiSoatPage() {
     const q = search.trim()
     if (q) {
       rows = rows.filter(t =>
-        fuzzyMatch(t.partner?.name ?? '', q) ||
+        fuzzyMatch(t.client?.name ?? '', q) ||
         fuzzyMatch(t.pickupLocation?.name ?? '', q) ||
         fuzzyMatch(t.dropoffLocation?.name ?? '', q) ||
         fuzzyMatch(t.vessel ?? '', q) ||
+        fuzzyMatch(t.vehicle?.plate ?? '', q) ||
         (t.containers ?? []).some(c => fuzzyMatch(c.containerNumber, q)),
       )
     }
@@ -243,7 +251,7 @@ export function DoiSoatPage() {
     return rows
   }, [trips, search, statusFilter])
 
-  const columns: Column<BookedTrip>[] = [
+  const columns: Column<DeliveredTrip>[] = [
     {
       key: 'date',
       header: 'Ngày',
@@ -262,31 +270,7 @@ export function DoiSoatPage() {
       header: 'Chủ hàng',
       render: (t) => (
         <span className="text-[13px] font-semibold truncate block" style={{ color: 'var(--ink)' }}>
-          {t.partner?.name ?? '—'}
-        </span>
-      ),
-    },
-    {
-      key: 'vessel',
-      header: 'Số tàu',
-      width: 140,
-      hideBelow: 'md',
-      render: (t) =>
-        t.vessel ? (
-          <span className="inline-flex items-center gap-1.5 text-[12.5px]" style={{ color: 'var(--ink-2)' }}>
-            <Ship className="h-3 w-3 shrink-0" style={{ color: 'var(--ink-3)' }} />
-            <span className="truncate" style={{ maxWidth: 110 }}>{t.vessel}</span>
-          </span>
-        ) : (
-          <span style={{ color: 'var(--ink-4)' }}>—</span>
-        ),
-    },
-    {
-      key: 'route',
-      header: 'Tuyến',
-      render: (t) => (
-        <span className="text-[12.5px] truncate block" style={{ color: 'var(--ink-2)', maxWidth: 240 }}>
-          {t.pickupLocation?.name ?? '—'} → {t.dropoffLocation?.name ?? '—'}
+          {t.client?.name ?? '—'}
         </span>
       ),
     },
@@ -294,47 +278,18 @@ export function DoiSoatPage() {
       key: 'containers',
       header: 'Container',
       width: 200,
-      hideBelow: 'lg',
       render: (t) => {
-        if (!t.containers.length) return <span style={{ color: 'var(--ink-4)' }}>—</span>
+        if (!t.containers?.length) return <span style={{ color: 'var(--ink-4)' }}>—</span>
         const first = t.containers[0]
         const more = t.containers.length - 1
-        const isEditing = editingContainer?.containerId === first.id
         return (
           <div className="flex items-center gap-1.5">
-            {isEditing ? (
-              <input
-                autoFocus
-                defaultValue={first.containerNumber}
-                className="nepo-input"
-                style={{ width: 120, fontSize: 12, padding: '2px 6px', fontFamily: 'var(--theme-font-mono)' }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    const val = (e.target as HTMLInputElement).value.trim().toUpperCase().replace(/[\s-]/g, '')
-                    if (val && val !== first.containerNumber) {
-                      updateContainer.mutate(
-                        { tripId: t.id, containerId: first.id, containerNumber: val },
-                        { onSettled: () => setEditingContainer(null) },
-                      )
-                    } else {
-                      setEditingContainer(null)
-                    }
-                  } else if (e.key === 'Escape') {
-                    setEditingContainer(null)
-                  }
-                }}
-                onBlur={() => setEditingContainer(null)}
-              />
-            ) : (
-              <span
-                className="tabular-nums whitespace-nowrap cursor-pointer"
-                style={{ fontFamily: 'var(--theme-font-mono)', fontSize: 12, color: 'var(--ink)', fontWeight: 600, textDecoration: 'underline dotted', textDecorationColor: 'var(--ink-3)', textUnderlineOffset: 3 }}
-                title="Nhấn để sửa số cont"
-                onClick={() => setEditingContainer({ tripId: t.id, containerId: first.id, value: first.containerNumber })}
-              >
-                {first.containerNumber}
-              </span>
-            )}
+            <span
+              className="tabular-nums whitespace-nowrap"
+              style={{ fontFamily: 'var(--theme-font-mono)', fontSize: 12, color: 'var(--ink)', fontWeight: 600 }}
+            >
+              {first.containerNumber}
+            </span>
             <span
               className="text-[10.5px] uppercase font-semibold whitespace-nowrap"
               style={{
@@ -357,12 +312,36 @@ export function DoiSoatPage() {
       },
     },
     {
+      key: 'route',
+      header: 'Tuyến',
+      render: (t) => (
+        <span className="text-[12.5px] truncate block" style={{ color: 'var(--ink-2)', maxWidth: 240 }}>
+          {t.pickupLocation?.name ?? '—'} → {t.dropoffLocation?.name ?? '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'vessel',
+      header: 'Số tàu',
+      width: 140,
+      hideBelow: 'md',
+      render: (t) =>
+        t.vessel ? (
+          <span className="inline-flex items-center gap-1.5 text-[12.5px]" style={{ color: 'var(--ink-2)' }}>
+            <Ship className="h-3 w-3 shrink-0" style={{ color: 'var(--ink-3)' }} />
+            <span className="truncate" style={{ maxWidth: 110 }}>{t.vessel}</span>
+          </span>
+        ) : (
+          <span style={{ color: 'var(--ink-4)' }}>—</span>
+        ),
+    },
+    {
       key: 'revenue',
       header: 'Doanh thu',
       align: 'right',
       width: 120,
       render: (t) => {
-        const r = tripRevenue(t)
+        const r = t.revenue ?? 0
         return (
           <span className="tabular-nums font-bold text-[13px]" style={{ color: 'var(--ink)' }}>
             {r > 0 ? compactCurrency(r) : '—'}
@@ -376,28 +355,12 @@ export function DoiSoatPage() {
       align: 'center',
       width: 150,
       render: (t) => {
-        const badge = getBookedTripStatusBadge(t.status)
-        const score = matchScores.get(t.id)
+        const badge = getDeliveredTripStatusBadge(t.status)
         return (
           <div className="flex items-center justify-center gap-1.5">
             <Pill variant={statusVariant(badge)} dot={false}>
               {badge.label}
             </Pill>
-            {score && score.suggestionCount > 0 && (
-              <span
-                className="tabular-nums font-bold"
-                style={{
-                  fontSize: 10.5,
-                  padding: '2px 6px',
-                  borderRadius: 999,
-                  background: 'var(--surface-3)',
-                  color: scoreColor(score.bestMatchScore, score.maxScore),
-                  fontFamily: 'var(--theme-font-mono)',
-                }}
-              >
-                {Math.round((score.bestMatchScore / score.maxScore) * 100)}%
-              </span>
-            )}
           </div>
         )
       },
@@ -456,7 +419,7 @@ export function DoiSoatPage() {
         <div className="flex items-center gap-2 mb-3">
           <span style={{ color: 'var(--ink-2)' }}><ClipboardList className="h-4 w-4" /></span>
           <h2 className="text-[15px] font-bold" style={{ color: 'var(--ink)', letterSpacing: '-0.01em' }}>
-            Chuyến đặt trước
+            Chuyến đã đi
           </h2>
           <span
             className="tabular-nums text-[11.5px] font-semibold rounded-full px-2 py-0.5"
@@ -508,6 +471,7 @@ export function DoiSoatPage() {
             rowKey={(t) => t.id}
             isLoading={isLoading}
             minWidth={1000}
+            onRowClick={(t) => { if (t.status === 'PENDING') setMatchTarget(t) }}
             empty={
               <div className="py-10">
                 <EmptyState
@@ -542,19 +506,26 @@ export function DoiSoatPage() {
 
       {showUnmatchFor && (
         <UnmatchDrawer
-          bookedTripId={showUnmatchFor}
+          deliveredTripId={showUnmatchFor}
           reason={unmatchReason}
           setReason={setUnmatchReason}
           onConfirm={() => {
             const trip = trips.find(t => t.id === showUnmatchFor)
-            if (!trip?.matchedDeliveredTripIds?.length) return
+            if (!trip) return
             unmatchMutation.mutate(
-              { deliveredTripId: trip.matchedDeliveredTripIds[0], bookedTripId: showUnmatchFor, reason: unmatchReason },
+              { deliveredTripId: trip.id, bookedTripId: showUnmatchFor, reason: unmatchReason },
               { onSuccess: () => { setShowUnmatchFor(null); setUnmatchReason('') } },
             )
           }}
           onClose={() => { setShowUnmatchFor(null); setUnmatchReason('') }}
           isPending={unmatchMutation.isPending}
+        />
+      )}
+
+      {matchTarget && (
+        <MatchDrawer
+          trip={matchTarget}
+          onClose={() => setMatchTarget(null)}
         />
       )}
     </div>
@@ -1119,14 +1090,14 @@ function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
 // ─── Unmatch drawer ───────────────────────────────────────────────────────────
 
 function UnmatchDrawer({
-  bookedTripId,
+  deliveredTripId,
   reason,
   setReason,
   onConfirm,
   onClose,
   isPending,
 }: {
-  bookedTripId: number
+  deliveredTripId: number
   reason: string
   setReason: (r: string) => void
   onConfirm: () => void
@@ -1139,7 +1110,7 @@ function UnmatchDrawer({
       onOpenChange={(o) => { if (!o) onClose() }}
       breadcrumb="Đối soát"
       title="Bỏ ghép chuyến"
-      meta={`Chuyến #${bookedTripId}`}
+      meta={`Chuyến #${deliveredTripId}`}
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>Huỷ</Button>
@@ -1172,6 +1143,168 @@ function UnmatchDrawer({
             autoFocus
           />
         </div>
+      </div>
+    </Drawer>
+  )
+}
+
+// ─── Match drawer (click-to-match for PENDING trips) ──────────────────────────
+
+function MatchDrawer({ trip, onClose }: { trip: DeliveredTrip; onClose: () => void }) {
+  const { data: suggestionsData, isLoading: suggestionsLoading } = useSuggestMatches(trip.id)
+  const reconcile = useReconcile()
+  const [matchingId, setMatchingId] = useState<number | null>(null)
+
+  const suggestions = suggestionsData?.suggestions ?? []
+
+  function handleMatch(bookedTripId: number) {
+    setMatchingId(bookedTripId)
+    reconcile.mutate(
+      { deliveredTripId: trip.id, bookedTripId },
+      { onSuccess: () => onClose() },
+    )
+  }
+
+  return (
+    <Drawer
+      open
+      onOpenChange={(o) => { if (!o) onClose() }}
+      breadcrumb="Đối soát"
+      title="Ghép chuyến"
+      meta={`${trip.client?.name ?? ''} · ${trip.containers?.[0]?.containerNumber ?? `#${trip.id}`}`}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>Huỷ</Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        {/* Trip summary */}
+        <div
+          className="px-3.5 py-2.5"
+          style={{ background: 'var(--surface-2)', borderRadius: 'var(--r-sm)', border: '1px solid var(--line)' }}
+        >
+          <div className="flex items-center gap-3 flex-wrap text-[13px]">
+            <span className="tabular-nums" style={{ color: 'var(--ink-2)', fontFamily: 'var(--theme-font-mono)' }}>
+              {formatDate(trip.tripDate)}
+            </span>
+            <span style={{ color: 'var(--ink-3)' }}>·</span>
+            <span style={{ color: 'var(--ink)' }}>
+              {trip.pickupLocation?.name ?? '—'} → {trip.dropoffLocation?.name ?? '—'}
+            </span>
+            {trip.vessel && (
+              <>
+                <span style={{ color: 'var(--ink-3)' }}>·</span>
+                <span style={{ color: 'var(--ink-2)' }}>{trip.vessel}</span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Loading */}
+        {suggestionsLoading && (
+          <div className="flex flex-col items-center gap-3 py-8">
+            <Loader2 className="h-6 w-6 animate-spin" style={{ color: 'var(--accent)' }} />
+            <p className="text-[13px] m-0" style={{ color: 'var(--ink-2)' }}>Đang tìm chuyến phù hợp...</p>
+          </div>
+        )}
+
+        {/* No suggestions */}
+        {!suggestionsLoading && suggestions.length === 0 && (
+          <div className="flex flex-col items-center py-8">
+            <EmptyState
+              icon={<ClipboardList className="h-5 w-5" />}
+              title="Không tìm thấy chuyến phù hợp"
+              compact
+            />
+          </div>
+        )}
+
+        {/* Suggestions list */}
+        {suggestions.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-[12px] m-0" style={{ color: 'var(--ink-3)' }}>
+              {suggestions.length} chuyến đặt trước phù hợp
+            </p>
+            {suggestions.map((s) => {
+              const bt = s.bookedTrip
+              const pct = s.maxScore > 0 ? Math.round((s.matchScore / s.maxScore) * 100) : 0
+              const isMatching = matchingId === bt.id && reconcile.isPending
+              return (
+                <div
+                  key={`${bt.id}-${s.containerId}`}
+                  className="flex items-center justify-between gap-3 px-3.5 py-3"
+                  style={{
+                    background: pct >= 80 ? 'var(--success-soft)' : pct >= 60 ? 'var(--warning-soft)' : 'var(--surface)',
+                    border: '1px solid var(--line)',
+                    borderRadius: 'var(--r-sm)',
+                  }}
+                >
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div className="flex items-center gap-2 text-[13px]">
+                      <span
+                        className="tabular-nums font-bold"
+                        style={{ fontFamily: 'var(--theme-font-mono)', color: 'var(--ink)' }}
+                      >
+                        {bt.containers?.[0]?.containerNumber ?? '—'}
+                      </span>
+                      {bt.containers?.[0]?.contType && (
+                        <span
+                          className="text-[10.5px] uppercase font-semibold px-1.5 py-0.5 rounded"
+                          style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}
+                        >
+                          {bt.containers[0].contType}
+                        </span>
+                      )}
+                      <span
+                        className="tabular-nums font-bold"
+                        style={{ color: scoreColor(s.matchScore, s.maxScore), fontSize: 12 }}
+                      >
+                        {pct}%
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[12px]" style={{ color: 'var(--ink-2)' }}>
+                      <span>{bt.partner?.name ?? '—'}</span>
+                      <span style={{ color: 'var(--ink-3)' }}>·</span>
+                      <span>{bt.pickupLocation?.name ?? '—'} → {bt.dropoffLocation?.name ?? '—'}</span>
+                      {bt.vessel && (
+                        <>
+                          <span style={{ color: 'var(--ink-3)' }}>·</span>
+                          <span>{bt.vessel}</span>
+                        </>
+                      )}
+                    </div>
+                    {/* Criteria dots */}
+                    <div className="flex items-center gap-1.5 mt-1">
+                      {s.criteria.map((c) => (
+                        <span
+                          key={c.name}
+                          title={`${c.label}: ${c.match ? 'Khớp' : 'Không khớp'}`}
+                          className="inline-block rounded-full"
+                          style={{
+                            width: 8,
+                            height: 8,
+                            background: c.match ? 'var(--success)' : c.fuzzy ? 'var(--warning)' : 'var(--surface-3)',
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <Button
+                    variant={pct >= 80 ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleMatch(bt.id)}
+                    disabled={isMatching}
+                    style={{ flexShrink: 0 }}
+                  >
+                    {isMatching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                    Ghép
+                  </Button>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </Drawer>
   )
