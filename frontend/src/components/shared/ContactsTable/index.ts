@@ -1,2 +1,2 @@
-export { PartnersTable } from './PartnersTable'
-export type { PartnerRow } from './PartnersTable'
+export { ContactsTable } from './ContactsTable'
+export type { ContactRow } from './ContactsTable'

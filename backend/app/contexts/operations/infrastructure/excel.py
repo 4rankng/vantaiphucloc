@@ -508,11 +508,11 @@ async def import_booked_trips(
         trip_date, client_code_str = key
 
         # Look up partner by code
-        partner_result = await db.execute(
+        client_result = await db.execute(
             select(Client).where(Client.code == client_code_str)
         )
-        partner = partner_result.scalar_one_or_none()
-        if not partner:
+        client = client_result.scalar_one_or_none()
+        if not client:
             errors.append(f"Nhóm {key}: không tìm thấy đối tác mã '{client_code_str}'")
             continue
 
@@ -567,7 +567,7 @@ async def import_booked_trips(
 
         if not revenue:
             tiered = await find_tiered_pricing(
-                db, client_id=partner.id, work_type=work_type,
+                db, client_id=client.id, work_type=work_type,
                 quantity=container_count,
                 pickup_location_id=pickup_id, dropoff_location_id=dropoff_id,
             )
@@ -581,7 +581,7 @@ async def import_booked_trips(
 
         booked_trip = BookedTrip(
             trip_date=trip_date_val,
-            client_id=partner.id,
+            client_id=client.id,
             pickup_location_id=pickup_id,
             dropoff_location_id=dropoff_id,
             pricing_id=pricing_id,
@@ -675,7 +675,7 @@ async def generate_delivered_trips_excel(
     driver_ids = {wo.driver_id for wo in delivered_trips}
     loc_ids = {wo.pickup_location_id for wo in delivered_trips} | {wo.dropoff_location_id for wo in delivered_trips}
     loc_ids.discard(None)
-    partner_name_by_id = {c.id: c.name for c in (await db.execute(select(Client).where(Client.id.in_(client_ids)))).scalars().all()} if client_ids else {}
+    client_name_by_id = {c.id: c.name for c in (await db.execute(select(Client).where(Client.id.in_(client_ids)))).scalars().all()} if client_ids else {}
     driver_name_by_id = {u.id: (u.full_name or u.username) for u in (await db.execute(select(_User).where(_User.id.in_(driver_ids)))).scalars().all()} if driver_ids else {}
     loc_name_by_id = {l.id: l.name for l in (await db.execute(select(Location).where(Location.id.in_(loc_ids)))).scalars().all()} if loc_ids else {}
     vehicle_ids = {wo.vehicle_id for wo in delivered_trips if wo.vehicle_id}
@@ -702,7 +702,7 @@ async def generate_delivered_trips_excel(
         plate = vehicle_by_id.get(wo.vehicle_id).plate if wo.vehicle_id and wo.vehicle_id in vehicle_by_id else ""
         for c in containers:
             ws.append([
-                f"WO#{wo.id}", partner_name_by_id.get(wo.client_id, ""),
+                f"WO#{wo.id}", client_name_by_id.get(wo.client_id, ""),
                 loc_name_by_id.get(wo.pickup_location_id, ""),
                 loc_name_by_id.get(wo.dropoff_location_id, ""),
                 driver_name_by_id.get(wo.driver_id, ""), plate,
@@ -733,7 +733,7 @@ async def generate_booked_trips_excel(
 ) -> bytes:
     """Export trip orders to Excel.
 
-    When client_id is provided, filters to that partner and includes
+    When client_id is provided, filters to that client and includes
     match status columns for customer reconciliation.
     """
     import openpyxl
@@ -766,19 +766,19 @@ async def generate_booked_trips_excel(
     client_ids = {to.client_id for to in booked_trips}
     loc_ids = {to.pickup_location_id for to in booked_trips} | {to.dropoff_location_id for to in booked_trips}
     loc_ids.discard(None)
-    partner_name_by_id = {c.id: c.name for c in (await db.execute(select(Client).where(Client.id.in_(client_ids)))).scalars().all()} if client_ids else {}
+    client_name_by_id = {c.id: c.name for c in (await db.execute(select(Client).where(Client.id.in_(client_ids)))).scalars().all()} if client_ids else {}
     loc_name_by_id = {l.id: l.name for l in (await db.execute(select(Location).where(Location.id.in_(loc_ids)))).scalars().all()} if loc_ids else {}
 
     # For per-partner export: load match status and vehicle plates
     match_map: dict[int, str] = {}  # to_id -> "Đã khớp" / "Chưa khớp"
     plate_map: dict[int, str] = {}  # to_id -> plate
     vessel_map: dict[int, str] = {}  # to_id -> vessel
-    partner_name = None
+    client_name = None
     if client_id:
         # Get partner name for filename
         p_result = await db.execute(select(Client).where(Client.id == client_id))
-        partner_obj = p_result.scalar_one_or_none()
-        partner_name = partner_obj.name if partner_obj else None
+        client_obj = p_result.scalar_one_or_none()
+        client_name = client_obj.name if client_obj else None
 
         # Load reconciliation links to determine match status
         from app.models.domain import Reconciliation
@@ -883,7 +883,7 @@ async def generate_booked_trips_excel(
             for c in containers:
                 ws.append([
                     f"TO#{to.id}", to.trip_date,
-                    partner_name_by_id.get(to.client_id, ""),
+                    client_name_by_id.get(to.client_id, ""),
                     loc_name_by_id.get(to.pickup_location_id, ""),
                     loc_name_by_id.get(to.dropoff_location_id, ""),
                     c.container_number, c.cont_type,
@@ -902,7 +902,7 @@ async def generate_booked_trips_excel(
     wb.save(buf)
     wb.close()
     buf.seek(0)
-    return buf.getvalue(), partner_name
+    return buf.getvalue(), client_name
 
 
 async def generate_doi_soat_excel(
@@ -911,9 +911,9 @@ async def generate_doi_soat_excel(
     date_from: str,
     date_to: str,
 ) -> tuple[bytes, str]:
-    """Generate reconciliation (đối soát) Excel for a specific partner.
+    """Generate reconciliation (đối soát) Excel for a specific client.
 
-    Returns (excel_bytes, partner_name) tuple.
+    Returns (excel_bytes, client_name) tuple.
     Only includes MATCHED trip orders within the date range.
     Columns: STT | Ngày chạy | Số cont | Loại | Điểm lấy | Điểm trả | Tác nghiệp | Biển số xe | Số tàu | Đơn giá
     Summary row at the bottom: count per work type + total amount.
@@ -926,8 +926,8 @@ async def generate_doi_soat_excel(
 
     # ── 1. Load partner ───────────────────────────────────────────────────────
     p_result = await db.execute(select(Client).where(Client.id == client_id))
-    partner = p_result.scalar_one_or_none()
-    partner_name = partner.name if partner else f"Client #{client_id}"
+    client = p_result.scalar_one_or_none()
+    client_name = client.name if client else f"Client #{client_id}"
 
     from datetime import date as date_type
 
@@ -1035,7 +1035,7 @@ async def generate_doi_soat_excel(
     # ── 6. Build Excel workbook ───────────────────────────────────────────────
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = partner_name[:31]
+    ws.title = client_name[:31]
 
     # ── Styles ────────────────────────────────────────────────────────────────
     thin_side = Side(style="thin", color="BBBBBB")
@@ -1066,7 +1066,7 @@ async def generate_doi_soat_excel(
 
     # Row 2: Subtitle
     month_range_str = f"Từ {df.strftime('%d/%m/%Y')} đến {dt.strftime('%d/%m/%Y')}"
-    ws.append([f"BẢNG ĐỐI SOÁT – {partner_name.upper()} – {month_range_str}", *[""] * (num_cols - 1)])
+    ws.append([f"BẢNG ĐỐI SOÁT – {client_name.upper()} – {month_range_str}", *[""] * (num_cols - 1)])
     ws.merge_cells(f"A2:{last_col_letter}2")
     subtitle_cell = ws["A2"]
     subtitle_cell.font = Font(bold=True, size=11, color=_blue_dark)
@@ -1202,7 +1202,7 @@ async def generate_doi_soat_excel(
     wb.save(buf)
     wb.close()
     buf.seek(0)
-    return buf.getvalue(), partner_name
+    return buf.getvalue(), client_name
 
 
 async def parse_customer_response_excel(file_content: bytes) -> list[dict]:

@@ -19,7 +19,7 @@ from app.contexts.customer_pricing.application.locations import (
     PinDriverLocation,
     UpdateLocation,
 )
-from app.contexts.customer_pricing.application.partners import (
+from app.contexts.customer_pricing.application.contacts import (
     CreatePartner,
     DeletePartner,
     GetPartner,

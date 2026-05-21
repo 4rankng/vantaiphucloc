@@ -223,7 +223,7 @@ class MonthlyPnLDTO:
     total_vehicle_expenses: int     # Fuel + Repairs + Law + Other
     profit: int                     # revenue − all costs
     matched_trip_count: int
-    partner_breakdown: list[ClientRevenueBreakdownDTO]
+    client_breakdown: list[ClientRevenueBreakdownDTO]
 
 
 class GetMonthlyPnL:
@@ -389,5 +389,5 @@ class GetMonthlyPnL:
             total_vehicle_expenses=total_vehicle_expenses,
             profit=profit,
             matched_trip_count=matched_trip_count,
-            partner_breakdown=client_breakdown,
+            client_breakdown=client_breakdown,
         )

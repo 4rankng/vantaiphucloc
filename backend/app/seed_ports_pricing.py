@@ -74,7 +74,7 @@ def _read_excel(path: Path) -> tuple[list[str], list[dict]]:
     Returns:
         ports: list of 62 port names
         pricing_rows: list of dicts with keys:
-            partner, pickup, dropoff, F20, F40, E20, E40, operation_type
+            client_name, pickup, dropoff, F20, F40, E20, E40, operation_type
     """
     # data_only=True reads cached formula results
     wb = load_workbook(path, data_only=True)
@@ -90,8 +90,8 @@ def _read_excel(path: Path) -> tuple[list[str], list[dict]]:
     ws_pricing = wb["CƯỚC TUYẾN"]
     pricing_rows: list[dict] = []
     for row in ws_pricing.iter_rows(min_row=3, max_row=ws_pricing.max_row, values_only=True):
-        partner = row[1]  # B: CHỦ HÀNG
-        if not partner or not str(partner).strip():
+        client_name = row[1]  # B: CHỦ HÀNG
+        if not client_name or not str(client_name).strip():
             continue
 
         def _val(cell):
@@ -106,7 +106,7 @@ def _read_excel(path: Path) -> tuple[list[str], list[dict]]:
                 return None
 
         pricing_rows.append({
-            "partner": str(partner).strip(),
+            "client_name": str(client_name).strip(),
             "pickup": str(row[2]).strip() if row[2] else None,
             "dropoff": str(row[3]).strip() if row[3] else None,
             "F20": _val(row[4]) if len(row) > 4 else None,
@@ -167,19 +167,19 @@ async def seed_ports_pricing() -> None:
 
         # ── 2. Partners (14 chủ hàng as clients) ────────────────────────
         print("\n=== Seeding Clients (Khách hàng) ===")
-        partner_map: dict[str, Client] = {}
+        client_map: dict[str, Client] = {}
 
         result = await db.execute(select(Client))
         for p in result.scalars().all():
             if p.code:
-                partner_map[p.code] = p
+                client_map[p.code] = p
 
-        chu_hang_names = sorted({r["partner"] for r in pricing_rows})
+        chu_hang_names = sorted({r["client_name"] for r in pricing_rows})
         created_partners = 0
 
         for name in chu_hang_names:
             code = name.upper().replace(" ", "_")
-            if code in partner_map:
+            if code in client_map:
                 print(f"  = {name} (already exists as {code})")
                 continue
             client = Client(
@@ -189,7 +189,7 @@ async def seed_ports_pricing() -> None:
             )
             db.add(client)
             await db.flush()
-            partner_map[code] = client
+            client_map[code] = client
             created_partners += 1
             print(f"  + {name} (code={code}, id={client.id})")
 
@@ -200,7 +200,7 @@ async def seed_ports_pricing() -> None:
         print("\n=== Seeding Pricings ===")
 
         # client_id on Pricing = the client (khách hàng/chủ hàng) directly.
-        # No PHUCLOC intermediary — Phúc Lộc is the company itself, not a partner.
+        # No PHUCLOC intermediary — Phúc Lộc is the company itself, not a client_name.
 
         # Load existing pricings for dedup
         result = await db.execute(select(Pricing))
@@ -221,10 +221,10 @@ async def seed_ports_pricing() -> None:
         skipped_existing = 0
 
         for row in pricing_rows:
-            partner_code = row["partner"].upper().replace(" ", "_")
-            client = partner_map.get(partner_code)
+            client_code = row["client_name"].upper().replace(" ", "_")
+            client = client_map.get(client_code)
             if not client:
-                print(f"  ⚠ Skip: partner '{row['partner']}' not found")
+                print(f"  ⚠ Skip: client_name '{row['client_name']}' not found")
                 continue
 
             pickup_name = row["pickup"]

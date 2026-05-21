@@ -11,7 +11,7 @@ from app.contexts.identity.interface import (
 from app.contexts.customer_pricing.interface import (
     location_aliases_router,
     locations_router,
-    partners_router,
+    contacts_router,
     pricings_router,
 )
 from app.contexts.operations.interface import (
@@ -40,7 +40,7 @@ from app.schemas.domain import JobStatusResponse
 router = APIRouter()
 
 router.include_router(auth_router)
-router.include_router(partners_router)
+router.include_router(contacts_router)
 router.include_router(locations_router)
 router.include_router(location_aliases_router)
 router.include_router(pricings_router)

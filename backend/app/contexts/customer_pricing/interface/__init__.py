@@ -6,8 +6,8 @@ from app.contexts.customer_pricing.interface.routers.location_aliases import (
 from app.contexts.customer_pricing.interface.routers.locations import (
     router as locations_router,
 )
-from app.contexts.customer_pricing.interface.routers.partners import (
-    router as partners_router,
+from app.contexts.customer_pricing.interface.routers.contacts import (
+    router as contacts_router,
 )
 from app.contexts.customer_pricing.interface.routers.pricings import (
     router as pricings_router,
@@ -16,6 +16,6 @@ from app.contexts.customer_pricing.interface.routers.pricings import (
 __all__ = [
     "location_aliases_router",
     "locations_router",
-    "partners_router",
+    "contacts_router",
     "pricings_router",
 ]

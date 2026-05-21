@@ -481,21 +481,21 @@ async def seed_dev() -> None:
 
         # ── 5. Clients & Vendors ─────────────────────────────────────────
         print("\n=== Seeding Clients ===")
-        partner_map: dict[str, Client | Vendor] = {}
+        org_map: dict[str, Client | Vendor] = {}
         for p in SEED_CLIENTS:
             result = await db.execute(select(Client).where(Client.code == p["code"]))
-            partner = result.scalars().first()
-            if partner is None:
-                partner = Client(
+            client = result.scalars().first()
+            if client is None:
+                client = Client(
                     code=p["code"], name=p["name"],
                     phone=p["phone"], tax_code=p.get("tax_code"),
                     address=p.get("address"), contact_person=p.get("contact_person"),
                     is_active=True,
                 )
-                db.add(partner)
+                db.add(client)
                 await db.flush()
                 print(f"  + {p['code']} (client) — {p['name']}")
-            partner_map[p["code"]] = partner
+            org_map[p["code"]] = client
 
         print("\n=== Seeding Vendors ===")
         for p in SEED_VENDORS:
@@ -511,7 +511,7 @@ async def seed_dev() -> None:
                 db.add(vendor)
                 await db.flush()
                 print(f"  + {p['code']} (vendor) — {p['name']}")
-            partner_map[p["code"]] = vendor
+            org_map[p["code"]] = vendor
         await db.commit()
 
         # ── 6. Settings ────────────────────────────────────────────────
@@ -528,7 +528,7 @@ async def seed_dev() -> None:
         pricing_map: dict[tuple, Pricing] = {}
 
         for client_code, routes in ALL_PRICING.items():
-            client = partner_map[client_code]
+            client = org_map[client_code]
             for (pickup_name, dropoff_name, work_type), prices in routes.items():
                 pickup_loc = loc_map.get(pickup_name)
                 dropoff_loc = loc_map.get(dropoff_name)
@@ -584,7 +584,7 @@ async def seed_dev() -> None:
                 skipped += 1
                 continue
 
-            client = partner_map[client_code]
+            client = org_map[client_code]
             client_pricing = ALL_PRICING.get(client_code, {})
             prices = client_pricing.get((pickup, dropoff, wt))
             if not prices:
@@ -681,7 +681,7 @@ async def seed_dev() -> None:
                 size = rng.choices([20, 40], weights=[75, 25])[0]
                 wt = f"F{size}"
                 client_code = rng.choices(CLIENT_KEYS, weights=CLIENT_W)[0]
-                client = partner_map[client_code]
+                client = org_map[client_code]
                 client_pricing = ALL_PRICING.get(client_code, {})
                 prices = client_pricing.get((pickup, dropoff, wt))
                 if not prices:

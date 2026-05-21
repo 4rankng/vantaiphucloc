@@ -174,7 +174,7 @@ class VendorReconRowOut(BaseModel):
 class VendorReconImportOut(BaseModel):
     id: int
     vendor_id: int
-    vendor_partner_name: str
+    vendor_client_name: str
     period_from: date
     period_to: date
     source_filename: str | None
@@ -618,18 +618,18 @@ async def list_imports(
 
     # Fetch partner names in bulk
     client_ids = list({imp.vendor_id for imp in imports})
-    partners_map: dict[int, str] = {}
+    vendors_map: dict[int, str] = {}
     if client_ids:
         partners = (
             await db.execute(select(Vendor).where(Vendor.id.in_(client_ids)))
         ).scalars().all()
-        partners_map = {p.id: p.name for p in partners}
+        vendors_map = {p.id: p.name for p in partners}
 
     return [
         {
             "id": imp.id,
             "vendor_id": imp.vendor_id,
-            "vendor_partner_name": partners_map.get(imp.vendor_id, ""),
+            "vendor_client_name": vendors_map.get(imp.vendor_id, ""),
             "period_from": imp.period_from,
             "period_to": imp.period_to,
             "source_filename": imp.source_filename,
@@ -677,7 +677,7 @@ async def get_import(
     return {
         "id": imp.id,
         "vendor_id": imp.vendor_id,
-        "vendor_partner_name": vendor.name if vendor else "",
+        "vendor_client_name": vendor.name if vendor else "",
         "period_from": imp.period_from,
         "period_to": imp.period_to,
         "source_filename": imp.source_filename,

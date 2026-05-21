@@ -2,7 +2,7 @@ import { Phone, MapPin, User } from 'lucide-react'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { cn } from '@/lib/utils'
 
-export interface PartnerRow extends Record<string, unknown> {
+export interface ContactRow extends Record<string, unknown> {
   id: number
   name: string
   partnerType: 'client' | 'vendor'
@@ -13,9 +13,9 @@ export interface PartnerRow extends Record<string, unknown> {
   contactPerson: string
 }
 
-interface PartnersTableProps {
-  partners: PartnerRow[]
-  onRowClick: (partner: PartnerRow) => void
+interface ContactsTableProps {
+  contacts: ContactRow[]
+  onRowClick: (contact: ContactRow) => void
   loading?: boolean
 }
 
@@ -34,7 +34,7 @@ function Initials({ name }: { name: string }) {
   )
 }
 
-export function PartnersTable({ partners, onRowClick, loading }: PartnersTableProps) {
+export function ContactsTable({ contacts, onRowClick, loading }: ContactsTableProps) {
   if (loading) {
     return (
       <div className="rounded-lg border border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] overflow-hidden">
@@ -51,7 +51,7 @@ export function PartnersTable({ partners, onRowClick, loading }: PartnersTablePr
     )
   }
 
-  if (partners.length === 0) {
+  if (contacts.length === 0) {
     return (
       <div className="rounded-lg border border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] py-16 text-center text-sm text-[var(--theme-text-muted)]">
         Không có đối tác
@@ -71,7 +71,7 @@ export function PartnersTable({ partners, onRowClick, loading }: PartnersTablePr
       </div>
 
       {/* Rows */}
-      {partners.map((row, i) => (
+      {contacts.map((row, i) => (
         <div
           key={row.id}
           onClick={() => onRowClick(row)}
@@ -79,7 +79,7 @@ export function PartnersTable({ partners, onRowClick, loading }: PartnersTablePr
             'flex lg:grid lg:grid-cols-[2fr_1fr_1fr_1.5fr_1fr] items-center gap-4 px-5 py-3.5',
             'cursor-pointer transition-colors hover:bg-[var(--theme-bg-tertiary)]',
           )}
-          style={{ borderBottom: i < partners.length - 1 ? '1px solid var(--theme-border-light, var(--theme-border-default))' : undefined }}
+          style={{ borderBottom: i < contacts.length - 1 ? '1px solid var(--theme-border-light, var(--theme-border-default))' : undefined }}
         >
           {/* Name + initials */}
           <div className="flex items-center gap-3 min-w-0">

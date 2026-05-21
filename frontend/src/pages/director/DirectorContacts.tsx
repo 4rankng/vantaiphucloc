@@ -6,7 +6,7 @@ import { Button } from '@/components/ui'
 import { SearchBar } from '@/components/shared/SearchBar'
 import { FilterPills } from '@/components/shared/FilterPills'
 import { InfoRow } from '@/components/shared/InfoRow'
-import { PartnersTable, type PartnerRow } from '@/components/shared/PartnersTable'
+import { ContactsTable, type ContactRow } from '@/components/shared/ContactsTable'
 import { CreateClientDialog } from '@/components/shared/CreateClientDialog'
 import { CreateVendorDialog } from '@/components/shared/CreateVendorDialog'
 import { fuzzyMatch } from '@/lib/search-utils'
@@ -19,15 +19,15 @@ import type { Client, Vendor } from '@/data/domain'
 
 type PartnerFilter = 'ALL' | 'client' | 'vendor'
 
-function toClientRow(c: Client): PartnerRow {
+function toClientRow(c: Client): ContactRow {
   return { id: c.id, name: c.name, partnerType: 'client', type: 'company', phone: c.phone ?? '', taxCode: c.taxCode ?? '', address: c.address ?? '', contactPerson: c.contactPerson ?? '' }
 }
 
-function toVendorRow(v: Vendor): PartnerRow {
+function toVendorRow(v: Vendor): ContactRow {
   return { id: v.id, name: v.name, partnerType: 'vendor', type: 'company', phone: v.phone ?? '', taxCode: v.taxCode ?? '', address: v.address ?? '', contactPerson: v.contactPerson ?? '' }
 }
 
-export function DirectorPartners() {
+export function DirectorContacts() {
   const toast = useToast()
   const isMobile = useIsMobile()
   const { data: clients = [], isLoading: clientsLoading } = useClients()
@@ -39,8 +39,8 @@ export function DirectorPartners() {
 
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<PartnerFilter>('ALL')
-  const [selected, setSelected] = useState<PartnerRow | null>(null)
-  const [deleteConfirm, setDeleteConfirm] = useState<PartnerRow | null>(null)
+  const [selected, setSelected] = useState<ContactRow | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<ContactRow | null>(null)
   const [createType, setCreateType] = useState<'client' | 'vendor' | null>(null)
 
   const allRows = useMemo(() => [
@@ -120,8 +120,8 @@ export function DirectorPartners() {
         onChange={setFilter}
       />
 
-      <PartnersTable
-        partners={filtered}
+      <ContactsTable
+        contacts={filtered}
         onRowClick={setSelected}
         loading={loading}
       />

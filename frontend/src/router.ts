@@ -86,7 +86,7 @@ export function createAppRouter() {
           children: [
             { index: true,                       element: ebc('DirectorDashboard', h(Lazy, { component: R.DirectorDashboard })) },
             { path: 'users',                     element: ebc('UserManagement', h(Lazy, { component: R.UserManagement })) },
-            { path: 'partners',                  element: ebc('DirectorPartners', h(Lazy, { component: R.DirectorPartners })) },
+            { path: 'partners',                  element: ebc('DirectorContacts', h(Lazy, { component: R.DirectorContacts })) },
             { path: 'routes',                    element: ebc('RouteList', h(Lazy, { component: R.RouteList })) },
             { path: 'pricing',                   element: ebc('DirectorPricingList', h(Lazy, { component: R.DirectorPricingList })) },
             { path: 'pricing/:clientId',         element: ebc('DirectorPricingDetail', h(Lazy, { component: R.DirectorPricingDetail })) },

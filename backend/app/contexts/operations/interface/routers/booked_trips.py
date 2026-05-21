@@ -65,11 +65,11 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
-def _trip_to_out(t: BookedTrip, partners, locations) -> BookedTripOut:
+def _trip_to_out(t: BookedTrip, clients, locations) -> BookedTripOut:
     return BookedTripOut(
         id=int(t.id),  # type: ignore[arg-type]
         trip_date=t.trip_date,
-        client=get_client_summary(partners, t.client_id),
+        client=get_client_summary(clients, t.client_id),
         pickup_location=get_location_summary(locations, t.pickup_location_id),
         dropoff_location=get_location_summary(locations, t.dropoff_location_id),
         containers=[
@@ -98,7 +98,7 @@ async def _load_one(session, t: BookedTrip) -> BookedTripOut:
 async def _load_many(session, trips: list[BookedTrip]) -> list[BookedTripOut]:
     if not trips:
         return []
-    partners = await load_client_summaries(
+    clients = await load_client_summaries(
         session, {t.client_id for t in trips}
     )
     locations = await load_location_summaries(
@@ -106,7 +106,7 @@ async def _load_many(session, trips: list[BookedTrip]) -> list[BookedTripOut]:
         {t.pickup_location_id for t in trips}
         | {t.dropoff_location_id for t in trips},
     )
-    return [_trip_to_out(t, partners, locations) for t in trips]
+    return [_trip_to_out(t, clients, locations) for t in trips]
 
 
 def _container_inputs(items) -> list[TripContainerInput]:
@@ -214,14 +214,14 @@ async def search_booked_trips(
         )
         # Subquery for partner name match
         from app.models.domain import Client as PartnerORM
-        partner_subquery = (
+        client_subquery = (
             sa_select(PartnerORM.id)
             .where(PartnerORM.name.ilike(term))
         )
         query = query.where(
             sa_or(
                 BookedTripORM.id.in_(container_subquery),
-                BookedTripORM.client_id.in_(partner_subquery),
+                BookedTripORM.client_id.in_(client_subquery),
                 # Date search: allow YYYY-MM-DD or DD/MM/YYYY patterns
                 BookedTripORM.trip_date.cast(str).ilike(term),
             )
@@ -261,7 +261,7 @@ async def search_booked_trips(
         | {t.dropoff_location_id for t in page_trips}
         | {wo.pickup_location_id, wo.dropoff_location_id}
     )
-    partners = await load_client_summaries(db, client_ids)
+    clients = await load_client_summaries(db, client_ids)
     locations = await load_location_summaries(db, location_ids)
     alias_groups = await _load_alias_groups(db)
 
@@ -274,7 +274,7 @@ async def search_booked_trips(
         for c in wo_cont_rows if c.container_number
     }
     wo_date = _get_wo_date(wo)
-    wo_client_name = get_client_summary(partners, wo.client_id).name
+    wo_client_name = get_client_summary(clients, wo.client_id).name
     wo_pickup_name = get_location_summary(locations, wo.pickup_location_id).name
     wo_dropoff_name = get_location_summary(locations, wo.dropoff_location_id).name
     wo_containers_str = _format_containers(wo_cont_rows)
@@ -292,7 +292,7 @@ async def search_booked_trips(
     results = []
     for t in page_trips:
         # Compute match score against WO
-        to_client_name = get_client_summary(partners, t.client_id).name
+        to_client_name = get_client_summary(clients, t.client_id).name
         to_pickup_name = get_location_summary(locations, t.pickup_location_id).name
         to_dropoff_name = get_location_summary(locations, t.dropoff_location_id).name
         to_date_str = t.trip_date.isoformat() if t.trip_date else None
@@ -448,16 +448,16 @@ async def export_booked_trips_excel(
 ):
     from app.contexts.operations.infrastructure.excel import generate_booked_trips_excel
     session = use_case.repo.session  # type: ignore[attr-defined]
-    content, partner_name = await generate_booked_trips_excel(
+    content, client_name = await generate_booked_trips_excel(
         session,
         date_from=date_from.isoformat() if date_from else None,
         date_to=date_to.isoformat() if date_to else None,
         status=status,
         client_id=client_id,
     )
-    if client_id and partner_name:
+    if client_id and client_name:
         from app.utils.text import slugify_vi
-        slug = slugify_vi(partner_name)
+        slug = slugify_vi(client_name)
         filename = f"chuyen_khach_hang_{slug}_{date.today().isoformat()}.xlsx"
     else:
         filename = "booked_trips.xlsx"
@@ -508,10 +508,10 @@ async def export_doi_soat_excel(
     from app.utils.text import slugify_vi
 
     session = use_case.repo.session  # type: ignore[attr-defined]
-    content, partner_name = await generate_doi_soat_excel(
+    content, client_name = await generate_doi_soat_excel(
         session, client_id, date_from.isoformat(), date_to.isoformat(),
     )
-    slug = slugify_vi(partner_name)
+    slug = slugify_vi(client_name)
     # Format: DoiSoat_<KH>_MM-YYYY  (use date_from's month as the report month)
     month_str = date_from.strftime("%m-%Y")
     filename = f"DoiSoat_{slug}_{month_str}.xlsx"

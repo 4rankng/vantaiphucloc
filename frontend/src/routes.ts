@@ -43,7 +43,7 @@ export const DriverJobs             = lazy(() => import('@/pages/director/Driver
 export const ClientJobs             = lazy(() => import('@/pages/director/ClientJobs').then(m => ({ default: m.ClientJobs })))
 export const DirectorPricingList    = lazy(() => import('@/pages/director/PricingList').then(m => ({ default: m.PricingList })))
 export const DirectorPricingDetail  = lazy(() => import('@/pages/director/PricingDetail').then(m => ({ default: m.PricingDetail })))
-export const DirectorPartners       = lazy(() => import('@/pages/director/DirectorPartners').then(m => ({ default: m.DirectorPartners })))
+export const DirectorContacts       = lazy(() => import('@/pages/director/DirectorContacts').then(m => ({ default: m.DirectorContacts })))
 
 // ─── SuperAdmin ───────────────────────────────────────────────────────────────
 export const SuperAdminApp = lazy(() => import('@/pages/superadmin/SuperAdminApp').then(m => ({ default: m.SuperAdminApp })))
