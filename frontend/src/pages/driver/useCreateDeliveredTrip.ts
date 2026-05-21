@@ -211,6 +211,32 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     }
   }, [])
 
+  const validateContainerOnBlur = useCallback((idx: number) => {
+    const cont = containers[idx]
+    if (!cont) return
+    const raw = cont.containerNumber.trim()
+    const fmtErr = validateContainerFormat(raw)
+    if (fmtErr) {
+      setContainerErrors(prev => ({ ...prev, [idx]: fmtErr }))
+      clearTimeout(validateTimers.current[idx])
+      return
+    }
+    if (!raw || raw.length !== 11) {
+      setContainerErrors(prev => { const next = { ...prev }; delete next[idx]; return next })
+      clearTimeout(validateTimers.current[idx])
+      return
+    }
+    clearTimeout(validateTimers.current[idx])
+    apiClient.validateContainer(raw).then(res => {
+      setContainerErrors(prev => {
+        if (!res.success || !res.data?.valid) {
+          return { ...prev, [idx]: res.data?.error ?? 'Số container không hợp lệ' }
+        }
+        const next = { ...prev }; delete next[idx]; return next
+      })
+    }).catch(() => {})
+  }, [containers])
+
   const addContainer = useCallback(() => {
     setContainers(prev => [...prev, { ...EMPTY_CONT }])
   }, [])
@@ -379,7 +405,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
     setPickupLocation: (v: string) => { setSelectedTripId(null); setPickupLocation(v) },
     setDropoffLocation: (v: string) => { setSelectedTripId(null); setDropoffLocation(v) },
     openScanner, openGallery, handleScanComplete, setScannerOpen,
-    updateContainer, addContainer, removeContainer,
+    updateContainer, addContainer, removeContainer, validateContainerOnBlur,
     handleRecentTripSelect,
     onRequestSubmit, confirmSubmit,
     setSummaryOpen,

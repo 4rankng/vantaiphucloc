@@ -7,7 +7,6 @@ import {
   AlertCircle,
   CheckCircle,
   DollarSign,
-  Ship,
   FileSpreadsheet,
   Upload,
   X,
@@ -24,31 +23,25 @@ import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { Panel } from '@/components/shared/Panel'
 import { DataTable, type Column } from '@/components/shared/DataTable'
 import { Toolbar, ToolbarSearch, ToolbarSpacer } from '@/components/shared/Toolbar'
-import { Drawer } from '@/components/shared/Drawer'
-import { PhotoLightbox } from '@/components/shared/PhotoLightbox'
 import { Pill, type PillVariant } from '@/components/shared/Pill'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { StepIndicator } from '@/components/shared/StepIndicator'
-import { InlineSelect } from '@/components/shared/InlineSelect'
 import { Button } from '@/components/ui'
+// AutoMatchDrawer removed — auto-match now runs inline
+import { ExcelImportDrawer } from '@/components/shared/ExcelImportDrawer'
+import { DeliveredTripDetailDrawer } from '@/components/shared/DeliveredTripDetailDrawer'
+import { FilterTabs } from '@/components/shared/FilterTabs'
+import { StatPill } from '@/components/shared/StatPill'
 import { useMonthParams } from './use-month-params'
-import { formatCurrency, compactCurrency } from '@/data/domain'
+import { formatCurrency, compactCurrency, OPERATION_TYPE_LABELS } from '@/data/domain'
 import { fuzzyMatch } from '@/lib/search-utils'
 import type { DeliveredTrip, DeliveredTripStatus } from '@/data/domain'
 import {
   useDeliveredTrips,
+  useUnmatch,
+  useExportDeliveredTripsExcel,
   useAutoMatch,
   useAutoMatchConfirm,
-  useUnmatch,
-  useBulkImportAndMatch,
-  useAIParsePreview,
-  useClients,
-  useSuggestMatches,
-  useReconcile,
-  useExportDeliveredTripsExcel,
 } from '@/hooks/use-queries'
-import type { AutoMatchCandidate } from '@/data/domain'
-import type { DuplicateGroup } from '@/services/api/deliveredTrips.api'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -97,23 +90,6 @@ const STATUS_FILTER_LABELS: Record<StatusFilter, string> = {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function StatPill({ count, label, accent }: { count: number | string; label: string; accent?: boolean }) {
-  return (
-    <span
-      className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-medium"
-      style={{
-        background: accent ? 'var(--accent-soft)' : 'var(--surface-3)',
-        color: accent ? 'var(--accent)' : 'var(--ink-2)',
-      }}
-    >
-      <span className="tabular-nums font-bold" style={{ color: accent ? 'var(--accent)' : 'var(--ink)' }}>
-        {count}
-      </span>
-      {label}
-    </span>
-  )
-}
-
 function MatchProgressBar({ pct }: { pct: number }) {
   return (
     <div className="flex items-center gap-2.5 mt-2.5">
@@ -141,59 +117,7 @@ function MatchProgressBar({ pct }: { pct: number }) {
   )
 }
 
-function StatusFilterTabs({
-  value,
-  onChange,
-  counts,
-}: {
-  value: StatusFilter
-  onChange: (v: StatusFilter) => void
-  counts: Record<StatusFilter, number>
-}) {
-  const filters: StatusFilter[] = ['ALL', 'PENDING', 'MATCHED']
-  return (
-    <div
-      className="flex items-center"
-      style={{
-        border: '1px solid var(--line)',
-        borderRadius: 'var(--r-sm, 8px)',
-        overflow: 'hidden',
-        flexShrink: 0,
-      }}
-    >
-      {filters.map((f, i) => {
-        const active = value === f
-        return (
-          <button
-            key={f}
-            type="button"
-            onClick={() => onChange(f)}
-            className="flex items-center gap-1.5 text-[12.5px] font-medium px-3 py-1.5 transition-colors"
-            style={{
-              background: active ? 'var(--accent)' : 'transparent',
-              color: active ? '#fff' : 'var(--ink-2)',
-              borderRight: i < filters.length - 1 ? '1px solid var(--line)' : 'none',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {STATUS_FILTER_LABELS[f]}
-            <span
-              className="tabular-nums text-[10.5px] font-bold px-1.5 py-0 rounded-full"
-              style={{
-                background: active ? 'rgba(255,255,255,0.25)' : 'var(--surface-3)',
-                color: active ? '#fff' : 'var(--ink-3)',
-                minWidth: 18,
-                textAlign: 'center',
-              }}
-            >
-              {counts[f]}
-            </span>
-          </button>
-        )
-      })}
-    </div>
-  )
-}
+
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
@@ -201,7 +125,6 @@ export function DoiSoatPage() {
   const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
-  const [showAutoMatch, setShowAutoMatch] = useState(false)
   const [showImport, setShowImport] = useState(false)
   const [confirmUnmatchId, setConfirmUnmatchId] = useState<number | null>(null)
   const [matchTarget, setMatchTarget] = useState<DeliveredTrip | null>(null)
@@ -210,6 +133,28 @@ export function DoiSoatPage() {
 
   const { data: trips = [], isLoading } = useDeliveredTrips({ dateFrom, dateTo })
   const unmatchMutation = useUnmatch()
+  const autoMatch = useAutoMatch()
+  const autoMatchConfirm = useAutoMatchConfirm()
+
+  const autoMatching = autoMatch.isPending || autoMatchConfirm.isPending
+
+  const handleAutoMatch = useCallback(() => {
+    autoMatch.mutate(
+      { dateFrom, dateTo },
+      {
+        onSuccess: (data) => {
+          const pairs = (data.candidates ?? [])
+            .filter((c) => c.suggestedDefault)
+            .map((c) => ({
+              deliveredTripId: c.deliveredTripId,
+              bookedTripId: c.bookedTripId,
+            }))
+          if (pairs.length === 0) return
+          autoMatchConfirm.mutate(pairs)
+        },
+      },
+    )
+  }, [dateFrom, dateTo, autoMatch, autoMatchConfirm])
 
   // Status counts
   const matchedCount = useMemo(() => trips.filter(t => t.status === 'MATCHED').length, [trips])
@@ -250,7 +195,7 @@ export function DoiSoatPage() {
   const columns: Column<DeliveredTrip>[] = [
     {
       key: 'date',
-      header: 'Ngày',
+      header: 'Ngày đi',
       width: 64,
       render: (t) => (
         <span
@@ -264,17 +209,17 @@ export function DoiSoatPage() {
     {
       key: 'client',
       header: 'Chủ hàng',
-      width: 120,
+      width: 100,
       render: (t) => (
         <span className="text-[13px] font-semibold truncate block" style={{ color: 'var(--ink)' }}>
-          {t.client?.name || '—'}
+          {t.client?.code || '—'}
         </span>
       ),
     },
     {
       key: 'containers',
-      header: 'Container',
-      width: 200,
+      header: 'Số Cont',
+      width: 150,
       render: (t) => {
         if (!t.containers?.length) return <span style={{ color: 'var(--ink-4)' }}>—</span>
         const first = t.containers[0]
@@ -287,18 +232,6 @@ export function DoiSoatPage() {
             >
               {first.containerNumber}
             </span>
-            <span
-              className="text-[10.5px] uppercase font-semibold whitespace-nowrap"
-              style={{
-                color: 'var(--ink-2)',
-                background: 'var(--surface-3)',
-                padding: '1px 5px',
-                borderRadius: 4,
-                letterSpacing: '0.04em',
-              }}
-            >
-              {first.contType}
-            </span>
             {more > 0 && (
               <span className="text-[11px] whitespace-nowrap" style={{ color: 'var(--ink-3)' }}>
                 +{more}
@@ -309,56 +242,79 @@ export function DoiSoatPage() {
       },
     },
     {
-      key: 'route',
-      header: 'Tuyến',
+      key: 'contType',
+      header: 'Loại Cont',
+      width: 64,
+      render: (t) => {
+        const ct = t.containers?.[0]?.contType || t.workType
+        return ct ? (
+          <span
+            className="text-[10.5px] uppercase font-semibold whitespace-nowrap"
+            style={{
+              color: 'var(--ink-2)',
+              background: 'var(--surface-3)',
+              padding: '1px 5px',
+              borderRadius: 4,
+              letterSpacing: '0.04em',
+            }}
+          >
+            {ct}
+          </span>
+        ) : (
+          <span style={{ color: 'var(--ink-4)' }}>—</span>
+        )
+      },
+    },
+    {
+      key: 'vehicle',
+      header: 'Số xe chạy',
+      width: 90,
       render: (t) => (
-        <span className="text-[12.5px] truncate block" style={{ color: 'var(--ink-2)', maxWidth: 240 }}>
-          {t.pickupLocation?.name ?? '—'} → {t.dropoffLocation?.name ?? '—'}
+        <span className="text-[13px] tabular-nums" style={{ color: 'var(--ink-2)' }}>
+          {t.vehicle?.plate || '—'}
         </span>
       ),
     },
     {
       key: 'vessel',
       header: 'Số tàu',
-      width: 140,
-      hideBelow: 'md',
-      render: (t) =>
-        t.vessel ? (
-          <span className="inline-flex items-center gap-1.5 text-[12.5px]" style={{ color: 'var(--ink-2)' }}>
-            <Ship className="h-3 w-3 shrink-0" style={{ color: 'var(--ink-3)' }} />
-            <span>{t.vessel}</span>
+      width: 90,
+      render: (t) => (
+        <span className="text-[13px] truncate block" style={{ color: 'var(--ink-2)' }}>
+          {t.vessel || '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'pickup',
+      header: 'Điểm đi',
+      render: (t) => (
+        <span className="text-[12.5px] truncate block" style={{ color: 'var(--ink-2)' }}>
+          {t.pickupLocation?.name ?? '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'dropoff',
+      header: 'Điểm đến',
+      render: (t) => (
+        <span className="text-[12.5px] truncate block" style={{ color: 'var(--ink-2)' }}>
+          {t.dropoffLocation?.name ?? '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'operation',
+      header: 'Tác nghiệp',
+      width: 110,
+      render: (t) => {
+        const label = t.operationType ? OPERATION_TYPE_LABELS[t.operationType] : null
+        return label ? (
+          <span className="text-[12px] whitespace-nowrap" style={{ color: 'var(--ink-2)' }}>
+            {label}
           </span>
         ) : (
           <span style={{ color: 'var(--ink-4)' }}>—</span>
-        ),
-    },
-    {
-      key: 'revenue',
-      header: 'Doanh thu',
-      align: 'right',
-      width: 120,
-      render: (t) => {
-        const r = t.revenue ?? 0
-        return (
-          <span className="tabular-nums font-bold text-[13px]" style={{ color: 'var(--ink)' }}>
-            {r > 0 ? compactCurrency(r) : '—'}
-          </span>
-        )
-      },
-    },
-    {
-      key: 'status',
-      header: 'Trạng thái',
-      align: 'center',
-      width: 150,
-      render: (t) => {
-        const badge = getDeliveredTripStatusBadge(t.status)
-        return (
-          <div className="flex items-center justify-center gap-1.5">
-            <Pill variant={statusVariant(badge)} dot={false}>
-              {badge.label}
-            </Pill>
-          </div>
         )
       },
     },
@@ -366,41 +322,40 @@ export function DoiSoatPage() {
       key: 'actions',
       header: '',
       align: 'right',
-      width: 100,
+      width: 90,
       render: (t) => {
-        if (t.status !== 'MATCHED') return null
-        const confirming = confirmUnmatchId === t.id
-        if (confirming) {
+        if (t.status === 'MATCHED') {
+          const confirming = confirmUnmatchId === t.id
+          if (confirming) {
+            return (
+              <div className="flex items-center justify-end gap-1.5">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    unmatchMutation.mutate(
+                      { deliveredTripId: t.id, bookedTripId: t.bookedTripId! },
+                      { onSuccess: () => setConfirmUnmatchId(null) },
+                    )
+                  }}
+                  disabled={unmatchMutation.isPending}
+                  className="text-[11px] font-semibold px-2 py-1 rounded"
+                  style={{ color: 'var(--danger)', background: 'var(--danger-soft)' }}
+                >
+                  {unmatchMutation.isPending ? 'Đang xử lý...' : 'Xác nhận'}
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setConfirmUnmatchId(null) }}
+                  className="text-[11px] font-medium px-2 py-1 rounded"
+                  style={{ color: 'var(--ink-3)' }}
+                >
+                  Huỷ
+                </button>
+              </div>
+            )
+          }
           return (
-            <div className="flex items-center justify-end gap-1">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  unmatchMutation.mutate(
-                    { deliveredTripId: t.id, bookedTripId: t.bookedTripId! },
-                    { onSuccess: () => setConfirmUnmatchId(null) },
-                  )
-                }}
-                disabled={unmatchMutation.isPending}
-                className="text-[11.5px] font-semibold px-2 py-1 rounded"
-                style={{ color: 'var(--danger)', background: 'var(--danger-soft)' }}
-              >
-                {unmatchMutation.isPending ? 'Đang xử lý...' : 'Xác nhận'}
-              </button>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); setConfirmUnmatchId(null) }}
-                className="text-[11.5px] font-medium px-2 py-1 rounded"
-                style={{ color: 'var(--ink-3)' }}
-              >
-                Huỷ
-              </button>
-            </div>
-          )
-        }
-        return (
-          <div className="flex items-center justify-end">
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setConfirmUnmatchId(t.id) }}
@@ -411,8 +366,20 @@ export function DoiSoatPage() {
             >
               <Unlink className="h-3.5 w-3.5" />
             </button>
-          </div>
-        )
+          )
+        }
+        if (t.status === 'PENDING') {
+          return (
+            <span
+              className="nepo-row-action cursor-default hover:bg-transparent"
+              style={{ color: 'var(--warning)' }}
+              title="Chờ ghép"
+            >
+              <AlertTriangle className="h-3.5 w-3.5" />
+            </span>
+          )
+        }
+        return null
       },
     },
   ]
@@ -467,8 +434,8 @@ export function DoiSoatPage() {
               <FileSpreadsheet className="h-3.5 w-3.5" />
               Nhập Excel
             </Button>
-            <Button variant="ghost" onClick={() => setShowAutoMatch(true)}>
-              <Zap className="h-3.5 w-3.5" />
+            <Button variant="ghost" onClick={handleAutoMatch} disabled={autoMatching}>
+              {autoMatching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
               Ghép tự động
             </Button>
           </div>
@@ -483,7 +450,16 @@ export function DoiSoatPage() {
               width={320}
             />
             <ToolbarSpacer />
-            <StatusFilterTabs value={statusFilter} onChange={setStatusFilter} counts={statusCounts} />
+            <FilterTabs<StatusFilter>
+              tabs={[
+                { value: 'ALL', label: 'Tất cả' },
+                { value: 'PENDING', label: 'Chờ ghép' },
+                { value: 'MATCHED', label: 'Đã ghép' },
+              ]}
+              value={statusFilter}
+              onChange={setStatusFilter}
+              counts={statusCounts}
+            />
           </Toolbar>
 
           <DataTable
@@ -493,6 +469,7 @@ export function DoiSoatPage() {
             isLoading={isLoading}
             minWidth={1000}
             onRowClick={(t) => setMatchTarget(t)}
+            rowClassName={(t) => t.status === 'MATCHED' ? 'row-matched' : t.status === 'PENDING' ? 'row-pending' : ''}
             empty={
               <div className="py-10">
                 <EmptyState
@@ -517,16 +494,9 @@ export function DoiSoatPage() {
         <ExcelImportDrawer onClose={() => setShowImport(false)} />
       )}
 
-      {showAutoMatch && (
-        <AutoMatchDrawer
-          dateFrom={dateFrom}
-          dateTo={dateTo}
-          onClose={() => setShowAutoMatch(false)}
-        />
-      )}
 
       {matchTarget && (
-        <TripDetailDrawer
+        <DeliveredTripDetailDrawer
           trip={matchTarget}
           onClose={() => setMatchTarget(null)}
         />
@@ -535,849 +505,4 @@ export function DoiSoatPage() {
   )
 }
 
-// ─── Auto-match drawer ────────────────────────────────────────────────────────
 
-function AutoMatchDrawer({ dateFrom, dateTo, onClose }: { dateFrom: string; dateTo: string; onClose: () => void }) {
-  const autoMatch = useAutoMatch()
-  const confirmMutation = useAutoMatchConfirm()
-  const [candidates, setCandidates] = useState<AutoMatchCandidate[]>([])
-  const [confirmed, setConfirmed] = useState(false)
-
-  function handlePreview() {
-    autoMatch.mutate(
-      { dateFrom, dateTo },
-      { onSuccess: (data) => setCandidates(data.candidates ?? []) },
-    )
-  }
-
-  function handleConfirm() {
-    const pairs = candidates
-      .filter(c => c.suggestedDefault)
-      .map(c => ({ deliveredTripId: c.deliveredTripId, bookedTripId: c.bookedTripId }))
-    if (pairs.length === 0) return
-    confirmMutation.mutate(pairs, { onSuccess: () => setConfirmed(true) })
-  }
-
-  const defaultCount = candidates.filter(c => c.suggestedDefault).length
-  const showInitial = candidates.length === 0 && !autoMatch.isPending && !confirmed
-
-  return (
-    <Drawer
-      open
-      onOpenChange={(o) => { if (!o) onClose() }}
-      breadcrumb="Đối soát"
-      title="Ghép tự động nối"
-      meta={`Kỳ ${dateFrom} → ${dateTo}`}
-      footer={
-        confirmed ? (
-          <Button variant="default" onClick={onClose}>Xong</Button>
-        ) : candidates.length > 0 ? (
-          <>
-            <Button variant="ghost" onClick={onClose}>Huỷ</Button>
-            <Button
-              variant="default"
-              onClick={handleConfirm}
-              disabled={confirmMutation.isPending || defaultCount === 0}
-            >
-              {confirmMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <CheckCircle className="h-4 w-4" />
-              )}
-              Ghép {defaultCount} cặp
-            </Button>
-          </>
-        ) : showInitial ? (
-          <>
-            <Button variant="ghost" onClick={onClose}>Huỷ</Button>
-            <Button variant="default" onClick={handlePreview}>
-              <Zap className="h-4 w-4" /> Quét và đề xuất
-            </Button>
-          </>
-        ) : null
-      }
-    >
-      {showInitial && (
-        <div className="space-y-4">
-          <p className="text-[13.5px] m-0" style={{ color: 'var(--ink-2)' }}>
-            Hệ thống sẽ tự động tìm và đề xuất các cặp chuyến phù hợp nhất trong kỳ.
-            Bạn có thể xem trước trước khi xác nhận ghép.
-          </p>
-          <ul className="m-0 pl-4 space-y-1.5 text-[13px]" style={{ color: 'var(--ink-2)' }}>
-            <li>Chuyến đặt trước được so khớp với chuyến đã đi.</li>
-            <li>Điểm khớp được tính dựa trên tuyến, ngày, biển số và container.</li>
-            <li>Chỉ ghép các cặp đạt ngưỡng "đề xuất tự động" trở lên.</li>
-          </ul>
-        </div>
-      )}
-
-      {autoMatch.isPending && (
-        <div className="flex flex-col items-center gap-3 py-10">
-          <Loader2 className="h-8 w-8 animate-spin" style={{ color: 'var(--accent)' }} />
-          <p className="text-[13px] m-0" style={{ color: 'var(--ink-2)' }}>Đang quét và đề xuất...</p>
-        </div>
-      )}
-
-      {candidates.length > 0 && !confirmed && (
-        <div className="space-y-3">
-          <div
-            className="flex items-center gap-2.5 px-3.5 py-2.5"
-            style={{ background: 'var(--success-soft)', borderRadius: 'var(--r-sm)', color: 'var(--success)' }}
-          >
-            <CheckCircle className="h-4 w-4 shrink-0" />
-            <span className="text-[13px]">
-              Tìm thấy <strong>{candidates.length}</strong> cặp, <strong>{defaultCount}</strong> cặp được đề xuất ghép tự động
-            </span>
-          </div>
-
-          <div className="space-y-1.5 max-h-[420px] overflow-y-auto">
-            {candidates.map((c, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between gap-3 px-3.5 py-2.5"
-                style={{
-                  background: c.suggestedDefault ? 'var(--surface-2)' : 'var(--surface)',
-                  border: '1px solid var(--line)',
-                  borderRadius: 'var(--r-sm)',
-                }}
-              >
-                <div className="flex items-center gap-2.5 text-[13px] min-w-0">
-                  <span className="font-semibold truncate" style={{ color: 'var(--ink)' }}>
-                    WO {c.deliveredTripRef?.plate ?? c.deliveredTripId}
-                  </span>
-                  <span style={{ color: 'var(--ink-3)' }}>→</span>
-                  <span className="font-semibold truncate" style={{ color: 'var(--ink)' }}>
-                    TO {c.bookedTripRef?.clientName ?? c.bookedTripId}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span
-                    className="tabular-nums font-bold"
-                    style={{
-                      fontSize: 12.5,
-                      color: scoreColor(c.matchScore, c.maxScore),
-                      fontFamily: 'var(--theme-font-mono)',
-                    }}
-                  >
-                    {c.maxScore > 0 ? Math.round((c.matchScore / c.maxScore) * 100) : 0}%
-                  </span>
-                  {c.suggestedDefault && (
-                    <Pill variant="success" dot={false}>Đề xuất</Pill>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {confirmed && (
-        <div className="flex flex-col items-center text-center py-8">
-          <div
-            className="grid place-items-center mb-4"
-            style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--success-soft)', color: 'var(--success)' }}
-          >
-            <CheckCircle className="h-7 w-7" strokeWidth={2.25} />
-          </div>
-          <p className="m-0 text-[18px] font-bold" style={{ letterSpacing: '-0.02em', color: 'var(--ink)' }}>
-            Ghép thành công {defaultCount} cặp
-          </p>
-        </div>
-      )}
-    </Drawer>
-  )
-}
-
-// ─── Excel import drawer ──────────────────────────────────────────────────────
-
-type ImportStep = 'upload' | 'preview' | 'done'
-
-const IMPORT_STEPS = [
-  { label: 'Nhập file' },
-  { label: 'Soát duyệt' },
-  { label: 'Lưu dữ liệu' },
-]
-
-function stepIndex(step: ImportStep): number {
-  return step === 'upload' ? 0 : step === 'preview' ? 1 : 2
-}
-
-interface PreviewRow { [key: string]: unknown }
-
-function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
-  const [step, setStep] = useState<ImportStep>('upload')
-  const [file, setFile] = useState<File | null>(null)
-  const [clientId, setClientId] = useState('')
-  const [previewData, setPreviewData] = useState<PreviewRow[]>([])
-  const [previewColumns, setPreviewColumns] = useState<string[]>([])
-  const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([])
-  const [previewWarnings, setPreviewWarnings] = useState<string[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
-  const dropRef = useRef<HTMLDivElement>(null)
-
-  const { data: clients = [] } = useClients()
-  const bulkImport = useBulkImportAndMatch()
-  const aiPreview = useAIParsePreview()
-
-  const handleFileSelect = useCallback((f: File | null) => {
-    if (!f) return
-    setFile(f)
-    setError(null)
-  }, [])
-
-  function handleDragOver(e: React.DragEvent) {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'copy'
-    dropRef.current?.classList.add('is-dragging')
-  }
-  function handleDragLeave() {
-    dropRef.current?.classList.remove('is-dragging')
-  }
-  function handleDrop(e: React.DragEvent) {
-    e.preventDefault()
-    dropRef.current?.classList.remove('is-dragging')
-    handleFileSelect(e.dataTransfer.files?.[0] ?? null)
-  }
-
-  function handlePreview() {
-    if (!file) return
-    setError(null)
-    aiPreview.mutate({ file }, {
-      onSuccess: (data) => {
-        const cols = (data as { columns?: string[] }).columns ?? []
-        const rows = (data as { rows?: PreviewRow[] }).rows ?? []
-        const dups = (data as { duplicateGroups?: DuplicateGroup[] }).duplicateGroups ?? []
-        const warns = (data as { warnings?: string[] }).warnings ?? []
-        setPreviewColumns(cols)
-        setPreviewData(rows)
-        setDuplicateGroups(dups)
-        setPreviewWarnings(warns)
-        // Auto-detect client from "Chủ hàng" column
-        if (!clientId) {
-          const uniqueClients = [...new Set(rows.map(r => String(r['Chủ hàng'] ?? '').trim()).filter(Boolean))]
-          if (uniqueClients.length === 1) {
-            const code = uniqueClients[0].toUpperCase()
-            const match = clients.find(c =>
-              c.code?.toUpperCase() === code ||
-              c.name.toUpperCase().split(/\s+/)[0] === code
-            )
-            if (match) setClientId(String(match.id))
-          }
-        }
-        setStep('preview')
-      },
-      onError: (err) => setError(err instanceof Error ? err.message : 'Lỗi khi phân tích file'),
-    })
-  }
-
-  function handleImport() {
-    if (!file) return
-    setError(null)
-    bulkImport.mutate(
-      { file, clientId: clientId ? Number(clientId) : undefined },
-      {
-        onSuccess: () => setStep('done'),
-        onError: (err) => setError(err instanceof Error ? err.message : 'Lỗi khi import'),
-      },
-    )
-  }
-
-  function handleReset() {
-    setStep('upload')
-    setFile(null)
-    setClientId('')
-    setPreviewData([])
-    setPreviewColumns([])
-    setDuplicateGroups([])
-    setPreviewWarnings([])
-    setError(null)
-    if (fileRef.current) fileRef.current.value = ''
-  }
-
-  const previewCols = previewColumns.length > 0 ? previewColumns : []
-
-  // Build a map of row index → duplicate type for highlighting
-  const duplicateRowMap = useMemo(() => {
-    const map = new Map<number, 'exact' | 'fuzzy' | 'digits'>()
-    for (const g of duplicateGroups) {
-      for (const idx of g.rowIndices) {
-        if (!map.has(idx)) map.set(idx, g.type)
-      }
-    }
-    return map
-  }, [duplicateGroups])
-
-  const footer = step === 'upload' ? (
-    <>
-      <Button variant="ghost" onClick={onClose}>Huỷ</Button>
-      <Button variant="default" onClick={handlePreview} disabled={!file || aiPreview.isPending}>
-        {aiPreview.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-        {aiPreview.isPending ? 'Đang phân tích...' : 'Xem trước'}
-      </Button>
-    </>
-  ) : step === 'preview' ? (
-    <>
-      {clientId ? (
-        <span
-          className="text-[12px] font-medium px-2.5 py-1 rounded-full mr-auto"
-          style={{ background: 'var(--success-soft)', color: 'var(--success)' }}
-        >
-          {clients.find(c => String(c.id) === clientId)?.name ?? 'Chủ hàng'} ✓
-        </span>
-      ) : (
-        <InlineSelect
-          placeholder="Chọn chủ hàng"
-          value={clientId}
-          options={clients.map(c => ({ value: String(c.id), label: c.name }))}
-          onChange={setClientId}
-          className="mr-auto"
-          style={{ minWidth: 180, borderColor: 'var(--warning)' }}
-        />
-      )}
-      <Button variant="ghost" onClick={() => { setStep('upload'); setPreviewData([]); setPreviewColumns([]) }}>Quay lại</Button>
-      <Button variant="default" onClick={handleImport} disabled={bulkImport.isPending || !clientId}>
-        {bulkImport.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-        {bulkImport.isPending ? 'Đang lưu...' : 'Lưu dữ liệu'}
-      </Button>
-    </>
-  ) : (
-    <>
-      <Button variant="ghost" onClick={handleReset}>Nhập file khác</Button>
-      <Button variant="default" onClick={onClose}>Xong</Button>
-    </>
-  )
-
-  return (
-    <Drawer
-      open
-      onOpenChange={(o) => { if (!o) onClose() }}
-      breadcrumb="Đối soát"
-      title="Nhập Excel"
-      width="80vw"
-      footer={footer}
-    >
-      {/* Step indicator */}
-      <div className="mb-6">
-        <StepIndicator steps={IMPORT_STEPS} current={stepIndex(step)} />
-      </div>
-
-      {/* ── Upload step ── */}
-      {step === 'upload' && (
-        <div className="space-y-5">
-          {/* File area */}
-          <div>
-            <label className="nepo-field-label">File Excel</label>
-
-            {/* File chip — shown when file selected */}
-            {file && (
-              <div
-                className="flex items-center gap-2.5 px-3 py-2 mb-3"
-                style={{ background: 'var(--accent-soft)', borderRadius: 'var(--r-sm)', border: '1px solid var(--accent)' }}
-              >
-                <FileSpreadsheet className="h-4 w-4 shrink-0" style={{ color: 'var(--accent)' }} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[13px] font-semibold truncate m-0" style={{ color: 'var(--ink)' }}>{file.name}</p>
-                  <p className="text-[11px] m-0 mt-0.5" style={{ color: 'var(--ink-3)' }}>
-                    {(file.size / 1024).toFixed(1)} KB · xlsx / xls / csv
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => { setFile(null); if (fileRef.current) fileRef.current.value = '' }}
-                  className="grid place-items-center rounded-md"
-                  style={{ width: 24, height: 24, color: 'var(--ink-3)' }}
-                  aria-label="Xoá file"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            )}
-
-            {/* Drop zone — only shown when no file is selected */}
-            {!file && (
-              <div
-                ref={dropRef}
-                onClick={() => fileRef.current?.click()}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                className="nepo-dropzone"
-                style={{ minHeight: 130 }}
-              >
-                <Upload className="h-7 w-7 mb-2" style={{ color: 'var(--ink-3)' }} strokeWidth={1.5} />
-                <p className="text-[13.5px] font-semibold m-0" style={{ color: 'var(--ink)' }}>
-                  Kéo & thả file vào đây
-                </p>
-                <p className="text-[12px] m-0 mt-1" style={{ color: 'var(--ink-3)' }}>
-                  hoặc nhấn để chọn từ máy · .xlsx .xls .csv
-                </p>
-              </div>
-            )}
-            {file && (
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                className="text-[12px] font-medium"
-                style={{ color: 'var(--accent)' }}
-              >
-                Thay bằng file khác
-              </button>
-            )}
-
-            <input
-              ref={fileRef}
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              onChange={(e) => handleFileSelect(e.target.files?.[0] ?? null)}
-              className="hidden"
-            />
-          </div>
-
-          {error && (
-            <div
-              className="flex items-start gap-2.5 px-3.5 py-3"
-              style={{ background: 'var(--danger-soft)', borderRadius: 'var(--r-sm)', color: 'var(--danger)', fontSize: 13 }}
-            >
-              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-              <span>{error}</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Preview step ── */}
-      {step === 'preview' && (
-        <div className="space-y-4">
-          {/* Duplicate warning banner */}
-          {previewWarnings.length > 0 && (
-            <div
-              className="flex items-start gap-2.5 px-3.5 py-3"
-              style={{ background: 'var(--warning-soft)', borderRadius: 'var(--r-sm)', color: 'var(--warning)', fontSize: 13 }}
-            >
-              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-              <div>
-                {previewWarnings.map((w, i) => <p key={i} className="m-0 font-semibold">{w}</p>)}
-                {duplicateGroups.length > 0 && (
-                  <ul className="m-0 mt-1.5 pl-4 space-y-0.5" style={{ listStyle: 'disc' }}>
-                    {duplicateGroups.map((g, i) => (
-                      <li key={i} className="text-[12px]" style={{ opacity: 0.9 }}>{g.message}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-          )}
-          {/* Summary row */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[13px] font-medium" style={{ color: 'var(--ink)' }}>
-              {file?.name}
-            </span>
-            <span
-              className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
-              style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}
-            >
-              {previewData.length} dòng · {previewCols.length} cột
-            </span>
-            {previewData.length > 20 && (
-              <span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>
-                (hiển thị 20 dòng đầu)
-              </span>
-            )}
-          </div>
-
-          {/* Preview table */}
-          {previewData.length === 0 ? (
-            <p className="text-[13px] text-center py-8" style={{ color: 'var(--ink-3)' }}>Không có dữ liệu</p>
-          ) : (
-            <div
-              className="nepo-table-scroll"
-              style={{
-                
-                border: '1px solid var(--line)',
-                borderRadius: 'var(--r-sm)',
-                overflow: 'auto',
-              }}
-            >
-              <table className="nepo-table w-full" style={{ minWidth: 600 }}>
-                <thead>
-                  <tr>
-                    <th style={{ width: 40 }}>#</th>
-                    {previewCols.map(key => (
-                      <th key={key} className="text-left">{key}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {previewData.slice(0, 20).map((row, i) => {
-                    const dupType = duplicateRowMap.get(i)
-                    const rowBg = dupType === 'exact'
-                      ? 'var(--danger-soft)'
-                      : dupType === 'fuzzy'
-                        ? 'var(--warning-soft)'
-                        : dupType === 'digits'
-                          ? 'color-mix(in srgb, var(--accent-soft) 60%, white)'
-                          : undefined
-                    return (
-                    <tr key={i} style={rowBg ? { background: rowBg } : undefined}>
-                      <td>
-                        <span className="tabular-nums text-[12px]" style={{ color: 'var(--ink-3)' }}>
-                          {dupType ? <AlertTriangle className="inline h-3 w-3 mr-0.5" style={{ color: dupType === 'exact' ? 'var(--danger)' : 'var(--warning)' }} /> : null}
-                          {i + 1}
-                        </span>
-                      </td>
-                      {previewCols.map((key) => {
-                        const val = row[key]
-                        return (
-                          <td key={key}>
-                            <span style={{ color: val == null ? 'var(--ink-3)' : 'var(--ink-2)', fontSize: 12.5 }}>
-                              {val != null ? String(val) : '—'}
-                            </span>
-                          </td>
-                        )
-                      })}
-                    </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          <p className="text-[12px] m-0" style={{ color: 'var(--ink-3)' }}>
-            Dữ liệu sẽ được nhập và tự động ghép với chuyến đã đi sau khi xác nhận.
-          </p>
-
-          {error && (
-            <div
-              className="flex items-start gap-2.5 px-3.5 py-3"
-              style={{ background: 'var(--danger-soft)', borderRadius: 'var(--r-sm)', color: 'var(--danger)', fontSize: 13 }}
-            >
-              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-              <span>{error}</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Done step ── */}
-      {step === 'done' && (
-        <div className="flex flex-col items-center text-center py-10">
-          <div
-            className="grid place-items-center mb-5"
-            style={{
-              width: 72,
-              height: 72,
-              borderRadius: '50%',
-              background: 'var(--success-soft)',
-              color: 'var(--success)',
-              boxShadow: '0 0 0 8px color-mix(in srgb, var(--success-soft) 50%, transparent)',
-            }}
-          >
-            <CheckCircle className="h-9 w-9" strokeWidth={1.75} />
-          </div>
-          <h3 className="m-0 text-[18px] font-bold" style={{ letterSpacing: '-0.02em', color: 'var(--ink)' }}>
-            Nhập thành công
-          </h3>
-          <p className="m-0 mt-2 max-w-sm text-[13px] leading-relaxed" style={{ color: 'var(--ink-2)' }}>
-            Dữ liệu từ{' '}
-            <span className="font-semibold font-mono" style={{ color: 'var(--ink)' }}>{file?.name ?? 'file'}</span>{' '}
-            đã được nhập và tự động ghép với chuyến đã đi.
-          </p>
-        </div>
-      )}
-    </Drawer>
-  )
-}
-
-// ─── Trip detail drawer ──────────────────────────────────────────────────────
-
-const STATUS_PILL_VARIANT: Record<DeliveredTripStatus, PillVariant> = {
-  PENDING: 'warn',
-  MATCHED: 'success',
-  COMPLETED: 'success',
-  CANCELLED: 'danger',
-}
-const STATUS_LABEL: Record<DeliveredTripStatus, string> = {
-  PENDING: 'Chờ ghép',
-  MATCHED: 'Đã ghép',
-  COMPLETED: 'Hoàn thành',
-  CANCELLED: 'Hủy',
-}
-
-function TripDetailDrawer({ trip, onClose }: { trip: DeliveredTrip; onClose: () => void }) {
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
-  const { data: suggestionsData, isLoading: suggestionsLoading } = useSuggestMatches(trip.status === 'PENDING' ? trip.id : 0)
-  const reconcile = useReconcile()
-  const [matchingId, setMatchingId] = useState<number | null>(null)
-
-  const suggestions = suggestionsData?.suggestions ?? []
-  const hasPhotos = trip.containers.some(c => c.photoUrl)
-
-  function handleMatch(bookedTripId: number) {
-    setMatchingId(bookedTripId)
-    reconcile.mutate(
-      { deliveredTripId: trip.id, bookedTripId },
-      { onSuccess: () => onClose() },
-    )
-  }
-
-  function formatTimestamp(ts: string | null | undefined): string {
-    if (!ts) return '—'
-    const d = new Date(ts)
-    return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
-      + ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-  }
-
-  return (
-    <>
-      <PhotoLightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />
-
-      <Drawer
-        open
-        onOpenChange={(o) => { if (!o) onClose() }}
-        breadcrumb="Đối soát"
-        title={
-          <span className="flex items-center gap-2">
-            <Pill variant={STATUS_PILL_VARIANT[trip.status]}>{STATUS_LABEL[trip.status]}</Pill>
-            Chuyến đã đi
-          </span>
-        }
-        meta={`${trip.client?.name ?? ''} · ${trip.containers?.[0]?.containerNumber ?? `#${trip.id}`}`}
-        footer={<Button variant="ghost" onClick={onClose}>Đóng</Button>}
-      >
-        <div className="space-y-5">
-          {/* Trip summary */}
-          <div
-            className="px-3.5 py-2.5"
-            style={{ background: 'var(--surface-2)', borderRadius: 'var(--r-sm)', border: '1px solid var(--line)' }}
-          >
-            <div className="flex items-center gap-3 flex-wrap text-[13px]">
-              <span className="tabular-nums" style={{ color: 'var(--ink-2)', fontFamily: 'var(--theme-font-mono)' }}>
-                {formatDate(trip.tripDate)}
-              </span>
-              <span style={{ color: 'var(--ink-3)' }}>·</span>
-              <span style={{ color: 'var(--ink)' }}>
-                {trip.pickupLocation?.name ?? '—'} → {trip.dropoffLocation?.name ?? '—'}
-              </span>
-              {trip.vessel && (
-                <>
-                  <span style={{ color: 'var(--ink-3)' }}>·</span>
-                  <span style={{ color: 'var(--ink-2)' }}>{trip.vessel}</span>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Container photos */}
-          {hasPhotos && (
-            <div className="space-y-2">
-              <p className="text-[12px] m-0 font-medium" style={{ color: 'var(--ink-3)' }}>Ảnh container</p>
-              <div className={`grid ${trip.containers.length > 1 ? 'grid-cols-2' : 'grid-cols-1'} gap-2`}>
-                {trip.containers.map((c) => (
-                  <div key={c.id}>
-                    <div
-                      className="relative rounded-lg overflow-hidden aspect-square"
-                      style={{ border: '1px solid var(--line)' }}
-                    >
-                      {c.photoUrl ? (
-                        <button
-                          className="block w-full h-full touch-manipulation"
-                          onClick={() => setLightboxUrl(c.photoUrl!)}
-                          aria-label={`Xem ảnh ${c.containerNumber}`}
-                        >
-                          <img src={c.photoUrl} alt={c.containerNumber} className="w-full h-full object-cover" />
-                        </button>
-                      ) : (
-                        <div
-                          className="w-full h-full flex flex-col items-center justify-center"
-                          style={{ background: 'var(--surface-2)' }}
-                        >
-                          <Camera className="w-6 h-6" style={{ color: 'var(--ink-3)' }} />
-                        </div>
-                      )}
-                      <div
-                        className="absolute bottom-0 left-0 right-0 px-2 py-1.5 flex items-center justify-between"
-                        style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
-                      >
-                        <p className="text-[11px] font-mono font-semibold truncate" style={{ color: '#fff' }}>
-                          {c.containerNumber}
-                        </p>
-                        {c.contType && (
-                          <span
-                            className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ml-1"
-                            style={{ background: 'var(--accent)', color: '#fff' }}
-                          >
-                            {c.contType}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    {/* Photo meta */}
-                    {c.photoTimestamp && (
-                      <p className="text-[11px] m-0 mt-1 flex items-center gap-1" style={{ color: 'var(--ink-3)' }}>
-                        <Clock className="w-3 h-3" />
-                        {formatTimestamp(c.photoTimestamp)}
-                      </p>
-                    )}
-                    {c.photoAddress && (
-                      <p className="text-[11px] m-0 mt-0.5 flex items-center gap-1" style={{ color: 'var(--ink-3)' }}>
-                        <MapPin className="w-3 h-3" />
-                        {c.photoAddress}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Trip details */}
-          <div
-            className="rounded-lg overflow-hidden"
-            style={{ background: 'var(--surface-2)', border: '1px solid var(--line)' }}
-          >
-            {trip.gpsAddress && (
-              <InfoRowCompact icon={MapPin} label="Vị trí GPS" value={trip.gpsAddress} />
-            )}
-            {trip.driver && (
-              <InfoRowCompact icon={User} label="Tài xế" value={trip.driver.name + (trip.driver.phone ? ` · ${trip.driver.phone}` : '')} />
-            )}
-            {trip.vehicle && (
-              <InfoRowCompact icon={Truck} label="Xe" value={trip.vehicle.plate} />
-            )}
-            <InfoRowCompact icon={Calendar} label="Ngày tạo" value={formatTimestamp(trip.createdAt)} noBorder />
-          </div>
-
-          {/* Match suggestions — PENDING only */}
-          {trip.status === 'PENDING' && (
-            <div className="space-y-3 pt-2" style={{ borderTop: '1px solid var(--line)' }}>
-              <p className="text-[12px] m-0 font-medium" style={{ color: 'var(--ink-3)' }}>Ghép chuyến</p>
-
-              {suggestionsLoading && (
-                <div className="flex flex-col items-center gap-3 py-6">
-                  <Loader2 className="h-5 w-5 animate-spin" style={{ color: 'var(--accent)' }} />
-                  <p className="text-[13px] m-0" style={{ color: 'var(--ink-2)' }}>Đang tìm chuyến phù hợp...</p>
-                </div>
-              )}
-
-              {!suggestionsLoading && suggestions.length === 0 && (
-                <div className="flex flex-col items-center py-4">
-                  <EmptyState
-                    icon={<ClipboardList className="h-5 w-5" />}
-                    title="Không tìm thấy chuyến phù hợp"
-                    compact
-                  />
-                </div>
-              )}
-
-              {suggestions.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-[12px] m-0" style={{ color: 'var(--ink-3)' }}>
-                    {suggestions.length} chuyến đặt trước phù hợp
-                  </p>
-                  {suggestions.map((s) => {
-                    const bt = s.bookedTrip
-                    const pct = s.maxScore > 0 ? Math.round((s.matchScore / s.maxScore) * 100) : 0
-                    const isMatching = matchingId === bt.id && reconcile.isPending
-                    return (
-                      <div
-                        key={`${bt.id}-${s.containerId}`}
-                        className="flex items-center justify-between gap-3 px-3.5 py-3"
-                        style={{
-                          background: pct >= 80 ? 'var(--success-soft)' : pct >= 60 ? 'var(--warning-soft)' : 'var(--surface)',
-                          border: '1px solid var(--line)',
-                          borderRadius: 'var(--r-sm)',
-                        }}
-                      >
-                        <div className="flex-1 min-w-0 space-y-1">
-                          <div className="flex items-center gap-2 text-[13px]">
-                            <span
-                              className="tabular-nums font-bold"
-                              style={{ fontFamily: 'var(--theme-font-mono)', color: 'var(--ink)' }}
-                            >
-                              {bt.containers?.[0]?.containerNumber ?? '—'}
-                            </span>
-                            {bt.containers?.[0]?.contType && (
-                              <span
-                                className="text-[10.5px] uppercase font-semibold px-1.5 py-0.5 rounded"
-                                style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}
-                              >
-                                {bt.containers[0].contType}
-                              </span>
-                            )}
-                            <span
-                              className="tabular-nums font-bold"
-                              style={{ color: scoreColor(s.matchScore, s.maxScore), fontSize: 12 }}
-                            >
-                              {pct}%
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1.5 text-[12px]" style={{ color: 'var(--ink-2)' }}>
-                            <span>{bt.client?.name ?? '—'}</span>
-                            <span style={{ color: 'var(--ink-3)' }}>·</span>
-                            <span>{bt.pickupLocation?.name ?? '—'} → {bt.dropoffLocation?.name ?? '—'}</span>
-                            {bt.vessel && (
-                              <>
-                                <span style={{ color: 'var(--ink-3)' }}>·</span>
-                                <span>{bt.vessel}</span>
-                              </>
-                            )}
-                          </div>
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5">
-                            {s.criteria.map((c) => (
-                              <span
-                                key={c.name}
-                                className="flex items-center gap-0.5 text-[10.5px]"
-                                style={{
-                                  color: c.match
-                                    ? (c.fuzzy ? 'var(--warning)' : 'var(--success)')
-                                    : 'var(--ink-4)',
-                                }}
-                              >
-                                {c.match ? '✓' : '–'}
-                                {c.label}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                        <Button
-                          variant={pct >= 80 ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => handleMatch(bt.id)}
-                          disabled={isMatching}
-                          style={{ flexShrink: 0 }}
-                        >
-                          {isMatching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                          Ghép
-                        </Button>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </Drawer>
-    </>
-  )
-}
-
-function InfoRowCompact({ icon: Icon, label, value, noBorder }: {
-  icon: React.ComponentType<{ className?: string }>
-  label: string
-  value: string
-  noBorder?: boolean
-}) {
-  return (
-    <div
-      className="flex items-center gap-3 px-3.5 py-2 text-[13px]"
-      style={{ borderBottom: noBorder ? 'none' : '1px solid var(--line)' }}
-    >
-      <Icon className="w-4 h-4 shrink-0" style={{ color: 'var(--ink-3)' }} />
-      <span className="shrink-0" style={{ color: 'var(--ink-3)', minWidth: 72 }}>{label}</span>
-      <span className="min-w-0" style={{ color: 'var(--ink)' }}>{value}</span>
-    </div>
-  )
-}

@@ -62,6 +62,7 @@ export const queryKeys = {
   deliveredTripsFiltered: (filters?: Record<string, string>) =>
     ['delivered-trips', filters] as const,
   bookedTrips: ['booked-trips'] as const,
+  bookedTrip: (id: number) => ['booked-trips', id] as const,
   bookedTripsFiltered: (filters?: Record<string, string>) =>
     ['booked-trips', filters] as const,
   driverEarnings: (driverId: number, startDate: string, endDate: string) =>
@@ -215,6 +216,18 @@ export function useBookedTrips(filters?: { clientId?: number; driverId?: number;
       const res = await apiClient.getBookedTrips(filters)
       return res.success ? res.data : []
     },
+  })
+}
+
+export function useBookedTrip(id: number | null) {
+  return useQuery({
+    queryKey: id ? queryKeys.bookedTrip(id) : ['booked-trips', 'none'],
+    queryFn: async () => {
+      if (!id) return null
+      const res = await apiClient.getBookedTrip(id)
+      return res.success ? res.data : null
+    },
+    enabled: !!id,
   })
 }
 

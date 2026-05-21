@@ -256,8 +256,8 @@ export interface CriterionBreakdown {
   name: string
   label: string
   match: boolean
-  deliveredTripValue: string | null
-  bookedTripValue: string | null
+  woValue: string | null
+  toValue: string | null
   fuzzy?: boolean
 }
 

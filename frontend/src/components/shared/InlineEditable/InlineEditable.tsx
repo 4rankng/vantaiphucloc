@@ -9,6 +9,7 @@ interface InlineEditableProps {
   placeholder?: string
   className?: string
   editLabel?: string
+  validate?: (value: string) => string | null | Promise<string | null>
 }
 
 export function InlineEditable({
@@ -19,10 +20,13 @@ export function InlineEditable({
   placeholder = '',
   className = '',
   editLabel,
+  validate,
 }: InlineEditableProps) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(value)
   const [saving, setSaving] = useState(false)
+  const [validating, setValidating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -37,11 +41,68 @@ export function InlineEditable({
   }, [value])
 
   const handleSave = async () => {
-    if (draft === value) { setEditing(false); return }
+    if (draft === value) { setEditing(false); setError(null); return }
+    if (validate) {
+      setValidating(true)
+      try {
+        const err = await validate(draft)
+        if (err) {
+          setError(err)
+          setValidating(false)
+          return
+        }
+      } catch (e) {
+        setError('Lỗi kết nối kiểm tra số container')
+        setValidating(false)
+        return
+      }
+      setValidating(false)
+    }
     setSaving(true)
     try {
       await onSave(draft)
       setEditing(false)
+      setError(null)
+    } catch (err) {
+      setError('Không thể lưu thay đổi')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+    const related = e.relatedTarget as HTMLElement
+    if (related && related.closest('.inline-editable-btn')) {
+      return
+    }
+    if (draft === value) {
+      setEditing(false)
+      setError(null)
+      return
+    }
+    if (validate) {
+      setValidating(true)
+      try {
+        const err = await validate(draft)
+        if (err) {
+          setError(err)
+          setValidating(false)
+          return
+        }
+      } catch (e) {
+        setError('Lỗi kết nối kiểm tra số container')
+        setValidating(false)
+        return
+      }
+      setValidating(false)
+    }
+    setSaving(true)
+    try {
+      await onSave(draft)
+      setEditing(false)
+      setError(null)
+    } catch (err) {
+      setError('Không thể lưu thay đổi')
     } finally {
       setSaving(false)
     }
@@ -49,42 +110,55 @@ export function InlineEditable({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleSave()
-    if (e.key === 'Escape') { setDraft(value); setEditing(false) }
+    if (e.key === 'Escape') { setDraft(value); setError(null); setEditing(false) }
   }
 
   if (editing) {
     return (
-      <div className={`flex items-center gap-1.5 ${className}`}>
-        <input
-          ref={inputRef}
-          type={inputType}
-          value={draft}
-          onChange={e => setDraft(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          disabled={saving}
-          className="flex-1 min-w-0 rounded-md border px-2 py-1 text-sm outline-none"
-          style={{
-            background: 'var(--theme-bg-primary)',
-            borderColor: 'var(--theme-brand-primary)',
-            color: 'var(--theme-text-primary)',
-          }}
-        />
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="flex h-6 w-6 items-center justify-center rounded-md"
-          style={{ background: 'var(--theme-status-success)', color: '#fff' }}
-        >
-          <Check className="h-3 w-3" />
-        </button>
-        <button
-          onClick={() => { setDraft(value); setEditing(false) }}
-          className="flex h-6 w-6 items-center justify-center rounded-md"
-          style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
-        >
-          <X className="h-3 w-3" />
-        </button>
+      <div className={`flex flex-col gap-1 ${className}`}>
+        <div className="flex items-center gap-1.5 w-full">
+          <input
+            ref={inputRef}
+            type={inputType}
+            value={draft}
+            onChange={e => {
+              setDraft(e.target.value)
+              if (error) setError(null)
+            }}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            disabled={saving || validating}
+            className="flex-1 min-w-0 rounded-md border px-2 py-1 text-sm outline-none"
+            style={{
+              background: 'var(--theme-bg-primary)',
+              borderColor: error ? 'var(--theme-status-error)' : 'var(--theme-brand-primary)',
+              color: 'var(--theme-text-primary)',
+            }}
+          />
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || validating}
+            className="inline-editable-btn flex h-6 w-6 items-center justify-center rounded-md text-white shrink-0"
+            style={{ background: 'var(--theme-status-success)' }}
+          >
+            <Check className="h-3 w-3" />
+          </button>
+          <button
+            type="button"
+            onClick={() => { setDraft(value); setError(null); setEditing(false) }}
+            className="inline-editable-btn flex h-6 w-6 items-center justify-center rounded-md shrink-0"
+            style={{ background: 'var(--theme-bg-tertiary)', color: 'var(--theme-text-muted)' }}
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+        {error && (
+          <p className="text-xs font-medium px-1" style={{ color: 'var(--theme-status-error)' }}>
+            {error}
+          </p>
+        )}
       </div>
     )
   }

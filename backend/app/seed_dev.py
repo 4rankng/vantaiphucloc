@@ -238,6 +238,9 @@ CLIENT_WEIGHTS = {"HAIAN": 65, "GLORY": 22, "CONSCIENCE": 13}
 CLIENT_KEYS = list(CLIENT_WEIGHTS.keys())
 CLIENT_W = list(CLIENT_WEIGHTS.values())
 
+OPERATION_TYPES = ["XUAT_NHAP_TAU", "CHUYEN_BAI", "LAY_VO_HA_HANG", "DONG_KHO"]
+OPERATION_TYPE_WEIGHTS = [55, 20, 15, 10]
+
 VESSELS = [
     "HAIAN ALFA 073N", "HAIAN LINK V.138S", "HAIAN BETA 062S",
     "HAIAN EXPRESS 251N", "HAIAN GLOBAL 045S", "HAIAN PIONEER 112N",
@@ -283,6 +286,7 @@ def _generate_trips_for_month(year: int, month: int, plates: list[str]) -> list[
             "unit_price": unit_price,
             "trip_date": f"{year}-{month:02d}-{day:02d}",
             "client_code": client_code,
+            "operation_type": rng.choices(OPERATION_TYPES, weights=OPERATION_TYPE_WEIGHTS)[0],
         })
     return trips
 
@@ -607,6 +611,7 @@ async def seed_dev() -> None:
                 driver_id=drv.id,
                 vehicle_id=veh.id,
                 vessel=trip.get("vessel", ""),
+                operation_type=trip.get("operation_type"),
                 work_type=wt,
                 revenue=trip["unit_price"],
                 driver_salary=prices.get("driver_salary", 150000),
@@ -624,6 +629,7 @@ async def seed_dev() -> None:
                 pickup_location_id=loc_map[pickup].id,
                 dropoff_location_id=loc_map[dropoff].id,
                 vessel=trip.get("vessel", ""),
+                operation_type=trip.get("operation_type"),
                 work_type=wt,
                 revenue=trip["unit_price"],
                 status="MATCHED",
@@ -695,6 +701,7 @@ async def seed_dev() -> None:
                     pickup_location_id=loc_map[pickup].id,
                     dropoff_location_id=loc_map[dropoff].id,
                     vessel=rng.choice(VESSELS),
+                    operation_type=rng.choices(OPERATION_TYPES, weights=OPERATION_TYPE_WEIGHTS)[0],
                     work_type=wt,
                     revenue=unit_price,
                     status="PENDING",

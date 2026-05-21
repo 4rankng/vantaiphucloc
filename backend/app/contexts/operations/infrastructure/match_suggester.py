@@ -1,14 +1,15 @@
 """Suggestion algorithm for matching DeliveredTrips ↔ BookedTrips.
 
-Seven weighted matching criteria:
+Eight weighted matching criteria:
 
-  1. Container number (0.30) — strongest identifier, graduated scoring
-  2. Pickup location (0.15) — key route discriminator
-  3. Dropoff location (0.15) — key route discriminator
-  4. Container type / work_type (0.12) — E20/E40/F20/F40 narrows matches
-  5. Vessel number (0.12) — strong for XUAT_NHAP_TAU operations
-  6. Vehicle plate (0.10) — links to specific truck/driver
-  7. Customer / client (0.06) — coarse filter only
+  1. Container number (0.28) — strongest identifier, graduated scoring
+  2. Pickup location (0.14) — key route discriminator
+  3. Dropoff location (0.14) — key route discriminator
+  4. Container type / work_type (0.11) — E20/E40/F20/F40 narrows matches
+  5. Vessel number (0.10) — strong for XUAT_NHAP_TAU operations
+  6. Vehicle plate (0.09) — links to specific truck/driver
+  7. Operation type (0.08) — XUAT_NHAP_TAU, CHUYEN_BAI, etc.
+  8. Customer / client (0.06) — coarse filter only
 
 Date is NOT a scoring criterion — used only for SQL pre-filter (±7 days).
 
@@ -74,12 +75,13 @@ def _get_wo_date(wo: DeliveredTrip):
 
 
 WEIGHTS = {
-    "container_number": 0.30,
-    "pickup_location": 0.15,
-    "dropoff_location": 0.15,
-    "work_type": 0.12,
-    "vessel": 0.12,
-    "vehicle_plate": 0.10,
+    "container_number": 0.28,
+    "pickup_location": 0.14,
+    "dropoff_location": 0.14,
+    "work_type": 0.11,
+    "vessel": 0.10,
+    "vehicle_plate": 0.09,
+    "operation_type": 0.08,
     "client": 0.06,
 }
 
@@ -99,6 +101,7 @@ def _effective_weights(
     vessel_missing: bool = False,
     work_type_missing: bool = False,
     vehicle_missing: bool = False,
+    operation_type_missing: bool = False,
 ) -> dict[str, float]:
     """Return weights with redistribution for NULL fields.
 
@@ -117,6 +120,9 @@ def _effective_weights(
     if vehicle_missing:
         missing_total += w.pop("vehicle_plate")
         missing_keys.append("vehicle_plate")
+    if operation_type_missing:
+        missing_total += w.pop("operation_type")
+        missing_keys.append("operation_type")
 
     if missing_total > 0 and w:
         active_total = sum(w.values())
@@ -189,6 +195,7 @@ CRITERIA_ORDER = [
     ("work_type", "Loại cont"),
     ("vessel", "Số tàu"),
     ("vehicle_plate", "Số xe"),
+    ("operation_type", "Tác nghiệp"),
     ("client", "Khách hàng"),
 ]
 
@@ -210,8 +217,10 @@ def _build_criteria(
     to_vessel: str | None = None,
     wo_vehicle_plate: str | None = None,
     to_vehicle_plate: str | None = None,
+    wo_operation_type: str | None = None,
+    to_operation_type: str | None = None,
 ) -> list[CriterionBreakdown]:
-    """Build the 7-criteria breakdown for UI rendering."""
+    """Build the 8-criteria breakdown for UI rendering."""
     matched = set(matched_fields)
     container_match = (
         "container_number" in matched
@@ -227,6 +236,7 @@ def _build_criteria(
         "work_type": (wo_work_type, to_work_type),
         "vessel": (wo_vessel, to_vessel),
         "vehicle_plate": (wo_vehicle_plate, to_vehicle_plate),
+        "operation_type": (wo_operation_type, to_operation_type),
         "client": (wo_client, to_client),
     }
     out: list[CriterionBreakdown] = []
@@ -521,6 +531,8 @@ async def suggest_trip_matches(
                 to_vessel=to.vessel,
                 wo_vehicle_plate=None,
                 to_vehicle_plate=None,
+                wo_operation_type=delivered_trip.operation_type,
+                to_operation_type=to.operation_type,
             )
             match_score = sum(1 for c in criteria if c.match)
             warnings = [
@@ -664,6 +676,8 @@ async def suggest_wo_matches(
             to_vessel=booked_trip.vessel,
             wo_vehicle_plate=None,
             to_vehicle_plate=None,
+            wo_operation_type=wo.operation_type,
+            to_operation_type=booked_trip.operation_type,
         )
         match_score = sum(1 for c in criteria if c.match)
         warnings = [
@@ -692,7 +706,7 @@ def _score_to_container_against_wo(
     wo: DeliveredTrip,
     alias_groups: dict[int, set[int]] | None = None,
 ) -> tuple[list[str], float]:
-    """Score a single TO container against a work order using 7 criteria."""
+    """Score a single TO container against a work order using 8 criteria."""
     matched_fields: list[str] = []
     score = 0.0
 
@@ -702,11 +716,13 @@ def _score_to_container_against_wo(
         getattr(to, "vehicle_plate", None) or getattr(wo, "vehicle_id", None)
     )
     work_type_missing = not (to.work_type or wo.work_type)
+    operation_type_missing = not (to.operation_type or wo.operation_type)
 
     w = _effective_weights(
         vessel_missing=vessel_missing,
         vehicle_missing=vehicle_missing,
         work_type_missing=work_type_missing,
+        operation_type_missing=operation_type_missing,
     )
 
     # 1. Container number — graduated scoring
@@ -784,7 +800,13 @@ def _score_to_container_against_wo(
                 matched_fields.append("vehicle_plate")
                 score += w.get("vehicle_plate", 0) * 0.6
 
-    # 7. Client
+    # 7. Operation type
+    if not operation_type_missing:
+        if to.operation_type and wo.operation_type and to.operation_type == wo.operation_type:
+            matched_fields.append("operation_type")
+            score += w.get("operation_type", 0)
+
+    # 8. Client
     if to.client_id == wo.client_id:
         matched_fields.append("client")
         score += w.get("client", 0)
@@ -886,11 +908,13 @@ def _score_wo_against_to(
         getattr(booked_trip, "vehicle_plate", None) or getattr(wo, "vehicle_id", None)
     )
     work_type_missing = not (booked_trip.work_type or wo.work_type)
+    operation_type_missing = not (booked_trip.operation_type or wo.operation_type)
 
     w = _effective_weights(
         vessel_missing=vessel_missing,
         vehicle_missing=vehicle_missing,
         work_type_missing=work_type_missing,
+        operation_type_missing=operation_type_missing,
     )
 
     # 1. Container number — graduated scoring
@@ -956,7 +980,13 @@ def _score_wo_against_to(
         # Same as _score_to_container_against_to — vehicle_id FK based
         pass
 
-    # 7. Client
+    # 7. Operation type
+    if not operation_type_missing:
+        if booked_trip.operation_type and wo.operation_type and booked_trip.operation_type == wo.operation_type:
+            matched_fields.append("operation_type")
+            score += w.get("operation_type", 0)
+
+    # 8. Client
     if wo.client_id == booked_trip.client_id:
         matched_fields.append("client")
         score += w.get("client", 0)

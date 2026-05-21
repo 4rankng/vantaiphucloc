@@ -67,3 +67,4 @@ graphify-out/
 heartbeat*.json
 .codegraph
 .opencode
+.antigravitycli/

@@ -83,6 +83,7 @@ export const apiClient = {
   updateContainerNumber: deliveredTripsApi.updateContainerNumber,
 
   // Trip Orders
+  getBookedTrip: bookedTripsApi.getBookedTrip,
   getBookedTrips: bookedTripsApi.getBookedTrips,
   createBookedTrip: bookedTripsApi.createBookedTrip,
   updateBookedTrip: bookedTripsApi.updateBookedTrip,

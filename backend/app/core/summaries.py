@@ -102,6 +102,27 @@ def get_location_summary(
     return summaries.get(location_id, LocationSummaryOut(id=location_id, name=""))
 
 
+async def load_vehicle_summaries(
+    db: AsyncSession, vehicle_ids: set[int | None] | list[int | None]
+) -> dict[int, VehicleSummaryOut]:
+    ids = {i for i in vehicle_ids if i is not None}
+    if not ids:
+        return {}
+    res = await db.execute(sa_select(Vehicle).where(Vehicle.id.in_(ids)))
+    return {
+        v.id: VehicleSummaryOut(id=v.id, plate=v.plate)
+        for v in res.scalars().all()
+    }
+
+
+def get_vehicle_summary(
+    summaries: dict[int, VehicleSummaryOut], vehicle_id: int | None
+) -> VehicleSummaryOut | None:
+    if vehicle_id is None:
+        return None
+    return summaries.get(vehicle_id)
+
+
 def get_driver_summary(
     summaries: dict[int, DriverSummaryOut], driver_id: int
 ) -> DriverSummaryOut:

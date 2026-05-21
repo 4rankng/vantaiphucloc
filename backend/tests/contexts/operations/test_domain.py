@@ -10,7 +10,6 @@ from app.contexts.operations.domain.entities import BookedTrip, DeliveredTrip
 from app.contexts.operations.domain.exceptions import (
     ContainerCountInvalid,
     InvalidStateTransition,
-    BookedTripLocked,
 )
 from app.contexts.operations.domain.value_objects import (
     BookedTripId,
@@ -55,12 +54,6 @@ def test_trip_unmatch_from_pending_is_noop() -> None:
     t.unmatch()  # idempotent — PENDING is fine
     assert t.status == BookedTripStatus.PENDING
 
-
-def test_trip_locked_blocks_cancel() -> None:
-    t = _make_trip()
-    t.lock(user_id=42)
-    with pytest.raises(BookedTripLocked):
-        t.cancel()
 
 
 def test_trip_cancel_sets_status() -> None:

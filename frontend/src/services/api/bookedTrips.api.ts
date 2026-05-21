@@ -43,6 +43,8 @@ export interface BookedTripUpdatePayload {
   pickupLocationId?: number
   dropoffLocationId?: number
   containers?: BookedTripContainerItem[]
+  vessel?: string | null
+  operationType?: string | null
   pricingId?: number | null
   unitPrice?: number
   driverSalary?: number
@@ -51,6 +53,15 @@ export interface BookedTripUpdatePayload {
   status?: BookedTrip['status']
   isConfirmed?: boolean
   matchedDeliveredTripIds?: number[]
+}
+
+export async function getBookedTrip(id: number): Promise<ApiResponse<BookedTrip>> {
+  try {
+    const res = await api.get(`/booked-trips/${id}`)
+    return ok(toCamel<BookedTrip>(res.data))
+  } catch (err) {
+    return fail(err)
+  }
 }
 
 export async function getBookedTrips(filters?: BookedTripFilters): Promise<ApiResponse<BookedTrip[]>> {

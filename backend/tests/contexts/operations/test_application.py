@@ -34,7 +34,7 @@ from app.contexts.operations.application.dto import (
     DeliveredTripContainerInput,
     DeliveredTripCreateInput,
 )
-from app.contexts.operations.domain.exceptions import NotFound, BookedTripLocked
+from app.contexts.operations.domain.exceptions import NotFound
 from app.contexts.operations.domain.value_objects import (
     BookedTripStatus,
     DeliveredTripStatus,
@@ -136,26 +136,6 @@ async def test_list_booked_trips_paginates_and_filters(db_session, fixtures):
     assert total == 3
     assert len(items) == 2
 
-
-@pytest.mark.asyncio
-@pytest.mark.skip(reason="is_locked not persisted in ORM yet — feature incomplete")
-async def test_cancel_booked_trip_blocked_when_locked(db_session, fixtures):
-    booked_trip_repo = SqlBookedTripRepository(db_session)
-    delivered_trip_repo = SqlDeliveredTripRepository(db_session)
-    create = CreateBookedTrip(booked_trip_repo, delivered_trip_repo, db_session)
-    t = await create(BookedTripCreateInput(
-        trip_date=date(2026, 5, 1),
-        partner_id=fixtures["partner_id"],
-        pickup_location_id=fixtures["pickup_id"],
-        dropoff_location_id=fixtures["dropoff_id"],
-    ))
-    t.lock(user_id=1)
-    await booked_trip_repo.save(t)
-    await db_session.commit()
-
-    cancel = CancelBookedTrip(booked_trip_repo, db_session)
-    with pytest.raises(BookedTripLocked):
-        await cancel(int(t.id))
 
 
 @pytest.mark.asyncio

@@ -58,9 +58,11 @@ from app.core.summaries import (
     get_driver_summary,
     get_location_summary,
     get_client_summary,
+    get_vehicle_summary,
     load_driver_summaries,
     load_location_summaries,
     load_client_summaries,
+    load_vehicle_summaries,
 )
 from app.utils.iso6346 import normalize_container_number as _norm
 
@@ -76,7 +78,7 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
-def _wo_to_out(w: DeliveredTrip, partners, drivers, locations, matched_trip_count: int = 0, booked_trip_id: int | None = None) -> DeliveredTripOut:
+def _wo_to_out(w: DeliveredTrip, partners, drivers, locations, vehicles, matched_trip_count: int = 0, booked_trip_id: int | None = None) -> DeliveredTripOut:
     return DeliveredTripOut(
         id=int(w.id),  # type: ignore[arg-type]
         client=get_client_summary(partners, w.client_id),
@@ -84,6 +86,7 @@ def _wo_to_out(w: DeliveredTrip, partners, drivers, locations, matched_trip_coun
         dropoff_location=get_location_summary(locations, w.dropoff_location_id),
         driver=get_driver_summary(drivers, w.driver_id),
         vendor_id=w.vendor_id,
+        vehicle=get_vehicle_summary(vehicles, w.vehicle_id),
         vessel=w.vessel,
         operation_type=w.operation_type,
         work_type=w.work_type,
@@ -129,6 +132,7 @@ async def _load_many(session, wos: list[DeliveredTrip]) -> list[DeliveredTripOut
         {w.pickup_location_id for w in wos}
         | {w.dropoff_location_id for w in wos},
     )
+    vehicles = await load_vehicle_summaries(session, {w.vehicle_id for w in wos})
     # Count active reconciliation links per WO (multi-container matching)
     from sqlalchemy import func, select as sa_select
     from app.models.domain import Reconciliation
@@ -157,23 +161,11 @@ async def _load_many(session, wos: list[DeliveredTrip]) -> list[DeliveredTripOut
             booked_ids.setdefault(wo_id, bt_id)
 
     return [
-        _wo_to_out(w, partners, drivers, locations, link_counts.get(int(w.id), 0), booked_ids.get(int(w.id)))  # type: ignore[arg-type]
+        _wo_to_out(w, partners, drivers, locations, vehicles, link_counts.get(int(w.id), 0), booked_ids.get(int(w.id)))  # type: ignore[arg-type]
         for w in wos
     ]
 
 
-def _hide_salary_fields(wo_out: DeliveredTripOut) -> None:
-    wo_out.driver_salary = 0
-    wo_out.allowance = 0
-
-
-def _hide_vessel_field(wo_out: DeliveredTripOut) -> None:
-    """Mask vessel from accountant views while the trip is PENDING.
-
-    Số tàu is driver-only knowledge during transport; accountant should
-    only see it after the work order has been matched (MATCHED status).
-    """
-    wo_out.vessel = None
 
 
 def _container_inputs(items) -> list[DeliveredTripContainerInput]:
@@ -300,14 +292,6 @@ async def list_delivered_trips(
     ))
     out = await _load_many(use_case.repo.session, items)  # type: ignore[attr-defined]
 
-    if current_user.role == "driver":
-        for i, w in enumerate(items):
-            if w.status == DeliveredTripStatus.PENDING:
-                _hide_salary_fields(out[i])
-    elif current_user.role == "accountant":
-        for i, w in enumerate(items):
-            if w.status == DeliveredTripStatus.PENDING:
-                _hide_vessel_field(out[i])
 
     return PaginatedResponse[DeliveredTripOut](
         items=out, total=total, page=page, page_size=page_size,
@@ -437,10 +421,7 @@ async def get_delivered_trip(
         from app.contexts.operations.domain.exceptions import NotFound
         raise translate(NotFound("DeliveredTrip", delivered_trip_id))
     out = await _load_one(use_case.repo.session, w)  # type: ignore[attr-defined]
-    if current_user.role == "driver" and w.status == DeliveredTripStatus.PENDING:
-        _hide_salary_fields(out)
-    elif current_user.role == "accountant" and w.status == DeliveredTripStatus.PENDING:
-        _hide_vessel_field(out)
+    # Removed salary masking
     return out
 
 

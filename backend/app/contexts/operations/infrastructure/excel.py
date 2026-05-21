@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.domain import DeliveredTrip, DeliveredTripContainer, BookedTrip, BookedTripContainer, Client, PricingLine, Vehicle, VehicleDriver
 from app.utils.iso6346 import normalize_container_number, validate_container_number
+from app.utils.excel_utils import parse_operation_type
 
 _logger = logging.getLogger(__name__)
 
@@ -411,6 +412,9 @@ _TRIP_IMPORT_COLUMNS = {
     "driver_salary": "driver_salary",
     "phu_cap": "allowance",
     "allowance": "allowance",
+    "tac_nghiep": "operation_type",
+    "operation_type": "operation_type",
+    "operation": "operation_type",
 }
 
 
@@ -418,7 +422,8 @@ def _normalize_trip_import_header(header: str) -> str:
     """Map Vietnamese/English header to standard field name."""
     if not header:
         return ""
-    normalized = re.sub(r'[^a-zA-Z0-9_]', '_', str(header).strip().lower())
+    from app.utils.text import slugify_vi
+    normalized = slugify_vi(header)
     return _TRIP_IMPORT_COLUMNS.get(normalized, normalized)
 
 
@@ -577,7 +582,8 @@ async def import_booked_trips(
                 allowance = tiered.allowance
                 pricing_id = tiered.pricing.id
 
-        trip_date_val = date_type.fromisoformat(str(trip_date)) if isinstance(trip_date, str) else trip_date
+        operation_type_raw = first_row.get("operation_type")
+        operation_type = parse_operation_type(operation_type_raw) if operation_type_raw else None
 
         booked_trip = BookedTrip(
             trip_date=trip_date_val,
@@ -585,6 +591,7 @@ async def import_booked_trips(
             pickup_location_id=pickup_id,
             dropoff_location_id=dropoff_id,
             pricing_id=pricing_id,
+            operation_type=operation_type,
             revenue=revenue,
             driver_salary=driver_salary,
             allowance=allowance,
@@ -610,12 +617,12 @@ def generate_booked_trip_template() -> bytes:
     """Generate a blank Excel template for trip order import."""
     headers = [
         "Ngày", "Mã KH", "Điểm lấy", "Điểm trả",
-        "Cung đường", "Số cont", "Loại cont", "Đơn giá",
+        "Cung đường", "Số cont", "Loại cont", "Tác nghiệp", "Đơn giá",
         "Lương TX", "Phụ cấp",
     ]
     examples = [
         "01/05/2026", "KH001", "Cát lái", "KC Bình Dương",
-        "Cát lái - KC Bình Dương", "TCLU1234567", "E20", "1500000",
+        "Cát lái - KC Bình Dương", "TCLU1234567", "E20", "Xuất / Nhập tàu", "1500000",
         "500000", "100000",
     ]
     workbook = openpyxl.Workbook()

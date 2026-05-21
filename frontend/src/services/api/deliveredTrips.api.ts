@@ -64,7 +64,7 @@ export async function getDeliveredTrip(id: number): Promise<ApiResponse<Delivere
 }
 
 export async function getDeliveredTrips(filters?: DeliveredTripFilters): Promise<ApiResponse<DeliveredTrip[]>> {
-  const cacheKey = `delivered-trips:${filters?.driverId || ''}:${filters?.status || ''}`
+  const cacheKey = `delivered-trips:${filters?.driverId || ''}:${filters?.status || ''}:${filters?.dateFrom || ''}:${filters?.dateTo || ''}`
   try {
     const params: Record<string, string> = {}
     if (filters?.driverId) params.driver_id = String(filters.driverId)

@@ -58,13 +58,13 @@ async def _seed_driver_and_accountant(db_session, async_client):
 
     wo = await create(
         DeliveredTripCreateInput(
-            partner_id=partner.id,
+            client_id=partner.id,
             pickup_location_id=pickup.id,
             dropoff_location_id=dropoff.id,
             driver_id=driver.id,
             vessel="EVER GIVEN - VOY 001",
             containers=[
-                DeliveredTripContainerInput(container_number="ABCU0000104", work_type="F20")
+                DeliveredTripContainerInput(container_number="ABCU0000104", cont_type="F20")
             ],
         ),
         CurrentUserContext(id=99, role="superadmin"),
@@ -74,21 +74,21 @@ async def _seed_driver_and_accountant(db_session, async_client):
 
 
 @pytest.mark.asyncio
-async def test_accountant_cannot_see_vessel_on_pending_wo(db_session, async_client):
-    """vessel should be None in accountant list + detail when WO is PENDING."""
+async def test_accountant_can_see_vessel_on_pending_wo(db_session, async_client):
+    """vessel should be visible in accountant list + detail when WO is PENDING."""
     acc_h, _drv_h, wo_id, *_ = await _seed_driver_and_accountant(db_session, async_client)
 
     # Detail view
     res = await async_client.get(f"/api/v1/delivered-trips/{wo_id}", headers=acc_h)
     assert res.status_code == 200, res.text
-    assert res.json()["vessel"] is None, "Vessel must be masked for accountant on PENDING WO"
+    assert res.json()["vessel"] == "EVER GIVEN - VOY 001", "Vessel must be visible to accountant on PENDING WO"
 
     # List view
     res = await async_client.get("/api/v1/delivered-trips", headers=acc_h)
     assert res.status_code == 200, res.text
     for item in res.json()["items"]:
         if item["id"] == wo_id:
-            assert item["vessel"] is None, "Vessel must be masked in list for PENDING WO"
+            assert item["vessel"] == "EVER GIVEN - VOY 001", "Vessel must be visible in list for PENDING WO"
             break
 
 

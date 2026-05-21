@@ -23,7 +23,7 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
     canSubmit, summaryContainers, summaryClientName,
     setClientId, setVessel, setOperationType, setPickupLocation, setDropoffLocation,
     openScanner, handleScanComplete, setScannerOpen,
-    updateContainer, addContainer, removeContainer,
+    updateContainer, addContainer, removeContainer, validateContainerOnBlur,
     handleRecentTripSelect,
     onRequestSubmit, confirmSubmit, setSummaryOpen,
   } = useCreateDeliveredTrip(existingDeliveredTrip)
@@ -116,6 +116,7 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
                 <input
                   value={cont.containerNumber}
                   onChange={e => updateContainer(idx, 'containerNumber', e.target.value)}
+                  onBlur={() => validateContainerOnBlur(idx)}
                   className="w-full h-11 rounded-xl px-3.5 text-sm font-mono font-semibold [&::placeholder]:opacity-50"
                   style={{
                     background: 'var(--theme-bg-tertiary)',

@@ -17,6 +17,8 @@ export interface DataTableProps<T> {
   onRowClick?: (row: T, index: number) => void
   /** Per-row selected state. Adds accent-soft background. */
   isSelected?: (row: T, index: number) => boolean
+  /** Per-row CSS class name. */
+  rowClassName?: (row: T, index: number) => string
   /** When provided, returning non-null inserts an expansion row below the data row. */
   renderExpanded?: (row: T, index: number) => ReactNode | null
   /** Minimum table width before horizontal scroll kicks in. Defaults to 900. */
@@ -46,6 +48,7 @@ export function DataTable<T>({
   footer,
   onRowClick,
   isSelected,
+  rowClassName,
   renderExpanded,
   minWidth = 900,
   className = '',
@@ -99,7 +102,7 @@ export function DataTable<T>({
             return (
               <Fragment key={key}>
                 <tr
-                  className={`${selected ? 'is-selected' : ''} ${onRowClick ? 'cursor-pointer' : ''}`}
+                  className={`${selected ? 'is-selected' : ''} ${rowClassName?.(row, i) ?? ''} ${onRowClick ? 'cursor-pointer' : ''}`}
                   onClick={onRowClick ? () => onRowClick(row, i) : undefined}
                 >
                   {columns.map((col) => {

@@ -34,6 +34,7 @@ from app.utils.excel_utils import (
     looks_like_container,
     parse_amount,
     parse_date,
+    parse_operation_type,
 )
 from app.utils.iso6346 import normalize_container_number
 
@@ -52,6 +53,7 @@ _HEADER_PATTERNS: dict[str, list[str]] = {
     "dropoff": ["điểm trả", "dropoff", "trả hàng", "nơi trả", "đến", "to", "điểm đến", "nơi đến", "trả"],
     "amount": ["tiền", "amount", "cước", "giá", "đơn giá", "unit price", "cước phí", "thành tiền", "tổng tiền", "price"],
     "work_type": ["loại", "work type", "type", "loại cont", "loại container", "size"],
+    "operation_type": ["tác nghiệp", "tac nghiep", "loại tác nghiệp", "loai tac nghiep", "operation", "operation type", "operation_type"],
     "notes": ["ghi chú", "note", "notes", "remark", "remarks", "mô tả", "description"],
 }
 
@@ -104,6 +106,7 @@ class ImportRow:
     dropoff_location: str | None = None
     amount: int | None = None  # In VND (integer)
     work_type: str | None = None
+    operation_type: str | None = None
     notes: str | None = None
     parse_error: str | None = None
 
@@ -326,6 +329,7 @@ class BulkImportService:
         amount = _parse_amount(_get("amount"))
         work_type_raw = _get("work_type")
         work_type = str(work_type_raw).strip().upper() if work_type_raw is not None else None
+        operation_type = parse_operation_type(_get("operation_type"))
         notes = str(_get("notes")).strip() if _get("notes") is not None else None
 
         # Validate work_type
@@ -343,6 +347,7 @@ class BulkImportService:
             dropoff_location=dropoff,
             amount=amount,
             work_type=work_type or "E20",
+            operation_type=operation_type,
             notes=notes,
         )
 
@@ -439,6 +444,7 @@ class BulkImportService:
             driver_id=None,  # Will be assigned later
             work_type=row.work_type or "E20",
             trip_date=row.trip_date,
+            operation_type=row.operation_type,
             status="PENDING",
             vessel=row.notes if row.notes and ("tau" in row.notes.lower() or "tàu" in row.notes.lower()) else None,
         )

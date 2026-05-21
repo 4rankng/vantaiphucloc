@@ -448,6 +448,7 @@ class BookedTripUpdate(BaseModel):
     pickup_location_id: int | None = None
     dropoff_location_id: int | None = None
     containers: list[TripContainerCreate] | None = None
+    vessel: str | None = None
     operation_type: str | None = None
     work_type: str | None = None
     revenue: int | None = None

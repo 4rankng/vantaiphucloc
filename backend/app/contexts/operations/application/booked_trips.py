@@ -184,6 +184,10 @@ class UpdateBookedTrip:
             t.pickup_location_id = data.pickup_location_id
         if data.dropoff_location_id is not None:
             t.dropoff_location_id = data.dropoff_location_id
+        if data.vessel is not None:
+            t.vessel = data.vessel
+        if data.operation_type is not None:
+            t.operation_type = data.operation_type
         if data.revenue is not None:
             t.revenue = int(data.revenue)
         if data.driver_salary is not None:
