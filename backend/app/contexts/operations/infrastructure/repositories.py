@@ -217,6 +217,24 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
         )).scalar_one_or_none()
         return await self._hydrate(orm) if orm else None
 
+    async def _hydrate_many(self, orms: list[DeliveredTripORM]) -> list[DeliveredTrip]:
+        """Batch-load containers for a list of trips in a single query."""
+        if not orms:
+            return []
+        ids = [int(o.id) for o in orms]
+        container_rows = (await self.session.execute(
+            select(DeliveredTripContainerORM)
+            .where(DeliveredTripContainerORM.delivered_trip_id.in_(ids))
+            .order_by(DeliveredTripContainerORM.delivered_trip_id, DeliveredTripContainerORM.id.asc())
+        )).scalars().all()
+        containers_by_trip: dict[int, list[DeliveredTripContainerORM]] = {i: [] for i in ids}
+        for c in container_rows:
+            containers_by_trip[int(c.delivered_trip_id)].append(c)
+        return [
+            delivered_trip_to_domain(o, containers_by_trip[int(o.id)])
+            for o in orms
+        ]
+
     async def list(
         self,
         *,
@@ -233,10 +251,18 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
             q = q.where(DeliveredTripORM.client_id == client_id)
         if driver_id is not None:
             q = q.where(DeliveredTripORM.driver_id == driver_id)
+        # Filter by trip_date (the actual trip day), falling back to created_at
+        # for records that pre-date the trip_date column.
         if date_from is not None:
-            q = q.where(DeliveredTripORM.created_at >= date_from)
+            q = q.where(
+                (DeliveredTripORM.trip_date >= date_from) |
+                ((DeliveredTripORM.trip_date == None) & (DeliveredTripORM.created_at >= date_from))  # noqa: E711
+            )
         if date_to is not None:
-            q = q.where(DeliveredTripORM.created_at <= date_to)
+            q = q.where(
+                (DeliveredTripORM.trip_date <= date_to) |
+                ((DeliveredTripORM.trip_date == None) & (DeliveredTripORM.created_at <= date_to))  # noqa: E711
+            )
         if status is not None:
             q = q.where(DeliveredTripORM.status == str(status))
         total = await self.session.scalar(
@@ -244,7 +270,7 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
         ) or 0
         q = q.order_by(DeliveredTripORM.id.desc()).offset(offset).limit(limit)
         rows = list((await self.session.execute(q)).scalars().all())
-        items = [await self._hydrate(r) for r in rows]
+        items = await self._hydrate_many(rows)
         return items, int(total)
 
     async def list_by_ids(
@@ -255,7 +281,7 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
         rows = list((await self.session.execute(
             select(DeliveredTripORM).where(DeliveredTripORM.id.in_([int(i) for i in ids]))
         )).scalars().all())
-        return [await self._hydrate(r) for r in rows]
+        return await self._hydrate_many(rows)
 
     async def add(self, w: DeliveredTrip) -> DeliveredTrip:
         orm = delivered_trip_to_orm(w)

@@ -37,7 +37,6 @@ import { fuzzyMatch } from '@/lib/search-utils'
 import type { DeliveredTrip, DeliveredTripStatus } from '@/data/domain'
 import {
   useDeliveredTrips,
-  useMatchScores,
   useAutoMatch,
   useAutoMatchConfirm,
   useUnmatch,
@@ -48,7 +47,7 @@ import {
   useReconcile,
   useExportDeliveredTripsExcel,
 } from '@/hooks/use-queries'
-import type { AutoMatchCandidate, DeliveredTripMatchScore } from '@/data/domain'
+import type { AutoMatchCandidate } from '@/data/domain'
 import type { DuplicateGroup } from '@/services/api/deliveredTrips.api'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -210,16 +209,7 @@ export function DoiSoatPage() {
   const exportExcel = useExportDeliveredTripsExcel()
 
   const { data: trips = [], isLoading } = useDeliveredTrips({ dateFrom, dateTo })
-  const { data: matchScoresData } = useMatchScores(dateFrom, dateTo)
   const unmatchMutation = useUnmatch()
-
-  const matchScores = useMemo(() => {
-    const map = new Map<number, DeliveredTripMatchScore>()
-    for (const s of matchScoresData?.scores ?? []) {
-      map.set(s.deliveredTripId, s)
-    }
-    return map
-  }, [matchScoresData])
 
   // Status counts
   const matchedCount = useMemo(() => trips.filter(t => t.status === 'MATCHED').length, [trips])
@@ -274,9 +264,10 @@ export function DoiSoatPage() {
     {
       key: 'client',
       header: 'Chủ hàng',
+      width: 120,
       render: (t) => (
         <span className="text-[13px] font-semibold truncate block" style={{ color: 'var(--ink)' }}>
-          {t.client?.name ?? '—'}
+          {t.client?.name || '—'}
         </span>
       ),
     },
@@ -472,13 +463,13 @@ export function DoiSoatPage() {
               {exportExcel.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
               Xuất Excel
             </Button>
-            <Button variant="outline" onClick={() => setShowImport(true)}>
+            <Button variant="ghost" onClick={() => setShowImport(true)}>
               <FileSpreadsheet className="h-3.5 w-3.5" />
               Nhập Excel
             </Button>
-            <Button variant="default" onClick={() => setShowAutoMatch(true)}>
+            <Button variant="ghost" onClick={() => setShowAutoMatch(true)}>
               <Zap className="h-3.5 w-3.5" />
-              Tự động ghép
+              Ghép tự động
             </Button>
           </div>
         </div>
@@ -575,7 +566,7 @@ function AutoMatchDrawer({ dateFrom, dateTo, onClose }: { dateFrom: string; date
       open
       onOpenChange={(o) => { if (!o) onClose() }}
       breadcrumb="Đối soát"
-      title="Tự động ghép nối"
+      title="Ghép tự động nối"
       meta={`Kỳ ${dateFrom} → ${dateTo}`}
       footer={
         confirmed ? (
