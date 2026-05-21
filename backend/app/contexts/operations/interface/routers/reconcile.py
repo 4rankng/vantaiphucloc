@@ -495,12 +495,21 @@ async def auto_match(
     date_from = date_type.fromisoformat(body.date_from) if body.date_from else None
     date_to = date_type.fromisoformat(body.date_to) if body.date_to else None
 
-    # Fetch all PENDING work orders in date range
+    # Fetch all PENDING work orders in date range (filter by trip_date,
+    # fall back to created_at for records that pre-date that column).
     wo_query = sa_select(WO).where(WO.status == "PENDING")
     if date_from:
-        wo_query = wo_query.where(WO.created_at >= date_from)
+        from sqlalchemy import or_ as _or
+        wo_query = wo_query.where(
+            _or(WO.trip_date >= date_from,
+                (WO.trip_date == None) & (WO.created_at >= date_from))  # noqa: E711
+        )
     if date_to:
-        wo_query = wo_query.where(WO.created_at < date_to)
+        from sqlalchemy import or_ as _or
+        wo_query = wo_query.where(
+            _or(WO.trip_date <= date_to,
+                (WO.trip_date == None) & (WO.created_at <= date_to))  # noqa: E711
+        )
 
     delivered_trips = list((await db.execute(wo_query)).scalars().all())
 
@@ -866,10 +875,17 @@ async def match_scores(
     dt = date_type.fromisoformat(date_to) if date_to else None
 
     wo_query = sa_select(WO).where(WO.status == "PENDING")
+    from sqlalchemy import or_ as _or
     if df:
-        wo_query = wo_query.where(WO.created_at >= df)
+        wo_query = wo_query.where(
+            _or(WO.trip_date >= df,
+                (WO.trip_date == None) & (WO.created_at >= df))  # noqa: E711
+        )
     if dt:
-        wo_query = wo_query.where(WO.created_at < dt)
+        wo_query = wo_query.where(
+            _or(WO.trip_date <= dt,
+                (WO.trip_date == None) & (WO.created_at <= dt))  # noqa: E711
+        )
 
     delivered_trips = list((await db.execute(wo_query)).scalars().all())
     scores: list[DeliveredTripMatchScore] = []

@@ -264,10 +264,16 @@ async def suggest_trip_matches(
 ) -> list[MatchSuggestion]:
     """Find candidate BookedTrips for *delivered_trip*.
 
+    Container number is a hard gate: a booked trip must share at least
+    the digit portion of a container number with this WO to be considered
+    at all. Client-only matches are excluded from candidates — client
+    contributes 6% scoring weight on top of the container gate.
+
     TO-centric: a TO with N containers can match N WOs. We find TOs that:
-    1. Share container numbers with this WO (or share partner)
+    1. Pass the container gate (exact or digits-only partial match)
     2. Have remaining capacity (matched WO count < TO container count)
     3. Are PENDING or MATCHED (not COMPLETED/CANCELLED)
+    4. Have a trip_date within ±30 days of this WO's trip_date
 
     Per-container expansion: a TO with K available containers (after
     excluding those already linked to other WOs) emits K independent
@@ -277,6 +283,8 @@ async def suggest_trip_matches(
     tuple, so the UI can render one row per container and the user can
     pick which specific container of the TO this trip is fulfilling.
     """
+    from datetime import timedelta
+
     wo_containers = (await db.execute(
         select(DeliveredTripContainer.container_number)
         .where(DeliveredTripContainer.delivered_trip_id == delivered_trip.id)
@@ -298,20 +306,75 @@ async def suggest_trip_matches(
     if already_linked is not None:
         return []
 
-    # Find TOs that share container numbers with this WO
-    container_subquery = (
+    # ── Container gate ────────────────────────────────────────────────────
+    # Include booked trips whose containers share exact OR digits-only
+    # partial match with any WO container. Client-only candidates are
+    # excluded — they produce too many false positives for high-volume
+    # clients and client match is scored as a soft +6% on top.
+    wo_digits = {re.sub(r'[^0-9]', '', cn) for cn in wo_container_numbers if cn}
+
+    # Exact container match subquery
+    exact_subquery = (
         select(BookedTripContainer.booked_trip_id)
         .where(BookedTripContainer.container_number.in_(wo_container_numbers))
     )
+    # Digits-only partial match subquery (catches OCR typos in prefix letters)
+    digits_filters = [
+        BookedTripContainer.container_number.op('~')(r'[0-9]{4,}')  # has digits
+    ]
+    # We do digits matching in Python after fetch — SQL subquery just pre-filters
+    # to trips sharing the same client or exact container match, then Python
+    # applies the digit gate. This keeps the SQL simple and correct.
     # TOs that are PENDING or MATCHED (have capacity for more WOs)
     query = select(BookedTrip).where(
         BookedTrip.status.in_(["PENDING", "MATCHED"]),
-        or_(
-            BookedTrip.client_id == delivered_trip.client_id,
-            BookedTrip.id.in_(container_subquery),
-        ),
+        BookedTrip.id.in_(exact_subquery),
     )
+
+    # ── Date window ───────────────────────────────────────────────────────
+    # Limit to booked trips within ±30 days of this WO's trip date.
+    wo_date = _get_wo_date(delivered_trip)
+    if wo_date is not None:
+        query = query.where(
+            BookedTrip.trip_date >= wo_date - timedelta(days=30),
+            BookedTrip.trip_date <= wo_date + timedelta(days=30),
+        )
+
     candidates = list((await db.execute(query)).scalars().all())
+
+    # Expand to digits-only partial matches (same client, digit overlap)
+    # by running a second query for digit-matching TOs not already included.
+    if wo_digits:
+        exact_ids = {c.id for c in candidates}
+        # Fetch containers for same-client TOs in date window to check digit overlap
+        digit_query = select(BookedTrip).where(
+            BookedTrip.status.in_(["PENDING", "MATCHED"]),
+            BookedTrip.client_id == delivered_trip.client_id,
+            ~BookedTrip.id.in_(list(exact_ids)) if exact_ids else True,  # type: ignore[arg-type]
+        )
+        if wo_date is not None:
+            digit_query = digit_query.where(
+                BookedTrip.trip_date >= wo_date - timedelta(days=30),
+                BookedTrip.trip_date <= wo_date + timedelta(days=30),
+            )
+        digit_candidates = list((await db.execute(digit_query)).scalars().all())
+        if digit_candidates:
+            dc_ids = [c.id for c in digit_candidates]
+            dc_containers = (await db.execute(
+                select(BookedTripContainer)
+                .where(BookedTripContainer.booked_trip_id.in_(dc_ids))
+            )).scalars().all()
+            dc_conts_by_trip: dict[int, list[BookedTripContainer]] = defaultdict(list)
+            for c in dc_containers:
+                dc_conts_by_trip[c.booked_trip_id].append(c)
+            for to in digit_candidates:
+                to_digits = {
+                    re.sub(r'[^0-9]', '', normalize_container_number(c.container_number) or '')
+                    for c in dc_conts_by_trip.get(to.id, [])
+                    if c.container_number
+                }
+                if to_digits & wo_digits:
+                    candidates.append(to)
     if not candidates:
         return []
 
