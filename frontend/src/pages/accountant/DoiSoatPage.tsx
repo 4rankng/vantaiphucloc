@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   ClipboardList,
   Zap,
@@ -7,21 +8,17 @@ import {
   AlertCircle,
   CheckCircle,
   DollarSign,
-  CircleCheck,
-  Clock,
   Ship,
-  Container as ContainerIcon,
+  FileSpreadsheet,
 } from 'lucide-react'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { Panel } from '@/components/shared/Panel'
-import { KpiHeroCard } from '@/components/shared/KpiHeroCard'
 import { DataTable, type Column } from '@/components/shared/DataTable'
 import { Toolbar, ToolbarSearch, ToolbarSpacer } from '@/components/shared/Toolbar'
 import { Drawer } from '@/components/shared/Drawer'
 import { Pill, type PillVariant } from '@/components/shared/Pill'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui'
-import { MatchSuggestionsPanel } from '@/components/accountant/MatchSuggestionsPanel'
 import { useMonthParams } from './use-month-params'
 import { formatCurrency, getBookedTripStatusBadge, compactCurrency } from '@/data/domain'
 import { fuzzyMatch } from '@/lib/search-utils'
@@ -31,10 +28,11 @@ import {
   useMatchScores,
   useAutoMatch,
   useAutoMatchConfirm,
-  useReconcile,
   useUnmatch,
 } from '@/hooks/use-queries'
 import type { AutoMatchCandidate, DeliveredTripMatchScore } from '@/data/domain'
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function tripRevenue(t: BookedTrip): number {
   return t.revenue ?? 0
@@ -63,16 +61,129 @@ function statusVariant(badge: ReturnType<typeof getBookedTripStatusBadge>): Pill
   }
 }
 
+// ─── Status filter type ───────────────────────────────────────────────────────
+
+type StatusFilter = 'ALL' | 'PENDING' | 'MATCHED'
+
+const STATUS_FILTER_LABELS: Record<StatusFilter, string> = {
+  ALL: 'Tất cả',
+  PENDING: 'Chờ ghép',
+  MATCHED: 'Đã ghép',
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function StatPill({ count, label, accent }: { count: number | string; label: string; accent?: boolean }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-medium"
+      style={{
+        background: accent ? 'var(--accent-soft)' : 'var(--surface-3)',
+        color: accent ? 'var(--accent)' : 'var(--ink-2)',
+      }}
+    >
+      <span className="tabular-nums font-bold" style={{ color: accent ? 'var(--accent)' : 'var(--ink)' }}>
+        {count}
+      </span>
+      {label}
+    </span>
+  )
+}
+
+function MatchProgressBar({ pct }: { pct: number }) {
+  return (
+    <div className="flex items-center gap-2.5 mt-2.5">
+      <div
+        className="flex-1 relative"
+        style={{ height: 4, background: 'var(--surface-3)', borderRadius: 999, maxWidth: 240 }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            height: '100%',
+            width: `${Math.min(pct, 100)}%`,
+            background: pct >= 90 ? 'var(--success, #10b981)' : pct >= 60 ? 'var(--warning, #f59e0b)' : 'var(--accent)',
+            borderRadius: 999,
+            transition: 'width 0.4s ease',
+          }}
+        />
+      </div>
+      <span className="text-[11.5px] font-semibold tabular-nums" style={{ color: 'var(--ink-2)' }}>
+        {pct}% đã ghép
+      </span>
+    </div>
+  )
+}
+
+function StatusFilterTabs({
+  value,
+  onChange,
+  counts,
+}: {
+  value: StatusFilter
+  onChange: (v: StatusFilter) => void
+  counts: Record<StatusFilter, number>
+}) {
+  const filters: StatusFilter[] = ['ALL', 'PENDING', 'MATCHED']
+  return (
+    <div
+      className="flex items-center"
+      style={{
+        border: '1px solid var(--line)',
+        borderRadius: 'var(--r-sm, 8px)',
+        overflow: 'hidden',
+        flexShrink: 0,
+      }}
+    >
+      {filters.map((f, i) => {
+        const active = value === f
+        return (
+          <button
+            key={f}
+            type="button"
+            onClick={() => onChange(f)}
+            className="flex items-center gap-1.5 text-[12.5px] font-medium px-3 py-1.5 transition-colors"
+            style={{
+              background: active ? 'var(--accent)' : 'transparent',
+              color: active ? '#fff' : 'var(--ink-2)',
+              borderRight: i < filters.length - 1 ? '1px solid var(--line)' : 'none',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {STATUS_FILTER_LABELS[f]}
+            <span
+              className="tabular-nums text-[10.5px] font-bold px-1.5 py-0 rounded-full"
+              style={{
+                background: active ? 'rgba(255,255,255,0.25)' : 'var(--surface-3)',
+                color: active ? '#fff' : 'var(--ink-3)',
+                minWidth: 18,
+                textAlign: 'center',
+              }}
+            >
+              {counts[f]}
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+
 export function DoiSoatPage() {
+  const navigate = useNavigate()
   const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [showAutoMatch, setShowAutoMatch] = useState(false)
   const [showUnmatchFor, setShowUnmatchFor] = useState<number | null>(null)
   const [unmatchReason, setUnmatchReason] = useState('')
 
   const { data: trips = [], isLoading } = useBookedTrips({ dateFrom, dateTo, pageSize: 500 })
   const { data: matchScoresData } = useMatchScores(dateFrom, dateTo)
-  const reconcileMutation = useReconcile()
   const unmatchMutation = useUnmatch()
 
   const matchScores = useMemo(() => {
@@ -83,22 +194,40 @@ export function DoiSoatPage() {
     return map
   }, [matchScoresData])
 
-  const filtered = useMemo(() => {
-    const q = search.trim()
-    if (!q) return trips
-    return trips.filter(t =>
-      fuzzyMatch(t.partner?.name ?? '', q) ||
-      fuzzyMatch(t.pickupLocation?.name ?? '', q) ||
-      fuzzyMatch(t.dropoffLocation?.name ?? '', q) ||
-      fuzzyMatch(t.vessel ?? '', q) ||
-      (t.containers ?? []).some(c => fuzzyMatch(c.containerNumber, q)),
-    )
-  }, [trips, search])
-
-  const matchedCount = trips.filter(t => t.status === 'MATCHED').length
-  const pendingCount = trips.filter(t => t.status === 'PENDING').length
-  const totalRevenue = trips.reduce((sum, t) => sum + tripRevenue(t), 0)
+  // Status counts
+  const matchedCount = useMemo(() => trips.filter(t => t.status === 'MATCHED').length, [trips])
+  const pendingCount = useMemo(() => trips.filter(t => t.status === 'PENDING').length, [trips])
+  const totalRevenue = useMemo(() => trips.reduce((sum, t) => sum + tripRevenue(t), 0), [trips])
   const matchedPct = trips.length > 0 ? Math.round((matchedCount / trips.length) * 100) : 0
+
+  const statusCounts: Record<StatusFilter, number> = {
+    ALL: trips.length,
+    PENDING: pendingCount,
+    MATCHED: matchedCount,
+  }
+
+  // Filtered rows
+  const filtered = useMemo(() => {
+    let rows = trips
+
+    // Status filter
+    if (statusFilter === 'PENDING') rows = rows.filter(t => t.status === 'PENDING')
+    else if (statusFilter === 'MATCHED') rows = rows.filter(t => t.status === 'MATCHED')
+
+    // Text search
+    const q = search.trim()
+    if (q) {
+      rows = rows.filter(t =>
+        fuzzyMatch(t.partner?.name ?? '', q) ||
+        fuzzyMatch(t.pickupLocation?.name ?? '', q) ||
+        fuzzyMatch(t.dropoffLocation?.name ?? '', q) ||
+        fuzzyMatch(t.vessel ?? '', q) ||
+        (t.containers ?? []).some(c => fuzzyMatch(c.containerNumber, q)),
+      )
+    }
+
+    return rows
+  }, [trips, search, statusFilter])
 
   const columns: Column<BookedTrip>[] = [
     {
@@ -185,17 +314,16 @@ export function DoiSoatPage() {
         )
       },
     },
-
     {
       key: 'revenue',
       header: 'Doanh thu',
       align: 'right',
-      width: 130,
+      width: 120,
       render: (t) => {
         const r = tripRevenue(t)
         return (
-          <span className="tabular-nums font-bold" style={{ color: 'var(--ink)' }}>
-            {r > 0 ? formatCurrency(r) : '—'}
+          <span className="tabular-nums font-bold text-[13px]" style={{ color: 'var(--ink)' }}>
+            {r > 0 ? compactCurrency(r) : '—'}
           </span>
         )
       },
@@ -204,7 +332,7 @@ export function DoiSoatPage() {
       key: 'status',
       header: 'Trạng thái',
       align: 'center',
-      width: 160,
+      width: 150,
       render: (t) => {
         const badge = getBookedTripStatusBadge(t.status)
         const score = matchScores.get(t.id)
@@ -236,7 +364,7 @@ export function DoiSoatPage() {
       key: 'actions',
       header: '',
       align: 'right',
-      width: 88,
+      width: 48,
       render: (t) => (
         <div className="flex items-center justify-end gap-1">
           {t.status === 'MATCHED' && (
@@ -258,80 +386,95 @@ export function DoiSoatPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <header className="flex items-start justify-between gap-5 flex-wrap">
+
+      {/* ── Header ── */}
+      <header className="flex items-start justify-between gap-4 flex-wrap">
         <div className="min-w-0">
           <h1 className="typo-display">Đối soát</h1>
-          <p className="typo-body-sm mt-1.5">
-            Ghép chuyến đã đi với chuyến đặt trước — chạy tự động hoặc xem đề xuất từng chuyến
-          </p>
+          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+            <StatPill count={trips.length} label=" chuyến" accent />
+            <StatPill count={matchedCount} label=" đã ghép" />
+            {pendingCount > 0 && <StatPill count={pendingCount} label=" chờ ghép" />}
+            <span
+              className="inline-flex items-center gap-1 text-[12px] px-2.5 py-0.5 rounded-full font-medium"
+              style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}
+            >
+              <DollarSign className="h-3 w-3" style={{ color: 'var(--ink-3)' }} />
+              <span className="font-bold tabular-nums" style={{ color: 'var(--ink)' }}>{compactCurrency(totalRevenue)}</span>
+            </span>
+          </div>
+          {trips.length > 0 && <MatchProgressBar pct={matchedPct} />}
         </div>
         <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
       </header>
 
-      <div className="grid grid-cols-3 gap-3">
-        <KpiHeroCard
-          label="Tổng chuyến"
-          value={trips.length}
-          icon={ClipboardList}
-          color="blue"
-          sublabel={`Đã ghép: ${matchedPct}%`}
-        />
-        <KpiHeroCard
-          label="Đã ghép"
-          value={matchedCount}
-          icon={CircleCheck}
-          color="emerald"
-          sublabel={`${pendingCount} chờ ghép`}
-        />
-        <KpiHeroCard
-          label="Doanh thu"
-          formattedValue={compactCurrency(totalRevenue)}
-          value={totalRevenue}
-          icon={DollarSign}
-          color="amber"
-          sublabel="Kỳ hiện tại"
-        />
-      </div>
+      {/* ── Table section ── */}
+      <section>
+        {/* Section header */}
+        <div className="flex items-center gap-2 mb-3">
+          <span style={{ color: 'var(--ink-2)' }}><ClipboardList className="h-4 w-4" /></span>
+          <h2 className="text-[15px] font-bold" style={{ color: 'var(--ink)', letterSpacing: '-0.01em' }}>
+            Chuyến đặt trước
+          </h2>
+          <span
+            className="tabular-nums text-[11.5px] font-semibold rounded-full px-2 py-0.5"
+            style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}
+          >
+            {filtered.length}
+          </span>
+          {filtered.length !== trips.length && (
+            <span className="text-[11.5px]" style={{ color: 'var(--ink-3)' }}>
+              / {trips.length}
+            </span>
+          )}
+        </div>
 
-      <Panel
-        title="Chuyến đặt trước"
-        subtitle={`${filtered.length}/${trips.length} chuyến · ${dateFrom} → ${dateTo}`}
-        actions={
-          <Button variant="default" onClick={() => setShowAutoMatch(true)}>
-            <Zap className="h-4 w-4" />
-            Tự động ghép
-          </Button>
-        }
-        flush
-      >
-        <Toolbar bordered>
-          <ToolbarSpacer />
-          <ToolbarSearch
-            value={search}
-            onChange={setSearch}
-            placeholder="Tìm chủ hàng, tàu, tuyến, số cont..."
-            width={320}
+        <Panel flush>
+          <Toolbar bordered>
+            <StatusFilterTabs value={statusFilter} onChange={setStatusFilter} counts={statusCounts} />
+            <ToolbarSpacer />
+            <Button variant="outline" onClick={() => navigate('/accountant/import')}>
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              Nhập Excel
+            </Button>
+            <Button variant="default" onClick={() => setShowAutoMatch(true)}>
+              <Zap className="h-3.5 w-3.5" />
+              Tự động ghép
+            </Button>
+            <ToolbarSearch
+              value={search}
+              onChange={setSearch}
+              placeholder="Tìm chủ hàng, tàu, tuyến, cont…"
+              width={260}
+            />
+          </Toolbar>
+
+          <DataTable
+            columns={columns}
+            rows={filtered}
+            rowKey={(t) => t.id}
+            isLoading={isLoading}
+            minWidth={1000}
+            empty={
+              <div className="py-10">
+                <EmptyState
+                  icon={<ClipboardList className="h-5 w-5" />}
+                  title={
+                    search.trim()
+                      ? 'Không tìm thấy chuyến'
+                      : statusFilter !== 'ALL'
+                        ? `Không có chuyến nào "${STATUS_FILTER_LABELS[statusFilter].toLowerCase()}"`
+                        : 'Chưa có chuyến nào trong tháng này'
+                  }
+                  compact
+                />
+              </div>
+            }
           />
-        </Toolbar>
+        </Panel>
+      </section>
 
-        <DataTable
-          columns={columns}
-          rows={filtered}
-          rowKey={(t) => t.id}
-          isLoading={isLoading}
-          minWidth={1100}
-          empty={
-            <div className="py-10">
-              <EmptyState
-                icon={<ClipboardList className="h-5 w-5" />}
-                title={search.trim() ? 'Không tìm thấy chuyến' : 'Chưa có chuyến nào trong tháng này'}
-                compact
-              />
-            </div>
-          }
-        />
-      </Panel>
-
+      {/* ── Drawers ── */}
       {showAutoMatch && (
         <AutoMatchDrawer
           dateFrom={dateFrom}
@@ -361,15 +504,9 @@ export function DoiSoatPage() {
   )
 }
 
-function AutoMatchDrawer({
-  dateFrom,
-  dateTo,
-  onClose,
-}: {
-  dateFrom: string
-  dateTo: string
-  onClose: () => void
-}) {
+// ─── Auto-match drawer ────────────────────────────────────────────────────────
+
+function AutoMatchDrawer({ dateFrom, dateTo, onClose }: { dateFrom: string; dateTo: string; onClose: () => void }) {
   const autoMatch = useAutoMatch()
   const confirmMutation = useAutoMatchConfirm()
   const [candidates, setCandidates] = useState<AutoMatchCandidate[]>([])
@@ -511,7 +648,7 @@ function AutoMatchDrawer({
           >
             <CheckCircle className="h-7 w-7" strokeWidth={2.25} />
           </div>
-          <p className="m-0" style={{ fontFamily: 'var(--theme-font-display)', fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em' }}>
+          <p className="m-0 text-[18px] font-bold" style={{ letterSpacing: '-0.02em', color: 'var(--ink)' }}>
             Ghép thành công {defaultCount} cặp
           </p>
         </div>
@@ -519,6 +656,8 @@ function AutoMatchDrawer({
     </Drawer>
   )
 }
+
+// ─── Unmatch drawer ───────────────────────────────────────────────────────────
 
 function UnmatchDrawer({
   bookedTripId,

@@ -1,9 +1,13 @@
 import { useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2, ArrowRight } from 'lucide-react'
+import {
+  Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2, ArrowRight, X, Sparkles, ArrowLeft,
+} from 'lucide-react'
 import { Panel } from '@/components/shared/Panel'
 import { StepIndicator } from '@/components/shared/StepIndicator'
 import { Button } from '@/components/ui'
+import { InlineSelect } from '@/components/shared/InlineSelect'
+import { LinkButton } from '@/components/shared/LinkButton/LinkButton'
 import { useBulkImportAndMatch, useAIParsePreview, useClients } from '@/hooks/use-queries'
 
 type Step = 'upload' | 'preview' | 'done'
@@ -21,6 +25,46 @@ const STEPS = [
 function stepIndex(step: Step): number {
   return step === 'upload' ? 0 : step === 'preview' ? 1 : 2
 }
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function InlineError({ message }: { message: string }) {
+  return (
+    <div
+      className="flex items-start gap-2.5 px-3.5 py-3"
+      style={{ background: 'var(--danger-soft)', borderRadius: 'var(--r-sm)', color: 'var(--danger)', fontSize: 13 }}
+    >
+      <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+      <span>{message}</span>
+    </div>
+  )
+}
+
+function FilePreviewChip({ file, onRemove }: { file: File; onRemove: () => void }) {
+  return (
+    <div
+      className="flex items-center gap-2.5 px-3 py-2"
+      style={{ background: 'var(--accent-soft)', borderRadius: 'var(--r-sm)', border: '1px solid var(--accent)' }}
+    >
+      <FileSpreadsheet className="h-4 w-4 shrink-0" style={{ color: 'var(--accent)' }} />
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] font-semibold truncate m-0" style={{ color: 'var(--ink)' }}>{file.name}</p>
+        <p className="text-[11px] m-0" style={{ color: 'var(--ink-3)' }}>{(file.size / 1024).toFixed(1)} KB</p>
+      </div>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onRemove() }}
+        className="grid place-items-center rounded-md"
+        style={{ width: 24, height: 24, color: 'var(--ink-3)' }}
+        aria-label="Xoá file"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  )
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
 
 export function ExcelImportPage() {
   const navigate = useNavigate()
@@ -105,230 +149,228 @@ export function ExcelImportPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+
+      {/* ── Header ── */}
       <header>
-        <h1 className="typo-display">Nhập Excel</h1>
-        <p className="typo-body-sm mt-1.5">
+        <LinkButton onClick={() => navigate('/accountant/doi-soat')} icon={ArrowLeft}>
+          Đối soát
+        </LinkButton>
+        <h1 className="typo-display mt-2">Nhập Excel</h1>
+        <p className="typo-body-sm mt-1">
           Nhập chuyến từ Excel của chủ hàng — AI sẽ tự phân tích cột và đề xuất ghép nối
         </p>
       </header>
 
-      <div
-        className="px-5 py-4"
-        style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--line)',
-          borderRadius: 'var(--r-lg)',
-        }}
-      >
+      {/* ── Step indicator ── */}
+      <Panel>
         <StepIndicator steps={STEPS} current={stepIndex(step)} />
-      </div>
+      </Panel>
 
-      {step === 'upload' && (
-        <Panel
-          title="Tải file Excel"
-          subtitle="Hỗ trợ .xlsx, .xls, .csv"
-        >
-          <div className="space-y-5">
-            <div>
-              <label className="nepo-field-label" htmlFor="import-client">
-                Chủ hàng <span style={{ color: 'var(--ink-3)', fontWeight: 400 }}>(tùy chọn)</span>
-              </label>
-              <select
-                id="import-client"
-                value={clientId}
-                onChange={e => setClientId(e.target.value)}
-                className="nepo-select"
-              >
-                <option value="">— Chọn chủ hàng —</option>
-                {clients.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
+      {/* ── Step content (key={step} re-triggers animation) ── */}
+      <div key={step} className="animate-fade-in">
 
-            <div>
-              <label className="nepo-field-label">File Excel</label>
-              <div
-                ref={dropRef}
-                onClick={() => fileRef.current?.click()}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                className={`nepo-dropzone ${file ? 'has-file' : ''}`}
-              >
-                <FileSpreadsheet
-                  className="h-9 w-9 mb-2"
-                  style={{ color: file ? 'var(--accent)' : 'var(--ink-3)' }}
-                  strokeWidth={1.5}
+        {step === 'upload' && (
+          <Panel
+            title="Tải file Excel"
+            subtitle="Hỗ trợ .xlsx, .xls, .csv"
+          >
+            <div className="space-y-5">
+              <div className="space-y-1.5">
+                <label className="nepo-field-label">
+                  Chủ hàng <span style={{ color: 'var(--ink-3)', fontWeight: 400 }}>(tùy chọn)</span>
+                </label>
+                <InlineSelect
+                  placeholder="Chọn chủ hàng"
+                  value={clientId}
+                  options={clients.map(c => ({ value: String(c.id), label: c.name }))}
+                  onChange={setClientId}
                 />
-                <p
-                  className="text-[14px] font-semibold m-0"
-                  style={{ color: 'var(--ink)' }}
-                >
-                  {file ? file.name : 'Kéo & thả file vào đây'}
-                </p>
-                <p className="text-[12px] m-0 mt-1" style={{ color: 'var(--ink-3)' }}>
-                  {file ? `${(file.size / 1024).toFixed(1)} KB` : 'hoặc nhấn để chọn từ máy'}
-                </p>
               </div>
-              <input
-                ref={fileRef}
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                onChange={(e) => handleFileSelect(e.target.files?.[0] ?? null)}
-                className="hidden"
-              />
-            </div>
 
-            {error && (
+              <div className="space-y-1.5">
+                <label className="nepo-field-label">File Excel</label>
+                {file && (
+                  <div className="mb-2">
+                    <FilePreviewChip
+                      file={file}
+                      onRemove={() => { setFile(null); if (fileRef.current) fileRef.current.value = '' }}
+                    />
+                  </div>
+                )}
+                <div
+                  ref={dropRef}
+                  onClick={() => fileRef.current?.click()}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`nepo-dropzone ${file ? 'has-file' : ''}`}
+                >
+                  {file ? (
+                    <p className="text-[13px] font-medium m-0" style={{ color: 'var(--accent)' }}>
+                      Thay file khác
+                    </p>
+                  ) : (
+                    <>
+                      <Upload className="h-8 w-8 mb-2" style={{ color: 'var(--ink-3)' }} strokeWidth={1.5} />
+                      <p className="text-[14px] font-semibold m-0" style={{ color: 'var(--ink)' }}>
+                        Kéo & thả file vào đây
+                      </p>
+                      <p className="text-[12px] m-0 mt-1" style={{ color: 'var(--ink-3)' }}>
+                        hoặc nhấn để chọn từ máy
+                      </p>
+                      <div className="flex items-center gap-1 mt-3">
+                        <Sparkles className="h-3 w-3" style={{ color: 'var(--accent)' }} />
+                        <span className="text-[11px] font-medium" style={{ color: 'var(--accent)' }}>
+                          AI tự phân tích cột và đề xuất ghép nối
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={(e) => handleFileSelect(e.target.files?.[0] ?? null)}
+                  className="hidden"
+                />
+              </div>
+
+              {error && <InlineError message={error} />}
+
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-[12px]" style={{ color: 'var(--ink-3)' }}>
+                  Hỗ trợ .xlsx, .xls, .csv
+                </span>
+                <Button variant="default" onClick={handlePreview} disabled={!file || aiPreview.isPending}>
+                  {aiPreview.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                  {aiPreview.isPending ? 'Đang phân tích...' : 'Xem trước'}
+                </Button>
+              </div>
+            </div>
+          </Panel>
+        )}
+
+        {step === 'preview' && (
+          <>
+            <Panel
+              title={`Xem trước (${previewData.length} dòng)`}
+              subtitle={file ? file.name : undefined}
+              actions={
+                <div className="flex items-center gap-2">
+                  <span
+                    className="text-[11px] rounded-full px-2 py-0.5 font-medium"
+                    style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}
+                  >
+                    {previewCols.length} cột
+                  </span>
+                  {previewData.length > 20 && (
+                    <span className="text-[11px]" style={{ color: 'var(--ink-3)' }}>
+                      Hiển thị 20 dòng đầu
+                    </span>
+                  )}
+                </div>
+              }
+              flush
+            >
+              {previewData.length === 0 ? (
+                <div className="py-10 text-center text-[13px]" style={{ color: 'var(--ink-3)' }}>
+                  Không có dữ liệu
+                </div>
+              ) : (
+                <div className="nepo-table-scroll" style={{ maxHeight: 480 }}>
+                  <table className="nepo-table w-full" style={{ minWidth: 900 }}>
+                    <thead>
+                      <tr>
+                        <th className="nepo-th-sticky" style={{ width: 44 }}>#</th>
+                        {previewCols.map(key => (
+                          <th key={key} className="text-left">{key}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previewData.slice(0, 20).map((row, i) => (
+                        <tr key={i}>
+                          <td className="nepo-td-sticky">
+                            <span className="text-[12px]" style={{ color: 'var(--ink-3)', fontVariantNumeric: 'tabular-nums' }}>
+                              {i + 1}
+                            </span>
+                          </td>
+                          {previewCols.map((key) => {
+                            const val = row[key]
+                            return (
+                              <td key={key}>
+                                <span style={{ color: val == null ? 'var(--ink-3)' : 'var(--ink-2)' }}>
+                                  {val != null ? String(val) : '—'}
+                                </span>
+                              </td>
+                            )
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Panel>
+
+            {error && <InlineError message={error} />}
+
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-[12px]" style={{ color: 'var(--ink-3)' }}>
+                Dữ liệu sẽ được nhập và tự động ghép với chuyến đã đi
+              </span>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" onClick={() => { setStep('upload'); setPreviewData([]) }}>
+                  Quay lại
+                </Button>
+                <Button variant="default" onClick={handleImport} disabled={bulkImport.isPending}>
+                  {bulkImport.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                  {bulkImport.isPending ? 'Đang nhập...' : 'Nhập dữ liệu'}
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {step === 'done' && (
+          <Panel title="Nhập thành công!">
+            <div className="flex flex-col items-center text-center py-10 px-4">
               <div
-                className="flex items-start gap-2.5 px-3.5 py-3"
+                className="grid place-items-center mb-5"
                 style={{
-                  background: 'var(--danger-soft)',
-                  borderRadius: 'var(--r-sm)',
-                  color: 'var(--danger)',
-                  fontSize: 13,
+                  width: 80,
+                  height: 80,
+                  borderRadius: '50%',
+                  background: 'var(--success-soft)',
+                  color: 'var(--success)',
+                  boxShadow: '0 0 0 8px color-mix(in srgb, var(--success-soft) 50%, transparent)',
                 }}
               >
-                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                <span>{error}</span>
+                <CheckCircle className="h-10 w-10" strokeWidth={1.75} />
               </div>
-            )}
-
-            <div className="flex justify-end">
-              <Button variant="default" onClick={handlePreview} disabled={!file || aiPreview.isPending}>
-                {aiPreview.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Upload className="h-4 w-4" />
-                )}
-                {aiPreview.isPending ? 'Đang phân tích...' : 'Xem trước'}
-              </Button>
+              <p className="m-0 mt-2 max-w-md typo-body-sm" style={{ color: 'var(--ink-2)' }}>
+                Dữ liệu từ <span className="font-mono font-semibold" style={{ color: 'var(--ink)' }}>{file?.name ?? 'file'}</span> đã được nhập và tự động ghép với chuyến đã đi.
+                Bạn có thể kiểm tra ngay tại trang Đối soát.
+              </p>
+              <div className="flex items-center gap-2 mt-6">
+                <Button variant="ghost" onClick={handleReset}>
+                  Nhập file khác
+                </Button>
+                <Button variant="default" onClick={() => navigate('/accountant/doi-soat')}>
+                  Xem đối soát
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          </div>
-        </Panel>
-      )}
-
-      {step === 'preview' && (
-        <>
-          <Panel
-            title={`Xem trước (${previewData.length} dòng)`}
-            subtitle={file ? file.name : undefined}
-            actions={<span className="text-[12px]" style={{ color: 'var(--ink-3)' }}>Hiển thị tối đa 20 dòng đầu</span>}
-            flush
-          >
-            {previewData.length === 0 ? (
-              <div className="py-10 text-center text-[13px]" style={{ color: 'var(--ink-3)' }}>
-                Không có dữ liệu
-              </div>
-            ) : (
-              <div className="nepo-table-scroll" style={{ maxHeight: 480 }}>
-                <table className="nepo-table w-full" style={{ minWidth: 900 }}>
-                  <thead>
-                    <tr>
-                      {previewCols.map(key => (
-                        <th key={key} className="text-left">{key}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {previewData.slice(0, 20).map((row, i) => (
-                      <tr key={i}>
-                        {previewCols.map((key) => {
-                          const val = row[key]
-                          return (
-                            <td key={key}>
-                              <span style={{ color: val == null ? 'var(--ink-3)' : 'var(--ink-2)' }}>
-                                {val != null ? String(val) : '—'}
-                              </span>
-                            </td>
-                          )
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {previewData.length > 20 && (
-                  <p
-                    className="text-center py-3 m-0"
-                    style={{
-                      fontSize: 12,
-                      color: 'var(--ink-3)',
-                      borderTop: '1px solid var(--line)',
-                      background: 'var(--surface-2)',
-                    }}
-                  >
-                    ... và {previewData.length - 20} dòng khác
-                  </p>
-                )}
-              </div>
-            )}
           </Panel>
+        )}
 
-          {error && (
-            <div
-              className="flex items-start gap-2.5 px-3.5 py-3"
-              style={{
-                background: 'var(--danger-soft)',
-                borderRadius: 'var(--r-sm)',
-                color: 'var(--danger)',
-                fontSize: 13,
-              }}
-            >
-              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => { setStep('upload'); setPreviewData([]) }}
-            >
-              Quay lại
-            </Button>
-            <Button variant="default" onClick={handleImport} disabled={bulkImport.isPending}>
-              {bulkImport.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-              {bulkImport.isPending ? 'Đang nhập...' : 'Nhập dữ liệu'}
-            </Button>
-          </div>
-        </>
-      )}
-
-      {step === 'done' && (
-        <Panel>
-          <div className="flex flex-col items-center text-center py-10 px-4">
-            <div
-              className="grid place-items-center mb-4"
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: '50%',
-                background: 'var(--success-soft)',
-                color: 'var(--success)',
-              }}
-            >
-              <CheckCircle className="h-8 w-8" strokeWidth={2.25} />
-            </div>
-            <h2 className="m-0" style={{ fontFamily: 'var(--theme-font-display)', fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em' }}>
-              Nhập thành công!
-            </h2>
-            <p className="m-0 mt-2 max-w-md" style={{ fontSize: 13.5, color: 'var(--ink-2)' }}>
-              Dữ liệu từ {file?.name ?? 'file'} đã được nhập và tự động ghép với chuyến đã đi.
-              Bạn có thể kiểm tra ngay tại trang Đối soát.
-            </p>
-            <div className="flex items-center gap-2 mt-6">
-              <Button variant="ghost" onClick={handleReset}>
-                Nhập file khác
-              </Button>
-              <Button variant="default" onClick={() => navigate('/accountant/doi-soat')}>
-                Xem đối soát
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </Panel>
-      )}
+      </div>
     </div>
   )
 }
