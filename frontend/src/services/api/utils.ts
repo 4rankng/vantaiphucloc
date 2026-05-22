@@ -9,7 +9,7 @@
  */
 
 import { api } from './client'
-import type { ApiResponse } from '@/data/domain'
+import type { ApiResponse, PaginatedResult } from '@/data/domain'
 
 // ─── Case-conversion utilities ────────────────────────────────────────────────
 
@@ -70,6 +70,19 @@ export function unwrapList(data: unknown): unknown[] {
     return (data as { items: unknown[] }).items
   }
   return data as unknown[]
+}
+
+/** Unwrap backend PaginatedResponse into frontend PaginatedResult */
+export function unwrapPaginated<T>(data: unknown, mapItem: (raw: unknown) => T): PaginatedResult<T> {
+  const d = data as Record<string, unknown>
+  const rawItems: unknown[] = Array.isArray(d?.items) ? d.items : []
+  return {
+    items: rawItems.map(mapItem),
+    total: (d?.total as number) ?? rawItems.length,
+    page: (d?.page as number) ?? 1,
+    pageSize: (d?.page_size as number) ?? 50,
+    totalPages: (d?.total_pages as number) ?? 1,
+  }
 }
 
 /** Wrap a successful result in the ApiResponse shape */

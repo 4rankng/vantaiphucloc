@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { TrendUp, TrendDown, Minus } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type TrendDirection = 'up' | 'down' | 'flat'
@@ -28,9 +28,9 @@ interface MetricCardProps {
   className?: string
 }
 
-const TREND_ICONS: Record<TrendDirection, typeof TrendUp> = {
-  up: TrendUp,
-  down: TrendDown,
+const TREND_ICONS: Record<TrendDirection, typeof TrendingUp> = {
+  up: TrendingUp,
+  down: TrendingDown,
   flat: Minus,
 }
 

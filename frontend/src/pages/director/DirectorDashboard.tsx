@@ -10,7 +10,9 @@ import { useBookedTrips } from '@/hooks/use-queries'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { BrandIcon } from '@/components/atoms/BrandIcon'
 import { BarChartWidget } from '@/components/shared/Charts'
-import { Reveal, RevealList, SectionRouteDecoration } from '@/components/shared/Reveal'
+import { RevealList } from '@/components/shared/Reveal'
+import { SectionRouteDecoration } from '@/components/shared/Decoration'
+import { AnimatedNumber } from '@/components/shared'
 import type { AuditLogEntry } from '@/services/api/audit.api'
 import { getAuditLogs } from '@/services/api/audit.api'
 import { SparklineChart } from '@/components/shared/SparklineChart'
@@ -68,7 +70,7 @@ type Tone = keyof typeof TONE_COLORS
 
 interface StatCardProps {
   label: string
-  value: string
+  value: React.ReactNode
   icon: React.ReactNode
   trend?: string
   tone: Tone
@@ -84,7 +86,7 @@ function StatCard({ label, value, icon, trend, tone, sparkData, loading }: StatC
 
   return (
     <div
-      className="relative overflow-hidden transition-all hover:shadow-md"
+      className="relative overflow-hidden transition-all hover:shadow-md card-hover-lift"
       style={{
         background: 'var(--theme-bg-secondary)',
         border: '1px solid var(--theme-border-default)',
@@ -153,7 +155,8 @@ function StatCard({ label, value, icon, trend, tone, sparkData, loading }: StatC
 
 export function DirectorDashboard() {
   const navigate = useNavigate()
-  const { data: trips = [], isLoading: loading } = useBookedTrips()
+  const { data: _trips, isLoading: loading } = useBookedTrips()
+  const trips = _trips?.items ?? []
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([])
   const [financialLogs, setFinancialLogs] = useState<AuditLogEntry[]>([])
 
@@ -349,7 +352,7 @@ export function DirectorDashboard() {
         <section className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
           <StatCard
             label="Tổng chuyến"
-            value={requestedThisMonth.toLocaleString('vi-VN')}
+            value={<AnimatedNumber value={requestedThisMonth} format="number" />}
             icon={<Truck className="h-4.5 w-4.5" />}
             trend={delta(requestedThisMonth, prevRequested)}
             tone="primary"
@@ -358,7 +361,7 @@ export function DirectorDashboard() {
           />
           <StatCard
             label="Đã khớp"
-            value={String(completedThisMonth)}
+            value={<AnimatedNumber value={completedThisMonth} format="number" />}
             icon={<CheckCircle2 className="h-4.5 w-4.5" />}
             trend={delta(completedThisMonth, prevCompleted)}
             tone="success"
@@ -367,7 +370,7 @@ export function DirectorDashboard() {
           />
           <StatCard
             label="Chờ xử lý"
-            value={String(pendingThisMonth)}
+            value={<AnimatedNumber value={pendingThisMonth} format="number" />}
             icon={<AlertCircle className="h-4.5 w-4.5" />}
             trend={delta(pendingThisMonth, prevPending)}
             tone="warning"
@@ -376,7 +379,7 @@ export function DirectorDashboard() {
           />
           <StatCard
             label="Doanh thu"
-            value={compact(revenueThisMonth) + ' ₫'}
+            value={<><AnimatedNumber value={revenueThisMonth} format="compact" /> ₫</>}
             icon={<DollarSign className="h-4.5 w-4.5" />}
             trend={delta(revenueThisMonth, prevRevenue)}
             tone="info"

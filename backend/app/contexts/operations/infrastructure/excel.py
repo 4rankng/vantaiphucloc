@@ -1009,7 +1009,7 @@ async def generate_doi_soat_excel(
             wo_driver_map   = {r[0]: r[1] for r in wo_rows}
             wo_vessel_map   = {r[0]: (r[2] or "") for r in wo_rows}
             wo_ext_plate_map = {r[0]: r[4] for r in wo_rows if r[3]}
-            wo_op_type_map  = {r[0]: (r[5] or "") for r in wo_rows}
+            wo_op_type_map  = {r[0]: (r[4] or "") for r in wo_rows}
             driver_ids = [d for d in wo_driver_map.values() if d is not None]
 
             driver_plate_map: dict[int, str] = {}
@@ -1060,7 +1060,7 @@ async def generate_doi_soat_excel(
     _grey_row    = "F5F8FC"
 
     # ── Title block (rows 1–3) ────────────────────────────────────────────────
-    num_cols = 13  # number of data columns
+    num_cols = 12  # number of data columns
     last_col_letter = get_column_letter(num_cols)
 
     # Row 1: Company + report title
@@ -1086,7 +1086,7 @@ async def generate_doi_soat_excel(
 
     # ── Header row (row 4) ────────────────────────────────────────────────────
     headers = [
-        "STT", "Mã chuyến", "Ngày chạy", "Số cont", "Loại cont",
+        "STT", "Ngày chạy", "Số cont", "Loại cont",
         "Điểm lấy", "Điểm trả",
         "Tác nghiệp", "Biển số xe", "Số tàu", "Đơn giá (VNĐ)",
         "Xác nhận KH", "Ghi chú KH",
@@ -1131,12 +1131,12 @@ async def generate_doi_soat_excel(
 
         for c in containers:
             stt += 1
-            wt_label = WORK_TYPE_FULL.get(c.cont_type or "", c.cont_type or "")
+            wt_label = c.cont_type or ""
             type_count[wt_label] = type_count.get(wt_label, 0) + 1
             total_amount += revenue
 
             data_row = [
-                stt, to.id, trip_date_str, c.container_number, wt_label,
+                stt, trip_date_str, c.container_number, wt_label,
                 pickup, dropoff, op_type, plate, vessel, revenue or "",
                 "", "",  # Xác nhận KH, Ghi chú KH — empty for customer to fill
             ]
@@ -1152,7 +1152,7 @@ async def generate_doi_soat_excel(
                     cell.alignment = Alignment(horizontal="center", vertical="center")
                 if col_num == 2:  # Mã chuyến
                     cell.alignment = Alignment(horizontal="center", vertical="center")
-                if col_num == 11 and revenue:  # Đơn giá
+                if col_num == 10 and revenue:  # Đơn giá
                     cell.number_format = '#,##0'
                     cell.alignment = Alignment(horizontal="right", vertical="center")
             ws.row_dimensions[data_row_num].height = 18
@@ -1190,9 +1190,9 @@ async def generate_doi_soat_excel(
     for row_data in total_row_cells:
         ws.append(row_data)
         r = ws.max_row
-        ws.merge_cells(f"A{r}:K{r}")
+        ws.merge_cells(f"A{r}:J{r}")
         label_cell = ws.cell(row=r, column=1)
-        val_cell   = ws.cell(row=r, column=11)
+        val_cell   = ws.cell(row=r, column=10)
         label_cell.font = Font(bold=True, size=10, color=_blue_dark)
         val_cell.font   = Font(bold=True, size=11, color=_blue_dark)
         val_cell.number_format = '#,##0'
@@ -1201,7 +1201,7 @@ async def generate_doi_soat_excel(
             ws.cell(row=r, column=col_num).fill = total_fill
 
     # ── Column widths ─────────────────────────────────────────────────────────
-    col_widths = [6, 10, 12, 16, 14, 24, 24, 14, 14, 14, 16, 14, 24]
+    col_widths = [6, 12, 16, 14, 24, 24, 14, 14, 14, 16, 14, 24]
     for i, width in enumerate(col_widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = width
 

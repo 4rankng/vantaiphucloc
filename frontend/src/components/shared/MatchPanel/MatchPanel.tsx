@@ -529,7 +529,8 @@ export function MatchPanel({ deliveredTrip, onClose, onMatchSuccess }: MatchPane
 
   // ── Data ──────────────────────────────────────────────────────────────────
   const { isLoading: loadingWO } = useDeliveredTrips()
-  const { data: allTrips = [], isLoading: loadingTrips } = useBookedTrips()
+  const { data: _allTrips, isLoading: loadingTrips } = useBookedTrips()
+  const allTrips = _allTrips?.items ?? []
   const { data: suggestionsData, isLoading: loadingSuggestions } = useSuggestMatches(deliveredTrip.id)
   const { data: routes = [] } = useRoutes()
 

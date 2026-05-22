@@ -138,14 +138,13 @@ class CreateBookedTrip:
             dropoff_location_id=data.dropoff_location_id,
             revenue=revenue,
             status=BookedTripStatus.DRAFT if revenue == 0 else BookedTripStatus.PENDING,
-            matched_delivered_trip_ids=list(data.matched_delivered_trip_ids or []),
         )
         _add_containers(t, data.containers)
 
         saved = await self.repo.add(t)
         saved = await self.repo.save(saved)
 
-        for wo_id in saved.matched_delivered_trip_ids:
+        for wo_id in (data.matched_delivered_trip_ids or []):
             wo = await self.wo_repo.get_by_id(wo_id)  # type: ignore[arg-type]
             if wo is not None and wo.status == DeliveredTripStatus.PENDING:
                 wo.match()
@@ -190,6 +189,8 @@ class UpdateBookedTrip:
             t.vehicle_plate = data.vehicle_plate
         if data.operation_type is not None:
             t.operation_type = data.operation_type
+        if data.work_type is not None:
+            t.work_type = data.work_type
         if data.revenue is not None:
             t.revenue = int(data.revenue)
         if data.driver_salary is not None:
@@ -205,12 +206,19 @@ class UpdateBookedTrip:
             t.containers = []
             _add_containers(t, data.containers)
 
-        # Matched WO ids — diff and update WO statuses
-        old_matched = set(t.matched_delivered_trip_ids)
+        # Matched WO ids — diff and update WO statuses via Reconciliation table
+        from sqlalchemy import select
+        from app.models.domain import Reconciliation
+        old_matched_rows = (await self.session.execute(
+            select(Reconciliation.delivered_trip_id).where(
+                Reconciliation.booked_trip_id == tid,
+                Reconciliation.is_active == True,  # noqa: E712
+            )
+        )).scalars().all()
+        old_matched = set(int(x) for x in old_matched_rows)
         new_matched: set[int] | None = None
         if data.matched_delivered_trip_ids is not None:
             new_matched = {int(i) for i in data.matched_delivered_trip_ids}
-            t.matched_delivered_trip_ids = sorted(new_matched)
 
         await self.repo.save(t)
 
@@ -600,9 +608,17 @@ class ConfirmBookedTrip:
         to.status = BookedTripStatus.CONFIRMED
         await self.to_repo.save(to)
 
-        # Complete all matched DeliveredTrips
-        for wo_id in to.matched_delivered_trip_ids:
-            wo = await self.wo_repo.get_by_id(wo_id)
+        # Complete all matched DeliveredTrips via Reconciliation
+        from sqlalchemy import select
+        from app.models.domain import Reconciliation
+        matched_wo_ids = (await self.session.execute(
+            select(Reconciliation.delivered_trip_id).where(
+                Reconciliation.booked_trip_id == booked_trip_id,
+                Reconciliation.is_active == True,  # noqa: E712
+            )
+        )).scalars().all()
+        for wo_id in matched_wo_ids:
+            wo = await self.wo_repo.get_by_id(int(wo_id))
             if wo is not None:
                 wo.status = DeliveredTripStatus.COMPLETED
                 await self.wo_repo.save(wo)

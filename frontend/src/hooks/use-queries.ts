@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/services/api'
 import { searchBookedTrips } from '@/services/api/bookedTrips.api'
-import type { ApiResponse, Pricing, DeliveredTrip, BookedTrip, ContType, Client, Vendor, VendorSummary, BulkMatchPair, LocationAlias, MergeLocationsResponse } from '@/data/domain'
+import type { ApiResponse, PaginatedResult, Pricing, DeliveredTrip, BookedTrip, ContType, Client, Vendor, VendorSummary, BulkMatchPair, LocationAlias, MergeLocationsResponse } from '@/data/domain'
 import type { DriverEarnings } from '@/services/api/salary.api'
 import type { VehicleExpenseCategory } from '@/services/api/vehicleExpenses.api'
 import type { Vehicle } from '@/services/api/vehicles.api'
@@ -174,18 +174,23 @@ export function usePricings(filters?: { clientId?: number; workType?: ContType; 
   })
 }
 
-export function useDeliveredTrips(filters?: { driverId?: number; dateFrom?: string; dateTo?: string; status?: DeliveredTrip['status'] }) {
+export function useDeliveredTrips(filters?: { driverId?: number; dateFrom?: string; dateTo?: string; status?: DeliveredTrip['status']; page?: number; pageSize?: number }) {
   const flatFilters: Record<string, string> = {}
   if (filters?.driverId) flatFilters.driverId = String(filters.driverId)
   if (filters?.dateFrom) flatFilters.dateFrom = filters.dateFrom
   if (filters?.dateTo) flatFilters.dateTo = filters.dateTo
   if (filters?.status) flatFilters.status = filters.status
+  if (filters?.page) flatFilters.page = String(filters.page)
+  if (filters?.pageSize) flatFilters.pageSize = String(filters.pageSize)
 
   return useQuery({
     queryKey: queryKeys.deliveredTripsFiltered(Object.keys(flatFilters).length > 0 ? flatFilters : undefined),
     queryFn: async () => {
       const res = await apiClient.getDeliveredTrips(filters)
-      return res.success ? res.data : []
+      if (!res.success) {
+        return { items: [] as DeliveredTrip[], total: 0, page: 1, pageSize: 50, totalPages: 0 } as PaginatedResult<DeliveredTrip>
+      }
+      return res.data
     },
   })
 }
@@ -201,20 +206,24 @@ export function useDeliveredTrip(id: number) {
   })
 }
 
-export function useBookedTrips(filters?: { clientId?: number; driverId?: number; status?: BookedTrip['status']; dateFrom?: string; dateTo?: string; pageSize?: number }) {
+export function useBookedTrips(filters?: { clientId?: number; driverId?: number; status?: BookedTrip['status']; dateFrom?: string; dateTo?: string; page?: number; pageSize?: number }) {
   const flatFilters: Record<string, string> = {}
   if (filters?.clientId) flatFilters.clientId = String(filters.clientId)
   if (filters?.driverId) flatFilters.driverId = String(filters.driverId)
   if (filters?.status) flatFilters.status = filters.status
   if (filters?.dateFrom) flatFilters.dateFrom = filters.dateFrom
   if (filters?.dateTo) flatFilters.dateTo = filters.dateTo
+  if (filters?.page) flatFilters.page = String(filters.page)
   if (filters?.pageSize) flatFilters.pageSize = String(filters.pageSize)
 
   return useQuery({
     queryKey: queryKeys.bookedTripsFiltered(Object.keys(flatFilters).length > 0 ? flatFilters : undefined),
     queryFn: async () => {
       const res = await apiClient.getBookedTrips(filters)
-      return res.success ? res.data : []
+      if (!res.success) {
+        return { items: [] as BookedTrip[], total: 0, page: 1, pageSize: 50, totalPages: 0 } as PaginatedResult<BookedTrip>
+      }
+      return res.data
     },
   })
 }

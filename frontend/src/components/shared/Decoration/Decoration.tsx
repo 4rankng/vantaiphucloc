@@ -31,6 +31,9 @@ type DecorationVariant =
   | 'wave-divider'
   | 'pulse-dot'
   | 'hero-fleet'
+  | 'container-stack'
+  | 'port-crane-mini'
+  | 'truck-route'
 
 interface DecorationProps {
   variant: DecorationVariant
@@ -55,6 +58,9 @@ const PATHS: Record<DecorationVariant, string> = {
   'wave-divider': '/illustrations/decor-wave-divider.svg',
   'pulse-dot': '/illustrations/decor-pulse-dot.svg',
   'hero-fleet': '/illustrations/hero-fleet.svg',
+  'container-stack': '/illustrations/decor-container-stack.svg',
+  'port-crane-mini': '/illustrations/decor-port-crane-mini.svg',
+  'truck-route': '/illustrations/decor-truck-route.svg',
 }
 
 /**

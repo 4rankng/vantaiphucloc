@@ -1,11 +1,11 @@
-import type { ElementType } from 'react'
+import type { ElementType, ReactNode } from 'react'
 
 type KpiColor = 'blue' | 'emerald' | 'amber' | 'rose'
 
 export interface KpiHeroCardProps {
   label: string
   value: string | number
-  formattedValue?: string
+  formattedValue?: ReactNode
   icon: ElementType
   color: KpiColor
   sublabel?: string

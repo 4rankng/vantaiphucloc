@@ -65,7 +65,7 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
-def _trip_to_out(t: BookedTrip, clients, locations) -> BookedTripOut:
+def _trip_to_out(t: BookedTrip, clients, locations, matched_delivered_trip_ids: list[int] | None = None) -> BookedTripOut:
     return BookedTripOut(
         id=int(t.id),  # type: ignore[arg-type]
         trip_date=t.trip_date,
@@ -81,11 +81,12 @@ def _trip_to_out(t: BookedTrip, clients, locations) -> BookedTripOut:
             for c in t.containers
         ],
         vessel=t.vessel,
+        vehicle_plate=t.vehicle_plate,
         operation_type=t.operation_type,
         work_type=t.work_type,
         revenue=t.revenue,
         status=t.status,
-        matched_delivered_trip_ids=list(t.matched_delivered_trip_ids),
+        matched_delivered_trip_ids=matched_delivered_trip_ids or [],
         created_at=t.created_at,
         updated_at=t.updated_at,
     )
@@ -106,7 +107,21 @@ async def _load_many(session, trips: list[BookedTrip]) -> list[BookedTripOut]:
         {t.pickup_location_id for t in trips}
         | {t.dropoff_location_id for t in trips},
     )
-    return [_trip_to_out(t, clients, locations) for t in trips]
+    # Look up matched delivered trip IDs from Reconciliation table
+    from sqlalchemy import select
+    from app.models.domain import Reconciliation
+    to_ids = [t.id for t in trips]
+    matched_map: dict[int, list[int]] = {tid: [] for tid in to_ids}
+    if to_ids:
+        recon_result = await session.execute(
+            select(Reconciliation.booked_trip_id, Reconciliation.delivered_trip_id).where(
+                Reconciliation.booked_trip_id.in_(to_ids),
+                Reconciliation.is_active == True,  # noqa: E712
+            )
+        )
+        for bt_id, dt_id in recon_result.all():
+            matched_map[bt_id].append(dt_id)
+    return [_trip_to_out(t, clients, locations, matched_map.get(t.id, [])) for t in trips]
 
 
 def _container_inputs(items) -> list[TripContainerInput]:
@@ -384,7 +399,7 @@ async def list_booked_trips(
     date_to: date | None = None,
     unpriced: bool | None = None,
     page: int = Query(1, ge=1),
-    page_size: int = Query(50, ge=1, le=5000),
+    page_size: int = Query(50, ge=1, le=200),
     current_user: User = Depends(require_permission("read", "BookedTrip")),
     use_case: ListBookedTrips = Depends(get_list_booked_trips),
 ):
@@ -560,7 +575,10 @@ async def update_booked_trip(
             vessel=body.vessel,
             vehicle_plate=body.vehicle_plate,
             operation_type=body.operation_type,
+            work_type=body.work_type,
             revenue=body.revenue,
+            driver_salary=body.driver_salary,
+            allowance=body.allowance,
             status=body.status,
             matched_delivered_trip_ids=body.matched_delivered_trip_ids,
         ))

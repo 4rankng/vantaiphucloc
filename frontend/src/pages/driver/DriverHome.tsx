@@ -9,10 +9,11 @@ import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { useMyEarnings, useSalaryConfig, useDeliveredTrips } from '@/hooks/use-queries'
 import { getSalaryPeriodDates, dayBefore, dayAfter, toISODate } from '@/utils/salaryPeriod'
 import { useIsMobile } from '@/hooks/use-mobile'
-import { formatDate } from '@/lib/format'
 import { resolveRoute } from '@/lib/route-utils'
 import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
 import { LiveDot } from '@/components/shared/Decoration'
+import { RevealList, Reveal } from '@/components/shared/Reveal'
+import { AnimatedNumber } from '@/components/shared/AnimatedNumber'
 
 const PAGE_SIZE = 10
 
@@ -26,7 +27,8 @@ export function DriverHome() {
 function DesktopDriverHome() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { data: deliveredTrips = [], isLoading: loading } = useDeliveredTrips({ driverId: Number(user!.id) })
+  const { data: _deliveredTrips, isLoading: loading } = useDeliveredTrips({ driverId: Number(user!.id) })
+  const deliveredTrips = _deliveredTrips?.items ?? []
 
   const { data: config } = useSalaryConfig()
   const now = new Date()
@@ -102,36 +104,38 @@ function DesktopDriverHome() {
       </div>
 
       {/* Stats grid */}
-      <div className="kpi-grid">
-        <div className="stat-card">
-          <div className="stat-top">
-            <div className="stat-icon brand"><Truck size={16} /></div>
+      <RevealList stagger={70} threshold={0.05}>
+        <div className="kpi-grid">
+          <div className="stat-card">
+            <div className="stat-top">
+              <div className="stat-icon brand"><Truck size={16} /></div>
+            </div>
+            <p className="stat-label">Tổng chuyến</p>
+            <p className="stat-value">{periodJobs.length}</p>
           </div>
-          <p className="stat-label">Tổng chuyến</p>
-          <p className="stat-value">{periodJobs.length}</p>
-        </div>
-        <div className="stat-card">
-          <div className="stat-top">
-            <div className="stat-icon success"><TrendingUp size={16} /></div>
+          <div className="stat-card">
+            <div className="stat-top">
+              <div className="stat-icon success"><TrendingUp size={16} /></div>
+            </div>
+            <p className="stat-label">Đã khớp</p>
+            <p className="stat-value">{matchedCount}</p>
           </div>
-          <p className="stat-label">Đã khớp</p>
-          <p className="stat-value">{matchedCount}</p>
-        </div>
-        <div className="stat-card">
-          <div className="stat-top">
-            <div className="stat-icon warning"><Clock size={16} /></div>
+          <div className="stat-card">
+            <div className="stat-top">
+              <div className="stat-icon warning"><Clock size={16} /></div>
+            </div>
+            <p className="stat-label">Chờ ghép</p>
+            <p className="stat-value">{pendingCount}</p>
           </div>
-          <p className="stat-label">Chờ ghép</p>
-          <p className="stat-value">{pendingCount}</p>
-        </div>
-        <div className="stat-card">
-          <div className="stat-top">
-            <div className="stat-icon info"><Wallet size={16} /></div>
+          <div className="stat-card">
+            <div className="stat-top">
+              <div className="stat-icon info"><Wallet size={16} /></div>
+            </div>
+            <p className="stat-label">Tổng thu nhập</p>
+            <p className="stat-value" style={{ fontSize: periodJobs.length > 99 ? '22px' : undefined }}>{formatCurrencyFull(earningsValue)}</p>
           </div>
-          <p className="stat-label">Tổng thu nhập</p>
-          <p className="stat-value" style={{ fontSize: periodJobs.length > 99 ? '22px' : undefined }}>{formatCurrencyFull(earningsValue)}</p>
         </div>
-      </div>
+      </RevealList>
 
       {/* Recent trips table */}
       <div className="card-shell">
@@ -168,36 +172,37 @@ function DesktopDriverHome() {
               const isPending = wo.status === 'PENDING'
               const isMatched = wo.status === 'MATCHED' || wo.status === 'COMPLETED'
               return (
-                <button
-                  key={wo.id}
-                  onClick={() => navigate(`/driver/job/${wo.id}`)}
-                  className="tt-list-row"
-                >
-                  <div
-                    className="row-icon"
-                    style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
+                <Reveal key={wo.id} delay={i * 40} distance={8} threshold={0.05}>
+                  <button
+                    onClick={() => navigate(`/driver/job/${wo.id}`)}
+                    className="tt-list-row"
                   >
-                    {wo.client.code
-                      ? wo.client.code.slice(0, 2).toUpperCase()
-                      : wo.client.name.slice(0, 2).toUpperCase()}
-                  </div>
-                  <div className="row-content">
-                    <div className="row-headline">
-                      <strong>{wo.client.name}</strong>
-                      {isPending ? (
-                        <StatusBadgePro variant="warning" label="Chờ ghép" size="sm" />
-                      ) : isMatched ? (
-                        <StatusBadgePro variant="success" label="Đã khớp" size="sm" />
+                    <div
+                      className="row-icon"
+                      style={{ background: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' }}
+                    >
+                      {wo.client.code
+                        ? wo.client.code.slice(0, 2).toUpperCase()
+                        : wo.client.name.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="row-content">
+                      <div className="row-headline">
+                        <strong>{wo.client.name}</strong>
+                        {isPending ? (
+                          <StatusBadgePro variant="warning" label="Chờ ghép" size="sm" />
+                        ) : isMatched ? (
+                          <StatusBadgePro variant="success" label="Đã khớp" size="sm" />
+                        ) : null}
+                      </div>
+                      <div className="row-meta">{resolveRoute(wo)} · {dateStr}</div>
+                    </div>
+                    <div className="row-tail">
+                      {wo.driverSalary > 0 ? (
+                        <div className="font-mono-num text-sm font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>+{formatCurrencyFull(wo.driverSalary)}</div>
                       ) : null}
                     </div>
-                    <div className="row-meta">{resolveRoute(wo)} · {dateStr}</div>
-                  </div>
-                  <div className="row-tail">
-                    {wo.driverSalary > 0 ? (
-                      <div className="font-mono-num text-sm font-semibold" style={{ color: 'var(--theme-brand-primary)' }}>+{formatCurrencyFull(wo.driverSalary)}</div>
-                    ) : null}
-                  </div>
-                </button>
+                  </button>
+                </Reveal>
               )
             })}
           </div>
@@ -210,7 +215,8 @@ function DesktopDriverHome() {
 function MobileDriverHome() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { data: deliveredTrips = [], isLoading: loading } = useDeliveredTrips({ driverId: Number(user!.id) })
+  const { data: _deliveredTrips, isLoading: loading } = useDeliveredTrips({ driverId: Number(user!.id) })
+  const deliveredTrips = _deliveredTrips?.items ?? []
   const [filter, setFilter] = useState<FilterTab>('all')
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
 
@@ -364,7 +370,7 @@ function MobileDriverHome() {
           <img src="/icons/money.png" alt="" aria-hidden className="shrink-0 w-9 h-9 object-contain" />
           <div className="flex-1 min-w-0">
             <p className="text-[15px] font-bold tabular-nums leading-tight whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
-              {formatCurrencyFull(earningsValue)}
+              <AnimatedNumber value={earningsValue} format="currency" duration={700} />
             </p>
             <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
               {matchedCount} chuyến

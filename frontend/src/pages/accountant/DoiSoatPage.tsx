@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from 'react'
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import {
   ClipboardList,
   Zap,
@@ -26,11 +26,13 @@ import { Toolbar, ToolbarSearch, ToolbarSpacer } from '@/components/shared/Toolb
 import { Pill, type PillVariant } from '@/components/shared/Pill'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
 // AutoMatchDrawer removed — auto-match now runs inline
 import { ExcelImportDrawer } from '@/components/shared/ExcelImportDrawer'
 import { DeliveredTripDetailDrawer } from '@/components/shared/DeliveredTripDetailDrawer'
 import { FilterTabs } from '@/components/shared/FilterTabs'
 import { StatPill } from '@/components/shared/StatPill'
+import { Pagination } from '@/components/ui/Pagination/Pagination'
 import { useMonthParams } from './use-month-params'
 import { formatCurrency, compactCurrency, OPERATION_TYPE_LABELS } from '@/data/domain'
 import { fuzzyMatch } from '@/lib/search-utils'
@@ -39,8 +41,10 @@ import {
   useDeliveredTrips,
   useUnmatch,
   useExportDeliveredTripsExcel,
+  useExportDoiSoatExcel,
   useAutoMatch,
   useAutoMatchConfirm,
+  useClients,
 } from '@/hooks/use-queries'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -128,10 +132,26 @@ export function DoiSoatPage() {
   const [showImport, setShowImport] = useState(false)
   const [confirmUnmatchId, setConfirmUnmatchId] = useState<number | null>(null)
   const [matchTarget, setMatchTarget] = useState<DeliveredTrip | null>(null)
+  const [doiSoatClientId, setDoiSoatClientId] = useState<string>('')
+  const [page, setPage] = useState(1)
+  const pageSize = 50
 
   const exportExcel = useExportDeliveredTripsExcel()
+  const exportDoiSoat = useExportDoiSoatExcel()
+  const { data: clients = [] } = useClients()
 
-  const { data: trips = [], isLoading } = useDeliveredTrips({ dateFrom, dateTo })
+  useEffect(() => { setPage(1) }, [statusFilter, dateFrom, dateTo])
+
+  const { data, isLoading } = useDeliveredTrips({
+    dateFrom,
+    dateTo,
+    status: statusFilter !== 'ALL' ? statusFilter : undefined,
+    page,
+    pageSize,
+  })
+  const trips = data?.items ?? []
+  const totalPages = data?.totalPages ?? 0
+  const totalItems = data?.total ?? 0
   const unmatchMutation = useUnmatch()
   const autoMatch = useAutoMatch()
   const autoMatchConfirm = useAutoMatchConfirm()
@@ -156,27 +176,22 @@ export function DoiSoatPage() {
     )
   }, [dateFrom, dateTo, autoMatch, autoMatchConfirm])
 
-  // Status counts
+  // Status counts from current page data
   const matchedCount = useMemo(() => trips.filter(t => t.status === 'MATCHED').length, [trips])
   const pendingCount = useMemo(() => trips.filter(t => t.status === 'PENDING').length, [trips])
   const totalRevenue = useMemo(() => trips.reduce((sum, t) => sum + (t.revenue ?? 0), 0), [trips])
-  const matchedPct = trips.length > 0 ? Math.round((matchedCount / trips.length) * 100) : 0
+  const matchedPct = totalItems > 0 ? Math.round((matchedCount / totalItems) * 100) : 0
 
   const statusCounts: Record<StatusFilter, number> = {
-    ALL: trips.length,
+    ALL: totalItems,
     PENDING: pendingCount,
     MATCHED: matchedCount,
   }
 
-  // Filtered rows
+  // Filtered rows (client-side text search on current page)
   const filtered = useMemo(() => {
     let rows = trips
 
-    // Status filter
-    if (statusFilter === 'PENDING') rows = rows.filter(t => t.status === 'PENDING')
-    else if (statusFilter === 'MATCHED') rows = rows.filter(t => t.status === 'MATCHED')
-
-    // Text search
     const q = search.trim()
     if (q) {
       rows = rows.filter(t =>
@@ -190,7 +205,7 @@ export function DoiSoatPage() {
     }
 
     return rows
-  }, [trips, search, statusFilter])
+  }, [trips, search])
 
   const columns: Column<DeliveredTrip>[] = [
     {
@@ -392,7 +407,7 @@ export function DoiSoatPage() {
         <div className="min-w-0">
           <h1 className="typo-display">Đối soát</h1>
           <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-            <StatPill count={trips.length} label=" chuyến" accent />
+            <StatPill count={totalItems} label=" chuyến" accent />
             <StatPill count={matchedCount} label=" đã ghép" />
             {pendingCount > 0 && <StatPill count={pendingCount} label=" chờ ghép" />}
             <span
@@ -419,6 +434,42 @@ export function DoiSoatPage() {
             </h2>
           </div>
           <div className="flex items-center gap-2">
+            <Select value={doiSoatClientId} onValueChange={setDoiSoatClientId}>
+              <SelectTrigger className="w-[160px] h-8 text-[12.5px]">
+                <SelectValue placeholder="Chọn chủ hàng…" />
+              </SelectTrigger>
+              <SelectContent>
+                {clients.map((c) => (
+                  <SelectItem key={c.id} value={String(c.id)}>
+                    {c.code} — {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                if (!doiSoatClientId) return
+                exportDoiSoat.mutate(
+                  { clientId: Number(doiSoatClientId), dateFrom, dateTo },
+                  {
+                    onSuccess: (blob) => {
+                      const client = clients.find(c => c.id === Number(doiSoatClientId))
+                      const url = URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = `doi-soat-${client?.code ?? 'export'}-${dateFrom}-${dateTo}.xlsx`
+                      a.click()
+                      URL.revokeObjectURL(url)
+                    },
+                  },
+                )
+              }}
+              disabled={!doiSoatClientId || exportDoiSoat.isPending}
+            >
+              {exportDoiSoat.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5" />}
+              Xuất đối soát
+            </Button>
             <Button
               variant="ghost"
               onClick={() => exportExcel.mutate(
@@ -486,6 +537,11 @@ export function DoiSoatPage() {
               </div>
             }
           />
+          {totalPages > 1 && (
+            <div className="flex justify-center py-3" style={{ borderTop: '1px solid var(--line)' }}>
+              <Pagination totalPages={totalPages} currentPage={page} onPageChange={setPage} />
+            </div>
+          )}
         </Panel>
       </section>
 

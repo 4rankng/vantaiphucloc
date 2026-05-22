@@ -68,6 +68,7 @@ class BookedTrip:
     revenue: Money = 0
     status: str = BookedTripStatus.PENDING
     vessel: str | None = None
+    vehicle_plate: str | None = None
     created_at: datetime = field(default_factory=_utcnow)
     updated_at: datetime = field(default_factory=_utcnow)
     containers: list[BookedTripContainer] = field(default_factory=list)

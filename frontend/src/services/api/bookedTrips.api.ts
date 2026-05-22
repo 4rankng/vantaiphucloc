@@ -1,9 +1,10 @@
 import { api } from './client'
-import { toCamel, toSnake, ok, fail, unwrapList } from './utils'
+import { toCamel, toSnake, ok, fail, unwrapPaginated } from './utils'
 import type {
   BookedTrip,
   BookedTripContainerItem,
   ApiResponse,
+  PaginatedResult,
   SuggestMatchesResponse,
   SuggestWosResponse,
   ReconciliationUploadResponse,
@@ -20,6 +21,7 @@ interface BookedTripFilters {
   dateFrom?: string
   dateTo?: string
   unpriced?: boolean
+  page?: number
   pageSize?: number
 }
 
@@ -65,7 +67,7 @@ export async function getBookedTrip(id: number): Promise<ApiResponse<BookedTrip>
   }
 }
 
-export async function getBookedTrips(filters?: BookedTripFilters): Promise<ApiResponse<BookedTrip[]>> {
+export async function getBookedTrips(filters?: BookedTripFilters): Promise<ApiResponse<PaginatedResult<BookedTrip>>> {
   try {
     const params: Record<string, string> = {}
     if (filters?.clientId) params.client_id = String(filters.clientId)
@@ -73,9 +75,10 @@ export async function getBookedTrips(filters?: BookedTripFilters): Promise<ApiRe
     if (filters?.dateFrom) params.date_from = filters.dateFrom
     if (filters?.dateTo) params.date_to = filters.dateTo
     if (filters?.unpriced !== undefined) params.unpriced = String(filters.unpriced)
-    if (filters?.pageSize) params.page_size = String(filters.pageSize)
+    params.page = String(filters?.page ?? 1)
+    params.page_size = String(filters?.pageSize ?? 50)
     const res = await api.get('/booked-trips', { params })
-    return ok(toCamel<BookedTrip[]>(unwrapList(res.data)))
+    return ok(unwrapPaginated<BookedTrip>(res.data, (raw) => toCamel<BookedTrip>(raw)))
   } catch (err) {
     return fail(err)
   }

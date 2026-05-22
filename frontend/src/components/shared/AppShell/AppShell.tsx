@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { AppTopBar, type AppTopBarProps } from '@/components/shared/AppTopBar'
+import { PageTransition } from '@/components/shared/PageTransition'
 
 interface AppShellProps {
   topbarProps: AppTopBarProps
@@ -46,7 +47,9 @@ export function AppShell({ topbarProps, contentClassName, children, topbarTheme 
         />
       </header>
       <main className={`flex-1 bg-dot-grid ${contentClassName ?? ''}`}>
-        {children}
+        <PageTransition>
+          {children}
+        </PageTransition>
       </main>
     </div>
   )

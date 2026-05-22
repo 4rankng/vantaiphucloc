@@ -39,6 +39,8 @@ class BookedTripUpdateInput:
     operation_type: str | None = None
     work_type: str | None = None
     revenue: int | None = None
+    driver_salary: int | None = None
+    allowance: int | None = None
     containers: list[TripContainerInput] | None = None
     status: str | None = None
     matched_delivered_trip_ids: list[int] | None = None

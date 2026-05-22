@@ -224,16 +224,6 @@ export function DeliveredTripDetailDrawer({
                 />
               </CriteriaEditRow>
 
-              {/* Điểm đến */}
-              <CriteriaEditRow label="Điểm đến">
-                <InlineSelect
-                  value={trip.dropoffLocation?.id ?? null}
-                  displayValue={trip.dropoffLocation?.name}
-                  options={locations.map((l) => ({ value: l.id, label: l.name }))}
-                  onChange={(id) => updateTrip.mutate({ id: trip.id, data: { dropoffLocationId: id } })}
-                />
-              </CriteriaEditRow>
-
               {/* Loại cont */}
               <CriteriaEditRow label="Loại cont">
                 <InlineSelect
@@ -246,6 +236,16 @@ export function DeliveredTripDetailDrawer({
                     )
                     if (containers) updateTrip.mutate({ id: trip.id, data: { containers } })
                   }}
+                />
+              </CriteriaEditRow>
+
+              {/* Điểm đến */}
+              <CriteriaEditRow label="Điểm đến">
+                <InlineSelect
+                  value={trip.dropoffLocation?.id ?? null}
+                  displayValue={trip.dropoffLocation?.name}
+                  options={locations.map((l) => ({ value: l.id, label: l.name }))}
+                  onChange={(id) => updateTrip.mutate({ id: trip.id, data: { dropoffLocationId: id } })}
                 />
               </CriteriaEditRow>
 
@@ -472,16 +472,6 @@ export function DeliveredTripDetailDrawer({
                     />
                   </CriteriaEditRow>
 
-                  {/* Điểm đến */}
-                  <CriteriaEditRow label="Điểm đến">
-                    <InlineSelect
-                      value={bookedTrip.dropoffLocation?.id ?? null}
-                      displayValue={bookedTrip.dropoffLocation?.name}
-                      options={locations.map((l) => ({ value: l.id, label: l.name }))}
-                      onChange={(id) => updateBookedTrip.mutate({ id: bookedTrip.id, data: { dropoffLocationId: id as number } })}
-                    />
-                  </CriteriaEditRow>
-
                   {/* Loại cont */}
                   <CriteriaEditRow label="Loại cont">
                     <InlineSelect
@@ -494,6 +484,16 @@ export function DeliveredTripDetailDrawer({
                         )
                         if (containers) updateBookedTrip.mutate({ id: bookedTrip.id, data: { containers } })
                       }}
+                    />
+                  </CriteriaEditRow>
+
+                  {/* Điểm đến */}
+                  <CriteriaEditRow label="Điểm đến">
+                    <InlineSelect
+                      value={bookedTrip.dropoffLocation?.id ?? null}
+                      displayValue={bookedTrip.dropoffLocation?.name}
+                      options={locations.map((l) => ({ value: l.id, label: l.name }))}
+                      onChange={(id) => updateBookedTrip.mutate({ id: bookedTrip.id, data: { dropoffLocationId: id as number } })}
                     />
                   </CriteriaEditRow>
 
@@ -657,15 +657,15 @@ function SuggestionCard({
 
   return (
     <div
-      className="flex items-center justify-between gap-3 px-3.5 py-3"
+      className="flex flex-col gap-2 px-3.5 py-3"
       style={{
         background: 'var(--surface)',
         border: '1px solid var(--line)',
         borderRadius: 'var(--r-sm)',
       }}
     >
-      <div className="flex-1 min-w-0">
-        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '4px 16px' }}>
+      <div className="min-w-0">
+        <div className="grid" style={{ gridTemplateColumns: '1fr 1.4fr', gap: '6px 12px' }}>
           {s.criteria.map((c) => {
             const matchColor = c.match
               ? c.fuzzy ? 'var(--warning)' : 'var(--success)'
@@ -745,7 +745,7 @@ function SuggestionCard({
                 default:
                   // Read-only (container_number)
                   return (
-                    <span className="truncate" style={{ color: current ? matchColor : 'var(--ink-4)' }}>
+                    <span className="font-mono font-semibold" style={{ color: current ? matchColor : 'var(--ink-4)' }}>
                       {current ?? '—'}
                     </span>
                   )
@@ -753,27 +753,28 @@ function SuggestionCard({
             }
 
             return (
-              <div key={c.name} className="flex items-center gap-1 min-w-0 text-[12px]">
+              <div key={c.name} className="flex items-baseline gap-1 min-w-0 text-[12px]">
                 <span className="shrink-0 text-[10px] font-semibold leading-none" style={{ color: matchColor }}>
                   {c.match ? '✓' : '✕'}
                 </span>
-                <span className="shrink-0" style={{ color: 'var(--ink-3)' }}>{c.label}:</span>
-                <div className="min-w-0 flex-1">{editControl()}</div>
+                <span className="shrink-0 whitespace-nowrap" style={{ color: 'var(--ink-3)' }}>{c.label}:</span>
+                <div className="min-w-0 flex-1 overflow-hidden">{editControl()}</div>
               </div>
             )
           })}
         </div>
       </div>
-      <Button
-        variant={pct >= 80 ? 'default' : 'outline'}
-        size="sm"
-        onClick={onMatch}
-        disabled={isMatching}
-        style={{ flexShrink: 0 }}
-      >
-        {isMatching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-        Ghép
-      </Button>
+      <div className="flex justify-end">
+        <Button
+          variant={pct >= 80 ? 'default' : 'outline'}
+          size="sm"
+          onClick={onMatch}
+          disabled={isMatching}
+        >
+          {isMatching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+          Ghép
+        </Button>
+      </div>
     </div>
   )
 }
@@ -820,7 +821,7 @@ function InlineSelect({
     <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setSearch('') }}>
       <PopoverTrigger asChild>
         <button
-          className="group inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 -mx-1.5 text-left text-[12px] transition-colors truncate w-full"
+          className="group inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 -mx-1.5 text-left text-[12px] transition-colors w-full flex-wrap"
           style={{ background: 'transparent', color: displayValue ? 'var(--ink)' : 'var(--ink-4)' }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)' }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}

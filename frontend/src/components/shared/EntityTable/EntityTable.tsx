@@ -48,7 +48,7 @@ export function EntityTable<T>({
 }: EntityTableProps<T>) {
   return (
     <div
-      className="rounded-xl border overflow-hidden"
+      className="rounded-xl border overflow-hidden card-hover-lift"
       style={{
         background: 'var(--theme-bg-secondary)',
         borderColor: 'var(--theme-border-default)',
@@ -129,13 +129,13 @@ export function EntityTable<T>({
               <div
                 key={rowKey(row)}
                 onClick={() => onRowClick?.(row)}
-                className={`lg:grid gap-4 px-5 py-3 transition-colors ${
+                className={`entity-row-enter lg:grid gap-4 px-5 py-3 transition-colors ${
                   onRowClick ? 'cursor-pointer' : ''
                 }`}
                 style={{
                   gridTemplateColumns: columns.map(c => c.className ?? '1fr').join(' '),
                   borderBottom: i < data.length - 1 ? '1px solid var(--theme-border-light)' : 'none',
-                  animationDelay: `${i * 30}ms`,
+                  animationDelay: `${Math.min(i * 28, 280)}ms`,
                 }}
                 onMouseEnter={e => {
                   if (onRowClick) (e.currentTarget as HTMLElement).style.background = 'var(--theme-bg-tertiary)'

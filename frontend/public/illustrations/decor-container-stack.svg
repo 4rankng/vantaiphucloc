@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160" fill="none">
+  <defs>
+    <filter id="cs-shadow" x="-4%" y="-4%" width="108%" height="112%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#065F46" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#cs-shadow)">
+    <!-- Bottom container -->
+    <g class="decor-fade-up" style="--decor-delay: 0ms">
+      <!-- Top face -->
+      <polygon points="100,90 160,65 100,40 40,65" fill="#D1FAE5" stroke="#065F46" stroke-width="1"/>
+      <!-- Left face -->
+      <polygon points="40,65 100,90 100,118 40,93" fill="#10B981" stroke="#065F46" stroke-width="1"/>
+      <!-- Right face -->
+      <polygon points="100,90 160,65 160,93 100,118" fill="#00B14F" stroke="#065F46" stroke-width="1"/>
+      <!-- Corrugation lines left -->
+      <line x1="55" y1="72" x2="55" y2="100" stroke="#065F46" stroke-opacity="0.18" stroke-width="0.6"/>
+      <line x1="70" y1="78" x2="70" y2="106" stroke="#065F46" stroke-opacity="0.18" stroke-width="0.6"/>
+      <line x1="85" y1="84" x2="85" y2="112" stroke="#065F46" stroke-opacity="0.18" stroke-width="0.6"/>
+      <!-- Corrugation lines right -->
+      <line x1="115" y1="84" x2="115" y2="112" stroke="#065F46" stroke-opacity="0.18" stroke-width="0.6"/>
+      <line x1="130" y1="78" x2="130" y2="106" stroke="#065F46" stroke-opacity="0.18" stroke-width="0.6"/>
+      <line x1="145" y1="72" x2="145" y2="100" stroke="#065F46" stroke-opacity="0.18" stroke-width="0.6"/>
+    </g>
+
+    <!-- Middle container -->
+    <g class="decor-fade-up" style="--decor-delay: 120ms">
+      <polygon points="92,68 152,43 92,18 32,43" fill="#ECFDF5" stroke="#065F46" stroke-width="1"/>
+      <polygon points="32,43 92,68 92,96 32,71" fill="#10B981" stroke="#065F46" stroke-width="1"/>
+      <polygon points="92,68 152,43 152,71 92,96" fill="#00B14F" stroke="#065F46" stroke-width="1"/>
+      <line x1="47" y1="50" x2="47" y2="78" stroke="#065F46" stroke-opacity="0.18" stroke-width="0.6"/>
+      <line x1="62" y1="56" x2="62" y2="84" stroke="#065F46" stroke-opacity="0.18" stroke-width="0.6"/>
+      <line x1="77" y1="62" x2="77" y2="90" stroke="#065F46" stroke-opacity="0.18" stroke-width="0.6"/>
+      <line x1="107" y1="62" x2="107" y2="90" stroke="#065F46" stroke-opacity="0.18" stroke-width="0.6"/>
+      <line x1="122" y1="56" x2="122" y2="84" stroke="#065F46" stroke-opacity="0.18" stroke-width="0.6"/>
+      <line x1="137" y1="50" x2="137" y2="78" stroke="#065F46" stroke-opacity="0.18" stroke-width="0.6"/>
+    </g>
+
+    <!-- Top container -->
+    <g class="decor-fade-up" style="--decor-delay: 240ms">
+      <polygon points="108,50 168,25 108,0 48,25" fill="#ECFDF5" stroke="#065F46" stroke-width="1"/>
+      <polygon points="48,25 108,50 108,78 48,53" fill="#00B14F" stroke="#065F46" stroke-width="1"/>
+      <polygon points="108,50 168,25 168,53 108,78" fill="#10B981" stroke="#065F46" stroke-width="1"/>
+      <line x1="63" y1="32" x2="63" y2="60" stroke="#065F46" stroke-opacity="0.18" stroke-width="0.6"/>
+      <line x1="78" y1="38" x2="78" y2="66" stroke="#065F46" stroke-opacity="0.18" stroke-width="0.6"/>
+      <line x1="93" y1="44" x2="93" y2="72" stroke="#065F46" stroke-opacity="0.18" stroke-width="0.6"/>
+      <line x1="123" y1="44" x2="123" y2="72" stroke="#065F46" stroke-opacity="0.18" stroke-width="0.6"/>
+      <line x1="138" y1="38" x2="138" y2="66" stroke="#065F46" stroke-opacity="0.18" stroke-width="0.6"/>
+      <line x1="153" y1="32" x2="153" y2="60" stroke="#065F46" stroke-opacity="0.18" stroke-width="0.6"/>
+    </g>
+  </g>
+</svg>

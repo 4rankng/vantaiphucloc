@@ -1,8 +1,8 @@
 import { api } from './client'
-import { toCamel, toSnake, ok, fail, isNetworkError, unwrapList } from './utils'
+import { toCamel, toSnake, ok, fail, isNetworkError, unwrapPaginated } from './utils'
 import { setCache, getCache } from '@/lib/offline-db'
 import { offlineQueue } from '@/lib/offline-queue'
-import type { DeliveredTrip, ContainerItem, ApiResponse } from '@/data/domain'
+import type { DeliveredTrip, ContainerItem, ApiResponse, PaginatedResult } from '@/data/domain'
 
 export interface SuggestedRoute {
   client: { id: number; code: string | null; name: string }
@@ -19,6 +19,8 @@ interface DeliveredTripFilters {
   dateFrom?: string
   dateTo?: string
   status?: DeliveredTrip['status']
+  page?: number
+  pageSize?: number
 }
 
 export interface DeliveredTripCreatePayload {
@@ -63,20 +65,22 @@ export async function getDeliveredTrip(id: number): Promise<ApiResponse<Delivere
   }
 }
 
-export async function getDeliveredTrips(filters?: DeliveredTripFilters): Promise<ApiResponse<DeliveredTrip[]>> {
-  const cacheKey = `delivered-trips:${filters?.driverId || ''}:${filters?.status || ''}:${filters?.dateFrom || ''}:${filters?.dateTo || ''}`
+export async function getDeliveredTrips(filters?: DeliveredTripFilters): Promise<ApiResponse<PaginatedResult<DeliveredTrip>>> {
+  const cacheKey = `delivered-trips:${filters?.driverId || ''}:${filters?.status || ''}:${filters?.dateFrom || ''}:${filters?.dateTo || ''}:p${filters?.page || 1}:s${filters?.pageSize || 50}`
   try {
     const params: Record<string, string> = {}
     if (filters?.driverId) params.driver_id = String(filters.driverId)
     if (filters?.dateFrom) params.date_from = filters.dateFrom
     if (filters?.dateTo) params.date_to = filters.dateTo
     if (filters?.status) params.status = filters.status
+    params.page = String(filters?.page ?? 1)
+    params.page_size = String(filters?.pageSize ?? 50)
     const res = await api.get('/delivered-trips', { params })
-    const data = toCamel<DeliveredTrip[]>(unwrapList(res.data))
-    await setCache(cacheKey, data)
-    return ok(data)
+    const result = unwrapPaginated<DeliveredTrip>(res.data, (raw) => toCamel<DeliveredTrip>(raw))
+    await setCache(cacheKey, result)
+    return ok(result)
   } catch (err) {
-    const cached = await getCache<DeliveredTrip[]>(cacheKey)
+    const cached = await getCache<PaginatedResult<DeliveredTrip>>(cacheKey)
     if (isNetworkError(err) && cached) return ok(cached)
     return fail(err)
   }
@@ -243,6 +247,7 @@ export interface TemplateParseResult {
   sheetName: string
   totalRows: number
   columns: string[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   rows: Record<string, any>[]
   duplicateGroups: DuplicateGroup[]
   warnings: string[]

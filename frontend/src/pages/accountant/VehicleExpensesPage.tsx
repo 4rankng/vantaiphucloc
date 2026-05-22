@@ -22,6 +22,7 @@ import { formatCurrency } from '@/data/domain'
 import type { VehicleExpense, VehicleExpenseCategory } from '@/services/api/vehicleExpenses.api'
 import { EXPENSE_CATEGORY_LABELS } from '@/services/api/vehicleExpenses.api'
 import { fuzzyMatch } from '@/lib/search-utils'
+import { AnimatedNumber } from '@/components/shared'
 
 const CATEGORIES: VehicleExpenseCategory[] = ['XANG_DAU', 'SUA_CHUA', 'TIEN_LUAT', 'KHAC']
 
@@ -205,27 +206,30 @@ export function VehicleExpensesPage() {
       <div className="grid grid-cols-3 gap-3">
         <KpiHeroCard
           label="Tổng chi phí"
-          formattedValue={formatCurrency(totalAmount)}
+          formattedValue={<AnimatedNumber value={totalAmount} format="currency" />}
           value={totalAmount}
           icon={Fuel}
           color="amber"
           sublabel="Kỳ hiện tại"
+          className="card-hover-lift"
         />
         <KpiHeroCard
           label="Xăng dầu"
-          formattedValue={formatCurrency(totalByCategory.XANG_DAU)}
+          formattedValue={<AnimatedNumber value={totalByCategory.XANG_DAU} format="currency" />}
           value={totalByCategory.XANG_DAU}
           icon={Coins}
           color="rose"
           sublabel={`${totalAmount > 0 ? Math.round((totalByCategory.XANG_DAU / totalAmount) * 100) : 0}% tổng chi`}
+          className="card-hover-lift"
         />
         <KpiHeroCard
           label="Sửa chữa + khác"
-          formattedValue={formatCurrency(totalByCategory.SUA_CHUA + totalByCategory.TIEN_LUAT + totalByCategory.KHAC)}
+          formattedValue={<AnimatedNumber value={totalByCategory.SUA_CHUA + totalByCategory.TIEN_LUAT + totalByCategory.KHAC} format="currency" />}
           value={totalByCategory.SUA_CHUA + totalByCategory.TIEN_LUAT + totalByCategory.KHAC}
           icon={Wrench}
           color="blue"
           sublabel={`Cao nhất: ${EXPENSE_CATEGORY_LABELS[topCategory]}`}
+          className="card-hover-lift"
         />
       </div>
 

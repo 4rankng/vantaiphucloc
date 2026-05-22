@@ -527,15 +527,15 @@ async def get_trip_daily_stats(
 
     rows = (await db.execute(
         select(
-            BookedTrip.trip_date,
-            BookedTrip.status,
-            func.count(BookedTrip.id),
+            DeliveredTrip.trip_date,
+            DeliveredTrip.status,
+            func.count(DeliveredTrip.id),
         )
         .where(
-            BookedTrip.trip_date >= df,
-            BookedTrip.trip_date <= dt,
+            DeliveredTrip.trip_date >= df,
+            DeliveredTrip.trip_date <= dt,
         )
-        .group_by(BookedTrip.trip_date, BookedTrip.status)
+        .group_by(DeliveredTrip.trip_date, DeliveredTrip.status)
     )).all()
 
     day_map: dict[int, dict[str, int]] = {}
@@ -546,10 +546,10 @@ async def get_trip_daily_stats(
         day = trip_date.day if hasattr(trip_date, 'day') else trip_date
         bucket = day_map.setdefault(day, {"matched": 0, "pending": 0})
         total += cnt
-        if status == "MATCHED":
+        if status in ("MATCHED", "COMPLETED"):
             bucket["matched"] += cnt
             matched += cnt
-        else:
+        elif status not in ("CANCELLED",):
             bucket["pending"] += cnt
             pending += cnt
 

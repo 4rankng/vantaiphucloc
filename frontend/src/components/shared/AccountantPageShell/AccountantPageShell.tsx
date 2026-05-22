@@ -2,6 +2,8 @@ import type { ElementType, ReactNode } from 'react'
 import { DashboardSectionHeader } from '@/components/shared/DashboardSectionHeader'
 import { SearchBar } from '@/components/shared/SearchBar'
 import { PulseHint } from '@/components/shared/PulseHint'
+import { Decoration } from '@/components/shared/Decoration'
+import { Reveal } from '@/components/shared/Reveal'
 
 interface AccountantPageShellProps {
   title: string
@@ -36,10 +38,11 @@ export function AccountantPageShell({
   children,
 }: AccountantPageShellProps) {
   return (
-    <div className="space-y-4 animate-fade-in">
-      <div>
+    <div className="space-y-4 animate-page-enter">
+      <div className="relative overflow-hidden">
         <h1 className="typo-display" style={{ color: 'var(--theme-text-primary)' }}>{title}</h1>
         <p className="typo-body-sm mt-1" style={{ color: 'var(--theme-text-muted)' }}>{subtitle}</p>
+        <Decoration variant="dot-grid" width={180} height={48} className="absolute right-0 top-0 opacity-20" ariaLabel="" />
       </div>
 
       {(onSearchChange || onAdd) && (
@@ -83,7 +86,10 @@ export function AccountantPageShell({
         </div>
       )}
 
-      {children}
+      <Reveal threshold={0.04}>
+        {children}
+      </Reveal>
     </div>
   )
 }
+

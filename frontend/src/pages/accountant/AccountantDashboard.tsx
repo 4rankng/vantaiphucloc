@@ -9,7 +9,9 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { KpiHeroCard } from '@/components/shared/KpiHeroCard'
 import { DashboardSectionHeader } from '@/components/shared/DashboardSectionHeader'
-import { RevealList } from '@/components/shared/Reveal'
+import { RevealList, Reveal } from '@/components/shared/Reveal'
+import { Decoration } from '@/components/shared/Decoration'
+import { AnimatedNumber } from '@/components/shared'
 import { useMonthParams } from './use-month-params'
 import { formatCurrencyFull as fmt, type DeliveredTrip } from '@/data/domain'
 import type { MonthlyPnL } from '@/services/api/pnl.api'
@@ -250,7 +252,8 @@ function DesktopDashboard() {
   const { data: prevPnl }    = useMonthlyPnL(prevDateFrom, prevDateTo)
   const { data: vehiclePnl } = useVehiclePnL(dateFrom, dateTo)
   const { data: dailyStats } = useTripDailyStats(dateFrom, dateTo)
-  const { data: unmatchedTrips = [] } = useDeliveredTrips({ dateFrom, dateTo, status: 'PENDING' })
+   const { data: _unmatchedTrips } = useDeliveredTrips({ dateFrom, dateTo, status: 'PENDING' })
+  const unmatchedTrips = _unmatchedTrips?.items ?? []
 
   // KPI values
   const revenue  = pnl?.revenue ?? 0
@@ -301,7 +304,7 @@ function DesktopDashboard() {
     <div className="space-y-5 animate-fade-in">
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between relative overflow-hidden">
         <div>
           <h1 className="typo-display" style={{ color: 'var(--theme-text-primary)' }}>Tổng quan</h1>
           <p className="typo-body-sm mt-1" style={{ color: 'var(--theme-text-muted)' }}>
@@ -309,6 +312,7 @@ function DesktopDashboard() {
           </p>
         </div>
         <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
+        <Decoration variant="route-line" width={220} height={56} className="absolute right-44 top-0 opacity-25" ariaLabel="" />
       </div>
 
       {/* ── KPI trio: Doanh thu · Chi phí · Lãi ── */}
@@ -317,32 +321,32 @@ function DesktopDashboard() {
           <KpiHeroCard
             label="Doanh thu"
             value={revenue}
-            formattedValue={fmt(revenue)}
+            formattedValue={<AnimatedNumber value={revenue} format="currency" />}
             icon={TrendingUp}
             color="emerald"
             sublabel={`Tháng ${pad(month)}/${year}`}
             trend={revenueDelta != null ? { value: `${Math.abs(revenueDelta)}%`, positive: revenueDelta >= 0 } : undefined}
-
+            className="card-hover-lift"
           />
           <KpiHeroCard
             label="Chi phí"
             value={chiPhi}
-            formattedValue={fmt(chiPhi)}
+            formattedValue={<AnimatedNumber value={chiPhi} format="currency" />}
             icon={TrendingDown}
             color="rose"
             sublabel="Lương + Xe + CP Chung"
             trend={chiPhiDelta != null ? { value: `${Math.abs(chiPhiDelta)}%`, positive: chiPhiDelta <= 0 } : undefined}
-
+            className="card-hover-lift"
           />
           <KpiHeroCard
             label="Lãi ròng"
             value={laiRong}
-            formattedValue={fmt(laiRong)}
+            formattedValue={<AnimatedNumber value={laiRong} format="currency" />}
             icon={DollarSign}
             color="blue"
             sublabel={bienLai != null ? `Biên lãi ${bienLai.toFixed(1)}%` : `Tháng ${pad(month)}/${year}`}
             trend={laiDelta != null ? { value: `${Math.abs(laiDelta)}%`, positive: laiDelta >= 0 } : undefined}
-
+            className="card-hover-lift"
           />
         </div>
       </RevealList>
@@ -351,7 +355,8 @@ function DesktopDashboard() {
       <div className="grid grid-cols-[1fr_340px] gap-4 items-start">
 
         {/* LEFT: Vehicle table */}
-        <DashboardCard>
+        <Reveal threshold={0.05}>
+          <DashboardCard className="card-hover-lift">
           <div className="px-5 pt-4 pb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
             <DashboardSectionHeader
               title="Doanh thu & Chi phí theo xe"
@@ -437,12 +442,14 @@ function DesktopDashboard() {
             </div>
           )}
         </DashboardCard>
+        </Reveal>
 
         {/* RIGHT: Bar chart + Pending revenue stacked */}
         <div className="flex flex-col gap-4">
 
           {/* Bar chart */}
-          <DashboardCard>
+          <Reveal direction="right" delay={100} threshold={0.05}>
+            <DashboardCard className="card-hover-lift">
             <div className="px-4 pt-4 pb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
               <DashboardSectionHeader
                 title="Chuyến theo ngày"
@@ -484,9 +491,11 @@ function DesktopDashboard() {
               ))}
             </div>
           </DashboardCard>
+          </Reveal>
 
           {/* Chuyến chưa ghép */}
-          <DashboardCard>
+          <Reveal direction="right" delay={200} threshold={0.05}>
+            <DashboardCard className="card-hover-lift">
             <div className="px-4 pt-4 pb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>
               <DashboardSectionHeader
                 title="Chưa ghép"
@@ -518,6 +527,7 @@ function DesktopDashboard() {
               )}
             </div>
           </DashboardCard>
+          </Reveal>
 
         </div>
       </div>
@@ -539,7 +549,8 @@ function MobileDashboard() {
   const { data: prevPnl }    = useMonthlyPnL(prevDateFrom, prevDateTo)
   const { data: vehiclePnl } = useVehiclePnL(dateFrom, dateTo)
   const { data: dailyStats } = useTripDailyStats(dateFrom, dateTo)
-  const { data: unmatchedTrips = [] } = useDeliveredTrips({ dateFrom, dateTo, status: 'PENDING' })
+  const { data: _unmatchedTrips } = useDeliveredTrips({ dateFrom, dateTo, status: 'PENDING' })
+  const unmatchedTrips = _unmatchedTrips?.items ?? []
 
   const revenue  = pnl?.revenue ?? 0
   const chiPhi   = sumChiPhi(pnl)
@@ -590,38 +601,40 @@ function MobileDashboard() {
         <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <KpiHeroCard
-          label="Doanh thu"
-          value={revenue}
-          formattedValue={fmt(revenue)}
-          icon={TrendingUp}
-          color="emerald"
-          sublabel={`Tháng ${pad(month)}/${year}`}
-          trend={revenueDelta != null ? { value: `${Math.abs(revenueDelta)}%`, positive: revenueDelta >= 0 } : undefined}
-
-        />
-        <KpiHeroCard
-          label="Chi phí"
-          value={chiPhi}
-          formattedValue={fmt(chiPhi)}
-          icon={TrendingDown}
-          color="rose"
-          sublabel="Lương + Xe + CP Chung"
-          trend={chiPhiDelta != null ? { value: `${Math.abs(chiPhiDelta)}%`, positive: chiPhiDelta <= 0 } : undefined}
-
-        />
-        <KpiHeroCard
-          label="Lãi ròng"
-          value={laiRong}
-          formattedValue={fmt(laiRong)}
-          icon={DollarSign}
-          color="blue"
-          sublabel={bienLai != null ? `Biên lãi ${bienLai.toFixed(1)}%` : `Tháng ${pad(month)}/${year}`}
-          trend={laiDelta != null ? { value: `${Math.abs(laiDelta)}%`, positive: laiDelta >= 0 } : undefined}
-
-        />
-      </div>
+      <RevealList stagger={70} threshold={0.08}>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <KpiHeroCard
+            label="Doanh thu"
+            value={revenue}
+            formattedValue={<AnimatedNumber value={revenue} format="currency" />}
+            icon={TrendingUp}
+            color="emerald"
+            sublabel={`Tháng ${pad(month)}/${year}`}
+            trend={revenueDelta != null ? { value: `${Math.abs(revenueDelta)}%`, positive: revenueDelta >= 0 } : undefined}
+            className="card-hover-lift"
+          />
+          <KpiHeroCard
+            label="Chi phí"
+            value={chiPhi}
+            formattedValue={<AnimatedNumber value={chiPhi} format="currency" />}
+            icon={TrendingDown}
+            color="rose"
+            sublabel="Lương + Xe + CP Chung"
+            trend={chiPhiDelta != null ? { value: `${Math.abs(chiPhiDelta)}%`, positive: chiPhiDelta <= 0 } : undefined}
+            className="card-hover-lift"
+          />
+          <KpiHeroCard
+            label="Lãi ròng"
+            value={laiRong}
+            formattedValue={<AnimatedNumber value={laiRong} format="currency" />}
+            icon={DollarSign}
+            color="blue"
+            sublabel={bienLai != null ? `Biên lãi ${bienLai.toFixed(1)}%` : `Tháng ${pad(month)}/${year}`}
+            trend={laiDelta != null ? { value: `${Math.abs(laiDelta)}%`, positive: laiDelta >= 0 } : undefined}
+            className="card-hover-lift"
+          />
+        </div>
+      </RevealList>
 
       {/* Vehicle P&L table (same as desktop, full-width + horizontal scroll on narrow) */}
       <DashboardCard>

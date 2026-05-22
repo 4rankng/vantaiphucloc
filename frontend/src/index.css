@@ -266,6 +266,12 @@
 .animate-fade-slide-up { animation: fadeSlideUp 0.28s cubic-bezier(0.4, 0, 0.2, 1) both; }
 .animate-fade-in       { animation: fadeIn 0.2s ease both; }
 
+@media (prefers-reduced-motion: no-preference) {
+  .entity-row-enter {
+    animation: fadeSlideUp 260ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+}
+
 @keyframes pill-appear {
   from { transform: translateY(-50%) scaleY(0); }
   to   { transform: translateY(-50%) scaleY(1); }
@@ -284,6 +290,33 @@
 .stagger-4 { animation-delay: 0.16s; }
 .stagger-5 { animation-delay: 0.20s; }
 .stagger-6 { animation-delay: 0.24s; }
+
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-page-enter {
+  animation: page-enter 280ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes scale-pop {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.animate-scale-pop {
+  animation: scale-pop 220ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.card-hover-lift {
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+.card-hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--theme-shadow-elevated, 0 4px 16px -4px rgba(9,9,11,0.08));
+}
+.card-hover-lift:active {
+  transform: translateY(0);
+}
 
 /* ─── Container scanner video (kept) ──────────────────── */
 .scanner-video { width: 100%; height: 100%; overflow: hidden; }
@@ -706,6 +739,24 @@
   letter-spacing: 0.02em;
   text-align: center;
   z-index: 10;
+}
+
+/* ─── Login background SVG animations ─────────────────── */
+@keyframes login-truck-in {
+  from { transform: translateX(-220px); }
+  to   { transform: translateX(0); }
+}
+@keyframes login-road-sweep {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(200%); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .login-truck-drive {
+    animation: login-truck-in 900ms cubic-bezier(0.22, 1, 0.36, 1) 200ms both;
+  }
+  .login-road-shimmer {
+    animation: login-road-sweep 1.6s cubic-bezier(0.4, 0, 0.6, 1) 800ms both;
+  }
 }
 
 /* ─── Password dots ────────────────────────────────────── */
@@ -1853,19 +1904,23 @@ select {
 ─────────────────────────────────────────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: no-preference) {
-  /* ─── Reveal wrapper (fade + slide up) ──────────────────────────────────────────── */
+  /* ─── Reveal wrapper (fade + directional slide) ────────────────────────────────── */
   .reveal-wrapper {
     opacity: 0;
-    transform: translateY(var(--reveal-distance, 12px));
     transition: opacity 320ms cubic-bezier(0.34, 1.56, 0.64, 1),
                 transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
     transition-delay: var(--reveal-delay, 0ms);
     will-change: opacity, transform;
   }
 
+  .reveal-dir-up    { transform: translateY(var(--reveal-distance, 12px)); }
+  .reveal-dir-left  { transform: translateX(calc(-1 * var(--reveal-distance, 12px))); }
+  .reveal-dir-right { transform: translateX(var(--reveal-distance, 12px)); }
+  .reveal-dir-scale { transform: scale(0.92); }
+
   .reveal-active.reveal-wrapper {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) translateX(0) scale(1);
   }
 
   /* ─── Decoration internal animations ──────────────────────────────────────────── */

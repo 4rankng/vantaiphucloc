@@ -249,6 +249,14 @@ export interface ApiResponse<T> {
   message?: string
 }
 
+export interface PaginatedResult<T> {
+  items: T[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
 // ─── Match Suggestions ────────────────────────────────────────────────────────
 
 export type MatchConfidence = 'full' | 'partial' | 'none'

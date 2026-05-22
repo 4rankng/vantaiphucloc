@@ -11,6 +11,7 @@ import { useVehiclePnL, useVehicles } from '@/hooks/use-queries'
 import { useMonthParams } from './use-month-params'
 import { formatCurrency, compactCurrency } from '@/data/domain'
 import type { VehiclePnLRow, VehiclePnLResponse } from '@/services/api/pnl.api'
+import { AnimatedNumber } from '@/components/shared'
 
 export function PnLPage() {
   const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
@@ -165,27 +166,30 @@ export function PnLPage() {
       <div className="grid grid-cols-3 gap-3">
         <KpiHeroCard
           label="Doanh thu"
-          formattedValue={compactCurrency(totalRevenue)}
+          formattedValue={<><AnimatedNumber value={totalRevenue} format="compact" /> ₫</>}
           value={totalRevenue}
           icon={DollarSign}
           color="amber"
           sublabel="Kỳ hiện tại"
+          className="card-hover-lift"
         />
         <KpiHeroCard
           label="Lợi nhuận"
-          formattedValue={compactCurrency(totalProfit)}
+          formattedValue={<><AnimatedNumber value={totalProfit} format="compact" /> ₫</>}
           value={totalProfit}
           icon={TrendingUp}
           color={totalProfit >= 0 ? 'emerald' : 'rose'}
           sublabel={`Biên: ${marginPct.toFixed(1)}%`}
+          className="card-hover-lift"
         />
         <KpiHeroCard
           label="Tổng chi phí"
-          formattedValue={compactCurrency(totalCost)}
+          formattedValue={<><AnimatedNumber value={totalCost} format="compact" /> ₫</>}
           value={totalCost}
           icon={Coins}
           color="blue"
           sublabel={`Xe + Lương`}
+          className="card-hover-lift"
         />
       </div>
 

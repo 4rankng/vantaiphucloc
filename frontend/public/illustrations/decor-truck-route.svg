@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 80" fill="none">
+  <!-- Route line (dashed, animated) -->
+  <path
+    class="decor-path-draw"
+    d="M30 50 Q80 50 100 40 Q120 30 160 30 Q200 30 220 40 Q240 50 250 50"
+    stroke="#10B981"
+    stroke-width="2"
+    stroke-dasharray="6 4"
+    stroke-linecap="round"
+    fill="none"
+    style="stroke-dashoffset: 320; --decor-delay: 0ms"
+  />
+
+  <!-- Origin dot -->
+  <circle class="decor-pop" cx="30" cy="50" r="5" fill="#D1FAE5" stroke="#065F46" stroke-width="1.5" style="--decor-delay: 200ms"/>
+  <circle class="decor-pop" cx="30" cy="50" r="2" fill="#00B14F" style="--decor-delay: 280ms"/>
+
+  <!-- Truck silhouette -->
+  <g transform="translate(130, 18)">
+    <!-- Cargo body -->
+    <rect x="0" y="2" width="22" height="14" rx="1.5" fill="#00B14F"/>
+    <!-- Cab -->
+    <path d="M22 6 L30 6 Q32 6 32 8 L32 16 L22 16 Z" fill="#065F46"/>
+    <!-- Cab window -->
+    <rect x="23" y="7.5" width="6" height="4.5" rx="1" fill="#ECFDF5" opacity="0.7"/>
+    <!-- Wheels -->
+    <circle cx="7" cy="18" r="3" fill="#065F46"/>
+    <circle cx="7" cy="18" r="1.2" fill="#D1FAE5"/>
+    <circle cx="27" cy="18" r="3" fill="#065F46"/>
+    <circle cx="27" cy="18" r="1.2" fill="#D1FAE5"/>
+    <!-- Undercarriage -->
+    <line x1="0" y1="16" x2="32" y2="16" stroke="#065F46" stroke-width="1"/>
+  </g>
+
+  <!-- Destination pin -->
+  <g class="decor-pop" style="--decor-delay: 400ms">
+    <path d="M250 50 Q250 38 250 36 Q250 28 244 28 Q238 28 238 36 Q238 38 238 50" fill="none"/>
+    <path d="M244 26 C240 26 236 30 236 35 C236 42 244 52 244 52 C244 52 252 42 252 35 C252 30 248 26 244 26 Z" fill="#00B14F" stroke="#065F46" stroke-width="1"/>
+    <circle cx="244" cy="34" r="3" fill="#ECFDF5"/>
+  </g>
+</svg>

@@ -9,7 +9,8 @@ export function ClientJobs() {
   const clientId = Number(clientIdStr)
   const [showPricing, setShowPricing] = useState(false)
 
-  const { data: allDeliveredTrips = [] } = useDeliveredTrips()
+  const { data: _deliveredTrips } = useDeliveredTrips()
+  const allDeliveredTrips = _deliveredTrips?.items ?? []
   const { data: clients = [] } = useClients()
   const { data: pricings = [] } = usePricings({ clientId })
 

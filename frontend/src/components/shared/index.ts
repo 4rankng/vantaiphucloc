@@ -83,3 +83,6 @@ export { StatBreakdownCard } from './StatBreakdownCard'
 // ─── Decoration & reveal ────────────────────────────────────────────────────────
 export { Reveal, RevealList } from './Reveal'
 export { Decoration, HeroDecoration, SectionRouteDecoration, LiveDot } from './Decoration'
+export { AnimatedNumber } from './AnimatedNumber'
+export { PageTransition } from './PageTransition'
+

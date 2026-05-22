@@ -16,6 +16,7 @@ import {
 } from '@/hooks/use-queries'
 import { useMonthParams } from './use-month-params'
 import { formatCurrency } from '@/data/domain'
+import { AnimatedNumber } from '@/components/shared'
 
 interface SalaryRow {
   driverId: number
@@ -137,27 +138,30 @@ export function SalaryPage() {
       <div className="grid grid-cols-3 gap-3">
         <KpiHeroCard
           label="Tổng thực lĩnh"
-          formattedValue={formatCurrency(totalEarnings)}
+          formattedValue={<AnimatedNumber value={totalEarnings} format="currency" />}
           value={totalEarnings}
           icon={Wallet}
           color="amber"
           sublabel={`${driverCount} tài xế`}
+          className="card-hover-lift"
         />
         <KpiHeroCard
           label="Lương cơ bản"
-          formattedValue={formatCurrency(totalBaseSalary)}
+          formattedValue={<AnimatedNumber value={totalBaseSalary} format="currency" />}
           value={totalBaseSalary}
           icon={Coins}
           color="blue"
           sublabel="Kỳ hiện tại"
+          className="card-hover-lift"
         />
         <KpiHeroCard
           label="Năng suất + phụ cấp"
-          formattedValue={formatCurrency(totalProductivity + totalAllowance)}
+          formattedValue={<AnimatedNumber value={totalProductivity + totalAllowance} format="currency" />}
           value={totalProductivity + totalAllowance}
           icon={BadgePercent}
           color="emerald"
           sublabel={`Năng suất ${formatCurrency(totalProductivity)}`}
+          className="card-hover-lift"
         />
       </div>
 

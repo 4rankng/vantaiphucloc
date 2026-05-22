@@ -191,8 +191,8 @@ def _confidence(score: float) -> str:
 CRITERIA_ORDER = [
     ("container_number", "Container"),
     ("pickup_location", "Điểm đi"),
-    ("dropoff_location", "Điểm đến"),
     ("work_type", "Loại cont"),
+    ("dropoff_location", "Điểm đến"),
     ("vessel", "Số tàu"),
     ("vehicle_plate", "Số xe"),
     ("operation_type", "Tác nghiệp"),
@@ -506,6 +506,8 @@ async def suggest_trip_matches(
                 dropoff_location=get_location_summary(
                     locations, to.dropoff_location_id,
                 ),
+                vessel=to.vessel,
+                vehicle_plate=to.vehicle_plate,
                 operation_type=to.operation_type,
                 work_type=to.work_type,
                 containers=[TripContainerOut.model_validate(container)],

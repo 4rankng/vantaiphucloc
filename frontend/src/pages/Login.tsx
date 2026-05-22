@@ -77,22 +77,29 @@ export function Login() {
               <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0"/>
               <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.25"/>
             </linearGradient>
+            <linearGradient id="lg-road-shimmer" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%"   stopColor="#FFFFFF" stopOpacity="0"/>
+              <stop offset="50%"  stopColor="#FFFFFF" stopOpacity="0.35"/>
+              <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0"/>
+            </linearGradient>
           </defs>
           {/* Stars / dots in sky */}
-          <circle cx="40"  cy="30"  r="1.5" fill="#FFFFFF" opacity="0.7"/>
-          <circle cx="120" cy="14"  r="1"   fill="#FFFFFF" opacity="0.6"/>
-          <circle cx="200" cy="22"  r="2"   fill="#FFFFFF" opacity="0.8"/>
-          <circle cx="300" cy="10"  r="1.5" fill="#FFFFFF" opacity="0.5"/>
-          <circle cx="380" cy="28"  r="1"   fill="#FFFFFF" opacity="0.65"/>
-          <circle cx="440" cy="16"  r="1.5" fill="#FFFFFF" opacity="0.7"/>
-          <circle cx="80"  cy="54"  r="1"   fill="#FFFFFF" opacity="0.45"/>
-          <circle cx="260" cy="38"  r="1.2" fill="#FFFFFF" opacity="0.55"/>
-          <circle cx="420" cy="50"  r="1"   fill="#FFFFFF" opacity="0.5"/>
+          <circle cx="40"  cy="30"  r="1.5" fill="#FFFFFF" opacity="0.7" className="login-star"/>
+          <circle cx="120" cy="14"  r="1"   fill="#FFFFFF" opacity="0.6" className="login-star"/>
+          <circle cx="200" cy="22"  r="2"   fill="#FFFFFF" opacity="0.8" className="login-star"/>
+          <circle cx="300" cy="10"  r="1.5" fill="#FFFFFF" opacity="0.5" className="login-star"/>
+          <circle cx="380" cy="28"  r="1"   fill="#FFFFFF" opacity="0.65" className="login-star"/>
+          <circle cx="440" cy="16"  r="1.5" fill="#FFFFFF" opacity="0.7" className="login-star"/>
+          <circle cx="80"  cy="54"  r="1"   fill="#FFFFFF" opacity="0.45" className="login-star"/>
+          <circle cx="260" cy="38"  r="1.2" fill="#FFFFFF" opacity="0.55" className="login-star"/>
+          <circle cx="420" cy="50"  r="1"   fill="#FFFFFF" opacity="0.5" className="login-star"/>
           {/* Horizon distant hills */}
           <path d="M0 200 Q80 160 160 180 Q240 200 320 165 Q400 130 480 170 L480 320 L0 320 Z"
                 fill="#FFFFFF" fillOpacity="0.05"/>
           {/* Ground road surface */}
           <rect x="0" y="260" width="480" height="60" fill="#FFFFFF" fillOpacity="0.07"/>
+          {/* Road shimmer sweep */}
+          <rect x="0" y="260" width="480" height="60" fill="url(#lg-road-shimmer)" fillOpacity="0.12" className="login-road-shimmer"/>
           {/* Road center dashes */}
           <g stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeOpacity="0.3">
             <line x1="0"   y1="290" x2="40"  y2="290"/>
@@ -103,19 +110,25 @@ export function Login() {
             <line x1="350" y1="290" x2="390" y2="290"/>
             <line x1="420" y1="290" x2="460" y2="290"/>
           </g>
-          {/* Truck 1 (left, larger) */}
-          <g transform="translate(40 245)">
+          {/* Truck 1 (left, larger) — animates in from off-screen */}
+          <g className="login-truck-drive">
             {/* Cargo */}
-            <rect x="0"  y="0"  width="100" height="46" rx="4" fill="#FFFFFF" fillOpacity="0.15"/>
-            <rect x="0"  y="0"  width="100" height="5"  rx="2" fill="#FFFFFF" fillOpacity="0.2"/>
+            <rect x="40"  y="245"  width="100" height="46" rx="4" fill="#FFFFFF" fillOpacity="0.15"/>
+            <rect x="40"  y="245"  width="100" height="5"  rx="2" fill="#FFFFFF" fillOpacity="0.2"/>
             {/* Cab */}
-            <path d="M100 8 L128 8 Q134 8 134 14 L134 46 L100 46 Z" fill="#FFFFFF" fillOpacity="0.22"/>
-            <rect x="103" y="12" width="27" height="18" rx="2" fill="#FFFFFF" fillOpacity="0.15"/>
+            <path d="M140 253 L168 253 Q174 253 174 259 L174 291 L140 291 Z" fill="#FFFFFF" fillOpacity="0.22"/>
+            <rect x="143" y="257" width="27" height="18" rx="2" fill="#FFFFFF" fillOpacity="0.15"/>
             {/* Wheels */}
-            <circle cx="20"  cy="50" r="9" fill="#FFFFFF" fillOpacity="0.25"/>
-            <circle cx="20"  cy="50" r="4" fill="#FFFFFF" fillOpacity="0.15"/>
-            <circle cx="112" cy="50" r="9" fill="#FFFFFF" fillOpacity="0.25"/>
-            <circle cx="112" cy="50" r="4" fill="#FFFFFF" fillOpacity="0.15"/>
+            <circle cx="60"  cy="295" r="9" fill="#FFFFFF" fillOpacity="0.25"/>
+            <circle cx="60"  cy="295" r="4" fill="#FFFFFF" fillOpacity="0.15"/>
+            <circle cx="152" cy="295" r="9" fill="#FFFFFF" fillOpacity="0.25"/>
+            <circle cx="152" cy="295" r="4" fill="#FFFFFF" fillOpacity="0.15"/>
+            {/* Motion lines */}
+            <g stroke="#FFFFFF" strokeLinecap="round" strokeOpacity="0.15">
+              <line x1="28" y1="262" x2="38" y2="262" strokeWidth="2.5"/>
+              <line x1="22" y1="270" x2="38" y2="270" strokeWidth="1.8"/>
+              <line x1="18" y1="278" x2="38" y2="278" strokeWidth="1.2"/>
+            </g>
           </g>
           {/* Truck 2 (right, smaller / distant) */}
           <g transform="translate(310 254)" opacity="0.65">
@@ -124,12 +137,6 @@ export function Login() {
             <rect x="74" y="9" width="18" height="12" rx="1.5" fill="#FFFFFF" fillOpacity="0.12"/>
             <circle cx="15" cy="36" r="6" fill="#FFFFFF" fillOpacity="0.2"/>
             <circle cx="82" cy="36" r="6" fill="#FFFFFF" fillOpacity="0.2"/>
-          </g>
-          {/* Motion lines behind truck 1 */}
-          <g stroke="#FFFFFF" strokeLinecap="round" strokeOpacity="0.15">
-            <line x1="0"  y1="262" x2="28" y2="262" strokeWidth="2.5"/>
-            <line x1="0"  y1="270" x2="22" y2="270" strokeWidth="1.8"/>
-            <line x1="0"  y1="278" x2="18" y2="278" strokeWidth="1.2"/>
           </g>
           {/* Distant building silhouettes */}
           <g fill="#FFFFFF" fillOpacity="0.07">

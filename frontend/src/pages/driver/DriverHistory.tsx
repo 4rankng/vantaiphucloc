@@ -17,7 +17,8 @@ const FILTER_OPTIONS: { value: FilterValue; label: string }[] = [
 export function DriverHistory() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { data: deliveredTrips = [], isLoading: loading } = useDeliveredTrips({ driverId: user!.id })
+  const { data: _deliveredTrips, isLoading: loading } = useDeliveredTrips({ driverId: user!.id })
+  const deliveredTrips = _deliveredTrips?.items ?? []
   const [filter, setFilter] = useState<FilterValue>('ALL')
 
   const filtered = useMemo(() =>

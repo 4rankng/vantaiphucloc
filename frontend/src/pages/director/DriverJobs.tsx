@@ -7,7 +7,8 @@ import { useDeliveredTrips } from '@/hooks/use-queries'
 export function DriverJobs() {
   const { driverId: driverIdStr } = useParams<{ driverId: string }>()
   const driverId = Number(driverIdStr)
-  const { data: jobs = [] } = useDeliveredTrips({ driverId })
+  const { data } = useDeliveredTrips({ driverId })
+  const jobs = data?.items ?? []
 
   const totalEarning = useMemo(() => jobs.reduce((s, j) => s + j.driverSalary, 0), [jobs])
 
