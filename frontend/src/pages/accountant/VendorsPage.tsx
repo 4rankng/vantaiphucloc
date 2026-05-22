@@ -10,12 +10,13 @@ import { TableSkeleton } from '@/components/shared/TableSkeleton/TableSkeleton'
 import { StatPill } from '@/components/shared/StatPill'
 import {
   useVendors,
+  useVendorsPaged,
   useCreateVendor,
   useUpdateVendor,
   useDeleteVendor,
 } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
-import { fuzzyMatch } from '@/lib/search-utils'
+import { useDebounce } from '@/hooks/use-debounce'
 import type { Vendor } from '@/data/domain'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -228,32 +229,34 @@ function VendorRow({ vendor, onEdit, onDelete }: {
 
 export function VendorsPage() {
   const toast = useToast()
-  const { data: vendors = [], isLoading } = useVendors()
+  // Keep useVendors for accurate stat counts (no search filter)
+  const { data: allVendors = [] } = useVendors()
+  const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 400)
+  const { data: pagedData, isLoading } = useVendorsPaged({
+    search: debouncedSearch || undefined,
+    pageSize: 500,
+  })
+  const vendors = pagedData?.items ?? []
+
   const createVendor = useCreateVendor()
   const updateVendor = useUpdateVendor()
   const deleteVendor = useDeleteVendor()
 
-  const [search, setSearch] = useState('')
   const [limit, setLimit] = useState(BATCH)
   const [editingId, setEditingId] = useState<number | 'new' | null>(null)
   const [editingField, setEditingField] = useState<FocusableField>(null)
   const [deleteTarget, setDeleteTarget] = useState<Vendor | null>(null)
 
-  useEffect(() => { setLimit(BATCH) }, [search])
+  useEffect(() => { setLimit(BATCH) }, [debouncedSearch])
 
-  const filtered = useMemo(() => {
-    const q = search.trim()
-    if (!q) return vendors
-    return vendors.filter(p => fuzzyMatch(p.name, q) || fuzzyMatch(p.phone ?? '', q) || fuzzyMatch(p.taxCode ?? '', q))
-  }, [vendors, search])
-
-  const visible = filtered.slice(0, limit)
-  const hasMore = limit < filtered.length
+  const visible = vendors.slice(0, limit)
+  const hasMore = limit < vendors.length
   const loadMore = useCallback(() => setLimit(n => n + BATCH), [])
   const sentinel = useInfiniteScroll(loadMore)
 
-  const companyCount = vendors.filter(v => v.type === 'company').length
-  const individualCount = vendors.filter(v => v.type !== 'company').length
+  const companyCount = allVendors.filter(v => v.type === 'company').length
+  const individualCount = allVendors.filter(v => v.type !== 'company').length
 
   const handleCreate = useCallback((data: FormData) => {
     createVendor.mutate(data, {
@@ -302,7 +305,7 @@ export function VendorsPage() {
         <Panel flush>
           {isLoading ? (
             <TableSkeleton />
-          ) : filtered.length === 0 && editingId !== 'new' ? (
+          ) : vendors.length === 0 && editingId !== 'new' ? (
             <div className="py-10">
               <EmptyState
                 icon={<Truck className="h-5 w-5" />}

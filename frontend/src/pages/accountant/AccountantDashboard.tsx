@@ -94,7 +94,7 @@ type VehicleSortCol = 'plate' | 'revenue' | 'totalCp' | 'profit' | 'margin'
 // ─── Desktop dashboard ────────────────────────────────────────────────────────
 
 function DesktopDashboard() {
-  const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
+  const { year, month, dateFrom, dateTo, periodStart, periodEnd, onPrev, onNext } = useMonthParams()
 
   // Previous month dates for delta computation
   const prevMonth = month === 1 ? 12 : month - 1
@@ -165,7 +165,7 @@ function DesktopDashboard() {
             Bảng điều khiển kế toán & vận tải
           </p>
         </div>
-        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
+        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
       </div>
 
       {/* ── KPI trio: Doanh thu · Chi phí · Lãi ── */}
@@ -391,7 +391,7 @@ function DesktopDashboard() {
 // ─── Mobile dashboard ─────────────────────────────────────────────────────────
 
 function MobileDashboard() {
-  const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
+  const { year, month, dateFrom, dateTo, periodStart, periodEnd, onPrev, onNext } = useMonthParams()
 
   const prevMonth    = month === 1 ? 12 : month - 1
   const prevYear     = month === 1 ? year - 1 : year
@@ -451,7 +451,7 @@ function MobileDashboard() {
     <div className="space-y-4 pb-8">
       <div className="flex items-center justify-between">
         <h1 className="typo-h1" style={{ color: 'var(--theme-text-primary)' }}>Tổng quan</h1>
-        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
+        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
       </div>
 
       <RevealList stagger={70} threshold={0.08}>

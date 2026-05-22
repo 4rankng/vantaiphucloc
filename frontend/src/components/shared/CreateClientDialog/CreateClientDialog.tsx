@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { Button, Input, Label } from '@/components/ui'
 import type { Client } from '@/data/domain'
@@ -9,11 +9,13 @@ interface CreateClientDialogProps {
   open: boolean
   onClose: () => void
   onConfirm: (data: ClientFormData) => Promise<void> | void
+  defaultName?: string
 }
 
 const VN_TAX_RE = /^\d{10}(\d{3})?$/
 
 const EMPTY_FORM: ClientFormData = {
+  code: '',
   name: '',
   type: 'company',
   phone: '',
@@ -22,10 +24,17 @@ const EMPTY_FORM: ClientFormData = {
   contactPerson: '',
 }
 
-export function CreateClientDialog({ open, onClose, onConfirm }: CreateClientDialogProps) {
+export function CreateClientDialog({ open, onClose, onConfirm, defaultName }: CreateClientDialogProps) {
   const [form, setForm] = useState<ClientFormData>(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<{ phone?: string; taxCode?: string }>({})
+
+  useEffect(() => {
+    if (open) {
+      setForm(defaultName ? { ...EMPTY_FORM, name: defaultName } : EMPTY_FORM)
+      setErrors({})
+    }
+  }, [open, defaultName])
 
   const updateField = <K extends keyof ClientFormData>(key: K, value: ClientFormData[K]) => {
     setForm(prev => ({ ...prev, [key]: value }))
@@ -65,18 +74,29 @@ export function CreateClientDialog({ open, onClose, onConfirm }: CreateClientDia
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Tên */}
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
-              Tên khách hàng <span style={{ color: 'var(--theme-error, #ef4444)' }}>*</span>
-            </Label>
-            <Input
-              value={form.name}
-              onChange={e => updateField('name', e.target.value)}
-              placeholder="Tên khách hàng"
-              className="text-sm"
-              autoFocus
-            />
+          {/* Tên + Mã khách */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-2 space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>
+                Tên khách hàng <span style={{ color: 'var(--theme-error, #ef4444)' }}>*</span>
+              </Label>
+              <Input
+                value={form.name}
+                onChange={e => updateField('name', e.target.value)}
+                placeholder="Tên khách hàng"
+                className="text-sm"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Mã KH</Label>
+              <Input
+                value={form.code ?? ''}
+                onChange={e => updateField('code', e.target.value)}
+                placeholder="VD: PAN"
+                className="text-sm"
+              />
+            </div>
           </div>
 
           {/* Loại */}

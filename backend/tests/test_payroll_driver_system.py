@@ -331,8 +331,8 @@ async def test_monthly_pnl_revenue_uses_unit_price_times_container_count(
     body = res.json()
     assert body["revenue"] == 8_000_000
     assert body["matched_trip_count"] == 2
-    assert len(body["partner_breakdown"]) == 1
-    assert body["partner_breakdown"][0]["revenue"] == 8_000_000
+    assert len(body["client_breakdown"]) == 1
+    assert body["client_breakdown"][0]["revenue"] == 8_000_000
 
 
 async def test_monthly_pnl_subtracts_base_productivity_allowance(
@@ -425,10 +425,10 @@ async def test_monthly_pnl_partner_breakdown_sorted_by_revenue(
         headers=headers,
     )
     body = res.json()
-    names = [p["partner_name"] for p in body["partner_breakdown"]]
+    names = [p["client_name"] for p in body["client_breakdown"]]
     assert names == ["B Corp", "A Corp"]
-    assert body["partner_breakdown"][0]["revenue"] == 5_000_000
-    assert body["partner_breakdown"][1]["revenue"] == 2_000_000
+    assert body["client_breakdown"][0]["revenue"] == 5_000_000
+    assert body["client_breakdown"][1]["revenue"] == 2_000_000
 
 
 # ---------------------------------------------------------------------------
@@ -483,7 +483,7 @@ async def test_customer_recon_preview_resolves_rows_against_booked_trips(
     assert res.status_code == 201, res.text
     body = res.json()
     assert body["status"] == "PARSED"
-    assert body["partner_name"] == "ACME Co."
+    assert body["client_name"] == "ACME Co."
     assert body["summary"]["total"] == 2
     assert body["summary"]["matched"] == 1
     assert body["summary"]["rejected"] == 1

@@ -12,7 +12,7 @@ from datetime import date, datetime
 @dataclass
 class TripContainerInput:
     container_number: str
-    cont_type: str
+    work_type: str
 
 
 @dataclass
@@ -61,7 +61,6 @@ class BookedTripListFilters:
 class ImportTripRow:
     """One row from the customer-Excel import pipeline, post-mapping."""
     container_no: str
-    cont_type: str = ""
     work_type: str = ""
     pickup_location: str = ""
     dropoff_location: str = ""
@@ -98,7 +97,7 @@ class ImportCommitResult:
 @dataclass
 class DeliveredTripContainerInput:
     container_number: str
-    cont_type: str
+    work_type: str
     photo_url: str | None = None
     photo_lat: float | None = None
     photo_lng: float | None = None
@@ -151,6 +150,9 @@ class DeliveredTripListFilters:
     date_from: date | None = None
     date_to: date | None = None
     status: str | None = None
+    sort_by: str | None = None      # trip_date | vessel | status | revenue | created_at | ...
+    sort_order: str = 'desc'        # asc | desc
+    search: str | None = None       # searches vessel, container_number, operation_type
 
 
 # ── Reconciliation ───────────────────────────────────────────────

@@ -56,26 +56,38 @@ from app.schemas.domain import SoftDeleteRequest
 router = APIRouter()
 
 
+_VALID_CLIENT_SORT = {'name', 'code', 'created_at'}
+
+
 @router.get("/clients", response_model=PaginatedResponse[PartnerOutBody])
 async def list_clients(
     type: str | None = Query(None, alias="type"),
+    search: str | None = Query(None, description="Search by name, code, phone, tax code"),
+    sort_by: str | None = Query(None, description="Sort column: name | code | type | created_at"),
+    sort_order: str = Query('asc', pattern='^(asc|desc)$'),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     current_user: User = Depends(require_permission("read", "Partner")),
     use_case: ListPartners = Depends(get_list_partners),
     redis: Redis = Depends(get_redis),
 ):
+    safe_sort_by = sort_by if sort_by in _VALID_CLIENT_SORT else None
     cache = CacheManager(redis)
-    cache_key = f"list:{type}:{page}:{page_size}"
-    cached = await cache.get_json("clients", cache_key)
-    if cached is not None:
-        return PaginatedResponse(**cached)
+    cache_key = f"list:{type}:{search}:{safe_sort_by}:{sort_order}:{page}:{page_size}"
+    # Only use cache when no search/sort is active (search is user-specific)
+    if not search:
+        cached = await cache.get_json("clients", cache_key)
+        if cached is not None:
+            return PaginatedResponse(**cached)
 
     items, total = await use_case(
         page=page,
         page_size=page_size,
         partner_type=type,
         active_only=True,
+        search=search,
+        sort_by=safe_sort_by,
+        sort_order=sort_order,
     )
 
     response = PaginatedResponse[PartnerOutBody](
@@ -85,10 +97,11 @@ async def list_clients(
         page_size=page_size,
         total_pages=math.ceil(total / page_size) if total > 0 else 0,
     )
-    serialized = response.model_dump(mode="json")
-    await cache.set_json(
-        "clients", cache_key, serialized, ttl=settings.CACHE_CLIENTS_TTL
-    )
+    if not search:
+        serialized = response.model_dump(mode="json")
+        await cache.set_json(
+            "clients", cache_key, serialized, ttl=settings.CACHE_CLIENTS_TTL
+        )
     return response
 
 

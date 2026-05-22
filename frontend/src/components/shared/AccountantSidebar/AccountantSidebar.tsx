@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -18,6 +18,7 @@ import {
   TrendingUp,
   FileSpreadsheet,
   MapPin,
+  KeyRound,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useUnreadCount } from '@/components/shared/NotificationPanel/NotificationPanel'
@@ -27,6 +28,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui'
+import { UserInfoDialog, ProfileDialog } from '@/components/shared/ProfileDialog'
 
 export interface SidebarItem {
   label: string
@@ -66,7 +68,7 @@ const ACCOUNTANT_NAV_SECTIONS: SidebarSection[] = [
     items: [
       { label: 'Chi phí xe', href: '/accountant/expenses', icon: Fuel },
       { label: 'Lương', href: '/accountant/salary', icon: Wallet },
-      { label: 'Báo cáo tài chính', href: '/accountant/pnl', icon: TrendingUp },
+      { label: 'Báo cáo', href: '/accountant/pnl', icon: TrendingUp },
     ],
   },
   {
@@ -110,6 +112,8 @@ export function AccountantSidebar({
   const navigate = useNavigate()
   const { user, logout } = useAuth()
   const unread = useUnreadCount()
+  const [showInfoDialog, setShowInfoDialog] = useState(false)
+  const [showPwDialog, setShowPwDialog] = useState(false)
 
   const sections: SidebarSection[] = items
     ? [{ label: null, items }]
@@ -333,11 +337,15 @@ export function AccountantSidebar({
                   </DropdownMenuItem>
                 )}
                 {profilePath && (
-                  <DropdownMenuItem onClick={() => navigate(profilePath)}>
+                  <DropdownMenuItem onClick={() => setShowInfoDialog(true)}>
                     <UserCircle className="mr-2 h-4 w-4" />
                     Thông tin cá nhân
                   </DropdownMenuItem>
                 )}
+                <DropdownMenuItem onClick={() => setShowPwDialog(true)}>
+                  <KeyRound className="mr-2 h-4 w-4" />
+                  Đổi mật khẩu
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -371,6 +379,9 @@ export function AccountantSidebar({
           />
         </button>
       )}
+
+      <UserInfoDialog open={showInfoDialog} onClose={() => setShowInfoDialog(false)} />
+      <ProfileDialog open={showPwDialog} onClose={() => setShowPwDialog(false)} />
     </aside>
   )
 }

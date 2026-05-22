@@ -271,6 +271,13 @@ async def create_delivered_trip_endpoint(
     return await _load_one(use_case.session, w)
 
 
+_VALID_SORT_COLS = {
+    'trip_date', 'vessel', 'status', 'revenue', 'created_at', 'operation_type',
+    'client_code', 'vehicle_plate', 'pickup_name', 'dropoff_name',
+    'container_number', 'cont_type',
+}
+
+
 @router.get("/delivered-trips", response_model=PaginatedResponse[DeliveredTripOut])
 async def list_delivered_trips(
     client_id: int | None = None,
@@ -278,19 +285,28 @@ async def list_delivered_trips(
     date_from: date | None = None,
     date_to: date | None = None,
     status: str | None = None,
+    search: str | None = Query(None, description="Search vessel, container number, operation type, client name/code"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
+    sort_by: str | None = Query(None, description="Sort column: trip_date | vessel | status | revenue | created_at"),
+    sort_order: str = Query('desc', pattern='^(asc|desc)$'),
     current_user: User = Depends(get_current_user),
     use_case: ListDeliveredTrips = Depends(get_list_delivered_trips),
 ):
     if current_user.role == "driver":
         driver_id = current_user.id
 
+    # Sanitise sort_by — only allow whitelisted columns
+    safe_sort_by = sort_by if sort_by in _VALID_SORT_COLS else None
+
     items, total = await use_case(DeliveredTripListFilters(
         page=page, page_size=page_size,
         client_id=client_id,
         driver_id=driver_id,
         date_from=date_from, date_to=date_to, status=status,
+        sort_by=safe_sort_by,
+        sort_order=sort_order,
+        search=search,
     ))
     out = await _load_many(use_case.repo.session, items)  # type: ignore[attr-defined]
 

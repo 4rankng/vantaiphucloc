@@ -81,9 +81,15 @@ async def update_own_profile(
     return UserOut.from_entity(user)
 
 
+_VALID_USER_SORT = {'username', 'full_name', 'role', 'phone'}
+
+
 @router.get("/users", response_model=PaginatedResponse[UserOut])
 async def list_users(
     role: str | None = None,
+    search: str | None = None,
+    sort_by: str | None = None,
+    sort_order: str = Query('asc', pattern='^(asc|desc)$'),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     current_user: UserORM = Depends(require_permission("list", "User")),
@@ -91,12 +97,16 @@ async def list_users(
 ):
     role_filter = UserRole.from_str(role) if role else None
     exclude_superadmin = current_user.role == "director"
+    safe_sort_by = sort_by if sort_by in _VALID_USER_SORT else None
     items, total = await use_case.execute(
         UserListFilter(
             page=page,
             page_size=page_size,
             role=role_filter,
             exclude_superadmin=exclude_superadmin,
+            search=search,
+            sort_by=safe_sort_by,
+            sort_order=sort_order,
         )
     )
 

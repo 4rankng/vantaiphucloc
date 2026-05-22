@@ -245,12 +245,37 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
         date_from: date | None = None,
         date_to: date | None = None,
         status: DeliveredTripStatus | None = None,
+        sort_by: str | None = None,
+        sort_order: str = 'desc',
+        search: str | None = None,
     ) -> tuple[Sequence[DeliveredTrip], int]:
+        from sqlalchemy import exists, or_
+        from app.models.domain import Client as ClientORM
         q = select(DeliveredTripORM)
         if client_id is not None:
             q = q.where(DeliveredTripORM.client_id == client_id)
         if driver_id is not None:
             q = q.where(DeliveredTripORM.driver_id == driver_id)
+        if search:
+            pattern = f"%{search}%"
+            # Search vessel, operation_type on the trip itself, and container_number via EXISTS
+            container_match = exists().where(
+                DeliveredTripContainerORM.delivered_trip_id == DeliveredTripORM.id,
+                DeliveredTripContainerORM.container_number.ilike(pattern),
+            )
+            client_match = exists().where(
+                ClientORM.id == DeliveredTripORM.client_id,
+                or_(
+                    ClientORM.name.ilike(pattern),
+                    ClientORM.code.ilike(pattern),
+                ),
+            )
+            q = q.where(or_(
+                DeliveredTripORM.vessel.ilike(pattern),
+                DeliveredTripORM.operation_type.ilike(pattern),
+                container_match,
+                client_match,
+            ))
         # Filter by trip_date (the actual trip day), falling back to created_at
         # for records that pre-date the trip_date column.
         if date_from is not None:
@@ -268,7 +293,52 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
         total = await self.session.scalar(
             select(func.count()).select_from(q.subquery())
         ) or 0
-        q = q.order_by(DeliveredTripORM.id.desc()).offset(offset).limit(limit)
+        # Dynamic sort — whitelist valid columns to prevent SQL injection
+        _SORTABLE_DIRECT = {
+            'trip_date': DeliveredTripORM.trip_date,
+            'vessel': DeliveredTripORM.vessel,
+            'status': DeliveredTripORM.status,
+            'revenue': DeliveredTripORM.revenue,
+            'created_at': DeliveredTripORM.created_at,
+            'operation_type': DeliveredTripORM.operation_type,
+        }
+        sort_col = _SORTABLE_DIRECT.get(sort_by or '') if sort_by else None
+
+        if sort_col is None and sort_by:
+            # JOIN-based sorts (client, vehicle, locations)
+            from app.models.domain import Client as ClientORM, Vehicle as VehicleORM, Location as LocationORM
+            _JOIN_SORTS = {
+                'client_code': (ClientORM, DeliveredTripORM.client_id, 'code'),
+                'vehicle_plate': (VehicleORM, DeliveredTripORM.vehicle_id, 'plate'),
+                'pickup_name': (LocationORM, DeliveredTripORM.pickup_location_id, 'name'),
+                'dropoff_name': (LocationORM, DeliveredTripORM.dropoff_location_id, 'name'),
+            }
+            join_spec = _JOIN_SORTS.get(sort_by)
+            if join_spec:
+                model, fk_col, attr_name = join_spec
+                q = q.outerjoin(model, model.id == fk_col)
+                sort_col = getattr(model, attr_name)
+
+        if sort_col is None and sort_by in ('container_number', 'cont_type'):
+            # Subquery sort: first container's number or type
+            attr = DeliveredTripContainerORM.container_number if sort_by == 'container_number' else DeliveredTripContainerORM.cont_type
+            sub = (
+                select(attr)
+                .where(DeliveredTripContainerORM.delivered_trip_id == DeliveredTripORM.id)
+                .order_by(DeliveredTripContainerORM.id)
+                .limit(1)
+                .correlate(DeliveredTripORM)
+                .scalar_subquery()
+            )
+            sort_col = sub
+
+        if sort_col is not None:
+            order_expr = sort_col.asc() if sort_order == 'asc' else sort_col.desc()
+            # Secondary tie-break: id descending keeps stable ordering
+            q = q.order_by(order_expr, DeliveredTripORM.id.desc())
+        else:
+            q = q.order_by(DeliveredTripORM.id.desc())
+        q = q.offset(offset).limit(limit)
         rows = list((await self.session.execute(q)).scalars().all())
         items = await self._hydrate_many(rows)
         return items, int(total)

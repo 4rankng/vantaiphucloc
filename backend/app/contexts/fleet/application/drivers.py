@@ -31,8 +31,22 @@ class ListDrivers:
     def __init__(self, repo: DriverRepository) -> None:
         self.repo = repo
 
-    async def __call__(self, *, page: int, page_size: int) -> DriverListDTO:
-        result = await self.repo.list_paged(page=page, page_size=page_size)
+    async def __call__(
+        self,
+        *,
+        page: int,
+        page_size: int,
+        search: str | None = None,
+        sort_by: str | None = None,
+        sort_order: str = 'asc',
+    ) -> DriverListDTO:
+        result = await self.repo.list_paged(
+            page=page,
+            page_size=page_size,
+            search=search,
+            sort_by=sort_by,
+            sort_order=sort_order,
+        )
         return DriverListDTO(
             items=[_to_dto(d) for d in result.items],
             total=result.total,

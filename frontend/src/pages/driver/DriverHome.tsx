@@ -100,7 +100,7 @@ function DesktopDriverHome() {
             Kỳ lương {displayMonth}/{displayYear}
           </p>
         </div>
-        <MonthNavigator year={displayYear} month={displayMonth} onPrev={handlePrevPeriod} onNext={handleNextPeriod} />
+        <MonthNavigator year={displayYear} month={displayMonth} onPrev={handlePrevPeriod} onNext={handleNextPeriod} periodStart={currentPeriod.startDate} periodEnd={currentPeriod.endDate} />
       </div>
 
       {/* Stats grid */}

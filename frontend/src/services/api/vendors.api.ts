@@ -1,7 +1,18 @@
 import { api } from './client'
 import { toCamel, toSnake, ok, fail, isNetworkError, unwrapList } from './utils'
 import { setCache, getCache } from '@/lib/offline-db'
-import type { Vendor, VendorSummary, ApiResponse } from '@/data/domain'
+import type { Vendor, VendorSummary, ApiResponse, PaginatedResult } from '@/data/domain'
+
+export type VendorSortBy = 'name' | 'code' | 'created_at'
+export type SortOrder = 'asc' | 'desc'
+
+export interface VendorFilters {
+  search?: string
+  sortBy?: VendorSortBy
+  sortOrder?: SortOrder
+  page?: number
+  pageSize?: number
+}
 
 export async function getVendors(): Promise<ApiResponse<Vendor[]>> {
   try {
@@ -12,6 +23,28 @@ export async function getVendors(): Promise<ApiResponse<Vendor[]>> {
   } catch (err) {
     const cached = await getCache<Vendor[]>('vendors')
     if (isNetworkError(err) && cached) return ok(cached)
+    return fail(err)
+  }
+}
+
+export async function getVendorsPaged(filters?: VendorFilters): Promise<ApiResponse<PaginatedResult<Vendor>>> {
+  try {
+    const params: Record<string, string> = {}
+    if (filters?.search) params.search = filters.search
+    if (filters?.sortBy) params.sort_by = filters.sortBy
+    if (filters?.sortOrder) params.sort_order = filters.sortOrder
+    params.page = String(filters?.page ?? 1)
+    params.page_size = String(filters?.pageSize ?? 100)
+    const res = await api.get('/vendors', { params })
+    const raw = res.data
+    return ok({
+      items: (raw.items ?? []).map((item: unknown) => toCamel<Vendor>(item)),
+      total: raw.total ?? 0,
+      page: raw.page ?? 1,
+      pageSize: raw.page_size ?? 100,
+      totalPages: raw.total_pages ?? 0,
+    })
+  } catch (err) {
     return fail(err)
   }
 }

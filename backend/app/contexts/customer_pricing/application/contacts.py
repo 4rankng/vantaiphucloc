@@ -44,6 +44,9 @@ class ListPartners:
         page_size: int,
         partner_type: str | None = None,
         active_only: bool = True,
+        search: str | None = None,
+        sort_by: str | None = None,
+        sort_order: str = 'asc',
     ) -> tuple[list[Partner], int]:
         offset = (page - 1) * page_size
         items, total = await self.repo.list(
@@ -51,6 +54,9 @@ class ListPartners:
             limit=page_size,
             partner_type=partner_type,
             active_only=active_only,
+            search=search,
+            sort_by=sort_by,
+            sort_order=sort_order,
         )
         return list(items), total
 

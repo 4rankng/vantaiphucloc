@@ -44,22 +44,36 @@ def _to_out(d: DriverDTO, plate: str | None = None) -> DriverOut:
     )
 
 
+_VALID_DRIVER_SORT = {'username', 'full_name', 'phone'}
+
+
 @router.get("/drivers", response_model=PaginatedResponse[DriverOut])
 async def list_drivers(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
+    search: str | None = Query(None, description="Search by username, full name, phone"),
+    sort_by: str | None = Query(None, description="Sort column: username | full_name | phone"),
+    sort_order: str = Query('asc', pattern='^(asc|desc)$'),
     _current_user: User = Depends(get_current_user),
     use_case: ListDrivers = Depends(get_list_drivers),
     redis: Redis = Depends(get_redis),
     db: AsyncSession = Depends(get_db),
 ):
+    safe_sort_by = sort_by if sort_by in _VALID_DRIVER_SORT else None
     cache = CacheManager(redis)
-    cache_key = f"list:{page}:{page_size}"
-    cached = await cache.get_json("drivers", cache_key)
-    if cached is not None:
-        return PaginatedResponse(**cached)
+    cache_key = f"list:{page}:{page_size}:{search}:{safe_sort_by}:{sort_order}"
+    if not search:
+        cached = await cache.get_json("drivers", cache_key)
+        if cached is not None:
+            return PaginatedResponse(**cached)
 
-    result = await use_case(page=page, page_size=page_size)
+    result = await use_case(
+        page=page,
+        page_size=page_size,
+        search=search,
+        sort_by=safe_sort_by,
+        sort_order=sort_order,
+    )
 
     # Load vehicle plates for these drivers via VehicleDriver
     driver_ids = [d.id for d in result.items]
@@ -86,12 +100,13 @@ async def list_drivers(
         if result.total > 0
         else 0,
     )
-    await cache.set_json(
-        "drivers",
-        cache_key,
-        response.model_dump(mode="json"),
-        ttl=settings.CACHE_DRIVERS_TTL,
-    )
+    if not search:
+        await cache.set_json(
+            "drivers",
+            cache_key,
+            response.model_dump(mode="json"),
+            ttl=settings.CACHE_DRIVERS_TTL,
+        )
     return response
 
 

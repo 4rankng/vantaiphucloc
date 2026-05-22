@@ -53,19 +53,56 @@ class VendorOut(BaseModel):
 class PaginatedVendorOut(BaseModel):
     items: list[VendorOut]
     total: int
+    page: int = 1
+    page_size: int = 100
+    total_pages: int = 1
+
+
+_VALID_VENDOR_SORT = {'name', 'code', 'created_at'}
 
 
 @router.get("/vendors", response_model=PaginatedVendorOut)
 async def list_vendors(
+    search: str | None = Query(None, description="Search by name, code, phone, tax code, address, contact person"),
+    sort_by: str | None = Query(None, description="Sort column: name | code | created_at"),
+    sort_order: str = Query('asc', pattern='^(asc|desc)$'),
     page: int = Query(1, ge=1),
     page_size: int = Query(100, ge=1, le=500),
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(require_roles("accountant", "superadmin")),
 ):
-    total = (await db.execute(
-        select(Vendor).where(Vendor.is_active == True)  # noqa: E712
-    )).scalars().all()
-    return PaginatedVendorOut(items=total, total=len(total))
+    from sqlalchemy import func, or_
+    q = select(Vendor).where(Vendor.is_active == True)  # noqa: E712
+    if search:
+        pattern = f"%{search}%"
+        q = q.where(or_(
+            Vendor.name.ilike(pattern),
+            Vendor.code.ilike(pattern),
+            Vendor.phone.ilike(pattern),
+            Vendor.tax_code.ilike(pattern),
+            Vendor.address.ilike(pattern),
+            Vendor.contact_person.ilike(pattern),
+        ))
+    count_q = select(func.count()).select_from(q.subquery())
+    total_count = (await db.execute(count_q)).scalar() or 0
+    safe_sort_by = sort_by if sort_by in _VALID_VENDOR_SORT else None
+    _SORTABLE = {'name': Vendor.name, 'code': Vendor.code, 'created_at': Vendor.id}
+    sort_col = _SORTABLE.get(safe_sort_by or '')
+    if sort_col is not None:
+        order_expr = sort_col.asc() if sort_order == 'asc' else sort_col.desc()
+        q = q.order_by(order_expr, Vendor.id.asc())
+    else:
+        q = q.order_by(Vendor.name.asc())
+    q = q.offset((page - 1) * page_size).limit(page_size)
+    import math
+    items = (await db.execute(q)).scalars().all()
+    return PaginatedVendorOut(
+        items=list(items),
+        total=total_count,
+        page=page,
+        page_size=page_size,
+        total_pages=math.ceil(total_count / page_size) if total_count > 0 else 0,
+    )
 
 
 @router.get("/vendors/{vendor_id}", response_model=VendorOut)

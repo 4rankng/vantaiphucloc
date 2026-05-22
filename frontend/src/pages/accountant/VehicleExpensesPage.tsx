@@ -283,7 +283,7 @@ function ExpenseRow({ expense, onEdit, onDelete }: {
 
 export function VehicleExpensesPage() {
   const toast = useToast()
-  const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
+  const { year, month, dateFrom, dateTo, periodStart, periodEnd, onPrev, onNext } = useMonthParams()
   const [categoryFilter, setCategoryFilter] = useState<VehicleExpenseCategory | ''>('')
   const [vehicleFilter, setVehicleFilter] = useState<number | ''>('')
   const [search, setSearch] = useState('')
@@ -365,7 +365,7 @@ export function VehicleExpensesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
+          <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
           <Button variant="default" onClick={() => setEditingId('new')}>
             <Plus className="h-4 w-4" />
             Thêm chi phí

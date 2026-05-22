@@ -78,14 +78,39 @@ class SqlClientRepository(PartnerRepository):
         limit: int,
         partner_type: str | None = None,
         active_only: bool = True,
+        search: str | None = None,
+        sort_by: str | None = None,
+        sort_order: str = 'asc',
     ) -> tuple[Sequence[Partner], int]:
+        from sqlalchemy import or_
         q = select(ClientORM)
         if active_only:
             q = q.where(ClientORM.is_active.is_(True))
+        if search:
+            pattern = f"%{search}%"
+            q = q.where(or_(
+                ClientORM.name.ilike(pattern),
+                ClientORM.code.ilike(pattern),
+                ClientORM.phone.ilike(pattern),
+                ClientORM.tax_code.ilike(pattern),
+                ClientORM.address.ilike(pattern),
+                ClientORM.contact_person.ilike(pattern),
+            ))
         total = await self.session.scalar(
             select(func.count()).select_from(q.subquery())
         ) or 0
-        q = q.order_by(ClientORM.name.asc()).offset(offset).limit(limit)
+        _SORTABLE = {
+            'name': ClientORM.name,
+            'code': ClientORM.code,
+            'created_at': ClientORM.id,  # proxy; no created_at column on clients
+        }
+        sort_col = _SORTABLE.get(sort_by or '')
+        if sort_col is not None:
+            order_expr = sort_col.asc() if sort_order == 'asc' else sort_col.desc()
+            q = q.order_by(order_expr, ClientORM.id.asc())
+        else:
+            q = q.order_by(ClientORM.name.asc())
+        q = q.offset(offset).limit(limit)
         rows = list((await self.session.execute(q)).scalars().all())
         return [client_to_domain(r) for r in rows], int(total)
 

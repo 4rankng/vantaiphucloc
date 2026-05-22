@@ -95,6 +95,9 @@ class ListDeliveredTrips:
             status=(
                 DeliveredTripStatus(filters.status) if filters.status else None
             ),
+            sort_by=filters.sort_by,
+            sort_order=filters.sort_order,
+            search=filters.search,
         )
         return list(items), total
 

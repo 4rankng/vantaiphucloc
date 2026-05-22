@@ -10,7 +10,7 @@ import { useClients, useExportDoiSoatExcel } from '@/hooks/use-queries'
 import { useMonthParams } from './use-month-params'
 
 export function SettlementPage() {
-  const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
+  const { year, month, dateFrom, dateTo, periodStart, periodEnd, onPrev, onNext } = useMonthParams()
   const { data: clients = [] } = useClients()
   const [selectedClientId, setSelectedClientId] = useState<string>('')
   const exportMutation = useExportDoiSoatExcel()
@@ -46,7 +46,7 @@ export function SettlementPage() {
             Xuất Excel bảng đối soát chuyến vận chuyển theo chủ hàng và kỳ
           </p>
         </div>
-        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
+        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-5 items-start">

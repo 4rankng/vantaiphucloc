@@ -83,7 +83,10 @@
     font-family: var(--theme-font-display);
     font-size: clamp(1.75rem, 3.6vw, 2.5rem); /* 28px → 40px */
     font-weight: 600;
-    line-height: 1.05;
+    /* Generous line-height + small top padding so stacked Vietnamese diacritics
+       (ổ, ấ, ầ, ẩ, ễ, …) are not clipped by parents with overflow: hidden. */
+    line-height: 1.2;
+    padding-top: 0.08em;
     letter-spacing: -0.035em;
     color: var(--theme-text-primary);
   }

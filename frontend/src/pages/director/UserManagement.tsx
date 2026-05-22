@@ -9,14 +9,16 @@ import { DataTablePro, type Column } from '@/components/shared/DataTablePro/Data
 import { useToast } from '@/components/atoms/Toast'
 import { FilterPills } from '@/components/shared/FilterPills'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { SearchInput } from '@/components/shared/ListUtils'
 import type { Role } from '@/data/domain'
 import { ROLE_LABELS } from '@/data/domain'
 import { ROLE_ICONS } from '@/pages/superadmin/types'
 import { ROLE_COLORS, CREATABLE_ROLES } from '@/lib/role-mappings'
-import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '@/hooks/use-queries'
+import { useUsersPaged, useCreateUser, useUpdateUser, useDeleteUser } from '@/hooks/use-queries'
 import type { UserAccount } from '@/hooks/use-queries'
 import { useAuth } from '@/contexts/AuthContext'
 import { useIsMobile } from '@/hooks/use-mobile'
+import { useDebounce } from '@/hooks/use-debounce'
 
 function RequiredLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -41,7 +43,13 @@ const EMPTY_FORM: UserForm = { username: '', fullName: '', phone: '', cccd: '', 
 
 function UserManagementInner() {
   const toast = useToast()
-  const { data: allUsers = [], isLoading: loading } = useUsers()
+  const [searchInput, setSearchInput] = useState('')
+  const debouncedSearch = useDebounce(searchInput, 400)
+  const { data: pagedData, isLoading: loading } = useUsersPaged({
+    search: debouncedSearch || undefined,
+    pageSize: 500,
+  })
+  const allUsers = pagedData?.items ?? []
   const users = useMemo(() => allUsers.filter(u => u.isActive !== false), [allUsers])
   const createUser = useCreateUser()
   const updateUser = useUpdateUser()
@@ -209,6 +217,8 @@ function UserManagementInner() {
         </span>
         {addButton}
       </div>
+
+      <SearchInput value={searchInput} onChange={setSearchInput} placeholder="Tìm tên, SĐT, CCCD, tên đăng nhập…" />
 
       <FilterPills
         options={[

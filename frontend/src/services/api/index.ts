@@ -32,12 +32,14 @@ import * as vehicleDriversApi from './vehicleDrivers.api'
 export const apiClient = {
   // Clients
   getClients: clientsApi.getClients,
+  getClientsPaged: clientsApi.getClientsPaged,
   createClient: clientsApi.createClient,
   updateClient: clientsApi.updateClient,
   deleteClient: clientsApi.deleteClient,
 
   // Vendors
   getVendors: vendorsApi.getVendors,
+  getVendorsPaged: vendorsApi.getVendorsPaged,
   createVendor: vendorsApi.createVendor,
   updateVendor: vendorsApi.updateVendor,
   deleteVendor: vendorsApi.deleteVendor,
@@ -153,6 +155,7 @@ export const apiClient = {
 
   // Drivers
   getDrivers: driversApi.getDrivers,
+  getDriversPaged: driversApi.getDriversPaged,
   createDriver: driversApi.createDriver,
   updateDriver: driversApi.updateDriver,
 
@@ -163,6 +166,7 @@ export const apiClient = {
 
   // Users
   getUsers: usersApi.getUsers,
+  getUsersPaged: usersApi.getUsersPaged,
   createUser: usersApi.createUser,
   updateUser: usersApi.updateUser,
   deleteUser: usersApi.deleteUser,

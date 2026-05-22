@@ -1,11 +1,37 @@
 import { api } from './client'
-import { toCamel, toSnake, ok, fail, unwrapList } from './utils'
-import type { Driver, ApiResponse } from '@/data/domain'
+import { toCamel, toSnake, ok, fail, unwrapList, unwrapPaginated } from './utils'
+import type { Driver, ApiResponse, PaginatedResult } from '@/data/domain'
+
+export type DriverSortBy = 'username' | 'full_name' | 'phone'
+export type SortOrder = 'asc' | 'desc'
+
+export interface DriverFilters {
+  search?: string
+  sortBy?: DriverSortBy
+  sortOrder?: SortOrder
+  page?: number
+  pageSize?: number
+}
 
 export async function getDrivers(): Promise<ApiResponse<Driver[]>> {
   try {
-    const res = await api.get('/drivers')
+    const res = await api.get('/drivers', { params: { page_size: 500 } })
     return ok(toCamel<Driver[]>(unwrapList(res.data)))
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export async function getDriversPaged(filters?: DriverFilters): Promise<ApiResponse<PaginatedResult<Driver>>> {
+  try {
+    const params: Record<string, string> = {}
+    if (filters?.search) params.search = filters.search
+    if (filters?.sortBy) params.sort_by = filters.sortBy
+    if (filters?.sortOrder) params.sort_order = filters.sortOrder
+    params.page = String(filters?.page ?? 1)
+    params.page_size = String(filters?.pageSize ?? 50)
+    const res = await api.get('/drivers', { params })
+    return ok(unwrapPaginated<Driver>(res.data, (raw) => toCamel<Driver>(raw)))
   } catch (err) {
     return fail(err)
   }

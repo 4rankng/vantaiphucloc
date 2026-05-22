@@ -8,13 +8,14 @@ import { StatPill } from '@/components/shared/StatPill'
 import { Drawer } from '@/components/shared/Drawer'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { InlineSelect } from '@/components/shared/InlineSelect'
-import { useDrivers, useCreateDriver, useUpdateDriver, useVehicles } from '@/hooks/use-queries'
+import { useDrivers, useDriversPaged, useCreateDriver, useUpdateDriver, useVehicles } from '@/hooks/use-queries'
 import { useDriverBaseSalaryForm } from '@/components/payroll/useDriverBaseSalaryForm'
 import { useToast } from '@/components/atoms/Toast'
 import { useQueryClient } from '@tanstack/react-query'
-import { fuzzyMatch } from '@/lib/search-utils'
+import { useDebounce } from '@/hooks/use-debounce'
 import { formatCurrency } from '@/data/domain'
 import type { Driver } from '@/data/domain'
+import type { DriverSortBy } from '@/services/api/drivers.api'
 import { api } from '@/services/api/client'
 
 async function assignVehicle(driverId: number, plate: string) {
@@ -264,12 +265,16 @@ function DriverFormDrawer({ open, onClose, onSave, saving }: {
 export function DriversPage() {
   const toast = useToast()
   const qc = useQueryClient()
-  const { data: drivers = [], isLoading } = useDrivers()
+  // useDrivers for counts (all, no filter)
+  const { data: allDrivers = [] } = useDrivers()
   const { data: vehicles = [] } = useVehicles()
   const createDriver = useCreateDriver()
   const updateDriver = useUpdateDriver()
 
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 400)
+  const [sortBy, setSortBy] = useState<DriverSortBy>('full_name')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [showCreate, setShowCreate] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editingField, setEditingField] = useState<FocusableField>(null)
@@ -277,20 +282,33 @@ export function DriversPage() {
 
   // Infinite scroll
   const [limit, setLimit] = useState(BATCH)
-  useEffect(() => { setLimit(BATCH) }, [search]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setLimit(BATCH) }, [debouncedSearch, sortBy, sortOrder])
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return drivers
-    return drivers.filter(d => fuzzyMatch(d.fullName ?? d.username, search) || fuzzyMatch(d.phone ?? '', search) || fuzzyMatch(d.vehiclePlate ?? '', search))
-  }, [drivers, search])
+  const { data: pagedData, isLoading } = useDriversPaged({
+    search: debouncedSearch || undefined,
+    sortBy,
+    sortOrder,
+    pageSize: 500,
+  })
+  const drivers = pagedData?.items ?? []
+  const filtered = drivers
 
   const visible = useMemo(() => filtered.slice(0, limit), [filtered, limit])
   const hasMore = limit < filtered.length
   const loadMore = useCallback(() => setLimit(n => n + BATCH), [])
   const sentinel = useInfiniteScroll(loadMore)
 
-  const assignedCount = drivers.filter(d => d.vehiclePlate).length
-  const unassignedCount = drivers.length - assignedCount
+  const assignedCount = allDrivers.filter(d => d.vehiclePlate).length
+  const unassignedCount = allDrivers.length - assignedCount
+
+  const handleSortCol = (col: DriverSortBy) => {
+    if (sortBy === col) setSortOrder(o => o === 'asc' ? 'desc' : 'asc')
+    else { setSortBy(col); setSortOrder('asc') }
+  }
+  const SortIndicator = ({ col }: { col: DriverSortBy }) => {
+    if (sortBy !== col) return <span style={{ opacity: 0.3, fontSize: 10 }}>↕</span>
+    return <span style={{ fontSize: 10 }}>{sortOrder === 'asc' ? '↑' : '↓'}</span>
+  }
 
   const handleCreate = useCallback(async (data: { username: string; fullName: string; phone: string; plate: string }) => {
     createDriver.mutate({ username: data.username, fullName: data.fullName, phone: data.phone }, {
@@ -334,7 +352,7 @@ export function DriversPage() {
       <header>
         <h1 className="typo-display">Lái xe</h1>
         <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-          <StatPill count={drivers.length} label=" lái xe" accent />
+          <StatPill count={allDrivers.length} label=" lái xe" accent />
           <StatPill count={assignedCount} label=" đã gắn xe" />
           <StatPill count={unassignedCount} label=" chưa gắn xe" />
         </div>
@@ -370,9 +388,9 @@ export function DriversPage() {
                 <table className="nepo-table w-full" style={{ minWidth: 600 }}>
                   <thead>
                     <tr>
-                      <th className="text-left">Họ tên</th>
-                      <th className="text-left">SĐT</th>
-                      <th className="text-left">Biển số</th>
+                      <th className="text-left cursor-pointer select-none" onClick={() => handleSortCol('full_name')}>Họ tên <SortIndicator col="full_name" /></th>
+                      <th className="text-left cursor-pointer select-none" onClick={() => handleSortCol('phone')}>SĐT <SortIndicator col="phone" /></th>
+                      <th className="text-left cursor-pointer select-none" onClick={() => handleSortCol('username')}>Biển số <SortIndicator col="username" /></th>
                       <th className="text-right">Lương cơ bản</th>
                       <th className="text-left">Từ ngày</th>
                     </tr>

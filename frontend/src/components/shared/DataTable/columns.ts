@@ -21,4 +21,9 @@ export interface Column<T> {
   headerClassName?: string
   /** When true, render the column only at >= breakpoint (md = 768, lg = 1024). */
   hideBelow?: 'md' | 'lg'
+  /**
+   * When set, the column header becomes a sort toggle button.
+   * The value is the backend sort_by key sent in the API request.
+   */
+  sortKey?: string
 }

@@ -91,8 +91,11 @@ class SqlUserRepository(UserRepository):
         limit: int,
         role_filter: UserRole | None,
         exclude_role: UserRole | None,
+        search: str | None = None,
+        sort_by: str | None = None,
+        sort_order: str = 'asc',
     ) -> tuple[Sequence[User], int]:
-        q = select(UserORM).order_by(UserORM.username.asc())
+        q = select(UserORM)
         cq = select(func.count(UserORM.id))
         if role_filter is not None:
             q = q.where(UserORM.role == role_filter.value)
@@ -100,6 +103,29 @@ class SqlUserRepository(UserRepository):
         if exclude_role is not None:
             q = q.where(UserORM.role != exclude_role.value)
             cq = cq.where(UserORM.role != exclude_role.value)
+        if search:
+            pattern = f"%{search}%"
+            search_cond = or_(
+                UserORM.username.ilike(pattern),
+                UserORM.full_name.ilike(pattern),
+                UserORM.phone.ilike(pattern),
+                UserORM.email.ilike(pattern),
+                UserORM.cccd.ilike(pattern),
+            )
+            q = q.where(search_cond)
+            cq = cq.where(search_cond)
+        _SORTABLE = {
+            'username': UserORM.username,
+            'full_name': UserORM.full_name,
+            'role': UserORM.role,
+            'phone': UserORM.phone,
+        }
+        sort_col = _SORTABLE.get(sort_by or '')
+        if sort_col is not None:
+            order_expr = sort_col.asc() if sort_order == 'asc' else sort_col.desc()
+            q = q.order_by(order_expr, UserORM.id.asc())
+        else:
+            q = q.order_by(UserORM.username.asc())
         q = q.offset(offset).limit(limit)
 
         rows = (await self._session.execute(q)).scalars().all()

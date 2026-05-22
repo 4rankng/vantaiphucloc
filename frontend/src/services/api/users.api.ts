@@ -1,7 +1,19 @@
 import { api } from './client'
-import { toCamel, toSnake, ok, fail, unwrapList } from './utils'
-import type { ApiResponse } from '@/data/domain'
+import { toCamel, toSnake, ok, fail, unwrapList, unwrapPaginated } from './utils'
+import type { ApiResponse, PaginatedResult } from '@/data/domain'
 import type { Role } from '@/data/domain'
+
+export type UserSortBy = 'username' | 'full_name' | 'role' | 'phone'
+export type SortOrder = 'asc' | 'desc'
+
+export interface UserFilters {
+  search?: string
+  role?: string
+  sortBy?: UserSortBy
+  sortOrder?: SortOrder
+  page?: number
+  pageSize?: number
+}
 
 export interface UserAccount {
   id: string
@@ -38,10 +50,27 @@ export function toUserAccount(raw: Record<string, unknown>): UserAccount {
 
 export async function getUsers(): Promise<ApiResponse<UserAccount[]>> {
   try {
-    const res = await api.get('/users')
+    const res = await api.get('/users', { params: { page_size: 500 } })
     const items = unwrapList(res.data)
     const users = (items as Record<string, unknown>[]).map(toUserAccount)
     return ok(users)
+  } catch (err) {
+    return fail(err)
+  }
+}
+
+export async function getUsersPaged(filters?: UserFilters): Promise<ApiResponse<PaginatedResult<UserAccount>>> {
+  try {
+    const params: Record<string, string> = {}
+    if (filters?.search) params.search = filters.search
+    if (filters?.role) params.role = filters.role
+    if (filters?.sortBy) params.sort_by = filters.sortBy
+    if (filters?.sortOrder) params.sort_order = filters.sortOrder
+    params.page = String(filters?.page ?? 1)
+    params.page_size = String(filters?.pageSize ?? 50)
+    const res = await api.get('/users', { params })
+    const result = unwrapPaginated<UserAccount>(res.data, (raw) => toUserAccount(raw as Record<string, unknown>))
+    return ok(result)
   } catch (err) {
     return fail(err)
   }

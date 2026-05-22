@@ -39,7 +39,10 @@ export function AccountantPageShell({
 }: AccountantPageShellProps) {
   return (
     <div className="space-y-4 animate-page-enter">
-      <div className="relative overflow-hidden">
+      {/* `relative` keeps the Decoration anchored; `overflow-hidden` is intentionally
+          omitted — it would clip the tops of Vietnamese stacked diacritics. The
+          decoration sits flush to the right and naturally stays in bounds. */}
+      <div className="relative">
         <h1 className="typo-display" style={{ color: 'var(--theme-text-primary)' }}>{title}</h1>
         <p className="typo-body-sm mt-1" style={{ color: 'var(--theme-text-muted)' }}>{subtitle}</p>
         <Decoration variant="dot-grid" width={180} height={48} className="absolute right-0 top-0 opacity-20" ariaLabel="" />

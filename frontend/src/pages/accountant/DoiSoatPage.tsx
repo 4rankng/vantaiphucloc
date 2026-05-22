@@ -36,9 +36,10 @@ import { StatPill } from '@/components/shared/StatPill'
 import { Pagination } from '@/components/ui/Pagination/Pagination'
 import { useMonthParams } from './use-month-params'
 import { formatCurrency, compactCurrency, OPERATION_TYPE_LABELS } from '@/data/domain'
-import { fuzzyMatch } from '@/lib/search-utils'
+import { useDebounce } from '@/hooks/use-debounce'
 import { formatMatchDate as formatDate, scoreColor, getDeliveredTripStatusBadge, statusVariant } from '@/lib/match-utils'
 import type { DeliveredTrip, DeliveredTripStatus } from '@/data/domain'
+import type { DeliveredTripSortBy, SortOrder } from '@/services/api/deliveredTrips.api'
 import {
   useDeliveredTrips,
   useUnmatch,
@@ -62,8 +63,9 @@ const STATUS_FILTER_LABELS: Record<StatusFilter, string> = {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export function DoiSoatPage() {
-  const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
+  const { year, month, dateFrom, dateTo, periodStart, periodEnd, onPrev, onNext } = useMonthParams()
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 400)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [showImport, setShowImport] = useState(false)
   const [confirmUnmatchId, setConfirmUnmatchId] = useState<number | null>(null)
@@ -71,19 +73,30 @@ export function DoiSoatPage() {
   const [doiSoatClientId, setDoiSoatClientId] = useState<string>('ALL')
   const [page, setPage] = useState(1)
   const pageSize = 50
+  const [sortBy, setSortBy] = useState<DeliveredTripSortBy>('trip_date')
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
 
   const exportDoiSoat = useExportDoiSoatExcel()
   const { data: clients = [] } = useClients()
 
-  useEffect(() => { setPage(1) }, [statusFilter, dateFrom, dateTo, doiSoatClientId])
+  useEffect(() => { setPage(1) }, [statusFilter, dateFrom, dateTo, doiSoatClientId, debouncedSearch])
+
+  const handleSort = useCallback((key: string, order: SortOrder) => {
+    setSortBy(key as DeliveredTripSortBy)
+    setSortOrder(order)
+    setPage(1)
+  }, [])
 
   const { data, isLoading } = useDeliveredTrips({
     dateFrom,
     dateTo,
     clientId: doiSoatClientId !== 'ALL' && doiSoatClientId !== '' ? Number(doiSoatClientId) : undefined,
     status: statusFilter !== 'ALL' ? statusFilter : undefined,
+    search: debouncedSearch || undefined,
     page,
     pageSize,
+    sortBy,
+    sortOrder,
   })
   const trips = data?.items ?? []
   const totalPages = data?.totalPages ?? 0
@@ -149,30 +162,14 @@ export function DoiSoatPage() {
     MATCHED: globalMatched,
   }
 
-  // Filtered rows (client-side text search on current page)
-  const filtered = useMemo(() => {
-    let rows = trips
-
-    const q = search.trim()
-    if (q) {
-      rows = rows.filter(t =>
-        fuzzyMatch(t.client?.name ?? '', q) ||
-        fuzzyMatch(t.pickupLocation?.name ?? '', q) ||
-        fuzzyMatch(t.dropoffLocation?.name ?? '', q) ||
-        fuzzyMatch(t.vessel ?? '', q) ||
-        fuzzyMatch(t.vehicle?.plate ?? '', q) ||
-        (t.containers ?? []).some(c => fuzzyMatch(c.containerNumber, q)),
-      )
-    }
-
-    return rows
-  }, [trips, search])
+  const filtered = trips
 
   const columns: Column<DeliveredTrip>[] = [
     {
       key: 'date',
       header: 'Ngày đi',
       width: 64,
+      sortKey: 'trip_date',
       render: (t) => (
         <span
           className="tabular-nums"
@@ -186,6 +183,7 @@ export function DoiSoatPage() {
       key: 'client',
       header: 'Chủ hàng',
       width: 100,
+      sortKey: 'client_code',
       render: (t) => (
         <span className="text-[13px] font-semibold truncate block" style={{ color: 'var(--ink)' }}>
           {t.client?.code || '—'}
@@ -196,6 +194,7 @@ export function DoiSoatPage() {
       key: 'containers',
       header: 'Số Cont',
       width: 150,
+      sortKey: 'container_number',
       render: (t) => {
         if (!t.containers?.length) return <span style={{ color: 'var(--ink-4)' }}>—</span>
         const first = t.containers[0]
@@ -221,6 +220,7 @@ export function DoiSoatPage() {
       key: 'contType',
       header: 'Loại Cont',
       width: 64,
+      sortKey: 'cont_type',
       render: (t) => {
         const ct = t.containers?.[0]?.contType || t.workType
         return ct ? (
@@ -245,6 +245,7 @@ export function DoiSoatPage() {
       key: 'vehicle',
       header: 'Số xe chạy',
       width: 90,
+      sortKey: 'vehicle_plate',
       render: (t) => (
         <span className="text-[13px] tabular-nums" style={{ color: 'var(--ink-2)' }}>
           {t.vehicle?.plate || '—'}
@@ -255,6 +256,7 @@ export function DoiSoatPage() {
       key: 'vessel',
       header: 'Số tàu',
       width: 90,
+      sortKey: 'vessel',
       render: (t) => (
         <span className="text-[13px] truncate block" style={{ color: 'var(--ink-2)' }}>
           {t.vessel || '—'}
@@ -264,6 +266,7 @@ export function DoiSoatPage() {
     {
       key: 'pickup',
       header: 'Điểm đi',
+      sortKey: 'pickup_name',
       render: (t) => (
         <span className="text-[12.5px] truncate block" style={{ color: 'var(--ink-2)' }}>
           {t.pickupLocation?.name ?? '—'}
@@ -273,6 +276,7 @@ export function DoiSoatPage() {
     {
       key: 'dropoff',
       header: 'Điểm đến',
+      sortKey: 'dropoff_name',
       render: (t) => (
         <span className="text-[12.5px] truncate block" style={{ color: 'var(--ink-2)' }}>
           {t.dropoffLocation?.name ?? '—'}
@@ -283,6 +287,7 @@ export function DoiSoatPage() {
       key: 'operation',
       header: 'Tác nghiệp',
       width: 110,
+      sortKey: 'operation_type',
       render: (t) => {
         const label = t.operationType ? OPERATION_TYPE_LABELS[t.operationType] : null
         return label ? (
@@ -393,7 +398,7 @@ export function DoiSoatPage() {
           </div>
           {trips.length > 0 && <MatchProgressBar pct={globalMatchedPct} />}
         </div>
-        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
+        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
       </header>
 
       {/* ── Table section ── */}
@@ -482,6 +487,9 @@ export function DoiSoatPage() {
             rowKey={(t) => t.id}
             isLoading={isLoading}
             minWidth={1000}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSort={handleSort}
             onRowClick={(t) => setMatchTarget(t)}
             rowClassName={(t) => t.status === 'MATCHED' ? 'row-matched' : t.status === 'PENDING' ? 'row-pending' : ''}
             empty={

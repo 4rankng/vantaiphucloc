@@ -15,7 +15,7 @@ import { AnimatedNumber } from '@/components/shared'
 const monoStyle = { fontFamily: 'var(--theme-font-mono)' } as React.CSSProperties
 
 export function PnLPage() {
-  const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
+  const { year, month, dateFrom, dateTo, periodStart, periodEnd, onPrev, onNext } = useMonthParams()
   const [vehicleFilter, setVehicleFilter] = useState<number | ''>('')
   const { data: vehicles } = useVehicles()
   const { data: pnlData, isLoading } = useVehiclePnL(dateFrom, dateTo, vehicleFilter || undefined)
@@ -157,12 +157,12 @@ export function PnLPage() {
     <div className="space-y-6 animate-fade-in">
       <header className="flex items-start justify-between gap-5 flex-wrap">
         <div className="min-w-0">
-          <h1 className="typo-display">Báo cáo tài chính</h1>
+          <h1 className="typo-display">Báo cáo</h1>
           <p className="typo-body-sm mt-1.5">
             Doanh thu và lợi nhuận từng xe theo kỳ — đối chiếu chi phí xe, lương và biên lợi nhuận
           </p>
         </div>
-        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
+        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
       </header>
 
       <div className="grid grid-cols-3 gap-3">

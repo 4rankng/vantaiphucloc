@@ -29,7 +29,7 @@ interface SalaryRow {
 const monoStyle = { fontFamily: 'var(--theme-font-mono)' } as React.CSSProperties
 
 export function SalaryPage() {
-  const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
+  const { year, month, dateFrom, dateTo, periodStart, periodEnd, onPrev, onNext } = useMonthParams()
   const [selectedDriver, setSelectedDriver] = useState<number | null>(null)
 
   const { data: drivers = [] } = useDrivers()
@@ -192,7 +192,7 @@ export function SalaryPage() {
             <Download className="h-3.5 w-3.5" />
             {exportMutation.isPending ? 'Đang xuất...' : 'Xuất Excel'}
           </button>
-          <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
+          <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} periodStart={periodStart} periodEnd={periodEnd} />
         </div>
       </header>
 

@@ -1,9 +1,11 @@
 import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { pad, daysInMonth } from '@/lib/date-utils'
+import { useSalaryConfig } from '@/hooks/use-queries'
+import { getSalaryPeriodForMonth, toISODate } from '@/utils/salaryPeriod'
 
 export function useMonthParams() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const { data: config } = useSalaryConfig()
 
   const now = useMemo(() => new Date(), [])
   const defaultMonth = now.getMonth() + 1
@@ -12,8 +14,14 @@ export function useMonthParams() {
   const month = Number(searchParams.get('month')) || defaultMonth
   const year = Number(searchParams.get('year')) || defaultYear
 
-  const dateFrom = `${year}-${pad(month)}-01`
-  const dateTo = `${year}-${pad(month)}-${pad(daysInMonth(year, month))}`
+  const period = useMemo(() => {
+    const fromDay = config?.fromDay ?? 21
+    const toDay = config?.toDay ?? 20
+    return getSalaryPeriodForMonth(year, month, { fromDay, toDay })
+  }, [year, month, config])
+
+  const dateFrom = toISODate(period.startDate)
+  const dateTo = toISODate(period.endDate)
 
   const onPrev = useCallback(() => {
     setSearchParams(prev => {
@@ -47,5 +55,15 @@ export function useMonthParams() {
 
   const sublabel = `${dateFrom.slice(8)}/${dateFrom.slice(5, 7)} → ${dateTo.slice(8)}/${dateTo.slice(5, 7)}`
 
-  return { year, month, dateFrom, dateTo, sublabel, onPrev, onNext }
+  return {
+    year,
+    month,
+    dateFrom,
+    dateTo,
+    periodStart: period.startDate,
+    periodEnd: period.endDate,
+    sublabel,
+    onPrev,
+    onNext,
+  }
 }

@@ -64,13 +64,13 @@ def _write_sl_sheet(wb: openpyxl.Workbook, data: SettlementStatement, sheet_name
     )
     title_cell.font = _BOLD_LARGE
     title_cell.alignment = _CENTER
-    ws.merge_cells(start_row=5, start_column=1, end_row=5, end_column=17)
+    ws.merge_cells(start_row=5, start_column=1, end_row=5, end_column=16)
     period_cell = ws.cell(
         row=6, column=1,
         value=f"Từ ngày {p_start.strftime('%d/%m/%Y')} đến ngày {p_end.strftime('%d/%m/%Y')}",
     )
     period_cell.alignment = _CENTER
-    ws.merge_cells(start_row=6, start_column=1, end_row=6, end_column=17)
+    ws.merge_cells(start_row=6, start_column=1, end_row=6, end_column=16)
     ws.cell(row=7, column=1, value="KHÁCH HÀNG:")
     ws.cell(row=7, column=3, value=data.client.name).font = _BOLD
     ws.cell(
@@ -91,7 +91,6 @@ def _write_sl_sheet(wb: openpyxl.Workbook, data: SettlementStatement, sheet_name
         ("SỐ TÀU", 14),
         ("ĐIỂM ĐI", 16),
         ("ĐIỂM ĐẾN", 16),
-        ("SỐ CHUYẾN", 10),
         ("CƯỚC CHUYẾN", 14),
         ("TỔNG TT", 14),
         ("TÁC NGHIỆP", 12),
@@ -124,23 +123,22 @@ def _write_sl_sheet(wb: openpyxl.Workbook, data: SettlementStatement, sheet_name
         ws.cell(row=row, column=10, value=line.vessel).alignment = _CENTER
         ws.cell(row=row, column=11, value=line.pickup_location).alignment = _LEFT
         ws.cell(row=row, column=12, value=line.dropoff_location).alignment = _LEFT
-        ws.cell(row=row, column=13, value=f"=E{row}+F{row}+G{row}+H{row}").alignment = _CENTER
-        cuoc = ws.cell(row=row, column=14, value=line.unit_price)
+        cuoc = ws.cell(row=row, column=13, value=line.unit_price)
         _money_fmt(cuoc)
-        tt = ws.cell(row=row, column=15, value=f"=M{row}*N{row}")
+        tt = ws.cell(row=row, column=14, value=f"=M{row}")
         _money_fmt(tt)
-        ws.cell(row=row, column=16, value="")
-        ws.cell(row=row, column=17, value="").alignment = _CENTER
+        ws.cell(row=row, column=15, value=line.work_type).alignment = _CENTER
+        ws.cell(row=row, column=16, value="").alignment = _CENTER
         row += 1
 
     last_data_row = row - 1 if data.trip_lines else first_data_row - 1
 
     if data.trip_lines:
-        _apply_border(ws, header_row, last_data_row, 1, 17)
+        _apply_border(ws, header_row, last_data_row, 1, 16)
         total_row = last_data_row + 1
         ws.cell(row=total_row, column=4, value="TỔNG CỘNG").font = _BOLD
         ws.cell(row=total_row, column=4).alignment = _RIGHT
-        sum_cell = ws.cell(row=total_row, column=15, value=f"=SUM(O{first_data_row}:O{last_data_row})")
+        sum_cell = ws.cell(row=total_row, column=14, value=f"=SUM(N{first_data_row}:N{last_data_row})")
         _money_fmt(sum_cell)
         sum_cell.font = _BOLD
         sum_cell.fill = _TOTAL_FILL
@@ -148,13 +146,13 @@ def _write_sl_sheet(wb: openpyxl.Workbook, data: SettlementStatement, sheet_name
         vat_row = total_row + 1
         ws.cell(row=vat_row, column=4, value="VAT 8%").font = _BOLD
         ws.cell(row=vat_row, column=4).alignment = _RIGHT
-        vat_cell = ws.cell(row=vat_row, column=15, value=f"=ROUND(O{total_row}*0.08,0)")
+        vat_cell = ws.cell(row=vat_row, column=14, value=f"=ROUND(N{total_row}*0.08,0)")
         _money_fmt(vat_cell)
 
         grand_row = vat_row + 1
         ws.cell(row=grand_row, column=4, value="TỔNG THANH TOÁN").font = _BOLD
         ws.cell(row=grand_row, column=4).alignment = _RIGHT
-        grand_cell = ws.cell(row=grand_row, column=15, value=f"=O{total_row}+O{vat_row}")
+        grand_cell = ws.cell(row=grand_row, column=14, value=f"=N{total_row}+N{vat_row}")
         _money_fmt(grand_cell)
         grand_cell.font = _BOLD
         grand_cell.fill = _TOTAL_FILL

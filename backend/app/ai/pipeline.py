@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import re
+import unicodedata
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, BinaryIO
@@ -49,9 +50,16 @@ _TEMPLATE_HEADER_MAP: dict[str, str | None] = {
     "E20'": "E20",
     "E40'": "E40",
     "SỐ XE CHẠY": "Số xe chạy",
+    "SỐXE CHẠY": "Số xe chạy",
+    "SỐ XE\nCHẠY": "Số xe chạy",
+    "SỐ XE VC": "Số xe chạy",
+    "BIỂN SỐ XE": "Số xe chạy",
+    "BIỂN SỐ": "Số xe chạy",
+    "XE CHẠY": "Số xe chạy",
+    "SỐ XE": "Số xe chạy",
     "ĐIỂM ĐI": "Điểm đi",
     "ĐIỂM ĐẾN": "Điểm đến",
-    "SỐ CHUYẾN": "Số chuyến",
+    "SỐ CHUYẾN": None,  # Skip — always 1 in system, never stored as 0.5
     "CƯỚC CHUYẾN": "Cước chuyến",
     "CƯỚC\nCHUYẾN": "Cước chuyến",
     "TỔNG TT": "Tổng TT",
@@ -66,35 +74,17 @@ def _clean_value(val: str) -> str:
     return re.sub(r'^[\s,.;:]+|[\s,.;:]+$', '', val)
 
 
-def _levenshtein(s1: str, s2: str) -> int:
-    """Levenshtein edit distance between two strings."""
-    if len(s1) < len(s2):
-        return _levenshtein(s2, s1)
-    if not s2:
-        return len(s1)
-    prev = list(range(len(s2) + 1))
-    for i, c1 in enumerate(s1):
-        curr = [i + 1]
-        for j, c2 in enumerate(s2):
-            curr.append(min(prev[j + 1] + 1, curr[j] + 1, prev[j] + (c1 != c2)))
-        prev = curr
-    return prev[-1]
-
-
-def _extract_digits(s: str) -> str:
-    """Return only the digit characters from a string."""
-    return re.sub(r'[^0-9]', '', s)
-
-
 def _detect_duplicates(rows: list[dict[str, Any]], cont_key: str = "Số Cont") -> tuple[list[DuplicateGroup], list[str]]:
-    """Detect exact, fuzzy, and digits-only duplicate containers in parsed rows.
+    """Detect exact duplicate containers in parsed rows.
+
+    "Exact" means ALL column values match across rows, not just the container number.
+    Rows with the same container but different dates/locations/amounts are NOT duplicates.
 
     Returns (duplicate_groups, warnings).
     """
     groups: list[DuplicateGroup] = []
     warnings: list[str] = []
 
-    # Build list of (index, container_number) pairs
     indexed: list[tuple[int, str]] = []
     for i, row in enumerate(rows):
         cn = str(row.get(cont_key) or "").strip().upper().replace(" ", "").replace("-", "")
@@ -104,11 +94,20 @@ def _detect_duplicates(rows: list[dict[str, Any]], cont_key: str = "Số Cont") 
     if len(indexed) < 2:
         return groups, warnings
 
-    # --- Exact duplicates ---
-    seen: dict[str, list[int]] = {}
+    def _row_signature(row: dict[str, Any]) -> str:
+        """Normalized string of all cell values for full-row comparison."""
+        parts = []
+        for k, v in row.items():
+            s = str(v).strip().upper().replace(" ", "").replace("-", "") if v is not None else ""
+            parts.append(f"{k}={s}")
+        return "|".join(parts)
+
+    sig_groups: dict[tuple[str, str], list[int]] = {}
     for i, cn in indexed:
-        seen.setdefault(cn, []).append(i)
-    for cn, indices in seen.items():
+        sig = _row_signature(rows[i])
+        sig_groups.setdefault((cn, sig), []).append(i)
+
+    for (cn, sig), indices in sig_groups.items():
         if len(indices) > 1:
             groups.append(DuplicateGroup(
                 type="exact",
@@ -117,76 +116,21 @@ def _detect_duplicates(rows: list[dict[str, Any]], cont_key: str = "Số Cont") 
                 message=f"Cont {cn} xuất hiện {len(indices)} lần (dòng {', '.join(str(j + 1) for j in indices)})",
             ))
 
-    # --- Fuzzy duplicates (Levenshtein ≤ 2) ---
-    exact_sets = {cn for cn, idx in seen.items() if len(idx) > 1}
-    fuzzy_visited: set[frozenset[int]] = set()
-    for a_i, (i_a, cn_a) in enumerate(indexed):
-        for b_i in range(a_i + 1, len(indexed)):
-            i_b, cn_b = indexed[b_i]
-            if cn_a == cn_b:
-                continue  # already flagged as exact
-            pair = frozenset({i_a, i_b})
-            if pair in fuzzy_visited:
-                continue
-            dist = _levenshtein(cn_a, cn_b)
-            if dist <= 2:
-                fuzzy_visited.add(pair)
-                groups.append(DuplicateGroup(
-                    type="fuzzy",
-                    row_indices=[i_a, i_b],
-                    containers=[cn_a, cn_b],
-                    message=f"Cont {cn_a} (dòng {i_a + 1}) gần giống {cn_b} (dòng {i_b + 1})",
-                ))
-
-    # --- Digits-only matches ---
-    digits_map: dict[str, list[tuple[int, str]]] = {}
-    for i, cn in indexed:
-        digits = _extract_digits(cn)
-        if digits:
-            digits_map.setdefault(digits, []).append((i, cn))
-    for digits, entries in digits_map.items():
-        if len(entries) < 2:
-            continue
-        unique_prefixes = {cn[:4] for _, cn in entries}
-        if len(unique_prefixes) < 2:
-            continue  # same owner code → already caught by exact/fuzzy
-        indices = [i for i, _ in entries]
-        containers = [cn for _, cn in entries]
-        pair_key = frozenset(indices)
-        if pair_key in fuzzy_visited:
-            continue  # already caught at fuzzy level
-        groups.append(DuplicateGroup(
-            type="digits",
-            row_indices=indices,
-            containers=containers,
-            message=f"Chỉ trùng phần số ({digits}): {', '.join(containers)}",
-        ))
-
-    # Build summary warnings
-    exact_count = sum(1 for g in groups if g.type == "exact")
-    fuzzy_count = sum(1 for g in groups if g.type == "fuzzy")
-    digits_count = sum(1 for g in groups if g.type == "digits")
-    parts: list[str] = []
+    exact_count = len(groups)
     if exact_count:
-        parts.append(f"{exact_count} nhóm cont trùng nhau")
-    if fuzzy_count:
-        parts.append(f"{fuzzy_count} nhóm cont gần giống nhau")
-    if digits_count:
-        parts.append(f"{digits_count} nhóm trùng phần số")
-    if parts:
-        warnings.append("Tìm thấy " + ", ".join(parts))
+        warnings.append(f"Tìm thấy {exact_count} nhóm cont trùng nhau")
 
     return groups, warnings
 
 
 def _normalise_header(raw: str) -> str:
-    return re.sub(r"\s+", " ", raw.strip()).upper()
+    return re.sub(r"\s+", " ", unicodedata.normalize("NFC", raw.strip())).upper()
 
 
 @dataclass
 class DuplicateGroup:
     """A cluster of rows with similar container numbers."""
-    type: str  # "exact" | "fuzzy" | "digits"
+    type: str  # "exact"
     row_indices: list[int]  # 0-based index into rows list
     containers: list[str]
     message: str
@@ -283,6 +227,22 @@ def parse_template_excel(file: BinaryIO, filename: str) -> TemplateParseResult:
         if all_empty:
             continue
         rows.append(record)
+
+    # Derive "Loại Cont" from E20/F20/E40/F40 columns
+    _WORK_TYPE_KEYS = {"E20", "F20", "E40", "F40"}
+    for record in rows:
+        cont_type = None
+        for key in _WORK_TYPE_KEYS:
+            if record.get(key) is not None:
+                cont_type = key
+                break
+        record["Loại Cont"] = cont_type
+        for key in _WORK_TYPE_KEYS:
+            record.pop(key, None)
+
+    columns = [c for c in columns if c not in _WORK_TYPE_KEYS]
+    cont_idx = columns.index("Số Cont") + 1 if "Số Cont" in columns else len(columns)
+    columns.insert(cont_idx, "Loại Cont")
 
     # Detect duplicate / near-duplicate containers
     dup_groups, dup_warnings = _detect_duplicates(rows)

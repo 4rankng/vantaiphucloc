@@ -75,68 +75,79 @@ export function KpiHeroCard({
         boxShadow: 'none',
       }}
     >
-      {/* Single-row: [icon+label] ··· [value+pill] — value wraps to next row when card is narrow */}
-      <div className="flex items-center gap-3 px-4 py-3.5 flex-wrap">
-        {/* icon + label grouped so they always move together */}
-        <div className="flex items-center gap-2.5 shrink min-w-0">
-          <div
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px]"
-            style={{ background: c.iconBg }}
-          >
-            <Icon className="h-4.5 w-4.5" style={{ color: c.iconText }} />
-          </div>
-          <div className="min-w-0">
+      {/*
+        Deterministic 3-row layout on the right of the icon:
+          row 1: LABEL (left) + trend/badge pill (right)
+          row 2: VALUE (large, single line, truncates)
+          row 3: sublabel (muted, single line, truncates)
+        All cards have identical structure regardless of sublabel / value length,
+        so a trio of KpiHeroCards in a grid is always visually aligned.
+      */}
+      <div className="flex items-center gap-3 px-4 py-3">
+        {/* icon — vertically centered */}
+        <div
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px]"
+          style={{ background: c.iconBg }}
+        >
+          <Icon className="h-5 w-5" style={{ color: c.iconText }} />
+        </div>
+
+        {/* right column: label+pill / value / sublabel — stacked */}
+        <div className="flex min-w-0 flex-1 flex-col">
+          {/* row 1: label + trend/badge pill */}
+          <div className="flex items-center gap-2 min-w-0">
             <p
-              className="text-[11px] font-semibold uppercase tracking-widest leading-tight"
+              className="flex-1 truncate text-[11px] font-semibold uppercase tracking-widest leading-tight"
               style={{ color: 'var(--theme-text-muted)' }}
             >
               {label}
             </p>
-            {sublabel && (
-              <p className="text-[11px] mt-0.5 leading-tight" style={{ color: 'var(--theme-text-muted)' }}>
-                {sublabel}
-              </p>
-            )}
-          </div>
-        </div>
 
-        {/* value + pill: ml-auto pushes right; wraps to its own row when card is too narrow */}
-        <div className="flex items-baseline gap-2 flex-wrap ml-auto shrink-0">
+            {trend && (
+              <span
+                className="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold shrink-0"
+                style={{
+                  background: trend.positive
+                    ? 'color-mix(in srgb, var(--theme-status-success) 12%, transparent)'
+                    : 'color-mix(in srgb, var(--theme-status-error, #EF4444) 12%, transparent)',
+                  color: trend.positive
+                    ? 'var(--theme-status-success, #10B981)'
+                    : 'var(--theme-status-error, #EF4444)',
+                }}
+              >
+                <span>{trend.positive ? '↑' : '↓'}</span>
+                <span>{trend.value}</span>
+              </span>
+            )}
+
+            {badge && (() => {
+              const bs = BADGE_STYLES[badge.variant] ?? BADGE_STYLES.neutral
+              return (
+                <span
+                  className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap shrink-0"
+                  style={{ background: bs.bg, borderColor: bs.border, color: bs.text }}
+                >
+                  {badge.label}
+                </span>
+              )
+            })()}
+          </div>
+
+          {/* row 2: value */}
           <p
-            className="font-bold tabular-nums leading-none tracking-tight text-[18px]"
+            className="mt-1 truncate font-bold tabular-nums leading-tight tracking-tight text-[18px]"
             style={{ color: 'var(--theme-text-primary)' }}
           >
             {displayValue}
           </p>
 
-          {trend && (
-            <span
-              className="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold shrink-0"
-              style={{
-                background: trend.positive
-                  ? 'color-mix(in srgb, var(--theme-status-success) 12%, transparent)'
-                  : 'color-mix(in srgb, var(--theme-status-error, #EF4444) 12%, transparent)',
-                color: trend.positive
-                  ? 'var(--theme-status-success, #10B981)'
-                  : 'var(--theme-status-error, #EF4444)',
-              }}
-            >
-              <span>{trend.positive ? '↑' : '↓'}</span>
-              <span>{trend.value}</span>
-            </span>
-          )}
-
-          {badge && (() => {
-            const bs = BADGE_STYLES[badge.variant] ?? BADGE_STYLES.neutral
-            return (
-              <span
-                className="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap shrink-0"
-                style={{ background: bs.bg, borderColor: bs.border, color: bs.text }}
-              >
-                {badge.label}
-              </span>
-            )
-          })()}
+          {/* row 3: sublabel (reserves the line even when missing so heights match) */}
+          <p
+            className="truncate text-[11px] leading-tight"
+            style={{ color: 'var(--theme-text-muted)' }}
+          >
+            {sublabel ?? ' '}
+          </p>
         </div>
       </div>
     </Component>

@@ -28,17 +28,15 @@ export function MonthNavigator({
 }: MonthNavigatorProps) {
   const mm = String(month).padStart(2, '0')
 
-  const primaryLabel =
+  const primaryLabel = `Tháng ${mm}/${year}`
+
+  const rangeLabel =
     periodStart && periodEnd
       ? `${formatDDMM(periodStart)} → ${formatDDMM(periodEnd)}`
-      : `Tháng ${mm}/${year}`
-
-  const rangeLabel = periodStart && periodEnd
-    ? null
-    : (() => {
-        const lastDay = getDaysInMonth(year, month)
-        return `01/${mm} → ${String(lastDay).padStart(2, '0')}/${mm}`
-      })()
+      : (() => {
+          const lastDay = getDaysInMonth(year, month)
+          return `01/${mm} → ${String(lastDay).padStart(2, '0')}/${mm}`
+        })()
 
   return (
     <div className="flex items-center gap-3">

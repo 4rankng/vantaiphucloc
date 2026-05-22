@@ -64,7 +64,7 @@ async def _seed_driver_and_accountant(db_session, async_client):
             driver_id=driver.id,
             vessel="EVER GIVEN - VOY 001",
             containers=[
-                DeliveredTripContainerInput(container_number="ABCU0000104", cont_type="F20")
+                DeliveredTripContainerInput(container_number="ABCU0000104", work_type="F20")
             ],
         ),
         CurrentUserContext(id=99, role="superadmin"),

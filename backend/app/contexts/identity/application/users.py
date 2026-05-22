@@ -194,4 +194,7 @@ class ListUsers:
             limit=filter.page_size,
             role_filter=filter.role,
             exclude_role=UserRole.SUPERADMIN if filter.exclude_superadmin else None,
+            search=filter.search,
+            sort_by=filter.sort_by,
+            sort_order=filter.sort_order,
         )

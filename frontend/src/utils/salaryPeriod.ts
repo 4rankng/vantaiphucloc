@@ -83,3 +83,32 @@ export function toISODate(date: Date): string {
   const dd = String(date.getDate()).padStart(2, '0')
   return `${yyyy}-${mm}-${dd}`
 }
+
+/**
+ * Returns the (startDate, endDate) of the salary period for a given calendar month and year.
+ * e.g. For month=5 (May) and config={fromDay: 21, toDay: 20}, returns 21/04 -> 20/05.
+ */
+export function getSalaryPeriodForMonth(
+  year: number,
+  month: number, // 1-indexed (1-12)
+  config: SalaryConfig,
+): { startDate: Date; endDate: Date } {
+  const { fromDay, toDay } = config
+
+  if (fromDay <= toDay) {
+    // Same-month period (e.g. 1→31)
+    return {
+      startDate: safeDate(year, month - 1, fromDay),
+      endDate: safeDate(year, month - 1, toDay),
+    }
+  }
+
+  // Cross-month period (e.g. 21→20)
+  // Starts in previous month (month - 2 in 0-indexed)
+  const prevMonth = month === 1 ? 11 : month - 2
+  const prevYear = month === 1 ? year - 1 : year
+  return {
+    startDate: safeDate(prevYear, prevMonth, fromDay),
+    endDate: safeDate(year, month - 1, toDay),
+  }
+}

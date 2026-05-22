@@ -8,10 +8,11 @@ import { useInfiniteScroll, LoadMoreSentinel, SearchInput, FieldActions } from '
 import { useInlineEditForm } from '@/components/shared/useInlineEditForm'
 import { TableSkeleton } from '@/components/shared/TableSkeleton/TableSkeleton'
 import { StatPill } from '@/components/shared/StatPill'
-import { useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/use-queries'
+import { useClientsPaged, useClients, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
-import { fuzzyMatch } from '@/lib/search-utils'
+import { useDebounce } from '@/hooks/use-debounce'
 import type { Client } from '@/data/domain'
+import type { ClientSortBy } from '@/services/api/clients.api'
 
 const VN_TAX_RE = /^\d{10}(\d{3})?$/
 
@@ -233,34 +234,53 @@ function ClientRow({ client, onEdit, onDelete }: {
 
 export function ClientsPage() {
   const toast = useToast()
-  const { data: clients = [], isLoading } = useClients()
+  // Keep useClients for counts (loads all without search)
+  const { data: allClients = [] } = useClients()
   const createClient = useCreateClient()
   const updateClient = useUpdateClient()
   const deleteClient = useDeleteClient()
 
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 400)
+  const [sortBy, setSortBy] = useState<ClientSortBy>('name')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [limit, setLimit] = useState(BATCH)
   const [editingId, setEditingId] = useState<string | 'new' | null>(null)
   const [editingField, setEditingField] = useState<FocusableField>(null)
   const [deleteTarget, setDeleteTarget] = useState<Client | null>(null)
 
-  useEffect(() => { setLimit(BATCH) }, [search])
+  useEffect(() => { setLimit(BATCH) }, [debouncedSearch, sortBy, sortOrder])
 
-  const filtered = useMemo(() => {
-    const q = search.trim()
-    if (!q) return clients
-    return clients.filter(c =>
-      fuzzyMatch(c.name, q) || fuzzyMatch(c.phone ?? '', q) || fuzzyMatch(c.taxCode ?? '', q) || fuzzyMatch(c.address ?? '', q),
-    )
-  }, [clients, search])
+  const { data: pagedData, isLoading } = useClientsPaged({
+    search: debouncedSearch || undefined,
+    sortBy,
+    sortOrder,
+    pageSize: 500,
+  })
+  const clients = pagedData?.items ?? []
+  const filtered = clients
 
   const visible = filtered.slice(0, limit)
   const hasMore = limit < filtered.length
   const loadMore = useCallback(() => setLimit(n => n + BATCH), [])
   const sentinel = useInfiniteScroll(loadMore)
 
-  const companyCount = clients.filter(c => c.type === 'company').length
-  const individualCount = clients.filter(c => c.type !== 'company').length
+  const companyCount = allClients.filter(c => c.type === 'company').length
+  const individualCount = allClients.filter(c => c.type !== 'company').length
+
+  const handleSort = (col: ClientSortBy) => {
+    if (sortBy === col) {
+      setSortOrder(o => o === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortBy(col)
+      setSortOrder('asc')
+    }
+  }
+
+  const SortIndicator = ({ col }: { col: ClientSortBy }) => {
+    if (sortBy !== col) return <span style={{ opacity: 0.3, fontSize: 10 }}>↕</span>
+    return <span style={{ fontSize: 10 }}>{sortOrder === 'asc' ? '↑' : '↓'}</span>
+  }
 
   const handleCreate = useCallback((data: FormData) => {
     createClient.mutate(data, {
@@ -331,9 +351,9 @@ export function ClientsPage() {
                 <table className="nepo-table w-full" style={{ minWidth: 640, borderCollapse: 'collapse' }}>
                   <thead>
                     <tr>
-                      <th className="text-left">Mã khách</th>
-                      <th className="text-left">Tên chủ hàng</th>
-                      <th className="text-left">Loại</th>
+                      <th className="text-left cursor-pointer select-none" onClick={() => handleSort('code')}>Mã khách <SortIndicator col="code" /></th>
+                      <th className="text-left cursor-pointer select-none" onClick={() => handleSort('name')}>Tên chủ hàng <SortIndicator col="name" /></th>
+                      <th className="text-left cursor-pointer select-none" onClick={() => handleSort('type')}>Loại <SortIndicator col="type" /></th>
                       <th className="text-left">SĐT</th>
                       <th className="text-left">Địa chỉ</th>
                       <th className="text-left">MST</th>

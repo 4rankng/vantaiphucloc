@@ -19,9 +19,11 @@ interface InlineSelectProps {
   /** When provided, shows a "+ Tạo mới" footer button in the dropdown */
   onCreateNew?: () => void
   createNewLabel?: string
+  className?: string
+  style?: React.CSSProperties
 }
 
-export function InlineSelect({ placeholder, value, options, onChange, onInputChange, onCreateNew, createNewLabel = 'Tạo mới' }: InlineSelectProps) {
+export function InlineSelect({ placeholder, value, options, onChange, onInputChange, onCreateNew, createNewLabel = 'Tạo mới', className, style }: InlineSelectProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
@@ -55,11 +57,12 @@ export function InlineSelect({ placeholder, value, options, onChange, onInputCha
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="w-full flex items-center justify-between h-11 rounded-xl px-4 text-sm touch-manipulation"
+          className={`w-full flex items-center justify-between h-11 rounded-xl px-4 text-sm touch-manipulation ${className ?? ''}`}
           style={{
             background: 'var(--theme-bg-secondary)',
             border: '1px solid var(--theme-border-default)',
             color: selected || value ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)',
+            ...style,
           }}
         >
           <span className={`${selected || value ? 'font-medium' : ''}`}>

@@ -181,6 +181,28 @@ async def merge_locations(
     if target_orm is None:
         raise HTTPException(status_code=404, detail=f"Target location {body.target_location_id} not found")
 
+    # Preserve the source location's name as an alias on the target so future
+    # imports/lookups of the old name still resolve to the merged location.
+    source_name_norm = normalize(source_orm.name)
+    target_name_norm = normalize(target_orm.name)
+    if source_name_norm and source_name_norm != target_name_norm:
+        # Check if an alias with the same normalized form already exists anywhere.
+        existing = (await db.execute(
+            select(LocationAliasORM).where(LocationAliasORM.alias_normalized == source_name_norm)
+        )).scalar_one_or_none()
+        if existing is None:
+            db.add(LocationAliasORM(
+                location_id=body.target_location_id,
+                alias=source_orm.name[:255],
+                alias_normalized=source_name_norm,
+                source="merge",
+                created_by_id=current_user.id,
+            ))
+        else:
+            # Re-point any existing alias to the target (so it survives the merge).
+            existing.location_id = body.target_location_id
+        await db.flush()
+
     # Deactivate source location
     source_orm.is_active = False
 

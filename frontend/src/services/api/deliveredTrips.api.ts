@@ -14,14 +14,20 @@ export interface SuggestedRoute {
   source: 'frequent' | 'recent' | 'popular'
 }
 
+export type DeliveredTripSortBy = 'trip_date' | 'vessel' | 'status' | 'revenue' | 'created_at' | 'operation_type' | 'client_code' | 'vehicle_plate' | 'pickup_name' | 'dropoff_name' | 'container_number' | 'cont_type'
+export type SortOrder = 'asc' | 'desc'
+
 interface DeliveredTripFilters {
   clientId?: number
   driverId?: number
   dateFrom?: string
   dateTo?: string
   status?: DeliveredTrip['status']
+  search?: string
   page?: number
   pageSize?: number
+  sortBy?: DeliveredTripSortBy
+  sortOrder?: SortOrder
 }
 
 export interface DeliveredTripCreatePayload {
@@ -67,7 +73,7 @@ export async function getDeliveredTrip(id: number): Promise<ApiResponse<Delivere
 }
 
 export async function getDeliveredTrips(filters?: DeliveredTripFilters): Promise<ApiResponse<PaginatedResult<DeliveredTrip>>> {
-  const cacheKey = `delivered-trips:${filters?.clientId || ''}:${filters?.driverId || ''}:${filters?.status || ''}:${filters?.dateFrom || ''}:${filters?.dateTo || ''}:p${filters?.page || 1}:s${filters?.pageSize || 50}`
+  const cacheKey = `delivered-trips:${filters?.clientId || ''}:${filters?.driverId || ''}:${filters?.status || ''}:${filters?.dateFrom || ''}:${filters?.dateTo || ''}:${filters?.search || ''}:p${filters?.page || 1}:s${filters?.pageSize || 50}:sb${filters?.sortBy || ''}:so${filters?.sortOrder || ''}`
   try {
     const params: Record<string, string> = {}
     if (filters?.clientId) params.client_id = String(filters.clientId)
@@ -75,6 +81,9 @@ export async function getDeliveredTrips(filters?: DeliveredTripFilters): Promise
     if (filters?.dateFrom) params.date_from = filters.dateFrom
     if (filters?.dateTo) params.date_to = filters.dateTo
     if (filters?.status) params.status = filters.status
+    if (filters?.search) params.search = filters.search
+    if (filters?.sortBy) params.sort_by = filters.sortBy
+    if (filters?.sortOrder) params.sort_order = filters.sortOrder
     params.page = String(filters?.page ?? 1)
     params.page_size = String(filters?.pageSize ?? 50)
     const res = await api.get('/delivered-trips', { params })

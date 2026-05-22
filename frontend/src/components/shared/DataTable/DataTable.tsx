@@ -27,6 +27,12 @@ export interface DataTableProps<T> {
   fixedLayout?: boolean
   /** Extra wrapper class. */
   className?: string
+  /** Currently active sort column key (matches Column.sortKey). */
+  sortBy?: string
+  /** Current sort direction. */
+  sortOrder?: 'asc' | 'desc'
+  /** Called when the user clicks a sortable column header. */
+  onSort?: (key: string, order: 'asc' | 'desc') => void
 }
 
 const ALIGN_CLASS: Record<ColumnAlign, string> = {
@@ -38,6 +44,31 @@ const ALIGN_CLASS: Record<ColumnAlign, string> = {
 const HIDE_CLASS: Record<NonNullable<Column<unknown>['hideBelow']>, string> = {
   md: 'hidden md:table-cell',
   lg: 'hidden lg:table-cell',
+}
+
+// ── Sort indicator icon ───────────────────────────────────────────────────────
+function SortIcon({ active, order }: { active: boolean; order: 'asc' | 'desc' }) {
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        flexDirection: 'column',
+        gap: 1,
+        marginLeft: 4,
+        verticalAlign: 'middle',
+        opacity: active ? 1 : 0.35,
+        transition: 'opacity 0.15s',
+      }}
+      aria-hidden
+    >
+      <svg width="7" height="4" viewBox="0 0 7 4" fill="none">
+        <path d="M3.5 0L7 4H0L3.5 0Z" fill={active && order === 'asc' ? 'currentColor' : 'var(--ink-3)'} />
+      </svg>
+      <svg width="7" height="4" viewBox="0 0 7 4" fill="none">
+        <path d="M3.5 4L0 0H7L3.5 4Z" fill={active && order === 'desc' ? 'currentColor' : 'var(--ink-3)'} />
+      </svg>
+    </span>
+  )
 }
 
 export function DataTable<T>({
@@ -55,6 +86,9 @@ export function DataTable<T>({
   minWidth = 900,
   fixedLayout = false,
   className = '',
+  sortBy,
+  sortOrder = 'desc',
+  onSort,
 }: DataTableProps<T>) {
   if (isLoading) {
     return (
@@ -85,13 +119,41 @@ export function DataTable<T>({
             {columns.map((col) => {
               const align = col.align ?? 'left'
               const hide = col.hideBelow ? HIDE_CLASS[col.hideBelow] : ''
+              const isSortable = !!col.sortKey && !!onSort
+              const isActive = isSortable && sortBy === col.sortKey
+              const nextOrder: 'asc' | 'desc' = isActive && sortOrder === 'asc' ? 'desc' : 'asc'
               return (
                 <th
                   key={col.key}
                   className={`${ALIGN_CLASS[align]} ${hide} ${col.headerClassName ?? ''} ${col.sticky ? 'nepo-th-sticky' : ''}`}
                   style={col.width ? { width: typeof col.width === 'number' ? `${col.width}px` : col.width } : undefined}
                 >
-                  {col.header}
+                  {isSortable ? (
+                    <button
+                      type="button"
+                      onClick={() => onSort!(col.sortKey!, isActive ? nextOrder : 'desc')}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 2,
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        cursor: 'pointer',
+                        color: isActive ? 'var(--ink)' : 'inherit',
+                        fontWeight: isActive ? 700 : undefined,
+                        fontSize: 'inherit',
+                        letterSpacing: 'inherit',
+                        textTransform: 'inherit',
+                      }}
+                      title={`Sắp xếp theo ${typeof col.header === 'string' ? col.header : col.key}`}
+                    >
+                      {col.header}
+                      <SortIcon active={isActive} order={isActive ? sortOrder : 'desc'} />
+                    </button>
+                  ) : (
+                    col.header
+                  )}
                 </th>
               )
             })}
