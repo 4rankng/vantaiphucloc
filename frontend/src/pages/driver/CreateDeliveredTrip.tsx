@@ -193,21 +193,12 @@ export function CreateDeliveredTrip({ existingDeliveredTrip }: { existingDeliver
       {/* Operation Type */}
       <div className="space-y-1.5">
         <label className="text-sm font-semibold" style={{ color: 'var(--theme-text-primary)' }}>Tác nghiệp</label>
-        <select
+        <InlineSelect
+          placeholder="Chọn tác nghiệp"
           value={operationType}
-          onChange={e => setOperationType(e.target.value)}
-          className="w-full h-11 rounded-xl px-3.5 text-sm"
-          style={{
-            background: 'var(--theme-bg-tertiary)',
-            border: '1.5px solid transparent',
-            color: operationType ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)',
-          }}
-        >
-          <option value="">Chọn tác nghiệp</option>
-          {OPERATION_TYPE_OPTIONS.map(o => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
+          options={OPERATION_TYPE_OPTIONS}
+          onChange={setOperationType}
+        />
       </div>
 
 

@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react'
-import { 
+import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
   Button
 } from '@/components/ui'
-import { 
-  Upload, FileSpreadsheet, AlertCircle, CheckCircle2, 
+import {
+  Upload, FileSpreadsheet, AlertCircle, CheckCircle2,
   ArrowRight, ChevronRight, Loader2, Info
 } from 'lucide-react'
 import { usePreviewPricing, useCommitPricing } from '@/hooks/use-queries'
@@ -12,6 +12,7 @@ import { useToast } from '@/components/atoms/Toast'
 import { formatCurrencyShort } from '@/data/domain'
 import type { Client } from '@/data/domain'
 import type { PricingPreviewResponse, PricingPreviewRow, PricingFormat } from '@/services/api/imports.api'
+import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
 
 interface PricingImportDialogProps {
   open: boolean
@@ -84,29 +85,29 @@ export function PricingImportDialog({ open, onClose, clients }: PricingImportDia
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase text-slate-500">1. Chọn Khách hàng</label>
-                  <select 
-                    className="w-full h-10 px-3 rounded-lg border bg-white text-sm"
-                    value={selectedClientId || ''}
-                    onChange={e => setSelectedClientId(Number(e.target.value))}
-                  >
-                    <option value="">-- Chọn khách hàng --</option>
-                    {clients.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+                  <InlineSelect
+                    placeholder="-- Chọn khách hàng --"
+                    value={selectedClientId ? String(selectedClientId) : ''}
+                    options={[
+                      { value: '', label: '-- Chọn khách hàng --' },
+                      ...clients.map(c => ({ value: String(c.id), label: c.name })),
+                    ]}
+                    onChange={v => setSelectedClientId(v ? Number(v) : 0)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase text-slate-500">2. Định dạng file (Tùy chọn)</label>
-                  <select 
-                    className="w-full h-10 px-3 rounded-lg border bg-white text-sm"
-                    value={format || ''}
-                    onChange={e => setFormat(e.target.value as PricingFormat || undefined)}
-                  >
-                    <option value="">Tự động nhận diện</option>
-                    <option value="pan">PAN (Trucking HD)</option>
-                    <option value="hap">HAP (Shipside)</option>
-                    <option value="newway">NEWWAY (Hải chung)</option>
-                  </select>
+                  <InlineSelect
+                    placeholder="Tự động nhận diện"
+                    value={format ?? ''}
+                    options={[
+                      { value: '', label: 'Tự động nhận diện' },
+                      { value: 'pan', label: 'PAN (Trucking HD)' },
+                      { value: 'hap', label: 'HAP (Shipside)' },
+                      { value: 'newway', label: 'NEWWAY (Hải chung)' },
+                    ]}
+                    onChange={v => setFormat((v as PricingFormat) || undefined)}
+                  />
                 </div>
               </div>
 

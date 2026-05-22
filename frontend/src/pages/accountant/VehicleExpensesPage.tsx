@@ -12,6 +12,7 @@ import { DangerConfirmDialog } from '@/components/shared/DangerConfirmDialog/Dan
 import { Button } from '@/components/ui'
 import { FieldActions } from '@/components/shared/ListUtils'
 import { useInlineEditForm } from '@/components/shared/useInlineEditForm'
+import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
 import {
   useVehicleExpenses,
   useCreateVehicleExpense,
@@ -123,31 +124,33 @@ function ExpenseEditRow({ initial, onSave, onCancel, saving, vehicles, initialFo
       </td>
       {/* Xe */}
       <td style={{ padding: '5px 8px' }}>
-        <div className="flex items-center">
-          <select
-            ref={vehicleRef}
-            className="nepo-select text-[12px]"
-            style={{ minWidth: 100, borderColor: errors.vehicleId ? 'var(--status-error, #e53)' : undefined }}
-            value={form.vehicleId}
-            onChange={e => set('vehicleId', Number(e.target.value))}
-          >
-            <option value={0}>— Chọn xe —</option>
-            {vehicles.map(v => <option key={v.id} value={v.id}>{v.plate}</option>)}
-          </select>
+        <div className="flex items-center gap-1" style={{ minWidth: 120 }}>
+          <div className="flex-1">
+            <InlineSelect
+              placeholder="— Chọn xe —"
+              value={form.vehicleId ? String(form.vehicleId) : ''}
+              options={[
+                { value: '', label: '— Chọn xe —' },
+                ...vehicles.map(v => ({ value: String(v.id), label: v.plate })),
+              ]}
+              onChange={v => set('vehicleId', Number(v) || 0)}
+            />
+            {errors.vehicleId && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.vehicleId}</p>}
+          </div>
           {isDirty('vehicleId') && actions}
         </div>
       </td>
       {/* Loại */}
       <td style={{ padding: '5px 8px' }}>
-        <div className="flex items-center">
-          <select
-            className="nepo-select text-[12px]"
-            style={{ minWidth: 100 }}
-            value={form.category}
-            onChange={e => set('category', e.target.value as VehicleExpenseCategory)}
-          >
-            {CATEGORIES.map(c => <option key={c} value={c}>{EXPENSE_CATEGORY_LABELS[c]}</option>)}
-          </select>
+        <div className="flex items-center gap-1" style={{ minWidth: 120 }}>
+          <div className="flex-1">
+            <InlineSelect
+              placeholder="Loại chi phí"
+              value={form.category}
+              options={CATEGORIES.map(c => ({ value: c, label: EXPENSE_CATEGORY_LABELS[c] }))}
+              onChange={v => set('category', v as VehicleExpenseCategory)}
+            />
+          </div>
           {isDirty('category') && actions}
         </div>
       </td>
@@ -378,15 +381,17 @@ export function VehicleExpensesPage() {
             </FilterPill>
           ))}
           <div className="w-px h-5 mx-1" style={{ background: 'var(--line)' }} />
-          <select
-            value={vehicleFilter}
-            onChange={e => setVehicleFilter(e.target.value ? Number(e.target.value) : '')}
-            className="nepo-select"
-            style={{ minHeight: 32, padding: '6px 32px 6px 11px', fontSize: 12.5, width: 'auto' }}
-          >
-            <option value="">Tất cả xe</option>
-            {vehicles?.map(v => <option key={v.id} value={v.id}>{v.plate}</option>)}
-          </select>
+          <div style={{ width: 160 }}>
+            <InlineSelect
+              placeholder="Tất cả xe"
+              value={vehicleFilter !== '' ? String(vehicleFilter) : ''}
+              options={[
+                { value: '', label: 'Tất cả xe' },
+                ...(vehicles ?? []).map(v => ({ value: String(v.id), label: v.plate })),
+              ]}
+              onChange={v => setVehicleFilter(v ? Number(v) : '')}
+            />
+          </div>
           <ToolbarSpacer />
           <ToolbarSearch value={search} onChange={setSearch} placeholder="Tìm biển số, mô tả..." width={260} />
         </Toolbar>

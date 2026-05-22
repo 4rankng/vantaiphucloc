@@ -46,7 +46,7 @@ export function FieldActions({ onSave, onCancel, saving }: {
   onSave: () => void; onCancel: () => void; saving?: boolean
 }) {
   return (
-    <div className="flex items-center gap-1 ml-2">
+    <div className="flex items-center gap-1 ml-2 relative" style={{ marginTop: -4 }}>
       <button type="button" onClick={onSave} disabled={saving}
         className="flex items-center justify-center rounded transition-colors"
         style={{ width: 24, height: 24, background: 'var(--success)', color: '#fff', opacity: saving ? 0.7 : 1 }}>
@@ -57,6 +57,10 @@ export function FieldActions({ onSave, onCancel, saving }: {
         style={{ width: 24, height: 24, background: 'var(--surface-3)', color: 'var(--ink-2)', opacity: saving ? 0.5 : 1 }}>
         <X className="h-3.5 w-3.5" />
       </button>
+      <span className="absolute top-full left-0 text-[9px] leading-none select-none whitespace-nowrap pointer-events-none"
+            style={{ color: 'var(--ink-4)', marginTop: 2 }}>
+        Enter xác nhận · Esc huỷ
+      </span>
     </div>
   )
 }

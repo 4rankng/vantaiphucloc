@@ -3,6 +3,7 @@ import { MapPin, Plus, AlertTriangle, Merge, ArrowUp, Trash2 } from 'lucide-reac
 import { Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui'
 import { DangerConfirmDialog } from '@/components/shared/DangerConfirmDialog/DangerConfirmDialog'
 import { Panel } from '@/components/shared/Panel'
+import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
 import { Drawer } from '@/components/shared/Drawer'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { useInfiniteScroll, LoadMoreSentinel, SearchInput, FieldActions } from '@/components/shared/ListUtils'
@@ -242,19 +243,29 @@ function MergeDialog({ open, onClose, locations, onMerge, merging }: {
             <label className="nepo-field-label">
               Địa điểm nguồn <span style={{ color: 'var(--ink-3)' }}>(sẽ bị gộp)</span>
             </label>
-            <select value={source} onChange={e => setSource(Number(e.target.value) || '')} className="nepo-select">
-              <option value="">— Chọn địa điểm —</option>
-              {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-            </select>
+            <InlineSelect
+              placeholder="— Chọn địa điểm —"
+              value={source !== '' ? String(source) : ''}
+              options={[
+                { value: '', label: '— Chọn địa điểm —' },
+                ...locations.map(l => ({ value: String(l.id), label: l.name })),
+              ]}
+              onChange={v => setSource(v ? Number(v) : '')}
+            />
           </div>
           <div>
             <label className="nepo-field-label">
               Địa điểm đích <span style={{ color: 'var(--ink-3)' }}>(giữ lại)</span>
             </label>
-            <select value={target} onChange={e => setTarget(Number(e.target.value) || '')} className="nepo-select">
-              <option value="">— Chọn địa điểm —</option>
-              {locations.filter(l => l.id !== source).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-            </select>
+            <InlineSelect
+              placeholder="— Chọn địa điểm —"
+              value={target !== '' ? String(target) : ''}
+              options={[
+                { value: '', label: '— Chọn địa điểm —' },
+                ...locations.filter(l => l.id !== source).map(l => ({ value: String(l.id), label: l.name })),
+              ]}
+              onChange={v => setTarget(v ? Number(v) : '')}
+            />
           </div>
         </div>
 

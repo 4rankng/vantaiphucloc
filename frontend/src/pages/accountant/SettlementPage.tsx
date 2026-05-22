@@ -3,6 +3,7 @@ import { Download, FileSpreadsheet } from 'lucide-react'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { Panel } from '@/components/shared/Panel'
 import { Pill } from '@/components/shared/Pill'
+import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
 import { Button } from '@/components/ui'
 import { useClients, useExportDoiSoatExcel } from '@/hooks/use-queries'
 import { useMonthParams } from './use-month-params'
@@ -54,20 +55,18 @@ export function SettlementPage() {
         >
           <div className="space-y-5">
             <div>
-              <label className="nepo-field-label" htmlFor="client-select">
+              <label className="nepo-field-label">
                 Chủ hàng
               </label>
-              <select
-                id="client-select"
+              <InlineSelect
+                placeholder="— Chọn chủ hàng —"
                 value={selectedClientId}
-                onChange={e => setSelectedClientId(e.target.value)}
-                className="nepo-select"
-              >
-                <option value="">— Chọn chủ hàng —</option>
-                {clients.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+                options={[
+                  { value: '', label: '— Chọn chủ hàng —' },
+                  ...clients.map(c => ({ value: String(c.id), label: c.name })),
+                ]}
+                onChange={setSelectedClientId}
+              />
             </div>
 
             <div>

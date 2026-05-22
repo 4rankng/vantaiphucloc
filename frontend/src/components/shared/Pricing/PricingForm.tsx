@@ -312,20 +312,12 @@ export function PricingForm({ initial, clients, lockedClientId, onSave, onSaveCo
           <div className="max-w-md">
             <div className="space-y-2">
               <Label className="typo-form-label">Tác nghiệp</Label>
-              <select
+              <InlineSelect
+                placeholder="— Không chọn —"
                 value={operationType}
-                onChange={e => setOperationType(e.target.value)}
-                className="w-full h-10 rounded-xl px-3 text-sm"
-                style={{
-                  background: 'var(--theme-bg-tertiary)',
-                  border: '1.5px solid transparent',
-                  color: operationType ? 'var(--theme-text-primary)' : 'var(--theme-text-muted)',
-                }}
-              >
-                {OPERATION_TYPE_OPTIONS.map(o => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
+                options={OPERATION_TYPE_OPTIONS}
+                onChange={setOperationType}
+              />
             </div>
           </div>
         </div>

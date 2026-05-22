@@ -8,6 +8,7 @@ import { Plate } from '@/components/shared/Plate'
 import { Toolbar, ToolbarSpacer } from '@/components/shared/Toolbar'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { useVehiclePnL, useVehicles } from '@/hooks/use-queries'
+import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
 import { useMonthParams } from './use-month-params'
 import { formatCurrency, compactCurrency } from '@/data/domain'
 import type { VehiclePnLRow, VehiclePnLResponse } from '@/services/api/pnl.api'
@@ -195,15 +196,17 @@ export function PnLPage() {
 
       <Panel title="P&L theo xe" subtitle={`${rows.length} xe · ${dateFrom} → ${dateTo}`} flush>
         <Toolbar bordered>
-          <select
-            value={vehicleFilter}
-            onChange={e => setVehicleFilter(e.target.value ? Number(e.target.value) : '')}
-            className="nepo-select"
-            style={{ minHeight: 32, padding: '6px 32px 6px 11px', fontSize: 12.5, width: 'auto' }}
-          >
-            <option value="">Tất cả xe</option>
-            {vehicles?.map(v => <option key={v.id} value={v.id}>{v.plate}</option>)}
-          </select>
+          <div style={{ width: 160 }}>
+            <InlineSelect
+              placeholder="Tất cả xe"
+              value={vehicleFilter !== '' ? String(vehicleFilter) : ''}
+              options={[
+                { value: '', label: 'Tất cả xe' },
+                ...(vehicles ?? []).map(v => ({ value: String(v.id), label: v.plate })),
+              ]}
+              onChange={v => setVehicleFilter(v ? Number(v) : '')}
+            />
+          </div>
           <ToolbarSpacer />
           <span className="text-[12px]" style={{ color: 'var(--ink-3)' }}>
             Cuộn ngang để xem toàn bộ cột trên màn hình nhỏ
