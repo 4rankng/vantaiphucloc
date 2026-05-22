@@ -563,7 +563,10 @@ export function useCreateDeliveredTrip() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: Parameters<typeof apiClient.createDeliveredTrip>[0]) => apiClient.createDeliveredTrip(data).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['delivered-trips'] }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+    },
   })
 }
 
@@ -575,6 +578,7 @@ export function useUpdateDeliveredTrip() {
       qc.invalidateQueries({ queryKey: ['delivered-trips'] })
       qc.invalidateQueries({ queryKey: ['suggest-matches'] })
       qc.invalidateQueries({ queryKey: ['suggest-wos'] })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
     },
   })
 }
@@ -586,6 +590,7 @@ export function useCreateBookedTrip() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['booked-trips'] })
       qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
     },
   })
 }
@@ -598,6 +603,7 @@ export function useUpdateBookedTrip() {
       qc.invalidateQueries({ queryKey: ['booked-trips'] })
       qc.invalidateQueries({ queryKey: ['suggest-matches'] })
       qc.invalidateQueries({ queryKey: ['suggest-wos'] })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
     },
   })
 }
@@ -610,6 +616,7 @@ export function useReconcile() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['booked-trips'] })
       qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
     },
   })
 }
@@ -641,6 +648,7 @@ export function useBulkImportAndMatch() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['delivered-trips'] })
       qc.invalidateQueries({ queryKey: ['booked-trips'] })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
     },
   })
 }
@@ -666,7 +674,10 @@ export function useImportBookedTrips() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (file: File) => apiClient.importBookedTrips(file),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['booked-trips'] }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['booked-trips'] })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+    },
   })
 }
 
@@ -702,6 +713,7 @@ export function useUpdateContainerNumber() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['booked-trips'] })
       qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
     },
   })
 }
@@ -802,6 +814,7 @@ export function useUnmatch() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.bookedTrips })
       qc.invalidateQueries({ queryKey: queryKeys.deliveredTrips })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
     },
   })
 }
@@ -831,6 +844,7 @@ export function useAutoMatchConfirm() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.deliveredTrips })
       qc.invalidateQueries({ queryKey: queryKeys.bookedTrips })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
     },
   })
 }
@@ -853,6 +867,7 @@ export function useBulkMatch() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.deliveredTrips })
       qc.invalidateQueries({ queryKey: queryKeys.bookedTrips })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
     },
   })
 }
@@ -865,6 +880,7 @@ export function useBatchReconcileForWO() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.deliveredTrips })
       qc.invalidateQueries({ queryKey: queryKeys.bookedTrips })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
     },
   })
 }
@@ -877,6 +893,7 @@ export function useBatchReconcileForTO() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.deliveredTrips })
       qc.invalidateQueries({ queryKey: queryKeys.bookedTrips })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
     },
   })
 }
@@ -987,6 +1004,9 @@ export function useCommitReconciliationImport() {
     onSuccess: (_data, importId) => {
       qc.invalidateQueries({ queryKey: ['reconciliation-imports'] })
       qc.invalidateQueries({ queryKey: queryKeys.reconciliationImport(importId) })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['booked-trips'] })
     },
   })
 }
