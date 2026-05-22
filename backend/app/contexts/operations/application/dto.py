@@ -146,6 +146,7 @@ class DeliveredTripUpdateInput:
 class DeliveredTripListFilters:
     page: int = 1
     page_size: int = 50
+    client_id: int | None = None
     driver_id: int | None = None
     date_from: date | None = None
     date_to: date | None = None

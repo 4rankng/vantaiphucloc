@@ -508,6 +508,7 @@ async def get_vehicle_pnl(
 async def get_trip_daily_stats(
     date_from: str = Query(..., description="YYYY-MM-DD"),
     date_to: str = Query(..., description="YYYY-MM-DD"),
+    client_id: int | None = None,
     _current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -525,33 +526,40 @@ async def get_trip_daily_stats(
         from fastapi import HTTPException
         raise HTTPException(status_code=422, detail="Invalid date format. Use YYYY-MM-DD.")
 
+    stmt = select(
+        DeliveredTrip.trip_date,
+        DeliveredTrip.status,
+        func.count(DeliveredTrip.id),
+        func.coalesce(func.sum(DeliveredTrip.revenue), 0),
+    ).where(
+        DeliveredTrip.trip_date >= df,
+        DeliveredTrip.trip_date <= dt,
+    )
+
+    if client_id is not None:
+        stmt = stmt.where(DeliveredTrip.client_id == client_id)
+
     rows = (await db.execute(
-        select(
-            DeliveredTrip.trip_date,
-            DeliveredTrip.status,
-            func.count(DeliveredTrip.id),
-        )
-        .where(
-            DeliveredTrip.trip_date >= df,
-            DeliveredTrip.trip_date <= dt,
-        )
-        .group_by(DeliveredTrip.trip_date, DeliveredTrip.status)
+        stmt.group_by(DeliveredTrip.trip_date, DeliveredTrip.status)
     )).all()
 
     day_map: dict[int, dict[str, int]] = {}
     total = 0
     matched = 0
     pending = 0
-    for trip_date, status, cnt in rows:
+    total_revenue = 0
+    for trip_date, status, cnt, rev in rows:
         day = trip_date.day if hasattr(trip_date, 'day') else trip_date
         bucket = day_map.setdefault(day, {"matched": 0, "pending": 0})
         total += cnt
         if status in ("MATCHED", "COMPLETED"):
             bucket["matched"] += cnt
             matched += cnt
+            total_revenue += int(rev)
         elif status not in ("CANCELLED",):
             bucket["pending"] += cnt
             pending += cnt
+            total_revenue += int(rev)
 
     days_in_month = _cal.monthrange(df.year, df.month)[1]
     buckets = [
@@ -565,6 +573,7 @@ async def get_trip_daily_stats(
         total=total,
         matched=matched,
         pending=pending,
+        total_revenue=total_revenue,
         match_rate=round(matched / total * 100) if total > 0 else None,
         buckets=buckets,
     )

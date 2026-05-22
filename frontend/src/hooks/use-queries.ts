@@ -174,8 +174,9 @@ export function usePricings(filters?: { clientId?: number; workType?: ContType; 
   })
 }
 
-export function useDeliveredTrips(filters?: { driverId?: number; dateFrom?: string; dateTo?: string; status?: DeliveredTrip['status']; page?: number; pageSize?: number }) {
+export function useDeliveredTrips(filters?: { clientId?: number; driverId?: number; dateFrom?: string; dateTo?: string; status?: DeliveredTrip['status']; page?: number; pageSize?: number }) {
   const flatFilters: Record<string, string> = {}
+  if (filters?.clientId) flatFilters.clientId = String(filters.clientId)
   if (filters?.driverId) flatFilters.driverId = String(filters.driverId)
   if (filters?.dateFrom) flatFilters.dateFrom = filters.dateFrom
   if (filters?.dateTo) flatFilters.dateTo = filters.dateTo
@@ -1042,11 +1043,11 @@ export function useVehiclePnL(dateFrom: string, dateTo: string, vehicleId?: numb
   })
 }
 
-export function useTripDailyStats(dateFrom: string, dateTo: string) {
+export function useTripDailyStats(dateFrom: string, dateTo: string, clientId?: number) {
   return useQuery({
-    queryKey: ['trip-daily-stats', dateFrom, dateTo],
+    queryKey: ['trip-daily-stats', dateFrom, dateTo, clientId],
     queryFn: async () => {
-      const res = await apiClient.getTripDailyStats(dateFrom, dateTo)
+      const res = await apiClient.getTripDailyStats(dateFrom, dateTo, clientId)
       return res.success ? res.data : null
     },
     enabled: !!dateFrom && !!dateTo,

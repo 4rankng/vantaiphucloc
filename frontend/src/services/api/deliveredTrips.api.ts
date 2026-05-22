@@ -15,6 +15,7 @@ export interface SuggestedRoute {
 }
 
 interface DeliveredTripFilters {
+  clientId?: number
   driverId?: number
   dateFrom?: string
   dateTo?: string
@@ -66,9 +67,10 @@ export async function getDeliveredTrip(id: number): Promise<ApiResponse<Delivere
 }
 
 export async function getDeliveredTrips(filters?: DeliveredTripFilters): Promise<ApiResponse<PaginatedResult<DeliveredTrip>>> {
-  const cacheKey = `delivered-trips:${filters?.driverId || ''}:${filters?.status || ''}:${filters?.dateFrom || ''}:${filters?.dateTo || ''}:p${filters?.page || 1}:s${filters?.pageSize || 50}`
+  const cacheKey = `delivered-trips:${filters?.clientId || ''}:${filters?.driverId || ''}:${filters?.status || ''}:${filters?.dateFrom || ''}:${filters?.dateTo || ''}:p${filters?.page || 1}:s${filters?.pageSize || 50}`
   try {
     const params: Record<string, string> = {}
+    if (filters?.clientId) params.client_id = String(filters.clientId)
     if (filters?.driverId) params.driver_id = String(filters.driverId)
     if (filters?.dateFrom) params.date_from = filters.dateFrom
     if (filters?.dateTo) params.date_to = filters.dateTo

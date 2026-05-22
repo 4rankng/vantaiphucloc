@@ -273,6 +273,7 @@ async def create_delivered_trip_endpoint(
 
 @router.get("/delivered-trips", response_model=PaginatedResponse[DeliveredTripOut])
 async def list_delivered_trips(
+    client_id: int | None = None,
     driver_id: int | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
@@ -287,6 +288,7 @@ async def list_delivered_trips(
 
     items, total = await use_case(DeliveredTripListFilters(
         page=page, page_size=page_size,
+        client_id=client_id,
         driver_id=driver_id,
         date_from=date_from, date_to=date_to, status=status,
     ))

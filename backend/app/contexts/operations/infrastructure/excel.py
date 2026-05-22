@@ -1042,168 +1042,148 @@ async def generate_doi_soat_excel(
     # ── 6. Build Excel workbook ───────────────────────────────────────────────
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = client_name[:31]
+    month_label = df.strftime("%m/%Y")
+    ws.title = f"SL T{df.month}.{str(df.year)[2:]}"
+
+    num_cols = 15  # A–O
+    last_col = get_column_letter(num_cols)
 
     # ── Styles ────────────────────────────────────────────────────────────────
-    thin_side = Side(style="thin", color="BBBBBB")
+    _bold = Font(bold=True, size=11)
+    _bold14 = Font(bold=True, size=14)
+    _header_font = Font(bold=True, size=11)
+    thin_side = Side(style="thin", color="000000")
     thin_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
-    thick_bottom = Border(
-        left=thin_side, right=thin_side,
-        top=Side(style="thin", color="BBBBBB"),
-        bottom=Side(style="medium", color="1F4E79"),
-    )
-    _blue_dark   = "1F4E79"
-    _blue_header = "2E75B6"
-    _blue_light  = "DEEAF1"
-    _yellow_sum  = "FFF2CC"
-    _white       = "FFFFFF"
-    _grey_row    = "F5F8FC"
+    center = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    left = Alignment(horizontal="left", vertical="center")
+    right_align = Alignment(horizontal="right", vertical="center")
 
-    # ── Title block (rows 1–3) ────────────────────────────────────────────────
-    num_cols = 12  # number of data columns
-    last_col_letter = get_column_letter(num_cols)
+    # ── Title block (rows 1–8) ────────────────────────────────────────────────
+    ws.merge_cells(f"A1:{last_col}1")
+    ws["A1"] = "CÔNG TY TNHH AMT PHÚC LỘC"
+    ws["A1"].font = _bold
 
-    # Row 1: Company + report title
-    ws.append(["VẬN TẢI PHÚC LỘC", "", "", "", "", "", "", "", "", ""])
-    ws.merge_cells(f"A1:{last_col_letter}1")
-    title_cell = ws["A1"]
-    title_cell.font = Font(bold=True, size=14, color=_blue_dark)
-    title_cell.alignment = Alignment(horizontal="center", vertical="center")
-    ws.row_dimensions[1].height = 24
+    ws.merge_cells(f"A2:{last_col}2")
+    ws["A2"] = "Địa chỉ: Số 56B/97 đường Đoàn Kết, P. Hải An, TP Hải Phòng"
+    ws["A2"].font = _bold
 
-    # Row 2: Subtitle
-    month_range_str = f"Từ {df.strftime('%d/%m/%Y')} đến {dt.strftime('%d/%m/%Y')}"
-    ws.append([f"BẢNG ĐỐI SOÁT – {client_name.upper()} – {month_range_str}", *[""] * (num_cols - 1)])
-    ws.merge_cells(f"A2:{last_col_letter}2")
-    subtitle_cell = ws["A2"]
-    subtitle_cell.font = Font(bold=True, size=11, color=_blue_dark)
-    subtitle_cell.alignment = Alignment(horizontal="center", vertical="center")
-    ws.row_dimensions[2].height = 20
+    ws.merge_cells(f"A3:{last_col}3")
+    ws["A3"] = "MST: 0201965047"
 
-    # Row 3: empty spacer
-    ws.append([""] * num_cols)
-    ws.row_dimensions[3].height = 6
+    # Row 4 empty
+    ws.merge_cells(f"A5:{last_col}5")
+    ws["A5"] = f"BẢNG KÊ QUYẾT TOÁN CƯỚC VẬN CHUYỂN THÁNG {month_label}"
+    ws["A5"].font = _bold14
+    ws["A5"].alignment = center
 
-    # ── Header row (row 4) ────────────────────────────────────────────────────
+    ws.merge_cells(f"A6:{last_col}6")
+    ws["A6"] = f"Từ ngày {df.strftime('%d/%m/%Y')} đến ngày {dt.strftime('%d/%m/%Y')}"
+    ws["A6"].font = _bold
+    ws["A6"].alignment = center
+
+    ws["A7"] = "KHÁCH HÀNG:"
+    ws.merge_cells(f"C7:{last_col}7")
+    ws["C7"] = client_name
+    ws["C7"].font = _bold
+
+    ws.merge_cells(f"A8:{last_col}8")
+    ws["A8"] = "Công ty TNHH AMT Phúc Lộc xin gửi tới Quý Công ty bảng kê quyết toán vận tải như sau:"
+
+    # ── Header row 10 ─────────────────────────────────────────────────────────
     headers = [
-        "STT", "Ngày chạy", "Số cont", "Loại cont",
-        "Điểm lấy", "Điểm trả",
-        "Tác nghiệp", "Biển số xe", "Số tàu", "Đơn giá (VNĐ)",
-        "Xác nhận KH", "Ghi chú KH",
+        "STT", "NGÀY ĐI", "CHỦ HÀNG", "SỐ CONTAINER",
+        "F20'", "F40'", "E20'", "E40'",
+        "SỐ XE CHẠY", "ĐIỂM ĐI", "ĐIỂM ĐẾN",
+        "SỐ CHUYẾN", "CƯỚC CHUYẾN", "TỔNG TT", "TÁC NGHIỆP",
     ]
-    ws.append(headers)
-    header_row = 4
-    header_font = Font(bold=True, color=_white, size=10)
-    header_fill = PatternFill(start_color=_blue_header, end_color=_blue_header, fill_type="solid")
+    ws.append([])  # row 9 empty
+    ws.append(headers)  # row 10
     for col_num in range(1, num_cols + 1):
-        cell = ws.cell(row=header_row, column=col_num)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        cell.border = thick_bottom
-    ws.row_dimensions[header_row].height = 32
+        cell = ws.cell(row=10, column=col_num)
+        cell.font = _header_font
+        cell.alignment = center
+        cell.border = thin_border
 
-    # Freeze rows 1–4 (title + header)
-    ws.freeze_panes = ws.cell(row=5, column=1)
+    # ── Subtotal row 11 ───────────────────────────────────────────────────────
+    last_data_row = max(len(booked_trips) * 3 + 11, 12)  # rough estimate
+    ws.append([
+        "", "", "", "",
+        f"=SUBTOTAL(9,E12:E{last_data_row})",
+        f"=SUBTOTAL(9,F12:F{last_data_row})",
+        f"=SUBTOTAL(9,G12:G{last_data_row})",
+        f"=SUBTOTAL(9,H12:H{last_data_row})",
+        "", "", "",
+        f"=SUBTOTAL(9,L12:L{last_data_row})",
+        "",
+        f"=SUBTOTAL(9,N12:N{last_data_row})",
+        "",
+    ])
+    for col_num in [5, 6, 7, 8, 12, 14]:
+        ws.cell(row=11, column=col_num).font = _bold
+        ws.cell(row=11, column=col_num).alignment = center
 
-    # ── Data rows ─────────────────────────────────────────────────────────────
-    WORK_TYPE_FULL = {
-        "E20": "Rỗng 20ft", "E40": "Rỗng 40ft",
-        "F20": "Hàng 20ft", "F40": "Hàng 40ft",
-    }
+    # ── Data rows (12+) ──────────────────────────────────────────────────────
     stt = 0
-    type_count: dict[str, int] = {}
-    total_amount = 0
+    client_code = client.code if client else ""
 
-    for row_idx, to in enumerate(booked_trips):
+    for to in booked_trips:
         containers = containers_map.get(to.id, [])
-        pickup  = loc_name_by_id.get(to.pickup_location_id or 0, "")
+        pickup = loc_name_by_id.get(to.pickup_location_id or 0, "")
         dropoff = loc_name_by_id.get(to.dropoff_location_id or 0, "")
-        plate   = plate_map.get(to.id, "")
-        vessel  = vessel_map.get(to.id, "")
+        plate = plate_map.get(to.id, "")
         op_type = op_type_map.get(to.id, "")
         revenue = to.revenue or 0
         trip_date_str = to.trip_date.strftime("%d/%m/%Y") if to.trip_date else ""
 
-        # Fill colour alternates every trip (not every row) for readability
-        fill_color = _white if row_idx % 2 == 0 else _grey_row
-        row_fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
-
         for c in containers:
             stt += 1
-            wt_label = c.cont_type or ""
-            type_count[wt_label] = type_count.get(wt_label, 0) + 1
-            total_amount += revenue
+            ct = (c.cont_type or "").upper()
 
-            data_row = [
-                stt, trip_date_str, c.container_number, wt_label,
-                pickup, dropoff, op_type, plate, vessel, revenue or "",
-                "", "",  # Xác nhận KH, Ghi chú KH — empty for customer to fill
-            ]
-            ws.append(data_row)
-            data_row_num = ws.max_row
+            # Cont type flags
+            f20 = 1 if ct == "F20" else None
+            f40 = 1 if ct == "F40" else None
+            e20 = 1 if ct == "E20" else None
+            e40 = 1 if ct == "E40" else None
 
+            row_num = 11 + stt
+            ws.append([
+                stt, trip_date_str, client_code, c.container_number,
+                f20, f40, e20, e40,
+                plate, pickup, dropoff,
+                f"=E{row_num}+F{row_num}+G{row_num}+H{row_num}",
+                revenue if revenue else None,
+                f"=L{row_num}*M{row_num}",
+                op_type,
+            ])
+
+            # Styling
             for col_num in range(1, num_cols + 1):
-                cell = ws.cell(row=data_row_num, column=col_num)
-                cell.fill = row_fill
+                cell = ws.cell(row=row_num, column=col_num)
                 cell.border = thin_border
-                cell.alignment = Alignment(vertical="center")
-                if col_num == 1:  # STT
-                    cell.alignment = Alignment(horizontal="center", vertical="center")
-                if col_num == 2:  # Mã chuyến
-                    cell.alignment = Alignment(horizontal="center", vertical="center")
-                if col_num == 10 and revenue:  # Đơn giá
+                if col_num in (1, 2, 3, 5, 6, 7, 8, 9, 12, 15):
+                    cell.alignment = center
+                elif col_num == 4:
+                    cell.alignment = left
+                elif col_num in (10, 11):
+                    cell.alignment = center
+                elif col_num in (13, 14):
+                    cell.alignment = right_align
                     cell.number_format = '#,##0'
-                    cell.alignment = Alignment(horizontal="right", vertical="center")
-            ws.row_dimensions[data_row_num].height = 18
+                if col_num == 14:
+                    cell.font = _bold
 
-    # ── Summary rows ──────────────────────────────────────────────────────────
-    sum_fill = PatternFill(start_color=_blue_light, end_color=_blue_light, fill_type="solid")
-    sum_font_bold = Font(bold=True, size=10, color=_blue_dark)
-
-    # Spacer row
-    ws.append([""] * num_cols)
-
-    # Count per loại cont
-    ws.append(["Tổng hợp theo loại container:", *[""] * (num_cols - 1)])
-    label_row = ws.max_row
-    ws.merge_cells(f"A{label_row}:M{label_row}")
-    ws[f"A{label_row}"].font = sum_font_bold
-    ws[f"A{label_row}"].fill = sum_fill
-
-    for wt_label, count in sorted(type_count.items()):
-        ws.append(["", f"  {wt_label}", count, "cont", *[""] * (num_cols - 4)])
-        r = ws.max_row
-        for col_num in range(1, num_cols + 1):
-            ws.cell(row=r, column=col_num).fill = sum_fill
-        ws.cell(row=r, column=2).font = Font(size=10)
-        ws.cell(row=r, column=3).font = Font(bold=True, size=10, color=_blue_dark)
-
-    # Total rows
-    total_row_cells: list[list] = [
-        ["Tổng số container:", *[""] * 3, "", "", "", "", "", stt],
-    ]
-    if total_amount:
-        total_row_cells.append(["Tổng đơn giá:", *[""] * 3, "", "", "", "", "", total_amount])
-
-    total_fill = PatternFill(start_color=_yellow_sum, end_color=_yellow_sum, fill_type="solid")
-    for row_data in total_row_cells:
-        ws.append(row_data)
-        r = ws.max_row
-        ws.merge_cells(f"A{r}:J{r}")
-        label_cell = ws.cell(row=r, column=1)
-        val_cell   = ws.cell(row=r, column=10)
-        label_cell.font = Font(bold=True, size=10, color=_blue_dark)
-        val_cell.font   = Font(bold=True, size=11, color=_blue_dark)
-        val_cell.number_format = '#,##0'
-        val_cell.alignment = Alignment(horizontal="right", vertical="center")
-        for col_num in range(1, num_cols + 1):
-            ws.cell(row=r, column=col_num).fill = total_fill
+    # Update subtotal range to actual last row
+    actual_last = 11 + stt if stt > 0 else 12
+    for col_num, col_letter in [(5, "E"), (6, "F"), (7, "G"), (8, "H"), (12, "L"), (14, "N")]:
+        ws.cell(row=11, column=col_num).value = f"=SUBTOTAL(9,{col_letter}12:{col_letter}{actual_last})"
 
     # ── Column widths ─────────────────────────────────────────────────────────
-    col_widths = [6, 12, 16, 14, 24, 24, 14, 14, 14, 16, 14, 24]
+    col_widths = [6, 12, 12, 18, 6, 6, 6, 6, 14, 20, 20, 12, 14, 14, 16]
     for i, width in enumerate(col_widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = width
+
+    # Freeze header
+    ws.freeze_panes = "A12"
 
     buf = BytesIO()
     wb.save(buf)

@@ -5,8 +5,6 @@ import {
   MapPin,
   Clock,
   User,
-  Truck,
-  Calendar,
   ClipboardList,
   Loader2,
 } from 'lucide-react'
@@ -184,7 +182,7 @@ export function DeliveredTripDetailDrawer({
           >
             <div
               className="grid"
-              style={{ gridTemplateColumns: '1fr 1fr', gap: '5px 16px' }}
+              style={{ gridTemplateColumns: '0.85fr 1.15fr', gap: '5px 16px' }}
             >
               {/* Container */}
               <CriteriaEditRow label="Container">
@@ -394,22 +392,26 @@ export function DeliveredTripDetailDrawer({
             {trip.gpsAddress && (
               <InfoRowCompact icon={MapPin} label="Vị trí GPS" value={trip.gpsAddress} />
             )}
-            {trip.driver && (
-              <InfoRowCompact
-                icon={User}
-                label="Tài xế"
-                value={trip.driver.name + (trip.driver.phone ? ` · ${trip.driver.phone}` : '')}
-              />
+            {(trip.driver || trip.vehicle) && (
+              <div
+                className="flex items-start gap-3 px-3.5 py-2 text-[13px]"
+                style={{ borderBottom: 'none' }}
+              >
+                <User className="w-4 h-4 shrink-0 mt-0.5" style={{ color: 'var(--ink-3)' }} />
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 min-w-0">
+                  {trip.driver && (
+                    <span style={{ color: 'var(--ink)' }}>
+                      {trip.driver.name}{trip.driver.phone ? ` · ${trip.driver.phone}` : ''}
+                    </span>
+                  )}
+                  {trip.vehicle && (
+                    <span className="font-mono" style={{ color: 'var(--ink)' }}>
+                      {trip.vehicle.plate}
+                    </span>
+                  )}
+                </div>
+              </div>
             )}
-            {trip.vehicle && (
-              <InfoRowCompact icon={Truck} label="Xe" value={trip.vehicle.plate} />
-            )}
-            <InfoRowCompact
-              icon={Calendar}
-              label="Ngày tạo"
-              value={formatTimestamp(trip.createdAt)}
-              noBorder
-            />
           </div>
 
           {/* Matched Booked Trip — MATCHED only */}
@@ -431,7 +433,7 @@ export function DeliveredTripDetailDrawer({
               >
                 <div
                   className="grid"
-                  style={{ gridTemplateColumns: '1fr 1fr', gap: '5px 16px' }}
+                  style={{ gridTemplateColumns: '0.85fr 1.15fr', gap: '5px 16px' }}
                 >
                   {/* Container */}
                   <CriteriaEditRow label="Container">
@@ -631,6 +633,10 @@ function SuggestionCard({
   locations: import('@/data/domain').Location[]
 }) {
   const [bt, setBt] = useState(s.bookedTrip)
+  // Keep bt in sync when suggestions re-fetch (e.g. after saving a field)
+  useEffect(() => {
+    setBt(s.bookedTrip)
+  }, [s.bookedTrip.id, s.bookedTrip.updatedAt])
   const pct = s.maxScore > 0 ? Math.round((s.matchScore / s.maxScore) * 100) : 0
 
   const save = async (data: import('@/services/api/bookedTrips.api').BookedTripUpdatePayload) => {

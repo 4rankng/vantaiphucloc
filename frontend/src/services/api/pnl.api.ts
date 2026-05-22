@@ -86,6 +86,7 @@ export interface TripDailyStats {
   total: number
   matched: number
   pending: number
+  totalRevenue: number
   matchRate: number | null
   buckets: TripDayBucket[]
 }
@@ -93,10 +94,15 @@ export interface TripDailyStats {
 export async function getTripDailyStats(
   dateFrom: string,
   dateTo: string,
+  clientId?: number,
 ): Promise<ApiResponse<TripDailyStats>> {
   try {
     const res = await api.get('/dashboard/trip-daily-stats', {
-      params: { date_from: dateFrom, date_to: dateTo },
+      params: {
+        date_from: dateFrom,
+        date_to: dateTo,
+        ...(clientId ? { client_id: clientId } : {}),
+      },
     })
     return ok(toCamel<TripDailyStats>(res.data))
   } catch (err) {

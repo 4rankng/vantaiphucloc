@@ -88,6 +88,7 @@ class ListDeliveredTrips:
         items, total = await self.repo.list(
             offset=offset,
             limit=filters.page_size,
+            client_id=filters.client_id,
             driver_id=filters.driver_id,
             date_from=filters.date_from,
             date_to=filters.date_to,

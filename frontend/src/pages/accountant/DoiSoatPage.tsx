@@ -11,7 +11,6 @@ import {
   Upload,
   X,
   AlertTriangle,
-  Download,
   Camera,
   MapPin,
   Clock,
@@ -40,11 +39,11 @@ import type { DeliveredTrip, DeliveredTripStatus } from '@/data/domain'
 import {
   useDeliveredTrips,
   useUnmatch,
-  useExportDeliveredTripsExcel,
   useExportDoiSoatExcel,
   useAutoMatch,
   useAutoMatchConfirm,
   useClients,
+  useTripDailyStats,
 } from '@/hooks/use-queries'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -132,19 +131,19 @@ export function DoiSoatPage() {
   const [showImport, setShowImport] = useState(false)
   const [confirmUnmatchId, setConfirmUnmatchId] = useState<number | null>(null)
   const [matchTarget, setMatchTarget] = useState<DeliveredTrip | null>(null)
-  const [doiSoatClientId, setDoiSoatClientId] = useState<string>('')
+  const [doiSoatClientId, setDoiSoatClientId] = useState<string>('ALL')
   const [page, setPage] = useState(1)
   const pageSize = 50
 
-  const exportExcel = useExportDeliveredTripsExcel()
   const exportDoiSoat = useExportDoiSoatExcel()
   const { data: clients = [] } = useClients()
 
-  useEffect(() => { setPage(1) }, [statusFilter, dateFrom, dateTo])
+  useEffect(() => { setPage(1) }, [statusFilter, dateFrom, dateTo, doiSoatClientId])
 
   const { data, isLoading } = useDeliveredTrips({
     dateFrom,
     dateTo,
+    clientId: doiSoatClientId !== 'ALL' && doiSoatClientId !== '' ? Number(doiSoatClientId) : undefined,
     status: statusFilter !== 'ALL' ? statusFilter : undefined,
     page,
     pageSize,
@@ -176,16 +175,22 @@ export function DoiSoatPage() {
     )
   }, [dateFrom, dateTo, autoMatch, autoMatchConfirm])
 
-  // Status counts from current page data
-  const matchedCount = useMemo(() => trips.filter(t => t.status === 'MATCHED').length, [trips])
-  const pendingCount = useMemo(() => trips.filter(t => t.status === 'PENDING').length, [trips])
-  const totalRevenue = useMemo(() => trips.reduce((sum, t) => sum + (t.revenue ?? 0), 0), [trips])
-  const matchedPct = totalItems > 0 ? Math.round((matchedCount / totalItems) * 100) : 0
+  // Global stats from trip daily stats endpoint
+  const { data: dailyStats } = useTripDailyStats(
+    dateFrom,
+    dateTo,
+    doiSoatClientId !== 'ALL' && doiSoatClientId !== '' ? Number(doiSoatClientId) : undefined
+  )
+  const globalTotal = dailyStats?.total ?? 0
+  const globalMatched = dailyStats?.matched ?? 0
+  const globalPending = dailyStats?.pending ?? 0
+  const globalRevenue = dailyStats?.totalRevenue ?? 0
+  const globalMatchedPct = globalTotal > 0 ? Math.round((globalMatched / globalTotal) * 100) : 0
 
   const statusCounts: Record<StatusFilter, number> = {
-    ALL: totalItems,
-    PENDING: pendingCount,
-    MATCHED: matchedCount,
+    ALL: globalTotal,
+    PENDING: globalPending,
+    MATCHED: globalMatched,
   }
 
   // Filtered rows (client-side text search on current page)
@@ -407,18 +412,18 @@ export function DoiSoatPage() {
         <div className="min-w-0">
           <h1 className="typo-display">Đối soát</h1>
           <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-            <StatPill count={totalItems} label=" chuyến" accent />
-            <StatPill count={matchedCount} label=" đã ghép" />
-            {pendingCount > 0 && <StatPill count={pendingCount} label=" chờ ghép" />}
+            <StatPill count={globalTotal} label=" chuyến" accent />
+            <StatPill count={globalMatched} label=" đã ghép" />
+            {globalPending > 0 && <StatPill count={globalPending} label=" chờ ghép" />}
             <span
               className="inline-flex items-center gap-1 text-[12px] px-2.5 py-0.5 rounded-full font-medium"
               style={{ background: 'var(--surface-3)', color: 'var(--ink-2)' }}
             >
               <DollarSign className="h-3 w-3" style={{ color: 'var(--ink-3)' }} />
-              <span className="font-bold tabular-nums" style={{ color: 'var(--ink)' }}>{compactCurrency(totalRevenue)}</span>
+              <span className="font-bold tabular-nums" style={{ color: 'var(--ink)' }}>{compactCurrency(globalRevenue)}</span>
             </span>
           </div>
-          {trips.length > 0 && <MatchProgressBar pct={matchedPct} />}
+          {trips.length > 0 && <MatchProgressBar pct={globalMatchedPct} />}
         </div>
         <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
       </header>
@@ -435,10 +440,11 @@ export function DoiSoatPage() {
           </div>
           <div className="flex items-center gap-2">
             <Select value={doiSoatClientId} onValueChange={setDoiSoatClientId}>
-              <SelectTrigger className="w-[160px] h-8 text-[12.5px]">
+              <SelectTrigger className="w-[185px] h-8 text-[12.5px]">
                 <SelectValue placeholder="Chọn chủ hàng…" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="ALL">Tất cả chủ hàng</SelectItem>
                 {clients.map((c) => (
                   <SelectItem key={c.id} value={String(c.id)}>
                     {c.code} — {c.name}
@@ -449,7 +455,7 @@ export function DoiSoatPage() {
             <Button
               variant="ghost"
               onClick={() => {
-                if (!doiSoatClientId) return
+                if (!doiSoatClientId || doiSoatClientId === 'ALL') return
                 exportDoiSoat.mutate(
                   { clientId: Number(doiSoatClientId), dateFrom, dateTo },
                   {
@@ -465,21 +471,10 @@ export function DoiSoatPage() {
                   },
                 )
               }}
-              disabled={!doiSoatClientId || exportDoiSoat.isPending}
+              disabled={!doiSoatClientId || doiSoatClientId === 'ALL' || exportDoiSoat.isPending}
             >
               {exportDoiSoat.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5" />}
               Xuất đối soát
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => exportExcel.mutate(
-                { dateFrom, dateTo },
-                { onSuccess: (blob) => { const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'doi-soat.xlsx'; a.click(); URL.revokeObjectURL(url) } },
-              )}
-              disabled={exportExcel.isPending}
-            >
-              {exportExcel.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-              Xuất Excel
             </Button>
             <Button variant="ghost" onClick={() => setShowImport(true)}>
               <FileSpreadsheet className="h-3.5 w-3.5" />
