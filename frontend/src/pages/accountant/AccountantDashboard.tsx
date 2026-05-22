@@ -10,7 +10,6 @@ import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { KpiHeroCard } from '@/components/shared/KpiHeroCard'
 import { DashboardSectionHeader } from '@/components/shared/DashboardSectionHeader'
 import { RevealList, Reveal } from '@/components/shared/Reveal'
-import { Decoration } from '@/components/shared/Decoration'
 import { AnimatedNumber } from '@/components/shared'
 import { useMonthParams } from './use-month-params'
 import { formatCurrencyFull as fmt, type DeliveredTrip } from '@/data/domain'
@@ -312,7 +311,6 @@ function DesktopDashboard() {
           </p>
         </div>
         <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
-        <Decoration variant="route-line" width={220} height={56} className="absolute right-44 top-0 opacity-25" ariaLabel="" />
       </div>
 
       {/* ── KPI trio: Doanh thu · Chi phí · Lãi ── */}
