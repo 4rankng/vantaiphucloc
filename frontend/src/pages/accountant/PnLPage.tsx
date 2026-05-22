@@ -2,14 +2,17 @@ import { useState } from 'react'
 import { TrendingUp, DollarSign, Coins } from 'lucide-react'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { KpiHeroCard } from '@/components/shared/KpiHeroCard'
+import { NepoTable } from '@/components/shared/NepoTable'
+import type { NepoColumn, NepoFooterCell } from '@/components/shared/NepoTable'
 import { Plate } from '@/components/shared/Plate'
-import { TableSkeleton } from '@/components/shared/TableSkeleton/TableSkeleton'
-import { useVehiclePnL, useVehicles } from '@/hooks/use-queries'
 import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
+import { useVehiclePnL, useVehicles } from '@/hooks/use-queries'
 import { useMonthParams } from './use-month-params'
-import { formatCurrency, compactCurrency } from '@/data/domain'
+import { compactCurrency } from '@/data/domain'
 import type { VehiclePnLRow, VehiclePnLResponse } from '@/services/api/pnl.api'
 import { AnimatedNumber } from '@/components/shared'
+
+const monoStyle = { fontFamily: 'var(--theme-font-mono)' } as React.CSSProperties
 
 export function PnLPage() {
   const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
@@ -31,8 +34,124 @@ export function PnLPage() {
   const totalCost = totalCpXe + totalCpLuongSL + totalCpLuongCB
   const marginPct = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0
 
-  const num = (color: string = 'var(--ink-2)') =>
-    ({ color, fontFamily: 'var(--theme-font-mono)' } as React.CSSProperties)
+  const columns: NepoColumn<VehiclePnLRow>[] = [
+    {
+      key: 'plate',
+      header: 'Biển số',
+      sticky: true,
+      render: (r) => <Plate>{r.plate}</Plate>,
+    },
+    {
+      key: 'revenue',
+      header: 'Doanh thu',
+      align: 'right',
+      width: 130,
+      render: (r) => (
+        <span className="tabular-nums font-semibold" style={{ color: 'var(--ink)', ...monoStyle }}>
+          {compactCurrency(r.revenue)}
+        </span>
+      ),
+    },
+    {
+      key: 'xangDau',
+      header: 'CP Xăng dầu',
+      align: 'right',
+      width: 120,
+      hideBelow: 'lg',
+      render: (r) => <span className="tabular-nums" style={monoStyle}>{compactCurrency(r.cpXe.xangDau)}</span>,
+    },
+    {
+      key: 'suaChua',
+      header: 'CP Sửa chữa',
+      align: 'right',
+      width: 120,
+      hideBelow: 'lg',
+      render: (r) => <span className="tabular-nums" style={monoStyle}>{compactCurrency(r.cpXe.suaChua)}</span>,
+    },
+    {
+      key: 'tienLuat',
+      header: 'CP Tiền luật',
+      align: 'right',
+      width: 120,
+      hideBelow: 'lg',
+      render: (r) => <span className="tabular-nums" style={monoStyle}>{compactCurrency(r.cpXe.tienLuat)}</span>,
+    },
+    {
+      key: 'khac',
+      header: 'CP Khác',
+      align: 'right',
+      width: 100,
+      hideBelow: 'lg',
+      render: (r) => <span className="tabular-nums" style={monoStyle}>{compactCurrency(r.cpXe.khac)}</span>,
+    },
+    {
+      key: 'cpXe',
+      header: 'CP Xe',
+      align: 'right',
+      width: 110,
+      render: (r) => (
+        <span className="tabular-nums font-semibold" style={{ color: 'var(--ink)', ...monoStyle }}>
+          {compactCurrency(r.cpXe.total)}
+        </span>
+      ),
+    },
+    {
+      key: 'luongSL',
+      header: 'Lương SL',
+      align: 'right',
+      width: 110,
+      hideBelow: 'md',
+      render: (r) => <span className="tabular-nums" style={monoStyle}>{compactCurrency(r.cpLuongSanLuong)}</span>,
+    },
+    {
+      key: 'luongCB',
+      header: 'Lương CB',
+      align: 'right',
+      width: 110,
+      hideBelow: 'md',
+      render: (r) => <span className="tabular-nums" style={monoStyle}>{compactCurrency(r.cpLuongCoBan)}</span>,
+    },
+    {
+      key: 'profit',
+      header: 'Lợi nhuận',
+      align: 'right',
+      width: 120,
+      headerClass: 'nepo-col-net',
+      cellClass: 'nepo-col-net',
+      render: (r) => (
+        <span
+          className="tabular-nums font-bold"
+          style={{ color: r.loiNhuan >= 0 ? 'var(--accent-2)' : 'var(--danger)', fontFamily: 'var(--theme-font-mono)' }}
+        >
+          {compactCurrency(r.loiNhuan)}
+        </span>
+      ),
+    },
+  ]
+
+  const footerCells: NepoFooterCell[] = [
+    { content: 'Tổng', sticky: true },
+    { content: <span className="tabular-nums" style={monoStyle}>{compactCurrency(totalRevenue)}</span>, align: 'right' },
+    { content: <span className="tabular-nums" style={monoStyle}>{compactCurrency(totalCpXangDau)}</span>, align: 'right' },
+    { content: <span className="tabular-nums" style={monoStyle}>{compactCurrency(totalCpSuaChua)}</span>, align: 'right' },
+    { content: <span className="tabular-nums" style={monoStyle}>{compactCurrency(totalCpTienLuat)}</span>, align: 'right' },
+    { content: <span className="tabular-nums" style={monoStyle}>{compactCurrency(totalCpKhac)}</span>, align: 'right' },
+    { content: <span className="tabular-nums" style={monoStyle}>{compactCurrency(totalCpXe)}</span>, align: 'right' },
+    { content: <span className="tabular-nums" style={monoStyle}>{compactCurrency(totalCpLuongSL)}</span>, align: 'right' },
+    { content: <span className="tabular-nums" style={monoStyle}>{compactCurrency(totalCpLuongCB)}</span>, align: 'right' },
+    {
+      content: (
+        <span
+          className="tabular-nums font-bold"
+          style={{ color: totalProfit >= 0 ? 'var(--accent-2)' : 'var(--danger)', fontFamily: 'var(--theme-font-mono)' }}
+        >
+          {compactCurrency(totalProfit)}
+        </span>
+      ),
+      align: 'right',
+      className: 'nepo-col-net',
+    },
+  ]
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -43,20 +162,7 @@ export function PnLPage() {
             Doanh thu và lợi nhuận từng xe theo kỳ — đối chiếu chi phí xe, lương và biên lợi nhuận
           </p>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
-          <div style={{ width: 160 }}>
-            <InlineSelect
-              placeholder="Tất cả xe"
-              value={vehicleFilter !== '' ? String(vehicleFilter) : ''}
-              options={[
-                { value: '', label: 'Tất cả xe' },
-                ...(vehicles ?? []).map(v => ({ value: String(v.id), label: v.plate })),
-              ]}
-              onChange={v => setVehicleFilter(v ? Number(v) : '')}
-            />
-          </div>
-          <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
-        </div>
+        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
       </header>
 
       <div className="grid grid-cols-3 gap-3">
@@ -89,68 +195,29 @@ export function PnLPage() {
         />
       </div>
 
-      <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--line)' }}>
-        {isLoading ? (
-          <TableSkeleton rows={6} />
-        ) : (
-          <div className="nepo-table-scroll overflow-x-auto">
-            <table className="nepo-table w-full" style={{ minWidth: 1000, borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  <th className="text-left nepo-th-sticky">Biển số</th>
-                  <th className="text-right">Doanh thu</th>
-                  <th className="text-right hidden lg:table-cell">CP Xăng dầu</th>
-                  <th className="text-right hidden lg:table-cell">CP Sửa chữa</th>
-                  <th className="text-right hidden lg:table-cell">CP Tiền luật</th>
-                  <th className="text-right hidden lg:table-cell">CP Khác</th>
-                  <th className="text-right">CP Xe</th>
-                  <th className="text-right hidden md:table-cell">Lương SL</th>
-                  <th className="text-right hidden md:table-cell">Lương CB</th>
-                  <th className="text-right">Lợi nhuận</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className="text-center py-12" style={{ color: 'var(--ink-3)' }}>
-                      Không có dữ liệu P&L cho tháng này
-                    </td>
-                  </tr>
-                ) : rows.map((r) => (
-                  <tr key={r.vehicleId}>
-                    <td className="nepo-td-sticky"><Plate>{r.plate}</Plate></td>
-                    <td className="text-right tabular-nums font-semibold" style={num('var(--ink)')}>{compactCurrency(r.revenue)}</td>
-                    <td className="text-right tabular-nums hidden lg:table-cell" style={num()}>{compactCurrency(r.cpXe.xangDau)}</td>
-                    <td className="text-right tabular-nums hidden lg:table-cell" style={num()}>{compactCurrency(r.cpXe.suaChua)}</td>
-                    <td className="text-right tabular-nums hidden lg:table-cell" style={num()}>{compactCurrency(r.cpXe.tienLuat)}</td>
-                    <td className="text-right tabular-nums hidden lg:table-cell" style={num()}>{compactCurrency(r.cpXe.khac)}</td>
-                    <td className="text-right tabular-nums font-semibold" style={num('var(--ink)')}>{compactCurrency(r.cpXe.total)}</td>
-                    <td className="text-right tabular-nums hidden md:table-cell" style={num()}>{compactCurrency(r.cpLuongSanLuong)}</td>
-                    <td className="text-right tabular-nums hidden md:table-cell" style={num()}>{compactCurrency(r.cpLuongCoBan)}</td>
-                    <td className="text-right tabular-nums font-bold" style={{ color: r.loiNhuan >= 0 ? 'var(--success)' : 'var(--danger)', fontFamily: 'var(--theme-font-mono)' }}>{compactCurrency(r.loiNhuan)}</td>
-                  </tr>
-                ))}
-              </tbody>
-              {rows.length > 0 && (
-                <tfoot className="nepo-tfoot">
-                  <tr>
-                    <td className="nepo-td-sticky font-bold" style={{ color: 'var(--ink)' }}>Tổng</td>
-                    <td className="text-right tabular-nums" style={num('var(--ink)')}>{compactCurrency(totalRevenue)}</td>
-                    <td className="text-right tabular-nums hidden lg:table-cell" style={num()}>{compactCurrency(totalCpXangDau)}</td>
-                    <td className="text-right tabular-nums hidden lg:table-cell" style={num()}>{compactCurrency(totalCpSuaChua)}</td>
-                    <td className="text-right tabular-nums hidden lg:table-cell" style={num()}>{compactCurrency(totalCpTienLuat)}</td>
-                    <td className="text-right tabular-nums hidden lg:table-cell" style={num()}>{compactCurrency(totalCpKhac)}</td>
-                    <td className="text-right tabular-nums" style={num('var(--ink)')}>{compactCurrency(totalCpXe)}</td>
-                    <td className="text-right tabular-nums hidden md:table-cell" style={num()}>{compactCurrency(totalCpLuongSL)}</td>
-                    <td className="text-right tabular-nums hidden md:table-cell" style={num()}>{compactCurrency(totalCpLuongCB)}</td>
-                    <td className="text-right tabular-nums font-bold" style={{ color: totalProfit >= 0 ? 'var(--success)' : 'var(--danger)', fontFamily: 'var(--theme-font-mono)' }}>{compactCurrency(totalProfit)}</td>
-                  </tr>
-                </tfoot>
-              )}
-            </table>
-          </div>
-        )}
+      <div className="flex items-center gap-3">
+        <div style={{ width: 160 }}>
+          <InlineSelect
+            placeholder="Tất cả xe"
+            value={vehicleFilter !== '' ? String(vehicleFilter) : ''}
+            options={[
+              { value: '', label: 'Tất cả xe' },
+              ...(vehicles ?? []).map(v => ({ value: String(v.id), label: v.plate })),
+            ]}
+            onChange={v => setVehicleFilter(v ? Number(v) : '')}
+          />
+        </div>
       </div>
+
+      <NepoTable
+        columns={columns}
+        data={rows}
+        rowKey={(r) => r.vehicleId}
+        isLoading={isLoading}
+        emptyText="Không có dữ liệu P&L cho tháng này"
+        minWidth={1000}
+        footerCells={footerCells}
+      />
     </div>
   )
 }

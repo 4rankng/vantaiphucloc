@@ -97,6 +97,10 @@ export type { MiniStatCardProps } from './MiniStatCard'
 export { InfoBanner } from './InfoBanner'
 export type { InfoBannerProps } from './InfoBanner'
 
+// ─── Table primitives ────────────────────────────────────────────────────────
+export { NepoTable } from './NepoTable'
+export type { NepoColumn, NepoFooterCell, NepoTableProps } from './NepoTable'
+
 // ─── Decoration & reveal ────────────────────────────────────────────────────────
 export { Reveal, RevealList } from './Reveal'
 export { Decoration, HeroDecoration, SectionRouteDecoration, LiveDot } from './Decoration'

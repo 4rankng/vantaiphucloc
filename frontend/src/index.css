@@ -1027,28 +1027,29 @@ select {
 
 /* ─── NEPO DataTable ──────────────────────────────────── */
 .nepo-table {
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--ink);
+  width: 100%;
 }
 .nepo-table thead th {
-  padding: 11px 12px;
+  padding: 11px 16px;
   background: var(--surface-2);
-  border-bottom: 1px solid var(--line);
-  font-size: 10.5px;
+  border-bottom: 1px solid var(--line-2);
+  font-size: 11px;
   font-weight: 600;
   color: var(--ink-3);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.055em;
   white-space: nowrap;
   position: sticky;
   top: 0;
   z-index: 1;
 }
 .nepo-table tbody td {
-  padding: 12px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
-  color: var(--ink);
+  color: var(--ink-2);
   white-space: nowrap;
 }
 .nepo-table tbody tr {
@@ -1056,6 +1057,9 @@ select {
 }
 .nepo-table tbody tr:hover:not(.is-selected):not(.nepo-tr-expanded) {
   background: var(--surface-2);
+}
+.nepo-table tbody tr:hover:not(.is-selected) td {
+  color: var(--ink);
 }
 .nepo-table tbody tr.is-selected {
   background: var(--accent-soft);
@@ -1074,11 +1078,13 @@ select {
   border-bottom: 1px solid var(--line);
 }
 .nepo-table tfoot.nepo-tfoot td {
-  padding: 12px;
+  padding: 14px 16px;
   border-top: 2px solid var(--line-2);
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 13.5px;
   white-space: nowrap;
   background: var(--surface-2);
+  color: var(--ink);
 }
 .nepo-th-sticky,
 .nepo-td-sticky {
@@ -1090,6 +1096,17 @@ select {
 .nepo-table thead .nepo-th-sticky {
   z-index: 3;
   background: var(--surface-2);
+}
+.nepo-table tfoot.nepo-tfoot .nepo-td-sticky {
+  background: var(--surface-2);
+}
+
+/* ─── Accent column (net pay / profit) ───────────────── */
+.nepo-col-net {
+  border-left: 2px solid var(--line-2) !important;
+}
+.nepo-table thead th.nepo-col-net {
+  color: var(--ink-2);
 }
 
 /* ─── NEPO Toolbar primitives ─────────────────────────── */

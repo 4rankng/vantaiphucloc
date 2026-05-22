@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Wallet, Download, Settings2, Coins, Users, BadgePercent } from 'lucide-react'
+import { Wallet, Download, Settings2, Coins, BadgePercent } from 'lucide-react'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { KpiHeroCard } from '@/components/shared/KpiHeroCard'
-import { TableSkeleton } from '@/components/shared/TableSkeleton/TableSkeleton'
 import { Drawer, DrawerHero } from '@/components/shared/Drawer'
 import { Button } from '@/components/ui'
+import { NepoTable } from '@/components/shared/NepoTable'
+import type { NepoColumn, NepoFooterCell } from '@/components/shared/NepoTable'
 import {
   useSalaryDashboard,
   useExportSalaryExcel,
@@ -24,6 +25,8 @@ interface SalaryRow {
   totalEarnings: number
   totalAllowance: number
 }
+
+const monoStyle = { fontFamily: 'var(--theme-font-mono)' } as React.CSSProperties
 
 export function SalaryPage() {
   const { year, month, dateFrom, dateTo, onPrev, onNext } = useMonthParams()
@@ -59,34 +62,46 @@ export function SalaryPage() {
     )
   }
 
-  const columns: Column<SalaryRow>[] = [
+  const columns: NepoColumn<SalaryRow>[] = [
     {
       key: 'driver',
       header: 'Tài xế',
-      width: 180,
-      render: (d) => <span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{d.driverName ?? '—'}</span>,
+      render: (d) => (
+        <span className="font-semibold" style={{ color: 'var(--ink)' }}>
+          {d.driverName ?? '—'}
+        </span>
+      ),
     },
     {
       key: 'trips',
       header: 'Chuyến',
       align: 'right',
       width: 80,
-      render: (d) => <span className="tabular-nums">{d.matchedOrderCount ?? 0}</span>,
+      render: (d) => (
+        <span
+          className="tabular-nums inline-flex items-center justify-center rounded-md px-2 py-0.5 text-xs font-semibold"
+          style={{ background: 'var(--surface-3)', color: 'var(--ink-2)', minWidth: 32 }}
+        >
+          {d.matchedOrderCount ?? 0}
+        </span>
+      ),
     },
     {
       key: 'base',
       header: 'Lương CB',
       align: 'right',
-      width: 130,
-      render: (d) => <span className="tabular-nums" style={{ color: 'var(--ink-2)' }}>{formatCurrency(d.baseSalary ?? 0)}</span>,
+      width: 145,
+      render: (d) => (
+        <span className="tabular-nums" style={monoStyle}>{formatCurrency(d.baseSalary ?? 0)}</span>
+      ),
     },
     {
       key: 'productivity',
       header: 'Lương SL',
       align: 'right',
-      width: 130,
+      width: 145,
       render: (d) => (
-        <span className="tabular-nums" style={{ color: 'var(--ink-2)' }}>
+        <span className="tabular-nums" style={monoStyle}>
           {formatCurrency((d.totalEarnings ?? 0) - (d.baseSalary ?? 0) - (d.totalAllowance ?? 0))}
         </span>
       ),
@@ -95,28 +110,36 @@ export function SalaryPage() {
       key: 'allowance',
       header: 'Phụ cấp',
       align: 'right',
-      width: 120,
-      render: (d) => <span className="tabular-nums" style={{ color: 'var(--ink-2)' }}>{formatCurrency(d.totalAllowance ?? 0)}</span>,
+      width: 130,
+      render: (d) => (
+        <span className="tabular-nums" style={monoStyle}>{formatCurrency(d.totalAllowance ?? 0)}</span>
+      ),
     },
     {
       key: 'net',
       header: 'Thực lĩnh',
       align: 'right',
-      width: 140,
-      render: (d) => <span className="tabular-nums font-bold" style={{ color: 'var(--ink)' }}>{formatCurrency(d.totalEarnings ?? 0)}</span>,
+      width: 155,
+      headerClass: 'nepo-col-net',
+      cellClass: 'nepo-col-net',
+      render: (d) => (
+        <span
+          className="tabular-nums font-bold"
+          style={{ color: 'var(--accent-2)', fontFamily: 'var(--theme-font-mono)' }}
+        >
+          {formatCurrency(d.totalEarnings ?? 0)}
+        </span>
+      ),
     },
     {
       key: 'actions',
       header: '',
       align: 'right',
-      width: 56,
+      width: 52,
       render: (d) => (
         <button
           type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            setSelectedDriver(d.driverId)
-          }}
+          onClick={() => setSelectedDriver(d.driverId)}
           className="nepo-row-action"
           aria-label="Cấu hình lương cơ bản"
           title="Cấu hình lương cơ bản"
@@ -125,6 +148,26 @@ export function SalaryPage() {
         </button>
       ),
     },
+  ]
+
+  const totalTrips = dashboard.reduce((s, d) => s + (d.matchedOrderCount ?? 0), 0)
+
+  const footerCells: NepoFooterCell[] = [
+    { content: 'Tổng' },
+    { content: <span className="tabular-nums font-bold">{totalTrips}</span>, align: 'right' },
+    { content: <span className="tabular-nums" style={monoStyle}>{formatCurrency(totalBaseSalary)}</span>, align: 'right' },
+    { content: <span className="tabular-nums" style={monoStyle}>{formatCurrency(totalProductivity)}</span>, align: 'right' },
+    { content: <span className="tabular-nums" style={monoStyle}>{formatCurrency(totalAllowance)}</span>, align: 'right' },
+    {
+      content: (
+        <span className="tabular-nums font-bold" style={{ fontFamily: 'var(--theme-font-mono)', color: 'var(--accent-2)' }}>
+          {formatCurrency(totalEarnings)}
+        </span>
+      ),
+      align: 'right',
+      className: 'nepo-col-net',
+    },
+    { content: null },
   ]
 
   return (
@@ -183,58 +226,15 @@ export function SalaryPage() {
         />
       </div>
 
-      <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--line)' }}>
-        {isLoading ? (
-          <TableSkeleton rows={6} />
-        ) : (
-          <div className="nepo-table-scroll overflow-x-auto">
-            <table className="nepo-table w-full" style={{ minWidth: 700, borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  <th className="text-left">Tài xế</th>
-                  <th className="text-right">Chuyến</th>
-                  <th className="text-right">Lương CB</th>
-                  <th className="text-right">Lương SL</th>
-                  <th className="text-right">Phụ cấp</th>
-                  <th className="text-right">Thực lĩnh</th>
-                  <th style={{ width: 48 }} />
-                </tr>
-              </thead>
-              <tbody>
-                {dashboard.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="text-center py-12" style={{ color: 'var(--ink-3)' }}>
-                      Chưa có dữ liệu lương cho kỳ này
-                    </td>
-                  </tr>
-                ) : dashboard.map((d) => {
-                  const productivity = (d.totalEarnings ?? 0) - (d.baseSalary ?? 0) - (d.totalAllowance ?? 0)
-                  return (
-                    <tr key={d.driverId}>
-                      <td className="font-semibold" style={{ color: 'var(--ink)' }}>{d.driverName ?? '—'}</td>
-                      <td className="text-right tabular-nums">{d.matchedOrderCount ?? 0}</td>
-                      <td className="text-right tabular-nums" style={{ color: 'var(--ink-2)' }}>{formatCurrency(d.baseSalary ?? 0)}</td>
-                      <td className="text-right tabular-nums" style={{ color: 'var(--ink-2)' }}>{formatCurrency(productivity)}</td>
-                      <td className="text-right tabular-nums" style={{ color: 'var(--ink-2)' }}>{formatCurrency(d.totalAllowance ?? 0)}</td>
-                      <td className="text-right tabular-nums font-bold" style={{ color: 'var(--ink)' }}>{formatCurrency(d.totalEarnings ?? 0)}</td>
-                      <td className="text-right">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedDriver(d.driverId)}
-                          className="nepo-row-action"
-                          aria-label="Cấu hình lương cơ bản"
-                        >
-                          <Settings2 className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      <NepoTable
+        columns={columns}
+        data={dashboard}
+        rowKey={(d) => d.driverId}
+        isLoading={isLoading}
+        emptyText="Chưa có dữ liệu lương cho kỳ này"
+        minWidth={700}
+        footerCells={footerCells}
+      />
 
       {selectedDriver !== null && (
         <BaseSalaryDrawer
@@ -246,6 +246,8 @@ export function SalaryPage() {
     </div>
   )
 }
+
+// ─── Base Salary Drawer ───────────────────────────────────────────────────────
 
 interface DriverShape {
   id: number
