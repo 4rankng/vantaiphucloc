@@ -80,6 +80,23 @@ export { TopNavBar } from './TopNavBar'
 export type { TopNavItem } from './TopNavBar'
 export { StatBreakdownCard } from './StatBreakdownCard'
 
+// ─── Extracted inline components ─────────────────────────────────────────────
+export { DashboardCard } from './DashboardCard'
+export { DashboardStatCard } from './DashboardStatCard'
+export type { DashboardStatCardProps } from './DashboardStatCard'
+export { MatchProgressBar } from './MatchProgressBar'
+export type { MatchProgressBarProps } from './MatchProgressBar'
+export { TripBarChart } from './TripBarChart'
+export type { TripBarChartBar, TripBarChartProps } from './TripBarChart'
+export { SortableTableHeader } from './SortableTableHeader'
+export type { SortableTableHeaderProps, SortDirection } from './SortableTableHeader'
+export { ActivityFeedItem } from './ActivityFeedItem'
+export type { ActivityFeedItemProps } from './ActivityFeedItem'
+export { MiniStatCard } from './MiniStatCard'
+export type { MiniStatCardProps } from './MiniStatCard'
+export { InfoBanner } from './InfoBanner'
+export type { InfoBannerProps } from './InfoBanner'
+
 // ─── Decoration & reveal ────────────────────────────────────────────────────────
 export { Reveal, RevealList } from './Reveal'
 export { Decoration, HeroDecoration, SectionRouteDecoration, LiveDot } from './Decoration'

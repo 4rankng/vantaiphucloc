@@ -71,18 +71,21 @@ export function SalaryPage() {
       key: 'trips',
       header: 'Chuyến',
       align: 'right',
+      width: 80,
       render: (d) => <span className="tabular-nums">{d.matchedOrderCount ?? 0}</span>,
     },
     {
       key: 'base',
       header: 'Lương CB',
       align: 'right',
+      width: 130,
       render: (d) => <span className="tabular-nums" style={{ color: 'var(--ink-2)' }}>{formatCurrency(d.baseSalary ?? 0)}</span>,
     },
     {
       key: 'productivity',
       header: 'Lương SL',
       align: 'right',
+      width: 130,
       render: (d) => (
         <span className="tabular-nums" style={{ color: 'var(--ink-2)' }}>
           {formatCurrency((d.totalEarnings ?? 0) - (d.baseSalary ?? 0) - (d.totalAllowance ?? 0))}
@@ -93,12 +96,14 @@ export function SalaryPage() {
       key: 'allowance',
       header: 'Phụ cấp',
       align: 'right',
+      width: 120,
       render: (d) => <span className="tabular-nums" style={{ color: 'var(--ink-2)' }}>{formatCurrency(d.totalAllowance ?? 0)}</span>,
     },
     {
       key: 'net',
       header: 'Thực lĩnh',
       align: 'right',
+      width: 140,
       render: (d) => <span className="tabular-nums font-bold" style={{ color: 'var(--ink)' }}>{formatCurrency(d.totalEarnings ?? 0)}</span>,
     },
     {

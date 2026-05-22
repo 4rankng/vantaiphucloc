@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { formatCurrencyFull as formatCurrency } from '@/data/domain'
 import { BackButton } from '@/components/shared/BackButton'
+import { MiniStatCard } from '@/components/shared/MiniStatCard'
 import { useDeliveredTrips, useClients, usePricings } from '@/hooks/use-queries'
 
 export function ClientJobs() {
@@ -48,14 +49,8 @@ export function ClientJobs() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-lg p-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
-          <p className="text-[10px] font-semibold uppercase" style={{ color: 'var(--theme-text-muted)' }}>Doanh thu</p>
-          <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(totalRevenue)}</p>
-        </div>
-        <div className="rounded-lg p-3" style={{ background: 'var(--theme-bg-secondary)', boxShadow: 'var(--theme-shadow-card)', border: '1px solid var(--theme-border-default)' }}>
-          <p className="text-[10px] font-semibold uppercase" style={{ color: 'var(--theme-text-muted)' }}>Chi tài xế</p>
-          <p className="text-lg font-bold tabular-nums" style={{ color: 'var(--theme-text-primary)' }}>{formatCurrency(totalDriverEarning)}</p>
-        </div>
+        <MiniStatCard label="Doanh thu" value={formatCurrency(totalRevenue)} />
+        <MiniStatCard label="Chi tài xế" value={formatCurrency(totalDriverEarning)} />
       </div>
 
       {/* Đơn giá section */}

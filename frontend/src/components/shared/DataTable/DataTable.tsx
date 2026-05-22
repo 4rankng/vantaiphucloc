@@ -112,6 +112,7 @@ export function DataTable<T>({
                       <td
                         key={col.key}
                         className={`${ALIGN_CLASS[align]} ${hide} ${col.cellClassName ?? ''} ${col.sticky ? 'nepo-td-sticky' : ''}`}
+                        style={col.width ? { width: typeof col.width === 'number' ? `${col.width}px` : col.width, maxWidth: typeof col.width === 'number' ? `${col.width}px` : col.width } : undefined}
                       >
                         {col.render(row, i)}
                       </td>

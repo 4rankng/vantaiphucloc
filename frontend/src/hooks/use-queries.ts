@@ -144,7 +144,14 @@ export function useCreateLocation() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: { name: string }) => apiClient.createLocation(data).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.locations }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['locations'] })
+      qc.invalidateQueries({ queryKey: ['location-aliases'] })
+      qc.invalidateQueries({ queryKey: ['routes'] })
+      qc.invalidateQueries({ queryKey: ['pricings'] })
+      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['booked-trips'] })
+    },
   })
 }
 
@@ -152,7 +159,14 @@ export function useUpdateLocation() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: { name?: string } }) => apiClient.updateLocation(id, data).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.locations }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['locations'] })
+      qc.invalidateQueries({ queryKey: ['location-aliases'] })
+      qc.invalidateQueries({ queryKey: ['routes'] })
+      qc.invalidateQueries({ queryKey: ['pricings'] })
+      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['booked-trips'] })
+    },
   })
 }
 
@@ -160,7 +174,14 @@ export function useDeleteLocation() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => apiClient.deleteLocation(id).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.locations }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['locations'] })
+      qc.invalidateQueries({ queryKey: ['location-aliases'] })
+      qc.invalidateQueries({ queryKey: ['routes'] })
+      qc.invalidateQueries({ queryKey: ['pricings'] })
+      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['booked-trips'] })
+    },
   })
 }
 
@@ -302,7 +323,10 @@ export function useAddVehicleDriver() {
       const res = await apiClient.addVehicleDriver(vehicleId, driverId)
       return unwrap(res)
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.vehicleDrivers }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.vehicleDrivers })
+      qc.invalidateQueries({ queryKey: ['vehicles'] })
+    },
   })
 }
 
@@ -313,7 +337,10 @@ export function useRemoveVehicleDriver() {
       const res = await apiClient.removeVehicleDriver(id)
       return unwrap(res)
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.vehicleDrivers }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.vehicleDrivers })
+      qc.invalidateQueries({ queryKey: ['vehicles'] })
+    },
   })
 }
 
@@ -325,7 +352,7 @@ export function useCreateVehicle() {
       return unwrap(res)
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.vehicles() })
+      qc.invalidateQueries({ queryKey: ['vehicles'] })
       qc.invalidateQueries({ queryKey: queryKeys.vehicleDrivers })
     },
   })
@@ -422,7 +449,13 @@ export function useCreateClient() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: Omit<Client, 'id'>) => apiClient.createClient(data).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.clients }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['clients'] })
+      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['booked-trips'] })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+      qc.invalidateQueries({ queryKey: ['reconciliation-imports'] })
+    },
   })
 }
 
@@ -430,7 +463,13 @@ export function useUpdateClient() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<Client> }) => apiClient.updateClient(id, data).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.clients }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['clients'] })
+      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['booked-trips'] })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+      qc.invalidateQueries({ queryKey: ['reconciliation-imports'] })
+    },
   })
 }
 
@@ -438,7 +477,13 @@ export function useDeleteClient() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => apiClient.deleteClient(id).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.clients }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['clients'] })
+      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['booked-trips'] })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+      qc.invalidateQueries({ queryKey: ['reconciliation-imports'] })
+    },
   })
 }
 
@@ -447,7 +492,11 @@ export function useCreateVendor() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: Omit<Vendor, 'id'>) => apiClient.createVendor(data).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.vendors }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['vendors'] })
+      qc.invalidateQueries({ queryKey: ['vendor-summary'] })
+      qc.invalidateQueries({ queryKey: ['vendor-recon-imports'] })
+    },
   })
 }
 
@@ -455,7 +504,11 @@ export function useUpdateVendor() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<Vendor> }) => apiClient.updateVendor(id, data).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.vendors }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['vendors'] })
+      qc.invalidateQueries({ queryKey: ['vendor-summary'] })
+      qc.invalidateQueries({ queryKey: ['vendor-recon-imports'] })
+    },
   })
 }
 
@@ -463,7 +516,11 @@ export function useDeleteVendor() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => apiClient.deleteVendor(id).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.vendors }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['vendors'] })
+      qc.invalidateQueries({ queryKey: ['vendor-summary'] })
+      qc.invalidateQueries({ queryKey: ['vendor-recon-imports'] })
+    },
   })
 }
 
@@ -745,6 +802,7 @@ export function useCalculateSalary() {
       qc.invalidateQueries({ queryKey: ['driver-earnings'] })
       qc.invalidateQueries({ queryKey: ['my-earnings'] })
       qc.invalidateQueries({ queryKey: ['salary-dashboard'] })
+      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
     },
   })
 }
@@ -754,7 +812,12 @@ export function useCreateDriver() {
   return useMutation({
     mutationFn: (data: { username: string; fullName?: string; phone: string }) =>
       apiClient.createDriver(data).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.drivers }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['drivers'] })
+      qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
+      qc.invalidateQueries({ queryKey: ['driver-earnings'] })
+      qc.invalidateQueries({ queryKey: ['salary-dashboard'] })
+    },
   })
 }
 
@@ -763,7 +826,12 @@ export function useUpdateDriver() {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<{ fullName: string; phone: string; username: string }> }) =>
       apiClient.updateDriver(id, data).then(unwrap),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.drivers }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['drivers'] })
+      qc.invalidateQueries({ queryKey: ['vehicle-drivers'] })
+      qc.invalidateQueries({ queryKey: ['driver-earnings'] })
+      qc.invalidateQueries({ queryKey: ['salary-dashboard'] })
+    },
   })
 }
 
@@ -823,7 +891,13 @@ export function useUpdateSalaryConfig() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: { from_day: number; to_day: number }) => apiClient.updateSalaryConfig(data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: queryKeys.salaryConfig }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.salaryConfig })
+      qc.invalidateQueries({ queryKey: ['driver-earnings'] })
+      qc.invalidateQueries({ queryKey: ['my-earnings'] })
+      qc.invalidateQueries({ queryKey: ['salary-dashboard'] })
+      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
+    },
   })
 }
 
@@ -940,8 +1014,9 @@ export function useSetDriverBaseSalary() {
         .setDriverBaseSalary(driverId, { baseSalary, effectiveFrom, note })
         .then(unwrap),
     onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: queryKeys.driverBaseSalary(vars.driverId) })
+      qc.invalidateQueries({ queryKey: ['driver-base-salary'] })
       qc.invalidateQueries({ queryKey: ['driver-earnings'] })
+      qc.invalidateQueries({ queryKey: ['my-earnings'] })
       qc.invalidateQueries({ queryKey: ['salary-dashboard'] })
       qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
     },
@@ -1101,6 +1176,8 @@ export function useCreateVehicleExpense() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['vehicle-expenses'] })
       qc.invalidateQueries({ queryKey: ['vehicle-pnl'] })
+      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
     },
   })
 }
@@ -1113,6 +1190,8 @@ export function useUpdateVehicleExpense() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['vehicle-expenses'] })
       qc.invalidateQueries({ queryKey: ['vehicle-pnl'] })
+      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
     },
   })
 }
@@ -1125,6 +1204,8 @@ export function useDeleteVehicleExpense() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['vehicle-expenses'] })
       qc.invalidateQueries({ queryKey: ['vehicle-pnl'] })
+      qc.invalidateQueries({ queryKey: ['monthly-pnl'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-summary'] })
     },
   })
 }
@@ -1181,6 +1262,10 @@ export function useApplyVendorReconciliation() {
     onSuccess: (_data, importId) => {
       qc.invalidateQueries({ queryKey: queryKeys.vendorReconImport(importId) })
       qc.invalidateQueries({ queryKey: ['vendor-recon-imports'] })
+      qc.invalidateQueries({ queryKey: ['booked-trips'] })
+      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['trip-daily-stats'] })
+      qc.invalidateQueries({ queryKey: ['vendor-summary'] })
     },
   })
 }
@@ -1263,8 +1348,12 @@ export function useMergeLocations() {
     mutationFn: ({ sourceLocationId, targetLocationId }: { sourceLocationId: number; targetLocationId: number }) =>
       apiClient.mergeLocations(sourceLocationId, targetLocationId).then(unwrap),
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['locations'] })
       qc.invalidateQueries({ queryKey: ['location-aliases'] })
-      qc.invalidateQueries({ queryKey: queryKeys.locations })
+      qc.invalidateQueries({ queryKey: ['routes'] })
+      qc.invalidateQueries({ queryKey: ['pricings'] })
+      qc.invalidateQueries({ queryKey: ['delivered-trips'] })
+      qc.invalidateQueries({ queryKey: ['booked-trips'] })
     },
   })
 }

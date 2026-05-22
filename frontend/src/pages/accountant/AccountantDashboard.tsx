@@ -11,13 +11,16 @@ import { KpiHeroCard } from '@/components/shared/KpiHeroCard'
 import { DashboardSectionHeader } from '@/components/shared/DashboardSectionHeader'
 import { RevealList, Reveal } from '@/components/shared/Reveal'
 import { AnimatedNumber } from '@/components/shared'
+import { DashboardCard } from '@/components/shared/DashboardCard'
+import { TripBarChart } from '@/components/shared/TripBarChart'
+import { SortableTableHeader } from '@/components/shared/SortableTableHeader'
+import type { SortDirection } from '@/components/shared/SortableTableHeader'
 import { useMonthParams } from './use-month-params'
 import { formatCurrencyFull as fmt, type DeliveredTrip } from '@/data/domain'
 import type { MonthlyPnL } from '@/services/api/pnl.api'
 import {
   CheckCircle2, DollarSign, Clock, TrendingUp,
   TrendingDown, BarChart3, Truck,
-  ChevronUp, ChevronDown, ChevronsUpDown,
 } from 'lucide-react'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -52,27 +55,6 @@ function formatTripDate(dateStr: string | null | undefined): string {
 
 // ─── Subcomponents ────────────────────────────────────────────────────────────
 
-function DashboardCard({
-  children,
-  className = '',
-}: {
-  children: React.ReactNode
-  className?: string
-}) {
-  return (
-    <div
-      className={`rounded-xl border overflow-hidden ${className}`}
-      style={{
-        background: 'var(--theme-bg-secondary)',
-        borderColor: 'var(--theme-border-default)',
-        boxShadow: '0 0 0 1px rgba(9,9,11,0.02), 0 1px 3px rgba(9,9,11,0.05), 0 4px 16px -4px rgba(9,9,11,0.05)',
-      }}
-    >
-      {children}
-    </div>
-  )
-}
-
 function EmptyState({ icon: Icon, text }: { icon: React.ElementType; text: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-12 gap-3">
@@ -83,77 +65,6 @@ function EmptyState({ icon: Icon, text }: { icon: React.ElementType; text: strin
         <Icon className="h-6 w-6" style={{ color: 'var(--theme-brand-primary)' }} />
       </div>
       <p className="text-sm" style={{ color: 'var(--theme-text-muted)' }}>{text}</p>
-    </div>
-  )
-}
-
-// ─── Trip bar chart ───────────────────────────────────────────────────────────
-
-function TripBarChart({
-  bars,
-}: {
-  bars: { day: number; matched: number; pending: number }[]
-}) {
-  const maxTotal = Math.max(1, ...bars.map(b => b.matched + b.pending))
-  const HEIGHT = 96
-
-  return (
-    <div>
-      <div className="flex items-end gap-[2px]" style={{ height: HEIGHT }}>
-        {bars.map(b => {
-          const matchedH = Math.round((b.matched / maxTotal) * HEIGHT)
-          const pendingH = Math.round((b.pending / maxTotal) * HEIGHT)
-          const total = b.matched + b.pending
-          return (
-            <div
-              key={b.day}
-              className="flex flex-1 flex-col items-stretch gap-[1px]"
-              style={{ height: HEIGHT, justifyContent: 'flex-end' }}
-            >
-              {b.pending > 0 && (
-                <div
-                  className="rounded-t-[2px]"
-                  style={{
-                    height: Math.max(3, pendingH),
-                    background: 'var(--theme-status-warning)',
-                    opacity: 0.85,
-                  }}
-                />
-              )}
-              {b.matched > 0 && (
-                <div
-                  style={{
-                    height: Math.max(3, matchedH),
-                    background: 'var(--theme-status-success)',
-                    borderRadius: b.pending === 0 ? '2px 2px 0 0' : '0',
-                  }}
-                />
-              )}
-              {total === 0 && (
-                <div
-                  style={{
-                    height: 3,
-                    background: 'var(--theme-border-light)',
-                    borderRadius: '2px 2px 0 0',
-                  }}
-                />
-              )}
-            </div>
-          )
-        })}
-      </div>
-      {/* X-axis labels — every 5 days */}
-      <div className="flex gap-[2px] mt-1.5">
-        {bars.map(b => (
-          <div
-            key={b.day}
-            className="flex-1 text-center"
-            style={{ fontSize: 8, color: 'var(--theme-text-muted)' }}
-          >
-            {b.day % 5 === 1 ? b.day : ''}
-          </div>
-        ))}
-      </div>
     </div>
   )
 }
@@ -208,33 +119,6 @@ function UnmatchedTripRow({
 // ─── Sort helpers ─────────────────────────────────────────────────────────────
 
 type VehicleSortCol = 'plate' | 'revenue' | 'totalCp' | 'profit' | 'margin'
-type SortDir = 'asc' | 'desc'
-
-function SortTh({
-  label, col, sort, onSort, align = 'right',
-}: {
-  label: string
-  col: VehicleSortCol
-  sort: { col: VehicleSortCol; dir: SortDir }
-  onSort: (c: VehicleSortCol) => void
-  align?: 'left' | 'right'
-}) {
-  const active = sort.col === col
-  const Icon = active ? (sort.dir === 'asc' ? ChevronUp : ChevronDown) : ChevronsUpDown
-  return (
-    <th
-      onClick={() => onSort(col)}
-      className={`py-2.5 px-3 text-[11px] font-bold uppercase tracking-wider cursor-pointer select-none whitespace-nowrap ${align === 'right' ? 'text-right' : 'text-left'}`}
-      style={{ color: active ? 'var(--theme-brand-primary)' : 'var(--theme-text-muted)' }}
-    >
-      <span className={`inline-flex items-center gap-1 ${align === 'right' ? 'justify-end' : ''}`}>
-        {align === 'left' && <Icon className="h-3 w-3" style={{ opacity: active ? 1 : 0.4 }} />}
-        {label}
-        {align === 'right' && <Icon className="h-3 w-3" style={{ opacity: active ? 1 : 0.4 }} />}
-      </span>
-    </th>
-  )
-}
 
 // ─── Desktop dashboard ────────────────────────────────────────────────────────
 
@@ -273,7 +157,7 @@ function DesktopDashboard() {
   const dayBars      = dailyStats?.buckets ?? []
 
   // Vehicle table sort
-  const [vehicleSort, setVehicleSort] = useState<{ col: VehicleSortCol; dir: SortDir }>({ col: 'revenue', dir: 'desc' })
+  const [vehicleSort, setVehicleSort] = useState<{ col: VehicleSortCol; dir: SortDirection }>({ col: 'revenue', dir: 'desc' })
   function toggleVehicleSort(col: VehicleSortCol) {
     setVehicleSort(prev => prev.col === col
       ? { col, dir: prev.dir === 'desc' ? 'asc' : 'desc' }
@@ -374,10 +258,10 @@ function DesktopDashboard() {
               <table className="w-full [&_td]:align-middle" style={{ borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: 'var(--theme-bg-primary)', borderBottom: '1px solid var(--theme-border-light)' }}>
-                    <SortTh label="Biển số" col="plate" sort={vehicleSort} onSort={toggleVehicleSort} align="left" />
-                    <SortTh label="Doanh thu" col="revenue" sort={vehicleSort} onSort={toggleVehicleSort} />
-                    <SortTh label="Chi phí" col="totalCp" sort={vehicleSort} onSort={toggleVehicleSort} />
-                    <SortTh label="Lãi" col="profit" sort={vehicleSort} onSort={toggleVehicleSort} />
+                    <SortableTableHeader label="Biển số" col="plate" sort={vehicleSort} onSort={toggleVehicleSort} align="left" />
+                    <SortableTableHeader label="Doanh thu" col="revenue" sort={vehicleSort} onSort={toggleVehicleSort} />
+                    <SortableTableHeader label="Chi phí" col="totalCp" sort={vehicleSort} onSort={toggleVehicleSort} />
+                    <SortableTableHeader label="Lãi" col="profit" sort={vehicleSort} onSort={toggleVehicleSort} />
                   </tr>
                 </thead>
                 <tbody>
@@ -566,7 +450,7 @@ function MobileDashboard() {
   const dayBars      = dailyStats?.buckets ?? []
 
   // Vehicle table sort (same as desktop)
-  const [vehicleSort, setVehicleSort] = useState<{ col: VehicleSortCol; dir: SortDir }>({ col: 'revenue', dir: 'desc' })
+  const [vehicleSort, setVehicleSort] = useState<{ col: VehicleSortCol; dir: SortDirection }>({ col: 'revenue', dir: 'desc' })
   function toggleVehicleSort(col: VehicleSortCol) {
     setVehicleSort(prev => prev.col === col
       ? { col, dir: prev.dir === 'desc' ? 'asc' : 'desc' }
@@ -654,10 +538,10 @@ function MobileDashboard() {
             <table className="w-full [&_td]:align-middle" style={{ borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: 'var(--theme-bg-primary)', borderBottom: '1px solid var(--theme-border-light)' }}>
-                  <SortTh label="Biển số" col="plate" sort={vehicleSort} onSort={toggleVehicleSort} align="left" />
-                  <SortTh label="Doanh thu" col="revenue" sort={vehicleSort} onSort={toggleVehicleSort} />
-                  <SortTh label="Chi phí" col="totalCp" sort={vehicleSort} onSort={toggleVehicleSort} />
-                  <SortTh label="Lãi" col="profit" sort={vehicleSort} onSort={toggleVehicleSort} />
+                  <SortableTableHeader label="Biển số" col="plate" sort={vehicleSort} onSort={toggleVehicleSort} align="left" />
+                  <SortableTableHeader label="Doanh thu" col="revenue" sort={vehicleSort} onSort={toggleVehicleSort} />
+                  <SortableTableHeader label="Chi phí" col="totalCp" sort={vehicleSort} onSort={toggleVehicleSort} />
+                  <SortableTableHeader label="Lãi" col="profit" sort={vehicleSort} onSort={toggleVehicleSort} />
                 </tr>
               </thead>
               <tbody>

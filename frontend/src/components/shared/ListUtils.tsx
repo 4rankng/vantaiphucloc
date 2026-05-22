@@ -42,8 +42,8 @@ export function SearchInput({ value, onChange, placeholder }: {
 
 // ─── Inline save/cancel icons ─────────────────────────────────────────────────
 
-export function FieldActions({ onSave, onCancel, saving }: {
-  onSave: () => void; onCancel: () => void; saving?: boolean
+export function FieldActions({ onSave, onCancel, saving, hintAlign = 'left' }: {
+  onSave: () => void; onCancel: () => void; saving?: boolean; hintAlign?: 'left' | 'right'
 }) {
   return (
     <div className="flex items-center gap-1 ml-2 relative" style={{ marginTop: -4 }}>
@@ -57,8 +57,10 @@ export function FieldActions({ onSave, onCancel, saving }: {
         style={{ width: 24, height: 24, background: 'var(--surface-3)', color: 'var(--ink-2)', opacity: saving ? 0.5 : 1 }}>
         <X className="h-3.5 w-3.5" />
       </button>
-      <span className="absolute top-full left-0 text-[9px] leading-none select-none whitespace-nowrap pointer-events-none"
-            style={{ color: 'var(--ink-4)', marginTop: 2 }}>
+      <span
+        className="absolute top-full text-[9px] leading-none select-none whitespace-nowrap pointer-events-none"
+        style={{ color: 'var(--ink-4)', marginTop: 7, ...(hintAlign === 'right' ? { right: 0 } : { left: 0 }) }}
+      >
         Enter xác nhận · Esc huỷ
       </span>
     </div>

@@ -4,6 +4,7 @@ import { MonthNavigator } from '@/components/shared/MonthNavigator'
 import { Panel } from '@/components/shared/Panel'
 import { Pill } from '@/components/shared/Pill'
 import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
+import { InfoBanner } from '@/components/shared/InfoBanner'
 import { Button } from '@/components/ui'
 import { useClients, useExportDoiSoatExcel } from '@/hooks/use-queries'
 import { useMonthParams } from './use-month-params'
@@ -144,18 +145,9 @@ export function SettlementPage() {
             </dl>
           </Panel>
 
-          <div
-            className="px-4 py-3"
-            style={{
-              background: 'var(--info-soft)',
-              border: '1px solid var(--info-soft)',
-              borderRadius: 'var(--r)',
-            }}
-          >
-            <p className="text-[12.5px] m-0" style={{ color: 'var(--info)' }}>
-              Bảng đối soát bao gồm toàn bộ chuyến đã ghép với chủ hàng đã chọn trong khoảng thời gian.
-            </p>
-          </div>
+          <InfoBanner variant="info">
+            Bảng đối soát bao gồm toàn bộ chuyến đã ghép với chủ hàng đã chọn trong khoảng thời gian.
+          </InfoBanner>
         </aside>
       </div>
     </div>

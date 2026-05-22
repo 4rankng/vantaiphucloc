@@ -44,7 +44,7 @@ function formatDate(d: string): string {
 
 // ─── Inline edit types ──────────────────────────────────────────────────────
 
-type FocusableField = 'vehicleId' | 'amount' | 'expenseDate' | 'description' | null
+type FocusableField = 'vehicleId' | 'category' | 'amount' | 'expenseDate' | 'description'
 
 type FormData = {
   vehicleId: number
@@ -64,7 +64,7 @@ const EMPTY_FORM: FormData = {
 
 // ─── Inline edit row ────────────────────────────────────────────────────────
 
-function ExpenseEditRow({ initial, onSave, onCancel, saving, vehicles, initialFocus = null }: {
+function ExpenseEditRow({ initial, onSave, onCancel, saving, vehicles, initialFocus = 'amount' }: {
   initial: FormData
   onSave: (data: FormData) => void
   onCancel: () => void
@@ -72,12 +72,12 @@ function ExpenseEditRow({ initial, onSave, onCancel, saving, vehicles, initialFo
   vehicles: { id: number; plate: string }[]
   initialFocus?: FocusableField
 }) {
-  const vehicleRef = useRef<HTMLSelectElement>(null)
+  const [activeField, setActiveField] = useState<FocusableField>(initialFocus)
   const amountRef = useRef<HTMLInputElement>(null)
   const dateRef = useRef<HTMLInputElement>(null)
   const descRef = useRef<HTMLInputElement>(null)
 
-  const { form, errors, set, isDirty, anyDirty, handleSave } = useInlineEditForm<FormData>({
+  const { form, errors, set, anyDirty, handleSave } = useInlineEditForm<FormData>({
     initial,
     validate: (f) => {
       const errs: Record<string, string> = {}
@@ -90,102 +90,146 @@ function ExpenseEditRow({ initial, onSave, onCancel, saving, vehicles, initialFo
     onCancel,
   })
 
-  const actions = anyDirty
-    ? <FieldActions onSave={handleSave} onCancel={onCancel} saving={saving} />
-    : null
-
+  // Auto-focus text inputs when the active field changes
   useEffect(() => {
-    const refMap: Record<string, React.RefObject<HTMLElement | null>> = {
-      vehicleId: vehicleRef,
-      amount: amountRef,
-      expenseDate: dateRef,
-      description: descRef,
-    }
-    if (initialFocus && refMap[initialFocus]?.current) {
-      refMap[initialFocus].current!.focus()
-    }
-  }, [initialFocus])
+    if (activeField === 'amount') amountRef.current?.focus()
+    else if (activeField === 'expenseDate') dateRef.current?.focus()
+    else if (activeField === 'description') descRef.current?.focus()
+  }, [activeField])
+
+  const plateLabel = vehicles.find(v => v.id === form.vehicleId)?.plate
+
+  // Floating actions: right of the active cell normally, left when it's the last column.
+  const isLastColumn = activeField === 'description'
+  const floatingActions = (
+    <div style={{
+      position: 'absolute',
+      top: '50%',
+      transform: 'translateY(-50%)',
+      zIndex: 20,
+      ...(isLastColumn
+        ? { right: '100%', paddingRight: 6 }
+        : { left: '100%', paddingLeft: 6 }),
+    }}>
+      <FieldActions onSave={handleSave} onCancel={onCancel} saving={saving} hintAlign={isLastColumn ? 'right' : 'left'} />
+    </div>
+  )
+
+  const tdActive: React.CSSProperties = { padding: '5px 8px', position: 'relative' }
+  const tdInactive = (field: FocusableField): React.CSSProperties => ({
+    padding: '5px 8px', cursor: 'text', opacity: 0, transition: 'opacity 0.15s',
+  })
 
   return (
     <tr style={{ background: 'var(--accent-soft)' }}>
       {/* Ngày */}
-      <td style={{ padding: '5px 8px' }}>
-        <div className="flex items-center">
+      {activeField === 'expenseDate' ? (
+        <td style={tdActive}>
           <input
             ref={dateRef}
             type="date"
             className="nepo-input text-[12px]"
-            style={{ width: 120 }}
+            style={{ width: '100%' }}
             value={form.expenseDate}
             onChange={e => set('expenseDate', e.target.value)}
           />
-          {isDirty('expenseDate') && actions}
-        </div>
-      </td>
+          {floatingActions}
+        </td>
+      ) : (
+        <td style={tdInactive('expenseDate')} onClick={() => setActiveField('expenseDate')}>
+          <span className="tabular-nums" style={{ color: 'var(--ink-2)', fontFamily: 'var(--theme-font-mono)', fontSize: 12.5 }}>
+            {formatDate(form.expenseDate)}
+          </span>
+        </td>
+      )}
+
       {/* Xe */}
-      <td style={{ padding: '5px 8px' }}>
-        <div className="flex items-center gap-1" style={{ minWidth: 120 }}>
-          <div className="flex-1">
-            <InlineSelect
-              placeholder="— Chọn xe —"
-              value={form.vehicleId ? String(form.vehicleId) : ''}
-              options={[
-                { value: '', label: '— Chọn xe —' },
-                ...vehicles.map(v => ({ value: String(v.id), label: v.plate })),
-              ]}
-              onChange={v => set('vehicleId', Number(v) || 0)}
-            />
-            {errors.vehicleId && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.vehicleId}</p>}
-          </div>
-          {isDirty('vehicleId') && actions}
-        </div>
-      </td>
+      {activeField === 'vehicleId' ? (
+        <td style={tdActive}>
+          <InlineSelect
+            placeholder="— Chọn xe —"
+            value={form.vehicleId ? String(form.vehicleId) : ''}
+            options={[
+              { value: '', label: '— Chọn xe —' },
+              ...vehicles.map(v => ({ value: String(v.id), label: v.plate })),
+            ]}
+            onChange={v => set('vehicleId', Number(v) || 0)}
+          />
+          {errors.vehicleId && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.vehicleId}</p>}
+          {floatingActions}
+        </td>
+      ) : (
+        <td style={tdInactive('vehicleId')} onClick={() => setActiveField('vehicleId')}>
+          {plateLabel
+            ? <Plate>{plateLabel}</Plate>
+            : <span className="text-[12px]" style={{ color: 'var(--ink-3)' }}>— Chọn xe —</span>}
+        </td>
+      )}
+
       {/* Loại */}
-      <td style={{ padding: '5px 8px' }}>
-        <div className="flex items-center gap-1" style={{ minWidth: 120 }}>
-          <div className="flex-1">
-            <InlineSelect
-              placeholder="Loại chi phí"
-              value={form.category}
-              options={CATEGORIES.map(c => ({ value: c, label: EXPENSE_CATEGORY_LABELS[c] }))}
-              onChange={v => set('category', v as VehicleExpenseCategory)}
-            />
-          </div>
-          {isDirty('category') && actions}
-        </div>
-      </td>
+      {activeField === 'category' ? (
+        <td style={tdActive}>
+          <InlineSelect
+            placeholder="Loại chi phí"
+            value={form.category}
+            options={CATEGORIES.map(c => ({ value: c, label: EXPENSE_CATEGORY_LABELS[c] }))}
+            onChange={v => set('category', v as VehicleExpenseCategory)}
+          />
+          {floatingActions}
+        </td>
+      ) : (
+        <td style={tdInactive('category')} onClick={() => setActiveField('category')}>
+          <Pill variant={CATEGORY_VARIANT[form.category]} dot={false}>
+            {EXPENSE_CATEGORY_LABELS[form.category]}
+          </Pill>
+        </td>
+      )}
+
       {/* Số tiền */}
-      <td style={{ padding: '5px 8px' }}>
-        <div className="flex items-center justify-end">
-          <div style={{ flex: 1 }}>
-            <input
-              ref={amountRef}
-              type="number"
-              className="nepo-input text-[12px] tabular-nums"
-              style={{ width: '100%', textAlign: 'right', borderColor: errors.amount ? 'var(--status-error, #e53)' : undefined }}
-              value={form.amount || ''}
-              onChange={e => set('amount', Number(e.target.value) || 0)}
-              placeholder="0"
-            />
-            {errors.amount && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.amount}</p>}
-          </div>
-          {isDirty('amount') && actions}
-        </div>
-      </td>
+      {activeField === 'amount' ? (
+        <td style={tdActive}>
+          <input
+            ref={amountRef}
+            type="text"
+            inputMode="numeric"
+            className="nepo-input text-[12px] tabular-nums"
+            style={{ width: '100%', textAlign: 'right', borderColor: errors.amount ? 'var(--status-error, #e53)' : undefined }}
+            value={form.amount || ''}
+            onChange={e => set('amount', Number(e.target.value.replace(/\D/g, '')) || 0)}
+            placeholder="0"
+          />
+          {errors.amount && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.amount}</p>}
+          {floatingActions}
+        </td>
+      ) : (
+        <td style={{ ...tdInactive('amount'), textAlign: 'right' }} onClick={() => setActiveField('amount')}>
+          <span className="tabular-nums font-bold" style={{ color: 'var(--ink)', fontFamily: 'var(--theme-font-mono)', fontSize: 12.5 }}>
+            {form.amount ? formatCurrency(form.amount) : '—'}
+          </span>
+        </td>
+      )}
+
       {/* Mô tả */}
-      <td style={{ padding: '5px 8px' }}>
-        <div className="flex items-center">
+      {activeField === 'description' ? (
+        <td style={tdActive}>
           <input
             ref={descRef}
             className="nepo-input text-[12px]"
-            style={{ minWidth: 100, flex: 1 }}
+            style={{ width: '100%' }}
             value={form.description}
             onChange={e => set('description', e.target.value)}
             placeholder="Mô tả..."
           />
-          {isDirty('description') && actions}
-        </div>
-      </td>
+          {floatingActions}
+        </td>
+      ) : (
+        <td style={tdInactive('description')} onClick={() => setActiveField('description')}>
+          <span className="truncate block" style={{ color: 'var(--ink-2)', maxWidth: 320, fontSize: 12.5 }}>
+            {form.description || '—'}
+          </span>
+        </td>
+      )}
+
       <td style={{ width: 32 }} />
     </tr>
   )
@@ -210,7 +254,7 @@ function ExpenseRow({ expense, onEdit, onDelete }: {
       <td onClick={cell('vehicleId')}>
         <Plate>{expense.vehiclePlate ?? '—'}</Plate>
       </td>
-      <td onClick={() => onEdit(null)}>
+      <td onClick={cell('category')}>
         <Pill variant={CATEGORY_VARIANT[expense.category]} dot={false}>
           {EXPENSE_CATEGORY_LABELS[expense.category]}
         </Pill>
@@ -248,7 +292,7 @@ export function VehicleExpensesPage() {
   const [vehicleFilter, setVehicleFilter] = useState<number | ''>('')
   const [search, setSearch] = useState('')
   const [editingId, setEditingId] = useState<number | 'new' | null>(null)
-  const [editingField, setEditingField] = useState<FocusableField>(null)
+  const [editingField, setEditingField] = useState<FocusableField>('amount')
   const [deleteTarget, setDeleteTarget] = useState<VehicleExpense | null>(null)
 
   const { data: vehicles } = useVehicles()
@@ -413,8 +457,8 @@ export function VehicleExpensesPage() {
                 <tr>
                   <th className="text-left" style={{ width: 80 }}>Ngày</th>
                   <th className="text-left" style={{ width: 120 }}>Biển số</th>
-                  <th className="text-left" style={{ width: 140 }}>Loại</th>
-                  <th className="text-right" style={{ width: 140 }}>Số tiền</th>
+                  <th className="text-left" style={{ width: 1, whiteSpace: 'nowrap' }}>Loại</th>
+                  <th className="text-right" style={{ width: 130, whiteSpace: 'nowrap' }}>Số tiền</th>
                   <th className="text-left">Mô tả</th>
                   <th style={{ width: 32 }} />
                 </tr>

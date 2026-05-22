@@ -20,6 +20,7 @@ import {
   Calendar,
 } from 'lucide-react'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
+import { MatchProgressBar } from '@/components/shared/MatchProgressBar'
 import { Panel } from '@/components/shared/Panel'
 import { DataTable, type Column } from '@/components/shared/DataTable'
 import { Toolbar, ToolbarSearch, ToolbarSpacer } from '@/components/shared/Toolbar'
@@ -91,37 +92,6 @@ const STATUS_FILTER_LABELS: Record<StatusFilter, string> = {
   PENDING: 'Chờ ghép',
   MATCHED: 'Đã ghép',
 }
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function MatchProgressBar({ pct }: { pct: number }) {
-  return (
-    <div className="flex items-center gap-2.5 mt-2.5">
-      <div
-        className="flex-1 relative"
-        style={{ height: 4, background: 'var(--surface-3)', borderRadius: 999, maxWidth: 240 }}
-      >
-        <div
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            height: '100%',
-            width: `${Math.min(pct, 100)}%`,
-            background: pct >= 90 ? 'var(--success, #10b981)' : pct >= 60 ? 'var(--warning, #f59e0b)' : 'var(--accent)',
-            borderRadius: 999,
-            transition: 'width 0.4s ease',
-          }}
-        />
-      </div>
-      <span className="text-[11.5px] font-semibold tabular-nums" style={{ color: 'var(--ink-2)' }}>
-        {pct}% đã ghép
-      </span>
-    </div>
-  )
-}
-
-
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 

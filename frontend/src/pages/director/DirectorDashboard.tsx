@@ -13,9 +13,10 @@ import { BarChartWidget } from '@/components/shared/Charts'
 import { RevealList } from '@/components/shared/Reveal'
 import { SectionRouteDecoration } from '@/components/shared/Decoration'
 import { AnimatedNumber } from '@/components/shared'
+import { DashboardStatCard } from '@/components/shared/DashboardStatCard'
+import { ActivityFeedItem } from '@/components/shared/ActivityFeedItem'
 import type { AuditLogEntry } from '@/services/api/audit.api'
 import { getAuditLogs } from '@/services/api/audit.api'
-import { SparklineChart } from '@/components/shared/SparklineChart'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -39,117 +40,8 @@ function monogram(name: string): string {
   return name.slice(0, 2).toUpperCase()
 }
 
-// ─── Tone color map ──────────────────────────────────────────────────────────
-
-const TONE_COLORS = {
-  primary: {
-    iconBg: 'var(--theme-brand-primary-light)',
-    iconColor: 'var(--theme-brand-primary)',
-    sparkColor: 'var(--theme-brand-primary)',
-  },
-  success: {
-    iconBg: 'var(--theme-status-success-light)',
-    iconColor: 'var(--theme-status-success)',
-    sparkColor: '#10B981',
-  },
-  warning: {
-    iconBg: 'var(--theme-status-warning-light)',
-    iconColor: 'var(--theme-status-warning)',
-    sparkColor: 'var(--theme-text-muted)',
-  },
-  info: {
-    iconBg: 'var(--theme-status-info-light)',
-    iconColor: 'var(--theme-status-info)',
-    sparkColor: '#2563EB',
-  },
-} as const
-
-type Tone = keyof typeof TONE_COLORS
-
-// ─── StatCard (local) ────────────────────────────────────────────────────────
-
-interface StatCardProps {
-  label: string
-  value: React.ReactNode
-  icon: React.ReactNode
-  trend?: string
-  tone: Tone
-  sparkData?: number[]
-  loading?: boolean
-}
-
-function StatCard({ label, value, icon, trend, tone, sparkData, loading }: StatCardProps) {
-  const colors = TONE_COLORS[tone]
-  const isUp = trend?.startsWith('+')
-  // Only show trend when there's a real, non-zero delta
-  const showTrend = trend && trend !== '0%' && trend !== '+0%'
-
-  return (
-    <div
-      className="relative overflow-hidden transition-all hover:shadow-md card-hover-lift"
-      style={{
-        background: 'var(--theme-bg-secondary)',
-        border: '1px solid var(--theme-border-default)',
-        borderRadius: 'var(--theme-radius-lg, 12px)',
-        boxShadow: 'var(--theme-shadow-sm)',
-        padding: '14px 16px 40px',
-      }}
-    >
-      {/* Row 1: label left · bare colored icon right */}
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <p
-          className="text-[11px] font-semibold uppercase tracking-wider leading-tight"
-          style={{ color: 'var(--theme-text-muted)' }}
-        >
-          {label}
-        </p>
-        <span
-          className="shrink-0 flex [&_svg]:h-4 [&_svg]:w-4 mt-px"
-          style={{ color: colors.iconColor, opacity: 0.7 }}
-        >
-          {icon}
-        </span>
-      </div>
-
-      {/* Row 2: value */}
-      {loading ? (
-        <div className="h-7 w-20 rounded animate-pulse mb-2" style={{ background: 'var(--theme-bg-tertiary)' }} />
-      ) : (
-        <p
-          className="text-[22px] lg:text-[26px] font-bold leading-none tabular-nums tracking-tight mb-2.5"
-          style={{ color: 'var(--theme-text-primary)' }}
-        >
-          {value}
-        </p>
-      )}
-
-      {/* Row 3: trend pill */}
-      {showTrend && (
-        <span
-          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] font-semibold tabular-nums"
-          style={{
-            background: `color-mix(in srgb, ${isUp ? 'var(--theme-status-success)' : 'var(--theme-status-error)'} 14%, transparent)`,
-            color: isUp ? 'var(--theme-status-success)' : 'var(--theme-status-error)',
-          }}
-        >
-          {isUp ? (
-            <svg viewBox="0 0 24 24" className="h-2.5 w-2.5"><polyline points="6 14 12 8 18 14" stroke="currentColor" fill="none" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          ) : (
-            <svg viewBox="0 0 24 24" className="h-2.5 w-2.5"><polyline points="6 10 12 16 18 10" stroke="currentColor" fill="none" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          )}
-          {trend}
-        </span>
-      )}
-
-      {/* Sparkline pinned to bottom */}
-      {sparkData && sparkData.length >= 2 && (
-        <div className="absolute right-0 bottom-0 left-0">
-          <SparklineChart data={sparkData} color={colors.sparkColor} />
-        </div>
-      )}
-    </div>
-  )
-}
+// Alias DashboardStatCard as StatCard for local use
+const StatCard = DashboardStatCard
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -567,47 +459,39 @@ export function DirectorDashboard() {
             </span>
           </div>
           <div>
-            {financialLogs.map(log => {
+            {financialLogs.map((log, i) => {
               const time = new Date(log.createdAt)
               const timeStr = time.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
               const activityText = formatActivityEntry(log.action, log.tableName)
               const changes = formatFinancialChange(log)
 
               return (
-                <div
+                <ActivityFeedItem
                   key={log.id}
-                  className="flex items-start gap-3 px-5 py-3"
-                  style={{ borderTop: '1px solid var(--theme-border-light)' }}
-                >
-                  <div
-                    className="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg mt-0.5"
-                    style={{ background: 'var(--theme-brand-primary-light)', width: 30, height: 30 }}
-                  >
-                    <DollarSign className="h-3.5 w-3.5" style={{ color: 'var(--theme-brand-primary)' }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] leading-snug" style={{ color: 'var(--theme-text-primary)' }}>
+                  isFirst={i === 0}
+                  icon={<DollarSign className="h-3.5 w-3.5" style={{ color: 'var(--theme-brand-primary)' }} />}
+                  iconBg="var(--theme-brand-primary-light)"
+                  title={
+                    <>
                       <span className="font-semibold">Kế toán</span>{' '}
                       <span>đã {activityText}</span>
                       <span className="font-mono text-xs" style={{ color: 'var(--theme-text-muted)' }}> #{log.recordId}</span>
-                    </p>
-                    {changes && (
-                      <div className="mt-1.5 flex flex-wrap gap-2">
-                        {changes.map((c, ci) => (
-                          <div key={ci} className="inline-flex items-center gap-1.5 text-[11px] bg-white border rounded-md px-2 py-1">
-                            <span className="font-medium text-slate-500">{c.label}:</span>
-                            <span className="line-through text-slate-400">{compact(c.old)}</span>
-                            <ArrowUpRight className="h-2.5 w-2.5 text-slate-300" />
-                            <span className="font-bold text-emerald-600">{compact(c.new)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-[11px] tabular-nums whitespace-nowrap shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
-                    {timeStr}
-                  </span>
-                </div>
+                    </>
+                  }
+                  subtitle={changes && (
+                    <div className="flex flex-wrap gap-2">
+                      {changes.map((c, ci) => (
+                        <div key={ci} className="inline-flex items-center gap-1.5 text-[11px] bg-white border rounded-md px-2 py-1">
+                          <span className="font-medium text-slate-500">{c.label}:</span>
+                          <span className="line-through text-slate-400">{compact(c.old)}</span>
+                          <ArrowUpRight className="h-2.5 w-2.5 text-slate-300" />
+                          <span className="font-bold text-emerald-600">{compact(c.new)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  timestamp={timeStr}
+                />
               )
             })}
           </div>
@@ -639,7 +523,7 @@ export function DirectorDashboard() {
           </div>
         ) : (
           <div>
-            {auditLogs.map(log => {
+            {auditLogs.map((log, i) => {
               const time = new Date(log.createdAt)
               const timeStr = time.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
               const dateStr = time.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
@@ -647,36 +531,25 @@ export function DirectorDashboard() {
               const activityText = formatActivityEntry(log.action, log.tableName)
 
               return (
-                <div
+                <ActivityFeedItem
                   key={log.id}
-                  className="flex items-start gap-3 px-5 py-3"
-                  style={{ borderTop: '1px solid var(--theme-border-light)' }}
-                >
-                  <div
-                    className="flex h-7.5 w-7.5 shrink-0 items-center justify-center rounded-lg mt-0.5"
-                    style={{ background: 'var(--theme-bg-tertiary)', width: 30, height: 30 }}
-                  >
-                    <User className="h-3.5 w-3.5" style={{ color: 'var(--theme-text-muted)' }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] leading-snug" style={{ color: 'var(--theme-text-primary)' }}>
+                  isFirst={i === 0}
+                  icon={<User className="h-3.5 w-3.5" style={{ color: 'var(--theme-text-muted)' }} />}
+                  iconBg="var(--theme-bg-tertiary)"
+                  title={
+                    <>
                       <span className="font-semibold">{actor}</span>{' '}
                       <span>đã {activityText}</span>
                       {log.recordId ? (
                         <span className="font-mono text-xs" style={{ color: 'var(--theme-text-muted)' }}> #{log.recordId}</span>
                       ) : null}
-                    </p>
-                    {log.reason && (
-                      <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--theme-text-muted)' }}>{log.reason}</p>
-                    )}
-                  </div>
-                  <span
-                    className="text-[11px] tabular-nums whitespace-nowrap shrink-0"
-                    style={{ color: 'var(--theme-text-muted)' }}
-                  >
-                    {timeStr} · {dateStr}
-                  </span>
-                </div>
+                    </>
+                  }
+                  subtitle={log.reason && (
+                    <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--theme-text-muted)' }}>{log.reason}</p>
+                  )}
+                  timestamp={`${timeStr} · ${dateStr}`}
+                />
               )
             })}
           </div>
