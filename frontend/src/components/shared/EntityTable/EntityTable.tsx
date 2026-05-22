@@ -52,7 +52,7 @@ export function EntityTable<T>({
       style={{
         background: 'var(--theme-bg-secondary)',
         borderColor: 'var(--theme-border-default)',
-        boxShadow: '0 0 0 1px rgba(9,9,11,0.03), 0 1px 3px rgba(9,9,11,0.06), 0 4px 16px -4px rgba(9,9,11,0.05)',
+        boxShadow: 'none',
       }}
     >
       <div className="px-5 pt-4 pb-3" style={{ borderBottom: '1px solid var(--theme-border-light)' }}>

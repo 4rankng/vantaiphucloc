@@ -18,7 +18,7 @@ export function ChartCard({ title, subtitle, actions, children, loading, classNa
       className={cn('rounded-lg p-5', className)}
       style={{
         background: 'var(--theme-bg-secondary)',
-        boxShadow: 'var(--theme-shadow-sm)',
+        boxShadow: 'none',
         border: '1px solid var(--theme-border-default)',
       }}
     >

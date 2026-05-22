@@ -10,22 +10,14 @@ import { ContactsTable, type ContactRow } from '@/components/shared/ContactsTabl
 import { CreateClientDialog } from '@/components/shared/CreateClientDialog'
 import { CreateVendorDialog } from '@/components/shared/CreateVendorDialog'
 import { fuzzyMatch } from '@/lib/search-utils'
+import { toClientRow, toVendorRow } from '@/lib/contact-utils'
 import {
   useClients, useVendors, useCreateClient, useCreateVendor, useDeleteClient, useDeleteVendor,
 } from '@/hooks/use-queries'
 import { useToast } from '@/components/atoms/Toast'
 import { useIsMobile } from '@/hooks/use-mobile'
-import type { Client, Vendor } from '@/data/domain'
 
 type PartnerFilter = 'ALL' | 'client' | 'vendor'
-
-function toClientRow(c: Client): ContactRow {
-  return { id: c.id, name: c.name, partnerType: 'client', type: 'company', phone: c.phone ?? '', taxCode: c.taxCode ?? '', address: c.address ?? '', contactPerson: c.contactPerson ?? '' }
-}
-
-function toVendorRow(v: Vendor): ContactRow {
-  return { id: v.id, name: v.name, partnerType: 'vendor', type: 'company', phone: v.phone ?? '', taxCode: v.taxCode ?? '', address: v.address ?? '', contactPerson: v.contactPerson ?? '' }
-}
 
 export function DirectorContacts() {
   const toast = useToast()

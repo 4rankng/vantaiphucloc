@@ -50,7 +50,7 @@ export function KpiCard({
         border: '1px solid var(--line)',
         borderRadius: 'var(--r-lg)',
         padding: '18px 20px',
-        transition: 'transform 180ms ease, box-shadow 180ms ease',
+        transition: 'border-color 160ms ease',
       }}
     >
       <div className="flex items-center justify-between mb-3">

@@ -4,14 +4,8 @@ import { BrandIcon } from '@/components/atoms/BrandIcon'
 import { FilterPills } from '@/components/shared/FilterPills'
 import { ROLE_LABELS, type Role } from '@/data/domain'
 import { ROLE_ICONS } from '@/pages/superadmin/types'
+import { SUPERADMIN_ROLE_COLORS as ROLE_COLORS } from '@/lib/role-mappings'
 import { type UserAccount } from '@/services/api/users.api'
-
-const ROLE_COLORS: Record<Role, { bg: string; color: string }> = {
-  superadmin: { bg: 'var(--theme-status-info-light)', color: 'var(--theme-status-info)' },
-  director: { bg: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' },
-  driver: { bg: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' },
-  accountant: { bg: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' },
-}
 
 export function SuperAdminDashboard({
   users,

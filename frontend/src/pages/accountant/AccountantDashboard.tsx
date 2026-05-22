@@ -17,41 +17,12 @@ import { SortableTableHeader } from '@/components/shared/SortableTableHeader'
 import type { SortDirection } from '@/components/shared/SortableTableHeader'
 import { useMonthParams } from './use-month-params'
 import { formatCurrencyFull as fmt, type DeliveredTrip } from '@/data/domain'
+import { pad, daysInMonth, sumChiPhi, computeDelta, formatTripDate } from '@/lib/accounting-utils'
 import type { MonthlyPnL } from '@/services/api/pnl.api'
 import {
   CheckCircle2, DollarSign, Clock, TrendingUp,
   TrendingDown, BarChart3, Truck,
 } from 'lucide-react'
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function pad(n: number): string {
-  return String(n).padStart(2, '0')
-}
-
-function daysInMonth(y: number, m: number): number {
-  return new Date(y, m, 0).getDate()
-}
-
-function sumChiPhi(p: MonthlyPnL | null | undefined): number {
-  if (!p) return 0
-  return (p.totalProductivitySalary ?? 0)
-    + (p.totalAllowance ?? 0)
-    + (p.totalBaseSalary ?? 0)
-    + (p.totalVehicleExpenses ?? 0)
-    + (p.totalCpChung ?? 0)
-}
-
-function computeDelta(current: number, prev: number): number | null {
-  if (!prev || prev === 0) return null
-  return Math.round(((current - prev) / Math.abs(prev)) * 100)
-}
-
-function formatTripDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return ''
-  const [, m, d] = dateStr.split('-')
-  return d && m ? `${d}/${m}` : dateStr
-}
 
 // ─── Subcomponents ────────────────────────────────────────────────────────────
 

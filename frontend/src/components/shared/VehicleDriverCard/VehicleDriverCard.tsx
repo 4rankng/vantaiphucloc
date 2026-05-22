@@ -24,7 +24,7 @@ export function VehicleDriverCard({
       style={{
         background: 'var(--theme-bg-secondary)',
         borderColor: 'var(--theme-border-default)',
-        boxShadow: '0 0 0 1px rgba(9,9,11,0.02), 0 1px 2px rgba(9,9,11,0.04)',
+        boxShadow: 'none',
       }}
     >
       <div className="px-4 pt-3.5 pb-2">

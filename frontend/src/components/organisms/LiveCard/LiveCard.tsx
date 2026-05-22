@@ -11,7 +11,7 @@ export function LiveCard({ title, subtitle, elapsed, onClick }: LiveCardProps) {
       <button
         onClick={onClick}
         className="w-full text-left rounded-2xl overflow-hidden card-lift"
-        style={{ boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
+        style={{ boxShadow: 'none' }}
       >
         {/* Amber header bar */}
         <div className="px-4 py-2.5 flex items-center justify-between"

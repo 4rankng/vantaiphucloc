@@ -11,26 +11,12 @@ import { FilterPills } from '@/components/shared/FilterPills'
 import { EmptyState } from '@/components/shared/EmptyState'
 import type { Role } from '@/data/domain'
 import { ROLE_LABELS } from '@/data/domain'
+import { ROLE_ICONS } from '@/pages/superadmin/types'
+import { ROLE_COLORS, CREATABLE_ROLES } from '@/lib/role-mappings'
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '@/hooks/use-queries'
 import type { UserAccount } from '@/hooks/use-queries'
 import { useAuth } from '@/contexts/AuthContext'
 import { useIsMobile } from '@/hooks/use-mobile'
-
-const ROLE_ICONS: Record<Role, typeof Truck> = {
-  superadmin: LayoutDashboard,
-  director: LayoutDashboard,
-  accountant: CircleDollarSign,
-  driver: Truck,
-}
-
-const ROLE_COLORS: Record<Role, { bg: string; color: string }> = {
-  superadmin: { bg: 'var(--theme-status-info-light)', color: 'var(--theme-status-info)' },
-  director: { bg: 'var(--theme-status-info-light)', color: 'var(--theme-status-info)' },
-  accountant: { bg: 'var(--theme-status-warning-light)', color: 'var(--theme-status-warning)' },
-  driver: { bg: 'var(--theme-brand-primary-light)', color: 'var(--theme-brand-primary)' },
-}
-
-const CREATABLE_ROLES: Role[] = ['driver', 'accountant', 'director']
 
 function RequiredLabel({ children }: { children: React.ReactNode }) {
   return (

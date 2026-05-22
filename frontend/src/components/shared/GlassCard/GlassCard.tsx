@@ -15,8 +15,8 @@ export function GlassCard({ children, className, style, onClick, hover = false }
       onClick={onClick}
       style={style}
       className={cn(
-        'rounded-xl border border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition-shadow duration-150',
-        (hover || onClick) && 'cursor-pointer hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)] active:scale-[0.98]',
+        'rounded-xl border border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] p-4 transition-colors duration-150',
+        (hover || onClick) && 'cursor-pointer hover:border-[var(--theme-border-strong,#d4d4d8)]',
         className,
       )}
     >

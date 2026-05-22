@@ -23,6 +23,8 @@ export interface DataTableProps<T> {
   renderExpanded?: (row: T, index: number) => ReactNode | null
   /** Minimum table width before horizontal scroll kicks in. Defaults to 900. */
   minWidth?: number
+  /** Use fixed table layout — column widths are strictly honoured. */
+  fixedLayout?: boolean
   /** Extra wrapper class. */
   className?: string
 }
@@ -51,6 +53,7 @@ export function DataTable<T>({
   rowClassName,
   renderExpanded,
   minWidth = 900,
+  fixedLayout = false,
   className = '',
 }: DataTableProps<T>) {
   if (isLoading) {
@@ -75,7 +78,7 @@ export function DataTable<T>({
     <div className={`nepo-table-scroll overflow-x-auto ${className}`}>
       <table
         className="nepo-table w-full"
-        style={{ minWidth: `${minWidth}px`, borderCollapse: 'collapse' }}
+        style={{ minWidth: `${minWidth}px`, borderCollapse: 'collapse', tableLayout: fixedLayout ? 'fixed' : 'auto' }}
       >
         <thead>
           <tr>

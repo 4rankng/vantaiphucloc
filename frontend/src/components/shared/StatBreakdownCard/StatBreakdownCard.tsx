@@ -19,7 +19,7 @@ export function StatBreakdownCard({ label, total, items = [], minRows = 0 }: Sta
       style={{
         background: 'var(--theme-bg-secondary)',
         border: '1px solid var(--theme-border-default)',
-        boxShadow: '0 4px 12px -4px rgba(0,0,0,0.06)',
+        boxShadow: 'none',
       }}
     >
       <div className="flex flex-col sm:flex-row">

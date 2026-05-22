@@ -4,7 +4,7 @@ export function StatsRow({ items }: { items: { label: string; value: string | nu
       {items.map(item => (
         <div
           key={item.label}
-          className="rounded-lg border p-3 transition hover:shadow-sm"
+          className="rounded-lg border p-3 transition-colors"
           style={{ background: 'var(--surface-bg)', borderColor: 'var(--surface-border)' }}
         >
           {item.icon && <div className="flex items-center gap-2 mb-1">{item.icon}</div>}

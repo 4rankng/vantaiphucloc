@@ -24,7 +24,7 @@ import { MatchProgressBar } from '@/components/shared/MatchProgressBar'
 import { Panel } from '@/components/shared/Panel'
 import { DataTable, type Column } from '@/components/shared/DataTable'
 import { Toolbar, ToolbarSearch, ToolbarSpacer } from '@/components/shared/Toolbar'
-import { Pill, type PillVariant } from '@/components/shared/Pill'
+import { Pill } from '@/components/shared/Pill'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
@@ -37,6 +37,7 @@ import { Pagination } from '@/components/ui/Pagination/Pagination'
 import { useMonthParams } from './use-month-params'
 import { formatCurrency, compactCurrency, OPERATION_TYPE_LABELS } from '@/data/domain'
 import { fuzzyMatch } from '@/lib/search-utils'
+import { formatMatchDate as formatDate, scoreColor, getDeliveredTripStatusBadge, statusVariant } from '@/lib/match-utils'
 import type { DeliveredTrip, DeliveredTripStatus } from '@/data/domain'
 import {
   useDeliveredTrips,
@@ -47,41 +48,6 @@ import {
   useClients,
   useTripDailyStats,
 } from '@/hooks/use-queries'
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return '—'
-  const [, m, d] = dateStr.split('-')
-  if (!d) return dateStr
-  return `${d}/${m}`
-}
-
-function scoreColor(score: number, max: number): string {
-  const pct = max > 0 ? score / max : 0
-  if (pct >= 0.8) return 'var(--success)'
-  if (pct >= 0.5) return 'var(--warning)'
-  return 'var(--danger)'
-}
-
-function getDeliveredTripStatusBadge(status: DeliveredTripStatus): { variant: 'success' | 'warning' | 'danger' | 'info' | 'neutral'; label: string } {
-  switch (status) {
-    case 'PENDING': return { variant: 'warning', label: 'Chờ ghép' }
-    case 'MATCHED': return { variant: 'success', label: 'Đã ghép' }
-    case 'COMPLETED': return { variant: 'success', label: 'Hoàn thành' }
-    case 'CANCELLED': return { variant: 'danger', label: 'Huỷ' }
-  }
-}
-
-function statusVariant(badge: ReturnType<typeof getDeliveredTripStatusBadge>): PillVariant {
-  switch (badge.variant) {
-    case 'success': return 'success'
-    case 'warning': return 'warn'
-    case 'danger':  return 'danger'
-    case 'info':    return 'info'
-    default:        return 'neutral'
-  }
-}
 
 // ─── Status filter type ───────────────────────────────────────────────────────
 

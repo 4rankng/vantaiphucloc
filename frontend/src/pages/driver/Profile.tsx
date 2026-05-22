@@ -8,12 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Label } from '@/components/ui'
-
-const ROLE_LABELS: Record<string, string> = {
-  driver: 'Tài xế',
-  accountant: 'Kế toán',
-  director: 'Giám đốc',
-}
+import { ROLE_LABELS } from '@/data/domain'
 
 // ─── Inline editable row ──────────────────────────────────────────────────────
 

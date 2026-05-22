@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import { Wallet, Download, Settings2, Coins, Users, BadgePercent } from 'lucide-react'
 import { MonthNavigator } from '@/components/shared/MonthNavigator'
-import { Panel } from '@/components/shared/Panel'
 import { KpiHeroCard } from '@/components/shared/KpiHeroCard'
-import { DataTable, type Column } from '@/components/shared/DataTable'
+import { TableSkeleton } from '@/components/shared/TableSkeleton/TableSkeleton'
 import { Drawer, DrawerHero } from '@/components/shared/Drawer'
-import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui'
 import {
   useSalaryDashboard,
@@ -65,6 +63,7 @@ export function SalaryPage() {
     {
       key: 'driver',
       header: 'Tài xế',
+      width: 180,
       render: (d) => <span className="text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{d.driverName ?? '—'}</span>,
     },
     {
@@ -137,7 +136,21 @@ export function SalaryPage() {
             Bảng lương tài xế theo kỳ với chi tiết chuyến, lương cơ bản, năng suất và phụ cấp
           </p>
         </div>
-        <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
+        <div className="flex items-center gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={exportMutation.isPending}
+            className="inline-flex items-center gap-1.5 text-[12.5px] font-medium transition-colors disabled:opacity-50"
+            style={{ color: 'var(--ink-3)' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--ink)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--ink-3)')}
+          >
+            <Download className="h-3.5 w-3.5" />
+            {exportMutation.isPending ? 'Đang xuất...' : 'Xuất Excel'}
+          </button>
+          <MonthNavigator year={year} month={month} onPrev={onPrev} onNext={onNext} />
+        </div>
       </header>
 
       <div className="grid grid-cols-3 gap-3">
@@ -170,34 +183,58 @@ export function SalaryPage() {
         />
       </div>
 
-      <Panel
-        title="Bảng lương tài xế"
-        subtitle={`Kỳ ${dateFrom} → ${dateTo}`}
-        actions={
-          <Button variant="outline" size="sm" onClick={handleExport} disabled={exportMutation.isPending}>
-            <Download className="h-3.5 w-3.5" />
-            {exportMutation.isPending ? 'Đang xuất...' : 'Xuất Excel'}
-          </Button>
-        }
-        flush
-      >
-        <DataTable
-          columns={columns}
-          rows={dashboard}
-          rowKey={(d) => d.driverId}
-          isLoading={isLoading}
-          minWidth={800}
-          empty={
-            <div className="py-10">
-              <EmptyState
-                icon={<Wallet className="h-5 w-5" />}
-                title="Chưa có dữ liệu lương cho kỳ này"
-                compact
-              />
-            </div>
-          }
-        />
-      </Panel>
+      <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--line)' }}>
+        {isLoading ? (
+          <TableSkeleton rows={6} />
+        ) : (
+          <div className="nepo-table-scroll overflow-x-auto">
+            <table className="nepo-table w-full" style={{ minWidth: 700, borderCollapse: 'collapse' }}>
+              <thead>
+                <tr>
+                  <th className="text-left">Tài xế</th>
+                  <th className="text-right">Chuyến</th>
+                  <th className="text-right">Lương CB</th>
+                  <th className="text-right">Lương SL</th>
+                  <th className="text-right">Phụ cấp</th>
+                  <th className="text-right">Thực lĩnh</th>
+                  <th style={{ width: 48 }} />
+                </tr>
+              </thead>
+              <tbody>
+                {dashboard.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="text-center py-12" style={{ color: 'var(--ink-3)' }}>
+                      Chưa có dữ liệu lương cho kỳ này
+                    </td>
+                  </tr>
+                ) : dashboard.map((d) => {
+                  const productivity = (d.totalEarnings ?? 0) - (d.baseSalary ?? 0) - (d.totalAllowance ?? 0)
+                  return (
+                    <tr key={d.driverId}>
+                      <td className="font-semibold" style={{ color: 'var(--ink)' }}>{d.driverName ?? '—'}</td>
+                      <td className="text-right tabular-nums">{d.matchedOrderCount ?? 0}</td>
+                      <td className="text-right tabular-nums" style={{ color: 'var(--ink-2)' }}>{formatCurrency(d.baseSalary ?? 0)}</td>
+                      <td className="text-right tabular-nums" style={{ color: 'var(--ink-2)' }}>{formatCurrency(productivity)}</td>
+                      <td className="text-right tabular-nums" style={{ color: 'var(--ink-2)' }}>{formatCurrency(d.totalAllowance ?? 0)}</td>
+                      <td className="text-right tabular-nums font-bold" style={{ color: 'var(--ink)' }}>{formatCurrency(d.totalEarnings ?? 0)}</td>
+                      <td className="text-right">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedDriver(d.driverId)}
+                          className="nepo-row-action"
+                          aria-label="Cấu hình lương cơ bản"
+                        >
+                          <Settings2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {selectedDriver !== null && (
         <BaseSalaryDrawer

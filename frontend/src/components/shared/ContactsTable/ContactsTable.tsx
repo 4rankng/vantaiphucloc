@@ -60,7 +60,7 @@ export function ContactsTable({ contacts, onRowClick, loading }: ContactsTablePr
   }
 
   return (
-    <div className="rounded-[var(--theme-radius-lg,10px)] border border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] overflow-hidden shadow-[var(--theme-shadow-card,0_1px_0_rgba(9,9,11,0.02))]">
+    <div className="rounded-[var(--theme-radius-lg,10px)] border border-[var(--theme-border-default)] bg-[var(--theme-bg-secondary)] overflow-hidden">
       {/* Header */}
       <div className="hidden lg:grid grid-cols-[2fr_1fr_1fr_1.5fr_1fr] gap-4 px-5 py-3" style={{ borderBottom: '1px solid var(--theme-border-light, var(--theme-border-default))' }}>
         {['Tên', 'Loại đối tác', 'Điện thoại', 'Địa chỉ', 'Người liên hệ'].map(h => (

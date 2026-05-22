@@ -65,9 +65,9 @@ export function MetricCard({
       onClick={onClick}
       className={cn(
         'w-full text-left rounded-xl border border-[var(--theme-border-default)]',
-        'bg-[var(--theme-bg-secondary)] p-5 shadow-sm',
-        'transition-shadow duration-150',
-        (onClick) && 'cursor-pointer hover:shadow-md active:scale-[0.99]',
+        'bg-[var(--theme-bg-secondary)] p-5',
+        'transition-colors duration-150',
+        (onClick) && 'cursor-pointer hover:border-[var(--theme-border-strong,#d4d4d8)]',
         VARIANT_BORDERS[variant],
         className,
       )}

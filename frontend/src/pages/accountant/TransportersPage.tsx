@@ -32,6 +32,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import type { Driver, Vendor } from '@/data/domain'
 import { api } from '@/services/api/client'
 import { fuzzyMatch } from '@/lib/search-utils'
+import { groupByVehicle, type VehicleGroup } from '@/lib/accounting-utils'
 import { VendorManagementDrawer } from '@/components/shared/VendorManagementDrawer'
 import { DriverFormDrawer, type DriverFormData } from '@/components/shared/DriverFormDrawer'
 import { DriverRow, DriverEditRow, type DriverRowFormData } from '@/components/shared/DriverTableRows'
@@ -42,36 +43,6 @@ import { useInfiniteScroll, LoadMoreSentinel, SearchInput, FieldActions } from '
 const BATCH = 15
 
 type DriverFocusableField = 'fullName' | 'phone' | 'plate' | null
-
-// ─── Data helpers ─────────────────────────────────────────────────────────────
-
-interface VehicleGroup {
-  vehicleId: number
-  plate: string
-  vendorId: number | null
-  drivers: { id: number; driverId: number; driverName: string }[]
-}
-
-function groupByVehicle(
-  rows: { id: number; vehicleId: number; vehiclePlate: string; driverId: number; driverName: string }[],
-  vehicles: { id: number; plate: string; vendorId?: number | null }[],
-): VehicleGroup[] {
-  const map = new Map<number, VehicleGroup>()
-  for (const r of rows) {
-    if (!map.has(r.vehicleId)) {
-      map.set(r.vehicleId, { vehicleId: r.vehicleId, plate: r.vehiclePlate, vendorId: null, drivers: [] })
-    }
-    map.get(r.vehicleId)!.drivers.push({ id: r.id, driverId: r.driverId, driverName: r.driverName })
-  }
-  for (const v of vehicles) {
-    if (!map.has(v.id)) {
-      map.set(v.id, { vehicleId: v.id, plate: v.plate, vendorId: v.vendorId ?? null, drivers: [] })
-    } else {
-      map.get(v.id)!.vendorId = v.vendorId ?? null
-    }
-  }
-  return [...map.values()].sort((a, b) => a.plate.localeCompare(b.plate))
-}
 
 
 // ═══════════════════════════════════════════════════════════════════════════════

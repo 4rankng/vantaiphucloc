@@ -67,12 +67,12 @@ export function KpiHeroCard({
     <Component
       onClick={onClick}
       className={`relative overflow-hidden rounded-xl border transition-all duration-200 text-left w-full ${
-        onClick ? 'cursor-pointer hover:shadow-lg active:scale-[0.98]' : ''
+        onClick ? 'cursor-pointer active:opacity-90' : ''
       } ${className}`}
       style={{
         background: 'var(--theme-bg-secondary)',
         borderColor: 'var(--theme-border-default)',
-        boxShadow: '0 0 0 1px rgba(9,9,11,0.03), 0 1px 3px rgba(9,9,11,0.06), 0 4px 16px -4px rgba(9,9,11,0.06)',
+        boxShadow: 'none',
       }}
     >
       {/* Single-row: [icon+label] ··· [value+pill] — value wraps to next row when card is narrow */}

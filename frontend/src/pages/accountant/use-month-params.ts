@@ -1,13 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
-
-function pad(n: number): string {
-  return String(n).padStart(2, '0')
-}
-
-function daysInMonth(year: number, month: number): number {
-  return new Date(year, month, 0).getDate()
-}
+import { pad, daysInMonth } from '@/lib/date-utils'
 
 export function useMonthParams() {
   const [searchParams, setSearchParams] = useSearchParams()

@@ -37,7 +37,7 @@ export function MobileListCard({ children, onClick, className }: MobileListCardP
   return (
     <div className={cn(
       'card rounded-xl p-4 animate-fade-slide-up',
-      onClick && 'cursor-pointer hover:shadow-lg transition-shadow active:scale-[0.99]',
+      onClick && 'cursor-pointer transition-colors',
       className
     )}>
       {children}

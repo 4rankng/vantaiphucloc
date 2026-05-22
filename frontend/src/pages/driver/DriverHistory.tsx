@@ -6,13 +6,7 @@ import { formatCurrencyFull } from '@/data/domain'
 import { FilterPills } from '@/components/shared/FilterPills'
 import { DeliveredTripCard } from '@/components/shared/DeliveredTripCard'
 import { useDeliveredTrips } from '@/hooks/use-queries'
-
-type FilterValue = 'ALL' | 'PENDING'
-
-const FILTER_OPTIONS: { value: FilterValue; label: string }[] = [
-  { value: 'ALL', label: 'Tất cả' },
-  { value: 'PENDING', label: 'Chờ ghép' },
-]
+import { DRIVER_HISTORY_FILTER_OPTIONS as FILTER_OPTIONS, type FilterValue } from '@/lib/filter-options'
 
 export function DriverHistory() {
   const navigate = useNavigate()

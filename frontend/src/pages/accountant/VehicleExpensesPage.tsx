@@ -25,6 +25,7 @@ import { formatCurrency } from '@/data/domain'
 import type { VehicleExpense, VehicleExpenseCategory } from '@/services/api/vehicleExpenses.api'
 import { EXPENSE_CATEGORY_LABELS } from '@/services/api/vehicleExpenses.api'
 import { fuzzyMatch } from '@/lib/search-utils'
+import { formatDate } from '@/lib/format'
 import { AnimatedNumber } from '@/components/shared'
 import { useToast } from '@/components/atoms/Toast'
 
@@ -35,11 +36,6 @@ const CATEGORY_VARIANT: Record<VehicleExpenseCategory, 'accent' | 'warn' | 'info
   SUA_CHUA: 'warn',
   TIEN_LUAT: 'info',
   KHAC: 'neutral',
-}
-
-function formatDate(d: string): string {
-  const [y, m, day] = d.split('-')
-  return day && m ? `${day}/${m}` : d
 }
 
 // ─── Inline edit types ──────────────────────────────────────────────────────

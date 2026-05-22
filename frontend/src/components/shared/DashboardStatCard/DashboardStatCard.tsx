@@ -42,7 +42,7 @@ export function DashboardStatCard({ label, value, icon, trend, tone, sparkData, 
 
   return (
     <div
-      className="relative overflow-hidden transition-all hover:shadow-md card-hover-lift"
+      className="relative overflow-hidden transition-all card-hover-lift"
       style={{
         background: 'var(--theme-bg-secondary)',
         border: '1px solid var(--theme-border-default)',

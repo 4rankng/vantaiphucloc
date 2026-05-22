@@ -123,13 +123,13 @@ function StatCard({
     <Component
       onClick={onClick}
       className={`relative overflow-hidden text-left transition-all ${
-        isClickable ? 'cursor-pointer hover:shadow-md active:scale-[0.98]' : ''
+        isClickable ? 'cursor-pointer' : ''
       }`}
       style={{
         background: 'var(--theme-bg-secondary, var(--bg-2))',
         border: '1px solid var(--theme-border-default, var(--border-1))',
         borderRadius: 'var(--theme-radius-lg, 12px)',
-        boxShadow: 'var(--theme-shadow-sm, 0 1px 2px rgba(9,9,11,0.04))',
+        boxShadow: 'none',
         padding: '14px 16px 40px',
       }}
     >
