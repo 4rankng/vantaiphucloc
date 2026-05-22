@@ -6,6 +6,7 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle,
+  Check,
   DollarSign,
   FileSpreadsheet,
   Upload,
@@ -152,6 +153,25 @@ export function DoiSoatPage() {
   const totalPages = data?.totalPages ?? 0
   const totalItems = data?.total ?? 0
   const unmatchMutation = useUnmatch()
+
+  // Global ESC = cancel unlink, Enter = confirm unlink
+  useEffect(() => {
+    if (confirmUnmatchId === null) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setConfirmUnmatchId(null)
+      } else if (e.key === 'Enter') {
+        const trip = trips.find((t) => t.id === confirmUnmatchId)
+        if (!trip?.bookedTripId || unmatchMutation.isPending) return
+        unmatchMutation.mutate(
+          { deliveredTripId: trip.id, bookedTripId: trip.bookedTripId },
+          { onSuccess: () => setConfirmUnmatchId(null) },
+        )
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [confirmUnmatchId, trips, unmatchMutation])
   const autoMatch = useAutoMatch()
   const autoMatchConfirm = useAutoMatchConfirm()
 
@@ -348,7 +368,7 @@ export function DoiSoatPage() {
           const confirming = confirmUnmatchId === t.id
           if (confirming) {
             return (
-              <div className="flex items-center justify-end gap-1.5">
+              <div className="relative flex flex-col items-center justify-center gap-0.5">
                 <button
                   type="button"
                   onClick={(e) => {
@@ -359,19 +379,31 @@ export function DoiSoatPage() {
                     )
                   }}
                   disabled={unmatchMutation.isPending}
-                  className="text-[11px] font-semibold px-2 py-1 rounded"
-                  style={{ color: 'var(--danger)', background: 'var(--danger-soft)' }}
+                  className="nepo-row-action"
+                  aria-label="Xác nhận bỏ ghép (Enter)"
+                  title="Xác nhận bỏ ghép (Enter)"
+                  style={{ color: 'var(--danger)' }}
                 >
-                  {unmatchMutation.isPending ? 'Đang xử lý...' : 'Xác nhận'}
+                  {unmatchMutation.isPending
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    : <Check className="h-3.5 w-3.5" />}
                 </button>
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); setConfirmUnmatchId(null) }}
-                  className="text-[11px] font-medium px-2 py-1 rounded"
+                  className="nepo-row-action"
+                  aria-label="Huỷ (Esc)"
+                  title="Huỷ (Esc)"
                   style={{ color: 'var(--ink-3)' }}
                 >
-                  Huỷ
+                  <X className="h-3.5 w-3.5" />
                 </button>
+                <span
+                  className="absolute top-full -translate-y-1 right-0 text-[9px] leading-none select-none whitespace-nowrap pointer-events-none"
+                  style={{ color: 'var(--ink-4)' }}
+                >
+                  Enter xác nhận · Esc huỷ
+                </span>
               </div>
             )
           }
