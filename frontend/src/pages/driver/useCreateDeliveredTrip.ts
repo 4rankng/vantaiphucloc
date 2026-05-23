@@ -202,6 +202,26 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
   // Container management
   const validateTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
 
+  /** Apply the validate-container response to error + suggestion state for one row. */
+  const applyValidationResult = useCallback((
+    idx: number,
+    res: Awaited<ReturnType<typeof apiClient.validateContainer>>,
+  ) => {
+    const invalid = !res.success || !res.data?.valid
+    setContainerErrors(prev => {
+      if (invalid) return { ...prev, [idx]: res.data?.error ?? 'Số container không hợp lệ' }
+      const next = { ...prev }; delete next[idx]; return next
+    })
+    setContainerSuggestions(prev => {
+      const list = invalid ? (res.data?.suggestions ?? []) : []
+      if (list.length === 0) {
+        if (!(idx in prev)) return prev
+        const next = { ...prev }; delete next[idx]; return next
+      }
+      return { ...prev, [idx]: list }
+    })
+  }, [])
+
   const updateContainer = useCallback(<K extends keyof ContainerForm>(
     idx: number,
     field: K,
@@ -241,27 +261,7 @@ export function useCreateDeliveredTrip(existingDeliveredTrip?: DeliveredTrip | n
         }).catch(() => { /* ignore network errors here */ })
       }, 400)
     }
-  }, [])
-
-  /** Apply the validate-container response to error + suggestion state for one row. */
-  const applyValidationResult = useCallback((
-    idx: number,
-    res: Awaited<ReturnType<typeof apiClient.validateContainer>>,
-  ) => {
-    const invalid = !res.success || !res.data?.valid
-    setContainerErrors(prev => {
-      if (invalid) return { ...prev, [idx]: res.data?.error ?? 'Số container không hợp lệ' }
-      const next = { ...prev }; delete next[idx]; return next
-    })
-    setContainerSuggestions(prev => {
-      const list = invalid ? (res.data?.suggestions ?? []) : []
-      if (list.length === 0) {
-        if (!(idx in prev)) return prev
-        const next = { ...prev }; delete next[idx]; return next
-      }
-      return { ...prev, [idx]: list }
-    })
-  }, [])
+  }, [applyValidationResult])
 
   const validateContainerOnBlur = useCallback((idx: number) => {
     const cont = containers[idx]
