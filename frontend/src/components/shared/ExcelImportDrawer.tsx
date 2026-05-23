@@ -169,8 +169,19 @@ export function ExcelImportDrawer({ onClose }: { onClose: () => void }) {
     setError(null)
     if (importType === 'client') {
       startPreview(f)
+    } else if (importType === 'driver') {
+      uploadDriverRecon.mutate(
+        { file: f },
+        {
+          onSuccess: (data) => {
+            setReconResult(data)
+            setStep('done')
+          },
+          onError: (err) => setError(err instanceof Error ? err.message : 'Lỗi khi tải đối soát lái xe'),
+        },
+      )
     }
-  }, [startPreview, importType])
+  }, [startPreview, importType, uploadDriverRecon])
 
   function handleDragOver(e: React.DragEvent) {
     e.preventDefault()

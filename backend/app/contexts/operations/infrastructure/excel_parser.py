@@ -134,15 +134,13 @@ class ExcelParser:
         container_raw = _get("container")
         container_number = None
         if container_raw is not None:
-            match = CONTAINER_RE.search(str(container_raw).upper().replace(" ", ""))
-            if match:
-                container_number = match.group(0)
-
-        if container_number is None and _get("container") is not None:
-            return ImportRow(
-                row_number=row_num,
-                parse_error=f"Số container không hợp lệ: {_get('container')}",
-            )
+            raw_str = str(container_raw).strip()
+            if raw_str:
+                match = CONTAINER_RE.search(raw_str.upper().replace(" ", ""))
+                if match:
+                    container_number = match.group(0)
+                else:
+                    container_number = raw_str
 
         if container_number is None:
             return ImportRow(
