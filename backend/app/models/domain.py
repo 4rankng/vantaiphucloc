@@ -307,6 +307,39 @@ class RoutePricing(AuditableMixin, Base):
     )
 
 
+class VendorRoutePricing(AuditableMixin, Base):
+    __tablename__ = "vendor_route_pricings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False, index=True)
+    pickup_location_id = Column(
+        Integer, ForeignKey("locations.id"), nullable=False, index=True
+    )
+    dropoff_location_id = Column(
+        Integer, ForeignKey("locations.id"), nullable=False, index=True
+    )
+    work_type = Column(String(50), nullable=False, index=True)
+    f20_price = Column(Integer, nullable=True)
+    f40_price = Column(Integer, nullable=True)
+    e20_price = Column(Integer, nullable=True)
+    e40_price = Column(Integer, nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "vendor_id",
+            "pickup_location_id",
+            "dropoff_location_id",
+            "work_type",
+            name="uq_vendor_route_pricings_lane",
+        ),
+    )
+
+
 # ---------------------------------------------------------------------------
 # DeliveredTrip (driver trip — created by driver app)
 # ---------------------------------------------------------------------------

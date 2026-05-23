@@ -147,6 +147,25 @@ export function useRoutePricing() {
     })
   }, [deleteId, deleteMutation, toast])
 
+  const updateItem = useCallback(
+    (id: number, data: RoutePricingUpdatePayload, callbacks?: { onSuccess?: () => void; onError?: () => void }) => {
+      updateMutation.mutate(
+        { id, data },
+        {
+          onSuccess: () => {
+            toast.success('Đã cập nhật cước tuyến')
+            callbacks?.onSuccess?.()
+          },
+          onError: () => {
+            toast.error('Không thể cập nhật')
+            callbacks?.onError?.()
+          },
+        },
+      )
+    },
+    [updateMutation, toast],
+  )
+
   return {
     routePricings,
     isLoading,
@@ -167,6 +186,8 @@ export function useRoutePricing() {
     openEdit,
     handleSubmit,
     handleDelete,
+    updateItem,
     isSubmitting: createMutation.isPending || updateMutation.isPending,
+    isUpdating: updateMutation.isPending,
   }
 }

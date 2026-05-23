@@ -66,7 +66,7 @@ export function KpiHeroCard({
   return (
     <Component
       onClick={onClick}
-      className={`relative overflow-hidden rounded-xl border transition-all duration-200 text-left w-full ${
+      className={`relative rounded-xl border transition-all duration-200 text-left w-full ${
         onClick ? 'cursor-pointer active:opacity-90' : ''
       } ${className}`}
       style={{

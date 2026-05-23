@@ -1,24 +1,62 @@
-import { memo, useCallback } from 'react'
-import { Pencil, Trash2, ArrowRight, MapPin } from 'lucide-react'
+import { useState, useCallback, useRef, useEffect } from 'react'
+import { Trash2, MapPin } from 'lucide-react'
 import { compactCurrency, WORK_TYPE_LABELS } from '@/data/domain'
 import type { RoutePricing, WorkType } from '@/data/domain'
+import { useInlineEditForm } from '@/components/shared/useInlineEditForm'
+import { InlineSelect } from '@/components/shared/InlineSelect/InlineSelect'
+import { FieldActions } from '@/components/shared/ListUtils'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { TableSkeleton } from '@/components/shared/TableSkeleton/TableSkeleton'
+import { Route } from 'lucide-react'
 
-interface RoutePricingTableProps {
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+type FocusableField =
+  | 'clientId'
+  | 'pickupLocationId'
+  | 'dropoffLocationId'
+  | 'workType'
+  | 'f20Price'
+  | 'f40Price'
+  | 'e20Price'
+  | 'e40Price'
+
+export type RoutePricingFormData = {
+  clientId: number
+  pickupLocationId: number
+  dropoffLocationId: number
+  workType: WorkType
+  f20Price: string
+  f40Price: string
+  e20Price: string
+  e40Price: string
+}
+
+export interface RoutePricingTableProps {
   data: RoutePricing[]
   isLoading: boolean
-  onEdit: (rp: RoutePricing) => void
+  editingId: number | null
+  editingField?: FocusableField
+  onStartEdit: (rp: RoutePricing, field?: FocusableField) => void
+  onSave: (id: number, data: RoutePricingFormData) => void
+  onCancelEdit: () => void
   onDelete: (id: number) => void
+  editInitial?: RoutePricingFormData
+  isSaving?: boolean
+  clients: Array<{ id: number; name: string; code?: string | null }>
+  locations: Array<{ id: number; name: string }>
 }
 
 // ─── Color map for operation type badges ─────────────────────────────────────
+
 const OP_BADGE_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
-  'NHẬP HÀNG':        { bg: '#eff6ff', text: '#1d4ed8', dot: '#3b82f6' },
-  'XUẤT HÀNG':        { bg: '#f0fdf4', text: '#15803d', dot: '#22c55e' },
-  'CHẠY SÀ LAN':      { bg: '#faf5ff', text: '#7e22ce', dot: '#a855f7' },
-  'CHUYỂN BÃI':       { bg: '#fff7ed', text: '#c2410c', dot: '#f97316' },
-  'ĐÓNG KHO':         { bg: '#fefce8', text: '#a16207', dot: '#eab308' },
-  'LẤY VỎ HẠ HÀNG':  { bg: '#f0fdfa', text: '#0f766e', dot: '#14b8a6' },
-  'XUẤT/NHẬP TÀU':    { bg: '#eef2ff', text: '#4338ca', dot: '#6366f1' },
+  'NHẬP HÀNG':       { bg: '#eff6ff', text: '#1d4ed8', dot: '#3b82f6' },
+  'XUẤT HÀNG':       { bg: '#f0fdf4', text: '#15803d', dot: '#22c55e' },
+  'CHẠY SÀ LAN':     { bg: '#faf5ff', text: '#7e22ce', dot: '#a855f7' },
+  'CHUYỂN BÃI':      { bg: '#fff7ed', text: '#c2410c', dot: '#f97316' },
+  'ĐÓNG KHO':        { bg: '#fefce8', text: '#a16207', dot: '#eab308' },
+  'LẤY VỎ HẠ HÀNG': { bg: '#f0fdfa', text: '#0f766e', dot: '#14b8a6' },
+  'XUẤT/NHẬP TÀU':   { bg: '#eef2ff', text: '#4338ca', dot: '#6366f1' },
 }
 const DEFAULT_BADGE = { bg: '#f4f4f5', text: '#52525b', dot: '#a1a1aa' }
 
@@ -42,10 +80,7 @@ function OpBadge({ type }: { type: string }) {
 function PriceCell({ value }: { value: number | null }) {
   if (value == null) {
     return (
-      <span
-        className="font-mono-num text-xs"
-        style={{ color: 'var(--ink-4)', letterSpacing: '0.05em' }}
-      >
+      <span className="font-mono-num text-xs" style={{ color: 'var(--ink-4)', letterSpacing: '0.05em' }}>
         —
       </span>
     )
@@ -57,357 +92,351 @@ function PriceCell({ value }: { value: number | null }) {
   )
 }
 
-// ─── Empty state SVG ─────────────────────────────────────────────────────────
-function EmptyState() {
-  return (
-    <div className="flex flex-col items-center justify-center py-20 px-4">
-      <svg
-        width="140"
-        height="100"
-        viewBox="0 0 140 100"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className="mb-5 opacity-60"
-        aria-hidden="true"
-      >
-        {/* Road */}
-        <rect x="10" y="52" width="120" height="22" rx="4" fill="#e4e4e7" />
-        {/* Dashed centre line */}
-        <rect x="20" y="62" width="14" height="3" rx="1.5" fill="#a1a1aa" />
-        <rect x="44" y="62" width="14" height="3" rx="1.5" fill="#a1a1aa" />
-        <rect x="68" y="62" width="14" height="3" rx="1.5" fill="#a1a1aa" />
-        <rect x="92" y="62" width="14" height="3" rx="1.5" fill="#a1a1aa" />
-        <rect x="116" y="62" width="10" height="3" rx="1.5" fill="#a1a1aa" />
-        {/* Truck silhouette */}
-        <rect x="22" y="34" width="38" height="20" rx="4" fill="#d1d5db" />
-        <rect x="54" y="39" width="12" height="15" rx="3" fill="#e4e4e7" />
-        <circle cx="32" cy="55" r="6" fill="#9ca3af" />
-        <circle cx="32" cy="55" r="3" fill="#d1d5db" />
-        <circle cx="50" cy="55" r="6" fill="#9ca3af" />
-        <circle cx="50" cy="55" r="3" fill="#d1d5db" />
-        <circle cx="60" cy="55" r="6" fill="#9ca3af" />
-        <circle cx="60" cy="55" r="3" fill="#d1d5db" />
-        {/* Pin A */}
-        <circle cx="16" cy="36" r="8" fill="#bbf7d0" />
-        <circle cx="16" cy="36" r="4" fill="#16a34a" />
-        <line x1="16" y1="44" x2="16" y2="52" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeDasharray="2 2" />
-        {/* Pin B */}
-        <circle cx="124" cy="36" r="8" fill="#fed7aa" />
-        <circle cx="124" cy="36" r="4" fill="#ea580c" />
-        <line x1="124" y1="44" x2="124" y2="52" stroke="#ea580c" strokeWidth="2" strokeLinecap="round" strokeDasharray="2 2" />
-        {/* Arrow */}
-        <path d="M82 35 L96 35" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" />
-        <path d="M92 31 L96 35 L92 39" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        {/* Question marks */}
-        <text x="74" y="21" fontFamily="system-ui" fontSize="12" fill="#d1d5db" textAnchor="middle">?</text>
-        <text x="86" y="15" fontFamily="system-ui" fontSize="9" fill="#e4e4e7" textAnchor="middle">?</text>
-      </svg>
+// ─── Inline edit row ─────────────────────────────────────────────────────────
 
-      <p className="text-sm font-semibold mb-1" style={{ color: 'var(--ink-2)' }}>
-        Chưa có cước tuyến nào
-      </p>
-      <p className="text-xs text-center max-w-xs" style={{ color: 'var(--ink-4)' }}>
-        Thêm cước tuyến mới hoặc nhập từ file Excel để bắt đầu quản lý bảng giá.
-      </p>
+function RoutePricingEditRow({
+  initial,
+  onSave,
+  onCancel,
+  saving,
+  clients,
+  locations,
+  initialFocus = 'f20Price',
+}: {
+  initial: RoutePricingFormData
+  onSave: (data: RoutePricingFormData) => void
+  onCancel: () => void
+  saving?: boolean
+  clients: Array<{ id: number; name: string; code?: string | null }>
+  locations: Array<{ id: number; name: string }>
+  initialFocus?: FocusableField
+}) {
+  const [activeField, setActiveField] = useState<FocusableField>(initialFocus)
+  const f20Ref = useRef<HTMLInputElement>(null)
+  const f40Ref = useRef<HTMLInputElement>(null)
+  const e20Ref = useRef<HTMLInputElement>(null)
+  const e40Ref = useRef<HTMLInputElement>(null)
+
+  const { form, errors, set, handleSave } = useInlineEditForm<RoutePricingFormData>({
+    initial,
+    validate: (f) => {
+      const errs: Record<string, string> = {}
+      if (!f.clientId) errs.clientId = 'Chọn chủ hàng'
+      if (!f.pickupLocationId) errs.pickupLocationId = 'Chọn nơi lấy'
+      if (!f.dropoffLocationId) errs.dropoffLocationId = 'Chọn nơi hạ'
+      if (!f.f20Price && !f.f40Price && !f.e20Price && !f.e40Price)
+        errs.f20Price = 'Nhập ít nhất 1 giá'
+      return errs
+    },
+    onSave,
+    onCancel,
+  })
+
+  useEffect(() => {
+    if (activeField === 'f20Price') f20Ref.current?.focus()
+    else if (activeField === 'f40Price') f40Ref.current?.focus()
+    else if (activeField === 'e20Price') e20Ref.current?.focus()
+    else if (activeField === 'e40Price') e40Ref.current?.focus()
+  }, [activeField])
+
+  const isLastPriceCol = activeField === 'e40Price'
+  const floatingActions = (
+    <div style={{
+      position: 'absolute',
+      top: '50%',
+      transform: 'translateY(-50%)',
+      zIndex: 20,
+      ...(isLastPriceCol
+        ? { right: '100%', paddingRight: 6 }
+        : { left: '100%', paddingLeft: 6 }),
+    }}>
+      <FieldActions onSave={handleSave} onCancel={onCancel} saving={saving} hintAlign={isLastPriceCol ? 'right' : 'left'} />
     </div>
+  )
+
+  const clientOptions = [
+    { value: '', label: '— Chủ hàng —' },
+    ...clients.map(c => ({ value: String(c.id), label: c.code ? `${c.code} – ${c.name}` : c.name })),
+  ]
+  const locationOptions = [
+    { value: '', label: '— Địa điểm —' },
+    ...locations.map(l => ({ value: String(l.id), label: l.name })),
+  ]
+  const workTypeOptions = (Object.entries(WORK_TYPE_LABELS) as [WorkType, string][])
+    .filter(([key]) => !['E20', 'E40', 'F20', 'F40'].includes(key))
+    .map(([key, label]) => ({ value: key, label }))
+
+  const tdActive: React.CSSProperties = { padding: '5px 8px', position: 'relative' }
+  const tdInactive = (): React.CSSProperties => ({ padding: '5px 8px', cursor: 'pointer', opacity: 0.45, transition: 'opacity 0.15s' })
+
+  const priceInput = (field: 'f20Price' | 'f40Price' | 'e20Price' | 'e40Price', ref: React.RefObject<HTMLInputElement | null>, color: string) => {
+    if (activeField === field) {
+      return (
+        <td style={{ ...tdActive, textAlign: 'right' }}>
+          <input
+            ref={ref}
+            type="text"
+            inputMode="numeric"
+            className="nepo-input text-[12px] tabular-nums"
+            style={{ width: '100%', textAlign: 'right', borderColor: errors[field] ? 'var(--status-error, #e53)' : undefined }}
+            value={form[field]}
+            onChange={e => set(field, e.target.value.replace(/[^0-9]/g, ''))}
+            placeholder="—"
+          />
+          {floatingActions}
+        </td>
+      )
+    }
+    return (
+      <td style={{ ...tdInactive(), textAlign: 'right' }} onClick={() => setActiveField(field)}>
+        <span className="tabular-nums text-xs" style={{ color: form[field] ? color : 'var(--ink-4)', fontFamily: 'var(--theme-font-mono)' }}>
+          {form[field] ? compactCurrency(Number(form[field])) : '—'}
+        </span>
+      </td>
+    )
+  }
+
+  return (
+    <tr style={{ background: 'var(--accent-soft)' }}>
+      {/* # placeholder */}
+      <td style={{ ...tdInactive(), color: 'var(--ink-4)', fontSize: 12 }} />
+
+      {/* Chủ hàng */}
+      {activeField === 'clientId' ? (
+        <td style={tdActive}>
+          <InlineSelect
+            placeholder="— Chủ hàng —"
+            value={form.clientId ? String(form.clientId) : ''}
+            options={clientOptions}
+            onChange={v => set('clientId', Number(v) || 0)}
+          />
+          {errors.clientId && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.clientId}</p>}
+          {floatingActions}
+        </td>
+      ) : (
+        <td style={tdInactive()} onClick={() => setActiveField('clientId')}>
+          {clients.find(c => c.id === form.clientId)
+            ? <span className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold" style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)', color: 'var(--theme-brand-primary)' }}>
+                {clients.find(c => c.id === form.clientId)?.name}
+              </span>
+            : <span className="text-[12px]" style={{ color: 'var(--ink-3)' }}>— Chủ hàng —</span>}
+        </td>
+      )}
+
+      {/* Điểm đi */}
+      {activeField === 'pickupLocationId' ? (
+        <td style={tdActive}>
+          <InlineSelect
+            placeholder="— Điểm đi —"
+            value={form.pickupLocationId ? String(form.pickupLocationId) : ''}
+            options={locationOptions}
+            onChange={v => { set('pickupLocationId', Number(v) || 0); setActiveField('dropoffLocationId') }}
+          />
+          {errors.pickupLocationId && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.pickupLocationId}</p>}
+          {floatingActions}
+        </td>
+      ) : (
+        <td style={tdInactive()} onClick={() => setActiveField('pickupLocationId')}>
+          <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--ink-1)' }}>
+            <MapPin className="h-3 w-3 shrink-0" style={{ color: '#16a34a' }} />
+            {locations.find(l => l.id === form.pickupLocationId)?.name ?? '—'}
+          </span>
+        </td>
+      )}
+
+      {/* Điểm đến */}
+      {activeField === 'dropoffLocationId' ? (
+        <td style={tdActive}>
+          <InlineSelect
+            placeholder="— Điểm đến —"
+            value={form.dropoffLocationId ? String(form.dropoffLocationId) : ''}
+            options={locationOptions}
+            onChange={v => set('dropoffLocationId', Number(v) || 0)}
+          />
+          {errors.dropoffLocationId && <p className="text-[10px] mt-0.5" style={{ color: 'var(--status-error, #e53)' }}>{errors.dropoffLocationId}</p>}
+          {floatingActions}
+        </td>
+      ) : (
+        <td style={tdInactive()} onClick={() => setActiveField('dropoffLocationId')}>
+          <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--ink-1)' }}>
+            <MapPin className="h-3 w-3 shrink-0" style={{ color: '#ea580c' }} />
+            {locations.find(l => l.id === form.dropoffLocationId)?.name ?? '—'}
+          </span>
+        </td>
+      )}
+
+      {/* F20 */}
+      {priceInput('f20Price', f20Ref, '#3b82f6')}
+      {/* F40 */}
+      {priceInput('f40Price', f40Ref, '#3b82f6')}
+      {/* E20 */}
+      {priceInput('e20Price', e20Ref, '#6366f1')}
+      {/* E40 */}
+      {priceInput('e40Price', e40Ref, '#6366f1')}
+
+      {/* Tác nghiệp */}
+      {activeField === 'workType' ? (
+        <td style={tdActive}>
+          <InlineSelect
+            placeholder="Tác nghiệp"
+            value={form.workType}
+            options={workTypeOptions}
+            onChange={v => set('workType', v as WorkType)}
+          />
+          {floatingActions}
+        </td>
+      ) : (
+        <td style={tdInactive()} onClick={() => setActiveField('workType')}>
+          <OpBadge type={form.workType} />
+        </td>
+      )}
+
+      {/* Delete placeholder */}
+      <td style={{ width: 32 }} />
+    </tr>
   )
 }
 
-// ─── Loading skeleton ────────────────────────────────────────────────────────
-function LoadingSkeleton() {
+// ─── Read row ─────────────────────────────────────────────────────────────────
+
+function RoutePricingRow({ rp, idx, onEdit, onDelete }: {
+  rp: RoutePricing
+  idx: number
+  onEdit: (field: FocusableField) => void
+  onDelete: () => void
+}) {
+  const cell = (field: FocusableField) => (e: React.MouseEvent) => { e.stopPropagation(); onEdit(field) }
+
   return (
-    <div
-      className="rounded-xl overflow-hidden border"
-      style={{ background: 'var(--surface-2)', borderColor: 'var(--border)' }}
-    >
-      {/* Fake header */}
-      <div
-        className="px-4 py-3 flex gap-4 border-b"
-        style={{ borderColor: 'var(--border)', background: 'var(--surface-1)' }}
-      >
-        {[28, 100, 80, 80, 60, 60, 60, 60, 80, 50].map((w, i) => (
-          <div
-            key={i}
-            className="h-3 rounded animate-pulse"
-            style={{ width: w, background: 'var(--surface-3)', flexShrink: 0 }}
-          />
-        ))}
-      </div>
-      <div className="p-3 space-y-2">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-11 rounded-lg animate-pulse"
-            style={{
-              background: 'var(--surface-3)',
-              opacity: 1 - i * 0.12,
-            }}
-          />
-        ))}
-      </div>
-    </div>
+    <tr className="cursor-pointer group">
+      <td style={{ color: 'var(--ink-4)', fontSize: 12, fontFamily: 'var(--theme-font-mono)' }} onClick={cell('clientId')}>
+        {idx + 1}
+      </td>
+
+      <td onClick={cell('clientId')}>
+        <span
+          className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold"
+          style={{
+            background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)',
+            color: 'var(--theme-brand-primary)',
+          }}
+        >
+          {rp.client.name}
+        </span>
+      </td>
+
+      <td onClick={cell('pickupLocationId')}>
+        <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--ink-1)' }}>
+          <MapPin className="h-3 w-3 shrink-0" style={{ color: '#16a34a' }} />
+          {rp.pickupLocation.name}
+        </span>
+      </td>
+      <td onClick={cell('dropoffLocationId')}>
+        <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: 'var(--ink-1)' }}>
+          <MapPin className="h-3 w-3 shrink-0" style={{ color: '#ea580c' }} />
+          {rp.dropoffLocation.name}
+        </span>
+      </td>
+
+      <td style={{ textAlign: 'right' }} onClick={cell('f20Price')}><PriceCell value={rp.f20Price} /></td>
+      <td style={{ textAlign: 'right' }} onClick={cell('f40Price')}><PriceCell value={rp.f40Price} /></td>
+      <td style={{ textAlign: 'right' }} onClick={cell('e20Price')}><PriceCell value={rp.e20Price} /></td>
+      <td style={{ textAlign: 'right' }} onClick={cell('e40Price')}><PriceCell value={rp.e40Price} /></td>
+
+      <td onClick={cell('workType')}><OpBadge type={rp.workType} /></td>
+
+      <td style={{ width: 32 }}>
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete() }}
+          className="opacity-0 group-hover:opacity-100 flex items-center justify-center rounded transition-opacity"
+          style={{ width: 24, height: 24, color: 'var(--ink-3)' }}
+          title="Xoá"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </td>
+    </tr>
   )
 }
 
 // ─── Main component ──────────────────────────────────────────────────────────
-export const RoutePricingTable = memo(function RoutePricingTable({
+
+export function RoutePricingTable({
   data,
   isLoading,
-  onEdit,
+  editingId,
+  editingField,
+  onStartEdit,
+  onSave,
+  onCancelEdit,
   onDelete,
+  editInitial,
+  isSaving,
+  clients,
+  locations,
 }: RoutePricingTableProps) {
-  const handleEdit = useCallback((rp: RoutePricing) => () => onEdit(rp), [onEdit])
-  const handleDelete = useCallback((id: number) => () => onDelete(id), [onDelete])
+  const handleStartEdit = useCallback(
+    (rp: RoutePricing, field: FocusableField = 'f20Price') => onStartEdit(rp, field),
+    [onStartEdit],
+  )
 
-  if (isLoading) return <LoadingSkeleton />
-  if (!data.length) return <EmptyState />
+  if (isLoading) return <TableSkeleton rows={5} />
+
+  if (!data.length) {
+    return (
+      <div className="py-10">
+        <EmptyState
+          icon={<Route className="h-5 w-5" />}
+          title="Chưa có cước tuyến nào"
+          description="Thêm cước tuyến mới hoặc nhập từ file Excel để bắt đầu"
+          compact
+        />
+      </div>
+    )
+  }
 
   return (
-    <div
-      className="overflow-hidden rounded-xl border"
-      style={{ background: 'var(--surface-2)', borderColor: 'var(--border)' }}
-    >
-      {/* Count strip */}
-      <div
-        className="flex items-center justify-between px-4 py-2 border-b"
-        style={{ borderColor: 'var(--border)', background: 'var(--surface-1)' }}
-      >
-        <span className="text-xs font-medium" style={{ color: 'var(--ink-3)' }}>
-          {data.length} tuyến
-        </span>
-        <div className="flex gap-3 text-xs" style={{ color: 'var(--ink-4)' }}>
-          <span>F = Full cont</span>
-          <span>E = Empty cont</span>
-        </div>
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr
-              className="text-left text-xs font-semibold uppercase tracking-wider select-none"
-              style={{ color: 'var(--ink-3)', borderBottom: '1px solid var(--border)' }}
-            >
-              <th className="px-4 py-3 w-10">#</th>
-              <th className="px-4 py-3 min-w-[120px]">Chủ hàng</th>
-              <th className="px-4 py-3 min-w-[220px]">Tuyến đường</th>
-              {/* Grouped container price headers */}
-              <th
-                colSpan={2}
-                className="px-4 py-2 text-center text-xs"
-                style={{
-                  borderLeft: '1px solid var(--border)',
-                  background: 'color-mix(in srgb, #3b82f6 6%, transparent)',
-                  color: '#1d4ed8',
-                }}
-              >
-                Full cont
-              </th>
-              <th
-                colSpan={2}
-                className="px-4 py-2 text-center text-xs"
-                style={{
-                  borderLeft: '1px solid var(--border)',
-                  background: 'color-mix(in srgb, #6366f1 6%, transparent)',
-                  color: '#4338ca',
-                }}
-              >
-                Empty cont
-              </th>
-              <th className="px-4 py-3 min-w-[130px]">Tác nghiệp</th>
-              <th className="px-4 py-3 w-[80px] text-right">Thao tác</th>
-            </tr>
-            {/* Sub-header row for F20 / F40 / E20 / E40 */}
-            <tr
-              className="text-xs font-medium uppercase tracking-wider"
-              style={{ color: 'var(--ink-4)', borderBottom: '2px solid var(--border)' }}
-            >
-              <th className="px-4 pb-2" />
-              <th className="px-4 pb-2" />
-              <th className="px-4 pb-2" />
-              <th
-                className="px-4 pb-2 text-right"
-                style={{
-                  borderLeft: '1px solid var(--border)',
-                  background: 'color-mix(in srgb, #3b82f6 4%, transparent)',
-                  color: '#3b82f6',
-                }}
-              >
-                20'
-              </th>
-              <th
-                className="px-4 pb-2 text-right"
-                style={{
-                  background: 'color-mix(in srgb, #3b82f6 4%, transparent)',
-                  color: '#3b82f6',
-                }}
-              >
-                40'
-              </th>
-              <th
-                className="px-4 pb-2 text-right"
-                style={{
-                  borderLeft: '1px solid var(--border)',
-                  background: 'color-mix(in srgb, #6366f1 4%, transparent)',
-                  color: '#6366f1',
-                }}
-              >
-                20'
-              </th>
-              <th
-                className="px-4 pb-2 text-right"
-                style={{
-                  background: 'color-mix(in srgb, #6366f1 4%, transparent)',
-                  color: '#6366f1',
-                }}
-              >
-                40'
-              </th>
-              <th className="px-4 pb-2" />
-              <th className="px-4 pb-2" />
-            </tr>
-          </thead>
-
-          <tbody>
-            {data.map((rp, idx) => (
-              <tr
+    <div className="nepo-table-scroll overflow-x-auto">
+      <table className="nepo-table w-full" style={{ minWidth: 900, borderCollapse: 'collapse' }}>
+        <thead>
+          <tr>
+            <th style={{ width: 32 }}>#</th>
+            <th className="text-left" style={{ width: 130 }}>Chủ hàng</th>
+            <th className="text-left" style={{ minWidth: 140 }}>Điểm đi</th>
+            <th className="text-left" style={{ minWidth: 140 }}>Điểm đến</th>
+            <th className="text-right" style={{ width: 80, color: '#3b82f6' }}>F20</th>
+            <th className="text-right" style={{ width: 80, color: '#3b82f6' }}>F40</th>
+            <th className="text-right" style={{ width: 80, color: '#6366f1' }}>E20</th>
+            <th className="text-right" style={{ width: 80, color: '#6366f1' }}>E40</th>
+            <th className="text-left" style={{ minWidth: 130 }}>Tác nghiệp</th>
+            <th style={{ width: 32 }} />
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((rp, idx) =>
+            editingId === rp.id && editInitial ? (
+              <RoutePricingEditRow
                 key={rp.id}
-                className="group transition-colors"
-                style={{
-                  borderBottom: '1px solid var(--border)',
-                  background: idx % 2 === 1
-                    ? 'color-mix(in srgb, var(--surface-3) 40%, transparent)'
-                    : 'transparent',
-                }}
-                onMouseEnter={(e) => {
-                  ;(e.currentTarget as HTMLTableRowElement).style.background =
-                    'color-mix(in srgb, var(--theme-brand-primary) 5%, transparent)'
-                }}
-                onMouseLeave={(e) => {
-                  ;(e.currentTarget as HTMLTableRowElement).style.background =
-                    idx % 2 === 1
-                      ? 'color-mix(in srgb, var(--surface-3) 40%, transparent)'
-                      : 'transparent'
-                }}
-              >
-                {/* # */}
-                <td
-                  className="px-4 py-3 text-xs tabular-nums font-mono-num"
-                  style={{ color: 'var(--ink-4)' }}
-                >
-                  {idx + 1}
-                </td>
-
-                {/* Chủ hàng */}
-                <td className="px-4 py-3">
-                  <span
-                    className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold"
-                    style={{
-                      background: 'color-mix(in srgb, var(--theme-brand-primary) 10%, transparent)',
-                      color: 'var(--theme-brand-primary)',
-                    }}
-                  >
-                    {rp.client.name}
-                  </span>
-                </td>
-
-                {/* Tuyến đường — combined pickup → dropoff */}
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span
-                      className="inline-flex items-center gap-1 text-xs font-medium truncate max-w-[90px]"
-                      style={{ color: 'var(--ink-1)' }}
-                    >
-                      <MapPin className="h-3 w-3 shrink-0" style={{ color: '#16a34a' }} />
-                      {rp.pickupLocation.name}
-                    </span>
-                    <ArrowRight
-                      className="h-3 w-3 shrink-0"
-                      style={{ color: 'var(--ink-4)' }}
-                    />
-                    <span
-                      className="inline-flex items-center gap-1 text-xs font-medium truncate max-w-[90px]"
-                      style={{ color: 'var(--ink-1)' }}
-                    >
-                      <MapPin className="h-3 w-3 shrink-0" style={{ color: '#ea580c' }} />
-                      {rp.dropoffLocation.name}
-                    </span>
-                  </div>
-                </td>
-
-                {/* F20 */}
-                <td
-                  className="px-4 py-3 text-right"
-                  style={{ borderLeft: '1px solid var(--border)' }}
-                >
-                  <PriceCell value={rp.f20Price} />
-                </td>
-                {/* F40 */}
-                <td className="px-4 py-3 text-right">
-                  <PriceCell value={rp.f40Price} />
-                </td>
-
-                {/* E20 */}
-                <td
-                  className="px-4 py-3 text-right"
-                  style={{ borderLeft: '1px solid var(--border)' }}
-                >
-                  <PriceCell value={rp.e20Price} />
-                </td>
-                {/* E40 */}
-                <td className="px-4 py-3 text-right">
-                  <PriceCell value={rp.e40Price} />
-                </td>
-
-                {/* Tác nghiệp */}
-                <td className="px-4 py-3">
-                  <OpBadge type={rp.workType} />
-                </td>
-
-                {/* Actions */}
-                <td className="px-4 py-3">
-                  <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={handleEdit(rp)}
-                      title="Sửa"
-                      className="p-1.5 rounded-md transition-colors"
-                      style={{ color: 'var(--ink-3)' }}
-                      onMouseEnter={(e) => {
-                        ;(e.currentTarget as HTMLButtonElement).style.background =
-                          'color-mix(in srgb, #3b82f6 12%, transparent)'
-                        ;(e.currentTarget as HTMLButtonElement).style.color = '#1d4ed8'
-                      }}
-                      onMouseLeave={(e) => {
-                        ;(e.currentTarget as HTMLButtonElement).style.background = 'transparent'
-                        ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--ink-3)'
-                      }}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={handleDelete(rp.id)}
-                      title="Xoá"
-                      className="p-1.5 rounded-md transition-colors"
-                      style={{ color: 'var(--ink-3)' }}
-                      onMouseEnter={(e) => {
-                        ;(e.currentTarget as HTMLButtonElement).style.background =
-                          'color-mix(in srgb, #ef4444 12%, transparent)'
-                        ;(e.currentTarget as HTMLButtonElement).style.color = '#dc2626'
-                      }}
-                      onMouseLeave={(e) => {
-                        ;(e.currentTarget as HTMLButtonElement).style.background = 'transparent'
-                        ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--ink-3)'
-                      }}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                initial={editInitial}
+                onSave={(data) => onSave(rp.id, data)}
+                onCancel={onCancelEdit}
+                saving={isSaving}
+                clients={clients}
+                locations={locations}
+                initialFocus={editingField ?? 'f20Price'}
+              />
+            ) : (
+              <RoutePricingRow
+                key={rp.id}
+                rp={rp}
+                idx={idx}
+                onEdit={(field) => handleStartEdit(rp, field)}
+                onDelete={() => onDelete(rp.id)}
+              />
+            ),
+          )}
+        </tbody>
+      </table>
     </div>
   )
-})
+}

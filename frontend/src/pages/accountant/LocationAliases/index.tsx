@@ -51,16 +51,44 @@ function findDuplicateHint(loc: Location, all: Location[]): Location | null {
   return null
 }
 
+// ─── Search highlight helper ──────────────────────────────────────────────────
+
+function HighlightText({ text, query }: { text: string; query: string }) {
+  if (!query.trim()) return <>{text}</>
+  const q = normalizeVietnamese(query.trim()).toLowerCase()
+  const norm = normalizeVietnamese(text).toLowerCase()
+  const idx = norm.indexOf(q)
+  if (idx === -1) return <>{text}</>
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark
+        style={{
+          background: 'color-mix(in srgb, var(--accent) 18%, transparent)',
+          color: 'inherit',
+          fontWeight: 700,
+          borderRadius: 2,
+          padding: '0 1px',
+        }}
+      >
+        {text.slice(idx, idx + q.length)}
+      </mark>
+      {text.slice(idx + q.length)}
+    </>
+  )
+}
+
 // ─── Left-rail location row ───────────────────────────────────────────────────
 
 function LocationListItem({
-  location, aliasCount, isSelected, isDuplicateCandidate, onClick, 'data-loc-id': dataLocId,
+  location, aliasCount, isSelected, isDuplicateCandidate, onClick, query, 'data-loc-id': dataLocId,
 }: {
   location: Location
   aliasCount: number
   isSelected: boolean
   isDuplicateCandidate: boolean
   onClick: () => void
+  query?: string
   'data-loc-id'?: number
 }) {
   const [hovered, setHovered] = useState(false)
@@ -88,7 +116,7 @@ function LocationListItem({
           className="text-[13px] font-medium truncate"
           style={{ color: isSelected ? 'var(--ink)' : hovered ? 'var(--ink)' : 'var(--ink-2)' }}
         >
-          {location.name}
+          <HighlightText text={location.name} query={query ?? ''} />
         </span>
         {isDuplicateCandidate && (
           <AlertTriangle
@@ -648,6 +676,7 @@ export function LocationAliasesPage() {
   const [search, setSearch] = useState('')
   const [creating, setCreating] = useState(false)
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [showOnlyDupes, setShowOnlyDupes] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
   const [deleteTarget, setDeleteTarget] = useState<Location | null>(null)
   const [mergeOpen, setMergeOpen] = useState(false)
@@ -673,15 +702,17 @@ export function LocationAliasesPage() {
     return ids
   }, [locations])
 
-  // Search filter (matches both location name and any alias)
+  // Search filter (matches both location name and any alias) + optional dupe-only filter
   const filtered = useMemo(() => {
-    if (!search.trim()) return locations
+    let list = locations
+    if (showOnlyDupes) list = list.filter(l => duplicateIds.has(l.id))
+    if (!search.trim()) return list
     const q = search.toLowerCase()
-    return locations.filter(l => {
+    return list.filter(l => {
       if (fuzzyMatch(l.name, search)) return true
       return (aliasesByLoc.get(l.id) ?? []).some(a => fuzzyMatch(a.alias, search) || a.alias.toLowerCase().includes(q))
     })
-  }, [locations, search, aliasesByLoc])
+  }, [locations, search, aliasesByLoc, showOnlyDupes, duplicateIds])
 
   // Auto-select first location once data loads, or when current selection disappears
   useEffect(() => {
@@ -848,31 +879,49 @@ export function LocationAliasesPage() {
                 style={{ paddingLeft: 32 }}
               />
             </div>
-            <button
-              type="button"
-              onClick={() => setCreating(true)}
-              disabled={creating}
-              className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded text-[12px] font-medium transition-colors"
-              style={{
-                background: 'var(--accent)',
-                color: '#fff',
-                opacity: creating ? 0.5 : 1,
-              }}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Thêm địa điểm
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCreating(true)}
+                disabled={creating}
+                className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded text-[12px] font-medium transition-colors"
+                style={{ background: 'var(--accent)', color: '#fff', opacity: creating ? 0.5 : 1 }}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Thêm địa điểm
+              </button>
+              {duplicateIds.size > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowOnlyDupes(v => !v)}
+                  className="flex items-center gap-1 px-2 py-1.5 rounded text-[11px] font-medium transition-colors shrink-0"
+                  style={showOnlyDupes
+                    ? { background: 'var(--warning)', color: '#fff', border: 'none' }
+                    : { background: 'var(--surface-3)', color: 'var(--ink-3)', border: 'none' }
+                  }
+                  title={showOnlyDupes ? 'Xem tất cả' : 'Chỉ hiện địa điểm có thể trùng'}
+                >
+                  <AlertTriangle className="h-3 w-3" />
+                  {duplicateIds.size}
+                </button>
+              )}
+            </div>
           </div>
 
           {/* List — scroll-fade wrapper */}
-          <div className="flex-1 relative overflow-hidden">
+          <div className="flex-1 overflow-hidden" style={{ position: 'relative' }}>
+            {/* bottom fade */}
             <div
-              className="absolute inset-x-0 bottom-0 h-8 pointer-events-none z-10"
+              className="pointer-events-none z-10"
               style={{
+                position: 'absolute',
+                insetInline: 0,
+                bottom: 0,
+                height: 40,
                 background: 'linear-gradient(to bottom, transparent, var(--surface-2))',
               }}
             />
-            <div ref={listRef} className="h-full overflow-y-auto">
+            <div ref={listRef} style={{ height: '100%', overflowY: 'auto' }}>
             {creating && (
               <NewLocationInput
                 onCreate={handleCreate}
@@ -902,6 +951,7 @@ export function LocationAliasesPage() {
                   aliasCount={aliasesByLoc.get(loc.id)?.length ?? 0}
                   isSelected={selectedId === loc.id}
                   isDuplicateCandidate={duplicateIds.has(loc.id)}
+                  query={search}
                   onClick={() => setSelectedId(loc.id)}
                 />
               ))
