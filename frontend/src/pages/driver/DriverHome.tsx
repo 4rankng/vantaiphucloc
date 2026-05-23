@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
-import { Plus, Truck, Clock, Wallet, TrendingUp } from 'lucide-react'
+import { Plus, Truck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { formatCurrencyFull } from '@/data/domain'
@@ -8,7 +8,6 @@ import { DeliveredTripCard } from '@/components/shared/DeliveredTripCard'
 import { FloatingActionButton } from '@/components/shared/FloatingActionButton'
 import { useMyEarnings, useSalaryConfig, useDeliveredTrips } from '@/hooks/use-queries'
 import { getSalaryPeriodDates, dayBefore, dayAfter, toISODate } from '@/utils/salaryPeriod'
-import { useIsMobile } from '@/hooks/use-mobile'
 import { resolveRoute } from '@/lib/route-utils'
 import { StatusBadgePro } from '@/components/shared/StatusBadgePro'
 import { LiveDot } from '@/components/shared/Decoration'
@@ -20,8 +19,7 @@ const PAGE_SIZE = 10
 type FilterTab = 'all' | 'pending'
 
 export function DriverHome() {
-  const isMobile = useIsMobile(1024)
-  return isMobile ? <MobileDriverHome /> : <DesktopDriverHome />
+  return <MobileDriverHome />
 }
 
 function DesktopDriverHome() {
@@ -308,6 +306,15 @@ function MobileDriverHome() {
     [periodJobs],
   )
 
+  const matchedCount = useMemo(() =>
+    periodJobs.filter(w => w.matched).length,
+    [periodJobs],
+  )
+  const pendingCount = useMemo(() =>
+    periodJobs.filter(w => !w.matched).length,
+    [periodJobs],
+  )
+
   // Use on-the-fly earnings from backend if available, otherwise fallback to local calc
   const earningsValue = myEarnings?.totalEarnings ?? totalEarnings
   const displayMonth = currentPeriod.startDate.getMonth() + 1
@@ -315,13 +322,25 @@ function MobileDriverHome() {
 
   return (
     <div className="space-y-4">
-      {/* Combined month + earnings card */}
+      {/* Month navigator — standalone row, NOT part of the stat card */}
+      <div className="flex items-center justify-center gap-2">
+        <LiveDot active={true} />
+        <MonthNavigator
+          year={displayYear}
+          month={displayMonth}
+          onPrev={handlePrevPeriod}
+          onNext={handleNextPeriod}
+          periodStart={currentPeriod.startDate}
+          periodEnd={currentPeriod.endDate}
+        />
+      </div>
+
+      {/* Stat card: trips breakdown + salary */}
       <div
         className="rounded-xl overflow-hidden flex relative"
         style={{
           background: 'linear-gradient(135deg, color-mix(in srgb, var(--theme-brand-primary) 5%, var(--theme-bg-secondary)) 0%, var(--theme-bg-secondary) 55%)',
           border: '1px solid color-mix(in srgb, var(--theme-brand-primary) 14%, var(--theme-border-default))',
-          boxShadow: 'none',
         }}
       >
         {/* Watermark truck silhouette */}
@@ -343,31 +362,36 @@ function MobileDriverHome() {
           <circle cx="82"  cy="48" r="8" fill="#059669"/>
         </svg>
 
-        <div className="flex-1 min-w-0 flex items-center justify-center py-3 px-2 gap-2">
-          <LiveDot active={true} />
-          <MonthNavigator
-            year={displayYear}
-            month={displayMonth}
-            onPrev={handlePrevPeriod}
-            onNext={handleNextPeriod}
-            periodStart={currentPeriod.startDate}
-            periodEnd={currentPeriod.endDate}
-          />
+        {/* Left: trip breakdown — label + two sub-columns */}
+        <div className="flex-1 min-w-0 flex flex-col justify-center px-4 py-3.5 gap-2">
+          <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
+            Số chuyến
+          </p>
+          <div className="flex items-start">
+            {/* Đã ghép */}
+            <div className="flex-1 flex flex-col gap-0.5">
+              <p className="text-[11px] font-medium" style={{ color: 'var(--theme-success, #16a34a)' }}>Đã ghép</p>
+              <p className="text-xl font-bold tabular-nums leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{matchedCount}</p>
+            </div>
+            {/* Inner divider */}
+            <div className="w-px self-stretch mx-3" style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 14%, var(--theme-border-default))' }} />
+            {/* Chưa ghép */}
+            <div className="flex-1 flex flex-col gap-0.5">
+              <p className="text-[11px] font-medium" style={{ color: 'var(--theme-warning, #d97706)' }}>Chưa ghép</p>
+              <p className="text-xl font-bold tabular-nums leading-tight" style={{ color: 'var(--theme-text-primary)' }}>{pendingCount}</p>
+            </div>
+          </div>
         </div>
 
-        <div
-          className="w-px self-stretch my-3"
-          style={{ background: 'color-mix(in srgb, var(--theme-brand-primary) 18%, var(--theme-border-default))' }}
-        />
-
-        <div className="flex-1 min-w-0 flex items-center gap-2 px-3 py-3">
+        {/* Right: salary */}
+        <div className="flex-1 min-w-0 flex items-center gap-2.5 px-4 py-3.5">
           <img src="/icons/money.png" alt="" aria-hidden className="shrink-0 w-9 h-9 object-contain" />
           <div className="flex-1 min-w-0">
-            <p className="text-[15px] font-bold tabular-nums leading-tight whitespace-nowrap" style={{ color: 'var(--theme-text-primary)' }}>
-              <AnimatedNumber value={earningsValue} format="currency" duration={700} />
+            <p className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--theme-text-muted)' }}>
+              Lương
             </p>
-            <p className="text-xs" style={{ color: 'var(--theme-text-muted)' }}>
-              {periodJobs.length} chuyến
+            <p className="text-[15px] font-bold tabular-nums leading-tight whitespace-nowrap" style={{ color: 'var(--theme-brand-primary)' }}>
+              <AnimatedNumber value={earningsValue} format="currency" duration={700} />
             </p>
           </div>
         </div>

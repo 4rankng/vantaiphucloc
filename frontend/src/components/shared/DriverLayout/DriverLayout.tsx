@@ -2,9 +2,6 @@ import { Outlet, useNavigate, Navigate } from 'react-router-dom'
 import { AppShell } from '@/components/shared/AppShell'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Role } from '@/data/domain'
-import { useIsMobile } from '@/hooks/use-mobile'
-import { DesktopShell } from '@/components/shared/DesktopShell/DesktopShell'
-import { DRIVER_NAV } from '@/components/shared/DesktopShell/navConfig'
 
 const ALLOWED_ROLES: Role[] = ['driver']
 
@@ -13,34 +10,36 @@ function MobileDriverShell() {
   const navigate = useNavigate()
 
   return (
-    <AppShell
-      topbarProps={{
-        variant: 'home' as const,
-        name: user?.name ?? '',
-        onNotifications: () => navigate('/driver/notifications'),
-      }}
-      contentClassName="px-4 py-4 pb-28 space-y-4"
+    // On wider screens, frame the mobile shell as a centered phone-shaped
+    // column so the layout remains the mobile design at any viewport.
+    <div
+      className="min-h-[100dvh] w-full flex justify-center"
+      style={{ background: 'var(--theme-bg-primary)' }}
     >
-      <Outlet />
-    </AppShell>
+      <div className="w-full max-w-md min-h-[100dvh] shadow-none sm:shadow-xl">
+        <AppShell
+          topbarProps={{
+            variant: 'home' as const,
+            name: user?.name ?? '',
+            onNotifications: () => navigate('/driver/notifications'),
+          }}
+          contentClassName="px-4 py-4 pb-28 space-y-4"
+        >
+          <Outlet />
+        </AppShell>
+      </div>
+    </div>
   )
 }
 
 export function DriverLayout() {
   const { user } = useAuth()
-  const isMobile = useIsMobile(1024)
 
   if (!user || !ALLOWED_ROLES.includes(user.role)) {
     return <Navigate to="/" replace />
   }
 
-  if (isMobile) {
-    return <MobileDriverShell />
-  }
-
-  return (
-    <DesktopShell navItems={DRIVER_NAV} roleLabel="Tài xế">
-      <Outlet />
-    </DesktopShell>
-  )
+  // Drivers always use the mobile shell — the desktop sidebar is reserved
+  // for back-office roles (accountant, director, superadmin).
+  return <MobileDriverShell />
 }

@@ -179,3 +179,110 @@ def get_container_number_error(container_number: str) -> str | None:
     """
     is_valid, error_message = validate_container_number(container_number)
     return None if is_valid else error_message
+
+
+def suggest_corrections(container_number: str, max_results: int = 3) -> list[str]:
+    """Suggest valid container numbers within 1-2 digit edits of ``container_number``.
+
+    Use case: driver enters/scans a container number whose ISO 6346 check digit
+    doesn't match. Most of the time this is a single-digit typo or OCR misread
+    in the 7-digit numeric portion. This function enumerates candidate numbers
+    that:
+
+    1. Keep the 4-letter owner code unchanged (owner code is usually correct
+       and changing it would change the container's identity entirely).
+    2. Differ from the input in 1 or 2 digit positions (positions 4..10, which
+       includes the check digit).
+    3. Have a valid ISO 6346 check digit.
+
+    Ranking (best first):
+      * Fewer edits beat more edits (1-edit before 2-edit).
+      * Within the same edit count, prefer candidates whose edit is just the
+        check digit (position 10) — that's the most common reason for failure.
+      * Smaller absolute digit deltas next (e.g. 4→5 beats 4→9).
+
+    Args:
+        container_number: An 11-char container number that failed validation.
+            Must already be in normalized format (no hyphens, uppercase). If
+            the format is wrong (not 4 letters + 7 digits), returns [].
+        max_results: Maximum number of suggestions to return. Defaults to 3.
+
+    Returns:
+        Up to ``max_results`` candidate container numbers, ordered best-first.
+        Never includes the input itself. Returns [] if no candidates qualify
+        or the input format is unrecoverable.
+    """
+    if max_results <= 0:
+        return []
+
+    normalized = normalize_container_number(container_number)
+    if not validate_format(normalized):
+        return []
+
+    # If the input is already valid, nothing to suggest.
+    if validate_check_digit(normalized):
+        return []
+
+    owner = normalized[:4]
+    original_digits = normalized[4:11]  # 7 digits: 6 serial + 1 check
+
+    # Score each candidate so we can rank and dedupe.
+    # Lower score = better suggestion.
+    scored: dict[str, tuple[int, int, int]] = {}
+
+    def consider(candidate_digits: str, edited_positions: tuple[int, ...]) -> None:
+        candidate = owner + candidate_digits
+        if candidate == normalized:
+            return
+        if not validate_check_digit(candidate):
+            return
+        edit_count = len(edited_positions)
+        # Bonus for editing the check digit (position 10 in the full number = position 6 in the 7-digit slice).
+        check_digit_only = 1 if edited_positions == (6,) else 0
+        # Sum of absolute deltas between original and candidate at edited positions.
+        delta_sum = sum(
+            abs(int(candidate_digits[p]) - int(original_digits[p])) for p in edited_positions
+        )
+        # Score tuple: (edit_count, NOT check_digit_only, delta_sum).
+        # Tuple compare gives natural lexicographic ordering.
+        score = (edit_count, 1 - check_digit_only, delta_sum)
+        existing = scored.get(candidate)
+        if existing is None or score < existing:
+            scored[candidate] = score
+
+    # ── Pass 1: single-digit substitutions ──────────────────────────────────
+    for pos in range(7):
+        original = original_digits[pos]
+        for new_digit in "0123456789":
+            if new_digit == original:
+                continue
+            candidate_digits = original_digits[:pos] + new_digit + original_digits[pos + 1 :]
+            consider(candidate_digits, (pos,))
+
+    # ── Pass 2: two-digit substitutions ─────────────────────────────────────
+    # Only run if we don't already have enough single-edit suggestions, to
+    # avoid an O(n²·10²) blowup when single-edit candidates already saturate.
+    single_edit_count = sum(1 for s in scored.values() if s[0] == 1)
+    if single_edit_count < max_results:
+        for pos_a in range(7):
+            for pos_b in range(pos_a + 1, 7):
+                orig_a = original_digits[pos_a]
+                orig_b = original_digits[pos_b]
+                for da in "0123456789":
+                    if da == orig_a:
+                        continue
+                    for db in "0123456789":
+                        if db == orig_b:
+                            continue
+                        candidate_digits = (
+                            original_digits[:pos_a]
+                            + da
+                            + original_digits[pos_a + 1 : pos_b]
+                            + db
+                            + original_digits[pos_b + 1 :]
+                        )
+                        consider(candidate_digits, (pos_a, pos_b))
+
+    # Rank by score, then take top N.
+    ranked = sorted(scored.items(), key=lambda kv: kv[1])
+    return [candidate for candidate, _score in ranked[:max_results]]

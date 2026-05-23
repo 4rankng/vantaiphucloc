@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<!--
+  Cargo Constellations — Generative Art Viewer
+  Vantai Phuc Loc · Container Transport Management Platform
+  Philosophy: Container route networks as living celestial maps.
+  Brand: NEPO green (#00B14F), dark background, Be Vietnam Pro aesthetic.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cargo Constellations — Vantai Phuc Loc</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Lora:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ─── Anthropic Brand Variables ─────────────────── */
+    :root {
+      --anthropic-dark:       #141413;
+      --anthropic-light:      #faf9f5;
+      --anthropic-mid-gray:   #b0aea5;
+      --anthropic-light-gray: #e8e6dc;
+      --anthropic-orange:     #d97757;
+      --anthropic-blue:       #6a9bcc;
+      --anthropic-green:      #788c5d;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, var(--anthropic-light) 0%, #f5f3ee 100%);
+      min-height: 100vh;
+      color: var(--anthropic-dark);
+    }
+
+    .container {
+      display: flex;
+      min-height: 100vh;
+      padding: 20px;
+      gap: 20px;
+    }
+
+    /* ─── Sidebar ───────────────────────────────────── */
+    .sidebar {
+      width: 292px;
+      flex-shrink: 0;
+      background: rgba(255,255,255,0.96);
+      backdrop-filter: blur(12px);
+      padding: 24px 20px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(20,20,19,0.1);
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .sidebar h1 {
+      font-family: 'Lora', serif;
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--anthropic-dark);
+      margin-bottom: 6px;
+      line-height: 1.3;
+    }
+
+    .sidebar .subtitle {
+      color: var(--anthropic-mid-gray);
+      font-size: 11px;
+      margin-bottom: 28px;
+      line-height: 1.55;
+    }
+
+    .control-section { margin-bottom: 26px; }
+
+    .control-section h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--anthropic-dark);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .control-section h3::before {
+      content: '•';
+      color: var(--anthropic-orange);
+    }
+
+    /* ─── Seed ──────────────────────────────────────── */
+    .seed-input {
+      width: 100%;
+      background: var(--anthropic-light);
+      padding: 10px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      margin-bottom: 10px;
+      border: 1px solid var(--anthropic-light-gray);
+      text-align: center;
+      color: var(--anthropic-dark);
+    }
+    .seed-input:focus {
+      outline: none;
+      border-color: var(--anthropic-orange);
+      box-shadow: 0 0 0 2px rgba(217,119,87,0.12);
+      background: white;
+    }
+
+    .seed-controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    /* ─── Parameter Controls ────────────────────────── */
+    .control-group { margin-bottom: 15px; }
+
+    .control-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--anthropic-dark);
+      margin-bottom: 6px;
+    }
+
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .slider-container input[type="range"] {
+      flex: 1;
+      height: 4px;
+      background: var(--anthropic-light-gray);
+      border-radius: 2px;
+      outline: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+    }
+    .slider-container input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      background: var(--anthropic-orange);
+      border-radius: 50%;
+      cursor: pointer;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+    .slider-container input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+      background: #c86641;
+    }
+    .slider-container input[type="range"]::-moz-range-thumb {
+      width: 14px; height: 14px;
+      background: var(--anthropic-orange);
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+    }
+
+    .value-display {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      color: var(--anthropic-mid-gray);
+      min-width: 42px;
+      text-align: right;
+    }
+
+    /* ─── Color Pickers ─────────────────────────────── */
+    .color-group { margin-bottom: 12px; }
+    .color-group label {
+      display: block;
+      font-size: 11px;
+      color: var(--anthropic-mid-gray);
+      margin-bottom: 4px;
+    }
+    .color-picker-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .color-picker-container input[type="color"] {
+      width: 30px; height: 30px;
+      border: 1px solid var(--anthropic-light-gray);
+      border-radius: 6px;
+      cursor: pointer;
+      background: none;
+      padding: 2px;
+    }
+    .color-value {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      color: var(--anthropic-mid-gray);
+    }
+
+    /* ─── Buttons ───────────────────────────────────── */
+    .button {
+      background: var(--anthropic-orange);
+      color: white;
+      border: none;
+      padding: 9px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.1s ease;
+      width: 100%;
+      font-family: 'Poppins', sans-serif;
+      letter-spacing: 0.01em;
+    }
+    .button:hover  { background: #c86641; transform: translateY(-1px); }
+    .button:active { transform: translateY(0); }
+    .button.secondary { background: var(--anthropic-blue); }
+    .button.secondary:hover { background: #5a8bb8; }
+    .button.tertiary  { background: var(--anthropic-green); }
+    .button.tertiary:hover  { background: #6b7b52; }
+
+    .btn-row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .btn-row .button { flex: 1; }
+
+    /* ─── Canvas Area ───────────────────────────────── */
+    .canvas-area {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 0;
+    }
+
+    #canvas-container {
+      width: 100%;
+      max-width: 1100px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(3,15,8,0.35), 0 4px 12px rgba(0,177,79,0.08);
+      background: #030F08;
+    }
+    #canvas-container canvas {
+      display: block;
+      width: 100% !important;
+      height: auto !important;
+    }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 120px 40px;
+      font-size: 14px;
+      color: rgba(0, 177, 79, 0.4);
+      font-family: 'Courier New', monospace;
+      letter-spacing: 0.08em;
+    }
+
+    /* ─── Responsive ────────────────────────────────── */
+    @media (max-width: 700px) {
+      .container { flex-direction: column; padding: 12px; }
+      .sidebar { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ═══════ SIDEBAR ═══════ -->
+  <div class="sidebar">
+    <h1>Cargo Constellations</h1>
+    <div class="subtitle">
+      Container route networks rendered as living star maps —
+      each seed reveals a unique shipping season over Hai Phong.
+    </div>
+
+    <!-- Seed -->
+    <div class="control-section">
+      <h3>Seed</h3>
+      <input type="number" id="seed-input" class="seed-input" value="888" onchange="updateSeed()">
+      <div class="seed-controls">
+        <button class="button secondary" onclick="previousSeed()">← Prev</button>
+        <button class="button secondary" onclick="nextSeed()">Next →</button>
+      </div>
+      <button class="button tertiary" onclick="randomSeedAndUpdate()">↻ Random</button>
+    </div>
+
+    <!-- Parameters -->
+    <div class="control-section">
+      <h3>Parameters</h3>
+
+      <div class="control-group">
+        <label>Network Nodes</label>
+        <div class="slider-container">
+          <input type="range" id="nodeCount" min="4" max="22" step="1" value="10"
+                 oninput="onNodeCountChange(+this.value)">
+          <span class="value-display" id="nodeCount-value">10</span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Active Containers</label>
+        <div class="slider-container">
+          <input type="range" id="particleCount" min="20" max="320" step="10" value="130"
+                 oninput="onParticleCountChange(+this.value)">
+          <span class="value-display" id="particleCount-value">130</span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Route Speed</label>
+        <div class="slider-container">
+          <input type="range" id="flowSpeed" min="0.2" max="3.0" step="0.1" value="1.0"
+                 oninput="updateParam('flowSpeed', +this.value)">
+          <span class="value-display" id="flowSpeed-value">1.0</span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Trail Persistence</label>
+        <div class="slider-container">
+          <input type="range" id="trailFade" min="3" max="80" step="1" value="11"
+                 oninput="updateParam('trailFade', +this.value)">
+          <span class="value-display" id="trailFade-value">11</span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Connection Lines</label>
+        <div class="slider-container">
+          <input type="range" id="connectionOpacity" min="0" max="80" step="2" value="14"
+                 oninput="updateParam('connectionOpacity', +this.value)">
+          <span class="value-display" id="connectionOpacity-value">14</span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Glow Intensity</label>
+        <div class="slider-container">
+          <input type="range" id="glowIntensity" min="0.2" max="2.5" step="0.1" value="1.0"
+                 oninput="updateParam('glowIntensity', +this.value)">
+          <span class="value-display" id="glowIntensity-value">1.0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Colors -->
+    <div class="control-section">
+      <h3>Colors</h3>
+
+      <div class="color-group">
+        <label>Route Glow</label>
+        <div class="color-picker-container">
+          <input type="color" id="cp-route" value="#00B14F"
+                 onchange="updateColorParam('routeColor', this.value, 'cv-route')">
+          <span class="color-value" id="cv-route">#00B14F</span>
+        </div>
+      </div>
+
+      <div class="color-group">
+        <label>Priority Containers</label>
+        <div class="color-picker-container">
+          <input type="color" id="cp-bright" value="#DFFAEB"
+                 onchange="updateColorParam('brightColor', this.value, 'cv-bright')">
+          <span class="color-value" id="cv-bright">#DFFAEB</span>
+        </div>
+      </div>
+
+      <div class="color-group">
+        <label>Node Highlight</label>
+        <div class="color-picker-container">
+          <input type="color" id="cp-port" value="#008B3E"
+                 onchange="updateColorParam('portColor', this.value, 'cv-port')">
+          <span class="color-value" id="cv-port">#008B3E</span>
+        </div>
+      </div>
+
+      <div class="color-group">
+        <label>Background</label>
+        <div class="color-picker-container">
+          <input type="color" id="cp-bg" value="#030F08"
+                 onchange="updateColorParam('bgColor', this.value, 'cv-bg')">
+          <span class="color-value" id="cv-bg">#030F08</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="control-section">
+      <h3>Actions</h3>
+      <button class="button" onclick="downloadArt()" style="margin-bottom:8px">
+        ↓ Download PNG
+      </button>
+      <button class="button secondary" onclick="resetParameters()">
+        ↺ Reset Defaults
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════ CANVAS ═══════ -->
+  <div class="canvas-area">
+    <div id="canvas-container">
+      <div class="loading">INITIALISING CARGO CONSTELLATIONS…</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  PARAMETERS
+// ═══════════════════════════════════════════════════════════════
+let params = {
+  seed:              888,
+  nodeCount:         10,
+  particleCount:     130,
+  flowSpeed:         1.0,
+  trailFade:         11,
+  connectionOpacity: 14,
+  glowIntensity:     1.0,
+  routeColor:  '#00B14F',
+  brightColor: '#DFFAEB',
+  portColor:   '#008B3E',
+  bgColor:     '#030F08',
+};
+const defaultParams = { ...params };
+
+// ═══════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════
+let nodes     = [];
+let particles = [];
+
+// ═══════════════════════════════════════════════════════════════
+//  COLOUR UTILITY
+// ═══════════════════════════════════════════════════════════════
+function hexRgb(hex) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return m ? [parseInt(m[1],16), parseInt(m[2],16), parseInt(m[3],16)] : [0,177,79];
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  P5.JS — SETUP & DRAW
+// ═══════════════════════════════════════════════════════════════
+function setup() {
+  const cnv = createCanvas(1200, 675); // 16:9 hero format
+  cnv.parent('canvas-container');
+  document.querySelector('.loading').style.display = 'none';
+  frameRate(60);
+  initializeSystem();
+}
+
+function initializeSystem() {
+  randomSeed(params.seed);
+  noiseSeed(params.seed);
+  nodes     = [];
+  particles = [];
+
+  // ─── Node placement: Poisson-disc relaxation (seeded) ───
+  const margin  = 85;
+  const W       = width  - margin * 2;
+  const H       = height - margin * 2;
+  const minDist = min(W, H) * 0.16;
+  let   tries   = 0;
+  const maxTry  = params.nodeCount * 100;
+
+  while (nodes.length < params.nodeCount && tries < maxTry) {
+    tries++;
+    const x = margin + random(W);
+    const y = margin + random(H);
+    let ok = true;
+    for (const nd of nodes) {
+      if (dist(x, y, nd.pos.x, nd.pos.y) < minDist) { ok = false; break; }
+    }
+    if (ok) {
+      // Near-edge nodes become ports (larger, with rings)
+      const edgeFrac = min(x - 0, width - x, y - 0, height - y) / (min(width,height) * 0.45);
+      const isPort   = edgeFrac < 0.28 || random() < 0.18;
+      nodes.push(new NetworkNode(x, y, isPort));
+    }
+  }
+
+  // ─── Particles: staggered t so they don't all depart at once ───
+  for (let i = 0; i < params.particleCount; i++) {
+    const p = new ContainerParticle();
+    p.t = random(1); // stagger
+    particles.push(p);
+  }
+
+  // Initial clear
+  const bg = hexRgb(params.bgColor);
+  background(bg[0], bg[1], bg[2]);
+}
+
+// ─── Main draw loop ─────────────────────────────────────────
+function draw() {
+  const bg = hexRgb(params.bgColor);
+
+  // Fade (trail persistence)
+  noStroke();
+  fill(bg[0], bg[1], bg[2], params.trailFade);
+  rect(0, 0, width, height);
+
+  // Ambient radial glow from canvas centre
+  drawAmbientGlow();
+
+  // Faint connection graph
+  if (params.connectionOpacity > 0) drawConnections();
+
+  // Particles
+  for (const p of particles) { p.update(); p.display(); }
+
+  // Nodes (always on top)
+  for (const nd of nodes) { nd.display(); }
+}
+
+// ─── Ambient centre glow ─────────────────────────────────────
+function drawAmbientGlow() {
+  const rr = hexRgb(params.routeColor);
+  const gi = params.glowIntensity;
+  const ctx = drawingContext;
+  const grd = ctx.createRadialGradient(
+    width/2, height/2, 0,
+    width/2, height/2, min(width,height) * 0.58
+  );
+  grd.addColorStop(0, `rgba(${rr[0]},${rr[1]},${rr[2]},${0.04 * gi})`);
+  grd.addColorStop(1, `rgba(${rr[0]},${rr[1]},${rr[2]},0)`);
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, 0, width, height);
+}
+
+// ─── Connection lines (curved, distance-faded) ───────────────
+function drawConnections() {
+  const rr      = hexRgb(params.routeColor);
+  const maxDist = width * 0.52;
+  noFill();
+
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const ni = nodes[i].pos;
+      const nj = nodes[j].pos;
+      const d  = dist(ni.x, ni.y, nj.x, nj.y);
+      if (d > maxDist) continue;
+
+      const falloff = 1 - d / maxDist;
+      const alpha   = params.connectionOpacity * falloff * falloff;
+      stroke(rr[0], rr[1], rr[2], alpha);
+      strokeWeight(0.6);
+
+      // Gentle quadratic arc
+      const mx = (ni.x + nj.x) / 2;
+      const my = (ni.y + nj.y) / 2;
+      const px = -(nj.y - ni.y) * 0.07;
+      const py =  (nj.x - ni.x) * 0.07;
+
+      beginShape();
+      vertex(ni.x, ni.y);
+      quadraticVertex(mx + px, my + py, nj.x, nj.y);
+      endShape();
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  NETWORK NODE
+// ═══════════════════════════════════════════════════════════════
+class NetworkNode {
+  constructor(x, y, isPort) {
+    this.pos        = createVector(x, y);
+    this.isPort     = isPort;
+    this.r          = isPort ? random(6.5, 11.5) : random(3, 5.5);
+    this.pulsePhase = random(TWO_PI);
+    this.pulseSpeed = random(0.011, 0.021);
+  }
+
+  display() {
+    const beat = 0.5 + 0.5 * sin(frameCount * this.pulseSpeed + this.pulsePhase);
+    const gi   = params.glowIntensity;
+    const rr   = hexRgb(params.routeColor);
+    const pr   = hexRgb(params.portColor);
+    const br   = hexRgb(params.brightColor);
+
+    noStroke();
+
+    // Wide outer halo
+    fill(rr[0], rr[1], rr[2], (9 + 11 * beat) * gi);
+    circle(this.pos.x, this.pos.y, this.r * 9 * (1 + 0.22 * beat));
+
+    // Inner glow (port colour for ports, route colour for depots)
+    const gc = this.isPort ? pr : rr;
+    fill(gc[0], gc[1], gc[2], (45 + 40 * beat) * gi);
+    circle(this.pos.x, this.pos.y, this.r * 3.2);
+
+    // Core
+    fill(br[0], br[1], br[2], 175 + 80 * beat);
+    circle(this.pos.x, this.pos.y, this.r);
+
+    // Port — double concentric rings
+    if (this.isPort) {
+      noFill();
+      stroke(pr[0], pr[1], pr[2], 55 * beat * gi);
+      strokeWeight(0.9);
+      circle(this.pos.x, this.pos.y, this.r * 4.5);
+      stroke(pr[0], pr[1], pr[2], 22 * beat * gi);
+      strokeWeight(0.5);
+      circle(this.pos.x, this.pos.y, this.r * 7);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CONTAINER PARTICLE
+// ═══════════════════════════════════════════════════════════════
+class ContainerParticle {
+  constructor() {
+    this.t          = 0;
+    this.currentPos = null;
+    this.prevPos    = null;
+    this.reset();
+  }
+
+  reset() {
+    if (nodes.length < 2) return;
+
+    // Pick source ≠ destination
+    this.srcIdx = floor(random(nodes.length));
+    this.dstIdx = floor(random(nodes.length));
+    let guard = 20;
+    while (this.dstIdx === this.srcIdx && guard-- > 0) {
+      this.dstIdx = floor(random(nodes.length));
+    }
+
+    const src = nodes[this.srcIdx].pos;
+    const dst = nodes[this.dstIdx].pos;
+    this.src = src.copy();
+    this.dst = dst.copy();
+
+    // Cubic Bézier: arc amplitude proportional to distance
+    const dx  = dst.x - src.x;
+    const dy  = dst.y - src.y;
+    const len = dist(src.x, src.y, dst.x, dst.y);
+    const c   = random(-0.42, 0.42);
+    const amp = constrain(len / width, 0, 0.5);
+
+    this.cp1 = createVector(
+      src.x + dx * 0.3 + dy * c * amp * 2.2,
+      src.y + dy * 0.3 - dx * c * amp * 2.2
+    );
+    this.cp2 = createVector(
+      src.x + dx * 0.7 + dy * c * amp * 2.2,
+      src.y + dy * 0.7 - dx * c * amp * 2.2
+    );
+
+    this.t = 0;
+    // Base speed: shorter routes feel crisper, long hauls feel deliberate
+    const distFactor = map(len, 0, width, 1.55, 0.65);
+    this.baseSpeed   = random(0.0030, 0.0075) * distFactor;
+
+    this.alpha    = random(110, 235);
+    this.size     = random(1.5, 3.8);
+    this.isBright = random() < 0.07; // 7% priority containers
+    this.currentPos = this.src.copy();
+    this.prevPos    = null;
+  }
+
+  // Cubic Bézier interpolation
+  _bz(p0, p1, p2, p3, t) {
+    const mt = 1 - t;
+    return mt*mt*mt*p0 + 3*mt*mt*t*p1 + 3*mt*t*t*p2 + t*t*t*p3;
+  }
+
+  update() {
+    if (nodes.length < 2) return;
+    this.prevPos = this.currentPos ? this.currentPos.copy() : null;
+
+    // flowSpeed applied here — no need to reinit particles on speed change
+    this.t += this.baseSpeed * params.flowSpeed;
+
+    if (this.t >= 1.0) { this.reset(); return; }
+
+    const x = this._bz(this.src.x, this.cp1.x, this.cp2.x, this.dst.x, this.t);
+    const y = this._bz(this.src.y, this.cp1.y, this.cp2.y, this.dst.y, this.t);
+    this.currentPos = createVector(x, y);
+  }
+
+  display() {
+    if (!this.currentPos || !this.prevPos) return;
+
+    const rr = hexRgb(params.routeColor);
+    const br = hexRgb(params.brightColor);
+    const gi = params.glowIntensity;
+
+    // Vitality: peaks at mid-journey (sine curve)
+    const vitality = sin(this.t * PI); // 0→1→0
+
+    if (this.isBright) {
+      // Priority / express container — bright white-green
+      stroke(br[0], br[1], br[2], 155 * vitality);
+      strokeWeight(this.size * 0.75);
+      noFill();
+      line(this.prevPos.x, this.prevPos.y, this.currentPos.x, this.currentPos.y);
+
+      noStroke();
+      fill(br[0], br[1], br[2], 55 * vitality * gi);
+      circle(this.currentPos.x, this.currentPos.y, this.size * 7);
+      fill(br[0], br[1], br[2], this.alpha * vitality);
+      circle(this.currentPos.x, this.currentPos.y, this.size * 1.6);
+
+    } else {
+      // Standard container — NEPO green
+      const tAlpha = this.alpha * vitality * 0.52;
+      stroke(rr[0], rr[1], rr[2], tAlpha);
+      strokeWeight(this.size * 0.44);
+      noFill();
+      line(this.prevPos.x, this.prevPos.y, this.currentPos.x, this.currentPos.y);
+
+      noStroke();
+      fill(rr[0], rr[1], rr[2], 22 * vitality * gi);
+      circle(this.currentPos.x, this.currentPos.y, this.size * 4.5);
+      fill(rr[0], rr[1], rr[2], this.alpha * (0.48 + 0.52 * vitality));
+      circle(this.currentPos.x, this.currentPos.y, this.size);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  UI HANDLERS
+// ═══════════════════════════════════════════════════════════════
+function updateParam(name, value) {
+  params[name] = value;
+  document.getElementById(name + '-value').textContent = value;
+}
+
+function onNodeCountChange(value) {
+  params.nodeCount = value;
+  document.getElementById('nodeCount-value').textContent = value;
+  initializeSystem(); // nodes changed → full reinit
+}
+
+function onParticleCountChange(value) {
+  params.particleCount = value;
+  document.getElementById('particleCount-value').textContent = value;
+  // Grow or shrink particle pool without disturbing nodes
+  while (particles.length < params.particleCount) {
+    const p = new ContainerParticle();
+    p.t = random(1);
+    particles.push(p);
+  }
+  while (particles.length > params.particleCount) particles.pop();
+}
+
+function updateColorParam(name, value, displayId) {
+  params[name] = value;
+  document.getElementById(displayId).textContent = value;
+  if (name === 'bgColor') {
+    const bg = hexRgb(value);
+    background(bg[0], bg[1], bg[2]);
+  }
+}
+
+// ─── Seed controls ───────────────────────────────────────────
+function updateSeedDisplay() {
+  document.getElementById('seed-input').value = params.seed;
+}
+function updateSeed() {
+  const v = parseInt(document.getElementById('seed-input').value, 10);
+  if (v > 0) { params.seed = v; initializeSystem(); }
+  else updateSeedDisplay();
+}
+function previousSeed()      { params.seed = Math.max(1, params.seed - 1); updateSeedDisplay(); initializeSystem(); }
+function nextSeed()          { params.seed++;                               updateSeedDisplay(); initializeSystem(); }
+function randomSeedAndUpdate() {
+  params.seed = Math.floor(Math.random() * 999999) + 1;
+  updateSeedDisplay();
+  initializeSystem();
+}
+
+// ─── Reset all ───────────────────────────────────────────────
+function resetParameters() {
+  Object.assign(params, defaultParams);
+  // Numeric sliders
+  [
+    ['nodeCount',         'nodeCount-value'],
+    ['particleCount',     'particleCount-value'],
+    ['flowSpeed',         'flowSpeed-value'],
+    ['trailFade',         'trailFade-value'],
+    ['connectionOpacity', 'connectionOpacity-value'],
+    ['glowIntensity',     'glowIntensity-value'],
+  ].forEach(([id, disp]) => {
+    document.getElementById(id).value           = params[id];
+    document.getElementById(disp).textContent   = params[id];
+  });
+  // Colour pickers
+  document.getElementById('cp-route').value  = params.routeColor;  document.getElementById('cv-route').textContent  = params.routeColor;
+  document.getElementById('cp-bright').value = params.brightColor; document.getElementById('cv-bright').textContent = params.brightColor;
+  document.getElementById('cp-port').value   = params.portColor;   document.getElementById('cv-port').textContent   = params.portColor;
+  document.getElementById('cp-bg').value     = params.bgColor;     document.getElementById('cv-bg').textContent     = params.bgColor;
+  updateSeedDisplay();
+  initializeSystem();
+}
+
+// ─── Download ────────────────────────────────────────────────
+function downloadArt() {
+  saveCanvas('cargo-constellations-seed-' + params.seed, 'png');
+}
+
+window.addEventListener('load', updateSeedDisplay);
+</script>
+</body>
+</html>

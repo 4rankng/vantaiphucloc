@@ -173,12 +173,18 @@ export async function updateDeliveredTrip(id: number, data: DeliveredTripUpdateP
   }
 }
 
-export async function validateContainer(containerNumber: string): Promise<ApiResponse<{ valid: boolean; error?: string }>> {
+export async function validateContainer(
+  containerNumber: string,
+): Promise<ApiResponse<{ valid: boolean; error?: string; suggestions?: string[] }>> {
   try {
     const res = await api.get('/delivered-trips/validate-container', {
       params: { container_number: containerNumber },
     })
-    return ok({ valid: res.data.valid, error: res.data.error })
+    return ok({
+      valid: res.data.valid,
+      error: res.data.error,
+      suggestions: res.data.suggestions ?? [],
+    })
   } catch (err) {
     return fail(err)
   }

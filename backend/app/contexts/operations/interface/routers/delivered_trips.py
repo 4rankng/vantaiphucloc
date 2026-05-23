@@ -133,12 +133,22 @@ async def validate_container(
     container_number: str = Query(..., description="Container number to validate"),
     current_user: User = Depends(get_current_user),
 ):
-    from app.utils.iso6346 import validate_container_number
+    from app.utils.iso6346 import (
+        suggest_corrections,
+        validate_container_number,
+    )
     valid, error = validate_container_number(container_number)
+    # Only compute suggestions when the format is right but the check digit is
+    # wrong — that's the recoverable case where a 1-2 digit typo is likely.
+    # For format errors there's too much guesswork (e.g. wrong length).
+    suggestions: list[str] = []
+    if not valid and error and "kiểm tra" in error:
+        suggestions = suggest_corrections(container_number, max_results=3)
     return {
         "valid": valid,
         "error": error or None,
         "normalized": _norm(container_number),
+        "suggestions": suggestions,
     }
 
 

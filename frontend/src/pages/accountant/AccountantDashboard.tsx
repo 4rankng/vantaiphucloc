@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   useMonthlyPnL,
   useVehiclePnL,
-  useDeliveredTrips,
+  useDeliveredTripsInfinite,
   useTripDailyStats,
 } from '@/hooks/use-queries'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -17,6 +17,7 @@ import { DashboardCard } from '@/components/shared/DashboardCard'
 import { TripBarChart } from '@/components/shared/TripBarChart'
 import { SortableTableHeader } from '@/components/shared/SortableTableHeader'
 import type { SortDirection } from '@/components/shared/SortableTableHeader'
+import { useInfiniteScroll, LoadMoreSentinel } from '@/components/shared/ListUtils'
 import { useMonthParams } from './use-month-params'
 import { formatCurrencyFull as fmt, type DeliveredTrip } from '@/data/domain'
 import { pad, daysInMonth, sumChiPhi, computeDelta, formatTripDate } from '@/lib/accounting-utils'
@@ -108,8 +109,18 @@ function DesktopDashboard() {
   const { data: prevPnl }    = useMonthlyPnL(prevDateFrom, prevDateTo)
   const { data: vehiclePnl } = useVehiclePnL(dateFrom, dateTo)
   const { data: dailyStats } = useTripDailyStats(dateFrom, dateTo)
-   const { data: _unmatchedTrips } = useDeliveredTrips({ dateFrom, dateTo, status: 'PENDING' })
-  const unmatchedTrips = _unmatchedTrips?.items ?? []
+  const {
+    data: _unmatchedData,
+    fetchNextPage: fetchMoreTrips,
+    hasNextPage: hasMoreTrips,
+    isFetchingNextPage: isLoadingMoreTrips,
+  } = useDeliveredTripsInfinite({ dateFrom, dateTo, matched: false })
+  const unmatchedTrips = useMemo(() => _unmatchedData?.pages.flatMap(p => p.items) ?? [], [_unmatchedData])
+  const totalPending = dailyStats?.pending ?? 0
+  const loadMoreTrips = useCallback(() => {
+    if (hasMoreTrips && !isLoadingMoreTrips) fetchMoreTrips()
+  }, [hasMoreTrips, isLoadingMoreTrips, fetchMoreTrips])
+  const tripSentinelRef = useInfiniteScroll(loadMoreTrips)
 
   // KPI values
   const revenue  = pnl?.revenue ?? 0
@@ -353,12 +364,12 @@ function DesktopDashboard() {
                 title="Chưa ghép"
                 icon={Clock}
                 right={
-                  unmatchedTrips.length > 0 ? (
+                  totalPending > 0 ? (
                     <span
                       className="flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold"
                       style={{ background: 'var(--theme-status-warning)', color: '#fff' }}
                     >
-                      {unmatchedTrips.length}
+                      {totalPending}
                     </span>
                   ) : undefined
                 }
@@ -366,7 +377,7 @@ function DesktopDashboard() {
             </div>
 
             <div>
-              {unmatchedTrips.length === 0 ? (
+              {unmatchedTrips.length === 0 && !(hasMoreTrips ?? false) ? (
                 <EmptyState icon={CheckCircle2} text="Không có chuyến chưa ghép" />
               ) : (
                 unmatchedTrips.map((trip, i) => (
@@ -378,7 +389,8 @@ function DesktopDashboard() {
                 ))
               )}
             </div>
-            {unmatchedTrips.length > 0 && (
+            <LoadMoreSentinel sentinelRef={tripSentinelRef} hasMore={hasMoreTrips ?? false} />
+            {(unmatchedTrips.length > 0 || totalPending > 0) && (
               <div
                 className="px-4 py-2.5"
                 style={{ borderTop: '1px solid var(--theme-border-light)' }}
@@ -417,8 +429,18 @@ function MobileDashboard() {
   const { data: prevPnl }    = useMonthlyPnL(prevDateFrom, prevDateTo)
   const { data: vehiclePnl } = useVehiclePnL(dateFrom, dateTo)
   const { data: dailyStats } = useTripDailyStats(dateFrom, dateTo)
-  const { data: _unmatchedTrips } = useDeliveredTrips({ dateFrom, dateTo, status: 'PENDING' })
-  const unmatchedTrips = _unmatchedTrips?.items ?? []
+  const {
+    data: _unmatchedData,
+    fetchNextPage: fetchMoreTrips,
+    hasNextPage: hasMoreTrips,
+    isFetchingNextPage: isLoadingMoreTrips,
+  } = useDeliveredTripsInfinite({ dateFrom, dateTo, matched: false })
+  const unmatchedTrips = useMemo(() => _unmatchedData?.pages.flatMap(p => p.items) ?? [], [_unmatchedData])
+  const totalPending = dailyStats?.pending ?? 0
+  const loadMoreTrips = useCallback(() => {
+    if (hasMoreTrips && !isLoadingMoreTrips) fetchMoreTrips()
+  }, [hasMoreTrips, isLoadingMoreTrips, fetchMoreTrips])
+  const tripSentinelRef = useInfiniteScroll(loadMoreTrips)
 
   const revenue  = pnl?.revenue ?? 0
   const chiPhi   = sumChiPhi(pnl)
@@ -633,12 +655,12 @@ function MobileDashboard() {
             title="Chưa ghép"
             icon={Clock}
             right={
-              unmatchedTrips.length > 0 ? (
+              totalPending > 0 ? (
                 <span
                   className="flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold"
                   style={{ background: 'var(--theme-status-warning)', color: '#fff' }}
                 >
-                  {unmatchedTrips.length}
+                  {totalPending}
                 </span>
               ) : undefined
             }
@@ -646,7 +668,7 @@ function MobileDashboard() {
         </div>
 
         <div>
-          {unmatchedTrips.length === 0 ? (
+          {unmatchedTrips.length === 0 && !(hasMoreTrips ?? false) ? (
             <EmptyState icon={CheckCircle2} text="Không có chuyến chưa ghép" />
           ) : (
             unmatchedTrips.map((trip, i) => (
@@ -658,7 +680,8 @@ function MobileDashboard() {
             ))
           )}
         </div>
-        {unmatchedTrips.length > 0 && (
+        <LoadMoreSentinel sentinelRef={tripSentinelRef} hasMore={hasMoreTrips ?? false} />
+        {(unmatchedTrips.length > 0 || totalPending > 0) && (
           <div
             className="px-4 py-2.5"
             style={{ borderTop: '1px solid var(--theme-border-light)' }}

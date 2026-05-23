@@ -101,6 +101,8 @@ export { NepoTable } from './NepoTable'
 export type { NepoColumn, NepoFooterCell, NepoTableProps } from './NepoTable'
 
 // ─── Decoration & reveal ────────────────────────────────────────────────────────
+export { CargoConstellationsCanvas } from './CargoConstellationsCanvas'
+export type { CargoConstellationsCanvasProps } from './CargoConstellationsCanvas'
 export { Reveal, RevealList } from './Reveal'
 export { Decoration, HeroDecoration, SectionRouteDecoration, LiveDot } from './Decoration'
 export { AnimatedNumber } from './AnimatedNumber'
