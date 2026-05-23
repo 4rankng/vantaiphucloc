@@ -75,7 +75,7 @@ function MobileDriverHome() {
   // Trips that match BOTH the period and the active list filter — used by the list.
   const filteredJobs = useMemo(() => {
     const byFilter = filter === 'pending'
-      ? periodJobs.filter(w => !w.matched)
+      ? periodJobs.filter(w => !w.bookedTripId)
       : periodJobs
     return [...byFilter].sort((a, b) => {
       const da = a.tripDate ?? a.createdAt.slice(0, 10)
@@ -115,11 +115,11 @@ function MobileDriverHome() {
   )
 
   const matchedCount = useMemo(() =>
-    periodJobs.filter(w => w.matched).length,
+    periodJobs.filter(w => w.bookedTripId).length,
     [periodJobs],
   )
   const pendingCount = useMemo(() =>
-    periodJobs.filter(w => !w.matched).length,
+    periodJobs.filter(w => !w.bookedTripId).length,
     [periodJobs],
   )
 

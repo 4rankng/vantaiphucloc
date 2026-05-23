@@ -111,7 +111,6 @@ class CreateDeliveredTrip:
             driver_salary=0,
             allowance=0,
             trip_date=data.trip_date if data.trip_date else date.today(),
-            matched=False,
         )
 
         saved = await self.repo.add(w)
@@ -153,7 +152,6 @@ class UpdateDeliveredTrip:
             data.revenue = None
             data.driver_salary = None
             data.allowance = None
-            data.matched = None
 
         if data.client_id is not None:
             w.client_id = data.client_id
@@ -181,8 +179,6 @@ class UpdateDeliveredTrip:
             w.driver_salary = int(data.driver_salary)
         if data.allowance is not None:
             w.allowance = int(data.allowance)
-        if data.matched is not None:
-            w.matched = data.matched
         w.updated_at = _utcnow()
 
         await self.repo.save(w)
@@ -232,7 +228,6 @@ class BatchCreateDeliveredTrips:
                             cont_type=item.cont_type,
                             revenue=0, driver_salary=0,
                             allowance=0,
-                            matched=False,
                         )
                         saved = await self.repo.add(w)
                         saved = await self.repo.save(saved)

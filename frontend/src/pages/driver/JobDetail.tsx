@@ -82,7 +82,7 @@ export function JobDetail() {
 
   const date = new Date(job.tripDate ?? job.createdAt)
   const dateStr = date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
-  const canEdit = !job.matched
+  const canEdit = !job.bookedTripId
   const contTypeLabel = job.contType ?? null
   const workTypeLabel = getWorkTypeLabel(job.workType) ?? job.workType ?? null
 
@@ -107,7 +107,7 @@ export function JobDetail() {
           <p className="text-base font-bold" style={{ color: 'var(--theme-text-primary)' }}>
             Chi tiết chuyến
           </p>
-          {job.matched ? (
+          {job.bookedTripId ? (
             <span
               className="flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full"
               style={{ background: 'var(--theme-status-success-light)', color: 'var(--theme-status-success)' }}

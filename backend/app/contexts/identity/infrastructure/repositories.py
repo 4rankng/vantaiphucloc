@@ -160,7 +160,7 @@ class SqlUserRepository(UserRepository):
         result = await self._session.execute(
             select(func.count(DeliveredTrip.id))
             .where(DeliveredTrip.driver_id == int(user_id))
-            .where(~DeliveredTrip.matched)
+            .where(DeliveredTrip.booked_trip_id.is_(None))
         )
         return (result.scalar() or 0) > 0
 

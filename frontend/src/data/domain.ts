@@ -166,9 +166,7 @@ export interface DeliveredTrip {
   tripDate?: string | null
   createdAt: string
   updatedAt: string
-  matched: boolean
-  matchedTripCount?: number
-  bookedTripId?: number | null
+  bookedTripId: number | null
   pendingSync?: boolean
 }
 

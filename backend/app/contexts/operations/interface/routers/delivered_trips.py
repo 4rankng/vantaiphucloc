@@ -78,7 +78,7 @@ def _wo_to_out(w: DeliveredTrip, partners, drivers, locations, vendors) -> Deliv
         driver_salary=w.driver_salary,
         allowance=w.allowance,
         trip_date=w.trip_date,
-        matched=w.matched,
+        booked_trip_id=w.booked_trip_id,
         created_at=w.created_at,
         updated_at=w.updated_at,
     )
@@ -297,7 +297,6 @@ async def update_delivered_trip(
                 revenue=body.revenue,
                 driver_salary=body.driver_salary,
                 allowance=body.allowance,
-                matched=body.matched,
             ),
             _user_ctx(current_user),
         )

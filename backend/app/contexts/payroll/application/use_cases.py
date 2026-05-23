@@ -62,7 +62,7 @@ class GetDriverEarnings:
                     func.coalesce(func.sum(DeliveredTrip.allowance), 0),
                 ).where(
                     DeliveredTrip.driver_id == driver_id,
-                    DeliveredTrip.matched == True,
+                    DeliveredTrip.booked_trip_id.isnot(None),
                     func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= start_date,
                     func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= end_date,
                 )
@@ -336,7 +336,7 @@ class GetMonthlyPnL:
                     func.coalesce(func.sum(DeliveredTrip.driver_salary), 0),
                     func.coalesce(func.sum(DeliveredTrip.allowance), 0),
                 ).where(
-                    DeliveredTrip.matched == True,
+                    DeliveredTrip.booked_trip_id.isnot(None),
                     func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
                     >= start_date,
                     func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
@@ -352,7 +352,7 @@ class GetMonthlyPnL:
             await self.session.execute(
                 select(DeliveredTrip.driver_id)
                 .where(
-                    DeliveredTrip.matched == True,
+                    DeliveredTrip.booked_trip_id.isnot(None),
                     func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
                     >= start_date,
                     func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
@@ -398,7 +398,7 @@ class GetMonthlyPnL:
                     DeliveredTrip.cont_type,
                 )
                 .where(
-                    DeliveredTrip.matched == True,
+                    DeliveredTrip.booked_trip_id.isnot(None),
                     DeliveredTrip.vendor_id.isnot(None),
                     func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at))
                     >= start_date,

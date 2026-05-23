@@ -29,7 +29,7 @@ async def generate_salary_excel(
     # Find matched DeliveredTrips in the date range, grouped by driver
     result = await db.execute(
         select(DeliveredTrip).where(
-            DeliveredTrip.matched == True,
+            DeliveredTrip.booked_trip_id.isnot(None),
             DeliveredTrip.trip_date >= start_dt,
             DeliveredTrip.trip_date <= end_dt,
         ).order_by(DeliveredTrip.driver_id)

@@ -180,7 +180,10 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
                 ((DeliveredTripORM.trip_date == None) & (DeliveredTripORM.created_at <= date_to))  # noqa: E711
             )
         if matched is not None:
-            q = q.where(DeliveredTripORM.matched == matched)
+            if matched:
+                q = q.where(DeliveredTripORM.booked_trip_id.isnot(None))
+            else:
+                q = q.where(DeliveredTripORM.booked_trip_id.is_(None))
         total = await self.session.scalar(
             select(func.count()).select_from(q.subquery())
         ) or 0
@@ -188,7 +191,7 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
         _SORTABLE_DIRECT = {
             'trip_date': DeliveredTripORM.trip_date,
             'vessel': DeliveredTripORM.vessel,
-            'matched': DeliveredTripORM.matched,
+            'matched': DeliveredTripORM.booked_trip_id,
             'revenue': DeliveredTripORM.revenue,
             'created_at': DeliveredTripORM.created_at,
             'cont_number': DeliveredTripORM.cont_number,
@@ -244,15 +247,3 @@ class SqlDeliveredTripRepository(DeliveredTripRepository):
         delivered_trip_to_orm(w, existing)
         await self.session.flush()
         return await self._hydrate(existing)
-
-    async def set_matched_bulk(
-        self, ids: Sequence[DeliveredTripId], matched: bool
-    ) -> None:
-        if not ids:
-            return
-        rows = (await self.session.execute(
-            select(DeliveredTripORM).where(DeliveredTripORM.id.in_([int(i) for i in ids]))
-        )).scalars().all()
-        for w in rows:
-            w.matched = matched
-        await self.session.flush()

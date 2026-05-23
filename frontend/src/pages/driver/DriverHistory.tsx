@@ -16,13 +16,13 @@ export function DriverHistory() {
   const [filter, setFilter] = useState<FilterValue>('ALL')
 
   const filtered = useMemo(() =>
-    filter === 'ALL' ? deliveredTrips : deliveredTrips.filter(w => !w.matched),
+    filter === 'ALL' ? deliveredTrips : deliveredTrips.filter(w => !w.bookedTripId),
     [deliveredTrips, filter],
   )
 
   const counts: Record<FilterValue, number> = useMemo(() => ({
     ALL: deliveredTrips.length,
-    PENDING: deliveredTrips.filter(w => !w.matched).length,
+    PENDING: deliveredTrips.filter(w => !w.bookedTripId).length,
   }), [deliveredTrips])
 
   const totalEarnings = useMemo(() =>

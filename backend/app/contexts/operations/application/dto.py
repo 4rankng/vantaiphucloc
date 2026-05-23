@@ -119,7 +119,6 @@ class DeliveredTripUpdateInput:
     revenue: int | None = None
     driver_salary: int | None = None
     allowance: int | None = None
-    matched: bool | None = None
 
 
 @dataclass

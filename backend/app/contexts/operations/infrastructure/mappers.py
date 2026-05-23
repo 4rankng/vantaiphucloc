@@ -73,7 +73,7 @@ def delivered_trip_to_domain(orm: DeliveredTripORM) -> DeliveredTrip:
         cont_number=orm.cont_number,
         cont_type=orm.cont_type,
         vehicle_plate=orm.vehicle_plate,
-        matched=orm.matched,
+        booked_trip_id=orm.booked_trip_id,
         revenue=int(orm.revenue or 0),
         driver_salary=int(orm.driver_salary or 0),
         allowance=int(orm.allowance or 0),
@@ -100,7 +100,7 @@ def delivered_trip_to_orm(
     orm.cont_number = w.cont_number
     orm.cont_type = w.cont_type
     orm.vehicle_plate = w.vehicle_plate
-    orm.matched = w.matched
+    orm.booked_trip_id = w.booked_trip_id
     orm.revenue = int(w.revenue)
     orm.driver_salary = int(w.driver_salary)
     orm.allowance = int(w.allowance)

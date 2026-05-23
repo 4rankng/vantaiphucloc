@@ -47,7 +47,7 @@ async def get_ai_match_suggestion(db: AsyncSession, delivered_trip_id: int) -> d
     wo = (await db.execute(
         select(DeliveredTripORM)
         .where(DeliveredTripORM.id == delivered_trip_id)
-        .where(DeliveredTripORM.matched == False)
+        .where(DeliveredTripORM.booked_trip_id.is_(None))
     )).scalar_one_or_none()
 
     if not wo:

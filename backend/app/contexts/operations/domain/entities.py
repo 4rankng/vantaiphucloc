@@ -59,13 +59,17 @@ class DeliveredTrip:
     cont_number: str | None = None
     cont_type: str | None = None
     vehicle_plate: str | None = None
-    matched: bool = False
+    booked_trip_id: int | None = None
     revenue: Money = 0
     driver_salary: Money = 0
     allowance: Money = 0
     trip_date: object | None = None
     created_at: datetime = field(default_factory=_utcnow)
     updated_at: datetime = field(default_factory=_utcnow)
+
+    @property
+    def matched(self) -> bool:
+        return self.booked_trip_id is not None
 
     def apply_pricing(
         self,

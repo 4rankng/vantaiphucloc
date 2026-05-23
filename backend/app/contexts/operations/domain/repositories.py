@@ -77,8 +77,3 @@ class DeliveredTripRepository(ABC):
 
     @abstractmethod
     async def save(self, w: DeliveredTrip) -> DeliveredTrip: ...
-
-    @abstractmethod
-    async def set_matched_bulk(
-        self, ids: Sequence[DeliveredTripId], matched: bool
-    ) -> None: ...

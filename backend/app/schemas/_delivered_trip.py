@@ -53,7 +53,6 @@ class DeliveredTripUpdate(BaseModel):
     revenue: int | None = None
     driver_salary: int | None = None
     allowance: int | None = None
-    matched: bool | None = None
 
 
 class DeliveredTripOut(BaseModel):
@@ -73,7 +72,7 @@ class DeliveredTripOut(BaseModel):
     driver_salary: int
     allowance: int
     trip_date: date | None = None
-    matched: bool
+    booked_trip_id: int | None = None
     created_at: datetime
     updated_at: datetime
 

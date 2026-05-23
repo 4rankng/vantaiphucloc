@@ -1,7 +1,4 @@
 import { useState, useEffect } from 'react'
-import {
-  Sparkles,
-} from 'lucide-react'
 import { Drawer } from '@/components/shared/Drawer'
 import { Pill, type PillVariant } from '@/components/shared/Pill'
 import { Button } from '@/components/ui'
@@ -41,7 +38,7 @@ export function DeliveredTripDetailDrawer({
   const { data: locations = [] } = useLocations()
 
   const { data: fetchedBookedTrip } = useBookedTrip(
-    trip.matched ? trip.bookedTripId ?? null : null,
+    trip.bookedTripId,
   )
   const [bookedTrip, setBookedTrip] = useState<BookedTrip | null>(null)
 
@@ -88,8 +85,8 @@ export function DeliveredTripDetailDrawer({
         title={
           <>
             <span>Chuyến đã đi</span>
-            <Pill variant={statusPillVariant(trip.matched)}>
-              {statusLabel(trip.matched)}
+            <Pill variant={statusPillVariant(!!trip.bookedTripId)}>
+              {statusLabel(!!trip.bookedTripId)}
             </Pill>
           </>
         }
@@ -182,7 +179,7 @@ export function DeliveredTripDetailDrawer({
             </div>
           </div>
 
-          {!trip.matched && (
+          {!trip.bookedTripId && (
             <div className="pt-2 flex justify-end">
               <button
                 onClick={() => setShowAISuggest(true)}
@@ -204,7 +201,7 @@ export function DeliveredTripDetailDrawer({
             </div>
           )}
 
-          {trip.matched && bookedTrip && (
+          {trip.bookedTripId && bookedTrip && (
             <div className="space-y-2 pt-2" style={{ borderTop: '1px solid var(--line)' }}>
               <p
                 className="text-[12px] m-0 font-medium"

@@ -230,7 +230,7 @@ async def auto_match_preview(
     Does NOT commit any changes.
     """
     # Load unmatched delivered trips
-    wo_query = select(DeliveredTripORM).where(DeliveredTripORM.matched == False)  # noqa: E712
+    wo_query = select(DeliveredTripORM).where(DeliveredTripORM.booked_trip_id.is_(None))
     if date_from:
         wo_query = wo_query.where(
             or_(
@@ -384,7 +384,7 @@ async def confirm_matches(
         if not to:
             errors.append(f"BookedTrip#{to_id} not found")
             continue
-        if wo.matched:
+        if wo.booked_trip_id is not None:
             errors.append(f"DeliveredTrip#{wo_id} already matched")
             continue
         if to.matched:
@@ -406,7 +406,6 @@ async def confirm_matches(
                 elif to_val and not wo_val:
                     setattr(wo, field, to_val)
 
-        wo.matched = True
         wo.booked_trip_id = to.id
         to.matched = True
         matched_count += 1

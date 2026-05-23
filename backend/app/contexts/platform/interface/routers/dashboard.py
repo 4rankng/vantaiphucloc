@@ -53,7 +53,7 @@ async def get_dashboard_summary(
 
     # Revenue: sum of revenue from matched DeliveredTrips
     revenue_query = select(func.coalesce(func.sum(DeliveredTrip.revenue), 0)).where(
-        DeliveredTrip.matched == True  # noqa: E712
+        DeliveredTrip.booked_trip_id.isnot(None)
     )
     if parsed_from:
         revenue_query = revenue_query.where(
@@ -95,7 +95,7 @@ async def get_dashboard_summary(
 
     # outstanding_debt: confirmed receivables (matched DeliveredTrips)
     debt_query = select(func.coalesce(func.sum(DeliveredTrip.revenue), 0)).where(
-        DeliveredTrip.matched == True  # noqa: E712
+        DeliveredTrip.booked_trip_id.isnot(None)
     )
     if parsed_from:
         debt_query = debt_query.where(
@@ -125,7 +125,7 @@ async def get_dashboard_summary(
         )
         .join(Vehicle, Vehicle.id == VehicleDriver.vehicle_id, isouter=True)
         .join(DeliveredTrip, DeliveredTrip.driver_id == User.id)
-        .where(DeliveredTrip.matched == True)
+        .where(DeliveredTrip.booked_trip_id.isnot(None))
         .group_by(User.id, User.username, Vehicle.plate)
     )
     driver_salary_summary = [
@@ -141,7 +141,7 @@ async def get_dashboard_summary(
 
     unmatched_q = await db.execute(
         select(func.count(DeliveredTrip.id)).where(
-            DeliveredTrip.matched == False
+            DeliveredTrip.booked_trip_id.is_(None)
         )
     )
     unmatched_delivered_trip_count = unmatched_q.scalar() or 0
@@ -214,7 +214,7 @@ async def get_kpi_trends(
         .where(
             wo_day >= start_date,
             wo_day <= parsed_end,
-            DeliveredTrip.matched == False,
+            DeliveredTrip.booked_trip_id.is_(None),
         )
         .group_by(wo_day)
     )).all()
@@ -241,7 +241,7 @@ async def get_kpi_trends(
         .where(
             wo_day >= start_date,
             wo_day <= parsed_end,
-            DeliveredTrip.matched == True,
+            DeliveredTrip.booked_trip_id.isnot(None),
         )
         .group_by(wo_day)
     )).all()
@@ -254,7 +254,7 @@ async def get_kpi_trends(
             func.coalesce(func.sum(DeliveredTrip.revenue), 0),
         )
         .where(
-            DeliveredTrip.matched == True,  # noqa: E712
+            DeliveredTrip.booked_trip_id.isnot(None),  # noqa: E712
             func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= start_date,
             func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= parsed_end,
         )
@@ -355,7 +355,7 @@ async def get_vehicle_pnl(
         )
         .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
         .where(
-            DeliveredTrip.matched == True,
+            DeliveredTrip.booked_trip_id.isnot(None),
             Vehicle.id.in_(list(vehicles.keys())),
             func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= df,
             func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= dt,
@@ -393,7 +393,7 @@ async def get_vehicle_pnl(
         )
         .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
         .where(
-            DeliveredTrip.matched == True,
+            DeliveredTrip.booked_trip_id.isnot(None),
             Vehicle.id.in_(list(vehicles.keys())),
             func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= df,
             func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= dt,
@@ -414,7 +414,7 @@ async def get_vehicle_pnl(
         )
         .join(Vehicle, Vehicle.plate == DeliveredTrip.vehicle_plate)
         .where(
-            DeliveredTrip.matched == True,
+            DeliveredTrip.booked_trip_id.isnot(None),
             Vehicle.id.in_(list(vehicles.keys())),
             func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) >= df,
             func.coalesce(DeliveredTrip.trip_date, func.date(DeliveredTrip.created_at)) <= dt,
@@ -542,7 +542,7 @@ async def get_trip_daily_stats(
 
     stmt = select(
         DeliveredTrip.trip_date,
-        DeliveredTrip.matched,
+        DeliveredTrip.booked_trip_id,
         func.count(DeliveredTrip.id),
         func.coalesce(func.sum(DeliveredTrip.revenue), 0),
     ).where(
@@ -554,7 +554,7 @@ async def get_trip_daily_stats(
         stmt = stmt.where(DeliveredTrip.client_id == client_id)
 
     rows = (await db.execute(
-        stmt.group_by(DeliveredTrip.trip_date, DeliveredTrip.matched)
+        stmt.group_by(DeliveredTrip.trip_date, DeliveredTrip.booked_trip_id)
     )).all()
 
     date_map: dict[str, dict[str, int]] = {}
@@ -564,11 +564,11 @@ async def get_trip_daily_stats(
     internal_count = 0
     vendor_count = 0
     total_revenue = 0
-    for trip_date, is_matched, cnt, rev in rows:
+    for trip_date, booked_id, cnt, rev in rows:
         ds = str(trip_date) if not hasattr(trip_date, 'isoformat') else trip_date.isoformat()
         bucket = date_map.setdefault(ds, {"matched": 0, "pending": 0})
         total += cnt
-        if is_matched:
+        if booked_id is not None:
             bucket["matched"] += cnt
             matched += cnt
             total_revenue += int(rev)

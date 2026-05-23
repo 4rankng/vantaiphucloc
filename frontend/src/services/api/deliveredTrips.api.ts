@@ -14,7 +14,7 @@ export interface SuggestedRoute {
   source: 'frequent' | 'recent' | 'popular'
 }
 
-export type DeliveredTripSortBy = 'trip_date' | 'vessel' | 'matched' | 'revenue' | 'created_at' | 'client_code' | 'vehicle_plate' | 'pickup_name' | 'dropoff_name' | 'cont_number' | 'cont_type' | 'work_type'
+export type DeliveredTripSortBy = 'trip_date' | 'vessel' | 'booked_trip_id' | 'revenue' | 'created_at' | 'client_code' | 'vehicle_plate' | 'pickup_name' | 'dropoff_name' | 'cont_number' | 'cont_type' | 'work_type'
 export type SortOrder = 'asc' | 'desc'
 
 interface DeliveredTripFilters {
@@ -59,7 +59,6 @@ export interface DeliveredTripUpdatePayload {
   revenue?: number
   driverSalary?: number
   allowance?: number
-  matched?: boolean | null
 }
 
 export async function getDeliveredTrip(id: number): Promise<ApiResponse<DeliveredTrip>> {
@@ -133,7 +132,7 @@ export async function createDeliveredTrip(
         driverSalary: 0,
         allowance: 0,
         createdAt: new Date().toISOString(),
-        matched: false,
+        bookedTripId: null,
         pendingSync: true,
       } satisfies DeliveredTrip)
     }

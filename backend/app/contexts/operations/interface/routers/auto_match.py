@@ -182,23 +182,18 @@ async def unmatch_endpoint(
     if not wo:
         from fastapi import HTTPException
         raise HTTPException(404, "Delivered trip not found")
-    if not wo.matched:
-        from fastapi import HTTPException
-        raise HTTPException(400, "Trip is not matched")
     if not wo.booked_trip_id:
         from fastapi import HTTPException
-        raise HTTPException(400, "No linked booked trip")
-
-    to = (await db.execute(
-        select(BookedTrip).where(BookedTrip.id == wo.booked_trip_id)
-    )).scalar_one_or_none()
-
+        raise HTTPException(400, "Trip is not matched")
     booked_id = wo.booked_trip_id
-    wo.matched = False
     wo.booked_trip_id = None
 
-    if to:
-        to.matched = False
+    if booked_id:
+        to = (await db.execute(
+            select(BookedTrip).where(BookedTrip.id == booked_id)
+        )).scalar_one_or_none()
+        if to:
+            to.matched = False
 
     await db.flush()
     return UnmatchResponse(ok=True, booked_trip_id=booked_id)

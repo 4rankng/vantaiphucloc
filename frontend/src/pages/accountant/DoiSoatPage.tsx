@@ -39,6 +39,8 @@ import {
 
 type StatusFilter = 'ALL' | 'PENDING' | 'MATCHED'
 
+const AI_ANIMATION_TIME = 0 // ms — minimum loading animation duration before showing results
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export function DoiSoatPage() {
@@ -59,19 +61,28 @@ export function DoiSoatPage() {
   // Auto-match
   const [showAutoMatchDate, setShowAutoMatchDate] = useState(false)
   const [showAutoMatch, setShowAutoMatch] = useState(false)
+  const [autoMatchReady, setAutoMatchReady] = useState(false)
   const autoMatchPreview = useAutoMatchPreview()
   const confirmMatch = useConfirmAutoMatch()
   const unmatch = useUnmatchTrip()
 
   const handleAutoMatchConfirm = useCallback(
     (from: string, to: string) => {
+      // Immediately swap dialogs — results dialog opens in loading state
+      setShowAutoMatchDate(false)
+      setShowAutoMatch(true)
+      setAutoMatchReady(false)
+
+      const startedAt = Date.now()
       autoMatchPreview.mutate(
         { dateFrom: from, dateTo: to },
         {
           onSuccess: () => {
-            setShowAutoMatchDate(false)
-            setShowAutoMatch(true)
+            const elapsed = Date.now() - startedAt
+            const remaining = Math.max(0, AI_ANIMATION_TIME - elapsed)
+            setTimeout(() => setAutoMatchReady(true), remaining)
           },
+          onError: () => setAutoMatchReady(true),
         }
       )
     },
@@ -295,7 +306,7 @@ export function DoiSoatPage() {
       header: '',
       width: 44,
       render: (t) => {
-        if (!t.matched) return null
+        if (!t.bookedTripId) return null
         return (
           <button
             title="Bỏ ghép chuyến này"
@@ -304,13 +315,28 @@ export function DoiSoatPage() {
               if (unmatch.isPending) return
               unmatch.mutate(t.id)
             }}
-            className="p-1 rounded hover:bg-red-50 transition-colors"
-            style={{ color: 'var(--ink-4)' }}
             disabled={unmatch.isPending}
+            className="group relative flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-200 ease-out hover:scale-110 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              color: 'var(--ink-4)',
+              background: 'transparent',
+            }}
+            onMouseEnter={e => {
+              const el = e.currentTarget
+              el.style.color = '#d97706'
+              el.style.background = 'rgba(245,158,11,0.10)'
+              el.style.boxShadow = '0 0 0 1.5px rgba(245,158,11,0.25), 0 2px 8px rgba(245,158,11,0.15)'
+            }}
+            onMouseLeave={e => {
+              const el = e.currentTarget
+              el.style.color = 'var(--ink-4)'
+              el.style.background = 'transparent'
+              el.style.boxShadow = 'none'
+            }}
           >
             {unmatch.isPending && unmatch.variables === t.id
-              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              : <Unlink className="h-3.5 w-3.5" />}
+              ? <Loader2 className="h-4 w-4 animate-spin" style={{ color: '#d97706' }} />
+              : <Unlink className="h-4 w-4 transition-transform duration-200 group-hover:rotate-12" />}
           </button>
         )
       },
@@ -428,7 +454,7 @@ export function DoiSoatPage() {
                 {autoMatchPreview.isPending
                   ? <Loader2 className="h-3 w-3 animate-spin" />
                   : null}
-                AI
+                AI Ghép chuyến
               </span>
 
               {/* inner white ring for depth */}
@@ -479,7 +505,7 @@ export function DoiSoatPage() {
             sortOrder={sortOrder}
             onSort={handleSort}
             onRowClick={(t) => setMatchTarget(t)}
-            rowClassName={(t) => t.matched ? 'row-matched' : 'row-pending'}
+            rowClassName={(t) => t.bookedTripId ? 'row-matched' : 'row-pending'}
             empty={
               <div className="py-10">
                 <EmptyState
@@ -524,13 +550,14 @@ export function DoiSoatPage() {
         />
       )}
 
-      {showAutoMatch && autoMatchPreview.data && (
+      {showAutoMatch && (
         <AutoMatchDialog
           open={showAutoMatch}
-          onClose={() => setShowAutoMatch(false)}
-          candidates={autoMatchPreview.data.candidates}
-          unmatchedCount={autoMatchPreview.data.unmatchedCount}
-          scannedCount={autoMatchPreview.data.scannedCount}
+          onClose={() => { setShowAutoMatch(false); setAutoMatchReady(false) }}
+          candidates={autoMatchReady && autoMatchPreview.data ? autoMatchPreview.data.candidates : []}
+          unmatchedCount={autoMatchReady && autoMatchPreview.data ? autoMatchPreview.data.unmatchedCount : 0}
+          scannedCount={autoMatchReady && autoMatchPreview.data ? autoMatchPreview.data.scannedCount : 0}
+          isLoading={!autoMatchReady}
           isConfirming={confirmMatch.isPending}
           onConfirm={handleConfirmMatch}
         />

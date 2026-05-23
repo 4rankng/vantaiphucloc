@@ -391,7 +391,6 @@ class ReconciliationImportService:
             cont_number=row.container_number,
             cont_type=row.cont_type or "E20",
             trip_date=row.trip_date,
-            matched=False,
             revenue=0,
             driver_salary=row.amount or 0,
             allowance=0,
@@ -425,7 +424,7 @@ class ReconciliationImportService:
             select(DeliveredTripORM).where(DeliveredTripORM.id == delivered_trip_id)
         )).scalar_one_or_none()
         if delivered_orm:
-            delivered_orm.matched = True
+            delivered_orm.booked_trip_id = booked_orm.id
 
         await self.session.flush()
 

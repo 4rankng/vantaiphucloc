@@ -140,7 +140,7 @@ function DriverCard({ wo, onClick }: { wo: DeliveredTrip; onClick: () => void })
           </span>
         ) : (
           <span className="text-[11px] font-medium whitespace-nowrap shrink-0" style={{ color: 'var(--theme-text-muted)' }}>
-            {!wo.matched ? 'Chờ ghép' : '—'}
+            {!wo.bookedTripId ? 'Chờ ghép' : '—'}
           </span>
         )}
       </div>
@@ -163,7 +163,7 @@ function DriverCard({ wo, onClick }: { wo: DeliveredTrip; onClick: () => void })
           {dropoff || '—'}
         </p>
         <div className="shrink-0 relative z-10">
-          <StatusPill matched={wo.matched} variant="driver" compact />
+          <StatusPill matched={!!wo.bookedTripId} variant="driver" compact />
         </div>
       </div>
     </button>
@@ -181,7 +181,7 @@ function AccountantCard({ wo }: { wo: DeliveredTrip }) {
     >
       <div className="flex items-start justify-between gap-3 mb-2">
         <ContainerChip wo={wo} />
-        <StatusPill matched={wo.matched} variant="accountant" />
+        <StatusPill matched={!!wo.bookedTripId} variant="accountant" />
       </div>
 
       <p className="text-sm font-bold leading-snug" style={{ color: 'var(--theme-text-primary)' }}>

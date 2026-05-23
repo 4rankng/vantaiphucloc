@@ -363,7 +363,6 @@ class DeliveredTrip(AuditableMixin, Base):
     cont_number = Column(String(50), nullable=True, index=True)
     cont_type = Column(String(10), nullable=True)
     vehicle_plate = Column(String(20), nullable=True)
-    matched = Column(Boolean, nullable=False, default=False)
     booked_trip_id = Column(Integer, ForeignKey("booked_trips.id"), nullable=True, index=True)
     revenue = Column(Integer, nullable=False, default=0)
     driver_salary = Column(Integer, nullable=False, default=0)
@@ -375,7 +374,6 @@ class DeliveredTrip(AuditableMixin, Base):
     )
 
     __table_args__ = (
-        Index("ix_delivered_trips_matched", "matched"),
         Index("ix_delivered_trips_created_at", "created_at"),
     )
 

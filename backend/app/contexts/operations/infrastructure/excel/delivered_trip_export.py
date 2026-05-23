@@ -27,7 +27,10 @@ async def generate_delivered_trips_excel(
     if date_to:
         query = query.where(DeliveredTrip.created_at <= date_to)
     if matched is not None:
-        query = query.where(DeliveredTrip.matched == matched)
+        if matched:
+            query = query.where(DeliveredTrip.booked_trip_id.isnot(None))
+        else:
+            query = query.where(DeliveredTrip.booked_trip_id.is_(None))
 
     result = await db.execute(query)
     delivered_trips = result.scalars().all()
@@ -59,7 +62,6 @@ async def generate_delivered_trips_excel(
         cell.fill = header_fill
         cell.alignment = Alignment(horizontal="center")
 
-    match_labels = {True: "Đã đối soát", False: "Chờ ghép"}
     for wo in delivered_trips:
         plate = wo.vehicle_plate or ""
         ws.append([
@@ -70,7 +72,7 @@ async def generate_delivered_trips_excel(
             wo.vessel or "",
             wo.cont_number or "", wo.cont_type or "",
             wo.driver_salary, wo.allowance, wo.driver_salary + wo.allowance,
-            match_labels.get(wo.matched, "Chờ ghép"),
+            "Đã đối soát" if wo.booked_trip_id else "Chờ ghép",
             wo.created_at.date() if wo.created_at else "",
         ])
 
