@@ -26,6 +26,8 @@ export const AccountantVendors    = lazy(() => import('@/pages/accountant/Vendor
 export const AccountantDrivers    = lazy(() => import('@/pages/accountant/DriversPage').then(m => ({ default: m.DriversPage })))
 export const AccountantTransporters = lazy(() => import('@/pages/accountant/TransportersPage').then(m => ({ default: m.TransportersPage })))
 export const AccountantSettings   = lazy(() => import('@/pages/accountant/SettingsPage').then(m => ({ default: m.SettingsPage })))
+export const SalaryPeriodSettings = lazy(() => import('@/pages/accountant/SalaryPeriodSettings').then(m => ({ default: m.SalaryPeriodSettings })))
+export const RoutePricingPage     = lazy(() => import('@/pages/accountant/RoutePricingPage').then(m => ({ default: m.RoutePricingPage })))
 export const AccountantDoiSoat    = lazy(() => import('@/pages/accountant/DoiSoatPage').then(m => ({ default: m.DoiSoatPage })))
 export const AccountantExpenses   = lazy(() => import('@/pages/accountant/VehicleExpensesPage').then(m => ({ default: m.VehicleExpensesPage })))
 export const AccountantSalary     = lazy(() => import('@/pages/accountant/SalaryPage').then(m => ({ default: m.SalaryPage })))

@@ -26,6 +26,7 @@ import * as pnlApi from './pnl.api'
 import * as vehicleExpensesApi from './vehicleExpenses.api'
 import * as vehiclesApi from './vehicles.api'
 import * as vehicleDriversApi from './vehicleDrivers.api'
+import * as routePricingsApi from './routePricings.api'
 
 export const apiClient = {
   // Clients
@@ -154,6 +155,12 @@ export const apiClient = {
 
   // Audit Logs
   getAuditLogs: auditApi.getAuditLogs,
+
+  // Route Pricings (Cước tuyến)
+  getRoutePricings: routePricingsApi.getRoutePricings,
+  createRoutePricing: routePricingsApi.createRoutePricing,
+  updateRoutePricing: routePricingsApi.updateRoutePricing,
+  deleteRoutePricing: routePricingsApi.deleteRoutePricing,
 }
 
 // Re-export types from salary.api

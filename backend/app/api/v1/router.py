@@ -14,6 +14,7 @@ from app.contexts.customer_pricing.interface import (
     contacts_router,
     pricings_router,
 )
+from app.contexts.route_pricing.interface import route_pricings_router
 from app.contexts.operations.interface import (
     imports_router,
     suggested_routes_router,
@@ -23,7 +24,12 @@ from app.contexts.operations.interface import (
     vendor_reconciliation_router,
     auto_match_router,
 )
-from app.contexts.fleet.interface import drivers_router, vehicle_expenses_router, vehicle_drivers_router, vehicles_router
+from app.contexts.fleet.interface import (
+    drivers_router,
+    vehicle_expenses_router,
+    vehicle_drivers_router,
+    vehicles_router,
+)
 from app.contexts.billing.interface import reports_router
 from app.contexts.payroll.interface import (
     salary_config_router,
@@ -43,6 +49,7 @@ router.include_router(contacts_router)
 router.include_router(locations_router)
 router.include_router(location_aliases_router)
 router.include_router(pricings_router)
+router.include_router(route_pricings_router)
 router.include_router(delivered_trips_router)
 router.include_router(suggested_routes_router)
 router.include_router(booked_trips_router)
@@ -114,7 +121,11 @@ async def get_job_status(
     info = await job.info()
     result = None
     if info and hasattr(info, "result") and info.result is not None:
-        result = info.result if isinstance(info.result, dict) else {"value": str(info.result)}
+        result = (
+            info.result
+            if isinstance(info.result, dict)
+            else {"value": str(info.result)}
+        )
 
     return JobStatusResponse(
         job_id=job_id,

@@ -75,6 +75,8 @@ export function createAppRouter() {
             { path: 'settlement',            element: ebc('AccountantSettlement', h(Lazy, { component: R.AccountantSettlement })) },
             { path: 'locations',             element: ebc('AccountantLocations', h(Lazy, { component: R.AccountantLocations })) },
             { path: 'settings',              element: ebc('AccountantSettings', h(Lazy, { component: R.AccountantSettings })) },
+            { path: 'settings/ky-luong',     element: ebc('SalaryPeriodSettings', h(Lazy, { component: R.SalaryPeriodSettings })) },
+            { path: 'settings/cuoc-tuyen',   element: ebc('RoutePricingPage', h(Lazy, { component: R.RoutePricingPage })) },
             { path: 'profile',               element: ebc('Profile', h(Lazy, { component: R.Profile })) },
             { path: '*',                     element: ebc('NotFound', h(Lazy, { component: R.NotFound })) },
           ],

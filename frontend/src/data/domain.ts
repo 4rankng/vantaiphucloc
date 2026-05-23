@@ -10,6 +10,20 @@ export const CONT_TYPE_LABELS: Record<ContType, string> = {
   F40: 'F40 (Container hàng 40ft)',
 }
 
+// Work types — container types + operation types (Tác nghiệp)
+export type WorkType = ContType | 'CHẠY SÀ LAN' | 'CHUYỂN BÃI' | 'ĐÓNG KHO' | 'LẤY VỎ HẠ HÀNG' | 'XUẤT/NHẬP TÀU'
+
+export const WORK_TYPES: WorkType[] = [...CONT_TYPES, 'CHẠY SÀ LAN', 'CHUYỂN BÃI', 'ĐÓNG KHO', 'LẤY VỎ HẠ HÀNG', 'XUẤT/NHẬP TÀU']
+
+export const WORK_TYPE_LABELS: Record<WorkType, string> = {
+  ...CONT_TYPE_LABELS,
+  'CHẠY SÀ LAN': 'Chạy sà lan',
+  'CHUYỂN BÃI': 'Chuyển bãi',
+  'ĐÓNG KHO': 'Đóng kho',
+  'LẤY VỎ HẠ HÀNG': 'Lấy vỏ hạ hàng',
+  'XUẤT/NHẬP TÀU': 'Xuất / Nhập tàu',
+}
+
 export const ROLE_LABELS: Record<Role, string> = {
   superadmin: 'SuperAdmin',
   director: 'Giám đốc',
@@ -125,7 +139,7 @@ export interface DeliveredTrip {
   vendorId?: number | null
   vehiclePlate?: string | null
   vessel?: string | null
-  workType?: string | null
+  workType?: WorkType | null
   revenue: number
   driverSalary: number
   allowance: number
@@ -168,7 +182,7 @@ export interface BookedTrip {
   contType: ContType | null
   vessel: string | null
   vehiclePlate?: string | null
-  workType?: string | null
+  workType?: WorkType | null
   revenue: number
   matchedDeliveredTripIds: number[]
   matched: boolean
@@ -233,3 +247,20 @@ export function compactCurrency(amount: number | undefined | null): string {
 
 export { formatCurrency as formatCurrencyFull }
 export { formatCurrency as formatCurrencyShort }
+
+// ─── Route Pricing (Cước tuyến) ────────────────────────────────────────────
+
+export interface RoutePricing {
+  id: number
+  client: ClientSummary
+  pickupLocation: LocationSummary
+  dropoffLocation: LocationSummary
+  operationType: WorkType
+  f20Price: number | null
+  f40Price: number | null
+  e20Price: number | null
+  e40Price: number | null
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}

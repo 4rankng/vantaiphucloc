@@ -39,6 +39,7 @@ def _utcnow() -> datetime:
 # Vehicle
 # ---------------------------------------------------------------------------
 
+
 class Vehicle(AuditableMixin, Base):
     __tablename__ = "vehicles"
 
@@ -57,6 +58,7 @@ class Vehicle(AuditableMixin, Base):
 # VehicleDriver — many-to-many vehicle ↔ driver with effective dates
 # ---------------------------------------------------------------------------
 
+
 class VehicleDriver(Base):
     """Associates a driver with a vehicle for a date range.
 
@@ -70,10 +72,15 @@ class VehicleDriver(Base):
     __tablename__ = "vehicle_drivers"
 
     id = Column(Integer, primary_key=True, index=True)
-    vehicle_id = Column(Integer, ForeignKey("vehicles.id", ondelete="CASCADE"),
-                        nullable=False, index=True)
-    driver_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"),
-                       nullable=False, index=True)
+    vehicle_id = Column(
+        Integer,
+        ForeignKey("vehicles.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    driver_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     effective_from = Column(Date, nullable=False)
     effective_to = Column(Date, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
@@ -87,6 +94,7 @@ class VehicleDriver(Base):
 # VehicleExpense — CP Xe (xăng dầu, sửa chữa, tiền luật, khác)
 # ---------------------------------------------------------------------------
 
+
 class VehicleExpense(AuditableMixin, Base):
     """Records a per-vehicle cost item for P&L calculations.
 
@@ -96,11 +104,15 @@ class VehicleExpense(AuditableMixin, Base):
     __tablename__ = "vehicle_expenses"
 
     id = Column(Integer, primary_key=True, index=True)
-    vehicle_id = Column(Integer, ForeignKey("vehicles.id", ondelete="SET NULL"),
-                        nullable=True, index=True)
+    vehicle_id = Column(
+        Integer,
+        ForeignKey("vehicles.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     category = Column(String(20), nullable=False, index=True)
     # XANG_DAU | SUA_CHUA | TIEN_LUAT | KHAC
-    amount = Column(Integer, nullable=False)   # VND
+    amount = Column(Integer, nullable=False)  # VND
     expense_date = Column(Date, nullable=False, index=True)
     description = Column(String(500), nullable=True)
     receipt_url = Column(String(1000), nullable=True)
@@ -119,6 +131,7 @@ class VehicleExpense(AuditableMixin, Base):
 # ---------------------------------------------------------------------------
 # Client
 # ---------------------------------------------------------------------------
+
 
 class Client(AuditableMixin, Base):
     __tablename__ = "clients"
@@ -141,6 +154,7 @@ class Client(AuditableMixin, Base):
 # Vendor
 # ---------------------------------------------------------------------------
 
+
 class Vendor(AuditableMixin, Base):
     __tablename__ = "vendors"
 
@@ -153,7 +167,9 @@ class Vendor(AuditableMixin, Base):
     contact_person = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
-    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+    )
 
 
 Partner = Client  # backward compat alias
@@ -162,6 +178,7 @@ Partner = Client  # backward compat alias
 # ---------------------------------------------------------------------------
 # Location
 # ---------------------------------------------------------------------------
+
 
 class Location(AuditableMixin, Base):
     __tablename__ = "locations"
@@ -182,17 +199,19 @@ class Location(AuditableMixin, Base):
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
     )
 
-    __table_args__ = (
-        Index("ix_locations_lat_lng", "lat", "lng"),
-    )
+    __table_args__ = (Index("ix_locations_lat_lng", "lat", "lng"),)
 
 
 class LocationAlias(Base):
     __tablename__ = "location_aliases"
 
     id = Column(Integer, primary_key=True, index=True)
-    location_id = Column(Integer, ForeignKey("locations.id", ondelete="CASCADE"),
-                          nullable=False, index=True)
+    location_id = Column(
+        Integer,
+        ForeignKey("locations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     alias = Column(String(255), nullable=False)
     alias_normalized = Column(String(255), nullable=False, unique=True)
     source = Column(String(30), nullable=False, index=True)
@@ -204,14 +223,19 @@ class LocationAlias(Base):
 # Pricing
 # ---------------------------------------------------------------------------
 
+
 class Pricing(AuditableMixin, Base):
     __tablename__ = "pricings"
 
     id = Column(Integer, primary_key=True, index=True)
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
-    work_type = Column(String(30), nullable=False)     # CHUYEN_BAI | XUAT_TAU | ...
-    pickup_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
-    dropoff_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
+    work_type = Column(String(30), nullable=False)  # CHUYỂN BÃI | XUẤT/NHẬP TÀU | ...
+    pickup_location_id = Column(
+        Integer, ForeignKey("locations.id"), nullable=False, index=True
+    )
+    dropoff_location_id = Column(
+        Integer, ForeignKey("locations.id"), nullable=False, index=True
+    )
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(
@@ -220,8 +244,10 @@ class Pricing(AuditableMixin, Base):
 
     __table_args__ = (
         UniqueConstraint(
-            "client_id", "work_type",
-            "pickup_location_id", "dropoff_location_id",
+            "client_id",
+            "work_type",
+            "pickup_location_id",
+            "dropoff_location_id",
             name="uq_pricings_lane",
         ),
     )
@@ -244,16 +270,59 @@ class PricingLine(Base):
 
 
 # ---------------------------------------------------------------------------
+# RoutePricing — flat per-route rates (Cước tuyến)
+# ---------------------------------------------------------------------------
+
+
+class RoutePricing(AuditableMixin, Base):
+    __tablename__ = "route_pricings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
+    pickup_location_id = Column(
+        Integer, ForeignKey("locations.id"), nullable=False, index=True
+    )
+    dropoff_location_id = Column(
+        Integer, ForeignKey("locations.id"), nullable=False, index=True
+    )
+    operation_type = Column(String(50), nullable=False, index=True)
+    f20_price = Column(Integer, nullable=True)
+    f40_price = Column(Integer, nullable=True)
+    e20_price = Column(Integer, nullable=True)
+    e40_price = Column(Integer, nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "client_id",
+            "pickup_location_id",
+            "dropoff_location_id",
+            "operation_type",
+            name="uq_route_pricings_lane",
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
 # DeliveredTrip (driver trip — created by driver app)
 # ---------------------------------------------------------------------------
+
 
 class DeliveredTrip(AuditableMixin, Base):
     __tablename__ = "delivered_trips"
 
     id = Column(Integer, primary_key=True, index=True)
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
-    pickup_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
-    dropoff_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
+    pickup_location_id = Column(
+        Integer, ForeignKey("locations.id"), nullable=False, index=True
+    )
+    dropoff_location_id = Column(
+        Integer, ForeignKey("locations.id"), nullable=False, index=True
+    )
     driver_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=True, index=True)
     vessel = Column(String(100), nullable=True)
@@ -281,14 +350,19 @@ class DeliveredTrip(AuditableMixin, Base):
 # BookedTrip (customer order — from Excel import or manual entry)
 # ---------------------------------------------------------------------------
 
+
 class BookedTrip(AuditableMixin, Base):
     __tablename__ = "booked_trips"
 
     id = Column(Integer, primary_key=True, index=True)
     trip_date = Column(Date, nullable=False)
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
-    pickup_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
-    dropoff_location_id = Column(Integer, ForeignKey("locations.id"), nullable=False, index=True)
+    pickup_location_id = Column(
+        Integer, ForeignKey("locations.id"), nullable=False, index=True
+    )
+    dropoff_location_id = Column(
+        Integer, ForeignKey("locations.id"), nullable=False, index=True
+    )
     vessel = Column(String(100), nullable=True)
     vehicle_plate = Column(String(50), nullable=True)
     work_type = Column(String(30), nullable=False)
@@ -312,6 +386,7 @@ class BookedTrip(AuditableMixin, Base):
 # Settings (key-value store for app-wide configuration)
 # ---------------------------------------------------------------------------
 
+
 class Setting(Base):
     __tablename__ = "settings"
 
@@ -325,6 +400,7 @@ class Setting(Base):
 # ---------------------------------------------------------------------------
 # DriverSalaryConfig (base salary history per driver, append-only)
 # ---------------------------------------------------------------------------
+
 
 class DriverSalaryConfig(Base):
     """Effective base salary for a driver, valid from ``effective_from``.

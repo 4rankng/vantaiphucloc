@@ -147,6 +147,8 @@ function resolveMobileTitle(pathname: string): string {
     '/accountant/transporters': 'Vận tải',
     '/accountant/doi-soat': 'Đối soát',
     '/accountant/settings': 'Thiết lập',
+    '/accountant/settings/ky-luong': 'Kỳ lương',
+    '/accountant/settings/cuoc-tuyen': 'Cước tuyến',
   }
   if (TITLES[pathname]) return TITLES[pathname]
   return ''

@@ -67,4 +67,7 @@ export const queryKeys = {
     ['vehicle-pnl', dateFrom, dateTo, vehicleId ?? 'all'] as const,
   vehicleExpenses: (params?: object) =>
     ['vehicle-expenses', params ?? {}] as const,
+  routePricings: ['route-pricings'] as const,
+  routePricingsFiltered: (filters?: { clientId?: number; operationType?: string }) =>
+    ['route-pricings', filters] as const,
 }
